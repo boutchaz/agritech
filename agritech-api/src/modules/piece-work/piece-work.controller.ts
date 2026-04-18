@@ -46,7 +46,6 @@ export class PieceWorkController {
     description: 'Piece work records retrieved successfully',
   })
   async findAll(
-    @Req() req,
     @Param('organizationId') organizationId: string,
     @Param('farmId') farmId: string,
     @Query() filters: PieceWorkFiltersDto,
@@ -65,7 +64,6 @@ export class PieceWorkController {
   })
   @ApiResponse({ status: 404, description: 'Piece work record not found' })
   async findOne(
-    @Req() req,
     @Param('organizationId') organizationId: string,
     @Param('id') id: string,
   ) {
@@ -103,7 +101,6 @@ export class PieceWorkController {
   @ApiResponse({ status: 400, description: 'Invalid input data' })
   @ApiResponse({ status: 404, description: 'Piece work record not found' })
   async update(
-    @Req() req,
     @Param('organizationId') organizationId: string,
     @Param('id') id: string,
     @Body() dto: UpdatePieceWorkDto,
@@ -123,11 +120,61 @@ export class PieceWorkController {
   @ApiResponse({ status: 400, description: 'Cannot delete paid records' })
   @ApiResponse({ status: 404, description: 'Piece work record not found' })
   async delete(
-    @Req() req,
     @Param('organizationId') organizationId: string,
     @Param('id') id: string,
   ) {
     return this.pieceWorkService.delete(id, organizationId);
+  }
+
+  @Patch('bulk-verify')
+  @ApiOperation({ summary: 'Bulk verify multiple piece work records' })
+  @ApiParam({ name: 'organizationId', description: 'Organization ID' })
+  @ApiParam({ name: 'farmId', description: 'Farm ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Piece work records verified successfully',
+  })
+  async bulkVerify(
+    @Req() req: any,
+    @Param('organizationId') organizationId: string,
+    @Param('farmId') farmId: string,
+    @Body() body: { ids: string[] },
+  ) {
+    return this.pieceWorkService.bulkVerify(organizationId, farmId, body.ids, req.user.sub);
+  }
+
+  @Post('bulk-generate-payments')
+  @ApiOperation({ summary: 'Bulk generate payments for multiple piece work records' })
+  @ApiParam({ name: 'organizationId', description: 'Organization ID' })
+  @ApiParam({ name: 'farmId', description: 'Farm ID' })
+  @ApiResponse({
+    status: 201,
+    description: 'Payments generated successfully',
+  })
+  async bulkGeneratePayments(
+    @Param('organizationId') organizationId: string,
+    @Param('farmId') farmId: string,
+    @Body() body: { ids: string[] },
+  ) {
+    return this.pieceWorkService.bulkGeneratePayments(organizationId, farmId, body.ids);
+  }
+
+  @Post(':id/generate-payment')
+  @ApiOperation({ summary: 'Generate payment for a piece work record' })
+  @ApiParam({ name: 'organizationId', description: 'Organization ID' })
+  @ApiParam({ name: 'farmId', description: 'Farm ID' })
+  @ApiParam({ name: 'id', description: 'Piece Work Record ID' })
+  @ApiResponse({
+    status: 201,
+    description: 'Payment generated successfully',
+  })
+  @ApiResponse({ status: 400, description: 'Record not in approved status' })
+  async generatePayment(
+    @Param('organizationId') organizationId: string,
+    @Param('farmId') farmId: string,
+    @Param('id') id: string,
+  ) {
+    return this.pieceWorkService.generatePayment(organizationId, farmId, id);
   }
 
   @Patch(':id/verify')
@@ -141,11 +188,10 @@ export class PieceWorkController {
   })
   @ApiResponse({ status: 404, description: 'Piece work record not found' })
   async verify(
-    @Req() req,
+    @Req() req: any,
     @Param('organizationId') organizationId: string,
     @Param('id') id: string,
   ) {
-    const userId = req.user.sub;
-    return this.pieceWorkService.verify(id, organizationId, userId);
+    return this.pieceWorkService.verify(id, organizationId, req.user.sub);
   }
 }

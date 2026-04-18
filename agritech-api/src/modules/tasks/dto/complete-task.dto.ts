@@ -9,8 +9,28 @@ import {
   Min,
   Max,
   ValidateNested,
+  IsBoolean,
 } from "class-validator";
 import { ConsumedItemDto } from "./consumed-item.dto";
+
+export class WorkerCompletionDto {
+  @IsUUID()
+  worker_id: string;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  units_completed?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  hours_worked?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  payment_included_in_salary?: boolean;
+}
 
 export class CompleteTaskDto {
   @ApiPropertyOptional({ description: "Quality rating (1-5)" })
@@ -64,4 +84,14 @@ export class CompleteTaskDto {
   @IsOptional()
   @IsUUID()
   work_unit_id?: string;
+
+  @ApiPropertyOptional({
+    description: "Per-worker completion data (units/hours per assigned worker)",
+    type: [WorkerCompletionDto],
+  })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => WorkerCompletionDto)
+  worker_completions?: WorkerCompletionDto[];
 }

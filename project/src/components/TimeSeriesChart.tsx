@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { TimeSeriesPoint } from '../services/satelliteIndicesService';
 
 export interface TemperatureDataPoint {
@@ -17,14 +17,14 @@ interface TimeSeriesChartProps {
   showTemperature?: boolean;
 }
 
-const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
+const TimeSeriesChart = ({
   data,
   index,
   width = 600,
   height = 300,
   temperatureData = [],
   showTemperature = false,
-}) => {
+}: TimeSeriesChartProps) => {
   if (!data || data.length === 0) {
     return (
       <div className="flex items-center justify-center h-64 text-gray-500 dark:text-gray-400">
@@ -182,9 +182,9 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
           />
 
           {/* Grid lines */}
-          {yTicks.map((tick, i) => (
+          {yTicks.map((tick, tickIdx) => (
             <line
-              key={i}
+              key={"tick-" + tickIdx}
               x1={margin.left}
               y1={margin.top + tick.y}
               x2={margin.left + chartWidth}
@@ -218,9 +218,9 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
           />
 
           {/* Y-axis labels (left - index values) */}
-          {yTicks.map((tick, i) => (
+          {yTicks.map((tick, tickIdx) => (
             <text
-              key={i}
+              key={"tick-" + tickIdx}
               x={margin.left - 10}
               y={margin.top + tick.y + 4}
               textAnchor="end"
@@ -242,9 +242,9 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
                 stroke="#ef4444"
                 strokeWidth="2"
               />
-              {tempTicks.map((tick, i) => (
+              {tempTicks.map((tick, tempIdx) => (
                 <text
-                  key={`temp-${i}`}
+                  key={`temp-${tempIdx}`}
                   x={margin.left + chartWidth + 10}
                   y={margin.top + tick.y + 4}
                   textAnchor="start"
@@ -258,9 +258,9 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
           )}
 
           {/* X-axis labels */}
-          {xTicks.map((tick, i) => (
+          {xTicks.map((tick, gridIdx) => (
             <text
-              key={i}
+              key={"grid-" + gridIdx}
               x={margin.left + tick.x}
               y={margin.top + chartHeight + 20}
               textAnchor="middle"
@@ -297,8 +297,8 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
           />
 
           {/* Temperature points */}
-          {showTemperature && tempPoints.map((point, i) => (
-            <g key={`temp-point-${i}`}>
+          {showTemperature && tempPoints.map((point, tempPtIdx) => (
+            <g key={`temp-point-${tempPtIdx}`}>
               <circle
                 cx={margin.left + point.x}
                 cy={margin.top + point.y}
@@ -316,8 +316,8 @@ const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
           ))}
 
           {/* Index data points */}
-          {points.map((point, i) => (
-            <g key={i}>
+          {points.map((point, barIdx) => (
+            <g key={"bar-" + barIdx}>
               <circle
                 cx={margin.left + point.x}
                 cy={margin.top + point.y}

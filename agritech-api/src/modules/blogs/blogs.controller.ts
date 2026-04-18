@@ -40,17 +40,18 @@ export class BlogsController {
   @Public()
   @ApiOperation({ summary: 'Get featured blog posts' })
   @ApiQuery({ name: 'limit', required: false, description: 'Number of posts to return', type: Number })
+  @ApiQuery({ name: 'locale', required: false, description: 'Locale (fr, ar, en)', type: String })
   @ApiResponse({ status: 200, description: 'Featured blog posts retrieved successfully' })
-  async getFeaturedBlogs(@Query('limit') limit?: number) {
-    return this.blogsService.getFeaturedBlogs(limit || 3);
+  async getFeaturedBlogs(@Query('limit') limit?: number, @Query('locale') locale?: string) {
+    return this.blogsService.getFeaturedBlogs(limit || 3, locale || 'fr');
   }
 
   @Get('categories')
   @Public()
   @ApiOperation({ summary: 'Get all blog categories' })
   @ApiResponse({ status: 200, description: 'Categories retrieved successfully' })
-  async getCategories() {
-    return this.blogsService.getCategories();
+  async getCategories(@Query('locale') locale?: string) {
+    return this.blogsService.getCategories(locale || 'fr');
   }
 
   @Get('categories/:slug')
@@ -59,8 +60,8 @@ export class BlogsController {
   @ApiParam({ name: 'slug', description: 'Category slug' })
   @ApiResponse({ status: 200, description: 'Category retrieved successfully' })
   @ApiResponse({ status: 404, description: 'Category not found' })
-  async getCategoryBySlug(@Param('slug') slug: string) {
-    return this.blogsService.getCategoryBySlug(slug);
+  async getCategoryBySlug(@Param('slug') slug: string, @Query('locale') locale?: string) {
+    return this.blogsService.getCategoryBySlug(slug, locale || 'fr');
   }
 
   @Get(':slug')
@@ -69,8 +70,8 @@ export class BlogsController {
   @ApiParam({ name: 'slug', description: 'Blog post slug' })
   @ApiResponse({ status: 200, description: 'Blog post retrieved successfully' })
   @ApiResponse({ status: 404, description: 'Blog post not found' })
-  async getBlogBySlug(@Param('slug') slug: string) {
-    return this.blogsService.getBlogBySlug(slug);
+  async getBlogBySlug(@Param('slug') slug: string, @Query('locale') locale?: string) {
+    return this.blogsService.getBlogBySlug(slug, locale || 'fr');
   }
 
   @Get(':slug/related')
@@ -82,7 +83,8 @@ export class BlogsController {
   async getRelatedBlogs(
     @Param('slug') slug: string,
     @Query('limit') limit?: number,
+    @Query('locale') locale?: string,
   ) {
-    return this.blogsService.getRelatedBlogs(slug, limit || 3);
+    return this.blogsService.getRelatedBlogs(slug, limit || 3, locale || 'fr');
   }
 }

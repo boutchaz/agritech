@@ -10,6 +10,10 @@ import SoilAnalysisForm from '@/components/Analysis/SoilAnalysisForm'
 import PlantAnalysisForm from '@/components/Analysis/PlantAnalysisForm'
 import WaterAnalysisForm from '@/components/Analysis/WaterAnalysisForm'
 import type { Analysis, AnalysisType, SoilAnalysisData, PlantAnalysisData, WaterAnalysisData } from '@/types/analysis'
+import { Button } from '@/components/ui/button';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { SectionLoader } from '@/components/ui/loader';
+
 
 const ParcelSoilAnalysis = () => {
   const { t } = useTranslation();
@@ -18,31 +22,36 @@ const ParcelSoilAnalysis = () => {
   const search = Route.useSearch();
   const { data: parcel, isLoading } = useParcelById(parcelId);
   const { data: calibrationStatus } = useCalibrationStatus(parcelId);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmAction] = useState<{title:string;description?:string;variant?:"destructive"|"default";onConfirm:()=>void}>({title:"",onConfirm:()=>{}});
+
   const [analysisTab, setAnalysisTab] = useState<AnalysisType>(search.type || 'soil');
   const [showForm, setShowForm] = useState(false);
   const [showTypeSelector, setShowTypeSelector] = useState(false);
   const [selectedFormType, setSelectedFormType] = useState<AnalysisType | null>(null);
+  const parcelOrganizationId = parcel?.organization_id;
 
-  const returnTo = (search as any).returnTo || 'stay';
+  const returnTo = search.returnTo || 'stay';
 
   // Auto-show form if type is specified in search params (from calibration panel)
+  /* eslint-disable react-hooks/set-state-in-effect */
+  /* eslint-disable-next-line react-hooks/exhaustive-deps */
   useEffect(() => {
     if (search.type && !showForm && !selectedFormType) {
       setSelectedFormType(search.type as AnalysisType);
       setShowForm(true);
     }
-  }, [search.type]);
+  }, [search.type, selectedFormType, showForm]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // Fetch real analyses data
-  const { analyses: soilAnalyses, loading: soilLoading, addAnalysis: addSoilAnalysis, deleteAnalysis: deleteSoilAnalysis } = useAnalyses(parcelId, 'soil', 'parcel', parcel.organization_id);
-  const { analyses: plantAnalyses, loading: plantLoading, addAnalysis: addPlantAnalysis, deleteAnalysis: deletePlantAnalysis } = useAnalyses(parcelId, 'plant', 'parcel', parcel.organization_id);
-  const { analyses: waterAnalyses, loading: waterLoading, addAnalysis: addWaterAnalysis, deleteAnalysis: deleteWaterAnalysis } = useAnalyses(parcelId, 'water', 'parcel', parcel.organization_id);
+  const { analyses: soilAnalyses, loading: soilLoading, addAnalysis: addSoilAnalysis, deleteAnalysis: deleteSoilAnalysis } = useAnalyses(parcelId, 'soil', 'parcel', parcelOrganizationId);
+  const { analyses: plantAnalyses, loading: plantLoading, addAnalysis: addPlantAnalysis, deleteAnalysis: deletePlantAnalysis } = useAnalyses(parcelId, 'plant', 'parcel', parcelOrganizationId);
+  const { analyses: waterAnalyses, loading: waterLoading, addAnalysis: addWaterAnalysis, deleteAnalysis: deleteWaterAnalysis } = useAnalyses(parcelId, 'water', 'parcel', parcelOrganizationId);
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
-      </div>
+      <SectionLoader />
     );
   }
 
@@ -69,7 +78,7 @@ const ParcelSoilAnalysis = () => {
         navigate({
           to: '/parcels/$parcelId/reports',
           params: { parcelId },
-          search: { autoRecalibrate: true },
+          search: { autoRecalibrate: true, farmId: undefined },
         });
       } else {
         setAnalysisTab('soil'); // Switch to soil tab to show the new analysis
@@ -96,7 +105,7 @@ const ParcelSoilAnalysis = () => {
         navigate({
           to: '/parcels/$parcelId/reports',
           params: { parcelId },
-          search: { autoRecalibrate: true },
+          search: { autoRecalibrate: true, farmId: undefined },
         });
       } else {
         setAnalysisTab('plant'); // Switch to plant tab to show the new analysis
@@ -123,7 +132,7 @@ const ParcelSoilAnalysis = () => {
         navigate({
           to: '/parcels/$parcelId/reports',
           params: { parcelId },
-          search: { autoRecalibrate: true },
+          search: { autoRecalibrate: true, farmId: undefined },
         });
       } else {
         setAnalysisTab('water'); // Switch to water tab to show the new analysis
@@ -205,15 +214,15 @@ const ParcelSoilAnalysis = () => {
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
             {t('parcels.analyse.selectAnalysisType')}
           </h3>
-          <button
+          <Button
             onClick={() => setShowTypeSelector(false)}
             className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
           >
             <X className="h-5 w-5" />
-          </button>
+          </Button>
         </div>
         <div className="p-6 space-y-3">
-          <button
+          <Button
             onClick={() => handleTypeSelect('soil')}
             className="w-full flex items-center p-4 rounded-lg border-2 border-gray-200 dark:border-gray-600 hover:border-green-500 dark:hover:border-green-500 hover:bg-green-50 dark:hover:bg-green-900/20 transition-all group"
           >
@@ -228,9 +237,9 @@ const ParcelSoilAnalysis = () => {
                 {t('parcels.analyse.soilDescription')}
               </p>
             </div>
-          </button>
+          </Button>
 
-          <button
+          <Button
             onClick={() => handleTypeSelect('plant')}
             className="w-full flex items-center p-4 rounded-lg border-2 border-gray-200 dark:border-gray-600 hover:border-green-500 dark:hover:border-green-500 hover:bg-green-50 dark:hover:bg-green-900/20 transition-all group"
           >
@@ -245,9 +254,9 @@ const ParcelSoilAnalysis = () => {
                 {t('parcels.analyse.plantDescription')}
               </p>
             </div>
-          </button>
+          </Button>
 
-          <button
+          <Button
             onClick={() => handleTypeSelect('water')}
             className="w-full flex items-center p-4 rounded-lg border-2 border-gray-200 dark:border-gray-600 hover:border-blue-500 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all group"
           >
@@ -262,9 +271,17 @@ const ParcelSoilAnalysis = () => {
                 {t('parcels.analyse.waterDescription')}
               </p>
             </div>
-          </button>
+          </Button>
         </div>
       </div>
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title={confirmAction.title}
+        description={confirmAction.description}
+        variant={confirmAction.variant}
+        onConfirm={confirmAction.onConfirm}
+      />
     </div>
   );
 
@@ -286,13 +303,13 @@ const ParcelSoilAnalysis = () => {
         <h3 className="text-2xl font-semibold text-gray-900 dark:text-white">
           {t('parcels.analyse.title')}
         </h3>
-        <button
+        <Button variant="green"
           onClick={() => setShowTypeSelector(true)}
-          className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+          className="flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors"
         >
           <Plus className="h-4 w-4" />
           <span>{t('parcels.analyse.newAnalysis')}</span>
-        </button>
+        </Button>
       </div>
 
       {/* Calibration Status Banner */}
@@ -330,6 +347,7 @@ const ParcelSoilAnalysis = () => {
             <Link
               to="/parcels/$parcelId/reports"
               params={{ parcelId }}
+              search={{ autoRecalibrate: undefined, farmId: undefined }}
               className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
             >
               <FileText className="w-4 h-4" />
@@ -371,7 +389,7 @@ const ParcelSoilAnalysis = () => {
       {/* Analysis Type Tabs */}
       <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
         <div className="flex border-b border-gray-200 dark:border-gray-700">
-          <button
+          <Button
             onClick={() => setAnalysisTab('soil')}
             className={`flex-1 px-6 py-4 text-sm font-medium transition-colors ${
               analysisTab === 'soil'
@@ -383,8 +401,8 @@ const ParcelSoilAnalysis = () => {
               <Flask className="h-4 w-4" />
               <span>{t('parcels.analyse.tabs.soil')}</span>
             </div>
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={() => setAnalysisTab('plant')}
             className={`flex-1 px-6 py-4 text-sm font-medium transition-colors ${
               analysisTab === 'plant'
@@ -396,8 +414,8 @@ const ParcelSoilAnalysis = () => {
               <Leaf className="h-4 w-4" />
               <span>{t('parcels.analyse.tabs.plant')}</span>
             </div>
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={() => setAnalysisTab('water')}
             className={`flex-1 px-6 py-4 text-sm font-medium transition-colors ${
               analysisTab === 'water'
@@ -409,15 +427,13 @@ const ParcelSoilAnalysis = () => {
               <Droplets className="h-4 w-4" />
               <span>{t('parcels.analyse.tabs.water')}</span>
             </div>
-          </button>
+          </Button>
         </div>
 
         {/* Analysis Content */}
         <div className="p-6">
           {analysesLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
-            </div>
+            <SectionLoader />
           ) : currentAnalyses.length === 0 ? (
             <div className="text-center py-12">
               {analysisTab === 'soil' && <Flask className="h-12 w-12 text-gray-400 mx-auto mb-4" />}
@@ -426,24 +442,20 @@ const ParcelSoilAnalysis = () => {
               <p className="text-gray-500 dark:text-gray-400 mb-4">
                 {t('parcels.analyse.noAnalyses')}
               </p>
-              <button
+              <Button variant="blue"
                 onClick={() => {
                   setSelectedFormType(analysisTab);
                   setShowForm(true);
                 }}
-                className={`px-4 py-2 text-white rounded-lg transition-colors ${
-                  analysisTab === 'water'
-                    ? 'bg-blue-600 hover:bg-blue-700'
-                    : 'bg-green-600 hover:bg-green-700'
-                }`}
+                className={`px-4 py-2 text-white rounded-lg transition-colors ${ analysisTab === 'water' ? '' : 'bg-green-600 hover:bg-green-700'}`}
               >
                 {t('parcels.analyse.addAnalysis')}
-              </button>
+              </Button>
             </div>
           ) : (
             <div className="space-y-4">
               {currentAnalyses.map((analysis) => {
-                const analysisData = analysis.data as any;
+                const analysisData = analysis.data;
                 return (
                   <div
                     key={analysis.id}
@@ -460,12 +472,12 @@ const ParcelSoilAnalysis = () => {
                           </p>
                         )}
                       </div>
-                      <button
+                      <Button
                         onClick={() => handleDeleteAnalysis(analysis.id)}
                         className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-sm"
                       >
                         {t('parcels.analyse.deleteAnalysis')}
-                      </button>
+                      </Button>
                     </div>
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                       {Object.entries(analysisData)
@@ -534,5 +546,6 @@ export const Route = createFileRoute('/_authenticated/(production)/parcels/$parc
   component: ParcelSoilAnalysis,
   validateSearch: (search: Record<string, unknown>) => ({
     type: (search.type as 'soil' | 'plant' | 'water') || undefined,
+    returnTo: (search.returnTo as 'stay' | 'reports') || undefined,
   }),
 });

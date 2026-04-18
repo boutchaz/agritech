@@ -28,6 +28,8 @@
     "lightMode": "Mode clair",
     "active": "Actif",
     "inactive": "Inactif",
+    "goBack": "Retour",
+    "goHome": "Tableau de bord",
     "retry": "Réessayer",
     "noResults": "Aucun résultat trouvé",
     "selectFarm": "Sélectionnez une ferme",
@@ -123,9 +125,9 @@
     },
     "roiCalculator": {
       "title": "Calculez votre retour sur investissement",
-      "subtitle": "Découvrez en 30 secondes combien AgriTech peut vous faire économiser chaque année. Recevez un rapport personnalisé par email.",
+      "subtitle": "Découvrez en 30 secondes combien AgroGina peut vous faire économiser chaque année. Recevez un rapport personnalisé par email.",
       "calculatorTitle": "Calculateur ROI",
-      "calculatorSubtitle": "Découvrez combien vous pourriez économiser avec AgriTech",
+      "calculatorSubtitle": "Découvrez combien vous pourriez économiser avec AgroGina",
       "farmSize": "Surface agricole (hectares)",
       "farmSizeUnit": "ha",
       "currentYield": "Rendement actuel (tonnes/ha)",
@@ -249,7 +251,11 @@
       "street": "Rue",
       "all": "Tous",
       "totalPoints": "Points totaux",
-      "activeLocations": "Emplacements actifs"
+      "activeLocations": "Emplacements actifs",
+      "activeFarm": "Ferme Active",
+      "activeFarms": "Fermes actives",
+      "noFarms": "Aucune parcelle localisée",
+      "noFarmsHint": "Dessinez les limites de vos parcelles sur la carte pour les voir ici"
     }
   },
   "nav": {
@@ -306,9 +312,38 @@
     "campaigns": "Campagnes",
     "cropCycles": "Cycles de Culture",
     "chat": "Assistant IA",
+    "biologicalAssets": "Actifs Biologiques",
     "compliance": "Conformité",
     "certifications": "Certifications",
-    "correctiveActions": "Actions correctives"
+    "correctiveActions": "Actions correctives",
+    "marketplace": "Marketplace",
+    "receivedRequests": "Demandes reçues",
+    "sentRequests": "Demandes envoyées",
+    "viewMarketplace": "Voir la marketplace",
+    "paymentRecords": "Paiements",
+    "bankAccounts": "Comptes bancaires"
+  },
+  "sidebar": {
+    "collapse": "Réduire",
+    "expand": "Développer la barre latérale"
+  },
+  "orgSwitcher": {
+    "organizations": "Organisations",
+    "orgSettings": "Paramètres de l'organisation",
+    "manageTeam": "Gérer l'équipe",
+    "signOut": "Se déconnecter",
+    "backToOrganizations": "← Retour aux organisations",
+    "farms": "Fermes - {{orgName}}",
+    "manager": "Gestionnaire: {{name}}",
+    "noFarms": "Aucune ferme trouvée",
+    "createFirstFarm": "Créez votre première ferme",
+    "roles": {
+      "owner": "Propriétaire",
+      "admin": "Administrateur",
+      "manager": "Gestionnaire",
+      "member": "Membre",
+      "viewer": "Lecteur"
+    }
   },
   "stock": {
     "title": "Gestion des Stocks",
@@ -382,10 +417,6 @@
         "cta": "Explorer les analyses"
       }
     },
-    "unifiedView": {
-      "title": "Vue opérationnelle unifiée",
-      "subtitle": "Surveillez en direct vos indicateurs clés : taches prioritaires, données météo et performances financières"
-    },
     "structuredData": {
       "platformName": "plateforme de gestion agricole",
       "description": "Solution unifiée de gestion agricole : fermes, parcelles, tâches, comptabilité et analyses.",
@@ -413,9 +444,23 @@
         "stockKeywords": "stock inventaire",
         "infrastructure": "Consulter les infrastructures",
         "infrastructureKeywords": "infrastructure irrigation équipements",
+        "farmHierarchy": "Gérer les fermes",
+        "farmHierarchyKeywords": "fermes hiérarchie",
+        "tasks": "Gérer les tâches",
+        "tasksKeywords": "tâches missions travail",
         "settings": "Ouvrir les paramètres",
         "settingsKeywords": "paramètres settings organisation"
       },
+      "create": {
+        "parcel": "Créer une parcelle",
+        "task": "Créer une tâche",
+        "cycle": "Créer un cycle cultural",
+        "stockEntry": "Créer une entrée de stock",
+        "invoice": "Créer une facture",
+        "worker": "Ajouter un travailleur"
+      },
+      "searchPlaceholder": "Rechercher une action ou une page...",
+      "noResults": "Aucun résultat trouvé.",
       "modules": {
         "subtitle": "Modules disponibles"
       },
@@ -648,7 +693,20 @@
       "topRow": "Ligne supérieure",
       "middleRow": "Ligne centrale",
       "bottomRow": "Ligne inférieure",
-      "helper": "Maintenez Ctrl/Cmd pour sélectionner plusieurs options"
+      "helper": "Maintenez Ctrl/Cmd pour sélectionner plusieurs options",
+      "structureTitle": "Organisation du tableau de bord",
+      "structureIntro": "Le haut du tableau de bord est fixe : contexte ferme, indicateurs, tâches, équipes, comptabilité et analyses apparaissent toujours dans cet ordre.",
+      "fixedStripLabel": "Fixe — toujours affiché",
+      "fixedStripDetail": "Sélecteur de ferme · 4 indicateurs · Tâches et équipes · Comptabilité et analyses labo",
+      "optionalBlockTitle": "Widgets optionnels en dessous",
+      "optionalTwoCol": "Rangée large (2 colonnes sur grand écran)",
+      "optionalThreeCol": "Rangée en tuiles (3 colonnes sur grand écran)",
+      "toggleHint": "Appuyez sur une carte pour afficher ou masquer le widget sur le tableau de bord.",
+      "previewFixed": "Disposition fixe",
+      "previewOptional": "Vos widgets optionnels",
+      "legacyBottomNote": "Certains blocs enregistrés ne sont pas encore affichés sur le tableau de bord et sont ignorés : {{keys}}",
+      "toggleOn": "Affiché",
+      "toggleOff": "Masqué"
     },
     "layoutOptions": {
       "soil": "Données du sol",
@@ -665,7 +723,8 @@
     "preview": {
       "title": "Aperçu de la disposition"
     },
-    "save": {
+    "save": "Enregistrer",
+    "saveResult": {
       "success": "Paramètres sauvegardés avec succès",
       "failed": "Erreur lors de la sauvegarde des paramètres",
       "failedDescription": "Une erreur s'est produite lors de la sauvegarde des paramètres."
@@ -712,7 +771,25 @@
       "legacyCosts": "Coûts Hérités",
       "legacyRevenue": "Revenus Hérités",
       "ledgerExpenses": "Dépenses Comptables",
-      "ledgerRevenue": "Revenus Comptables"
+      "ledgerRevenue": "Revenus Comptables",
+      "totalCosts": "Coûts Totaux",
+      "totalRevenue": "Revenus Totaux",
+      "netProfit": "Bénéfice Net",
+      "profitMargin": "Marge Bénéficiaire"
+    },
+    "operational": {
+      "taskLabor": "Coûts de Main d'Oeuvre",
+      "materialCosts": "Coûts Matériels",
+      "harvestRevenues": "Revenus de Récolte",
+      "metayageSettlements": "Règlements Métayage",
+      "product": "Produit",
+      "harvest": "Récolte",
+      "gross": "Brut",
+      "charges": "charges",
+      "workerShare": "Part ouvrier",
+      "noMaterialData": "Aucune donnée de coût matériel disponible pour cette période",
+      "noHarvestData": "Aucune donnée de revenu de récolte disponible pour cette période",
+      "noMetayageData": "Aucune donnée de règlement métayage disponible pour cette période"
     },
     "accounts": {
       "title": "Répartition par Plan Comptable",
@@ -785,6 +862,15 @@
       "journalEntryHelp": "Créer automatiquement une écriture dans le grand livre comptable"
     }
   },
+  "paid": "payé",
+  "pending": "en attente",
+  "notFound": {
+    "title": "Page introuvable",
+    "description": "La page que vous cherchez n'existe pas ou a été déplacée.",
+    "goHome": "Retour à l'accueil",
+    "goBack": "Page précédente",
+    "hint": "Vérifiez l'URL ou utilisez la navigation"
+  },
   "auth": {
     "login": "Connexion",
     "logout": "Déconnexion",
@@ -793,7 +879,7 @@
     "forgotPassword": "Mot de passe oublié ?",
     "signUp": "S'inscrire",
     "signIn": {
-      "title": "Connectez-vous à Agritech",
+        "title": "Connectez-vous à AgroGina",
       "subtitle": "Bon retour",
       "helperText": "Accédez à vos données satellite, tableau de bord d'exploitation et collaborateurs depuis un espace sécurisé.",
       "noAccount": "Vous n'avez pas encore de compte ?",
@@ -899,6 +985,19 @@
       "exportAll": "Exporter tout",
       "import": "Importer",
       "searchPlaceholder": "Rechercher une ferme",
+      "selectedSingle": "ferme sélectionnée",
+      "selectedMultiple": "fermes sélectionnées",
+      "clearSelection": "Désélectionner",
+      "selectAll": "Tout sélectionner",
+      "filterAllTypes": "Tous les types",
+      "filterMainFarms": "Fermes principales",
+      "filterSubFarms": "Sous-fermes",
+      "filterAllStatuses": "Tous les statuts",
+      "batchDeleteConfirmTitle": "Confirmation de suppression groupée",
+      "batchDeleteConfirmDescription": "Vous êtes sur le point de supprimer",
+      "batchDeleteIrreversible": "Cette action est irréversible. Toutes les données associées (parcelles, tâches, analyses satellite, etc.) seront également supprimées.",
+      "batchDeleteAction_one": "Supprimer {{count}} ferme",
+      "batchDeleteAction_other": "Supprimer {{count}} fermes",
       "deleteConfirm": "Confirmer la suppression de la ferme",
       "deleteWarning": "Êtes-vous sûr de vouloir supprimer la ferme",
       "deleteIrreversible": "Cette action est irréversible et supprimera toutes les données associées à cette ferme.",
@@ -911,8 +1010,35 @@
       "noSearchResults": "Aucune ferme ne correspond à votre recherche",
       "validation": {
         "nameRequired": "Le nom doit contenir au moins 2 caractères"
-      }
+      },
+      "deleting": "Suppression...",
+      "noEmail": "Aucun email",
+      "noUsersFound": "Aucun utilisateur trouvé",
+      "noUsersInOrganization": "Aucun utilisateur dans l'organisation",
+      "searchUsersPlaceholder": "Rechercher un utilisateur...",
+      "selectManagerError": "Erreur lors de la sélection du gestionnaire",
+      "unnamedUser": "Utilisateur sans nom",
+      "exportSuccess": "Export réussi !",
+      "exportError": "Erreur lors de l'export",
+      "deleteSuccess": "La ferme \"{{name}}\" et toutes ses données associées ont été supprimées avec succès.",
+      "deleteError": "Erreur lors de la suppression de la ferme",
+      "batchDeleteSuccess": "{{deleted}} ferme(s) supprimée(s) avec succès.{{failed,}}",
+      "relatedParcels_one": "{{count}} parcelle",
+      "relatedParcels_other": "{{count}} parcelles",
+      "relatedTasks_one": "{{count}} tâche",
+      "relatedTasks_other": "{{count}} tâches",
+      "relatedSatellite_one": "{{count}} analyse satellite",
+      "relatedSatellite_other": "{{count}} analyses satellite",
+      "relatedWarehouses_one": "{{count}} entrepôt",
+      "relatedWarehouses_other": "{{count}} entrepôts",
+      "relatedInventory_one": "{{count}} article d'inventaire",
+      "relatedInventory_other": "{{count}} articles d'inventaire",
+      "relatedStructures_one": "{{count}} infrastructure",
+      "relatedStructures_other": "{{count}} infrastructures",
+      "relatedWorkers_one": "{{count}} travailleur (sera dissocié)",
+      "relatedWorkers_other": "{{count}} travailleurs (seront dissociés)"
     },
+    "parcels": "Parcelles",
     "details": {
       "title": "Détails de la ferme",
       "information": "Informations de la ferme",
@@ -941,6 +1067,8 @@
       "cropCategory": "Catégorie de culture",
       "cropType": "Type de culture",
       "variety": "Variété",
+      "agromindSupported": "Supporté par AgromindIA",
+      "agromindVarietySupported": "Variété référencée AgromindIA",
       "plantingSystem": "Système de plantation",
       "spacing": "Espacement",
       "spacingPlaceholder": "Ex: 4x1.5",
@@ -960,6 +1088,19 @@
       "deleteWarning": "Êtes-vous sûr de vouloir supprimer la parcelle",
       "deleteIrreversibleWarning": "Cette action supprimera également toutes les analyses, tâches et autres données associées à cette parcelle. Cette action est irréversible.",
       "deleting": "Suppression...",
+      "archiveConfirm": "Archiver la parcelle",
+      "archiveWarning": "Voulez-vous archiver la parcelle",
+      "archiveNote": "Les données historiques (récoltes, coûts, tâches) seront conservées.",
+      "archiving": "Archivage...",
+      "archive": "Archiver",
+      "archiveSuccess": "Parcelle archivée avec succès",
+      "archiveError": "Erreur lors de l'archivage de la parcelle",
+      "archiveFailed": "L'archivage a échoué",
+      "restoreConfirm": "Restaurer la parcelle",
+      "restore": "Restaurer",
+      "restored": "Parcelle restaurée avec succès",
+      "archived": "Archivée",
+      "showArchived": "Afficher les archivées",
       "noParcels": "Aucune parcelle créée",
       "sections": {
         "basicInfo": "Informations de base",
@@ -971,6 +1112,10 @@
         "trees": "Arbres fruitiers",
         "cereals": "Céréales",
         "vegetables": "Légumes",
+        "legumes": "Légumineuses",
+        "fourrages": "Cultures fourragères",
+        "industrielles": "Cultures industrielles",
+        "aromatiques": "Plantes aromatiques",
         "other": "Autre"
       },
       "irrigation": {
@@ -991,7 +1136,7 @@
         "backToParcels": "Retour aux parcelles",
         "tabs": {
           "overview": "Vue d'ensemble",
-          "soil": "Analyse Sol",
+          "soil": "Analyses",
           "satellite": "Imagerie",
           "weather": "Météo & Climat",
           "production": "Intelligence de Production",
@@ -1098,171 +1243,136 @@
     }
   },
   "landing": {
+    "nav": {
+      "features": "Fonctionnalités",
+      "howItWorks": "Comment ça marche",
+      "faq": "FAQ",
+      "blog": "Blog",
+      "menuAria": "Menu principal",
+      "closeMenu": "Fermer le menu"
+    },
     "hero": {
-      "title": "Transformez votre agriculture avec",
-      "titleHighlight": "la donnée",
-      "subtitle": "Plateforme complète de gestion agricole. Parcelles, équipes, stocks, analyses satellite, sol et rentabilité. Tout en un seul endroit.",
-      "ctaPrimary": "Démarrer maintenant",
-      "ctaSecondary": "Découvrir les fonctionnalités",
-      "freeTrial": "Essai gratuit",
-      "noCommitment": "Sans engagement",
-      "supportIncluded": "Support inclus"
+      "title": "AGROGINA : La plateforme 360° qui fusionne votre réalité agronomique et votre gestion.",
+      "highlight": "Votre exploitation vue dans sa globalité.",
+      "subtitle": "Notre force, c'est le pont entre le terrain et les chiffres. Météo, capteurs IOT, outils RH, marketplace et conformité : AGROGINA centralise tout. Et notre module analytique AgromindIA transforme ces milliers de données en décisions ultra-précises.",
+      "ctaDemo": "Demander une démo",
+      "ctaDiscover": "Découvrir les fonctionnalités",
+      "badge1": "Essai gratuit",
+      "badge2": "Sans engagement",
+      "badge3": "Support inclus",
+      "demoInteractive": "DÉMO INTERACTIVE"
     },
-    "features": {
-      "title": "Fonctionnalités complètes",
-      "subtitle": "Tous les outils dont vous avez besoin pour gérer votre exploitation",
-      "parcelManagement": "Gestion Parcellaire",
-      "parcelDesc": "Gérez vos parcelles avec précision. Suivez les cultures, surfaces et données géospatiales.",
-      "teamManagement": "Gestion des Équipes",
-      "teamDesc": "Employés permanents et journaliers. Présences, salaires et planning optimisés.",
-      "satelliteAnalysis": "Analyse Satellite",
-      "satelliteDesc": "Indices NDVI, NDWI, NDMI pour surveiller la santé des cultures par satellite.",
-      "soilAnalysis": "Analyse du Sol",
-      "soilDesc": "pH, humidité, NPK, matière organique. Analyses en laboratoire et terrain.",
-      "stockManagement": "Gestion des Stocks",
-      "stockDesc": "Intrants, engrais, semences. Alertes de stock bas et gestion des expirations.",
-      "profitability": "Rentabilité Parcellaire",
-      "profitabilityDesc": "Calculez coûts et revenus par parcelle. Optimisez votre rentabilité.",
-      "analytics": "Rapports & Analytics",
-      "analyticsDesc": "Tableaux de bord personnalisables. Exportez vos données et rapports.",
-      "infrastructure": "Gestion Infrastructure",
-      "infrastructureDesc": "Équipements, bâtiments, systèmes d'irrigation. Maintenance et suivi.",
-      "weather": "Météo & Services",
-      "weatherDesc": "Prévisions météo intégrées et services utilitaires pour votre ferme.",
-      "multiOrg": "Multi-Organisation",
-      "multiOrgDesc": "Gérez plusieurs exploitations. Permissions et rôles par organisation.",
-      "secure": "Sécurisé & Conforme",
-      "secureDesc": "Authentification sécurisée, RLS Supabase. Vos données sont protégées.",
-      "realtime": "Temps Réel",
-      "realtimeDesc": "Mises à jour en temps réel avec React Query. Interface réactive."
+    "modules": {
+      "title": "Une suite complète pour chaque aspect de votre exploitation",
+      "subtitle": "Tout ce dont vous avez besoin, dans une seule interface.",
+      "parcels": "Gestion des parcelles",
+      "parcelsDesc": "Cartographiez, suivez vos cultures, gérez multi-sites",
+      "stocks": "Stocks & Intrants",
+      "stocksDesc": "Inventaire temps réel, alertes avant rupture",
+      "hr": "Personnel & Tâches",
+      "hrDesc": "Planifiez, assignez, suivez la progression",
+      "finance": "Finances & Commercial",
+      "financeDesc": "Devis, factures, coûts par parcelle",
+      "accounting": "Comptabilité avancée",
+      "accountingDesc": "Plan comptable, journaux, bilan, fiscalité",
+      "analytics": "Analyses",
+      "analyticsDesc": "Sol, eau, plantes, météo analytique",
+      "marketplace": "Marketplace",
+      "marketplaceDesc": "Achetez intrants, vendez récoltes, connectez partenaires",
+      "ai": "AgromindIA",
+      "aiDesc": "L'IA qui recommande, connecte, optimise",
+      "learnMore": "En savoir plus"
     },
-    "benefits": {
-      "title": "Pourquoi choisir AGROGINA ?",
-      "productivity": "Productivité accrue",
-      "productivityDesc": "Automatisez vos tâches et gagnez du temps sur la gestion quotidienne.",
-      "costReduction": "Réduction des coûts",
-      "costReductionDesc": "Optimisez vos intrants et réduisez le gaspillage grâce aux données.",
-      "betterYields": "Meilleurs rendements",
-      "betterYieldsDesc": "Prenez des décisions basées sur les données pour maximiser vos récoltes.",
-      "sustainable": "Agriculture durable",
-      "sustainableDesc": "Réduisez votre impact environnemental avec une gestion précise."
+    "steps": {
+      "title": "Opérationnel en 3 étapes",
+      "step1Title": "Connectez vos données",
+      "step1Desc": "Importez vos parcelles, stocks, équipes existantes",
+      "step2Title": "Laissez l'IA analyser",
+      "step2Desc": "AgromindIA apprend votre exploitation et génère des recommandations",
+      "step3Title": "Prenez les bonnes décisions",
+      "step3Desc": "Chaque action est connectée, chaque impact est visible"
     },
-    "cta": {
-      "title": "Prêt à moderniser votre agriculture ?",
-      "subtitle": "Rejoignez des équipes agricoles qui optimisent déjà leur exploitation.",
-      "button": "Commencer gratuitement"
+    "why": {
+      "title": "Ce qui nous différencie",
+      "connected": "Tout connecté",
+      "connectedDesc": "Une tâche créée impacte stocks, personnel, coûts automatiquement",
+      "ai": "IA intégrée",
+      "aiDesc": "Pas un gadget, un vrai moteur de décision",
+      "morocco": "Double Expertise",
+      "moroccoDesc": "La seule solution qui lie intimement un événement agronomique à votre rentabilité financière.",
+      "simple": "Simple et accessible",
+      "simpleDesc": "Interface évolutive : mode avancé pour ingénieurs, intermédiaire, ou basique pour une prise en main immédiate."
+    },
+    "regions": {
+      "title": "Régions Agricoles Supportées",
+      "subtitle": "Notre plateforme est disponible pour les terres agricoles dans les pays suivants :"
+    },
+    "pricing": {
+      "title": "Tarification sur mesure",
+      "subtitle": "Chaque exploitation est unique. Contactez-nous pour un devis adapté à vos besoins.",
+      "text": "À partir de votre première parcelle jusqu'à des centaines d'hectares, AGROGINA s'adapte.",
+      "cta": "Demander un devis"
+    },
+    "bp": {
+      "title": "Simulateur Business Plan (FDA)",
+      "subtitle": "Calculez vos aides de l'État marocain en quelques clics.",
+      "desc": "Un outil complet et exclusif pour simuler et générer automatiquement votre business plan pour le Fonds de Développement Agricole. Simple, rapide et conçu pour bloquer les abus.",
+      "feature1": "Gratuit pour les nouveaux inscrits (2 générations maximum)",
+      "feature2": "Cadrage automatique selon les normes DPA/ORMVA",
+      "feature3": "Prêt pour le dépôt officiel",
+      "cta": "Simuler mon projet"
+    },
+    "faq": {
+      "title": "Questions fréquentes",
+      "q1": "AGROGINA fonctionne pour quelle taille d'exploitation ?",
+      "a1": "De 10 à 10 000 hectares, la plateforme s'adapte à votre échelle.",
+      "q2": "Combien de temps pour être opérationnel ?",
+      "a2": "Configuration initiale en quelques jours, accompagnement inclus.",
+      "q3": "Mes données sont-elles sécurisées ?",
+      "a3": "Hébergement sécurisé, sauvegardes automatiques, accès contrôlé.",
+      "q4": "L'IA remplace-t-elle l'agriculteur ?",
+      "a4": "Non. Elle amplifie votre expertise en vous donnant les bonnes informations au bon moment.",
+      "q5": "Puis-je tester avant de m'engager ?",
+      "a5": "Oui, nous proposons une période d'essai gratuite.",
+      "q6": "Comment obtenir un devis ?",
+      "a6": "Remplissez le formulaire de contact, nous vous répondons sous 48h."
+    },
+    "contact": {
+      "title": "Prêt à transformer votre gestion agricole ?",
+      "subtitle": "Demandez une démonstration personnalisée avec notre équipe.",
+      "formName": "Nom complet",
+      "formEmail": "Email professionnel",
+      "formPhone": "Téléphone",
+      "formSize": "Taille d'exploitation",
+      "formSize1": "Moins de 50 ha",
+      "formSize2": "50 à 200 ha",
+      "formSize3": "200 à 500 ha",
+      "formSize4": "Plus de 500 ha",
+      "formMsg": "Message (optionnel)",
+      "formSizePlaceholder": "Choisir la taille",
+      "validationRequired": "Veuillez remplir tous les champs obligatoires.",
+      "submit": "Envoyer la demande"
     },
     "footer": {
-      "tagline": "La plateforme complète pour moderniser votre agriculture.",
+      "tagline": "AGROGINA centralise la gestion de vos parcelles, stocks, équipes, finances, analyses et marketplace.",
       "product": "Produit",
+      "company": "Entreprise",
+      "about": "À propos",
+      "legal": "Légal",
+      "terms": "Mentions légales",
+      "privacy": "Politique de confidentialité",
+      "madeInCredit": "Fait avec amour au Maroc par <codelovers>CodeLovers</codelovers>",
+      "copyright": "Tous droits réservés.",
       "features": "Fonctionnalités",
       "pricing": "Tarifs",
-      "freeTrial": "Essai gratuit",
-      "blog": "Blog",
-      "support": "Support",
-      "documentation": "Documentation",
-      "contact": "Contact",
       "faq": "FAQ",
-      "legal": "Légal",
-      "privacy": "Confidentialité",
-      "terms": "CGU",
-      "legalNotice": "Mentions légales",
-      "copyright": "Tous droits réservés."
-    },
-    "trustedBy": "Ils nous font confiance",
-    "trusted": {
-      "agronomists": "Agronomes",
-      "coops": "Coopératives",
-      "exporters": "Exportateurs",
-      "labs": "Laboratoires"
-    },
-    "nav": {
-      "blog": "Blog"
+      "blog": "Blog",
+      "contact": "Contact"
     },
     "seo": {
       "title": "AGROGINA - La Suite de Gestion Agricole Tout-en-Un | Maroc",
       "description": "AGROGINA révolutionne l'agriculture au Maroc. Une plateforme unique pour piloter production, finance, RH, stocks et commercialisation. Agriculture de précision et gestion d'exploitation simplifiée.",
-      "keywords": "gestion agricole, logiciel agriculture maroc, erp agricole, parcelles, NDVI, analyse satellite, comptabilité agricole, gestion ferme, agriculture de précision, marketplace agricole, contrôle qualité fruit, gestion main d'oeuvre agricole, agrogina, agritech"
-    },
-    "modules": {
-      "title": "Les modules qui orchestrent vos opérations",
-      "subtitle": "Une suite intégrée reliant la planification des parcelles, le travail des équipes, la comptabilité et l'analyse agronomique.",
-      "cta": "Découvrir le module",
-      "parcels": {
-        "title": "Gestion des parcelles",
-        "desc": "Cartographiez vos parcelles, suivez les cultures et reliez-les aux analyses de sol."
-      },
-      "tasks": {
-        "title": "Planification des tâches",
-        "desc": "Assignez vos équipes, mesurez le temps passé et suivez la progression en direct."
-      },
-      "accounting": {
-        "title": "Comptabilité intégrée",
-        "desc": "Automatisez factures, paiements et suivi des coûts par ferme ou parcelle."
-      },
-      "analytics": {
-        "title": "Analyses & services",
-        "desc": "Exploitez les images satellite et commandez vos analyses laboratoire en quelques clics."
-      }
-    },
-    "siam": {
-      "title": "SIAM 2026 • Rencontrez AGROGINA",
-      "description": "Réservez un créneau de démonstration produit sur le stand AGROGINA.",
-      "features": {
-        "demo": "Démonstration en direct de la plateforme.",
-        "focus": "Focus satellite, tâches, stock et comptabilité.",
-        "slots": "Créneaux disponibles depuis le cache local."
-      },
-      "form": {
-        "title": "Demande de rendez-vous",
-        "description": "Nous revenons vers vous rapidement avec confirmation du créneau.",
-        "fullName": "Nom complet",
-        "email": "Email professionnel",
-        "phone": "Téléphone",
-        "submit": "Réserver un RDV SIAM",
-        "success": "Demande enregistrée. Notre équipe vous confirme le créneau RDV sous 24h."
-      }
-    },
-    "blog": {
-      "label": "Blog",
-      "title": "Dernières actualités",
-      "subtitle": "Restez informé des dernières tendances et bonnes pratiques en technologie agricole.",
-      "viewAll": "Voir tous les articles",
-      "readingTime": "min"
-    },
-    "pricing": {
-      "title": "Tarifs simples et transparents",
-      "subtitle": "Choisissez le plan adapté à vos besoins",
-      "mostPopular": "Le plus populaire",
-      "perMonth": "/mois",
-      "perHaYear": "/ha/an HT",
-      "getStarted": "Commencer",
-      "contactUs": "Nous contacter"
-    },
-    "stats": {
-      "farms": "Fermes gérées",
-      "parcels": "Parcelles suivies",
-      "hectares": "Hectares surveillés",
-      "satisfaction": "Satisfaction client"
-    },
-    "testimonials": {
-      "title": "La confiance des agriculteurs marocains",
-      "subtitle": "Découvrez ce que les professionnels de l'agriculture disent d'AGROGINA",
-      "farmer1": {
-        "quote": "AGROGINA a transformé notre exploitation agrumicole de 200 hectares. Nous avons réduit notre consommation d'eau de 30% et amélioré notre conformité qualité à l'export.",
-        "author": "Hassan B.",
-        "role": "Producteur d'agrumes, Souss-Massa"
-      },
-      "coop1": {
-        "quote": "La gestion de plus de 50 fermes membres était un cauchemar auparavant. Nous avons maintenant une visibilité complète sur les coûts, les rendements et la rentabilité de chaque parcelle.",
-        "author": "Fatima Z.",
-        "role": "Directrice, Coopérative oléicole, Meknès"
-      },
-      "exporter1": {
-        "quote": "Les fonctionnalités d'analyse satellite et de suivi qualité nous ont aidés à obtenir la certification GlobalGAP pour toutes nos fermes fournisseurs.",
-        "author": "Karim M.",
-        "role": "Directeur Export, AgriExport Maroc"
-      }
+    "keywords": "gestion agricole, logiciel agriculture maroc, erp agricole, parcelles, NDVI, analyse satellite, comptabilité agricole, gestion ferme, agriculture de précision, marketplace agricole, contrôle qualité fruit, gestion main d'oeuvre agricole, agrogina"
     }
   },
   "suppliers": {
@@ -1311,7 +1421,8 @@
     "editDescription": "Mettre à jour les détails du fournisseur",
     "deleteConfirmTitle": "Confirmer la suppression",
     "deleteConfirmation": "Êtes-vous sûr de vouloir supprimer le fournisseur",
-    "deleteWarning": "Cette action est irréversible."
+    "deleteWarning": "Cette action est irréversible.",
+    "unknownError": "Erreur inconnue"
   },
   "warehouses": {
     "title": "Gestion des Entrepôts",
@@ -1338,6 +1449,8 @@
     "deleteConfirmTitle": "Confirmer la suppression",
     "deleteConfirmation": "Êtes-vous sûr de vouloir supprimer l'entrepôt",
     "deleteWarning": "Cette action est irréversible et supprimera toutes les données de stock associées.",
+    "createDescription": "Créer un entrepôt pour gérer vos stocks de production",
+    "editDescription": "Modifier les informations et paramètres de l'entrepôt",
     "table": {
       "name": "Nom",
       "location": "Emplacement",
@@ -1494,7 +1607,9 @@
       "updated": "Groupe d'articles mis à jour avec succès",
       "deleted": "Groupe d'articles supprimé avec succès",
       "deleteTitle": "Supprimer le Groupe d'Articles",
-      "deleteConfirmation": "Êtes-vous sûr de vouloir supprimer le groupe d'articles \"{{name}}\" ? Cette action ne peut pas être annulée."
+      "deleteConfirmation": "Êtes-vous sûr de vouloir supprimer le groupe d'articles \"{{name}}\" ? Cette action ne peut pas être annulée.",
+      "noGroupsFound": "Aucun groupe d'articles trouvé",
+      "noOrganization": "Aucune organisation sélectionnée"
     },
     "unit": {
       "manage": "Gérer les Unités",
@@ -1539,7 +1654,87 @@
       "fiscalYears": "Années Fiscales",
       "fiscalYearsDescription": "Gérer les années fiscales et les périodes comptables",
       "biologicalAssets": "Actifs Biologiques",
-      "biologicalAssetsDescription": "Gérer les vergers, le bétail et les actifs pérennes"
+      "biologicalAssetsDescription": "Gérer les vergers, le bétail et les actifs pérennes",
+      "costCenters": "Centres de Coûts",
+      "costCentersDescription": "Gérer les centres de coûts pour le suivi des dépenses",
+      "accountMappings": "Correspondance des Comptes",
+      "accountMappingsDescription": "Configurer les correspondances automatiques des écritures comptables",
+      "emailTemplates": "Templates d'emails",
+      "emailTemplatesDescription": "Gérer les templates d'emails de notification",
+      "files": "Gestion des Fichiers",
+      "filesDescription": "Gérer les fichiers et détecter les orphelins",
+      "dangerZone": "Zone de Danger",
+      "dangerZoneDescription": "Gérer les données de démo et actions critiques",
+      "legal": "Mentions Légales",
+      "legalDescription": "CGU et politique de confidentialité",
+      "banners": "Bannières",
+      "bannersDescription": "Annonces dans l'application",
+      "billing": "Facturation & Factures",
+      "billingDescription": "Gérer la facturation et consulter les factures",
+      "changelog": "Journal des modifications",
+      "changelogDescription": "Historique des changements produit",
+      "sections": {
+        "personal": "Personnel",
+        "organization": "Organisation",
+        "accounting": "Comptabilité & Finance",
+        "content": "Contenu & Affichage",
+        "legal": "Légal",
+        "system": "Système"
+      }
+    }
+  },
+  "banners": {
+    "title": "Bannières",
+    "description": "Messages temporaires dans l'application pour votre organisation",
+    "empty": "Aucune bannière. Créez-en une pour informer votre équipe.",
+    "dismissible": "Masquable"
+  },
+  "changelog": {
+    "title": "Journal des modifications",
+    "description": "Historique public des changements produit",
+    "empty": "Aucune entrée. Documentez votre première version."
+  },
+  "emailTemplates": {
+    "title": "Templates d'Emails",
+    "description": "Afficher et personnaliser les templates d'emails de notification",
+    "search": "Rechercher des templates...",
+    "noTemplates": "Aucun template d'email trouvé",
+    "noResults": "Aucun template ne correspond à votre recherche",
+    "selectTemplate": "Sélectionnez un template pour voir les détails",
+    "edit": "Modifier",
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "delete": "Supprimer",
+    "deleted": "Template supprimé",
+    "deleteFailed": "Échec de la suppression du template",
+    "duplicated": "Template dupliqué",
+    "duplicateFailed": "Échec de la duplication du template",
+    "updated": "Template mis à jour",
+    "updateFailed": "Échec de la mise à jour du template",
+    "active": "Actif",
+    "inactive": "Inactif",
+    "system": "Système",
+    "subject": "Sujet",
+    "htmlBody": "Corps HTML",
+    "preview": "Aperçu",
+    "variables": "Variables",
+    "categories": {
+      "all": "Tous",
+      "marketplace": "Marketplace",
+      "invoice": "Factures",
+      "quote": "Devis",
+      "order": "Commandes",
+      "task": "Tâches",
+      "reminder": "Rappels",
+      "general": "Général"
+    }
+  },
+  "account": {
+    "title": "Paramètres du Compte",
+    "tabs": {
+      "profile": "Profil",
+      "preferences": "Préférences",
+      "security": "Sécurité"
     }
   },
   "profile": {
@@ -1549,6 +1744,9 @@
     "success": "Profil sauvegardé avec succès",
     "cancel": "Annuler",
     "changePhoto": "Changer la photo",
+    "uploadPhoto": "Télécharger",
+    "takePhoto": "Prendre une photo",
+    "capture": "Capturer",
     "photoFormats": "Formats acceptés: JPG, PNG (max 2MB)",
     "sections": {
       "personalInfo": "Informations personnelles",
@@ -1614,7 +1812,13 @@
       "uploadError": "Erreur lors du téléversement de la photo. Veuillez réessayer.",
       "removeError": "Erreur lors de la suppression de la photo. Veuillez réessayer."
     },
-    "removePhoto": "Supprimer la photo"
+    "removePhoto": "Supprimer la photo",
+    "toast": {
+      "photoUpdated": "Photo de profil mise à jour",
+      "photoUpdateFailed": "Échec de la mise à jour de la photo",
+      "photoRemoved": "Photo de profil supprimée",
+      "photoRemoveFailed": "Échec de la suppression de la photo"
+    }
   },
   "preferences": {
     "title": "Préférences",
@@ -1709,6 +1913,9 @@
   },
   "organization": {
     "title": "Paramètres de l'Organisation",
+    "pageSubtitle": "Configurez l'identité de votre organisation, les coordonnées et les préférences régionales",
+    "previewMarketplace": "Aperçu marketplace",
+    "previewShort": "Aperçu",
     "save": "Sauvegarder",
     "saving": "Sauvegarde...",
     "success": "Paramètres sauvegardés avec succès",
@@ -1741,7 +1948,7 @@
     "mapProviderMapbox": "Mapbox",
     "mapProviderMapboxDesc": "Imagerie satellite de meilleure qualité. Nécessite un jeton API.",
     "mapProviderDescription": "Sélectionnez la source de tuiles pour les fonds de carte.",
-    "mapProviderTokenWarning": "Mapbox nécessite une variable d'environnement VITE_MAPBOX_TOKEN. La carte utilisera les tuiles par défaut tant qu'elle n'est pas configurée.",
+    "mapProviderTokenWarning": "Les fonds Mapbox nécessitent VITE_MAPBOX_TOKEN et VITE_MAP_PROVIDER=mapbox. Utilisez VITE_MAP_PROVIDER=default pour OSM/Esri uniquement et éviter la consommation de tuiles Mapbox.",
     "placeholders": {
       "name": "Nom de votre organisation",
       "slug": "slug-organisation",
@@ -1773,6 +1980,11 @@
       "notFound": "Organisation non trouvée",
       "loadError": "Erreur lors du chargement des données de l'organisation",
       "saveError": "Erreur lors de la sauvegarde des modifications"
+    },
+    "currency": {
+      "label": "Devise",
+      "placeholder": "Sélectionner une devise",
+      "helper": "La devise sera utilisée pour tous les montants financiers (charges, factures, etc.)"
     }
   },
   "subscription": {
@@ -1814,7 +2026,69 @@
       "mostPopular": "Le plus populaire",
       "currentPlan": "Plan actuel",
       "contactSales": "Contacter les ventes",
-      "getStarted": "Commencer"
+      "getStarted": "Commencer",
+      "upgrade": "Passer au supérieur",
+      "downgrade": "Passer à l'inférieur",
+      "hectares": "Hectares",
+      "hectaresUpTo": "jusqu'à {{max}}",
+      "hectaresAbove": ">{{min}}",
+      "users": "Utilisateurs",
+      "support": "Support",
+      "sla": "SLA",
+      "slaIncluded": "Inclus",
+      "slaNotIncluded": "Non inclus",
+      "pricePerHa": "{{price}} MAD/ha/an (HT)"
+    },
+    "processing": "Traitement en cours...",
+    "contractInputs": "Paramètres du contrat",
+    "contractedHectares": "Hectares contractuels",
+    "billingCycle": "Cycle de facturation",
+    "billingCycles": {
+      "monthly": "Mensuel",
+      "semiannual": "Semestriel",
+      "annual": "Annuel"
+    },
+    "billedCycle": "Facturé {{cycle}}",
+    "currentContract": "Contrat actuel",
+    "usageLimits": "Utilisation et limites",
+    "contractTimeline": "Chronologie du contrat",
+    "timeline": {
+      "start": "Début",
+      "end": "Fin",
+      "renewalNotice": "Préavis de renouvellement",
+      "daysBeforeEnd": "{{days}} jours avant la fin"
+    },
+    "details": {
+      "status": "Statut",
+      "contractedHectares": "Hectares contractuels",
+      "includedUsers": "Utilisateurs inclus",
+      "unlimited": "Illimité",
+      "contractEnd": "Fin du contrat",
+      "nextBilling": "Prochaine facturation"
+    },
+    "billingManagementTitle": "Gestion de la facturation",
+    "billingManagementDescription": "Ouvrez le paiement avec le contexte de votre contrat actuel pour mettre à jour les paramètres de paiement et de facture.",
+    "manageBilling": "Gérer la facturation",
+    "addons": {
+      "title": "Modules complémentaires",
+      "active": "Actif",
+      "buy": "Acheter",
+      "noAddons": "Aucun module complémentaire configuré.",
+      "coreModules": "Modules de base inclus",
+      "perMonth": "{{price}} $/mois"
+    },
+    "modular": {
+      "title": "Choisissez vos modules",
+      "subtitle": "Sélectionnez les modules ERP et les hectares pour votre ferme",
+      "switchToModular": "Passer au modulaire",
+      "changeModules": "Modifier les modules",
+      "activeModules": "Modules actifs",
+      "customPlan": "Plan personnalisé",
+      "modulesLabel": "modules",
+      "moduleCount": "{{count}} modules",
+      "erpMonthly": "ERP/mois",
+      "haAnnual": "Ha/an",
+      "annualHt": "Annuel HT"
     },
     "errors": {
       "noOrganization": "Aucune organisation sélectionnée. Veuillez d'abord sélectionner une organisation.",
@@ -1849,7 +2123,10 @@
       "inactive": "Inactif"
     },
     "actions": {
-      "viewPassword": "Voir le mot de passe"
+      "viewPassword": "Voir le mot de passe",
+      "activate": "Activer l'utilisateur",
+      "deactivate": "Désactiver l'utilisateur",
+      "remove": "Retirer l'utilisateur"
     },
     "invite": {
       "title": "Inviter un utilisateur",
@@ -1925,6 +2202,8 @@
     "used": "Utilisé {{count}} fois",
     "used_plural": "Utilisé {{count}} fois",
     "cancel": "Annuler",
+    "createLabel": "Créer",
+    "updateLabel": "Mettre à jour",
     "create": {
       "success": "Unité de travail créée avec succès",
       "failed": "Échec de la création de l'unité de travail",
@@ -2011,6 +2290,9 @@
       "title": "Aucun modèle pour le moment",
       "description": "Créez votre premier modèle pour personnaliser les en-têtes et pieds de page des documents"
     },
+    "editor": {
+      "preview": "Aperçu"
+    },
     "actions": {
       "preview": "Aperçu",
       "setDefault": "Définir par défaut",
@@ -2027,6 +2309,40 @@
     "setDefault": {
       "success": "Modèle par défaut mis à jour",
       "failed": "Échec de la définition du modèle par défaut"
+    },
+    "preview": {
+      "title": "Aperçu : {{name}}",
+      "loadingTitle": "Aperçu du modèle",
+      "notFound": "Impossible de charger le modèle.",
+      "draftHint": "Vous visualisez des modifications non enregistrées depuis l’éditeur.",
+      "sampleCompany": "Raison sociale",
+      "sampleAddress": "123 rue du Commerce",
+      "sampleCity": "Ville, pays",
+      "sampleEmail": "contact@exemple.com",
+      "sampleInvoiceTitle": "Facture n° INV-2024-001",
+      "sampleQuoteTitle": "Devis n° QUO-2024-001",
+      "sampleSalesOrderTitle": "Commande de vente n° SO-2024-001",
+      "samplePurchaseOrderTitle": "Bon de commande n° PO-2024-001",
+      "sampleReportTitle": "Titre du rapport",
+      "sampleGeneralTitle": "Titre du document",
+      "sampleDate": "Date : {{date}}",
+      "sampleCustomer": "Nom du client",
+      "sampleCustomerStreet": "456 avenue Client",
+      "sampleCustomerCity": "Ville, pays",
+      "colDescription": "Description",
+      "colQty": "Qté",
+      "colUnitPrice": "Prix unitaire",
+      "colAmount": "Montant",
+      "line1": "Produit exemple A",
+      "line2": "Produit exemple B",
+      "total": "Total",
+      "reportSample1": "Cet exemple illustre le rendu d’un rapport avec vos marges et typographie.",
+      "reportSample2": "Le texte et les chiffres définitifs viendront des rapports générés.",
+      "generalSample": "Cet exemple illustre la mise en page générale de vos documents.",
+      "footerContactLine": "Adresse · Téléphone · E-mail (exemple)",
+      "pageOf": "Page 1 sur 3",
+      "contentHeight": "Hauteur utile du contenu : {{mm}} mm",
+      "note": "Contenu d’exemple uniquement. Les documents générés utiliseront les données réelles."
     }
   },
   "network": {
@@ -2422,6 +2738,21 @@
       "title": "Clients",
       "subtitle": "Gérez vos clients pour les factures de vente",
       "searchPlaceholder": "Rechercher par nom, email ou téléphone...",
+      "viewMode": {
+        "card": "Vue cartes",
+        "list": "Vue liste"
+      },
+      "noSearchResults": "Aucun client ne correspond à votre recherche.",
+      "table": {
+        "name": "Nom",
+        "code": "Code",
+        "type": "Type",
+        "contact": "Contact",
+        "email": "Email",
+        "phone": "Téléphone",
+        "location": "Localisation",
+        "actions": "Actions"
+      },
       "fields": {
         "name": "Nom du client",
         "code": "Code client",
@@ -2877,14 +3208,14 @@
   },
   "authPages": {
     "login": {
-      "title": "Connectez-vous à Agritech",
+        "title": "Connectez-vous à AgroGina",
       "subtitle": "Bon retour",
       "emailLabel": "Adresse email",
       "passwordLabel": "Mot de passe",
       "passwordPlaceholder": "Entrez votre mot de passe"
     },
     "register": {
-      "title": "Créez votre compte Agritech",
+      "title": "Créez votre compte AgroGina",
       "subtitle": "Démarrez en quelques minutes",
       "organizationLabel": "Nom de l'organisation",
       "organizationPlaceholder": "Coopérative Agricole Verte",
@@ -3062,6 +3393,11 @@
     "deleteParcel": "Supprimer la parcelle",
     "deleteConfirm": "Êtes-vous sûr de vouloir supprimer la parcelle \"{{name}}\" ?",
     "deleteError": "Erreur lors de la suppression de la parcelle",
+    "archiveParcel": "Archiver la parcelle",
+    "archiveConfirmMsg": "Archiver cette parcelle ? Les données historiques seront conservées.",
+    "archiveSuccess": "Parcelle archivée avec succès",
+    "archiveError": "Erreur lors de l'archivage",
+    "restoreParcel": "Restaurer la parcelle",
     "updateError": "Erreur lors de la mise à jour de la parcelle",
     "form": {
       "name": "Nom",
@@ -3099,7 +3435,8 @@
     "detail": {
       "tabs": {
         "overview": "Vue d'ensemble",
-        "soil": "Analyse Sol",
+        "agromind": "Agromind IA",
+        "soil": "Analyses",
         "satellite": "Satellite",
         "weather": "Météo",
         "production": "Production",
@@ -3109,6 +3446,7 @@
       "loading": "Chargement des détails de la parcelle...",
       "notFound": "Parcelle non trouvée",
       "backToParcels": "Retour aux Parcelles",
+      "tabsNavAria": "Sections de la parcelle",
       "breadcrumbs": {
         "farm": "Ferme",
         "parcels": "Parcelles"
@@ -3254,7 +3592,9 @@
       "list": "Gestion du Personnel",
       "payments": "Paiements",
       "paymentsShort": "Paie",
-      "calculator": "Calculateur Métayage"
+      "calculator": "Calculateur Métayage",
+      "productionSharing": "Partage de Production",
+      "productionSharingShort": "Partage"
     },
     "list": {
       "title": "Gestion du Personnel",
@@ -3316,7 +3656,10 @@
     },
     "confirmations": {
       "deactivate": "Êtes-vous sûr de vouloir désactiver ce travailleur?",
-      "delete": "Êtes-vous sûr de vouloir supprimer définitivement ce travailleur? Cette action est irréversible."
+      "delete": "Êtes-vous sûr de vouloir supprimer définitivement ce travailleur? Cette action est irréversible.",
+      "duplicateTitle": "Un travailleur avec ce nom existe déjà",
+      "duplicateQuestion": "Voulez-vous quand même créer ce travailleur ? (Il peut s'agir de deux personnes différentes.)",
+      "duplicateContinue": "Continuer quand même"
     },
     "workerTypes": {
       "fixed_salary": "Salarié fixe",
@@ -3486,6 +3829,33 @@
         "fillAllRequired": "Veuillez remplir tous les champs obligatoires",
         "settlementSaved": "Règlement enregistré avec succès",
         "saveError": "Erreur lors de l'enregistrement"
+      }
+    },
+    "productionSharing": {
+      "addHint": "Ajoutez un travailleur de type \"Métayage\" pour commencer le suivi",
+      "summary": {
+        "grossRevenue": "Revenu brut total",
+        "totalCharges": "Charges totales",
+        "workerShares": "Parts travailleurs",
+        "ownerShare": "Part propriétaire"
+      },
+      "pending": "en attente",
+      "paid": "payés",
+      "settlements": "règlements",
+      "workerTotal": "Total pour",
+      "noSettlements": "Aucun règlement enregistré. Utilisez le calculateur pour créer un règlement.",
+      "statusPaid": "Payé",
+      "statusPending": "En attente",
+      "statusCancelled": "Annulé",
+      "table": {
+        "period": "Période",
+        "grossRevenue": "Revenu brut",
+        "charges": "Charges",
+        "basis": "Base",
+        "percentage": "%",
+        "workerShare": "Part travailleur",
+        "verification": "Vérification",
+        "status": "Statut"
       }
     },
     "configuration": {
@@ -3847,6 +4217,35 @@
         "quality": "Qualité",
         "destination": "Destination",
         "status": "Statut"
+      },
+      "viewMode": {
+        "card": "Vue cartes",
+        "table": "Vue tableau"
+      },
+      "table": {
+        "date": "Date",
+        "crop": "Culture",
+        "parcel": "Parcelle",
+        "quantity": "Quantité",
+        "quality": "Qualité",
+        "status": "Statut",
+        "destination": "Destination",
+        "revenue": "Revenu",
+        "actions": "Actions"
+      },
+      "actions": {
+        "viewDetails": "Voir les détails",
+        "createReception": "Créer un lot de réception"
+      },
+      "unspecifiedCrop": "Culture non spécifiée",
+      "estimated": "estimé",
+      "destination": "Destination",
+      "intendedFor": {
+        "market": "Marché",
+        "storage": "Stockage",
+        "processing": "Transformation",
+        "export": "Export",
+        "direct_client": "Client direct"
       }
     },
     "intelligence": {
@@ -3886,6 +4285,63 @@
       "note": {
         "label": "Note",
         "message": "Les données de qualité peuvent déjà être enregistrées dans le formulaire de lot de réception. Cette page dédiée fournira des workflows et des analyses de contrôle qualité avancés."
+      },
+      "list": {
+        "title": "Inspections Qualité",
+        "subtitle": "{{count}} inspections",
+        "subtitleEmpty": "Aucune inspection",
+        "loading": "Chargement des inspections...",
+        "search": "Rechercher des inspections...",
+        "stats": {
+          "total": "Total Inspections",
+          "avgScore": "Score Moyen",
+          "completed": "Terminées",
+          "inProgress": "En Cours"
+        },
+        "filters": {
+          "allTypes": "Tous les Types",
+          "allStatuses": "Tous les Statuts",
+          "type": {
+            "preHarvest": "Pré-Récolte",
+            "postHarvest": "Post-Récolte",
+            "storage": "Stockage",
+            "transport": "Transport",
+            "processing": "Transformation"
+          },
+          "status": {
+            "scheduled": "Planifiée",
+            "inProgress": "En Cours",
+            "completed": "Terminée",
+            "failed": "Échouée",
+            "cancelled": "Annulée"
+          }
+        },
+        "table": {
+          "type": "Type",
+          "date": "Date",
+          "parcel": "Parcelle / Ferme",
+          "score": "Score",
+          "status": "Statut",
+          "actions": "Actions"
+        },
+        "actions": {
+          "delete": "Supprimer"
+        },
+        "confirm": {
+          "deleteTitle": "Supprimer l'Inspection",
+          "deleteDescription": "Cette action est irréversible. Êtes-vous sûr de vouloir supprimer cette inspection qualité ?",
+          "cancel": "Annuler",
+          "deleteAction": "Supprimer"
+        },
+        "empty": {
+          "title": "Aucune inspection",
+          "description": "Les inspections qualité apparaîtront ici une fois créées",
+          "searchTitle": "Aucun résultat",
+          "searchDescription": "Essayez de modifier votre recherche"
+        },
+        "mobile": {
+          "empty": "Aucune inspection"
+        }
       }
     },
     "satelliteAnalysis": {
@@ -3967,6 +4423,10 @@
       "statsPending": "En attente",
       "statsTotalAmount": "Montant total",
       "statsWorkers": "Travailleurs"
+    },
+    "errors": {
+      "farmsFetchFailed": "Échec du chargement des fermes",
+      "farmsFetchHint": "Veuillez réessayer ou contacter l'administrateur"
     }
   },
   "tasks": {
@@ -3975,7 +4435,18 @@
     "loading": "Chargement...",
     "list": "Liste",
     "calendar": "Calendrier",
+    "kanban": "Tableau",
     "navigation": "Navigation des tâches",
+    "kanbanTitle": "Tableau des Tâches",
+    "kanbanSubtitle": "Glissez les tâches entre les colonnes pour mettre à jour leur statut",
+    "kanbanEmpty": "Aucune tâche",
+    "kanbanError": "Échec du chargement des tâches.",
+    "kanbanDueOverdue": "En retard",
+    "kanbanDueToday": "Aujourd'hui",
+    "kanbanDueTomorrow": "Demain",
+    "kanbanRecurring": "Récurrent : {{frequency}}",
+    "kanbanSubtask": "Fait partie d'une série récurrente",
+    "kanbanSaving": "Enregistrement...",
     "stats": {
       "pending": "En attente",
       "inProgress": "En cours",
@@ -4058,7 +4529,193 @@
         "empty": "Aucun mois trouvé",
         "search": "Rechercher un mois..."
       }
+    },
+    "form": {
+      "editTitle": "Modifier la tâche",
+      "createTitle": "Nouvelle tâche",
+      "titleLabel": "Titre *",
+      "titlePlaceholder": "Ex: Taille des arbres fruitiers",
+      "taskTypeLabel": "Type de tâche *",
+      "taskTypePlaceholder": "Sélectionner type",
+      "priorityLabel": "Priorité *",
+      "priorityPlaceholder": "Sélectionner priorité",
+      "priorities": {
+        "low": "Basse",
+        "medium": "Moyenne",
+        "high": "Haute",
+        "urgent": "Urgente"
+      },
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "Détails de la tâche...",
+      "farmLabel": "Ferme *",
+      "farmPlaceholder": "Sélectionnez une ferme",
+      "parcelLabel": "Parcelle",
+      "parcelPlaceholder": "Sélectionner parcelle",
+      "parcelPlaceholderNoFarm": "Sélectionnez d'abord une ferme",
+      "parcelNone": "Aucune",
+      "parcelCropInfo": "Culture: {{crop}}",
+      "parcelCropUndefined": "Non définie",
+      "parcelVarietyInfo": "Variété: {{variety}}",
+      "parcelTreeCount": "{{count}} arbres",
+      "parcelRequiredForHarvest": "Sélectionnez une parcelle pour les tâches de récolte",
+      "assignedToLabel": "Assigné à (travailleurs)",
+      "selectedCount": "{{count}} sélectionné(s)",
+      "noWorkersNoFarm": "Aucun travailleur disponible. Sélectionnez une ferme pour filtrer les travailleurs.",
+      "noWorkersForFarm": "Aucun travailleur trouvé pour cette ferme",
+      "workerTypes": {
+        "fixedSalary": "Salarié fixe",
+        "dailyWorker": "Journalier",
+        "metayage": "Métayer"
+      },
+      "multiWorkerHint": "Vous pouvez sélectionner plusieurs travailleurs pour cette tâche",
+      "startDateLabel": "Date début *",
+      "dueDateLabel": "Date limite *",
+      "durationLabel": "Durée (heures)",
+      "paymentSection": "Paiement et Unités de Travail",
+      "fixedSalarySelected": "Salariés fixes sélectionnés - paiement optionnel",
+      "fixedSalaryNote": "<strong>Note:</strong> Les travailleurs à salaire fixe sont déjà rémunérés mensuellement. Le paiement pour cette tâche est optionnel (bonus/prime pour travail exceptionnel).",
+      "paymentTypeLabel": "Type de paiement",
+      "paymentTypeOptional": "(optionnel)",
+      "paymentTypePlaceholder": "Sélectionner",
+      "paymentTypes": {
+        "none": "Aucun (inclus dans le salaire)",
+        "daily": "Par jour",
+        "perUnit": "À l'unité (Pièce-travail)",
+        "monthly": "Mensuel",
+        "metayage": "Métayage"
+      },
+      "workUnitLabel": "Unité de travail *",
+      "workUnitPlaceholder": "Sélectionner...",
+      "workUnitNone": "Aucune",
+      "unitsEstimatedLabel": "Unités estimées",
+      "unitsEstimatedPlaceholder": "Ex: 100 (optionnel)",
+      "unitsEstimatedHint": "Les unités réelles seront enregistrées à la fin de la tâche",
+      "ratePerUnitLabel": "Tarif par unité (MAD)",
+      "ratePerUnitPlaceholder": "Ex: 5.00 (optionnel)",
+      "estimatedTotal": "Total estimé: {{amount}} MAD",
+      "enableStockAccess": "Utiliser des produits du stock",
+      "enableStockAccessHint": "Cochez si cette tâche nécessite des produits du stock (ex: caisses de récolte, produits d'entretien...).",
+      "productsSection": "Produits à utiliser (Stock)",
+      "addProduct": "Ajouter produit",
+      "noProductsAvailable": "Aucun produit disponible en stock. Ajoutez des produits dans Stock > Réceptions.",
+      "productsHint": "Ajoutez les produits qui seront utilisés pour cette tâche. Le stock sera automatiquement déduit à la complétion.",
+      "productLabel": "Produit",
+      "productPlaceholder": "Sélectionner un produit",
+      "productSelectDefault": "-- Sélectionner --",
+      "quantityLabel": "Quantité",
+      "exceedsStock": "Dépasse le stock ({{available}})",
+      "stockDeductionNote": "<strong>Note :</strong> Le stock sera automatiquement déduit lorsque la tâche sera marquée comme complétée.",
+      "notesLabel": "Notes",
+      "notesPlaceholder": "Notes additionnelles...",
+      "cancel": "Annuler",
+      "saving": "Enregistrement...",
+      "save": "Enregistrer",
+      "validation": {
+        "titleRequired": "Le titre est requis",
+        "taskTypeRequired": "Le type de tâche est requis",
+        "priorityRequired": "La priorité est requise",
+        "farmRequired": "La ferme est requise",
+        "startDateRequired": "La date de début est requise",
+        "dueDateRequired": "La date limite est requise",
+        "dueDateAfterStart": "La date limite doit être après la date de début",
+        "parcelRequiredForHarvest": "La parcelle est requise pour les tâches de récolte"
+      }
+    },
+    "checklist": {
+      "check": "Cocher l'élément",
+      "uncheck": "Décocher l'élément",
+      "removeItem": "Supprimer l'élément"
     }
+  },
+  "dangerZone": {
+    "title": "Zone de Danger",
+    "subtitle": "Actions irréversibles sur les données de votre organisation",
+    "adminOnly": "Seuls les administrateurs peuvent accéder à cette section.",
+    "stats": {
+      "title": "Statistiques des Données",
+      "totalRecords": "Enregistrements au total",
+      "farms": "Fermes",
+      "parcels": "Parcelles",
+      "workers": "Travailleurs",
+      "tasks": "Tâches",
+      "harvest_records": "Récoltes",
+      "reception_batches": "Lots de réception",
+      "warehouses": "Entrepôts",
+      "items": "Articles",
+      "item_groups": "Groupes d'articles",
+      "customers": "Clients",
+      "suppliers": "Fournisseurs",
+      "quotes": "Devis",
+      "sales_orders": "Bons de commande",
+      "purchase_orders": "Bons d'achat",
+      "invoices": "Factures",
+      "payments": "Paiements",
+      "journal_entries": "Écritures comptables",
+      "utilities": "Charges fixes",
+      "costs": "Coûts",
+      "revenues": "Revenus",
+      "structures": "Infrastructures",
+      "cost_centers": "Centres de coût",
+      "stock_entries": "Mouvements de stock",
+      "crop_templates": "Modèles de culture",
+      "stock_movements": "Mouvements de stock détaillés",
+      "inventory_batches": "Lots d'inventaire",
+      "payment_advances": "Avances sur salaire",
+      "metayage_settlements": "Règlements métayage",
+      "biological_asset_valuations": "Valorisations actifs bio.",
+      "pest_disease_reports": "Signalements ravageurs",
+      "calibrations": "Calibrations IA"
+    },
+    "exportImport": {
+      "title": "Exporter / Importer les Données",
+      "description": "Sauvegardez toutes vos données dans un fichier JSON ou restaurez-les à partir d'une sauvegarde précédente.",
+      "exportTitle": "Exporter",
+      "exportDescription": "Téléchargez toutes les données de votre organisation dans un fichier JSON.",
+      "exportButton": "Exporter les Données",
+      "exportSuccess": "Exportation réussie !",
+      "exportError": "Erreur lors de l'exportation",
+      "importTitle": "Importer",
+      "importDescription": "Restaurez vos données à partir d'un fichier JSON exporté précédemment.",
+      "importSelectFile": "Sélectionner un Fichier",
+      "importConfirmTitle": "Confirmer l'importation",
+      "importFile": "Fichier :",
+      "importExportDate": "Date d'export :",
+      "importWarning": "<strong>Attention :</strong> L'importation ajoutera les données au contenu existant. Les identifiants seront régénérés et les relations préservées.",
+      "importConfirmButton": "Confirmer l'Importation",
+      "importSuccess": "Importation réussie ! {{count}} enregistrements importés.",
+      "importError": "Une erreur s'est produite lors de l'importation.",
+      "invalidJsonFile": "Fichier JSON invalide"
+    },
+    "demoData": {
+      "title": "Données de Démonstration",
+      "description": "Générez des données de démonstration pour explorer les fonctionnalités de la plateforme. Cela créera des fermes, parcelles, travailleurs, tâches, récoltes, factures et plus encore.",
+      "generateButton": "Générer les Données de Démo",
+      "confirmGenerate": "Êtes-vous sûr de vouloir générer les données de démonstration ?",
+      "existingDataNote": "Note : Vous avez déjà {{count}} enregistrements. Les nouvelles données seront ajoutées.",
+      "generateSuccess": "Données de démonstration générées avec succès !"
+    },
+    "deleteDemoOnly": {
+      "title": "Supprimer les Données de Démo Uniquement",
+      "description": "Supprime uniquement les données générées par la démonstration, tout en conservant vos données personnelles.",
+      "button": "Supprimer les Données de Démo",
+      "confirmMessage": "Confirmez la suppression des données de démonstration uniquement.",
+      "success": "Les données de démonstration ont été supprimées.",
+      "successCount": "Données de démonstration supprimées. Total supprimé : {{count}} enregistrements.",
+      "error": "Une erreur s'est produite lors de la suppression des données de démo."
+    },
+    "deleteAll": {
+      "title": "Supprimer Toutes les Données",
+      "warning": "<strong>Attention !</strong> Cette action supprimera définitivement toutes les données de votre organisation, incluant les fermes, parcelles, travailleurs, tâches, récoltes, factures et toutes les autres données. Cette action est <strong>irréversible</strong>.",
+      "noData": "Aucune donnée à supprimer. Votre organisation est vide.",
+      "button": "Supprimer Toutes les Données",
+      "confirmPrompt": "Pour confirmer, tapez le nom de votre organisation : <strong>{{name}}</strong>",
+      "confirmPlaceholder": "Tapez le nom de l'organisation",
+      "confirmButton": "Supprimer Définitivement",
+      "success": "Toutes les données ont été supprimées. Total supprimé : {{count}} enregistrements.",
+      "error": "Une erreur s'est produite lors de la suppression des données."
+    },
+    "confirm": "Confirmer",
+    "cancel": "Annuler"
   },
   "tour": {
     "buttons": {
@@ -4072,304 +4729,296 @@
     },
     "welcome": {
       "step1": {
-        "title": "Bienvenue sur AgriTech! 🌾",
-        "content": "Découvrez comment gérer efficacement votre exploitation agricole. Cette visite guidée vous présentera les principales fonctionnalités de la plateforme."
+        "title": "Bienvenue sur AgroGina ! 🌾",
+        "content": "Votre plateforme complète de gestion agricole. Cette visite rapide vous montre les zones principales — ça prend moins d'une minute."
       },
       "step2": {
-        "title": "Navigation principale",
-        "content": "Utilisez ce menu pour accéder à toutes les sections de l'application : fermes, parcelles, tâches, stock, comptabilité et plus encore."
+        "title": "Navigation",
+        "content": "Tout est organisé dans cette barre latérale : votre terrain, votre équipe, votre production et vos finances. On va parcourir chaque couche."
       },
       "step3": {
-        "title": "Changement d'organisation",
-        "content": "Si vous gérez plusieurs exploitations, vous pouvez facilement basculer entre elles ici."
+        "title": "Votre Organisation",
+        "content": "Basculez entre organisations si vous gérez plusieurs fermes ou coopératives. Toutes les données sont isolées par organisation."
       },
       "step4": {
-        "title": "Votre profil",
-        "content": "Accédez à vos paramètres, préférences et options de déconnexion depuis ce menu."
+        "title": "Votre Compte",
+        "content": "Accédez à votre profil, préférences, langue et déconnexion depuis ici."
       }
     },
     "fullApp": {
       "step1": {
-        "title": "Tour complet de l'application 🌾",
-        "content": "Découvrez toutes les fonctionnalités d'AgriTech en une visite guidée complète. Nous allons parcourir chaque module de la plateforme."
+        "title": "La Visite Complète 🌾",
+        "content": "AgroGina suit le flux naturel de votre ferme : Définir le terrain → Le travailler → Cultiver & surveiller → Vendre & comptabiliser. Voyons comment chaque module s'intègre."
       },
       "step2": {
-        "title": "1. Navigation principale",
-        "content": "Le menu latéral vous donne accès à tous les modules. Explorons ensemble chaque section de votre exploitation agricole."
+        "title": "Votre Organisation",
+        "content": "Tout commence ici. Basculez entre fermes ou coopératives — chacune a ses propres données, équipe et paramètres."
       },
       "step3": {
-        "title": "2. Multi-organisation",
-        "content": "AgriTech est multi-tenant. Gérez plusieurs exploitations agricoles depuis un seul compte et basculez facilement entre elles."
+        "title": "Tableau de bord — Votre Centre de Commande",
+        "content": "Métriques clés en un coup d'œil : santé des parcelles, tâches urgentes et stats de production. C'est ici que vous commencez votre journée."
       },
       "step4": {
-        "title": "3. Tableau de bord",
-        "content": "Votre centre de commande. Visualisez les statistiques clés, les tâches urgentes et l'état de santé de vos cultures en un coup d'œil."
+        "title": "🌍 Couche 1 : Fermes",
+        "content": "Commencez par définir vos fermes. Une ferme regroupe parcelles, travailleurs et équipements. C'est votre unité d'organisation."
       },
       "step5": {
-        "title": "4. Gestion des fermes",
-        "content": "Organisez vos exploitations en fermes et sous-fermes. Chaque ferme peut contenir plusieurs parcelles avec leurs propres cultures."
+        "title": "🌍 Couche 1 : Parcelles",
+        "content": "Chaque ferme contient des parcelles — les vrais plots de terrain. Définissez leurs limites, type de sol, irrigation et culture actuelle. Les parcelles sont au cœur de tout."
       },
       "step6": {
-        "title": "5. Parcelles",
-        "content": "Définissez vos parcelles avec leurs limites géographiques, types de sol, systèmes d'irrigation et cultures."
+        "title": "🌍 Couche 1 : Infrastructure",
+        "content": "Puits, bassins, stations de pompage, hangars — enregistrez vos actifs physiques. Ils se connectent aux parcelles et apparaissent dans les plannings de maintenance."
       },
       "step7": {
-        "title": "6. Inventaire",
-        "content": "Suivez votre stock d'intrants : semences, engrais, produits phytosanitaires, équipements. Recevez des alertes de stock bas."
+        "title": "👥 Couche 2 : Personnel",
+        "content": "Votre équipe : permanents, journaliers, gérants. Assignez des tâches, suivez les heures, calculez la paie. Les tâches relient les personnes aux parcelles."
       },
       "step8": {
-        "title": "7. Infrastructures",
-        "content": "Gérez vos bâtiments, puits, bassins, stations de pompage et autres équipements."
+        "title": "📦 Couche 2 : Stock",
+        "content": "Semences, engrais, produits phytosanitaires, équipement. Suivez les niveaux, recevez des alertes de stock bas et enregistrez chaque mouvement."
       },
       "step9": {
-        "title": "8. Personnel",
-        "content": "Gérez votre équipe : ouvriers, tâches assignées. Suivez leurs heures et calculez leurs salaires."
+        "title": "🌱 Couche 3 : Production",
+        "content": "Campagnes, cycles de culture, récoltes, contrôle qualité. C'est ici que parcelles + tâches + intrants se transforment en données de production."
       },
       "step10": {
-        "title": "9. Production",
-        "content": "Suivez vos campagnes, cycles de culture, récoltes et contrôle qualité. Traçabilité complète de la production."
+        "title": "✅ Couche 3 : Conformité",
+        "content": "Certifications (GlobalGAP, Bio, etc.), audits et actions correctives. Vos données de traçabilité alimentent automatiquement les rapports de conformité."
       },
       "step11": {
-        "title": "10. Ventes & Achats",
-        "content": "Créez des devis, bons de commande et gérez vos transactions commerciales."
+        "title": "💰 Couche 4 : Ventes & Achats",
+        "content": "Créez des devis, convertissez en commandes, gérez fournisseurs et clients. Le côté commercial de votre exploitation."
       },
       "step12": {
-        "title": "11. Comptabilité",
-        "content": "Comptabilité en partie double adaptée à l'agriculture. Plan comptable, journaux, factures et rapports financiers."
+        "title": "📊 Couche 4 : Comptabilité",
+        "content": "Factures, paiements, écritures, plan comptable — comptabilité en partie double adaptée à l'agriculture. Connectée aux ventes et à la production."
       },
       "step13": {
-        "title": "12. Rapports",
-        "content": "Générez des rapports détaillés : production, rentabilité, main d'œuvre. Exportez en PDF ou Excel."
+        "title": "🤖 AgromindIA — Votre Assistant IA",
+        "content": "Le cerveau d'AgroGina. Posez des questions sur votre ferme en langage naturel. Il voit vos stocks, tâches, météo et coûts pour donner des conseils actionnables."
       },
       "step14": {
-        "title": "13. Configuration",
-        "content": "Gérez vos clients, fournisseurs, entrepôts et accédez aux paramètres de l'application."
+        "title": "📈 Rapports & Analyses",
+        "content": "Rapports de production, rentabilité par parcelle, coûts de main d'œuvre, états financiers. Export PDF ou Excel."
       },
       "step15": {
-        "title": "14. Votre profil",
-        "content": "Accédez à vos paramètres personnels, préférences et options de déconnexion."
+        "title": "Paramètres & Profil",
+        "content": "Configurez votre organisation, gérez les accès de l'équipe, activez/désactivez les modules et définissez vos préférences."
       },
       "step16": {
-        "title": "Prêt à commencer! 🚀",
-        "content": "Vous avez maintenant une vue d'ensemble de toutes les fonctionnalités. Cliquez sur le bouton d'aide (?) en bas à droite pour revoir cette visite ou accéder aux guides de chaque module."
+        "title": "Vous êtes prêt ! 🚀",
+        "content": "Commencez par Fermes → Parcelles → Tâches — c'est le flux principal. Cliquez sur le bouton d'aide (?) à tout moment pour relancer une visite."
       }
     },
     "dashboard": {
       "step1": {
-        "title": "Statistiques clés",
-        "content": "Visualisez en un coup d'œil les métriques importantes de votre exploitation : superficie, récoltes, revenus et tâches en cours."
+        "title": "Métriques Clés",
+        "content": "Vos stats de ferme en un coup d'œil — superficie totale, parcelles actives, récoltes et revenus. Mis à jour en temps réel."
       },
       "step2": {
-        "title": "Tâches récentes",
-        "content": "Suivez les tâches urgentes et leur progression directement depuis le tableau de bord."
+        "title": "Santé des Parcelles",
+        "content": "Vue rapide de vos parcelles et leur état actuel. Cliquez pour voir l'analyse satellite, les tâches et la rentabilité."
       },
       "step3": {
-        "title": "Météo",
-        "content": "Consultez les prévisions météo pour planifier vos activités agricoles."
-      },
-      "step4": {
-        "title": "Aperçu des parcelles",
-        "content": "Visualisez l'état de santé de vos cultures grâce aux indices satellite."
+        "title": "Tâches à Venir",
+        "content": "Les tâches qui nécessitent votre attention aujourd'hui. Chaque tâche est liée à une parcelle, un travailleur et des intrants — le cœur des opérations quotidiennes."
       }
     },
     "farmManagement": {
       "step1": {
-        "title": "Vos fermes",
-        "content": "Gérez toutes vos exploitations agricoles depuis cette vue. Chaque ferme peut contenir plusieurs parcelles."
+        "title": "Aperçu des Fermes",
+        "content": "Vos fermes en un coup d'œil — nombre total, superficie combinée et options d'import/export. Les fermes sont le niveau supérieur de votre hiérarchie."
       },
       "step2": {
-        "title": "Ajouter une ferme",
-        "content": "Cliquez ici pour créer une nouvelle ferme et définir ses caractéristiques : nom, localisation, superficie, type de sol, etc."
+        "title": "Créer une Ferme",
+        "content": "Ajoutez une nouvelle ferme pour commencer. Vous y ajouterez ensuite des parcelles, assignerez des travailleurs et commencerez le suivi de production."
       },
       "step3": {
-        "title": "Vue cartographique",
-        "content": "Visualisez vos fermes et parcelles sur la carte. Vous pouvez dessiner les limites de vos parcelles directement sur la carte."
+        "title": "Vos Fermes",
+        "content": "Chaque carte est une ferme avec ses parcelles et sous-fermes. Cliquez pour voir les détails, gérer les parcelles ou assigner un responsable."
       }
     },
     "parcels": {
       "step1": {
-        "title": "Liste des parcelles",
-        "content": "Toutes vos parcelles sont affichées ici avec leurs cultures actuelles, superficies et états de santé."
+        "title": "Vos Parcelles",
+        "content": "Chaque parcelle représente un plot de terrain avec sa culture, superficie et état de santé. C'est là que production, tâches et données satellite se rencontrent."
       },
       "step2": {
-        "title": "Filtres",
-        "content": "Filtrez vos parcelles par culture, ferme ou état pour trouver rapidement ce que vous cherchez."
+        "title": "Filtrer & Chercher",
+        "content": "Filtrez par ferme, type de culture ou statut pour vous concentrer sur l'essentiel. Utile quand vous gérez des dizaines de parcelles."
       },
       "step3": {
-        "title": "Actions rapides",
-        "content": "Accédez rapidement aux analyses satellite, à la météo, aux tâches et à la rentabilité de chaque parcelle."
+        "title": "Actions Parcelle",
+        "content": "Pour chaque parcelle : imagerie satellite, météo, tâches ou analyse de rentabilité. Tout est à un clic."
       }
     },
     "tasks": {
       "step1": {
-        "title": "Gestion des tâches",
-        "content": "Planifiez et suivez toutes les tâches agricoles : irrigation, fertilisation, récolte, traitements, etc."
+        "title": "Liste des Tâches",
+        "content": "Toutes les tâches agricoles : irrigation, fertilisation, récolte, traitements. Chaque tâche est liée à une parcelle et peut être assignée à un travailleur."
       },
       "step2": {
-        "title": "Vue calendrier",
-        "content": "Visualisez vos tâches sur un calendrier pour mieux planifier vos activités."
+        "title": "Vue Calendrier",
+        "content": "Passez en vue calendrier pour planifier votre semaine. Visualisez la répartition des tâches et évitez les conflits de personnel."
       },
       "step3": {
-        "title": "Créer une tâche",
-        "content": "Créez de nouvelles tâches, assignez-les à des ouvriers et définissez des priorités et des échéances."
+        "title": "Créer une Tâche",
+        "content": "Nouvelle tâche : choisissez une parcelle, assignez un travailleur, définissez la priorité. Les tâches avec intrants déduisent automatiquement du stock."
       }
     },
     "workers": {
       "step1": {
-        "title": "Gestion des ouvriers",
-        "content": "Gérez votre équipe : ouvriers permanents, journaliers, et métayers. Suivez leurs paiements et performances."
+        "title": "Votre Équipe",
+        "content": "Tous les travailleurs — permanents, journaliers et métayers. Voyez leurs tâches assignées, disponibilité et historique de paiement."
       },
       "step2": {
         "title": "Paiements",
-        "content": "Calculez automatiquement les salaires basés sur le temps travaillé, les tâches effectuées ou le travail à la pièce."
+        "content": "Calculez la paie selon les heures travaillées, tâches accomplies ou travail à la pièce. Les paiements s'enregistrent automatiquement en comptabilité."
       },
       "step3": {
-        "title": "Ajouter un ouvrier",
-        "content": "Enregistrez de nouveaux membres de votre équipe avec leurs informations et modalités de paiement."
+        "title": "Ajouter un Travailleur",
+        "content": "Enregistrez un nouveau membre avec son rôle, coordonnées et conditions de paie. Il apparaîtra immédiatement dans les menus d'assignation."
       }
     },
     "inventory": {
       "step1": {
-        "title": "Aperçu du stock",
-        "content": "Visualisez l'état de votre inventaire : produits en stock, niveaux bas, et valeur totale."
+        "title": "Aperçu du Stock",
+        "content": "Votre tableau de bord stock : valeur totale, alertes de stock bas et mouvements récents. Le stock est consommé à la complétion des tâches."
       },
       "step2": {
-        "title": "Catalogue d'articles",
-        "content": "Gérez votre catalogue de produits : intrants, engrais, semences, équipements, etc."
+        "title": "Catalogue d'Articles",
+        "content": "Tous vos produits : semences, engrais, phytosanitaires, équipement. Chaque article suit la quantité actuelle, seuil minimum et coût."
       },
       "step3": {
         "title": "Entrepôts",
-        "content": "Organisez votre stock par entrepôt et suivez les mouvements entre sites."
+        "content": "Organisez le stock par emplacement. Transférez entre entrepôts et suivez ce qui est stocké où."
       },
       "step4": {
-        "title": "Mouvements de stock",
-        "content": "Enregistrez les entrées, sorties et transferts de stock avec traçabilité complète."
+        "title": "Mouvements de Stock",
+        "content": "Chaque entrée et sortie est enregistrée : livraisons fournisseurs, consommation terrain, transferts. Traçabilité complète pour la conformité."
       }
     },
     "accounting": {
       "step1": {
-        "title": "Comptabilité",
-        "content": "Gérez toute votre comptabilité agricole : factures, paiements, journaux et rapports financiers."
+        "title": "Centre Comptable",
+        "content": "Votre vue d'ensemble financière : factures en cours, paiements récents et activité du journal. Tout connecté à vos ventes et production."
       },
       "step2": {
         "title": "Factures",
-        "content": "Créez et gérez vos factures clients et fournisseurs. Suivez les paiements et les créances."
+        "content": "Factures clients et fournisseurs. Créées depuis les commandes ou manuellement. Suivez les paiements et envoyez des relances."
       },
       "step3": {
-        "title": "Journal comptable",
-        "content": "Enregistrez vos écritures comptables en partie double selon le plan comptable agricole."
+        "title": "Écritures Comptables",
+        "content": "Comptabilité en partie double avec le plan comptable agricole marocain. Les paiements et mouvements de stock génèrent des écritures automatiquement."
       },
       "step4": {
-        "title": "Rapports financiers",
-        "content": "Générez des rapports : bilan, compte de résultat, balance des comptes, et analyses de rentabilité."
+        "title": "Rapports Financiers",
+        "content": "Bilan, compte de résultat, balance, analyse de rentabilité. Exportez pour votre comptable ou pour les banques."
       }
     },
     "satellite": {
       "step1": {
-        "title": "Analyse satellite",
-        "content": "Visualisez la santé de vos cultures grâce aux images satellite. Les indices NDVI, NDWI et autres vous aident à détecter les problèmes."
+        "title": "Imagerie Satellite",
+        "content": "Voyez vos parcelles depuis l'espace. Le NDVI montre la vigueur des cultures, le NDWI le stress hydrique. Détectez les problèmes avant qu'ils ne soient visibles."
       },
       "step2": {
-        "title": "Indices de végétation",
-        "content": "Comparez différents indices pour comprendre l'état de vos cultures : stress hydrique, vigueur végétative, etc."
+        "title": "Indices de Végétation",
+        "content": "Comparez différents indices côte à côte. Chacun raconte une histoire différente — santé végétative, humidité, concentration en chlorophylle."
       },
       "step3": {
-        "title": "Historique",
-        "content": "Naviguez dans le temps pour voir l'évolution de vos parcelles et détecter les tendances."
+        "title": "Voyage dans le Temps",
+        "content": "Naviguez dans l'historique d'images pour voir l'évolution de vos parcelles. Repérez les tendances et validez les effets des traitements."
       }
     },
     "reports": {
       "step1": {
-        "title": "Rapports",
-        "content": "Accédez à tous vos rapports : production, finances, main d'œuvre, et analyses de rentabilité."
+        "title": "Centre de Rapports",
+        "content": "Tous vos rapports en un seul endroit : production, finances, main d'œuvre et rentabilité. Chaque rapport tire des données en temps réel de tous les modules."
       },
       "step2": {
         "title": "Export",
-        "content": "Exportez vos rapports en PDF ou Excel pour les partager ou les archiver."
+        "content": "Téléchargez en PDF ou Excel. Partagez avec votre équipe, votre banque ou votre auditeur de certification."
       },
       "step3": {
-        "title": "Filtres et périodes",
-        "content": "Personnalisez vos rapports en filtrant par période, ferme, parcelle ou type de culture."
+        "title": "Filtres & Périodes",
+        "content": "Personnalisez par plage de dates, ferme, parcelle ou culture. Comparez cette saison à la précédente pour mesurer les progrès."
       }
     },
     "harvests": {
       "step1": {
-        "title": "Statistiques de récolte",
-        "content": "Visualisez le résumé de vos récoltes : quantités totales, valeur estimée, répartition par culture."
+        "title": "Tableau de Bord Récoltes",
+        "content": "Quantités totales, revenus estimés et répartition par culture. C'est le résultat de toute votre chaîne de production."
       },
       "step2": {
-        "title": "Liste des récoltes",
-        "content": "Toutes vos récoltes sont listées ici avec la date, parcelle, culture, quantité et qualité."
+        "title": "Historique des Récoltes",
+        "content": "Chaque enregistrement est lié à une parcelle avec quantité, grade de qualité et date. Les données qualité alimentent les rapports de conformité."
       },
       "step3": {
-        "title": "Nouvelle récolte",
-        "content": "Enregistrez une nouvelle récolte en spécifiant la parcelle, la quantité récoltée et la qualité du produit."
+        "title": "Enregistrer une Récolte",
+        "content": "Saisissez une récolte : sélectionnez la parcelle, entrez quantité et qualité. Cela met à jour vos stats et peut déclencher une commande de vente."
       },
       "step4": {
-        "title": "Filtres",
-        "content": "Filtrez vos récoltes par période, ferme, culture ou statut pour retrouver rapidement les informations."
+        "title": "Filtrer & Analyser",
+        "content": "Filtrez par période, culture ou ferme pour comparer les rendements. Quelles parcelles sont les plus performantes ? Quelles cultures les plus rentables ?"
       }
     },
     "infrastructure": {
       "step1": {
-        "title": "Vos infrastructures",
-        "content": "Gérez tous vos bâtiments et équipements : puits, bassins, stations de pompage, hangars, bureaux."
+        "title": "Votre Infrastructure",
+        "content": "Puits, bassins, stations de pompage, hangars, bureaux. Chaque actif est lié à une ferme et peut avoir des plannings de maintenance."
       },
       "step2": {
-        "title": "Ajouter une infrastructure",
-        "content": "Créez de nouvelles infrastructures avec leur type, localisation, capacité et date de mise en service."
-      },
-      "step3": {
-        "title": "Maintenance",
-        "content": "Planifiez et suivez la maintenance de vos équipements pour éviter les pannes et optimiser leur durée de vie."
+        "title": "Ajouter une Infrastructure",
+        "content": "Enregistrez un nouvel actif : type, localisation, capacité et date de mise en service. Les rappels de maintenance gardent vos équipements opérationnels."
       }
     },
     "billing": {
       "step1": {
-        "title": "Aperçu facturation",
-        "content": "Visualisez le résumé de votre facturation : devis en cours, commandes à livrer, factures à encaisser."
+        "title": "Aperçu Facturation",
+        "content": "Devis en attente, commandes à livrer, factures à encaisser. Le pipeline commercial qui transforme votre production en revenus."
       },
       "step2": {
         "title": "Devis",
-        "content": "Créez des devis professionnels pour vos clients. Suivez leur statut : envoyé, accepté, converti en commande."
+        "content": "Créez des devis professionnels pour vos acheteurs. Une fois acceptés, convertissez-les en commande en un clic."
       },
       "step3": {
-        "title": "Bons de commande",
-        "content": "Gérez vos commandes clients et fournisseurs. Suivez les livraisons et les réceptions."
+        "title": "Commandes",
+        "content": "Commandes de vente et d'achat. Suivez livraisons et réceptions. Les commandes génèrent des factures et mettent à jour la comptabilité."
       },
       "step4": {
         "title": "Factures",
-        "content": "Émettez des factures et suivez les paiements. Gérez les relances et les créances clients."
+        "content": "Émettez des factures et suivez les paiements. Les factures en retard apparaissent sur votre tableau de bord avec des relances automatiques."
       },
       "step5": {
-        "title": "Clients et fournisseurs",
-        "content": "Gérez votre carnet d'adresses : clients, fournisseurs, transporteurs avec leurs coordonnées et historique."
+        "title": "Contacts",
+        "content": "Vos clients, fournisseurs et transporteurs. Historique des contacts et des transactions en un seul endroit."
       }
     },
     "settings": {
       "step1": {
-        "title": "Paramètres",
-        "content": "Accédez à tous les paramètres de votre organisation depuis ce menu."
+        "title": "Menu Paramètres",
+        "content": "Toutes les options de configuration organisées par catégorie. Commencez par Organisation pour configurer les détails de votre ferme."
       },
       "step2": {
         "title": "Organisation",
-        "content": "Configurez les informations de votre exploitation : nom, adresse, logo, devise et année fiscale."
+        "content": "L'identité de votre ferme : nom, adresse, logo, devise et exercice fiscal. Ces infos apparaissent sur les factures et rapports."
       },
       "step3": {
-        "title": "Utilisateurs",
-        "content": "Gérez les membres de votre équipe, leurs rôles et permissions d'accès à la plateforme."
+        "title": "Membres de l'Équipe",
+        "content": "Invitez des membres et assignez des rôles : admin, responsable de ferme, agronome, travailleur ou observateur. Chaque rôle voit des fonctionnalités différentes."
       },
       "step4": {
         "title": "Abonnement",
-        "content": "Consultez votre formule actuelle, les fonctionnalités incluses et passez à un plan supérieur si besoin."
+        "content": "Votre plan actuel et ses fonctionnalités. Évoluez pour débloquer plus de parcelles, l'analyse satellite ou les recommandations IA avancées."
       },
       "step5": {
         "title": "Modules",
-        "content": "Activez ou désactivez les modules selon vos besoins : comptabilité, satellite, métayage, etc."
+        "content": "Activez uniquement ce dont vous avez besoin : comptabilité, satellite, conformité, arboriculture. Les modules désactivés disparaissent de la barre latérale."
       },
       "step6": {
-        "title": "Préférences",
-        "content": "Personnalisez votre expérience : langue, thème, format de date, notifications."
+        "title": "Votre Profil",
+        "content": "Préférences personnelles : langue (français, anglais, arabe), thème, notifications. Vos paramètres vous suivent sur tous vos appareils."
       }
     }
   },
@@ -4788,7 +5437,11 @@
     "dataRange": "Données du {{startDate}} au {{endDate}}",
     "location": "Localisation",
     "forecast": {
-      "title": "Prévisions Météo sur 15 jours"
+      "title": "Prévisions météo sur 16 jours",
+      "empty": "Aucune prévision à court terme pour le moment.",
+      "precip": "Précip.",
+      "wind": "Vent",
+      "humidity": "Humidité"
     },
     "summary": {
       "avgTemperature": "Température Moyenne",
@@ -4801,14 +5454,30 @@
       "temperatureAnalysis": "Analyse des Températures",
       "precipitationAnalysis": "Analyse des Précipitations",
       "dryWetConditions": "Conditions Sèches & Humides",
-      "insightsRecommendations": "Analyses et Recommandations"
+      "insightsRecommendations": "Analyses et Recommandations",
+      "evapotranspiration": "Évapotranspiration (ET₀)"
     },
     "insights": {
       "comparison": "Les données sont comparées aux normales climatiques à long terme (LTN) pour identifier les écarts significatifs par rapport aux conditions habituelles.",
       "wetDay": "Un jour humide est défini comme un jour avec plus de 1mm de précipitations. Les périodes sèches sont analysées pour optimiser la gestion de l'irrigation.",
       "drought": "Les conditions de sécheresse (5 jours consécutifs avec moins de 5mm) nécessitent une attention particulière pour la gestion hydrique des cultures."
     },
-    "noData": "Sélectionnez une période pour afficher les analyses météorologiques"
+    "noData": "Sélectionnez une période pour afficher les analyses météorologiques",
+    "et": {
+      "whatIsET": "Qu'est-ce que l'Évapotranspiration (ET) ?",
+      "description": "L'évapotranspiration (ET) est la perte totale d'eau du sol vers l'atmosphère, combinant l'évaporation (eau se transformant en vapeur depuis le sol, les plans d'eau ou les surfaces humides) et la transpiration (eau libérée par les plantes à travers leurs feuilles). L'ET₀ (ET de référence) est essentielle pour la planification de l'irrigation.",
+      "noData": "Aucune donnée d'évapotranspiration disponible",
+      "totalET": "ET₀ Totale",
+      "avgDaily": "ET₀ Moy. Journalière",
+      "maxDaily": "ET₀ Max Journalière",
+      "minDaily": "ET₀ Min Journalière",
+      "dailyChart": "Évapotranspiration de Référence Journalière (ET₀)",
+      "dailyET0": "ET₀ Journalière",
+      "movingAvg": "Moy. Mobile 7 jours",
+      "monthlyChart": "Évapotranspiration Mensuelle (ET₀)",
+      "monthlyTotal": "ET₀ Totale Mensuelle (mm)",
+      "irrigationInsight": "L'ET₀ représente la demande en eau de l'atmosphère. Multipliez l'ET₀ par le coefficient cultural (Kc) pour estimer les besoins en eau réels de la culture (ETc = ET₀ × Kc). Des valeurs d'ET₀ plus élevées indiquent des besoins en irrigation plus importants."
+    }
   },
   "satellite": {
     "loading": "Chargement de l'analyse satellite...",
@@ -4938,6 +5607,39 @@
         "save": "Enregistrer la Récolte",
         "update": "Mettre à jour"
       }
+    },
+    "unspecifiedCrop": "Culture non spécifiée",
+    "estimated": "estimé",
+    "destination": "Destination",
+    "intendedFor": {
+      "market": "Marché local",
+      "storage": "Stockage",
+      "processing": "Transformation",
+      "export": "Export",
+      "direct_client": "Client direct"
+    },
+    "stats": {
+      "totalHarvests": "Total Récoltes",
+      "totalQuantity": "Quantité Totale",
+      "estimatedRevenue": "Revenu Estimé",
+      "avgPerHarvest": "Moy. par récolte"
+    },
+    "details": {
+      "title": "Détails de la Récolte",
+      "crop": "Culture",
+      "parcel": "Parcelle",
+      "date": "Date",
+      "quality": "Qualité",
+      "score": "Note",
+      "estimated": "estimé",
+      "storage": "Stockage",
+      "destination": "Destination",
+      "notes": "Notes",
+      "unspecifiedCrop": "Non spécifié"
+    },
+    "actions": {
+      "viewDetails": "Voir les détails",
+      "createReception": "Créer lot de réception"
     }
   },
   "utilities": {
@@ -5154,10 +5856,62 @@
       "flood": "Submersion",
       "furrow": "Rigole",
       "none": "Aucune (Bour)"
+    },
+    "waterSources": {
+      "well": "Puits",
+      "dam": "Barrage",
+      "canal": "Séguia",
+      "municipal": "Réseau AEP",
+      "mixed": "Mixte",
+      "other": "Autre"
+    },
+    "irrigationFrequencies": {
+      "daily": "Quotidien",
+      "2_3_per_week": "2-3 fois/semaine",
+      "weekly": "1 fois/semaine",
+      "biweekly": "1 fois/15 jours",
+      "monthly": "1 fois/mois",
+      "other": "Autre"
+    },
+    "harvestRegularity": {
+      "stable": "Stable",
+      "marked_alternance": "Alternance marquée",
+      "very_irregular": "Très irrégulière"
+    },
+    "pruningTypes": {
+      "formation": "Formation",
+      "production": "Production",
+      "rejuvenation": "Rajeunissement",
+      "sanitary": "Sanitaire",
+      "mixed": "Mixte"
+    },
+    "pruningIntensities": {
+      "light": "Légère (<15%)",
+      "medium": "Moyenne (15-25%)",
+      "heavy": "Sévère (>25%)"
+    },
+    "fertilizationStatus": {
+      "yes": "Oui",
+      "no": "Non",
+      "partial": "Partielle"
+    },
+    "fertilizationTypes": {
+      "organic": "Organique",
+      "mineral": "Minérale",
+      "both": "Mixte",
+      "unknown": "Inconnu"
     }
   },
   "moduleView": {
     "moduleNotFound": "Module non trouvé",
+    "moduleNotFoundDesc": "Le module \"{{name}}\" n'existe pas ou n'est pas actif.",
+    "moduleNotFoundSuggestion": "Vouliez-vous dire :",
+    "availableModules": "Modules disponibles",
+    "searchModules": "Rechercher un module...",
+    "noModulesMatch": "Aucun module ne correspond à votre recherche.",
+    "goToDashboard": "Retour au Tableau de bord",
+    "allCategories": "Tous",
+    "moduleNotFoundHint": "Appuyez sur Échap pour revenir au tableau de bord",
     "fruitTrees": "Arbres Fruitiers",
     "noParcelsFound": "Aucune parcelle trouvée",
     "noParcelsDescription": "Aucune parcelle n'a été trouvée pour cette ferme. Créez d'abord des parcelles dans la section Parcelles.",
@@ -5178,6 +5932,7 @@
     "parcelCounter": "{{current}} sur {{total}} parcelles",
     "maximizeModule": "Maximisez votre module",
     "assignDescription": "Assignez des parcelles à ce module pour obtenir des données et recommandations spécifiques.",
+    "selectFarmHint": "Sélectionnez une ferme dans l'en-tête pour charger les parcelles et les données de ce module.",
     "errors": {
       "noFarmSelected": "Aucune ferme sélectionnée",
       "noOrgSelected": "Aucune organisation sélectionnée",
@@ -5335,14 +6090,36 @@
       "title": "Assistant IA",
       "subtitle": "Posez des questions sur votre ferme, vos travailleurs, votre comptabilité et plus encore",
       "placeholder": "Demandez des informations sur votre ferme, vos travailleurs, votre comptabilité, votre stock...",
-      "welcome": "Bonjour! Je suis votre assistant AgriTech. Comment puis-je vous aider aujourd'hui?",
+      "welcome": "Bonjour! Je suis votre assistant AgroGina. Comment puis-je vous aider aujourd'hui?",
       "listening": "Écoute...",
       "voiceNotSupported": "La saisie vocale n'est pas prise en charge dans ce navigateur",
       "clear": "Effacer",
       "send": "Envoyer",
+      "imageUpload": "Téléverser une image",
+      "imageRemove": "Retirer l'image",
+      "analyzingImage": "Analyse de l'image...",
       "error": "Erreur lors de l'envoi du message",
-      "retry": "Réessayer"
+      "retry": "Réessayer",
+      "suggestions": {
+        "overview": "Vue d'ensemble de la ferme",
+        "lowStock": "Alertes de stock bas",
+        "weather": "Prévisions météo",
+        "financial": "Résumé financier",
+        "tasks": "Tâches des travailleurs aujourd'hui",
+        "harvests": "Récoltes à venir"
+      }
     }
+  },
+  "calibrationZones": {
+    "A": "Forte vigueur",
+    "B": "Bonne vigueur",
+    "C": "Moyenne",
+    "D": "Zone de vigilance",
+    "E": "Zone de stress",
+    "spatialHomogeneity": "Homogénéité spatiale",
+    "zoneDistribution": "Distribution des zones",
+    "comingSoon": "L'analyse zonale nécessite des rasters satellite par pixel.",
+    "comingSoonSub": "Bientôt disponible — un résumé au niveau parcelle est utilisé pour l'instant."
   },
   "emptyState": {
     "noData": "Aucune donnée disponible",
@@ -5369,6 +6146,436 @@
       "creatingOrg": "Création de l'organisation...",
       "activatingTrial": "Activation de l'essai...",
       "complete": "Terminé!"
+    }
+  },
+  "modulesSettings": {
+    "title": "Modules",
+    "subtitle": "Activez ou désactivez les modules selon vos besoins. Les modules désactivés n'apparaîtront pas dans la navigation.",
+    "loading": "Chargement des modules...",
+    "error": "Erreur lors du chargement des modules. Veuillez réessayer.",
+    "currentPlan": "Plan actuel : {{plan}}",
+    "allModulesAvailable": "Tous les modules sont disponibles",
+    "modulesAvailable": "{{count}} modules disponibles",
+    "viewSubscription": "Voir l'abonnement",
+    "activeCount": "{{active}}/{{total}} actifs",
+    "noModulesInCategory": "Aucun module disponible dans cette catégorie.",
+    "upgrade": "Mettre à niveau →",
+    "upgradePrompt": "Ce module n'est pas disponible dans votre plan actuel. Voulez-vous voir les options de mise à niveau ?",
+    "configurationOf": "Configuration de {{name}}",
+    "noSettings": "Aucun paramètre spécifique disponible pour ce module",
+    "treeManagement": "Gestion des types d'arbres",
+    "farmManagementSettings": "Paramètres de Gestion de Ferme",
+    "generalSettings": "Paramètres généraux",
+    "pruningNotifications": "Notifications de taille",
+    "diseaseAlerts": "Alertes de maladies",
+    "harvestForecasts": "Prévisions de récolte",
+    "sections": {
+      "agriculture": "Agriculture",
+      "agricultureDesc": "Modules de production agricole",
+      "elevage": "Élevage",
+      "elevageDesc": "Modules d'élevage et de gestion animale",
+      "functional": "Modules fonctionnels",
+      "functionalDesc": "Gestion, comptabilité, stock, RH, analytique..."
+    },
+    "categories": {
+      "core": "Module Core",
+      "production": "Production",
+      "operations": "Opérations",
+      "hr": "Ressources Humaines",
+      "inventory": "Inventaire & Stock",
+      "sales": "Ventes",
+      "purchasing": "Approvisionnement",
+      "accounting": "Comptabilité",
+      "analytics": "Analytique"
+    },
+    "activityModules": {
+      "arbres_fruitiers": "Arbres fruitiers",
+      "aeroponie": "Aéroponie",
+      "hydroponie": "Hydroponie",
+      "maraichage": "Maraîchage",
+      "myciculture": "Myciculture",
+      "pisciculture": "Pisciculture",
+      "bovin": "Bovin",
+      "ovin": "Ovin",
+      "camelin": "Camelin",
+      "caprin": "Caprin",
+      "aviculture": "Aviculture",
+      "couveuses": "Couveuses"
+    },
+    "activityDescriptions": {
+      "arbres_fruitiers": "Pommiers, agrumes, grenadiers, avocatiers...",
+      "aeroponie": "Culture aéroponique sans sol",
+      "hydroponie": "Culture hydroponique en milieu aqueux",
+      "maraichage": "Cultures légumières et maraîchères",
+      "myciculture": "Culture de champignons",
+      "pisciculture": "Élevage de poissons",
+      "bovin": "Élevage de bovins",
+      "ovin": "Élevage de moutons",
+      "camelin": "Élevage de camelins",
+      "caprin": "Élevage de caprins",
+      "aviculture": "Élevage de volailles",
+      "couveuses": "Poussins, poulet de chair, poules pondeuses"
+    }
+  },
+  "costCenters": {
+    "title": "Centres de Coûts",
+    "description": "Gérez les centres de coûts pour le suivi des dépenses et l'analyse de rentabilité.",
+    "addNew": "Ajouter un Centre de Coûts",
+    "searchPlaceholder": "Rechercher par code ou nom...",
+    "filterStatus": "Filtrer par statut",
+    "allStatus": "Tous les Statuts",
+    "activeOnly": "Actifs Uniquement",
+    "inactiveOnly": "Inactifs Uniquement",
+    "listTitle": "Liste des Centres de Coûts",
+    "listDescription": "Total : {{count}} centres de coûts",
+    "loading": "Chargement des centres de coûts...",
+    "noSearchResults": "Aucun centre de coûts trouvé correspondant à votre recherche.",
+    "empty": "Aucun centre de coûts. Créez le premier pour commencer.",
+    "noPermission": "Vous n'avez pas la permission de gérer les centres de coûts.",
+    "active": "Actif",
+    "inactive": "Inactif",
+    "activate": "Activer",
+    "deactivate": "Désactiver",
+    "activated": "Centre de coûts activé",
+    "deactivated": "Centre de coûts désactivé",
+    "toggleFailed": "Échec de la mise à jour du statut du centre de coûts",
+    "table": {
+      "code": "Code",
+      "name": "Nom",
+      "parent": "Parent",
+      "location": "Emplacement",
+      "status": "Statut",
+      "actions": "Actions"
+    },
+    "create": {
+      "title": "Créer un Centre de Coûts",
+      "description": "Ajoutez un nouveau centre de coûts pour le suivi des dépenses.",
+      "success": "Centre de coûts créé avec succès",
+      "failed": "Échec de la création du centre de coûts"
+    },
+    "edit": {
+      "title": "Modifier le Centre de Coûts",
+      "description": "Mettez à jour les détails du centre de coûts.",
+      "success": "Centre de coûts mis à jour avec succès",
+      "failed": "Échec de la mise à jour du centre de coûts"
+    },
+    "update": {
+      "success": "Centre de coûts mis à jour avec succès",
+      "failed": "Échec de la mise à jour du centre de coûts"
+    },
+    "delete": {
+      "title": "Supprimer le Centre de Coûts",
+      "description": "Êtes-vous sûr de vouloir supprimer \"{{name}}\" ? Cette action est irréversible. Si ce centre de coûts a des écritures comptables associées, la suppression échouera.",
+      "success": "Centre de coûts supprimé avec succès",
+      "failed": "Échec de la suppression du centre de coûts. Il peut avoir des écritures comptables associées."
+    },
+    "form": {
+      "code": "Code",
+      "codePlaceholder": "ex. CC001",
+      "name": "Nom",
+      "namePlaceholder": "ex. Opérations Champ Nord",
+      "description": "Description",
+      "descriptionPlaceholder": "Brève description de ce centre de coûts...",
+      "parent": "Centre de Coûts Parent",
+      "parentPlaceholder": "Sélectionner un parent (facultatif)",
+      "noParent": "Aucun parent (niveau supérieur)",
+      "parentHelp": "Organisez les centres de coûts hiérarchiquement pour les rapports consolidés.",
+      "farm": "Ferme",
+      "farmPlaceholder": "Sélectionner une ferme (facultatif)",
+      "noFarm": "Aucune ferme",
+      "farmHelp": "Liez ce centre de coûts à une ferme spécifique pour le suivi.",
+      "parcel": "Parcelle",
+      "parcelPlaceholder": "Sélectionner une parcelle (facultatif)",
+      "noParcel": "Aucune parcelle",
+      "parcelHelp": "Précisez davantage vers une parcelle spécifique pour un suivi granulaire.",
+      "active": "Actif",
+      "activeHelp": "Les centres de coûts inactifs ne peuvent pas être utilisés dans de nouvelles transactions.",
+      "update": "Mettre à jour",
+      "create": "Créer"
+    },
+    "accountMappings": {
+      "title": "Correspondances de comptes",
+      "description": "Configurez comment les événements métier correspondent aux comptes du grand livre pour la création automatique d'écritures.",
+      "noPermission": "Vous n'avez pas la permission de gérer les correspondances de comptes.",
+      "initializeDefaults": "Initialiser les valeurs par défaut",
+      "addNew": "Ajouter une correspondance",
+      "infoTitle": "Comment fonctionnent les correspondances de comptes",
+      "infoDescription": "Les correspondances de comptes relient les événements métier (comme l'achèvement de tâches ou la vente de récoltes) à des comptes du grand livre spécifiques. Lorsqu'une tâche est terminée ou qu'une récolte est vendue, le système crée automatiquement des écritures comptables à l'aide de ces correspondances.",
+      "searchPlaceholder": "Rechercher par clé ou compte...",
+      "filterType": "Filtrer par type",
+      "filterStatus": "Statut",
+      "allTypes": "Tous les types",
+      "allStatus": "Tous les statuts",
+      "activeOnly": "Actif",
+      "inactiveOnly": "Inactif",
+      "loading": "Chargement des correspondances de comptes...",
+      "noSearchResults": "Aucune correspondance trouvée pour vos filtres.",
+      "empty": "Aucune correspondance de comptes configurée. Cliquez sur « Initialiser les valeurs par défaut » pour configurer les correspondances standard, ou ajoutez-les manuellement.",
+      "typeCount": "{{count}} correspondances",
+      "active": "Actif",
+      "inactive": "Inactif",
+      "activate": "Activer",
+      "deactivate": "Désactiver",
+      "activated": "Correspondance de compte activée",
+      "deactivated": "Correspondance de compte désactivée",
+      "toggleFailed": "Échec de la mise à jour du statut de la correspondance",
+      "table": {
+        "key": "Clé",
+        "account": "Compte",
+        "description": "Description",
+        "status": "Statut",
+        "actions": "Actions"
+      },
+      "create": {
+        "title": "Créer une correspondance de compte",
+        "description": "Associer un événement métier à un compte du grand livre.",
+        "success": "Correspondance de compte créée avec succès",
+        "failed": "Échec de la création de la correspondance de compte"
+      },
+      "edit": {
+        "title": "Modifier la correspondance de compte",
+        "description": "Mettre à jour les détails de la correspondance de compte.",
+        "success": "Correspondance de compte mise à jour avec succès",
+        "failed": "Échec de la mise à jour de la correspondance de compte"
+      },
+      "update": {
+        "success": "Correspondance de compte mise à jour avec succès",
+        "failed": "Échec de la mise à jour de la correspondance de compte"
+      },
+      "delete": {
+        "title": "Supprimer la correspondance de compte",
+        "description": "Êtes-vous sûr de vouloir supprimer la correspondance pour « {{key}} » ? Cela n'affectera pas les écritures existantes, mais les nouvelles écritures automatiques échoueront sans cette correspondance.",
+        "success": "Correspondance de compte supprimée avec succès",
+        "failed": "Échec de la suppression de la correspondance de compte"
+      },
+      "initialize": {
+        "success": "{{count}} correspondances par défaut initialisées",
+        "failed": "Échec de l'initialisation des correspondances par défaut"
+      },
+      "form": {
+        "type": "Type de correspondance",
+        "typePlaceholder": "Sélectionner le type de correspondance",
+        "key": "Clé de correspondance",
+        "keyPlaceholder": "Sélectionner la clé de correspondance",
+        "account": "Compte du grand livre",
+        "accountPlaceholder": "Sélectionner un compte",
+        "description": "Description",
+        "descriptionPlaceholder": "Description facultative...",
+        "active": "Actif",
+        "activeHelp": "Les correspondances inactives sont ignorées lors de la création des écritures.",
+        "update": "Mettre à jour",
+        "create": "Créer"
+      },
+      "labels": {
+        "cost_type": "Type de coût",
+        "revenue_type": "Type de revenu",
+        "harvest_sale": "Vente de récolte",
+        "cash": "Caisse/Banque",
+        "planting": "Plantation",
+        "harvesting": "Récolte",
+        "irrigation": "Irrigation",
+        "fertilization": "Fertilisation",
+        "pesticide": "Application de pesticides",
+        "pruning": "Taille",
+        "maintenance": "Entretien",
+        "transport": "Transport",
+        "labor": "Main-d'œuvre",
+        "materials": "Matériaux",
+        "utilities": "Services publics",
+        "other": "Autre",
+        "product_sales": "Ventes de produits",
+        "service_income": "Revenus de services",
+        "other_income": "Autres revenus",
+        "market": "Vente au marché",
+        "export": "Vente à l'export",
+        "wholesale": "Vente en gros",
+        "direct": "Vente directe",
+        "processing": "Transformation",
+        "bank": "Compte bancaire",
+        "petty_cash": "Petite caisse"
+      }
+    }
+  },
+  "siamRdv": {
+    "hero": {
+      "badge": "SIAM 2026 · Meknes",
+      "title": "Reservez votre rendez-vous avec AGROGINA",
+      "subtitle": "Decouvrez comment notre plateforme AgroGina transforme la gestion de vos exploitations. Demonstration personnalisee sur notre stand."
+    },
+    "sections": {
+      "info": "Vos informations",
+      "farm": "Votre exploitation",
+      "slot": "Choisissez votre creneau"
+    },
+    "form": {
+      "namePlaceholder": "Nom complet *",
+      "companyPlaceholder": "Entreprise / Exploitation",
+      "phonePlaceholder": "Telephone *",
+      "emailPlaceholder": "Email",
+      "surface": "Surface cultivee",
+      "region": "Region",
+      "other": "Autre",
+      "otherCulturePlaceholder": "Precisez votre culture",
+      "submit": "Confirmer ma demande de rendez-vous",
+      "submitting": "Envoi en cours..."
+    },
+    "surface": {
+      "lt50": "Moins de 50 ha",
+      "s50_150": "50 - 150 ha",
+      "s150_300": "150 - 300 ha",
+      "s300_600": "300 - 600 ha",
+      "gt600": "Plus de 600 ha"
+    },
+    "validation": {
+      "nameMin": "Veuillez renseigner votre nom complet",
+      "phoneRequired": "Veuillez renseigner un numero de telephone valide",
+      "emailInvalid": "Veuillez renseigner un email valide",
+      "slotRequired": "Veuillez choisir un creneau",
+      "phoneInvalid": "Numéro de téléphone invalide"
+    },
+    "success": {
+      "title": "Demande envoyee !",
+      "message": "Bonjour {{name}}, votre demande pour le creneau {{slot}} a bien ete recue.",
+      "fallbackName": "a vous",
+      "subtext": "Notre equipe vous contacte dans les 24h."
+    },
+    "error": {
+      "submitFailed": "Impossible d'envoyer votre demande. Veuillez reessayer."
+    },
+    "crops": {
+      "olive": "Olivier",
+      "citrus": "Agrumes",
+      "avocado": "Avocat",
+      "datePalm": "Palmier dattier",
+      "cereals": "Céréales",
+      "vegetables": "Maraîchage"
+    },
+    "regions": {
+      "meknesFes": "Meknès-Fès",
+      "soussMassa": "Souss-Massa",
+      "marrakechSafi": "Marrakech-Safi",
+      "beniMellal": "Béni Mellal-Khénifra",
+      "rabatSale": "Rabat-Salé",
+      "tangerTetouan": "Tanger-Tétouan",
+      "oriental": "Oriental",
+      "other": "Autre"
+    }
+  },
+  "retry": "Réessayer",
+  "close": "Fermer",
+  "edit": "Modifier",
+  "clearSearch": "Effacer la recherche",
+  "resetFilters": "Réinitialiser les filtres",
+  "viewAll": "Voir tout",
+  "gridView": "Vue grille",
+  "listView": "Vue liste",
+  "dragHandle": "Glisser pour réorganiser",
+  "toggleSatellite": "Basculer vue satellite",
+  "fullscreen": "Plein écran",
+  "exitFullscreen": "Quitter le plein écran",
+  "crops": {
+    "pageTitle": "Cultures",
+    "description": "Gérez vos cultures et suivez leur croissance.",
+    "addCrop": "Ajouter une culture",
+    "noCrops": "Aucune culture",
+    "noCropsDescription": "Commencez par ajouter votre première culture.",
+    "farm": "Ferme",
+    "parcel": "Parcelle",
+    "area": "Surface",
+    "plantingDate": "Plantation",
+    "expectedHarvest": "Récolte prévue"
+  },
+  "bankAccounts": {
+    "pageTitle": "Comptes bancaires",
+    "description": "Gérez les comptes bancaires de votre organisation.",
+    "addAccount": "Ajouter un compte",
+    "noAccounts": "Aucun compte bancaire",
+    "noAccountsDescription": "Commencez par ajouter votre premier compte bancaire.",
+    "bankName": "Banque",
+    "accountNumber": "N° de compte",
+    "currency": "Devise",
+    "confirmDelete": "Supprimer le compte bancaire",
+    "confirmDeleteDescription": "Êtes-vous sûr de vouloir supprimer ce compte bancaire ?",
+    "deleteSuccess": "Compte bancaire supprimé avec succès",
+    "deleteError": "Échec de la suppression du compte bancaire"
+  },
+  "deliveries": {
+    "pageTitle": "Livraisons",
+    "description": "Suivez et gérez vos livraisons de produits.",
+    "addDelivery": "Nouvelle livraison",
+    "noDeliveries": "Aucune livraison",
+    "noDeliveriesDescription": "Créez votre première livraison pour commencer le suivi.",
+    "date": "Date",
+    "type": "Type",
+    "cancelSuccess": "Livraison annulée",
+    "cancelError": "Échec de l'annulation de la livraison"
+  },
+  "payments": {
+    "pageTitle": "Paiements",
+    "description": "Suivez les paiements, avances et approbations des travailleurs.",
+    "newPayment": "Nouveau paiement",
+    "noPayments": "Aucun paiement",
+    "noPaymentsDescription": "Les paiements apparaîtront ici une fois créés.",
+    "type": "Type",
+    "period": "Période",
+    "approve": "Approuver",
+    "process": "Traiter",
+    "approveSuccess": "Paiement approuvé",
+    "approveError": "Échec de l'approbation du paiement",
+    "processSuccess": "Paiement traité",
+    "processError": "Échec du traitement du paiement"
+  },
+  "productApplications": {
+    "pageTitle": "Applications de produits",
+    "description": "Suivez les traitements et l'utilisation des produits depuis le stock.",
+    "addApplication": "Enregistrer une application",
+    "noApplications": "Aucune application de produit",
+    "noApplicationsDescription": "Enregistrez votre première application de produit.",
+    "date": "Date",
+    "quantityUsed": "Quantité",
+    "areaTreated": "Surface traitée"
+  },
+  "modules": {
+    "title": "Modules",
+    "subtitle": "Accédez à toutes les fonctionnalités selon votre rôle et permissions",
+    "accessible": "accessibles",
+    "rolesLegend": "Rôles",
+    "sections": {
+      "main": "Principal"
+    },
+    "marketplace": {
+      "received": "Demandes reçues",
+      "sent": "Demandes envoyées"
+    },
+    "desc": {
+      "dashboard": "Vue d'ensemble de l'activité, métriques et alertes",
+      "farmHierarchy": "Gérer les fermes, secteurs et structure organisationnelle",
+      "parcels": "Consulter et gérer les parcelles agricoles et cartes",
+      "stock": "Suivre l'inventaire, produits et mouvements d'entrepôt",
+      "infrastructure": "Gérer les bâtiments, équipements et structures",
+      "chat": "Demandez des recommandations intelligentes à AgromindIA",
+      "workers": "Gérer les employés, journaliers et affectations d'équipe",
+      "tasks": "Créer, assigner et suivre les tâches terrain et opérationnelles",
+      "campaigns": "Planifier et suivre les campagnes de production saisonnières",
+      "cropCycles": "Suivre le cycle de culture du semis à la récolte",
+      "harvests": "Enregistrer et gérer les opérations de récolte et rendements",
+      "receptionBatches": "Gérer la réception et le lotissement des produits",
+      "qualityControl": "Contrôles qualité, classement et tests de conformité",
+      "trees": "Inventaire et suivi des plantations d'arbres fruitiers",
+      "orchards": "Gérer les blocs vergers, variétés et plans de plantation",
+      "pruning": "Planifier et suivre les opérations de taille",
+      "compliance": "Suivi de conformité réglementaire et préparation aux audits",
+      "certifications": "Gérer les certifications (GlobalGAP, bio, etc.)",
+      "quotes": "Créer et gérer les devis",
+      "salesOrders": "Traiter les bons de commande clients",
+      "purchaseOrders": "Gérer les bons de commande fournisseurs",
+      "accounting": "Vue d'ensemble financière et tableau de bord comptable",
+      "invoices": "Créer et gérer les factures",
+      "payments": "Suivre les paiements et règlements",
+      "journal": "Écritures comptables et grand livre",
+      "reports": "Rapports financiers, compte de résultat et bilan",
+      "marketplaceReceived": "Consulter et répondre aux demandes de devis reçues",
+      "marketplaceSent": "Suivre les demandes de devis envoyées"
     }
   }
 }

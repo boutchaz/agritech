@@ -79,7 +79,7 @@ export default function NewListingPage() {
                     <div className="flex items-center justify-between h-16">
                         <Link href="/dashboard" className="flex items-center space-x-2">
                             <span className="text-2xl">🌱</span>
-                            <span className="text-xl font-bold text-green-700">AgriTech Market</span>
+                            <span className="text-xl font-bold text-green-700">AgroGina Market</span>
                         </Link>
                         <div className="flex items-center space-x-4">
                             <Link href="/dashboard/listings" className="text-gray-700 hover:text-green-700 flex items-center gap-2">
@@ -87,6 +87,7 @@ export default function NewListingPage() {
                                 Retour aux annonces
                             </Link>
                             <button
+                                type="button"
                                 onClick={handleLogout}
                                 className="flex items-center space-x-1 text-gray-700 hover:text-red-600"
                             >
@@ -259,9 +260,9 @@ export default function NewListingPage() {
 
                         {/* Product Images */}
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                            <p className="block text-sm font-medium text-gray-700 mb-2">
                                 Images du produit
-                            </label>
+                            </p>
                             <ProductImageUpload
                                 images={images}
                                 onImagesChange={setImages}

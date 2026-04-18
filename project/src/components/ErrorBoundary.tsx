@@ -65,7 +65,7 @@ export class ErrorBoundary extends Component<Props, State> {
                 </div>
               </div>
 
-              {import.meta.env.DEV && this.state.error && (
+              {this.state.error && (
                 <div className="mb-6 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
                   <div className="flex items-start gap-3">
                     <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
@@ -76,6 +76,16 @@ export class ErrorBoundary extends Component<Props, State> {
                       <code className="text-xs font-mono text-amber-800 dark:text-amber-400 break-all whitespace-pre-wrap block">
                         {this.state.error.message}
                       </code>
+                      {this.state.error.stack && (
+                        <details className="mt-3 text-left">
+                          <summary className="text-xs font-medium text-amber-900 dark:text-amber-200 cursor-pointer select-none">
+                            Stack trace
+                          </summary>
+                          <pre className="mt-2 max-h-48 overflow-auto text-[10px] font-mono text-amber-800/90 dark:text-amber-300/90 whitespace-pre-wrap break-all">
+                            {this.state.error.stack}
+                          </pre>
+                        </details>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -92,10 +102,7 @@ export class ErrorBoundary extends Component<Props, State> {
                   Go Home
                 </Button>
                 
-                <Button
-                  onClick={this.handleRetry}
-                  className="gap-2 bg-green-600 hover:bg-green-700 text-white"
-                >
+                <Button variant="green" onClick={this.handleRetry} className="gap-2" >
                   <RefreshCw className="w-4 h-4" />
                   Try Again
                 </Button>

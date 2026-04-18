@@ -35,7 +35,7 @@ interface SourceDataPanelProps {
  * Collapsible panel showing source data summary
  * Can be embedded in the report preview or shown as a standalone component
  */
-export const SourceDataPanel: React.FC<SourceDataPanelProps> = ({
+export const SourceDataPanel = ({
   metadata,
   isLoading = false,
   defaultOpen = false,
@@ -43,7 +43,7 @@ export const SourceDataPanel: React.FC<SourceDataPanelProps> = ({
   onRefreshData,
   isRefreshing = false,
   compact = false,
-}) => {
+}: SourceDataPanelProps) => {
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
@@ -98,7 +98,7 @@ export const SourceDataPanel: React.FC<SourceDataPanelProps> = ({
   return (
     <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
       {/* Panel Header */}
-      <button
+      <Button
         onClick={() => setIsOpen(!isOpen)}
         className="w-full flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
       >
@@ -133,7 +133,7 @@ export const SourceDataPanel: React.FC<SourceDataPanelProps> = ({
             <ChevronRight className="w-5 h-5 text-gray-400" />
           )}
         </div>
-      </button>
+      </Button>
 
       {/* Panel Content */}
       {isOpen && (
@@ -150,7 +150,7 @@ export const SourceDataPanel: React.FC<SourceDataPanelProps> = ({
           </div>
 
           {/* Sources Grid */}
-          <div className={cn('grid gap-2', compact ? 'grid-cols-5' : 'grid-cols-2 md:grid-cols-5')}>
+          <div className={cn('grid gap-2', compact ? 'grid-cols-5' : 'grid-cols-2 lg:grid-cols-5')}>
             {Object.entries(metadata.sources).map(([name, source]) => (
               <SourceCard
                 key={name}
@@ -165,9 +165,9 @@ export const SourceDataPanel: React.FC<SourceDataPanelProps> = ({
           {/* Warnings Summary */}
           {metadata.warnings.length > 0 && !compact && (
             <div className="space-y-2">
-              {metadata.warnings.slice(0, 2).map((warning, idx) => (
+              {metadata.warnings.slice(0, 2).map((warning) => (
                 <div
-                  key={idx}
+                  key={`${warning.message}-${warning.severity}`}
                   className={cn(
                     'p-2 rounded-lg flex items-center gap-2 text-sm',
                     warning.severity === 'critical'
@@ -237,12 +237,12 @@ export const SourceDataPanel: React.FC<SourceDataPanelProps> = ({
 /**
  * Compact card showing individual source status
  */
-const SourceCard: React.FC<{
+const SourceCard = ({ name, source, icon, compact }: {
   name: string;
   source: DataSourceInfo;
   icon: React.ReactNode;
   compact?: boolean;
-}> = ({ name, source, icon, compact }) => {
+}) => {
   return (
     <div
       className={cn(
@@ -282,17 +282,15 @@ const SourceCard: React.FC<{
 /**
  * Inline badge version for use in headers or summaries
  */
-export const SourceDataBadge: React.FC<{
-  metadata: SourceDataMetadata | null;
-  onClick?: () => void;
-}> = ({ metadata, onClick }) => {
+export const SourceDataBadge = ({ metadata, onClick }: { metadata: SourceDataMetadata | null;
+  onClick?: () => void; }) => {
   if (!metadata) return null;
 
   const hasIssues =
     metadata.sufficiencyStatus !== 'sufficient' || metadata.warnings.length > 0;
 
   return (
-    <button
+    <Button
       onClick={onClick}
       className={cn(
         'inline-flex items-center gap-1.5 px-2 py-1 text-xs rounded-full border transition-colors',
@@ -304,7 +302,7 @@ export const SourceDataBadge: React.FC<{
       <Database className="w-3 h-3" />
       <span>{metadata.totalDataPoints.toLocaleString()} pts</span>
       {hasIssues && <AlertTriangle className="w-3 h-3" />}
-    </button>
+    </Button>
   );
 };
 

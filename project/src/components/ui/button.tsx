@@ -13,11 +13,26 @@ const buttonVariants = cva(
         destructive:
           "bg-destructive text-destructive-foreground hover:bg-destructive/90",
         outline:
-          "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
+          "border border-input bg-background !text-slate-900 hover:bg-accent hover:!text-accent-foreground dark:!text-slate-100",
         secondary:
           "bg-secondary text-secondary-foreground hover:bg-secondary/80",
-        ghost: "hover:bg-accent hover:text-accent-foreground",
+        ghost:
+          "!text-slate-900 hover:bg-accent hover:!text-accent-foreground dark:!text-slate-100",
         link: "text-primary underline-offset-4 hover:underline",
+        orange:
+          "bg-orange-600 text-white hover:bg-orange-700 dark:bg-orange-500 dark:hover:bg-orange-600",
+        purple:
+          "bg-purple-600 text-white hover:bg-purple-700 dark:bg-purple-500 dark:hover:bg-purple-600",
+        green:
+          "bg-green-600 text-white hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600",
+        blue:
+          "bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600",
+        amber:
+          "bg-amber-600 text-white hover:bg-amber-700 dark:bg-amber-500 dark:hover:bg-amber-600",
+        red:
+          "bg-red-600 text-white hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600",
+        emerald:
+          "bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-600",
       },
       size: {
         default: "h-10 px-4 py-2",
@@ -27,7 +42,7 @@ const buttonVariants = cva(
       },
     },
     defaultVariants: {
-      variant: "default",
+      variant: "ghost",
       size: "default",
     },
   }
@@ -42,9 +57,18 @@ export interface ButtonProps
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant, size, asChild = false, ...props }, ref) => {
     const Comp = asChild ? Slot : "button"
+    // Auto-resolve variant: submit buttons default to primary, everything else to ghost
+    let resolvedVariant = variant
+    if (!variant) {
+      if (props.type === "submit") {
+        resolvedVariant = "default"
+      } else {
+        resolvedVariant = "ghost"
+      }
+    }
     return (
       <Comp
-        className={cn(buttonVariants({ variant, size, className }))}
+        className={cn(buttonVariants({ variant: resolvedVariant, size }), className)}
         ref={ref}
         {...props}
       />

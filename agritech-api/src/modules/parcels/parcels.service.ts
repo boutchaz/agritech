@@ -1,79 +1,121 @@
 import {
+  Inject,
   Injectable,
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   NotFoundException,
   InternalServerErrorException,
   Logger,
-} from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { DeleteParcelDto } from './dto/delete-parcel.dto';
-import { CreateParcelDto } from './dto/create-parcel.dto';
-import { UpdateParcelDto } from './dto/update-parcel.dto';
-import { ListParcelsResponseDto } from './dto/list-parcels.dto';
-import { SubscriptionsService } from '../subscriptions/subscriptions.service';
+  forwardRef,
+} from "@nestjs/common";
+import { DeleteParcelDto } from "./dto/delete-parcel.dto";
+import { CreateParcelDto } from "./dto/create-parcel.dto";
+import { UpdateParcelDto } from "./dto/update-parcel.dto";
+import { GetParcelResponseDto } from "./dto/list-parcels.dto";
+import { paginatedResponse, type PaginatedResponse } from "../../common/dto/paginated-query.dto";
+import { DatabaseService } from "../database/database.service";
+import { SubscriptionsService } from "../subscriptions/subscriptions.service";
+import { CalibrationService } from "../calibration/calibration.service";
+import {
+  CORE_INDICES,
+  SatelliteCacheService,
+} from "../satellite-indices/satellite-cache.service";
+import { NotificationsService } from "../notifications/notifications.service";
+import { NotificationsGateway } from "../notifications/notifications.gateway";
+import { NotificationType } from "../notifications/dto/notification.dto";
+
+const MAJOR_PARCEL_PROFILE_FIELDS = [
+  "crop_type",
+  "variety",
+  "planting_system",
+  "irrigation_type",
+  "water_source",
+  "density_per_hectare",
+  "plant_count",
+] as const;
 
 @Injectable()
 export class ParcelsService {
-  private readonly supabaseAdmin: SupabaseClient;
   private readonly logger = new Logger(ParcelsService.name);
 
   constructor(
-    private configService: ConfigService,
-    private subscriptionsService: SubscriptionsService,
-  ) {
-    const supabaseUrl = this.configService.get<string>('SUPABASE_URL');
-    const supabaseServiceKey = this.configService.get<string>(
-      'SUPABASE_SERVICE_ROLE_KEY',
-    );
+    private readonly databaseService: DatabaseService,
+    private readonly subscriptionsService: SubscriptionsService,
+    private readonly satelliteCacheService: SatelliteCacheService,
+    private readonly notificationsService: NotificationsService,
+    @Inject(forwardRef(() => NotificationsGateway)) private readonly notificationsGateway: NotificationsGateway,
+    @Inject(forwardRef(() => CalibrationService)) private readonly calibrationService: CalibrationService,
+  ) {}
 
-    if (!supabaseUrl || !supabaseServiceKey) {
-      throw new Error('Missing Supabase configuration');
-    }
-
-    this.supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
+  /**
+   * Broadcast a parcel ai_phase transition so the frontend can update
+   * buttons/steppers without polling. Mirrors the event the calibration
+   * state machine emits, so both paths speak the same language.
+   */
+  private emitPhaseChanged(
+    parcelId: string,
+    organizationId: string,
+    fromPhase: string | null,
+    toPhase: string,
+  ): void {
+    this.notificationsGateway.emitToOrganization(
+      organizationId,
+      "calibration:phase-changed",
+      {
+        parcel_id: parcelId,
+        from_phase: fromPhase,
+        to_phase: toPhase,
       },
-    });
+    );
   }
 
-  async deleteParcel(userId: string, dto: DeleteParcelDto) {
+  /**
+   * Archive a parcel (soft delete). Sets is_active=false instead of hard deleting.
+   * All related data (harvests, costs, tasks, etc.) is preserved for historical reporting.
+   */
+  async archiveParcel(userId: string, dto: DeleteParcelDto) {
     const { parcel_id } = dto;
 
-    this.logger.log(`Deleting parcel ${parcel_id} for user ${userId}`);
+    this.logger.log(`Archiving parcel ${parcel_id} for user ${userId}`);
 
-    // First verify the parcel exists and get farm info
-    const { data: existingParcel, error: checkError } = await this.supabaseAdmin
-      .from('parcels')
-      .select('id, name, farm_id')
-      .eq('id', parcel_id)
+    // Verify the parcel exists and get farm info
+    const { data: existingParcel, error: checkError } = await this.databaseService.getAdminClient()
+      .from("parcels")
+      .select("id, name, farm_id, is_active")
+      .eq("id", parcel_id)
       .single();
 
     if (checkError || !existingParcel) {
-      this.logger.error('Parcel not found', checkError);
+      this.logger.error("Parcel not found", checkError);
       throw new NotFoundException(
-        `Unable to verify parcel: ${checkError?.message || 'Parcel not found'}`,
+        `Unable to verify parcel: ${checkError?.message || "Parcel not found"}`,
       );
     }
 
+    if (!existingParcel.is_active) {
+      return {
+        success: true,
+        archived_parcel: { id: existingParcel.id, name: existingParcel.name },
+        message: "Parcel is already archived",
+      };
+    }
+
     if (!existingParcel.farm_id) {
-      throw new BadRequestException('Parcel is not associated with any farm');
+      throw new BadRequestException("Parcel is not associated with any farm");
     }
 
     // Get farm info to find organization_id
-    const { data: farm, error: farmError } = await this.supabaseAdmin
-      .from('farms')
-      .select('organization_id')
-      .eq('id', existingParcel.farm_id)
+    const { data: farm, error: farmError } = await this.databaseService.getAdminClient()
+      .from("farms")
+      .select("organization_id")
+      .eq("id", existingParcel.farm_id)
       .single();
 
     if (farmError || !farm) {
-      this.logger.error('Error fetching farm', farmError);
+      this.logger.error("Error fetching farm", farmError);
       throw new NotFoundException(
-        `Unable to retrieve farm information: ${farmError?.message || 'Farm not found'}`,
+        `Unable to retrieve farm information: ${farmError?.message || "Farm not found"}`,
       );
     }
 
@@ -81,92 +123,150 @@ export class ParcelsService {
 
     if (!organizationId) {
       throw new BadRequestException(
-        'Unable to determine organization of the parcel',
+        "Unable to determine organization of the parcel",
       );
     }
 
     // Check user's role in the organization
-    const { data: orgUser, error: roleError } = await this.supabaseAdmin
-      .from('organization_users')
-      .select('role_id, roles!inner(name)')
-      .eq('organization_id', organizationId)
-      .eq('user_id', userId)
-      .eq('is_active', true)
+    const { data: orgUser, error: roleError } = await this.databaseService.getAdminClient()
+      .from("organization_users")
+      .select("role_id, roles!inner(name)")
+      .eq("organization_id", organizationId)
+      .eq("user_id", userId)
+      .eq("is_active", true)
       .maybeSingle();
 
     if (roleError) {
-      this.logger.error('Error checking user role', roleError);
+      this.logger.error("Error checking user role", roleError);
       throw new InternalServerErrorException(
         `Unable to verify your role: ${roleError.message}`,
       );
     }
 
     if (!orgUser) {
-      throw new ForbiddenException('You do not have access to this organization');
+      throw new ForbiddenException(
+        "You do not have access to this organization",
+      );
     }
 
-    // Check subscription status using SubscriptionsService
+    // Check subscription status
     const hasValidSubscription =
       await this.subscriptionsService.hasValidSubscription(organizationId);
 
     if (!hasValidSubscription) {
-      this.logger.warn(
-        `Subscription check failed for organization ${organizationId}`,
-      );
       throw new ForbiddenException(
-        'An active subscription is required to delete parcels',
+        "An active subscription is required to manage parcels",
       );
     }
 
-    this.logger.log(`Deleting parcel: ${parcel_id}`);
+    // Archive the parcel (soft delete)
+    const { data: archivedParcel, error: archiveError } =
+      await this.databaseService.getAdminClient()
+        .from("parcels")
+        .update({ is_active: false, updated_at: new Date().toISOString() })
+        .eq("id", parcel_id)
+        .select("id, name")
+        .single();
 
-    // Delete the parcel
-    const { data: deletedParcels, error: deleteError } = await this.supabaseAdmin
-      .from('parcels')
-      .delete()
-      .eq('id', parcel_id)
-      .select('id, name');
-
-    if (deleteError) {
-      this.logger.error('Delete error', deleteError);
+    if (archiveError) {
+      this.logger.error("Archive error", archiveError);
       throw new InternalServerErrorException(
-        `Error during deletion: ${deleteError.message}`,
+        `Error during archiving: ${archiveError.message}`,
       );
     }
 
-    if (!deletedParcels || deletedParcels.length === 0) {
-      this.logger.warn(
-        'No parcel deleted - parcel may not exist or was already deleted',
-      );
+    this.logger.log(`Parcel archived successfully: ${archivedParcel.id}`);
 
-      // Verify if parcel still exists
-      const { data: verifyParcel, error: verifyError } = await this.supabaseAdmin
-        .from('parcels')
-        .select('id')
-        .eq('id', parcel_id)
-        .maybeSingle();
+    return {
+      success: true,
+      archived_parcel: archivedParcel,
+    };
+  }
 
-      if (verifyError) {
-        this.logger.error('Error verifying parcel', verifyError);
-        throw new InternalServerErrorException(
-          `Verification error: ${verifyError.message}`,
+  /**
+   * Restore an archived parcel (set is_active=true).
+   */
+  async restoreParcel(userId: string, parcelId: string) {
+    this.logger.log(`Restoring parcel ${parcelId} for user ${userId}`);
+
+    const { data: existingParcel, error: checkError } = await this.databaseService.getAdminClient()
+      .from("parcels")
+      .select("id, name, farm_id, is_active")
+      .eq("id", parcelId)
+      .single();
+
+    if (checkError || !existingParcel) {
+      throw new NotFoundException("Parcel not found");
+    }
+
+    if (existingParcel.is_active) {
+      return { success: true, restored_parcel: { id: existingParcel.id, name: existingParcel.name }, message: "Parcel is already active" };
+    }
+
+    if (!existingParcel.farm_id) {
+      throw new BadRequestException("Parcel is not associated with any farm");
+    }
+
+    const { data: farm } = await this.databaseService.getAdminClient()
+      .from("farms")
+      .select("organization_id")
+      .eq("id", existingParcel.farm_id)
+      .single();
+
+    if (!farm?.organization_id) {
+      throw new BadRequestException("Unable to determine organization");
+    }
+
+    const organizationId = farm.organization_id;
+
+    // Verify user access
+    const { data: orgUser } = await this.databaseService.getAdminClient()
+      .from("organization_users")
+      .select("role_id")
+      .eq("organization_id", organizationId)
+      .eq("user_id", userId)
+      .eq("is_active", true)
+      .maybeSingle();
+
+    if (!orgUser) {
+      throw new ForbiddenException("You do not have access to this organization");
+    }
+
+    // Check subscription limit before restoring
+    const { data: sub } = await this.databaseService.getAdminClient()
+      .from("subscriptions")
+      .select("max_parcels")
+      .eq("organization_id", organizationId)
+      .maybeSingle();
+
+    if (sub?.max_parcels != null) {
+      const { count: activeParcelCount } = await this.databaseService.getAdminClient()
+        .from("parcels")
+        .select("id, farms!inner(organization_id)", { count: "exact", head: true })
+        .eq("farms.organization_id", organizationId)
+        .eq("is_active", true);
+
+      if ((activeParcelCount ?? 0) >= sub.max_parcels) {
+        throw new ForbiddenException(
+          `Cannot restore: subscription limit of ${sub.max_parcels} active parcels reached`,
         );
-      }
-
-      if (verifyParcel) {
-        throw new InternalServerErrorException(
-          'Deletion failed. Parcel may be referenced elsewhere or protected by a constraint.',
-        );
-      } else {
-        this.logger.log('Parcel was already deleted or does not exist');
-        return { success: true, message: 'Parcel deleted or already absent' };
       }
     }
 
-    const deletedParcel = deletedParcels[0];
-    this.logger.log(`Parcel deleted successfully: ${deletedParcel.id}`);
+    const { data: restoredParcel, error: restoreError } = await this.databaseService.getAdminClient()
+      .from("parcels")
+      .update({ is_active: true, updated_at: new Date().toISOString() })
+      .eq("id", parcelId)
+      .select("id, name")
+      .single();
 
-    return { success: true, deleted_parcel: deletedParcel };
+    if (restoreError) {
+      throw new InternalServerErrorException(`Error restoring parcel: ${restoreError.message}`);
+    }
+
+    this.logger.log(`Parcel restored successfully: ${restoredParcel.id}`);
+
+    return { success: true, restored_parcel: restoredParcel };
   }
 
   async getPerformanceSummary(
@@ -177,67 +277,73 @@ export class ParcelsService {
       parcelId?: string;
       fromDate?: Date;
       toDate?: Date;
-    } = {}
+    } = {},
   ) {
-    this.logger.log(`Getting parcel performance summary for org ${organizationId}`);
+    this.logger.log(
+      `Getting parcel performance summary for org ${organizationId}`,
+    );
 
     // Verify user access
-    const { data: orgUser, error: orgError } = await this.supabaseAdmin
-      .from('organization_users')
-      .select('role_id')
-      .eq('organization_id', organizationId)
-      .eq('user_id', userId)
-      .eq('is_active', true)
+    const { data: orgUser, error: orgError } = await this.databaseService.getAdminClient()
+      .from("organization_users")
+      .select("role_id")
+      .eq("organization_id", organizationId)
+      .eq("user_id", userId)
+      .eq("is_active", true)
       .maybeSingle();
 
     if (orgError || !orgUser) {
-      throw new ForbiddenException('You do not have access to this organization');
+      throw new ForbiddenException(
+        "You do not have access to this organization",
+      );
     }
 
     // Build query for harvest records joined with parcels and farms
-    let query = this.supabaseAdmin
-      .from('harvest_records')
-      .select(`
+    let query = this.databaseService.getAdminClient()
+      .from("harvest_records")
+      .select(
+        `
         parcel_id,
-        crop_type,
-        actual_yield,
-        estimated_yield,
-        revenue_amount,
-        cost_amount,
-        profit_amount,
+        quantity,
+        unit,
         harvest_date,
+        estimated_revenue,
         parcels!inner (
           id,
           name,
           area,
           area_unit,
+          crop_type,
           farms!inner (
             id,
             name,
             organization_id
           )
         )
-      `)
-      .eq('parcels.farms.organization_id', organizationId);
+      `,
+      )
+      .eq("parcels.farms.organization_id", organizationId);
 
     if (filters.farmId) {
-      query = query.eq('parcels.farm_id', filters.farmId);
+      query = query.eq("parcels.farm_id", filters.farmId);
     }
     if (filters.parcelId) {
-      query = query.eq('parcel_id', filters.parcelId);
+      query = query.eq("parcel_id", filters.parcelId);
     }
     if (filters.fromDate) {
-      query = query.gte('harvest_date', filters.fromDate.toISOString());
+      query = query.gte("harvest_date", filters.fromDate.toISOString());
     }
     if (filters.toDate) {
-      query = query.lte('harvest_date', filters.toDate.toISOString());
+      query = query.lte("harvest_date", filters.toDate.toISOString());
     }
 
     const { data: harvests, error } = await query;
 
     if (error) {
-      this.logger.error('Error fetching harvest records', error);
-      throw new InternalServerErrorException('Failed to fetch performance data');
+      this.logger.error("Error fetching harvest records", error);
+      throw new InternalServerErrorException(
+        "Failed to fetch performance data",
+      );
     }
 
     // Aggregate data
@@ -253,39 +359,47 @@ export class ParcelsService {
           parcel_id: parcelId,
           parcel_name: parcel.name,
           farm_name: farm.name,
-          crop_type: record.crop_type,
+          crop_type: parcel.crop_type,
           total_harvests: 0,
           total_yield: 0,
-          total_estimated_yield: 0,
           total_revenue: 0,
-          total_cost: 0,
-          total_profit: 0,
           last_harvest_date: null,
-          area_hectares: parcel.area_unit === 'hectares' ? parcel.area : parcel.area * 0.404686, // Simple conversion if needed
+          area_hectares:
+            parcel.area_unit === "hectares"
+              ? parcel.area
+              : parcel.area * 0.404686,
         });
       }
 
       const summary = summaryMap.get(parcelId);
       summary.total_harvests++;
-      summary.total_yield += record.actual_yield || 0;
-      summary.total_estimated_yield += record.estimated_yield || 0;
-      summary.total_revenue += record.revenue_amount || 0;
-      summary.total_cost += record.cost_amount || 0;
-      summary.total_profit += record.profit_amount || 0;
+      summary.total_yield += record.quantity || 0;
+      summary.total_revenue += record.estimated_revenue || 0;
 
       const harvestDate = new Date(record.harvest_date);
-      if (!summary.last_harvest_date || harvestDate > new Date(summary.last_harvest_date)) {
+      if (
+        !summary.last_harvest_date ||
+        harvestDate > new Date(summary.last_harvest_date)
+      ) {
         summary.last_harvest_date = record.harvest_date;
       }
     });
 
     // Calculate averages and format result
-    const result = Array.from(summaryMap.values()).map(s => {
-      const avgYieldPerHectare = s.area_hectares > 0 ? s.total_yield / s.area_hectares : 0;
-      const avgTargetYield = s.total_harvests > 0 ? s.total_estimated_yield / s.total_harvests : 0;
-      const avgVariancePercent = s.total_estimated_yield > 0
-        ? ((s.total_yield - s.total_estimated_yield) / s.total_estimated_yield) * 100
-        : 0;
+    const result = Array.from(summaryMap.values()).map((s) => {
+      const avgYieldPerHectare =
+        s.area_hectares > 0 ? s.total_yield / s.area_hectares : 0;
+      const avgYieldPerHarvest =
+        s.total_harvests > 0 ? s.total_yield / s.total_harvests : 0;
+
+      // Performance rating based on yield productivity per hectare
+      // Uses relative thresholds since target yield is not available on harvest_records
+      const performanceRating =
+        s.total_harvests === 0
+          ? "No Data"
+          : avgYieldPerHectare > 0
+            ? "Active"
+            : "No Yield";
 
       return {
         parcel_id: s.parcel_id,
@@ -294,14 +408,15 @@ export class ParcelsService {
         crop_type: s.crop_type,
         total_harvests: s.total_harvests,
         avg_yield_per_hectare: parseFloat(avgYieldPerHectare.toFixed(2)),
-        avg_target_yield: parseFloat(avgTargetYield.toFixed(2)),
-        avg_variance_percent: parseFloat(avgVariancePercent.toFixed(2)),
-        performance_rating: avgVariancePercent >= 0 ? 'Excellent' : avgVariancePercent > -10 ? 'Good' : 'Poor',
+        avg_yield_per_harvest: parseFloat(avgYieldPerHarvest.toFixed(2)),
+        avg_target_yield: 0,
+        avg_variance_percent: 0,
+        performance_rating: performanceRating,
         total_revenue: parseFloat(s.total_revenue.toFixed(2)),
-        total_cost: parseFloat(s.total_cost.toFixed(2)),
-        total_profit: parseFloat(s.total_profit.toFixed(2)),
-        avg_profit_margin: s.total_revenue > 0 ? parseFloat(((s.total_profit / s.total_revenue) * 100).toFixed(2)) : 0,
-        last_harvest_date: s.last_harvest_date
+        total_cost: 0,
+        total_profit: 0,
+        avg_profit_margin: 0,
+        last_harvest_date: s.last_harvest_date,
       };
     });
 
@@ -312,27 +427,33 @@ export class ParcelsService {
     userId: string,
     organizationId: string,
     farmId?: string,
-  ): Promise<ListParcelsResponseDto> {
-    this.logger.log(`Listing parcels for organization ${organizationId}${farmId ? `, farm ${farmId}` : ''}`);
+    includeArchived: boolean = false,
+  ): Promise<PaginatedResponse<any>> {
+    this.logger.log(
+      `Listing parcels for organization ${organizationId}${farmId ? `, farm ${farmId}` : ""}`,
+    );
 
     // Verify user access
-    const { data: orgUser, error: orgError } = await this.supabaseAdmin
-      .from('organization_users')
-      .select('organization_id')
-      .eq('organization_id', organizationId)
-      .eq('user_id', userId)
-      .eq('is_active', true)
+    const { data: orgUser, error: orgError } = await this.databaseService.getAdminClient()
+      .from("organization_users")
+      .select("organization_id")
+      .eq("organization_id", organizationId)
+      .eq("user_id", userId)
+      .eq("is_active", true)
       .maybeSingle();
 
     if (orgError || !orgUser) {
-      this.logger.error('User not authorized for organization', orgError);
-      throw new ForbiddenException('You do not have access to this organization');
+      this.logger.error("User not authorized for organization", orgError);
+      throw new ForbiddenException(
+        "You do not have access to this organization",
+      );
     }
 
     // Build query
-    let query = this.supabaseAdmin
-      .from('parcels')
-      .select(`
+    let query = this.databaseService.getAdminClient()
+      .from("parcels")
+      .select(
+        `
         id,
         farm_id,
         name,
@@ -358,31 +479,125 @@ export class ParcelsService {
         soil_type,
         irrigation_type,
         is_active,
+        ai_phase,
+        ai_enabled,
+        ai_observation_only,
+        ai_nutrition_option,
         created_at,
         updated_at,
         farms!inner (
           id,
           organization_id
         )
-      `)
-      .eq('farms.organization_id', organizationId);
+      `,
+      )
+      .eq("farms.organization_id", organizationId);
 
-    if (farmId) {
-      query = query.eq('farm_id', farmId);
+    if (!includeArchived) {
+      query = query.eq("is_active", true);
     }
 
-    query = query.order('name', { ascending: true });
+    if (farmId) {
+      query = query.eq("farm_id", farmId);
+    }
+
+    query = query.order("name", { ascending: true });
 
     const { data: parcels, error: parcelsError } = await query;
 
     if (parcelsError) {
-      this.logger.error('Error fetching parcels', parcelsError);
-      throw new InternalServerErrorException('Failed to fetch parcels');
+      this.logger.error("Error fetching parcels", parcelsError);
+      throw new InternalServerErrorException("Failed to fetch parcels");
+    }
+
+    const items = parcels || [];
+    return paginatedResponse(items, items.length, 1, items.length || 100);
+  }
+
+  async getParcel(
+    userId: string,
+    organizationId: string,
+    parcelId: string,
+  ): Promise<GetParcelResponseDto> {
+    this.logger.log(
+      `Getting parcel ${parcelId} for organization ${organizationId}`,
+    );
+
+    const { data: orgUser, error: orgError } = await this.databaseService.getAdminClient()
+      .from("organization_users")
+      .select("organization_id")
+      .eq("organization_id", organizationId)
+      .eq("user_id", userId)
+      .eq("is_active", true)
+      .maybeSingle();
+
+    if (orgError || !orgUser) {
+      this.logger.error("User not authorized for organization", orgError);
+      throw new ForbiddenException(
+        "You do not have access to this organization",
+      );
+    }
+
+    const { data: parcel, error: parcelError } = await this.databaseService.getAdminClient()
+      .from("parcels")
+      .select(
+        `
+        id,
+        farm_id,
+        name,
+        description,
+        area,
+        area_unit,
+        boundary,
+        calculated_area,
+        perimeter,
+        crop_category,
+        crop_type,
+        tree_type,
+        tree_count,
+        planting_density,
+        variety,
+        planting_system,
+        spacing,
+        density_per_hectare,
+        plant_count,
+        planting_date,
+        planting_year,
+        rootstock,
+        soil_type,
+        irrigation_type,
+        ai_phase,
+        ai_enabled,
+        ai_observation_only,
+        ai_nutrition_option,
+        ai_calibration_id,
+        is_active,
+        created_at,
+        updated_at,
+        farms!inner (
+          id,
+          organization_id
+        )
+      `,
+      )
+      .eq("id", parcelId)
+      .eq("farms.organization_id", organizationId)
+      .maybeSingle();
+
+    if (parcelError) {
+      this.logger.error("Error fetching parcel", parcelError);
+      throw new InternalServerErrorException("Failed to fetch parcel");
+    }
+
+    if (!parcel) {
+      throw new NotFoundException(
+        "Parcel not found or you do not have access to it",
+      );
     }
 
     return {
       success: true,
-      parcels: parcels || [],
+      parcel,
     };
   }
 
@@ -391,39 +606,49 @@ export class ParcelsService {
     organizationId: string,
     dto: CreateParcelDto,
   ) {
-    this.logger.log(`Creating parcel for user ${userId} in org ${organizationId}`);
+    this.logger.log(
+      `Creating parcel for user ${userId} in org ${organizationId}`,
+    );
 
     // Verify user access
-    const { data: orgUser, error: orgError } = await this.supabaseAdmin
-      .from('organization_users')
-      .select('organization_id')
-      .eq('organization_id', organizationId)
-      .eq('user_id', userId)
-      .eq('is_active', true)
+    const { data: orgUser, error: orgError } = await this.databaseService.getAdminClient()
+      .from("organization_users")
+      .select("organization_id")
+      .eq("organization_id", organizationId)
+      .eq("user_id", userId)
+      .eq("is_active", true)
       .maybeSingle();
 
     if (orgError || !orgUser) {
-      throw new ForbiddenException('You do not have access to this organization');
+      throw new ForbiddenException(
+        "You do not have access to this organization",
+      );
     }
 
     const hasValidSubscription =
       await this.subscriptionsService.hasValidSubscription(organizationId);
     if (!hasValidSubscription) {
-      throw new ForbiddenException('Active subscription required to create parcels');
+      throw new ForbiddenException(
+        "Active subscription required to create parcels",
+      );
     }
 
     // Enforce subscription parcel limit
-    const { data: sub } = await this.supabaseAdmin
-      .from('subscriptions')
-      .select('max_parcels')
-      .eq('organization_id', organizationId)
+    const { data: sub } = await this.databaseService.getAdminClient()
+      .from("subscriptions")
+      .select("max_parcels")
+      .eq("organization_id", organizationId)
       .maybeSingle();
 
     if (sub?.max_parcels != null) {
-      const { count: parcelCount } = await this.supabaseAdmin
-        .from('parcels')
-        .select('id, farms!inner(organization_id)', { count: 'exact', head: true })
-        .eq('farms.organization_id', organizationId);
+      const { count: parcelCount } = await this.databaseService.getAdminClient()
+        .from("parcels")
+        .select("id, farms!inner(organization_id)", {
+          count: "exact",
+          head: true,
+        })
+        .eq("farms.organization_id", organizationId)
+        .eq("is_active", true);
 
       if ((parcelCount ?? 0) >= sub.max_parcels) {
         throw new ForbiddenException(
@@ -433,25 +658,39 @@ export class ParcelsService {
     }
 
     // Verify farm belongs to organization
-    const { data: farm, error: farmError } = await this.supabaseAdmin
-      .from('farms')
-      .select('id, organization_id')
-      .eq('id', dto.farm_id)
-      .eq('organization_id', organizationId)
+    const { data: farm, error: farmError } = await this.databaseService.getAdminClient()
+      .from("farms")
+      .select("id, organization_id")
+      .eq("id", dto.farm_id)
+      .eq("organization_id", organizationId)
       .single();
 
     if (farmError || !farm) {
-      this.logger.error('Farm not found or access denied', farmError);
-      throw new NotFoundException('Farm not found or you do not have access to it');
+      this.logger.error("Farm not found or access denied", farmError);
+      throw new NotFoundException(
+        "Farm not found or you do not have access to it",
+      );
     }
 
-    // Prepare parcel data
-    const parcelData: any = {
+    let resolvedPlantingYear = dto.planting_year ?? null;
+    const resolvedPlantingDate = dto.planting_date ?? null;
+
+    if (!resolvedPlantingYear && resolvedPlantingDate) {
+      resolvedPlantingYear = new Date(resolvedPlantingDate).getFullYear();
+    }
+
+    if (!resolvedPlantingYear && !resolvedPlantingDate) {
+      throw new BadRequestException(
+        "Planting year or planting date is required (needed to determine plantation age)",
+      );
+    }
+
+    const parcelData: Record<string, unknown> = {
       farm_id: dto.farm_id,
       name: dto.name,
       description: dto.description || null,
       area: dto.area,
-      area_unit: dto.area_unit || 'hectares',
+      area_unit: dto.area_unit || "hectares",
       crop_category: dto.crop_category || null,
       crop_type: dto.crop_type || null,
       variety: dto.variety || null,
@@ -459,8 +698,8 @@ export class ParcelsService {
       spacing: dto.spacing || null,
       density_per_hectare: dto.density_per_hectare || null,
       plant_count: dto.plant_count || null,
-      planting_date: dto.planting_date || null,
-      planting_year: dto.planting_year || null,
+      planting_date: resolvedPlantingDate,
+      planting_year: resolvedPlantingYear,
       planting_type: dto.planting_type || null,
       rootstock: dto.rootstock || null,
       soil_type: dto.soil_type || null,
@@ -472,49 +711,274 @@ export class ParcelsService {
     };
 
     // Insert parcel
-    const { data: newParcel, error: createError } = await this.supabaseAdmin
-      .from('parcels')
+    const { data: newParcel, error: createError } = await this.databaseService.getAdminClient()
+      .from("parcels")
       .insert(parcelData)
       .select()
       .single();
 
     if (createError) {
-      this.logger.error('Error creating parcel', createError);
-      throw new InternalServerErrorException(`Failed to create parcel: ${createError.message}`);
+      this.logger.error("Error creating parcel", createError);
+      const isDuplicateParcelName =
+        createError.code === "23505" ||
+        createError.message?.includes("idx_parcels_name_org_farm") ||
+        createError.message?.includes("duplicate key value violates unique constraint");
+
+      if (isDuplicateParcelName) {
+        throw new ConflictException(
+          `A parcel named "${dto.name}" already exists in this farm`,
+        );
+      }
+
+      throw new InternalServerErrorException(
+        `Failed to create parcel: ${createError.message}`,
+      );
     }
 
     this.logger.log(`Parcel created successfully: ${newParcel.id}`);
 
-    if (newParcel.boundary && Array.isArray(newParcel.boundary) && newParcel.boundary.length >= 3) {
-      this.triggerSatelliteSync(newParcel.id, organizationId, newParcel.boundary, dto.farm_id, dto.name);
+    if (
+      newParcel.boundary &&
+      Array.isArray(newParcel.boundary) &&
+      newParcel.boundary.length >= 3
+    ) {
+      this.triggerProactiveSatelliteDownload(
+        newParcel.id,
+        organizationId,
+        resolvedPlantingYear,
+      );
     }
 
     return newParcel;
   }
 
-  private triggerSatelliteSync(
+  /**
+   * Warm satellite cache after parcel creation. Intentionally does not change
+   * ai_phase - calibration readiness is enforced separately when the user starts calibration.
+   */
+  private triggerProactiveSatelliteDownload(
     parcelId: string,
     organizationId: string,
-    boundary: number[][],
-    farmId?: string,
-    parcelName?: string,
+    plantingYear: number | null,
   ) {
-    const satelliteApiUrl = this.configService.get<string>('SATELLITE_SERVICE_URL') || 'http://localhost:8001';
-    const url = `${satelliteApiUrl.replace(/\/+$/, '')}/api/sync/parcel`;
+    const age = plantingYear ? new Date().getFullYear() - plantingYear : null;
+    const isJuvenile = age !== null && age <= 5;
+    const monthsToSync = isJuvenile ? 12 : 24;
+    const startDate = new Date();
+    startDate.setMonth(startDate.getMonth() - monthsToSync);
 
-    fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        parcel_id: parcelId,
-        organization_id: organizationId,
-        boundary,
-        farm_id: farmId || null,
-        parcel_name: parcelName || null,
-      }),
-    }).catch((err) => {
-      this.logger.warn(`Failed to trigger satellite sync for parcel ${parcelId}: ${err.message}`);
-    });
+    void this.satelliteCacheService
+      .syncParcelSatelliteData(parcelId, organizationId, undefined, {
+        startDate: startDate.toISOString().split("T")[0],
+        endDate: new Date().toISOString().split("T")[0],
+        indices: CORE_INDICES,
+      })
+      .then(async (syncResult) => {
+        this.logger.log(
+          `Satellite download completed for parcel ${parcelId}: ${syncResult.totalPoints} points`,
+        );
+
+        // V2 lifecycle: transition awaiting_data → ready_calibration
+        try {
+          const { data: parcelRow } = await this.databaseService.getAdminClient()
+            .from("parcels")
+            .select("ai_phase")
+            .eq("id", parcelId)
+            .eq("organization_id", organizationId)
+            .maybeSingle();
+
+          if (parcelRow?.ai_phase === "awaiting_data") {
+            const { error: transitionError } = await this.databaseService.getAdminClient()
+              .from("parcels")
+              .update({ ai_phase: "ready_calibration" })
+              .eq("id", parcelId)
+              .eq("organization_id", organizationId)
+              .eq("ai_phase", "awaiting_data");
+
+            if (!transitionError) {
+              this.logger.log(
+                `Parcel ${parcelId} transitioned to ready_calibration after satellite sync`,
+              );
+
+              this.emitPhaseChanged(
+                parcelId,
+                organizationId,
+                "awaiting_data",
+                "ready_calibration",
+              );
+
+              // Auto-start calibration now that satellite data is ready
+              this.triggerAutoCalibration(parcelId, organizationId);
+            }
+          }
+        } catch (err) {
+          this.logger.warn(
+            `Failed to transition parcel ${parcelId} to ready_calibration: ${err instanceof Error ? err.message : "unknown"}`,
+          );
+        }
+
+        return this.notifyOrganizationUsers(
+          organizationId,
+          NotificationType.SATELLITE_DOWNLOAD_COMPLETE,
+          "Données satellite prêtes",
+          "Les données satellite de votre parcelle sont disponibles. Vous pouvez lancer le calibrage.",
+          { parcel_id: parcelId },
+        );
+      })
+      .catch((err) => {
+        const message = err instanceof Error ? err.message : "unknown error";
+        this.logger.warn(
+          `Satellite download failed for parcel ${parcelId}: ${message}`,
+        );
+      });
+  }
+
+  /**
+   * Public entry point: sync all core satellite indices for a parcel,
+   * transition to ready_calibration, and auto-start calibration.
+   * Returns immediately — work runs in the background.
+   */
+  async triggerFullSyncAndCalibration(
+    parcelId: string,
+    organizationId: string,
+  ): Promise<{ status: string; message: string }> {
+    const { data: parcel } = await this.databaseService.getAdminClient()
+      .from("parcels")
+      .select("boundary, planting_year")
+      .eq("id", parcelId)
+      .eq("organization_id", organizationId)
+      .maybeSingle();
+
+    if (
+      !parcel?.boundary ||
+      !Array.isArray(parcel.boundary) ||
+      parcel.boundary.length < 3
+    ) {
+      return { status: "skipped", message: "Parcel has no valid boundary" };
+    }
+
+    // Reset to awaiting_data so the full flow runs
+    const { data: previousPhaseRow } = await this.databaseService.getAdminClient()
+      .from("parcels")
+      .select("ai_phase")
+      .eq("id", parcelId)
+      .eq("organization_id", organizationId)
+      .maybeSingle();
+
+    await this.databaseService.getAdminClient()
+      .from("parcels")
+      .update({ ai_phase: "awaiting_data" })
+      .eq("id", parcelId)
+      .eq("organization_id", organizationId);
+
+    this.emitPhaseChanged(
+      parcelId,
+      organizationId,
+      (previousPhaseRow?.ai_phase as string | null) ?? null,
+      "awaiting_data",
+    );
+
+    // Always sync at least 24 months for a complete dataset
+    const startDate = new Date();
+    startDate.setMonth(startDate.getMonth() - 24);
+
+    void this.satelliteCacheService
+      .syncParcelSatelliteData(parcelId, organizationId, undefined, {
+        startDate: startDate.toISOString().split("T")[0],
+        endDate: new Date().toISOString().split("T")[0],
+        indices: CORE_INDICES,
+      })
+      .then(async (syncResult) => {
+        this.logger.log(
+          `Full sync completed for parcel ${parcelId}: ${syncResult.totalPoints} points`,
+        );
+
+        const { data: transitioned } = await this.databaseService.getAdminClient()
+          .from("parcels")
+          .update({ ai_phase: "ready_calibration" })
+          .eq("id", parcelId)
+          .eq("organization_id", organizationId)
+          .eq("ai_phase", "awaiting_data")
+          .select("id");
+
+        if (transitioned?.length) {
+          this.emitPhaseChanged(
+            parcelId,
+            organizationId,
+            "awaiting_data",
+            "ready_calibration",
+          );
+        }
+
+        this.triggerAutoCalibration(parcelId, organizationId);
+      })
+      .catch((err) => {
+        this.logger.warn(
+          `Full sync failed for parcel ${parcelId}: ${err instanceof Error ? err.message : err}`,
+        );
+      });
+
+    return {
+      status: "started",
+      message: "Satellite sync started (24 months). Calibration will follow automatically.",
+    };
+  }
+
+  /**
+   * Auto-start calibration after satellite data is ready.
+   * Fire-and-forget — failures are logged but don't block the flow.
+   */
+  private triggerAutoCalibration(
+    parcelId: string,
+    organizationId: string,
+  ): void {
+    void this.calibrationService
+      .startCalibration(parcelId, organizationId, { mode_calibrage: "full" }, { skipReadinessCheck: true })
+      .then((record) => {
+        this.logger.log(
+          `Auto-calibration started for parcel ${parcelId}: calibration ${record.id}`,
+        );
+      })
+      .catch((err) => {
+        const message = err instanceof Error ? err.message : "unknown error";
+        this.logger.warn(
+          `Auto-calibration failed to start for parcel ${parcelId}: ${message}`,
+        );
+      });
+  }
+
+  private async notifyOrganizationUsers(
+    organizationId: string,
+    type: NotificationType,
+    title: string,
+    message: string,
+    data: Record<string, unknown>,
+  ): Promise<void> {
+    const { data: orgUsers } = await this.databaseService.getAdminClient()
+      .from("organization_users")
+      .select("user_id")
+      .eq("organization_id", organizationId)
+      .eq("is_active", true);
+
+    if (!orgUsers?.length) return;
+
+    const seen = new Set<string>();
+    for (const orgUser of orgUsers) {
+      const uid = orgUser.user_id as string;
+      if (seen.has(uid)) continue;
+      seen.add(uid);
+
+      await this.notificationsService
+        .createNotification({
+          userId: uid,
+          organizationId,
+          type,
+          title,
+          message,
+          data,
+        })
+        .catch(() => {});
+    }
   }
 
   async updateParcel(
@@ -526,37 +990,51 @@ export class ParcelsService {
     this.logger.log(`Updating parcel ${parcelId} for user ${userId}`);
 
     // Verify user access
-    const { data: orgUser, error: orgError } = await this.supabaseAdmin
-      .from('organization_users')
-      .select('organization_id')
-      .eq('organization_id', organizationId)
-      .eq('user_id', userId)
-      .eq('is_active', true)
+    const { data: orgUser, error: orgError } = await this.databaseService.getAdminClient()
+      .from("organization_users")
+      .select("organization_id")
+      .eq("organization_id", organizationId)
+      .eq("user_id", userId)
+      .eq("is_active", true)
       .maybeSingle();
 
     if (orgError || !orgUser) {
-      throw new ForbiddenException('You do not have access to this organization');
+      throw new ForbiddenException(
+        "You do not have access to this organization",
+      );
     }
 
     // Verify parcel exists and belongs to organization
-    const { data: existingParcel, error: checkError } = await this.supabaseAdmin
-      .from('parcels')
-      .select(`
+    const { data: existingParcel, error: checkError } = await this.databaseService.getAdminClient()
+      .from("parcels")
+      .select(
+        `
         id,
         farm_id,
         farms!inner (
           id,
           organization_id
         )
-      `)
-      .eq('id', parcelId)
-      .eq('farms.organization_id', organizationId)
+      `,
+      )
+      .eq("id", parcelId)
+      .eq("farms.organization_id", organizationId)
       .single();
 
     if (checkError || !existingParcel) {
-      this.logger.error('Parcel not found or access denied', checkError);
-      throw new NotFoundException('Parcel not found or you do not have access to it');
+      this.logger.error("Parcel not found or access denied", checkError);
+      throw new NotFoundException(
+        "Parcel not found or you do not have access to it",
+      );
     }
+
+    const { data: profileBefore } = await this.databaseService.getAdminClient()
+      .from("parcels")
+      .select(
+        "crop_type, variety, planting_system, irrigation_type, water_source, density_per_hectare, plant_count, ai_phase, ai_enabled, ai_observation_only, ai_calibration_id, boundary, planting_year",
+      )
+      .eq("id", parcelId)
+      .maybeSingle();
 
     // Prepare update data (only include fields that are provided)
     const updateData: any = {};
@@ -564,38 +1042,109 @@ export class ParcelsService {
     if (dto.description !== undefined) updateData.description = dto.description;
     if (dto.area !== undefined) updateData.area = dto.area;
     if (dto.area_unit !== undefined) updateData.area_unit = dto.area_unit;
-    if (dto.crop_category !== undefined) updateData.crop_category = dto.crop_category;
+    if (dto.crop_category !== undefined)
+      updateData.crop_category = dto.crop_category;
     if (dto.crop_type !== undefined) updateData.crop_type = dto.crop_type;
     if (dto.variety !== undefined) updateData.variety = dto.variety;
-    if (dto.planting_system !== undefined) updateData.planting_system = dto.planting_system;
+    if (dto.planting_system !== undefined)
+      updateData.planting_system = dto.planting_system;
     if (dto.spacing !== undefined) updateData.spacing = dto.spacing;
-    if (dto.density_per_hectare !== undefined) updateData.density_per_hectare = dto.density_per_hectare;
+    if (dto.density_per_hectare !== undefined)
+      updateData.density_per_hectare = dto.density_per_hectare;
     if (dto.plant_count !== undefined) updateData.plant_count = dto.plant_count;
-    if (dto.planting_date !== undefined) updateData.planting_date = dto.planting_date;
-    if (dto.planting_year !== undefined) updateData.planting_year = dto.planting_year;
-    if (dto.planting_type !== undefined) updateData.planting_type = dto.planting_type;
+    if (dto.planting_date !== undefined)
+      updateData.planting_date = dto.planting_date;
+    if (dto.planting_year !== undefined)
+      updateData.planting_year = dto.planting_year;
+    if (dto.planting_type !== undefined)
+      updateData.planting_type = dto.planting_type;
     if (dto.rootstock !== undefined) updateData.rootstock = dto.rootstock;
     if (dto.soil_type !== undefined) updateData.soil_type = dto.soil_type;
-    if (dto.irrigation_type !== undefined) updateData.irrigation_type = dto.irrigation_type;
+    if (dto.irrigation_type !== undefined)
+      updateData.irrigation_type = dto.irrigation_type;
+    if (dto.water_source !== undefined)
+      updateData.water_source = dto.water_source;
+    if (dto.irrigation_frequency !== undefined)
+      updateData.irrigation_frequency = dto.irrigation_frequency;
+    if (dto.water_quantity_per_session !== undefined)
+      updateData.water_quantity_per_session = dto.water_quantity_per_session;
+    if (dto.water_quantity_unit !== undefined)
+      updateData.water_quantity_unit = dto.water_quantity_unit;
     if (dto.boundary !== undefined) updateData.boundary = dto.boundary;
-    if (dto.calculated_area !== undefined) updateData.calculated_area = dto.calculated_area;
+    if (dto.calculated_area !== undefined)
+      updateData.calculated_area = dto.calculated_area;
     if (dto.perimeter !== undefined) updateData.perimeter = dto.perimeter;
 
     // Update parcel
-    const { data: updatedParcel, error: updateError } = await this.supabaseAdmin
-      .from('parcels')
+    const { data: updatedParcel, error: updateError } = await this.databaseService.getAdminClient()
+      .from("parcels")
       .update(updateData)
-      .eq('id', parcelId)
+      .eq("id", parcelId)
       .select()
       .single();
 
     if (updateError) {
-      this.logger.error('Error updating parcel', updateError);
-      throw new InternalServerErrorException(`Failed to update parcel: ${updateError.message}`);
+      this.logger.error("Error updating parcel", updateError);
+      throw new InternalServerErrorException(
+        `Failed to update parcel: ${updateError.message}`,
+      );
     }
 
     this.logger.log(`Parcel updated successfully: ${updatedParcel.id}`);
+
+    // Trigger satellite download when boundary is set/changed
+    const boundaryChanged =
+      dto.boundary !== undefined &&
+      Array.isArray(dto.boundary) &&
+      dto.boundary.length >= 3;
+    const hadNoBoundaryBefore =
+      !profileBefore?.boundary ||
+      !Array.isArray(profileBefore.boundary) ||
+      (profileBefore.boundary as unknown[]).length < 3;
+
+    if (boundaryChanged && hadNoBoundaryBefore) {
+      const plantingYear =
+        dto.planting_year ??
+        (profileBefore?.planting_year as number | null) ??
+        null;
+      this.triggerProactiveSatelliteDownload(
+        parcelId,
+        organizationId,
+        plantingYear,
+      );
+    }
+
+    if (
+      profileBefore &&
+      this.parcelMajorProfileChanged(updateData, profileBefore) &&
+      profileBefore.ai_phase === "active" &&
+      profileBefore.ai_enabled === true &&
+      profileBefore.ai_observation_only !== true &&
+      typeof profileBefore.ai_calibration_id === "string" &&
+      profileBefore.ai_calibration_id.length > 0
+    ) {
+      this.calibrationService.scheduleAnnualPlanRefreshAfterMajorParcelEdit(
+        parcelId,
+        organizationId,
+      );
+    }
+
     return updatedParcel;
+  }
+
+  private parcelMajorProfileChanged(
+    updateData: Record<string, unknown>,
+    before: Record<string, unknown>,
+  ): boolean {
+    for (const key of MAJOR_PARCEL_PROFILE_FIELDS) {
+      if (updateData[key] === undefined) {
+        continue;
+      }
+      if (updateData[key] !== before[key]) {
+        return true;
+      }
+    }
+    return false;
   }
 
   async getParcelApplications(
@@ -603,45 +1152,54 @@ export class ParcelsService {
     organizationId: string,
     parcelId: string,
   ) {
-    this.logger.log(`Getting applications for parcel ${parcelId} in org ${organizationId}`);
+    this.logger.log(
+      `Getting applications for parcel ${parcelId} in org ${organizationId}`,
+    );
 
     // Verify user access
-    const { data: orgUser, error: orgError } = await this.supabaseAdmin
-      .from('organization_users')
-      .select('organization_id')
-      .eq('organization_id', organizationId)
-      .eq('user_id', userId)
-      .eq('is_active', true)
+    const { data: orgUser, error: orgError } = await this.databaseService.getAdminClient()
+      .from("organization_users")
+      .select("organization_id")
+      .eq("organization_id", organizationId)
+      .eq("user_id", userId)
+      .eq("is_active", true)
       .maybeSingle();
 
     if (orgError || !orgUser) {
-      this.logger.error('User not authorized for organization', orgError);
-      throw new ForbiddenException('You do not have access to this organization');
+      this.logger.error("User not authorized for organization", orgError);
+      throw new ForbiddenException(
+        "You do not have access to this organization",
+      );
     }
 
     // Verify parcel exists and belongs to organization
-    const { data: parcel, error: parcelError } = await this.supabaseAdmin
-      .from('parcels')
-      .select(`
+    const { data: parcel, error: parcelError } = await this.databaseService.getAdminClient()
+      .from("parcels")
+      .select(
+        `
         id,
         farms!inner (
           id,
           organization_id
         )
-      `)
-      .eq('id', parcelId)
-      .eq('farms.organization_id', organizationId)
+      `,
+      )
+      .eq("id", parcelId)
+      .eq("farms.organization_id", organizationId)
       .maybeSingle();
 
     if (parcelError || !parcel) {
-      this.logger.error('Parcel not found or access denied', parcelError);
-      throw new NotFoundException('Parcel not found or you do not have access to it');
+      this.logger.error("Parcel not found or access denied", parcelError);
+      throw new NotFoundException(
+        "Parcel not found or you do not have access to it",
+      );
     }
 
     // Get applications for this parcel
-    const { data: applications, error: appsError } = await this.supabaseAdmin
-      .from('product_applications')
-      .select(`
+    const { data: applications, error: appsError } = await this.databaseService.getAdminClient()
+      .from("product_applications")
+      .select(
+        `
         id,
         product_id,
         application_date,
@@ -655,13 +1213,16 @@ export class ParcelsService {
           item_name,
           default_unit
         )
-      `)
-      .eq('parcel_id', parcelId)
-      .order('application_date', { ascending: false });
+      `,
+      )
+      .eq("parcel_id", parcelId)
+      .order("application_date", { ascending: false });
 
     if (appsError) {
-      this.logger.error('Error fetching parcel applications', appsError);
-      throw new InternalServerErrorException('Failed to fetch parcel applications');
+      this.logger.error("Error fetching parcel applications", appsError);
+      throw new InternalServerErrorException(
+        "Failed to fetch parcel applications",
+      );
     }
 
     // Transform the response to match the expected DTO structure

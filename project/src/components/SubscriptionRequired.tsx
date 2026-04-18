@@ -1,17 +1,18 @@
-import React from 'react';
+
 import { AlertTriangle, CreditCard, Lock } from 'lucide-react';
 import { useNavigate } from '@tanstack/react-router';
 import { useAuth } from '../hooks/useAuth';
+import { Button } from '@/components/ui/button';
 
 interface SubscriptionRequiredProps {
   reason?: 'no_subscription' | 'expired' | 'canceled' | 'past_due';
   message?: string;
 }
 
-const SubscriptionRequired: React.FC<SubscriptionRequiredProps> = ({
+const SubscriptionRequired = ({
   reason = 'no_subscription',
   message,
-}) => {
+}: SubscriptionRequiredProps) => {
   const navigate = useNavigate();
   const { currentOrganization } = useAuth();
 
@@ -69,28 +70,28 @@ const SubscriptionRequired: React.FC<SubscriptionRequiredProps> = ({
 
           {/* Actions */}
           <div className="space-y-3">
-            <button
+            <Button variant="blue"
               onClick={() => navigate({ to: '/settings/subscription' })}
-              className="w-full flex items-center justify-center space-x-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+              className="w-full flex items-center justify-center space-x-2 px-6 py-3 rounded-lg transition-colors font-medium"
             >
               <CreditCard className="h-5 w-5" />
               <span>View Subscription Plans</span>
-            </button>
+            </Button>
 
-            <button
+            <Button
               onClick={() => navigate({ to: '/settings/organization' })}
               className="w-full px-6 py-3 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors font-medium"
             >
               Organization Settings
-            </button>
+            </Button>
           </div>
 
           {/* Help Text */}
           <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
             <p className="text-xs text-center text-gray-500 dark:text-gray-400">
               Need help? Contact your organization administrator or{' '}
-              <a href="mailto:support@agritech.com" className="text-blue-600 hover:text-blue-700">
-                support@agritech.com
+          <a href="mailto:support@agrogina.com" className="text-blue-600 hover:text-blue-700">
+            support@agrogina.com
               </a>
             </p>
           </div>

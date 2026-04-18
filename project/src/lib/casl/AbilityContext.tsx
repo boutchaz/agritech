@@ -7,6 +7,7 @@ import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '../api-client';
 import { authApi, type UserAbilities } from '../api/auth';
 import { defineAbilitiesFor, type AppAbility, type Action, type Subject } from './ability';
+import { isSubscriptionValid } from '../polar';
 
 // Create CASL context
 const AbilityContext = createContext<AppAbility | undefined>(undefined);
@@ -56,14 +57,24 @@ function buildAbilityFromBackend(
   // Apply subscription-based limits (these are frontend concerns for UX)
   // The backend will still enforce these, but we want to show proper UI
   if (subscription) {
-    const isActive = ['active', 'trialing'].includes(subscription.status);
-
-    if (!isActive) {
-      // Inactive subscription - block everything
+    // Align with polar.ts / billing: pending_renewal and grace periods count as usable
+    if (!isSubscriptionValid(subscription)) {
+      // Invalid or expired subscription - block mutating actions in the UI
       cannot('create', 'all');
       cannot('update', 'all');
       cannot('delete', 'all');
       can('read', 'Subscription');
+
+      // Re-apply admin management abilities after the blanket block.
+      // CASL's cannot('update','all') overrides earlier can('manage','User'),
+      // so we must re-grant User/Org/Settings management for admins to
+      // manage their organization even with an expired subscription.
+      const adminSubjects = ['User', 'Organization', 'Subscription', 'Role', 'Settings'];
+      for (const rule of abilitiesData.abilities) {
+        if (!rule.inverted && adminSubjects.includes(rule.subject)) {
+          can(rule.action as Action, rule.subject as Subject);
+        }
+      }
     } else {
       // Apply limits based on current counts
       if (currentCounts.farms >= subscription.max_farms) {
@@ -101,7 +112,7 @@ function buildAbilityFromBackend(
 }
 
 // Provider component
-export const AbilityProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const AbilityProvider = ({ children }: { children: React.ReactNode }) => {
   const { user, currentOrganization, userRole } = useAuth();
   const { data: subscription } = useSubscription();
 

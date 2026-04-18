@@ -7,9 +7,9 @@
  */
 
 import { useQuery } from '@tanstack/react-query';
-import { profitabilityApi, type ParcelProfitabilityData } from '@/lib/api/profitability';
+import { profitabilityApi, type ParcelProfitabilityData, type AnalysisFilters, type AnalysisFilterType, type AnalysisResult } from '@/lib/api/profitability';
 
-export type { ParcelProfitabilityData };
+export type { ParcelProfitabilityData, AnalysisFilters, AnalysisFilterType, AnalysisResult };
 
 export function useProfitabilityData(
   parcelId: string,
@@ -23,6 +23,18 @@ export function useProfitabilityData(
       return profitabilityApi.getParcelProfitability(parcelId, startDate, endDate, organizationId);
     },
     enabled: !!parcelId && !!organizationId,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useProfitabilityAnalysis(
+  filters: AnalysisFilters,
+  organizationId: string | null,
+) {
+  return useQuery<AnalysisResult>({
+    queryKey: ['profitability-analysis', organizationId, filters],
+    queryFn: () => profitabilityApi.getAnalysis(filters, organizationId!),
+    enabled: !!organizationId && !!filters.filter_type,
     staleTime: 5 * 60 * 1000,
   });
 }

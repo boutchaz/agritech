@@ -8,6 +8,7 @@ export interface SendMessageDto {
   query: string;
   language?: 'en' | 'fr' | 'ar';
   save_history?: boolean;
+  image?: string;
 }
 
 export interface ChatContextSummary {
@@ -26,12 +27,14 @@ export interface ChatMetadata {
   model: string;
   tokensUsed?: number;
   timestamp: string;
+  suggestions?: string[];
 }
 
 export interface ChatResponse {
   response: string;
   context_summary: ChatContextSummary;
   metadata: ChatMetadata;
+  suggestions?: string[];
 }
 
 export interface ChatMessage {
@@ -39,11 +42,14 @@ export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
   timestamp: string;
+  suggestions?: string[];
+  image?: string;
 }
 
 export interface ChatHistoryResponse {
   messages: ChatMessage[];
   total: number;
+  hasMore: boolean;
 }
 
 export const chatApi = {
@@ -65,12 +71,15 @@ export const chatApi = {
   async getHistory(
     organizationId?: string,
     limit = 20,
+    before?: string,
   ): Promise<ChatHistoryResponse> {
     if (!organizationId) {
       throw new OrganizationRequiredError();
     }
+    const params = new URLSearchParams({ limit: String(limit) });
+    if (before) params.append('before', before);
     return apiClient.get(
-      `${BASE_URL}/organizations/${organizationId}/chat/history?limit=${limit}`,
+      `${BASE_URL}/organizations/${organizationId}/chat/history?${params.toString()}`,
       {},
       organizationId,
     );
@@ -121,5 +130,73 @@ export const chatApi = {
     }
 
     return response.blob();
+  },
+
+  async sendMessageStream(
+    dto: SendMessageDto,
+    organizationId: string,
+    onToken: (token: string) => void,
+    onComplete: (metadata: ChatMetadata) => void,
+    onError: (error: Error) => void,
+    signal?: AbortSignal,
+  ): Promise<void> {
+    const headers = await getApiHeaders(organizationId);
+    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+
+    const response = await fetch(
+      `${API_URL}/api/v1/organizations/${organizationId}/chat/stream`,
+      {
+        method: 'POST',
+        headers: {
+          ...headers,
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify(dto),
+        signal,
+      },
+    );
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ message: 'Stream request failed' }));
+      onError(new Error(err.message || 'Failed to start stream'));
+      return;
+    }
+
+    const reader = response.body!.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    // Cancel the reader if the signal is aborted
+    if (signal) {
+      signal.addEventListener('abort', () => reader.cancel(), { once: true });
+    }
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          try {
+            const data = JSON.parse(line.slice(6));
+            if (data.type === 'token') onToken(data.content);
+            else if (data.type === 'done') onComplete({ ...data.metadata, suggestions: data.metadata?.suggestions });
+            else if (data.type === 'error') onError(new Error(data.message));
+          } catch {
+            // Skip malformed SSE data
+          }
+        }
+      }
+    } catch (error) {
+      // Ignore abort errors — they're expected when the user navigates away
+      if (error instanceof DOMException && error.name === 'AbortError') return;
+      onError(error instanceof Error ? error : new Error('Stream read error'));
+    }
   },
 };

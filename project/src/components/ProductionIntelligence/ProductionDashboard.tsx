@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import {  useState  } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
@@ -22,20 +23,26 @@ import {
 } from '@/hooks/useProductionIntelligence';
 import { useNavigate } from '@tanstack/react-router';
 import { formatCurrency } from '@/lib/taxCalculations';
+import { DEFAULT_CURRENCY } from '@/utils/currencies';
 import { YieldHistoryForm } from './YieldHistoryForm';
 import { BenchmarkForm } from './BenchmarkForm';
 import { HarvestForecastForm } from './HarvestForecastForm';
+import { SectionLoader } from '@/components/ui/loader';
+import { SeasonComparison } from './SeasonComparison';
 
 interface ProductionDashboardProps {
   parcelId?: string;
 }
 
-export const ProductionDashboard: React.FC<ProductionDashboardProps> = ({ parcelId }) => {
+export const ProductionDashboard = ({ parcelId }: ProductionDashboardProps) => {
   const { currentOrganization, currentFarm } = useAuth();
   const navigate = useNavigate();
-  const [dateRange, setDateRange] = useState({
-    fromDate: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 1 year ago
-    toDate: new Date().toISOString().split('T')[0],
+  const [dateRange, setDateRange] = useState(() => {
+    const t = Date.now();
+    return {
+      fromDate: new Date(t - 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      toDate: new Date(t).toISOString().split('T')[0],
+    };
   });
 
   // Form dialogs state
@@ -108,14 +115,7 @@ export const ProductionDashboard: React.FC<ProductionDashboardProps> = ({ parcel
   };
 
   if (loadingPerformance || loadingAlerts || loadingForecasts) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">Loading production intelligence...</p>
-        </div>
-      </div>
-    );
+    return <SectionLoader className="h-96 py-0" />;
   }
 
   return (
@@ -166,7 +166,7 @@ export const ProductionDashboard: React.FC<ProductionDashboardProps> = ({ parcel
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-gray-900 dark:text-white">
-              {formatCurrency(totalRevenue, currentOrganization?.currency || 'MAD')}
+              {formatCurrency(totalRevenue, currentOrganization?.currency || DEFAULT_CURRENCY)}
             </div>
             <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
               From {performanceSummary.reduce((sum, p) => sum + p.total_harvests, 0)} harvests
@@ -183,7 +183,7 @@ export const ProductionDashboard: React.FC<ProductionDashboardProps> = ({ parcel
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-gray-900 dark:text-white">
-              {formatCurrency(totalProfit, currentOrganization?.currency || 'MAD')}
+              {formatCurrency(totalProfit, currentOrganization?.currency || DEFAULT_CURRENCY)}
             </div>
             <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
               {avgProfitMargin.toFixed(1)}% avg margin
@@ -232,6 +232,7 @@ export const ProductionDashboard: React.FC<ProductionDashboardProps> = ({ parcel
           <TabsTrigger value="performance">Performance Benchmarks</TabsTrigger>
           <TabsTrigger value="alerts">Alerts ({alerts.length})</TabsTrigger>
           <TabsTrigger value="forecasts">Harvest Forecasts</TabsTrigger>
+          <TabsTrigger value="season-comparison">Season Comparison</TabsTrigger>
         </TabsList>
 
         {/* Performance Benchmarks Tab */}
@@ -284,7 +285,7 @@ export const ProductionDashboard: React.FC<ProductionDashboardProps> = ({ parcel
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => navigate({ to: '/accounting-invoices', search: { parcel_id: parcel.parcel_id } })}
+                          onClick={() => navigate({ to: '/accounting/invoices', search: { parcel_id: parcel.parcel_id } })}
                         >
                           <ExternalLink className="h-4 w-4 mr-1" />
                           View Invoices
@@ -346,7 +347,7 @@ export const ProductionDashboard: React.FC<ProductionDashboardProps> = ({ parcel
                             +{parcel.avg_variance_percent.toFixed(1)}% vs target
                           </span>
                           <span className="text-gray-600 dark:text-gray-400">
-                            Profit: {formatCurrency(parcel.total_profit, currentOrganization?.currency || 'MAD')}
+                            Profit: {formatCurrency(parcel.total_profit, currentOrganization?.currency || DEFAULT_CURRENCY)}
                           </span>
                           <span className="text-gray-600 dark:text-gray-400">
                             Margin: {parcel.avg_profit_margin.toFixed(1)}%
@@ -368,55 +369,55 @@ export const ProductionDashboard: React.FC<ProductionDashboardProps> = ({ parcel
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="border-b dark:border-gray-700">
-                    <tr className="text-left">
-                      <th className="pb-3 font-semibold">Parcel</th>
-                      <th className="pb-3 font-semibold">Crop</th>
-                      <th className="pb-3 font-semibold text-right">Avg Yield</th>
-                      <th className="pb-3 font-semibold text-right">Target</th>
-                      <th className="pb-3 font-semibold text-right">Variance</th>
-                      <th className="pb-3 font-semibold text-center">Rating</th>
-                      <th className="pb-3 font-semibold text-right">Revenue</th>
-                      <th className="pb-3 font-semibold text-right">Profit</th>
-                      <th className="pb-3 font-semibold text-right">Margin</th>
-                    </tr>
-                  </thead>
-                  <tbody>
+                <Table className="w-full text-sm">
+                  <TableHeader className="border-b dark:border-gray-700">
+                    <TableRow className="text-left">
+                      <TableHead className="pb-3 font-semibold">Parcel</TableHead>
+                      <TableHead className="pb-3 font-semibold">Crop</TableHead>
+                      <TableHead className="pb-3 font-semibold text-right">Avg Yield</TableHead>
+                      <TableHead className="pb-3 font-semibold text-right">Target</TableHead>
+                      <TableHead className="pb-3 font-semibold text-right">Variance</TableHead>
+                      <TableHead className="pb-3 font-semibold text-center">Rating</TableHead>
+                      <TableHead className="pb-3 font-semibold text-right">Revenue</TableHead>
+                      <TableHead className="pb-3 font-semibold text-right">Profit</TableHead>
+                      <TableHead className="pb-3 font-semibold text-right">Margin</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {performanceSummary.map((parcel) => (
-                      <tr key={parcel.parcel_id} className="border-b dark:border-gray-800">
-                        <td className="py-3">
+                      <TableRow key={parcel.parcel_id} className="border-b dark:border-gray-800">
+                        <TableCell className="py-3">
                           <div>
                             <div className="font-medium text-gray-900 dark:text-white">
                               {parcel.parcel_name}
                             </div>
                             <div className="text-xs text-gray-500">{parcel.farm_name}</div>
                           </div>
-                        </td>
-                        <td className="py-3">{parcel.crop_type}</td>
-                        <td className="py-3 text-right">{parcel.avg_yield_per_hectare.toFixed(2)} kg/ha</td>
-                        <td className="py-3 text-right">{parcel.avg_target_yield.toFixed(2)} kg/ha</td>
-                        <td className="py-3 text-right">
+                        </TableCell>
+                        <TableCell className="py-3">{parcel.crop_type}</TableCell>
+                        <TableCell className="py-3 text-right">{parcel.avg_yield_per_hectare.toFixed(2)} kg/ha</TableCell>
+                        <TableCell className="py-3 text-right">{parcel.avg_target_yield.toFixed(2)} kg/ha</TableCell>
+                        <TableCell className="py-3 text-right">
                           <span className={parcel.avg_variance_percent >= 0 ? 'text-green-600' : 'text-red-600'}>
                             {parcel.avg_variance_percent.toFixed(1)}%
                           </span>
-                        </td>
-                        <td className="py-3 text-center">
+                        </TableCell>
+                        <TableCell className="py-3 text-center">
                           <Badge className={getPerformanceColor(parcel.performance_rating)}>
                             {parcel.performance_rating}
                           </Badge>
-                        </td>
-                        <td className="py-3 text-right">
-                          {formatCurrency(parcel.total_revenue, currentOrganization?.currency || 'MAD')}
-                        </td>
-                        <td className="py-3 text-right">
-                          {formatCurrency(parcel.total_profit, currentOrganization?.currency || 'MAD')}
-                        </td>
-                        <td className="py-3 text-right">{parcel.avg_profit_margin.toFixed(1)}%</td>
-                      </tr>
+                        </TableCell>
+                        <TableCell className="py-3 text-right">
+                          {formatCurrency(parcel.total_revenue, currentOrganization?.currency || DEFAULT_CURRENCY)}
+                        </TableCell>
+                        <TableCell className="py-3 text-right">
+                          {formatCurrency(parcel.total_profit, currentOrganization?.currency || DEFAULT_CURRENCY)}
+                        </TableCell>
+                        <TableCell className="py-3 text-right">{parcel.avg_profit_margin.toFixed(1)}%</TableCell>
+                      </TableRow>
                     ))}
-                  </tbody>
-                </table>
+                  </TableBody>
+                </Table>
               </div>
             </CardContent>
           </Card>
@@ -481,7 +482,7 @@ export const ProductionDashboard: React.FC<ProductionDashboardProps> = ({ parcel
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => navigate({ to: '/accounting-invoices', search: { parcel_id: alert.parcel_id } })}
+                        onClick={() => navigate({ to: '/accounting/invoices', search: { parcel_id: alert.parcel_id } })}
                       >
                         <ExternalLink className="h-4 w-4 mr-1" />
                         Reconcile Revenue
@@ -518,7 +519,7 @@ export const ProductionDashboard: React.FC<ProductionDashboardProps> = ({ parcel
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                     <div>
                       <p className="text-sm text-gray-600 dark:text-gray-400">Predicted Yield</p>
                       <p className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -534,13 +535,13 @@ export const ProductionDashboard: React.FC<ProductionDashboardProps> = ({ parcel
                     <div>
                       <p className="text-sm text-gray-600 dark:text-gray-400">Est. Revenue</p>
                       <p className="text-lg font-semibold text-gray-900 dark:text-white">
-                        {formatCurrency(forecast.estimated_revenue || 0, currentOrganization?.currency || 'MAD')}
+                        {formatCurrency(forecast.estimated_revenue || 0, currentOrganization?.currency || DEFAULT_CURRENCY)}
                       </p>
                     </div>
                     <div>
                       <p className="text-sm text-gray-600 dark:text-gray-400">Est. Profit</p>
                       <p className="text-lg font-semibold text-gray-900 dark:text-white">
-                        {formatCurrency(forecast.estimated_profit || 0, currentOrganization?.currency || 'MAD')}
+                        {formatCurrency(forecast.estimated_profit || 0, currentOrganization?.currency || DEFAULT_CURRENCY)}
                       </p>
                     </div>
                   </div>
@@ -551,6 +552,10 @@ export const ProductionDashboard: React.FC<ProductionDashboardProps> = ({ parcel
               </Card>
             ))
           )}
+        </TabsContent>
+
+        <TabsContent value="season-comparison">
+          <SeasonComparison parcelId={parcelId} />
         </TabsContent>
       </Tabs>
 

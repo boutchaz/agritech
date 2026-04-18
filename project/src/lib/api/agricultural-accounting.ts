@@ -1,4 +1,5 @@
 import { apiClient } from '../api-client';
+import type { PaginatedQuery, PaginatedResponse } from './types';
 import type {
   FiscalYear,
   FiscalPeriod,
@@ -9,6 +10,7 @@ import type {
   CropCycleAllocation,
   CropCyclePnL,
   CampaignSummary,
+  CampaignStatus,
   CropCycleStage,
   HarvestEvent,
   HarvestEventStats,
@@ -142,6 +144,14 @@ export const campaignsApi = {
     return apiClient.patch<AgriculturalCampaign>(`/api/v1/campaigns/${id}`, updates);
   },
 
+  async updateStatus(id: string, status: CampaignStatus): Promise<AgriculturalCampaign> {
+    return apiClient.patch<AgriculturalCampaign>(`/api/v1/campaigns/${id}/status`, { status });
+  },
+
+  async remove(id: string): Promise<void> {
+    await apiClient.delete<void>(`/api/v1/campaigns/${id}`);
+  },
+
   async getSummary(organizationId: string): Promise<CampaignSummary[]> {
     const response = await apiClient.get<CampaignSummary[] | PaginatedApiResponse<CampaignSummary>>(
       '/api/v1/campaign-summary?sortBy=start_date&sortDir=desc',
@@ -153,6 +163,32 @@ export const campaignsApi = {
 };
 
 export const cropCyclesApi = {
+  async getPaginated(
+    organizationId: string,
+    query?: PaginatedQuery & {
+      campaign_id?: string;
+      fiscal_year_id?: string;
+      farm_id?: string;
+      parcel_id?: string;
+      status?: string;
+      crop_type?: string;
+      cycle_type?: string;
+      season?: string;
+    }
+  ): Promise<PaginatedResponse<CropCycle>> {
+    const queryString = toQueryString({
+      ...query,
+      sortBy: query?.sortBy || 'created_at',
+      sortDir: query?.sortDir || 'desc',
+    });
+
+    return apiClient.get<PaginatedResponse<CropCycle>>(
+      `/api/v1/crop-cycles${queryString}`,
+      {},
+      organizationId
+    );
+  },
+
   async getAll(
     organizationId: string,
     filters?: {
@@ -162,6 +198,8 @@ export const cropCyclesApi = {
       parcel_id?: string;
       status?: string;
       crop_type?: string;
+      cycle_type?: string;
+      season?: string;
     }
   ): Promise<CropCycle[]> {
     const query = toQueryString({

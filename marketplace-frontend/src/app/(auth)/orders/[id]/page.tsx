@@ -188,7 +188,7 @@ export default function OrderDetailPage() {
                         <h2 className="text-lg font-semibold text-gray-900 mb-4">Articles commandes</h2>
                         <div className="space-y-4">
                             {order.items?.map((item, index) => (
-                                <div key={index} className="flex gap-4">
+                                <div key={(item as any).title} className="flex gap-4">
                                     <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
                                         {(item as any).image_url ? (
                                             <img

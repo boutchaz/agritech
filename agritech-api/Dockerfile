@@ -3,10 +3,11 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Copy only the API package files (not workspace files to avoid workspace context)
-COPY agritech-api/package.json ./
+# Copy API package files
+COPY agritech-api/package.json ./agritech-api/
 
 # Install all dependencies
+WORKDIR /app/agritech-api
 RUN npm install
 
 # Copy source code
@@ -27,10 +28,13 @@ COPY agritech-api/package.json ./
 RUN npm install --production
 
 # Copy built application from builder
-COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/agritech-api/dist ./dist
 
 # Copy email templates
-COPY --from=builder /app/src/modules/email/templates ./dist/modules/email/templates
+COPY --from=builder /app/agritech-api/src/modules/email/templates ./dist/modules/email/templates
+
+# Bundle crop reference data (JSON files read at runtime as fallback)
+COPY --from=builder /app/agritech-api/referentials/ ./referentials/
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && \

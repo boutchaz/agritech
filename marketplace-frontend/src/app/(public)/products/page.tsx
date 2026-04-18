@@ -30,8 +30,8 @@ async function getCategories() {
 }
 
 export const metadata: Metadata = {
-  title: 'Produits Agricoles - AgriTech Market',
-  description: 'Découvrez notre sélection de produits agricoles sur AgriTech Market.',
+  title: 'Produits Agricoles - AgroGina Market',
+  description: 'Découvrez notre sélection de produits agricoles sur AgroGina Market.',
 };
 
 export default async function ProductsPage({

@@ -4,9 +4,10 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/hooks/useAuth';
 import { PageLayout } from '@/components/PageLayout';
 import ModernPageHeader from '@/components/ModernPageHeader';
-import { ArrowDownCircle, ArrowUpCircle, Banknote, Building2, Calendar, Loader2, AlertCircle, Download, Wheat, CalendarRange } from 'lucide-react';
+import { ArrowDownCircle, ArrowUpCircle, Banknote, Building2, Calendar, AlertCircle, Download, Wheat, CalendarRange } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/label';
 import { NativeSelect } from '@/components/ui/NativeSelect';
@@ -14,6 +15,9 @@ import { withRouteProtection } from '@/components/authorization/withRouteProtect
 import { useCashFlow, type CashFlowReport } from '@/hooks/useFinancialReports';
 import { useCampaigns, useFiscalYears } from '@/hooks/useAgriculturalAccounting';
 import { formatCurrency } from '@/lib/utils/format';
+import { PageLoader } from '@/components/ui/loader';
+import { AccountingReportSkeleton } from '@/components/ui/page-skeletons';
+
 
 interface CashFlowLineItem {
   id: string;
@@ -21,7 +25,7 @@ interface CashFlowLineItem {
   amount: number;
 }
 
-const CashFlowSection: React.FC<{
+const CashFlowSection = ({ title, items, total, currencySymbol, color, icon, tableLabel }: {
   title: string;
   items: CashFlowLineItem[];
   total: number;
@@ -29,7 +33,7 @@ const CashFlowSection: React.FC<{
   color: string;
   icon: React.ReactNode;
   tableLabel: string;
-}> = ({ title, items, total, currencySymbol, color, icon, tableLabel }) => (
+}) => (
   <Card>
     <CardHeader className={`${color} text-white rounded-t-lg`}>
       <CardTitle className="flex items-center justify-between">
@@ -44,32 +48,32 @@ const CashFlowSection: React.FC<{
       {items.length === 0 ? (
         <div className="p-4 text-center text-gray-500">No transactions in this period</div>
       ) : (
-        <table className="w-full" aria-label={tableLabel}>
-          <thead className="bg-gray-50 dark:bg-gray-800">
-            <tr>
-              <th scope="col" className="text-left px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400">Description</th>
-              <th scope="col" className="text-right px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400">Amount</th>
-            </tr>
-          </thead>
-          <tbody>
+        <Table className="w-full" aria-label={tableLabel}>
+          <TableHeader className="bg-gray-50 dark:bg-gray-800">
+            <TableRow>
+              <TableHead scope="col" className="text-left px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400">Description</TableHead>
+              <TableHead scope="col" className="text-right px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400">Amount</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {items.map((item) => (
-              <tr key={item.id} className="border-t border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
-                <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">{item.label}</td>
-                <td className={`px-4 py-3 text-sm text-right font-medium ${item.amount >= 0 ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>
+              <TableRow key={item.id} className="border-t border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
+                <TableCell className="px-4 py-3 text-sm text-gray-900 dark:text-white">{item.label}</TableCell>
+                <TableCell className={`px-4 py-3 text-sm text-right font-medium ${item.amount >= 0 ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>
                   {formatCurrency(item.amount, currencySymbol)}
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ))}
-          </tbody>
-          <tfoot className="bg-gray-100 dark:bg-gray-700">
-            <tr>
-              <td className="px-4 py-3 text-sm font-semibold text-gray-900 dark:text-white">Net {title}</td>
-              <td className="px-4 py-3 text-sm text-right font-bold text-gray-900 dark:text-white">
+          </TableBody>
+          <TableFooter className="bg-gray-100 dark:bg-gray-700">
+            <TableRow>
+              <TableCell className="px-4 py-3 text-sm font-semibold text-gray-900 dark:text-white">Net {title}</TableCell>
+              <TableCell className="px-4 py-3 text-sm text-right font-bold text-gray-900 dark:text-white">
                 {formatCurrency(total, currencySymbol)}
-              </td>
-            </tr>
-          </tfoot>
-        </table>
+              </TableCell>
+            </TableRow>
+          </TableFooter>
+        </Table>
       )}
     </CardContent>
   </Card>
@@ -230,7 +234,7 @@ function exportCashFlowCsv(
   URL.revokeObjectURL(url);
 }
 
-const AppContent: React.FC = () => {
+const AppContent = () => {
   const { t } = useTranslation();
   const { currentOrganization } = useAuth();
 
@@ -265,18 +269,14 @@ const AppContent: React.FC = () => {
     }
   }, [selectedFiscalYear, fiscalYears]);
 
-  const { data: cashFlowReport, isLoading, error } = useCashFlow(startDate, endDate);
+  const activeFiscalYearId = selectedFiscalYear !== 'all' ? selectedFiscalYear : undefined;
+  const { data: cashFlowReport, isLoading, error } = useCashFlow(startDate, endDate, activeFiscalYearId);
 
   const currencySymbol = currentOrganization?.currency_symbol || currentOrganization?.currency || 'MAD';
 
   if (!currentOrganization) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">{t('dashboard.loading', 'Loading organization...')}</p>
-        </div>
-      </div>
+      <PageLoader />
     );
   }
 
@@ -373,12 +373,7 @@ const AppContent: React.FC = () => {
         </Card>
 
         {/* Loading State */}
-        {isLoading && (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-green-600" />
-            <span className="ml-2 text-gray-600 dark:text-gray-400">{t('reportsModule.cashFlow.loading', 'Loading cash flow statement...')}</span>
-          </div>
-        )}
+        {isLoading && <AccountingReportSkeleton />}
 
         {/* Error State */}
         {error && (
@@ -396,7 +391,7 @@ const AppContent: React.FC = () => {
         {cashFlowReport && !isLoading && (
           <>
             {/* Summary Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
               <Card className="border-green-200 bg-green-50 dark:bg-green-900/20">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium text-green-600 dark:text-green-400 flex items-center gap-2">
@@ -493,42 +488,42 @@ const AppContent: React.FC = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-0">
-                <table className="w-full" aria-label={t('reportsModule.cashFlow.tableLabel', 'Cash Summary')}>
-                  <thead className="bg-gray-50 dark:bg-gray-800">
-                    <tr>
-                      <th scope="col" className="text-left px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400">Description</th>
-                      <th scope="col" className="text-right px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400">Amount</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr className="border-t border-gray-100 dark:border-gray-700">
-                      <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">
+                <Table className="w-full" aria-label={t('reportsModule.cashFlow.tableLabel', 'Cash Summary')}>
+                  <TableHeader className="bg-gray-50 dark:bg-gray-800">
+                    <TableRow>
+                      <TableHead scope="col" className="text-left px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400">Description</TableHead>
+                      <TableHead scope="col" className="text-right px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400">Amount</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    <TableRow className="border-t border-gray-100 dark:border-gray-700">
+                      <TableCell className="px-4 py-3 text-sm text-gray-900 dark:text-white">
                         {t('reportsModule.cashFlow.openingCash', 'Opening Cash Balance')}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-right font-medium text-gray-900 dark:text-white">
+                      </TableCell>
+                      <TableCell className="px-4 py-3 text-sm text-right font-medium text-gray-900 dark:text-white">
                         {formatCurrency(cashFlowReport.opening_cash, currencySymbol)}
-                      </td>
-                    </tr>
-                    <tr className="border-t border-gray-100 dark:border-gray-700">
-                      <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">
+                      </TableCell>
+                    </TableRow>
+                    <TableRow className="border-t border-gray-100 dark:border-gray-700">
+                      <TableCell className="px-4 py-3 text-sm text-gray-900 dark:text-white">
                         {t('reportsModule.cashFlow.netChangeInCash', 'Net Change in Cash')}
-                      </td>
-                      <td className={`px-4 py-3 text-sm text-right font-medium ${cashFlowReport.net_change >= 0 ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>
+                      </TableCell>
+                      <TableCell className={`px-4 py-3 text-sm text-right font-medium ${cashFlowReport.net_change >= 0 ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}`}>
                         {formatCurrency(cashFlowReport.net_change, currencySymbol)}
-                      </td>
-                    </tr>
-                  </tbody>
-                  <tfoot className="bg-gray-100 dark:bg-gray-700 font-bold">
-                    <tr>
-                      <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">
+                      </TableCell>
+                    </TableRow>
+                  </TableBody>
+                  <TableFooter className="bg-gray-100 dark:bg-gray-700 font-bold">
+                    <TableRow>
+                      <TableCell className="px-4 py-3 text-sm text-gray-900 dark:text-white">
                         {t('reportsModule.cashFlow.closingCash', 'Closing Cash Balance')}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-right text-green-700 dark:text-green-300">
+                      </TableCell>
+                      <TableCell className="px-4 py-3 text-sm text-right text-green-700 dark:text-green-300">
                         {formatCurrency(cashFlowReport.closing_cash, currencySymbol)}
-                      </td>
-                    </tr>
-                  </tfoot>
-                </table>
+                      </TableCell>
+                    </TableRow>
+                  </TableFooter>
+                </Table>
               </CardContent>
             </Card>
 

@@ -3,14 +3,16 @@ import { useTranslation } from 'react-i18next';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Plus, Edit, Trash2, ChevronRight, ChevronDown, Building2, Search, Filter, Database as DatabaseIcon } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Plus, Edit, Trash2, ChevronRight, ChevronDown, Filter, Database as DatabaseIcon } from 'lucide-react';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/badge';
+import { FilterBar } from '@/components/ui/data-table';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import { seedChartOfAccounts, type SupportedCountry } from '@/lib/seed-chart-of-accounts';
+import { DEFAULT_CURRENCY } from '@/utils/currencies';
 import {
   Table,
   TableBody,
@@ -20,12 +22,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
   DialogFooter,
-  DialogHeader,
-  DialogTitle,
 } from '@/components/ui/dialog';
 import {
   Select,
@@ -40,6 +37,9 @@ import { useAccounts } from '@/hooks/useAccounts';
 import { useAuth } from '@/hooks/useAuth';
 import { useFormErrors } from '@/hooks/useFormErrors';
 import type { Database } from '@/types/database.types';
+import { SectionLoader } from '@/components/ui/loader';
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
+
 
 type Account = Database['public']['Tables']['accounts']['Row'];
 type AccountType = 'Asset' | 'Liability' | 'Equity' | 'Revenue' | 'Expense';
@@ -59,7 +59,7 @@ const accountFormSchema = z.object({
 
 type AccountFormData = z.infer<typeof accountFormSchema>;
 
-const getInitialFormData = (orgCurrency: string = 'MAD'): AccountFormData => ({
+const getInitialFormData = (orgCurrency: string = DEFAULT_CURRENCY): AccountFormData => ({
   code: '',
   name: '',
   account_type: 'Asset',
@@ -88,7 +88,7 @@ const accountTypeIcons: Record<AccountType, string> = {
   Expense: '💸',
 };
 
-export const ChartOfAccounts: React.FC = () => {
+export const ChartOfAccounts = () => {
   const { t } = useTranslation();
   const { currentOrganization, user } = useAuth();
   const { data: accounts = [], isLoading, createAccount, updateAccount, deleteAccount } = useAccounts();
@@ -113,7 +113,7 @@ export const ChartOfAccounts: React.FC = () => {
     formState: { errors, isSubmitting },
   } = useForm<AccountFormData>({
     resolver: zodResolver(accountFormSchema),
-    defaultValues: getInitialFormData(currentOrganization?.currency || 'MAD'),
+    defaultValues: getInitialFormData(currentOrganization?.currency || DEFAULT_CURRENCY),
   });
 
   useEffect(() => {
@@ -126,12 +126,12 @@ export const ChartOfAccounts: React.FC = () => {
         parent_id: editingAccount.parent_id,
         is_group: editingAccount.is_group ?? false,
         is_active: editingAccount.is_active ?? true,
-        currency_code: currentOrganization?.currency || editingAccount.currency_code || 'MAD',
+        currency_code: currentOrganization?.currency || editingAccount.currency_code || DEFAULT_CURRENCY,
         allow_cost_center: editingAccount.allow_cost_center ?? true,
         description: editingAccount.description || '',
       });
     } else {
-      reset(getInitialFormData(currentOrganization?.currency || 'MAD'));
+      reset(getInitialFormData(currentOrganization?.currency || DEFAULT_CURRENCY));
     }
   }, [editingAccount, reset, currentOrganization]);
 
@@ -235,7 +235,7 @@ export const ChartOfAccounts: React.FC = () => {
     setIsSeeding(true);
     try {
       const countryCode: SupportedCountry = 'MAR';
-      const currency = (currentOrganization.currency || 'MAD') as 'MAD' | 'EUR' | 'USD' | 'GBP';
+      const currency = (currentOrganization.currency || DEFAULT_CURRENCY) as 'MAD' | 'EUR' | 'USD' | 'GBP';
 
       const result = await seedChartOfAccounts(
         currentOrganization.id,
@@ -317,7 +317,7 @@ export const ChartOfAccounts: React.FC = () => {
             </Badge>
           </TableCell>
           <TableCell className="text-center">
-            {currentOrganization?.currency || account.currency_code || 'MAD'}
+            {currentOrganization?.currency || account.currency_code || DEFAULT_CURRENCY}
           </TableCell>
           <TableCell className="text-center">
             {account.is_active ? (
@@ -353,49 +353,31 @@ export const ChartOfAccounts: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
-      </div>
+      <SectionLoader />
     );
   }
 
   return (
     <div className="space-y-4 md:space-y-6">
       <Card>
-        <CardHeader className="px-4 py-4 sm:px-6 sm:py-5">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div className="min-w-0">
-              <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
-                <Building2 className="h-5 w-5 flex-shrink-0" />
-                <span className="truncate">{t('accountingModule.accounts.title')}</span>
-              </CardTitle>
-              <CardDescription className="mt-1 text-sm">
-                {t('accountingModule.accounts.subtitleAlt')}
-              </CardDescription>
-            </div>
-            <Button onClick={handleCreateAccount} className="w-full sm:w-auto justify-center flex-shrink-0">
-              <Plus className="h-4 w-4 mr-2" />
-              {t('accountingModule.accounts.newAccount')}
-            </Button>
-          </div>
+        <CardHeader className="flex flex-row items-center justify-end gap-3 border-b px-4 py-4 sm:px-6 sm:py-5">
+          <Button
+            type="button"
+            variant="default"
+            onClick={handleCreateAccount}
+            className="w-full sm:w-auto justify-center flex-shrink-0"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            {t('accountingModule.accounts.newAccount')}
+          </Button>
         </CardHeader>
         <CardContent className="px-4 py-4 sm:px-6 sm:py-5">
-          {/* Filters */}
           <div className="flex flex-col gap-3 mb-6">
-            {/* Search Bar - Full width on mobile */}
-            <div className="w-full">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  placeholder={t('accountingModule.accounts.searchPlaceholder')}
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 w-full"
-                />
-              </div>
-            </div>
-
-            {/* Type Filter and Show Inactive */}
+            <FilterBar
+              searchValue={searchTerm}
+              onSearchChange={setSearchTerm}
+              searchPlaceholder={t('accountingModule.accounts.searchPlaceholder')}
+            />
             <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
               <Select value={filterType} onValueChange={(val) => setFilterType(val as AccountType | 'all')}>
                 <SelectTrigger className="w-full sm:w-[220px]">
@@ -455,6 +437,8 @@ export const ChartOfAccounts: React.FC = () => {
                           </div>
                           <div className="flex flex-col sm:flex-row gap-3 px-4">
                             <Button
+                              type="button"
+                              variant="default"
                               onClick={handleSeedChartOfAccounts}
                               disabled={isSeeding}
                               size="lg"
@@ -504,6 +488,8 @@ export const ChartOfAccounts: React.FC = () => {
                 </div>
                 <div className="flex flex-col gap-3 w-full">
                   <Button
+                    type="button"
+                    variant="default"
                     onClick={handleSeedChartOfAccounts}
                     disabled={isSeeding}
                     size="lg"
@@ -565,7 +551,7 @@ export const ChartOfAccounts: React.FC = () => {
                       <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
                         <span>{t('accountingModule.accounts.form.level', { number: level + 1 })}</span>
                         <span>•</span>
-                        <span>{account.currency_code || currentOrganization?.currency || 'MAD'}</span>
+                        <span>{account.currency_code || currentOrganization?.currency || DEFAULT_CURRENCY}</span>
                         <span>•</span>
                         <Badge variant="outline" className="text-xs">
                           {account.is_group ? t('accountingModule.accounts.accountKinds.group') : t('accountingModule.accounts.accountKinds.ledger')}
@@ -594,18 +580,17 @@ export const ChartOfAccounts: React.FC = () => {
       </Card>
 
       {/* Create/Edit Dialog */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto w-[calc(100vw-2rem)] sm:w-full">
-          <DialogHeader>
-            <DialogTitle className="text-lg sm:text-xl">
-              {editingAccount ? t('accountingModule.accounts.form.editTitle') : t('accountingModule.accounts.form.createTitle')}
-            </DialogTitle>
-            <DialogDescription className="text-sm">
-              {editingAccount
-                ? t('accountingModule.accounts.form.editDescription')
-                : t('accountingModule.accounts.form.createDescription')}
-            </DialogDescription>
-          </DialogHeader>
+      <ResponsiveDialog
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+        title={editingAccount ? t('accountingModule.accounts.form.editTitle') : t('accountingModule.accounts.form.createTitle')}
+        description={editingAccount
+          ? t('accountingModule.accounts.form.editDescription')
+          : t('accountingModule.accounts.form.createDescription')}
+        size="2xl"
+        className="w-[calc(100vw-2rem)] sm:w-full"
+        contentClassName="max-h-[90vh] overflow-y-auto"
+      >
            <form onSubmit={handleFormSubmit(onSubmit)} className="space-y-4 pt-2">
              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                <div>
@@ -782,19 +767,18 @@ export const ChartOfAccounts: React.FC = () => {
                </Button>
              </DialogFooter>
           </form>
-        </DialogContent>
-      </Dialog>
+      </ResponsiveDialog>
 
       {/* Delete Confirmation Dialog */}
-      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-lg sm:text-xl">{t('accountingModule.accounts.delete.title')}</DialogTitle>
-            <DialogDescription className="text-sm">
-              {t('accountingModule.accounts.delete.confirmation', { name: deletingAccount?.name })}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="flex-col sm:flex-row gap-2">
+      <ResponsiveDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        title={<span className="text-lg sm:text-xl">{t('accountingModule.accounts.delete.title')}</span>}
+        description={<span className="text-sm">{t('accountingModule.accounts.delete.confirmation', { name: deletingAccount?.name })}</span>}
+        size="md"
+        className="w-[calc(100vw-2rem)]"
+        footer={
+          <div className="flex w-full flex-col gap-2 sm:flex-row sm:justify-end">
             <Button
               variant="outline"
               onClick={() => setIsDeleteDialogOpen(false)}
@@ -810,9 +794,11 @@ export const ChartOfAccounts: React.FC = () => {
             >
               {t('accountingModule.accounts.delete.button')}
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </div>
+        }
+      >
+        <></>
+      </ResponsiveDialog>
     </div>
   );
 };

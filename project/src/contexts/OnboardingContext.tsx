@@ -50,6 +50,7 @@ const getDefaultState = (userId: string, email: string): OnboardingState => ({
     use_demo_data: false,
     enable_notifications: true
   },
+  existingFarmId: null,
   existingOrgId: null,
   selectedPlanType: null
 });
@@ -83,7 +84,7 @@ interface OnboardingProviderProps {
   children: ReactNode;
 }
 
-export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({ userId, email, children }) => {
+export const OnboardingProvider = ({ userId, email, children }: OnboardingProviderProps) => {
   const [state, setState] = useState<OnboardingState>(() => getDefaultState(userId, email));
   const [isRestored, setIsRestored] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -100,7 +101,7 @@ export const OnboardingProvider: React.FC<OnboardingProviderProps> = ({ userId, 
         // Check for organization from signup first
         const storedOrgId = localStorage.getItem('currentOrganizationId');
         const storedOrg = localStorage.getItem('currentOrganization');
-        let orgData: any = null;
+        let orgData: { name?: string; slug?: string; email?: string } | null = null;
 
         if (storedOrgId && storedOrg) {
           try {

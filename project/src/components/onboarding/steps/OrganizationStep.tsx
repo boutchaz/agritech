@@ -1,7 +1,9 @@
-import React, { useEffect, useRef, useState } from 'react';
+import {  useEffect, useRef, useState  } from "react";
 import { Building2, User, Briefcase, CheckCircle, ArrowRight, Mail } from 'lucide-react';
 import { OnboardingInput } from '../ui/OnboardingInput';
 import { SelectionCard } from '../ui/SelectionCard';
+import { ButtonLoader } from '@/components/ui/loader';
+import { Button } from '@/components/ui/button';
 
 interface OrganizationData {
   name: string;
@@ -62,14 +64,14 @@ const COUNTRIES = [
   { id: 'TN', name: 'Tunisie', flag: '🇹🇳' },
 ];
 
-export const OrganizationStep: React.FC<OrganizationStepProps> = ({
+export const OrganizationStep = ({
   organizationData,
   existingOrgId,
   onUpdate,
   onCheckSlug,
   onNext,
   isLoading = false,
-}) => {
+}: OrganizationStepProps) => {
   const [subStep, setSubStep] = useState(0);
   const [slugCheck, setSlugCheck] = useState<SlugCheckResult | null>(null);
   const [isCheckingSlug, setIsCheckingSlug] = useState(false);
@@ -180,7 +182,7 @@ export const OrganizationStep: React.FC<OrganizationStepProps> = ({
           ))}
         </div>
 
-        <button
+        <Button
           onClick={() => setSubStep(1)}
           className="mt-10 w-full py-4 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-2xl font-semibold text-base
             shadow-lg shadow-emerald-500/25 hover:shadow-xl hover:shadow-emerald-500/30
@@ -189,7 +191,7 @@ export const OrganizationStep: React.FC<OrganizationStepProps> = ({
         >
           <span>Continuer</span>
           <ArrowRight className="w-5 h-5" />
-        </button>
+        </Button>
 
         <style>{`
           @keyframes fade-in {
@@ -236,11 +238,11 @@ export const OrganizationStep: React.FC<OrganizationStepProps> = ({
               success={!isCheckingSlug && slugCheck?.available}
               error={!isCheckingSlug && slugCheck && !slugCheck.available ? 'Ce slug est déjà pris' : undefined}
               isValidating={isCheckingSlug}
-              hint={`Votre URL: agritech.ma/${organizationData.slug || 'votre-slug'}`}
+              hint={`Votre URL: agrogina.ma/${organizationData.slug || 'votre-slug'}`}
             />
             
             {slugCheck && !slugCheck.available && slugCheck.suggestion && (
-              <button
+              <Button
                 type="button"
                 onClick={() => {
                   if (slugCheck.suggestion) {
@@ -250,7 +252,7 @@ export const OrganizationStep: React.FC<OrganizationStepProps> = ({
                 className="mt-2 text-sm text-emerald-600 hover:text-emerald-700 font-medium underline underline-offset-2"
               >
                 Utiliser "{slugCheck.suggestion}" à la place
-              </button>
+              </Button>
             )}
           </div>
         </div>
@@ -265,7 +267,7 @@ export const OrganizationStep: React.FC<OrganizationStepProps> = ({
               </div>
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-gray-900 text-lg truncate">{organizationData.name}</p>
-                <p className="text-sm text-gray-500">agritech.ma/{organizationData.slug || 'slug'}</p>
+                <p className="text-sm text-gray-500">agrogina.ma/{organizationData.slug || 'slug'}</p>
               </div>
               {slugCheck?.available && (
                 <CheckCircle className="w-6 h-6 text-emerald-500 flex-shrink-0" />
@@ -274,7 +276,7 @@ export const OrganizationStep: React.FC<OrganizationStepProps> = ({
           </div>
         )}
 
-        <button
+        <Button
           onClick={() => setSubStep(2)}
           disabled={!organizationData.name.trim() || (!existingOrgId && !slugCheck?.available)}
           className="mt-10 w-full py-4 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-2xl font-semibold text-base
@@ -285,7 +287,7 @@ export const OrganizationStep: React.FC<OrganizationStepProps> = ({
         >
           <span>Continuer</span>
           <ArrowRight className="w-5 h-5" />
-        </button>
+        </Button>
 
         <style>{`
           @keyframes fade-in {
@@ -359,7 +361,7 @@ export const OrganizationStep: React.FC<OrganizationStepProps> = ({
         </div>
       </div>
 
-      <button
+      <Button
         onClick={onNext}
         disabled={!isValid || isLoading}
         className="mt-10 w-full py-4 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-2xl font-semibold text-base
@@ -370,7 +372,7 @@ export const OrganizationStep: React.FC<OrganizationStepProps> = ({
       >
         {isLoading ? (
           <>
-            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+            <ButtonLoader className="h-5 w-5 text-white" />
             <span>Enregistrement...</span>
           </>
         ) : (
@@ -379,7 +381,7 @@ export const OrganizationStep: React.FC<OrganizationStepProps> = ({
             <ArrowRight className="w-5 h-5" />
           </>
         )}
-      </button>
+      </Button>
 
       <style>{`
         @keyframes fade-in {

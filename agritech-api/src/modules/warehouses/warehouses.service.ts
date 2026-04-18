@@ -1,6 +1,7 @@
 import { Injectable, BadRequestException, NotFoundException, Logger } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { CreateWarehouseDto, UpdateWarehouseDto } from './dto';
+import { paginatedResponse, type PaginatedResponse } from '../../common/dto/paginated-query.dto';
 
 @Injectable()
 export class WarehousesService {
@@ -8,22 +9,32 @@ export class WarehousesService {
 
   constructor(private readonly databaseService: DatabaseService) {}
 
-  async findAll(organizationId: string): Promise<any> {
+  async findAll(organizationId: string, page = 1, pageSize = 100): Promise<PaginatedResponse<any>> {
     const supabase = this.databaseService.getAdminClient();
 
+    const { count } = await supabase
+      .from('warehouses')
+      .select('id', { count: 'exact', head: true })
+      .eq('organization_id', organizationId)
+      .is('deleted_at', null)
+      .eq('is_active', true);
+
+    const from = (page - 1) * pageSize;
     const { data, error } = await supabase
       .from('warehouses')
       .select('*')
       .eq('organization_id', organizationId)
+      .is('deleted_at', null)
       .eq('is_active', true)
-      .order('name', { ascending: true });
+      .order('name', { ascending: true })
+      .range(from, from + pageSize - 1);
 
     if (error) {
       this.logger.error(`Failed to fetch warehouses: ${error.message}`);
       throw new BadRequestException(`Failed to fetch warehouses: ${error.message}`);
     }
 
-    return data;
+    return paginatedResponse(data || [], count || 0, page, pageSize);
   }
 
   async findOne(id: string, organizationId: string): Promise<any> {
@@ -34,6 +45,7 @@ export class WarehousesService {
       .select('*')
       .eq('id', id)
       .eq('organization_id', organizationId)
+      .is('deleted_at', null)
       .single();
 
     if (error) {
@@ -106,6 +118,7 @@ export class WarehousesService {
       .update(updateData)
       .eq('id', id)
       .eq('organization_id', organizationId)
+      .is('deleted_at', null)
       .select()
       .single();
 
@@ -125,9 +138,10 @@ export class WarehousesService {
 
     const { error } = await supabase
       .from('warehouses')
-      .update({ is_active: false })
+      .update({ deleted_at: new Date().toISOString(), is_active: false })
       .eq('id', id)
-      .eq('organization_id', organizationId);
+      .eq('organization_id', organizationId)
+      .is('deleted_at', null);
 
     if (error) {
       this.logger.error(`Failed to delete warehouse: ${error.message}`);
@@ -148,6 +162,8 @@ export class WarehousesService {
         warehouse:warehouses(id, name)
       `)
       .eq('organization_id', organizationId)
+      .is('item.deleted_at', null)
+      .is('warehouse.deleted_at', null)
       .order('item_name', { ascending: true });
 
     if (filters?.warehouse_id) {

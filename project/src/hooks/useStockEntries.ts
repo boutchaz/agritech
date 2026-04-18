@@ -141,6 +141,26 @@ export function useCancelStockEntry() {
   });
 }
 
+export function useReverseStockEntry() {
+  const queryClient = useQueryClient();
+  const { currentOrganization } = useAuth();
+
+  return useMutation({
+    mutationFn: async ({ entryId, reason }: { entryId: string; reason: string }) => {
+      if (!currentOrganization?.id) {
+        throw new Error('No organization selected');
+      }
+
+      return stockEntriesApi.reverse(entryId, reason, currentOrganization.id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['stock-entries', currentOrganization?.id] });
+      queryClient.invalidateQueries({ queryKey: ['stock-movements'] });
+      queryClient.invalidateQueries({ queryKey: ['inventory-items'] });
+    },
+  });
+}
+
 /**
  * Hook to delete stock entry (only Draft)
  */

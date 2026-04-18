@@ -1,0 +1,27 @@
+{
+  "id": "referentials/avocado",
+  "title": "Avocado (Avocatier)",
+  "description": "Operational referential for precision avocado management in Morocco",
+  "source": "@site/docs/referentials/avocado.md",
+  "sourceDirName": "referentials",
+  "slug": "/referentials/avocado",
+  "permalink": "/referentials/avocado",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 3,
+  "frontMatter": {
+    "sidebar_position": 3,
+    "title": "Avocado (Avocatier)"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Olive Tree (Olivier)",
+    "permalink": "/referentials/olive-tree"
+  },
+  "next": {
+    "title": "Citrus (Agrumes)",
+    "permalink": "/referentials/citrus"
+  }
+}

@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate, useSearch } from '@tanstack/react-router';
+import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useState, useEffect } from 'react';
 import TasksList from '@/components/Tasks/TasksList';
 import TaskForm from '@/components/Tasks/TaskForm';
@@ -42,13 +42,10 @@ function TasksListPage() {
         { organization_id: currentOrganization.id },
         currentOrganization.id
       );
-      let farmsList: any[] = [];
-      if (data && typeof data === 'object' && 'farms' in data && Array.isArray((data as { farms: any[] }).farms)) {
-        farmsList = (data as { farms: any[] }).farms;
-      } else if (Array.isArray(data)) {
-        farmsList = data;
-      }
-      return farmsList.map((f: any) => ({ id: f.farm_id || f.id, name: f.farm_name || f.name }));
+      return (data || []).map((f: { farm_id?: string; id?: string; farm_name?: string; name?: string }) => ({
+        id: f.farm_id || f.id || '',
+        name: f.farm_name || f.name || '',
+      }));
     },
     enabled: !!currentOrganization?.id,
   });

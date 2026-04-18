@@ -1,6 +1,7 @@
 import { Controller, Get, Patch, Post, Delete, Body, UseGuards, Request, Param, Put, Query } from '@nestjs/common';
 import { OnboardingService } from './onboarding.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { OrganizationGuard } from '../../common/guards/organization.guard';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse, ApiBody, ApiQuery } from '@nestjs/swagger';
 import {
   OnboardingStateDto,
@@ -14,7 +15,7 @@ import {
 
 @ApiTags('onboarding')
 @Controller('onboarding')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, OrganizationGuard)
 @ApiBearerAuth()
 export class OnboardingController {
   constructor(private readonly onboardingService: OnboardingService) {}

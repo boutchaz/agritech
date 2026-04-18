@@ -1,7 +1,10 @@
 import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { SequencesService } from '../sequences/sequences.service';
+import { sanitizeSearch } from '../../common/utils/sanitize-search';
 import { StockEntriesService } from '../stock-entries/stock-entries.service';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationType } from '../notifications/dto/notification.dto';
 import { StockEntryType, StockEntryStatus } from '../stock-entries/dto/create-stock-entry.dto';
 import {
   CreatePurchaseOrderDto,
@@ -21,6 +24,7 @@ export class PurchaseOrdersService {
     private readonly databaseService: DatabaseService,
     private readonly sequencesService: SequencesService,
     private readonly stockEntriesService: StockEntriesService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   /**
@@ -110,7 +114,35 @@ export class PurchaseOrdersService {
       }
 
       // Fetch complete order with items
-      return this.findOne(purchaseOrder.id, organizationId);
+      const result = await this.findOne(purchaseOrder.id, organizationId);
+
+      try {
+        const client = this.databaseService.getAdminClient();
+        const { data: orgUsers } = await client
+          .from('organization_users')
+          .select('user_id')
+          .eq('organization_id', organizationId)
+          .eq('is_active', true);
+
+        const userIds = (orgUsers || [])
+          .map((u: { user_id: string }) => u.user_id)
+          .filter((id: string) => id !== userId);
+
+        if (userIds.length > 0) {
+          await this.notificationsService.createNotificationsForUsers(
+            userIds,
+            organizationId,
+            NotificationType.PURCHASE_ORDER_CREATED,
+            `New purchase order #${orderNumber}`,
+            `Purchase order #${orderNumber} created — ${totalAmount} total`,
+            { orderId: purchaseOrder.id, orderNumber, totalAmount },
+          );
+        }
+      } catch (notifError) {
+        this.logger.warn(`Failed to send purchase order notification: ${notifError}`);
+      }
+
+      return result;
     } catch (error) {
       this.logger.error('Error in create purchase order:', error);
       throw error;
@@ -147,9 +179,12 @@ export class PurchaseOrdersService {
         .eq('organization_id', organizationId);
 
       if (search) {
-        const searchFilter = `order_number.ilike.%${search}%,supplier_name.ilike.%${search}%`;
-        countQuery = countQuery.or(searchFilter);
-        dataQuery = dataQuery.or(searchFilter);
+        const safeSearch = sanitizeSearch(search);
+        if (safeSearch) {
+          const searchFilter = `order_number.ilike.%${safeSearch}%,supplier_name.ilike.%${safeSearch}%`;
+          countQuery = countQuery.or(searchFilter);
+          dataQuery = dataQuery.or(searchFilter);
+        }
       }
 
       if (status) {
@@ -387,6 +422,30 @@ export class PurchaseOrdersService {
       if (error) {
         this.logger.error('Error updating order status:', error);
         throw new BadRequestException(`Failed to update status: ${error.message}`);
+      }
+
+      try {
+        const client = this.databaseService.getAdminClient();
+        const { data: orgUsers } = await client
+          .from('organization_users')
+          .select('user_id')
+          .eq('organization_id', organizationId)
+          .eq('is_active', true);
+
+        const userIds = (orgUsers || []).map((u: { user_id: string }) => u.user_id);
+
+        if (userIds.length > 0) {
+          await this.notificationsService.createNotificationsForUsers(
+            userIds,
+            organizationId,
+            NotificationType.PURCHASE_ORDER_STATUS_CHANGED,
+            `Purchase order #${order.order_number} is now ${updateStatusDto.status}`,
+            `Status updated from ${order.status} to ${updateStatusDto.status}`,
+            { orderId: id, orderNumber: order.order_number, previousStatus: order.status, newStatus: updateStatusDto.status },
+          );
+        }
+      } catch (notifError) {
+        this.logger.warn(`Failed to send PO status notification: ${notifError}`);
       }
 
       return this.findOne(id, organizationId);

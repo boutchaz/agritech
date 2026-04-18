@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Calculator, TrendingUp, Sprout, Mail, ArrowRight, Check, Users, Droplets } from 'lucide-react';
+import { DEFAULT_CURRENCY } from '@/utils/currencies';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -46,7 +47,7 @@ const PRICING_TIERS = {
   enterprise: 150,
 } as const;
 
-const ROICalculator: React.FC<ROICalculatorProps> = ({ className }) => {
+const ROICalculator = ({ className }: ROICalculatorProps) => {
   const { t } = useTranslation();
   const [step, setStep] = useState<'calculator' | 'email'>('calculator');
   const [email, setEmail] = useState('');
@@ -78,7 +79,7 @@ const ROICalculator: React.FC<ROICalculatorProps> = ({ className }) => {
   }));
 
   const roiData: ROIData = useMemo(() => {
-    // AgriTech benefits (conservative estimates)
+    // AgroGina benefits (conservative estimates)
     const yieldImprovement = 0.15; // 15% yield increase
     const laborOptimization = 0.25; // 25% labor savings
     const inputOptimization = 0.20; // 20% input savings
@@ -114,7 +115,7 @@ const ROICalculator: React.FC<ROICalculatorProps> = ({ className }) => {
   const formatCurrency = (value: number) =>
     value.toLocaleString('fr-MA', {
       style: 'currency',
-      currency: 'MAD',
+      currency: DEFAULT_CURRENCY,
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     });
@@ -130,7 +131,7 @@ const ROICalculator: React.FC<ROICalculatorProps> = ({ className }) => {
             {t('common.roiCalculator.thankYouTitle')}
           </CardTitle>
           <CardDescription className="text-green-700 dark:text-green-300 max-w-md">
-            <span dangerouslySetInnerHTML={{ __html: t('common.roiCalculator.thankYouMessage', { email }) }} />
+            <span dangerouslySetInnerHTML={{ __html: t('common.roiCalculator.thankYouMessage', { email: email.replace(/[<>&"']/g, (c: string) => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#x27;'}[c] || c)) }) }} />
           </CardDescription>
           <Button
             variant="outline"
@@ -155,7 +156,7 @@ const ROICalculator: React.FC<ROICalculatorProps> = ({ className }) => {
           <div className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-green-100 dark:bg-green-900 mx-auto mb-3">
             <Mail className="h-6 w-6 text-green-600 dark:text-green-400" />
           </div>
-          <CardTitle className="text-2xl sm:text-3xl font-bold">
+          <CardTitle className="text-2xl sm:text-3xl font-semibold">
             {t('common.roiCalculator.emailReportTitle')}
           </CardTitle>
           <CardDescription className="text-base">
@@ -209,7 +210,7 @@ const ROICalculator: React.FC<ROICalculatorProps> = ({ className }) => {
               </label>
               <div className="grid grid-cols-3 gap-2">
                 {Object.entries(PRICING_TIERS).map(([key, price]) => (
-                  <button
+                  <Button
                     key={key}
                     type="button"
                     onClick={() => setSelectedPlan(key as keyof typeof PRICING_TIERS)}
@@ -223,16 +224,12 @@ const ROICalculator: React.FC<ROICalculatorProps> = ({ className }) => {
                     {t(`common.roiCalculator.plans.${key}`)}
                     <br />
                     <span className="font-bold">{price}$</span>
-                  </button>
+                  </Button>
                 ))}
               </div>
             </div>
 
-            <Button
-              type="submit"
-              size="lg"
-              className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold"
-            >
+            <Button variant="green" type="submit" size="lg" className="w-full font-semibold" >
               {t('common.roiCalculator.receiveFreeReport')}
               <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
@@ -241,13 +238,13 @@ const ROICalculator: React.FC<ROICalculatorProps> = ({ className }) => {
               {t('common.roiCalculator.noCommitment')}
             </p>
 
-            <button
+            <Button
               type="button"
               onClick={() => setStep('calculator')}
               className="w-full text-sm text-gray-600 dark:text-gray-400 hover:text-green-600 dark:hover:text-green-400"
             >
               {t('common.roiCalculator.backToCalculator')}
-            </button>
+            </Button>
           </form>
         </CardContent>
       </Card>
@@ -260,7 +257,7 @@ const ROICalculator: React.FC<ROICalculatorProps> = ({ className }) => {
         <div className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-green-100 dark:bg-green-900 mx-auto mb-3">
           <Calculator className="h-6 w-6 text-green-600 dark:text-green-400" />
         </div>
-        <CardTitle className="text-2xl sm:text-3xl font-bold">{t('common.roiCalculator.calculatorTitle')}</CardTitle>
+        <CardTitle className="text-2xl sm:text-3xl font-semibold">{t('common.roiCalculator.calculatorTitle')}</CardTitle>
         <CardDescription className="text-base">{t('common.roiCalculator.calculatorSubtitle')}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -323,7 +320,7 @@ const ROICalculator: React.FC<ROICalculatorProps> = ({ className }) => {
              </label>
              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                {cropOptions.map((crop) => (
-                 <button
+                 <Button
                    key={crop.value}
                    type="button"
                    onClick={() => setValue('cropType', crop.value)}
@@ -335,7 +332,7 @@ const ROICalculator: React.FC<ROICalculatorProps> = ({ className }) => {
                    )}
                  >
                    {crop.label}
-                 </button>
+                 </Button>
                ))}
              </div>
              <input type="hidden" {...register('cropType')} />
@@ -485,10 +482,7 @@ const ROICalculator: React.FC<ROICalculatorProps> = ({ className }) => {
         </div>
 
         {/* CTA Button */}
-        <Button
-          size="lg"
-          className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold text-lg"
-          onClick={() => setStep('email')}
+        <Button variant="green" size="lg" className="w-full font-semibold text-lg" onClick={() => setStep('email')}
         >
           {t('common.roiCalculator.receiveReport')}
           <ArrowRight className="ml-2 h-5 w-5" />

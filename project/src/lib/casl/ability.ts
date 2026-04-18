@@ -1,5 +1,6 @@
 import { AbilityBuilder, createMongoAbility, MongoAbility } from '@casl/ability';
 import type { Subscription } from '../../hooks/useSubscription';
+import { isSubscriptionValid } from '../polar';
 
 // Define all possible actions
 export type Action =
@@ -318,23 +319,31 @@ export function defineAbilitiesFor(context: UserContext): AppAbility {
   // SUBSCRIPTION-BASED PERMISSIONS
   // ============================================
 
-  if (!subscription) {
-    // No subscription - block everything except viewing subscription page
+  // Must match AbilityContext + polar billing (e.g. pending_renewal, grace period)
+  if (!isSubscriptionValid(subscription)) {
     cannot('create', 'all');
     cannot('update', 'all');
     cannot('delete', 'all');
     can('read', 'Subscription');
-    return build();
-  }
 
-  // Check subscription status
-  const isActive = ['active', 'trialing'].includes(subscription.status);
-  if (!isActive) {
-    // Inactive subscription - block everything
-    cannot('create', 'all');
-    cannot('update', 'all');
-    cannot('delete', 'all');
-    can('read', 'Subscription');
+    // Re-apply admin management abilities after the blanket block.
+    // CASL's cannot('update','all') overrides earlier can('manage','User'),
+    // so we must re-grant User/Org/Settings management for admins.
+    if (role.name === 'system_admin') {
+      can('manage', 'all');
+    } else if (role.name === 'organization_admin') {
+      can('manage', 'User');
+      can('invite', 'User');
+      can('remove', 'User');
+      can('read', 'Organization');
+      can('update', 'Organization');
+      can('read', 'Subscription');
+      can('update', 'Subscription');
+      can('read', 'Settings');
+      can('update', 'Settings');
+      can('manage', 'Role');
+    }
+
     return build();
   }
 

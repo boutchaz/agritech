@@ -1,9 +1,26 @@
-import { Controller, Post, Body, Get, BadRequestException } from '@nestjs/common';
+import { Controller, Get, Post, Body, UseGuards, BadRequestException } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { EmailService } from './email.service';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { InternalAdminGuard } from '../admin/guards/internal-admin.guard';
 
+/**
+ * Email controller — restricted to internal admins only.
+ * These endpoints send emails with sensitive content (temp passwords).
+ * They must NEVER be publicly accessible.
+ */
+@ApiTags('email')
+@ApiBearerAuth()
 @Controller('email')
+@UseGuards(JwtAuthGuard, InternalAdminGuard)
 export class EmailController {
   constructor(private readonly emailService: EmailService) {}
+
+  @Get('config')
+  @ApiOperation({ summary: 'Get current SMTP configuration (redacted)' })
+  getConfig() {
+    return this.emailService.getRedactedConfig();
+  }
 
   @Post('test')
   async sendTestEmail(@Body() body: { to: string }) {
@@ -12,6 +29,19 @@ export class EmailController {
       throw new BadRequestException('Email service is not configured');
     }
     return { message: 'Test email sent successfully' };
+  }
+
+  @Post('test-template')
+  @ApiOperation({ summary: 'Send a test email using any template by type, with sample data' })
+  async sendTestTemplate(@Body() body: { to: string; type: string }) {
+    if (!body.to || !body.type) {
+      throw new BadRequestException('Both "to" and "type" are required');
+    }
+    const sent = await this.emailService.sendTestByType(body.type, body.to);
+    if (!sent) {
+      throw new BadRequestException('Failed to send — check SMTP config and template existence');
+    }
+    return { message: `Test email sent for template "${body.type}"` };
   }
 
   @Post('user-created')

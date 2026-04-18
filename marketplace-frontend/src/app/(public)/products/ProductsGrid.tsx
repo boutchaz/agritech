@@ -396,9 +396,9 @@ function ProductsGridContent({ initialProducts, initialCategories, initialCatego
                                                 acc.push(page);
                                                 return acc;
                                             }, [])
-                                            .map((item, idx) =>
+                                            .map((item, ellipsisIdx) =>
                                                 typeof item === 'string' ? (
-                                                    <span key={`ellipsis-${idx}`} className="px-2 text-gray-400">...</span>
+                                                    <span key={`ellipsis-${ellipsisIdx}`} className="px-2 text-gray-400">...</span>
                                                 ) : (
                                                     <button
                                                         key={item}

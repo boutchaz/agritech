@@ -1,6 +1,6 @@
-# AgriTech Pricing Admin Tool
+# AgroGina Pricing Admin Tool
 
-A minimal internal tool for managing AgriTech pricing and syncing with Polar.sh.
+A minimal internal tool for managing AgroGina pricing and syncing with Polar.sh.
 
 ## Features
 

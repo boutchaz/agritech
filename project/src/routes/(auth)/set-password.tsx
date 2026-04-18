@@ -28,7 +28,7 @@ function SetPasswordPage() {
   useEffect(() => {
     // Check if user needs to set password
     if (!user) {
-      navigate({ to: '/login' });
+      navigate({ to: '/login', search: { redirect: '/dashboard' } });
       return;
     }
 
@@ -103,9 +103,9 @@ function SetPasswordPage() {
 
       // Redirect to dashboard
       navigate({ to: '/dashboard' });
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error setting password:', err);
-      setError(err.message || 'Une erreur est survenue lors de la configuration du mot de passe');
+      setError(err instanceof Error ? err.message : 'Une erreur est survenue lors de la configuration du mot de passe');
     } finally {
       setLoading(false);
     }
@@ -121,7 +121,7 @@ function SetPasswordPage() {
               <Leaf className="w-8 h-8 text-white" />
             </div>
             <h1 className="text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
-              AgriTech
+              AgroGina
             </h1>
           </div>
         </div>
@@ -166,7 +166,7 @@ function SetPasswordPage() {
                     className="pr-12 h-11"
                     required
                   />
-                  <button
+                  <Button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute inset-y-0 right-0 pr-4 flex items-center text-muted-foreground hover:text-foreground transition-colors"
@@ -176,7 +176,7 @@ function SetPasswordPage() {
                     ) : (
                       <Eye className="w-5 h-5" />
                     )}
-                  </button>
+                  </Button>
                 </div>
 
                 {/* Password Strength Indicator */}
@@ -252,7 +252,7 @@ function SetPasswordPage() {
                     className="pr-12 h-11"
                     required
                   />
-                  <button
+                  <Button
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                     className="absolute inset-y-0 right-0 pr-4 flex items-center text-muted-foreground hover:text-foreground transition-colors"
@@ -262,7 +262,7 @@ function SetPasswordPage() {
                     ) : (
                       <Eye className="w-5 h-5" />
                     )}
-                  </button>
+                  </Button>
                 </div>
                 {confirmPassword && password !== confirmPassword && (
                   <p className="text-xs text-red-600 dark:text-red-400 font-medium flex items-center gap-1">
@@ -273,12 +273,7 @@ function SetPasswordPage() {
               </div>
 
               {/* Submit Button */}
-              <Button
-                type="submit"
-                disabled={loading || !password || !confirmPassword || password !== confirmPassword}
-                className="w-full h-11 bg-green-600 hover:bg-green-700 text-white font-medium shadow-lg shadow-green-600/20"
-                size="lg"
-              >
+              <Button variant="green" type="submit" disabled={loading || !password || !confirmPassword || password !== confirmPassword} className="w-full h-11 font-medium shadow-lg shadow-green-600/20" size="lg" >
                 {loading ? (
                   <>
                     <Loader2 className="w-5 h-5 animate-spin" />
@@ -303,7 +298,7 @@ function SetPasswordPage() {
 
         {/* Footer */}
         <p className="text-center text-xs text-muted-foreground mt-6">
-          © 2024 AgriTech Platform. Tous droits réservés.
+          © 2024 AgroGina Platform. Tous droits réservés.
         </p>
       </div>
     </div>

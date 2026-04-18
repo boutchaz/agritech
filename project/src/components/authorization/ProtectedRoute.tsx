@@ -1,8 +1,10 @@
-import { useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { useAbility } from '../../lib/casl/AbilityContext';
 import { useAuth } from '../../hooks/useAuth';
 import type { Action, Subject } from '../../lib/casl/ability';
+import { PageLoader } from '@/components/ui/loader';
+
 
 interface ProtectedRouteProps {
   action: Action;
@@ -18,12 +20,12 @@ interface ProtectedRouteProps {
  * IMPORTANT: This component waits for auth to fully load before checking permissions
  * to avoid race conditions where guest abilities are evaluated before user data loads.
  */
-export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
+export const ProtectedRoute = ({
   action,
   subject,
   children,
   redirectTo = '/tasks',
-}) => {
+}: ProtectedRouteProps) => {
   const ability = useAbility();
   const { loading: authLoading, user, currentOrganization, userRole } = useAuth();
   const navigate = useNavigate();
@@ -36,11 +38,6 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   useEffect(() => {
     // Only check permission after BOTH auth and rules are fully loaded
     if (isReady && !ability.can(action, subject)) {
-      console.warn(`Access denied to ${subject}. Required: ${action}`, {
-        user: user?.email,
-        role: userRole?.role_name,
-        organization: currentOrganization?.name,
-      });
       navigate({ to: redirectTo });
     }
   }, [ability, action, subject, navigate, redirectTo, isReady, user, userRole, currentOrganization]);
@@ -48,14 +45,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   // Show loading while auth is loading OR rules aren't loaded yet
   if (!isReady) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">
-            {authLoading ? 'Loading authentication...' : 'Loading permissions...'}
-          </p>
-        </div>
-      </div>
+      <PageLoader />
     );
   }
 

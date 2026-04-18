@@ -1,16 +1,15 @@
-import React, { useMemo } from 'react';
+import {  useMemo  } from "react";
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
-  Dialog,
-  DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/Select';
@@ -19,6 +18,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useCreateHarvestForecast } from '@/hooks/useProductionIntelligence';
 import { useFarms, useParcelsByFarm } from '@/hooks/useParcelsQuery';
 import { toast } from 'sonner';
+import { DEFAULT_CURRENCY } from '@/utils/currencies';
 
 const forecastSchema = z.object({
   farm_id: z.string().min(1, 'Farm is required'),
@@ -54,11 +54,11 @@ interface HarvestForecastFormProps {
   onSuccess?: () => void;
 }
 
-export const HarvestForecastForm: React.FC<HarvestForecastFormProps> = ({
+export const HarvestForecastForm = ({
   isOpen,
   onClose,
   onSuccess,
-}) => {
+}: HarvestForecastFormProps) => {
   const { currentOrganization, currentFarm } = useAuth();
   const createForecast = useCreateHarvestForecast();
   const { data: farms = [] } = useFarms(currentOrganization?.id);
@@ -131,7 +131,7 @@ export const HarvestForecastForm: React.FC<HarvestForecastFormProps> = ({
 
       await createForecast.mutateAsync({
         ...data,
-        currency_code: currentOrganization?.currency || 'MAD',
+        currency_code: currentOrganization?.currency || DEFAULT_CURRENCY,
         status: 'pending',
         adjustment_factors: adjustmentFactors,
       });
@@ -147,8 +147,12 @@ export const HarvestForecastForm: React.FC<HarvestForecastFormProps> = ({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+    <ResponsiveDialog
+      open={isOpen}
+      onOpenChange={onClose}
+      size="3xl"
+      contentClassName="max-h-[90vh] overflow-y-auto"
+    >
         <DialogHeader>
           <DialogTitle>Create Harvest Forecast</DialogTitle>
           <DialogDescription>
@@ -338,7 +342,7 @@ export const HarvestForecastForm: React.FC<HarvestForecastFormProps> = ({
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="estimated_price_per_unit">
-                  Price per Unit ({currentOrganization?.currency || 'MAD'})
+                  Price per Unit ({currentOrganization?.currency || DEFAULT_CURRENCY})
                 </Label>
                 <Input
                   type="number"
@@ -351,7 +355,7 @@ export const HarvestForecastForm: React.FC<HarvestForecastFormProps> = ({
 
               <div>
                 <Label htmlFor="estimated_revenue">
-                  Estimated Revenue ({currentOrganization?.currency || 'MAD'})
+                  Estimated Revenue ({currentOrganization?.currency || DEFAULT_CURRENCY})
                 </Label>
                 <Input
                   type="number"
@@ -366,7 +370,7 @@ export const HarvestForecastForm: React.FC<HarvestForecastFormProps> = ({
 
               <div>
                 <Label htmlFor="estimated_cost">
-                  Estimated Cost ({currentOrganization?.currency || 'MAD'})
+                  Estimated Cost ({currentOrganization?.currency || DEFAULT_CURRENCY})
                 </Label>
                 <Input
                   type="number"
@@ -379,7 +383,7 @@ export const HarvestForecastForm: React.FC<HarvestForecastFormProps> = ({
 
               <div>
                 <Label htmlFor="estimated_profit">
-                  Estimated Profit ({currentOrganization?.currency || 'MAD'})
+                  Estimated Profit ({currentOrganization?.currency || DEFAULT_CURRENCY})
                 </Label>
                 <Input
                   type="number"
@@ -451,7 +455,6 @@ export const HarvestForecastForm: React.FC<HarvestForecastFormProps> = ({
             </Button>
           </DialogFooter>
         </form>
-      </DialogContent>
-    </Dialog>
+    </ResponsiveDialog>
   );
 };

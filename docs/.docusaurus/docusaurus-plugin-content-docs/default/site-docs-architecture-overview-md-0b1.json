@@ -1,7 +1,7 @@
 {
   "id": "architecture/overview",
   "title": "Architecture Overview",
-  "description": "The AgriTech Platform is built as a multi-tenant SaaS application using a monorepo structure with pnpm workspaces.",
+  "description": "The AgroGina Platform is built as a multi-tenant SaaS application using a monorepo structure with pnpm workspaces.",
   "source": "@site/docs/architecture/overview.md",
   "sourceDirName": "architecture",
   "slug": "/architecture/overview",
@@ -20,7 +20,7 @@
     "permalink": "/getting-started/quick-start"
   },
   "next": {
-    "title": "Database Schema",
-    "permalink": "/database/schema"
+    "title": "Mobile App (Expo/React Native)",
+    "permalink": "/architecture/mobile-app"
   }
 }

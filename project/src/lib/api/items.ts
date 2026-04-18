@@ -1,10 +1,12 @@
-import { createCrudApi } from './createCrudApi';
+import { createCrudApi, requireOrganizationId } from './createCrudApi';
 import { apiClient } from '../api-client';
+import type { PaginatedQuery, PaginatedResponse } from './types';
 import type {
   Item,
   ItemWithDetails,
   ItemGroup,
   ItemSelectionOption,
+  ItemPrice,
   CreateItemInput,
   UpdateItemInput,
   CreateItemGroupInput,
@@ -14,9 +16,30 @@ import type {
   ProductVariant,
   ItemFilters,
   ItemGroupFilters,
+  FarmStockLevelsByItem,
+  ItemUsageSummary,
+  ItemStockLevelsResponse,
+  ItemSelectionFilters,
+  FarmStockLevelFilters,
+  StockLevelFilters,
+  ItemGroupListResponse,
+  MessageResponse,
+  SeedResultResponse,
 } from '../../types/items';
 
 const BASE_URL = '/api/v1/items';
+
+export interface PaginatedItemQuery extends PaginatedQuery {
+  is_sales_item?: boolean;
+  is_active?: boolean;
+  item_group_id?: string;
+}
+
+export type {
+  ItemStockLevelWarehouse,
+  ItemStockLevelSummary,
+  ItemStockLevelsResponse,
+} from '../../types/items';
 
 const baseCrud = createCrudApi<Item, CreateItemInput, ItemFilters, UpdateItemInput>(BASE_URL);
 
@@ -31,6 +54,29 @@ export const itemsApi = {
    */
   async getOne(id: string, organizationId?: string): Promise<ItemWithDetails> {
     return apiClient.get<ItemWithDetails>(`${BASE_URL}/${id}`, {}, organizationId);
+  },
+
+  async getPaginated(
+    organizationId: string,
+    query: PaginatedItemQuery,
+  ): Promise<PaginatedResponse<Item>> {
+    requireOrganizationId(organizationId, 'itemsApi.getPaginated');
+
+    const params = new URLSearchParams();
+
+    if (query.page) params.append('page', String(query.page));
+    if (query.pageSize) params.append('pageSize', String(query.pageSize));
+    if (query.sortBy) params.append('sortBy', query.sortBy);
+    if (query.sortDir) params.append('sortDir', query.sortDir);
+    if (query.search) params.append('search', query.search);
+    if (query.is_sales_item !== undefined) params.append('is_sales_item', String(query.is_sales_item));
+    if (query.is_active !== undefined) params.append('is_active', String(query.is_active));
+    if (query.item_group_id) params.append('item_group_id', query.item_group_id);
+
+    const queryString = params.toString();
+    const url = queryString ? `${BASE_URL}?${queryString}` : BASE_URL;
+
+    return apiClient.get<PaginatedResponse<Item>>(url, {}, organizationId);
   },
 
   // =====================================================
@@ -52,7 +98,8 @@ export const itemsApi = {
     if (filters?.search) params.append('search', filters.search);
 
     const url = `${BASE_URL}/groups${params.toString() ? `?${params.toString()}` : ''}`;
-    return apiClient.get<ItemGroup[]>(url, {}, organizationId);
+    const res = await apiClient.get<ItemGroupListResponse>(url, {}, organizationId);
+    return res?.data || [];
   },
 
   /**
@@ -79,8 +126,20 @@ export const itemsApi = {
   /**
    * Delete an item group
    */
-  async deleteGroup(id: string, organizationId?: string): Promise<{ message: string }> {
-    return apiClient.delete<{ message: string }>(`${BASE_URL}/groups/${id}`, {}, organizationId);
+  async deleteGroup(id: string, organizationId?: string): Promise<MessageResponse> {
+    return apiClient.delete<MessageResponse>(`${BASE_URL}/groups/${id}`, {}, organizationId);
+  },
+
+  /**
+   * Seed predefined item groups and subcategories (idempotent)
+   */
+  async seedPredefinedGroups(organizationId?: string): Promise<SeedResultResponse> {
+    return apiClient.post<SeedResultResponse>(
+      `${BASE_URL}/groups/seed-predefined`,
+      {},
+      {},
+      organizationId
+    );
   },
 
   // =====================================================
@@ -90,12 +149,7 @@ export const itemsApi = {
   /**
    * Get items for selection (lightweight for dropdowns)
    */
-  async getForSelection(filters?: {
-    is_sales_item?: boolean;
-    is_purchase_item?: boolean;
-    is_stock_item?: boolean;
-    search?: string;
-  }, organizationId?: string): Promise<ItemSelectionOption[]> {
+  async getForSelection(filters?: ItemSelectionFilters, organizationId?: string): Promise<ItemSelectionOption[]> {
     const params = new URLSearchParams();
 
     if (filters?.is_sales_item !== undefined) {
@@ -121,45 +175,38 @@ export const itemsApi = {
    * Get stock levels grouped by farm with warehouse relationships
    */
   async getFarmStockLevels(
-    filters?: {
-      farm_id?: string;
-      item_id?: string;
-      low_stock_only?: boolean;
-    },
+    filters?: FarmStockLevelFilters,
     organizationId?: string,
-  ): Promise<any[]> {
+  ): Promise<FarmStockLevelsByItem[]> {
     const params = new URLSearchParams();
     if (filters?.farm_id) params.append('farm_id', filters.farm_id);
     if (filters?.item_id) params.append('item_id', filters.item_id);
     if (filters?.low_stock_only) params.append('low_stock_only', 'true');
 
     const url = `${BASE_URL}/stock-levels/farm${params.toString() ? `?${params.toString()}` : ''}`;
-    return apiClient.get<any[]>(url, {}, organizationId);
+    return apiClient.get<FarmStockLevelsByItem[]>(url, {}, organizationId);
   },
 
   /**
    * Get item usage by farm/parcel
    */
-  async getItemFarmUsage(itemId: string, organizationId?: string): Promise<any> {
-    return apiClient.get<any>(`${BASE_URL}/${itemId}/farm-usage`, {}, organizationId);
+  async getItemFarmUsage(itemId: string, organizationId?: string): Promise<ItemUsageSummary> {
+    return apiClient.get<ItemUsageSummary>(`${BASE_URL}/${itemId}/farm-usage`, {}, organizationId);
   },
 
   /**
    * Get stock levels for items with farm context
    */
   async getStockLevels(
-    filters?: {
-      farm_id?: string;
-      item_id?: string;
-    },
+    filters?: StockLevelFilters,
     organizationId?: string,
-  ): Promise<any> {
+  ): Promise<ItemStockLevelsResponse> {
     const params = new URLSearchParams();
     if (filters?.farm_id) params.append('farm_id', filters.farm_id);
     if (filters?.item_id) params.append('item_id', filters.item_id);
 
     const url = `${BASE_URL}/stock-levels${params.toString() ? `?${params.toString()}` : ''}`;
-    return apiClient.get<any>(url, {}, organizationId);
+    return apiClient.get<ItemStockLevelsResponse>(url, {}, organizationId);
   },
 
   // =====================================================
@@ -186,8 +233,8 @@ export const itemsApi = {
     return apiClient.patch<ProductVariant>(`${BASE_URL}/variants/${variantId}`, data, {}, organizationId);
   },
 
-  async deleteVariant(variantId: string, organizationId?: string): Promise<{ message: string }> {
-    return apiClient.delete<{ message: string }>(`${BASE_URL}/variants/${variantId}`, {}, organizationId);
+  async deleteVariant(variantId: string, organizationId?: string): Promise<MessageResponse> {
+    return apiClient.delete<MessageResponse>(`${BASE_URL}/variants/${variantId}`, {}, organizationId);
   },
 
   // =====================================================
@@ -197,7 +244,20 @@ export const itemsApi = {
   /**
    * Get all prices for a specific item
    */
-  async getItemPrices(itemId: string, organizationId?: string): Promise<any[]> {
-    return apiClient.get<any[]>(`${BASE_URL}/${itemId}/prices`, {}, organizationId);
+  async getItemPrices(itemId: string, organizationId?: string): Promise<ItemPrice[]> {
+    return apiClient.get<ItemPrice[]>(`${BASE_URL}/${itemId}/prices`, {}, organizationId);
+  },
+
+  async getByBarcode(barcode: string, organizationId?: string): Promise<ItemWithDetails & { variantId?: string }> {
+    type BarcodeResponse = { type: 'item'; item: ItemWithDetails } | { type: 'variant'; item: ItemWithDetails; variant: { id: string } };
+    const response = await apiClient.get<BarcodeResponse>(
+      `${BASE_URL}/by-barcode/${barcode}`,
+      {},
+      organizationId,
+    );
+    if (response.type === 'variant' && response.variant) {
+      return { ...response.item, variantId: response.variant.id };
+    }
+    return response.item;
   },
 };

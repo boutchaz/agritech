@@ -1,5 +1,6 @@
 import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
+import { sanitizeSearch } from '../../common/utils/sanitize-search';
 
 export interface RegisterAbstractEntityDto {
   entityType: string;
@@ -175,7 +176,8 @@ export class EntitiesService {
 
     // Search in metadata if search term provided
     if (params.searchTerm) {
-      query = query.or(`metadata.ilike.%${params.searchTerm}%,entity_type.ilike.%${params.searchTerm}%`);
+      const s = sanitizeSearch(params.searchTerm);
+      if (s) query = query.or(`metadata.ilike.%${s}%,entity_type.ilike.%${s}%`);
     }
 
     // Apply limit

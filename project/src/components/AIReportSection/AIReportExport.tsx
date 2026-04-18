@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import {  useState  } from "react";
 import { Loader, FileText, FileIcon, Eye } from 'lucide-react';
 import jsPDF from 'jspdf';
 import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, BorderStyle } from 'docx';
@@ -6,6 +6,7 @@ import { saveAs } from 'file-saver';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import type { AIReportSections } from '../../lib/api/ai-reports';
+import { Button } from '@/components/ui/button';
 
 interface AIReportExportProps {
   sections: AIReportSections | null | undefined;
@@ -15,13 +16,13 @@ interface AIReportExportProps {
   onPreview?: () => void;
 }
 
-export const AIReportExport: React.FC<AIReportExportProps> = ({
+export const AIReportExport = ({
   sections,
   parcelName,
   generatedAt,
   provider,
   onPreview,
-}) => {
+}: AIReportExportProps) => {
   const { t } = useTranslation();
   const [isExportingPDF, setIsExportingPDF] = useState(false);
   const [isExportingDOCX, setIsExportingDOCX] = useState(false);
@@ -125,7 +126,7 @@ ${t('aiReports.sections.water', 'Eau')}: ${sections.healthAssessment.waterStatus
         doc.setPage(i);
         doc.setFontSize(8);
         doc.setFont('helvetica', 'italic');
-        doc.text(`Page ${i} sur ${totalPages} - ${t('aiReports.export.footer', 'Rapport généré par AgriTech IA')}`, margin, 290);
+        doc.text(`Page ${i} sur ${totalPages} - ${t('aiReports.export.footer', 'Rapport généré par AgroGina IA')}`, margin, 290);
       }
 
       const fileName = `rapport-ia-${parcelName.toLowerCase().replace(/\s+/g, '-')}-${new Date().toISOString().split('T')[0]}.pdf`;
@@ -223,7 +224,7 @@ ${t('aiReports.sections.water', 'Eau')}: ${sections.healthAssessment.waterStatus
 
       docChildren.push(
         new Paragraph({
-          children: [new TextRun({ text: t('aiReports.export.footer', 'Rapport généré par AgriTech IA'), italics: true, size: 18 })],
+          children: [new TextRun({ text: t('aiReports.export.footer', 'Rapport généré par AgroGina IA'), italics: true, size: 18 })],
           alignment: AlignmentType.CENTER,
           spacing: { before: 600 },
         })
@@ -254,23 +255,13 @@ ${t('aiReports.sections.water', 'Eau')}: ${sections.healthAssessment.waterStatus
   return (
     <div className="flex items-center gap-2">
       {onPreview && (
-        <button
-          onClick={onPreview}
-          disabled={!hasContent}
-          className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          title={t('aiReports.export.preview', 'Aperçu complet')}
-        >
+        <Button variant="green" onClick={onPreview} disabled={!hasContent} className="flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors disabled:cursor-not-allowed" title={t('aiReports.export.preview', 'Aperçu complet')} >
           <Eye className="w-4 h-4" />
           <span>{t('aiReports.export.previewButton', 'Aperçu')}</span>
-        </button>
+        </Button>
       )}
 
-      <button
-        onClick={exportToPDF}
-        disabled={isExporting || !hasContent}
-        className="flex items-center space-x-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        title={t('aiReports.export.exportPDF', 'Exporter en PDF')}
-      >
+      <Button variant="red" onClick={exportToPDF} disabled={isExporting || !hasContent} className="flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors disabled:cursor-not-allowed" title={t('aiReports.export.exportPDF', 'Exporter en PDF')} >
         {isExportingPDF ? (
           <>
             <Loader className="w-4 h-4 animate-spin" />
@@ -282,14 +273,9 @@ ${t('aiReports.sections.water', 'Eau')}: ${sections.healthAssessment.waterStatus
             <span>PDF</span>
           </>
         )}
-      </button>
+      </Button>
 
-      <button
-        onClick={exportToDOCX}
-        disabled={isExporting || !hasContent}
-        className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        title={t('aiReports.export.exportDOCX', 'Exporter en Word')}
-      >
+      <Button variant="blue" onClick={exportToDOCX} disabled={isExporting || !hasContent} className="flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors disabled:cursor-not-allowed" title={t('aiReports.export.exportDOCX', 'Exporter en Word')} >
         {isExportingDOCX ? (
           <>
             <Loader className="w-4 h-4 animate-spin" />
@@ -301,7 +287,7 @@ ${t('aiReports.sections.water', 'Eau')}: ${sections.healthAssessment.waterStatus
             <span>DOCX</span>
           </>
         )}
-      </button>
+      </Button>
     </div>
   );
 };

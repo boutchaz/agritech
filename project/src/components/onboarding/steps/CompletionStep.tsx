@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import {  useState  } from "react";
 import { Rocket, Settings, Bell, Database, ArrowRight, Check, Loader2, Sparkles } from 'lucide-react';
 import { SelectionCard } from '../ui/SelectionCard';
+import { Button } from '@/components/ui/button';
 
 interface Preferences {
   currency: string;
@@ -32,7 +33,7 @@ const DATE_FORMATS = [
   { id: 'YYYY-MM-DD', name: '2024-12-31', description: 'Format ISO' },
 ];
 
-export const CompletionStep: React.FC<CompletionStepProps> = ({
+export const CompletionStep = ({
   preferences,
   profileName,
   organizationName,
@@ -41,7 +42,7 @@ export const CompletionStep: React.FC<CompletionStepProps> = ({
   onUpdate,
   onComplete,
   isLoading,
-}) => {
+}: CompletionStepProps) => {
   const [showPreferences, setShowPreferences] = useState(false);
 
   if (!showPreferences) {
@@ -114,7 +115,7 @@ export const CompletionStep: React.FC<CompletionStepProps> = ({
         </div>
 
         {/* Preferences toggle */}
-        <button
+        <Button
           onClick={() => setShowPreferences(true)}
           className="w-full p-4 mb-6 bg-gray-50 hover:bg-gray-100 rounded-xl border border-gray-200 flex items-center justify-between transition-colors"
         >
@@ -123,10 +124,10 @@ export const CompletionStep: React.FC<CompletionStepProps> = ({
             <span className="text-gray-700">Personnaliser les préférences</span>
           </div>
           <ArrowRight className="w-5 h-5 text-gray-400" />
-        </button>
+        </Button>
 
         {/* Launch button */}
-        <button
+        <Button
           onClick={onComplete}
           disabled={isLoading}
           className="w-full py-5 bg-gradient-to-r from-emerald-500 via-emerald-600 to-teal-600 text-white rounded-2xl font-bold text-lg
@@ -146,7 +147,7 @@ export const CompletionStep: React.FC<CompletionStepProps> = ({
               Lancer mon tableau de bord
             </>
           )}
-        </button>
+        </Button>
 
         <p className="mt-4 text-center text-sm text-gray-500">
           3... 2... 1... C'est parti !
@@ -189,7 +190,7 @@ export const CompletionStep: React.FC<CompletionStepProps> = ({
           <label className="block text-sm font-medium text-gray-700 mb-2">Devise</label>
           <div className="grid grid-cols-3 gap-2">
             {CURRENCIES.map((currency) => (
-              <button
+              <Button
                 key={currency.id}
                 type="button"
                 onClick={() => onUpdate({ currency: currency.id })}
@@ -203,7 +204,7 @@ export const CompletionStep: React.FC<CompletionStepProps> = ({
               >
                 <div className="text-lg font-bold">{currency.symbol}</div>
                 <div className="text-xs text-gray-500">{currency.id}</div>
-              </button>
+              </Button>
             ))}
           </div>
         </div>
@@ -213,7 +214,7 @@ export const CompletionStep: React.FC<CompletionStepProps> = ({
           <label className="block text-sm font-medium text-gray-700 mb-2">Format de date</label>
           <div className="space-y-2">
             {DATE_FORMATS.map((format) => (
-              <button
+              <Button
                 key={format.id}
                 type="button"
                 onClick={() => onUpdate({ date_format: format.id })}
@@ -232,7 +233,7 @@ export const CompletionStep: React.FC<CompletionStepProps> = ({
                 {preferences.date_format === format.id && (
                   <Check className="w-5 h-5 text-emerald-500" />
                 )}
-              </button>
+              </Button>
             ))}
           </div>
         </div>
@@ -258,14 +259,14 @@ export const CompletionStep: React.FC<CompletionStepProps> = ({
       </div>
 
       <div className="mt-8 flex gap-3">
-        <button
+        <Button
           onClick={() => setShowPreferences(false)}
           className="flex-1 py-4 bg-gray-100 text-gray-700 rounded-xl font-medium
             hover:bg-gray-200 transition-all duration-200"
         >
           Retour
-        </button>
-        <button
+        </Button>
+        <Button
           onClick={onComplete}
           disabled={isLoading}
           className="flex-1 py-4 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-xl font-semibold
@@ -285,7 +286,7 @@ export const CompletionStep: React.FC<CompletionStepProps> = ({
               <Rocket className="w-5 h-5" />
             </>
           )}
-        </button>
+        </Button>
       </div>
 
       <style>{`

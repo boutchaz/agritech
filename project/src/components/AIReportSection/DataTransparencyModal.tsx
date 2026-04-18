@@ -21,9 +21,12 @@ import {
   Hash,
   Shield,
 } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { StatusDot } from '@/components/ui/status-dot';
 import { cn } from '@/lib/utils';
 import {
   DataFreshnessIndicator,
@@ -51,14 +54,14 @@ interface DataTransparencyModalProps {
  * Modal component for displaying detailed data transparency information
  * Shows all source data used to generate an AI report
  */
-export const DataTransparencyModal: React.FC<DataTransparencyModalProps> = ({
+export const DataTransparencyModal = ({
   open,
   onOpenChange,
   metadata,
   isLoading = false,
   onRefreshData,
   isRefreshing = false,
-}) => {
+}: DataTransparencyModalProps) => {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState('overview');
   const [expandedSources, setExpandedSources] = useState<string[]>(['satellite', 'weather']);
@@ -105,8 +108,13 @@ export const DataTransparencyModal: React.FC<DataTransparencyModalProps> = ({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+    <ResponsiveDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      size="4xl"
+      className="max-h-[90vh] overflow-hidden flex flex-col"
+      contentClassName="max-h-[90vh] overflow-hidden flex flex-col"
+    >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Database className="w-5 h-5 text-primary-600" />
@@ -180,20 +188,17 @@ export const DataTransparencyModal: React.FC<DataTransparencyModalProps> = ({
             </Tabs>
           </div>
         ) : null}
-      </DialogContent>
-    </Dialog>
+    </ResponsiveDialog>
   );
 };
 
 /**
  * Overview tab showing summary of data transparency
  */
-const OverviewTab: React.FC<{
-  metadata: SourceDataMetadata;
+const OverviewTab = ({ metadata, formatDate, onRefreshData, isRefreshing }: { metadata: SourceDataMetadata;
   formatDate: (date: string | null) => string;
   onRefreshData?: (sources: string[]) => void;
-  isRefreshing?: boolean;
-}> = ({ metadata, formatDate, onRefreshData, isRefreshing }) => {
+  isRefreshing?: boolean; }) => {
   const { t } = useTranslation();
 
   const staleSources = Object.entries(metadata.sources)
@@ -283,9 +288,9 @@ const OverviewTab: React.FC<{
             {t('dataTransparency.warnings', 'Warnings & Alerts')}
           </h4>
           <div className="space-y-2">
-            {metadata.warnings.map((warning, idx) => (
+            {metadata.warnings.map((warning) => (
               <div
-                key={idx}
+                key={`${warning.type}-${warning.source ?? 'general'}-${warning.message}`}
                 className={cn(
                   'p-3 rounded-lg border flex items-start gap-3',
                   warning.severity === 'critical'
@@ -402,13 +407,11 @@ const OverviewTab: React.FC<{
 /**
  * Sources tab showing detailed info for each data source
  */
-const SourcesTab: React.FC<{
-  metadata: SourceDataMetadata;
+const SourcesTab = ({ metadata, expandedSources, toggleSource, getSourceIcon, formatDate }: { metadata: SourceDataMetadata;
   expandedSources: string[];
   toggleSource: (source: string) => void;
   getSourceIcon: (source: string) => React.ReactNode;
-  formatDate: (date: string | null) => string;
-}> = ({ metadata, expandedSources, toggleSource, getSourceIcon, formatDate }) => {
+  formatDate: (date: string | null) => string; }) => {
   const { t } = useTranslation();
 
   const sourceOrder = ['satellite', 'weather', 'soil', 'water', 'plant'] as const;
@@ -425,7 +428,7 @@ const SourcesTab: React.FC<{
             className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden"
           >
             {/* Source Header */}
-            <button
+            <Button
               onClick={() => toggleSource(sourceName)}
               className="w-full flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
             >
@@ -470,7 +473,7 @@ const SourcesTab: React.FC<{
                   <ChevronRight className="w-5 h-5 text-gray-400" />
                 )}
               </div>
-            </button>
+            </Button>
 
             {/* Source Details */}
             {isExpanded && (
@@ -488,11 +491,9 @@ const SourcesTab: React.FC<{
 /**
  * Detailed view for a single data source
  */
-const SourceDetails: React.FC<{
-  source: DataSourceInfo & { details?: SatelliteDataDetails | WeatherDataDetails | AnalysisDataDetails };
+const SourceDetails = ({ source, sourceName, formatDate }: { source: DataSourceInfo & { details?: SatelliteDataDetails | WeatherDataDetails | AnalysisDataDetails };
   sourceName: string;
-  formatDate: (date: string | null) => string;
-}> = ({ source, sourceName, formatDate }) => {
+  formatDate: (date: string | null) => string; }) => {
   const { t } = useTranslation();
 
   if (!source.available) {
@@ -510,7 +511,7 @@ const SourceDetails: React.FC<{
   return (
     <div className="space-y-4">
       {/* Basic Info Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div>
           <span className="text-xs text-gray-500 dark:text-gray-400">
             {t('dataTransparency.dataPoints', 'Data Points')}
@@ -557,15 +558,15 @@ const SourceDetails: React.FC<{
   );
 };
 
-const SatelliteDetails: React.FC<{ details: SatelliteDataDetails }> = ({ details }) => {
+const SatelliteDetails = ({ details }: { details: SatelliteDataDetails }) => {
   const { t } = useTranslation();
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap gap-2">
         <span className="text-xs text-gray-500">{t('dataTransparency.satellite.indices', 'Indices')}:</span>
-        {details.indices.map((idx) => (
-          <span key={idx} className="px-2 py-0.5 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded">
-            {idx}
+        {details.indices.map((vegIndex) => (
+          <span key={vegIndex} className="px-2 py-0.5 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded">
+            {vegIndex}
           </span>
         ))}
       </div>
@@ -583,7 +584,7 @@ const SatelliteDetails: React.FC<{ details: SatelliteDataDetails }> = ({ details
   );
 };
 
-const WeatherDetails: React.FC<{ details: WeatherDataDetails }> = ({ details }) => {
+const WeatherDetails = ({ details }: { details: WeatherDataDetails }) => {
   const { t } = useTranslation();
   return (
     <div className="space-y-3">
@@ -604,7 +605,7 @@ const WeatherDetails: React.FC<{ details: WeatherDataDetails }> = ({ details }) 
   );
 };
 
-const AnalysisDetails: React.FC<{ details: AnalysisDataDetails }> = ({ details }) => {
+const AnalysisDetails = ({ details }: { details: AnalysisDataDetails }) => {
   const { t } = useTranslation();
   return (
     <div className="space-y-3">
@@ -615,28 +616,28 @@ const AnalysisDetails: React.FC<{ details: AnalysisDataDetails }> = ({ details }
       )}
       {details.parameters.length > 0 && (
         <div className="overflow-x-auto">
-          <table className="min-w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-200 dark:border-gray-700">
-                <th className="text-left py-2 text-gray-600 dark:text-gray-400 font-medium">
+          <Table className="min-w-full text-sm">
+            <TableHeader>
+              <TableRow className="border-b border-gray-200 dark:border-gray-700">
+                <TableHead className="text-left py-2 text-gray-600 dark:text-gray-400 font-medium">
                   {t('dataTransparency.analysis.parameter', 'Parameter')}
-                </th>
-                <th className="text-left py-2 text-gray-600 dark:text-gray-400 font-medium">
+                </TableHead>
+                <TableHead className="text-left py-2 text-gray-600 dark:text-gray-400 font-medium">
                   {t('dataTransparency.analysis.value', 'Value')}
-                </th>
-                <th className="text-left py-2 text-gray-600 dark:text-gray-400 font-medium">
+                </TableHead>
+                <TableHead className="text-left py-2 text-gray-600 dark:text-gray-400 font-medium">
                   {t('dataTransparency.analysis.status', 'Status')}
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {details.parameters.slice(0, 10).map((param, idx) => (
-                <tr key={idx} className="border-b border-gray-100 dark:border-gray-800">
-                  <td className="py-2 text-gray-900 dark:text-white">{param.name}</td>
-                  <td className="py-2 text-gray-900 dark:text-white">
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {details.parameters.slice(0, 10).map((param) => (
+                <TableRow key={`${param.name}-${param.unit ?? ''}`} className="border-b border-gray-100 dark:border-gray-800">
+                  <TableCell className="py-2 text-gray-900 dark:text-white">{param.name}</TableCell>
+                  <TableCell className="py-2 text-gray-900 dark:text-white">
                     {param.value} {param.unit}
-                  </td>
-                  <td className="py-2">
+                  </TableCell>
+                  <TableCell className="py-2">
                     {param.status && (
                       <span
                         className={cn(
@@ -651,11 +652,11 @@ const AnalysisDetails: React.FC<{ details: AnalysisDataDetails }> = ({ details }
                         {param.status}
                       </span>
                     )}
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
           {details.parameters.length > 10 && (
             <p className="text-xs text-gray-500 mt-2">
               {t('dataTransparency.analysis.andMore', 'And {{count}} more parameters...', {
@@ -672,7 +673,7 @@ const AnalysisDetails: React.FC<{ details: AnalysisDataDetails }> = ({ details }
 /**
  * Raw data tab showing actual data used (read-only)
  */
-const RawDataTab: React.FC<{ metadata: SourceDataMetadata }> = ({ metadata }) => {
+const RawDataTab = ({ metadata }: { metadata: SourceDataMetadata }) => {
   const { t } = useTranslation();
   const [selectedSource, setSelectedSource] = useState<string>('satellite');
   const [page, setPage] = useState(1);
@@ -703,7 +704,7 @@ const RawDataTab: React.FC<{ metadata: SourceDataMetadata }> = ({ metadata }) =>
         {Object.keys(metadata.sources).map((sourceName) => {
           const src = metadata.sources[sourceName as keyof typeof metadata.sources];
           return (
-            <button
+            <Button
               key={sourceName}
               onClick={() => {
                 setSelectedSource(sourceName);
@@ -720,7 +721,7 @@ const RawDataTab: React.FC<{ metadata: SourceDataMetadata }> = ({ metadata }) =>
             >
               {sourceName.charAt(0).toUpperCase() + sourceName.slice(1)}
               {src.available && <span className="ml-1 text-xs">({src.dataPoints})</span>}
-            </button>
+            </Button>
           );
         })}
       </div>
@@ -785,10 +786,8 @@ const RawDataTab: React.FC<{ metadata: SourceDataMetadata }> = ({ metadata }) =>
 /**
  * Audit trail tab showing processing timestamps
  */
-const AuditTab: React.FC<{
-  metadata: SourceDataMetadata;
-  formatDateTime: (date: string | null) => string;
-}> = ({ metadata, formatDateTime }) => {
+const AuditTab = ({ metadata, formatDateTime }: { metadata: SourceDataMetadata;
+  formatDateTime: (date: string | null) => string; }) => {
   const { t } = useTranslation();
 
   return (
@@ -801,7 +800,7 @@ const AuditTab: React.FC<{
         </h4>
         <div className="space-y-4">
           <div className="flex items-start gap-4">
-            <div className="w-3 h-3 rounded-full bg-blue-500 mt-1.5" />
+            <StatusDot color="blue" size="md" className="mt-1.5" />
             <div>
               <p className="font-medium text-gray-900 dark:text-white">
                 {t('dataTransparency.audit.dataFetched', 'Data Fetched')}
@@ -812,7 +811,7 @@ const AuditTab: React.FC<{
             </div>
           </div>
           <div className="flex items-start gap-4">
-            <div className="w-3 h-3 rounded-full bg-yellow-500 mt-1.5" />
+            <StatusDot color="yellow" size="md" className="mt-1.5" />
             <div>
               <p className="font-medium text-gray-900 dark:text-white">
                 {t('dataTransparency.audit.processingStarted', 'Processing Started')}
@@ -823,7 +822,7 @@ const AuditTab: React.FC<{
             </div>
           </div>
           <div className="flex items-start gap-4">
-            <div className="w-3 h-3 rounded-full bg-green-500 mt-1.5" />
+            <StatusDot color="green" size="md" className="mt-1.5" />
             <div>
               <p className="font-medium text-gray-900 dark:text-white">
                 {t('dataTransparency.audit.processingCompleted', 'Processing Completed')}

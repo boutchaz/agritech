@@ -1,4 +1,5 @@
 import { apiClient } from '../api-client';
+import type { ParcelJournalEntry } from '../../types/profitability';
 
 const BASE_URL = '/api/v1/profitability';
 
@@ -87,6 +88,7 @@ export interface CreateCostDto {
   notes?: string;
   currency?: string;
   category_id?: string;
+  fiscal_year_id?: string;
 }
 
 export interface CreateRevenueDto {
@@ -102,12 +104,14 @@ export interface CreateRevenueDto {
   description?: string;
   notes?: string;
   currency?: string;
+  fiscal_year_id?: string;
 }
 
 export interface ProfitabilityFilters {
   start_date?: string;
   end_date?: string;
   parcel_id?: string;
+  fiscal_year_id?: string;
 }
 
 export interface ProfitabilityData {
@@ -130,11 +134,14 @@ export interface ProfitabilityData {
 }
 
 export interface ParcelProfitabilityData {
-  // Combined totals (legacy + ledger)
+  // Grand totals (accounting + operational)
   totalCosts: number;
   totalRevenue: number;
   netProfit: number;
   profitMargin: number;
+  // Accounting sub-totals only
+  accountingCosts?: number;
+  accountingRevenue?: number;
   // Legacy data
   costs: Cost[];
   revenues: Revenue[];
@@ -204,6 +211,53 @@ export interface ParcelProfitabilityData {
     revenue_amount: number;
     net_amount: number;
   }>;
+  // Operational data
+  taskLaborCosts?: Array<{
+    id: string;
+    work_date: string;
+    total_payment: number;
+    hours_worked?: number;
+    hourly_rate?: number;
+    payment_status: string;
+    task_description: string;
+    task_id: string;
+    task_title: string;
+    worker_type?: string;
+  }>;
+  taskLaborTotal?: number;
+  materialCosts?: Array<{
+    id: string;
+    application_date: string;
+    quantity_used: number;
+    cost: number;
+    currency?: string;
+    task_id?: string;
+    task_title?: string;
+    item_name?: string;
+  }>;
+  materialCostTotal?: number;
+  harvestRevenues?: Array<{
+    id: string;
+    harvest_date: string;
+    quantity: number;
+    unit?: string;
+    expected_price_per_unit?: number;
+    estimated_revenue: number;
+    lot_number?: string;
+    crop_type?: string;
+  }>;
+  harvestRevenueTotal?: number;
+  metayageSettlements?: Array<{
+    id: string;
+    payment_date?: string;
+    gross_revenue: number;
+    net_revenue: number;
+    total_charges?: number;
+    worker_share_amount?: number;
+    worker_percentage?: number;
+    payment_status: string;
+  }>;
+  metayageTotal?: number;
 }
 
 export interface Parcel {
@@ -227,6 +281,7 @@ export const profitabilityApi = {
     if (filters.start_date) params.append('start_date', filters.start_date);
     if (filters.end_date) params.append('end_date', filters.end_date);
     if (filters.parcel_id) params.append('parcel_id', filters.parcel_id);
+    if (filters.fiscal_year_id) params.append('fiscal_year_id', filters.fiscal_year_id);
 
     const queryString = params.toString();
     const url = `${BASE_URL}/costs${queryString ? `?${queryString}` : ''}`;
@@ -241,6 +296,7 @@ export const profitabilityApi = {
     if (filters.start_date) params.append('start_date', filters.start_date);
     if (filters.end_date) params.append('end_date', filters.end_date);
     if (filters.parcel_id) params.append('parcel_id', filters.parcel_id);
+    if (filters.fiscal_year_id) params.append('fiscal_year_id', filters.fiscal_year_id);
 
     const queryString = params.toString();
     const url = `${BASE_URL}/revenues${queryString ? `?${queryString}` : ''}`;
@@ -258,6 +314,7 @@ export const profitabilityApi = {
     if (filters.start_date) params.append('start_date', filters.start_date);
     if (filters.end_date) params.append('end_date', filters.end_date);
     if (filters.parcel_id) params.append('parcel_id', filters.parcel_id);
+    if (filters.fiscal_year_id) params.append('fiscal_year_id', filters.fiscal_year_id);
 
     const queryString = params.toString();
     const url = `${BASE_URL}/analytics${queryString ? `?${queryString}` : ''}`;
@@ -304,14 +361,29 @@ export const profitabilityApi = {
     startDate: string,
     endDate: string,
     organizationId?: string,
-  ): Promise<any[]> {
+  ): Promise<ParcelJournalEntry[]> {
     const params = new URLSearchParams();
     params.append('start_date', startDate);
     params.append('end_date', endDate);
 
     const queryString = params.toString();
     const url = `${BASE_URL}/parcel/${parcelId}/journal-entries?${queryString}`;
-    return apiClient.get<any[]>(url, {}, organizationId);
+    return apiClient.get<ParcelJournalEntry[]>(url, {}, organizationId);
+  },
+
+  /**
+   * Multi-filter financial analysis
+   */
+  async getAnalysis(filters: AnalysisFilters, organizationId?: string): Promise<AnalysisResult> {
+    const params = new URLSearchParams();
+    if (filters.filter_type) params.append('filter_type', filters.filter_type);
+    if (filters.filter_value) params.append('filter_value', filters.filter_value);
+    if (filters.start_date) params.append('start_date', filters.start_date);
+    if (filters.end_date) params.append('end_date', filters.end_date);
+
+    const queryString = params.toString();
+    const url = `${BASE_URL}/analysis${queryString ? `?${queryString}` : ''}`;
+    return apiClient.get<AnalysisResult>(url, {}, organizationId);
   },
 
   /**
@@ -322,6 +394,40 @@ export const profitabilityApi = {
     return apiClient.get<AccountMappings>(`${BASE_URL}/account-mappings`, {}, organizationId);
   },
 };
+
+export type AnalysisFilterType = 'organization' | 'farm' | 'parcel' | 'crop_type' | 'variety';
+
+export interface AnalysisFilters {
+  filter_type?: AnalysisFilterType;
+  filter_value?: string;
+  start_date?: string;
+  end_date?: string;
+}
+
+export interface AnalysisParcelRow {
+  parcel_id: string;
+  parcel_name: string;
+  crop_type: string | null;
+  variety: string | null;
+  costs: number;
+  revenue: number;
+  profit: number;
+}
+
+export interface AnalysisResult {
+  filter_type: AnalysisFilterType;
+  filter_value?: string;
+  filter_label: string;
+  parcel_count: number;
+  farm_count: number;
+  total_costs: number;
+  total_revenue: number;
+  net_profit: number;
+  margin_percent: number;
+  cost_breakdown: { labor: number; materials: number; product_applications: number; equipment: number; other: number };
+  revenue_breakdown: { harvest: number; invoiced: number; other: number };
+  by_parcel: AnalysisParcelRow[];
+}
 
 export interface AccountMappings {
   expense: Record<string, { id: string; code: string; name: string }>;

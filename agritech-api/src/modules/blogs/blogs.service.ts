@@ -2,6 +2,13 @@ import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { StrapiService } from '../reference-data/strapi.service';
 import { BlogFiltersDto } from './dto/blog-filters.dto';
 
+interface CacheEntry<T> {
+  data: T;
+  expiresAt: number;
+}
+
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
 export interface BlogPost {
   id: number;
   title: string;
@@ -46,19 +53,39 @@ export interface PaginatedBlogs {
 @Injectable()
 export class BlogsService {
   private readonly logger = new Logger(BlogsService.name);
+  private readonly cache = new Map<string, CacheEntry<any>>();
 
   constructor(private readonly strapiService: StrapiService) {}
+
+  private getCached<T>(key: string): T | null {
+    const entry = this.cache.get(key);
+    if (entry && entry.expiresAt > Date.now()) {
+      return entry.data as T;
+    }
+    if (entry) this.cache.delete(key);
+    return null;
+  }
+
+  private setCache<T>(key: string, data: T): void {
+    this.cache.set(key, { data, expiresAt: Date.now() + CACHE_TTL_MS });
+  }
 
   /**
    * Get all published blog posts with filters and pagination
    */
   async getBlogs(filters: BlogFiltersDto): Promise<PaginatedBlogs> {
+    const locale = filters.locale || 'fr';
+    const cacheKey = `blogs:list:${locale}:${filters.page}:${filters.limit}:${filters.category || ''}:${filters.featured}:${filters.search || ''}:${filters.tag || ''}`;
+    const cached = this.getCached<PaginatedBlogs>(cacheKey);
+    if (cached) return cached;
+
     const params: any = {
       populate: ['featured_image', 'blog_category'],
       sort: `${filters.sortBy}:${filters.sortOrder}`,
       'pagination[page]': filters.page,
       'pagination[pageSize]': filters.limit,
       publicationState: 'live',
+      locale,
     };
 
     // Category filter
@@ -84,7 +111,7 @@ export class BlogsService {
 
     const response = await this.strapiService.get('/blogs', params);
 
-    return {
+    const result = {
       data: this.transformBlogPosts(response),
       meta: response.meta?.pagination || {
         page: filters.page,
@@ -93,16 +120,23 @@ export class BlogsService {
         total: 0,
       },
     };
+    this.setCache(cacheKey, result);
+    return result;
   }
 
   /**
    * Get a single blog post by slug
    */
-  async getBlogBySlug(slug: string): Promise<BlogPost> {
+  async getBlogBySlug(slug: string, locale: string = 'fr'): Promise<BlogPost> {
+    const cacheKey = `blogs:detail:${slug}:${locale}`;
+    const cached = this.getCached<BlogPost>(cacheKey);
+    if (cached) return cached;
+
     const params = {
       'filters[slug][$eq]': slug,
       populate: ['featured_image', 'blog_category'],
       publicationState: 'live',
+      locale,
     };
 
     try {
@@ -118,6 +152,7 @@ export class BlogsService {
       }
 
       this.logger.debug(`Successfully transformed blog post: ${posts[0].title}`);
+      this.setCache(cacheKey, posts[0]);
       return posts[0];
     } catch (error) {
       this.logger.error(`Error fetching blog post with slug "${slug}":`, error);
@@ -140,13 +175,18 @@ export class BlogsService {
   /**
    * Get featured blog posts
    */
-  async getFeaturedBlogs(limit: number = 3): Promise<BlogPost[]> {
+  async getFeaturedBlogs(limit: number = 3, locale: string = 'fr'): Promise<BlogPost[]> {
+    const cacheKey = `blogs:featured:${locale}:${limit}`;
+    const cached = this.getCached<BlogPost[]>(cacheKey);
+    if (cached) return cached;
+
     const params = {
       'filters[is_featured][$eq]': true,
       populate: ['featured_image', 'blog_category'],
       sort: 'publishedAt:desc',
       'pagination[pageSize]': limit,
       publicationState: 'live',
+      locale,
     };
 
     try {
@@ -154,6 +194,7 @@ export class BlogsService {
       const response = await this.strapiService.get('/blogs', params);
       const posts = this.transformBlogPosts(response);
       this.logger.debug(`Found ${posts.length} featured blog posts`);
+      this.setCache(cacheKey, posts);
       return posts;
     } catch (error) {
       this.logger.error('Error fetching featured blogs:', error);
@@ -164,9 +205,9 @@ export class BlogsService {
   /**
    * Get related blog posts by category
    */
-  async getRelatedBlogs(slug: string, limit: number = 3): Promise<BlogPost[]> {
+  async getRelatedBlogs(slug: string, limit: number = 3, locale: string = 'fr'): Promise<BlogPost[]> {
     // First get the current post to find its category
-    const currentPost = await this.getBlogBySlug(slug);
+    const currentPost = await this.getBlogBySlug(slug, locale);
 
     if (!currentPost.blog_category) {
       return [];
@@ -179,6 +220,7 @@ export class BlogsService {
       sort: 'publishedAt:desc',
       'pagination[pageSize]': limit,
       publicationState: 'live',
+      locale,
     };
 
     const response = await this.strapiService.get('/blogs', params);
@@ -188,21 +230,29 @@ export class BlogsService {
   /**
    * Get all blog categories
    */
-  async getCategories(): Promise<BlogCategory[]> {
+  async getCategories(locale: string = 'fr'): Promise<BlogCategory[]> {
+    const cacheKey = `blogs:categories:${locale}`;
+    const cached = this.getCached<BlogCategory[]>(cacheKey);
+    if (cached) return cached;
+
     const params = {
       sort: 'name:asc',
+      locale,
     };
 
     const response = await this.strapiService.get('/blog-categories', params);
-    return this.strapiService.transformResponse(response);
+    const categories = this.strapiService.transformResponse(response);
+    this.setCache(cacheKey, categories);
+    return categories;
   }
 
   /**
    * Get a single category by slug
    */
-  async getCategoryBySlug(slug: string): Promise<BlogCategory> {
+  async getCategoryBySlug(slug: string, locale: string = 'fr'): Promise<BlogCategory> {
     const params = {
       'filters[slug][$eq]': slug,
+      locale,
     };
 
     const response = await this.strapiService.get('/blog-categories', params);
@@ -250,7 +300,7 @@ export class BlogsService {
         excerpt: attrs.excerpt || '',
         content: attrs.content || '',
         featured_image: this.transformImage(attrs.featured_image),
-        author: attrs.author || 'AgriTech Team',
+        author: attrs.author || 'AgroGina Team',
         reading_time: attrs.reading_time || 5,
         is_featured: attrs.is_featured || false,
         tags: attrs.tags || [],

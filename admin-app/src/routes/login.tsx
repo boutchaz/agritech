@@ -11,8 +11,8 @@ function LoginPage() {
 
   if (isLoading) {
     return (
-      <div className="h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      <div className="flex min-h-dvh items-center justify-center px-4">
+        <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary" />
       </div>
     );
   }
@@ -36,11 +36,11 @@ function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="max-w-md w-full bg-white rounded-lg shadow-md p-8">
-        <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-gray-900">AgriTech Admin</h1>
-          <p className="text-gray-600 mt-2">Sign in to continue</p>
+    <div className="flex min-h-dvh items-center justify-center bg-gray-100 px-4 py-8 pb-[max(2rem,env(safe-area-inset-bottom))] pt-[max(2rem,env(safe-area-inset-top))]">
+      <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-md sm:p-8">
+        <div className="mb-8 text-center">
+          <h1 className="text-xl font-bold text-gray-900 sm:text-2xl">AgroGina Admin</h1>
+          <p className="mt-2 text-sm text-gray-600 sm:text-base">Sign in to continue</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">

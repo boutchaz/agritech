@@ -192,6 +192,36 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
   }
 
   /**
+   * Emit a notification:read event to a specific user (for syncing read state across clients)
+   */
+  emitRead(userId: string, notificationId: string, readAt: string) {
+    this.server.to(`user:${userId}`).emit('notification:read', {
+      notificationId,
+      readAt,
+    });
+    this.logger.debug(`Notification read event sent to user ${userId}: ${notificationId}`);
+  }
+
+  /**
+   * Emit a notification:read-all event to a specific user
+   */
+  emitReadAll(userId: string, count: number, readAt: string) {
+    this.server.to(`user:${userId}`).emit('notification:read-all', {
+      count,
+      readAt,
+    });
+    this.logger.debug(`Read-all event sent to user ${userId}: ${count} notifications`);
+  }
+
+  emitToOrganization(
+    organizationId: string,
+    event: string,
+    data: Record<string, unknown>,
+  ): void {
+    this.server.to(`org:${organizationId}`).emit(event, data);
+  }
+
+  /**
    * Check if a user is currently connected
    */
   isUserConnected(userId: string): boolean {

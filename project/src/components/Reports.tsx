@@ -1,15 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import {  useState, useEffect  } from "react";
 import { FileText, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Module } from '../types';
 import { useOrganizationStore } from '../stores/organizationStore';
 import { reportsApi, ReportCategory, ReportType, ReportTypeInfo } from '../lib/api/reports';
+import { Button } from '@/components/ui/button';
 
 interface ReportsProps {
   activeModules?: Module[];
 }
 
-const Reports: React.FC<ReportsProps> = ({ activeModules = [] }) => {
+const Reports = ({ activeModules: _activeModules = [] }: ReportsProps) => {
   const { currentOrganization } = useOrganizationStore();
   const [baseReports, setBaseReports] = useState<ReportCategory[]>([]);
   const [moduleReports, setModuleReports] = useState<ReportCategory[]>([]);
@@ -30,9 +31,9 @@ const Reports: React.FC<ReportsProps> = ({ activeModules = [] }) => {
         const data = await reportsApi.getAvailableReports(currentOrganization.id);
         setBaseReports(data.baseReports);
         setModuleReports(data.moduleReports);
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error('Error fetching available reports:', err);
-        setError(err.message || 'Failed to fetch available reports');
+        setError(err instanceof Error ? err.message : 'Failed to fetch available reports');
       } finally {
         setLoading(false);
       }
@@ -62,13 +63,13 @@ const Reports: React.FC<ReportsProps> = ({ activeModules = [] }) => {
       // Convert to CSV and download
       const csv = convertToCSV(reportData.columns, reportData.data);
       downloadCSV(csv, `${reportName}-${endDate.toISOString().split('T')[0]}.csv`);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error generating report:', err);
-      toast.error(err.message || 'Failed to generate report');
+      toast.error(err instanceof Error ? err.message : 'Failed to generate report');
     }
   };
 
-  const convertToCSV = (columns: string[], data: Record<string, any>[]): string => {
+  const convertToCSV = (columns: string[], data: Record<string, unknown>[]): string => {
     const header = columns.join(',');
     const rows = data.map(row =>
       columns.map(col => {
@@ -177,14 +178,14 @@ const Reports: React.FC<ReportsProps> = ({ activeModules = [] }) => {
                       </div>
                     </div>
 
-                    <button
+                    <Button variant="blue"
                       onClick={() => handleDownloadReport(reportType.id, reportType.name)}
-                      className="w-full mt-4 flex items-center justify-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors"
+                      className="w-full mt-4 flex items-center justify-center space-x-2 px-4 py-2 rounded-md transition-colors"
                       data-tour="reports-export"
                     >
                       <Download className="h-5 w-5" />
                       <span>Télécharger</span>
-                    </button>
+                    </Button>
                   </div>
                 ))}
               </div>

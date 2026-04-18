@@ -1,0 +1,47 @@
+{
+  "title": "الإشعارات",
+  "all": "الكل",
+  "unread": "غير مقروءة",
+  "noUnread": "لا توجد إشعارات غير مقروءة",
+  "empty": "لا توجد إشعارات",
+  "allCaughtUp": "أنت على اطلاع بكل جديد!",
+  "willAppearHere": "ستظهر الإشعارات الجديدة هنا",
+  "markAllRead": "وضع علامة مقروء على الكل",
+  "types": {
+    "task": "مهمة",
+    "harvest": "حصاد",
+    "alert": "تنبيه",
+    "system": "نظام",
+    "approval": "موافقة",
+    "calibration": "معايرة",
+    "weather": "طقس",
+    "inventory": "مخزون"
+  },
+  "approvals": {
+    "title": "الموافقات",
+    "pending": "قيد الانتظار",
+    "approved": "تمت الموافقة",
+    "rejected": "مرفوضة",
+    "approve": "موافقة",
+    "reject": "رفض",
+    "noPending": "لا توجد موافقات معلقة",
+    "empty": "لا توجد موافقات",
+    "allDone": "أنت على اطلاع بكل جديد!",
+    "willAppearHere": "ستظهر الموافقات هنا",
+    "confirmApprove": "الموافقة على الطلب",
+    "confirmApproveMessage": "هل أنت متأكد أنك تريد الموافقة على هذا الطلب؟",
+    "confirmReject": "رفض الطلب",
+    "confirmRejectMessage": "هل أنت متأكد أنك تريد رفض هذا الطلب؟",
+    "status": {
+      "pending": "قيد الانتظار",
+      "approved": "تمت الموافقة",
+      "rejected": "مرفوضة"
+    },
+    "types": {
+      "task_completion": "إتمام المهمة",
+      "harvest_validation": "التحقق من الحصاد",
+      "time_log": "سجل الوقت",
+      "expense": "مصروف"
+    }
+  }
+}

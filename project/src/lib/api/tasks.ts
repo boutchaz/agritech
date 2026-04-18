@@ -4,12 +4,20 @@ import type { PaginatedQuery, PaginatedResponse } from './types';
 import type {
   Task,
   TaskSummary,
-  TaskFilters,
   CreateTaskRequest,
   UpdateTaskRequest,
   TaskStatistics,
   CompleteHarvestTaskRequest,
   CompleteHarvestTaskResponse,
+  TaskCategory,
+  TaskComment,
+  TaskTimeLog,
+  ChecklistItem,
+  ChecklistUpdateResponse,
+  TaskDependenciesResponse,
+  TaskBlockedStatus,
+  TaskClockInResponse,
+  TaskClockOutResponse,
 } from '../../types/tasks';
 
 export interface TaskApiFilters {
@@ -38,10 +46,14 @@ export const tasksApi = {
    * Get all tasks assigned to the current user across all organizations
    */
   async getMyTasks(): Promise<TaskSummary[]> {
-    return apiClient.get<TaskSummary[]>('/api/v1/my-tasks');
+    const res = await apiClient.get<{ data: TaskSummary[] }>('/api/v1/tasks/my-tasks');
+    return res?.data || [];
   },
 
-  async getAll(organizationId: string, filters?: TaskFilters): Promise<TaskSummary[]> {
+  async getAll(
+    organizationId: string,
+    filters?: TaskApiFilters | PaginatedTaskQuery,
+  ): Promise<PaginatedResponse<TaskSummary>> {
     const params = new URLSearchParams();
     if (filters) {
       Object.entries(filters).forEach(([key, value]) => {
@@ -54,27 +66,12 @@ export const tasksApi = {
     }
     const queryString = params.toString();
     const url = queryString ? `/api/v1/tasks?${queryString}` : '/api/v1/tasks';
-    return apiClient.get<TaskSummary[]>(url, {}, organizationId);
+    return apiClient.get<PaginatedResponse<TaskSummary>>(url, {}, organizationId);
   },
 
+  /** @deprecated Use getAll() — backend now always returns PaginatedResponse */
   async getPaginated(organizationId: string, query: PaginatedTaskQuery): Promise<PaginatedResponse<TaskSummary>> {
-    const params = new URLSearchParams();
-    if (query.page) params.append('page', String(query.page));
-    if (query.pageSize) params.append('pageSize', String(query.pageSize));
-    if (query.sortBy) params.append('sortBy', query.sortBy);
-    if (query.sortDir) params.append('sortDir', query.sortDir);
-    if (query.search) params.append('search', query.search);
-    if (query.dateFrom) params.append('date_from', query.dateFrom);
-    if (query.dateTo) params.append('date_to', query.dateTo);
-    if (query.status) params.append('status', query.status);
-    if (query.priority) params.append('priority', query.priority);
-    if (query.task_type) params.append('task_type', query.task_type);
-    if (query.assigned_to) params.append('assigned_to', query.assigned_to);
-    if (query.farm_id) params.append('farm_id', query.farm_id);
-    if (query.parcel_id) params.append('parcel_id', query.parcel_id);
-    const queryString = params.toString();
-    const url = queryString ? `/api/v1/tasks?${queryString}` : '/api/v1/tasks';
-    return apiClient.get<PaginatedResponse<TaskSummary>>(url, {}, organizationId);
+    return this.getAll(organizationId, query);
   },
 
   async getOne(id: string, organizationId?: string): Promise<TaskSummary> {
@@ -107,6 +104,10 @@ export const tasksApi = {
     }, {}, organizationId);
   },
 
+  async start(organizationId: string, taskId: string): Promise<Task> {
+    return apiClient.post<Task>(`/api/v1/tasks/${taskId}/start`, {}, {}, organizationId);
+  },
+
   async complete(
     organizationId: string,
     taskId: string,
@@ -136,24 +137,75 @@ export const tasksApi = {
     return apiClient.get<TaskStatistics>('/api/v1/tasks/statistics', {}, organizationId);
   },
 
-  async getCategories(organizationId: string): Promise<any[]> {
-    return apiClient.get<any[]>('/api/v1/tasks/categories/all', {}, organizationId);
+  async getCategories(organizationId: string): Promise<TaskCategory[]> {
+    return apiClient.get<TaskCategory[]>('/api/v1/tasks/categories/all', {}, organizationId);
   },
 
-  async createCategory(organizationId: string, data: any): Promise<any> {
-    return apiClient.post<any>('/api/v1/tasks/categories', data, {}, organizationId);
+  async createCategory(
+    organizationId: string,
+    data: Omit<TaskCategory, 'id' | 'created_at' | 'updated_at' | 'is_active'>,
+  ): Promise<TaskCategory> {
+    return apiClient.post<TaskCategory>('/api/v1/tasks/categories', data, {}, organizationId);
   },
 
-  async getComments(organizationId: string, taskId: string): Promise<any[]> {
-    return apiClient.get<any[]>(`/api/v1/tasks/${taskId}/comments`, {}, organizationId);
+  async getComments(organizationId: string, taskId: string): Promise<TaskComment[]> {
+    return apiClient.get<TaskComment[]>(`/api/v1/tasks/${taskId}/comments`, {}, organizationId);
   },
 
-  async addComment(organizationId: string, taskId: string, data: { comment: string; worker_id?: string }): Promise<any> {
-    return apiClient.post<any>(`/api/v1/tasks/${taskId}/comments`, data, {}, organizationId);
+  async addComment(
+    organizationId: string,
+    taskId: string,
+    data: { comment: string; worker_id?: string; type?: string },
+  ): Promise<TaskComment> {
+    return apiClient.post<TaskComment>(`/api/v1/tasks/${taskId}/comments`, data, {}, organizationId);
   },
 
-  async getTimeLogs(organizationId: string, taskId: string): Promise<any[]> {
-    return apiClient.get<any[]>(`/api/v1/tasks/${taskId}/time-logs`, {}, organizationId);
+  async updateComment(
+    organizationId: string,
+    taskId: string,
+    commentId: string,
+    data: { comment: string },
+  ): Promise<TaskComment> {
+    return apiClient.patch<TaskComment>(`/api/v1/tasks/${taskId}/comments/${commentId}`, data, {}, organizationId);
+  },
+
+  async deleteComment(
+    organizationId: string,
+    taskId: string,
+    commentId: string,
+  ): Promise<{ success: boolean }> {
+    return apiClient.delete<{ success: boolean }>(`/api/v1/tasks/${taskId}/comments/${commentId}`, {}, organizationId);
+  },
+
+  async resolveComment(
+    organizationId: string,
+    taskId: string,
+    commentId: string,
+    resolved: boolean,
+  ): Promise<TaskComment> {
+    return apiClient.patch<TaskComment>(`/api/v1/tasks/${taskId}/comments/${commentId}/resolve`, { resolved }, {}, organizationId);
+  },
+
+  // Watchers API
+  async getWatchers(organizationId: string, taskId: string): Promise<Array<{
+    id: string;
+    user_id: string;
+    created_at: string;
+    user_profile?: { id: string; first_name?: string; last_name?: string; email?: string };
+  }>> {
+    return apiClient.get(`/api/v1/tasks/${taskId}/watchers`, {}, organizationId);
+  },
+
+  async followTask(organizationId: string, taskId: string): Promise<{ id: string; task_id: string; user_id: string }> {
+    return apiClient.post(`/api/v1/tasks/${taskId}/watchers`, {}, {}, organizationId);
+  },
+
+  async unfollowTask(organizationId: string, taskId: string): Promise<{ success: boolean }> {
+    return apiClient.delete(`/api/v1/tasks/${taskId}/watchers`, {}, organizationId);
+  },
+
+  async getTimeLogs(organizationId: string, taskId: string): Promise<TaskTimeLog[]> {
+    return apiClient.get<TaskTimeLog[]>(`/api/v1/tasks/${taskId}/time-logs`, {}, organizationId);
   },
 
   async clockIn(organizationId: string, taskId: string, data: {
@@ -161,14 +213,62 @@ export const tasksApi = {
     location_lat?: number;
     location_lng?: number;
     notes?: string;
-  }): Promise<any> {
-    return apiClient.post<any>(`/api/v1/tasks/${taskId}/clock-in`, data, {}, organizationId);
+  }): Promise<TaskClockInResponse> {
+    return apiClient.post<TaskClockInResponse>(`/api/v1/tasks/${taskId}/clock-in`, data, {}, organizationId);
   },
 
   async clockOut(organizationId: string, timeLogId: string, data: {
     break_duration?: number;
     notes?: string;
-  }): Promise<any> {
-    return apiClient.patch<any>(`/api/v1/tasks/time-logs/${timeLogId}/clock-out`, data, {}, organizationId);
+    units_completed?: number;
+    photo_url?: string;
+  }): Promise<TaskClockOutResponse> {
+    return apiClient.patch<TaskClockOutResponse>(`/api/v1/tasks/time-logs/${timeLogId}/clock-out`, data, {}, organizationId);
+  },
+
+  // Checklist API
+  async getChecklist(organizationId: string, taskId: string): Promise<ChecklistItem[]> {
+    return apiClient.get<ChecklistItem[]>(`/api/v1/tasks/${taskId}/checklist`, {}, organizationId);
+  },
+
+  async updateChecklist(
+    organizationId: string,
+    taskId: string,
+    checklist: ChecklistItem[],
+  ): Promise<ChecklistUpdateResponse> {
+    return apiClient.put<ChecklistUpdateResponse>(`/api/v1/tasks/${taskId}/checklist`, { checklist }, {}, organizationId);
+  },
+
+  async addChecklistItem(organizationId: string, taskId: string, title: string): Promise<ChecklistItem> {
+    return apiClient.post<ChecklistItem>(`/api/v1/tasks/${taskId}/checklist/items`, { title }, {}, organizationId);
+  },
+
+  async toggleChecklistItem(organizationId: string, taskId: string, itemId: string): Promise<ChecklistUpdateResponse> {
+    return apiClient.patch<ChecklistUpdateResponse>(`/api/v1/tasks/${taskId}/checklist/items/${itemId}/toggle`, {}, {}, organizationId);
+  },
+
+  async removeChecklistItem(organizationId: string, taskId: string, itemId: string): Promise<ChecklistUpdateResponse> {
+    return apiClient.delete<ChecklistUpdateResponse>(`/api/v1/tasks/${taskId}/checklist/items/${itemId}`, {}, organizationId);
+  },
+
+  // Dependencies API
+  async getDependencies(organizationId: string, taskId: string): Promise<TaskDependenciesResponse> {
+    return apiClient.get<TaskDependenciesResponse>(`/api/v1/tasks/${taskId}/dependencies`, {}, organizationId);
+  },
+
+  async addDependency(organizationId: string, taskId: string, dependsOnTaskId: string, dependencyType?: string, lagDays?: number): Promise<TaskDependenciesResponse['depends_on'][number]> {
+    return apiClient.post<TaskDependenciesResponse['depends_on'][number]>(`/api/v1/tasks/${taskId}/dependencies`, {
+      depends_on_task_id: dependsOnTaskId,
+      dependency_type: dependencyType || 'finish_to_start',
+      lag_days: lagDays || 0,
+    }, {}, organizationId);
+  },
+
+  async removeDependency(organizationId: string, dependencyId: string): Promise<{ message: string }> {
+    return apiClient.delete<{ message: string }>(`/api/v1/tasks/dependencies/${dependencyId}`, {}, organizationId);
+  },
+
+  async isTaskBlocked(organizationId: string, taskId: string): Promise<TaskBlockedStatus> {
+    return apiClient.get<TaskBlockedStatus>(`/api/v1/tasks/${taskId}/blocked`, {}, organizationId);
   },
 };

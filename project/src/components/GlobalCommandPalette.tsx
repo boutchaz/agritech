@@ -1,161 +1,301 @@
-import React, { useMemo } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { useNavigate } from '@tanstack/react-router';
-import type { Action } from 'kbar';
-import { CommandPalette } from './CommandPalette';
+import { useHotkey } from '@tanstack/react-hotkeys';
+import { useTranslation } from 'react-i18next';
+import {
+  CommandDialog,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+  CommandSeparator,
+  CommandShortcut,
+} from '@/components/ui/command';
+import {
+  LayoutDashboard,
+  FlaskConical,
+  MapPin,
+  Package,
+  Wrench,
+  Settings,
+  Plus,
+  ListTodo,
+  Sprout,
+  FileText,
+  Users,
+  Sun,
+} from 'lucide-react';
 
 interface GlobalCommandPaletteProps {
   children: React.ReactNode;
 }
 
-export const GlobalCommandPalette: React.FC<GlobalCommandPaletteProps> = ({ children }) => {
-  const navigate = useNavigate();
+interface CommandAction {
+  id: string;
+  labelKey: string;
+  labelFallback: string;
+  icon?: React.ReactNode;
+  shortcut?: string[];
+  keywords: string[];
+  onSelect: () => void;
+}
 
-  const globalActions = useMemo<Action[]>(() => {
-    const navigationActions: Action[] = [
+export const GlobalCommandPalette = ({ children }: GlobalCommandPaletteProps) => {
+  const navigate = useNavigate();
+  const { t } = useTranslation('common');
+  const [open, setOpen] = useState(false);
+
+
+  // Listen for programmatic toggle from useCommandPaletteToggle()
+  useEffect(() => {
+    const handler = () => setOpen((prev) => !prev);
+    window.addEventListener('toggle-command-palette', handler);
+    return () => window.removeEventListener('toggle-command-palette', handler);
+  }, []);
+
+  const togglePaletteHotkeyOptions = useMemo(
+    () => ({
+      meta: { name: t('keyboardShortcuts', 'Keyboard shortcuts'), description: 'Toggle command palette' },
+    }),
+    [t],
+  );
+
+  useHotkey('Mod+K', () => setOpen((prev) => !prev), togglePaletteHotkeyOptions);
+
+  const handleSelect = useCallback(
+    (action: () => void) => {
+      setOpen(false);
+      action();
+    },
+    [],
+  );
+
+  const navActions: CommandAction[] = useMemo(
+    () => [
       {
         id: 'go-dashboard',
-        name: 'Aller au tableau de bord',
+        labelKey: 'dashboard.commands.navigation.dashboard',
+        labelFallback: 'Go to dashboard',
+        icon: <LayoutDashboard className="h-4 w-4" />,
         shortcut: ['g', 'd'],
-        keywords: 'dashboard accueil home tableau',
-        section: 'Navigation',
-        perform: () => navigate({ to: '/dashboard' }),
+        keywords: ['dashboard', 'home', 'tableau'],
+        onSelect: () => navigate({ to: '/dashboard' }),
       },
       {
         id: 'go-analyses',
-        name: 'Ouvrir les analyses',
+        labelKey: 'dashboard.commands.navigation.analyses',
+        labelFallback: 'Open analyses',
+        icon: <FlaskConical className="h-4 w-4" />,
         shortcut: ['g', 'a'],
-        keywords: 'analyses soil rapport',
-        section: 'Navigation',
-        perform: () => navigate({ to: '/analyses' }),
+        keywords: ['analyses', 'soil', 'rapport'],
+        onSelect: () => navigate({ to: '/analytics' }),
       },
       {
         id: 'go-parcels',
-        name: 'Voir les parcelles',
+        labelKey: 'dashboard.commands.navigation.parcels',
+        labelFallback: 'View parcels',
+        icon: <MapPin className="h-4 w-4" />,
         shortcut: ['g', 'p'],
-        keywords: 'parcelles champs map',
-        section: 'Navigation',
-        perform: () => navigate({ to: '/parcels' }),
+        keywords: ['parcelles', 'champs', 'map'],
+        onSelect: () => navigate({ to: '/parcels' }),
       },
       {
         id: 'go-stock',
-        name: 'Accéder au stock',
+        labelKey: 'dashboard.commands.navigation.stock',
+        labelFallback: 'Access stock',
+        icon: <Package className="h-4 w-4" />,
         shortcut: ['g', 's'],
-        keywords: 'stock inventaire',
-        section: 'Navigation',
-        perform: () => navigate({ to: '/stock' }),
+        keywords: ['stock', 'inventaire'],
+        onSelect: () => navigate({ to: '/stock' }),
       },
       {
         id: 'go-infrastructure',
-        name: 'Consulter les infrastructures',
+        labelKey: 'dashboard.commands.navigation.infrastructure',
+        labelFallback: 'View infrastructure',
+        icon: <Wrench className="h-4 w-4" />,
         shortcut: ['g', 'i'],
-        keywords: 'infrastructure irrigation équipements',
-        section: 'Navigation',
-        perform: () => navigate({ to: '/infrastructure' }),
+        keywords: ['infrastructure', 'irrigation', 'equipment'],
+        onSelect: () => navigate({ to: '/infrastructure' }),
       },
       {
         id: 'go-farm-hierarchy',
-        name: 'Gérer les fermes',
+        labelKey: 'dashboard.commands.navigation.farmHierarchy',
+        labelFallback: 'Manage farms',
+        icon: <MapPin className="h-4 w-4" />,
         shortcut: ['g', 'f'],
-        keywords: 'fermes farms hiérarchie hierarchy',
-        section: 'Navigation',
-        perform: () => navigate({ to: '/farm-hierarchy' }),
+        keywords: ['fermes', 'farms', 'hierarchy'],
+        onSelect: () => navigate({ to: '/farm-hierarchy' }),
       },
       {
         id: 'go-tasks',
-        name: 'Gérer les tâches',
+        labelKey: 'dashboard.commands.navigation.tasks',
+        labelFallback: 'Manage tasks',
+        icon: <ListTodo className="h-4 w-4" />,
         shortcut: ['g', 'k'],
-        keywords: 'tâches tasks missions travail',
-        section: 'Navigation',
-        perform: () => navigate({ to: '/tasks' }),
+        keywords: ['tasks', 'missions', 'travail'],
+        onSelect: () => navigate({ to: '/tasks' }),
       },
       {
         id: 'go-settings',
-        name: 'Ouvrir les paramètres',
+        labelKey: 'dashboard.commands.navigation.settings',
+        labelFallback: 'Open settings',
+        icon: <Settings className="h-4 w-4" />,
         shortcut: ['g', 't'],
-        keywords: 'paramètres settings organisation',
-        section: 'Navigation',
-        perform: () => navigate({ to: '/settings' }),
+        keywords: ['settings', 'organization'],
+        onSelect: () => navigate({ to: '/settings/account' }),
       },
-    ];
+    ],
+    [navigate],
+  );
 
-    const createActions: Action[] = [
+  const createActions: CommandAction[] = useMemo(
+    () => [
       {
         id: 'create-parcel',
-        name: 'Créer une parcelle',
+        labelKey: 'dashboard.commands.create.parcel',
+        labelFallback: 'Create parcel',
+        icon: <Plus className="h-4 w-4" />,
         shortcut: ['c', 'p'],
-        keywords: 'nouvelle parcelle create parcel new',
-        section: 'Création',
-        perform: () => {
-          window.location.href = '/parcels?create=true';
-        },
+        keywords: ['nouvelle', 'parcelle', 'create', 'new'],
+        onSelect: () => { window.location.href = '/parcels?create=true'; },
       },
       {
         id: 'create-task',
-        name: 'Créer une tâche',
+        labelKey: 'dashboard.commands.create.task',
+        labelFallback: 'Create task',
+        icon: <Plus className="h-4 w-4" />,
         shortcut: ['c', 't'],
-        keywords: 'nouvelle tâche create task new',
-        section: 'Création',
-        perform: () => {
-          window.location.href = '/tasks?create=true';
-        },
+        keywords: ['nouvelle', 'tache', 'create', 'new'],
+        onSelect: () => { window.location.href = '/tasks?create=true'; },
       },
       {
         id: 'create-cycle',
-        name: 'Créer un cycle de culture',
+        labelKey: 'dashboard.commands.create.cycle',
+        labelFallback: 'Create crop cycle',
+        icon: <Sprout className="h-4 w-4" />,
         shortcut: ['c', 'c'],
-        keywords: 'nouveau cycle crop create',
-        section: 'Création',
-        perform: () => {
-          window.location.href = '/crop-cycles?create=true';
-        },
+        keywords: ['nouveau', 'cycle', 'crop', 'create'],
+        onSelect: () => { window.location.href = '/crop-cycles?create=true'; },
       },
       {
         id: 'create-stock-entry',
-        name: 'Créer une entrée de stock',
+        labelKey: 'dashboard.commands.create.stockEntry',
+        labelFallback: 'Create stock entry',
+        icon: <Plus className="h-4 w-4" />,
         shortcut: ['c', 's'],
-        keywords: 'nouvelle entrée stock create',
-        section: 'Création',
-        perform: () => {
-          window.location.href = '/stock?tab=entries&create=true';
-        },
+        keywords: ['nouvelle', 'entree', 'stock', 'create'],
+        onSelect: () => { window.location.href = '/stock?tab=entries&create=true'; },
       },
       {
         id: 'create-invoice',
-        name: 'Créer une facture',
+        labelKey: 'dashboard.commands.create.invoice',
+        labelFallback: 'Create invoice',
+        icon: <FileText className="h-4 w-4" />,
         shortcut: ['c', 'i'],
-        keywords: 'nouvelle facture invoice create',
-        section: 'Création',
-        perform: () => {
-          window.location.href = '/accounting/invoices?create=true';
-        },
+        keywords: ['nouvelle', 'facture', 'invoice', 'create'],
+        onSelect: () => { window.location.href = '/accounting/invoices?create=true'; },
       },
       {
         id: 'create-worker',
-        name: 'Ajouter un travailleur',
+        labelKey: 'dashboard.commands.create.worker',
+        labelFallback: 'Add worker',
+        icon: <Users className="h-4 w-4" />,
         shortcut: ['c', 'w'],
-        keywords: 'nouveau travailleur worker create',
-        section: 'Création',
-        perform: () => {
-          window.location.href = '/workers?create=true';
-        },
+        keywords: ['nouveau', 'travailleur', 'worker', 'create'],
+        onSelect: () => { window.location.href = '/workers?create=true'; },
       },
-    ];
+    ],
+    [],
+  );
 
-    const preferenceActions: Action[] = [
+  const preferenceActions: CommandAction[] = useMemo(
+    () => [
       {
         id: 'toggle-theme',
-        name: 'Changer de thème',
+        labelKey: 'dashboard.commands.preferences.lightMode',
+        labelFallback: 'Toggle theme',
+        icon: <Sun className="h-4 w-4" />,
         shortcut: ['t'],
-        keywords: 'theme mode sombre clair dark light',
-        section: 'Préférences',
-        perform: () => {
-          document.documentElement.classList.toggle('dark');
-        },
+        keywords: ['theme', 'dark', 'light', 'mode'],
+        onSelect: () => document.documentElement.classList.toggle('dark'),
       },
-    ];
+    ],
+    [],
+  );
 
-    return [...navigationActions, ...createActions, ...preferenceActions];
-  }, [navigate]);
+  const renderShortcut = (shortcut?: string[]) => {
+    if (!shortcut?.length) return null;
+    return (
+      <CommandShortcut>
+        {shortcut.map((key) => key.toUpperCase()).join(' ')}
+      </CommandShortcut>
+    );
+  };
 
-  return <CommandPalette actions={globalActions}>{children}</CommandPalette>;
+  return (
+    <>
+      {children}
+      <CommandDialog open={open} onOpenChange={setOpen}>
+        <CommandInput placeholder={t('dashboard.commands.searchPlaceholder', 'Search for an action or page...')} />
+        <CommandList>
+          <CommandEmpty>{t('dashboard.commands.noResults', 'No results found.')}</CommandEmpty>
+
+          <CommandGroup heading={t('dashboard.commands.sections.navigation', 'Navigation')}>
+            {navActions.map((action) => (
+              <CommandItem
+                key={action.id}
+                value={action.id}
+                onSelect={() => handleSelect(action.onSelect)}
+              >
+                {action.icon}
+                <span>{t(action.labelKey, action.labelFallback)}</span>
+                {renderShortcut(action.shortcut)}
+              </CommandItem>
+            ))}
+          </CommandGroup>
+
+          <CommandSeparator />
+
+          <CommandGroup heading={t('dashboard.commands.sections.modules', 'Create')}>
+            {createActions.map((action) => (
+              <CommandItem
+                key={action.id}
+                value={action.id}
+                onSelect={() => handleSelect(action.onSelect)}
+              >
+                {action.icon}
+                <span>{t(action.labelKey, action.labelFallback)}</span>
+                {renderShortcut(action.shortcut)}
+              </CommandItem>
+            ))}
+          </CommandGroup>
+
+          <CommandSeparator />
+
+          <CommandGroup heading={t('dashboard.commands.sections.preferences', 'Preferences')}>
+            {preferenceActions.map((action) => (
+              <CommandItem
+                key={action.id}
+                value={action.id}
+                onSelect={() => handleSelect(action.onSelect)}
+              >
+                {action.icon}
+                <span>{t(action.labelKey, action.labelFallback)}</span>
+                {renderShortcut(action.shortcut)}
+              </CommandItem>
+            ))}
+          </CommandGroup>
+
+        </CommandList>
+      </CommandDialog>
+    </>
+  );
 };
+
+export function useCommandPaletteToggle() {
+  const toggle = useCallback(() => {
+    window.dispatchEvent(new CustomEvent('toggle-command-palette'));
+  }, []);
+  return { toggle };
+}

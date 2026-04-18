@@ -14,6 +14,8 @@ export interface TaskAssignment {
   hours_worked?: number;
   units_completed?: number;
   notes?: string;
+  payment_included_in_salary?: boolean;
+  bonus_amount?: number | null;
   created_at: string;
   updated_at: string;
   worker?: {
@@ -28,6 +30,8 @@ export interface CreateTaskAssignmentDto {
   worker_id: string;
   role?: 'worker' | 'supervisor' | 'lead';
   notes?: string;
+  payment_included_in_salary?: boolean;
+  bonus_amount?: number;
 }
 
 export interface BulkCreateTaskAssignmentsDto {
@@ -38,6 +42,8 @@ export interface UpdateTaskAssignmentDto {
   status?: 'assigned' | 'working' | 'completed' | 'removed';
   hours_worked?: number;
   units_completed?: number;
+  payment_included_in_salary?: boolean;
+  bonus_amount?: number;
   notes?: string;
 }
 
@@ -75,6 +81,20 @@ export const taskAssignmentsApi = {
   ): Promise<TaskAssignment[]> {
     return apiClient.post<TaskAssignment[]>(
       `/api/v1/organizations/${organizationId}/tasks/${taskId}/assignments/bulk`,
+      data
+    );
+  },
+
+  /**
+   * Sync workers for a task (create new, remove deselected) — use in edit mode
+   */
+  async syncAssignments(
+    organizationId: string,
+    taskId: string,
+    data: BulkCreateTaskAssignmentsDto
+  ): Promise<TaskAssignment[]> {
+    return apiClient.post<TaskAssignment[]>(
+      `/api/v1/organizations/${organizationId}/tasks/${taskId}/assignments/sync`,
       data
     );
   },

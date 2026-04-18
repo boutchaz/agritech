@@ -4,9 +4,10 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/hooks/useAuth';
 import { PageLayout } from '@/components/PageLayout';
 import ModernPageHeader from '@/components/ModernPageHeader';
-import { Building2, TrendingUp, TrendingDown, Loader2, AlertCircle, Download, Calendar, Wheat, CalendarRange } from 'lucide-react';
+import { Building2, TrendingUp, TrendingDown, AlertCircle, Download, Calendar, Wheat, CalendarRange } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/label';
 import { NativeSelect } from '@/components/ui/NativeSelect';
@@ -14,19 +15,22 @@ import { withRouteProtection } from '@/components/authorization/withRouteProtect
 import { useProfitLoss, type ProfitLossRow } from '@/hooks/useFinancialReports';
 import { useCampaigns, useFiscalYears } from '@/hooks/useAgriculturalAccounting';
 import { exportProfitLossCsv } from '@/lib/utils/report-export';
+import { PageLoader } from '@/components/ui/loader';
+import { AccountingReportSkeleton } from '@/components/ui/page-skeletons';
+
 
 const formatCurrency = (amount: number, symbol: string = 'MAD') => {
   return `${symbol} ${amount.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
-const ProfitLossSection: React.FC<{
+const ProfitLossSection = ({ title, accounts, total, currencySymbol, color, icon }: {
   title: string;
   accounts: ProfitLossRow[];
   total: number;
   currencySymbol: string;
   color: string;
   icon: React.ReactNode;
-}> = ({ title, accounts, total, currencySymbol, color, icon }) => (
+}) => (
   <Card>
     <CardHeader className={`${color} text-white rounded-t-lg`}>
       <CardTitle className="flex items-center justify-between">
@@ -41,40 +45,40 @@ const ProfitLossSection: React.FC<{
       {accounts.length === 0 ? (
         <div className="p-4 text-center text-gray-500">No transactions in this period</div>
       ) : (
-        <table className="w-full" aria-label={`${title} Accounts`}>
-          <thead className="bg-gray-50 dark:bg-gray-800">
-            <tr>
-              <th scope="col" className="text-left px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400">Code</th>
-              <th scope="col" className="text-left px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400">Account Name</th>
-              <th scope="col" className="text-right px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400">Amount</th>
-            </tr>
-          </thead>
-          <tbody>
+        <Table className="w-full" aria-label={`${title} Accounts`}>
+          <TableHeader className="bg-gray-50 dark:bg-gray-800">
+            <TableRow>
+              <TableHead scope="col" className="text-left px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400">Code</TableHead>
+              <TableHead scope="col" className="text-left px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400">Account Name</TableHead>
+              <TableHead scope="col" className="text-right px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400">Amount</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {accounts.map((account) => (
-              <tr key={account.account_id} className="border-t border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
-                <td className="px-4 py-3 text-sm font-mono text-gray-600 dark:text-gray-400">{account.account_code}</td>
-                <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">{account.account_name}</td>
-                <td className="px-4 py-3 text-sm text-right font-medium text-gray-900 dark:text-white">
+              <TableRow key={account.account_id} className="border-t border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
+                <TableCell className="px-4 py-3 text-sm font-mono text-gray-600 dark:text-gray-400">{account.account_code}</TableCell>
+                <TableCell className="px-4 py-3 text-sm text-gray-900 dark:text-white">{account.account_name}</TableCell>
+                <TableCell className="px-4 py-3 text-sm text-right font-medium text-gray-900 dark:text-white">
                   {formatCurrency(Number(account.display_amount), currencySymbol)}
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ))}
-          </tbody>
-          <tfoot className="bg-gray-100 dark:bg-gray-700">
-            <tr>
-              <td colSpan={2} className="px-4 py-3 text-sm font-semibold text-gray-900 dark:text-white">Total {title}</td>
-              <td className="px-4 py-3 text-sm text-right font-bold text-gray-900 dark:text-white">
+          </TableBody>
+          <TableFooter className="bg-gray-100 dark:bg-gray-700">
+            <TableRow>
+              <TableCell colSpan={2} className="px-4 py-3 text-sm font-semibold text-gray-900 dark:text-white">Total {title}</TableCell>
+              <TableCell className="px-4 py-3 text-sm text-right font-bold text-gray-900 dark:text-white">
                 {formatCurrency(total, currencySymbol)}
-              </td>
-            </tr>
-          </tfoot>
-        </table>
+              </TableCell>
+            </TableRow>
+          </TableFooter>
+        </Table>
       )}
     </CardContent>
   </Card>
 );
 
-const AppContent: React.FC = () => {
+const AppContent = () => {
   const { t } = useTranslation();
   const { currentOrganization } = useAuth();
 
@@ -109,18 +113,14 @@ const AppContent: React.FC = () => {
     }
   }, [selectedFiscalYear, fiscalYears]);
 
-  const { data: report, isLoading, error } = useProfitLoss(startDate, endDate);
+  const activeFiscalYearId = selectedFiscalYear !== 'all' ? selectedFiscalYear : undefined;
+  const { data: report, isLoading, error } = useProfitLoss(startDate, endDate, activeFiscalYearId);
 
   const currencySymbol = currentOrganization?.currency_symbol || currentOrganization?.currency || 'MAD';
 
   if (!currentOrganization) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">{t('dashboard.loading', 'Loading organization...')}</p>
-        </div>
-      </div>
+      <PageLoader />
     );
   }
 
@@ -217,12 +217,7 @@ const AppContent: React.FC = () => {
         </Card>
 
         {/* Loading State */}
-        {isLoading && (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-green-600" />
-            <span className="ml-2 text-gray-600 dark:text-gray-400">{t('reportsModule.profitLoss.loading', 'Loading profit & loss statement...')}</span>
-          </div>
-        )}
+        {isLoading && <AccountingReportSkeleton />}
 
         {/* Error State */}
         {error && (

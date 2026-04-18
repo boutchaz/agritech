@@ -7,7 +7,12 @@ import type {
   ExperienceLevelConfig,
   FeatureUsage,
 } from '@/types/experience-level';
-import { EXPERIENCE_LEVELS, hasFeature, suggestLevelUpgrade } from '@/types/experience-level';
+import {
+  EXPERIENCE_LEVELS,
+  hasFeature,
+  suggestLevelUpgrade,
+  normalizeExperienceLevel,
+} from '@/types/experience-level';
 
 interface ExperienceLevelContextValue {
   level: ExperienceLevel;
@@ -34,7 +39,7 @@ interface ExperienceLevelProviderProps {
   children: React.ReactNode;
 }
 
-export const ExperienceLevelProvider: React.FC<ExperienceLevelProviderProps> = ({ children }) => {
+export const ExperienceLevelProvider = ({ children }: ExperienceLevelProviderProps) => {
   const { profile, user } = useAuth();
   const queryClient = useQueryClient();
 
@@ -46,14 +51,12 @@ export const ExperienceLevelProvider: React.FC<ExperienceLevelProviderProps> = (
   // Load user preferences from profile
   useEffect(() => {
     if (profile) {
-      // @ts-expect-error - experience_level will be added after migration
       const userLevel = profile.experience_level as ExperienceLevel | undefined;
-      // @ts-expect-error - dismissed_hints will be added after migration
+      const safeLevel = normalizeExperienceLevel(userLevel);
       const userHints = profile.dismissed_hints as string[] | undefined;
-      // @ts-expect-error - feature_usage will be added after migration
       const userUsage = profile.feature_usage as FeatureUsage | undefined;
 
-      setLevelState(userLevel || 'basic');
+      setLevelState(safeLevel);
       setDismissedHints(userHints || []);
       setFeatureUsage(userUsage || {});
       setIsLoading(false);
@@ -67,7 +70,7 @@ export const ExperienceLevelProvider: React.FC<ExperienceLevelProviderProps> = (
   const updateLevelMutation = useMutation({
     mutationFn: async (newLevel: ExperienceLevel) => {
       if (!user) throw new Error('User not authenticated');
-      await usersApi.updateMe({ experience_level: newLevel } as Record<string, unknown>);
+      await usersApi.updateMe({ experience_level: newLevel });
     },
     onSuccess: (_, newLevel) => {
       setLevelState(newLevel);
@@ -88,7 +91,7 @@ export const ExperienceLevelProvider: React.FC<ExperienceLevelProviderProps> = (
       if (!user) throw new Error('User not authenticated');
 
       const updatedHints = [...dismissedHints, hintId];
-      await usersApi.updateMe({ dismissed_hints: updatedHints } as Record<string, unknown>);
+      await usersApi.updateMe({ dismissed_hints: updatedHints });
       return updatedHints;
     },
     onSuccess: (updatedHints) => {
@@ -128,7 +131,7 @@ export const ExperienceLevelProvider: React.FC<ExperienceLevelProviderProps> = (
         },
       };
 
-      await usersApi.updateMe({ feature_usage: updatedUsage } as Record<string, unknown>);
+      await usersApi.updateMe({ feature_usage: updatedUsage });
       return updatedUsage;
     },
     onSuccess: (updatedUsage) => {
@@ -158,7 +161,7 @@ export const ExperienceLevelProvider: React.FC<ExperienceLevelProviderProps> = (
 
   const value: ExperienceLevelContextValue = {
     level,
-    config: EXPERIENCE_LEVELS[level],
+    config: EXPERIENCE_LEVELS[normalizeExperienceLevel(level)],
     setLevel,
     hasFeature: checkFeature,
     dismissedHints,

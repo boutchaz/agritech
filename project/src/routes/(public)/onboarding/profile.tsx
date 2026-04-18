@@ -1,7 +1,6 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { WelcomeStep } from '@/components/onboarding/steps/WelcomeStep';
 import { useOnboardingStore } from '@/stores/onboardingStore';
-import { useAuth } from '@/hooks/useAuth';
 import { onboardingApi } from '@/lib/api/onboarding';
 import { useCallback, useRef } from 'react';
 
@@ -10,11 +9,8 @@ export const Route = createFileRoute('/(public)/onboarding/profile')({
 });
 
 function ProfileStep() {
-  const { user } = useAuth();
   const navigate = useNavigate();
   const profileData = useOnboardingStore((state) => state.profileData);
-  const organizationData = useOnboardingStore((state) => state.organizationData);
-  const existingOrgId = useOnboardingStore((state) => state.existingOrgId);
   const updateProfileData = useOnboardingStore((state) => state.updateProfileData);
   const setCurrentStep = useOnboardingStore((state) => state.setCurrentStep);
   const persistState = useOnboardingStore((state) => state.persistState);
@@ -31,21 +27,22 @@ function ProfileStep() {
     try {
       await onboardingApi.saveProfile(profileData);
 
-      // Determine next step and navigate
-      const nextStep = (existingOrgId && organizationData.name) ? 3 : 2;
-      const targetRoute = (existingOrgId && organizationData.name)
-        ? '/onboarding/farm'
-        : '/onboarding/organization';
+      // Always advance to step 2 (organization). Signup auto-creates an
+      // org + stashes its id in localStorage, which populates
+      // existingOrgId on the store — but the user has never actually
+      // reviewed/confirmed org info. Skipping straight to farm made new
+      // users land on modules + subscription without ever seeing
+      // profile / org / farm steps. The organization step is
+      // responsible for prefilling from the existing org and letting
+      // the user edit before continuing.
+      await persistState({ currentStep: 2 });
+      setCurrentStep(2);
 
-      // Persist state with the new step
-      await persistState({ currentStep: nextStep });
-      setCurrentStep(nextStep);
-
-      navigate({ to: targetRoute });
+      navigate({ to: '/onboarding/organization' });
     } finally {
       isSubmittingRef.current = false;
     }
-  }, [navigate, setCurrentStep, persistState, profileData, existingOrgId, organizationData.name]);
+  }, [navigate, setCurrentStep, persistState, profileData]);
 
   return (
     <WelcomeStep

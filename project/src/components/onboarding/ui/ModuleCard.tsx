@@ -1,5 +1,6 @@
 import React from 'react';
 import { Check, Lock, Sparkles } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface ModuleCardProps {
   id: string;
@@ -14,7 +15,7 @@ interface ModuleCardProps {
   requiredPlan?: string | null;
 }
 
-export const ModuleCard: React.FC<ModuleCardProps> = ({
+export const ModuleCard = ({
   name,
   description,
   icon,
@@ -24,7 +25,7 @@ export const ModuleCard: React.FC<ModuleCardProps> = ({
   recommended,
   locked = false,
   requiredPlan,
-}) => {
+}: ModuleCardProps) => {
   const colorMap: Record<string, { bg: string; border: string; iconBg: string; check: string }> = {
     emerald: { bg: 'bg-emerald-50', border: 'border-emerald-500', iconBg: 'bg-emerald-100 text-emerald-600', check: 'bg-emerald-500' },
     blue: { bg: 'bg-blue-50', border: 'border-blue-500', iconBg: 'bg-blue-100 text-blue-600', check: 'bg-blue-500' },
@@ -39,7 +40,7 @@ export const ModuleCard: React.FC<ModuleCardProps> = ({
   const colors = colorMap[color] || colorMap.emerald;
 
   return (
-    <button
+    <Button
       type="button"
       onClick={() => {
         if (locked) {
@@ -48,12 +49,12 @@ export const ModuleCard: React.FC<ModuleCardProps> = ({
         onToggle();
       }}
       className={`
-        relative group p-4 rounded-2xl border-2 text-left
+        relative group h-auto min-w-0 w-full whitespace-normal p-4 rounded-2xl border-2 text-left
         transition-all duration-300 ease-out
         ${locked ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}
         ${selected 
           ? `${colors.bg} ${colors.border} shadow-lg` 
-          : 'bg-white border-gray-200 hover:border-gray-300 hover:shadow-md'
+          : 'bg-white dark:bg-gray-900/40 border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500 hover:shadow-md'
         }
         ${locked ? '' : selected ? 'scale-[1.02]' : 'hover:scale-[1.01]'}
       `}
@@ -129,7 +130,7 @@ export const ModuleCard: React.FC<ModuleCardProps> = ({
           animation: check-in 0.3s ease-out forwards;
         }
       `}</style>
-    </button>
+    </Button>
   );
 };
 

@@ -143,18 +143,18 @@ export function useLatestSatelliteIndices(parcelId: string | null | undefined) {
       const latestByIndex: Record<string, SatelliteIndex> = {};
 
       for (const item of response) {
-        const indexName = item.index_name?.toUpperCase();
-        if (!indexName) continue;
+        const vegIndex = item.index_name?.toUpperCase();
+        if (!vegIndex) continue;
 
-        const existing = latestByIndex[indexName];
+        const existing = latestByIndex[vegIndex];
         if (!existing || new Date(item.date) > new Date(existing.date)) {
-          latestByIndex[indexName] = item;
+          latestByIndex[vegIndex] = item;
         }
       }
 
       // Extract values
-      const getValue = (indexName: string): number | null => {
-        const item = latestByIndex[indexName];
+      const getValue = (vegIndex: string): number | null => {
+        const item = latestByIndex[vegIndex];
         if (!item) return null;
         return item.mean_value ?? item.index_value ?? null;
       };
@@ -178,6 +178,7 @@ export function useLatestSatelliteIndices(parcelId: string | null | undefined) {
     },
     enabled: !!parcelId && !!organizationId,
     staleTime: 5 * 60 * 1000, // 5 minutes
-    retry: 1,
+    retry: 0,
+    gcTime: 10 * 60 * 1000,
   });
 }

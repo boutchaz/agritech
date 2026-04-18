@@ -2,6 +2,9 @@ import {
   Controller,
   Get,
   Post,
+  Put,
+  Patch,
+  Delete,
   Param,
   Body,
   Query,
@@ -11,6 +14,8 @@ import {
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { InternalAdminGuard } from './guards/internal-admin.guard';
 import { AdminService } from './admin.service';
+import { ReferentialService } from './referential.service';
+import { SupportedCountriesService, CreateSupportedCountryDto, UpdateSupportedCountryDto } from './supported-countries.service';
 import {
   ReferenceDataTable,
   ImportReferenceDataDto,
@@ -24,7 +29,11 @@ import {
 @Controller('admin')
 @UseGuards(JwtAuthGuard, InternalAdminGuard)
 export class AdminController {
-  constructor(private readonly adminService: AdminService) {}
+  constructor(
+    private readonly adminService: AdminService,
+    private readonly referentialService: ReferentialService,
+    private readonly supportedCountriesService: SupportedCountriesService,
+  ) {}
 
   // ============================================
   // Reference Data Endpoints
@@ -126,5 +135,204 @@ export class AdminController {
       parseInt(limit || '50', 10),
       parseInt(offset || '0', 10),
     );
+  }
+
+  // ============================================
+  // Crop Referential JSON Endpoints
+  // ============================================
+
+  @Get('referentials')
+  async listReferentials() {
+    return this.referentialService.listAll();
+  }
+
+  @Get('referentials/:crop')
+  async getReferential(@Param('crop') crop: string) {
+    return this.referentialService.getOne(crop);
+  }
+
+  @Put('referentials/:crop')
+  async updateReferential(
+    @Param('crop') crop: string,
+    @Body() body: any,
+  ) {
+    return this.referentialService.updateReferential(crop, body);
+  }
+
+  @Post('referentials/:crop/validate')
+  async validateReferential(
+    @Param('crop') crop: string,
+    @Body() body: any,
+  ) {
+    return this.referentialService.validateReferential(crop, body);
+  }
+
+  @Get('referentials/:crop/:section')
+  async getReferentialSection(
+    @Param('crop') crop: string,
+    @Param('section') section: string,
+  ) {
+    return this.referentialService.getSection(crop, section);
+  }
+
+  @Put('referentials/:crop/:section')
+  async updateReferentialSection(
+    @Param('crop') crop: string,
+    @Param('section') section: string,
+    @Body() body: any,
+  ) {
+    return this.referentialService.updateSection(crop, section, body);
+  }
+
+  @Post('referentials/:crop/:section/validate')
+  async validateReferentialSection(
+    @Param('crop') crop: string,
+    @Param('section') section: string,
+    @Body() body: any,
+  ) {
+    return this.referentialService.validateSection(crop, section, body);
+  }
+
+  @Get('referentials/:crop/schema')
+  async getReferentialSchema(@Param('crop') crop: string) {
+    return this.referentialService.getSchema(crop);
+  }
+
+  @Post('referentials')
+  async createReferential(@Body() body: { crop: string; template?: string }) {
+    return this.referentialService.create(body.crop, body.template);
+  }
+
+  // ============================================
+  // Admin Subscription Management
+  // ============================================
+
+  @Get('subscriptions/:orgId')
+  async getOrgSubscription(@Param('orgId') orgId: string) {
+    return this.adminService.getOrgSubscription(orgId);
+  }
+
+  @Post('subscriptions/:orgId/extend')
+  async extendSubscription(
+    @Param('orgId') orgId: string,
+    @Body() body: { days?: number; newEndDate?: string; reason?: string },
+    @Request() req: any,
+  ) {
+    return this.adminService.extendSubscription(orgId, body, req.user.id);
+  }
+
+  @Put('subscriptions/:orgId')
+  async updateSubscription(
+    @Param('orgId') orgId: string,
+    @Body() body: any,
+    @Request() req: any,
+  ) {
+    return this.adminService.updateSubscription(orgId, body, req.user.id);
+  }
+
+  @Post('subscriptions/:orgId/create')
+  async createSubscription(
+    @Param('orgId') orgId: string,
+    @Body() body: any,
+    @Request() req: any,
+  ) {
+    return this.adminService.createSubscription(orgId, body, req.user.id);
+  }
+
+  // ============================================
+  // Banners (cross-org admin management)
+  // ============================================
+
+  @Get('banners')
+  async getAllBanners() {
+    return this.adminService.getAllBanners();
+  }
+
+  @Post('banners')
+  async createBanner(@Body() body: any, @Request() req: any) {
+    return this.adminService.createBanner(body, req.user.id);
+  }
+
+  @Patch('banners/:id')
+  async updateBanner(@Param('id') id: string, @Body() body: any) {
+    return this.adminService.updateBanner(id, body);
+  }
+
+  @Delete('banners/:id')
+  async deleteBanner(@Param('id') id: string) {
+    return this.adminService.deleteBanner(id);
+  }
+
+  // ============================================
+  // Supported Countries Endpoints
+  // ============================================
+
+  @Get('supported-countries')
+  async getSupportedCountries() {
+    return this.supportedCountriesService.findAll();
+  }
+
+  @Post('supported-countries')
+  async createSupportedCountry(@Body() dto: CreateSupportedCountryDto) {
+    return this.supportedCountriesService.create(dto);
+  }
+
+  @Put('supported-countries/:id')
+  async updateSupportedCountry(
+    @Param('id') id: string,
+    @Body() dto: UpdateSupportedCountryDto,
+  ) {
+    return this.supportedCountriesService.update(id, dto);
+  }
+
+  @Delete('supported-countries/:id')
+  async deleteSupportedCountry(@Param('id') id: string) {
+    return this.supportedCountriesService.delete(id);
+  }
+
+  @Put('supported-countries/:id/toggle')
+  async toggleSupportedCountry(
+    @Param('id') id: string,
+    @Body() body: { enabled: boolean },
+  ) {
+    return this.supportedCountriesService.toggleEnabled(id, body.enabled);
+  }
+
+  // ============================================
+  // Module Management Endpoints
+  // ============================================
+
+  @Get('modules')
+  async getModules() {
+    return this.adminService.getModules();
+  }
+
+  @Get('modules/:id')
+  async getModule(@Param('id') id: string) {
+    return this.adminService.getModule(id);
+  }
+
+  @Post('modules')
+  async createModule(@Body() body: Record<string, unknown>) {
+    return this.adminService.createModule(body);
+  }
+
+  @Patch('modules/:id')
+  async updateModule(@Param('id') id: string, @Body() body: Record<string, unknown>) {
+    return this.adminService.updateModule(id, body);
+  }
+
+  @Delete('modules/:id')
+  async deleteModule(@Param('id') id: string) {
+    return this.adminService.deleteModule(id);
+  }
+
+  @Put('modules/:id/translations/:locale')
+  async upsertModuleTranslation(
+    @Param('id') moduleId: string,
+    @Param('locale') locale: string,
+    @Body() body: { name?: string; description?: string; features?: string[] },
+  ) {
+    return this.adminService.upsertModuleTranslation(moduleId, locale, body);
   }
 }

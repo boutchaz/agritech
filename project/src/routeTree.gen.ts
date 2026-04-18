@@ -11,6 +11,12 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedReportsRouteImport } from './routes/_authenticated/reports'
+import { Route as AuthenticatedReferentielsRouteImport } from './routes/_authenticated/referentiels'
+import { Route as publicTermsOfServiceRouteImport } from './routes/(public)/terms-of-service'
+import { Route as publicRdvSiamRouteImport } from './routes/(public)/rdv-siam'
+import { Route as publicRdvRouteImport } from './routes/(public)/rdv'
+import { Route as publicPrivacyPolicyRouteImport } from './routes/(public)/privacy-policy'
 import { Route as publicPitchDeckRouteImport } from './routes/(public)/pitch-deck'
 import { Route as publicOnboardingRouteImport } from './routes/(public)/onboarding'
 import { Route as publicCheckoutSuccessRouteImport } from './routes/(public)/checkout-success'
@@ -23,22 +29,25 @@ import { Route as authForgotPasswordRouteImport } from './routes/(auth)/forgot-p
 import { Route as AuthenticatedPestAlertsIndexRouteImport } from './routes/_authenticated/pest-alerts/index'
 import { Route as AuthenticatedComplianceIndexRouteImport } from './routes/_authenticated/compliance/index'
 import { Route as publicOnboardingIndexRouteImport } from './routes/(public)/onboarding/index'
-import { Route as publicBlogIndexRouteImport } from './routes/(public)/blog/index'
 import { Route as AuthenticatedPestAlertsReportIdRouteImport } from './routes/_authenticated/pest-alerts/$reportId'
 import { Route as AuthenticatedworkforceWorkersRouteImport } from './routes/_authenticated/(workforce)/workers'
 import { Route as AuthenticatedworkforceTasksRouteImport } from './routes/_authenticated/(workforce)/tasks'
 import { Route as AuthenticatedsettingsSettingsRouteImport } from './routes/_authenticated/(settings)/settings'
 import { Route as AuthenticatedproductionTreesRouteImport } from './routes/_authenticated/(production)/trees'
+import { Route as AuthenticatedproductionSatelliteAnalysisRouteImport } from './routes/_authenticated/(production)/satellite-analysis'
 import { Route as AuthenticatedproductionQualityControlRouteImport } from './routes/_authenticated/(production)/quality-control'
 import { Route as AuthenticatedproductionPruningRouteImport } from './routes/_authenticated/(production)/pruning'
+import { Route as AuthenticatedproductionProductApplicationsRouteImport } from './routes/_authenticated/(production)/product-applications'
 import { Route as AuthenticatedproductionParcelsRouteImport } from './routes/_authenticated/(production)/parcels'
 import { Route as AuthenticatedproductionOrchardsRouteImport } from './routes/_authenticated/(production)/orchards'
 import { Route as AuthenticatedproductionHarvestsRouteImport } from './routes/_authenticated/(production)/harvests'
 import { Route as AuthenticatedproductionFarmHierarchyRouteImport } from './routes/_authenticated/(production)/farm-hierarchy'
 import { Route as AuthenticatedproductionCropCyclesRouteImport } from './routes/_authenticated/(production)/crop-cycles'
 import { Route as AuthenticatedproductionCampaignsRouteImport } from './routes/_authenticated/(production)/campaigns'
+import { Route as AuthenticatedproductionBiologicalAssetsRouteImport } from './routes/_authenticated/(production)/biological-assets'
 import { Route as AuthenticatedmiscUtilitiesRouteImport } from './routes/_authenticated/(misc)/utilities'
 import { Route as AuthenticatedmiscNotificationsRouteImport } from './routes/_authenticated/(misc)/notifications'
+import { Route as AuthenticatedmiscModulesRouteImport } from './routes/_authenticated/(misc)/modules'
 import { Route as AuthenticatedmiscMarketplaceRouteImport } from './routes/_authenticated/(misc)/marketplace'
 import { Route as AuthenticatedmiscLabServicesRouteImport } from './routes/_authenticated/(misc)/lab-services'
 import { Route as AuthenticatedmiscInfrastructureRouteImport } from './routes/_authenticated/(misc)/infrastructure'
@@ -57,7 +66,6 @@ import { Route as publicOnboardingOrganizationRouteImport } from './routes/(publ
 import { Route as publicOnboardingModulesRouteImport } from './routes/(public)/onboarding/modules'
 import { Route as publicOnboardingFarmRouteImport } from './routes/(public)/onboarding/farm'
 import { Route as publicOnboardingCompleteRouteImport } from './routes/(public)/onboarding/complete'
-import { Route as publicBlogSlugRouteImport } from './routes/(public)/blog/$slug'
 import { Route as authAuthCallbackRouteImport } from './routes/(auth)/auth.callback'
 import { Route as AuthenticatedComplianceCorrectiveActionsIndexRouteImport } from './routes/_authenticated/compliance/corrective-actions/index'
 import { Route as AuthenticatedComplianceCertificationsIndexRouteImport } from './routes/_authenticated/compliance/certifications/index'
@@ -66,9 +74,11 @@ import { Route as AuthenticatedsettingsSettingsIndexRouteImport } from './routes
 import { Route as AuthenticatedinventoryStockIndexRouteImport } from './routes/_authenticated/(inventory)/stock/index'
 import { Route as AuthenticatedaccountingAccountingIndexRouteImport } from './routes/_authenticated/(accounting)/accounting/index'
 import { Route as AuthenticatedComplianceCertificationsCertIdRouteImport } from './routes/_authenticated/compliance/certifications/$certId'
+import { Route as AuthenticatedworkforceWorkforcePaymentsRouteImport } from './routes/_authenticated/(workforce)/workforce/payments'
 import { Route as AuthenticatedworkforceWorkforceEmployeesRouteImport } from './routes/_authenticated/(workforce)/workforce/employees'
 import { Route as AuthenticatedworkforceWorkforceDayLaborersRouteImport } from './routes/_authenticated/(workforce)/workforce/day-laborers'
 import { Route as AuthenticatedworkforceWorkersWorkerIdRouteImport } from './routes/_authenticated/(workforce)/workers.$workerId'
+import { Route as AuthenticatedworkforceTasksKanbanRouteImport } from './routes/_authenticated/(workforce)/tasks/kanban'
 import { Route as AuthenticatedworkforceTasksCalendarRouteImport } from './routes/_authenticated/(workforce)/tasks/calendar'
 import { Route as AuthenticatedworkforceTasksTaskIdRouteImport } from './routes/_authenticated/(workforce)/tasks/$taskId'
 import { Route as AuthenticatedsettingsSettingsWorkUnitsRouteImport } from './routes/_authenticated/(settings)/settings.work-units'
@@ -78,37 +88,44 @@ import { Route as AuthenticatedsettingsSettingsProfileRouteImport } from './rout
 import { Route as AuthenticatedsettingsSettingsPreferencesRouteImport } from './routes/_authenticated/(settings)/settings.preferences'
 import { Route as AuthenticatedsettingsSettingsOrganizationRouteImport } from './routes/_authenticated/(settings)/settings.organization'
 import { Route as AuthenticatedsettingsSettingsModulesRouteImport } from './routes/_authenticated/(settings)/settings.modules'
-import { Route as AuthenticatedsettingsSettingsFiscalYearsRouteImport } from './routes/_authenticated/(settings)/settings.fiscal-years'
+import { Route as AuthenticatedsettingsSettingsLegalRouteImport } from './routes/_authenticated/(settings)/settings.legal'
 import { Route as AuthenticatedsettingsSettingsFilesRouteImport } from './routes/_authenticated/(settings)/settings.files'
 import { Route as AuthenticatedsettingsSettingsDocumentsRouteImport } from './routes/_authenticated/(settings)/settings.documents'
 import { Route as AuthenticatedsettingsSettingsDashboardRouteImport } from './routes/_authenticated/(settings)/settings.dashboard'
 import { Route as AuthenticatedsettingsSettingsDangerZoneRouteImport } from './routes/_authenticated/(settings)/settings.danger-zone'
-import { Route as AuthenticatedsettingsSettingsCostCentersRouteImport } from './routes/_authenticated/(settings)/settings.cost-centers'
 import { Route as AuthenticatedsettingsSettingsBiologicalAssetsRouteImport } from './routes/_authenticated/(settings)/settings.biological-assets'
-import { Route as AuthenticatedsettingsSettingsAccountMappingsRouteImport } from './routes/_authenticated/(settings)/settings.account-mappings'
+import { Route as AuthenticatedsettingsSettingsBillingRouteImport } from './routes/_authenticated/(settings)/settings.billing'
+import { Route as AuthenticatedsettingsSettingsAiRouteImport } from './routes/_authenticated/(settings)/settings.ai'
 import { Route as AuthenticatedsettingsSettingsAccountRouteImport } from './routes/_authenticated/(settings)/settings.account'
 import { Route as AuthenticatedproductionProductionSoilAnalysisRouteImport } from './routes/_authenticated/(production)/production/soil-analysis'
 import { Route as AuthenticatedproductionProductionSatelliteAnalysisRouteImport } from './routes/_authenticated/(production)/production/satellite-analysis'
 import { Route as AuthenticatedproductionProductionQualityControlRouteImport } from './routes/_authenticated/(production)/production/quality-control'
 import { Route as AuthenticatedproductionProductionProfitabilityRouteImport } from './routes/_authenticated/(production)/production/profitability'
 import { Route as AuthenticatedproductionProductionIntelligenceRouteImport } from './routes/_authenticated/(production)/production/intelligence'
-import { Route as AuthenticatedproductionProductionHarvestsRouteImport } from './routes/_authenticated/(production)/production/harvests'
 import { Route as AuthenticatedproductionProductionCropCyclesRouteImport } from './routes/_authenticated/(production)/production/crop-cycles'
 import { Route as AuthenticatedproductionParcelsParcelIdRouteImport } from './routes/_authenticated/(production)/parcels.$parcelId'
 import { Route as AuthenticatedproductionCropCyclesCycleIdRouteImport } from './routes/_authenticated/(production)/crop-cycles/$cycleId'
 import { Route as AuthenticatedmiscMarketplaceOrdersRouteImport } from './routes/_authenticated/(misc)/marketplace/orders'
 import { Route as AuthenticatedinventoryStockWarehousesRouteImport } from './routes/_authenticated/(inventory)/stock/warehouses'
 import { Route as AuthenticatedinventoryStockSuppliersRouteImport } from './routes/_authenticated/(inventory)/stock/suppliers'
+import { Route as AuthenticatedinventoryStockStockTakeRouteImport } from './routes/_authenticated/(inventory)/stock/stock-take'
 import { Route as AuthenticatedinventoryStockStockRouteImport } from './routes/_authenticated/(inventory)/stock/stock'
 import { Route as AuthenticatedinventoryStockReportsRouteImport } from './routes/_authenticated/(inventory)/stock/reports'
+import { Route as AuthenticatedinventoryStockReorderSuggestionsRouteImport } from './routes/_authenticated/(inventory)/stock/reorder-suggestions'
 import { Route as AuthenticatedinventoryStockReceptionRouteImport } from './routes/_authenticated/(inventory)/stock/reception'
-import { Route as AuthenticatedinventoryStockItemsRouteImport } from './routes/_authenticated/(inventory)/stock/items'
+import { Route as AuthenticatedinventoryStockQuickStockRouteImport } from './routes/_authenticated/(inventory)/stock/quick-stock'
 import { Route as AuthenticatedinventoryStockInventoryRouteImport } from './routes/_authenticated/(inventory)/stock/inventory'
 import { Route as AuthenticatedinventoryStockGroupsRouteImport } from './routes/_authenticated/(inventory)/stock/groups'
+import { Route as AuthenticatedinventoryStockExpiryAlertsRouteImport } from './routes/_authenticated/(inventory)/stock/expiry-alerts'
 import { Route as AuthenticatedinventoryStockEntriesRouteImport } from './routes/_authenticated/(inventory)/stock/entries'
+import { Route as AuthenticatedinventoryStockDeliveriesRouteImport } from './routes/_authenticated/(inventory)/stock/deliveries'
+import { Route as AuthenticatedinventoryStockDashboardRouteImport } from './routes/_authenticated/(inventory)/stock/dashboard'
+import { Route as AuthenticatedinventoryStockBatchesRouteImport } from './routes/_authenticated/(inventory)/stock/batches'
+import { Route as AuthenticatedinventoryStockApprovalsRouteImport } from './routes/_authenticated/(inventory)/stock/approvals'
 import { Route as AuthenticatedinventoryInventoryReceptionBatchesRouteImport } from './routes/_authenticated/(inventory)/inventory/reception-batches'
 import { Route as AuthenticatedaccountingAccountingTrialBalanceRouteImport } from './routes/_authenticated/(accounting)/accounting/trial-balance'
 import { Route as AuthenticatedaccountingAccountingSalesOrdersRouteImport } from './routes/_authenticated/(accounting)/accounting/sales-orders'
+import { Route as AuthenticatedaccountingAccountingReportsAnalysisRouteImport } from './routes/_authenticated/(accounting)/accounting/reports-analysis'
 import { Route as AuthenticatedaccountingAccountingReportsRouteImport } from './routes/_authenticated/(accounting)/accounting/reports'
 import { Route as AuthenticatedaccountingAccountingQuotesRouteImport } from './routes/_authenticated/(accounting)/accounting/quotes'
 import { Route as AuthenticatedaccountingAccountingPurchaseOrdersRouteImport } from './routes/_authenticated/(accounting)/accounting/purchase-orders'
@@ -117,14 +134,19 @@ import { Route as AuthenticatedaccountingAccountingPaymentsRouteImport } from '.
 import { Route as AuthenticatedaccountingAccountingJournalRouteImport } from './routes/_authenticated/(accounting)/accounting/journal'
 import { Route as AuthenticatedaccountingAccountingInvoicesRouteImport } from './routes/_authenticated/(accounting)/accounting/invoices'
 import { Route as AuthenticatedaccountingAccountingGeneralLedgerRouteImport } from './routes/_authenticated/(accounting)/accounting/general-ledger'
+import { Route as AuthenticatedaccountingAccountingFiscalYearsRouteImport } from './routes/_authenticated/(accounting)/accounting/fiscal-years'
 import { Route as AuthenticatedaccountingAccountingCustomersRouteImport } from './routes/_authenticated/(accounting)/accounting/customers'
+import { Route as AuthenticatedaccountingAccountingCostCentersRouteImport } from './routes/_authenticated/(accounting)/accounting/cost-centers'
 import { Route as AuthenticatedaccountingAccountingCashFlowRouteImport } from './routes/_authenticated/(accounting)/accounting/cash-flow'
+import { Route as AuthenticatedaccountingAccountingBankAccountsRouteImport } from './routes/_authenticated/(accounting)/accounting/bank-accounts'
 import { Route as AuthenticatedaccountingAccountingBalanceSheetRouteImport } from './routes/_authenticated/(accounting)/accounting/balance-sheet'
 import { Route as AuthenticatedaccountingAccountingAgedReceivablesRouteImport } from './routes/_authenticated/(accounting)/accounting/aged-receivables'
 import { Route as AuthenticatedaccountingAccountingAgedPayablesRouteImport } from './routes/_authenticated/(accounting)/accounting/aged-payables'
 import { Route as AuthenticatedaccountingAccountingAccountsRouteImport } from './routes/_authenticated/(accounting)/accounting/accounts'
+import { Route as AuthenticatedaccountingAccountingAccountMappingsRouteImport } from './routes/_authenticated/(accounting)/accounting/account-mappings'
 import { Route as AuthenticatedworkforceWorkforceTasksIndexRouteImport } from './routes/_authenticated/(workforce)/workforce/tasks.index'
 import { Route as AuthenticatedproductionParcelsParcelIdIndexRouteImport } from './routes/_authenticated/(production)/parcels.$parcelId.index'
+import { Route as AuthenticatedinventoryStockItemsIndexRouteImport } from './routes/_authenticated/(inventory)/stock/items.index'
 import { Route as AuthenticatedworkforceWorkforceWorkersPieceWorkRouteImport } from './routes/_authenticated/(workforce)/workforce/workers.piece-work'
 import { Route as AuthenticatedworkforceWorkforceTasksCalendarRouteImport } from './routes/_authenticated/(workforce)/workforce/tasks.calendar'
 import { Route as AuthenticatedproductionParcelsParcelIdWeatherRouteImport } from './routes/_authenticated/(production)/parcels.$parcelId.weather'
@@ -133,11 +155,21 @@ import { Route as AuthenticatedproductionParcelsParcelIdReportsRouteImport } fro
 import { Route as AuthenticatedproductionParcelsParcelIdProfitabilityRouteImport } from './routes/_authenticated/(production)/parcels.$parcelId.profitability'
 import { Route as AuthenticatedproductionParcelsParcelIdProductionRouteImport } from './routes/_authenticated/(production)/parcels.$parcelId.production'
 import { Route as AuthenticatedproductionParcelsParcelIdAnalyseRouteImport } from './routes/_authenticated/(production)/parcels.$parcelId.analyse'
+import { Route as AuthenticatedproductionParcelsParcelIdAiRouteImport } from './routes/_authenticated/(production)/parcels.$parcelId.ai'
 import { Route as AuthenticatedmiscMarketplaceQuoteRequestsSentRouteImport } from './routes/_authenticated/(misc)/marketplace/quote-requests.sent'
 import { Route as AuthenticatedmiscMarketplaceQuoteRequestsReceivedRouteImport } from './routes/_authenticated/(misc)/marketplace/quote-requests.received'
+import { Route as AuthenticatedinventoryStockItemsItemIdRouteImport } from './routes/_authenticated/(inventory)/stock/items.$itemId'
 import { Route as AuthenticatedproductionParcelsParcelIdSatelliteIndexRouteImport } from './routes/_authenticated/(production)/parcels.$parcelId.satellite.index'
+import { Route as AuthenticatedproductionParcelsParcelIdAiIndexRouteImport } from './routes/_authenticated/(production)/parcels.$parcelId.ai.index'
 import { Route as AuthenticatedproductionParcelsParcelIdSatelliteTimeseriesRouteImport } from './routes/_authenticated/(production)/parcels.$parcelId.satellite.timeseries'
 import { Route as AuthenticatedproductionParcelsParcelIdSatelliteHeatmapRouteImport } from './routes/_authenticated/(production)/parcels.$parcelId.satellite.heatmap'
+import { Route as AuthenticatedproductionParcelsParcelIdAiWeatherRouteImport } from './routes/_authenticated/(production)/parcels.$parcelId.ai.weather'
+import { Route as AuthenticatedproductionParcelsParcelIdAiRecommendationsRouteImport } from './routes/_authenticated/(production)/parcels.$parcelId.ai.recommendations'
+import { Route as AuthenticatedproductionParcelsParcelIdAiPlanRouteImport } from './routes/_authenticated/(production)/parcels.$parcelId.ai.plan'
+import { Route as AuthenticatedproductionParcelsParcelIdAiCalibrationRouteImport } from './routes/_authenticated/(production)/parcels.$parcelId.ai.calibration'
+import { Route as AuthenticatedproductionParcelsParcelIdAiAlertsRouteImport } from './routes/_authenticated/(production)/parcels.$parcelId.ai.alerts'
+import { Route as AuthenticatedproductionParcelsParcelIdAiPlanIndexRouteImport } from './routes/_authenticated/(production)/parcels.$parcelId.ai.plan.index'
+import { Route as AuthenticatedproductionParcelsParcelIdAiPlanSummaryRouteImport } from './routes/_authenticated/(production)/parcels.$parcelId.ai.plan.summary'
 
 const AuthenticatedRoute = AuthenticatedRouteImport.update({
   id: '/_authenticated',
@@ -146,6 +178,37 @@ const AuthenticatedRoute = AuthenticatedRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedReportsRoute = AuthenticatedReportsRouteImport.update({
+  id: '/reports',
+  path: '/reports',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedReferentielsRoute =
+  AuthenticatedReferentielsRouteImport.update({
+    id: '/referentiels',
+    path: '/referentiels',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const publicTermsOfServiceRoute = publicTermsOfServiceRouteImport.update({
+  id: '/(public)/terms-of-service',
+  path: '/terms-of-service',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const publicRdvSiamRoute = publicRdvSiamRouteImport.update({
+  id: '/(public)/rdv-siam',
+  path: '/rdv-siam',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const publicRdvRoute = publicRdvRouteImport.update({
+  id: '/(public)/rdv',
+  path: '/rdv',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const publicPrivacyPolicyRoute = publicPrivacyPolicyRouteImport.update({
+  id: '/(public)/privacy-policy',
+  path: '/privacy-policy',
   getParentRoute: () => rootRouteImport,
 } as any)
 const publicPitchDeckRoute = publicPitchDeckRouteImport.update({
@@ -210,11 +273,6 @@ const publicOnboardingIndexRoute = publicOnboardingIndexRouteImport.update({
   path: '/',
   getParentRoute: () => publicOnboardingRoute,
 } as any)
-const publicBlogIndexRoute = publicBlogIndexRouteImport.update({
-  id: '/(public)/blog/',
-  path: '/blog/',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const AuthenticatedPestAlertsReportIdRoute =
   AuthenticatedPestAlertsReportIdRouteImport.update({
     id: '/pest-alerts/$reportId',
@@ -245,6 +303,12 @@ const AuthenticatedproductionTreesRoute =
     path: '/trees',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedproductionSatelliteAnalysisRoute =
+  AuthenticatedproductionSatelliteAnalysisRouteImport.update({
+    id: '/(production)/satellite-analysis',
+    path: '/satellite-analysis',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedproductionQualityControlRoute =
   AuthenticatedproductionQualityControlRouteImport.update({
     id: '/(production)/quality-control',
@@ -255,6 +319,12 @@ const AuthenticatedproductionPruningRoute =
   AuthenticatedproductionPruningRouteImport.update({
     id: '/(production)/pruning',
     path: '/pruning',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedproductionProductApplicationsRoute =
+  AuthenticatedproductionProductApplicationsRouteImport.update({
+    id: '/(production)/product-applications',
+    path: '/product-applications',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedproductionParcelsRoute =
@@ -293,6 +363,12 @@ const AuthenticatedproductionCampaignsRoute =
     path: '/campaigns',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedproductionBiologicalAssetsRoute =
+  AuthenticatedproductionBiologicalAssetsRouteImport.update({
+    id: '/(production)/biological-assets',
+    path: '/biological-assets',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedmiscUtilitiesRoute =
   AuthenticatedmiscUtilitiesRouteImport.update({
     id: '/(misc)/utilities',
@@ -303,6 +379,12 @@ const AuthenticatedmiscNotificationsRoute =
   AuthenticatedmiscNotificationsRouteImport.update({
     id: '/(misc)/notifications',
     path: '/notifications',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedmiscModulesRoute =
+  AuthenticatedmiscModulesRouteImport.update({
+    id: '/(misc)/modules',
+    path: '/modules',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedmiscMarketplaceRoute =
@@ -409,11 +491,6 @@ const publicOnboardingCompleteRoute =
     path: '/complete',
     getParentRoute: () => publicOnboardingRoute,
   } as any)
-const publicBlogSlugRoute = publicBlogSlugRouteImport.update({
-  id: '/(public)/blog/$slug',
-  path: '/blog/$slug',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const authAuthCallbackRoute = authAuthCallbackRouteImport.update({
   id: '/(auth)/auth/callback',
   path: '/auth/callback',
@@ -461,6 +538,12 @@ const AuthenticatedComplianceCertificationsCertIdRoute =
     path: '/compliance/certifications/$certId',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedworkforceWorkforcePaymentsRoute =
+  AuthenticatedworkforceWorkforcePaymentsRouteImport.update({
+    id: '/(workforce)/workforce/payments',
+    path: '/workforce/payments',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedworkforceWorkforceEmployeesRoute =
   AuthenticatedworkforceWorkforceEmployeesRouteImport.update({
     id: '/(workforce)/workforce/employees',
@@ -478,6 +561,12 @@ const AuthenticatedworkforceWorkersWorkerIdRoute =
     id: '/$workerId',
     path: '/$workerId',
     getParentRoute: () => AuthenticatedworkforceWorkersRoute,
+  } as any)
+const AuthenticatedworkforceTasksKanbanRoute =
+  AuthenticatedworkforceTasksKanbanRouteImport.update({
+    id: '/kanban',
+    path: '/kanban',
+    getParentRoute: () => AuthenticatedworkforceTasksRoute,
   } as any)
 const AuthenticatedworkforceTasksCalendarRoute =
   AuthenticatedworkforceTasksCalendarRouteImport.update({
@@ -533,10 +622,10 @@ const AuthenticatedsettingsSettingsModulesRoute =
     path: '/modules',
     getParentRoute: () => AuthenticatedsettingsSettingsRoute,
   } as any)
-const AuthenticatedsettingsSettingsFiscalYearsRoute =
-  AuthenticatedsettingsSettingsFiscalYearsRouteImport.update({
-    id: '/fiscal-years',
-    path: '/fiscal-years',
+const AuthenticatedsettingsSettingsLegalRoute =
+  AuthenticatedsettingsSettingsLegalRouteImport.update({
+    id: '/legal',
+    path: '/legal',
     getParentRoute: () => AuthenticatedsettingsSettingsRoute,
   } as any)
 const AuthenticatedsettingsSettingsFilesRoute =
@@ -563,22 +652,22 @@ const AuthenticatedsettingsSettingsDangerZoneRoute =
     path: '/danger-zone',
     getParentRoute: () => AuthenticatedsettingsSettingsRoute,
   } as any)
-const AuthenticatedsettingsSettingsCostCentersRoute =
-  AuthenticatedsettingsSettingsCostCentersRouteImport.update({
-    id: '/cost-centers',
-    path: '/cost-centers',
-    getParentRoute: () => AuthenticatedsettingsSettingsRoute,
-  } as any)
 const AuthenticatedsettingsSettingsBiologicalAssetsRoute =
   AuthenticatedsettingsSettingsBiologicalAssetsRouteImport.update({
     id: '/biological-assets',
     path: '/biological-assets',
     getParentRoute: () => AuthenticatedsettingsSettingsRoute,
   } as any)
-const AuthenticatedsettingsSettingsAccountMappingsRoute =
-  AuthenticatedsettingsSettingsAccountMappingsRouteImport.update({
-    id: '/account-mappings',
-    path: '/account-mappings',
+const AuthenticatedsettingsSettingsBillingRoute =
+  AuthenticatedsettingsSettingsBillingRouteImport.update({
+    id: '/billing',
+    path: '/billing',
+    getParentRoute: () => AuthenticatedsettingsSettingsRoute,
+  } as any)
+const AuthenticatedsettingsSettingsAiRoute =
+  AuthenticatedsettingsSettingsAiRouteImport.update({
+    id: '/ai',
+    path: '/ai',
     getParentRoute: () => AuthenticatedsettingsSettingsRoute,
   } as any)
 const AuthenticatedsettingsSettingsAccountRoute =
@@ -617,12 +706,6 @@ const AuthenticatedproductionProductionIntelligenceRoute =
     path: '/production/intelligence',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
-const AuthenticatedproductionProductionHarvestsRoute =
-  AuthenticatedproductionProductionHarvestsRouteImport.update({
-    id: '/(production)/production/harvests',
-    path: '/production/harvests',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
 const AuthenticatedproductionProductionCropCyclesRoute =
   AuthenticatedproductionProductionCropCyclesRouteImport.update({
     id: '/(production)/production/crop-cycles',
@@ -659,6 +742,12 @@ const AuthenticatedinventoryStockSuppliersRoute =
     path: '/suppliers',
     getParentRoute: () => AuthenticatedinventoryStockRoute,
   } as any)
+const AuthenticatedinventoryStockStockTakeRoute =
+  AuthenticatedinventoryStockStockTakeRouteImport.update({
+    id: '/stock-take',
+    path: '/stock-take',
+    getParentRoute: () => AuthenticatedinventoryStockRoute,
+  } as any)
 const AuthenticatedinventoryStockStockRoute =
   AuthenticatedinventoryStockStockRouteImport.update({
     id: '/stock',
@@ -671,16 +760,22 @@ const AuthenticatedinventoryStockReportsRoute =
     path: '/reports',
     getParentRoute: () => AuthenticatedinventoryStockRoute,
   } as any)
+const AuthenticatedinventoryStockReorderSuggestionsRoute =
+  AuthenticatedinventoryStockReorderSuggestionsRouteImport.update({
+    id: '/reorder-suggestions',
+    path: '/reorder-suggestions',
+    getParentRoute: () => AuthenticatedinventoryStockRoute,
+  } as any)
 const AuthenticatedinventoryStockReceptionRoute =
   AuthenticatedinventoryStockReceptionRouteImport.update({
     id: '/reception',
     path: '/reception',
     getParentRoute: () => AuthenticatedinventoryStockRoute,
   } as any)
-const AuthenticatedinventoryStockItemsRoute =
-  AuthenticatedinventoryStockItemsRouteImport.update({
-    id: '/items',
-    path: '/items',
+const AuthenticatedinventoryStockQuickStockRoute =
+  AuthenticatedinventoryStockQuickStockRouteImport.update({
+    id: '/quick-stock',
+    path: '/quick-stock',
     getParentRoute: () => AuthenticatedinventoryStockRoute,
   } as any)
 const AuthenticatedinventoryStockInventoryRoute =
@@ -695,10 +790,40 @@ const AuthenticatedinventoryStockGroupsRoute =
     path: '/groups',
     getParentRoute: () => AuthenticatedinventoryStockRoute,
   } as any)
+const AuthenticatedinventoryStockExpiryAlertsRoute =
+  AuthenticatedinventoryStockExpiryAlertsRouteImport.update({
+    id: '/expiry-alerts',
+    path: '/expiry-alerts',
+    getParentRoute: () => AuthenticatedinventoryStockRoute,
+  } as any)
 const AuthenticatedinventoryStockEntriesRoute =
   AuthenticatedinventoryStockEntriesRouteImport.update({
     id: '/entries',
     path: '/entries',
+    getParentRoute: () => AuthenticatedinventoryStockRoute,
+  } as any)
+const AuthenticatedinventoryStockDeliveriesRoute =
+  AuthenticatedinventoryStockDeliveriesRouteImport.update({
+    id: '/deliveries',
+    path: '/deliveries',
+    getParentRoute: () => AuthenticatedinventoryStockRoute,
+  } as any)
+const AuthenticatedinventoryStockDashboardRoute =
+  AuthenticatedinventoryStockDashboardRouteImport.update({
+    id: '/dashboard',
+    path: '/dashboard',
+    getParentRoute: () => AuthenticatedinventoryStockRoute,
+  } as any)
+const AuthenticatedinventoryStockBatchesRoute =
+  AuthenticatedinventoryStockBatchesRouteImport.update({
+    id: '/batches',
+    path: '/batches',
+    getParentRoute: () => AuthenticatedinventoryStockRoute,
+  } as any)
+const AuthenticatedinventoryStockApprovalsRoute =
+  AuthenticatedinventoryStockApprovalsRouteImport.update({
+    id: '/approvals',
+    path: '/approvals',
     getParentRoute: () => AuthenticatedinventoryStockRoute,
   } as any)
 const AuthenticatedinventoryInventoryReceptionBatchesRoute =
@@ -717,6 +842,12 @@ const AuthenticatedaccountingAccountingSalesOrdersRoute =
   AuthenticatedaccountingAccountingSalesOrdersRouteImport.update({
     id: '/sales-orders',
     path: '/sales-orders',
+    getParentRoute: () => AuthenticatedaccountingAccountingRoute,
+  } as any)
+const AuthenticatedaccountingAccountingReportsAnalysisRoute =
+  AuthenticatedaccountingAccountingReportsAnalysisRouteImport.update({
+    id: '/reports-analysis',
+    path: '/reports-analysis',
     getParentRoute: () => AuthenticatedaccountingAccountingRoute,
   } as any)
 const AuthenticatedaccountingAccountingReportsRoute =
@@ -767,16 +898,34 @@ const AuthenticatedaccountingAccountingGeneralLedgerRoute =
     path: '/general-ledger',
     getParentRoute: () => AuthenticatedaccountingAccountingRoute,
   } as any)
+const AuthenticatedaccountingAccountingFiscalYearsRoute =
+  AuthenticatedaccountingAccountingFiscalYearsRouteImport.update({
+    id: '/fiscal-years',
+    path: '/fiscal-years',
+    getParentRoute: () => AuthenticatedaccountingAccountingRoute,
+  } as any)
 const AuthenticatedaccountingAccountingCustomersRoute =
   AuthenticatedaccountingAccountingCustomersRouteImport.update({
     id: '/customers',
     path: '/customers',
     getParentRoute: () => AuthenticatedaccountingAccountingRoute,
   } as any)
+const AuthenticatedaccountingAccountingCostCentersRoute =
+  AuthenticatedaccountingAccountingCostCentersRouteImport.update({
+    id: '/cost-centers',
+    path: '/cost-centers',
+    getParentRoute: () => AuthenticatedaccountingAccountingRoute,
+  } as any)
 const AuthenticatedaccountingAccountingCashFlowRoute =
   AuthenticatedaccountingAccountingCashFlowRouteImport.update({
     id: '/cash-flow',
     path: '/cash-flow',
+    getParentRoute: () => AuthenticatedaccountingAccountingRoute,
+  } as any)
+const AuthenticatedaccountingAccountingBankAccountsRoute =
+  AuthenticatedaccountingAccountingBankAccountsRouteImport.update({
+    id: '/bank-accounts',
+    path: '/bank-accounts',
     getParentRoute: () => AuthenticatedaccountingAccountingRoute,
   } as any)
 const AuthenticatedaccountingAccountingBalanceSheetRoute =
@@ -803,6 +952,12 @@ const AuthenticatedaccountingAccountingAccountsRoute =
     path: '/accounts',
     getParentRoute: () => AuthenticatedaccountingAccountingRoute,
   } as any)
+const AuthenticatedaccountingAccountingAccountMappingsRoute =
+  AuthenticatedaccountingAccountingAccountMappingsRouteImport.update({
+    id: '/account-mappings',
+    path: '/account-mappings',
+    getParentRoute: () => AuthenticatedaccountingAccountingRoute,
+  } as any)
 const AuthenticatedworkforceWorkforceTasksIndexRoute =
   AuthenticatedworkforceWorkforceTasksIndexRouteImport.update({
     id: '/(workforce)/workforce/tasks/',
@@ -814,6 +969,12 @@ const AuthenticatedproductionParcelsParcelIdIndexRoute =
     id: '/',
     path: '/',
     getParentRoute: () => AuthenticatedproductionParcelsParcelIdRoute,
+  } as any)
+const AuthenticatedinventoryStockItemsIndexRoute =
+  AuthenticatedinventoryStockItemsIndexRouteImport.update({
+    id: '/items/',
+    path: '/items/',
+    getParentRoute: () => AuthenticatedinventoryStockRoute,
   } as any)
 const AuthenticatedworkforceWorkforceWorkersPieceWorkRoute =
   AuthenticatedworkforceWorkforceWorkersPieceWorkRouteImport.update({
@@ -863,6 +1024,12 @@ const AuthenticatedproductionParcelsParcelIdAnalyseRoute =
     path: '/analyse',
     getParentRoute: () => AuthenticatedproductionParcelsParcelIdRoute,
   } as any)
+const AuthenticatedproductionParcelsParcelIdAiRoute =
+  AuthenticatedproductionParcelsParcelIdAiRouteImport.update({
+    id: '/ai',
+    path: '/ai',
+    getParentRoute: () => AuthenticatedproductionParcelsParcelIdRoute,
+  } as any)
 const AuthenticatedmiscMarketplaceQuoteRequestsSentRoute =
   AuthenticatedmiscMarketplaceQuoteRequestsSentRouteImport.update({
     id: '/quote-requests/sent',
@@ -875,11 +1042,23 @@ const AuthenticatedmiscMarketplaceQuoteRequestsReceivedRoute =
     path: '/quote-requests/received',
     getParentRoute: () => AuthenticatedmiscMarketplaceRoute,
   } as any)
+const AuthenticatedinventoryStockItemsItemIdRoute =
+  AuthenticatedinventoryStockItemsItemIdRouteImport.update({
+    id: '/items/$itemId',
+    path: '/items/$itemId',
+    getParentRoute: () => AuthenticatedinventoryStockRoute,
+  } as any)
 const AuthenticatedproductionParcelsParcelIdSatelliteIndexRoute =
   AuthenticatedproductionParcelsParcelIdSatelliteIndexRouteImport.update({
     id: '/',
     path: '/',
     getParentRoute: () => AuthenticatedproductionParcelsParcelIdSatelliteRoute,
+  } as any)
+const AuthenticatedproductionParcelsParcelIdAiIndexRoute =
+  AuthenticatedproductionParcelsParcelIdAiIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedproductionParcelsParcelIdAiRoute,
   } as any)
 const AuthenticatedproductionParcelsParcelIdSatelliteTimeseriesRoute =
   AuthenticatedproductionParcelsParcelIdSatelliteTimeseriesRouteImport.update({
@@ -893,6 +1072,48 @@ const AuthenticatedproductionParcelsParcelIdSatelliteHeatmapRoute =
     path: '/heatmap',
     getParentRoute: () => AuthenticatedproductionParcelsParcelIdSatelliteRoute,
   } as any)
+const AuthenticatedproductionParcelsParcelIdAiWeatherRoute =
+  AuthenticatedproductionParcelsParcelIdAiWeatherRouteImport.update({
+    id: '/weather',
+    path: '/weather',
+    getParentRoute: () => AuthenticatedproductionParcelsParcelIdAiRoute,
+  } as any)
+const AuthenticatedproductionParcelsParcelIdAiRecommendationsRoute =
+  AuthenticatedproductionParcelsParcelIdAiRecommendationsRouteImport.update({
+    id: '/recommendations',
+    path: '/recommendations',
+    getParentRoute: () => AuthenticatedproductionParcelsParcelIdAiRoute,
+  } as any)
+const AuthenticatedproductionParcelsParcelIdAiPlanRoute =
+  AuthenticatedproductionParcelsParcelIdAiPlanRouteImport.update({
+    id: '/plan',
+    path: '/plan',
+    getParentRoute: () => AuthenticatedproductionParcelsParcelIdAiRoute,
+  } as any)
+const AuthenticatedproductionParcelsParcelIdAiCalibrationRoute =
+  AuthenticatedproductionParcelsParcelIdAiCalibrationRouteImport.update({
+    id: '/calibration',
+    path: '/calibration',
+    getParentRoute: () => AuthenticatedproductionParcelsParcelIdAiRoute,
+  } as any)
+const AuthenticatedproductionParcelsParcelIdAiAlertsRoute =
+  AuthenticatedproductionParcelsParcelIdAiAlertsRouteImport.update({
+    id: '/alerts',
+    path: '/alerts',
+    getParentRoute: () => AuthenticatedproductionParcelsParcelIdAiRoute,
+  } as any)
+const AuthenticatedproductionParcelsParcelIdAiPlanIndexRoute =
+  AuthenticatedproductionParcelsParcelIdAiPlanIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedproductionParcelsParcelIdAiPlanRoute,
+  } as any)
+const AuthenticatedproductionParcelsParcelIdAiPlanSummaryRoute =
+  AuthenticatedproductionParcelsParcelIdAiPlanSummaryRouteImport.update({
+    id: '/summary',
+    path: '/summary',
+    getParentRoute: () => AuthenticatedproductionParcelsParcelIdAiPlanRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -905,8 +1126,13 @@ export interface FileRoutesByFullPath {
   '/checkout-success': typeof publicCheckoutSuccessRoute
   '/onboarding': typeof publicOnboardingRouteWithChildren
   '/pitch-deck': typeof publicPitchDeckRoute
+  '/privacy-policy': typeof publicPrivacyPolicyRoute
+  '/rdv': typeof publicRdvRoute
+  '/rdv-siam': typeof publicRdvSiamRoute
+  '/terms-of-service': typeof publicTermsOfServiceRoute
+  '/referentiels': typeof AuthenticatedReferentielsRoute
+  '/reports': typeof AuthenticatedReportsRoute
   '/auth/callback': typeof authAuthCallbackRoute
-  '/blog/$slug': typeof publicBlogSlugRoute
   '/onboarding/complete': typeof publicOnboardingCompleteRoute
   '/onboarding/farm': typeof publicOnboardingFarmRoute
   '/onboarding/modules': typeof publicOnboardingModulesRoute
@@ -925,31 +1151,38 @@ export interface FileRoutesByFullPath {
   '/infrastructure': typeof AuthenticatedmiscInfrastructureRoute
   '/lab-services': typeof AuthenticatedmiscLabServicesRoute
   '/marketplace': typeof AuthenticatedmiscMarketplaceRouteWithChildren
+  '/modules': typeof AuthenticatedmiscModulesRoute
   '/notifications': typeof AuthenticatedmiscNotificationsRoute
   '/utilities': typeof AuthenticatedmiscUtilitiesRoute
+  '/biological-assets': typeof AuthenticatedproductionBiologicalAssetsRoute
   '/campaigns': typeof AuthenticatedproductionCampaignsRoute
   '/crop-cycles': typeof AuthenticatedproductionCropCyclesRouteWithChildren
   '/farm-hierarchy': typeof AuthenticatedproductionFarmHierarchyRoute
   '/harvests': typeof AuthenticatedproductionHarvestsRoute
   '/orchards': typeof AuthenticatedproductionOrchardsRoute
   '/parcels': typeof AuthenticatedproductionParcelsRouteWithChildren
+  '/product-applications': typeof AuthenticatedproductionProductApplicationsRoute
   '/pruning': typeof AuthenticatedproductionPruningRoute
   '/quality-control': typeof AuthenticatedproductionQualityControlRoute
+  '/satellite-analysis': typeof AuthenticatedproductionSatelliteAnalysisRoute
   '/trees': typeof AuthenticatedproductionTreesRoute
   '/settings': typeof AuthenticatedsettingsSettingsRouteWithChildren
   '/tasks': typeof AuthenticatedworkforceTasksRouteWithChildren
   '/workers': typeof AuthenticatedworkforceWorkersRouteWithChildren
   '/pest-alerts/$reportId': typeof AuthenticatedPestAlertsReportIdRoute
-  '/blog/': typeof publicBlogIndexRoute
   '/onboarding/': typeof publicOnboardingIndexRoute
   '/compliance/': typeof AuthenticatedComplianceIndexRoute
   '/pest-alerts/': typeof AuthenticatedPestAlertsIndexRoute
+  '/accounting/account-mappings': typeof AuthenticatedaccountingAccountingAccountMappingsRoute
   '/accounting/accounts': typeof AuthenticatedaccountingAccountingAccountsRoute
   '/accounting/aged-payables': typeof AuthenticatedaccountingAccountingAgedPayablesRoute
   '/accounting/aged-receivables': typeof AuthenticatedaccountingAccountingAgedReceivablesRoute
   '/accounting/balance-sheet': typeof AuthenticatedaccountingAccountingBalanceSheetRoute
+  '/accounting/bank-accounts': typeof AuthenticatedaccountingAccountingBankAccountsRoute
   '/accounting/cash-flow': typeof AuthenticatedaccountingAccountingCashFlowRoute
+  '/accounting/cost-centers': typeof AuthenticatedaccountingAccountingCostCentersRoute
   '/accounting/customers': typeof AuthenticatedaccountingAccountingCustomersRoute
+  '/accounting/fiscal-years': typeof AuthenticatedaccountingAccountingFiscalYearsRoute
   '/accounting/general-ledger': typeof AuthenticatedaccountingAccountingGeneralLedgerRoute
   '/accounting/invoices': typeof AuthenticatedaccountingAccountingInvoicesRoute
   '/accounting/journal': typeof AuthenticatedaccountingAccountingJournalRoute
@@ -958,37 +1191,44 @@ export interface FileRoutesByFullPath {
   '/accounting/purchase-orders': typeof AuthenticatedaccountingAccountingPurchaseOrdersRoute
   '/accounting/quotes': typeof AuthenticatedaccountingAccountingQuotesRoute
   '/accounting/reports': typeof AuthenticatedaccountingAccountingReportsRoute
+  '/accounting/reports-analysis': typeof AuthenticatedaccountingAccountingReportsAnalysisRoute
   '/accounting/sales-orders': typeof AuthenticatedaccountingAccountingSalesOrdersRoute
   '/accounting/trial-balance': typeof AuthenticatedaccountingAccountingTrialBalanceRoute
   '/inventory/reception-batches': typeof AuthenticatedinventoryInventoryReceptionBatchesRoute
+  '/stock/approvals': typeof AuthenticatedinventoryStockApprovalsRoute
+  '/stock/batches': typeof AuthenticatedinventoryStockBatchesRoute
+  '/stock/dashboard': typeof AuthenticatedinventoryStockDashboardRoute
+  '/stock/deliveries': typeof AuthenticatedinventoryStockDeliveriesRoute
   '/stock/entries': typeof AuthenticatedinventoryStockEntriesRoute
+  '/stock/expiry-alerts': typeof AuthenticatedinventoryStockExpiryAlertsRoute
   '/stock/groups': typeof AuthenticatedinventoryStockGroupsRoute
   '/stock/inventory': typeof AuthenticatedinventoryStockInventoryRoute
-  '/stock/items': typeof AuthenticatedinventoryStockItemsRoute
+  '/stock/quick-stock': typeof AuthenticatedinventoryStockQuickStockRoute
   '/stock/reception': typeof AuthenticatedinventoryStockReceptionRoute
+  '/stock/reorder-suggestions': typeof AuthenticatedinventoryStockReorderSuggestionsRoute
   '/stock/reports': typeof AuthenticatedinventoryStockReportsRoute
   '/stock/stock': typeof AuthenticatedinventoryStockStockRoute
+  '/stock/stock-take': typeof AuthenticatedinventoryStockStockTakeRoute
   '/stock/suppliers': typeof AuthenticatedinventoryStockSuppliersRoute
   '/stock/warehouses': typeof AuthenticatedinventoryStockWarehousesRoute
   '/marketplace/orders': typeof AuthenticatedmiscMarketplaceOrdersRoute
   '/crop-cycles/$cycleId': typeof AuthenticatedproductionCropCyclesCycleIdRoute
   '/parcels/$parcelId': typeof AuthenticatedproductionParcelsParcelIdRouteWithChildren
   '/production/crop-cycles': typeof AuthenticatedproductionProductionCropCyclesRoute
-  '/production/harvests': typeof AuthenticatedproductionProductionHarvestsRoute
   '/production/intelligence': typeof AuthenticatedproductionProductionIntelligenceRoute
   '/production/profitability': typeof AuthenticatedproductionProductionProfitabilityRoute
   '/production/quality-control': typeof AuthenticatedproductionProductionQualityControlRoute
   '/production/satellite-analysis': typeof AuthenticatedproductionProductionSatelliteAnalysisRoute
   '/production/soil-analysis': typeof AuthenticatedproductionProductionSoilAnalysisRoute
   '/settings/account': typeof AuthenticatedsettingsSettingsAccountRoute
-  '/settings/account-mappings': typeof AuthenticatedsettingsSettingsAccountMappingsRoute
+  '/settings/ai': typeof AuthenticatedsettingsSettingsAiRoute
+  '/settings/billing': typeof AuthenticatedsettingsSettingsBillingRoute
   '/settings/biological-assets': typeof AuthenticatedsettingsSettingsBiologicalAssetsRoute
-  '/settings/cost-centers': typeof AuthenticatedsettingsSettingsCostCentersRoute
   '/settings/danger-zone': typeof AuthenticatedsettingsSettingsDangerZoneRoute
   '/settings/dashboard': typeof AuthenticatedsettingsSettingsDashboardRoute
   '/settings/documents': typeof AuthenticatedsettingsSettingsDocumentsRoute
   '/settings/files': typeof AuthenticatedsettingsSettingsFilesRoute
-  '/settings/fiscal-years': typeof AuthenticatedsettingsSettingsFiscalYearsRoute
+  '/settings/legal': typeof AuthenticatedsettingsSettingsLegalRoute
   '/settings/modules': typeof AuthenticatedsettingsSettingsModulesRoute
   '/settings/organization': typeof AuthenticatedsettingsSettingsOrganizationRoute
   '/settings/preferences': typeof AuthenticatedsettingsSettingsPreferencesRoute
@@ -998,9 +1238,11 @@ export interface FileRoutesByFullPath {
   '/settings/work-units': typeof AuthenticatedsettingsSettingsWorkUnitsRoute
   '/tasks/$taskId': typeof AuthenticatedworkforceTasksTaskIdRoute
   '/tasks/calendar': typeof AuthenticatedworkforceTasksCalendarRoute
+  '/tasks/kanban': typeof AuthenticatedworkforceTasksKanbanRoute
   '/workers/$workerId': typeof AuthenticatedworkforceWorkersWorkerIdRoute
   '/workforce/day-laborers': typeof AuthenticatedworkforceWorkforceDayLaborersRoute
   '/workforce/employees': typeof AuthenticatedworkforceWorkforceEmployeesRoute
+  '/workforce/payments': typeof AuthenticatedworkforceWorkforcePaymentsRoute
   '/compliance/certifications/$certId': typeof AuthenticatedComplianceCertificationsCertIdRoute
   '/accounting/': typeof AuthenticatedaccountingAccountingIndexRoute
   '/stock/': typeof AuthenticatedinventoryStockIndexRoute
@@ -1008,8 +1250,10 @@ export interface FileRoutesByFullPath {
   '/tasks/': typeof AuthenticatedworkforceTasksIndexRoute
   '/compliance/certifications/': typeof AuthenticatedComplianceCertificationsIndexRoute
   '/compliance/corrective-actions/': typeof AuthenticatedComplianceCorrectiveActionsIndexRoute
+  '/stock/items/$itemId': typeof AuthenticatedinventoryStockItemsItemIdRoute
   '/marketplace/quote-requests/received': typeof AuthenticatedmiscMarketplaceQuoteRequestsReceivedRoute
   '/marketplace/quote-requests/sent': typeof AuthenticatedmiscMarketplaceQuoteRequestsSentRoute
+  '/parcels/$parcelId/ai': typeof AuthenticatedproductionParcelsParcelIdAiRouteWithChildren
   '/parcels/$parcelId/analyse': typeof AuthenticatedproductionParcelsParcelIdAnalyseRoute
   '/parcels/$parcelId/production': typeof AuthenticatedproductionParcelsParcelIdProductionRoute
   '/parcels/$parcelId/profitability': typeof AuthenticatedproductionParcelsParcelIdProfitabilityRoute
@@ -1018,11 +1262,20 @@ export interface FileRoutesByFullPath {
   '/parcels/$parcelId/weather': typeof AuthenticatedproductionParcelsParcelIdWeatherRoute
   '/workforce/tasks/calendar': typeof AuthenticatedworkforceWorkforceTasksCalendarRoute
   '/workforce/workers/piece-work': typeof AuthenticatedworkforceWorkforceWorkersPieceWorkRoute
+  '/stock/items/': typeof AuthenticatedinventoryStockItemsIndexRoute
   '/parcels/$parcelId/': typeof AuthenticatedproductionParcelsParcelIdIndexRoute
   '/workforce/tasks/': typeof AuthenticatedworkforceWorkforceTasksIndexRoute
+  '/parcels/$parcelId/ai/alerts': typeof AuthenticatedproductionParcelsParcelIdAiAlertsRoute
+  '/parcels/$parcelId/ai/calibration': typeof AuthenticatedproductionParcelsParcelIdAiCalibrationRoute
+  '/parcels/$parcelId/ai/plan': typeof AuthenticatedproductionParcelsParcelIdAiPlanRouteWithChildren
+  '/parcels/$parcelId/ai/recommendations': typeof AuthenticatedproductionParcelsParcelIdAiRecommendationsRoute
+  '/parcels/$parcelId/ai/weather': typeof AuthenticatedproductionParcelsParcelIdAiWeatherRoute
   '/parcels/$parcelId/satellite/heatmap': typeof AuthenticatedproductionParcelsParcelIdSatelliteHeatmapRoute
   '/parcels/$parcelId/satellite/timeseries': typeof AuthenticatedproductionParcelsParcelIdSatelliteTimeseriesRoute
+  '/parcels/$parcelId/ai/': typeof AuthenticatedproductionParcelsParcelIdAiIndexRoute
   '/parcels/$parcelId/satellite/': typeof AuthenticatedproductionParcelsParcelIdSatelliteIndexRoute
+  '/parcels/$parcelId/ai/plan/summary': typeof AuthenticatedproductionParcelsParcelIdAiPlanSummaryRoute
+  '/parcels/$parcelId/ai/plan/': typeof AuthenticatedproductionParcelsParcelIdAiPlanIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -1034,8 +1287,13 @@ export interface FileRoutesByTo {
   '/setup': typeof desktopSetupRoute
   '/checkout-success': typeof publicCheckoutSuccessRoute
   '/pitch-deck': typeof publicPitchDeckRoute
+  '/privacy-policy': typeof publicPrivacyPolicyRoute
+  '/rdv': typeof publicRdvRoute
+  '/rdv-siam': typeof publicRdvSiamRoute
+  '/terms-of-service': typeof publicTermsOfServiceRoute
+  '/referentiels': typeof AuthenticatedReferentielsRoute
+  '/reports': typeof AuthenticatedReportsRoute
   '/auth/callback': typeof authAuthCallbackRoute
-  '/blog/$slug': typeof publicBlogSlugRoute
   '/onboarding/complete': typeof publicOnboardingCompleteRoute
   '/onboarding/farm': typeof publicOnboardingFarmRoute
   '/onboarding/modules': typeof publicOnboardingModulesRoute
@@ -1052,29 +1310,36 @@ export interface FileRoutesByTo {
   '/infrastructure': typeof AuthenticatedmiscInfrastructureRoute
   '/lab-services': typeof AuthenticatedmiscLabServicesRoute
   '/marketplace': typeof AuthenticatedmiscMarketplaceRouteWithChildren
+  '/modules': typeof AuthenticatedmiscModulesRoute
   '/notifications': typeof AuthenticatedmiscNotificationsRoute
   '/utilities': typeof AuthenticatedmiscUtilitiesRoute
+  '/biological-assets': typeof AuthenticatedproductionBiologicalAssetsRoute
   '/campaigns': typeof AuthenticatedproductionCampaignsRoute
   '/crop-cycles': typeof AuthenticatedproductionCropCyclesRouteWithChildren
   '/farm-hierarchy': typeof AuthenticatedproductionFarmHierarchyRoute
   '/harvests': typeof AuthenticatedproductionHarvestsRoute
   '/orchards': typeof AuthenticatedproductionOrchardsRoute
   '/parcels': typeof AuthenticatedproductionParcelsRouteWithChildren
+  '/product-applications': typeof AuthenticatedproductionProductApplicationsRoute
   '/pruning': typeof AuthenticatedproductionPruningRoute
   '/quality-control': typeof AuthenticatedproductionQualityControlRoute
+  '/satellite-analysis': typeof AuthenticatedproductionSatelliteAnalysisRoute
   '/trees': typeof AuthenticatedproductionTreesRoute
   '/workers': typeof AuthenticatedworkforceWorkersRouteWithChildren
   '/pest-alerts/$reportId': typeof AuthenticatedPestAlertsReportIdRoute
-  '/blog': typeof publicBlogIndexRoute
   '/onboarding': typeof publicOnboardingIndexRoute
   '/compliance': typeof AuthenticatedComplianceIndexRoute
   '/pest-alerts': typeof AuthenticatedPestAlertsIndexRoute
+  '/accounting/account-mappings': typeof AuthenticatedaccountingAccountingAccountMappingsRoute
   '/accounting/accounts': typeof AuthenticatedaccountingAccountingAccountsRoute
   '/accounting/aged-payables': typeof AuthenticatedaccountingAccountingAgedPayablesRoute
   '/accounting/aged-receivables': typeof AuthenticatedaccountingAccountingAgedReceivablesRoute
   '/accounting/balance-sheet': typeof AuthenticatedaccountingAccountingBalanceSheetRoute
+  '/accounting/bank-accounts': typeof AuthenticatedaccountingAccountingBankAccountsRoute
   '/accounting/cash-flow': typeof AuthenticatedaccountingAccountingCashFlowRoute
+  '/accounting/cost-centers': typeof AuthenticatedaccountingAccountingCostCentersRoute
   '/accounting/customers': typeof AuthenticatedaccountingAccountingCustomersRoute
+  '/accounting/fiscal-years': typeof AuthenticatedaccountingAccountingFiscalYearsRoute
   '/accounting/general-ledger': typeof AuthenticatedaccountingAccountingGeneralLedgerRoute
   '/accounting/invoices': typeof AuthenticatedaccountingAccountingInvoicesRoute
   '/accounting/journal': typeof AuthenticatedaccountingAccountingJournalRoute
@@ -1083,36 +1348,43 @@ export interface FileRoutesByTo {
   '/accounting/purchase-orders': typeof AuthenticatedaccountingAccountingPurchaseOrdersRoute
   '/accounting/quotes': typeof AuthenticatedaccountingAccountingQuotesRoute
   '/accounting/reports': typeof AuthenticatedaccountingAccountingReportsRoute
+  '/accounting/reports-analysis': typeof AuthenticatedaccountingAccountingReportsAnalysisRoute
   '/accounting/sales-orders': typeof AuthenticatedaccountingAccountingSalesOrdersRoute
   '/accounting/trial-balance': typeof AuthenticatedaccountingAccountingTrialBalanceRoute
   '/inventory/reception-batches': typeof AuthenticatedinventoryInventoryReceptionBatchesRoute
+  '/stock/approvals': typeof AuthenticatedinventoryStockApprovalsRoute
+  '/stock/batches': typeof AuthenticatedinventoryStockBatchesRoute
+  '/stock/dashboard': typeof AuthenticatedinventoryStockDashboardRoute
+  '/stock/deliveries': typeof AuthenticatedinventoryStockDeliveriesRoute
   '/stock/entries': typeof AuthenticatedinventoryStockEntriesRoute
+  '/stock/expiry-alerts': typeof AuthenticatedinventoryStockExpiryAlertsRoute
   '/stock/groups': typeof AuthenticatedinventoryStockGroupsRoute
   '/stock/inventory': typeof AuthenticatedinventoryStockInventoryRoute
-  '/stock/items': typeof AuthenticatedinventoryStockItemsRoute
+  '/stock/quick-stock': typeof AuthenticatedinventoryStockQuickStockRoute
   '/stock/reception': typeof AuthenticatedinventoryStockReceptionRoute
+  '/stock/reorder-suggestions': typeof AuthenticatedinventoryStockReorderSuggestionsRoute
   '/stock/reports': typeof AuthenticatedinventoryStockReportsRoute
   '/stock/stock': typeof AuthenticatedinventoryStockStockRoute
+  '/stock/stock-take': typeof AuthenticatedinventoryStockStockTakeRoute
   '/stock/suppliers': typeof AuthenticatedinventoryStockSuppliersRoute
   '/stock/warehouses': typeof AuthenticatedinventoryStockWarehousesRoute
   '/marketplace/orders': typeof AuthenticatedmiscMarketplaceOrdersRoute
   '/crop-cycles/$cycleId': typeof AuthenticatedproductionCropCyclesCycleIdRoute
   '/production/crop-cycles': typeof AuthenticatedproductionProductionCropCyclesRoute
-  '/production/harvests': typeof AuthenticatedproductionProductionHarvestsRoute
   '/production/intelligence': typeof AuthenticatedproductionProductionIntelligenceRoute
   '/production/profitability': typeof AuthenticatedproductionProductionProfitabilityRoute
   '/production/quality-control': typeof AuthenticatedproductionProductionQualityControlRoute
   '/production/satellite-analysis': typeof AuthenticatedproductionProductionSatelliteAnalysisRoute
   '/production/soil-analysis': typeof AuthenticatedproductionProductionSoilAnalysisRoute
   '/settings/account': typeof AuthenticatedsettingsSettingsAccountRoute
-  '/settings/account-mappings': typeof AuthenticatedsettingsSettingsAccountMappingsRoute
+  '/settings/ai': typeof AuthenticatedsettingsSettingsAiRoute
+  '/settings/billing': typeof AuthenticatedsettingsSettingsBillingRoute
   '/settings/biological-assets': typeof AuthenticatedsettingsSettingsBiologicalAssetsRoute
-  '/settings/cost-centers': typeof AuthenticatedsettingsSettingsCostCentersRoute
   '/settings/danger-zone': typeof AuthenticatedsettingsSettingsDangerZoneRoute
   '/settings/dashboard': typeof AuthenticatedsettingsSettingsDashboardRoute
   '/settings/documents': typeof AuthenticatedsettingsSettingsDocumentsRoute
   '/settings/files': typeof AuthenticatedsettingsSettingsFilesRoute
-  '/settings/fiscal-years': typeof AuthenticatedsettingsSettingsFiscalYearsRoute
+  '/settings/legal': typeof AuthenticatedsettingsSettingsLegalRoute
   '/settings/modules': typeof AuthenticatedsettingsSettingsModulesRoute
   '/settings/organization': typeof AuthenticatedsettingsSettingsOrganizationRoute
   '/settings/preferences': typeof AuthenticatedsettingsSettingsPreferencesRoute
@@ -1122,9 +1394,11 @@ export interface FileRoutesByTo {
   '/settings/work-units': typeof AuthenticatedsettingsSettingsWorkUnitsRoute
   '/tasks/$taskId': typeof AuthenticatedworkforceTasksTaskIdRoute
   '/tasks/calendar': typeof AuthenticatedworkforceTasksCalendarRoute
+  '/tasks/kanban': typeof AuthenticatedworkforceTasksKanbanRoute
   '/workers/$workerId': typeof AuthenticatedworkforceWorkersWorkerIdRoute
   '/workforce/day-laborers': typeof AuthenticatedworkforceWorkforceDayLaborersRoute
   '/workforce/employees': typeof AuthenticatedworkforceWorkforceEmployeesRoute
+  '/workforce/payments': typeof AuthenticatedworkforceWorkforcePaymentsRoute
   '/compliance/certifications/$certId': typeof AuthenticatedComplianceCertificationsCertIdRoute
   '/accounting': typeof AuthenticatedaccountingAccountingIndexRoute
   '/stock': typeof AuthenticatedinventoryStockIndexRoute
@@ -1132,6 +1406,7 @@ export interface FileRoutesByTo {
   '/tasks': typeof AuthenticatedworkforceTasksIndexRoute
   '/compliance/certifications': typeof AuthenticatedComplianceCertificationsIndexRoute
   '/compliance/corrective-actions': typeof AuthenticatedComplianceCorrectiveActionsIndexRoute
+  '/stock/items/$itemId': typeof AuthenticatedinventoryStockItemsItemIdRoute
   '/marketplace/quote-requests/received': typeof AuthenticatedmiscMarketplaceQuoteRequestsReceivedRoute
   '/marketplace/quote-requests/sent': typeof AuthenticatedmiscMarketplaceQuoteRequestsSentRoute
   '/parcels/$parcelId/analyse': typeof AuthenticatedproductionParcelsParcelIdAnalyseRoute
@@ -1141,11 +1416,19 @@ export interface FileRoutesByTo {
   '/parcels/$parcelId/weather': typeof AuthenticatedproductionParcelsParcelIdWeatherRoute
   '/workforce/tasks/calendar': typeof AuthenticatedworkforceWorkforceTasksCalendarRoute
   '/workforce/workers/piece-work': typeof AuthenticatedworkforceWorkforceWorkersPieceWorkRoute
+  '/stock/items': typeof AuthenticatedinventoryStockItemsIndexRoute
   '/parcels/$parcelId': typeof AuthenticatedproductionParcelsParcelIdIndexRoute
   '/workforce/tasks': typeof AuthenticatedworkforceWorkforceTasksIndexRoute
+  '/parcels/$parcelId/ai/alerts': typeof AuthenticatedproductionParcelsParcelIdAiAlertsRoute
+  '/parcels/$parcelId/ai/calibration': typeof AuthenticatedproductionParcelsParcelIdAiCalibrationRoute
+  '/parcels/$parcelId/ai/recommendations': typeof AuthenticatedproductionParcelsParcelIdAiRecommendationsRoute
+  '/parcels/$parcelId/ai/weather': typeof AuthenticatedproductionParcelsParcelIdAiWeatherRoute
   '/parcels/$parcelId/satellite/heatmap': typeof AuthenticatedproductionParcelsParcelIdSatelliteHeatmapRoute
   '/parcels/$parcelId/satellite/timeseries': typeof AuthenticatedproductionParcelsParcelIdSatelliteTimeseriesRoute
+  '/parcels/$parcelId/ai': typeof AuthenticatedproductionParcelsParcelIdAiIndexRoute
   '/parcels/$parcelId/satellite': typeof AuthenticatedproductionParcelsParcelIdSatelliteIndexRoute
+  '/parcels/$parcelId/ai/plan/summary': typeof AuthenticatedproductionParcelsParcelIdAiPlanSummaryRoute
+  '/parcels/$parcelId/ai/plan': typeof AuthenticatedproductionParcelsParcelIdAiPlanIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -1160,8 +1443,13 @@ export interface FileRoutesById {
   '/(public)/checkout-success': typeof publicCheckoutSuccessRoute
   '/(public)/onboarding': typeof publicOnboardingRouteWithChildren
   '/(public)/pitch-deck': typeof publicPitchDeckRoute
+  '/(public)/privacy-policy': typeof publicPrivacyPolicyRoute
+  '/(public)/rdv': typeof publicRdvRoute
+  '/(public)/rdv-siam': typeof publicRdvSiamRoute
+  '/(public)/terms-of-service': typeof publicTermsOfServiceRoute
+  '/_authenticated/referentiels': typeof AuthenticatedReferentielsRoute
+  '/_authenticated/reports': typeof AuthenticatedReportsRoute
   '/(auth)/auth/callback': typeof authAuthCallbackRoute
-  '/(public)/blog/$slug': typeof publicBlogSlugRoute
   '/(public)/onboarding/complete': typeof publicOnboardingCompleteRoute
   '/(public)/onboarding/farm': typeof publicOnboardingFarmRoute
   '/(public)/onboarding/modules': typeof publicOnboardingModulesRoute
@@ -1180,31 +1468,38 @@ export interface FileRoutesById {
   '/_authenticated/(misc)/infrastructure': typeof AuthenticatedmiscInfrastructureRoute
   '/_authenticated/(misc)/lab-services': typeof AuthenticatedmiscLabServicesRoute
   '/_authenticated/(misc)/marketplace': typeof AuthenticatedmiscMarketplaceRouteWithChildren
+  '/_authenticated/(misc)/modules': typeof AuthenticatedmiscModulesRoute
   '/_authenticated/(misc)/notifications': typeof AuthenticatedmiscNotificationsRoute
   '/_authenticated/(misc)/utilities': typeof AuthenticatedmiscUtilitiesRoute
+  '/_authenticated/(production)/biological-assets': typeof AuthenticatedproductionBiologicalAssetsRoute
   '/_authenticated/(production)/campaigns': typeof AuthenticatedproductionCampaignsRoute
   '/_authenticated/(production)/crop-cycles': typeof AuthenticatedproductionCropCyclesRouteWithChildren
   '/_authenticated/(production)/farm-hierarchy': typeof AuthenticatedproductionFarmHierarchyRoute
   '/_authenticated/(production)/harvests': typeof AuthenticatedproductionHarvestsRoute
   '/_authenticated/(production)/orchards': typeof AuthenticatedproductionOrchardsRoute
   '/_authenticated/(production)/parcels': typeof AuthenticatedproductionParcelsRouteWithChildren
+  '/_authenticated/(production)/product-applications': typeof AuthenticatedproductionProductApplicationsRoute
   '/_authenticated/(production)/pruning': typeof AuthenticatedproductionPruningRoute
   '/_authenticated/(production)/quality-control': typeof AuthenticatedproductionQualityControlRoute
+  '/_authenticated/(production)/satellite-analysis': typeof AuthenticatedproductionSatelliteAnalysisRoute
   '/_authenticated/(production)/trees': typeof AuthenticatedproductionTreesRoute
   '/_authenticated/(settings)/settings': typeof AuthenticatedsettingsSettingsRouteWithChildren
   '/_authenticated/(workforce)/tasks': typeof AuthenticatedworkforceTasksRouteWithChildren
   '/_authenticated/(workforce)/workers': typeof AuthenticatedworkforceWorkersRouteWithChildren
   '/_authenticated/pest-alerts/$reportId': typeof AuthenticatedPestAlertsReportIdRoute
-  '/(public)/blog/': typeof publicBlogIndexRoute
   '/(public)/onboarding/': typeof publicOnboardingIndexRoute
   '/_authenticated/compliance/': typeof AuthenticatedComplianceIndexRoute
   '/_authenticated/pest-alerts/': typeof AuthenticatedPestAlertsIndexRoute
+  '/_authenticated/(accounting)/accounting/account-mappings': typeof AuthenticatedaccountingAccountingAccountMappingsRoute
   '/_authenticated/(accounting)/accounting/accounts': typeof AuthenticatedaccountingAccountingAccountsRoute
   '/_authenticated/(accounting)/accounting/aged-payables': typeof AuthenticatedaccountingAccountingAgedPayablesRoute
   '/_authenticated/(accounting)/accounting/aged-receivables': typeof AuthenticatedaccountingAccountingAgedReceivablesRoute
   '/_authenticated/(accounting)/accounting/balance-sheet': typeof AuthenticatedaccountingAccountingBalanceSheetRoute
+  '/_authenticated/(accounting)/accounting/bank-accounts': typeof AuthenticatedaccountingAccountingBankAccountsRoute
   '/_authenticated/(accounting)/accounting/cash-flow': typeof AuthenticatedaccountingAccountingCashFlowRoute
+  '/_authenticated/(accounting)/accounting/cost-centers': typeof AuthenticatedaccountingAccountingCostCentersRoute
   '/_authenticated/(accounting)/accounting/customers': typeof AuthenticatedaccountingAccountingCustomersRoute
+  '/_authenticated/(accounting)/accounting/fiscal-years': typeof AuthenticatedaccountingAccountingFiscalYearsRoute
   '/_authenticated/(accounting)/accounting/general-ledger': typeof AuthenticatedaccountingAccountingGeneralLedgerRoute
   '/_authenticated/(accounting)/accounting/invoices': typeof AuthenticatedaccountingAccountingInvoicesRoute
   '/_authenticated/(accounting)/accounting/journal': typeof AuthenticatedaccountingAccountingJournalRoute
@@ -1213,37 +1508,44 @@ export interface FileRoutesById {
   '/_authenticated/(accounting)/accounting/purchase-orders': typeof AuthenticatedaccountingAccountingPurchaseOrdersRoute
   '/_authenticated/(accounting)/accounting/quotes': typeof AuthenticatedaccountingAccountingQuotesRoute
   '/_authenticated/(accounting)/accounting/reports': typeof AuthenticatedaccountingAccountingReportsRoute
+  '/_authenticated/(accounting)/accounting/reports-analysis': typeof AuthenticatedaccountingAccountingReportsAnalysisRoute
   '/_authenticated/(accounting)/accounting/sales-orders': typeof AuthenticatedaccountingAccountingSalesOrdersRoute
   '/_authenticated/(accounting)/accounting/trial-balance': typeof AuthenticatedaccountingAccountingTrialBalanceRoute
   '/_authenticated/(inventory)/inventory/reception-batches': typeof AuthenticatedinventoryInventoryReceptionBatchesRoute
+  '/_authenticated/(inventory)/stock/approvals': typeof AuthenticatedinventoryStockApprovalsRoute
+  '/_authenticated/(inventory)/stock/batches': typeof AuthenticatedinventoryStockBatchesRoute
+  '/_authenticated/(inventory)/stock/dashboard': typeof AuthenticatedinventoryStockDashboardRoute
+  '/_authenticated/(inventory)/stock/deliveries': typeof AuthenticatedinventoryStockDeliveriesRoute
   '/_authenticated/(inventory)/stock/entries': typeof AuthenticatedinventoryStockEntriesRoute
+  '/_authenticated/(inventory)/stock/expiry-alerts': typeof AuthenticatedinventoryStockExpiryAlertsRoute
   '/_authenticated/(inventory)/stock/groups': typeof AuthenticatedinventoryStockGroupsRoute
   '/_authenticated/(inventory)/stock/inventory': typeof AuthenticatedinventoryStockInventoryRoute
-  '/_authenticated/(inventory)/stock/items': typeof AuthenticatedinventoryStockItemsRoute
+  '/_authenticated/(inventory)/stock/quick-stock': typeof AuthenticatedinventoryStockQuickStockRoute
   '/_authenticated/(inventory)/stock/reception': typeof AuthenticatedinventoryStockReceptionRoute
+  '/_authenticated/(inventory)/stock/reorder-suggestions': typeof AuthenticatedinventoryStockReorderSuggestionsRoute
   '/_authenticated/(inventory)/stock/reports': typeof AuthenticatedinventoryStockReportsRoute
   '/_authenticated/(inventory)/stock/stock': typeof AuthenticatedinventoryStockStockRoute
+  '/_authenticated/(inventory)/stock/stock-take': typeof AuthenticatedinventoryStockStockTakeRoute
   '/_authenticated/(inventory)/stock/suppliers': typeof AuthenticatedinventoryStockSuppliersRoute
   '/_authenticated/(inventory)/stock/warehouses': typeof AuthenticatedinventoryStockWarehousesRoute
   '/_authenticated/(misc)/marketplace/orders': typeof AuthenticatedmiscMarketplaceOrdersRoute
   '/_authenticated/(production)/crop-cycles/$cycleId': typeof AuthenticatedproductionCropCyclesCycleIdRoute
   '/_authenticated/(production)/parcels/$parcelId': typeof AuthenticatedproductionParcelsParcelIdRouteWithChildren
   '/_authenticated/(production)/production/crop-cycles': typeof AuthenticatedproductionProductionCropCyclesRoute
-  '/_authenticated/(production)/production/harvests': typeof AuthenticatedproductionProductionHarvestsRoute
   '/_authenticated/(production)/production/intelligence': typeof AuthenticatedproductionProductionIntelligenceRoute
   '/_authenticated/(production)/production/profitability': typeof AuthenticatedproductionProductionProfitabilityRoute
   '/_authenticated/(production)/production/quality-control': typeof AuthenticatedproductionProductionQualityControlRoute
   '/_authenticated/(production)/production/satellite-analysis': typeof AuthenticatedproductionProductionSatelliteAnalysisRoute
   '/_authenticated/(production)/production/soil-analysis': typeof AuthenticatedproductionProductionSoilAnalysisRoute
   '/_authenticated/(settings)/settings/account': typeof AuthenticatedsettingsSettingsAccountRoute
-  '/_authenticated/(settings)/settings/account-mappings': typeof AuthenticatedsettingsSettingsAccountMappingsRoute
+  '/_authenticated/(settings)/settings/ai': typeof AuthenticatedsettingsSettingsAiRoute
+  '/_authenticated/(settings)/settings/billing': typeof AuthenticatedsettingsSettingsBillingRoute
   '/_authenticated/(settings)/settings/biological-assets': typeof AuthenticatedsettingsSettingsBiologicalAssetsRoute
-  '/_authenticated/(settings)/settings/cost-centers': typeof AuthenticatedsettingsSettingsCostCentersRoute
   '/_authenticated/(settings)/settings/danger-zone': typeof AuthenticatedsettingsSettingsDangerZoneRoute
   '/_authenticated/(settings)/settings/dashboard': typeof AuthenticatedsettingsSettingsDashboardRoute
   '/_authenticated/(settings)/settings/documents': typeof AuthenticatedsettingsSettingsDocumentsRoute
   '/_authenticated/(settings)/settings/files': typeof AuthenticatedsettingsSettingsFilesRoute
-  '/_authenticated/(settings)/settings/fiscal-years': typeof AuthenticatedsettingsSettingsFiscalYearsRoute
+  '/_authenticated/(settings)/settings/legal': typeof AuthenticatedsettingsSettingsLegalRoute
   '/_authenticated/(settings)/settings/modules': typeof AuthenticatedsettingsSettingsModulesRoute
   '/_authenticated/(settings)/settings/organization': typeof AuthenticatedsettingsSettingsOrganizationRoute
   '/_authenticated/(settings)/settings/preferences': typeof AuthenticatedsettingsSettingsPreferencesRoute
@@ -1253,9 +1555,11 @@ export interface FileRoutesById {
   '/_authenticated/(settings)/settings/work-units': typeof AuthenticatedsettingsSettingsWorkUnitsRoute
   '/_authenticated/(workforce)/tasks/$taskId': typeof AuthenticatedworkforceTasksTaskIdRoute
   '/_authenticated/(workforce)/tasks/calendar': typeof AuthenticatedworkforceTasksCalendarRoute
+  '/_authenticated/(workforce)/tasks/kanban': typeof AuthenticatedworkforceTasksKanbanRoute
   '/_authenticated/(workforce)/workers/$workerId': typeof AuthenticatedworkforceWorkersWorkerIdRoute
   '/_authenticated/(workforce)/workforce/day-laborers': typeof AuthenticatedworkforceWorkforceDayLaborersRoute
   '/_authenticated/(workforce)/workforce/employees': typeof AuthenticatedworkforceWorkforceEmployeesRoute
+  '/_authenticated/(workforce)/workforce/payments': typeof AuthenticatedworkforceWorkforcePaymentsRoute
   '/_authenticated/compliance/certifications/$certId': typeof AuthenticatedComplianceCertificationsCertIdRoute
   '/_authenticated/(accounting)/accounting/': typeof AuthenticatedaccountingAccountingIndexRoute
   '/_authenticated/(inventory)/stock/': typeof AuthenticatedinventoryStockIndexRoute
@@ -1263,8 +1567,10 @@ export interface FileRoutesById {
   '/_authenticated/(workforce)/tasks/': typeof AuthenticatedworkforceTasksIndexRoute
   '/_authenticated/compliance/certifications/': typeof AuthenticatedComplianceCertificationsIndexRoute
   '/_authenticated/compliance/corrective-actions/': typeof AuthenticatedComplianceCorrectiveActionsIndexRoute
+  '/_authenticated/(inventory)/stock/items/$itemId': typeof AuthenticatedinventoryStockItemsItemIdRoute
   '/_authenticated/(misc)/marketplace/quote-requests/received': typeof AuthenticatedmiscMarketplaceQuoteRequestsReceivedRoute
   '/_authenticated/(misc)/marketplace/quote-requests/sent': typeof AuthenticatedmiscMarketplaceQuoteRequestsSentRoute
+  '/_authenticated/(production)/parcels/$parcelId/ai': typeof AuthenticatedproductionParcelsParcelIdAiRouteWithChildren
   '/_authenticated/(production)/parcels/$parcelId/analyse': typeof AuthenticatedproductionParcelsParcelIdAnalyseRoute
   '/_authenticated/(production)/parcels/$parcelId/production': typeof AuthenticatedproductionParcelsParcelIdProductionRoute
   '/_authenticated/(production)/parcels/$parcelId/profitability': typeof AuthenticatedproductionParcelsParcelIdProfitabilityRoute
@@ -1273,11 +1579,20 @@ export interface FileRoutesById {
   '/_authenticated/(production)/parcels/$parcelId/weather': typeof AuthenticatedproductionParcelsParcelIdWeatherRoute
   '/_authenticated/(workforce)/workforce/tasks/calendar': typeof AuthenticatedworkforceWorkforceTasksCalendarRoute
   '/_authenticated/(workforce)/workforce/workers/piece-work': typeof AuthenticatedworkforceWorkforceWorkersPieceWorkRoute
+  '/_authenticated/(inventory)/stock/items/': typeof AuthenticatedinventoryStockItemsIndexRoute
   '/_authenticated/(production)/parcels/$parcelId/': typeof AuthenticatedproductionParcelsParcelIdIndexRoute
   '/_authenticated/(workforce)/workforce/tasks/': typeof AuthenticatedworkforceWorkforceTasksIndexRoute
+  '/_authenticated/(production)/parcels/$parcelId/ai/alerts': typeof AuthenticatedproductionParcelsParcelIdAiAlertsRoute
+  '/_authenticated/(production)/parcels/$parcelId/ai/calibration': typeof AuthenticatedproductionParcelsParcelIdAiCalibrationRoute
+  '/_authenticated/(production)/parcels/$parcelId/ai/plan': typeof AuthenticatedproductionParcelsParcelIdAiPlanRouteWithChildren
+  '/_authenticated/(production)/parcels/$parcelId/ai/recommendations': typeof AuthenticatedproductionParcelsParcelIdAiRecommendationsRoute
+  '/_authenticated/(production)/parcels/$parcelId/ai/weather': typeof AuthenticatedproductionParcelsParcelIdAiWeatherRoute
   '/_authenticated/(production)/parcels/$parcelId/satellite/heatmap': typeof AuthenticatedproductionParcelsParcelIdSatelliteHeatmapRoute
   '/_authenticated/(production)/parcels/$parcelId/satellite/timeseries': typeof AuthenticatedproductionParcelsParcelIdSatelliteTimeseriesRoute
+  '/_authenticated/(production)/parcels/$parcelId/ai/': typeof AuthenticatedproductionParcelsParcelIdAiIndexRoute
   '/_authenticated/(production)/parcels/$parcelId/satellite/': typeof AuthenticatedproductionParcelsParcelIdSatelliteIndexRoute
+  '/_authenticated/(production)/parcels/$parcelId/ai/plan/summary': typeof AuthenticatedproductionParcelsParcelIdAiPlanSummaryRoute
+  '/_authenticated/(production)/parcels/$parcelId/ai/plan/': typeof AuthenticatedproductionParcelsParcelIdAiPlanIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -1292,8 +1607,13 @@ export interface FileRouteTypes {
     | '/checkout-success'
     | '/onboarding'
     | '/pitch-deck'
+    | '/privacy-policy'
+    | '/rdv'
+    | '/rdv-siam'
+    | '/terms-of-service'
+    | '/referentiels'
+    | '/reports'
     | '/auth/callback'
-    | '/blog/$slug'
     | '/onboarding/complete'
     | '/onboarding/farm'
     | '/onboarding/modules'
@@ -1312,31 +1632,38 @@ export interface FileRouteTypes {
     | '/infrastructure'
     | '/lab-services'
     | '/marketplace'
+    | '/modules'
     | '/notifications'
     | '/utilities'
+    | '/biological-assets'
     | '/campaigns'
     | '/crop-cycles'
     | '/farm-hierarchy'
     | '/harvests'
     | '/orchards'
     | '/parcels'
+    | '/product-applications'
     | '/pruning'
     | '/quality-control'
+    | '/satellite-analysis'
     | '/trees'
     | '/settings'
     | '/tasks'
     | '/workers'
     | '/pest-alerts/$reportId'
-    | '/blog/'
     | '/onboarding/'
     | '/compliance/'
     | '/pest-alerts/'
+    | '/accounting/account-mappings'
     | '/accounting/accounts'
     | '/accounting/aged-payables'
     | '/accounting/aged-receivables'
     | '/accounting/balance-sheet'
+    | '/accounting/bank-accounts'
     | '/accounting/cash-flow'
+    | '/accounting/cost-centers'
     | '/accounting/customers'
+    | '/accounting/fiscal-years'
     | '/accounting/general-ledger'
     | '/accounting/invoices'
     | '/accounting/journal'
@@ -1345,37 +1672,44 @@ export interface FileRouteTypes {
     | '/accounting/purchase-orders'
     | '/accounting/quotes'
     | '/accounting/reports'
+    | '/accounting/reports-analysis'
     | '/accounting/sales-orders'
     | '/accounting/trial-balance'
     | '/inventory/reception-batches'
+    | '/stock/approvals'
+    | '/stock/batches'
+    | '/stock/dashboard'
+    | '/stock/deliveries'
     | '/stock/entries'
+    | '/stock/expiry-alerts'
     | '/stock/groups'
     | '/stock/inventory'
-    | '/stock/items'
+    | '/stock/quick-stock'
     | '/stock/reception'
+    | '/stock/reorder-suggestions'
     | '/stock/reports'
     | '/stock/stock'
+    | '/stock/stock-take'
     | '/stock/suppliers'
     | '/stock/warehouses'
     | '/marketplace/orders'
     | '/crop-cycles/$cycleId'
     | '/parcels/$parcelId'
     | '/production/crop-cycles'
-    | '/production/harvests'
     | '/production/intelligence'
     | '/production/profitability'
     | '/production/quality-control'
     | '/production/satellite-analysis'
     | '/production/soil-analysis'
     | '/settings/account'
-    | '/settings/account-mappings'
+    | '/settings/ai'
+    | '/settings/billing'
     | '/settings/biological-assets'
-    | '/settings/cost-centers'
     | '/settings/danger-zone'
     | '/settings/dashboard'
     | '/settings/documents'
     | '/settings/files'
-    | '/settings/fiscal-years'
+    | '/settings/legal'
     | '/settings/modules'
     | '/settings/organization'
     | '/settings/preferences'
@@ -1385,9 +1719,11 @@ export interface FileRouteTypes {
     | '/settings/work-units'
     | '/tasks/$taskId'
     | '/tasks/calendar'
+    | '/tasks/kanban'
     | '/workers/$workerId'
     | '/workforce/day-laborers'
     | '/workforce/employees'
+    | '/workforce/payments'
     | '/compliance/certifications/$certId'
     | '/accounting/'
     | '/stock/'
@@ -1395,8 +1731,10 @@ export interface FileRouteTypes {
     | '/tasks/'
     | '/compliance/certifications/'
     | '/compliance/corrective-actions/'
+    | '/stock/items/$itemId'
     | '/marketplace/quote-requests/received'
     | '/marketplace/quote-requests/sent'
+    | '/parcels/$parcelId/ai'
     | '/parcels/$parcelId/analyse'
     | '/parcels/$parcelId/production'
     | '/parcels/$parcelId/profitability'
@@ -1405,11 +1743,20 @@ export interface FileRouteTypes {
     | '/parcels/$parcelId/weather'
     | '/workforce/tasks/calendar'
     | '/workforce/workers/piece-work'
+    | '/stock/items/'
     | '/parcels/$parcelId/'
     | '/workforce/tasks/'
+    | '/parcels/$parcelId/ai/alerts'
+    | '/parcels/$parcelId/ai/calibration'
+    | '/parcels/$parcelId/ai/plan'
+    | '/parcels/$parcelId/ai/recommendations'
+    | '/parcels/$parcelId/ai/weather'
     | '/parcels/$parcelId/satellite/heatmap'
     | '/parcels/$parcelId/satellite/timeseries'
+    | '/parcels/$parcelId/ai/'
     | '/parcels/$parcelId/satellite/'
+    | '/parcels/$parcelId/ai/plan/summary'
+    | '/parcels/$parcelId/ai/plan/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -1421,8 +1768,13 @@ export interface FileRouteTypes {
     | '/setup'
     | '/checkout-success'
     | '/pitch-deck'
+    | '/privacy-policy'
+    | '/rdv'
+    | '/rdv-siam'
+    | '/terms-of-service'
+    | '/referentiels'
+    | '/reports'
     | '/auth/callback'
-    | '/blog/$slug'
     | '/onboarding/complete'
     | '/onboarding/farm'
     | '/onboarding/modules'
@@ -1439,29 +1791,36 @@ export interface FileRouteTypes {
     | '/infrastructure'
     | '/lab-services'
     | '/marketplace'
+    | '/modules'
     | '/notifications'
     | '/utilities'
+    | '/biological-assets'
     | '/campaigns'
     | '/crop-cycles'
     | '/farm-hierarchy'
     | '/harvests'
     | '/orchards'
     | '/parcels'
+    | '/product-applications'
     | '/pruning'
     | '/quality-control'
+    | '/satellite-analysis'
     | '/trees'
     | '/workers'
     | '/pest-alerts/$reportId'
-    | '/blog'
     | '/onboarding'
     | '/compliance'
     | '/pest-alerts'
+    | '/accounting/account-mappings'
     | '/accounting/accounts'
     | '/accounting/aged-payables'
     | '/accounting/aged-receivables'
     | '/accounting/balance-sheet'
+    | '/accounting/bank-accounts'
     | '/accounting/cash-flow'
+    | '/accounting/cost-centers'
     | '/accounting/customers'
+    | '/accounting/fiscal-years'
     | '/accounting/general-ledger'
     | '/accounting/invoices'
     | '/accounting/journal'
@@ -1470,36 +1829,43 @@ export interface FileRouteTypes {
     | '/accounting/purchase-orders'
     | '/accounting/quotes'
     | '/accounting/reports'
+    | '/accounting/reports-analysis'
     | '/accounting/sales-orders'
     | '/accounting/trial-balance'
     | '/inventory/reception-batches'
+    | '/stock/approvals'
+    | '/stock/batches'
+    | '/stock/dashboard'
+    | '/stock/deliveries'
     | '/stock/entries'
+    | '/stock/expiry-alerts'
     | '/stock/groups'
     | '/stock/inventory'
-    | '/stock/items'
+    | '/stock/quick-stock'
     | '/stock/reception'
+    | '/stock/reorder-suggestions'
     | '/stock/reports'
     | '/stock/stock'
+    | '/stock/stock-take'
     | '/stock/suppliers'
     | '/stock/warehouses'
     | '/marketplace/orders'
     | '/crop-cycles/$cycleId'
     | '/production/crop-cycles'
-    | '/production/harvests'
     | '/production/intelligence'
     | '/production/profitability'
     | '/production/quality-control'
     | '/production/satellite-analysis'
     | '/production/soil-analysis'
     | '/settings/account'
-    | '/settings/account-mappings'
+    | '/settings/ai'
+    | '/settings/billing'
     | '/settings/biological-assets'
-    | '/settings/cost-centers'
     | '/settings/danger-zone'
     | '/settings/dashboard'
     | '/settings/documents'
     | '/settings/files'
-    | '/settings/fiscal-years'
+    | '/settings/legal'
     | '/settings/modules'
     | '/settings/organization'
     | '/settings/preferences'
@@ -1509,9 +1875,11 @@ export interface FileRouteTypes {
     | '/settings/work-units'
     | '/tasks/$taskId'
     | '/tasks/calendar'
+    | '/tasks/kanban'
     | '/workers/$workerId'
     | '/workforce/day-laborers'
     | '/workforce/employees'
+    | '/workforce/payments'
     | '/compliance/certifications/$certId'
     | '/accounting'
     | '/stock'
@@ -1519,6 +1887,7 @@ export interface FileRouteTypes {
     | '/tasks'
     | '/compliance/certifications'
     | '/compliance/corrective-actions'
+    | '/stock/items/$itemId'
     | '/marketplace/quote-requests/received'
     | '/marketplace/quote-requests/sent'
     | '/parcels/$parcelId/analyse'
@@ -1528,11 +1897,19 @@ export interface FileRouteTypes {
     | '/parcels/$parcelId/weather'
     | '/workforce/tasks/calendar'
     | '/workforce/workers/piece-work'
+    | '/stock/items'
     | '/parcels/$parcelId'
     | '/workforce/tasks'
+    | '/parcels/$parcelId/ai/alerts'
+    | '/parcels/$parcelId/ai/calibration'
+    | '/parcels/$parcelId/ai/recommendations'
+    | '/parcels/$parcelId/ai/weather'
     | '/parcels/$parcelId/satellite/heatmap'
     | '/parcels/$parcelId/satellite/timeseries'
+    | '/parcels/$parcelId/ai'
     | '/parcels/$parcelId/satellite'
+    | '/parcels/$parcelId/ai/plan/summary'
+    | '/parcels/$parcelId/ai/plan'
   id:
     | '__root__'
     | '/'
@@ -1546,8 +1923,13 @@ export interface FileRouteTypes {
     | '/(public)/checkout-success'
     | '/(public)/onboarding'
     | '/(public)/pitch-deck'
+    | '/(public)/privacy-policy'
+    | '/(public)/rdv'
+    | '/(public)/rdv-siam'
+    | '/(public)/terms-of-service'
+    | '/_authenticated/referentiels'
+    | '/_authenticated/reports'
     | '/(auth)/auth/callback'
-    | '/(public)/blog/$slug'
     | '/(public)/onboarding/complete'
     | '/(public)/onboarding/farm'
     | '/(public)/onboarding/modules'
@@ -1566,31 +1948,38 @@ export interface FileRouteTypes {
     | '/_authenticated/(misc)/infrastructure'
     | '/_authenticated/(misc)/lab-services'
     | '/_authenticated/(misc)/marketplace'
+    | '/_authenticated/(misc)/modules'
     | '/_authenticated/(misc)/notifications'
     | '/_authenticated/(misc)/utilities'
+    | '/_authenticated/(production)/biological-assets'
     | '/_authenticated/(production)/campaigns'
     | '/_authenticated/(production)/crop-cycles'
     | '/_authenticated/(production)/farm-hierarchy'
     | '/_authenticated/(production)/harvests'
     | '/_authenticated/(production)/orchards'
     | '/_authenticated/(production)/parcels'
+    | '/_authenticated/(production)/product-applications'
     | '/_authenticated/(production)/pruning'
     | '/_authenticated/(production)/quality-control'
+    | '/_authenticated/(production)/satellite-analysis'
     | '/_authenticated/(production)/trees'
     | '/_authenticated/(settings)/settings'
     | '/_authenticated/(workforce)/tasks'
     | '/_authenticated/(workforce)/workers'
     | '/_authenticated/pest-alerts/$reportId'
-    | '/(public)/blog/'
     | '/(public)/onboarding/'
     | '/_authenticated/compliance/'
     | '/_authenticated/pest-alerts/'
+    | '/_authenticated/(accounting)/accounting/account-mappings'
     | '/_authenticated/(accounting)/accounting/accounts'
     | '/_authenticated/(accounting)/accounting/aged-payables'
     | '/_authenticated/(accounting)/accounting/aged-receivables'
     | '/_authenticated/(accounting)/accounting/balance-sheet'
+    | '/_authenticated/(accounting)/accounting/bank-accounts'
     | '/_authenticated/(accounting)/accounting/cash-flow'
+    | '/_authenticated/(accounting)/accounting/cost-centers'
     | '/_authenticated/(accounting)/accounting/customers'
+    | '/_authenticated/(accounting)/accounting/fiscal-years'
     | '/_authenticated/(accounting)/accounting/general-ledger'
     | '/_authenticated/(accounting)/accounting/invoices'
     | '/_authenticated/(accounting)/accounting/journal'
@@ -1599,37 +1988,44 @@ export interface FileRouteTypes {
     | '/_authenticated/(accounting)/accounting/purchase-orders'
     | '/_authenticated/(accounting)/accounting/quotes'
     | '/_authenticated/(accounting)/accounting/reports'
+    | '/_authenticated/(accounting)/accounting/reports-analysis'
     | '/_authenticated/(accounting)/accounting/sales-orders'
     | '/_authenticated/(accounting)/accounting/trial-balance'
     | '/_authenticated/(inventory)/inventory/reception-batches'
+    | '/_authenticated/(inventory)/stock/approvals'
+    | '/_authenticated/(inventory)/stock/batches'
+    | '/_authenticated/(inventory)/stock/dashboard'
+    | '/_authenticated/(inventory)/stock/deliveries'
     | '/_authenticated/(inventory)/stock/entries'
+    | '/_authenticated/(inventory)/stock/expiry-alerts'
     | '/_authenticated/(inventory)/stock/groups'
     | '/_authenticated/(inventory)/stock/inventory'
-    | '/_authenticated/(inventory)/stock/items'
+    | '/_authenticated/(inventory)/stock/quick-stock'
     | '/_authenticated/(inventory)/stock/reception'
+    | '/_authenticated/(inventory)/stock/reorder-suggestions'
     | '/_authenticated/(inventory)/stock/reports'
     | '/_authenticated/(inventory)/stock/stock'
+    | '/_authenticated/(inventory)/stock/stock-take'
     | '/_authenticated/(inventory)/stock/suppliers'
     | '/_authenticated/(inventory)/stock/warehouses'
     | '/_authenticated/(misc)/marketplace/orders'
     | '/_authenticated/(production)/crop-cycles/$cycleId'
     | '/_authenticated/(production)/parcels/$parcelId'
     | '/_authenticated/(production)/production/crop-cycles'
-    | '/_authenticated/(production)/production/harvests'
     | '/_authenticated/(production)/production/intelligence'
     | '/_authenticated/(production)/production/profitability'
     | '/_authenticated/(production)/production/quality-control'
     | '/_authenticated/(production)/production/satellite-analysis'
     | '/_authenticated/(production)/production/soil-analysis'
     | '/_authenticated/(settings)/settings/account'
-    | '/_authenticated/(settings)/settings/account-mappings'
+    | '/_authenticated/(settings)/settings/ai'
+    | '/_authenticated/(settings)/settings/billing'
     | '/_authenticated/(settings)/settings/biological-assets'
-    | '/_authenticated/(settings)/settings/cost-centers'
     | '/_authenticated/(settings)/settings/danger-zone'
     | '/_authenticated/(settings)/settings/dashboard'
     | '/_authenticated/(settings)/settings/documents'
     | '/_authenticated/(settings)/settings/files'
-    | '/_authenticated/(settings)/settings/fiscal-years'
+    | '/_authenticated/(settings)/settings/legal'
     | '/_authenticated/(settings)/settings/modules'
     | '/_authenticated/(settings)/settings/organization'
     | '/_authenticated/(settings)/settings/preferences'
@@ -1639,9 +2035,11 @@ export interface FileRouteTypes {
     | '/_authenticated/(settings)/settings/work-units'
     | '/_authenticated/(workforce)/tasks/$taskId'
     | '/_authenticated/(workforce)/tasks/calendar'
+    | '/_authenticated/(workforce)/tasks/kanban'
     | '/_authenticated/(workforce)/workers/$workerId'
     | '/_authenticated/(workforce)/workforce/day-laborers'
     | '/_authenticated/(workforce)/workforce/employees'
+    | '/_authenticated/(workforce)/workforce/payments'
     | '/_authenticated/compliance/certifications/$certId'
     | '/_authenticated/(accounting)/accounting/'
     | '/_authenticated/(inventory)/stock/'
@@ -1649,8 +2047,10 @@ export interface FileRouteTypes {
     | '/_authenticated/(workforce)/tasks/'
     | '/_authenticated/compliance/certifications/'
     | '/_authenticated/compliance/corrective-actions/'
+    | '/_authenticated/(inventory)/stock/items/$itemId'
     | '/_authenticated/(misc)/marketplace/quote-requests/received'
     | '/_authenticated/(misc)/marketplace/quote-requests/sent'
+    | '/_authenticated/(production)/parcels/$parcelId/ai'
     | '/_authenticated/(production)/parcels/$parcelId/analyse'
     | '/_authenticated/(production)/parcels/$parcelId/production'
     | '/_authenticated/(production)/parcels/$parcelId/profitability'
@@ -1659,11 +2059,20 @@ export interface FileRouteTypes {
     | '/_authenticated/(production)/parcels/$parcelId/weather'
     | '/_authenticated/(workforce)/workforce/tasks/calendar'
     | '/_authenticated/(workforce)/workforce/workers/piece-work'
+    | '/_authenticated/(inventory)/stock/items/'
     | '/_authenticated/(production)/parcels/$parcelId/'
     | '/_authenticated/(workforce)/workforce/tasks/'
+    | '/_authenticated/(production)/parcels/$parcelId/ai/alerts'
+    | '/_authenticated/(production)/parcels/$parcelId/ai/calibration'
+    | '/_authenticated/(production)/parcels/$parcelId/ai/plan'
+    | '/_authenticated/(production)/parcels/$parcelId/ai/recommendations'
+    | '/_authenticated/(production)/parcels/$parcelId/ai/weather'
     | '/_authenticated/(production)/parcels/$parcelId/satellite/heatmap'
     | '/_authenticated/(production)/parcels/$parcelId/satellite/timeseries'
+    | '/_authenticated/(production)/parcels/$parcelId/ai/'
     | '/_authenticated/(production)/parcels/$parcelId/satellite/'
+    | '/_authenticated/(production)/parcels/$parcelId/ai/plan/summary'
+    | '/_authenticated/(production)/parcels/$parcelId/ai/plan/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -1678,9 +2087,11 @@ export interface RootRouteChildren {
   publicCheckoutSuccessRoute: typeof publicCheckoutSuccessRoute
   publicOnboardingRoute: typeof publicOnboardingRouteWithChildren
   publicPitchDeckRoute: typeof publicPitchDeckRoute
+  publicPrivacyPolicyRoute: typeof publicPrivacyPolicyRoute
+  publicRdvRoute: typeof publicRdvRoute
+  publicRdvSiamRoute: typeof publicRdvSiamRoute
+  publicTermsOfServiceRoute: typeof publicTermsOfServiceRoute
   authAuthCallbackRoute: typeof authAuthCallbackRoute
-  publicBlogSlugRoute: typeof publicBlogSlugRoute
-  publicBlogIndexRoute: typeof publicBlogIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -1697,6 +2108,48 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/reports': {
+      id: '/_authenticated/reports'
+      path: '/reports'
+      fullPath: '/reports'
+      preLoaderRoute: typeof AuthenticatedReportsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/referentiels': {
+      id: '/_authenticated/referentiels'
+      path: '/referentiels'
+      fullPath: '/referentiels'
+      preLoaderRoute: typeof AuthenticatedReferentielsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/(public)/terms-of-service': {
+      id: '/(public)/terms-of-service'
+      path: '/terms-of-service'
+      fullPath: '/terms-of-service'
+      preLoaderRoute: typeof publicTermsOfServiceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/(public)/rdv-siam': {
+      id: '/(public)/rdv-siam'
+      path: '/rdv-siam'
+      fullPath: '/rdv-siam'
+      preLoaderRoute: typeof publicRdvSiamRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/(public)/rdv': {
+      id: '/(public)/rdv'
+      path: '/rdv'
+      fullPath: '/rdv'
+      preLoaderRoute: typeof publicRdvRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/(public)/privacy-policy': {
+      id: '/(public)/privacy-policy'
+      path: '/privacy-policy'
+      fullPath: '/privacy-policy'
+      preLoaderRoute: typeof publicPrivacyPolicyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/(public)/pitch-deck': {
@@ -1783,13 +2236,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof publicOnboardingIndexRouteImport
       parentRoute: typeof publicOnboardingRoute
     }
-    '/(public)/blog/': {
-      id: '/(public)/blog/'
-      path: '/blog'
-      fullPath: '/blog/'
-      preLoaderRoute: typeof publicBlogIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/_authenticated/pest-alerts/$reportId': {
       id: '/_authenticated/pest-alerts/$reportId'
       path: '/pest-alerts/$reportId'
@@ -1825,6 +2271,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedproductionTreesRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/(production)/satellite-analysis': {
+      id: '/_authenticated/(production)/satellite-analysis'
+      path: '/satellite-analysis'
+      fullPath: '/satellite-analysis'
+      preLoaderRoute: typeof AuthenticatedproductionSatelliteAnalysisRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/(production)/quality-control': {
       id: '/_authenticated/(production)/quality-control'
       path: '/quality-control'
@@ -1837,6 +2290,13 @@ declare module '@tanstack/react-router' {
       path: '/pruning'
       fullPath: '/pruning'
       preLoaderRoute: typeof AuthenticatedproductionPruningRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/(production)/product-applications': {
+      id: '/_authenticated/(production)/product-applications'
+      path: '/product-applications'
+      fullPath: '/product-applications'
+      preLoaderRoute: typeof AuthenticatedproductionProductApplicationsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/(production)/parcels': {
@@ -1881,6 +2341,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedproductionCampaignsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/(production)/biological-assets': {
+      id: '/_authenticated/(production)/biological-assets'
+      path: '/biological-assets'
+      fullPath: '/biological-assets'
+      preLoaderRoute: typeof AuthenticatedproductionBiologicalAssetsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/(misc)/utilities': {
       id: '/_authenticated/(misc)/utilities'
       path: '/utilities'
@@ -1893,6 +2360,13 @@ declare module '@tanstack/react-router' {
       path: '/notifications'
       fullPath: '/notifications'
       preLoaderRoute: typeof AuthenticatedmiscNotificationsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/(misc)/modules': {
+      id: '/_authenticated/(misc)/modules'
+      path: '/modules'
+      fullPath: '/modules'
+      preLoaderRoute: typeof AuthenticatedmiscModulesRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/(misc)/marketplace': {
@@ -2021,13 +2495,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof publicOnboardingCompleteRouteImport
       parentRoute: typeof publicOnboardingRoute
     }
-    '/(public)/blog/$slug': {
-      id: '/(public)/blog/$slug'
-      path: '/blog/$slug'
-      fullPath: '/blog/$slug'
-      preLoaderRoute: typeof publicBlogSlugRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/(auth)/auth/callback': {
       id: '/(auth)/auth/callback'
       path: '/auth/callback'
@@ -2084,6 +2551,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedComplianceCertificationsCertIdRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/(workforce)/workforce/payments': {
+      id: '/_authenticated/(workforce)/workforce/payments'
+      path: '/workforce/payments'
+      fullPath: '/workforce/payments'
+      preLoaderRoute: typeof AuthenticatedworkforceWorkforcePaymentsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/(workforce)/workforce/employees': {
       id: '/_authenticated/(workforce)/workforce/employees'
       path: '/workforce/employees'
@@ -2104,6 +2578,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/workers/$workerId'
       preLoaderRoute: typeof AuthenticatedworkforceWorkersWorkerIdRouteImport
       parentRoute: typeof AuthenticatedworkforceWorkersRoute
+    }
+    '/_authenticated/(workforce)/tasks/kanban': {
+      id: '/_authenticated/(workforce)/tasks/kanban'
+      path: '/kanban'
+      fullPath: '/tasks/kanban'
+      preLoaderRoute: typeof AuthenticatedworkforceTasksKanbanRouteImport
+      parentRoute: typeof AuthenticatedworkforceTasksRoute
     }
     '/_authenticated/(workforce)/tasks/calendar': {
       id: '/_authenticated/(workforce)/tasks/calendar'
@@ -2168,11 +2649,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedsettingsSettingsModulesRouteImport
       parentRoute: typeof AuthenticatedsettingsSettingsRoute
     }
-    '/_authenticated/(settings)/settings/fiscal-years': {
-      id: '/_authenticated/(settings)/settings/fiscal-years'
-      path: '/fiscal-years'
-      fullPath: '/settings/fiscal-years'
-      preLoaderRoute: typeof AuthenticatedsettingsSettingsFiscalYearsRouteImport
+    '/_authenticated/(settings)/settings/legal': {
+      id: '/_authenticated/(settings)/settings/legal'
+      path: '/legal'
+      fullPath: '/settings/legal'
+      preLoaderRoute: typeof AuthenticatedsettingsSettingsLegalRouteImport
       parentRoute: typeof AuthenticatedsettingsSettingsRoute
     }
     '/_authenticated/(settings)/settings/files': {
@@ -2203,13 +2684,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedsettingsSettingsDangerZoneRouteImport
       parentRoute: typeof AuthenticatedsettingsSettingsRoute
     }
-    '/_authenticated/(settings)/settings/cost-centers': {
-      id: '/_authenticated/(settings)/settings/cost-centers'
-      path: '/cost-centers'
-      fullPath: '/settings/cost-centers'
-      preLoaderRoute: typeof AuthenticatedsettingsSettingsCostCentersRouteImport
-      parentRoute: typeof AuthenticatedsettingsSettingsRoute
-    }
     '/_authenticated/(settings)/settings/biological-assets': {
       id: '/_authenticated/(settings)/settings/biological-assets'
       path: '/biological-assets'
@@ -2217,11 +2691,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedsettingsSettingsBiologicalAssetsRouteImport
       parentRoute: typeof AuthenticatedsettingsSettingsRoute
     }
-    '/_authenticated/(settings)/settings/account-mappings': {
-      id: '/_authenticated/(settings)/settings/account-mappings'
-      path: '/account-mappings'
-      fullPath: '/settings/account-mappings'
-      preLoaderRoute: typeof AuthenticatedsettingsSettingsAccountMappingsRouteImport
+    '/_authenticated/(settings)/settings/billing': {
+      id: '/_authenticated/(settings)/settings/billing'
+      path: '/billing'
+      fullPath: '/settings/billing'
+      preLoaderRoute: typeof AuthenticatedsettingsSettingsBillingRouteImport
+      parentRoute: typeof AuthenticatedsettingsSettingsRoute
+    }
+    '/_authenticated/(settings)/settings/ai': {
+      id: '/_authenticated/(settings)/settings/ai'
+      path: '/ai'
+      fullPath: '/settings/ai'
+      preLoaderRoute: typeof AuthenticatedsettingsSettingsAiRouteImport
       parentRoute: typeof AuthenticatedsettingsSettingsRoute
     }
     '/_authenticated/(settings)/settings/account': {
@@ -2266,13 +2747,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedproductionProductionIntelligenceRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/(production)/production/harvests': {
-      id: '/_authenticated/(production)/production/harvests'
-      path: '/production/harvests'
-      fullPath: '/production/harvests'
-      preLoaderRoute: typeof AuthenticatedproductionProductionHarvestsRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
     '/_authenticated/(production)/production/crop-cycles': {
       id: '/_authenticated/(production)/production/crop-cycles'
       path: '/production/crop-cycles'
@@ -2315,6 +2789,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedinventoryStockSuppliersRouteImport
       parentRoute: typeof AuthenticatedinventoryStockRoute
     }
+    '/_authenticated/(inventory)/stock/stock-take': {
+      id: '/_authenticated/(inventory)/stock/stock-take'
+      path: '/stock-take'
+      fullPath: '/stock/stock-take'
+      preLoaderRoute: typeof AuthenticatedinventoryStockStockTakeRouteImport
+      parentRoute: typeof AuthenticatedinventoryStockRoute
+    }
     '/_authenticated/(inventory)/stock/stock': {
       id: '/_authenticated/(inventory)/stock/stock'
       path: '/stock'
@@ -2329,6 +2810,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedinventoryStockReportsRouteImport
       parentRoute: typeof AuthenticatedinventoryStockRoute
     }
+    '/_authenticated/(inventory)/stock/reorder-suggestions': {
+      id: '/_authenticated/(inventory)/stock/reorder-suggestions'
+      path: '/reorder-suggestions'
+      fullPath: '/stock/reorder-suggestions'
+      preLoaderRoute: typeof AuthenticatedinventoryStockReorderSuggestionsRouteImport
+      parentRoute: typeof AuthenticatedinventoryStockRoute
+    }
     '/_authenticated/(inventory)/stock/reception': {
       id: '/_authenticated/(inventory)/stock/reception'
       path: '/reception'
@@ -2336,11 +2824,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedinventoryStockReceptionRouteImport
       parentRoute: typeof AuthenticatedinventoryStockRoute
     }
-    '/_authenticated/(inventory)/stock/items': {
-      id: '/_authenticated/(inventory)/stock/items'
-      path: '/items'
-      fullPath: '/stock/items'
-      preLoaderRoute: typeof AuthenticatedinventoryStockItemsRouteImport
+    '/_authenticated/(inventory)/stock/quick-stock': {
+      id: '/_authenticated/(inventory)/stock/quick-stock'
+      path: '/quick-stock'
+      fullPath: '/stock/quick-stock'
+      preLoaderRoute: typeof AuthenticatedinventoryStockQuickStockRouteImport
       parentRoute: typeof AuthenticatedinventoryStockRoute
     }
     '/_authenticated/(inventory)/stock/inventory': {
@@ -2357,11 +2845,46 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedinventoryStockGroupsRouteImport
       parentRoute: typeof AuthenticatedinventoryStockRoute
     }
+    '/_authenticated/(inventory)/stock/expiry-alerts': {
+      id: '/_authenticated/(inventory)/stock/expiry-alerts'
+      path: '/expiry-alerts'
+      fullPath: '/stock/expiry-alerts'
+      preLoaderRoute: typeof AuthenticatedinventoryStockExpiryAlertsRouteImport
+      parentRoute: typeof AuthenticatedinventoryStockRoute
+    }
     '/_authenticated/(inventory)/stock/entries': {
       id: '/_authenticated/(inventory)/stock/entries'
       path: '/entries'
       fullPath: '/stock/entries'
       preLoaderRoute: typeof AuthenticatedinventoryStockEntriesRouteImport
+      parentRoute: typeof AuthenticatedinventoryStockRoute
+    }
+    '/_authenticated/(inventory)/stock/deliveries': {
+      id: '/_authenticated/(inventory)/stock/deliveries'
+      path: '/deliveries'
+      fullPath: '/stock/deliveries'
+      preLoaderRoute: typeof AuthenticatedinventoryStockDeliveriesRouteImport
+      parentRoute: typeof AuthenticatedinventoryStockRoute
+    }
+    '/_authenticated/(inventory)/stock/dashboard': {
+      id: '/_authenticated/(inventory)/stock/dashboard'
+      path: '/dashboard'
+      fullPath: '/stock/dashboard'
+      preLoaderRoute: typeof AuthenticatedinventoryStockDashboardRouteImport
+      parentRoute: typeof AuthenticatedinventoryStockRoute
+    }
+    '/_authenticated/(inventory)/stock/batches': {
+      id: '/_authenticated/(inventory)/stock/batches'
+      path: '/batches'
+      fullPath: '/stock/batches'
+      preLoaderRoute: typeof AuthenticatedinventoryStockBatchesRouteImport
+      parentRoute: typeof AuthenticatedinventoryStockRoute
+    }
+    '/_authenticated/(inventory)/stock/approvals': {
+      id: '/_authenticated/(inventory)/stock/approvals'
+      path: '/approvals'
+      fullPath: '/stock/approvals'
+      preLoaderRoute: typeof AuthenticatedinventoryStockApprovalsRouteImport
       parentRoute: typeof AuthenticatedinventoryStockRoute
     }
     '/_authenticated/(inventory)/inventory/reception-batches': {
@@ -2383,6 +2906,13 @@ declare module '@tanstack/react-router' {
       path: '/sales-orders'
       fullPath: '/accounting/sales-orders'
       preLoaderRoute: typeof AuthenticatedaccountingAccountingSalesOrdersRouteImport
+      parentRoute: typeof AuthenticatedaccountingAccountingRoute
+    }
+    '/_authenticated/(accounting)/accounting/reports-analysis': {
+      id: '/_authenticated/(accounting)/accounting/reports-analysis'
+      path: '/reports-analysis'
+      fullPath: '/accounting/reports-analysis'
+      preLoaderRoute: typeof AuthenticatedaccountingAccountingReportsAnalysisRouteImport
       parentRoute: typeof AuthenticatedaccountingAccountingRoute
     }
     '/_authenticated/(accounting)/accounting/reports': {
@@ -2441,6 +2971,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedaccountingAccountingGeneralLedgerRouteImport
       parentRoute: typeof AuthenticatedaccountingAccountingRoute
     }
+    '/_authenticated/(accounting)/accounting/fiscal-years': {
+      id: '/_authenticated/(accounting)/accounting/fiscal-years'
+      path: '/fiscal-years'
+      fullPath: '/accounting/fiscal-years'
+      preLoaderRoute: typeof AuthenticatedaccountingAccountingFiscalYearsRouteImport
+      parentRoute: typeof AuthenticatedaccountingAccountingRoute
+    }
     '/_authenticated/(accounting)/accounting/customers': {
       id: '/_authenticated/(accounting)/accounting/customers'
       path: '/customers'
@@ -2448,11 +2985,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedaccountingAccountingCustomersRouteImport
       parentRoute: typeof AuthenticatedaccountingAccountingRoute
     }
+    '/_authenticated/(accounting)/accounting/cost-centers': {
+      id: '/_authenticated/(accounting)/accounting/cost-centers'
+      path: '/cost-centers'
+      fullPath: '/accounting/cost-centers'
+      preLoaderRoute: typeof AuthenticatedaccountingAccountingCostCentersRouteImport
+      parentRoute: typeof AuthenticatedaccountingAccountingRoute
+    }
     '/_authenticated/(accounting)/accounting/cash-flow': {
       id: '/_authenticated/(accounting)/accounting/cash-flow'
       path: '/cash-flow'
       fullPath: '/accounting/cash-flow'
       preLoaderRoute: typeof AuthenticatedaccountingAccountingCashFlowRouteImport
+      parentRoute: typeof AuthenticatedaccountingAccountingRoute
+    }
+    '/_authenticated/(accounting)/accounting/bank-accounts': {
+      id: '/_authenticated/(accounting)/accounting/bank-accounts'
+      path: '/bank-accounts'
+      fullPath: '/accounting/bank-accounts'
+      preLoaderRoute: typeof AuthenticatedaccountingAccountingBankAccountsRouteImport
       parentRoute: typeof AuthenticatedaccountingAccountingRoute
     }
     '/_authenticated/(accounting)/accounting/balance-sheet': {
@@ -2483,6 +3034,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedaccountingAccountingAccountsRouteImport
       parentRoute: typeof AuthenticatedaccountingAccountingRoute
     }
+    '/_authenticated/(accounting)/accounting/account-mappings': {
+      id: '/_authenticated/(accounting)/accounting/account-mappings'
+      path: '/account-mappings'
+      fullPath: '/accounting/account-mappings'
+      preLoaderRoute: typeof AuthenticatedaccountingAccountingAccountMappingsRouteImport
+      parentRoute: typeof AuthenticatedaccountingAccountingRoute
+    }
     '/_authenticated/(workforce)/workforce/tasks/': {
       id: '/_authenticated/(workforce)/workforce/tasks/'
       path: '/workforce/tasks'
@@ -2496,6 +3054,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/parcels/$parcelId/'
       preLoaderRoute: typeof AuthenticatedproductionParcelsParcelIdIndexRouteImport
       parentRoute: typeof AuthenticatedproductionParcelsParcelIdRoute
+    }
+    '/_authenticated/(inventory)/stock/items/': {
+      id: '/_authenticated/(inventory)/stock/items/'
+      path: '/items'
+      fullPath: '/stock/items/'
+      preLoaderRoute: typeof AuthenticatedinventoryStockItemsIndexRouteImport
+      parentRoute: typeof AuthenticatedinventoryStockRoute
     }
     '/_authenticated/(workforce)/workforce/workers/piece-work': {
       id: '/_authenticated/(workforce)/workforce/workers/piece-work'
@@ -2553,6 +3118,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedproductionParcelsParcelIdAnalyseRouteImport
       parentRoute: typeof AuthenticatedproductionParcelsParcelIdRoute
     }
+    '/_authenticated/(production)/parcels/$parcelId/ai': {
+      id: '/_authenticated/(production)/parcels/$parcelId/ai'
+      path: '/ai'
+      fullPath: '/parcels/$parcelId/ai'
+      preLoaderRoute: typeof AuthenticatedproductionParcelsParcelIdAiRouteImport
+      parentRoute: typeof AuthenticatedproductionParcelsParcelIdRoute
+    }
     '/_authenticated/(misc)/marketplace/quote-requests/sent': {
       id: '/_authenticated/(misc)/marketplace/quote-requests/sent'
       path: '/quote-requests/sent'
@@ -2567,12 +3139,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedmiscMarketplaceQuoteRequestsReceivedRouteImport
       parentRoute: typeof AuthenticatedmiscMarketplaceRoute
     }
+    '/_authenticated/(inventory)/stock/items/$itemId': {
+      id: '/_authenticated/(inventory)/stock/items/$itemId'
+      path: '/items/$itemId'
+      fullPath: '/stock/items/$itemId'
+      preLoaderRoute: typeof AuthenticatedinventoryStockItemsItemIdRouteImport
+      parentRoute: typeof AuthenticatedinventoryStockRoute
+    }
     '/_authenticated/(production)/parcels/$parcelId/satellite/': {
       id: '/_authenticated/(production)/parcels/$parcelId/satellite/'
       path: '/'
       fullPath: '/parcels/$parcelId/satellite/'
       preLoaderRoute: typeof AuthenticatedproductionParcelsParcelIdSatelliteIndexRouteImport
       parentRoute: typeof AuthenticatedproductionParcelsParcelIdSatelliteRoute
+    }
+    '/_authenticated/(production)/parcels/$parcelId/ai/': {
+      id: '/_authenticated/(production)/parcels/$parcelId/ai/'
+      path: '/'
+      fullPath: '/parcels/$parcelId/ai/'
+      preLoaderRoute: typeof AuthenticatedproductionParcelsParcelIdAiIndexRouteImport
+      parentRoute: typeof AuthenticatedproductionParcelsParcelIdAiRoute
     }
     '/_authenticated/(production)/parcels/$parcelId/satellite/timeseries': {
       id: '/_authenticated/(production)/parcels/$parcelId/satellite/timeseries'
@@ -2588,16 +3174,69 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedproductionParcelsParcelIdSatelliteHeatmapRouteImport
       parentRoute: typeof AuthenticatedproductionParcelsParcelIdSatelliteRoute
     }
+    '/_authenticated/(production)/parcels/$parcelId/ai/weather': {
+      id: '/_authenticated/(production)/parcels/$parcelId/ai/weather'
+      path: '/weather'
+      fullPath: '/parcels/$parcelId/ai/weather'
+      preLoaderRoute: typeof AuthenticatedproductionParcelsParcelIdAiWeatherRouteImport
+      parentRoute: typeof AuthenticatedproductionParcelsParcelIdAiRoute
+    }
+    '/_authenticated/(production)/parcels/$parcelId/ai/recommendations': {
+      id: '/_authenticated/(production)/parcels/$parcelId/ai/recommendations'
+      path: '/recommendations'
+      fullPath: '/parcels/$parcelId/ai/recommendations'
+      preLoaderRoute: typeof AuthenticatedproductionParcelsParcelIdAiRecommendationsRouteImport
+      parentRoute: typeof AuthenticatedproductionParcelsParcelIdAiRoute
+    }
+    '/_authenticated/(production)/parcels/$parcelId/ai/plan': {
+      id: '/_authenticated/(production)/parcels/$parcelId/ai/plan'
+      path: '/plan'
+      fullPath: '/parcels/$parcelId/ai/plan'
+      preLoaderRoute: typeof AuthenticatedproductionParcelsParcelIdAiPlanRouteImport
+      parentRoute: typeof AuthenticatedproductionParcelsParcelIdAiRoute
+    }
+    '/_authenticated/(production)/parcels/$parcelId/ai/calibration': {
+      id: '/_authenticated/(production)/parcels/$parcelId/ai/calibration'
+      path: '/calibration'
+      fullPath: '/parcels/$parcelId/ai/calibration'
+      preLoaderRoute: typeof AuthenticatedproductionParcelsParcelIdAiCalibrationRouteImport
+      parentRoute: typeof AuthenticatedproductionParcelsParcelIdAiRoute
+    }
+    '/_authenticated/(production)/parcels/$parcelId/ai/alerts': {
+      id: '/_authenticated/(production)/parcels/$parcelId/ai/alerts'
+      path: '/alerts'
+      fullPath: '/parcels/$parcelId/ai/alerts'
+      preLoaderRoute: typeof AuthenticatedproductionParcelsParcelIdAiAlertsRouteImport
+      parentRoute: typeof AuthenticatedproductionParcelsParcelIdAiRoute
+    }
+    '/_authenticated/(production)/parcels/$parcelId/ai/plan/': {
+      id: '/_authenticated/(production)/parcels/$parcelId/ai/plan/'
+      path: '/'
+      fullPath: '/parcels/$parcelId/ai/plan/'
+      preLoaderRoute: typeof AuthenticatedproductionParcelsParcelIdAiPlanIndexRouteImport
+      parentRoute: typeof AuthenticatedproductionParcelsParcelIdAiPlanRoute
+    }
+    '/_authenticated/(production)/parcels/$parcelId/ai/plan/summary': {
+      id: '/_authenticated/(production)/parcels/$parcelId/ai/plan/summary'
+      path: '/summary'
+      fullPath: '/parcels/$parcelId/ai/plan/summary'
+      preLoaderRoute: typeof AuthenticatedproductionParcelsParcelIdAiPlanSummaryRouteImport
+      parentRoute: typeof AuthenticatedproductionParcelsParcelIdAiPlanRoute
+    }
   }
 }
 
 interface AuthenticatedaccountingAccountingRouteChildren {
+  AuthenticatedaccountingAccountingAccountMappingsRoute: typeof AuthenticatedaccountingAccountingAccountMappingsRoute
   AuthenticatedaccountingAccountingAccountsRoute: typeof AuthenticatedaccountingAccountingAccountsRoute
   AuthenticatedaccountingAccountingAgedPayablesRoute: typeof AuthenticatedaccountingAccountingAgedPayablesRoute
   AuthenticatedaccountingAccountingAgedReceivablesRoute: typeof AuthenticatedaccountingAccountingAgedReceivablesRoute
   AuthenticatedaccountingAccountingBalanceSheetRoute: typeof AuthenticatedaccountingAccountingBalanceSheetRoute
+  AuthenticatedaccountingAccountingBankAccountsRoute: typeof AuthenticatedaccountingAccountingBankAccountsRoute
   AuthenticatedaccountingAccountingCashFlowRoute: typeof AuthenticatedaccountingAccountingCashFlowRoute
+  AuthenticatedaccountingAccountingCostCentersRoute: typeof AuthenticatedaccountingAccountingCostCentersRoute
   AuthenticatedaccountingAccountingCustomersRoute: typeof AuthenticatedaccountingAccountingCustomersRoute
+  AuthenticatedaccountingAccountingFiscalYearsRoute: typeof AuthenticatedaccountingAccountingFiscalYearsRoute
   AuthenticatedaccountingAccountingGeneralLedgerRoute: typeof AuthenticatedaccountingAccountingGeneralLedgerRoute
   AuthenticatedaccountingAccountingInvoicesRoute: typeof AuthenticatedaccountingAccountingInvoicesRoute
   AuthenticatedaccountingAccountingJournalRoute: typeof AuthenticatedaccountingAccountingJournalRoute
@@ -2606,6 +3245,7 @@ interface AuthenticatedaccountingAccountingRouteChildren {
   AuthenticatedaccountingAccountingPurchaseOrdersRoute: typeof AuthenticatedaccountingAccountingPurchaseOrdersRoute
   AuthenticatedaccountingAccountingQuotesRoute: typeof AuthenticatedaccountingAccountingQuotesRoute
   AuthenticatedaccountingAccountingReportsRoute: typeof AuthenticatedaccountingAccountingReportsRoute
+  AuthenticatedaccountingAccountingReportsAnalysisRoute: typeof AuthenticatedaccountingAccountingReportsAnalysisRoute
   AuthenticatedaccountingAccountingSalesOrdersRoute: typeof AuthenticatedaccountingAccountingSalesOrdersRoute
   AuthenticatedaccountingAccountingTrialBalanceRoute: typeof AuthenticatedaccountingAccountingTrialBalanceRoute
   AuthenticatedaccountingAccountingIndexRoute: typeof AuthenticatedaccountingAccountingIndexRoute
@@ -2613,6 +3253,8 @@ interface AuthenticatedaccountingAccountingRouteChildren {
 
 const AuthenticatedaccountingAccountingRouteChildren: AuthenticatedaccountingAccountingRouteChildren =
   {
+    AuthenticatedaccountingAccountingAccountMappingsRoute:
+      AuthenticatedaccountingAccountingAccountMappingsRoute,
     AuthenticatedaccountingAccountingAccountsRoute:
       AuthenticatedaccountingAccountingAccountsRoute,
     AuthenticatedaccountingAccountingAgedPayablesRoute:
@@ -2621,10 +3263,16 @@ const AuthenticatedaccountingAccountingRouteChildren: AuthenticatedaccountingAcc
       AuthenticatedaccountingAccountingAgedReceivablesRoute,
     AuthenticatedaccountingAccountingBalanceSheetRoute:
       AuthenticatedaccountingAccountingBalanceSheetRoute,
+    AuthenticatedaccountingAccountingBankAccountsRoute:
+      AuthenticatedaccountingAccountingBankAccountsRoute,
     AuthenticatedaccountingAccountingCashFlowRoute:
       AuthenticatedaccountingAccountingCashFlowRoute,
+    AuthenticatedaccountingAccountingCostCentersRoute:
+      AuthenticatedaccountingAccountingCostCentersRoute,
     AuthenticatedaccountingAccountingCustomersRoute:
       AuthenticatedaccountingAccountingCustomersRoute,
+    AuthenticatedaccountingAccountingFiscalYearsRoute:
+      AuthenticatedaccountingAccountingFiscalYearsRoute,
     AuthenticatedaccountingAccountingGeneralLedgerRoute:
       AuthenticatedaccountingAccountingGeneralLedgerRoute,
     AuthenticatedaccountingAccountingInvoicesRoute:
@@ -2641,6 +3289,8 @@ const AuthenticatedaccountingAccountingRouteChildren: AuthenticatedaccountingAcc
       AuthenticatedaccountingAccountingQuotesRoute,
     AuthenticatedaccountingAccountingReportsRoute:
       AuthenticatedaccountingAccountingReportsRoute,
+    AuthenticatedaccountingAccountingReportsAnalysisRoute:
+      AuthenticatedaccountingAccountingReportsAnalysisRoute,
     AuthenticatedaccountingAccountingSalesOrdersRoute:
       AuthenticatedaccountingAccountingSalesOrdersRoute,
     AuthenticatedaccountingAccountingTrialBalanceRoute:
@@ -2670,40 +3320,67 @@ const AuthenticatedinventoryInventoryRouteWithChildren =
   )
 
 interface AuthenticatedinventoryStockRouteChildren {
+  AuthenticatedinventoryStockApprovalsRoute: typeof AuthenticatedinventoryStockApprovalsRoute
+  AuthenticatedinventoryStockBatchesRoute: typeof AuthenticatedinventoryStockBatchesRoute
+  AuthenticatedinventoryStockDashboardRoute: typeof AuthenticatedinventoryStockDashboardRoute
+  AuthenticatedinventoryStockDeliveriesRoute: typeof AuthenticatedinventoryStockDeliveriesRoute
   AuthenticatedinventoryStockEntriesRoute: typeof AuthenticatedinventoryStockEntriesRoute
+  AuthenticatedinventoryStockExpiryAlertsRoute: typeof AuthenticatedinventoryStockExpiryAlertsRoute
   AuthenticatedinventoryStockGroupsRoute: typeof AuthenticatedinventoryStockGroupsRoute
   AuthenticatedinventoryStockInventoryRoute: typeof AuthenticatedinventoryStockInventoryRoute
-  AuthenticatedinventoryStockItemsRoute: typeof AuthenticatedinventoryStockItemsRoute
+  AuthenticatedinventoryStockQuickStockRoute: typeof AuthenticatedinventoryStockQuickStockRoute
   AuthenticatedinventoryStockReceptionRoute: typeof AuthenticatedinventoryStockReceptionRoute
+  AuthenticatedinventoryStockReorderSuggestionsRoute: typeof AuthenticatedinventoryStockReorderSuggestionsRoute
   AuthenticatedinventoryStockReportsRoute: typeof AuthenticatedinventoryStockReportsRoute
   AuthenticatedinventoryStockStockRoute: typeof AuthenticatedinventoryStockStockRoute
+  AuthenticatedinventoryStockStockTakeRoute: typeof AuthenticatedinventoryStockStockTakeRoute
   AuthenticatedinventoryStockSuppliersRoute: typeof AuthenticatedinventoryStockSuppliersRoute
   AuthenticatedinventoryStockWarehousesRoute: typeof AuthenticatedinventoryStockWarehousesRoute
   AuthenticatedinventoryStockIndexRoute: typeof AuthenticatedinventoryStockIndexRoute
+  AuthenticatedinventoryStockItemsItemIdRoute: typeof AuthenticatedinventoryStockItemsItemIdRoute
+  AuthenticatedinventoryStockItemsIndexRoute: typeof AuthenticatedinventoryStockItemsIndexRoute
 }
 
 const AuthenticatedinventoryStockRouteChildren: AuthenticatedinventoryStockRouteChildren =
   {
+    AuthenticatedinventoryStockApprovalsRoute:
+      AuthenticatedinventoryStockApprovalsRoute,
+    AuthenticatedinventoryStockBatchesRoute:
+      AuthenticatedinventoryStockBatchesRoute,
+    AuthenticatedinventoryStockDashboardRoute:
+      AuthenticatedinventoryStockDashboardRoute,
+    AuthenticatedinventoryStockDeliveriesRoute:
+      AuthenticatedinventoryStockDeliveriesRoute,
     AuthenticatedinventoryStockEntriesRoute:
       AuthenticatedinventoryStockEntriesRoute,
+    AuthenticatedinventoryStockExpiryAlertsRoute:
+      AuthenticatedinventoryStockExpiryAlertsRoute,
     AuthenticatedinventoryStockGroupsRoute:
       AuthenticatedinventoryStockGroupsRoute,
     AuthenticatedinventoryStockInventoryRoute:
       AuthenticatedinventoryStockInventoryRoute,
-    AuthenticatedinventoryStockItemsRoute:
-      AuthenticatedinventoryStockItemsRoute,
+    AuthenticatedinventoryStockQuickStockRoute:
+      AuthenticatedinventoryStockQuickStockRoute,
     AuthenticatedinventoryStockReceptionRoute:
       AuthenticatedinventoryStockReceptionRoute,
+    AuthenticatedinventoryStockReorderSuggestionsRoute:
+      AuthenticatedinventoryStockReorderSuggestionsRoute,
     AuthenticatedinventoryStockReportsRoute:
       AuthenticatedinventoryStockReportsRoute,
     AuthenticatedinventoryStockStockRoute:
       AuthenticatedinventoryStockStockRoute,
+    AuthenticatedinventoryStockStockTakeRoute:
+      AuthenticatedinventoryStockStockTakeRoute,
     AuthenticatedinventoryStockSuppliersRoute:
       AuthenticatedinventoryStockSuppliersRoute,
     AuthenticatedinventoryStockWarehousesRoute:
       AuthenticatedinventoryStockWarehousesRoute,
     AuthenticatedinventoryStockIndexRoute:
       AuthenticatedinventoryStockIndexRoute,
+    AuthenticatedinventoryStockItemsItemIdRoute:
+      AuthenticatedinventoryStockItemsItemIdRoute,
+    AuthenticatedinventoryStockItemsIndexRoute:
+      AuthenticatedinventoryStockItemsIndexRoute,
   }
 
 const AuthenticatedinventoryStockRouteWithChildren =
@@ -2747,6 +3424,54 @@ const AuthenticatedproductionCropCyclesRouteWithChildren =
     AuthenticatedproductionCropCyclesRouteChildren,
   )
 
+interface AuthenticatedproductionParcelsParcelIdAiPlanRouteChildren {
+  AuthenticatedproductionParcelsParcelIdAiPlanSummaryRoute: typeof AuthenticatedproductionParcelsParcelIdAiPlanSummaryRoute
+  AuthenticatedproductionParcelsParcelIdAiPlanIndexRoute: typeof AuthenticatedproductionParcelsParcelIdAiPlanIndexRoute
+}
+
+const AuthenticatedproductionParcelsParcelIdAiPlanRouteChildren: AuthenticatedproductionParcelsParcelIdAiPlanRouteChildren =
+  {
+    AuthenticatedproductionParcelsParcelIdAiPlanSummaryRoute:
+      AuthenticatedproductionParcelsParcelIdAiPlanSummaryRoute,
+    AuthenticatedproductionParcelsParcelIdAiPlanIndexRoute:
+      AuthenticatedproductionParcelsParcelIdAiPlanIndexRoute,
+  }
+
+const AuthenticatedproductionParcelsParcelIdAiPlanRouteWithChildren =
+  AuthenticatedproductionParcelsParcelIdAiPlanRoute._addFileChildren(
+    AuthenticatedproductionParcelsParcelIdAiPlanRouteChildren,
+  )
+
+interface AuthenticatedproductionParcelsParcelIdAiRouteChildren {
+  AuthenticatedproductionParcelsParcelIdAiAlertsRoute: typeof AuthenticatedproductionParcelsParcelIdAiAlertsRoute
+  AuthenticatedproductionParcelsParcelIdAiCalibrationRoute: typeof AuthenticatedproductionParcelsParcelIdAiCalibrationRoute
+  AuthenticatedproductionParcelsParcelIdAiPlanRoute: typeof AuthenticatedproductionParcelsParcelIdAiPlanRouteWithChildren
+  AuthenticatedproductionParcelsParcelIdAiRecommendationsRoute: typeof AuthenticatedproductionParcelsParcelIdAiRecommendationsRoute
+  AuthenticatedproductionParcelsParcelIdAiWeatherRoute: typeof AuthenticatedproductionParcelsParcelIdAiWeatherRoute
+  AuthenticatedproductionParcelsParcelIdAiIndexRoute: typeof AuthenticatedproductionParcelsParcelIdAiIndexRoute
+}
+
+const AuthenticatedproductionParcelsParcelIdAiRouteChildren: AuthenticatedproductionParcelsParcelIdAiRouteChildren =
+  {
+    AuthenticatedproductionParcelsParcelIdAiAlertsRoute:
+      AuthenticatedproductionParcelsParcelIdAiAlertsRoute,
+    AuthenticatedproductionParcelsParcelIdAiCalibrationRoute:
+      AuthenticatedproductionParcelsParcelIdAiCalibrationRoute,
+    AuthenticatedproductionParcelsParcelIdAiPlanRoute:
+      AuthenticatedproductionParcelsParcelIdAiPlanRouteWithChildren,
+    AuthenticatedproductionParcelsParcelIdAiRecommendationsRoute:
+      AuthenticatedproductionParcelsParcelIdAiRecommendationsRoute,
+    AuthenticatedproductionParcelsParcelIdAiWeatherRoute:
+      AuthenticatedproductionParcelsParcelIdAiWeatherRoute,
+    AuthenticatedproductionParcelsParcelIdAiIndexRoute:
+      AuthenticatedproductionParcelsParcelIdAiIndexRoute,
+  }
+
+const AuthenticatedproductionParcelsParcelIdAiRouteWithChildren =
+  AuthenticatedproductionParcelsParcelIdAiRoute._addFileChildren(
+    AuthenticatedproductionParcelsParcelIdAiRouteChildren,
+  )
+
 interface AuthenticatedproductionParcelsParcelIdSatelliteRouteChildren {
   AuthenticatedproductionParcelsParcelIdSatelliteHeatmapRoute: typeof AuthenticatedproductionParcelsParcelIdSatelliteHeatmapRoute
   AuthenticatedproductionParcelsParcelIdSatelliteTimeseriesRoute: typeof AuthenticatedproductionParcelsParcelIdSatelliteTimeseriesRoute
@@ -2769,6 +3494,7 @@ const AuthenticatedproductionParcelsParcelIdSatelliteRouteWithChildren =
   )
 
 interface AuthenticatedproductionParcelsParcelIdRouteChildren {
+  AuthenticatedproductionParcelsParcelIdAiRoute: typeof AuthenticatedproductionParcelsParcelIdAiRouteWithChildren
   AuthenticatedproductionParcelsParcelIdAnalyseRoute: typeof AuthenticatedproductionParcelsParcelIdAnalyseRoute
   AuthenticatedproductionParcelsParcelIdProductionRoute: typeof AuthenticatedproductionParcelsParcelIdProductionRoute
   AuthenticatedproductionParcelsParcelIdProfitabilityRoute: typeof AuthenticatedproductionParcelsParcelIdProfitabilityRoute
@@ -2780,6 +3506,8 @@ interface AuthenticatedproductionParcelsParcelIdRouteChildren {
 
 const AuthenticatedproductionParcelsParcelIdRouteChildren: AuthenticatedproductionParcelsParcelIdRouteChildren =
   {
+    AuthenticatedproductionParcelsParcelIdAiRoute:
+      AuthenticatedproductionParcelsParcelIdAiRouteWithChildren,
     AuthenticatedproductionParcelsParcelIdAnalyseRoute:
       AuthenticatedproductionParcelsParcelIdAnalyseRoute,
     AuthenticatedproductionParcelsParcelIdProductionRoute:
@@ -2818,14 +3546,14 @@ const AuthenticatedproductionParcelsRouteWithChildren =
 
 interface AuthenticatedsettingsSettingsRouteChildren {
   AuthenticatedsettingsSettingsAccountRoute: typeof AuthenticatedsettingsSettingsAccountRoute
-  AuthenticatedsettingsSettingsAccountMappingsRoute: typeof AuthenticatedsettingsSettingsAccountMappingsRoute
+  AuthenticatedsettingsSettingsAiRoute: typeof AuthenticatedsettingsSettingsAiRoute
+  AuthenticatedsettingsSettingsBillingRoute: typeof AuthenticatedsettingsSettingsBillingRoute
   AuthenticatedsettingsSettingsBiologicalAssetsRoute: typeof AuthenticatedsettingsSettingsBiologicalAssetsRoute
-  AuthenticatedsettingsSettingsCostCentersRoute: typeof AuthenticatedsettingsSettingsCostCentersRoute
   AuthenticatedsettingsSettingsDangerZoneRoute: typeof AuthenticatedsettingsSettingsDangerZoneRoute
   AuthenticatedsettingsSettingsDashboardRoute: typeof AuthenticatedsettingsSettingsDashboardRoute
   AuthenticatedsettingsSettingsDocumentsRoute: typeof AuthenticatedsettingsSettingsDocumentsRoute
   AuthenticatedsettingsSettingsFilesRoute: typeof AuthenticatedsettingsSettingsFilesRoute
-  AuthenticatedsettingsSettingsFiscalYearsRoute: typeof AuthenticatedsettingsSettingsFiscalYearsRoute
+  AuthenticatedsettingsSettingsLegalRoute: typeof AuthenticatedsettingsSettingsLegalRoute
   AuthenticatedsettingsSettingsModulesRoute: typeof AuthenticatedsettingsSettingsModulesRoute
   AuthenticatedsettingsSettingsOrganizationRoute: typeof AuthenticatedsettingsSettingsOrganizationRoute
   AuthenticatedsettingsSettingsPreferencesRoute: typeof AuthenticatedsettingsSettingsPreferencesRoute
@@ -2840,12 +3568,11 @@ const AuthenticatedsettingsSettingsRouteChildren: AuthenticatedsettingsSettingsR
   {
     AuthenticatedsettingsSettingsAccountRoute:
       AuthenticatedsettingsSettingsAccountRoute,
-    AuthenticatedsettingsSettingsAccountMappingsRoute:
-      AuthenticatedsettingsSettingsAccountMappingsRoute,
+    AuthenticatedsettingsSettingsAiRoute: AuthenticatedsettingsSettingsAiRoute,
+    AuthenticatedsettingsSettingsBillingRoute:
+      AuthenticatedsettingsSettingsBillingRoute,
     AuthenticatedsettingsSettingsBiologicalAssetsRoute:
       AuthenticatedsettingsSettingsBiologicalAssetsRoute,
-    AuthenticatedsettingsSettingsCostCentersRoute:
-      AuthenticatedsettingsSettingsCostCentersRoute,
     AuthenticatedsettingsSettingsDangerZoneRoute:
       AuthenticatedsettingsSettingsDangerZoneRoute,
     AuthenticatedsettingsSettingsDashboardRoute:
@@ -2854,8 +3581,8 @@ const AuthenticatedsettingsSettingsRouteChildren: AuthenticatedsettingsSettingsR
       AuthenticatedsettingsSettingsDocumentsRoute,
     AuthenticatedsettingsSettingsFilesRoute:
       AuthenticatedsettingsSettingsFilesRoute,
-    AuthenticatedsettingsSettingsFiscalYearsRoute:
-      AuthenticatedsettingsSettingsFiscalYearsRoute,
+    AuthenticatedsettingsSettingsLegalRoute:
+      AuthenticatedsettingsSettingsLegalRoute,
     AuthenticatedsettingsSettingsModulesRoute:
       AuthenticatedsettingsSettingsModulesRoute,
     AuthenticatedsettingsSettingsOrganizationRoute:
@@ -2882,6 +3609,7 @@ const AuthenticatedsettingsSettingsRouteWithChildren =
 interface AuthenticatedworkforceTasksRouteChildren {
   AuthenticatedworkforceTasksTaskIdRoute: typeof AuthenticatedworkforceTasksTaskIdRoute
   AuthenticatedworkforceTasksCalendarRoute: typeof AuthenticatedworkforceTasksCalendarRoute
+  AuthenticatedworkforceTasksKanbanRoute: typeof AuthenticatedworkforceTasksKanbanRoute
   AuthenticatedworkforceTasksIndexRoute: typeof AuthenticatedworkforceTasksIndexRoute
 }
 
@@ -2891,6 +3619,8 @@ const AuthenticatedworkforceTasksRouteChildren: AuthenticatedworkforceTasksRoute
       AuthenticatedworkforceTasksTaskIdRoute,
     AuthenticatedworkforceTasksCalendarRoute:
       AuthenticatedworkforceTasksCalendarRoute,
+    AuthenticatedworkforceTasksKanbanRoute:
+      AuthenticatedworkforceTasksKanbanRoute,
     AuthenticatedworkforceTasksIndexRoute:
       AuthenticatedworkforceTasksIndexRoute,
   }
@@ -2916,6 +3646,8 @@ const AuthenticatedworkforceWorkersRouteWithChildren =
   )
 
 interface AuthenticatedRouteChildren {
+  AuthenticatedReferentielsRoute: typeof AuthenticatedReferentielsRoute
+  AuthenticatedReportsRoute: typeof AuthenticatedReportsRoute
   AuthenticatedaccountingAccountingRoute: typeof AuthenticatedaccountingAccountingRouteWithChildren
   AuthenticatedcoreAnalyticsRoute: typeof AuthenticatedcoreAnalyticsRoute
   AuthenticatedcoreChatRoute: typeof AuthenticatedcoreChatRoute
@@ -2928,16 +3660,20 @@ interface AuthenticatedRouteChildren {
   AuthenticatedmiscInfrastructureRoute: typeof AuthenticatedmiscInfrastructureRoute
   AuthenticatedmiscLabServicesRoute: typeof AuthenticatedmiscLabServicesRoute
   AuthenticatedmiscMarketplaceRoute: typeof AuthenticatedmiscMarketplaceRouteWithChildren
+  AuthenticatedmiscModulesRoute: typeof AuthenticatedmiscModulesRoute
   AuthenticatedmiscNotificationsRoute: typeof AuthenticatedmiscNotificationsRoute
   AuthenticatedmiscUtilitiesRoute: typeof AuthenticatedmiscUtilitiesRoute
+  AuthenticatedproductionBiologicalAssetsRoute: typeof AuthenticatedproductionBiologicalAssetsRoute
   AuthenticatedproductionCampaignsRoute: typeof AuthenticatedproductionCampaignsRoute
   AuthenticatedproductionCropCyclesRoute: typeof AuthenticatedproductionCropCyclesRouteWithChildren
   AuthenticatedproductionFarmHierarchyRoute: typeof AuthenticatedproductionFarmHierarchyRoute
   AuthenticatedproductionHarvestsRoute: typeof AuthenticatedproductionHarvestsRoute
   AuthenticatedproductionOrchardsRoute: typeof AuthenticatedproductionOrchardsRoute
   AuthenticatedproductionParcelsRoute: typeof AuthenticatedproductionParcelsRouteWithChildren
+  AuthenticatedproductionProductApplicationsRoute: typeof AuthenticatedproductionProductApplicationsRoute
   AuthenticatedproductionPruningRoute: typeof AuthenticatedproductionPruningRoute
   AuthenticatedproductionQualityControlRoute: typeof AuthenticatedproductionQualityControlRoute
+  AuthenticatedproductionSatelliteAnalysisRoute: typeof AuthenticatedproductionSatelliteAnalysisRoute
   AuthenticatedproductionTreesRoute: typeof AuthenticatedproductionTreesRoute
   AuthenticatedsettingsSettingsRoute: typeof AuthenticatedsettingsSettingsRouteWithChildren
   AuthenticatedworkforceTasksRoute: typeof AuthenticatedworkforceTasksRouteWithChildren
@@ -2946,7 +3682,6 @@ interface AuthenticatedRouteChildren {
   AuthenticatedComplianceIndexRoute: typeof AuthenticatedComplianceIndexRoute
   AuthenticatedPestAlertsIndexRoute: typeof AuthenticatedPestAlertsIndexRoute
   AuthenticatedproductionProductionCropCyclesRoute: typeof AuthenticatedproductionProductionCropCyclesRoute
-  AuthenticatedproductionProductionHarvestsRoute: typeof AuthenticatedproductionProductionHarvestsRoute
   AuthenticatedproductionProductionIntelligenceRoute: typeof AuthenticatedproductionProductionIntelligenceRoute
   AuthenticatedproductionProductionProfitabilityRoute: typeof AuthenticatedproductionProductionProfitabilityRoute
   AuthenticatedproductionProductionQualityControlRoute: typeof AuthenticatedproductionProductionQualityControlRoute
@@ -2954,6 +3689,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedproductionProductionSoilAnalysisRoute: typeof AuthenticatedproductionProductionSoilAnalysisRoute
   AuthenticatedworkforceWorkforceDayLaborersRoute: typeof AuthenticatedworkforceWorkforceDayLaborersRoute
   AuthenticatedworkforceWorkforceEmployeesRoute: typeof AuthenticatedworkforceWorkforceEmployeesRoute
+  AuthenticatedworkforceWorkforcePaymentsRoute: typeof AuthenticatedworkforceWorkforcePaymentsRoute
   AuthenticatedComplianceCertificationsCertIdRoute: typeof AuthenticatedComplianceCertificationsCertIdRoute
   AuthenticatedComplianceCertificationsIndexRoute: typeof AuthenticatedComplianceCertificationsIndexRoute
   AuthenticatedComplianceCorrectiveActionsIndexRoute: typeof AuthenticatedComplianceCorrectiveActionsIndexRoute
@@ -2963,6 +3699,8 @@ interface AuthenticatedRouteChildren {
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedReferentielsRoute: AuthenticatedReferentielsRoute,
+  AuthenticatedReportsRoute: AuthenticatedReportsRoute,
   AuthenticatedaccountingAccountingRoute:
     AuthenticatedaccountingAccountingRouteWithChildren,
   AuthenticatedcoreAnalyticsRoute: AuthenticatedcoreAnalyticsRoute,
@@ -2980,8 +3718,11 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedmiscLabServicesRoute: AuthenticatedmiscLabServicesRoute,
   AuthenticatedmiscMarketplaceRoute:
     AuthenticatedmiscMarketplaceRouteWithChildren,
+  AuthenticatedmiscModulesRoute: AuthenticatedmiscModulesRoute,
   AuthenticatedmiscNotificationsRoute: AuthenticatedmiscNotificationsRoute,
   AuthenticatedmiscUtilitiesRoute: AuthenticatedmiscUtilitiesRoute,
+  AuthenticatedproductionBiologicalAssetsRoute:
+    AuthenticatedproductionBiologicalAssetsRoute,
   AuthenticatedproductionCampaignsRoute: AuthenticatedproductionCampaignsRoute,
   AuthenticatedproductionCropCyclesRoute:
     AuthenticatedproductionCropCyclesRouteWithChildren,
@@ -2991,9 +3732,13 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedproductionOrchardsRoute: AuthenticatedproductionOrchardsRoute,
   AuthenticatedproductionParcelsRoute:
     AuthenticatedproductionParcelsRouteWithChildren,
+  AuthenticatedproductionProductApplicationsRoute:
+    AuthenticatedproductionProductApplicationsRoute,
   AuthenticatedproductionPruningRoute: AuthenticatedproductionPruningRoute,
   AuthenticatedproductionQualityControlRoute:
     AuthenticatedproductionQualityControlRoute,
+  AuthenticatedproductionSatelliteAnalysisRoute:
+    AuthenticatedproductionSatelliteAnalysisRoute,
   AuthenticatedproductionTreesRoute: AuthenticatedproductionTreesRoute,
   AuthenticatedsettingsSettingsRoute:
     AuthenticatedsettingsSettingsRouteWithChildren,
@@ -3006,8 +3751,6 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedPestAlertsIndexRoute: AuthenticatedPestAlertsIndexRoute,
   AuthenticatedproductionProductionCropCyclesRoute:
     AuthenticatedproductionProductionCropCyclesRoute,
-  AuthenticatedproductionProductionHarvestsRoute:
-    AuthenticatedproductionProductionHarvestsRoute,
   AuthenticatedproductionProductionIntelligenceRoute:
     AuthenticatedproductionProductionIntelligenceRoute,
   AuthenticatedproductionProductionProfitabilityRoute:
@@ -3022,6 +3765,8 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
     AuthenticatedworkforceWorkforceDayLaborersRoute,
   AuthenticatedworkforceWorkforceEmployeesRoute:
     AuthenticatedworkforceWorkforceEmployeesRoute,
+  AuthenticatedworkforceWorkforcePaymentsRoute:
+    AuthenticatedworkforceWorkforcePaymentsRoute,
   AuthenticatedComplianceCertificationsCertIdRoute:
     AuthenticatedComplianceCertificationsCertIdRoute,
   AuthenticatedComplianceCertificationsIndexRoute:
@@ -3075,9 +3820,11 @@ const rootRouteChildren: RootRouteChildren = {
   publicCheckoutSuccessRoute: publicCheckoutSuccessRoute,
   publicOnboardingRoute: publicOnboardingRouteWithChildren,
   publicPitchDeckRoute: publicPitchDeckRoute,
+  publicPrivacyPolicyRoute: publicPrivacyPolicyRoute,
+  publicRdvRoute: publicRdvRoute,
+  publicRdvSiamRoute: publicRdvSiamRoute,
+  publicTermsOfServiceRoute: publicTermsOfServiceRoute,
   authAuthCallbackRoute: authAuthCallbackRoute,
-  publicBlogSlugRoute: publicBlogSlugRoute,
-  publicBlogIndexRoute: publicBlogIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

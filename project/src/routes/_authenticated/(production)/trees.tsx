@@ -1,13 +1,14 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
-import { TreeDeciduous, Calendar, Scissors, Sprout } from 'lucide-react';
+import { TreeDeciduous, Calendar, Scissors } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { cropsApi } from '@/lib/api/crops';
 import { tasksApi } from '@/lib/api/tasks';
+import { useParcelsByOrganization } from '@/hooks/useParcelsQuery';
+import type { TaskSummary } from '@/types/tasks';
 
 export const Route = createFileRoute('/_authenticated/(production)/trees')({
   component: Trees,
@@ -15,36 +16,47 @@ export const Route = createFileRoute('/_authenticated/(production)/trees')({
 
 function Trees() {
   const { t } = useTranslation();
-  const { organizationId } = useAuth();
+  const { currentOrganization } = useAuth();
   const navigate = useNavigate();
+  const organizationId = currentOrganization?.id;
 
-  // Fetch tree crops with module filter
-  const { data: treeCrops, isLoading: cropsLoading } = useQuery({
-    queryKey: ['crops', organizationId, 'fruit-trees'],
-    queryFn: () => cropsApi.getAll(organizationId!, { module: 'fruit-trees' }),
-    enabled: !!organizationId,
-  });
+  // Use parcels with tree_type as proxy for tree crops
+  const { data: parcelsData = [] } = useParcelsByOrganization(organizationId);
+  const treeCrops = parcelsData.filter((p) => p.tree_type);
+  const cropsLoading = false;
 
   // Fetch pruning tasks
   const { data: pruningTasks } = useQuery({
     queryKey: ['tasks', organizationId, 'pruning'],
-    queryFn: () => tasksApi.list(organizationId!),
+    queryFn: async () => (await tasksApi.getAll(organizationId!)).data,
     enabled: !!organizationId,
   });
 
   const pendingPruningCount = pruningTasks?.filter(
-    task => task.task_type === 'maintenance' &&
+    (task: TaskSummary) => task.task_type === 'maintenance' &&
     (task.title?.toLowerCase().includes('pruning') || task.title?.toLowerCase().includes('taille')) &&
     task.status === 'pending'
   ).length || 0;
 
+  type TreeCategory = {
+    icon: typeof TreeDeciduous;
+    title: string;
+    description: string;
+    route: '/orchards' | '/pruning' | '/harvests';
+    search?: { module: 'fruit-trees' };
+    color: string;
+    bgColor: string;
+    onClick: () => void;
+  };
+
   // Update tree categories to use module-filtered routes
-  const treeCategories = [
+  const treeCategories: TreeCategory[] = [
     {
       icon: TreeDeciduous,
       title: t('trees.orchards', 'Orchards'),
       description: t('trees.orchardsDesc', 'Manage your fruit orchards'),
       route: '/orchards',
+      onClick: () => navigate({ to: '/orchards' }),
       color: 'text-emerald-600',
       bgColor: 'bg-emerald-100',
     },
@@ -53,17 +65,9 @@ function Trees() {
       title: t('trees.pruning', 'Pruning'),
       description: t('trees.pruningDesc', 'Track pruning schedules'),
       route: '/pruning',
+      onClick: () => navigate({ to: '/pruning' }),
       color: 'text-orange-600',
       bgColor: 'bg-orange-100',
-    },
-    {
-      icon: Sprout,
-      title: t('trees.varieties', 'Tree Varieties'),
-      description: t('trees.varietiesDesc', 'Browse available tree varieties'),
-      route: '/crops',
-      search: { module: 'fruit-trees' },
-      color: 'text-green-600',
-      bgColor: 'bg-green-100',
     },
     {
       icon: Calendar,
@@ -71,6 +75,7 @@ function Trees() {
       description: t('trees.harvestsDesc', 'Track fruit harvest records'),
       route: '/harvests',
       search: { module: 'fruit-trees' },
+      onClick: () => navigate({ to: '/harvests' }),
       color: 'text-amber-600',
       bgColor: 'bg-amber-100',
     },
@@ -95,13 +100,7 @@ function Trees() {
             <Card
               key={category.route}
               className="cursor-pointer transition-all hover:shadow-lg"
-              onClick={() => {
-                if (category.search) {
-                  navigate({ to: category.route as any, search: category.search as any });
-                } else {
-                  navigate({ to: category.route as any });
-                }
-              }}
+              onClick={category.onClick}
             >
               <CardHeader>
                 <div

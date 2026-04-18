@@ -2,7 +2,9 @@ import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { DatabaseService } from '../database/database.service';
 import { SequencesService } from '../sequences/sequences.service';
+import { FiscalYearsService } from '../fiscal-years/fiscal-years.service';
 import { CreateJournalEntryDto, JournalEntryType, JournalEntryStatus } from './dto/create-journal-entry.dto';
+import { sanitizeSearch } from '../../common/utils/sanitize-search';
 
 @Injectable()
 export class AccountingAutomationService {
@@ -11,6 +13,7 @@ export class AccountingAutomationService {
   constructor(
     private readonly databaseService: DatabaseService,
     private readonly sequencesService: SequencesService,
+    private readonly fiscalYearsService: FiscalYearsService,
   ) {}
 
   /**
@@ -26,7 +29,9 @@ export class AccountingAutomationService {
     date: Date,
     description: string,
     createdBy: string,
+    parcelId?: string,
   ): Promise<any> {
+    await this.assertPeriodOpen(organizationId, date);
     const supabase = this.databaseService.getAdminClient();
 
     // Get account mappings
@@ -62,6 +67,10 @@ export class AccountingAutomationService {
     // Generate journal entry number
     const entryNumber = await this.generateJournalEntryNumber(supabase, organizationId);
 
+    // Resolve fiscal year from date
+    const dateStr = date instanceof Date ? date.toISOString().split('T')[0] : String(date);
+    const fiscalYearId = await this.fiscalYearsService.resolveFiscalYear(organizationId, dateStr);
+
     // Create journal entry (totals will be calculated by trigger after items are inserted)
     const { data: journalEntry, error: entryError } = await supabase
       .from('journal_entries')
@@ -77,6 +86,7 @@ export class AccountingAutomationService {
         total_credit: 0, // Will be updated by trigger
         status: JournalEntryStatus.DRAFT, // Start as draft, post after items inserted
         created_by: createdBy,
+        ...(fiscalYearId ? { fiscal_year_id: fiscalYearId } : {}),
       })
       .select()
       .single();
@@ -94,6 +104,8 @@ export class AccountingAutomationService {
         debit: amount,
         credit: 0,
         description: description,
+        ...(parcelId ? { parcel_id: parcelId } : {}),
+        ...(fiscalYearId ? { fiscal_year_id: fiscalYearId } : {}),
       },
       {
         journal_entry_id: journalEntry.id,
@@ -101,6 +113,8 @@ export class AccountingAutomationService {
         debit: 0,
         credit: amount,
         description: `Payment for ${costType}`,
+        ...(parcelId ? { parcel_id: parcelId } : {}),
+        ...(fiscalYearId ? { fiscal_year_id: fiscalYearId } : {}),
       },
     ];
 
@@ -129,10 +143,10 @@ export class AccountingAutomationService {
       throw new BadRequestException(`Failed to create journal items: ${itemsError.message}`);
     }
 
-    // Post the journal entry now that items are inserted and validated
+    // Post the journal entry and set correct totals (set explicitly — no DB trigger)
     const { error: postError } = await supabase
       .from('journal_entries')
-      .update({ status: JournalEntryStatus.POSTED })
+      .update({ status: JournalEntryStatus.POSTED, total_debit: totalDebit, total_credit: totalCredit })
       .eq('id', journalEntry.id);
 
     if (postError) {
@@ -157,7 +171,9 @@ export class AccountingAutomationService {
     date: Date,
     description: string,
     createdBy: string,
+    parcelId?: string,
   ): Promise<any> {
+    await this.assertPeriodOpen(organizationId, date);
     const supabase = this.databaseService.getAdminClient();
 
     // Get account mappings
@@ -193,6 +209,10 @@ export class AccountingAutomationService {
     // Generate journal entry number
     const entryNumber = await this.generateJournalEntryNumber(supabase, organizationId);
 
+    // Resolve fiscal year from date
+    const revDateStr = date instanceof Date ? date.toISOString().split('T')[0] : String(date);
+    const revFiscalYearId = await this.fiscalYearsService.resolveFiscalYear(organizationId, revDateStr);
+
     // Create journal entry (totals will be calculated by trigger after items are inserted)
     const { data: journalEntry, error: entryError } = await supabase
       .from('journal_entries')
@@ -208,6 +228,7 @@ export class AccountingAutomationService {
         total_credit: 0, // Will be updated by trigger
         status: JournalEntryStatus.DRAFT, // Start as draft, post after items inserted
         created_by: createdBy,
+        ...(revFiscalYearId ? { fiscal_year_id: revFiscalYearId } : {}),
       })
       .select()
       .single();
@@ -225,6 +246,8 @@ export class AccountingAutomationService {
         debit: amount,
         credit: 0,
         description: `Receipt for ${revenueType}`,
+        ...(parcelId ? { parcel_id: parcelId } : {}),
+        ...(revFiscalYearId ? { fiscal_year_id: revFiscalYearId } : {}),
       },
       {
         journal_entry_id: journalEntry.id,
@@ -232,6 +255,8 @@ export class AccountingAutomationService {
         debit: 0,
         credit: amount,
         description: description,
+        ...(parcelId ? { parcel_id: parcelId } : {}),
+        ...(revFiscalYearId ? { fiscal_year_id: revFiscalYearId } : {}),
       },
     ];
 
@@ -260,10 +285,10 @@ export class AccountingAutomationService {
       throw new BadRequestException(`Failed to create journal items: ${itemsError.message}`);
     }
 
-    // Post the journal entry now that items are inserted and validated
+    // Post the journal entry and set correct totals (set explicitly — no DB trigger)
     const { error: postError } = await supabase
       .from('journal_entries')
-      .update({ status: JournalEntryStatus.POSTED })
+      .update({ status: JournalEntryStatus.POSTED, total_debit: totalDebit, total_credit: totalCredit })
       .eq('id', journalEntry.id);
 
     if (postError) {
@@ -273,6 +298,29 @@ export class AccountingAutomationService {
 
     this.logger.log(`Journal entry created for revenue ${revenueId}: ${entryNumber}`);
     return journalEntry;
+  }
+
+  /**
+   * Public method to resolve an account ID by mapping type and key.
+   * Looks up org-level mappings first, falls back to global templates.
+   * Used by invoices, payments, and other services that need account resolution.
+   */
+  async resolveAccountId(
+    organizationId: string,
+    mappingType: string,
+    mappingKey: string,
+  ): Promise<string | null> {
+    const supabase = this.databaseService.getAdminClient();
+    return this.getAccountIdByMapping(supabase, organizationId, mappingType, mappingKey);
+  }
+
+  /**
+   * Delegates to FiscalYearsService. Throws if the fiscal year covering
+   * the date is closed. Safe to call from any service that posts to GL.
+   */
+  async assertPeriodOpen(organizationId: string, date: Date | string): Promise<void> {
+    const dateStr = date instanceof Date ? date.toISOString().split('T')[0] : String(date);
+    await this.fiscalYearsService.assertPeriodOpen(organizationId, dateStr);
   }
 
   /**
@@ -290,7 +338,7 @@ export class AccountingAutomationService {
       .select('account_id, account_code')
       .eq('organization_id', organizationId)
       .eq('mapping_type', mappingType)
-      .or(`mapping_key.eq.${mappingKey},source_key.eq.${mappingKey}`)
+      .or(`mapping_key.eq.${sanitizeSearch(mappingKey)},source_key.eq.${sanitizeSearch(mappingKey)}`)
       .eq('is_active', true)
       .maybeSingle();
 
@@ -355,7 +403,7 @@ export class AccountingAutomationService {
    * Replaces function: generate_journal_entry_number()
    */
   private async generateJournalEntryNumber(
-    supabase: SupabaseClient,
+    _supabase: SupabaseClient,
     organizationId: string,
   ): Promise<string> {
     try {
@@ -382,6 +430,7 @@ export class AccountingAutomationService {
     createdBy: string,
     farmId?: string,
   ): Promise<any> {
+    await this.assertPeriodOpen(organizationId, date);
     const supabase = this.databaseService.getAdminClient();
 
     // Get account mappings
@@ -442,6 +491,10 @@ export class AccountingAutomationService {
     // Generate journal entry number
     const entryNumber = await this.generateJournalEntryNumber(supabase, organizationId);
 
+    // Resolve fiscal year from date
+    const wpDateStr = date instanceof Date ? date.toISOString().split('T')[0] : String(date);
+    const wpFiscalYearId = await this.fiscalYearsService.resolveFiscalYear(organizationId, wpDateStr);
+
     // Create journal entry
     const { data: journalEntry, error: entryError } = await supabase
       .from('journal_entries')
@@ -457,6 +510,7 @@ export class AccountingAutomationService {
         total_credit: 0, // Will be updated by trigger
         status: JournalEntryStatus.DRAFT, // Start as draft, post after items inserted
         created_by: createdBy,
+        ...(wpFiscalYearId ? { fiscal_year_id: wpFiscalYearId } : {}),
       })
       .select()
       .single();
@@ -475,6 +529,7 @@ export class AccountingAutomationService {
         credit: 0,
         description: `Salary/Wages payment for ${workerName}`,
         farm_id: farmId || null,
+        ...(wpFiscalYearId ? { fiscal_year_id: wpFiscalYearId } : {}),
       },
       {
         journal_entry_id: journalEntry.id,
@@ -483,6 +538,7 @@ export class AccountingAutomationService {
         credit: amount,
         description: `Payment to ${workerName} - ${paymentType}`,
         farm_id: farmId || null,
+        ...(wpFiscalYearId ? { fiscal_year_id: wpFiscalYearId } : {}),
       },
     ];
 
@@ -511,10 +567,10 @@ export class AccountingAutomationService {
       throw new BadRequestException(`Failed to create journal items: ${itemsError.message}`);
     }
 
-    // Post the journal entry now that items are inserted and validated
+    // Post the journal entry and set correct totals (set explicitly — no DB trigger)
     const { error: postError } = await supabase
       .from('journal_entries')
-      .update({ status: JournalEntryStatus.POSTED })
+      .update({ status: JournalEntryStatus.POSTED, total_debit: totalDebit, total_credit: totalCredit })
       .eq('id', journalEntry.id);
 
     if (postError) {
@@ -524,6 +580,122 @@ export class AccountingAutomationService {
 
     this.logger.log(`Journal entry created for worker payment ${paymentId}: ${entryNumber}`);
     return journalEntry;
+  }
+
+  /**
+   * Create a reversing journal entry for a previously posted entry.
+   * Swaps debit/credit on every line and posts it. Used for invoice voids,
+   * harvest edit/delete, and any other case where a posted entry must be undone
+   * without mutating the original (preserves audit trail).
+   *
+   * Throws if the original is not posted, or if a reversal already exists.
+   */
+  async createReversalEntry(
+    organizationId: string,
+    originalEntryId: string,
+    userId: string,
+    reason: string,
+    reversalDate?: Date,
+  ): Promise<{ reversalEntryId: string; reversalNumber: string }> {
+    const supabase = this.databaseService.getAdminClient();
+
+    const { data: original, error: originalError } = await supabase
+      .from('journal_entries')
+      .select('id, entry_number, status, reference_type, reference_number, reference_id')
+      .eq('id', originalEntryId)
+      .eq('organization_id', organizationId)
+      .maybeSingle();
+
+    if (originalError || !original) {
+      throw new BadRequestException(`Original journal entry not found: ${originalError?.message ?? 'no row'}`);
+    }
+
+    if (original.status !== 'posted') {
+      throw new BadRequestException(`Only posted journal entries can be reversed (got status: ${original.status})`);
+    }
+
+    // Idempotency: refuse to create a second reversal for the same entry
+    const { data: existingReversal } = await supabase
+      .from('journal_entries')
+      .select('id')
+      .eq('organization_id', organizationId)
+      .eq('reference_type', 'Reversal')
+      .eq('reference_id', originalEntryId)
+      .maybeSingle();
+
+    if (existingReversal) {
+      throw new BadRequestException(`Reversal already exists for journal entry ${original.entry_number}`);
+    }
+
+    const effectiveDate = (reversalDate ?? new Date()).toISOString().split('T')[0];
+    await this.assertPeriodOpen(organizationId, effectiveDate);
+    const reversalNumber = await this.generateJournalEntryNumber(supabase, organizationId);
+    const now = new Date().toISOString();
+
+    const result = await this.databaseService.executeInPgTransaction(async (pgClient) => {
+      // Lock original to prevent concurrent reversal
+      const lockRes = await pgClient.query(
+        `SELECT status FROM journal_entries WHERE id = $1 AND organization_id = $2 FOR UPDATE`,
+        [originalEntryId, organizationId],
+      );
+      if (lockRes.rowCount === 0) {
+        throw new BadRequestException('Original journal entry not found');
+      }
+      if (lockRes.rows[0].status !== 'posted') {
+        throw new BadRequestException('Original journal entry is no longer posted');
+      }
+
+      const jeRes = await pgClient.query(
+        `INSERT INTO journal_entries (organization_id, entry_number, entry_date, entry_type, description, reference_type, reference_number, reference_id, remarks, created_by, status)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id`,
+        [
+          organizationId,
+          reversalNumber,
+          effectiveDate,
+          JournalEntryType.ADJUSTMENT,
+          `Reversal of ${original.entry_number}: ${reason}`,
+          'Reversal',
+          original.entry_number,
+          originalEntryId,
+          reason,
+          userId,
+          'draft',
+        ],
+      );
+      const reversalId = jeRes.rows[0].id;
+
+      // Copy items with debit/credit swapped
+      const copyRes = await pgClient.query(
+        `INSERT INTO journal_items (journal_entry_id, account_id, description, debit, credit, cost_center_id, farm_id, parcel_id)
+         SELECT $1, account_id, COALESCE('Reversal: ' || description, 'Reversal'), credit, debit, cost_center_id, farm_id, parcel_id
+         FROM journal_items WHERE journal_entry_id = $2
+         RETURNING debit, credit`,
+        [reversalId, originalEntryId],
+      );
+
+      if (copyRes.rowCount === 0) {
+        throw new BadRequestException('Original journal entry has no items to reverse');
+      }
+
+      const totalDebit = copyRes.rows.reduce((s: number, r: any) => s + Number(r.debit || 0), 0);
+      const totalCredit = copyRes.rows.reduce((s: number, r: any) => s + Number(r.credit || 0), 0);
+
+      if (Math.abs(totalDebit - totalCredit) >= 0.01) {
+        throw new BadRequestException(
+          `Reversal entry not balanced: debits=${totalDebit}, credits=${totalCredit}`,
+        );
+      }
+
+      await pgClient.query(
+        `UPDATE journal_entries SET status = 'posted', posted_by = $1, posted_at = $2, total_debit = $3, total_credit = $4 WHERE id = $5`,
+        [userId, now, totalDebit, totalCredit, reversalId],
+      );
+
+      return { reversalEntryId: reversalId };
+    });
+
+    this.logger.log(`Reversal entry ${reversalNumber} created for ${original.entry_number} (reason: ${reason})`);
+    return { reversalEntryId: result.reversalEntryId, reversalNumber };
   }
 
   /**

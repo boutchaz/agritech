@@ -10,8 +10,10 @@ export enum StockEntryType {
 
 export enum StockEntryStatus {
   DRAFT = 'Draft',
+  SUBMITTED = 'Submitted',
   POSTED = 'Posted',
   CANCELLED = 'Cancelled',
+  REVERSED = 'Reversed',
 }
 
 export enum ValuationMethod {
@@ -120,10 +122,6 @@ export class CreateStockEntryDto {
   @IsString()
   @IsOptional()
   purpose?: string;
-
-  @IsUUID()
-  @IsOptional()
-  crop_cycle_id?: string;
 
   @IsString()
   @IsOptional()

@@ -1,14 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import {  useState, useEffect  } from "react";
 import { Plus, X, FileText, Calendar } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import { DEFAULT_CURRENCY } from '../utils/currencies';
 import { productApplicationsApi, ProductApplication } from '../lib/api/product-applications';
 import { inventoryApi, InventoryProduct } from '../lib/api/inventory';
 import { parcelsApi, Parcel } from '../lib/api/parcels';
 import { farmsApi } from '../lib/api/farms';
+import { Button } from '@/components/ui/button';
+import { SectionLoader } from '@/components/ui/loader';
+
 
 type Application = ProductApplication;
 
-const ProductApplications: React.FC = () => {
+const ProductApplications = () => {
   const { currentOrganization } = useAuth();
   const [applications, setApplications] = useState<Application[]>([]);
   const [products, setProducts] = useState<InventoryProduct[]>([]);
@@ -18,7 +22,7 @@ const ProductApplications: React.FC = () => {
   const [_selectedProduct, setSelectedProduct] = useState<string>('');
   const [farmId, setFarmId] = useState<string | null>(null);
 
-  const currency = currentOrganization?.currency || 'MAD';
+  const currency = currentOrganization?.currency || DEFAULT_CURRENCY;
 
   const [newApplication, setNewApplication] = useState({
     product_id: '',
@@ -63,17 +67,10 @@ const ProductApplications: React.FC = () => {
         currentOrganization.id
       );
 
-      // Handle paginated response: { success: true, farms: [...], total: ... }
-      let farms: any[] = [];
-      if (data && typeof data === 'object' && 'farms' in data && Array.isArray((data as { farms: any[] }).farms)) {
-        const farmsData = (data as { farms: any[] }).farms;
-        farms = farmsData.map((farm: any) => ({
-          id: farm.farm_id || farm.id,
-          name: farm.farm_name || farm.name,
-        }));
-      } else if (Array.isArray(data)) {
-        farms = data;
-      }
+      const farms = (data || []).map((farm: { farm_id?: string; id?: string; farm_name?: string; name?: string }) => ({
+        id: farm.farm_id || farm.id,
+        name: farm.farm_name || farm.name,
+      }));
 
       if (farms && farms.length > 0) {
         setFarmId(farms[0].id);
@@ -150,9 +147,7 @@ const ProductApplications: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
-      </div>
+      <SectionLoader />
     );
   }
 
@@ -163,13 +158,13 @@ const ProductApplications: React.FC = () => {
         <h2 className="text-lg font-medium text-gray-900 dark:text-white">
           Applications de Produits
         </h2>
-        <button
+        <Button variant="green"
           onClick={() => setShowAddModal(true)}
-          className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+          className="flex items-center space-x-2 px-4 py-2 rounded-md"
         >
           <Plus className="h-5 w-5" />
           <span>Nouvelle Application</span>
-        </button>
+        </Button>
       </div>
 
       {/* Applications List */}
@@ -186,7 +181,7 @@ const ProductApplications: React.FC = () => {
       ) : (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
           <div className="divide-y divide-gray-200 dark:divide-gray-700">
-            {applications.map((app: any) => (
+            {applications.map((app: { id: string; inventory: { name: string }; application_date: string; quantity_used: number; area_treated: number; notes?: string; cost?: number }) => (
               <div key={app.id} className="p-6">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
@@ -228,12 +223,12 @@ const ProductApplications: React.FC = () => {
               <h3 className="text-lg font-medium text-gray-900 dark:text-white">
                 Nouvelle Application
               </h3>
-              <button
+              <Button
                 onClick={() => setShowAddModal(false)}
                 className="text-gray-400 hover:text-gray-500"
               >
                 <X className="h-6 w-6" />
-              </button>
+              </Button>
             </div>
             <div className="space-y-4">
               <div>
@@ -358,19 +353,15 @@ const ProductApplications: React.FC = () => {
               </div>
             </div>
             <div className="mt-6 flex justify-end space-x-3">
-              <button
+              <Button
                 onClick={() => setShowAddModal(false)}
                 className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-500"
               >
                 Annuler
-              </button>
-              <button
-                onClick={handleAddApplication}
-                disabled={!newApplication.product_id || !newApplication.quantity_used}
-                className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
-              >
+              </Button>
+              <Button variant="green" onClick={handleAddApplication} disabled={!newApplication.product_id || !newApplication.quantity_used} className="px-4 py-2 text-sm font-medium rounded-md disabled:cursor-not-allowed" >
                 Enregistrer
-              </button>
+              </Button>
             </div>
           </div>
         </div>

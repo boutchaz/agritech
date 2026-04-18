@@ -1,16 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import {  useState, useEffect  } from "react";
 import { Sliders, Save, Loader2 } from 'lucide-react';
 import { FormField } from './ui/FormField';
 import { Select } from './ui/Select';
 import { ExperienceLevelSelector } from './settings/ExperienceLevelSelector';
 import { Button } from './ui/button';
+import { Switch } from './ui/switch';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../hooks/useAuth';
 import { usersApi } from '../lib/api/users';
 import { useQueryClient } from '@tanstack/react-query';
+import { isRTLLocale } from '@/lib/is-rtl-locale';
+import { loadLanguage } from '@/i18n/config';
 
-const PreferencesSettings: React.FC = () => {
+const PreferencesSettings = () => {
   const { i18n, t } = useTranslation();
   const { user, profile } = useAuth();
   const queryClient = useQueryClient();
@@ -29,13 +32,13 @@ const PreferencesSettings: React.FC = () => {
   // Handle language change immediately
   const handleLanguageChange = async (newLanguage: string) => {
     setLanguage(newLanguage);
-    // Immediately change i18n language
-    await i18n.changeLanguage(newLanguage);
-    
+    // Load bundles then switch language
+    await loadLanguage(newLanguage);
+
     // Set document direction for RTL languages
-    if (newLanguage === 'ar') {
+    if (isRTLLocale(newLanguage)) {
       document.documentElement.dir = 'rtl';
-      document.documentElement.lang = 'ar';
+      document.documentElement.lang = newLanguage.split('-')[0] || 'ar';
     } else {
       document.documentElement.dir = 'ltr';
       document.documentElement.lang = newLanguage;
@@ -45,8 +48,8 @@ const PreferencesSettings: React.FC = () => {
   // Load user preferences from profile
   useEffect(() => {
     if (profile) {
-      const userLanguage = (profile as any).language || i18n.language || 'fr';
-      const userTimezone = (profile as any).timezone || 'Africa/Casablanca';
+      const userLanguage = profile.language || i18n.language || 'fr';
+      const userTimezone = profile.timezone || 'Africa/Casablanca';
 
       // Only set the state for display, don't change i18n language automatically
       // This allows users to keep their current language selection until they explicitly change it
@@ -86,11 +89,11 @@ const PreferencesSettings: React.FC = () => {
 
       // Update i18n language immediately
       if (i18n.language !== language) {
-        await i18n.changeLanguage(language);
+        await loadLanguage(language);
         // Set document direction
-        if (language === 'ar') {
+        if (isRTLLocale(language)) {
           document.documentElement.dir = 'rtl';
-          document.documentElement.lang = 'ar';
+          document.documentElement.lang = language.split('-')[0] || 'ar';
         } else {
           document.documentElement.dir = 'ltr';
           document.documentElement.lang = language;
@@ -138,11 +141,7 @@ const PreferencesSettings: React.FC = () => {
             {t('preferences.title')}
           </h2>
         </div>
-        <Button
-          onClick={handleSave}
-          disabled={isSaving}
-          className="bg-green-600 hover:bg-green-700"
-        >
+        <Button variant="green" onClick={handleSave} disabled={isSaving} >
           <Save className="h-4 w-4 mr-2" />
           {isSaving ? t('preferences.saving') : t('preferences.save')}
         </Button>
@@ -173,7 +172,6 @@ const PreferencesSettings: React.FC = () => {
                 <option value="fr">Français</option>
                 <option value="en">English</option>
                 <option value="ar">العربية</option>
-                <option value="es">Español</option>
               </Select>
             </FormField>
 
@@ -208,15 +206,7 @@ const PreferencesSettings: React.FC = () => {
                   {t('preferences.notifications.email.description')}
                 </p>
               </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={notifications.email}
-                  onChange={(e) => setNotifications({ ...notifications, email: e.target.checked })}
-                  className="sr-only peer"
-                />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 dark:peer-focus:ring-green-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-green-600"></div>
-              </label>
+              <Switch checked={notifications.email} onCheckedChange={(val) => setNotifications({ ...notifications, email: val })} />
             </div>
 
             <div className="flex items-center justify-between">
@@ -226,15 +216,7 @@ const PreferencesSettings: React.FC = () => {
                   {t('preferences.notifications.push.description')}
                 </p>
               </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={notifications.push}
-                  onChange={(e) => setNotifications({ ...notifications, push: e.target.checked })}
-                  className="sr-only peer"
-                />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 dark:peer-focus:ring-green-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-green-600"></div>
-              </label>
+              <Switch checked={notifications.push} onCheckedChange={(val) => setNotifications({ ...notifications, push: val })} />
             </div>
 
             <div className="flex items-center justify-between">
@@ -244,15 +226,7 @@ const PreferencesSettings: React.FC = () => {
                   {t('preferences.notifications.alerts.description')}
                 </p>
               </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={notifications.alerts}
-                  onChange={(e) => setNotifications({ ...notifications, alerts: e.target.checked })}
-                  className="sr-only peer"
-                />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 dark:peer-focus:ring-green-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-green-600"></div>
-              </label>
+              <Switch checked={notifications.alerts} onCheckedChange={(val) => setNotifications({ ...notifications, alerts: val })} />
             </div>
 
             <div className="flex items-center justify-between">
@@ -262,15 +236,7 @@ const PreferencesSettings: React.FC = () => {
                   {t('preferences.notifications.reports.description')}
                 </p>
               </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={notifications.reports}
-                  onChange={(e) => setNotifications({ ...notifications, reports: e.target.checked })}
-                  className="sr-only peer"
-                />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 dark:peer-focus:ring-green-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-green-600"></div>
-              </label>
+              <Switch checked={notifications.reports} onCheckedChange={(val) => setNotifications({ ...notifications, reports: val })} />
             </div>
           </div>
         </div>
@@ -289,10 +255,7 @@ const PreferencesSettings: React.FC = () => {
                 {t('preferences.dataPrivacy.analytics.description')}
               </p>
             </div>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input type="checkbox" className="sr-only peer" defaultChecked />
-              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 dark:peer-focus:ring-green-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-green-600"></div>
-            </label>
+            <Switch defaultChecked />
           </div>
 
           <div className="text-sm text-gray-500 dark:text-gray-400">

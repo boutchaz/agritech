@@ -138,6 +138,40 @@ export const queryKeys = {
     },
   },
 
+  calibration: {
+    status: (parcelId: string, organizationId?: string) =>
+      ['calibration', organizationId ?? 'none', parcelId, 'status'] as const,
+    report: (parcelId: string, organizationId?: string) =>
+      ['calibration', organizationId ?? 'none', parcelId, 'report'] as const,
+    nutritionSuggestion: (parcelId: string, organizationId?: string) =>
+      ['calibration', organizationId ?? 'none', parcelId, 'nutrition-suggestion'] as const,
+    phase: (parcelId: string, organizationId?: string) =>
+      ['calibration', organizationId ?? 'none', parcelId, 'phase'] as const,
+    history: (parcelId: string, organizationId?: string) =>
+      ['calibration', organizationId ?? 'none', parcelId, 'history'] as const,
+    draft: (parcelId: string, organizationId?: string) =>
+      ['calibration', organizationId ?? 'none', parcelId, 'draft'] as const,
+    review: (parcelId: string, organizationId?: string) =>
+      ['calibration', organizationId ?? 'none', parcelId, 'review'] as const,
+    percentiles: (parcelId: string, organizationId?: string) =>
+      ['calibration', organizationId ?? 'none', parcelId, 'percentiles'] as const,
+    zones: (parcelId: string, organizationId?: string) =>
+      ['calibration', organizationId ?? 'none', parcelId, 'zones'] as const,
+    irrigation: (parcelId: string, organizationId?: string) =>
+      ['calibration', organizationId ?? 'none', parcelId, 'irrigation'] as const,
+  },
+
+  annual: {
+    eligibility: (parcelId: string, organizationId?: string) =>
+      ['annual', 'eligibility', parcelId, organizationId ?? 'none'] as const,
+    missingTasks: (parcelId: string, organizationId?: string) =>
+      ['annual', 'missing-tasks', parcelId, organizationId ?? 'none'] as const,
+    newAnalyses: (parcelId: string, organizationId?: string) =>
+      ['annual', 'new-analyses', parcelId, organizationId ?? 'none'] as const,
+    campaignBilan: (parcelId: string, organizationId?: string) =>
+      ['annual', 'campaign-bilan', parcelId, organizationId ?? 'none'] as const,
+  },
+
   /**
    * Profitability
    */

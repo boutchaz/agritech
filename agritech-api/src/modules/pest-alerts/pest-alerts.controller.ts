@@ -20,6 +20,7 @@ import {
 } from '@nestjs/swagger';
 import { PestAlertsService } from './pest-alerts.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { OrganizationGuard } from '../../common/guards/organization.guard';
 import { PoliciesGuard } from '../casl/policies.guard';
 import { CheckPolicies } from '../casl/check-policies.decorator';
 import { Action } from '../casl/action.enum';
@@ -30,7 +31,7 @@ import { PestReportResponseDto, PestDiseaseLibraryDto } from './dto/pest-report-
 
 @ApiTags('pest-alerts')
 @Controller('pest-alerts')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, OrganizationGuard)
 @ApiBearerAuth()
 export class PestAlertsController {
   constructor(private pestAlertsService: PestAlertsService) {}
@@ -177,6 +178,31 @@ export class PestAlertsController {
   ): Promise<void> {
     const organizationId = req.headers['x-organization-id'] as string;
     return this.pestAlertsService.deleteReport(organizationId, reportId);
+  }
+
+  @Get('disease-risk/:parcelId')
+  @UseGuards(PoliciesGuard)
+  @CheckPolicies((ability: AppAbility) => ability.can(Action.Read, 'Farm'))
+  @ApiOperation({
+    summary: 'Get disease risk assessment for a parcel',
+    description: 'Evaluates disease risk based on current weather conditions and crop-specific thresholds',
+  })
+  @ApiParam({
+    name: 'parcelId',
+    description: 'Parcel ID',
+    type: String,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Disease risk assessment retrieved successfully',
+  })
+  @ApiResponse({ status: 404, description: 'Parcel not found' })
+  async getDiseaseRisk(
+    @Request() req,
+    @Param('parcelId') parcelId: string,
+  ) {
+    const organizationId = req.headers['x-organization-id'] as string;
+    return this.pestAlertsService.getDiseaseRisk(parcelId, organizationId);
   }
 
   @Post('reports/:id/escalate')

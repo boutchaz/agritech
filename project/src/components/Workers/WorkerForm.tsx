@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from "react";
+import {  useEffect, useState  } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Save, UserPlus, AlertCircle, X, Shield } from "lucide-react";
+import { ApiError } from "@/lib/api-client-axios";
+import { Save, UserPlus, AlertCircle, AlertTriangle, X, Shield } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import type { Worker, WorkerFormData } from "../../types/workers";
@@ -11,29 +12,22 @@ import {
   METAYAGE_TYPE_OPTIONS,
   CALCULATION_BASIS_OPTIONS,
   PAYMENT_FREQUENCY_OPTIONS,
+  WORKER_TYPES,
+  PAYMENT_FREQUENCIES,
+  METAYAGE_TYPES,
+  CALCULATION_BASES,
 } from "../../types/workers";
 import { useCreateWorker, useUpdateWorker } from "../../hooks/useWorkers";
 import { useCurrency } from "../../hooks/useCurrency";
 import { useFormErrors } from "../../hooks/useFormErrors";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "../ui/dialog";
-import {
-  Drawer,
-  DrawerContent,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerFooter,
-} from "../ui/drawer";
+import { ResponsiveDialog } from "../ui/responsive-dialog";
 import { Button } from "../ui/button";
-import { useIsMobile } from "@/hooks/useMediaQuery";
+import { ButtonLoader } from '@/components/ui/loader';
+import { Switch } from '@/components/ui/switch';
+
 
 // Zod schema factory function with conditional validation
-const createWorkerSchema = (t: any) =>
+const createWorkerSchema = (t: (key: string) => string) =>
   z
     .object({
       first_name: z.string().min(2, t("workers.form.validation.firstNameMin")),
@@ -47,7 +41,7 @@ const createWorkerSchema = (t: any) =>
         .or(z.literal("")),
       address: z.string().optional(),
       date_of_birth: z.string().optional(),
-      worker_type: z.enum(["fixed_salary", "daily_worker", "metayage"]),
+      worker_type: z.enum(WORKER_TYPES),
       position: z.string().optional(),
       hire_date: z.string(),
       farm_id: z.string().optional(),
@@ -57,15 +51,16 @@ const createWorkerSchema = (t: any) =>
       daily_rate: z.number().positive().optional(),
       per_unit_rate: z.number().positive().optional(),
       metayage_type: z
-        .enum(["khammass", "rebaa", "tholth", "custom"])
+        .enum(METAYAGE_TYPES)
         .optional(),
       metayage_percentage: z.number().min(0).max(50).optional(),
-      calculation_basis: z.enum(["gross_revenue", "net_revenue"]).optional(),
+      calculation_basis: z.enum(CALCULATION_BASES).optional(),
       specialties: z.array(z.string()).optional(),
       certifications: z.array(z.string()).optional(),
       payment_frequency: z
-        .enum(["monthly", "daily", "per_task", "harvest_share"])
+        .enum(PAYMENT_FREQUENCIES)
         .optional(),
+      payment_frequencies: z.array(z.string()).optional(),
       bank_account: z.string().optional(),
       payment_method: z.string().optional(),
       notes: z.string().optional(),
@@ -77,13 +72,6 @@ const createWorkerSchema = (t: any) =>
           code: z.ZodIssueCode.custom,
           path: ["monthly_salary"],
           message: t("workers.form.validation.monthlySalaryRequired"),
-        });
-      }
-      if (data.worker_type === "daily_worker" && !data.daily_rate) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["daily_rate"],
-          message: t("workers.form.validation.dailyRateRequired"),
         });
       }
       if (data.worker_type === "metayage") {
@@ -109,18 +97,20 @@ interface WorkerFormProps {
   worker?: Worker | null;
   organizationId: string;
   farms: Array<{ id: string; name: string }>;
+  existingWorkers?: Worker[];
   onClose: () => void;
   onSuccess?: () => void;
 }
 
-const WorkerForm: React.FC<WorkerFormProps> = ({
+const WorkerForm = ({
   open,
   worker,
   organizationId,
   farms,
+  existingWorkers = [],
   onClose,
   onSuccess,
-}) => {
+}: WorkerFormProps) => {
   const { t } = useTranslation();
   const { handleFormError } = useFormErrors<WorkerFormData>();
   const isEditing = !!worker;
@@ -130,14 +120,16 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
   const createWorker = useCreateWorker();
   const updateWorker = useUpdateWorker();
   const { symbol: currencySymbol } = useCurrency();
-  const isMobile = useIsMobile();
-
   const [specialtyInput, setSpecialtyInput] = useState("");
   const [certificationInput, setCertificationInput] = useState("");
   const [grantPlatformAccess, setGrantPlatformAccess] = useState(
     !!worker?.user_id,
   );
   const [platformAccessLoading, setPlatformAccessLoading] = useState(false);
+  const [duplicateWarning, setDuplicateWarning] = useState<{
+    matches: Worker[];
+    pendingData: WorkerFormData;
+  } | null>(null);
 
   const {
     register,
@@ -188,6 +180,7 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
         specialties: worker.specialties || [],
         certifications: worker.certifications || [],
         payment_frequency: worker.payment_frequency ?? undefined,
+        payment_frequencies: worker.payment_frequencies || [],
         bank_account: worker.bank_account || "",
         payment_method: worker.payment_method || "",
         notes: worker.notes || "",
@@ -217,13 +210,14 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
         specialties: [],
         certifications: [],
         payment_frequency: undefined,
+        payment_frequencies: [],
         bank_account: "",
         payment_method: "",
         notes: "",
       });
       setGrantPlatformAccess(false);
     }
-  }, [worker, open, reset]);
+  }, [worker, reset]);
 
   const watchEmail = watch("email");
   const workerType = watch("worker_type");
@@ -232,7 +226,7 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
   const isCnssDecl = watch("is_cnss_declared");
   const specialties = watch("specialties") || [];
   const certifications = watch("certifications") || [];
-  const perUnitRate = watch("per_unit_rate");
+  // per_unit_rate is now set at task level, not worker profile
 
   useEffect(() => {
     if (!isEditing) {
@@ -243,8 +237,11 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
         setValue("metayage_type", undefined);
       } else if (workerType === "daily_worker") {
         setValue("monthly_salary", undefined);
+        setValue("daily_rate", undefined);
+        setValue("per_unit_rate", undefined);
         setValue("metayage_percentage", undefined);
         setValue("metayage_type", undefined);
+        setValue("payment_frequency", undefined);
       } else if (workerType === "metayage") {
         setValue("monthly_salary", undefined);
         setValue("daily_rate", undefined);
@@ -287,9 +284,24 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
       // Clear the manual error if platform access is disabled
       clearErrors("email");
     }
-  }, [grantPlatformAccess, watchEmail]);
+  }, [clearErrors, errors.email?.type, grantPlatformAccess, setError, t, watchEmail]);
 
-  const onSubmit = async (data: WorkerFormData) => {
+  const submitWorker = async (data: WorkerFormData, bypassDuplicateCheck = false) => {
+    // Duplicate check — only on create, skip if user already confirmed
+    if (!isEditing && !bypassDuplicateCheck) {
+      const firstName = data.first_name.trim().toLowerCase();
+      const lastName = data.last_name.trim().toLowerCase();
+      const matches = existingWorkers.filter(
+        (w) =>
+          w.first_name.trim().toLowerCase() === firstName &&
+          w.last_name.trim().toLowerCase() === lastName,
+      );
+      if (matches.length > 0) {
+        setDuplicateWarning({ matches, pendingData: data });
+        return;
+      }
+    }
+
     try {
       let workerId = worker?.id;
 
@@ -308,6 +320,11 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
         bank_account: data.bank_account?.trim() || undefined,
         payment_method: data.payment_method?.trim() || undefined,
         notes: data.notes?.trim() || undefined,
+        // Daily workers: rates are defined at task level, not in the profile
+        ...(data.worker_type === "daily_worker" && {
+          daily_rate: undefined,
+          per_unit_rate: undefined,
+        }),
       };
 
       // 1. Create or update the worker
@@ -381,6 +398,10 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
       onSuccess?.();
       onClose();
     } catch (error: unknown) {
+      console.error('[WorkerForm] Submit error:', error);
+      if (error instanceof ApiError) {
+        console.error('[WorkerForm] Backend response:', error.responseData);
+      }
       // Use generic error handler for worker create/update errors
       handleFormError(error, setError);
     }
@@ -436,10 +457,10 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
       <Button type="button" variant="outline" onClick={onClose}>
         {t("workers.form.buttons.cancel")}
       </Button>
-      <Button type="submit" form="worker-form" disabled={isSubmitting}>
-        {isSubmitting ? (
+      <Button type="submit" form="worker-form" disabled={isSubmitting || createWorker.isPending || updateWorker.isPending}>
+        {isSubmitting || createWorker.isPending || updateWorker.isPending ? (
           <>
-            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+            <ButtonLoader />
             <span>{t("workers.form.buttons.saving")}</span>
           </>
         ) : (
@@ -460,7 +481,7 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
   const formContent = (
     <form
       id="worker-form"
-      onSubmit={handleSubmit(onSubmit)}
+      onSubmit={handleSubmit((data) => submitWorker(data))}
       className="space-y-6"
     >
       {/* Error Summary */}
@@ -485,11 +506,70 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
         </div>
       )}
 
+      {/* Duplicate worker warning */}
+      {duplicateWarning && (
+        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-700 rounded-lg p-4">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
+            <div className="flex-1">
+              <h4 className="text-sm font-semibold text-amber-900 dark:text-amber-100 mb-2">
+                {t("workers.confirmations.duplicateTitle")}
+              </h4>
+              <ul className="text-sm text-amber-800 dark:text-amber-200 space-y-1 mb-3">
+                {duplicateWarning.matches.map((w) => (
+                  <li key={w.id} className="flex flex-wrap gap-x-3 gap-y-0.5">
+                    <span className="font-medium">
+                      {w.first_name} {w.last_name}
+                    </span>
+                    {w.cin && (
+                      <span className="text-amber-700 dark:text-amber-300">
+                        CIN: {w.cin}
+                      </span>
+                    )}
+                    {w.phone && (
+                      <span className="text-amber-700 dark:text-amber-300">
+                        {t("workers.form.fields.phone")}: {w.phone}
+                      </span>
+                    )}
+                    {w.email && (
+                      <span className="text-amber-700 dark:text-amber-300">
+                        {w.email}
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+              <p className="text-sm text-amber-800 dark:text-amber-200 mb-3">
+                {t("workers.confirmations.duplicateQuestion")}
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setDuplicateWarning(null)}
+                >
+                  {t("workers.form.buttons.cancel")}
+                </Button>
+                <Button variant="amber" type="button" size="sm" onClick={() => {
+                    const data = duplicateWarning.pendingData;
+                    setDuplicateWarning(null);
+                    submitWorker(data, true);
+                  }}
+                >
+                  {t("workers.confirmations.duplicateContinue")}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Worker Type */}
       <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+        <div className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
           {t("workers.form.fields.workerType")} *
-        </label>
+        </div>
         <select
           {...register("worker_type")}
           className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
@@ -514,9 +594,9 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <div className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               {t("workers.form.fields.firstName")} *
-            </label>
+            </div>
             <input
               {...register("first_name")}
               type="text"
@@ -531,9 +611,9 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <div className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               {t("workers.form.fields.lastName")} *
-            </label>
+            </div>
             <input
               {...register("last_name")}
               type="text"
@@ -548,9 +628,9 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <div className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               {t("workers.form.fields.cin")}
-            </label>
+            </div>
             <input
               {...register("cin")}
               type="text"
@@ -560,9 +640,9 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <div className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               {t("workers.form.fields.phone")}
-            </label>
+            </div>
             <input
               {...register("phone")}
               type="tel"
@@ -572,9 +652,9 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <div className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               {t("workers.form.fields.email")}
-            </label>
+            </div>
             <input
               {...register("email")}
               type="email"
@@ -589,9 +669,9 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <div className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               {t("workers.form.fields.dateOfBirth")}
-            </label>
+            </div>
             <input
               {...register("date_of_birth")}
               type="date"
@@ -600,9 +680,9 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
           </div>
 
           <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <div className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               {t("workers.form.fields.address")}
-            </label>
+            </div>
             <textarea
               {...register("address")}
               rows={2}
@@ -622,18 +702,11 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
               <h4 className="text-sm font-semibold text-blue-900 dark:text-blue-100">
                 {t("workers.form.sections.platformAccess")}
               </h4>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={grantPlatformAccess}
-                  onChange={(e) => setGrantPlatformAccess(e.target.checked)}
-                  disabled={
-                    platformAccessLoading || (isEditing && !!worker?.user_id)
-                  }
-                  className="sr-only peer"
-                />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
-              </label>
+              <Switch
+                checked={grantPlatformAccess}
+                onCheckedChange={(val) => setGrantPlatformAccess(val)}
+                disabled={platformAccessLoading || (isEditing && !!worker?.user_id)}
+              />
             </div>
 
             <p className="text-sm text-blue-700 dark:text-blue-300 mb-2">
@@ -670,9 +743,9 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <div className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               {t("workers.form.fields.position")}
-            </label>
+            </div>
             <input
               {...register("position")}
               type="text"
@@ -682,9 +755,9 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <div className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               {t("workers.form.fields.farm")}
-            </label>
+            </div>
             <select
               {...register("farm_id")}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
@@ -704,9 +777,9 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <div className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               {t("workers.form.fields.hireDate")} *
-            </label>
+            </div>
             <input
               {...register("hire_date")}
               type="date"
@@ -739,9 +812,9 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
         </div>
         {isCnssDecl && (
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <div className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               {t("workers.form.fields.cnssNumber")}
-            </label>
+            </div>
             <input
               {...register("cnss_number")}
               type="text"
@@ -761,12 +834,12 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
         {/* Fixed Salary */}
         {workerType === "fixed_salary" && (
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              {t("workers.form.fields.monthlySalary", {
-                currency: currencySymbol,
-              })}{" "}
-              *
-            </label>
+              <div className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                {t("workers.form.fields.monthlySalary", {
+                  currency: currencySymbol,
+                })}{" "}
+                *
+              </div>
             <input
               {...register("monthly_salary", { valueAsNumber: true })}
               type="number"
@@ -785,55 +858,42 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
         {/* Daily Worker */}
         {workerType === "daily_worker" && (
           <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  {t("workers.form.fields.dailyRate", {
-                    currency: currencySymbol,
-                  })}{" "}
-                  *
-                </label>
-                <input
-                  {...register("daily_rate", { valueAsNumber: true })}
-                  type="number"
-                  step="0.01"
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                  placeholder={t("workers.form.placeholders.dailyRate")}
-                />
-                {errors.daily_rate && (
-                  <p className="text-red-600 text-sm mt-1">
-                    {errors.daily_rate.message}
-                  </p>
-                )}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  {t("workers.form.fields.perUnitRate", {
-                    currency: currencySymbol,
-                  })}
-                </label>
-                <input
-                  {...register("per_unit_rate", { valueAsNumber: true })}
-                  type="number"
-                  step="0.01"
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                  placeholder={t("workers.form.placeholders.perUnitRate")}
-                />
-                {errors.per_unit_rate && (
-                  <p className="text-red-600 text-sm mt-1">
-                    {errors.per_unit_rate.message}
-                  </p>
-                )}
-                {perUnitRate != null && perUnitRate > 0 && (
-                  <p className="text-sm font-medium text-green-700 dark:text-green-400 mt-1">
-                    {t('workers.form.perUnitSummary', { rate: perUnitRate, currency: currencySymbol }) || `Le paiement par unité est de ${perUnitRate} ${currencySymbol}`}
-                  </p>
-                )}
-              </div>
-            </div>
             <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg text-sm text-blue-800 dark:text-blue-200">
-              <p>{t("workers.form.perUnitRateInfo")}</p>
+              <p>{t("workers.form.ratesDefinedAtTask", "Les taux (journalier, à l'unité) sont définis lors de la création de chaque tâche.")}</p>
             </div>
+
+            <div>
+              <div className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                {t("workers.form.fields.paymentModes", "Modes de paiement acceptés")}
+              </div>
+              <div className="space-y-2">
+                {[
+                  { value: 'daily' as const, label: t("workers.form.paymentMode.daily", "Journalier") },
+                  { value: 'per_task' as const, label: t("workers.form.paymentMode.perTask", "À la tâche") },
+                  { value: 'per_unit' as const, label: t("workers.form.paymentMode.perUnit", "À l'unité") },
+                  { value: 'harvest_share' as const, label: t("workers.form.paymentMode.harvestShare", "Part de récolte") },
+                ].map((mode) => {
+                  const currentFreqs = watch("payment_frequencies") || [];
+                  return (
+                    <label key={mode.value} className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={currentFreqs.includes(mode.value)}
+                        onChange={(e) => {
+                          const updated = e.target.checked
+                            ? [...currentFreqs, mode.value]
+                            : currentFreqs.filter((f: string) => f !== mode.value);
+                          setValue("payment_frequencies", updated);
+                        }}
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className="text-sm text-gray-700 dark:text-gray-300">{mode.label}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+
           </div>
         )}
 
@@ -842,9 +902,9 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <div className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   {t("workers.form.fields.metayageType")} *
-                </label>
+                </div>
                 <select
                   {...register("metayage_type")}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
@@ -863,9 +923,9 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <div className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   {t("workers.form.fields.metayagePercentage")} *
-                </label>
+                </div>
                 <input
                   {...register("metayage_percentage", { valueAsNumber: true })}
                   type="number"
@@ -886,9 +946,9 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <div className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 {t("workers.form.fields.calculationBasis")}
-              </label>
+              </div>
               <select
                 {...register("calculation_basis")}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
@@ -935,11 +995,12 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
         </h3>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Payment Frequency */}
+          {/* Payment Frequency — hidden for daily workers (they use payment_frequencies checkboxes) */}
+          {workerType !== "daily_worker" && (
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <div className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               {t("workers.form.fields.paymentFrequency")}
-            </label>
+            </div>
             <select
               {...register("payment_frequency")}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
@@ -953,8 +1014,7 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
                 // "daily" for daily workers and fixed salary
 
                 if (
-                  option.value === "per_task" &&
-                  workerType !== "daily_worker"
+                  option.value === "per_task"
                 ) {
                   return null; // Hide "À la tâche" for non-daily workers
                 }
@@ -984,18 +1044,17 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
               {workerType === "fixed_salary" &&
                 t("workers.form.paymentFrequencyHint.fixedSalary")}
-              {workerType === "daily_worker" &&
-                t("workers.form.paymentFrequencyHint.dailyWorker")}
               {workerType === "metayage" &&
                 t("workers.form.paymentFrequencyHint.metayage")}
             </p>
           </div>
+          )}
 
           {/* Payment Method */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <div className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               {t("workers.form.fields.paymentMethod")}
-            </label>
+            </div>
             <select
               {...register("payment_method")}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
@@ -1018,9 +1077,9 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
 
           {/* Bank Account (conditional) */}
           <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <div className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               {t("workers.form.fields.bankAccount")}
-            </label>
+            </div>
             <input
               {...register("bank_account")}
               type="text"
@@ -1093,9 +1152,9 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
 
         {/* Specialties */}
         <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <div className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             {t("workers.form.fields.specialties")}
-          </label>
+          </div>
           <div className="flex gap-2 mb-2">
             <input
               type="text"
@@ -1107,28 +1166,24 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
               className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
               placeholder={t("workers.form.placeholders.specialties")}
             />
-            <button
-              type="button"
-              onClick={addSpecialty}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-            >
+            <Button variant="blue" type="button" onClick={addSpecialty} className="px-4 py-2 rounded-lg" >
               {t("workers.form.buttons.add")}
-            </button>
+            </Button>
           </div>
           <div className="flex flex-wrap gap-2">
             {specialties.map((specialty, index) => (
               <span
-                key={index}
+                key={specialty}
                 className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 rounded-full text-sm"
               >
                 {specialty}
-                <button
+                <Button
                   type="button"
                   onClick={() => removeSpecialty(index)}
                   className="hover:text-blue-600"
                 >
                   <X className="w-3 h-3" />
-                </button>
+                </Button>
               </span>
             ))}
           </div>
@@ -1136,9 +1191,9 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
 
         {/* Certifications */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <div className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             {t("workers.form.fields.certifications")}
-          </label>
+          </div>
           <div className="flex gap-2 mb-2">
             <input
               type="text"
@@ -1150,28 +1205,24 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
               className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
               placeholder={t("workers.form.placeholders.certifications")}
             />
-            <button
-              type="button"
-              onClick={addCertification}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-            >
+            <Button variant="blue" type="button" onClick={addCertification} className="px-4 py-2 rounded-lg" >
               {t("workers.form.buttons.add")}
-            </button>
+            </Button>
           </div>
           <div className="flex flex-wrap gap-2">
             {certifications.map((cert, index) => (
               <span
-                key={index}
+                key={cert}
                 className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200 rounded-full text-sm"
               >
                 {cert}
-                <button
+                <Button
                   type="button"
                   onClick={() => removeCertification(index)}
                   className="hover:text-green-600"
                 >
                   <X className="w-3 h-3" />
-                </button>
+                </Button>
               </span>
             ))}
           </div>
@@ -1180,9 +1231,9 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
 
       {/* Notes */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+        <div className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
           {t("workers.form.fields.notes")}
-        </label>
+        </div>
         <textarea
           {...register("notes")}
           rows={3}
@@ -1193,35 +1244,18 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
     </form>
   );
 
-  // Render Drawer on mobile, Dialog on desktop
-  if (isMobile) {
-    return (
-      <Drawer open={open} onOpenChange={onClose}>
-        <DrawerContent className="max-h-[90vh] bg-white dark:bg-gray-800">
-          <DrawerHeader>
-            <DrawerTitle>{headerContent}</DrawerTitle>
-          </DrawerHeader>
-          <div className="px-4 pb-4 overflow-y-auto max-h-[calc(90vh-10rem)]">
-            {formContent}
-          </div>
-          <DrawerFooter className="flex-row justify-end gap-2">
-            {footerContent}
-          </DrawerFooter>
-        </DrawerContent>
-      </Drawer>
-    );
-  }
-
   return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-800">
-        <DialogHeader>
-          <DialogTitle>{headerContent}</DialogTitle>
-        </DialogHeader>
-        {formContent}
-        <DialogFooter>{footerContent}</DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <ResponsiveDialog
+      open={open}
+      onOpenChange={onClose}
+      title={headerContent}
+      size="2xl"
+      className="bg-white dark:bg-gray-800"
+      contentClassName="max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-800"
+      footer={<div className="flex w-full flex-row justify-end gap-2">{footerContent}</div>}
+    >
+      {formContent}
+    </ResponsiveDialog>
   );
 };
 

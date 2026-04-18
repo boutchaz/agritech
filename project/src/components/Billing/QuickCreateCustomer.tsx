@@ -1,18 +1,11 @@
-import React from 'react';
+
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/label';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import { useCreateCustomer } from '@/hooks/useCustomers';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
@@ -32,11 +25,11 @@ const customerSchema = z.object({
 
 type CustomerFormData = z.infer<typeof customerSchema>;
 
-export const QuickCreateCustomer: React.FC<QuickCreateCustomerProps> = ({
+export const QuickCreateCustomer = ({
   open,
   onOpenChange,
   onSuccess,
-}) => {
+}: QuickCreateCustomerProps) => {
   const createCustomer = useCreateCustomer();
 
   const {
@@ -69,16 +62,32 @@ export const QuickCreateCustomer: React.FC<QuickCreateCustomerProps> = ({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>Quick Create Customer</DialogTitle>
-          <DialogDescription>
-            Add a new customer with basic information. You can edit details later.
-          </DialogDescription>
-        </DialogHeader>
-
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+    <ResponsiveDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title="Quick Create Customer"
+      description="Add a new customer with basic information. You can edit details later."
+      size="md"
+      footer={(
+        <>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              reset();
+              onOpenChange(false);
+            }}
+          >
+            Cancel
+          </Button>
+          <Button type="submit" form="quick-create-customer-form" disabled={isSubmitting}>
+            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Create Customer
+          </Button>
+        </>
+      )}
+    >
+      <form id="quick-create-customer-form" onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div>
             <Label htmlFor="name">Customer Name *</Label>
             <Input
@@ -123,24 +132,7 @@ export const QuickCreateCustomer: React.FC<QuickCreateCustomerProps> = ({
             />
           </div>
 
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                reset();
-                onOpenChange(false);
-              }}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Create Customer
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+      </form>
+    </ResponsiveDialog>
   );
 };

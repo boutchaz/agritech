@@ -1,15 +1,15 @@
-import React, { useState } from 'react';
+import {  useState  } from "react";
 import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import i18n from '@/i18n/config';
 import { useAuth } from '@/hooks/useAuth';
 import { PageLayout } from '@/components/PageLayout';
 import ModernPageHeader from '@/components/ModernPageHeader';
-import { MobileNavBar } from '@/components/MobileNavBar';
-import { Building2, Receipt, Plus, CheckCircle2, Clock, XCircle, Search, Eye, Edit, Trash2, MoreVertical, Download, Send, Loader2 } from 'lucide-react';
+
+import { Building2, Receipt, Plus, CheckCircle2, Clock, XCircle, Eye, Edit, Trash2, MoreVertical, Download, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/Input';
-import { Select } from '@/components/ui/Select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -21,18 +21,27 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { withRouteProtection } from '@/components/authorization/withRouteProtection';
-import { useInvoices, usePaginatedInvoices, useInvoiceStats, useDeleteInvoice } from '@/hooks/useInvoices';
+import { usePaginatedInvoices, useInvoiceStats, useDeleteInvoice } from '@/hooks/useInvoices';
 import { InvoiceForm } from '@/components/Accounting/InvoiceForm';
 import { InvoiceDetailDialog } from '@/components/Accounting/InvoiceDetailDialog';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { fr, ar, enUS } from 'date-fns/locale';
-import { useServerTableState, SortableHeader, DateRangeFilter, DataTablePagination } from '@/components/ui/data-table';
+import { useServerTableState, SortableHeader, DataTablePagination, FilterBar, ListPageLayout, ListPageHeader } from '@/components/ui/data-table';
+import { SectionLoader } from '@/components/ui/loader';
 
-const AppContent: React.FC = () => {
+
+const AppContent = () => {
   const { t } = useTranslation();
   const { currentOrganization } = useAuth();
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<{title:string;description?:string;variant?:"destructive"|"default";onConfirm:()=>void}>({title:"",onConfirm:()=>{}});
+  const _showConfirm = (title: string, onConfirm: () => void, opts?: {description?: string; variant?: "destructive" | "default"}) => {
+    setConfirmAction({title, onConfirm, ...opts});
+    setConfirmOpen(true);
+  };
+
   const [isInvoiceFormOpen, setIsInvoiceFormOpen] = useState(false);
   const [viewInvoiceId, setViewInvoiceId] = useState<string | null>(null);
   const [editInvoiceId, setEditInvoiceId] = useState<string | null>(null);
@@ -119,16 +128,7 @@ const AppContent: React.FC = () => {
   };
 
   if (!currentOrganization || isLoading) {
-    return (
-      <div className={cn("min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900", isRTL && "flex-row-reverse")} dir={isRTL ? 'rtl' : 'ltr'}>
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">
-            {!currentOrganization ? t('common.loading') : t('invoices.loading', 'Loading invoices...')}
-          </p>
-        </div>
-      </div>
-    );
+    return <SectionLoader />;
   }
 
   if (error) {
@@ -147,87 +147,69 @@ const AppContent: React.FC = () => {
     <PageLayout
       activeModule="accounting"
       header={
-        <>
-          {/* Mobile Navigation Bar */}
-          <MobileNavBar title={t('invoices.pageTitle', 'Invoices')} />
-
-          {/* Desktop Header */}
-          <div className="hidden md:block">
-            <ModernPageHeader
-              breadcrumbs={[
-                { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
-                { icon: Receipt, label: t('invoices.pageTitle', 'Invoices'), isActive: true }
-              ]}
-              title={t('invoices.title', 'Invoices')}
-              subtitle={t('invoices.subtitle', 'Manage sales and purchase invoices')}
-            />
-          </div>
-        </>
+        <ModernPageHeader
+          breadcrumbs={[
+            { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
+            { icon: Receipt, label: t('invoices.pageTitle', 'Invoices'), isActive: true }
+          ]}
+          title={t('invoices.title', 'Invoices')}
+          subtitle={t('invoices.subtitle', 'Manage sales and purchase invoices')}
+        />
       }
     >
-      <div className={cn("p-3 sm:p-4 md:p-6 pb-20 md:pb-6 space-y-4 sm:space-y-6", isRTL && "text-right")}>
-          {/* Header with Search and Filters */}
-          <div className="flex flex-col gap-4">
-            <div className={cn("flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3", isRTL && "flex-row-reverse")}>
-              <div className="min-w-0">
-                <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white truncate">{t('invoices.allInvoices', 'All Invoices')}</h2>
-                <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mt-1 line-clamp-2">
-                  {t('invoices.description', 'Track and manage your invoices')}
-                </p>
-              </div>
-              <div className={cn("flex gap-2 flex-shrink-0", isRTL && "flex-row-reverse")}>
+      <div className={cn("p-3 sm:p-4 md:p-6 pb-20 md:pb-6", isRTL && "text-right")}>
+        <ListPageLayout
+          header={
+            <ListPageHeader
+              variant="shell"
+              className={isRTL ? 'sm:flex-row-reverse' : undefined}
+              actions={
                 <Button onClick={() => setIsInvoiceFormOpen(true)} className="flex-1 sm:flex-none">
                   <Plus className={cn("h-4 w-4 sm:mr-2", isRTL && "sm:ml-2")} />
                   <span className="hidden sm:inline">{t('invoices.actions.create', 'Create Invoice')}</span>
                   <span className="sm:hidden">New</span>
                 </Button>
-              </div>
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-3">
-              <div className="relative flex-1">
-                <Search className={cn("absolute top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4", isRTL ? "right-3" : "left-3")} />
-                <Input
-                  placeholder={t('invoices.search.placeholder', 'Search invoices by number or customer...')}
-                  value={tableState.search}
-                  onChange={(e) => tableState.setSearch(e.target.value)}
-                  className={isRTL ? "pr-10" : "pl-10"}
-                />
-                {isFetching && (
-                  <Loader2 className={cn("absolute top-1/2 transform -translate-y-1/2 h-4 w-4 animate-spin text-gray-400", isRTL ? "left-3" : "right-3")} />
-                )}
-              </div>
-              <DateRangeFilter
-                value={tableState.datePreset}
-                onChange={tableState.setDatePreset}
-              />
-              <Select
-                value={filterType}
-                onChange={(e) => setFilterType(e.target.value as 'all' | 'sales' | 'purchase')}
-                className="w-full sm:w-40"
-              >
-                <option value="all">{t('invoices.filter.allTypes', 'All Types')}</option>
-                <option value="sales">{t('invoices.filter.sales', 'Sales')}</option>
-                <option value="purchase">{t('invoices.filter.purchase', 'Purchase')}</option>
-              </Select>
-              <Select
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
-                className="w-full sm:w-40"
-              >
-                <option value="all">{t('invoices.filter.allStatus', 'All Status')}</option>
-                <option value="draft">{t('invoices.status.draft', 'Draft')}</option>
-                <option value="submitted">{t('invoices.status.submitted', 'Submitted')}</option>
-                <option value="paid">{t('invoices.status.paid', 'Paid')}</option>
-                <option value="partially_paid">{t('invoices.status.partiallyPaid', 'Partially Paid')}</option>
-                <option value="overdue">{t('invoices.status.overdue', 'Overdue')}</option>
-                <option value="cancelled">{t('invoices.status.cancelled', 'Cancelled')}</option>
-              </Select>
-            </div>
-          </div>
-
-          {/* Stats */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4" data-tour="billing-stats">
+              }
+            />
+          }
+          filters={
+            <FilterBar
+              searchValue={tableState.search}
+              onSearchChange={tableState.setSearch}
+              searchPlaceholder={t('invoices.search.placeholder', 'Search invoices by number or customer...')}
+              isSearching={isFetching}
+              filters={[
+                {
+                  key: 'type',
+                  value: filterType,
+                  onChange: (v) => setFilterType(v as 'all' | 'sales' | 'purchase'),
+                  options: [
+                    { value: 'all', label: t('invoices.filter.allTypes', 'All Types') },
+                    { value: 'sales', label: t('invoices.filter.sales', 'Sales') },
+                    { value: 'purchase', label: t('invoices.filter.purchase', 'Purchase') },
+                  ],
+                },
+                {
+                  key: 'status',
+                  value: filterStatus,
+                  onChange: (v) => setFilterStatus(v),
+                  options: [
+                    { value: 'all', label: t('invoices.filter.allStatus', 'All Status') },
+                    { value: 'draft', label: t('invoices.status.draft', 'Draft') },
+                    { value: 'submitted', label: t('invoices.status.submitted', 'Submitted') },
+                    { value: 'paid', label: t('invoices.status.paid', 'Paid') },
+                    { value: 'partially_paid', label: t('invoices.status.partiallyPaid', 'Partially Paid') },
+                    { value: 'overdue', label: t('invoices.status.overdue', 'Overdue') },
+                    { value: 'cancelled', label: t('invoices.status.cancelled', 'Cancelled') },
+                  ],
+                },
+              ]}
+              datePreset={tableState.datePreset}
+              onDatePresetChange={tableState.setDatePreset}
+            />
+          }
+          stats={
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4" data-tour="billing-stats">
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
@@ -275,7 +257,8 @@ const AppContent: React.FC = () => {
               </CardContent>
             </Card>
           </div>
-
+          }
+        >
           {/* Invoice List - Desktop Table View */}
           <Card className="hidden md:block" data-tour="billing-invoices">
             <CardHeader>
@@ -286,9 +269,9 @@ const AppContent: React.FC = () => {
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-gray-200 dark:border-gray-700">
+                <Table className="w-full">
+                  <TableHeader>
+                    <TableRow className="border-b border-gray-200 dark:border-gray-700">
                       <SortableHeader
                         label={t('invoices.table.invoiceNumber', 'Invoice #')}
                         sortKey="invoice_number"
@@ -326,23 +309,23 @@ const AppContent: React.FC = () => {
                         currentSort={tableState.sortConfig}
                         onSort={tableState.handleSort}
                       />
-                      <th className={cn("py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400", isRTL ? "text-left" : "text-right")}>
+                      <TableHead className={cn("py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400", isRTL ? "text-left" : "text-right")}>
                         {t('invoices.table.actions', 'Actions')}
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {invoices.map((invoice) => (
-                      <tr key={invoice.id} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                        <td className="py-3 px-4">
+                      <TableRow key={invoice.id} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                        <TableCell className="py-3 px-4">
                           <div className={cn("flex items-center gap-2", isRTL && "flex-row-reverse")}>
                             <Receipt className="h-4 w-4 text-gray-400" />
                             <span className="font-medium text-gray-900 dark:text-white">
                               {invoice.invoice_number}
                             </span>
                           </div>
-                        </td>
-                        <td className="py-3 px-4">
+                        </TableCell>
+                        <TableCell className="py-3 px-4">
                           <Badge className={cn(
                             invoice.invoice_type === 'sales'
                               ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400'
@@ -350,23 +333,23 @@ const AppContent: React.FC = () => {
                           )}>
                             {invoice.invoice_type === 'sales' ? t('invoices.type.sales', 'Sales') : t('invoices.type.purchase', 'Purchase')}
                           </Badge>
-                        </td>
-                        <td className={cn("py-3 px-4 text-sm text-gray-900 dark:text-white", isRTL && "text-right")}>
+                        </TableCell>
+                        <TableCell className={cn("py-3 px-4 text-sm text-gray-900 dark:text-white", isRTL && "text-right")}>
                           {invoice.party_name}
-                        </td>
-                        <td className={cn("py-3 px-4 text-sm text-gray-600 dark:text-gray-400", isRTL && "text-right")}>
+                        </TableCell>
+                        <TableCell className={cn("py-3 px-4 text-sm text-gray-600 dark:text-gray-400", isRTL && "text-right")}>
                           {format(new Date(invoice.invoice_date), 'P', { locale: getLocale() })}
-                        </td>
-                        <td className={cn("py-3 px-4 text-sm font-medium text-gray-900 dark:text-white", isRTL ? "text-left" : "text-right")}>
+                        </TableCell>
+                        <TableCell className={cn("py-3 px-4 text-sm font-medium text-gray-900 dark:text-white", isRTL ? "text-left" : "text-right")}>
                           {invoice.currency_code} {Number(invoice.grand_total).toLocaleString('fr-FR', { minimumFractionDigits: 2 })}
-                        </td>
-                        <td className="py-3 px-4">
+                        </TableCell>
+                        <TableCell className="py-3 px-4">
                           <Badge className={cn(`${getStatusColor(invoice.status)} flex items-center gap-1 w-fit`, isRTL && "flex-row-reverse")}>
                             {getStatusIcon(invoice.status)}
                             {t(`invoices.status.${invoice.status}`, invoice.status)}
                           </Badge>
-                        </td>
-                        <td className="py-3 px-4">
+                        </TableCell>
+                        <TableCell className="py-3 px-4">
                           <div className={cn("flex items-center gap-2", isRTL ? "justify-start flex-row-reverse" : "justify-end")}>
                             <Button
                               variant="ghost"
@@ -424,20 +407,20 @@ const AppContent: React.FC = () => {
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </div>
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     ))}
                     {invoices.length === 0 && (
-                      <tr>
-                        <td colSpan={7} className={cn("py-8 text-center text-gray-500 dark:text-gray-400", isRTL && "text-right")}>
+                      <TableRow>
+                        <TableCell colSpan={7} className={cn("py-8 text-center text-gray-500 dark:text-gray-400", isRTL && "text-right")}>
                           {tableState.search || filterType !== 'all' || filterStatus !== 'all' || tableState.datePreset !== 'all'
                             ? t('invoices.empty.filtered', 'No invoices match your filters.')
                             : t('invoices.empty.message', 'No invoices found. Create your first invoice to get started.')}
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     )}
-                  </tbody>
-                </table>
+                  </TableBody>
+                </Table>
               </div>
               <DataTablePagination
                 page={tableState.page}
@@ -582,6 +565,7 @@ const AppContent: React.FC = () => {
               />
             )}
           </div>
+        </ListPageLayout>
 
         {/* Invoice Creation/Edit Dialog */}
         <InvoiceForm
@@ -605,6 +589,14 @@ const AppContent: React.FC = () => {
           invoiceId={viewInvoiceId}
         />
       </div>
+          <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title={confirmAction.title}
+        description={confirmAction.description}
+        variant={confirmAction.variant}
+        onConfirm={confirmAction.onConfirm}
+      />
     </PageLayout>
   );
 };

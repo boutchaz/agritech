@@ -7,6 +7,10 @@ import {
   InternalServerErrorException,
 } from '@nestjs/common';
 import { ParcelsService } from './parcels.service';
+import { SubscriptionsService } from '../subscriptions/subscriptions.service';
+import { SatelliteCacheService } from '../satellite-indices/satellite-cache.service';
+import { NotificationsService } from '../notifications/notifications.service';
+import { CalibrationService } from '../calibration/calibration.service';
 import {
   createMockSupabaseClient,
   createMockQueryBuilder,
@@ -20,6 +24,10 @@ describe('ParcelsService', () => {
   let service: ParcelsService;
   let mockClient: MockSupabaseClient;
   let mockConfigService: jest.Mocked<ConfigService>;
+  let mockSubscriptionsService: { hasValidSubscription: jest.Mock };
+  let mockSatelliteCacheService: { syncParcelSatelliteData: jest.Mock };
+  let mockNotificationsService: { createNotification: jest.Mock };
+  let mockCalibrationService: { scheduleAnnualPlanRefreshAfterMajorParcelEdit: jest.Mock };
 
   // ============================================================
   // TEST DATA FIXTURES
@@ -75,6 +83,18 @@ describe('ParcelsService', () => {
     mockConfigService = {
       get: jest.fn(),
     } as any;
+    mockSubscriptionsService = {
+      hasValidSubscription: jest.fn().mockResolvedValue(true),
+    };
+    mockSatelliteCacheService = {
+      syncParcelSatelliteData: jest.fn().mockResolvedValue({ totalPoints: 0 }),
+    };
+    mockNotificationsService = {
+      createNotification: jest.fn().mockResolvedValue(undefined),
+    };
+    mockCalibrationService = {
+      scheduleAnnualPlanRefreshAfterMajorParcelEdit: jest.fn(),
+    };
 
     // Mock environment variables
     mockConfigService.get.mockImplementation((key: string) => {
@@ -89,6 +109,10 @@ describe('ParcelsService', () => {
       providers: [
         ParcelsService,
         { provide: ConfigService, useValue: mockConfigService },
+        { provide: SubscriptionsService, useValue: mockSubscriptionsService },
+        { provide: SatelliteCacheService, useValue: mockSatelliteCacheService },
+        { provide: NotificationsService, useValue: mockNotificationsService },
+        { provide: CalibrationService, useValue: mockCalibrationService },
       ],
     }).compile();
 
@@ -752,6 +776,22 @@ describe('ParcelsService', () => {
       const parcelQuery = createMockQueryBuilder();
       parcelQuery.eq.mockReturnValue(parcelQuery);
 
+      parcelQuery.maybeSingle.mockResolvedValue(
+        mockQueryResult({
+          crop_type: existingParcel.crop_type,
+          variety: existingParcel.variety,
+          planting_system: existingParcel.planting_system,
+          irrigation_type: existingParcel.irrigation_type,
+          water_source: null,
+          density_per_hectare: existingParcel.density_per_hectare,
+          plant_count: existingParcel.plant_count,
+          ai_phase: 'disabled',
+          ai_enabled: false,
+          ai_observation_only: false,
+          ai_calibration_id: null,
+        }),
+      );
+
       // First single() call returns existing parcel
       let singleCallCount = 0;
       parcelQuery.single.mockImplementation(() => {
@@ -795,6 +835,22 @@ describe('ParcelsService', () => {
 
       const parcelQuery = createMockQueryBuilder();
       parcelQuery.eq.mockReturnValue(parcelQuery);
+
+      parcelQuery.maybeSingle.mockResolvedValue(
+        mockQueryResult({
+          crop_type: existingParcel.crop_type,
+          variety: existingParcel.variety,
+          planting_system: existingParcel.planting_system,
+          irrigation_type: existingParcel.irrigation_type,
+          water_source: null,
+          density_per_hectare: existingParcel.density_per_hectare,
+          plant_count: existingParcel.plant_count,
+          ai_phase: 'disabled',
+          ai_enabled: false,
+          ai_observation_only: false,
+          ai_calibration_id: null,
+        }),
+      );
 
       // First single() call returns existing parcel
       let singleCallCount = 0;

@@ -55,4 +55,11 @@ export class ChatResponseDto {
     type: ChatMetadataDto,
   })
   metadata: ChatMetadataDto;
+
+  @ApiPropertyOptional({
+    description: 'Follow-up suggestion prompts',
+    type: [String],
+    example: ['What is the water status?', 'Show me the annual plan'],
+  })
+  suggestions?: string[];
 }

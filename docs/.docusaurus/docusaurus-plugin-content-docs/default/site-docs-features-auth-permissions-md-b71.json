@@ -1,0 +1,27 @@
+{
+  "id": "features/auth-permissions",
+  "title": "Authentication & Permissions",
+  "description": "Overview",
+  "source": "@site/docs/features/auth-permissions.md",
+  "sourceDirName": "features",
+  "slug": "/features/auth-permissions",
+  "permalink": "/features/auth-permissions",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 7,
+  "frontMatter": {
+    "sidebar_position": 7,
+    "title": "Authentication & Permissions"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Database Schema",
+    "permalink": "/database/schema"
+  },
+  "next": {
+    "title": "Satellite Analysis Service",
+    "permalink": "/features/satellite-analysis"
+  }
+}

@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { createFileRoute, useNavigate, Link } from '@tanstack/react-router'
 import React, { useState, useEffect } from 'react'
 import { AuthLayout } from '@/components/AuthLayout'
 import { FormField } from '@/components/ui/FormField'
@@ -13,6 +13,7 @@ import {
   trackRegisterFailure,
   trackPageView,
 } from '@/lib/analytics'
+import { Button } from '@/components/ui/button';
 
 export const Route = createFileRoute('/(auth)/register')({
   component: RegisterPage,
@@ -24,6 +25,7 @@ function RegisterPage() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [organizationName, setOrganizationName] = useState('')
   const [includeDemoData, setIncludeDemoData] = useState(false)
+  const [tosAccepted, setTosAccepted] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const navigate = useNavigate()
@@ -31,7 +33,7 @@ function RegisterPage() {
 
   // Track page view on mount
   useEffect(() => {
-    trackPageView({ title: 'Create your Agritech account' })
+    trackPageView({ title: 'Create your AgroGina account' })
   }, [])
 
   // Redirect to dashboard if user is already logged in
@@ -53,6 +55,13 @@ function RegisterPage() {
     setError(null)
 
     trackRegisterAttempt()
+
+    if (!tosAccepted) {
+      setError("Vous devez accepter les Conditions Générales d'Utilisation et la Politique de Confidentialité")
+      setIsLoading(false)
+      trackRegisterFailure('tos_not_accepted')
+      return
+    }
 
     if (password !== confirmPassword) {
       setError('Passwords do not match')
@@ -105,7 +114,7 @@ function RegisterPage() {
 
   return (
     <AuthLayout
-      title="Create your Agritech account"
+      title="Create your AgroGina account"
       subtitle="Get started in minutes"
       helperText="Set up a workspace for your organization and invite your team once you're inside."
       switchLabel="Already have an account?"
@@ -200,6 +209,38 @@ function RegisterPage() {
               </p>
             </div>
           </div>
+
+          <div className="flex items-start space-x-3 rounded-xl border border-slate-200 bg-slate-50/50 p-4">
+            <Checkbox
+              id="tos-accepted"
+              checked={tosAccepted}
+              onCheckedChange={(checked) => setTosAccepted(checked === true)}
+              className="mt-0.5"
+            />
+            <div className="flex-1">
+              <label
+                htmlFor="tos-accepted"
+                className="text-sm text-slate-700 cursor-pointer"
+              >
+                J'accepte les{' '}
+                <Link
+                  to="/terms-of-service"
+                  target="_blank"
+                  className="font-medium text-emerald-600 underline hover:text-emerald-700"
+                >
+                  Conditions Générales d'Utilisation
+                </Link>
+                {' '}et la{' '}
+                <Link
+                  to="/privacy-policy"
+                  target="_blank"
+                  className="font-medium text-emerald-600 underline hover:text-emerald-700"
+                >
+                  Politique de Confidentialité
+                </Link>
+              </label>
+            </div>
+          </div>
         </div>
 
         {error && (
@@ -208,14 +249,14 @@ function RegisterPage() {
           </div>
         )}
 
-        <button
+        <Button
           type="submit"
-          disabled={isLoading}
+          disabled={isLoading || !tosAccepted}
           className="w-full rounded-xl bg-gradient-to-r from-emerald-500 to-lime-400 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-500/30 transition hover:from-emerald-600 hover:to-lime-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
           data-testid="register-submit"
         >
           {isLoading ? 'Creating account...' : 'Sign up'}
-        </button>
+        </Button>
       </form>
     </AuthLayout>
   )

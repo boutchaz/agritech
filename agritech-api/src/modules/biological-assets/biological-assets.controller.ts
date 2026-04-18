@@ -23,9 +23,9 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { OrganizationGuard } from '../../common/guards/organization.guard';
 import { RequireRole } from '../../common/decorators/require-role.decorator';
 import { BiologicalAssetsService } from './biological-assets.service';
-import { CreateBiologicalAssetDto } from './dto/create-biological-asset.dto';
+import { CreateBiologicalAssetDto, BiologicalAssetStatus } from './dto';
 import { BiologicalAssetFiltersDto } from './dto/biological-asset-filters.dto';
-import { BiologicalAssetStatus } from './dto/create-biological-asset.dto';
+import { CreateValuationDto } from './dto/create-valuation.dto';
 
 @ApiTags('Biological Assets')
 @ApiBearerAuth()
@@ -102,5 +102,28 @@ export class BiologicalAssetsController {
   ) {
     const organizationId = req.headers['x-organization-id'] as string;
     return this.biologicalAssetsService.updateStatus(id, organizationId, req.user.id, status);
+  }
+
+  // ── Valuations ──
+
+  @Get(':id/valuations')
+  @ApiOperation({ summary: 'Get valuations for a biological asset' })
+  @ApiResponse({ status: 200, description: 'Valuations retrieved successfully' })
+  getValuations(@Param('id') id: string, @Request() req) {
+    const organizationId = req.headers['x-organization-id'] as string;
+    return this.biologicalAssetsService.getValuations(id, organizationId);
+  }
+
+  @Post(':id/valuations')
+  @ApiOperation({ summary: 'Record a fair value valuation' })
+  @ApiResponse({ status: 201, description: 'Valuation created successfully' })
+  @RequireRole('organization_admin', 'farm_manager', 'system_admin')
+  createValuation(
+    @Param('id') id: string,
+    @Request() req,
+    @Body() dto: CreateValuationDto,
+  ) {
+    const organizationId = req.headers['x-organization-id'] as string;
+    return this.biologicalAssetsService.createValuation(id, organizationId, req.user.id, dto);
   }
 }

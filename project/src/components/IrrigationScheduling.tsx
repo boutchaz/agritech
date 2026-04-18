@@ -1,33 +1,25 @@
-import React, { useState } from 'react';
+import {  useState  } from "react";
 import { Droplets, AlertCircle, CheckCircle, Loader, TrendingUp } from 'lucide-react';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 import { getIrrigationSchedule, type IrrigationRequest } from '../lib/edge-functions-api';
-import { cropsApi } from '../lib/api/crops';
-import { useAuth } from '../hooks/useAuth';
+import { useParcelById } from '../hooks/useParcelsQuery';
+import { Button } from '@/components/ui/button';
 
 interface IrrigationSchedulingProps {
   parcelId: string;
   parcelName: string;
 }
 
-const IrrigationScheduling: React.FC<IrrigationSchedulingProps> = ({
+const IrrigationScheduling = ({
   parcelId,
   parcelName
-}) => {
-  const { currentOrganization } = useAuth();
+}: IrrigationSchedulingProps) => {
   const [soilMoisture, setSoilMoisture] = useState<number>(50);
   const [growthStage, setGrowthStage] = useState<string>('vegetative');
 
-  const { data: currentCrop } = useQuery({
-    queryKey: ['current-crop', parcelId, currentOrganization?.id],
-    queryFn: async () => {
-      if (!currentOrganization?.id) throw new Error('No organization selected');
-      const crops = await cropsApi.getAll(currentOrganization.id, undefined, parcelId);
-      const growing = crops.find(c => c.status === 'growing');
-      return growing || null;
-    },
-    enabled: !!currentOrganization?.id && !!parcelId,
-  });
+  // Use parcel crop_type instead of crops table
+  const { data: parcelData } = useParcelById(parcelId);
+  const currentCrop = parcelData?.crop_type ? { name: parcelData.crop_type } : null;
 
   // Mutation to get irrigation schedule
   const scheduleMutation = useMutation({
@@ -120,11 +112,7 @@ const IrrigationScheduling: React.FC<IrrigationSchedulingProps> = ({
           </div>
         )}
 
-        <button
-          onClick={handleGenerateSchedule}
-          disabled={scheduleMutation.isPending}
-          className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        >
+        <Button variant="blue" onClick={handleGenerateSchedule} disabled={scheduleMutation.isPending} className="w-full flex items-center justify-center space-x-2 px-4 py-3 rounded-lg transition-colors disabled:cursor-not-allowed" >
           {scheduleMutation.isPending ? (
             <>
               <Loader className="w-5 h-5 animate-spin" />
@@ -136,7 +124,7 @@ const IrrigationScheduling: React.FC<IrrigationSchedulingProps> = ({
               <span>Générer le planning</span>
             </>
           )}
-        </button>
+        </Button>
       </div>
 
       {/* Error Display */}
@@ -205,7 +193,7 @@ const IrrigationScheduling: React.FC<IrrigationSchedulingProps> = ({
           {parcelInfo && (
             <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
               <h5 className="font-medium text-gray-900 dark:text-white mb-3">Informations de la parcelle</h5>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
                 <div>
                   <span className="text-gray-600 dark:text-gray-400">Surface:</span>
                   <div className="font-medium text-gray-900 dark:text-white">{parcelInfo.area} ha</div>
@@ -233,8 +221,8 @@ const IrrigationScheduling: React.FC<IrrigationSchedulingProps> = ({
             <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
               <h5 className="font-medium text-gray-900 dark:text-white mb-3">Analyse</h5>
               <ul className="space-y-2">
-                {schedule.reasoning.map((reason, index) => (
-                  <li key={index} className="flex items-start space-x-2 text-sm text-gray-600 dark:text-gray-400">
+                {schedule.reasoning.map((reason) => (
+                  <li key={reason} className="flex items-start space-x-2 text-sm text-gray-600 dark:text-gray-400">
                     <span className="text-blue-500 mt-1">•</span>
                     <span>{reason}</span>
                   </li>
@@ -251,8 +239,8 @@ const IrrigationScheduling: React.FC<IrrigationSchedulingProps> = ({
                 <div className="flex-1">
                   <h5 className="font-medium text-yellow-900 dark:text-yellow-300 mb-2">Avertissements</h5>
                   <ul className="space-y-1">
-                    {schedule.warnings.map((warning, index) => (
-                      <li key={index} className="text-sm text-yellow-700 dark:text-yellow-400">
+                    {schedule.warnings.map((warning) => (
+                      <li key={warning} className="text-sm text-yellow-700 dark:text-yellow-400">
                         {warning}
                       </li>
                     ))}

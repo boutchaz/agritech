@@ -5,11 +5,13 @@ import { NotificationsService } from './notifications.service';
 import { NotificationsGateway } from './notifications.gateway';
 import { NotificationsController } from './notifications.controller';
 import { DatabaseModule } from '../database/database.module';
+import { EmailModule } from '../email/email.module';
 import { AuthModule } from '../auth/auth.module';
 
 @Module({
   imports: [
     DatabaseModule,
+    EmailModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({

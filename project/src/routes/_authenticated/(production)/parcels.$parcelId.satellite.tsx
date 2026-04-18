@@ -6,6 +6,8 @@ import { useParcelById } from '@/hooks/useParcelsQuery'
 import { useCalibrationStatus } from '@/hooks/useAIReports'
 import { apiRequest } from '@/lib/api-client'
 import { Satellite, CheckCircle2, AlertTriangle, FileText, BarChart3, Map as MapIcon, Database } from 'lucide-react'
+import { SectionLoader } from '@/components/ui/loader';
+
 
 type SatelliteTab = 'timeseries' | 'heatmap';
 
@@ -40,9 +42,7 @@ const ParcelSatelliteLayout = () => {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
-      </div>
+      <SectionLoader />
     );
   }
 
@@ -103,9 +103,9 @@ const ParcelSatelliteLayout = () => {
             to="/parcels/$parcelId/reports"
             params={{ parcelId }}
             search={{ farmId: undefined }}
-            className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+            className="flex items-center gap-2 rounded-lg border border-yellow-200/80 bg-white px-4 py-2 text-slate-700 shadow-sm transition-colors hover:bg-gray-50 dark:border-yellow-700/60 dark:bg-slate-800 dark:text-yellow-100 dark:hover:bg-slate-700/90"
           >
-            <FileText className="w-4 h-4" />
+            <FileText className="w-4 h-4 text-yellow-700 dark:text-yellow-300" />
             <span className="text-sm font-medium">{t('satellite.goToReports', 'Go to Reports')}</span>
           </Link>
         </div>

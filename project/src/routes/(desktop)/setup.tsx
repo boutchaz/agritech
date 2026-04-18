@@ -1,8 +1,9 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { tauriCommands } from '@/lib/tauri-bridge';
 import { Building2, User, Lock, Mail, Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 export const Route = createFileRoute('/(desktop)/setup')({
   component: SetupPage,
@@ -64,7 +65,7 @@ function SetupPage() {
               <Building2 className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
             </div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-              {t('desktop.setup.title', 'Set Up AgriTech Desktop')}
+              {t('desktop.setup.title', 'Set Up AgroGina Desktop')}
             </h1>
             <p className="text-gray-600 dark:text-gray-400">
               {t('desktop.setup.description', 'Create your local account to get started')}
@@ -178,17 +179,13 @@ function SetupPage() {
               </div>
             )}
 
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-emerald-600 hover:bg-emerald-700 rounded-lg text-white font-medium transition disabled:opacity-50 disabled:cursor-not-allowed"
-            >
+            <Button variant="emerald" type="submit" disabled={isLoading} className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-medium transition disabled:cursor-not-allowed" >
               {isLoading ? (
                 <Loader2 className="w-5 h-5 animate-spin" />
               ) : (
                 t('desktop.setup.createAccount', 'Create Account & Continue')
               )}
-            </button>
+            </Button>
           </form>
 
           <p className="mt-6 text-xs text-center text-gray-500 dark:text-gray-400">

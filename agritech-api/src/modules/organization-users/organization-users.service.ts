@@ -1,6 +1,9 @@
 import { Injectable, NotFoundException, BadRequestException, ForbiddenException, Logger } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { EmailService } from '../email/email.service';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationType } from '../notifications/dto/notification.dto';
+import { extractPagination, paginatedResponse, type PaginatedResponse } from '../../common/dto/paginated-query.dto';
 import {
   OrganizationUserFiltersDto,
   CreateOrganizationUserDto,
@@ -14,47 +17,42 @@ export class OrganizationUsersService {
   constructor(
     private readonly databaseService: DatabaseService,
     private readonly emailService: EmailService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   /**
    * Get all organization users with optional filters
    * Includes user profiles, roles, and worker info
    */
-  async findAll(organizationId: string, filters?: OrganizationUserFiltersDto): Promise<any> {
+  async findAll(organizationId: string, filters?: OrganizationUserFiltersDto): Promise<PaginatedResponse<any>> {
     const client = this.databaseService.getAdminClient();
 
     try {
-      // Build query with joins
+      const { page, pageSize, from, to } = extractPagination(filters);
+
+      const applyFilters = (q: any) => {
+        q = q.eq('organization_id', organizationId);
+        if (filters?.is_active !== undefined) q = q.eq('is_active', filters.is_active);
+        if (filters?.role_id) q = q.eq('role_id', filters.role_id);
+        if (filters?.user_id) q = q.eq('user_id', filters.user_id);
+        return q;
+      };
+
+      // Count
+      const { count } = await applyFilters(
+        client.from('organization_users').select('id', { count: 'exact', head: true }),
+      );
+
+      // Data query
       let query = client
         .from('organization_users')
         .select(`
           *,
           roles!inner(id, name, display_name),
-          user_profiles!organization_users_user_id_fkey!inner(id, first_name, last_name, email),
-          workers(id, position, is_active)
-        `)
-        .eq('organization_id', organizationId);
-
-      // Apply filters
-      if (filters?.is_active !== undefined) {
-        query = query.eq('is_active', filters.is_active);
-      }
-
-      if (filters?.role_id) {
-        query = query.eq('role_id', filters.role_id);
-      }
-
-      if (filters?.user_id) {
-        query = query.eq('user_id', filters.user_id);
-      }
-
-      // Apply pagination
-      if (filters?.page && filters?.limit) {
-        const offset = (filters.page - 1) * filters.limit;
-        query = query.range(offset, offset + filters.limit - 1);
-      }
-
-      query = query.order('created_at', { ascending: false });
+          user_profiles!organization_users_user_profile_fkey!inner(id, first_name, last_name, email)
+        `);
+      query = applyFilters(query);
+      query = query.order('created_at', { ascending: false }).range(from, to);
 
       const { data, error } = await query;
 
@@ -63,16 +61,29 @@ export class OrganizationUsersService {
         throw new BadRequestException(`Failed to fetch organization users: ${error.message}`);
       }
 
-      // Transform data to include full_name
+      // Fetch workers separately (no direct FK between organization_users and workers)
+      const userIds = (data || []).map((ou: any) => ou.user_id);
+      let workerMap = new Map<string, any>();
+      if (userIds.length > 0) {
+        const { data: workers } = await client
+          .from('workers')
+          .select('id, user_id, position, is_active')
+          .in('user_id', userIds);
+        workerMap = new Map((workers || []).map((w: any) => [w.user_id, w]));
+      }
+
+      // Transform data
       const transformedData = (data || []).map((ou: any) => {
         const profile = Array.isArray(ou.user_profiles) ? ou.user_profiles[0] : ou.user_profiles;
+        const worker = workerMap.get(ou.user_id) || null;
         return {
           ...ou,
           full_name: `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim(),
+          workers: worker ? [worker] : [],
         };
       });
 
-      return transformedData;
+      return paginatedResponse(transformedData, count || 0, page, pageSize);
     } catch (error) {
       this.logger.error('Error fetching organization users:', error);
       throw error;
@@ -176,8 +187,7 @@ export class OrganizationUsersService {
       .select(`
         *,
         roles(id, name, display_name),
-        user_profiles!organization_users_user_id_fkey(id, first_name, last_name, email),
-        workers(id, position, is_active)
+        user_profiles!organization_users_user_profile_fkey(id, first_name, last_name, email)
       `)
       .eq('user_id', userId)
       .eq('organization_id', organizationId)
@@ -192,11 +202,19 @@ export class OrganizationUsersService {
       throw new NotFoundException('Organization user not found');
     }
 
+    // Fetch worker info separately (no direct FK between organization_users and workers)
+    const { data: worker } = await client
+      .from('workers')
+      .select('id, position, is_active')
+      .eq('user_id', userId)
+      .maybeSingle();
+
     const profile = Array.isArray(data.user_profiles) ? data.user_profiles[0] : data.user_profiles;
 
     return {
       ...data,
       full_name: `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim(),
+      workers: worker ? [worker] : [],
     };
   }
 
@@ -244,9 +262,180 @@ export class OrganizationUsersService {
         throw new BadRequestException(`Failed to create organization user: ${error.message}`);
       }
 
+      try {
+        const { data: profile } = await client
+          .from('user_profiles')
+          .select('first_name, last_name')
+          .eq('id', dto.user_id)
+          .maybeSingle();
+
+        const memberName = profile
+          ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'A new member'
+          : 'A new member';
+
+        const { data: orgUsers } = await client
+          .from('organization_users')
+          .select('user_id')
+          .eq('organization_id', organizationId)
+          .eq('is_active', true);
+
+        const userIds = (orgUsers || [])
+          .map((u: { user_id: string }) => u.user_id)
+          .filter((id: string) => id !== dto.user_id && id !== createdBy);
+
+        if (userIds.length > 0) {
+          await this.notificationsService.createNotificationsForUsers(
+            userIds,
+            organizationId,
+            NotificationType.MEMBER_ADDED,
+            `${memberName} joined the organization`,
+            `${memberName} has been added to the organization`,
+            { userId: dto.user_id, memberName },
+          );
+        }
+
+        await this.notificationsService.createNotification({
+          userId: dto.user_id,
+          organizationId,
+          type: NotificationType.MEMBER_ADDED,
+          title: 'Welcome to the organization',
+          message: 'You have been added to the organization',
+          data: { userId: dto.user_id },
+        });
+      } catch (notifError) {
+        this.logger.warn(`Failed to send member added notification: ${notifError}`);
+      }
+
       return data;
     } catch (error) {
       this.logger.error('Error creating organization user:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Invite a user by email to the organization
+   * Creates a Supabase auth user if needed, then adds to organization
+   */
+  async inviteUser(
+    email: string,
+    roleId: string,
+    organizationId: string,
+    invitedBy: string,
+    firstName?: string,
+    lastName?: string,
+  ): Promise<any> {
+    const client = this.databaseService.getAdminClient();
+
+    try {
+      // Check subscription limits
+      const { data: sub } = await client
+        .from('subscriptions')
+        .select('max_users')
+        .eq('organization_id', organizationId)
+        .maybeSingle();
+
+      if (sub?.max_users != null) {
+        const { count: userCount } = await client
+          .from('organization_users')
+          .select('*', { count: 'exact', head: true })
+          .eq('organization_id', organizationId)
+          .eq('is_active', true);
+
+        if ((userCount ?? 0) >= sub.max_users) {
+          throw new ForbiddenException(
+            `Subscription limit reached: maximum ${sub.max_users} users for your plan`,
+          );
+        }
+      }
+
+      // Check if user already exists by email in user_profiles
+      const { data: existingProfile } = await client
+        .from('user_profiles')
+        .select('id, email')
+        .eq('email', email.toLowerCase())
+        .maybeSingle();
+
+      let userId: string;
+
+      if (existingProfile) {
+        userId = existingProfile.id;
+
+        // Check if already in organization
+        const { data: existingOrgUser } = await client
+          .from('organization_users')
+          .select('user_id, is_active')
+          .eq('user_id', userId)
+          .eq('organization_id', organizationId)
+          .maybeSingle();
+
+        if (existingOrgUser) {
+          if (existingOrgUser.is_active) {
+            throw new BadRequestException('User is already a member of this organization');
+          }
+          // Re-activate if previously deactivated
+          await client
+            .from('organization_users')
+            .update({ is_active: true, role_id: roleId })
+            .eq('user_id', userId)
+            .eq('organization_id', organizationId);
+
+          return { success: true, message: 'User has been re-activated in the organization' };
+        }
+      } else {
+        // Create new auth user with temporary password
+        const crypto = require('crypto');
+        const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
+        let tempPassword = '';
+        for (let i = 0; i < 16; i++) {
+          tempPassword += chars.charAt(crypto.randomInt(chars.length));
+        }
+
+        const { data: authUser, error: authError } = await client.auth.admin.createUser({
+          email: email.toLowerCase(),
+          password: tempPassword,
+          email_confirm: true,
+          user_metadata: {
+            first_name: firstName || '',
+            last_name: lastName || '',
+          },
+        });
+
+        if (authError) {
+          this.logger.error(`Failed to create auth user: ${authError.message}`);
+          throw new BadRequestException(`Failed to create user: ${authError.message}`);
+        }
+
+        userId = authUser.user.id;
+
+        // Create user profile
+        await client.from('user_profiles').upsert({
+          id: userId,
+          email: email.toLowerCase(),
+          first_name: firstName || null,
+          last_name: lastName || null,
+        });
+
+        // Send invitation email
+        const memberName = firstName || email;
+        const emailSent = await this.emailService.sendPasswordResetEmail(
+          email,
+          memberName,
+          tempPassword,
+        );
+        if (emailSent) {
+          this.logger.log(`Invitation email sent to ${email}`);
+        }
+      }
+
+      // Add user to organization
+      return this.create(
+        { user_id: userId, role_id: roleId, is_active: true },
+        organizationId,
+        invitedBy,
+      );
+    } catch (error) {
+      this.logger.error('Error inviting user:', error);
       throw error;
     }
   }
@@ -273,6 +462,29 @@ export class OrganizationUsersService {
       throw new BadRequestException(`Failed to update organization user: ${error.message}`);
     }
 
+    if (dto.role_id) {
+      try {
+        const { data: role } = await client
+          .from('roles')
+          .select('name')
+          .eq('id', dto.role_id)
+          .maybeSingle();
+
+        const roleName = role?.name || 'a new role';
+
+        await this.notificationsService.createNotification({
+          userId,
+          organizationId,
+          type: NotificationType.ROLE_CHANGED,
+          title: `Your role has been changed to ${roleName}`,
+          message: `Your permissions have been updated`,
+          data: { userId, roleId: dto.role_id, roleName },
+        });
+      } catch (notifError) {
+        this.logger.warn(`Failed to send role change notification: ${notifError}`);
+      }
+    }
+
     return data;
   }
 
@@ -294,6 +506,19 @@ export class OrganizationUsersService {
     if (error) {
       this.logger.error(`Failed to deactivate organization user: ${error.message}`);
       throw new BadRequestException(`Failed to deactivate organization user: ${error.message}`);
+    }
+
+    try {
+      await this.notificationsService.createNotification({
+        userId,
+        organizationId,
+        type: NotificationType.MEMBER_REMOVED,
+        title: 'You have been removed from the organization',
+        message: 'Your access to this organization has been revoked',
+        data: { userId },
+      });
+    } catch (notifError) {
+      this.logger.warn(`Failed to send member removed notification: ${notifError}`);
     }
 
     return { message: 'User removed from organization successfully' };
@@ -366,11 +591,12 @@ export class OrganizationUsersService {
 
     const isWorker = !!worker;
 
-    // Generate new temporary password
+    // Generate new temporary password using cryptographically secure RNG
+    const crypto = require('crypto');
     const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
     let tempPassword = '';
     for (let i = 0; i < 16; i++) {
-      tempPassword += chars.charAt(Math.floor(Math.random() * chars.length));
+      tempPassword += chars.charAt(crypto.randomInt(chars.length));
     }
 
     // Update Supabase auth user password

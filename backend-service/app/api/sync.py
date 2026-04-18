@@ -1,11 +1,13 @@
-from fastapi import APIRouter, HTTPException, BackgroundTasks
+from fastapi import APIRouter, HTTPException, BackgroundTasks, Depends
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
 from datetime import datetime, timedelta
 import logging
 import math
 
-router = APIRouter()
+from app.middleware.auth import get_current_user_or_service
+
+router = APIRouter(dependencies=[Depends(get_current_user_or_service)])
 logger = logging.getLogger(__name__)
 
 CORE_INDICES = ["NIRv", "EVI", "NDRE", "NDMI"]
@@ -31,7 +33,9 @@ def _boundary_to_geojson(boundary: List[List[float]]) -> Dict[str, Any]:
     def _to_wgs84(x: float, y: float) -> List[float]:
         if abs(x) > 180 or abs(y) > 90:
             lon = (x / 20037508.34) * 180
-            lat = (math.atan(math.exp((y / 20037508.34) * math.pi)) * 360 / math.pi) - 90
+            lat = (
+                math.atan(math.exp((y / 20037508.34) * math.pi)) * 360 / math.pi
+            ) - 90
             return [lon, lat]
         return [x, y]
 
@@ -49,7 +53,7 @@ async def _run_parcel_sync(
     parcel_name: Optional[str],
     indices: List[str],
 ):
-    from app.services import earth_engine_service
+    from app.services.satellite.factory import get_satellite_provider
     from app.services.supabase_service import supabase_service
 
     geometry = _boundary_to_geojson(boundary)
@@ -63,40 +67,66 @@ async def _run_parcel_sync(
         f"{start_date} to {end_date}"
     )
 
+    try:
+        satellite_provider = get_satellite_provider()
+        provider_name = satellite_provider.provider_name
+    except Exception as e:
+        logger.error(f"Failed to initialize satellite provider for sync: {e}")
+        return
+
+    logger.info(f"Using satellite provider: {provider_name}")
+
     total_saved = 0
 
     for index in indices:
         try:
-            time_series = earth_engine_service.get_time_series(
+            ts_result = satellite_provider.get_time_series(
                 geometry,
                 start_date,
                 end_date,
                 index,
                 "week",
-                use_aoi_cloud_filter=False,
             )
 
-            for point in time_series:
-                if point.get("value") is None:
+            for point in ts_result.data:
+                if point.value is None:
                     continue
                 try:
-                    await supabase_service.save_satellite_data(
-                        {
-                            "parcel_id": parcel_id,
-                            "organization_id": organization_id,
-                            "farm_id": farm_id,
-                            "index_name": index,
-                            "date": str(point["date"])[:10],
-                            "mean_value": float(point["value"]),
-                            "image_source": "sentinel-2",
-                        }
-                    )
+                    row: Dict[str, Any] = {
+                        "parcel_id": parcel_id,
+                        "organization_id": organization_id,
+                        "farm_id": farm_id,
+                        "index_name": index,
+                        "date": str(point.date)[:10],
+                        "mean_value": float(point.value),
+                        "image_source": "sentinel-2",
+                    }
+                    for key in (
+                        "min_value",
+                        "max_value",
+                        "std_value",
+                        "median_value",
+                        "percentile_25",
+                        "percentile_75",
+                        "percentile_90",
+                    ):
+                        v = getattr(point, key, None)
+                        if v is not None:
+                            row[key] = float(v)
+                    pc = getattr(point, "pixel_count", None)
+                    if pc is not None:
+                        row["pixel_count"] = int(pc)
+                    cc = getattr(point, "cloud_coverage", None)
+                    if cc is not None:
+                        row["cloud_coverage_percentage"] = float(cc)
+                    await supabase_service.save_satellite_data(row)
                     total_saved += 1
                 except Exception:
                     pass
 
             logger.info(
-                f"Synced {index} for parcel {parcel_id}: {len(time_series)} points"
+                f"Synced {index} for parcel {parcel_id} via {provider_name}: "
+                f"{len(ts_result.data)} points"
             )
         except Exception as e:
             logger.error(f"Failed to sync {index} for parcel {parcel_id}: {e}")

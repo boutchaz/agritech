@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useSubscription } from '@/hooks/useSubscription';
 import { normalizePlanType } from '@/lib/polar';
+import { Button } from '@/components/ui/button';
 
 export const Route = createFileRoute('/(public)/checkout-success')({
   component: CheckoutSuccess,
@@ -39,11 +40,13 @@ function CheckoutSuccess() {
   }, [currentOrganization, refetch]);
 
   // Check if subscription is active
+  /* eslint-disable react-hooks/set-state-in-effect -- deactivate on active subscription */
   useEffect(() => {
     if (subscription?.status === 'active') {
       setIsActivating(false);
     }
   }, [subscription]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleContinue = () => {
     navigate({ to: '/dashboard' });
@@ -159,11 +162,7 @@ function CheckoutSuccess() {
 
           {/* Actions */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button
-              onClick={handleContinue}
-              disabled={isActivating}
-              className="inline-flex items-center justify-center px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
-            >
+            <Button variant="green" onClick={handleContinue} disabled={isActivating} className="inline-flex items-center justify-center px-6 py-3 rounded-lg disabled:cursor-not-allowed transition-colors font-medium" >
               {isActivating ? (
                 <>
                   <Loader2 className="h-5 w-5 mr-2 animate-spin" />
@@ -175,15 +174,15 @@ function CheckoutSuccess() {
                   <ArrowRight className="h-5 w-5 ml-2" />
                 </>
               )}
-            </button>
+            </Button>
 
             {!isActivating && (
-              <button
+              <Button
                 onClick={handleViewSubscription}
                 className="inline-flex items-center justify-center px-6 py-3 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors font-medium"
               >
                 View Subscription Details
-              </button>
+              </Button>
             )}
           </div>
 
@@ -191,7 +190,7 @@ function CheckoutSuccess() {
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-8">
             Need help?{' '}
             <a
-              href="mailto:support@agritech.com"
+              href="mailto:support@agrogina.com"
               className="text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300 underline"
             >
               Contact Support
@@ -209,5 +208,3 @@ function CheckoutSuccess() {
     </div>
   );
 }
-
-export default CheckoutSuccess;

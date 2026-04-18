@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tansta
 import { useAuth } from '../hooks/useAuth';
 import { createInvoiceFromItems, fetchPartyName } from '../lib/invoice-service';
 import { invoicesApi, type PaginatedInvoiceQuery } from '../lib/api/invoices';
-import type { PaginatedResponse } from '../lib/api/types';
+import { type PaginatedResponse, extractApiResponse } from '../lib/api/types';
 
 export interface Invoice {
   id: string;
@@ -36,6 +36,7 @@ export interface Invoice {
 export interface InvoiceItem {
   id: string;
   invoice_id: string;
+  item_id: string | null;
   item_name: string;
   description: string | null;
   quantity: number;
@@ -65,10 +66,7 @@ export function useInvoices() {
       }
 
       const response = await invoicesApi.getAll({}, currentOrganization.id);
-      if (Array.isArray(response)) {
-        return response as Invoice[];
-      }
-      return ((response as any)?.data || []) as Invoice[];
+      return extractApiResponse<Invoice>(response);
     },
     enabled: !!currentOrganization?.id,
   });
@@ -84,7 +82,7 @@ export function usePaginatedInvoices(query: PaginatedInvoiceQuery) {
         throw new Error('No organization selected');
       }
 
-      return invoicesApi.getPaginated(query, currentOrganization.id);
+      return invoicesApi.getPaginated(query, currentOrganization.id) as unknown as PaginatedResponse<Invoice>;
     },
     enabled: !!currentOrganization?.id,
     placeholderData: keepPreviousData,
@@ -103,10 +101,7 @@ export function useInvoicesByType(type: 'sales' | 'purchase') {
       }
 
       const response = await invoicesApi.getAll({ invoice_type: type }, currentOrganization.id);
-      if (Array.isArray(response)) {
-        return response as Invoice[];
-      }
-      return ((response as any)?.data || []) as Invoice[];
+      return extractApiResponse<Invoice>(response);
     },
     enabled: !!currentOrganization?.id,
   });
@@ -129,7 +124,7 @@ export function useInvoice(invoiceId: string | null) {
       }
 
       const data = await invoicesApi.getOne(invoiceId, currentOrganization.id);
-      return data as InvoiceWithItems;
+      return data as unknown as InvoiceWithItems;
     },
     enabled: !!invoiceId && !!currentOrganization?.id,
   });
@@ -149,10 +144,7 @@ export function useInvoicesByStatus(status: Invoice['status']) {
       }
 
       const response = await invoicesApi.getAll({ status }, currentOrganization.id);
-      if (Array.isArray(response)) {
-        return response as Invoice[];
-      }
-      return ((response as any)?.data || []) as Invoice[];
+      return extractApiResponse<Invoice>(response);
     },
     enabled: !!currentOrganization?.id,
   });

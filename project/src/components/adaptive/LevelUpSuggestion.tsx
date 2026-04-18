@@ -11,8 +11,8 @@ import { EXPERIENCE_LEVELS } from '@/types/experience-level';
  * Shows when user has accumulated enough usage to benefit from higher level
  * Can be dismissed permanently per session
  */
-export const LevelUpSuggestion: React.FC = () => {
-  const { level, setLevel, shouldSuggestUpgrade, dismissHint } = useExperienceLevel();
+export const LevelUpSuggestion = () => {
+  const { level: _level, setLevel, shouldSuggestUpgrade, dismissHint } = useExperienceLevel();
   const [isDismissed, setIsDismissed] = React.useState(false);
 
   const suggestedLevel = shouldSuggestUpgrade();
@@ -55,11 +55,7 @@ export const LevelUpSuggestion: React.FC = () => {
                 {suggestedConfig.description}
               </div>
               <div className="flex space-x-2">
-                <Button
-                  size="sm"
-                  onClick={handleUpgrade}
-                  className="bg-green-600 hover:bg-green-700"
-                >
+                <Button variant="green" size="sm" onClick={handleUpgrade} >
                   Passer au niveau {suggestedConfig.label}
                 </Button>
                 <Button size="sm" variant="outline" onClick={handleDismiss}>
@@ -67,12 +63,12 @@ export const LevelUpSuggestion: React.FC = () => {
                 </Button>
               </div>
             </div>
-            <button
+            <Button
               onClick={handleDismiss}
               className="flex-shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
             >
               <X className="h-4 w-4" />
-            </button>
+            </Button>
           </div>
         </CardContent>
       </Card>

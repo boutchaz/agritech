@@ -1,12 +1,7 @@
-import React, { useState, useEffect, useMemo } from "react";
+import {  useState, useEffect, useMemo  } from "react";
 import { useTranslation } from "react-i18next";
 import { Banknote, Calculator, Loader2, AlertCircle, AlertTriangle } from "lucide-react";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
   DialogFooter,
 } from "../ui/dialog";
 import { Button } from "../ui/button";
@@ -41,6 +36,7 @@ import {
   PAYMENT_METHOD_LABELS,
   formatCurrency,
 } from "../../types/payments";
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 
 interface WorkerPaymentDialogProps {
   open: boolean;
@@ -97,7 +93,7 @@ function isCustomAmountType(type: PaymentType): boolean {
   return ["bonus", "overtime", "advance"].includes(type);
 }
 
-const WorkerPaymentDialog: React.FC<WorkerPaymentDialogProps> = ({
+const WorkerPaymentDialog = ({
   open,
   worker,
   onClose,
@@ -105,7 +101,7 @@ const WorkerPaymentDialog: React.FC<WorkerPaymentDialogProps> = ({
   initialPeriodStart,
   initialPeriodEnd,
   initialPaymentType,
-}) => {
+}: WorkerPaymentDialogProps) => {
   const { t } = useTranslation();
   const defaultDates = useMemo(() => getDefaultPeriodDates(), []);
   const [periodStart, setPeriodStart] = useState(
@@ -131,6 +127,7 @@ const WorkerPaymentDialog: React.FC<WorkerPaymentDialogProps> = ({
   const { data: accounts = [] } = useAccounts();
   const hasChartOfAccounts = accounts.length > 0;
 
+  /* eslint-disable react-hooks/set-state-in-effect -- reset form when dialog opens */
   useEffect(() => {
     if (open) {
       setPaymentType(
@@ -151,12 +148,15 @@ const WorkerPaymentDialog: React.FC<WorkerPaymentDialogProps> = ({
     initialPeriodEnd,
     defaultDates,
   ]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
+  /* eslint-disable react-hooks/set-state-in-effect -- clear calculated when type changes */
   useEffect(() => {
     if (requiresCustomAmount) {
       setCalculatedPayment(null);
     }
-  }, [paymentType, requiresCustomAmount]);
+  }, [requiresCustomAmount]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleCalculate = async () => {
     setError(null);
@@ -230,6 +230,7 @@ const WorkerPaymentDialog: React.FC<WorkerPaymentDialogProps> = ({
         period_start: periodStart,
         period_end: periodEnd,
         base_amount: calculatedPayment.base_amount,
+        task_bonus: calculatedPayment.task_bonus ?? 0,
         advance_deduction: calculatedPayment.advance_deductions,
         days_worked: calculatedPayment.days_worked,
         hours_worked: calculatedPayment.hours_worked,
@@ -267,22 +268,36 @@ const WorkerPaymentDialog: React.FC<WorkerPaymentDialogProps> = ({
   const isLoading = calculatePayment.isPending || createPayment.isPending;
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
-      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-green-100 dark:bg-green-900/30">
-              <Banknote className="w-5 h-5 text-green-600" />
-            </div>
-            <div>
-              <DialogTitle>{t("dialogs.workerPayment.title")}</DialogTitle>
-              <DialogDescription>
-                {worker.first_name} {worker.last_name}
-              </DialogDescription>
+    <ResponsiveDialog
+      open={open}
+      onOpenChange={(isOpen) => !isOpen && onClose()}
+      title={
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-lg bg-green-100 dark:bg-green-900/30">
+            <Banknote className="w-5 h-5 text-green-600" />
+          </div>
+          <div>
+            <div>{t("dialogs.workerPayment.title")}</div>
+            <div className="text-sm font-normal text-muted-foreground">
+              {worker.first_name} {worker.last_name}
             </div>
           </div>
-        </DialogHeader>
-
+        </div>
+      }
+      size="lg"
+      contentClassName="max-h-[90vh] overflow-y-auto"
+      footer={
+        <DialogFooter>
+          <Button
+            variant="outline"
+            onClick={onClose}
+            className="w-full sm:w-auto"
+          >
+            {t("app.cancel")}
+          </Button>
+        </DialogFooter>
+      }
+    >
         <div className="space-y-6 py-4">
           {error && (
             <Alert variant="destructive">
@@ -352,7 +367,11 @@ const WorkerPaymentDialog: React.FC<WorkerPaymentDialogProps> = ({
                 type="date"
                 value={periodEnd}
                 onChange={(e) => setPeriodEnd(e.target.value)}
+                className={periodEnd < periodStart ? 'border-red-500' : ''}
               />
+              {periodEnd < periodStart && (
+                <p className="text-xs text-red-500">La date de fin doit être après la date de début</p>
+              )}
             </div>
           </div>
 
@@ -484,11 +503,7 @@ const WorkerPaymentDialog: React.FC<WorkerPaymentDialogProps> = ({
                 </Card>
               )}
 
-              <Button
-                onClick={handleCreatePayment}
-                disabled={isLoading || customAmount <= 0 || !hasChartOfAccounts}
-                className="w-full bg-green-600 hover:bg-green-700"
-              >
+              <Button variant="green" onClick={handleCreatePayment} disabled={isLoading || customAmount <= 0 || !hasChartOfAccounts} className="w-full" >
                 {createPayment.isPending ? (
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                 ) : (
@@ -500,7 +515,7 @@ const WorkerPaymentDialog: React.FC<WorkerPaymentDialogProps> = ({
           ) : !calculatedPayment ? (
             <Button
               onClick={handleCalculate}
-              disabled={isLoading}
+              disabled={isLoading || periodEnd < periodStart}
               className="w-full"
               variant="outline"
             >
@@ -520,6 +535,17 @@ const WorkerPaymentDialog: React.FC<WorkerPaymentDialogProps> = ({
                   </h4>
 
                   <div className="space-y-2 text-sm">
+                    {/* Show "already paid" notice if base salary was already paid */}
+                    {calculatedPayment.already_paid_base != null &&
+                    calculatedPayment.already_paid_base > 0 && (
+                      <div className="flex justify-between text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700/50 rounded px-2 py-1">
+                        <span>✓ Salaire de base déjà payé :</span>
+                        <span>{formatCurrency(calculatedPayment.already_paid_base)}</span>
+                      </div>
+                    )}
+
+                    {/* Only show base amount if > 0 */}
+                    {calculatedPayment.base_amount > 0 && (
                     <div className="flex justify-between">
                       <span className="text-gray-600 dark:text-gray-400">
                         {t("dialogs.workerPayment.baseAmount")}:
@@ -528,33 +554,58 @@ const WorkerPaymentDialog: React.FC<WorkerPaymentDialogProps> = ({
                         {formatCurrency(calculatedPayment.base_amount)}
                       </span>
                     </div>
-
-                    {calculatedPayment.days_worked > 0 && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-600 dark:text-gray-400">
-                          {t("dialogs.workerPayment.daysWorked")}:
-                        </span>
-                        <span>{calculatedPayment.days_worked}</span>
-                      </div>
                     )}
 
-                    {calculatedPayment.hours_worked > 0 && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-600 dark:text-gray-400">
-                          {t("dialogs.workerPayment.hoursWorked")}:
-                        </span>
-                        <span>{calculatedPayment.hours_worked}h</span>
-                      </div>
-                    )}
+                    {/* Per-unit/days breakdown: only show if base salary is not already paid */}
+                    {calculatedPayment.base_amount > 0 &&
+                    calculatedPayment.units_completed != null &&
+                    calculatedPayment.units_completed > 0 ? (
+                      <>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600 dark:text-gray-400">
+                            Unités complétées :
+                          </span>
+                          <span>{calculatedPayment.units_completed ?? 0}</span>
+                        </div>
+                        {calculatedPayment.rate_per_unit != null && (
+                          <div className="flex justify-between">
+                            <span className="text-gray-600 dark:text-gray-400">
+                              Taux par unité :
+                            </span>
+                            <span>{formatCurrency(calculatedPayment.rate_per_unit)}</span>
+                          </div>
+                        )}
+                      </>
+                    ) : calculatedPayment.base_amount > 0 ? (
+                      <>
+                        {calculatedPayment.days_worked > 0 && (
+                          <div className="flex justify-between">
+                            <span className="text-gray-600 dark:text-gray-400">
+                              {t("dialogs.workerPayment.daysWorked")}:
+                            </span>
+                            <span>{calculatedPayment.days_worked}</span>
+                          </div>
+                        )}
 
-                    {calculatedPayment.tasks_completed > 0 && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-600 dark:text-gray-400">
-                          {t("dialogs.workerPayment.tasksCompleted")}:
-                        </span>
-                        <span>{calculatedPayment.tasks_completed}</span>
-                      </div>
-                    )}
+                        {calculatedPayment.hours_worked > 0 && (
+                          <div className="flex justify-between">
+                            <span className="text-gray-600 dark:text-gray-400">
+                              {t("dialogs.workerPayment.hoursWorked")}:
+                            </span>
+                            <span>{calculatedPayment.hours_worked}h</span>
+                          </div>
+                        )}
+
+                        {calculatedPayment.tasks_completed > 0 && (
+                          <div className="flex justify-between">
+                            <span className="text-gray-600 dark:text-gray-400">
+                              {t("dialogs.workerPayment.tasksCompleted")}:
+                            </span>
+                            <span>{calculatedPayment.tasks_completed}</span>
+                          </div>
+                        )}
+                      </>
+                    ) : null}
 
                     {calculatedPayment.overtime_amount > 0 && (
                       <div className="flex justify-between text-blue-600 dark:text-blue-400">
@@ -562,6 +613,14 @@ const WorkerPaymentDialog: React.FC<WorkerPaymentDialogProps> = ({
                         <span>
                           {formatCurrency(calculatedPayment.overtime_amount)}
                         </span>
+                      </div>
+                    )}
+
+                    {calculatedPayment.task_bonus != null &&
+                    calculatedPayment.task_bonus > 0 && (
+                      <div className="flex justify-between text-purple-600 dark:text-purple-400">
+                        <span>+ Tâches supplémentaires :</span>
+                        <span>{formatCurrency(calculatedPayment.task_bonus)}</span>
                       </div>
                     )}
 
@@ -616,11 +675,7 @@ const WorkerPaymentDialog: React.FC<WorkerPaymentDialogProps> = ({
                 >
                   {t("dialogs.workerPayment.recalculate")}
                 </Button>
-                <Button
-                  onClick={handleCreatePayment}
-                  disabled={isLoading || !hasChartOfAccounts}
-                  className="flex-1 bg-green-600 hover:bg-green-700"
-                >
+                <Button variant="green" onClick={handleCreatePayment} disabled={isLoading || !hasChartOfAccounts} className="flex-1" >
                   {createPayment.isPending ? (
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                   ) : (
@@ -632,18 +687,7 @@ const WorkerPaymentDialog: React.FC<WorkerPaymentDialogProps> = ({
             </div>
           )}
         </div>
-
-        <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={onClose}
-            className="w-full sm:w-auto"
-          >
-            {t("app.cancel")}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    </ResponsiveDialog>
   );
 };
 

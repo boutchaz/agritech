@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation } from '@tanstack/react-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -17,7 +17,6 @@ import {
   useRefreshUserData
 } from '../hooks/useAuthQueries';
 import type { OrganizationWithRole } from '../lib/api/users';
-import { useSubscription } from '../hooks/useSubscription';
 
 import { useOrganizationStore } from '../stores/organizationStore';
 import { useAuthStore, waitForHydration } from '../stores/authStore';
@@ -27,6 +26,8 @@ import {
   trackSessionStart,
   type AnalyticsUserProperties,
 } from '../lib/analytics';
+import { AuthenticatedLayoutSkeleton } from '@/components/AuthenticatedLayoutSkeleton';
+
 
 type Organization = AuthOrganization;
 type Farm = AuthFarm;
@@ -46,8 +47,8 @@ const toTitleCase = (value: string) =>
     .map(token => token.charAt(0).toUpperCase() + token.slice(1))
     .join(' ');
 
-export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { t } = useTranslation();
+export const MultiTenantAuthProvider = ({ children }: { children: React.ReactNode }) => {
+  const { t: _t } = useTranslation();
   const location = useLocation();
   const queryClient = useQueryClient();
   const [user, setUser] = useState<User | null>(null);
@@ -58,16 +59,28 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
   const [showAuth, setShowAuth] = useState(false);
 
   // Public routes that don't require authentication
-  const publicRoutes = ['/', '/login', '/register', '/forgot-password', '/onboarding/select-trial', '/set-password', '/auth/callback', '/blog'];
+  const publicRoutes = [
+    '/',
+    '/login',
+    '/register',
+    '/forgot-password',
+    '/onboarding/select-trial',
+    '/set-password',
+    '/auth/callback',
+    '/blog',
+    '/terms-of-service',
+    '/privacy-policy',
+    '/rdv',
+    '/rdv-siam',
+  ];
 
   // Routes that don't require password to be set (accessible with temporary password)
   const noPasswordRequiredRoutes = ['/tasks', '/auth/callback'];
 
   // TanStack Query hooks
-  const { data: profile, isLoading: profileLoading } = useUserProfile(user?.id);
-  const { data: organizations = [], isLoading: orgsLoading } = useUserOrganizations(user?.id);
+  const { data: profile, isLoading: profileLoading, isError: profileError } = useUserProfile(user?.id);
+  const { data: organizations = [], isLoading: orgsLoading, isError: orgsError } = useUserOrganizations(user?.id);
   const { data: farms = [], isLoading: farmsLoading } = useOrganizationFarms(currentOrganization?.id);
-  const { isLoading: subscriptionLoading } = useSubscription(currentOrganization);
   const signOutMutation = useSignOut();
   const refreshMutation = useRefreshUserData();
 
@@ -89,26 +102,25 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
   // IMPORTANT: Also wait for currentOrganization to be set when we have organizations
   const waitingForOrganization = organizations.length > 0 && !currentOrganization && !orgsLoading;
 
-  // Don't wait for subscription or farms on onboarding page
+  // Don't block the shell on subscription: `/_authenticated` already gates on `useSubscription`.
+  // Waiting here caused infinite "loading" when the subscription request hung or retry-looped.
   const isOnOnboardingPage = location.pathname.startsWith('/onboarding');
-  const loading = authLoading || profileLoading || orgsLoading ||
-    (!isOnOnboardingPage && (farmsLoading || subscriptionLoading)) ||
+  const loading =
+    authLoading ||
+    profileLoading ||
+    orgsLoading ||
+    (!isOnOnboardingPage && farmsLoading) ||
     waitingForOrganization;
 
 
-  // Calculate onboarding state - check profile, organizations, and onboarding completion
-  // IMPORTANT: Only calculate needsOnboarding if the session is actually valid
+  // Calculate onboarding state - only redirect when we have POSITIVE evidence onboarding is incomplete.
+  // Never redirect based on missing/errored data (API failures should not trigger onboarding).
+  // KEY RULE: having at least one organization is definitive proof onboarding is done —
+  // never redirect to onboarding if the user already belongs to an org.
   const isSessionValid = !useAuthStore.getState().isTokenExpired() && !!useAuthStore.getState().getAccessToken();
   const hasCompletedOnboarding = profile?.onboarding_completed === true;
-  const needsOnboarding = isSessionValid && !!(
-    user && !loading && (
-      // No profile yet (missing required fields)
-      !profile || !profile.full_name ||
-      // Onboarding not marked as completed in user_profiles
-      (profile && profile.onboarding_completed === false) ||
-      // Only force onboarding on missing organizations when onboarding was not already completed
-      (!hasCompletedOnboarding && organizations.length === 0)
-    )
+  const needsOnboarding = isSessionValid && !profileError && !orgsError && !!(
+    user && !loading && !hasCompletedOnboarding && organizations.length === 0
   );
 
 
@@ -144,38 +156,12 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
     setCurrentFarm(farm);
     localStorage.setItem('currentFarm', JSON.stringify(farm));
     
-    // Invalidate all farm-related queries to refresh dashboard and widgets
-    // Use predicate to match any query that might be farm-related
-    queryClient.invalidateQueries({
-      predicate: (query) => {
-        const queryKey = query.queryKey;
-        // Check if query key contains farm-related terms
-        const keyString = JSON.stringify(queryKey).toLowerCase();
-        return (
-          keyString.includes('farm') ||
-          keyString.includes('parcel') ||
-          keyString.includes('dashboard') ||
-          keyString.includes('analys') ||
-          keyString.includes('harvest') ||
-          keyString.includes('task') ||
-          keyString.includes('worker') ||
-          keyString.includes('inventory') ||
-          keyString.includes('stock') ||
-          keyString.includes('sales-order') ||
-          keyString.includes('invoice') ||
-          keyString.includes('crop') ||
-          keyString.includes('satellite') ||
-          keyString.includes('intelligence') ||
-          keyString.includes('lab-service') ||
-          keyString.includes('piece-work') ||
-          keyString.includes('metayage') ||
-          keyString.includes('item-farm-usage') ||
-          keyString.includes('farm-stock-levels')
-        );
-      },
-    });
-    
-    // Also explicitly invalidate common query key patterns
+    // Invalidate farm-dependent queries to refresh dashboard and widgets.
+    // IMPORTANT: Do NOT invalidate the 'farms' query itself — the list of farms
+    // doesn't change when switching the active farm. Invalidating it causes a
+    // refetch that can momentarily empty the farm selector dropdown (the query
+    // returns new object references, the sync effect re-fires, potentially
+    // causing cascading invalidations).
     queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] });
     queryClient.invalidateQueries({ queryKey: ['parcels'] });
     queryClient.invalidateQueries({ queryKey: ['parcels-with-details'] });
@@ -195,26 +181,8 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
     queryClient.invalidateQueries({ queryKey: ['production-intelligence'] });
     queryClient.invalidateQueries({ queryKey: ['lab-services'] });
     queryClient.invalidateQueries({ queryKey: ['piece-work'] });
-    queryClient.invalidateQueries({ queryKey: ['farms'] });
-    
-    // Force refetch active queries immediately
-    queryClient.refetchQueries({
-      predicate: (query) => {
-        const queryKey = query.queryKey;
-        const keyString = JSON.stringify(queryKey).toLowerCase();
-        return (
-          keyString.includes('farm') ||
-          keyString.includes('parcel') ||
-          keyString.includes('dashboard') ||
-          keyString.includes('analys') ||
-          keyString.includes('harvest') ||
-          keyString.includes('task') ||
-          keyString.includes('worker') ||
-          keyString.includes('inventory') ||
-          keyString.includes('stock')
-        );
-      },
-    });
+    queryClient.invalidateQueries({ queryKey: ['item-farm-usage'] });
+    queryClient.invalidateQueries({ queryKey: ['farm-stock-levels'] });
   };
 
   // Sign out handler
@@ -268,10 +236,8 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
       const accessToken = getAccessToken();
 
       if (!accessToken) {
-        console.warn('⚠️ No access token for role fetch');
         // Fall back to role from organization object if available
         if (currentOrganization.role) {
-          console.warn('ℹ️ Fallback: Using role from organization object:', currentOrganization.role);
           setUserRole(resolveFallbackRole(currentOrganization.role));
           return;
         }
@@ -293,10 +259,8 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
 
       if (!response.ok) {
         if (response.status === 401 || response.status === 403) {
-          console.warn('⚠️ Not authorized for role fetch, status:', response.status);
           // Fall back to role from organization object if available
           if (currentOrganization.role) {
-            console.warn('ℹ️ Fallback: Using role from organization object:', currentOrganization.role);
             setUserRole(resolveFallbackRole(currentOrganization.role));
             return;
           }
@@ -309,10 +273,8 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
       const data = await response.json();
 
       if (!data || !data.role) {
-        console.warn('⚠️ No role found for user in organization from API');
         // Fall back to role from organization object if available
         if (currentOrganization.role) {
-          console.warn('ℹ️ Fallback: Using role from organization object:', currentOrganization.role);
           setUserRole(resolveFallbackRole(currentOrganization.role));
           return;
         }
@@ -329,7 +291,6 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
       console.error('Error fetching user role:', error);
       // Fall back to role from organization object if available
       if (currentOrganization.role) {
-        console.warn('ℹ️ Fallback: Using role from organization object on error:', currentOrganization.role);
         setUserRole(resolveFallbackRole(currentOrganization.role));
         return;
       }
@@ -461,74 +422,67 @@ export const MultiTenantAuthProvider: React.FC<{ children: React.ReactNode }> = 
     }
   }, [farms, currentFarm]);
 
+  // Keep currentFarm in sync with latest `farms` list (ids + parcel-derived total_area).
+  // Fixes empty Radix Select when `currentFarm.id` was missing from a transient [] or after refetch.
+  useEffect(() => {
+    if (farms.length === 0) return;
+    if (!currentFarm) return;
+
+    const match = farms.find(f => f.id === currentFarm.id);
+    if (!match) {
+      let next = farms[0];
+      const raw = localStorage.getItem('currentFarm');
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw) as { id?: string };
+          const bySaved = parsed.id ? farms.find(f => f.id === parsed.id) : undefined;
+          if (bySaved) next = bySaved;
+        } catch {
+          /* ignore */
+        }
+      }
+      setCurrentFarm(next);
+      localStorage.setItem('currentFarm', JSON.stringify(next));
+      return;
+    }
+
+    const cur = currentFarm as typeof match & { total_area?: number };
+    const matchTa = (match as { total_area?: number }).total_area;
+    if (cur.total_area !== matchTa || cur.name !== match.name) {
+      setCurrentFarm(match);
+      localStorage.setItem('currentFarm', JSON.stringify(match));
+    }
+  }, [farms, currentFarm]);
+
   // Fetch user role when user or organization changes
   useEffect(() => {
     fetchUserRole();
   }, [user?.id, currentOrganization?.id]);
 
-  // Track session start and set user properties when authenticated
-  const { data: subscription } = useSubscription(currentOrganization);
+  // Track session start and set user properties when authenticated (fire once)
+  const analyticsTrackedRef = React.useRef(false);
 
   useEffect(() => {
-    if (user && profile && currentOrganization && userRole && !loading) {
-      // Track session start
-      trackSessionStart();
+    if (analyticsTrackedRef.current) return;
+    if (!user || !currentOrganization || !userRole || loading) return;
 
-      // Determine organization size
-      const orgSize = getOrganizationSize(organizations.length, farms.length);
+    analyticsTrackedRef.current = true;
+    trackSessionStart();
+    setAnalyticsUserProperties({
+      userId: user.id,
+      email: user.email,
+      signUpDate: profile?.created_at || new Date().toISOString(),
+      organizationId: currentOrganization.id,
+      organizationSize: getOrganizationSize(organizations.length, farms.length),
+      subscriptionTier: 'free', // simplified — no extra subscription query needed here
+      trialStatus: 'none',
+      role: userRole.role_name as AnalyticsUserProperties['role'],
+      farmCount: farms.length,
+      totalHectares: farms.reduce((t, f) => t + (f.size || 0), 0),
+      platform: 'web',
+    });
+  }, [user?.id, currentOrganization?.id, userRole?.role_name, loading]);
 
-      const planTypeMap: Record<string, AnalyticsUserProperties['subscriptionTier']> = {
-        starter: 'starter',
-        standard: 'standard',
-        premium: 'premium',
-        essential: 'starter',
-        professional: 'professional',
-        enterprise: 'enterprise',
-      };
-      const subscriptionTier: AnalyticsUserProperties['subscriptionTier'] = subscription
-        ? subscription.status === 'trialing'
-          ? 'trial'
-          : planTypeMap[(subscription.formula || subscription.plan_type) ?? ''] ?? 'free'
-        : 'free';
-
-      const trialStatus: AnalyticsUserProperties['trialStatus'] = !subscription
-        ? 'none'
-        : subscription.status === 'trialing'
-          ? 'active'
-          : subscription.status === 'active' &&
-              (subscription.formula || subscription.plan_type)
-            ? 'converted'
-            : 'expired';
-
-      // Set user properties for analytics segmentation
-      const userProps: AnalyticsUserProperties = {
-        userId: user.id,
-        email: user.email,
-        signUpDate: profile.created_at || new Date().toISOString(),
-        organizationId: currentOrganization.id,
-        organizationSize: orgSize,
-        subscriptionTier: subscriptionTier,
-        trialStatus: trialStatus,
-        role: userRole.role_name as AnalyticsUserProperties['role'],
-        farmCount: farms.length,
-        totalHectares: calculateTotalHectares(farms),
-        platform: 'web',
-      };
-
-      setAnalyticsUserProperties(userProps);
-    }
-  }, [user?.id, profile, currentOrganization?.id, userRole, loading, farms, organizations, subscription]);
-
-/**
- * Calculate total hectares from farms
- */
-function calculateTotalHectares(farms: Farm[]): number {
-  return farms.reduce((total, farm) => total + (farm.size || 0), 0);
-}
-
-/**
- * Determine organization size based on number of organizations and farms
- */
 function getOrganizationSize(orgCount: number, farmCount: number): 'solo' | 'small' | 'medium' | 'large' {
   if (orgCount === 1 && farmCount <= 1) return 'solo';
   if (orgCount <= 2 && farmCount <= 5) return 'small';
@@ -596,53 +550,60 @@ function getOrganizationSize(orgCount: number, farmCount: number): 'solo' | 'sma
   useEffect(() => {
     // Only check onboarding if all data is loaded
     if (!loading && !orgsLoading && !profileLoading && user && needsOnboarding && !isOnOnboardingPage && !isPublicRoute) {
-      // IMPORTANT: Validate session is actually valid before redirecting to onboarding
-      // This prevents redirecting users with expired tokens to onboarding
       const isTokenValid = !useAuthStore.getState().isTokenExpired();
       const hasAccessToken = !!useAuthStore.getState().getAccessToken();
 
-      // Only redirect to onboarding if the session is truly valid
       if (isTokenValid && hasAccessToken) {
         window.location.href = '/onboarding';
       } else {
-        // Session is invalid - clear auth and redirect to login
-        console.warn('[AuthProvider] Invalid session detected, clearing auth and redirecting to login');
-        useAuthStore.getState().clearAuth();
-        window.location.href = '/login';
+        const hasRefreshToken = !!useAuthStore.getState().tokens?.refresh_token;
+        if (hasRefreshToken) {
+          useAuthStore.getState().refreshAccessToken().then((refreshed) => {
+            if (refreshed) {
+              window.location.href = '/onboarding';
+            } else {
+              window.location.href = '/login';
+            }
+          });
+        } else {
+          window.location.href = '/login';
+        }
       }
     }
   }, [loading, orgsLoading, profileLoading, user, needsOnboarding, isOnOnboardingPage, isPublicRoute]);
 
 
 
-  const value = {
-    user: user ? { id: user.id, email: user.email || '' } : null,
-    profile: profile || null,
-    organizations,
-    currentOrganization,
-    farms,
-    currentFarm,
-    userRole,
-    loading,
-    needsOnboarding,
-    setCurrentOrganization: handleSetCurrentOrganization,
-    setCurrentFarm: handleSetCurrentFarm,
-    signOut,
-    refreshUserData,
-    hasRole,
-    isAtLeastRole,
-  };
+  const stableUser = useMemo(
+    () => (user ? { id: user.id, email: user.email || '' } : null),
+    [user?.id, user?.email],
+  );
 
-  // Show loading spinner (but not on public routes)
+  const value = useMemo(
+    () => ({
+      user: stableUser,
+      profile: profile || null,
+      organizations,
+      currentOrganization,
+      farms,
+      currentFarm,
+      userRole,
+      loading,
+      needsOnboarding,
+      setCurrentOrganization: handleSetCurrentOrganization,
+      setCurrentFarm: handleSetCurrentFarm,
+      signOut,
+      refreshUserData,
+      hasRole,
+      isAtLeastRole,
+    }),
+     
+    [stableUser, profile, organizations, currentOrganization, farms, currentFarm, userRole, loading, needsOnboarding],
+  );
+
+  // Show full layout skeleton while auth data loads (but not on public routes)
   if (loading && !isPublicRoute) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">{t('app.loading')}</p>
-        </div>
-      </div>
-    );
+    return <AuthenticatedLayoutSkeleton />;
   }
 
   // Show authentication form (but not on public routes)

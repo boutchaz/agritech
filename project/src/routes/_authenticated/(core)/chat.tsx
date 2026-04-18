@@ -1,57 +1,52 @@
 import React from 'react';
 import { ChatInterface } from '@/components/Chat/ChatInterface';
 import { createFileRoute } from '@tanstack/react-router';
-import { withRouteProtection } from '@/components/authorization/withRouteProtection';
+// withRouteProtection replaced by withModuleProtection for module gating
 import { useTranslation } from 'react-i18next';
 import ModernPageHeader from '@/components/ModernPageHeader';
 import { Building2, Bot } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { PageLoader } from '@/components/ui/loader';
 
-const ChatPage: React.FC = () => {
+const ChatPage = () => {
   const { t } = useTranslation();
   const { currentOrganization, currentFarm } = useAuth();
 
   // Set page title
   React.useEffect(() => {
-    const organizationName = currentOrganization?.name ?? 'Agritech Suite';
+    const organizationName = currentOrganization?.name ?? 'AgroGina Suite';
     const title = `${organizationName} | ${t('chat.title', 'AI Assistant')}`;
     document.title = title;
   }, [currentOrganization, t]);
 
   if (!currentOrganization) {
-    return (
-      <div className="flex items-center justify-center p-12">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">
-            {t('common.loading', 'Loading...')}
-          </p>
-        </div>
-      </div>
-    );
+    return <PageLoader />;
   }
 
   return (
-    <>
+    <div className="flex h-full min-h-0 w-full max-h-full flex-1 flex-col overflow-hidden">
       <ModernPageHeader
         breadcrumbs={[
           { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
-          ...(currentFarm ? [{ icon: Building2, label: currentFarm.name, path: '/farm-hierarchy' }] : []),
+          ...(currentFarm?.name ? [{ icon: Building2, label: currentFarm.name, path: '/farm-hierarchy' }] : []),
           { icon: Bot, label: t('chat.title', 'AI Assistant'), isActive: true },
         ]}
         title={t('chat.title', 'AI Assistant')}
         subtitle={t('chat.subtitle', 'Ask questions about your farm, workers, accounting, and more')}
       />
 
-      <div className="p-3 sm:p-4 lg:p-6">
-        <div className="max-w-4xl mx-auto" style={{ height: 'calc(100vh - 12rem)' }}>
+      {/* No bottom padding: main already reserves space for mobile nav / safe area; extra pb felt like a large gap */}
+      <div className="flex min-h-0 flex-1 flex-col px-3 pt-3 pb-0 sm:px-4 sm:pt-4 lg:px-6 lg:pt-6">
+        <div className="mx-auto flex min-h-0 w-full max-w-4xl flex-1 flex-col min-h-[min(28rem,calc(100dvh-12rem))]">
           <ChatInterface />
         </div>
       </div>
-    </>
+    </div>
   );
 };
 
+import { withModuleProtection } from '@/components/authorization/withModuleProtection';
+
 export const Route = createFileRoute('/_authenticated/(core)/chat')({
-  component: withRouteProtection(ChatPage, 'read', 'Chat'),
+  component: withModuleProtection(ChatPage, 'read', 'Chat'),
 });

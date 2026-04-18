@@ -1,27 +1,32 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/hooks/useAuth';
 import ModernPageHeader from '@/components/ModernPageHeader';
-import { MobileNavBar } from '@/components/MobileNavBar';
+
 import ReceptionBatchList from '@/components/Stock/ReceptionBatchList';
 import ReceptionBatchForm from '@/components/Stock/ReceptionBatchForm';
+import ReceptionBatchDetail from '@/components/Stock/ReceptionBatchDetail';
 import { Building2, ClipboardCheck } from 'lucide-react';
 import type { ReceptionBatch } from '@/types/reception';
+import { SectionLoader } from '@/components/ui/loader';
+
 
 function ReceptionBatchesPage() {
-  const { t } = useTranslation();
+  const { t } = useTranslation('stock');
   const { currentOrganization } = useAuth();
   const [showForm, setShowForm] = useState(false);
   const [batchToEdit, setBatchToEdit] = useState<ReceptionBatch | null>(null);
-  const [_selectedBatch, setSelectedBatch] = useState<ReceptionBatch | null>(null);
+  const [selectedBatch, setSelectedBatch] = useState<ReceptionBatch | null>(null);
   const search = Route.useSearch();
   const defaultHarvestId = search.harvest_id;
 
+  // Auto-open form when harvest_id is in URL (from harvest page link)
   useEffect(() => {
-    if (defaultHarvestId) {
+    if (defaultHarvestId && !showForm) {
       setShowForm(true);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [defaultHarvestId]);
 
   const handleViewBatch = (batch: ReceptionBatch) => {
@@ -47,31 +52,20 @@ function ReceptionBatchesPage() {
 
   if (!currentOrganization) {
     return (
-      <div className="flex items-center justify-center p-12">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">{t('receptionBatches.loading')}</p>
-        </div>
-      </div>
+      <SectionLoader />
     );
   }
 
   return (
     <>
-      {/* Mobile Navigation Bar */}
-      <MobileNavBar title={t('receptionBatches.title')} />
-
-      {/* Desktop Header */}
-      <div className="hidden md:block">
-        <ModernPageHeader
-          breadcrumbs={[
-            { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
-            { icon: ClipboardCheck, label: t('receptionBatches.title'), isActive: true }
-          ]}
-          title={t('receptionBatches.title')}
-          subtitle={t('receptionBatches.subtitle')}
-        />
-      </div>
+      <ModernPageHeader
+        breadcrumbs={[
+          { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
+          { icon: ClipboardCheck, label: t('receptionBatches.title'), isActive: true }
+        ]}
+        title={t('receptionBatches.title')}
+        subtitle={t('receptionBatches.subtitle')}
+      />
 
       <div className="p-3 sm:p-4 md:p-6 pb-20 md:pb-6">
         <ReceptionBatchList
@@ -85,7 +79,13 @@ function ReceptionBatchesPage() {
         open={showForm}
         onOpenChange={handleFormClose}
         defaultHarvestId={defaultHarvestId}
-        batchToEdit={batchToEdit}
+        batchToEdit={batchToEdit as unknown as Record<string, unknown> | undefined}
+      />
+
+      <ReceptionBatchDetail
+        batchId={selectedBatch?.id ?? null}
+        open={!!selectedBatch}
+        onOpenChange={(open) => { if (!open) setSelectedBatch(null); }}
       />
     </>
   );

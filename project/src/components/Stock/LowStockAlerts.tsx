@@ -1,10 +1,10 @@
-import React from 'react';
-import { useNavigate } from '@tanstack/react-router';
+import { Link, useNavigate } from '@tanstack/react-router';
 import { AlertTriangle, Package, Plus, ExternalLink } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { useFarmStockLevels } from '@/hooks/useFarmStockLevels';
 import { useCurrency } from '@/hooks/useCurrency';
 import { useTranslation } from 'react-i18next';
+import { cn } from '@/lib/utils';
 
 interface LowStockAlertsProps {
   farm_id?: string;
@@ -17,7 +17,7 @@ export default function LowStockAlerts({
   maxItems = 10,
   showActions = true,
 }: LowStockAlertsProps) {
-  const { t } = useTranslation();
+  const { t } = useTranslation('stock');
   const navigate = useNavigate();
   const { format: formatCurrency } = useCurrency();
 
@@ -66,26 +66,25 @@ export default function LowStockAlerts({
             </p>
           </div>
         </div>
-        {showActions && (
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => navigate({ to: '/stock/entries', search: { type: 'Material Receipt' } })}
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            {t('stock.lowStockAlerts.createEntry', 'Create Stock Entry')}
-          </Button>
-        )}
       </div>
 
       <div className="space-y-2">
-        {displayItems.map((item) => (
+        {displayItems.map((item) => {
+          const itemId = item.item_id;
+          if (!itemId) return null;
+
+          return (
           <div
-            key={item.item_id}
+            key={itemId}
             className="p-4 border border-amber-200 dark:border-amber-800 rounded-lg bg-amber-50 dark:bg-amber-900/10 hover:bg-amber-100 dark:hover:bg-amber-900/20 transition-colors"
           >
-            <div className="flex items-start justify-between">
-              <div className="flex-1">
+            <div className="flex items-start justify-between gap-3">
+              <Link
+                to="/stock/items/$itemId"
+                params={{ itemId }}
+                aria-label={t('stock.lowStockAlerts.viewItemAria', 'View item {{name}}', { name: item.item_name })}
+                className="min-w-0 flex-1 rounded-lg p-1 -m-1 text-inherit no-underline outline-none ring-amber-400/30 transition hover:bg-amber-100/60 focus-visible:ring-2 dark:hover:bg-amber-900/30"
+              >
                 <div className="flex items-center gap-2 mb-1">
                   <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0" />
                   <h4 className="font-semibold text-gray-900 dark:text-white">
@@ -150,36 +149,38 @@ export default function LowStockAlerts({
                     </div>
                   )}
                 </div>
-              </div>
+              </Link>
 
               {showActions && (
-                <div className="flex flex-col gap-2 ml-4">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() =>
-                      navigate({
-                        to: '/stock/entries',
-                        search: { type: 'Material Receipt', item_id: item.item_id },
-                      })
-                    }
+                <div className="flex shrink-0 flex-col gap-2">
+                  <Link
+                    to="/stock/entries"
+                    search={{ type: 'Material Receipt', item_id: itemId }}
+                    className={cn(
+                      buttonVariants({ variant: 'outline', size: 'sm' }),
+                      'text-slate-900 dark:text-slate-100',
+                    )}
                   >
-                    <Plus className="w-3 h-3 mr-1" />
+                    <Plus className="mr-1 h-3 w-3" aria-hidden />
                     {t('stock.lowStockAlerts.addStock', 'Add Stock')}
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => navigate({ to: '/stock/items', search: { itemId: item.item_id } })}
+                  </Link>
+                  <Link
+                    to="/stock/items/$itemId"
+                    params={{ itemId }}
+                    className={cn(
+                      buttonVariants({ variant: 'ghost', size: 'sm' }),
+                      'text-slate-900 dark:text-slate-100',
+                    )}
                   >
-                    <ExternalLink className="w-3 h-3 mr-1" />
+                    <ExternalLink className="mr-1 h-3 w-3" aria-hidden />
                     {t('stock.lowStockAlerts.viewItem', 'View Item')}
-                  </Button>
+                  </Link>
                 </div>
               )}
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
 
       {lowStockItems.length > maxItems && (

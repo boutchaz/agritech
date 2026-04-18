@@ -1,9 +1,18 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
+import { paginate, type PaginatedResponse } from '../../common/dto/paginated-query.dto';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationType } from '../notifications/dto/notification.dto';
+import { sanitizeSearch } from '../../common/utils/sanitize-search';
 
 @Injectable()
 export class DeliveriesService {
-  constructor(private readonly databaseService: DatabaseService) {}
+  private readonly logger = new Logger(DeliveriesService.name);
+
+  constructor(
+    private readonly databaseService: DatabaseService,
+    private readonly notificationsService: NotificationsService,
+  ) {}
 
   /**
    * Verify user has access to organization
@@ -27,67 +36,38 @@ export class DeliveriesService {
    * Get all deliveries for an organization with optional filters
    */
   async getAll(userId: string, organizationId: string, filters?: {
-    status?: string; // comma-separated
-    payment_status?: string; // comma-separated
-    delivery_type?: string; // comma-separated
+    status?: string;
+    payment_status?: string;
+    delivery_type?: string;
     farm_id?: string;
     driver_id?: string;
     date_from?: string;
     date_to?: string;
     customer_name?: string;
-  }) {
+    page?: number;
+    pageSize?: number;
+  }): Promise<PaginatedResponse<any>> {
     await this.verifyOrganizationAccess(userId, organizationId);
     const client = this.databaseService.getAdminClient();
 
-    let query = client
-      .from('deliveries')
-      .select('*')
-      .eq('organization_id', organizationId);
-
-    if (filters?.status) {
-      const statuses = filters.status.split(',');
-      query = query.in('status', statuses);
-    }
-
-    if (filters?.payment_status) {
-      const paymentStatuses = filters.payment_status.split(',');
-      query = query.in('payment_status', paymentStatuses);
-    }
-
-    if (filters?.delivery_type) {
-      const types = filters.delivery_type.split(',');
-      query = query.in('delivery_type', types);
-    }
-
-    if (filters?.farm_id) {
-      query = query.eq('farm_id', filters.farm_id);
-    }
-
-    if (filters?.driver_id) {
-      query = query.eq('driver_id', filters.driver_id);
-    }
-
-    if (filters?.date_from) {
-      query = query.gte('delivery_date', filters.date_from);
-    }
-
-    if (filters?.date_to) {
-      query = query.lte('delivery_date', filters.date_to);
-    }
-
-    if (filters?.customer_name) {
-      query = query.ilike('customer_name', `%${filters.customer_name}%`);
-    }
-
-    query = query.order('delivery_date', { ascending: false });
-
-    const { data, error } = await query;
-
-    if (error) {
-      throw new BadRequestException(`Failed to fetch deliveries: ${error.message}`);
-    }
-
-    return data || [];
+    return paginate(client, 'deliveries', {
+      filters: (q) => {
+        q = q.eq('organization_id', organizationId);
+        if (filters?.status) q = q.in('status', filters.status.split(','));
+        if (filters?.payment_status) q = q.in('payment_status', filters.payment_status.split(','));
+        if (filters?.delivery_type) q = q.in('delivery_type', filters.delivery_type.split(','));
+        if (filters?.farm_id) q = q.eq('farm_id', filters.farm_id);
+        if (filters?.driver_id) q = q.eq('driver_id', filters.driver_id);
+        if (filters?.date_from) q = q.gte('delivery_date', filters.date_from);
+        if (filters?.date_to) q = q.lte('delivery_date', filters.date_to);
+        if (filters?.customer_name) { const s = sanitizeSearch(filters.customer_name); if (s) q = q.ilike('customer_name', `%${s}%`); }
+        return q;
+      },
+      page: filters?.page || 1,
+      pageSize: filters?.pageSize || 50,
+      orderBy: 'delivery_date',
+      ascending: false,
+    });
   }
 
   /**
@@ -348,6 +328,31 @@ export class DeliveriesService {
       throw new BadRequestException(`Failed to create tracking record: ${trackingError.message}`);
     }
 
+    try {
+      const { data: orgUsers } = await client
+        .from('organization_users')
+        .select('user_id')
+        .eq('organization_id', organizationId)
+        .eq('is_active', true);
+
+      const userIds = (orgUsers || [])
+        .map((u: { user_id: string }) => u.user_id)
+        .filter((id: string) => id !== userId);
+
+      if (userIds.length > 0) {
+        await this.notificationsService.createNotificationsForUsers(
+          userIds,
+          organizationId,
+          NotificationType.DELIVERY_STATUS_CHANGED,
+          `Delivery to ${delivery.customer_name || 'customer'} is now ${statusData.status}`,
+          `Delivery status updated to ${statusData.status}`,
+          { deliveryId, status: statusData.status, customerName: delivery.customer_name },
+        );
+      }
+    } catch (notifError) {
+      this.logger.warn(`Failed to send delivery status notification: ${notifError}`);
+    }
+
     return delivery;
   }
 
@@ -385,6 +390,31 @@ export class DeliveriesService {
 
     if (error) {
       throw new BadRequestException(`Failed to complete delivery: ${error.message}`);
+    }
+
+    try {
+      const { data: orgUsers } = await client
+        .from('organization_users')
+        .select('user_id')
+        .eq('organization_id', organizationId)
+        .eq('is_active', true);
+
+      const userIds = (orgUsers || [])
+        .map((u: { user_id: string }) => u.user_id)
+        .filter((id: string) => id !== userId);
+
+      if (userIds.length > 0) {
+        await this.notificationsService.createNotificationsForUsers(
+          userIds,
+          organizationId,
+          NotificationType.DELIVERY_COMPLETED,
+          `Delivery to ${data.customer_name || 'customer'} completed`,
+          `Delivery has been signed by ${completionData.signature_name} and marked as delivered`,
+          { deliveryId, customerName: data.customer_name, signedBy: completionData.signature_name },
+        );
+      }
+    } catch (notifError) {
+      this.logger.warn(`Failed to send delivery completion notification: ${notifError}`);
     }
 
     return data;

@@ -1,6 +1,8 @@
-import React from 'react';
+
+import { cn } from '@/lib/utils';
 import { Users, Activity, Building2, Clock, TrendingUp, Zap } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { StatsGridSkeleton } from '@/components/ui/skeleton';
 import type { LiveDashboardSummary } from '../../services/liveDashboardService';
 
 interface LiveSummaryCardsProps {
@@ -8,26 +10,14 @@ interface LiveSummaryCardsProps {
   isLoading?: boolean;
 }
 
-const LiveSummaryCards: React.FC<LiveSummaryCardsProps> = ({
+const LiveSummaryCards = ({
   summary,
   isLoading = false,
-}) => {
+}: LiveSummaryCardsProps) => {
   const { t } = useTranslation();
 
   if (isLoading) {
-    return (
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        {[...Array(6)].map((_, i) => (
-          <div key={i} className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700">
-            <div className="animate-pulse space-y-3">
-              <div className="h-8 w-8 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
-              <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
-              <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
-            </div>
-          </div>
-        ))}
-      </div>
-    );
+    return <StatsGridSkeleton count={6} />;
   }
 
   const cards = [
@@ -93,40 +83,47 @@ const LiveSummaryCards: React.FC<LiveSummaryCardsProps> = ({
   ];
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-      {cards.map((card, index) => {
+    <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4 sm:gap-6">
+      {cards.map((card) => {
         const Icon = card.icon;
         return (
           <div
-            key={index}
-            className={`relative bg-gradient-to-br ${card.bgColor} ${card.darkBgColor} rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden hover:shadow-md transition-all duration-300`}
+            key={card.label}
+            className={`group relative bg-white dark:bg-slate-800 rounded-3xl p-5 shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden hover:shadow-xl transition-all duration-500 hover:-translate-y-1`}
           >
             {/* Background decoration */}
-            <div className={`absolute top-0 right-0 w-16 h-16 bg-gradient-to-br ${card.color} opacity-10 rounded-full blur-xl`}></div>
+            <div className={`absolute top-0 right-0 w-20 h-20 bg-gradient-to-br ${card.color} opacity-[0.03] group-hover:opacity-[0.08] rounded-full -mr-10 -mt-10 transition-all duration-700 group-hover:scale-150`}></div>
 
-            {/* Live indicator */}
-            {card.isLive && (
-              <div className="absolute top-2 right-2">
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                </span>
+            <div className="relative z-10">
+              <div className="flex items-start justify-between mb-4">
+                <div className={`p-2.5 bg-gradient-to-br ${card.color} rounded-2xl shadow-lg shadow-gray-200 dark:shadow-none`}>
+                  <Icon className="h-4 w-4 text-white" />
+                </div>
+                
+                {/* Live indicator */}
+                {card.isLive && (
+                  <div className="flex items-center gap-1.5 bg-emerald-50 dark:bg-emerald-900/30 px-2 py-0.5 rounded-full border border-emerald-100 dark:border-emerald-800">
+                    <span className="relative flex h-1.5 w-1.5">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
+                    </span>
+                    <span className="text-[8px] font-medium text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">Live</span>
+                  </div>
+                )}
               </div>
-            )}
 
-            {/* Icon */}
-            <div className={`p-2 bg-gradient-to-br ${card.color} rounded-lg w-fit mb-3`}>
-              <Icon className="h-4 w-4 text-white" />
-            </div>
+              {/* Value */}
+              <div className={cn(
+                "font-semibold text-slate-900 dark:text-white tabular-nums tracking-tighter",
+                card.isText ? 'text-base uppercase truncate' : 'text-3xl'
+              )}>
+                {card.value}
+              </div>
 
-            {/* Value */}
-            <div className={`text-2xl font-bold text-gray-900 dark:text-white ${card.isText ? 'text-lg' : ''}`}>
-              {card.value}
-            </div>
-
-            {/* Label */}
-            <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mt-1">
-              {card.label}
+              {/* Label */}
+              <div className="text-[10px] font-medium text-slate-400 dark:text-slate-500 mt-1 uppercase tracking-wide sm:tracking-wider leading-tight break-words hyphens-auto">
+                {card.label}
+              </div>
             </div>
           </div>
         );

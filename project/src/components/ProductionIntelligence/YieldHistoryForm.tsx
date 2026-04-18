@@ -1,16 +1,15 @@
-import React from 'react';
+
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
-  Dialog,
-  DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/Select';
@@ -43,11 +42,11 @@ interface YieldHistoryFormProps {
   onSuccess?: () => void;
 }
 
-export const YieldHistoryForm: React.FC<YieldHistoryFormProps> = ({
+export const YieldHistoryForm = ({
   isOpen,
   onClose,
   onSuccess,
-}) => {
+}: YieldHistoryFormProps) => {
   const { currentOrganization, currentFarm } = useAuth();
   const createYield = useCreateYieldHistory();
   const { data: farms = [] } = useFarms(currentOrganization?.id);
@@ -84,8 +83,12 @@ export const YieldHistoryForm: React.FC<YieldHistoryFormProps> = ({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+    <ResponsiveDialog
+      open={isOpen}
+      onOpenChange={onClose}
+      size="2xl"
+      contentClassName="max-h-[90vh] overflow-y-auto"
+    >
         <DialogHeader>
           <DialogTitle>Record Yield History</DialogTitle>
           <DialogDescription>
@@ -257,7 +260,6 @@ export const YieldHistoryForm: React.FC<YieldHistoryFormProps> = ({
             </Button>
           </DialogFooter>
         </form>
-      </DialogContent>
-    </Dialog>
+    </ResponsiveDialog>
   );
 };

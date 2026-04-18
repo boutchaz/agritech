@@ -2,6 +2,55 @@
 @tailwind components;
 @tailwind utilities;
 
+/* shadcn design tokens — maps to green primary brand */
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 142 76% 36%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 220 14% 96%;
+    --secondary-foreground: 220 9% 46%;
+    --muted: 220 14% 96%;
+    --muted-foreground: 220 9% 46%;
+    --accent: 220 14% 96%;
+    --accent-foreground: 220 9% 22%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 142 76% 36%;
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 222 47% 11%;
+    --foreground: 210 40% 98%;
+    --card: 222 47% 11%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222 47% 11%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 142 71% 45%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 217 33% 17%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217 33% 17%;
+    --muted-foreground: 215 20% 65%;
+    --accent: 217 33% 17%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217 33% 17%;
+    --input: 217 33% 17%;
+    --ring: 142 71% 45%;
+    --radius: 0.5rem;
+  }
+}
+
 /* iOS Safe Area Support */
 @layer base {
   :root {
@@ -33,23 +82,132 @@
     padding-bottom: var(--safe-area-inset-bottom);
   }
   .safe-all {
-    padding: var(--safe-area-inset-top) var(--safe-area-inset-right) var(--safe-area-inset-bottom) var(--safe-area-inset-left);
+    padding: var(--safe-area-inset-top) var(--safe-area-inset-right)
+      var(--safe-area-inset-bottom) var(--safe-area-inset-left);
+  }
+
+  /**
+   * Mobile bottom nav (4rem) + safe-area + content gap — scoped to the authenticated app shell.
+   * The fixed bar is 4rem + safe-area; scrollports add 1.5rem so the last line is not flush with tabs.
+   * Set `data-authenticated-app` on the column that wraps main + MobileBottomNav.
+   * - --app-layout-bottom-pad: use on <main data-main-scroll> (pb-app-shell-main).
+   * - --app-nested-scroll-bottom-pad: use on inner overflow-y-auto (e.g. settings content column).
+   */
+  [data-authenticated-app] {
+    --app-layout-bottom-pad: max(0.5rem, env(safe-area-inset-bottom, 0px));
+    --app-nested-scroll-bottom-pad: 0px;
+  }
+  @media (max-width: 767.98px) {
+    [data-authenticated-app] {
+      /**
+       * Physical reserve for the fixed tab bar (see spacer under <main> in _authenticated).
+       * max(14px, safe-area): some Samsung / Android builds report 0 for gesture bar — still reserve space.
+       * 4.5rem: slightly above 4rem row for large system fonts / two-line labels.
+       */
+      --app-mobile-nav-reserve: calc(
+        4.5rem + max(14px, env(safe-area-inset-bottom, 0px)) + 1rem
+      );
+      /* Extra scroll-end air inside <main> / nested scrollports (tab clearance is mostly the in-flow spacer). */
+      --app-layout-bottom-pad: calc(
+        0.75rem + max(14px, env(safe-area-inset-bottom, 0px))
+      );
+      --app-nested-scroll-bottom-pad: calc(1rem + max(8px, env(safe-area-inset-bottom, 0px)));
+    }
+  }
+}
+
+@layer utilities {
+  /* Fallbacks: safe when class is used outside [data-authenticated-app] (e.g. Storybook). */
+  .pb-app-shell-main {
+    padding-bottom: var(
+      --app-layout-bottom-pad,
+      max(0.5rem, env(safe-area-inset-bottom, 0px))
+    );
+  }
+  .scroll-pb-app-shell-main {
+    scroll-padding-bottom: var(
+      --app-layout-bottom-pad,
+      max(0.5rem, env(safe-area-inset-bottom, 0px))
+    );
+  }
+  .pb-app-shell-nested-scroll {
+    padding-bottom: var(--app-nested-scroll-bottom-pad, 0px);
+  }
+  .scroll-pb-app-shell-nested-scroll {
+    scroll-padding-bottom: var(--app-nested-scroll-bottom-pad, 0px);
   }
 }
 
 /* Prevent body/html scrolling - only allow scroll in main content area */
 @layer base {
-  html,
+  html {
+    height: 100%;
+    height: -webkit-fill-available;
+  }
+
   body {
     height: 100%;
+    /* iOS Safari: dynamic viewport + nested main scroll */
+    min-height: 100dvh;
+    min-height: -webkit-fill-available;
     overflow: hidden;
     margin: 0;
     padding: 0;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Eliminate 300ms tap delay on all interactive elements */
+  a,
+  button,
+  [role="button"],
+  input,
+  select,
+  textarea,
+  label,
+  [tabindex] {
+    touch-action: manipulation;
   }
 
   #root {
     height: 100%;
+    min-height: 100dvh;
+    min-height: -webkit-fill-available;
     overflow: hidden;
+  }
+
+  /* ===== Tablet Demo Optimizations ===== */
+
+  /* Standalone PWA: hide status bar gap, use full screen */
+  @media all and (display-mode: standalone) {
+    body {
+      padding-top: env(safe-area-inset-top);
+    }
+  }
+
+  /* Prevent pull-to-refresh and overscroll bounce on tablet */
+  html, body, #root {
+    overscroll-behavior: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Prevent text selection during demo swipes */
+  .no-select {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  /*
+   * Momentum scrolling on iOS for the app shell main region.
+   * Do not gate on max-width: iPad Pro landscape (>1024px) must get this too.
+   */
+  [data-main-scroll] {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  @media (min-width: 768px) {
+    [data-main-scroll] {
+      scroll-behavior: smooth;
+    }
   }
 
   /* Defend main scroll container against Radix UI / react-remove-scroll
@@ -62,16 +220,16 @@
 /* Global, professional form styles */
 @layer base {
   /* Textual inputs, selects, and textareas */
-  input[type='text'],
-  input[type='email'],
-  input[type='password'],
-  input[type='tel'],
-  input[type='url'],
-  input[type='search'],
-  input[type='number'],
-  input[type='date'],
-  input[type='time'],
-  input[type='datetime-local'],
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="tel"],
+  input[type="url"],
+  input[type="search"],
+  input[type="number"],
+  input[type="date"],
+  input[type="time"],
+  input[type="datetime-local"],
   select,
   textarea {
     @apply block w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800/70 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors duration-150 ease-in-out;
@@ -93,7 +251,7 @@
   }
 
   /* Hover and disabled states */
-  input:not([type='checkbox']):not([type='radio']):hover,
+  input:not([type="checkbox"]):not([type="radio"]):hover,
   select:hover,
   textarea:hover {
     @apply border-gray-300 dark:border-gray-500;
@@ -105,19 +263,19 @@
     @apply bg-gray-100 dark:bg-gray-700/60 text-gray-500 dark:text-gray-400 cursor-not-allowed;
   }
 
-  /* Invalid state */
-  input:invalid,
-  select:invalid,
-  textarea:invalid {
+  /* Invalid state — use :user-invalid so empty required fields are not red on first paint */
+  input:not([type='checkbox']):not([type='radio']):user-invalid,
+  select:user-invalid,
+  textarea:user-invalid {
     @apply border-red-400 focus:ring-red-500 focus:border-red-500;
   }
 
   /* Checkbox and radio */
-  input[type='checkbox'] {
+  input[type="checkbox"] {
     @apply h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500;
   }
 
-  input[type='radio'] {
+  input[type="radio"] {
     @apply h-4 w-4 border-gray-300 text-primary-600 focus:ring-primary-500;
   }
 
@@ -136,64 +294,17 @@
     @apply w-full max-w-lg rounded-t-2xl sm:rounded-xl bg-white dark:bg-gray-900 shadow-xl ring-1 ring-black/10 dark:ring-white/10 overflow-hidden max-h-[90vh] sm:max-h-[85vh] overflow-y-auto;
   }
 
-  /* Blog post content – AGRIVI-style typography (headings, lists, spacing) */
-  .blog-content {
-    @apply text-gray-700 dark:text-gray-300 max-w-none;
+  /**
+   * Module page body — same rhythm as dashboard.tsx and settings content.
+   * Use on route pages below ModernPageHeader for consistent padding and max width.
+   */
+  .app-page-content {
+    @apply w-full max-w-[1920px] mx-auto min-h-0 min-w-0 flex-1 px-2 sm:px-3 md:px-3 lg:px-4 py-3 sm:py-4 md:py-5 lg:py-6 space-y-6 md:space-y-8;
   }
-  .blog-content > h1:first-child {
-    @apply hidden;
-  }
-  .blog-content h1 {
-    @apply text-2xl md:text-3xl font-bold mt-10 mb-4 text-gray-900 dark:text-white scroll-mt-20;
-  }
-  .blog-content h2 {
-    @apply text-xl md:text-2xl font-bold mt-10 mb-4 pb-2 border-b border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white scroll-mt-20;
-  }
-  .blog-content h3 {
-    @apply text-lg md:text-xl font-semibold mt-6 mb-3 text-gray-900 dark:text-white scroll-mt-20;
-  }
-  .blog-content p {
-    @apply text-base md:text-lg leading-relaxed mb-4;
-  }
-  .blog-content p:first-of-type {
-    @apply text-lg md:text-xl text-gray-800 dark:text-gray-200;
-  }
-  .blog-content ul {
-    @apply list-disc pl-6 mb-4 space-y-2;
-  }
-  .blog-content ol {
-    @apply list-decimal pl-6 mb-4 space-y-2;
-  }
-  .blog-content li {
-    @apply text-base md:text-lg leading-relaxed;
-  }
-  .blog-content li > ul,
-  .blog-content li > ol {
-    @apply mt-2 mb-0;
-  }
-  .blog-content strong {
-    @apply font-semibold text-gray-900 dark:text-white;
-  }
-  .blog-content a {
-    @apply text-green-600 dark:text-green-400 underline underline-offset-2 hover:no-underline;
-  }
-  .blog-content img {
-    @apply rounded-xl shadow-lg my-4 w-full h-auto;
-  }
-  .blog-content blockquote {
-    @apply border-l-4 border-green-500 pl-4 my-4 italic text-gray-600 dark:text-gray-400;
-  }
-  .blog-content hr {
-    @apply my-8 border-gray-200 dark:border-gray-700;
-  }
-  .blog-content code {
-    @apply px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-sm font-mono;
-  }
-  .blog-content pre {
-    @apply p-4 rounded-lg bg-gray-100 dark:bg-gray-800 overflow-x-auto my-4;
-  }
-  .blog-content pre code {
-    @apply p-0 bg-transparent;
+
+  /** Horizontal scroll for wide toolbars/filters on narrow viewports (demo-safe on tablet). */
+  .app-toolbar-scroll {
+    @apply flex min-w-0 flex-wrap gap-2 sm:flex-nowrap sm:overflow-x-auto sm:pb-1 sm:[scrollbar-width:thin];
   }
 }
 
@@ -211,7 +322,8 @@
   }
 
   @keyframes float {
-    0%, 100% {
+    0%,
+    100% {
       transform: translateY(0) translateX(0);
     }
     50% {
@@ -220,7 +332,8 @@
   }
 
   @keyframes pulse-slow {
-    0%, 100% {
+    0%,
+    100% {
       opacity: 1;
     }
     50% {
@@ -303,7 +416,8 @@
   }
 
   @keyframes bell-shake {
-    0%, 100% {
+    0%,
+    100% {
       transform: rotate(0deg);
     }
     25% {
@@ -327,7 +441,8 @@
   }
 
   @keyframes glow-pulse {
-    0%, 100% {
+    0%,
+    100% {
       box-shadow: 0 0 5px rgba(239, 68, 68, 0.5);
     }
     50% {
@@ -403,4 +518,142 @@
   .stagger-delay-5 {
     animation-delay: 0.25s;
   }
+}
+
+/* Chat Markdown Styles */
+.chat-markdown {
+  line-height: 1.5;
+  word-break: break-word;
+}
+.chat-markdown h1,
+.chat-markdown h2,
+.chat-markdown h3 {
+  font-weight: 600;
+  margin-top: 0.75rem;
+  margin-bottom: 0.25rem;
+}
+.chat-markdown h1 {
+  font-size: 1.1em;
+}
+.chat-markdown h2 {
+  font-size: 1.05em;
+}
+.chat-markdown h3 {
+  font-size: 1em;
+}
+.chat-markdown p {
+  margin: 0.25rem 0;
+}
+.chat-markdown ul,
+.chat-markdown ol {
+  margin: 0.25rem 0;
+  padding-left: 1.25rem;
+}
+.chat-markdown ul {
+  list-style-type: disc;
+}
+.chat-markdown ol {
+  list-style-type: decimal;
+}
+.chat-markdown li {
+  margin: 0.125rem 0;
+}
+.chat-markdown strong {
+  font-weight: 600;
+}
+.chat-markdown em {
+  font-style: italic;
+}
+.chat-markdown code {
+  background-color: hsl(var(--muted));
+  padding: 0.1rem 0.3rem;
+  border-radius: 0.25rem;
+  font-size: 0.85em;
+  font-family: ui-monospace, monospace;
+}
+.chat-markdown pre {
+  background-color: hsl(var(--muted));
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.375rem;
+  overflow-x: auto;
+  margin: 0.5rem 0;
+}
+.chat-markdown pre code {
+  background: none;
+  padding: 0;
+  font-size: 0.8em;
+}
+.chat-markdown table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85em;
+  margin: 0.5rem 0;
+}
+.chat-markdown th,
+.chat-markdown td {
+  border: 1px solid hsl(var(--border));
+  padding: 0.25rem 0.5rem;
+  text-align: left;
+}
+.chat-markdown th {
+  background-color: hsl(var(--muted));
+  font-weight: 600;
+}
+.chat-markdown blockquote {
+  border-left: 3px solid hsl(var(--primary));
+  padding-left: 0.75rem;
+  margin: 0.5rem 0;
+  color: hsl(var(--muted-foreground));
+}
+.chat-markdown hr {
+  border: none;
+  border-top: 1px solid hsl(var(--border));
+  margin: 0.5rem 0;
+}
+.chat-markdown a:not([data-route]) {
+  color: hsl(var(--primary));
+  text-decoration: underline;
+}
+.chat-markdown > *:first-child {
+  margin-top: 0;
+}
+.chat-markdown > *:last-child {
+  margin-bottom: 0;
+}
+
+/* Custom branded scrollbar — thin, rounded, uses design tokens */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--primary) / 0.35) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: hsl(var(--primary) / 0.35);
+  border-radius: 9999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--primary) / 0.55);
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Hide scrollbar for horizontal scroll strips */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
 }

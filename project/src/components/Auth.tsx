@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { loginViaApi, signupViaApi } from '../lib/auth-api';
 import { Lock, Mail, User } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface AuthProps {
   onAuthSuccess: () => void;
 }
 
-const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
+const Auth = ({ onAuthSuccess }: AuthProps) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -134,22 +135,18 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
           </div>
 
           <div>
-            <button
-              type="submit"
-              disabled={loading}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
+            <Button variant="green" type="submit" disabled={loading} className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:cursor-not-allowed" >
               {loading ? (
                 <span className="absolute left-0 inset-y-0 flex items-center pl-3">
                   <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                 </span>
               ) : null}
               {isSignUp ? 'Créer un compte' : 'Se connecter'}
-            </button>
+            </Button>
           </div>
 
           <div className="text-center">
-            <button
+            <Button
               type="button"
               onClick={() => {
                 setIsSignUp(!isSignUp);
@@ -160,7 +157,7 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
               {isSignUp
                 ? 'Déjà un compte ? Se connecter'
                 : "Pas de compte ? S'inscrire"}
-            </button>
+            </Button>
           </div>
         </form>
       </div>

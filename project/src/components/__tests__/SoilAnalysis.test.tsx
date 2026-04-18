@@ -15,7 +15,7 @@ describe('SoilAnalysis', () => {
     await user.selectOptions(texture, 'Limoneuse')
 
     // Target pH input by its unique ID to avoid matching "Phosphore (P)"
-    const ph = document.getElementById('soil_ph') as HTMLInputElement
+    const ph = document.getElementById('physical.ph') as HTMLInputElement
     await user.clear(ph)
     await user.type(ph, '6')
 

@@ -29,6 +29,11 @@ export class CreateProductApplicationDto {
   @IsOptional()
   parcel_id?: string;
 
+  @ApiPropertyOptional({ description: 'Optional: Product variant ID (e.g. 1L, 5L format)' })
+  @IsUUID()
+  @IsOptional()
+  variant_id?: string;
+
   @ApiPropertyOptional({ description: 'Optional: Task ID if this application was planned' })
   @IsUUID()
   @IsOptional()

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import {  useState  } from "react";
 import { useTranslation } from 'react-i18next';
 import { Download, Loader2, CheckCircle, AlertCircle, Lock, FileArchive } from 'lucide-react';
 import { Button } from '../ui/button';
@@ -16,6 +16,11 @@ interface ExportStats {
   tasks: number;
   harvest_records: number;
   invoices: number;
+  journal_entries: number;
+  payment_records: number;
+  work_records: number;
+  accounts: number;
+  _storage_files: number;
   total: number;
 }
 
@@ -61,7 +66,7 @@ async function encryptData(data: string, passphrase: string): Promise<ArrayBuffe
   return result.buffer;
 }
 
-export const ExportData: React.FC = () => {
+export const ExportData = () => {
   const { t } = useTranslation();
   const { currentOrganization } = useAuth();
   const [step, setStep] = useState<ExportStep>('configure');
@@ -125,6 +130,11 @@ export const ExportData: React.FC = () => {
         tasks: exportData.tasks?.length || 0,
         harvest_records: exportData.harvest_records?.length || 0,
         invoices: exportData.invoices?.length || 0,
+        journal_entries: exportData.journal_entries?.length || 0,
+        payment_records: exportData.payment_records?.length || 0,
+        work_records: exportData.work_records?.length || 0,
+        accounts: exportData.accounts?.length || 0,
+        _storage_files: exportData._storage_files?.length || 0,
         total: 0,
       };
       
@@ -311,6 +321,20 @@ export const ExportData: React.FC = () => {
             <div className="font-medium">{stats.harvest_records}</div>
             <div>{t('common.invoices', 'Invoices')}:</div>
             <div className="font-medium">{stats.invoices}</div>
+            <div>{t('common.journalEntries', 'Journal Entries')}:</div>
+            <div className="font-medium">{stats.journal_entries}</div>
+            <div>{t('common.paymentRecords', 'Payment Records')}:</div>
+            <div className="font-medium">{stats.payment_records}</div>
+            <div>{t('common.workRecords', 'Work Records')}:</div>
+            <div className="font-medium">{stats.work_records}</div>
+            <div>{t('common.accounts', 'Accounts')}:</div>
+            <div className="font-medium">{stats.accounts}</div>
+            {stats._storage_files > 0 && (
+              <>
+                <div>{t('common.files', 'Files & Images')}:</div>
+                <div className="font-medium">{stats._storage_files}</div>
+              </>
+            )}
             <div className="border-t pt-2 font-medium">{t('common.totalRecords', 'Total Records')}:</div>
             <div className="border-t pt-2 font-bold text-green-600">{stats.total}</div>
           </div>
@@ -319,7 +343,7 @@ export const ExportData: React.FC = () => {
 
       <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
         <p className="text-sm text-blue-800 dark:text-blue-200">
-          {t('settings.export.downloadStarted', 'Your download should have started automatically. Use this file to import your data in the AgriTech Desktop application.')}
+          {t('settings.export.downloadStarted', 'Your download should have started automatically. Use this file to import your data in the AgroGina Desktop application.')}
         </p>
       </div>
 

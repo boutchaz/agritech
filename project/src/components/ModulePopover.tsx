@@ -29,6 +29,7 @@ import {
 import { Button } from './ui/button';
 import { ScrollArea } from './ui/scroll-area';
 import { cn } from '../lib/utils';
+import { Button } from '@/components/ui/button';
 
 const CATEGORY_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   core: Boxes,
@@ -48,7 +49,7 @@ interface ModulePopoverProps {
   isCollapsed: boolean;
 }
 
-export const ModulePopover: React.FC<ModulePopoverProps> = ({ isCollapsed }) => {
+export const ModulePopover = ({ isCollapsed }: ModulePopoverProps) => {
   const { t } = useTranslation();
   const { data: modules = [], isLoading } = useModules();
   const { data: subscription } = useSubscription();
@@ -125,7 +126,7 @@ export const ModulePopover: React.FC<ModulePopoverProps> = ({ isCollapsed }) => 
       {/* Addons Section */}
       {addonsOverview && (
         <div className="border-b border-gray-200 dark:border-gray-700 pb-4 mb-4">
-          <button
+          <Button
             onClick={() => setShowAddons(!showAddons)}
             className="w-full flex items-center justify-between p-2 text-left hover:bg-gray-50 dark:hover:bg-gray-800 rounded-md transition-colors"
           >
@@ -143,7 +144,7 @@ export const ModulePopover: React.FC<ModulePopoverProps> = ({ isCollapsed }) => 
             ) : (
               <ChevronRight className="h-4 w-4 text-gray-500" />
             )}
-          </button>
+          </Button>
 
           {showAddons && addonsOverview && (
             <div className="mt-2 space-y-2 pl-2">
@@ -196,7 +197,7 @@ export const ModulePopover: React.FC<ModulePopoverProps> = ({ isCollapsed }) => 
                   const isLocked = !isAvailable;
 
                   return (
-                    <button
+                    <Button
                       key={module.id}
                       onClick={() => handleModuleToggle(module.id, module.is_active)}
                       disabled={isLocked && !module.is_active}
@@ -224,7 +225,7 @@ export const ModulePopover: React.FC<ModulePopoverProps> = ({ isCollapsed }) => 
                       {isLocked && !module.is_active && (
                         <Lock className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
                       )}
-                    </button>
+                    </Button>
                   );
                 })}
               </div>

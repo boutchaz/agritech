@@ -1,6 +1,7 @@
-import React from 'react';
+
 import { Building2, MapPin, User, Trash2, Eye, Map, Edit } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { Button } from '@/components/ui/button';
 
 interface FarmListItemProps {
   farm: {
@@ -23,7 +24,7 @@ interface FarmListItemProps {
   onDelete?: () => void;
 }
 
-const FarmListItem: React.FC<FarmListItemProps> = ({
+const FarmListItem = ({
   farm,
   isSelected = false,
   onSelect,
@@ -32,7 +33,7 @@ const FarmListItem: React.FC<FarmListItemProps> = ({
   onEditManager,
   onViewParcels,
   onDelete,
-}) => {
+}: FarmListItemProps) => {
   const { t } = useTranslation();
 
   return (
@@ -95,7 +96,7 @@ const FarmListItem: React.FC<FarmListItemProps> = ({
               {farm.manager_name || t('farmHierarchy.farm.noManager')}
             </span>
             {onEditManager && (
-              <button
+              <Button
                 onClick={(e) => {
                   e.stopPropagation();
                   onEditManager();
@@ -104,7 +105,7 @@ const FarmListItem: React.FC<FarmListItemProps> = ({
                 title={t('farmHierarchy.farm.editManager')}
               >
                 <Edit className="w-3 h-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" />
-              </button>
+              </Button>
             )}
           </div>
 
@@ -127,27 +128,27 @@ const FarmListItem: React.FC<FarmListItemProps> = ({
 
         {/* Actions */}
         <div className="flex-shrink-0 flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-          <button
+          <Button
             onClick={onViewParcels}
             className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
             title={t('farmHierarchy.farm.manageParcels')}
           >
             <Map className="w-4 h-4" />
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={onSelect}
             className="p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors"
             title={t('farmHierarchy.farm.viewDetails')}
           >
             <Eye className="w-4 h-4" />
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={onDelete}
             className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
             title={t('farmHierarchy.farm.delete')}
           >
             <Trash2 className="w-4 h-4" />
-          </button>
+          </Button>
         </div>
       </div>
     </div>

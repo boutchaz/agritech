@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { User, Mail, Phone, Search, X, Check } from 'lucide-react';
+import { User, Mail, Phone, Search, Check } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { farmsService } from '../../services/farmsService';
@@ -10,6 +10,64 @@ import { Input } from '../ui/Input';
 import { Button } from '../ui/button';
 import { ScrollArea } from '../ui/scroll-area';
 import { useAuth } from '../../hooks/useAuth';
+import { SectionLoader } from '@/components/ui/loader';
+
+
+interface UserOptionProps {
+  user: OrganizationUser;
+  isSelected: boolean;
+  onSelect: (userId: string) => void;
+}
+
+const UserOption = ({ user, isSelected, onSelect }: UserOptionProps) => {
+  const { t } = useTranslation();
+  const fullName = `${user.profile?.first_name || ''} ${user.profile?.last_name || ''}`.trim();
+  const initials = fullName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+
+  return (
+    <Button
+      type="button"
+      onClick={() => onSelect(user.user_id)}
+      className={`w-full flex items-center gap-3 p-3 rounded-lg border transition-colors ${
+        isSelected
+          ? 'border-green-500 bg-green-50 dark:bg-green-900/20'
+          : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'
+      }`}
+    >
+      {/* Avatar - same pattern as UsersSettings */}
+      <div className="h-10 w-10 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center flex-shrink-0 overflow-hidden">
+        {user.profile?.avatar_url ? (
+          <img
+            src={user.profile.avatar_url}
+            alt={fullName}
+            className="h-10 w-10 rounded-full object-cover"
+          />
+        ) : (
+          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            {initials}
+          </span>
+        )}
+      </div>
+
+      <div className="flex-1 text-left">
+        <p className="font-medium text-gray-900 dark:text-white">
+          {fullName || t('farmHierarchy.farm.unnamedUser')}
+        </p>
+        <p className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-1">
+          <Mail className="w-3 h-3" />
+          {user.profile?.email || t('farmHierarchy.farm.noEmail')}
+        </p>
+      </div>
+
+      {isSelected && (
+        <div className="flex items-center justify-center w-6 h-6 rounded-full bg-green-500 text-white">
+          <Check className="w-4 h-4" />
+        </div>
+      )}
+    </Button>
+  );
+};
+
 
 interface EditFarmManagerModalProps {
   open: boolean;
@@ -21,15 +79,14 @@ interface EditFarmManagerModalProps {
   currentManagerPhone?: string;
 }
 
-const EditFarmManagerModal: React.FC<EditFarmManagerModalProps> = ({
+const EditFarmManagerModal = ({
   open,
   onOpenChange,
   farmId,
   farmName,
-  currentManagerName,
   currentManagerEmail,
   currentManagerPhone,
-}) => {
+}: EditFarmManagerModalProps) => {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { currentOrganization } = useAuth();
@@ -103,54 +160,6 @@ const EditFarmManagerModal: React.FC<EditFarmManagerModalProps> = ({
     });
   };
 
-  const UserOption: React.FC<{ user: OrganizationUser; isSelected: boolean }> = ({ user, isSelected }) => {
-    const fullName = `${user.profile?.first_name || ''} ${user.profile?.last_name || ''}`.trim();
-    const initials = fullName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-
-    return (
-      <button
-        type="button"
-        onClick={() => setSelectedUserId(user.user_id)}
-        className={`w-full flex items-center gap-3 p-3 rounded-lg border transition-colors ${
-          isSelected
-            ? 'border-green-500 bg-green-50 dark:bg-green-900/20'
-            : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'
-        }`}
-      >
-        {/* Avatar - same pattern as UsersSettings */}
-        <div className="h-10 w-10 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center flex-shrink-0 overflow-hidden">
-          {user.profile?.avatar_url ? (
-            <img
-              src={user.profile.avatar_url}
-              alt={fullName}
-              className="h-10 w-10 rounded-full object-cover"
-            />
-          ) : (
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              {initials}
-            </span>
-          )}
-        </div>
-
-        <div className="flex-1 text-left">
-          <p className="font-medium text-gray-900 dark:text-white">
-            {fullName || t('farmHierarchy.farm.unnamedUser')}
-          </p>
-          <p className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-1">
-            <Mail className="w-3 h-3" />
-            {user.profile?.email || t('farmHierarchy.farm.noEmail')}
-          </p>
-        </div>
-
-        {isSelected && (
-          <div className="flex items-center justify-center w-6 h-6 rounded-full bg-green-500 text-white">
-            <Check className="w-4 h-4" />
-          </div>
-        )}
-      </button>
-    );
-  };
-
   return (
     <ResponsiveDialog
       open={open}
@@ -179,6 +188,7 @@ const EditFarmManagerModal: React.FC<EditFarmManagerModalProps> = ({
           </Button>
         </div>
       }
+      size="md"
       className="sm:max-w-md"
     >
       <form id="edit-manager-form" onSubmit={handleSubmit} className="space-y-4">
@@ -198,9 +208,7 @@ const EditFarmManagerModal: React.FC<EditFarmManagerModalProps> = ({
         <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
           <ScrollArea className="h-64">
             {isLoadingUsers ? (
-              <div className="flex items-center justify-center h-32">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
-              </div>
+              <SectionLoader />
             ) : filteredUsers.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-32 text-gray-500 dark:text-gray-400">
                 <User className="w-8 h-8 mb-2 opacity-50" />
@@ -217,6 +225,7 @@ const EditFarmManagerModal: React.FC<EditFarmManagerModalProps> = ({
                     key={user.user_id}
                     user={user}
                     isSelected={selectedUserId === user.user_id}
+                    onSelect={setSelectedUserId}
                   />
                 ))}
               </div>

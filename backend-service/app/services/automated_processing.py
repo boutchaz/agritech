@@ -2,7 +2,7 @@ import asyncio
 import logging
 from typing import Dict, List, Optional, Any
 from datetime import datetime, timedelta
-from app.services import supabase_service
+from app.services.supabase_service import supabase_service
 from app.services.satellite import get_satellite_provider
 from app.models.schemas import BatchProcessingRequest, VegetationIndex
 
@@ -207,7 +207,7 @@ class AutomatedProcessingService:
                     try:
                         # Use CRS parameter to handle AOI crossing UTM zone boundaries
                         stats = index_image.reduceRegion(
-                            reducer=ee.Reducer.percentile([2, 25, 50, 75, 98])
+                            reducer=ee.Reducer.percentile([2, 10, 25, 50, 75, 90, 98])
                             .combine(ee.Reducer.mean(), "", True)
                             .combine(ee.Reducer.stdDev(), "", True)
                             .combine(ee.Reducer.count(), "", True),
@@ -230,6 +230,7 @@ class AutomatedProcessingService:
                             "max_value": stats_result.get(f"{index_name}_p98"),
                             "std_value": stats_result.get(f"{index_name}_stdDev"),
                             "median_value": stats_result.get(f"{index_name}_p50"),
+                            "percentile_10": stats_result.get(f"{index_name}_p10"),
                             "percentile_25": stats_result.get(f"{index_name}_p25"),
                             "percentile_75": stats_result.get(f"{index_name}_p75"),
                             "percentile_90": stats_result.get(f"{index_name}_p90"),
@@ -279,6 +280,10 @@ class AutomatedProcessingService:
                             "max_value": s.get("max"),
                             "std_value": s.get("std"),
                             "median_value": s.get("median"),
+                            "percentile_10": s.get("p10"),
+                            "percentile_25": s.get("p25"),
+                            "percentile_75": s.get("p75"),
+                            "percentile_90": s.get("p90"),
                             "cloud_coverage_percentage": cloud_check.get(
                                 "min_cloud_coverage", 0
                             ),

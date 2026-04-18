@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { CreateBankAccountDto, UpdateBankAccountDto } from './dto';
+import { sanitizeSearch } from '../../common/utils/sanitize-search';
 
 @Injectable()
 export class BankAccountsService {
@@ -26,7 +27,8 @@ export class BankAccountsService {
       }
 
       if (filters?.search) {
-        query = query.or(`account_name.ilike.%${filters.search}%,bank_name.ilike.%${filters.search}%`);
+        const s = sanitizeSearch(filters.search);
+        if (s) query = query.or(`account_name.ilike.%${s}%,bank_name.ilike.%${s}%`);
       }
 
       const { data, error } = await query;

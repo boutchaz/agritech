@@ -1,16 +1,17 @@
-import React, { useState, useMemo, useCallback } from 'react';
-import { Search, Bell, Loader2, Inbox, Star, Clock, Filter } from 'lucide-react';
+import { useState, useMemo, useCallback } from 'react';
+import { Loader2, Inbox, Clock, Filter } from 'lucide-react';
+import { FilterBar } from '@/components/ui/data-table';
 import { useNavigate } from '@tanstack/react-router';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { Button } from '../ui/button';
-import { Input } from '../ui/Input';
 import { ScrollArea } from '../ui/scroll-area';
 import { Card } from '../ui/card';
 import { NotificationItem } from './NotificationItem';
 import { NotificationFilters, NotificationTypeFilter, NotificationStatusFilter, NotificationTimeFilter } from './NotificationFilters';
 import { NotificationBulkActions } from './NotificationQuickActions';
 import { NotificationData } from '@/lib/socket';
+import { getNotificationRedirect } from '@/lib/notification-routes';
 import { useNotifications } from '@/hooks/useNotifications';
 import { Checkbox } from '../ui/checkbox';
 
@@ -90,7 +91,6 @@ export function NotificationCenter({ standalone = false }: NotificationCenterPro
     unreadCount,
     isLoading,
     markAsRead,
-    markAllAsRead,
   } = useNotifications({ limit: 100 });
 
   // State for important notifications (stored in localStorage)
@@ -174,14 +174,9 @@ export function NotificationCenter({ standalone = false }: NotificationCenterPro
       markAsRead(notification.id);
     }
 
-    // Navigate based on notification type
-    const { data } = notification;
-    if (data?.taskId) {
-      navigate({ to: '/tasks/$taskId', params: { taskId: data.taskId } });
-    } else if (data?.orderId) {
-      navigate({ to: '/marketplace/orders', search: { id: data.orderId } });
-    } else if (data?.quoteRequestId) {
-      navigate({ to: '/marketplace/quotes', search: { id: data.quoteRequestId } });
+    const redirect = getNotificationRedirect(notification);
+    if (redirect) {
+      navigate(redirect);
     }
 
     // Deselect if selected
@@ -200,8 +195,8 @@ export function NotificationCenter({ standalone = false }: NotificationCenterPro
   }, [markAsRead]);
 
   // Handle dismiss (archive)
-  const handleDismiss = useCallback((id: string) => {
-    // In a real app, this would call an API to archive the notification
+  const handleDismiss = useCallback((_id: string) => {
+    // TODO: Call API to archive the notification when backend supports it
     toast.success('Notification dismissed');
   }, []);
 
@@ -222,11 +217,6 @@ export function NotificationCenter({ standalone = false }: NotificationCenterPro
   }, []);
 
   // Handle mark all as read
-  const handleMarkAllRead = useCallback(async () => {
-    await markAllAsRead();
-    toast.success('All notifications marked as read');
-  }, [markAllAsRead]);
-
   // Handle clear filters
   const handleClearFilters = useCallback(() => {
     setTypeFilter('all');
@@ -252,7 +242,9 @@ export function NotificationCenter({ standalone = false }: NotificationCenterPro
 
   const handleBulkMarkImportant = useCallback(() => {
     const next = new Set(importantNotifications);
-    selectedIds.forEach((id) => next.add(id));
+    selectedIds.forEach((id) => {
+      next.add(id);
+    });
     setImportantNotifications(next);
     localStorage.setItem('important-notifications', JSON.stringify([...next]));
     setSelectedIds(new Set());
@@ -261,7 +253,9 @@ export function NotificationCenter({ standalone = false }: NotificationCenterPro
 
   const handleBulkRemoveImportant = useCallback(() => {
     const next = new Set(importantNotifications);
-    selectedIds.forEach((id) => next.delete(id));
+    selectedIds.forEach((id) => {
+      next.delete(id);
+    });
     setImportantNotifications(next);
     localStorage.setItem('important-notifications', JSON.stringify([...next]));
     setSelectedIds(new Set());
@@ -362,13 +356,11 @@ export function NotificationCenter({ standalone = false }: NotificationCenterPro
           </div>
 
           {/* Search bar */}
-          <div className="relative mb-4">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search notifications..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9"
+          <div className="mb-4">
+            <FilterBar
+              searchValue={searchQuery}
+              onSearchChange={setSearchQuery}
+              searchPlaceholder="Search notifications..."
             />
           </div>
 

@@ -1,8 +1,12 @@
-import React from 'react';
+
 import { Calendar, MapPin, Package, TrendingUp, Edit, Trash2, Eye, Award, ClipboardCheck } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
+import { fr, enUS, ar } from 'date-fns/locale';
 import type { HarvestSummary } from '../../types/harvests';
+import { Button } from '@/components/ui/button';
+
+const dateLocales: Record<string, Locale> = { fr, en: enUS, ar };
 
 interface HarvestCardProps {
   harvest: HarvestSummary;
@@ -12,7 +16,10 @@ interface HarvestCardProps {
   onCreateReception?: (harvest: HarvestSummary) => void;
 }
 
-const HarvestCard: React.FC<HarvestCardProps> = ({ harvest, onEdit, onDelete, onViewDetails, onCreateReception }) => {
+const HarvestCard = ({ harvest, onEdit, onDelete, onViewDetails, onCreateReception }: HarvestCardProps) => {
+  const { t, i18n } = useTranslation();
+  const currentLocale = dateLocales[i18n.language] || fr;
+
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
       stored: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
@@ -25,14 +32,7 @@ const HarvestCard: React.FC<HarvestCardProps> = ({ harvest, onEdit, onDelete, on
   };
 
   const getStatusLabel = (status: string) => {
-    const labels: Record<string, string> = {
-      stored: 'Stocké',
-      in_delivery: 'En livraison',
-      delivered: 'Livré',
-      sold: 'Vendu',
-      spoiled: 'Gâté',
-    };
-    return labels[status] || status;
+    return t(`harvests.statuses.${status}`, status);
   };
 
   const getQualityBadge = (grade?: string) => {
@@ -66,40 +66,40 @@ const HarvestCard: React.FC<HarvestCardProps> = ({ harvest, onEdit, onDelete, on
             {getQualityBadge(harvest.quality_grade)}
           </div>
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-            {harvest.crop_name || 'Culture non spécifiée'}
+            {harvest.crop_name || t('harvests.unspecifiedCrop', 'Unspecified crop')}
           </h3>
         </div>
         <div className="flex items-center gap-1">
           {onCreateReception && harvest.status === 'stored' && (
-            <button
+            <Button
               onClick={() => onCreateReception(harvest)}
               className="p-2 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-colors"
-              title="Créer Lot de Réception"
+              title={t('harvests.actions.createReception', 'Create Reception Batch')}
             >
               <ClipboardCheck className="h-4 w-4" />
-            </button>
+            </Button>
           )}
-          <button
+          <Button
             onClick={() => onViewDetails(harvest.id)}
             className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
-            title="Voir les détails"
+            title={t('harvests.actions.viewDetails', 'View details')}
           >
             <Eye className="h-4 w-4" />
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={() => onEdit(harvest)}
             className="p-2 text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-            title="Modifier"
+            title={t('common.edit', 'Edit')}
           >
             <Edit className="h-4 w-4" />
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={() => onDelete(harvest.id)}
             className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-            title="Supprimer"
+            title={t('common.delete', 'Delete')}
           >
             <Trash2 className="h-4 w-4" />
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -108,7 +108,7 @@ const HarvestCard: React.FC<HarvestCardProps> = ({ harvest, onEdit, onDelete, on
         <div className="flex items-center gap-2 text-sm">
           <Calendar className="h-4 w-4 text-gray-400" />
           <span className="text-gray-600 dark:text-gray-400">
-            {format(new Date(harvest.harvest_date), 'dd MMMM yyyy', { locale: fr })}
+            {format(new Date(harvest.harvest_date), 'dd MMMM yyyy', { locale: currentLocale })}
           </span>
         </div>
 
@@ -132,7 +132,7 @@ const HarvestCard: React.FC<HarvestCardProps> = ({ harvest, onEdit, onDelete, on
           <div className="flex items-center gap-2 text-sm">
             <TrendingUp className="h-4 w-4 text-green-600" />
             <span className="font-medium text-green-600 dark:text-green-400">
-              {harvest.estimated_revenue.toLocaleString()} MAD estimé
+              {harvest.estimated_revenue.toLocaleString()} MAD {t('harvests.estimated', 'estimated')}
             </span>
           </div>
         )}
@@ -142,7 +142,7 @@ const HarvestCard: React.FC<HarvestCardProps> = ({ harvest, onEdit, onDelete, on
       {harvest.intended_for && (
         <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
           <span className="text-xs text-gray-500 dark:text-gray-400">
-            Destination: <span className="font-medium text-gray-700 dark:text-gray-300">{harvest.intended_for}</span>
+            {t('harvests.destination', 'Destination')}: <span className="font-medium text-gray-700 dark:text-gray-300">{t(`harvests.intendedFor.${harvest.intended_for}`, harvest.intended_for)}</span>
           </span>
         </div>
       )}

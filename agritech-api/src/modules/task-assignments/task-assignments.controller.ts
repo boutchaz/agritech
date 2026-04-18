@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { OrganizationGuard } from '../../common/guards/organization.guard';
 import { TaskAssignmentsService } from './task-assignments.service';
 import {
   CreateTaskAssignmentDto,
@@ -20,8 +21,8 @@ import {
 
 @ApiTags('Task Assignments')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
-@Controller('api/v1/organizations/:organizationId/tasks/:taskId/assignments')
+@UseGuards(JwtAuthGuard, OrganizationGuard)
+@Controller('organizations/:organizationId/tasks/:taskId/assignments')
 export class TaskAssignmentsController {
   constructor(private readonly taskAssignmentsService: TaskAssignmentsService) {}
 
@@ -67,6 +68,23 @@ export class TaskAssignmentsController {
     @Req() req: any,
   ) {
     return this.taskAssignmentsService.bulkCreateAssignments(
+      organizationId,
+      taskId,
+      dto,
+      req.user.id,
+    );
+  }
+
+  @Post('sync')
+  @ApiOperation({ summary: 'Sync workers for a task (create new, remove deselected)' })
+  @ApiResponse({ status: 200, description: 'Assignments synced successfully' })
+  async syncAssignments(
+    @Param('organizationId') organizationId: string,
+    @Param('taskId') taskId: string,
+    @Body() dto: BulkCreateTaskAssignmentsDto,
+    @Req() req: any,
+  ) {
+    return this.taskAssignmentsService.syncAssignments(
       organizationId,
       taskId,
       dto,

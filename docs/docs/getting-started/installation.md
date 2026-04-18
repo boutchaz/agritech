@@ -4,7 +4,7 @@ sidebar_position: 1
 
 # Installation
 
-This guide will help you set up the AgriTech Platform development environment on your local machine.
+This guide will help you set up the AgroGina Platform development environment on your local machine.
 
 ## Prerequisites
 
@@ -110,6 +110,15 @@ VITE_SUPABASE_ANON_KEY=your-anon-key
 VITE_POLAR_CHECKOUT_URL=https://polar.sh/checkout
 ```
 
+#### Satellite/AI Backend Environment Variables
+
+```bash
+# backend-service/.env
+SATELLITE_PROVIDER=auto
+GEE_SERVICE_ACCOUNT=your-service-account@project.iam.gserviceaccount.com
+GEE_PRIVATE_KEY='{"type": "service_account", ...}'
+```
+
 ### 3. Start Services
 
 Start the database and other services using Docker Compose:
@@ -169,11 +178,52 @@ cd mobile
 pnpm start
 ```
 
+### Satellite/AI Backend Service (Python)
+
+```bash
+cd backend-service
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+uvicorn app.main:app --reload --port 8001
+```
+
+The service will be available at `http://localhost:8001`
+
+- API Documentation (Swagger): `http://localhost:8001/docs`
+
+### Desktop App (Tauri)
+
+Requires the Rust toolchain. Install from [rustup.rs](https://rustup.rs) if not already installed.
+
+```bash
+# Desktop (requires Rust toolchain)
+pnpm tauri:dev     # Dev with hot-reload
+pnpm tauri:build   # Build for current platform
+```
+
 ### Admin App
 
 ```bash
 cd admin-app
 pnpm dev
+```
+
+### Summary: All Development Servers
+
+| Service | Command | URL |
+|---------|---------|-----|
+| NestJS API | `pnpm --filter agritech-api start:dev` | http://localhost:3001 |
+| Frontend | `pnpm --filter agriprofy dev` | http://localhost:5173 |
+| Satellite & AI Service (Python) | `uvicorn app.main:app --reload --port 8001` | http://localhost:8001/docs |
+| Mobile | `cd mobile && pnpm start` | Expo DevTools |
+| Desktop | `pnpm tauri:dev` | Native window |
+
+```bash
+# Satellite & AI Service (Python)
+cd backend-service
+uvicorn app.main:app --reload --port 8001
+# Available at http://localhost:8001/docs (Swagger)
 ```
 
 ## Verify Installation

@@ -1,13 +1,15 @@
-import React from 'react'
+import type { ReactNode } from 'react'
+
+import { cn } from '@/lib/utils'
 
 type FormFieldProps = {
-  label?: React.ReactNode
+  label?: ReactNode
   htmlFor?: string
   helper?: string
   error?: string
   required?: boolean
   className?: string
-  children: React.ReactNode
+  children: ReactNode
 }
 
 export function FormField({
@@ -20,18 +22,23 @@ export function FormField({
   children,
 }: FormFieldProps) {
   return (
-    <div className={className}>
+    <div className={cn('space-y-1.5', className)}>
       {label && (
-        <label htmlFor={htmlFor} className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+        <label
+          htmlFor={htmlFor}
+          className="block text-sm font-medium leading-snug tracking-tight text-gray-800 dark:text-gray-200"
+        >
           {label}
-          {required ? <span className="text-red-500"> *</span> : null}
+          {required ? <span className="text-red-500 dark:text-red-400"> *</span> : null}
         </label>
       )}
       {children}
       {error ? (
-        <p className="mt-1 text-xs text-red-600 dark:text-red-400">{error}</p>
+        <p className="text-xs leading-relaxed text-red-600 dark:text-red-400" role="alert">
+          {error}
+        </p>
       ) : helper ? (
-        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{helper}</p>
+        <p className="text-xs leading-relaxed text-gray-500 dark:text-gray-400">{helper}</p>
       ) : null}
     </div>
   )

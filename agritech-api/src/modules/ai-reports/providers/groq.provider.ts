@@ -12,7 +12,7 @@ import {
 export class GroqProvider extends BaseAIProvider {
   private readonly envApiKey: string;
   private readonly apiUrl = 'https://api.groq.com/openai/v1/chat/completions';
-  private readonly defaultModel = 'llama-3.3-70b-versatile';
+  private readonly defaultModel = 'meta-llama/llama-4-scout-17b-16e-instruct';
 
   constructor(configService: ConfigService) {
     super(configService, AIProvider.GROQ);
@@ -45,7 +45,7 @@ export class GroqProvider extends BaseAIProvider {
           model,
           messages: this.buildMessages(request.systemPrompt, request.userPrompt),
           temperature: request.config.temperature ?? 0.7,
-          max_tokens: request.config.maxTokens ?? 4096,
+          max_tokens: request.config.maxTokens ?? 32768,
           response_format: { type: 'json_object' },
         },
         {
@@ -53,7 +53,7 @@ export class GroqProvider extends BaseAIProvider {
             Authorization: `Bearer ${apiKey}`,
             'Content-Type': 'application/json',
           },
-          timeout: 120000, // 2 minutes timeout for AI generation
+          timeout: 300000, // 5 minutes timeout for AI generation
         },
       );
 

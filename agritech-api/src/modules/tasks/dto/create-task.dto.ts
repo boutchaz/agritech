@@ -171,14 +171,32 @@ export class CreateTaskDto {
     default: "daily",
   })
   @IsOptional()
-  @IsIn(["daily", "per_unit", "monthly", "metayage", "none"])
+  @IsIn(["daily", "per_unit", "monthly", "metayage", "none", "forfait"])
   payment_type?: string;
+
+  @ApiPropertyOptional({ description: "Forfait amount (lump sum payment)" })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  forfait_amount?: number;
 
   @ApiPropertyOptional({ description: "Work unit ID for piece-work" })
   @IsOptional()
   @IsUUID()
   @EmptyStringToNull()
   work_unit_id?: string;
+
+  @ApiPropertyOptional({ description: "Crop cycle ID for production traceability" })
+  @IsOptional()
+  @IsUUID()
+  @EmptyStringToNull()
+  crop_cycle_id?: string;
+
+  @ApiPropertyOptional({ description: "Campaign ID for production traceability" })
+  @IsOptional()
+  @IsUUID()
+  @EmptyStringToNull()
+  campaign_id?: string;
 
   @ApiPropertyOptional({ description: "Estimated units required" })
   @IsOptional()
@@ -202,4 +220,20 @@ export class CreateTaskDto {
   @ValidateNested({ each: true })
   @Type(() => ConsumedItemDto)
   planned_items?: ConsumedItemDto[];
+
+  @ApiPropertyOptional({ description: 'Recurrence rule', enum: ['daily', 'weekly', 'biweekly', 'monthly', 'quarterly', 'yearly'] })
+  @IsOptional()
+  @IsIn(['daily', 'weekly', 'biweekly', 'monthly', 'quarterly', 'yearly'])
+  recurrence_rule?: string;
+
+  @ApiPropertyOptional({ description: 'Recurrence end date' })
+  @IsOptional()
+  @IsDateString()
+  recurrence_end_date?: string;
+
+  @ApiPropertyOptional({ description: 'Parent task ID for recurring instances' })
+  @IsOptional()
+  @IsUUID()
+  @EmptyStringToNull()
+  parent_task_id?: string;
 }

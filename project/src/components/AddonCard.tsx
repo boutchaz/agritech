@@ -1,8 +1,17 @@
-import React from 'react';
+import {  useState  } from "react";
 import { Check, Plus, Loader2, X, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
 import { usePurchaseAddon, useCancelAddon } from '../hooks/useAddons';
 import type { AddonModule, OrganizationAddon } from '../lib/api/addons';
+import { Button } from '@/components/ui/button';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+
+type ConfirmAction = {
+  title: string;
+  description?: string;
+  variant?: 'destructive' | 'default';
+  onConfirm: () => void;
+};
 
 interface AddonCardProps {
   addon: AddonModule;
@@ -11,14 +20,20 @@ interface AddonCardProps {
   onPurchaseSuccess?: () => void;
 }
 
-const AddonCard: React.FC<AddonCardProps> = ({
+const AddonCard = ({
   addon,
   activeAddon,
   hasAvailableSlots,
   onPurchaseSuccess,
-}) => {
+}: AddonCardProps) => {
   const purchaseAddon = usePurchaseAddon();
   const cancelAddon = useCancelAddon();
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<ConfirmAction>({ title: '', onConfirm: () => {} });
+  const showConfirm = (title: string, onConfirm: () => void, opts?: { description?: string; variant?: 'destructive' | 'default' }) => {
+    setConfirmAction({ title, onConfirm, ...opts });
+    setConfirmOpen(true);
+  };
 
   const isActive = activeAddon?.status === 'active' || activeAddon?.status === 'trialing';
   const isCanceling = activeAddon?.cancel_at_period_end;
@@ -54,22 +69,22 @@ const AddonCard: React.FC<AddonCardProps> = ({
       ? 'Êtes-vous sûr de vouloir annuler immédiatement? Vous perdrez l\'accès à ce module.'
       : 'L\'addon sera annulé à la fin de la période de facturation. Continuer?';
 
-    if (!confirm(confirmMessage)) return;
-
-    try {
-      await cancelAddon.mutateAsync({
-        module_id: addon.id,
-        cancel_immediately: immediately,
-      });
-      toast.success(
-        immediately
-          ? 'Addon annulé avec succès'
-          : 'L\'addon sera annulé à la fin de la période'
-      );
-    } catch (error) {
-      toast.error('Erreur lors de l\'annulation de l\'addon');
-      console.error('Cancel error:', error);
-    }
+    showConfirm(confirmMessage, async () => {
+      try {
+        await cancelAddon.mutateAsync({
+          module_id: addon.id,
+          cancel_immediately: immediately,
+        });
+        toast.success(
+          immediately
+            ? 'Addon annulé avec succès'
+            : 'L\'addon sera annulé à la fin de la période'
+        );
+      } catch (error) {
+        toast.error('Erreur lors de l\'annulation de l\'addon');
+        console.error('Cancel error:', error);
+      }
+    }, {variant: "destructive"});
   };
 
   const formatDate = (dateString?: string) => {
@@ -132,14 +147,14 @@ const AddonCard: React.FC<AddonCardProps> = ({
               </div>
             ) : (
               <div className="flex space-x-2 pt-2">
-                <button
+                <Button
                   onClick={() => handleCancel(false)}
                   disabled={cancelAddon.isPending}
                   className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50"
                 >
                   Annuler à la fin
-                </button>
-                <button
+                </Button>
+                <Button
                   onClick={() => handleCancel(true)}
                   disabled={cancelAddon.isPending}
                   className="px-3 py-2 text-sm border border-red-300 dark:border-red-700 rounded-lg text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50"
@@ -149,22 +164,14 @@ const AddonCard: React.FC<AddonCardProps> = ({
                   ) : (
                     <X className="h-4 w-4" />
                   )}
-                </button>
+                </Button>
               </div>
             )}
           </div>
         )}
 
         {!isActive && (
-          <button
-            onClick={handlePurchase}
-            disabled={purchaseAddon.isPending || !hasAvailableSlots}
-            className={`w-full py-2.5 px-4 rounded-lg font-medium transition-colors flex items-center justify-center space-x-2 ${
-              hasAvailableSlots
-                ? 'bg-blue-600 text-white hover:bg-blue-700'
-                : 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed'
-            } disabled:opacity-50`}
-          >
+          <Button variant="blue" onClick={handlePurchase} disabled={purchaseAddon.isPending || !hasAvailableSlots} className={`w-full py-2.5 px-4 rounded-lg font-medium transition-colors flex items-center justify-center space-x-2 ${ hasAvailableSlots ? '' : 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed' } disabled:opacity-50`} >
             {purchaseAddon.isPending ? (
               <Loader2 className="h-5 w-5 animate-spin" />
             ) : (
@@ -175,9 +182,17 @@ const AddonCard: React.FC<AddonCardProps> = ({
                 </span>
               </>
             )}
-          </button>
+          </Button>
         )}
       </div>
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title={confirmAction.title}
+        description={confirmAction.description}
+        variant={confirmAction.variant}
+        onConfirm={confirmAction.onConfirm}
+      />
     </div>
   );
 };

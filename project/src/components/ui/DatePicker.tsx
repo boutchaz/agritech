@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { StatusDot } from '@/components/ui/status-dot';
 import { format, parseISO } from 'date-fns';
 import { Calendar as CalendarIcon } from 'lucide-react';
 import { DayPicker } from 'react-day-picker';
@@ -28,6 +29,8 @@ export function DatePicker({
   const [selectedDate, setSelectedDate] = React.useState<Date | undefined>(
     value ? parseISO(value) : undefined
   );
+  const [calendarStyle, setCalendarStyle] = React.useState<React.CSSProperties>({});
+  const triggerRef = React.useRef<HTMLButtonElement>(null);
 
   // Convert available dates to Date objects for comparison
   const availableDateObjects = React.useMemo(
@@ -45,6 +48,22 @@ export function DatePicker({
   React.useEffect(() => {
     setSelectedDate(value ? parseISO(value) : undefined);
   }, [value]);
+
+  // Compute fixed position when opening — avoids clipping by dialog overflow
+  const open = () => {
+    if (disabled || isLoading) return;
+    if (triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const calendarHeight = 320; // approximate height of DayPicker
+      if (spaceBelow >= calendarHeight) {
+        setCalendarStyle({ top: rect.bottom + 4, left: rect.left });
+      } else {
+        setCalendarStyle({ bottom: window.innerHeight - rect.top + 4, left: rect.left });
+      }
+    }
+    setIsOpen(true);
+  };
 
   const handleSelect = (date: Date | undefined) => {
     if (!date) {
@@ -91,8 +110,9 @@ export function DatePicker({
     <div className={cn('relative', className)}>
       {/* Trigger Button */}
       <button
+        ref={triggerRef}
         type="button"
-        onClick={() => !disabled && !isLoading && setIsOpen(!isOpen)}
+        onClick={open}
         disabled={disabled || isLoading}
         className={cn(
           'flex h-10 w-full items-center justify-between rounded-md border border-gray-300 bg-white px-3 py-2 text-sm ring-offset-white',
@@ -105,17 +125,20 @@ export function DatePicker({
         <CalendarIcon className="h-4 w-4 opacity-50" />
       </button>
 
-      {/* Dropdown Calendar */}
+      {/* Calendar — fixed position so it's never clipped by dialog overflow */}
       {isOpen && (
         <>
           {/* Backdrop */}
           <div
-            className="fixed inset-0 z-40"
+            className="fixed inset-0 z-[9998]"
             onClick={() => setIsOpen(false)}
           />
 
           {/* Calendar Popover */}
-          <div className="absolute z-50 mt-2 rounded-md border border-gray-200 bg-white p-3 shadow-lg">
+          <div
+            className="fixed z-[9999] rounded-md border border-gray-200 bg-white p-3 shadow-lg"
+            style={calendarStyle}
+          >
             <DayPicker
               mode="single"
               selected={selectedDate}
@@ -132,7 +155,7 @@ export function DatePicker({
             {availableDates.length > 0 && (
               <div className="mt-3 border-t border-gray-200 pt-3 text-xs text-gray-600">
                 <div className="flex items-center gap-2">
-                  <div className="h-2 w-2 rounded-full bg-green-500" />
+                  <StatusDot color="green" size="sm" />
                   <span>Available satellite imagery</span>
                 </div>
               </div>

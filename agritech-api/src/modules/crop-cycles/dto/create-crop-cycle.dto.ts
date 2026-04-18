@@ -21,11 +21,6 @@ export enum CropCycleStatus {
 }
 
 export class CreateCropCycleDto {
-  @ApiProperty({ description: 'Organization ID' })
-  @IsUUID()
-  @IsNotEmpty()
-  organization_id: string;
-
   @ApiProperty({ description: 'Farm ID' })
   @IsUUID()
   @IsNotEmpty()
@@ -265,4 +260,9 @@ export class CreateCropCycleDto {
   @IsUUID()
   @IsOptional()
   template_id?: string;
+
+  @ApiPropertyOptional({ description: 'Biological asset ID (links this crop cycle to a perennial asset)' })
+  @IsUUID()
+  @IsOptional()
+  biological_asset_id?: string;
 }

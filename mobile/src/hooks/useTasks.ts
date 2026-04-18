@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { tasksApi, filesApi, type Task } from '@/lib/api';
+import { useAuthStore } from '@/stores/authStore';
 import { scheduleTaskReminder, cancelTaskReminders } from '@/lib/notifications';
 
 export const taskKeys = {
@@ -14,17 +15,27 @@ export const taskKeys = {
 };
 
 export function useMyTasks() {
+  const orgId = useAuthStore((s) => s.currentOrganization?.id);
   return useQuery({
     queryKey: taskKeys.myTasks(),
-    queryFn: () => tasksApi.getMyTasks(),
+    queryFn: async () => {
+      const res = await tasksApi.getMyTasks();
+      // API may return { data: [...] } or the array directly
+      return Array.isArray(res) ? res : (res?.data ?? []);
+    },
     staleTime: 2 * 60 * 1000,
+    enabled: !!orgId,
   });
 }
 
 export function useTasks(filters?: { status?: string; farmId?: string; parcelId?: string }) {
   return useQuery({
     queryKey: taskKeys.list(filters || {}),
-    queryFn: () => tasksApi.getTasks(filters),
+    queryFn: async () => {
+      const res = await tasksApi.getTasks(filters);
+      // API may return { data: [...] } or the array directly
+      return Array.isArray(res) ? res : (res?.data ?? []);
+    },
     staleTime: 2 * 60 * 1000,
   });
 }
@@ -39,10 +50,12 @@ export function useTask(taskId: string) {
 }
 
 export function useTaskStatistics() {
+  const orgId = useAuthStore((s) => s.currentOrganization?.id);
   return useQuery({
     queryKey: taskKeys.statistics(),
     queryFn: () => tasksApi.getStatistics(),
     staleTime: 5 * 60 * 1000,
+    enabled: !!orgId,
   });
 }
 
@@ -187,6 +200,66 @@ export function useAddTaskComment() {
       tasksApi.addComment(taskId, content),
     onSuccess: (_, { taskId }) => {
       queryClient.invalidateQueries({ queryKey: taskKeys.detail(taskId) });
+      queryClient.invalidateQueries({ queryKey: [...taskKeys.all, 'comments', taskId] });
     },
+  });
+}
+
+export function useTaskComments(taskId: string) {
+  return useQuery({
+    queryKey: [...taskKeys.all, 'comments', taskId],
+    queryFn: () => tasksApi.getComments(taskId),
+    enabled: !!taskId,
+    staleTime: 1 * 60 * 1000,
+  });
+}
+
+export function useTaskChecklist(taskId: string) {
+  return useQuery({
+    queryKey: [...taskKeys.all, 'checklist', taskId],
+    queryFn: () => tasksApi.getChecklist(taskId),
+    enabled: !!taskId,
+  });
+}
+
+export function useToggleChecklistItem() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ taskId, itemId }: { taskId: string; itemId: string }) =>
+      tasksApi.toggleChecklistItem(taskId, itemId),
+    onSuccess: (_, { taskId }) => {
+      queryClient.invalidateQueries({ queryKey: [...taskKeys.all, 'checklist', taskId] });
+      queryClient.invalidateQueries({ queryKey: taskKeys.detail(taskId) });
+    },
+  });
+}
+
+export function useAddChecklistItem() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ taskId, title }: { taskId: string; title: string }) =>
+      tasksApi.addChecklistItem(taskId, title),
+    onSuccess: (_, { taskId }) => {
+      queryClient.invalidateQueries({ queryKey: [...taskKeys.all, 'checklist', taskId] });
+    },
+  });
+}
+
+export function useRemoveChecklistItem() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ taskId, itemId }: { taskId: string; itemId: string }) =>
+      tasksApi.removeChecklistItem(taskId, itemId),
+    onSuccess: (_, { taskId }) => {
+      queryClient.invalidateQueries({ queryKey: [...taskKeys.all, 'checklist', taskId] });
+    },
+  });
+}
+
+export function useTaskDependencies(taskId: string) {
+  return useQuery({
+    queryKey: [...taskKeys.all, 'dependencies', taskId],
+    queryFn: () => tasksApi.getDependencies(taskId),
+    enabled: !!taskId,
   });
 }

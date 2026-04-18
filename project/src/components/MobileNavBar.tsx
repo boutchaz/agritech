@@ -1,7 +1,8 @@
-import React from 'react';
-import { useNavigate } from '@tanstack/react-router';
-import { ArrowLeft, Home } from 'lucide-react';
-import { cn } from '@/lib/utils';
+
+import { useNavigate } from "@tanstack/react-router";
+import { ArrowLeft, Home } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Button } from '@/components/ui/button';
 
 interface MobileNavBarProps {
   title: string;
@@ -11,13 +12,13 @@ interface MobileNavBarProps {
   className?: string;
 }
 
-export const MobileNavBar: React.FC<MobileNavBarProps> = ({
+export const MobileNavBar = ({
   title,
   showBackButton = true,
   showHomeButton = true,
   onBackClick,
   className,
-}) => {
+}: MobileNavBarProps) => {
   const navigate = useNavigate();
 
   const handleBack = () => {
@@ -29,36 +30,38 @@ export const MobileNavBar: React.FC<MobileNavBarProps> = ({
   };
 
   const handleHome = () => {
-    navigate({ to: '/' });
+    navigate({ to: "/" });
   };
 
   return (
-    <div className={cn(
-      "md:hidden flex items-center gap-2 py-2 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700",
-      // Add left padding to make room for hamburger menu button (16px margin + 40px button + 8px gap = 64px)
-      "pl-16 pr-3",
-      className
-    )}>
+    <div
+      className={cn(
+        "lg:hidden flex items-center gap-2 py-2 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700",
+        // Add left padding to make room for hamburger menu button (16px margin + 40px button + 8px gap = 64px)
+        "pl-16 pr-3",
+        className,
+      )}
+    >
       {showBackButton && (
-        <button
+        <Button
           onClick={handleBack}
           className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
           aria-label="Go back"
         >
           <ArrowLeft className="h-5 w-5 text-gray-600 dark:text-gray-400" />
-        </button>
+        </Button>
       )}
       <h1 className="text-base font-semibold text-gray-900 dark:text-white flex-1 truncate">
         {title}
       </h1>
       {showHomeButton && (
-        <button
+        <Button
           onClick={handleHome}
           className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
           aria-label="Go to home"
         >
           <Home className="h-5 w-5 text-gray-600 dark:text-gray-400" />
-        </button>
+        </Button>
       )}
     </div>
   );

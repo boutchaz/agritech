@@ -373,12 +373,12 @@ describe('satellite-api', () => {
         expect(result).toEqual(mockResponse)
       })
 
-      it('should use default cloud coverage of 30', async () => {
+      it('should use default cloud coverage of 10', async () => {
         mockApiClient.post.mockResolvedValue({
           available_dates: [],
           total_images: 0,
           date_range: { start: '', end: '' },
-          filters: { max_cloud_coverage: 30 },
+          filters: { max_cloud_coverage: 10 },
         })
 
         const aoi = {
@@ -390,7 +390,7 @@ describe('satellite-api', () => {
         expect(mockApiClient.post).toHaveBeenCalledWith(
           '/api/v1/satellite-proxy/indices/available-dates',
           expect.objectContaining({
-            cloud_coverage: 30,
+            cloud_coverage: 10,
           })
         )
       })

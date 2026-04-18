@@ -8,7 +8,6 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Cron } from '@nestjs/schedule';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { createHmac, timingSafeEqual } from 'crypto';
 
 import { CheckSubscriptionDto } from './dto/check-subscription.dto';
@@ -18,14 +17,19 @@ import {
   PolarWebhookEventType,
   PolarSubscriptionData,
 } from './dto/webhook.dto';
-import { CreateQuoteDto } from './dto/quote.dto';
+import { CreateModularQuoteDto, CreateQuoteDto } from './dto/quote.dto';
 import {
   RenewalNoticeDto,
   TerminateSubscriptionDto,
 } from './dto/lifecycle.dto';
 import {
   BillingCycle,
+  DEFAULT_DISCOUNT_PERCENT,
+  ERP_MODULES,
+  FORMULA_MODULE_MAPPING,
   FORMULA_POLICIES,
+  HA_PRICE_TIERS,
+  SIZE_MULTIPLIER_TIERS,
   SubscriptionFormula,
   SubscriptionLifecycleStatus,
   isFormulaAtLeast,
@@ -35,9 +39,12 @@ import {
   normalizeFormula,
 } from './subscription-domain';
 import {
+  ModularQuoteBreakdown,
   QuoteBreakdown,
   SubscriptionPricingService,
 } from './subscription-pricing.service';
+import { PolarCheckoutService } from './polar-checkout.service';
+import { DatabaseService } from '../database/database.service';
 
 export interface UsageCounts {
   farms_count: number;
@@ -65,6 +72,10 @@ export interface SubscriptionRecord {
   max_satellite_reports: number | null;
   contracted_hectares: number | null;
   included_users: number | null;
+  selected_modules: unknown[] | null;
+  ha_pricing_mode: string | null;
+  discount_pct: number | null;
+  size_multiplier: number | null;
   contract_start_at: string | null;
   contract_end_at: string | null;
   renewal_notice_days: number | null;
@@ -91,7 +102,6 @@ export interface SubscriptionRecord {
 
 @Injectable()
 export class SubscriptionsService {
-  private readonly supabaseAdmin: SupabaseClient;
   private readonly logger = new Logger(SubscriptionsService.name);
 
   /**
@@ -101,24 +111,10 @@ export class SubscriptionsService {
 
   constructor(
     private readonly configService: ConfigService,
+    private readonly databaseService: DatabaseService,
     private readonly pricingService: SubscriptionPricingService,
-  ) {
-    const supabaseUrl = this.configService.get<string>('SUPABASE_URL');
-    const supabaseServiceKey = this.configService.get<string>(
-      'SUPABASE_SERVICE_ROLE_KEY',
-    );
-
-    if (!supabaseUrl || !supabaseServiceKey) {
-      throw new Error('Missing Supabase configuration');
-    }
-
-    this.supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    });
-  }
+    private readonly polarCheckout: PolarCheckoutService,
+  ) {}
 
   async getSubscriptionCatalog() {
     const formulas = Object.values(SubscriptionFormula).map((formula) => {
@@ -148,6 +144,10 @@ export class SubscriptionsService {
         BillingCycle.ANNUAL,
       ],
       formulas,
+      modules: ERP_MODULES,
+      haTiers: HA_PRICE_TIERS,
+      sizeMultipliers: SIZE_MULTIPLIER_TIERS,
+      defaultDiscount: DEFAULT_DISCOUNT_PERCENT,
       currency: sampleQuote.currency,
       vatRate: sampleQuote.vatRate,
     };
@@ -163,12 +163,149 @@ export class SubscriptionsService {
     });
   }
 
+  async createModularQuote(
+    dto: CreateModularQuoteDto,
+  ): Promise<ModularQuoteBreakdown> {
+    const selectedModules = this.normalizeSelectedModuleIds(dto.selectedModules);
+
+    return this.pricingService.createModularQuoteAsync({
+      selectedModules,
+      contractedHectares: dto.contractedHectares,
+      billingCycle: dto.billingCycle,
+      discountPercent: dto.discountPercent,
+    });
+  }
+
   async createCheckoutUrl(
     userId: string,
     organizationId: string,
     checkoutDto: CheckoutDto,
   ) {
     await this.ensureOrganizationMembership(userId, organizationId);
+
+    const selectedModules = checkoutDto.selectedModules?.length
+      ? this.normalizeSelectedModuleIds(checkoutDto.selectedModules)
+      : [];
+
+    if (selectedModules.length > 0) {
+      const billingCycle = normalizeBillingCycle(checkoutDto.billingInterval);
+      const contractedHectares = Math.max(checkoutDto.contractedHectares || 1, 1);
+      const quote = await this.pricingService.createModularQuoteAsync({
+        selectedModules,
+        contractedHectares,
+        billingCycle,
+        discountPercent: checkoutDto.discountPercent,
+      });
+
+      const productId = await this.polarCheckout.resolveModularProductId(billingCycle);
+      if (!productId) {
+        throw new BadRequestException(
+          `No Polar product found for modular pricing (${billingCycle}). Sync products from admin first, or set POLAR_MODULAR_${billingCycle.toUpperCase()}_PRODUCT_ID env var.`,
+        );
+      }
+
+      const fallbackFormula = this.resolveFormulaForHectares(
+        SubscriptionFormula.STARTER,
+        contractedHectares,
+      );
+
+      const frontendUrl = this.configService.get<string>('FRONTEND_URL') || '';
+      const successUrl = frontendUrl
+        ? `${frontendUrl}/checkout-success`
+        : undefined;
+
+      const metadata: Record<string, string> = {
+        organization_id: organizationId,
+        formula: fallbackFormula,
+        billing_cycle: billingCycle,
+        contracted_hectares: String(contractedHectares),
+        selected_modules: JSON.stringify(selectedModules),
+        quote_amount_ht: String(quote.cycleAmountHt),
+        quote_amount_ttc: String(quote.cycleAmountTtc),
+        discount_percent: String(quote.discountPercent),
+        size_multiplier: String(quote.sizeMultiplier),
+      };
+
+      const dynamicPriceCents = Math.round(quote.cycleAmountTtc * 100);
+      const checkoutResult = await this.createPolarCheckoutUrl(
+        productId,
+        successUrl,
+        metadata,
+        dynamicPriceCents,
+      );
+
+      const { data: existingSubscription } = await this.databaseService.getAdminClient()
+        .from('subscriptions')
+        .select('id, current_period_end')
+        .eq('organization_id', organizationId)
+        .maybeSingle();
+
+      const migrationEffectiveAt = existingSubscription?.current_period_end
+        ? existingSubscription.current_period_end
+        : new Date().toISOString();
+
+      const legacyLimits = this.getLegacyResourceLimits(fallbackFormula);
+      const pendingPayload = {
+        pending_formula: fallbackFormula,
+        pending_billing_cycle: billingCycle,
+        pending_pricing_snapshot: quote,
+        migration_effective_at: migrationEffectiveAt,
+        contracted_hectares: contractedHectares,
+        included_users: FORMULA_POLICIES[fallbackFormula].includedUsers,
+        selected_modules: selectedModules,
+        ha_pricing_mode: 'progressive',
+        discount_pct: quote.discountPercent,
+        size_multiplier: quote.sizeMultiplier,
+        renewal_notice_days: 60,
+        payment_terms_days: 30,
+        overdue_grace_days: 30,
+        suspension_notice_days: 7,
+        export_window_days: 30,
+        currency: quote.currency,
+        vat_rate: quote.vatRate,
+        price_ht_per_ha_year: null,
+        amount_ht: quote.cycleAmountHt,
+        amount_tva: quote.cycleAmountTva,
+        amount_ttc: quote.cycleAmountTtc,
+      };
+
+      if (existingSubscription?.id) {
+        await this.databaseService.getAdminClient()
+          .from('subscriptions')
+          .update(pendingPayload)
+          .eq('id', existingSubscription.id);
+      } else {
+        const legacyPlan = mapFormulaToLegacyPlanType(fallbackFormula);
+        await this.databaseService.getAdminClient().from('subscriptions').insert({
+          organization_id: organizationId,
+          status: SubscriptionLifecycleStatus.PENDING_RENEWAL,
+          formula: fallbackFormula,
+          plan_type: legacyPlan,
+          billing_cycle: billingCycle,
+          billing_interval: billingCycle,
+          contracted_hectares: contractedHectares,
+          included_users: FORMULA_POLICIES[fallbackFormula].includedUsers,
+          max_farms: legacyLimits.farms,
+          max_parcels: legacyLimits.parcels,
+          max_users: legacyLimits.users,
+          max_satellite_reports: legacyLimits.satelliteReports,
+          contract_start_at: new Date().toISOString(),
+          contract_end_at: new Date(
+            Date.now() + 365 * 24 * 60 * 60 * 1000,
+          ).toISOString(),
+          next_billing_at: new Date().toISOString(),
+          ...pendingPayload,
+        });
+      }
+
+      return {
+        checkoutUrl: checkoutResult,
+        formula: fallbackFormula,
+        billingCycle,
+        quoteSnapshot: quote,
+        selectedModules,
+      };
+    }
 
     const formulaInput = checkoutDto.formula || checkoutDto.planType;
     const formula = normalizeFormula(formulaInput);
@@ -194,15 +331,10 @@ export class SubscriptionsService {
       billingCycle,
     });
 
-    const checkoutBaseUrl = this.configService.get<string>('POLAR_CHECKOUT_URL');
-    if (!checkoutBaseUrl) {
-      throw new BadRequestException('POLAR_CHECKOUT_URL is not configured');
-    }
-
-    const productId = this.getCheckoutProductId(resolvedFormula, billingCycle);
+    const productId = await this.polarCheckout.resolveProductId(resolvedFormula, billingCycle);
     if (!productId) {
       throw new BadRequestException(
-        `Polar product ID is not configured for ${resolvedFormula} (${billingCycle})`,
+        `No Polar product found for ${resolvedFormula} (${billingCycle}). Sync products from admin first, or set POLAR_${resolvedFormula.toUpperCase()}_${billingCycle.toUpperCase()}_PRODUCT_ID env var.`,
       );
     }
 
@@ -210,29 +342,23 @@ export class SubscriptionsService {
     const successUrl = frontendUrl
       ? `${frontendUrl}/checkout-success`
       : undefined;
-    const cancelUrl = frontendUrl
-      ? `${frontendUrl}/settings/subscription`
-      : undefined;
 
-    const checkoutUrl = new URL(checkoutBaseUrl);
-    checkoutUrl.searchParams.set('product_id', productId);
+    const metadata: Record<string, string> = {
+      organization_id: organizationId,
+      formula: resolvedFormula,
+      billing_cycle: billingCycle,
+      contracted_hectares: String(contractedHectares),
+    };
 
-    if (successUrl) {
-      checkoutUrl.searchParams.set('success_url', successUrl);
-    }
-    if (cancelUrl) {
-      checkoutUrl.searchParams.set('cancel_url', cancelUrl);
-    }
-
-    checkoutUrl.searchParams.set('metadata[organization_id]', organizationId);
-    checkoutUrl.searchParams.set('metadata[formula]', resolvedFormula);
-    checkoutUrl.searchParams.set('metadata[billing_cycle]', billingCycle);
-    checkoutUrl.searchParams.set(
-      'metadata[contracted_hectares]',
-      String(contractedHectares),
+    const dynamicPriceCents = Math.round(quote.cycleAmountTtc * 100);
+    const checkoutResult = await this.createPolarCheckoutUrl(
+      productId,
+      successUrl,
+      metadata,
+      dynamicPriceCents,
     );
 
-    const { data: existingSubscription } = await this.supabaseAdmin
+    const { data: existingSubscription } = await this.databaseService.getAdminClient()
       .from('subscriptions')
       .select('id, current_period_end')
       .eq('organization_id', organizationId)
@@ -263,14 +389,14 @@ export class SubscriptionsService {
     };
 
     if (existingSubscription?.id) {
-      await this.supabaseAdmin
+      await this.databaseService.getAdminClient()
         .from('subscriptions')
         .update(pendingPayload)
         .eq('id', existingSubscription.id);
     } else {
       const legacyPlan = mapFormulaToLegacyPlanType(resolvedFormula);
       const legacyLimits = this.getLegacyResourceLimits(resolvedFormula);
-      await this.supabaseAdmin.from('subscriptions').insert({
+      await this.databaseService.getAdminClient().from('subscriptions').insert({
         organization_id: organizationId,
         status: SubscriptionLifecycleStatus.PENDING_RENEWAL,
         formula: resolvedFormula,
@@ -293,7 +419,7 @@ export class SubscriptionsService {
     }
 
     return {
-      checkoutUrl: checkoutUrl.toString(),
+      checkoutUrl: checkoutResult,
       formula: resolvedFormula,
       billingCycle,
       quoteSnapshot: quote,
@@ -315,9 +441,9 @@ export class SubscriptionsService {
     const formula = parsedFormula;
 
     const { data: existingSubscription, error: existingError } =
-      await this.supabaseAdmin
+      await this.databaseService.getAdminClient()
         .from('subscriptions')
-        .select('id, status, formula')
+        .select('*')
         .eq('organization_id', organization_id)
         .maybeSingle();
 
@@ -327,6 +453,7 @@ export class SubscriptionsService {
       );
     }
 
+    // Idempotent: signup already creates a trialing row; /onboarding/select-trial calls this again.
     if (
       existingSubscription &&
       [
@@ -334,9 +461,13 @@ export class SubscriptionsService {
         SubscriptionLifecycleStatus.TRIALING,
       ].includes(existingSubscription.status as SubscriptionLifecycleStatus)
     ) {
-      throw new BadRequestException(
-        'Organization already has an active subscription',
+      this.logger.log(
+        `createTrialSubscription: org ${organization_id} already ${existingSubscription.status}, returning existing row`,
       );
+      return {
+        success: true,
+        subscription: existingSubscription,
+      };
     }
 
     const trialStart = new Date();
@@ -386,13 +517,13 @@ export class SubscriptionsService {
     };
 
     const upsertResult = existingSubscription?.id
-      ? await this.supabaseAdmin
+      ? await this.databaseService.getAdminClient()
           .from('subscriptions')
           .update(payload)
           .eq('id', existingSubscription.id)
           .select()
           .single()
-      : await this.supabaseAdmin
+      : await this.databaseService.getAdminClient()
           .from('subscriptions')
           .insert(payload)
           .select()
@@ -429,10 +560,10 @@ export class SubscriptionsService {
       return null;
     }
 
-    const { data: subscription, error } = await this.supabaseAdmin
+    const { data: subscription, error } = await this.databaseService.getAdminClient()
       .from('subscriptions')
       .select(
-        'id, organization_id, status, plan_id, plan_type, formula, billing_interval, billing_cycle, current_period_start, current_period_end, cancel_at_period_end, max_farms, max_parcels, max_users, max_satellite_reports, contracted_hectares, included_users, contract_start_at, contract_end_at, renewal_notice_days, payment_terms_days, next_billing_at, grace_period_ends_at, suspended_at, terminated_at, pending_formula, pending_billing_cycle, pending_pricing_snapshot, migration_effective_at, amount_ht, amount_tva, amount_ttc, currency, vat_rate, price_ht_per_ha_year, last_payment_notice_at, overdue_grace_days, suspension_notice_days, export_window_days, created_at, updated_at',
+        'id, organization_id, status, plan_id, plan_type, formula, billing_interval, billing_cycle, current_period_start, current_period_end, cancel_at_period_end, max_farms, max_parcels, max_users, max_satellite_reports, contracted_hectares, included_users, selected_modules, ha_pricing_mode, discount_pct, size_multiplier, contract_start_at, contract_end_at, renewal_notice_days, payment_terms_days, next_billing_at, grace_period_ends_at, suspended_at, terminated_at, pending_formula, pending_billing_cycle, pending_pricing_snapshot, migration_effective_at, amount_ht, amount_tva, amount_ttc, currency, vat_rate, price_ht_per_ha_year, last_payment_notice_at, overdue_grace_days, suspension_notice_days, export_window_days, created_at, updated_at',
       )
       .eq('organization_id', organizationId)
       .maybeSingle();
@@ -554,7 +685,7 @@ export class SubscriptionsService {
   }
 
   async hasValidSubscription(organizationId: string): Promise<boolean> {
-    const { data: subscription, error } = await this.supabaseAdmin
+    const { data: subscription, error } = await this.databaseService.getAdminClient()
       .from('subscriptions')
       .select('status, current_period_end, grace_period_ends_at')
       .eq('organization_id', organizationId)
@@ -592,7 +723,7 @@ export class SubscriptionsService {
   async registerRenewalNotice(userId: string, dto: RenewalNoticeDto) {
     await this.ensureOrganizationMembership(userId, dto.organizationId);
 
-    const { data: subscription, error } = await this.supabaseAdmin
+    const { data: subscription, error } = await this.databaseService.getAdminClient()
       .from('subscriptions')
       .select('id, status')
       .eq('organization_id', dto.organizationId)
@@ -602,7 +733,7 @@ export class SubscriptionsService {
       throw new NotFoundException('Subscription not found');
     }
 
-    await this.supabaseAdmin
+    await this.databaseService.getAdminClient()
       .from('subscriptions')
       .update({
         status: SubscriptionLifecycleStatus.PENDING_RENEWAL,
@@ -625,7 +756,7 @@ export class SubscriptionsService {
   async terminateSubscription(userId: string, dto: TerminateSubscriptionDto) {
     await this.ensureOrganizationMembership(userId, dto.organizationId);
 
-    const { data: subscription, error } = await this.supabaseAdmin
+    const { data: subscription, error } = await this.databaseService.getAdminClient()
       .from('subscriptions')
       .select('id, export_window_days')
       .eq('organization_id', dto.organizationId)
@@ -640,7 +771,7 @@ export class SubscriptionsService {
     const exportDeadline = new Date(terminatedAt);
     exportDeadline.setDate(exportDeadline.getDate() + exportWindowDays);
 
-    await this.supabaseAdmin
+    await this.databaseService.getAdminClient()
       .from('subscriptions')
       .update({
         status: SubscriptionLifecycleStatus.TERMINATED,
@@ -707,7 +838,7 @@ export class SubscriptionsService {
       );
     }
 
-    const existingWebhook = await this.supabaseAdmin
+    const existingWebhook = await this.databaseService.getAdminClient()
       .from('polar_webhooks')
       .select('id')
       .eq('event_id', eventId)
@@ -723,7 +854,7 @@ export class SubscriptionsService {
       subscriptionData,
     );
 
-    await this.supabaseAdmin.from('polar_webhooks').insert({
+    await this.databaseService.getAdminClient().from('polar_webhooks').insert({
       event_id: eventId,
       event_type: eventType,
       payload: webhookPayload,
@@ -767,7 +898,7 @@ export class SubscriptionsService {
   }
 
   private async ensureOrganizationMembership(userId: string, organizationId: string) {
-    const { data: orgUser, error } = await this.supabaseAdmin
+    const { data: orgUser, error } = await this.databaseService.getAdminClient()
       .from('organization_users')
       .select('organization_id')
       .eq('user_id', userId)
@@ -781,7 +912,7 @@ export class SubscriptionsService {
   }
 
   private async hasOrganizationMembership(userId: string, organizationId: string) {
-    const { data: orgUser } = await this.supabaseAdmin
+    const { data: orgUser } = await this.databaseService.getAdminClient()
       .from('organization_users')
       .select('organization_id')
       .eq('user_id', userId)
@@ -917,6 +1048,106 @@ export class SubscriptionsService {
     return this.configService.get<string>(
       `POLAR_${legacyPrefix}_SEMIANNUAL_PRODUCT_ID`,
     );
+  }
+
+  /**
+   * Create a Polar checkout URL using SDK (preferred) or manual URL fallback.
+   *
+   * When `dynamicPriceCents` is provided, the checkout session overrides the
+   * catalog price with the exact amount computed from the subscription model
+   * (modules, hectares, multiplier, discount). This lets a single Polar
+   * product serve every farm-size / module combination.
+   */
+  private async createPolarCheckoutUrl(
+    productId: string,
+    successUrl: string | undefined,
+    metadata: Record<string, string>,
+    dynamicPriceCents?: number,
+  ): Promise<string> {
+    // Try SDK checkout session first (supports dynamic pricing)
+    const session = await this.polarCheckout.createCheckoutSession({
+      productId,
+      successUrl,
+      metadata,
+      dynamicPriceCents,
+    });
+
+    if (session) {
+      return session.checkoutUrl;
+    }
+
+    // Fallback to manual URL construction (no dynamic pricing support)
+    const frontendUrl = this.configService.get<string>('FRONTEND_URL') || '';
+    const cancelUrl = frontendUrl
+      ? `${frontendUrl}/settings/subscription`
+      : undefined;
+
+    const manualUrl = this.polarCheckout.buildManualCheckoutUrl({
+      productId,
+      successUrl,
+      cancelUrl,
+      metadata,
+    });
+
+    if (manualUrl) {
+      return manualUrl;
+    }
+
+    throw new BadRequestException(
+      'Unable to create checkout URL. Configure POLAR_ACCESS_TOKEN or POLAR_CHECKOUT_URL.',
+    );
+  }
+
+  private getBaseModuleIds(): string[] {
+    return ERP_MODULES.filter((module) => module.isBase).map((module) => module.id);
+  }
+
+  private normalizeSelectedModuleIds(moduleIds: string[]): string[] {
+    const validModules = new Set(ERP_MODULES.map((module) => module.id));
+    const orderedModuleIds = [...this.getBaseModuleIds(), ...moduleIds];
+    const dedupedModuleIds: string[] = [];
+
+    for (const moduleId of orderedModuleIds) {
+      const normalizedModuleId = moduleId.trim();
+
+      if (!validModules.has(normalizedModuleId)) {
+        throw new BadRequestException(
+          `Unsupported ERP module: ${normalizedModuleId}`,
+        );
+      }
+
+      if (!dedupedModuleIds.includes(normalizedModuleId)) {
+        dedupedModuleIds.push(normalizedModuleId);
+      }
+    }
+
+    return dedupedModuleIds;
+  }
+
+  private extractSelectedModuleIds(selectedModules: unknown): string[] {
+    if (!Array.isArray(selectedModules)) {
+      return [];
+    }
+
+    const moduleIds: string[] = [];
+
+    for (const entry of selectedModules) {
+      if (typeof entry === 'string') {
+        moduleIds.push(entry);
+        continue;
+      }
+
+      if (
+        typeof entry === 'object' &&
+        entry !== null &&
+        'id' in entry &&
+        typeof entry.id === 'string'
+      ) {
+        moduleIds.push(entry.id);
+      }
+    }
+
+    return moduleIds;
   }
 
   private extractSubscriptionData(webhookPayload: {
@@ -1090,7 +1321,7 @@ export class SubscriptionsService {
           : null,
     };
 
-    const { data: polarSub, error: polarError } = await this.supabaseAdmin
+    const { data: polarSub, error: polarError } = await this.databaseService.getAdminClient()
       .from('polar_subscriptions')
       .upsert(polarUpdateData, {
         onConflict: 'polar_subscription_id',
@@ -1105,7 +1336,7 @@ export class SubscriptionsService {
       );
     }
 
-    const { data: existingSubscription } = await this.supabaseAdmin
+    const { data: existingSubscription } = await this.databaseService.getAdminClient()
       .from('subscriptions')
       .select('*')
       .eq('organization_id', organizationId)
@@ -1182,7 +1413,7 @@ export class SubscriptionsService {
 
     let mainSubscriptionResult: Record<string, unknown>;
     if (existingSubscription?.id) {
-      const { data, error } = await this.supabaseAdmin
+      const { data, error } = await this.databaseService.getAdminClient()
         .from('subscriptions')
         .update(updatePayload)
         .eq('id', existingSubscription.id)
@@ -1195,7 +1426,7 @@ export class SubscriptionsService {
         mainSubscriptionResult = data as Record<string, unknown>;
       }
     } else {
-      const { data, error } = await this.supabaseAdmin
+      const { data, error } = await this.databaseService.getAdminClient()
         .from('subscriptions')
         .insert({
           ...updatePayload,
@@ -1233,12 +1464,12 @@ export class SubscriptionsService {
   }
 
   private async getUsageCountsInternal(organizationId: string): Promise<UsageCounts> {
-    const { count: farmsCount } = await this.supabaseAdmin
+    const { count: farmsCount } = await this.databaseService.getAdminClient()
       .from('farms')
       .select('*', { count: 'exact', head: true })
       .eq('organization_id', organizationId);
 
-    const { data: parcels, count: parcelsCount } = await this.supabaseAdmin
+    const { data: parcels, count: parcelsCount } = await this.databaseService.getAdminClient()
       .from('parcels')
       .select('area', { count: 'exact' })
       .eq('organization_id', organizationId);
@@ -1248,7 +1479,7 @@ export class SubscriptionsService {
       return sum + (Number.isFinite(area) ? area : 0);
     }, 0);
 
-    const { count: usersCount } = await this.supabaseAdmin
+    const { count: usersCount } = await this.databaseService.getAdminClient()
       .from('organization_users')
       .select('*', { count: 'exact', head: true })
       .eq('organization_id', organizationId)
@@ -1270,17 +1501,50 @@ export class SubscriptionsService {
   ) {
     const normalizedFeature = featureName.trim().toLowerCase();
 
-    const { data: module, error: moduleError } = await this.supabaseAdmin
+    const { data: module, error: moduleError } = await this.databaseService.getAdminClient()
       .from('modules')
       .select('id, required_plan, is_active, is_available, is_required, slug, name')
-      .or(`slug.eq.${normalizedFeature},name.eq.${normalizedFeature}`)
+      .or(`slug.eq.${normalizedFeature.replace(/[,.()'"]/g, '')},name.eq.${normalizedFeature.replace(/[,.()'"]/g, '')}`)
       .maybeSingle();
 
     if (moduleError || !module || !module.is_active || !module.is_available) {
       return false;
     }
 
-    const currentFormula = normalizeFormula(formulaValue || undefined);
+    const { data: subscription } = await this.databaseService.getAdminClient()
+      .from('subscriptions')
+      .select('selected_modules, formula')
+      .eq('organization_id', organizationId)
+      .maybeSingle();
+
+    const selectedModuleIds = this.extractSelectedModuleIds(
+      subscription?.selected_modules,
+    );
+
+    if (selectedModuleIds.length > 0) {
+      if (selectedModuleIds.includes(module.id)) {
+        return true;
+      }
+
+      if (module.is_required) {
+        return true;
+      }
+    } else {
+      const currentFormula = normalizeFormula(
+        formulaValue || subscription?.formula || undefined,
+      );
+
+      if (currentFormula) {
+        const legacyModuleIds = FORMULA_MODULE_MAPPING[currentFormula] || [];
+        if (legacyModuleIds.includes(module.id)) {
+          return true;
+        }
+      }
+    }
+
+    const currentFormula = normalizeFormula(
+      formulaValue || subscription?.formula || undefined,
+    );
     const requiredFormula = normalizeFormula(
       module.required_plan as string | undefined,
     );
@@ -1293,7 +1557,7 @@ export class SubscriptionsService {
       return true;
     }
 
-    const { data: orgModule } = await this.supabaseAdmin
+    const { data: orgModule } = await this.databaseService.getAdminClient()
       .from('organization_modules')
       .select('is_active')
       .eq('organization_id', organizationId)
@@ -1311,7 +1575,7 @@ export class SubscriptionsService {
     actorId: string;
     payload: Record<string, unknown>;
   }) {
-    await this.supabaseAdmin.from('subscription_events').insert({
+    await this.databaseService.getAdminClient().from('subscription_events').insert({
       organization_id: params.organizationId,
       subscription_id: params.subscriptionId,
       event_type: params.eventType,
@@ -1322,7 +1586,7 @@ export class SubscriptionsService {
   }
 
   private async processRenewalNotices() {
-    const { data: subscriptions } = await this.supabaseAdmin
+    const { data: subscriptions } = await this.databaseService.getAdminClient()
       .from('subscriptions')
       .select('id, organization_id, status, contract_end_at, renewal_notice_days')
       .in('status', [
@@ -1341,7 +1605,7 @@ export class SubscriptionsService {
         continue;
       }
 
-      await this.supabaseAdmin
+      await this.databaseService.getAdminClient()
         .from('subscriptions')
         .update({
           status: SubscriptionLifecycleStatus.PENDING_RENEWAL,
@@ -1366,7 +1630,7 @@ export class SubscriptionsService {
   private async processPendingMigrations() {
     const nowIso = new Date().toISOString();
 
-    const { data: subscriptions } = await this.supabaseAdmin
+    const { data: subscriptions } = await this.databaseService.getAdminClient()
       .from('subscriptions')
       .select(
         'id, organization_id, pending_formula, pending_billing_cycle, migration_effective_at, pending_pricing_snapshot',
@@ -1386,7 +1650,7 @@ export class SubscriptionsService {
       const legacyPlan = mapFormulaToLegacyPlanType(targetFormula);
       const legacyLimits = this.getLegacyResourceLimits(targetFormula);
 
-      await this.supabaseAdmin
+      await this.databaseService.getAdminClient()
         .from('subscriptions')
         .update({
           formula: targetFormula,
@@ -1425,7 +1689,7 @@ export class SubscriptionsService {
     const overdueThreshold = new Date();
     overdueThreshold.setDate(overdueThreshold.getDate() - 30);
 
-    const { data: documents } = await this.supabaseAdmin
+    const { data: documents } = await this.databaseService.getAdminClient()
       .from('billing_documents')
       .select('id, organization_id, subscription_id, due_at, status')
       .in('status', ['issued', 'overdue'])
@@ -1434,7 +1698,7 @@ export class SubscriptionsService {
 
     for (const doc of documents || []) {
       if (doc.status !== 'overdue') {
-        await this.supabaseAdmin
+        await this.databaseService.getAdminClient()
           .from('billing_documents')
           .update({ status: 'overdue', updated_at: new Date().toISOString() })
           .eq('id', doc.id);
@@ -1444,7 +1708,7 @@ export class SubscriptionsService {
         continue;
       }
 
-      await this.supabaseAdmin
+      await this.databaseService.getAdminClient()
         .from('subscriptions')
         .update({
           status: SubscriptionLifecycleStatus.PAST_DUE,
@@ -1468,7 +1732,7 @@ export class SubscriptionsService {
   }
 
   private async processSuspensions() {
-    const { data: subscriptions } = await this.supabaseAdmin
+    const { data: subscriptions } = await this.databaseService.getAdminClient()
       .from('subscriptions')
       .select('id, organization_id, last_payment_notice_at, suspension_notice_days')
       .eq('status', SubscriptionLifecycleStatus.PAST_DUE)
@@ -1484,7 +1748,7 @@ export class SubscriptionsService {
         continue;
       }
 
-      await this.supabaseAdmin
+      await this.databaseService.getAdminClient()
         .from('subscriptions')
         .update({
           status: SubscriptionLifecycleStatus.SUSPENDED,
@@ -1507,7 +1771,7 @@ export class SubscriptionsService {
   }
 
   private async processTerminationWindows() {
-    const { data: subscriptions } = await this.supabaseAdmin
+    const { data: subscriptions } = await this.databaseService.getAdminClient()
       .from('subscriptions')
       .select('id, organization_id, terminated_at, export_window_days')
       .eq('status', SubscriptionLifecycleStatus.TERMINATED)

@@ -43,6 +43,7 @@ from app.services.satellite.utils.statistics import calculate_statistics_from_ar
 from app.services.satellite.utils.index_calculator import (
     calculate_all_indices as calculate_indices_numpy,
 )
+from app.services.satellite.utils.sentinel2_dates import dedupe_s2_available_dates_by_day
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
@@ -739,13 +740,16 @@ class CDSEProvider(ISatelliteProvider):
             # Process items
             available_dates = []
             for item in items:
+                dt_raw = item.properties.get("datetime")
+                if not dt_raw:
+                    continue
                 available_dates.append(
                     {
-                        "date": item.properties["datetime"][:10],
+                        "date": dt_raw[:10],
                         "cloud_coverage": item.properties.get("eo:cloud_cover", 0),
                         "timestamp": int(
                             datetime.fromisoformat(
-                                item.properties["datetime"].replace("Z", "+00:00")
+                                str(dt_raw).replace("Z", "+00:00")
                             ).timestamp()
                             * 1000
                         ),
@@ -753,9 +757,12 @@ class CDSEProvider(ISatelliteProvider):
                     }
                 )
 
+            # STAC can return multiple granules per day (tiles/orbits); one row per day for the AOI.
+            normalized = dedupe_s2_available_dates_by_day(available_dates)
+
             return {
-                "available_dates": available_dates,
-                "total_images": len(available_dates),
+                "available_dates": normalized,
+                "total_images": len(normalized),
                 "date_range": {"start": start_date, "end": end_date},
                 "filters": {"max_cloud_coverage": max_cloud_coverage},
                 "metadata": {"provider": self.provider_name},
@@ -824,6 +831,7 @@ class CDSEProvider(ISatelliteProvider):
             "MNDWI": ["B03", "B11"],
             "MCARI": ["B03", "B04", "B05"],
             "TCARI": ["B04", "B05"],
+            "TCARI_OSAVI": ["B03", "B04", "B05", "B08"],
         }
 
         return list(set(base_bands + index_specific.get(index, [])))
@@ -896,8 +904,18 @@ class CDSEProvider(ISatelliteProvider):
                 * (1 + L)
                 / (datacube.band("B08") + datacube.band("B04") + L)
             )
+        elif index == "TCARI_OSAVI":
+            # Match GEE earth_engine.calculate_vegetation_indices: TCARI / max(OSAVI, eps)
+            re = datacube.band("B05")
+            r = datacube.band("B04")
+            g = datacube.band("B03")
+            nir = datacube.band("B08")
+            eps = 1e-10
+            tcari = 3 * (re - r - (re - g) * 0.2 * (re / (r + eps)))
+            osavi = (nir - r) / (nir + r + 0.16 + eps)
+            return tcari / (osavi + eps)
         else:
             raise ValueError(
                 f"Index '{index}' is not implemented in the CDSE provider. "
-                f"Supported indices: NDVI, NIRv, EVI, NDRE, NDMI, MNDWI, GCI, SAVI, OSAVI, MSAVI2, MSI, MCARI, TCARI"
+                f"Supported indices: NDVI, NIRv, EVI, NDRE, NDMI, MNDWI, GCI, SAVI, OSAVI, MSAVI2, MSI, MCARI, TCARI, TCARI_OSAVI"
             )

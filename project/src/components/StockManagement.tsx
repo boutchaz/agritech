@@ -1,21 +1,42 @@
-import React, { useState, useEffect } from 'react';
-import { Plus, Package, ShoppingCart, AlertTriangle, Search, Trash2, X, Users, Warehouse, Building2, Phone, Mail, Upload, MoreVertical, Pencil } from 'lucide-react';
-import { useAuth } from '../hooks/useAuth';
-import { useCurrency } from '../hooks/useCurrency';
-import { FormField } from './ui/FormField';
-import { Input } from './ui/Input';
-import { Select } from './ui/Select';
-import { Textarea } from './ui/Textarea';
+import {  useState, useEffect, useCallback  } from "react";
+import { useTranslation } from "react-i18next";
+import {
+  Plus,
+  Package as _Package,
+  ShoppingCart as _ShoppingCart,
+  AlertTriangle as _AlertTriangle,
+  Trash2,
+  X,
+  Users,
+  Warehouse,
+  Building2,
+  Phone,
+  Mail,
+  Upload as _Upload,
+  MoreVertical,
+  Pencil,
+} from "lucide-react";
+import { useAuth } from "../hooks/useAuth";
+import { useCurrency } from "../hooks/useCurrency";
+import { FormField } from "./ui/FormField";
+import { Input } from "./ui/Input";
+import { Select } from "./ui/Select";
+import { Textarea } from "./ui/Textarea";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { suppliersApi } from '@/lib/api/suppliers';
-import { warehousesApi } from '@/lib/api/warehouses';
-import { toast } from 'sonner';
+} from "@/components/ui/dropdown-menu";
+import { suppliersApi } from "@/lib/api/suppliers";
+import { warehousesApi } from "@/lib/api/warehouses";
+import { toast } from "sonner";
+import { Button } from '@/components/ui/button';
+import { TableCell, TableHead, TableRow } from '@/components/ui/table';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { FilterBar, ListPageLayout, ResponsiveList } from '@/components/ui/data-table';
+
 
 interface Product {
   id: string;
@@ -62,111 +83,131 @@ interface Supplier {
 interface WarehouseData {
   id: string;
   organization_id: string;
-  farm_id: string | null;
+  farm_id?: string | null;
   name: string;
-  description: string | null;
-  location: string | null;
-  address: string | null;
-  city: string | null;
-  postal_code: string | null;
-  capacity: number | null;
-  capacity_unit: string | null;
-  temperature_controlled: boolean | null;
-  humidity_controlled: boolean | null;
-  security_level: string | null;
-  manager_name: string | null;
-  manager_phone: string | null;
-  is_active: boolean | null;
-  created_at: string | null;
-  updated_at: string | null;
+  description?: string | null;
+  location?: string | null;
+  address?: string | null;
+  city?: string | null;
+  postal_code?: string | null;
+  capacity?: number | null;
+  capacity_unit?: string | null;
+  temperature_controlled?: boolean | null;
+  humidity_controlled?: boolean | null;
+  security_level?: string | null;
+  manager_name?: string | null;
+  manager_phone?: string | null;
+  is_active?: boolean | null;
+  created_at?: string | null;
+  updated_at?: string | null;
 }
 
-const createDefaultPurchaseState = () => ({
-  product_id: '',
-  product_name: '',
-  category: '',
-  brand: '',
-  packaging_type: '',
+  const _createDefaultPurchaseState = () => ({
+  product_id: "",
+  product_name: "",
+  category: "",
+  brand: "",
+  packaging_type: "",
   packaging_size: 0,
   quantity: 0,
-  unit: 'units',
+  unit: "units",
   cost_per_unit: 0,
   total_cost: 0,
-  supplier: '',
-  supplier_id: '',
-  warehouse_id: '',
-  notes: '',
-  batch_number: '',
-  purchase_date: new Date().toISOString().split('T')[0],
+  supplier: "",
+  supplier_id: "",
+  warehouse_id: "",
+  notes: "",
+  batch_number: "",
+  purchase_date: new Date().toISOString().split("T")[0],
   invoice_file: null as File | null,
-  invoice_number: '',
+  invoice_number: "",
 });
+void _createDefaultPurchaseState;
 
 const createDefaultSupplierState = () => ({
-  name: '',
-  contact_person: '',
-  email: '',
-  phone: '',
-  address: '',
-  city: '',
-  postal_code: '',
-  country: 'Morocco',
-  website: '',
-  tax_id: '',
-  payment_terms: '',
-  notes: '',
+  name: "",
+  contact_person: "",
+  email: "",
+  phone: "",
+  address: "",
+  city: "",
+  postal_code: "",
+  country: "Morocco",
+  website: "",
+  tax_id: "",
+  payment_terms: "",
+  notes: "",
 });
 
 const createDefaultWarehouseState = () => ({
-  name: '',
-  description: '',
-  location: '',
-  address: '',
-  city: '',
-  postal_code: '',
-  capacity: '',
-  capacity_unit: 'm3',
+  name: "",
+  description: "",
+  location: "",
+  address: "",
+  city: "",
+  postal_code: "",
+  capacity: "",
+  capacity_unit: "m3",
   temperature_controlled: false,
   humidity_controlled: false,
-  security_level: 'standard',
-  manager_name: '',
-  manager_phone: '',
+  security_level: "standard",
+  manager_name: "",
+  manager_phone: "",
 });
 
-export type InventoryTab = 'stock' | 'suppliers' | 'warehouses';
+export type InventoryTab = "stock" | "suppliers" | "warehouses";
 
 interface StockManagementProps {
   activeTab: InventoryTab;
 }
 
-const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
+const StockManagement = ({ activeTab }: StockManagementProps) => {
+  const { t } = useTranslation('stock');
   const { currentOrganization, currentFarm } = useAuth();
-  const { symbol: currencySymbol } = useCurrency();
-  const [products, setProducts] = useState<Product[]>([]);
+  const { symbol: _currencySymbol } = useCurrency();
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<{title:string;description?:string;variant?:"destructive"|"default";onConfirm:()=>void}>({title:"",onConfirm:()=>{}});
+  const _showConfirm = (title: string, onConfirm: () => void, opts?: {description?: string; variant?: "destructive" | "default"}) => {
+    setConfirmAction({title, onConfirm, ...opts});
+    setConfirmOpen(true);
+  };
+void _showConfirm;
+
+  const [_products, _setProducts] = useState<Product[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [warehouses, setWarehouses] = useState<WarehouseData[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // showAddPurchase removed - purchases now handled via Stock Entries
   const [showAddSupplier, setShowAddSupplier] = useState(false);
   const [showAddWarehouse, setShowAddWarehouse] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
 
   // newPurchase state removed - purchases now handled via Stock Entries
 
   const [newSupplier, setNewSupplier] = useState(createDefaultSupplierState());
 
-  const [newWarehouse, setNewWarehouse] = useState(createDefaultWarehouseState());
-  const [editingSupplierId, setEditingSupplierId] = useState<string | null>(null);
-  const [editingWarehouseId, setEditingWarehouseId] = useState<string | null>(null);
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [quantityModalOpen, setQuantityModalOpen] = useState(false);
-  const [quantityAdjustment, setQuantityAdjustment] = useState<{ type: 'increase' | 'decrease'; amount: number; reason: string }>({
-    type: 'increase',
+  const [newWarehouse, setNewWarehouse] = useState(
+    createDefaultWarehouseState(),
+  );
+  const [editingSupplierId, setEditingSupplierId] = useState<string | null>(
+    null,
+  );
+  const [editingWarehouseId, setEditingWarehouseId] = useState<string | null>(
+    null,
+  );
+  const [_selectedProduct, _setSelectedProduct] = useState<Product | null>(null);
+  const [_quantityModalOpen, _setQuantityModalOpen] = useState(false);
+  const [_quantityAdjustment, _setQuantityAdjustment] = useState<{
+    type: "increase" | "decrease";
+    amount: number;
+    reason: string;
+  }>({
+    type: "increase",
     amount: 0,
-    reason: '',
+    reason: "",
   });
-  const [isAdjustingQuantity, setIsAdjustingQuantity] = useState(false);
+  const [_isAdjustingQuantity, _setIsAdjustingQuantity] = useState(false);
   const [isSubmittingSupplier, setIsSubmittingSupplier] = useState(false);
   const [isSubmittingWarehouse, setIsSubmittingWarehouse] = useState(false);
 
@@ -180,41 +221,46 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
     setEditingWarehouseId(null);
   };
 
+  // fetchProducts removed - stock management is now handled by InventoryStock component
+  // which uses the items table instead of the obsolete inventory_items table
+
+  const fetchSuppliers = useCallback(async () => {
+    if (!currentOrganization) return;
+
+    try {
+      const data = await suppliersApi.getAll(
+        { is_active: true },
+        currentOrganization.id,
+      );
+      setSuppliers(data || []);
+    } catch (error) {
+      console.error("Error fetching suppliers:", error);
+      setError(t('stockManagement.toast.fetchSuppliersFailed'));
+    }
+  }, [currentOrganization, t]);
+
+  const fetchWarehouses = useCallback(async () => {
+    if (!currentOrganization) return;
+
+    try {
+      const data = await warehousesApi.getAll(
+        undefined,
+        currentOrganization.id,
+      );
+      setWarehouses(data || []);
+    } catch (error) {
+      console.error("Error fetching warehouses:", error);
+      setError(t('stockManagement.toast.fetchWarehousesFailed'));
+    }
+  }, [currentOrganization, t]);
+
   useEffect(() => {
     if (currentOrganization) {
       // Only fetch suppliers and warehouses - stock tab is handled by InventoryStock component
       fetchSuppliers();
       fetchWarehouses();
     }
-     
-  }, [currentOrganization]);
-
-  // fetchProducts removed - stock management is now handled by InventoryStock component
-  // which uses the items table instead of the obsolete inventory_items table
-
-  const fetchSuppliers = async () => {
-    if (!currentOrganization) return;
-
-    try {
-      const data = await suppliersApi.getAll({ is_active: true }, currentOrganization.id);
-      setSuppliers(data || []);
-    } catch (error) {
-      console.error('Error fetching suppliers:', error);
-      setError('Failed to fetch suppliers');
-    }
-  };
-
-  const fetchWarehouses = async () => {
-    if (!currentOrganization) return;
-
-    try {
-      const data = await warehousesApi.getAll(undefined, currentOrganization.id);
-      setWarehouses(data || []);
-    } catch (error) {
-      console.error('Error fetching warehouses:', error);
-      setError('Failed to fetch warehouses');
-    }
-  };
+  }, [currentOrganization, fetchSuppliers, fetchWarehouses]);
 
   // openCreatePurchaseModal, closePurchaseModal removed - purchases now handled via Stock Entries
   // openRestockModal removed - stock management now handled by InventoryStock component
@@ -229,17 +275,17 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
     setEditingSupplierId(supplier.id);
     setNewSupplier({
       name: supplier.name,
-      contact_person: supplier.contact_person || '',
-      email: supplier.email || '',
-      phone: supplier.phone || '',
-      address: supplier.address || '',
-      city: supplier.city || '',
-      postal_code: supplier.postal_code || '',
-      country: supplier.country || 'Morocco',
-      website: supplier.website || '',
-      tax_id: supplier.tax_id || '',
-      payment_terms: supplier.payment_terms || '',
-      notes: supplier.notes || '',
+      contact_person: supplier.contact_person || "",
+      email: supplier.email || "",
+      phone: supplier.phone || "",
+      address: supplier.address || "",
+      city: supplier.city || "",
+      postal_code: supplier.postal_code || "",
+      country: supplier.country || "Morocco",
+      website: supplier.website || "",
+      tax_id: supplier.tax_id || "",
+      payment_terms: supplier.payment_terms || "",
+      notes: supplier.notes || "",
     });
     setError(null);
     setShowAddSupplier(true);
@@ -261,18 +307,18 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
     setEditingWarehouseId(warehouse.id);
     setNewWarehouse({
       name: warehouse.name,
-      description: warehouse.description || '',
-      location: warehouse.location || '',
-      address: warehouse.address || '',
-      city: warehouse.city || '',
-      postal_code: warehouse.postal_code || '',
-      capacity: warehouse.capacity?.toString() || '',
-      capacity_unit: warehouse.capacity_unit || 'm3',
+      description: warehouse.description || "",
+      location: warehouse.location || "",
+      address: warehouse.address || "",
+      city: warehouse.city || "",
+      postal_code: warehouse.postal_code || "",
+      capacity: warehouse.capacity?.toString() || "",
+      capacity_unit: warehouse.capacity_unit || "m3",
       temperature_controlled: Boolean(warehouse.temperature_controlled),
       humidity_controlled: Boolean(warehouse.humidity_controlled),
-      security_level: warehouse.security_level || 'standard',
-      manager_name: warehouse.manager_name || '',
-      manager_phone: warehouse.manager_phone || '',
+      security_level: warehouse.security_level || "standard",
+      manager_name: warehouse.manager_name || "",
+      manager_phone: warehouse.manager_phone || "",
     });
     setError(null);
     setShowAddWarehouse(true);
@@ -286,7 +332,7 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
 
   // openAdjustQuantityModal, handleAdjustQuantity removed - stock adjustments now handled via Stock Entries
 
-  // handleAddPurchase, handleDeleteProduct removed - purchases and stock management 
+  // handleAddPurchase, handleDeleteProduct removed - purchases and stock management
   // are now handled via Stock Entries and Items system (not inventory_items)
 
   const handleSubmitSupplier = async () => {
@@ -295,30 +341,37 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
     setIsSubmittingSupplier(true);
     try {
       if (editingSupplierId) {
-        const data = await suppliersApi.update(editingSupplierId, newSupplier, currentOrganization.id);
+        const data = await suppliersApi.update(
+          editingSupplierId,
+          newSupplier,
+          currentOrganization.id,
+        );
 
         setSuppliers((prev) =>
-          prev.map((supplier) => (supplier.id === editingSupplierId ? data : supplier)),
+          prev.map((supplier) =>
+            supplier.id === editingSupplierId ? data : supplier,
+          ),
         );
-        toast.success('Supplier updated successfully');
+        toast.success(t('stockManagement.toast.supplierUpdated'));
       } else {
         const data = await suppliersApi.create(
           {
             ...newSupplier,
             is_active: true,
           },
-          currentOrganization.id
+          currentOrganization.id,
         );
 
         setSuppliers([...suppliers, data]);
-        toast.success('Supplier created successfully');
+        toast.success(t('stockManagement.toast.supplierCreated'));
       }
 
       closeSupplierModal();
       setError(null);
     } catch (error) {
-      console.error('Error saving supplier:', error);
-      const message = error instanceof Error ? error.message : 'Failed to save supplier';
+      console.error("Error saving supplier:", error);
+      const message =
+        error instanceof Error ? error.message : t('stockManagement.toast.supplierSaveFailed');
       setError(message);
       toast.error(message);
     } finally {
@@ -327,21 +380,22 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
   };
 
   const handleDeleteSupplier = async (id: string) => {
-    if (!confirm('Êtes-vous sûr de vouloir archiver ce fournisseur ?')) return;
+    if (!confirm(t('stockManagement.toast.supplierArchiveConfirm'))) return;
     if (!currentOrganization) return;
 
     try {
       await suppliersApi.delete(id, currentOrganization.id);
 
-      setSuppliers(suppliers.filter(s => s.id !== id));
+      setSuppliers(suppliers.filter((s) => s.id !== id));
       if (editingSupplierId === id) {
         closeSupplierModal();
       }
       setError(null);
-      toast.success('Supplier archived successfully');
+      toast.success(t('stockManagement.toast.supplierArchived'));
     } catch (error) {
-      console.error('Error deleting supplier:', error);
-      const message = error instanceof Error ? error.message : 'Failed to delete supplier';
+      console.error("Error deleting supplier:", error);
+      const message =
+        error instanceof Error ? error.message : t('stockManagement.toast.supplierArchiveFailed');
       setError(message);
       toast.error(message);
     }
@@ -354,29 +408,41 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
     try {
       const payload = {
         ...newWarehouse,
-        capacity: newWarehouse.capacity ? parseFloat(newWarehouse.capacity) : undefined,
+        capacity: newWarehouse.capacity
+          ? parseFloat(newWarehouse.capacity)
+          : undefined,
         farm_id: currentFarm?.id || undefined,
       };
 
       if (editingWarehouseId) {
-        const data = await warehousesApi.update(editingWarehouseId, payload, currentOrganization.id);
+        const data = await warehousesApi.update(
+          editingWarehouseId,
+          payload,
+          currentOrganization.id,
+        );
 
         setWarehouses((prev) =>
-          prev.map((warehouse) => (warehouse.id === editingWarehouseId ? data : warehouse)),
+          prev.map((warehouse) =>
+            warehouse.id === editingWarehouseId ? data : warehouse,
+          ),
         );
-        toast.success('Warehouse updated successfully');
+        toast.success(t('stockManagement.toast.warehouseUpdated'));
       } else {
-        const data = await warehousesApi.create(payload, currentOrganization.id);
+        const data = await warehousesApi.create(
+          payload,
+          currentOrganization.id,
+        );
 
         setWarehouses([...warehouses, data]);
-        toast.success('Warehouse created successfully');
+        toast.success(t('stockManagement.toast.warehouseCreated'));
       }
 
       closeWarehouseModal();
       setError(null);
     } catch (error) {
-      console.error('Error saving warehouse:', error);
-      const message = error instanceof Error ? error.message : 'Failed to save warehouse';
+      console.error("Error saving warehouse:", error);
+      const message =
+        error instanceof Error ? error.message : t('stockManagement.toast.warehouseSaveFailed');
       setError(message);
       toast.error(message);
     } finally {
@@ -385,343 +451,467 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
   };
 
   const handleDeleteWarehouse = async (id: string) => {
-    if (!confirm('Êtes-vous sûr de vouloir archiver cet entrepôt ?')) return;
+    if (!confirm(t('stockManagement.toast.warehouseArchiveConfirm'))) return;
     if (!currentOrganization) return;
 
     try {
       await warehousesApi.delete(id, currentOrganization.id);
 
-      setWarehouses(warehouses.filter(w => w.id !== id));
+      setWarehouses(warehouses.filter((w) => w.id !== id));
       if (editingWarehouseId === id) {
         closeWarehouseModal();
       }
       setError(null);
-      toast.success('Warehouse archived successfully');
+      toast.success(t('stockManagement.toast.warehouseArchived'));
     } catch (error) {
-      console.error('Error deleting warehouse:', error);
-      const message = error instanceof Error ? error.message : 'Failed to delete warehouse';
+      console.error("Error deleting warehouse:", error);
+      const message =
+        error instanceof Error ? error.message : t('stockManagement.toast.warehouseArchiveFailed');
       setError(message);
       toast.error(message);
     }
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
-      </div>
-    );
-  }
+  const normalizedSearchTerm = searchTerm.toLowerCase();
+  const filteredSuppliers = suppliers.filter(
+    (supplier) =>
+      supplier.name?.toLowerCase().includes(normalizedSearchTerm) ||
+      supplier.contact_person?.toLowerCase().includes(normalizedSearchTerm) ||
+      supplier.city?.toLowerCase().includes(normalizedSearchTerm),
+  );
+  const filteredWarehouses = warehouses.filter(
+    (warehouse) =>
+      warehouse.name?.toLowerCase().includes(normalizedSearchTerm) ||
+      warehouse.location?.toLowerCase().includes(normalizedSearchTerm) ||
+      warehouse.manager_name?.toLowerCase().includes(normalizedSearchTerm),
+  );
 
   return (
-    <div className="p-3 sm:p-4 lg:p-6 space-y-4 sm:space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
-          Gestion du Stock
-        </h2>
-      </div>
-
-      {/* Tab Actions */}
-      {/* Stock tab is handled by InventoryStock component, so no actions needed here */}
-      <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-4">
-        {/* Stock tab actions removed - handled by InventoryStock component */}
-        {activeTab === 'suppliers' && (
-          <button
-            onClick={openCreateSupplierModal}
-            className="flex items-center justify-center space-x-2 px-3 sm:px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm"
-          >
-            <Plus className="h-4 w-4 sm:h-5 sm:w-5" />
-            <span>Nouveau Fournisseur</span>
-          </button>
-        )}
-        {activeTab === 'warehouses' && (
-          <button
-            onClick={openCreateWarehouseModal}
-            className="flex items-center justify-center space-x-2 px-3 sm:px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm"
-          >
-            <Plus className="h-4 w-4 sm:h-5 sm:w-5" />
-            <span>Nouvel Entrepôt</span>
-          </button>
-        )}
-      </div>
-
-      {/* Error message */}
-      {error && (
-        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 px-4 py-3 rounded">
-          {error}
-        </div>
-      )}
-
-      {/* Tab Content */}
-      {/* Stock tab is handled by InventoryStock component via Outlet in parent route */}
-      {/* Stock tab content removed - now handled by InventoryStock component using items table */}
-
-      {/* Suppliers Tab */}
-      {activeTab === 'suppliers' && (
-        <>
-          {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-            <Input
-              type="text"
-              placeholder="Rechercher un fournisseur..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
+    <div className="p-3 sm:p-4 lg:p-6">
+      <ListPageLayout
+        header={
+          activeTab === 'suppliers' || activeTab === 'warehouses' ? (
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-2 sm:gap-4">
+              {activeTab === 'suppliers' && (
+                <Button variant="green" onClick={openCreateSupplierModal} className="flex items-center justify-center space-x-2 px-3 sm:px-4 py-2 rounded-md text-sm" >
+                  <Plus className="h-4 w-4 sm:h-5 sm:w-5" />
+                  <span>{t('stockManagement.newSupplier')}</span>
+                </Button>
+              )}
+              {activeTab === 'warehouses' && (
+                <Button variant="green" onClick={openCreateWarehouseModal} className="flex items-center justify-center space-x-2 px-3 sm:px-4 py-2 rounded-md text-sm" >
+                  <Plus className="h-4 w-4 sm:h-5 sm:w-5" />
+                  <span>{t('stockManagement.newWarehouse')}</span>
+                </Button>
+              )}
+            </div>
+          ) : undefined
+        }
+        filters={
+          activeTab === "suppliers" || activeTab === "warehouses" ? (
+            <FilterBar
+              searchValue={searchTerm}
+              onSearchChange={setSearchTerm}
+              searchPlaceholder={
+                activeTab === "suppliers"
+                  ? t('stockManagement.searchSupplier')
+                  : t('stockManagement.searchWarehouse')
+              }
             />
+          ) : undefined
+        }
+      >
+        {error && (
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 px-4 py-3 rounded">
+            {error}
           </div>
+        )}
 
-          {/* Suppliers List */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-              <thead className="bg-gray-50 dark:bg-gray-700">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Fournisseur
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Contact
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Localisation
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                {suppliers
-                  .filter(supplier =>
-                    supplier.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                    supplier.contact_person?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                    supplier.city?.toLowerCase().includes(searchTerm.toLowerCase())
-                  )
-                  .map((supplier) => (
-                    <tr key={supplier.id}>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <div className="flex-shrink-0">
-                            <Building2 className="h-6 w-6 text-gray-400" />
-                          </div>
-                          <div className="ml-4">
-                            <div className="text-sm font-medium text-gray-900 dark:text-white">
-                              {supplier.name}
-                            </div>
-                            {supplier.payment_terms && (
-                              <div className="text-sm text-gray-500 dark:text-gray-400">
-                                {supplier.payment_terms}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900 dark:text-white">
-                          {supplier.contact_person}
-                        </div>
-                        <div className="text-sm text-gray-500 dark:text-gray-400 space-y-1">
-                          {supplier.email && (
-                            <div className="flex items-center">
-                              <Mail className="h-3 w-3 mr-1" />
-                              {supplier.email}
-                            </div>
-                          )}
-                          {supplier.phone && (
-                            <div className="flex items-center">
-                              <Phone className="h-3 w-3 mr-1" />
-                              {supplier.phone}
-                            </div>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+        {/* Stock tab is handled by InventoryStock component via Outlet in parent route */}
+        {/* Stock tab content removed - now handled by InventoryStock component using items table */}
+
+        {/* Suppliers Tab */}
+        {activeTab === "suppliers" && (
+          <ResponsiveList
+            items={filteredSuppliers}
+            isLoading={loading}
+            keyExtractor={(supplier) => supplier.id}
+            emptyIcon={Users}
+            emptyTitle={t('stockManagement.noSuppliers')}
+            emptyMessage={t('stockManagement.noSuppliersHint')}
+            renderCard={(supplier) => (
+              <div className="rounded-lg bg-white p-4 shadow dark:bg-gray-800 space-y-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
+                      <Building2 className="h-5 w-5 text-gray-500 dark:text-gray-400" />
+                    </div>
+                    <div>
+                      <div className="font-medium text-gray-900 dark:text-white">
+                        {supplier.name}
+                      </div>
+                      {supplier.payment_terms && (
                         <div className="text-sm text-gray-500 dark:text-gray-400">
-                          {supplier.city && supplier.country ? `${supplier.city}, ${supplier.country}` : supplier.country || supplier.city || '-'}
+                          {supplier.payment_terms}
                         </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <button
-                              type="button"
-                              className="inline-flex items-center justify-center rounded-md border border-gray-200 dark:border-gray-700 p-2 text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-200"
-                            >
-                              <MoreVertical className="h-4 w-4" />
-                            </button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => openEditSupplierModal(supplier)}>
-                              <Pencil className="mr-2 h-4 w-4" />
-                              Modifier
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              onClick={() => handleDeleteSupplier(supplier.id)}
-                              className="text-red-600 focus:text-red-600"
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Archiver
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </td>
-                    </tr>
-                  ))}
-              </tbody>
-            </table>
+                      )}
+                    </div>
+                  </div>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        type="button"
+                        className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-md border border-gray-200 p-2 text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:border-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                      >
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => openEditSupplierModal(supplier)}>
+                        <Pencil className="mr-2 h-4 w-4" />
+                        {t('stockManagement.edit')}
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onClick={() => handleDeleteSupplier(supplier.id)}
+                        className="text-red-600 focus:text-red-600"
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        {t('stockManagement.archive')}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
 
-            {suppliers.length === 0 && (
-              <div className="text-center py-12">
-                <Users className="mx-auto h-12 w-12 text-gray-400" />
-                <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">Aucun fournisseur</h3>
-                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                  Commencez par ajouter un nouveau fournisseur.
-                </p>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  {supplier.contact_person && (
+                    <div>
+                      <span className="block text-xs text-gray-500 dark:text-gray-400">
+                        {t('stockManagement.supplierTable.contact')}
+                      </span>
+                      <span className="text-gray-900 dark:text-white">
+                        {supplier.contact_person}
+                      </span>
+                    </div>
+                  )}
+                  <div>
+                    <span className="block text-xs text-gray-500 dark:text-gray-400">
+                      {t('stockManagement.supplierTable.location')}
+                    </span>
+                    <span className="text-gray-900 dark:text-white">
+                      {supplier.city && supplier.country
+                        ? `${supplier.city}, ${supplier.country}`
+                        : supplier.country || supplier.city || "-"}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap gap-3 text-sm text-gray-500 dark:text-gray-400">
+                  {supplier.email && (
+                    <div className="flex items-center gap-1">
+                      <Mail className="h-3.5 w-3.5" />
+                      <span>{supplier.email}</span>
+                    </div>
+                  )}
+                  {supplier.phone && (
+                    <div className="flex items-center gap-1">
+                      <Phone className="h-3.5 w-3.5" />
+                      <span>{supplier.phone}</span>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
-          </div>
-        </>
-      )}
+            renderTableHeader={
+              <TableRow>
+                <TableHead className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">
+                  {t('stockManagement.supplierTable.supplier')}
+                </TableHead>
+                <TableHead className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">
+                  {t('stockManagement.supplierTable.contact')}
+                </TableHead>
+                <TableHead className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">
+                  {t('stockManagement.supplierTable.location')}
+                </TableHead>
+                <TableHead className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">
+                  {t('stockManagement.supplierTable.actions')}
+                </TableHead>
+              </TableRow>
+            }
+            renderTable={(supplier) => (
+              <>
+                <TableCell className="px-6 py-4 whitespace-nowrap">
+                  <div className="flex items-center">
+                    <div className="flex-shrink-0">
+                      <Building2 className="h-6 w-6 text-gray-400" />
+                    </div>
+                    <div className="ml-4">
+                      <div className="text-sm font-medium text-gray-900 dark:text-white">
+                        {supplier.name}
+                      </div>
+                      {supplier.payment_terms && (
+                        <div className="text-sm text-gray-500 dark:text-gray-400">
+                          {supplier.payment_terms}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </TableCell>
+                <TableCell className="px-6 py-4 whitespace-nowrap">
+                  <div className="text-sm text-gray-900 dark:text-white">
+                    {supplier.contact_person}
+                  </div>
+                  <div className="space-y-1 text-sm text-gray-500 dark:text-gray-400">
+                    {supplier.email && (
+                      <div className="flex items-center">
+                        <Mail className="mr-1 h-3 w-3" />
+                        {supplier.email}
+                      </div>
+                    )}
+                    {supplier.phone && (
+                      <div className="flex items-center">
+                        <Phone className="mr-1 h-3 w-3" />
+                        {supplier.phone}
+                      </div>
+                    )}
+                  </div>
+                </TableCell>
+                <TableCell className="px-6 py-4 whitespace-nowrap">
+                  <div className="text-sm text-gray-500 dark:text-gray-400">
+                    {supplier.city && supplier.country
+                      ? `${supplier.city}, ${supplier.country}`
+                      : supplier.country || supplier.city || "-"}
+                  </div>
+                </TableCell>
+                <TableCell className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        type="button"
+                        className="inline-flex items-center justify-center rounded-md border border-gray-200 p-2 text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:border-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                      >
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => openEditSupplierModal(supplier)}>
+                        <Pencil className="mr-2 h-4 w-4" />
+                        {t('stockManagement.edit')}
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onClick={() => handleDeleteSupplier(supplier.id)}
+                        className="text-red-600 focus:text-red-600"
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        {t('stockManagement.archive')}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </TableCell>
+              </>
+            )}
+          />
+        )}
 
-      {/* Warehouses Tab */}
-      {activeTab === 'warehouses' && (
-        <>
-          {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-            <Input
-              type="text"
-              placeholder="Rechercher un entrepôt..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
-          </div>
+        {/* Warehouses Tab */}
+        {activeTab === "warehouses" && (
+          <ResponsiveList
+            items={filteredWarehouses}
+            isLoading={loading}
+            keyExtractor={(warehouse) => warehouse.id}
+            emptyIcon={Warehouse}
+            emptyTitle={t('stockManagement.noWarehouses')}
+            emptyMessage={t('stockManagement.noWarehousesHint')}
+            renderCard={(warehouse) => (
+              <div className="rounded-lg bg-white p-4 shadow dark:bg-gray-800 space-y-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
+                      <Warehouse className="h-5 w-5 text-gray-500 dark:text-gray-400" />
+                    </div>
+                    <div>
+                      <div className="font-medium text-gray-900 dark:text-white">
+                        {warehouse.name}
+                      </div>
+                      <div className="text-sm text-gray-500 dark:text-gray-400">
+                        {warehouse.location || warehouse.city || "-"}
+                      </div>
+                    </div>
+                  </div>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        type="button"
+                        className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-md border border-gray-200 p-2 text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:border-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                      >
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => openEditWarehouseModal(warehouse)}>
+                        <Pencil className="mr-2 h-4 w-4" />
+                        {t('stockManagement.edit')}
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onClick={() => handleDeleteWarehouse(warehouse.id)}
+                        className="text-red-600 focus:text-red-600"
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        {t('stockManagement.archive')}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
 
-          {/* Warehouses List */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-              <thead className="bg-gray-50 dark:bg-gray-700">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Entrepôt
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Capacité
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Responsable
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Conditions
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                {warehouses
-                  .filter(warehouse =>
-                    warehouse.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                    warehouse.location?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                    warehouse.manager_name?.toLowerCase().includes(searchTerm.toLowerCase())
-                  )
-                  .map((warehouse) => (
-                    <tr key={warehouse.id}>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <div className="flex-shrink-0">
-                            <Warehouse className="h-6 w-6 text-gray-400" />
-                          </div>
-                          <div className="ml-4">
-                            <div className="text-sm font-medium text-gray-900 dark:text-white">
-                              {warehouse.name}
-                            </div>
-                            <div className="text-sm text-gray-500 dark:text-gray-400">
-                              {warehouse.location || warehouse.city || '-'}
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900 dark:text-white">
-                          {warehouse.capacity ? `${warehouse.capacity} ${warehouse.capacity_unit}` : '-'}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900 dark:text-white">
-                          {warehouse.manager_name || '-'}
-                        </div>
-                        {warehouse.manager_phone && (
-                          <div className="text-sm text-gray-500 dark:text-gray-400 flex items-center">
-                            <Phone className="h-3 w-3 mr-1" />
-                            {warehouse.manager_phone}
-                          </div>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-xs space-y-1">
-                          {warehouse.temperature_controlled && (
-                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-                              Température contrôlée
-                            </span>
-                          )}
-                          {warehouse.humidity_controlled && (
-                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                              Humidité contrôlée
-                            </span>
-                          )}
-                          <div className="text-xs text-gray-500 dark:text-gray-400 capitalize">
-                            Sécurité: {warehouse.security_level}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <button
-                              type="button"
-                              className="inline-flex items-center justify-center rounded-md border border-gray-200 dark:border-gray-700 p-2 text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-200"
-                            >
-                              <MoreVertical className="h-4 w-4" />
-                            </button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => openEditWarehouseModal(warehouse)}>
-                              <Pencil className="mr-2 h-4 w-4" />
-                              Modifier
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              onClick={() => handleDeleteWarehouse(warehouse.id)}
-                              className="text-red-600 focus:text-red-600"
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Archiver
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </td>
-                    </tr>
-                  ))}
-              </tbody>
-            </table>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <span className="block text-xs text-gray-500 dark:text-gray-400">
+                      {t('stockManagement.warehouseTable.capacity')}
+                    </span>
+                    <span className="text-gray-900 dark:text-white">
+                      {warehouse.capacity
+                        ? `${warehouse.capacity} ${warehouse.capacity_unit}`
+                        : "-"}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="block text-xs text-gray-500 dark:text-gray-400">
+                      {t('stockManagement.warehouseTable.manager')}
+                    </span>
+                    <span className="text-gray-900 dark:text-white">
+                      {warehouse.manager_name || "-"}
+                    </span>
+                  </div>
+                </div>
 
-            {warehouses.length === 0 && (
-              <div className="text-center py-12">
-                <Warehouse className="mx-auto h-12 w-12 text-gray-400" />
-                <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">Aucun entrepôt</h3>
-                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                  Commencez par ajouter un nouvel entrepôt.
-                </p>
+                {warehouse.manager_phone && (
+                  <div className="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400">
+                    <Phone className="h-3.5 w-3.5" />
+                    <span>{warehouse.manager_phone}</span>
+                  </div>
+                )}
+
+                <div className="flex flex-wrap gap-2 text-xs">
+                  {warehouse.temperature_controlled && (
+                    <span className="inline-flex items-center rounded-full bg-blue-100 px-2 py-1 font-medium text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                      {t('stockManagement.tempControlled')}
+                    </span>
+                  )}
+                  {warehouse.humidity_controlled && (
+                    <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-1 font-medium text-green-800 dark:bg-green-900 dark:text-green-200">
+                      {t('stockManagement.humidityControlled')}
+                    </span>
+                  )}
+                  <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-1 font-medium capitalize text-gray-600 dark:bg-gray-700 dark:text-gray-300">
+                    {t('stockManagement.security')}{warehouse.security_level}
+                  </span>
+                </div>
               </div>
             )}
-          </div>
-        </>
-      )}
+            renderTableHeader={
+              <TableRow>
+                <TableHead className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">
+                  {t('stockManagement.warehouseTable.warehouse')}
+                </TableHead>
+                <TableHead className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">
+                  {t('stockManagement.warehouseTable.capacity')}
+                </TableHead>
+                <TableHead className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">
+                  {t('stockManagement.warehouseTable.manager')}
+                </TableHead>
+                <TableHead className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">
+                  {t('stockManagement.warehouseTable.conditions')}
+                </TableHead>
+                <TableHead className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">
+                  {t('stockManagement.warehouseTable.actions')}
+                </TableHead>
+              </TableRow>
+            }
+            renderTable={(warehouse) => (
+              <>
+                <TableCell className="px-6 py-4 whitespace-nowrap">
+                  <div className="flex items-center">
+                    <div className="flex-shrink-0">
+                      <Warehouse className="h-6 w-6 text-gray-400" />
+                    </div>
+                    <div className="ml-4">
+                      <div className="text-sm font-medium text-gray-900 dark:text-white">
+                        {warehouse.name}
+                      </div>
+                      <div className="text-sm text-gray-500 dark:text-gray-400">
+                        {warehouse.location || warehouse.city || "-"}
+                      </div>
+                    </div>
+                  </div>
+                </TableCell>
+                <TableCell className="px-6 py-4 whitespace-nowrap">
+                  <div className="text-sm text-gray-900 dark:text-white">
+                    {warehouse.capacity
+                      ? `${warehouse.capacity} ${warehouse.capacity_unit}`
+                      : "-"}
+                  </div>
+                </TableCell>
+                <TableCell className="px-6 py-4 whitespace-nowrap">
+                  <div className="text-sm text-gray-900 dark:text-white">
+                    {warehouse.manager_name || "-"}
+                  </div>
+                  {warehouse.manager_phone && (
+                    <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
+                      <Phone className="mr-1 h-3 w-3" />
+                      {warehouse.manager_phone}
+                    </div>
+                  )}
+                </TableCell>
+                <TableCell className="px-6 py-4 whitespace-nowrap">
+                  <div className="space-y-1 text-xs">
+                    {warehouse.temperature_controlled && (
+                      <span className="inline-flex items-center rounded-full bg-blue-100 px-2 py-1 text-xs font-medium text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                        {t('stockManagement.tempControlled')}
+                      </span>
+                    )}
+                    {warehouse.humidity_controlled && (
+                      <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-800 dark:bg-green-900 dark:text-green-200">
+                        {t('stockManagement.humidityControlled')}
+                      </span>
+                    )}
+                    <div className="text-xs capitalize text-gray-500 dark:text-gray-400">
+                      {t('stockManagement.security')}{warehouse.security_level}
+                    </div>
+                  </div>
+                </TableCell>
+                <TableCell className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        type="button"
+                        className="inline-flex items-center justify-center rounded-md border border-gray-200 p-2 text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:border-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                      >
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => openEditWarehouseModal(warehouse)}>
+                        <Pencil className="mr-2 h-4 w-4" />
+                        {t('stockManagement.edit')}
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onClick={() => handleDeleteWarehouse(warehouse.id)}
+                        className="text-red-600 focus:text-red-600"
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        {t('stockManagement.archive')}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </TableCell>
+              </>
+            )}
+          />
+        )}
+      </ListPageLayout>
 
       {/* Removed Add Product Modal - Products are now created automatically during purchase */}
       {/* {showAddProduct && (
@@ -731,12 +921,12 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
               <h3 className="text-base sm:text-lg font-medium text-gray-900 dark:text-white">
                 Nouveau Produit
               </h3>
-              <button
+              <Button
                 onClick={() => setShowAddProduct(false)}
                 className="text-gray-400 hover:text-gray-500"
               >
                 <X className="h-5 w-5 sm:h-6 sm:w-6" />
-              </button>
+              </Button>
             </div>
             <div className="space-y-3 sm:space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
@@ -912,419 +1102,19 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
             </div>
 
             <div className="mt-4 sm:mt-6 flex flex-col sm:flex-row justify-end gap-2 sm:gap-3">
-              <button
+              <Button
                 onClick={() => setShowAddProduct(false)}
                 className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-500 order-2 sm:order-1"
               >
                 Annuler
-              </button>
-              <button
-                onClick={handleAddProduct}
-                disabled={!newProduct.item_name || !newProduct.category || newProduct.quantity === undefined || newProduct.quantity < 0 || !newProduct.unit}
-                className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md disabled:opacity-50 disabled:cursor-not-allowed order-1 sm:order-2"
-              >
+              </Button>
+              <Button variant="green" onClick={handleAddProduct} disabled={!newProduct.item_name || !newProduct.category || newProduct.quantity === undefined || newProduct.quantity < 0 || !newProduct.unit} className="px-4 py-2 text-sm font-medium rounded-md disabled:cursor-not-allowed order-1 sm:order-2" >
                 Ajouter
-              </button>
+              </Button>
             </div>
           </div>
         </div>
-      )} */}
-
-      {/* Add Purchase Modal - REMOVED: Purchase functionality now handled via Stock Entries */}
-      {false && (
-        <div className="modal-overlay">
-          <div className="modal-panel p-4 sm:p-6 max-w-4xl max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-                Nouvel Achat de Produit
-              </h3>
-              <button
-                onClick={closePurchaseModal}
-                className="text-gray-400 hover:text-gray-500"
-              >
-                <X className="h-6 w-6" />
-              </button>
-            </div>
-
-            {/* Toggle between existing product or new product */}
-            <div className="mb-6">
-              <div className="flex space-x-4 border-b border-gray-200 dark:border-gray-700">
-                <button
-                  onClick={() => setNewPurchase({ ...newPurchase, product_id: '', product_name: '' })}
-                  className={`pb-2 px-1 border-b-2 font-medium text-sm ${
-                    !newPurchase.product_id ? 'border-green-500 text-green-600' : 'border-transparent text-gray-500 hover:text-gray-700'
-                  }`}
-                >
-                  Nouveau Produit
-                </button>
-                <button
-                  onClick={() => setNewPurchase({ ...newPurchase, product_name: '', product_id: products.length > 0 ? products[0].id : '' })}
-                  className={`pb-2 px-1 border-b-2 font-medium text-sm ${
-                    newPurchase.product_id ? 'border-green-500 text-green-600' : 'border-transparent text-gray-500 hover:text-gray-700'
-                  }`}
-                  disabled={products.length === 0}
-                >
-                  Produit Existant
-                </button>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              {/* Product Selection or Creation */}
-              {newPurchase.product_id ? (
-                <div>
-                  <FormField label="Sélectionner un produit existant *" htmlFor="purchase_product" required>
-                    <Select
-                      id="purchase_product"
-                      value={newPurchase.product_id}
-                      onChange={(e) => {
-                        const value = (e.target as HTMLSelectElement).value;
-                        const product = products.find(p => p.id === value);
-                        setNewPurchase({
-                          ...newPurchase,
-                          product_id: value,
-                          cost_per_unit: product?.cost_per_unit || 0,
-                          supplier: product?.supplier || '',
-                          unit: product?.unit || 'units',
-                          packaging_type: product?.packaging_type || '',
-                          packaging_size: product?.packaging_size || 0
-                        });
-                      }}
-                      required
-                    >
-                      <option value="">Sélectionner un produit</option>
-                      {products.map(product => (
-                        <option key={product.id} value={product.id}>
-                          {product.item_name}
-                          {product.packaging_type && ` - ${product.packaging_type} ${product.packaging_size}${product.unit}`}
-                          ({product.quantity} {product.unit} en stock)
-                        </option>
-                      ))}
-                    </Select>
-                  </FormField>
-                </div>
-              ) : (
-                <>
-                  {/* New Product Fields */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="sm:col-span-2">
-                      <FormField label="Nom du produit *" htmlFor="product_name" required>
-                        <Input
-                          id="product_name"
-                          type="text"
-                          value={newPurchase.product_name}
-                          onChange={(e) => setNewPurchase({ ...newPurchase, product_name: e.target.value })}
-                          placeholder="Ex: Engrais NPK 15-15-15"
-                          required
-                        />
-                      </FormField>
-                    </div>
-
-                    <div>
-                      <FormField label="Catégorie *" htmlFor="purchase_category" required>
-                        <Select
-                          id="purchase_category"
-                          value={newPurchase.category}
-                          onChange={(e) => setNewPurchase({ ...newPurchase, category: (e.target as HTMLSelectElement).value })}
-                          required
-                        >
-                          <option value="">Sélectionner...</option>
-                          <option value="seeds">Semences</option>
-                          <option value="fertilizers">Engrais</option>
-                          <option value="pesticides">Pesticides</option>
-                          <option value="herbicides">Herbicides</option>
-                          <option value="fungicides">Fongicides</option>
-                          <option value="equipment">Équipement</option>
-                          <option value="tools">Outils</option>
-                          <option value="irrigation">Irrigation</option>
-                          <option value="other">Autre</option>
-                        </Select>
-                      </FormField>
-                    </div>
-
-                    <div>
-                      <FormField label="Marque" htmlFor="purchase_brand">
-                        <Input
-                          id="purchase_brand"
-                          type="text"
-                          value={newPurchase.brand}
-                          onChange={(e) => setNewPurchase({ ...newPurchase, brand: e.target.value })}
-                          placeholder="Ex: Bayer, Syngenta, etc."
-                        />
-                      </FormField>
-                    </div>
-                  </div>
-                </>
-              )}
-
-              {/* Packaging Information */}
-              <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
-                <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-3">Conditionnement</h4>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div>
-                    <FormField label="Type de conditionnement *" htmlFor="packaging_type" required>
-                      <Select
-                        id="packaging_type"
-                        value={newPurchase.packaging_type}
-                        onChange={(e) => setNewPurchase({ ...newPurchase, packaging_type: (e.target as HTMLSelectElement).value })}
-                        required
-                      >
-                        <option value="">Sélectionner...</option>
-                        <option value="bidon">Bidon</option>
-                        <option value="bouteille">Bouteille</option>
-                        <option value="sac">Sac</option>
-                        <option value="boite">Boîte</option>
-                        <option value="carton">Carton</option>
-                        <option value="palette">Palette</option>
-                        <option value="vrac">Vrac</option>
-                        <option value="unite">Unité</option>
-                      </Select>
-                    </FormField>
-                  </div>
-
-                  <div>
-                    <FormField label="Taille *" htmlFor="packaging_size" required>
-                      <Input
-                        id="packaging_size"
-                        type="number"
-                        step="0.01"
-                        value={newPurchase.packaging_size}
-                        onChange={(e) => setNewPurchase({ ...newPurchase, packaging_size: Number(e.target.value) })}
-                        placeholder="Ex: 5, 25, 1000"
-                        required
-                      />
-                    </FormField>
-                  </div>
-
-                  <div>
-                    <FormField label="Unité *" htmlFor="purchase_unit" required>
-                      <Select
-                        id="purchase_unit"
-                        value={newPurchase.unit}
-                        onChange={(e) => setNewPurchase({ ...newPurchase, unit: (e.target as HTMLSelectElement).value })}
-                        required
-                      >
-                        <option value="L">Litres (L)</option>
-                        <option value="mL">Millilitres (mL)</option>
-                        <option value="kg">Kilogrammes (kg)</option>
-                        <option value="g">Grammes (g)</option>
-                        <option value="units">Unités</option>
-                        <option value="pieces">Pièces</option>
-                        <option value="m">Mètres (m)</option>
-                        <option value="m2">Mètres carrés (m²)</option>
-                      </Select>
-                    </FormField>
-                  </div>
-                </div>
-              </div>
-
-              {/* Purchase Details */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <FormField label="Quantité achetée *" htmlFor="purchase_qty" required>
-                    <Input
-                      id="purchase_qty"
-                      type="number"
-                      value={newPurchase.quantity}
-                      onChange={(e) => setNewPurchase({
-                        ...newPurchase,
-                        quantity: Number(e.target.value),
-                        total_cost: Number(e.target.value) * newPurchase.cost_per_unit
-                      })}
-                      placeholder="Nombre de conditionnements"
-                      required
-                    />
-                  </FormField>
-                </div>
-
-                <div>
-                  <FormField label={`Prix unitaire (${currencySymbol}) *`} htmlFor="purchase_cpu" required>
-                    <Input
-                      id="purchase_cpu"
-                      type="number"
-                      step="0.01"
-                      value={newPurchase.cost_per_unit}
-                      onChange={(e) => setNewPurchase({
-                        ...newPurchase,
-                        cost_per_unit: Number(e.target.value),
-                        total_cost: newPurchase.quantity * Number(e.target.value)
-                      })}
-                      placeholder="Prix par conditionnement"
-                      required
-                    />
-                  </FormField>
-                </div>
-
-                <div>
-                  <FormField label="Date d'achat *" htmlFor="purchase_date" required>
-                    <Input
-                      id="purchase_date"
-                      type="date"
-                      value={newPurchase.purchase_date}
-                      onChange={(e) => setNewPurchase({ ...newPurchase, purchase_date: e.target.value })}
-                      required
-                    />
-                  </FormField>
-                </div>
-
-                <div>
-                  <FormField label="Numéro de lot" htmlFor="purchase_batch">
-                    <Input
-                      id="purchase_batch"
-                      type="text"
-                      value={newPurchase.batch_number}
-                      onChange={(e) => setNewPurchase({ ...newPurchase, batch_number: e.target.value })}
-                      placeholder="Ex: LOT2024001"
-                    />
-                  </FormField>
-                </div>
-              </div>
-
-              {/* Supplier Information */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <FormField label="Fournisseur *" htmlFor="purchase_supplier" required>
-                    <Select
-                      id="purchase_supplier"
-                      value={newPurchase.supplier}
-                      onChange={(e) => {
-                        const value = (e.target as HTMLSelectElement).value;
-                        const selectedSupplier = suppliers.find(s => s.name === value);
-                        setNewPurchase({
-                          ...newPurchase,
-                          supplier: value,
-                          supplier_id: selectedSupplier?.id || ''
-                        });
-                      }}
-                      required
-                    >
-                      <option value="">Sélectionner un fournisseur</option>
-                      {suppliers.map(supplier => (
-                        <option key={supplier.id} value={supplier.name}>
-                          {supplier.name}
-                        </option>
-                      ))}
-                    </Select>
-                  </FormField>
-                </div>
-
-                <div>
-                  <FormField label="Entrepôt de stockage" htmlFor="purchase_warehouse">
-                    <Select
-                      id="purchase_warehouse"
-                      value={newPurchase.warehouse_id}
-                      onChange={(e) => setNewPurchase({ ...newPurchase, warehouse_id: (e.target as HTMLSelectElement).value })}
-                    >
-                      <option value="">Sélectionner un entrepôt</option>
-                      {warehouses.map(warehouse => (
-                        <option key={warehouse.id} value={warehouse.id}>
-                          {warehouse.name}
-                        </option>
-                      ))}
-                    </Select>
-                  </FormField>
-                </div>
-              </div>
-
-              {/* Invoice Upload */}
-              <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-                <h4 className="font-medium text-gray-900 dark:text-white mb-3">Document d'achat</h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <FormField label="Numéro de facture/bon" htmlFor="invoice_number">
-                      <Input
-                        id="invoice_number"
-                        type="text"
-                        value={newPurchase.invoice_number}
-                        onChange={(e) => setNewPurchase({ ...newPurchase, invoice_number: e.target.value })}
-                        placeholder="Ex: FAC-2024-001"
-                      />
-                    </FormField>
-                  </div>
-
-                  <div>
-                    <FormField label="Importer facture/bon (PDF, Image)" htmlFor="invoice_file">
-                      <div className="flex items-center space-x-2">
-                        <label htmlFor="invoice_upload" className="cursor-pointer flex items-center space-x-2 px-3 py-2 bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-md hover:bg-gray-50 dark:hover:bg-gray-500">
-                          <Upload className="h-4 w-4" />
-                          <span className="text-sm">{newPurchase.invoice_file ? newPurchase.invoice_file.name : 'Choisir un fichier'}</span>
-                        </label>
-                        <input
-                          id="invoice_upload"
-                          type="file"
-                          accept=".pdf,image/*"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) {
-                              setNewPurchase({ ...newPurchase, invoice_file: file });
-                            }
-                          }}
-                          className="hidden"
-                        />
-                        {newPurchase.invoice_file && (
-                          <button
-                            onClick={() => setNewPurchase({ ...newPurchase, invoice_file: null })}
-                            className="text-red-600 hover:text-red-800"
-                          >
-                            <X className="h-4 w-4" />
-                          </button>
-                        )}
-                      </div>
-                    </FormField>
-                  </div>
-                </div>
-              </div>
-
-              {/* Notes */}
-              <div>
-                <FormField label="Notes" htmlFor="purchase_notes">
-                  <Textarea
-                    id="purchase_notes"
-                    value={newPurchase.notes}
-                    onChange={(e) => setNewPurchase({ ...newPurchase, notes: e.target.value })}
-                    rows={3}
-                    placeholder="Informations supplémentaires sur cet achat..."
-                  />
-                </FormField>
-              </div>
-
-              {/* Total */}
-              <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-md">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Total de l'achat
-                  </span>
-                  <span className="text-lg font-bold text-gray-900 dark:text-white">
-                    {(newPurchase.quantity * newPurchase.cost_per_unit).toFixed(2)} {currencySymbol}
-                  </span>
-                </div>
-                {newPurchase.packaging_type && newPurchase.packaging_size > 0 && (
-                  <div className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                    {newPurchase.quantity} × {newPurchase.packaging_type} de {newPurchase.packaging_size}{newPurchase.unit}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="mt-6 flex justify-end space-x-3">
-              <button
-                onClick={closePurchaseModal}
-                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-500"
-              >
-                Annuler
-              </button>
-              <button
-                onClick={handleAddPurchase}
-                disabled={(!newPurchase.product_id && !newPurchase.product_name) || !newPurchase.quantity || !newPurchase.cost_per_unit || !newPurchase.packaging_type}
-                className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
-              >
-                <ShoppingCart className="h-4 w-4" />
-                <span>Enregistrer l'achat</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {null}
 
       {/* Add Supplier Modal */}
       {showAddSupplier && (
@@ -1332,146 +1122,213 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
           <div className="modal-panel p-6 max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-                {editingSupplierId ? 'Modifier le fournisseur' : 'Nouveau Fournisseur'}
+                {editingSupplierId
+                  ? t('stockManagement.supplierForm.editTitle')
+                  : t('stockManagement.supplierForm.createTitle')}
               </h3>
-              <button
+              <Button
                 onClick={closeSupplierModal}
                 className="text-gray-400 hover:text-gray-500"
               >
                 <X className="h-6 w-6" />
-              </button>
+              </Button>
             </div>
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2">
-                  <FormField label="Nom du fournisseur *" htmlFor="supplier_name" required>
+                  <FormField
+                    label={t('stockManagement.supplierForm.name')}
+                    htmlFor="supplier_name"
+                    required
+                  >
                     <Input
                       id="supplier_name"
                       type="text"
                       value={newSupplier.name}
-                      onChange={(e) => setNewSupplier({ ...newSupplier, name: e.target.value })}
+                      onChange={(e) =>
+                        setNewSupplier({ ...newSupplier, name: e.target.value })
+                      }
                       required
                     />
                   </FormField>
                 </div>
 
                 <div>
-                  <FormField label="Personne de contact" htmlFor="supplier_contact">
+                  <FormField
+                    label={t('stockManagement.supplierForm.contactPerson')}
+                    htmlFor="supplier_contact"
+                  >
                     <Input
                       id="supplier_contact"
                       type="text"
                       value={newSupplier.contact_person}
-                      onChange={(e) => setNewSupplier({ ...newSupplier, contact_person: e.target.value })}
+                      onChange={(e) =>
+                        setNewSupplier({
+                          ...newSupplier,
+                          contact_person: e.target.value,
+                        })
+                      }
                     />
                   </FormField>
                 </div>
 
                 <div>
-                  <FormField label="Email" htmlFor="supplier_email">
+                  <FormField label={t('stockManagement.supplierForm.email')} htmlFor="supplier_email">
                     <Input
                       id="supplier_email"
                       type="email"
                       value={newSupplier.email}
-                      onChange={(e) => setNewSupplier({ ...newSupplier, email: e.target.value })}
+                      onChange={(e) =>
+                        setNewSupplier({
+                          ...newSupplier,
+                          email: e.target.value,
+                        })
+                      }
                     />
                   </FormField>
                 </div>
 
                 <div>
-                  <FormField label="Téléphone" htmlFor="supplier_phone">
+                  <FormField label={t('stockManagement.supplierForm.phone')} htmlFor="supplier_phone">
                     <Input
                       id="supplier_phone"
                       type="tel"
                       value={newSupplier.phone}
-                      onChange={(e) => setNewSupplier({ ...newSupplier, phone: e.target.value })}
+                      onChange={(e) =>
+                        setNewSupplier({
+                          ...newSupplier,
+                          phone: e.target.value,
+                        })
+                      }
                     />
                   </FormField>
                 </div>
 
                 <div>
-                  <FormField label="Adresse" htmlFor="supplier_address">
+                  <FormField label={t('stockManagement.supplierForm.address')} htmlFor="supplier_address">
                     <Input
                       id="supplier_address"
                       type="text"
                       value={newSupplier.address}
-                      onChange={(e) => setNewSupplier({ ...newSupplier, address: e.target.value })}
+                      onChange={(e) =>
+                        setNewSupplier({
+                          ...newSupplier,
+                          address: e.target.value,
+                        })
+                      }
                     />
                   </FormField>
                 </div>
 
                 <div>
-                  <FormField label="Ville" htmlFor="supplier_city">
+                  <FormField label={t('stockManagement.supplierForm.city')} htmlFor="supplier_city">
                     <Input
                       id="supplier_city"
                       type="text"
                       value={newSupplier.city}
-                      onChange={(e) => setNewSupplier({ ...newSupplier, city: e.target.value })}
+                      onChange={(e) =>
+                        setNewSupplier({ ...newSupplier, city: e.target.value })
+                      }
                     />
                   </FormField>
                 </div>
 
                 <div>
-                  <FormField label="Code postal" htmlFor="supplier_postal">
+                  <FormField label={t('stockManagement.supplierForm.postalCode')} htmlFor="supplier_postal">
                     <Input
                       id="supplier_postal"
                       type="text"
                       value={newSupplier.postal_code}
-                      onChange={(e) => setNewSupplier({ ...newSupplier, postal_code: e.target.value })}
+                      onChange={(e) =>
+                        setNewSupplier({
+                          ...newSupplier,
+                          postal_code: e.target.value,
+                        })
+                      }
                     />
                   </FormField>
                 </div>
 
                 <div>
-                  <FormField label="Pays" htmlFor="supplier_country">
+                  <FormField label={t('stockManagement.supplierForm.country')} htmlFor="supplier_country">
                     <Input
                       id="supplier_country"
                       type="text"
                       value={newSupplier.country}
-                      onChange={(e) => setNewSupplier({ ...newSupplier, country: e.target.value })}
+                      onChange={(e) =>
+                        setNewSupplier({
+                          ...newSupplier,
+                          country: e.target.value,
+                        })
+                      }
                     />
                   </FormField>
                 </div>
 
                 <div>
-                  <FormField label="Site web" htmlFor="supplier_website">
+                  <FormField label={t('stockManagement.supplierForm.website')} htmlFor="supplier_website">
                     <Input
                       id="supplier_website"
                       type="url"
                       value={newSupplier.website}
-                      onChange={(e) => setNewSupplier({ ...newSupplier, website: e.target.value })}
+                      onChange={(e) =>
+                        setNewSupplier({
+                          ...newSupplier,
+                          website: e.target.value,
+                        })
+                      }
                     />
                   </FormField>
                 </div>
 
                 <div>
-                  <FormField label="Numéro TVA" htmlFor="supplier_tax">
+                  <FormField label={t('stockManagement.supplierForm.taxId')} htmlFor="supplier_tax">
                     <Input
                       id="supplier_tax"
                       type="text"
                       value={newSupplier.tax_id}
-                      onChange={(e) => setNewSupplier({ ...newSupplier, tax_id: e.target.value })}
+                      onChange={(e) =>
+                        setNewSupplier({
+                          ...newSupplier,
+                          tax_id: e.target.value,
+                        })
+                      }
                     />
                   </FormField>
                 </div>
 
                 <div>
-                  <FormField label="Conditions de paiement" htmlFor="supplier_payment" helper="Ex: Net 30, COD, etc.">
+                  <FormField
+                    label={t('stockManagement.supplierForm.paymentTerms')}
+                    htmlFor="supplier_payment"
+                    helper={t('stockManagement.supplierForm.paymentTermsPlaceholder')}
+                  >
                     <Input
                       id="supplier_payment"
                       type="text"
                       value={newSupplier.payment_terms}
-                      onChange={(e) => setNewSupplier({ ...newSupplier, payment_terms: e.target.value })}
-                      placeholder="Net 30, COD, etc."
+                      onChange={(e) =>
+                        setNewSupplier({
+                          ...newSupplier,
+                          payment_terms: e.target.value,
+                        })
+                      }
+                      placeholder={t('stockManagement.supplierForm.paymentTermsPlaceholder')}
                     />
                   </FormField>
                 </div>
 
                 <div className="col-span-2">
-                  <FormField label="Notes" htmlFor="supplier_notes">
+                  <FormField label={t('stockManagement.supplierForm.notes')} htmlFor="supplier_notes">
                     <Textarea
                       id="supplier_notes"
                       value={newSupplier.notes}
-                      onChange={(e) => setNewSupplier({ ...newSupplier, notes: e.target.value })}
+                      onChange={(e) =>
+                        setNewSupplier({
+                          ...newSupplier,
+                          notes: e.target.value,
+                        })
+                      }
                       rows={3}
                     />
                   </FormField>
@@ -1480,19 +1337,19 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
             </div>
 
             <div className="mt-6 flex justify-end space-x-3">
-              <button
+              <Button
                 onClick={closeSupplierModal}
                 className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-500"
               >
-                Annuler
-              </button>
-              <button
-                onClick={handleSubmitSupplier}
-                disabled={isSubmittingSupplier || !newSupplier.name}
-                className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isSubmittingSupplier ? 'Enregistrement...' : editingSupplierId ? 'Mettre à jour' : 'Ajouter'}
-              </button>
+                {t('stockManagement.supplierForm.cancel')}
+              </Button>
+              <Button variant="green" onClick={handleSubmitSupplier} disabled={isSubmittingSupplier || !newSupplier.name} className="px-4 py-2 text-sm font-medium rounded-md disabled:cursor-not-allowed" >
+                {isSubmittingSupplier
+                  ? t('stockManagement.supplierForm.saving')
+                  : editingSupplierId
+                    ? t('stockManagement.supplierForm.update')
+                    : t('stockManagement.supplierForm.add')}
+              </Button>
             </div>
           </div>
         </div>
@@ -1504,144 +1361,212 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
           <div className="modal-panel p-6 max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-                {editingWarehouseId ? 'Modifier l’entrepôt' : 'Nouvel Entrepôt'}
+                {editingWarehouseId ? t('stockManagement.warehouseForm.editTitle') : t('stockManagement.warehouseForm.createTitle')}
               </h3>
-              <button
+              <Button
                 onClick={closeWarehouseModal}
                 className="text-gray-400 hover:text-gray-500"
               >
                 <X className="h-6 w-6" />
-              </button>
+              </Button>
             </div>
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2">
-                  <FormField label="Nom de l'entrepôt *" htmlFor="warehouse_name" required>
+                  <FormField
+                    label={t('stockManagement.warehouseForm.name')}
+                    htmlFor="warehouse_name"
+                    required
+                  >
                     <Input
                       id="warehouse_name"
                       type="text"
                       value={newWarehouse.name}
-                      onChange={(e) => setNewWarehouse({ ...newWarehouse, name: e.target.value })}
+                      onChange={(e) =>
+                        setNewWarehouse({
+                          ...newWarehouse,
+                          name: e.target.value,
+                        })
+                      }
                       required
                     />
                   </FormField>
                 </div>
 
                 <div className="col-span-2">
-                  <FormField label="Description" htmlFor="warehouse_desc">
+                  <FormField label={t('stockManagement.warehouseForm.description')} htmlFor="warehouse_desc">
                     <Textarea
                       id="warehouse_desc"
                       value={newWarehouse.description}
-                      onChange={(e) => setNewWarehouse({ ...newWarehouse, description: e.target.value })}
+                      onChange={(e) =>
+                        setNewWarehouse({
+                          ...newWarehouse,
+                          description: e.target.value,
+                        })
+                      }
                       rows={2}
                     />
                   </FormField>
                 </div>
 
                 <div>
-                  <FormField label="Emplacement" htmlFor="warehouse_location">
+                  <FormField label={t('stockManagement.warehouseForm.location')} htmlFor="warehouse_location">
                     <Input
                       id="warehouse_location"
                       type="text"
                       value={newWarehouse.location}
-                      onChange={(e) => setNewWarehouse({ ...newWarehouse, location: e.target.value })}
+                      onChange={(e) =>
+                        setNewWarehouse({
+                          ...newWarehouse,
+                          location: e.target.value,
+                        })
+                      }
                     />
                   </FormField>
                 </div>
 
                 <div>
-                  <FormField label="Adresse" htmlFor="warehouse_address">
+                  <FormField label={t('stockManagement.warehouseForm.address')} htmlFor="warehouse_address">
                     <Input
                       id="warehouse_address"
                       type="text"
                       value={newWarehouse.address}
-                      onChange={(e) => setNewWarehouse({ ...newWarehouse, address: e.target.value })}
+                      onChange={(e) =>
+                        setNewWarehouse({
+                          ...newWarehouse,
+                          address: e.target.value,
+                        })
+                      }
                     />
                   </FormField>
                 </div>
 
                 <div>
-                  <FormField label="Ville" htmlFor="warehouse_city">
+                  <FormField label={t('stockManagement.warehouseForm.city')} htmlFor="warehouse_city">
                     <Input
                       id="warehouse_city"
                       type="text"
                       value={newWarehouse.city}
-                      onChange={(e) => setNewWarehouse({ ...newWarehouse, city: e.target.value })}
+                      onChange={(e) =>
+                        setNewWarehouse({
+                          ...newWarehouse,
+                          city: e.target.value,
+                        })
+                      }
                     />
                   </FormField>
                 </div>
 
                 <div>
-                  <FormField label="Code postal" htmlFor="warehouse_postal">
+                  <FormField label={t('stockManagement.warehouseForm.postalCode')} htmlFor="warehouse_postal">
                     <Input
                       id="warehouse_postal"
                       type="text"
                       value={newWarehouse.postal_code}
-                      onChange={(e) => setNewWarehouse({ ...newWarehouse, postal_code: e.target.value })}
+                      onChange={(e) =>
+                        setNewWarehouse({
+                          ...newWarehouse,
+                          postal_code: e.target.value,
+                        })
+                      }
                     />
                   </FormField>
                 </div>
 
                 <div>
-                  <FormField label="Capacité" htmlFor="warehouse_capacity">
+                  <FormField label={t('stockManagement.warehouseForm.capacity')} htmlFor="warehouse_capacity">
                     <Input
                       id="warehouse_capacity"
                       type="number"
                       step={1}
                       value={newWarehouse.capacity}
-                      onChange={(e) => setNewWarehouse({ ...newWarehouse, capacity: e.target.value })}
+                      onChange={(e) =>
+                        setNewWarehouse({
+                          ...newWarehouse,
+                          capacity: e.target.value,
+                        })
+                      }
                     />
                   </FormField>
                 </div>
 
                 <div>
-                  <FormField label="Unité de capacité" htmlFor="warehouse_capacity_unit">
+                  <FormField
+                    label={t('stockManagement.warehouseForm.capacityUnit')}
+                    htmlFor="warehouse_capacity_unit"
+                  >
                     <Select
                       id="warehouse_capacity_unit"
                       value={newWarehouse.capacity_unit}
-                      onChange={(e) => setNewWarehouse({ ...newWarehouse, capacity_unit: (e.target as HTMLSelectElement).value })}
+                      onChange={(e) =>
+                        setNewWarehouse({
+                          ...newWarehouse,
+                          capacity_unit: (e.target as HTMLSelectElement).value,
+                        })
+                      }
                     >
-                      <option value="m3">Mètres cubes (m³)</option>
-                      <option value="m2">Mètres carrés (m²)</option>
-                      <option value="kg">Kilogrammes</option>
-                      <option value="t">Tonnes</option>
+                      <option value="m3">{t('stockManagement.warehouseForm.capacityUnits.m3')}</option>
+                      <option value="m2">{t('stockManagement.warehouseForm.capacityUnits.m2')}</option>
+                      <option value="kg">{t('stockManagement.warehouseForm.capacityUnits.kg')}</option>
+                      <option value="t">{t('stockManagement.warehouseForm.capacityUnits.ton')}</option>
                     </Select>
                   </FormField>
                 </div>
 
                 <div>
-                  <FormField label="Responsable" htmlFor="warehouse_manager">
+                  <FormField label={t('stockManagement.warehouseForm.manager')} htmlFor="warehouse_manager">
                     <Input
                       id="warehouse_manager"
                       type="text"
                       value={newWarehouse.manager_name}
-                      onChange={(e) => setNewWarehouse({ ...newWarehouse, manager_name: e.target.value })}
+                      onChange={(e) =>
+                        setNewWarehouse({
+                          ...newWarehouse,
+                          manager_name: e.target.value,
+                        })
+                      }
                     />
                   </FormField>
                 </div>
 
                 <div>
-                  <FormField label="Téléphone du responsable" htmlFor="warehouse_manager_phone">
+                  <FormField
+                    label={t('stockManagement.warehouseForm.managerPhone')}
+                    htmlFor="warehouse_manager_phone"
+                  >
                     <Input
                       id="warehouse_manager_phone"
                       type="tel"
                       value={newWarehouse.manager_phone}
-                      onChange={(e) => setNewWarehouse({ ...newWarehouse, manager_phone: e.target.value })}
+                      onChange={(e) =>
+                        setNewWarehouse({
+                          ...newWarehouse,
+                          manager_phone: e.target.value,
+                        })
+                      }
                     />
                   </FormField>
                 </div>
 
                 <div>
-                  <FormField label="Niveau de sécurité" htmlFor="warehouse_security">
+                  <FormField
+                    label={t('stockManagement.warehouseForm.securityLevel')}
+                    htmlFor="warehouse_security"
+                  >
                     <Select
                       id="warehouse_security"
                       value={newWarehouse.security_level}
-                      onChange={(e) => setNewWarehouse({ ...newWarehouse, security_level: (e.target as HTMLSelectElement).value })}
+                      onChange={(e) =>
+                        setNewWarehouse({
+                          ...newWarehouse,
+                          security_level: (e.target as HTMLSelectElement).value,
+                        })
+                      }
                     >
-                      <option value="basic">Basique</option>
-                      <option value="standard">Standard</option>
-                      <option value="high">Élevé</option>
-                      <option value="maximum">Maximum</option>
+                      <option value="basic">{t('stockManagement.warehouseForm.securityLevels.basic')}</option>
+                      <option value="standard">{t('stockManagement.warehouseForm.securityLevels.standard')}</option>
+                      <option value="high">{t('stockManagement.warehouseForm.securityLevels.high')}</option>
+                      <option value="maximum">{t('stockManagement.warehouseForm.securityLevels.maximum')}</option>
                     </Select>
                   </FormField>
                 </div>
@@ -1653,11 +1578,19 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                         type="checkbox"
                         id="temperature_controlled"
                         checked={newWarehouse.temperature_controlled}
-                        onChange={(e) => setNewWarehouse({ ...newWarehouse, temperature_controlled: e.target.checked })}
+                        onChange={(e) =>
+                          setNewWarehouse({
+                            ...newWarehouse,
+                            temperature_controlled: e.target.checked,
+                          })
+                        }
                         className="rounded border-gray-300 text-green-600 focus:ring-green-500"
                       />
-                      <label htmlFor="temperature_controlled" className="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Température contrôlée
+                      <label
+                        htmlFor="temperature_controlled"
+                        className="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300"
+                      >
+                        {t('stockManagement.warehouseForm.tempControlled')}
                       </label>
                     </div>
 
@@ -1666,11 +1599,19 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
                         type="checkbox"
                         id="humidity_controlled"
                         checked={newWarehouse.humidity_controlled}
-                        onChange={(e) => setNewWarehouse({ ...newWarehouse, humidity_controlled: e.target.checked })}
+                        onChange={(e) =>
+                          setNewWarehouse({
+                            ...newWarehouse,
+                            humidity_controlled: e.target.checked,
+                          })
+                        }
                         className="rounded border-gray-300 text-green-600 focus:ring-green-500"
                       />
-                      <label htmlFor="humidity_controlled" className="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Humidité contrôlée
+                      <label
+                        htmlFor="humidity_controlled"
+                        className="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300"
+                      >
+                        {t('stockManagement.warehouseForm.humidityControlled')}
                       </label>
                     </div>
                   </div>
@@ -1679,111 +1620,34 @@ const StockManagement: React.FC<StockManagementProps> = ({ activeTab }) => {
             </div>
 
             <div className="mt-6 flex justify-end space-x-3">
-              <button
+              <Button
                 onClick={closeWarehouseModal}
                 className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-500"
               >
-                Annuler
-              </button>
-              <button
-                onClick={handleSubmitWarehouse}
-                disabled={isSubmittingWarehouse || !newWarehouse.name}
-                className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isSubmittingWarehouse ? 'Enregistrement...' : editingWarehouseId ? 'Mettre à jour' : 'Ajouter'}
-              </button>
+                {t('stockManagement.warehouseForm.cancel')}
+              </Button>
+              <Button variant="green" onClick={handleSubmitWarehouse} disabled={isSubmittingWarehouse || !newWarehouse.name} className="px-4 py-2 text-sm font-medium rounded-md disabled:cursor-not-allowed" >
+                {isSubmittingWarehouse
+                  ? t('stockManagement.warehouseForm.saving')
+                  : editingWarehouseId
+                    ? t('stockManagement.warehouseForm.update')
+                    : t('stockManagement.warehouseForm.add')}
+              </Button>
             </div>
           </div>
         </div>
       )}
 
-      {quantityModalOpen && selectedProduct && (
-        <div className="modal-overlay">
-          <div className="modal-panel p-6 max-w-md">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-                Ajuster la quantité
-              </h3>
-              <button
-                onClick={closeAdjustQuantityModal}
-                className="text-gray-400 hover:text-gray-500"
-              >
-                <X className="h-6 w-6" />
-              </button>
-            </div>
-            <div className="space-y-4">
-              <p className="text-sm text-gray-600 dark:text-gray-300">
-                Produit :{' '}
-                <span className="font-medium text-gray-900 dark:text-white">
-                  {selectedProduct.item_name || selectedProduct.name}
-                </span>
-              </p>
-              <div className="grid grid-cols-1 gap-4">
-                <FormField label="Type d'ajustement" htmlFor="adjustment_type">
-                  <Select
-                    id="adjustment_type"
-                    value={quantityAdjustment.type}
-                    onChange={(e) =>
-                      setQuantityAdjustment({
-                        ...quantityAdjustment,
-                        type: (e.target as HTMLSelectElement).value as 'increase' | 'decrease',
-                      })
-                    }
-                  >
-                    <option value="increase">Augmenter le stock</option>
-                    <option value="decrease">Diminuer le stock</option>
-                  </Select>
-                </FormField>
-                <FormField label="Quantité" htmlFor="adjustment_amount" required>
-                  <Input
-                    id="adjustment_amount"
-                    type="number"
-                    min={0}
-                    step="0.01"
-                    value={quantityAdjustment.amount}
-                    onChange={(e) =>
-                      setQuantityAdjustment({
-                        ...quantityAdjustment,
-                        amount: Number((e.target as HTMLInputElement).value),
-                      })
-                    }
-                    required
-                  />
-                </FormField>
-                <FormField
-                  label="Motif"
-                  htmlFor="adjustment_reason"
-                  helper="Optionnel, utile pour l'audit."
-                >
-                  <Textarea
-                    id="adjustment_reason"
-                    rows={3}
-                    value={quantityAdjustment.reason}
-                    onChange={(e) =>
-                      setQuantityAdjustment({ ...quantityAdjustment, reason: e.target.value })
-                    }
-                  />
-                </FormField>
-              </div>
-            </div>
-            <div className="mt-6 flex justify-end space-x-3">
-              <button
-                onClick={closeAdjustQuantityModal}
-                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-500"
-              >
-                Annuler
-              </button>
-              <button
-                onClick={handleAdjustQuantity}
-                disabled={isAdjustingQuantity || quantityAdjustment.amount <= 0}
-                className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isAdjustingQuantity ? 'Enregistrement...' : 'Appliquer'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {null}
+
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title={confirmAction.title}
+        description={confirmAction.description}
+        variant={confirmAction.variant}
+        onConfirm={confirmAction.onConfirm}
+      />
     </div>
   );
 };

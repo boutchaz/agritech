@@ -1,9 +1,11 @@
-import React from 'react';
+
 import { useNavigate } from '@tanstack/react-router';
 import { TrendingUp, AlertCircle, CheckCircle, Activity, Users, Package, Loader2, RefreshCw, Beaker, MapPin, CheckSquare } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { appConfig } from '@/config/app';
 import { useDashboardSummary } from '@/hooks/useDashboardSummary';
+import { Button } from '@/components/ui/button';
+import { useTranslation } from 'react-i18next';
 
 // Color map for dynamic classes (fixes Tailwind JIT issue)
 const colorClasses: Record<string, { bg: string; text: string }> = {
@@ -16,7 +18,8 @@ const colorClasses: Record<string, { bg: string; text: string }> = {
   teal: { bg: 'bg-teal-100 dark:bg-teal-900/20', text: 'text-teal-600 dark:text-teal-400' },
 };
 
-const DashboardHome: React.FC = () => {
+const DashboardHome = () => {
+  const { t } = useTranslation();
   const { currentOrganization, currentFarm } = useAuth();
   const { data: summary, isLoading, error, refetch } = useDashboardSummary(currentFarm?.id);
   const navigate = useNavigate();
@@ -78,8 +81,7 @@ const DashboardHome: React.FC = () => {
       description: 'Enregistrer une nouvelle analyse',
       icon: Beaker,
       onClick: () => {
-        // Navigate to analyses page
-        window.location.href = '/analyses';
+        navigate({ to: '/analytics' });
       },
     },
     {
@@ -87,7 +89,7 @@ const DashboardHome: React.FC = () => {
       description: 'Créer une nouvelle parcelle',
       icon: MapPin,
       onClick: () => {
-        window.location.href = '/parcels';
+        navigate({ to: '/parcels' });
       },
     },
     {
@@ -95,7 +97,7 @@ const DashboardHome: React.FC = () => {
       description: 'Créer une nouvelle tâche',
       icon: CheckSquare,
       onClick: () => {
-        window.location.href = '/tasks';
+        navigate({ to: '/tasks' });
       },
     },
   ];
@@ -108,7 +110,8 @@ const DashboardHome: React.FC = () => {
           Bienvenue sur {appConfig.name}
         </h1>
         <p className="text-green-100">
-          {currentOrganization?.name} {currentFarm && `• ${currentFarm.name}`}
+          {currentOrganization?.name}
+          {currentFarm?.name ? ` • ${currentFarm.name}` : ''}
         </p>
       </div>
 
@@ -126,24 +129,26 @@ const DashboardHome: React.FC = () => {
           <p className="text-red-600 dark:text-red-400">
             Erreur lors du chargement des données du tableau de bord.
           </p>
-          <button
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => refetch()}
-            className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-red-700 dark:text-red-300 bg-red-100 dark:bg-red-900/40 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/60 transition-colors"
+            className="text-red-700 dark:text-red-300 border-red-300 dark:border-red-700"
           >
             <RefreshCw className="w-4 h-4" />
-            Réessayer
-          </button>
+            {t('common.retry', 'Retry')}
+          </Button>
         </div>
       )}
 
       {/* Stats Grid */}
       {!isLoading && !error && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {stats.map((stat, index) => {
+          {stats.map((stat) => {
             const colors = colorClasses[stat.color] || colorClasses.green;
             return (
               <div
-                key={index}
+                key={stat.title}
                 className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm border border-gray-200 dark:border-gray-700"
               >
                 <div className="flex items-center justify-between mb-4">
@@ -175,11 +180,12 @@ const DashboardHome: React.FC = () => {
           Actions rapides
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {quickActions.map((action, index) => (
-            <button
-              key={index}
+          {quickActions.map((action) => (
+            <Button
+              key={action.title}
+              variant="outline"
               onClick={action.onClick}
-              className="p-4 text-left border-2 border-gray-200 dark:border-gray-700 rounded-lg hover:border-green-500 dark:hover:border-green-600 transition-colors group"
+              className="p-4 h-auto text-left justify-start border-2 border-gray-200 dark:border-gray-700 hover:border-green-500 dark:hover:border-green-600 group flex-col items-start"
             >
               <div className="flex items-center gap-3 mb-2">
                 <action.icon className="w-5 h-5 text-gray-400 group-hover:text-green-600 transition-colors" />
@@ -187,10 +193,10 @@ const DashboardHome: React.FC = () => {
                   {action.title}
                 </h3>
               </div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
+              <p className="text-sm text-gray-600 dark:text-gray-400 whitespace-normal">
                 {action.description}
               </p>
-            </button>
+            </Button>
           ))}
         </div>
       </div>

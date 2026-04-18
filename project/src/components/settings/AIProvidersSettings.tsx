@@ -21,6 +21,8 @@ import {
   useToggleAIProvider,
   type AIProviderType,
 } from '../../hooks/useOrganizationAISettings';
+import { Button } from '@/components/ui/button';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 
 interface ProviderConfig {
   id: AIProviderType;
@@ -58,12 +60,15 @@ const providers: ProviderConfig[] = [
   },
 ];
 
-export const AIProvidersSettings: React.FC = () => {
+export const AIProvidersSettings = () => {
   const { t } = useTranslation();
   const { data: settings = [], isLoading } = useOrganizationAISettings();
   const upsertMutation = useUpsertAIProvider();
   const deleteMutation = useDeleteAIProvider();
   const toggleMutation = useToggleAIProvider();
+
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmAction] = useState<{title:string;description?:string;variant?:"destructive"|"default";onConfirm:()=>void}>({title:"",onConfirm:()=>{}});
 
   const [apiKeys, setApiKeys] = useState<Record<AIProviderType, string>>({
     openai: '',
@@ -223,7 +228,7 @@ export const AIProvidersSettings: React.FC = () => {
                       </span>
 
                       {/* Toggle Switch */}
-                      <button
+                      <Button
                         onClick={() => handleToggle(provider.id, !setting.enabled)}
                         disabled={isPending}
                         className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
@@ -237,7 +242,7 @@ export const AIProvidersSettings: React.FC = () => {
                             setting.enabled ? 'translate-x-6' : 'translate-x-1'
                           }`}
                         />
-                      </button>
+                      </Button>
                     </>
                   )}
                 </div>
@@ -258,19 +263,19 @@ export const AIProvidersSettings: React.FC = () => {
                         </p>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <button
+                        <Button
                           onClick={() => setEditingProvider(provider.id)}
                           className="px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
                         >
                           {t('aiSettings.update', 'Modifier')}
-                        </button>
-                        <button
+                        </Button>
+                        <Button
                           onClick={() => handleDeleteKey(provider.id)}
                           disabled={isPending}
                           className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors disabled:opacity-50"
                         >
                           <Trash2 className="w-4 h-4" />
-                        </button>
+                        </Button>
                       </div>
                     </div>
 
@@ -308,7 +313,7 @@ export const AIProvidersSettings: React.FC = () => {
                           placeholder={provider.placeholder}
                           className="w-full pl-4 pr-10 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-transparent font-mono text-sm"
                         />
-                        <button
+                        <Button
                           type="button"
                           onClick={() =>
                             setShowKeys((prev) => ({
@@ -323,7 +328,7 @@ export const AIProvidersSettings: React.FC = () => {
                           ) : (
                             <Eye className="w-4 h-4" />
                           )}
-                        </button>
+                        </Button>
                       </div>
                     </div>
 
@@ -339,7 +344,7 @@ export const AIProvidersSettings: React.FC = () => {
                       </a>
                       <div className="flex items-center space-x-2">
                         {isEditing && (
-                          <button
+                          <Button
                             onClick={() => {
                               setEditingProvider(null);
                               setApiKeys((prev) => ({ ...prev, [provider.id]: '' }));
@@ -347,12 +352,12 @@ export const AIProvidersSettings: React.FC = () => {
                             className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
                           >
                             {t('app.cancel', 'Annuler')}
-                          </button>
+                          </Button>
                         )}
-                        <button
+                        <Button variant="green"
                           onClick={() => handleSaveKey(provider.id)}
                           disabled={!apiKeys[provider.id].trim() || isPending}
-                          className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors disabled:cursor-not-allowed"
                         >
                           {upsertMutation.isPending ? (
                             <Loader2 className="w-4 h-4 animate-spin" />
@@ -360,7 +365,7 @@ export const AIProvidersSettings: React.FC = () => {
                             <Save className="w-4 h-4" />
                           )}
                           <span>{t('app.save', 'Enregistrer')}</span>
-                        </button>
+                        </Button>
                       </div>
                     </div>
 
@@ -381,6 +386,14 @@ export const AIProvidersSettings: React.FC = () => {
           );
         })}
       </div>
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title={confirmAction.title}
+        description={confirmAction.description}
+        variant={confirmAction.variant}
+        onConfirm={confirmAction.onConfirm}
+      />
     </div>
   );
 };

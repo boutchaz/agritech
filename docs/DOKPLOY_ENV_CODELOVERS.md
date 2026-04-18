@@ -75,6 +75,7 @@ NestJS agritech-api. Point to Codelovers Supabase and dashboard URL.
 | `CMS_URL` | → replace | Your Codelovers CMS URL (e.g. `https://agritech-cms.xxx.codelovers.traefik.me`) |
 | `EMAIL_*` / `SMTP_*` | ✅ | Copy if you use SMTP |
 | `POLAR_*` | ✅ | Copy all Polar.sh vars if using subscriptions |
+| `OPENWEATHER_API_KEY` | Optional | OpenWeather on NestJS (e.g. chat context). Parcel UI forecast uses Open-Meteo via API without this key. |
 
 ---
 
@@ -128,7 +129,7 @@ Vite/React frontend. All `VITE_*` vars are baked in at build time.
 | `VITE_SATELLITE_SERVICE_URL` | → replace | Same as above |
 | `VITE_AUTH_SUPABASE_URL` / `VITE_AUTH_SUPABASE_ANON_KEY` | If used | Auth Supabase (cloud) if separate |
 | `VITE_MARKETPLACE_URL` | → replace | Codelovers marketplace URL if you have one |
-| `VITE_OPENWEATHER_API_KEY` | ✅ | Optional |
+| `OPENWEATHER_API_KEY` | Set on **API** stack | Optional; chat weather context if using OpenWeather on NestJS. Dashboard parcel forecast uses Open-Meteo (no browser key). |
 | `VITE_GA_MEASUREMENT_ID` / `VITE_CLARITY_*` | ✅ | Optional analytics |
 | `VITE_MAP_PROVIDER` / `VITE_MAPBOX_TOKEN` | ✅ | Optional |
 

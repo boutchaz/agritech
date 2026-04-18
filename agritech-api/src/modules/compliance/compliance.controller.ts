@@ -26,6 +26,7 @@ import { ComplianceService } from './compliance.service';
 import { ComplianceReportsService } from './compliance-reports.service';
 import { CorrectiveActionsService } from './corrective-actions.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { OrganizationGuard } from '../../common/guards/organization.guard';
 import { PoliciesGuard } from '../casl/policies.guard';
 import { CheckPolicies } from '../casl/check-policies.decorator';
 import { Action } from '../casl/action.enum';
@@ -38,7 +39,7 @@ import { CreateEvidenceDto } from './dto/create-evidence.dto';
 
 @ApiTags('compliance')
 @Controller('compliance')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, OrganizationGuard)
 @ApiBearerAuth()
 export class ComplianceController {
   constructor(
@@ -350,6 +351,7 @@ export class ComplianceController {
   @ApiResponse({ status: 403, description: 'Forbidden' })
   async createEvidence(@Request() req, @Body() dto: CreateEvidenceDto) {
     const organizationId = req.headers['x-organization-id'] as string;
+    dto.uploaded_by = req.user.id;
     return this.complianceService.createEvidence(organizationId, dto);
   }
 

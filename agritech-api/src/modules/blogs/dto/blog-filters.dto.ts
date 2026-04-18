@@ -47,4 +47,9 @@ export class BlogFiltersDto {
   @IsOptional()
   @IsString()
   sortOrder?: 'asc' | 'desc' = 'desc';
+
+  @ApiPropertyOptional({ description: 'Locale for i18n content (fr, ar, en)', default: 'fr' })
+  @IsOptional()
+  @IsString()
+  locale?: string = 'fr';
 }

@@ -1,13 +1,8 @@
 import React, { useState } from 'react';
 import { apiClient } from '../../lib/api-client';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '../ui/dialog';
 import { Upload, FileJson, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 
 interface FarmImportDialogProps {
   open: boolean;
@@ -16,12 +11,12 @@ interface FarmImportDialogProps {
   onSuccess: () => void;
 }
 
-const FarmImportDialog: React.FC<FarmImportDialogProps> = ({
+const FarmImportDialog = ({
   open,
   onOpenChange,
   organizationId,
   onSuccess,
-}) => {
+}: FarmImportDialogProps) => {
   const [file, setFile] = useState<File | null>(null);
   const [isImporting, setIsImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -63,7 +58,7 @@ const FarmImportDialog: React.FC<FarmImportDialogProps> = ({
       }
 
       if (!exportData.version) {
-        console.warn('Version non spécifiée dans le fichier d\'export');
+        // Version not specified in export file
       }
 
       const data = await apiClient.post<{
@@ -124,27 +119,29 @@ const FarmImportDialog: React.FC<FarmImportDialogProps> = ({
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Upload className="w-5 h-5" />
-            Importer des fermes
-          </DialogTitle>
-          <DialogDescription>
-            Sélectionnez un fichier JSON d'export pour restaurer des fermes avec leurs parcelles et AOI.
-          </DialogDescription>
-        </DialogHeader>
-
+    <ResponsiveDialog
+      open={open}
+      onOpenChange={handleClose}
+      title={
+        <div className="flex items-center gap-2">
+          <Upload className="w-5 h-5" />
+          Importer des fermes
+        </div>
+      }
+      description="Sélectionnez un fichier JSON d'export pour restaurer des fermes avec leurs parcelles et AOI."
+      size="2xl"
+      contentClassName="max-h-[90vh] overflow-y-auto"
+    >
         <div className="space-y-6 py-4">
           {/* File Selection */}
           <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            <label htmlFor="farm-import-file" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
               Fichier JSON d'export
             </label>
             <div className="flex items-center gap-4">
               <label className="flex-1 cursor-pointer">
                 <input
+                  id="farm-import-file"
                   type="file"
                   accept=".json,application/json"
                   onChange={handleFileSelect}
@@ -209,26 +206,20 @@ const FarmImportDialog: React.FC<FarmImportDialogProps> = ({
 
           {/* Action Buttons */}
           <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
-            <button
+            <Button
               onClick={handleClose}
               disabled={isImporting}
               className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
             >
               Annuler
-            </button>
-            <button
-              onClick={handleImport}
-              disabled={!file || isImporting}
-              className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors disabled:opacity-50"
-            >
+            </Button>
+            <Button variant="green" onClick={handleImport} disabled={!file || isImporting} className="px-4 py-2 text-sm font-medium rounded-lg transition-colors" >
               {isImporting ? 'Import en cours...' : 'Importer'}
-            </button>
+            </Button>
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+    </ResponsiveDialog>
   );
 };
 
 export default FarmImportDialog;
-

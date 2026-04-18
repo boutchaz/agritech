@@ -5,13 +5,12 @@ import { purchaseOrdersApi } from '@/lib/api/purchase-orders';
 import { warehousesApi } from '@/lib/api/warehouses';
 import { useAuth } from '@/hooks/useAuth';
 import {
-  Dialog,
-  DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { InvoiceTotalsDisplay } from '../Accounting/TaxBreakdown';
@@ -47,6 +46,8 @@ import {
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { Label } from '@/components/ui/label';
+import { SectionLoader } from '@/components/ui/loader';
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 
 type ExtendedStatus = PurchaseOrder['status'] | 'approved' | 'in_transit' | 'completed';
 type StatusActionKey = 'submitted' | 'confirmed' | 'received';
@@ -141,13 +142,13 @@ const toInputDate = (value: string | null | undefined) => {
   return parsed.toISOString().slice(0, 10);
 };
 
-export const PurchaseOrderDetailDialog: React.FC<PurchaseOrderDetailDialogProps> = ({
+export const PurchaseOrderDetailDialog = ({
   purchaseOrder,
   open,
   onOpenChange,
   onEdit,
   onDownloadPDF,
-}) => {
+}: PurchaseOrderDetailDialogProps) => {
   const { currentOrganization } = useAuth();
   const purchaseOrderId = purchaseOrder?.id ?? null;
   const {
@@ -260,26 +261,19 @@ export const PurchaseOrderDetailDialog: React.FC<PurchaseOrderDetailDialogProps>
 
   if (isDetailLoading || !resolvedPurchaseOrder) {
     return (
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-md">
-          <div className="flex flex-col items-center gap-3 py-10 text-sm text-gray-500 dark:text-gray-400">
-            <div className="size-8 animate-spin rounded-full border-b-2 border-emerald-500" />
-            Chargement du bon de commande…
-          </div>
-        </DialogContent>
-      </Dialog>
+      <ResponsiveDialog open={open} onOpenChange={onOpenChange} size="4xl" contentClassName="max-h-[90vh] overflow-y-auto">
+        <SectionLoader className="py-10" />
+      </ResponsiveDialog>
     );
   }
 
   if (detailError) {
     return (
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-md">
+      <ResponsiveDialog open={open} onOpenChange={onOpenChange} size="4xl" contentClassName="max-h-[90vh] overflow-y-auto">
           <div className="flex flex-col items-center gap-3 py-10 text-center text-sm text-red-600 dark:text-red-400">
             Impossible de charger les lignes du bon de commande.
           </div>
-        </DialogContent>
-      </Dialog>
+      </ResponsiveDialog>
     );
   }
 
@@ -354,7 +348,7 @@ export const PurchaseOrderDetailDialog: React.FC<PurchaseOrderDetailDialogProps>
 
   // Check if PO is confirmed and stock not yet received
   const canCreateMaterialReceipt = ['confirmed', 'submitted'].includes(po.status) &&
-    !(po as any).stock_received;
+    !po.stock_received;
 
   const remainingToBill = Number(po.grand_total) - Number(po.billed_amount);
 
@@ -373,11 +367,12 @@ export const PurchaseOrderDetailDialog: React.FC<PurchaseOrderDetailDialogProps>
         return;
       }
 
-      const backendUrl = import.meta.env.VITE_BACKEND_SERVICE_URL || import.meta.env.VITE_SATELLITE_SERVICE_URL || 'http://localhost:8001';
-      const response = await fetch(`${backendUrl}/api/billing/purchase-orders/${po.id}/pdf`, {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+      const response = await fetch(`${apiUrl}/api/v1/satellite-proxy/billing/purchase-orders/${po.id}/pdf`, {
         method: 'GET',
         headers: {
           Authorization: `Bearer ${accessToken}`,
+          'X-Organization-Id': po.organization_id || '',
         },
       });
 
@@ -563,27 +558,33 @@ export const PurchaseOrderDetailDialog: React.FC<PurchaseOrderDetailDialogProps>
   const availableStatusActions = statusActions.filter((action) => !action.disabled);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <DialogTitle className="flex items-center gap-2">
-                <Package className="h-5 w-5" />
-                Purchase Order #{po.order_number ?? ''}
-              </DialogTitle>
-              <DialogDescription>
-                View purchase order details and manage status
-              </DialogDescription>
-            </div>
-            <Badge className={getStatusColor(po.status)}>
-              {po.status}
-            </Badge>
+    <ResponsiveDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={`Purchase Order #${po.order_number ?? ''}`}
+      description="View purchase order details and manage status"
+      size="4xl"
+      contentClassName="max-h-[90vh] overflow-y-auto"
+    >
+      <DialogHeader>
+        <div className="flex items-center justify-between">
+          <div>
+            <DialogTitle className="flex items-center gap-2">
+              <Package className="h-5 w-5" />
+              Purchase Order #{po.order_number ?? ''}
+            </DialogTitle>
+            <DialogDescription>
+              View purchase order details and manage status
+            </DialogDescription>
           </div>
-        </DialogHeader>
+          <Badge className={getStatusColor(po.status)}>
+            {po.status}
+          </Badge>
+        </div>
+      </DialogHeader>
 
         <div className="space-y-6">
-          <div className="grid gap-4 lg:grid-cols-[2fr,1fr]">
+          <div className="grid gap-4 sm:grid-cols-[2fr,1fr]">
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
@@ -922,83 +923,83 @@ export const PurchaseOrderDetailDialog: React.FC<PurchaseOrderDetailDialogProps>
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-gray-200 dark:border-gray-700">
-                      <th className="py-2 px-2 text-left text-xs font-medium text-gray-600 dark:text-gray-400">
+                <Table className="w-full">
+                  <TableHeader>
+                    <TableRow className="border-b border-gray-200 dark:border-gray-700">
+                      <TableHead className="py-2 px-2 text-left text-xs font-medium text-gray-600 dark:text-gray-400">
                         Item
-                      </th>
-                      <th className="py-2 px-2 text-left text-xs font-medium text-gray-600 dark:text-gray-400">
+                      </TableHead>
+                      <TableHead className="py-2 px-2 text-left text-xs font-medium text-gray-600 dark:text-gray-400">
                         Description
-                      </th>
-                      <th className="py-2 px-2 text-right text-xs font-medium text-gray-600 dark:text-gray-400">
+                      </TableHead>
+                      <TableHead className="py-2 px-2 text-right text-xs font-medium text-gray-600 dark:text-gray-400">
                         Qty
-                      </th>
-                      <th className="py-2 px-2 text-right text-xs font-medium text-gray-600 dark:text-gray-400">
+                      </TableHead>
+                      <TableHead className="py-2 px-2 text-right text-xs font-medium text-gray-600 dark:text-gray-400">
                         Received
-                      </th>
-                      <th className="py-2 px-2 text-right text-xs font-medium text-gray-600 dark:text-gray-400">
+                      </TableHead>
+                      <TableHead className="py-2 px-2 text-right text-xs font-medium text-gray-600 dark:text-gray-400">
                         Billed
-                      </th>
-                      <th className="py-2 px-2 text-right text-xs font-medium text-gray-600 dark:text-gray-400">
+                      </TableHead>
+                      <TableHead className="py-2 px-2 text-right text-xs font-medium text-gray-600 dark:text-gray-400">
                         Rate
-                      </th>
-                      <th className="py-2 px-2 text-right text-xs font-medium text-gray-600 dark:text-gray-400">
+                      </TableHead>
+                      <TableHead className="py-2 px-2 text-right text-xs font-medium text-gray-600 dark:text-gray-400">
                         Amount
-                      </th>
-                      <th className="py-2 px-2 text-right text-xs font-medium text-gray-600 dark:text-gray-400">
+                      </TableHead>
+                      <TableHead className="py-2 px-2 text-right text-xs font-medium text-gray-600 dark:text-gray-400">
                         Tax
-                      </th>
-                      <th className="py-2 px-2 text-right text-xs font-medium text-gray-600 dark:text-gray-400">
+                      </TableHead>
+                      <TableHead className="py-2 px-2 text-right text-xs font-medium text-gray-600 dark:text-gray-400">
                         Total
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {po.items && po.items.length > 0 ? (
                       po.items.map((item: PurchaseOrderItem, index: number) => (
-                        <tr key={item.id || index} className="border-b border-gray-100 dark:border-gray-800">
-                          <td className="py-2 px-2 text-sm font-medium text-gray-900 dark:text-white">
+                        <TableRow key={item.id} className="border-b border-gray-100 dark:border-gray-800">
+                          <TableCell className="py-2 px-2 text-sm font-medium text-gray-900 dark:text-white">
                             {item.item_name}
-                          </td>
-                          <td className="py-2 px-2 text-sm text-gray-600 dark:text-gray-400">
+                          </TableCell>
+                          <TableCell className="py-2 px-2 text-sm text-gray-600 dark:text-gray-400">
                             {item.description || '-'}
-                          </td>
-                          <td className="py-2 px-2 text-sm text-right text-gray-900 dark:text-white">
+                          </TableCell>
+                          <TableCell className="py-2 px-2 text-sm text-right text-gray-900 dark:text-white">
                             {item.quantity}
-                          </td>
-                          <td className="py-2 px-2 text-sm text-right text-gray-600 dark:text-gray-400">
+                          </TableCell>
+                          <TableCell className="py-2 px-2 text-sm text-right text-gray-600 dark:text-gray-400">
                             {item.received_quantity || 0}
-                          </td>
-                          <td className="py-2 px-2 text-sm text-right text-gray-600 dark:text-gray-400">
+                          </TableCell>
+                          <TableCell className="py-2 px-2 text-sm text-right text-gray-600 dark:text-gray-400">
                             {item.billed_quantity || 0}
-                          </td>
-                          <td className="py-2 px-2 text-sm text-right text-gray-900 dark:text-white">
+                          </TableCell>
+                          <TableCell className="py-2 px-2 text-sm text-right text-gray-900 dark:text-white">
                             {formatCurrency(Number(item.unit_price), po.currency_code)}
-                          </td>
-                          <td className="py-2 px-2 text-sm text-right text-gray-900 dark:text-white">
+                          </TableCell>
+                          <TableCell className="py-2 px-2 text-sm text-right text-gray-900 dark:text-white">
                             {formatCurrency(Number(item.amount), po.currency_code)}
-                          </td>
-                          <td className="py-2 px-2 text-sm text-right text-gray-600 dark:text-gray-400">
+                          </TableCell>
+                          <TableCell className="py-2 px-2 text-sm text-right text-gray-600 dark:text-gray-400">
                             {formatCurrency(Number(item.tax_amount ?? 0), po.currency_code)}
-                          </td>
-                          <td className="py-2 px-2 text-sm text-right font-medium text-gray-900 dark:text-white">
+                          </TableCell>
+                          <TableCell className="py-2 px-2 text-sm text-right font-medium text-gray-900 dark:text-white">
                             {formatCurrency(
                               Number(item.amount) + Number(item.tax_amount ?? 0),
                               po.currency_code,
                             )}
-                          </td>
-                        </tr>
+                          </TableCell>
+                        </TableRow>
                       ))
                     ) : (
-                      <tr>
-                        <td colSpan={9} className="py-8 text-center text-sm text-gray-500 dark:text-gray-400">
+                      <TableRow>
+                        <TableCell colSpan={9} className="py-8 text-center text-sm text-gray-500 dark:text-gray-400">
                           No line items found.{canEditDetails ? ' Use the "Add Items" button above to add line items.' : ' This purchase order has no line items.'}
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     )}
-                  </tbody>
-                </table>
+                  </TableBody>
+                </Table>
               </div>
             </CardContent>
           </Card>
@@ -1124,8 +1125,6 @@ export const PurchaseOrderDetailDialog: React.FC<PurchaseOrderDetailDialogProps>
             </div>
           </div>
         </div>
-      </DialogContent>
-
       <AlertDialog
         open={pendingStatus !== null}
         onOpenChange={(open) => {
@@ -1166,7 +1165,7 @@ export const PurchaseOrderDetailDialog: React.FC<PurchaseOrderDetailDialogProps>
           ) : null}
         </AlertDialogContent>
       </AlertDialog>
-    </Dialog>
+    </ResponsiveDialog>
   );
 };
 

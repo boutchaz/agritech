@@ -49,7 +49,7 @@ function OnboardingLayout() {
         <div className="max-w-4xl mx-auto">
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/80 backdrop-blur-sm rounded-full shadow-sm">
             <Sprout className="w-5 h-5 text-emerald-600" />
-            <span className="font-semibold text-gray-800">AgriTech</span>
+            <span className="font-semibold text-gray-800">AgroGina</span>
           </div>
         </div>
       </div>

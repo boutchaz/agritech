@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -15,7 +15,8 @@ import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { Select } from '@/components/ui/Select';
 import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,13 +28,11 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import {
-  Table,
-  TableBody,
   TableCell,
   TableHead,
-  TableHeader,
-  TableRow,
 } from '@/components/ui/table';
+import { FilterBar, ListPageLayout, ResponsiveList } from '@/components/ui/data-table';
+import { EmptyState } from '@/components/ui/empty-state';
 import { Plus, Edit, Trash2, Loader2, AlertCircle, Warehouse as WarehouseIcon } from 'lucide-react';
 
 const warehouseSchema = z.object({
@@ -54,7 +53,8 @@ const warehouseSchema = z.object({
   is_active: z.boolean().optional(),
 });
 
-type WarehouseFormData = z.infer<typeof warehouseSchema>;
+type WarehouseFormValues = z.input<typeof warehouseSchema>;
+type WarehouseFormData = z.output<typeof warehouseSchema>;
 
 interface WarehouseFormProps {
   warehouse: Warehouse | null;
@@ -63,7 +63,8 @@ interface WarehouseFormProps {
 }
 
 function WarehouseForm({ warehouse, open, onOpenChange }: WarehouseFormProps) {
-  const { t } = useTranslation();
+  const { t } = useTranslation('stock');
+  const { t: tCommon } = useTranslation('common');
   const { currentOrganization } = useAuth();
   const queryClient = useQueryClient();
   const { data: farms = [] } = useFarms(currentOrganization?.id);
@@ -75,7 +76,7 @@ function WarehouseForm({ warehouse, open, onOpenChange }: WarehouseFormProps) {
     reset,
     setError,
     formState: { errors, isSubmitting },
-  } = useForm<WarehouseFormData>({
+  } = useForm<WarehouseFormValues, unknown, WarehouseFormData>({
     resolver: zodResolver(warehouseSchema),
     defaultValues: {
       farm_id: null,
@@ -86,7 +87,7 @@ function WarehouseForm({ warehouse, open, onOpenChange }: WarehouseFormProps) {
       city: '',
       postal_code: '',
       capacity: undefined,
-      capacity_unit: 'm3',
+      capacity_unit: '',
       temperature_controlled: false,
       humidity_controlled: false,
       security_level: 'standard',
@@ -107,7 +108,7 @@ function WarehouseForm({ warehouse, open, onOpenChange }: WarehouseFormProps) {
         city: warehouse.city || '',
         postal_code: warehouse.postal_code || '',
         capacity: warehouse.capacity || undefined,
-        capacity_unit: warehouse.capacity_unit || 'm3',
+        capacity_unit: warehouse.capacity_unit || '',
         temperature_controlled: warehouse.temperature_controlled ?? false,
         humidity_controlled: warehouse.humidity_controlled ?? false,
         security_level: warehouse.security_level || 'standard',
@@ -125,7 +126,7 @@ function WarehouseForm({ warehouse, open, onOpenChange }: WarehouseFormProps) {
         city: '',
         postal_code: '',
         capacity: undefined,
-        capacity_unit: 'm3',
+        capacity_unit: '',
         temperature_controlled: false,
         humidity_controlled: false,
         security_level: 'standard',
@@ -192,8 +193,12 @@ function WarehouseForm({ warehouse, open, onOpenChange }: WarehouseFormProps) {
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+    <ResponsiveDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      size="3xl"
+      contentClassName="max-h-[90vh] overflow-y-auto"
+    >
         <DialogHeader>
           <DialogTitle>
             {warehouse ? t('warehouses.editWarehouse') : t('warehouses.createWarehouse')}
@@ -322,11 +327,15 @@ function WarehouseForm({ warehouse, open, onOpenChange }: WarehouseFormProps) {
             </div>
 
             <div>
-              <Label htmlFor="capacity_unit">{t('warehouses.form.capacityUnit')}</Label>
+              <Label htmlFor="capacity_unit">
+                {t('warehouses.form.capacityUnit')}{' '}
+                <span className="text-gray-400 font-normal text-xs">({t('common.optional', 'optionnel')})</span>
+              </Label>
               <Select
                 id="capacity_unit"
                 {...register('capacity_unit')}
               >
+                <option value="">—</option>
                 <option value="m3">{t('warehouses.form.units.m3')}</option>
                 <option value="kg">{t('warehouses.form.units.kg')}</option>
                 <option value="ton">{t('warehouses.form.units.ton')}</option>
@@ -340,7 +349,10 @@ function WarehouseForm({ warehouse, open, onOpenChange }: WarehouseFormProps) {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="capacity">{t('warehouses.form.capacity')}</Label>
+              <Label htmlFor="capacity">
+                {t('warehouses.form.capacity')}{' '}
+                <span className="text-gray-400 font-normal text-xs">({t('common.optional', 'optionnel')})</span>
+              </Label>
               <Input
                 id="capacity"
                 type="number"
@@ -418,7 +430,7 @@ function WarehouseForm({ warehouse, open, onOpenChange }: WarehouseFormProps) {
               onClick={() => onOpenChange(false)}
               disabled={isSubmitting}
             >
-              {t('app.cancel')}
+              {tCommon('app.cancel')}
             </Button>
             <Button type="submit" disabled={isSubmitting}>
               {isSubmitting ? (
@@ -432,13 +444,13 @@ function WarehouseForm({ warehouse, open, onOpenChange }: WarehouseFormProps) {
             </Button>
           </div>
         </form>
-      </DialogContent>
-    </Dialog>
+    </ResponsiveDialog>
   );
 }
 
 export default function WarehouseManagement() {
-  const { t } = useTranslation();
+  const { t } = useTranslation('stock');
+  const { t: tCommon } = useTranslation('common');
   const { currentOrganization } = useAuth();
   const queryClient = useQueryClient();
   const { data: warehouses = [], isLoading, error, refetch } = useWarehouses();
@@ -447,6 +459,32 @@ export default function WarehouseManagement() {
   const [selectedWarehouse, setSelectedWarehouse] = useState<Warehouse | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [warehouseToDelete, setWarehouseToDelete] = useState<Warehouse | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const filteredWarehouses = useMemo(() => {
+    const query = searchTerm.trim().toLowerCase();
+
+    if (!query) {
+      return warehouses;
+    }
+
+    return warehouses.filter((warehouse) => {
+      const searchableFields = [
+        warehouse.name,
+        warehouse.description,
+        warehouse.location,
+        warehouse.address,
+        warehouse.city,
+        warehouse.postal_code,
+        warehouse.capacity_unit,
+        warehouse.security_level,
+        warehouse.manager_name,
+        warehouse.manager_phone,
+      ];
+
+      return searchableFields.some((value) => value?.toLowerCase().includes(query));
+    });
+  }, [warehouses, searchTerm]);
 
   const deleteMutation = useMutation({
     mutationFn: async (warehouseId: string) => {
@@ -498,136 +536,233 @@ export default function WarehouseManagement() {
         <AlertCircle className="w-12 h-12 mx-auto text-red-500 mb-4" />
         <p className="text-red-600 dark:text-red-400 mb-4">{t('warehouses.loadError')}</p>
         <Button onClick={() => refetch()} variant="outline">
-          {t('app.retry')}
+          {tCommon('app.retry')}
         </Button>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-            {t('warehouses.title')}
-          </h2>
-          <p className="text-gray-600 dark:text-gray-400 mt-1">
-            {t('warehouses.description')}
-          </p>
+    <>
+    <ListPageLayout
+      header={
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+              {t('warehouses.title')}
+            </h2>
+            <p className="text-gray-600 dark:text-gray-400 mt-1">
+              {t('warehouses.description')}
+            </p>
+          </div>
+          <Button type="button" variant="default" onClick={handleCreate}>
+            <Plus className="w-4 h-4 mr-2" />
+            {t('warehouses.createWarehouse')}
+          </Button>
         </div>
-        <Button onClick={handleCreate}>
-          <Plus className="w-4 h-4 mr-2" />
-          {t('warehouses.createWarehouse')}
-        </Button>
-      </div>
+      }
+      filters={
+        <FilterBar
+          searchValue={searchTerm}
+          onSearchChange={setSearchTerm}
+          searchPlaceholder={t('warehouses.searchPlaceholder', 'Search warehouses...')}
+        />
+      }
+    >
 
       {isLoading ? (
         <div className="flex justify-center items-center py-12">
           <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
         </div>
-      ) : warehouses.length === 0 ? (
-        <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-          <WarehouseIcon className="w-12 h-12 mx-auto text-gray-400 mb-4" />
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-            {t('warehouses.noWarehouses')}
-          </h3>
-          <p className="text-gray-600 dark:text-gray-400 mb-4">
-            {t('warehouses.noWarehousesDescription')}
-          </p>
-          <Button onClick={handleCreate}>
-            <Plus className="w-4 h-4 mr-2" />
-            {t('warehouses.createFirstWarehouse')}
-          </Button>
-        </div>
       ) : (
-        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{t('warehouses.table.name')}</TableHead>
-                <TableHead>{t('warehouses.table.location')}</TableHead>
-                <TableHead>{t('warehouses.table.capacity')}</TableHead>
-                <TableHead>{t('warehouses.table.features')}</TableHead>
-                <TableHead>{t('warehouses.table.manager')}</TableHead>
-                <TableHead>{t('warehouses.table.status')}</TableHead>
-                <TableHead className="text-right">{t('warehouses.table.actions')}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {warehouses.map((warehouse) => (
-                <TableRow key={warehouse.id}>
-                  <TableCell className="font-medium">{warehouse.name}</TableCell>
-                  <TableCell>
+        <ResponsiveList
+          items={filteredWarehouses}
+          keyExtractor={(warehouse) => warehouse.id}
+          emptyIcon={WarehouseIcon}
+          emptyTitle={
+            warehouses.length === 0
+              ? t('warehouses.noWarehouses')
+              : t('warehouses.noSearchResults', 'No warehouses found')
+          }
+          emptyMessage={
+            warehouses.length === 0
+              ? t('warehouses.noWarehousesDescription')
+              : t('warehouses.noSearchResultsDescription', 'Try adjusting your search.')
+          }
+          emptyAction={
+            warehouses.length === 0
+              ? {
+                  label: t('warehouses.createFirstWarehouse'),
+                  onClick: handleCreate,
+                }
+              : undefined
+          }
+          emptyExtra={
+            warehouses.length > 0 && filteredWarehouses.length === 0 ? (
+              <EmptyState
+                variant="inline"
+                description={t('warehouses.noSearchResultsDescription', 'Try adjusting your search.')}
+              />
+            ) : undefined
+          }
+          renderCard={(warehouse) => (
+            <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h3 className="font-medium text-gray-900 dark:text-white">{warehouse.name}</h3>
+                  <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
                     {[warehouse.city, warehouse.location].filter(Boolean).join(', ') || '-'}
-                  </TableCell>
-                  <TableCell>
-                    {warehouse.capacity
-                      ? `${warehouse.capacity} ${warehouse.capacity_unit}`
-                      : '-'}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-2 text-xs">
-                      {warehouse.temperature_controlled && (
-                        <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded">
-                          {t('warehouses.features.temp')}
-                        </span>
-                      )}
-                      {warehouse.humidity_controlled && (
-                        <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded">
-                          {t('warehouses.features.humidity')}
-                        </span>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
+                  </p>
+                </div>
+                <span
+                  className={`px-2 py-1 text-xs rounded ${
+                    warehouse.is_active
+                      ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300'
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+                  }`}
+                >
+                  {warehouse.is_active ? tCommon('app.active') : tCommon('app.inactive')}
+                </span>
+              </div>
+
+              <div className="mt-4 space-y-3 text-sm text-gray-600 dark:text-gray-400">
+                <div className="flex justify-between gap-3">
+                  <span className="font-medium text-gray-900 dark:text-white">{t('warehouses.table.capacity')}</span>
+                  <span>
+                    {warehouse.capacity ? `${warehouse.capacity} ${warehouse.capacity_unit}` : '-'}
+                  </span>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-900 dark:text-white">{t('warehouses.table.features')}</span>
+                  <div className="mt-2 flex flex-wrap gap-2 text-xs">
+                    {warehouse.temperature_controlled && (
+                      <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded">
+                        {t('warehouses.features.temp')}
+                      </span>
+                    )}
+                    {warehouse.humidity_controlled && (
+                      <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded">
+                        {t('warehouses.features.humidity')}
+                      </span>
+                    )}
+                    {!warehouse.temperature_controlled && !warehouse.humidity_controlled && <span>-</span>}
+                  </div>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-900 dark:text-white">{t('warehouses.table.manager')}</span>
+                  <div className="mt-1">
                     {warehouse.manager_name ? (
-                      <div className="text-sm">
+                      <>
                         <div>{warehouse.manager_name}</div>
-                        {warehouse.manager_phone && (
-                          <div className="text-gray-500 dark:text-gray-400">
-                            {warehouse.manager_phone}
-                          </div>
-                        )}
-                      </div>
+                        {warehouse.manager_phone && <div>{warehouse.manager_phone}</div>}
+                      </>
                     ) : (
                       '-'
                     )}
-                  </TableCell>
-                  <TableCell>
-                    <span
-                      className={`px-2 py-1 text-xs rounded ${
-                        warehouse.is_active
-                          ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300'
-                          : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
-                      }`}
-                    >
-                      {warehouse.is_active ? t('app.active') : t('app.inactive')}
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-4 flex justify-end gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleEdit(warehouse)}
+                  className="text-slate-700 dark:text-slate-100"
+                >
+                  <Edit className="w-4 h-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleDelete(warehouse)}
+                  className="text-red-600 hover:text-red-700"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          )}
+          renderTableHeader={
+            <tr>
+              <TableHead>{t('warehouses.table.name')}</TableHead>
+              <TableHead>{t('warehouses.table.location')}</TableHead>
+              <TableHead>{t('warehouses.table.capacity')}</TableHead>
+              <TableHead>{t('warehouses.table.features')}</TableHead>
+              <TableHead>{t('warehouses.table.manager')}</TableHead>
+              <TableHead>{t('warehouses.table.status')}</TableHead>
+              <TableHead className="text-right">{t('warehouses.table.actions')}</TableHead>
+            </tr>
+          }
+          renderTable={(warehouse) => (
+            <>
+              <TableCell className="font-medium">{warehouse.name}</TableCell>
+              <TableCell>
+                {[warehouse.city, warehouse.location].filter(Boolean).join(', ') || '-'}
+              </TableCell>
+              <TableCell>
+                {warehouse.capacity ? `${warehouse.capacity} ${warehouse.capacity_unit}` : '-'}
+              </TableCell>
+              <TableCell>
+                <div className="flex gap-2 text-xs">
+                  {warehouse.temperature_controlled && (
+                    <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded">
+                      {t('warehouses.features.temp')}
                     </span>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleEdit(warehouse)}
-                      >
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDelete(warehouse)}
-                        className="text-red-600 hover:text-red-700"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+                  )}
+                  {warehouse.humidity_controlled && (
+                    <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded">
+                      {t('warehouses.features.humidity')}
+                    </span>
+                  )}
+                </div>
+              </TableCell>
+              <TableCell>
+                {warehouse.manager_name ? (
+                  <div className="text-sm">
+                    <div>{warehouse.manager_name}</div>
+                    {warehouse.manager_phone && (
+                      <div className="text-gray-500 dark:text-gray-400">{warehouse.manager_phone}</div>
+                    )}
+                  </div>
+                ) : (
+                  '-'
+                )}
+              </TableCell>
+              <TableCell>
+                <span
+                  className={`px-2 py-1 text-xs rounded ${
+                    warehouse.is_active
+                      ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300'
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+                  }`}
+                >
+                  {warehouse.is_active ? tCommon('app.active') : tCommon('app.inactive')}
+                </span>
+              </TableCell>
+              <TableCell className="text-right">
+                <div className="flex justify-end gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleEdit(warehouse)}
+                    className="text-slate-700 dark:text-slate-100"
+                  >
+                    <Edit className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleDelete(warehouse)}
+                    className="text-red-600 hover:text-red-700"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+              </TableCell>
+            </>
+          )}
+        />
       )}
 
       <WarehouseForm
@@ -652,7 +787,7 @@ export default function WarehouseManagement() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>{t('app.cancel')}</AlertDialogCancel>
+            <AlertDialogCancel>{tCommon('app.cancel')}</AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmDelete}
               className="bg-red-600 hover:bg-red-700 text-white"
@@ -669,6 +804,7 @@ export default function WarehouseManagement() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </ListPageLayout>
+    </>
   );
 }

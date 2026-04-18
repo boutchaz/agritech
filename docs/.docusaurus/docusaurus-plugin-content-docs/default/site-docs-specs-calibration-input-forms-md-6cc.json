@@ -1,0 +1,27 @@
+{
+  "id": "specs/calibration-input-forms",
+  "title": "Calibration Input Forms (F1/F2/F3)",
+  "description": "FICHES DE SAISIE STANDARDISÉES",
+  "source": "@site/docs/specs/calibration-input-forms.md",
+  "sourceDirName": "specs",
+  "slug": "/specs/calibration-input-forms",
+  "permalink": "/specs/calibration-input-forms",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 5,
+  "frontMatter": {
+    "sidebar_position": 5,
+    "title": "Calibration Input Forms (F1/F2/F3)"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Reference Data Specifications",
+    "permalink": "/specs/reference-data-specs"
+  },
+  "next": {
+    "title": "Calibration Test Flow",
+    "permalink": "/specs/calibration-test-flow"
+  }
+}

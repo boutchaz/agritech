@@ -1,4 +1,4 @@
-import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 
 export interface CreateTaskFromTemplateDto {
@@ -20,6 +20,24 @@ export class TaskTemplatesService {
 
   constructor(private readonly databaseService: DatabaseService) {}
 
+  private async verifyOrganizationAccess(
+    userId: string,
+    organizationId: string,
+  ): Promise<void> {
+    const client = this.databaseService.getAdminClient();
+    const { data: orgUser } = await client
+      .from('organization_users')
+      .select('organization_id')
+      .eq('organization_id', organizationId)
+      .eq('user_id', userId)
+      .eq('is_active', true)
+      .maybeSingle();
+
+    if (!orgUser) {
+      throw new ForbiddenException('You do not have access to this organization');
+    }
+  }
+
   /**
    * Create a task from a template
    * Moved from SQL: create_task_from_template()
@@ -29,6 +47,7 @@ export class TaskTemplatesService {
     organizationId: string,
     dto: CreateTaskFromTemplateDto,
   ) {
+    await this.verifyOrganizationAccess(userId, organizationId);
     const client = this.databaseService.getAdminClient();
 
     // Get template with organization
@@ -123,6 +142,7 @@ export class TaskTemplatesService {
     organizationId: string,
     dto: UpdateTaskStatusDto,
   ): Promise<{ success: boolean }> {
+    await this.verifyOrganizationAccess(userId, organizationId);
     const client = this.databaseService.getAdminClient();
 
     // Verify task exists and belongs to organization

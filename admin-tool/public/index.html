@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AgriTech Pricing Admin</title>
+  <title>AgroGina Pricing Admin</title>
   <style>
     * {
       margin: 0;
@@ -255,11 +255,11 @@
 <body>
   <div class="container">
     <div class="header">
-      <h1>🔧 AgriTech Pricing Admin</h1>
+      <h1>🔧 AgroGina Pricing Admin</h1>
       <p>Manage plan pricing and sync to Polar.sh</p>
       <div class="env-toggle">
-        <button class="toggle-btn active" data-env="sandbox">Sandbox</button>
-        <button class="toggle-btn" data-env="production">Production</button>
+        <button type="button" class="toggle-btn active" data-env="sandbox">Sandbox</button>
+        <button type="button" class="toggle-btn" data-env="production">Production</button>
       </div>
     </div>
 
@@ -273,7 +273,7 @@
         <span id="lastUpdated">Last updated: Never</span>
         <span id="lastSynced">Last synced: Never</span>
       </div>
-      <button class="btn btn-primary" id="syncBtn">Sync to Polar.sh</button>
+      <button type="button" class="btn btn-primary" id="syncBtn">Sync to Polar.sh</button>
     </div>
   </div>
 
@@ -432,13 +432,15 @@
     });
 
     // Environment toggle
-    document.querySelectorAll('.toggle-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        currentEnv = btn.dataset.env;
+      document.querySelectorAll('.toggle-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.toggle-btn').forEach((b) => {
+            b.classList.remove('active');
+          });
+          btn.classList.add('active');
+          currentEnv = btn.dataset.env;
+        });
       });
-    });
 
     // Toast notification
     function showToast(message, type) {

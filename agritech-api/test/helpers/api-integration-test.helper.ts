@@ -75,7 +75,9 @@ export class ApiIntegrationTestHelper {
       }),
     );
 
-    this.app.setGlobalPrefix('api/v1');
+    this.app.setGlobalPrefix('api/v1', {
+      exclude: ['blog', 'blog/(.*)', 'sitemap.xml', 'rss.xml'],
+    });
     await this.app.init();
   }
 

@@ -11,13 +11,14 @@ import {
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { DashboardService } from './dashboard.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { OrganizationGuard } from '../../common/guards/organization.guard';
 
 @ApiTags('dashboard')
 @ApiBearerAuth('JWT-auth')
 @Controller('dashboard')
 // PoliciesGuard removed - dashboard endpoints validate org membership in service layer
 // This allows the dashboard flow to work before full CASL permissions are established
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, OrganizationGuard)
 export class DashboardController {
     constructor(private readonly dashboardService: DashboardService) { }
 

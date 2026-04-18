@@ -5,6 +5,21 @@ import * as Device from 'expo-device';
 import { Config, APP_CONFIG } from '@/constants/config';
 import { trackError } from './gtm';
 
+export const queryClientDefaultQueryOptions = {
+  staleTime: 5 * 60 * 1000,
+  retry: 2,
+  networkMode: 'offlineFirst' as const,
+};
+
+function resolveOrganizationId(): string | null {
+  try {
+    const mod = require('../stores/authStore');
+    return mod.useAuthStore?.getState()?.currentOrganization?.id ?? null;
+  } catch {
+    return null;
+  }
+}
+
 const ACCESS_TOKEN_KEY = 'agritech_access_token';
 const REFRESH_TOKEN_KEY = 'agritech_refresh_token';
 const ORGANIZATION_ID_KEY = 'agritech_organization_id';
@@ -20,9 +35,10 @@ interface DeviceInfo {
 
 async function getDeviceInfo(): Promise<DeviceInfo> {
   // Get or generate unique device ID
-  let deviceId = await SecureStore.getItemAsync(DEVICE_ID_KEY);
-  if (!deviceId) {
-    deviceId = Constants.deviceId || Constants.sessionId || `mobile_${Date.now()}`;
+  const storedDeviceId = await SecureStore.getItemAsync(DEVICE_ID_KEY);
+  const deviceId = storedDeviceId ?? Constants.deviceId ?? Constants.sessionId ?? `mobile_${Date.now()}`;
+
+  if (!storedDeviceId) {
     await SecureStore.setItemAsync(DEVICE_ID_KEY, deviceId);
   }
 
@@ -66,6 +82,9 @@ class ApiClient {
 
   constructor() {
     this.baseUrl = `${Config.API_URL}/api/v1`;
+    if (__DEV__) {
+      console.log(`[API] Base URL: ${this.baseUrl} (env: ${Config.environment})`);
+    }
   }
 
   async initialize(): Promise<void> {
@@ -156,14 +175,39 @@ class ApiClient {
       (headers as Record<string, string>)['Authorization'] = `Bearer ${this.accessToken}`;
     }
 
-    if (this.organizationId) {
-      (headers as Record<string, string>)['x-organization-id'] = this.organizationId;
+    const orgId = this.organizationId || resolveOrganizationId();
+    if (orgId) {
+      (headers as Record<string, string>)['x-organization-id'] = orgId;
     }
 
-    const response = await fetch(url, {
-      ...options,
-      headers,
-    });
+    if (__DEV__) {
+      console.log(`[API] ${options.method || 'GET'} ${url}`, { orgId, orgIdSource: this.organizationId ? 'instance' : 'store', hasToken: !!this.accessToken });
+    }
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+
+    let response: Response;
+
+    try {
+      response = await fetch(url, {
+        ...options,
+        headers,
+        signal: controller.signal,
+      });
+    } catch (fetchError) {
+      if (
+        retryOnUnauthorized &&
+        (fetchError instanceof TypeError ||
+          (fetchError instanceof Error && fetchError.name === 'AbortError'))
+      ) {
+        return this.request<T>(endpoint, options, false);
+      }
+
+      throw fetchError;
+    } finally {
+      clearTimeout(timeoutId);
+    }
 
     if (!response.ok) {
       const error: ApiError = await response.json().catch(() => ({
@@ -184,6 +228,9 @@ class ApiClient {
         await this.clearTokens();
       }
 
+      if (__DEV__) {
+        console.error(`[API] ERROR ${response.status} ${endpoint}:`, error.message);
+      }
       throw new Error(error.message || 'Request failed');
     }
 
@@ -191,7 +238,12 @@ class ApiClient {
       return {} as T;
     }
 
-    return response.json();
+    const data = await response.json();
+    if (__DEV__) {
+      const preview = JSON.stringify(data).slice(0, 200);
+      console.log(`[API] OK ${endpoint} →`, preview);
+    }
+    return data;
   }
 
   async get<T>(endpoint: string): Promise<T> {
@@ -205,6 +257,13 @@ class ApiClient {
     });
   }
 
+  async put<T>(endpoint: string, data?: unknown): Promise<T> {
+    return this.request<T>(endpoint, {
+      method: 'PUT',
+      body: data ? JSON.stringify(data) : undefined,
+    });
+  }
+
   async patch<T>(endpoint: string, data?: unknown): Promise<T> {
     return this.request<T>(endpoint, {
       method: 'PATCH',
@@ -212,14 +271,43 @@ class ApiClient {
     });
   }
 
-  async delete<T>(endpoint: string): Promise<T> {
-    return this.request<T>(endpoint, { method: 'DELETE' });
+  async delete<T>(endpoint: string, data?: unknown): Promise<T> {
+    return this.request<T>(endpoint, {
+      method: 'DELETE',
+      body: data ? JSON.stringify(data) : undefined,
+    });
   }
 
-  async uploadFile(
+  async downloadBlob(endpoint: string): Promise<Blob> {
+    const url = `${this.baseUrl}${endpoint}`;
+    const analyticsHeaders = await getAnalyticsHeaders();
+
+    const headers: HeadersInit = {
+      ...analyticsHeaders,
+    };
+
+    if (this.accessToken) {
+      (headers as Record<string, string>)['Authorization'] = `Bearer ${this.accessToken}`;
+    }
+
+    const orgId = this.organizationId || resolveOrganizationId();
+    if (orgId) {
+      (headers as Record<string, string>)['x-organization-id'] = orgId;
+    }
+
+    const response = await fetch(url, { method: 'GET', headers });
+
+    if (!response.ok) {
+      throw new Error(`Download failed: ${response.status} ${response.statusText}`);
+    }
+
+    return response.blob();
+  }
+
+  async uploadFile<T = { url: string }>(
     endpoint: string,
     file: { uri: string; name: string; type: string }
-  ): Promise<{ url: string }> {
+  ): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
     const formData = new FormData();
 
@@ -239,8 +327,9 @@ class ApiClient {
       (headers as Record<string, string>)['Authorization'] = `Bearer ${this.accessToken}`;
     }
 
-    if (this.organizationId) {
-      (headers as Record<string, string>)['x-organization-id'] = this.organizationId;
+    const uploadOrgId = this.organizationId || resolveOrganizationId();
+    if (uploadOrgId) {
+      (headers as Record<string, string>)['x-organization-id'] = uploadOrgId;
     }
 
     const response = await fetch(url, {
@@ -283,8 +372,14 @@ export interface Organization {
   id: string;
   name: string;
   slug: string;
+  description: string | null;
   logo_url: string | null;
+  currency_code: string;
+  timezone: string;
+  is_active: boolean;
   role: string;
+  role_display_name: string;
+  role_level: number;
 }
 
 export interface Farm {
@@ -299,7 +394,7 @@ export interface Task {
   id: string;
   title: string;
   description: string | null;
-  status: 'pending' | 'in_progress' | 'completed' | 'cancelled';
+  status: 'pending' | 'assigned' | 'in_progress' | 'completed' | 'cancelled' | 'on_hold';
   priority: 'low' | 'medium' | 'high' | 'urgent';
   due_date: string | null;
   task_type: string | null;
@@ -312,6 +407,8 @@ export interface Task {
   farm?: Farm;
   parcel?: { id: string; name: string };
   assigned_worker?: { id: string; first_name: string; last_name: string };
+  completion_percentage?: number;
+  estimated_duration?: number | null;
 }
 
 export interface HarvestRecord {
@@ -353,6 +450,30 @@ export interface Parcel {
   area_unit: string | null;
   current_crop: string | null;
   status: string;
+  boundary: number[][] | null;
+}
+
+function mapApiParcelRowToParcel(raw: Record<string, unknown>): Parcel {
+  const isActive = raw.is_active === true;
+  return {
+    id: String(raw.id ?? ''),
+    name: String(raw.name ?? ''),
+    farm_id: String(raw.farm_id ?? ''),
+    area: raw.area != null ? Number(raw.area) : null,
+    area_unit: (raw.area_unit as string | null) ?? null,
+    current_crop:
+      (raw.current_crop as string | null) ??
+      (raw.crop_type as string | null) ??
+      (raw.variety as string | null) ??
+      null,
+    status:
+      typeof raw.status === 'string'
+        ? raw.status
+        : isActive
+          ? 'active'
+          : 'fallow',
+    boundary: Array.isArray(raw.boundary) ? (raw.boundary as number[][]) : null,
+  };
 }
 
 // CASL Ability Types
@@ -379,12 +500,23 @@ export const authApi = {
 
   getProfile: () => api.get<UserProfile>('/auth/me'),
 
+  updateProfile: (data: { first_name?: string; last_name?: string; phone?: string; avatar_url?: string }) =>
+    api.patch<UserProfile>('/auth/me', data),
+
   changePassword: (newPassword: string) =>
     api.post<{ success: boolean }>('/auth/change-password', { newPassword }),
 
-  getOrganizations: () => api.get<Organization[]>('/auth/organizations'),
+  getOrganizations: () => api.get<Organization[]>('/users/me/organizations'),
 
-  getUserRole: () => api.get<{ role: string; permissions: string[] }>('/auth/me/role'),
+  /** Backend may return `role` as a slug string or as `{ role_name, role_display_name, role_level }`. */
+  getUserRole: () =>
+    api.get<{
+      role:
+        | string
+        | null
+        | { role_name: string; role_display_name?: string; role_level?: number };
+      permissions: string[] | Array<{ permission_name?: string; resource?: string; action?: string }>;
+    }>('/auth/me/role'),
 
   /**
    * Get CASL abilities for the current user
@@ -394,7 +526,7 @@ export const authApi = {
 };
 
 export const tasksApi = {
-  getMyTasks: () => api.get<Task[]>('/tasks/my-tasks'),
+  getMyTasks: () => api.get<{ data: Task[]; total: number; page: number; pageSize: number; totalPages: number }>('/tasks/my-tasks'),
 
   getTasks: (filters?: { status?: string; farmId?: string; parcelId?: string }) => {
     const params = new URLSearchParams();
@@ -402,18 +534,33 @@ export const tasksApi = {
     if (filters?.farmId) params.append('farmId', filters.farmId);
     if (filters?.parcelId) params.append('parcelId', filters.parcelId);
     const query = params.toString();
-    return api.get<{ data: Task[]; total: number }>(`/tasks${query ? `?${query}` : ''}`);
+    return api.get<{ data: Task[]; total: number; page: number; pageSize: number; totalPages: number }>(`/tasks${query ? `?${query}` : ''}`);
   },
 
   getTask: (taskId: string) => api.get<Task>(`/tasks/${taskId}`),
 
-  getStatistics: () => api.get<{
-    total: number;
-    pending: number;
-    in_progress: number;
-    completed: number;
-    overdue: number;
-  }>('/tasks/statistics'),
+  getStatistics: async () => {
+    const res = await api.get<{
+      total_tasks: number;
+      pending: number;
+      assigned: number;
+      in_progress: number;
+      completed: number;
+      cancelled: number;
+      on_hold: number;
+      overdue_tasks: number;
+      completion_rate: number;
+      total_cost: number;
+    }>('/tasks/statistics');
+    return {
+      total: res.total_tasks ?? 0,
+      pending: res.pending ?? 0,
+      assigned: res.assigned ?? 0,
+      in_progress: res.in_progress ?? 0,
+      completed: res.completed ?? 0,
+      overdue: res.overdue_tasks ?? 0,
+    };
+  },
 
   createTask: (data: Partial<Task>) => api.post<Task>('/tasks', data),
 
@@ -436,6 +583,21 @@ export const tasksApi = {
 
   addComment: (taskId: string, content: string) =>
     api.post(`/tasks/${taskId}/comments`, { content }),
+
+  getComments: (taskId: string) => api.get<any[]>(`/tasks/${taskId}/comments`),
+
+  getChecklist: (taskId: string) => api.get<any[]>(`/tasks/${taskId}/checklist`),
+
+  addChecklistItem: (taskId: string, title: string) =>
+    api.post(`/tasks/${taskId}/checklist/items`, { title }),
+
+  toggleChecklistItem: (taskId: string, itemId: string) =>
+    api.patch(`/tasks/${taskId}/checklist/items/${itemId}/toggle`, {}),
+
+  removeChecklistItem: (taskId: string, itemId: string) =>
+    api.delete(`/tasks/${taskId}/checklist/items/${itemId}`),
+
+  getDependencies: (taskId: string) => api.get<any>(`/tasks/${taskId}/dependencies`),
 };
 
 export const harvestsApi = {
@@ -444,7 +606,7 @@ export const harvestsApi = {
     const params = new URLSearchParams();
     if (filters?.dateFrom) params.append('dateFrom', filters.dateFrom);
     if (filters?.dateTo) params.append('dateTo', filters.dateTo);
-    if (filters?.farmId) params.append('farmId', filters.farmId);
+    if (filters?.farmId) params.append('farm_id', filters.farmId);
     const query = params.toString();
     return api.get<{ data: HarvestRecord[]; total: number }>(
       `/organizations/${orgId}/harvests${query ? `?${query}` : ''}`
@@ -484,23 +646,49 @@ export const harvestsApi = {
 };
 
 export const farmsApi = {
-  getFarms: () => {
-    return api.get<Farm[]>('/farms');
+  getFarms: async (): Promise<Farm[]> => {
+    const res = await api.get<any>('/farms');
+    const list: Array<Record<string, unknown>> = Array.isArray(res) ? res : (res?.data ?? []);
+    return list.map((f) => ({
+      id: (f.farm_id as string) || (f.id as string),
+      name: (f.farm_name as string) || (f.name as string) || '',
+      location: (f.farm_location as string | null) ?? null,
+      size: (f.farm_size as number | null) ?? null,
+      size_unit: (f.size_unit as string | null) ?? null,
+    }));
   },
 
-  getFarm: (farmId: string) => {
-    return api.get<Farm>(`/farms/${farmId}`);
+  getFarm: async (farmId: string): Promise<Farm> => {
+    const res = await api.get<any>(`/farms/${farmId}`);
+    const f = res?.data ?? res;
+    return {
+      id: (f.farm_id as string) || (f.id as string),
+      name: (f.farm_name as string) || (f.name as string) || '',
+      location: (f.farm_location as string | null) ?? null,
+      size: (f.farm_size as number | null) ?? null,
+      size_unit: (f.size_unit as string | null) ?? null,
+    };
   },
 };
 
 export const parcelsApi = {
-  getParcels: (farmId?: string) => {
+  getParcels: async (farmId?: string): Promise<Parcel[]> => {
     const query = farmId ? `?farm_id=${farmId}` : '';
-    return api.get<Parcel[]>(`/parcels${query}`);
+    const res = await api.get<any>(`/parcels${query}`);
+    return Array.isArray(res) ? res : (res?.data ?? []);
   },
 
-  getParcel: (parcelId: string) => {
-    return api.get<Parcel>(`/parcels/${parcelId}`);
+  getParcel: async (parcelId: string): Promise<Parcel> => {
+    const res = await api.get<any>(`/parcels/${parcelId}`);
+    const raw = res?.data ?? res;
+    if (!raw || typeof raw !== 'object') {
+      throw new Error('Invalid parcel response');
+    }
+    return mapApiParcelRowToParcel(raw);
+  },
+
+  deleteParcel: async (parcelId: string): Promise<{ success: boolean; deleted_parcel?: { id: string; name: string }; cleanup_summary?: Array<{ table: string; deleted: number }> }> => {
+    return api.delete(`/parcels`, { parcel_id: parcelId, cleanup_related_data: true });
   },
 };
 
@@ -513,4 +701,21 @@ export const filesApi = {
       type: 'image/jpeg',
     });
   },
+
+  uploadAvatar: (uri: string) => {
+    const filename = uri.split('/').pop() || 'avatar.jpg';
+    return api.uploadFile<{ avatar_url: string }>('/users/me/avatar', {
+      uri,
+      name: filename,
+      type: 'image/jpeg',
+    });
+  },
 };
+
+export { calibrationApi } from './api/calibration';
+export { analysesApi } from './api/analyses';
+export { weatherApi } from './api/weather';
+export { inventoryApi } from './api/inventory';
+export { workersApi } from './api/workers';
+export { accountingApi } from './api/accounting';
+export { notificationsApi, approvalsApi } from './api/notifications';

@@ -1,5 +1,5 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsEnum, IsUUID } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsArray, IsEnum, IsNumber, IsOptional, IsUUID } from 'class-validator';
 
 export enum TrialPlanInput {
   STARTER = 'starter',
@@ -26,6 +26,21 @@ export class CreateTrialSubscriptionDto {
   })
   @IsEnum(TrialPlanInput)
   plan_type: TrialPlanInput;
+
+  @ApiPropertyOptional({
+    description: 'Selected module IDs for modular pricing',
+    type: [String],
+  })
+  @IsOptional()
+  @IsArray()
+  selected_modules?: string[];
+
+  @ApiPropertyOptional({
+    description: 'Contracted hectares for the subscription',
+  })
+  @IsOptional()
+  @IsNumber()
+  contracted_hectares?: number;
 }
 
 export class SubscriptionResponseDto {

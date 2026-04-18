@@ -34,6 +34,7 @@ class TimeSeriesIndex(str, Enum):
     MSI = "MSI"
     MCARI = "MCARI"
     TCARI = "TCARI"
+    TCARI_OSAVI = "TCARI_OSAVI"
     NIRvP = "NIRvP"
 
 class TimeInterval(str, Enum):
@@ -85,8 +86,7 @@ class IndexCalculationRequest(BaseModel):
     indices: List[VegetationIndex] = Field(..., min_items=1, description="List of indices to calculate")
     cloud_coverage: Optional[float] = Field(10.0, ge=0, le=100, description="Maximum cloud coverage percentage")
     scale: Optional[int] = Field(10, ge=10, le=1000, description="Pixel scale in meters")
-    use_aoi_cloud_filter: Optional[bool] = Field(False, description="Ignored. SCL-based AOI filtering reserved for available-dates. Indices use tile-level filter at 10m.")
-    cloud_buffer_meters: Optional[float] = Field(300, ge=0, le=5000, description="Buffer around AOI for cloud calculation")
+    use_aoi_cloud_filter: Optional[bool] = Field(False, description="If True, use SCL-based AOI cloud filter at 20m instead of tile-level CLOUDY_PIXEL_PERCENTAGE.")
 
 class TimeSeriesRequest(BaseModel):
     aoi: AOIRequest
@@ -94,8 +94,7 @@ class TimeSeriesRequest(BaseModel):
     index: TimeSeriesIndex
     interval: Optional[TimeInterval] = TimeInterval.MONTH
     cloud_coverage: Optional[float] = Field(10.0, ge=0, le=100)
-    use_aoi_cloud_filter: Optional[bool] = Field(False, description="Ignored. SCL-based AOI filtering reserved for available-dates. Timeseries uses tile-level filter at 10m.")
-    cloud_buffer_meters: Optional[float] = Field(300, ge=0, le=5000, description="Buffer around AOI for cloud calculation")
+    use_aoi_cloud_filter: Optional[bool] = Field(False, description="If True, use SCL-based AOI cloud filter at 20m instead of tile-level CLOUDY_PIXEL_PERCENTAGE.")
 
 class ExportRequest(BaseModel):
     aoi: AOIRequest
@@ -120,6 +119,16 @@ class IndexValue(BaseModel):
 class TimeSeriesPoint(BaseModel):
     date: str
     value: float
+    min_value: Optional[float] = None
+    max_value: Optional[float] = None
+    std_value: Optional[float] = None
+    median_value: Optional[float] = None
+    percentile_10: Optional[float] = None
+    percentile_25: Optional[float] = None
+    percentile_75: Optional[float] = None
+    percentile_90: Optional[float] = None
+    pixel_count: Optional[int] = None
+    cloud_coverage: Optional[float] = None
 
 class TimeSeriesResponse(BaseModel):
     index: str
@@ -270,6 +279,20 @@ class CreateAOIRequest(BaseModel):
 
 # Cloud Coverage Check Models
 
+class AvailableDatesRequest(BaseModel):
+    aoi: AOIRequest
+    start_date: str = Field(..., pattern=r'^\d{4}-\d{2}-\d{2}$', description="Start date in YYYY-MM-DD format")
+    end_date: str = Field(..., pattern=r'^\d{4}-\d{2}-\d{2}$', description="End date in YYYY-MM-DD format")
+    cloud_coverage: Optional[float] = Field(30.0, ge=0, le=100, description="Maximum cloud coverage percentage")
+
+    @field_validator('end_date')
+    @classmethod
+    def validate_date_range(cls, v, info):
+        start = info.data.get('start_date') if info.data else None
+        if start and v < start:
+            raise ValueError("End date must be after start date")
+        return v
+
 class CloudCoverageCheckRequest(BaseModel):
     geometry: GeoJSON
     date_range: DateRangeRequest
@@ -353,6 +376,7 @@ class SatelliteIndicesData(BaseModel):
     max_value: Optional[float] = None
     std_value: Optional[float] = None
     median_value: Optional[float] = None
+    percentile_10: Optional[float] = None
     percentile_25: Optional[float] = None
     percentile_75: Optional[float] = None
     percentile_90: Optional[float] = None

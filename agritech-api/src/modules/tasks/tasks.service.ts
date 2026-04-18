@@ -17,7 +17,10 @@ import { AccountingAutomationService } from "../journal-entries/accounting-autom
 import { ReceptionBatchesService } from "../reception-batches/reception-batches.service";
 import { AdoptionService, MilestoneType } from "../adoption/adoption.service";
 import { NotificationsService } from "../notifications/notifications.service";
+import { NotificationType } from "../notifications/dto/notification.dto";
 import { ProductApplicationsService } from "../product-applications/product-applications.service";
+import { paginate, paginatedResponse, emptyPaginatedResponse, type PaginatedResponse } from "../../common/dto/paginated-query.dto";
+import { sanitizeSearch } from "../../common/utils/sanitize-search";
 
 @Injectable()
 export class TasksService {
@@ -58,7 +61,7 @@ export class TasksService {
    * Get all tasks assigned to the current user across all organizations
    * @param includeCompleted - If true, includes completed tasks in results
    */
-  async findMyTasks(userId: string, includeCompleted: boolean = false) {
+  async findMyTasks(userId: string, includeCompleted: boolean = false, page?: number, pageSize?: number) {
     const client = this.databaseService.getAdminClient();
 
     // First, get all organizations the user belongs to
@@ -75,7 +78,7 @@ export class TasksService {
     }
 
     if (!orgUsers || orgUsers.length === 0) {
-      return [];
+      return emptyPaginatedResponse(page ?? 1, pageSize ?? 50);
     }
 
     const organizationIds = orgUsers.map((ou) => ou.organization_id);
@@ -85,7 +88,6 @@ export class TasksService {
       ? ["pending", "assigned", "in_progress", "completed"]
       : ["pending", "assigned", "in_progress"];
 
-    // Get tasks where user is assigned (via assigned_user_id) or linked to a worker
     const { data: tasks, error } = await client
       .from("tasks")
       .select(
@@ -98,7 +100,6 @@ export class TasksService {
       `,
       )
       .in("organization_id", organizationIds)
-      .or(`assigned_user_id.eq.${userId}`)
       .in("status", statuses)
       .order("scheduled_start", { ascending: true, nullsFirst: false });
 
@@ -106,14 +107,13 @@ export class TasksService {
       throw new Error(`Failed to fetch user tasks: ${error.message}`);
     }
 
-    // Filter to only include tasks where user is directly assigned or assigned via worker
     const userTasks = (tasks || []).filter((task) => {
-      if (task.assigned_user_id === userId) return true;
+      if (task.created_by === userId) return true;
       if (task.worker?.user_id === userId) return true;
       return false;
     });
 
-    return userTasks.map((task) => ({
+    const mapTask = (task: any) => ({
       ...task,
       worker_name: task.worker
         ? `${task.worker.first_name} ${task.worker.last_name}`
@@ -127,7 +127,14 @@ export class TasksService {
       organization_name: Array.isArray(task.organization)
         ? task.organization[0]?.name
         : task.organization?.name,
-    }));
+    });
+
+    const effectivePage = page ?? 1;
+    const effectivePageSize = pageSize ?? 50;
+    const from = (effectivePage - 1) * effectivePageSize;
+    const paginatedTasks = userTasks.slice(from, from + effectivePageSize);
+
+    return paginatedResponse(paginatedTasks.map(mapTask), userTasks.length, effectivePage, effectivePageSize);
   }
 
   async findAll(
@@ -139,86 +146,39 @@ export class TasksService {
     const client = this.databaseService.getAdminClient();
 
     const page = filters?.page ? parseInt(filters.page, 10) : 1;
-    const pageSize = filters?.pageSize ? parseInt(filters.pageSize, 10) : 10;
+    const pageSize = filters?.pageSize ? parseInt(filters.pageSize, 10) : 50;
     const sortBy = filters?.sortBy || "scheduled_start";
     const sortDir = filters?.sortDir || "desc";
-    const hasPagination =
-      filters?.page !== undefined || filters?.pageSize !== undefined;
 
     const applyFilters = (q: any) => {
-      if (filters?.status) {
-        const statuses = filters.status.split(",");
-        q = q.in("status", statuses);
-      }
-      if (filters?.priority) {
-        const priorities = filters.priority.split(",");
-        q = q.in("priority", priorities);
-      }
-      if (filters?.task_type) {
-        const types = filters.task_type.split(",");
-        q = q.in("task_type", types);
-      }
-      if (filters?.assigned_to) {
-        q = q.eq("assigned_to", filters.assigned_to);
-      }
-      if (filters?.farm_id) {
-        q = q.eq("farm_id", filters.farm_id);
-      }
-      if (filters?.parcel_id) {
-        q = q.eq("parcel_id", filters.parcel_id);
-      }
-      if (filters?.date_from) {
-        q = q.gte("scheduled_start", filters.date_from);
-      }
-      if (filters?.date_to) {
-        q = q.lte("scheduled_start", filters.date_to);
-      }
-      if (filters?.search) {
-        q = q.or(
-          `title.ilike.%${filters.search}%,description.ilike.%${filters.search}%`,
-        );
-      }
+      q = q.eq("organization_id", organizationId);
+      if (filters?.status) q = q.in("status", filters.status.split(","));
+      if (filters?.priority) q = q.in("priority", filters.priority.split(","));
+      if (filters?.task_type) q = q.in("task_type", filters.task_type.split(","));
+      if (filters?.assigned_to) q = q.eq("assigned_to", filters.assigned_to);
+      if (filters?.farm_id) q = q.eq("farm_id", filters.farm_id);
+      if (filters?.parcel_id) q = q.eq("parcel_id", filters.parcel_id);
+      if (filters?.crop_cycle_id) q = q.eq("crop_cycle_id", filters.crop_cycle_id);
+      if (filters?.campaign_id) q = q.eq("campaign_id", filters.campaign_id);
+      if (filters?.date_from) q = q.gte("scheduled_start", filters.date_from);
+      if (filters?.date_to) q = q.lte("scheduled_start", filters.date_to);
+      if (filters?.search) { const s = sanitizeSearch(filters.search); if (s) q = q.or(`title.ilike.%${s}%,description.ilike.%${s}%`); }
       return q;
     };
 
-    let query = client
-      .from("tasks")
-      .select(
-        `
+    return paginate(client, "tasks", {
+      select: `
         *,
         worker:workers!assigned_to(first_name, last_name),
         farm:farms!farm_id(name),
         parcel:parcels!parcel_id(name)
       `,
-      )
-      .eq("organization_id", organizationId);
-
-    query = applyFilters(query);
-    query = query.order(sortBy, {
+      filters: applyFilters,
+      page,
+      pageSize,
+      orderBy: sortBy,
       ascending: sortDir === "asc",
-      nullsFirst: false,
-    });
-
-    if (hasPagination) {
-      let countQuery = client
-        .from("tasks")
-        .select("id", { count: "exact", head: true })
-        .eq("organization_id", organizationId);
-      countQuery = applyFilters(countQuery);
-
-      const { count } = await countQuery;
-
-      const from = (page - 1) * pageSize;
-      const to = from + pageSize - 1;
-      query = query.range(from, to);
-
-      const { data: tasks, error } = await query;
-
-      if (error) {
-        throw new Error(`Failed to fetch tasks: ${error.message}`);
-      }
-
-      const mappedTasks = (tasks || []).map((task) => ({
+      map: (task) => ({
         ...task,
         worker_name: task.worker
           ? `${task.worker.first_name} ${task.worker.last_name}`
@@ -229,35 +189,8 @@ export class TasksService {
         parcel_name: Array.isArray(task.parcel)
           ? task.parcel[0]?.name
           : task.parcel?.name,
-      }));
-
-      return {
-        data: mappedTasks,
-        total: count || 0,
-        page,
-        pageSize,
-        totalPages: Math.ceil((count || 0) / pageSize),
-      };
-    }
-
-    const { data: tasks, error } = await query;
-
-    if (error) {
-      throw new Error(`Failed to fetch tasks: ${error.message}`);
-    }
-
-    return (tasks || []).map((task) => ({
-      ...task,
-      worker_name: task.worker
-        ? `${task.worker.first_name} ${task.worker.last_name}`
-        : undefined,
-      farm_name: Array.isArray(task.farm)
-        ? task.farm[0]?.name
-        : task.farm?.name,
-      parcel_name: Array.isArray(task.parcel)
-        ? task.parcel[0]?.name
-        : task.parcel?.name,
-    }));
+      }),
+    });
   }
 
   /**
@@ -386,6 +319,17 @@ export class TasksService {
       );
     }
 
+    // Generate recurring tasks if recurrence_rule is set
+    if (!isUpdate && createTaskDto.recurrence_rule && task) {
+      try {
+        await this.generateRecurringTasks(organizationId, task, createTaskDto);
+      } catch (recurrenceError) {
+        this.logger.error(
+          `Failed to generate recurring tasks for task ${task.id}: ${recurrenceError.message}`,
+        );
+      }
+    }
+
     return {
       ...task,
       worker_name: task.worker
@@ -398,6 +342,112 @@ export class TasksService {
         ? task.parcel[0]?.name
         : task.parcel?.name,
     };
+  }
+
+  /**
+   * Generate recurring task instances based on recurrence_rule
+   * Creates future tasks up to recurrence_end_date or max 52 instances (1 year)
+   */
+  private async generateRecurringTasks(
+    organizationId: string,
+    parentTask: any,
+    dto: CreateTaskDto,
+  ) {
+    const client = this.databaseService.getAdminClient();
+    const rule = dto.recurrence_rule;
+    const maxInstances = 52;
+
+    const endDate = dto.recurrence_end_date
+      ? new Date(dto.recurrence_end_date)
+      : new Date(Date.now() + 365 * 24 * 60 * 60 * 1000); // 1 year from now
+
+    const baseDate = dto.scheduled_start
+      ? new Date(dto.scheduled_start)
+      : dto.due_date
+        ? new Date(dto.due_date)
+        : new Date();
+
+    const recurringTasks: any[] = [];
+
+    for (let i = 1; i <= maxInstances; i++) {
+      const nextDate = new Date(baseDate);
+
+      switch (rule) {
+        case 'daily':
+          nextDate.setDate(nextDate.getDate() + i);
+          break;
+        case 'weekly':
+          nextDate.setDate(nextDate.getDate() + i * 7);
+          break;
+        case 'biweekly':
+          nextDate.setDate(nextDate.getDate() + i * 14);
+          break;
+        case 'monthly':
+          nextDate.setMonth(nextDate.getMonth() + i);
+          break;
+        case 'quarterly':
+          nextDate.setMonth(nextDate.getMonth() + i * 3);
+          break;
+        case 'yearly':
+          nextDate.setFullYear(nextDate.getFullYear() + i);
+          break;
+        default:
+          return;
+      }
+
+      if (nextDate > endDate) break;
+
+      const taskRecord: Record<string, any> = {
+        organization_id: organizationId,
+        farm_id: parentTask.farm_id,
+        title: parentTask.title,
+        description: parentTask.description,
+        task_type: parentTask.task_type,
+        priority: parentTask.priority,
+        category_id: parentTask.category_id || null,
+        parcel_id: parentTask.parcel_id || null,
+        crop_id: parentTask.crop_id || null,
+        assigned_to: parentTask.assigned_to || null,
+        estimated_duration: parentTask.estimated_duration,
+        required_skills: parentTask.required_skills,
+        equipment_required: parentTask.equipment_required,
+        weather_dependency: parentTask.weather_dependency ?? false,
+        cost_estimate: parentTask.cost_estimate,
+        notes: parentTask.notes,
+        status: 'pending',
+        completion_percentage: 0,
+        parent_task_id: parentTask.id,
+        recurrence_rule: rule,
+      };
+
+      if (dto.scheduled_start) {
+        taskRecord.scheduled_start = nextDate.toISOString();
+        if (dto.scheduled_end && dto.scheduled_start) {
+          const duration = new Date(dto.scheduled_end).getTime() - new Date(dto.scheduled_start).getTime();
+          taskRecord.scheduled_end = new Date(nextDate.getTime() + duration).toISOString();
+        }
+      }
+      if (dto.due_date) {
+        const dueDateOffset = dto.scheduled_start
+          ? new Date(dto.due_date).getTime() - new Date(dto.scheduled_start).getTime()
+          : 0;
+        taskRecord.due_date = new Date(nextDate.getTime() + dueDateOffset).toISOString().split('T')[0];
+      }
+
+      recurringTasks.push(taskRecord);
+    }
+
+    if (recurringTasks.length > 0) {
+      const { error } = await client.from('tasks').insert(recurringTasks);
+
+      if (error) {
+        throw new Error(`Failed to insert recurring tasks: ${error.message}`);
+      }
+
+      this.logger.log(
+        `Generated ${recurringTasks.length} recurring task instances for parent task ${parentTask.id}`,
+      );
+    }
   }
 
   /**
@@ -416,7 +466,7 @@ export class TasksService {
     const { data: existingTask } = await client
       .from("tasks")
       .select(
-        "id, status, assigned_to, start_date, end_date, title, task_type, farm_id, organization_id, due_date, parcel_id",
+        "id, status, assigned_to, scheduled_start, scheduled_end, title, task_type, farm_id, organization_id, due_date, parcel_id",
       )
       .eq("id", taskId)
       .eq("organization_id", organizationId)
@@ -438,7 +488,7 @@ export class TasksService {
       .select(
         `
         *,
-        worker:workers!assigned_to(first_name, last_name, payment_type, hourly_rate, daily_rate),
+        worker:workers!assigned_to(first_name, last_name, worker_type, daily_rate, per_unit_rate, monthly_salary),
         farm:farms!farm_id(name),
         parcel:parcels!parcel_id(name)
       `,
@@ -457,6 +507,63 @@ export class TasksService {
         // Log error but don't fail the task update
         this.logger.error(
           `Failed to create work record for task ${taskId}: ${workRecordError}`,
+        );
+      }
+    }
+
+    // Auto time tracking on status transitions
+    if (updateTaskDto.status && updateTaskDto.status !== existingTask.status) {
+      if (updateTaskDto.status === "in_progress" && task.assigned_to) {
+        // Resumed → clock in
+        await this.autoClockIn(taskId, task.assigned_to);
+      } else if (
+        existingTask.status === "in_progress" &&
+        ["paused", "completed", "cancelled", "on_hold"].includes(updateTaskDto.status)
+      ) {
+        // Left in_progress → clock out
+        await this.autoClockOut(taskId);
+      }
+    }
+
+    // Send notification when task status changes
+    if (updateTaskDto.status && updateTaskDto.status !== existingTask.status) {
+      try {
+        // Notify the assigned worker (if they have a user account)
+        if (existingTask.assigned_to) {
+          const { data: assignedWorker } = await client
+            .from("workers")
+            .select("user_id, first_name, last_name")
+            .eq("id", existingTask.assigned_to)
+            .maybeSingle();
+
+          if (assignedWorker?.user_id) {
+            const statusLabels: Record<string, string> = {
+              pending: "pending",
+              in_progress: "in progress",
+              completed: "completed",
+              cancelled: "cancelled",
+              on_hold: "on hold",
+            };
+            const statusLabel = statusLabels[updateTaskDto.status] || updateTaskDto.status;
+
+            await this.notificationsService.createNotification({
+              userId: assignedWorker.user_id,
+              organizationId,
+              type: NotificationType.TASK_STATUS_CHANGED,
+              title: `Task "${existingTask.title || "Untitled"}" is now ${statusLabel}`,
+              message: `The status of your task has been updated to ${statusLabel}`,
+              data: {
+                taskId,
+                previousStatus: existingTask.status,
+                newStatus: updateTaskDto.status,
+              },
+            });
+          }
+        }
+      } catch (notifError) {
+        // Don't fail the update if notification fails
+        this.logger.warn(
+          `Failed to send task status change notification: ${notifError.message}`,
         );
       }
     }
@@ -505,27 +612,31 @@ export class TasksService {
     }
     // Calculate hours worked from task duration
     const hoursWorked =
-      task.start_date && task.end_date
-        ? (new Date(task.end_date).getTime() -
-            new Date(task.start_date).getTime()) /
+      task.actual_start && task.actual_end
+        ? (new Date(task.actual_end).getTime() -
+            new Date(task.actual_start).getTime()) /
           (1000 * 60 * 60)
         : 0;
-    // Calculate payment based on worker payment type
+    // Calculate payment based on worker type
     let totalPayment = 0;
     if (
-      worker.payment_type === "hourly" &&
-      worker.hourly_rate &&
+      worker.worker_type === "daily_worker" &&
+      worker.daily_rate &&
       hoursWorked > 0
     ) {
-      totalPayment = worker.hourly_rate * hoursWorked;
-    } else if (worker.payment_type === "daily" && worker.daily_rate) {
+      // Prorate daily rate by hours (assume 8h day)
+      totalPayment = (worker.daily_rate / 8) * hoursWorked;
+    } else if (worker.worker_type === "daily_worker" && worker.daily_rate) {
       totalPayment = worker.daily_rate;
+    } else if (worker.worker_type === "fixed_salary" && worker.monthly_salary) {
+      // Prorate monthly salary for a single day
+      totalPayment = worker.monthly_salary / 26;
     }
     // Determine work date
     const workDate = task.due_date
       ? new Date(task.due_date)
-      : task.end_date
-        ? new Date(task.end_date)
+      : task.actual_end
+        ? new Date(task.actual_end)
         : new Date();
     const { error: workRecordError } = await client
       .from("work_records")
@@ -533,12 +644,12 @@ export class TasksService {
         farm_id: farmId,
         organization_id: task.organization_id,
         worker_id: task.assigned_to,
-        worker_type: worker.payment_type,
+        worker_type: worker.worker_type,
         work_date: workDate.toISOString().split("T")[0],
         hours_worked: hoursWorked > 0 ? hoursWorked : null,
         task_description: task.title || "Task completed",
-        hourly_rate: worker.hourly_rate,
-        total_payment: totalPayment > 0 ? totalPayment : null,
+        hourly_rate: worker.daily_rate ? Math.round((worker.daily_rate / 8) * 100) / 100 : null,
+        total_payment: totalPayment > 0 ? Math.round(totalPayment * 100) / 100 : null,
         payment_status: totalPayment > 0 ? "pending" : "not_applicable",
         notes: JSON.stringify({
           task_id: task.id,
@@ -586,6 +697,93 @@ export class TasksService {
     }
 
     return { message: "Task deleted successfully" };
+  }
+
+  /**
+   * Bulk create tasks
+   */
+  async bulkCreate(userId: string, organizationId: string, tasks: CreateTaskDto[]) {
+    await this.verifyOrganizationAccess(userId, organizationId);
+    const client = this.databaseService.getAdminClient();
+
+    const taskRecords = tasks.map((dto) => ({
+      ...dto,
+      organization_id: organizationId,
+      status: "pending",
+      completion_percentage: 0,
+      weather_dependency: dto.weather_dependency ?? false,
+    }));
+
+    const { data, error } = await client
+      .from("tasks")
+      .insert(taskRecords)
+      .select(
+        `
+        *,
+        worker:workers!assigned_to(first_name, last_name),
+        farm:farms!farm_id(name),
+        parcel:parcels!parcel_id(name)
+      `,
+      );
+
+    if (error) {
+      throw new Error(`Failed to bulk create tasks: ${error.message}`);
+    }
+
+    return (data || []).map((task) => ({
+      ...task,
+      worker_name: task.worker
+        ? `${task.worker.first_name} ${task.worker.last_name}`
+        : undefined,
+      farm_name: Array.isArray(task.farm)
+        ? task.farm[0]?.name
+        : task.farm?.name,
+      parcel_name: Array.isArray(task.parcel)
+        ? task.parcel[0]?.name
+        : task.parcel?.name,
+    }));
+  }
+
+  /**
+   * Bulk update status of multiple tasks
+   */
+  async bulkUpdateStatus(userId: string, organizationId: string, taskIds: string[], status: string) {
+    await this.verifyOrganizationAccess(userId, organizationId);
+    const client = this.databaseService.getAdminClient();
+
+    const { data, error } = await client
+      .from("tasks")
+      .update({ status })
+      .eq("organization_id", organizationId)
+      .in("id", taskIds)
+      .select("id, status");
+
+    if (error) {
+      throw new Error(`Failed to bulk update task status: ${error.message}`);
+    }
+
+    return { updated: data?.length || 0, tasks: data || [] };
+  }
+
+  /**
+   * Bulk delete multiple tasks
+   */
+  async bulkDelete(userId: string, organizationId: string, taskIds: string[]) {
+    await this.verifyOrganizationAccess(userId, organizationId);
+    const client = this.databaseService.getAdminClient();
+
+    const { data, error } = await client
+      .from("tasks")
+      .delete()
+      .eq("organization_id", organizationId)
+      .in("id", taskIds)
+      .select("id");
+
+    if (error) {
+      throw new Error(`Failed to bulk delete tasks: ${error.message}`);
+    }
+
+    return { deleted: data?.length || 0 };
   }
 
   /**
@@ -718,7 +916,7 @@ export class TasksService {
     const { data: existingTask } = await client
       .from("tasks")
       .select(
-        "id, title, task_type, actual_cost, assigned_to, scheduled_start, scheduled_end, farm_id, parcel_id, payment_type, units_required, rate_per_unit, work_unit_id",
+        "id, title, task_type, actual_cost, assigned_to, scheduled_start, scheduled_end, farm_id, parcel_id, payment_type, units_required, rate_per_unit, work_unit_id, forfait_amount",
       )
       .eq("id", taskId)
       .eq("organization_id", organizationId)
@@ -755,6 +953,9 @@ export class TasksService {
     if (error) {
       throw new Error(`Failed to complete task: ${error.message}`);
     }
+
+    // Auto clock-out any active time sessions
+    await this.autoClockOut(taskId);
 
     // Create work record if task is assigned to a worker
     // This connects the task system with the worker payment system
@@ -796,57 +997,153 @@ export class TasksService {
               hoursWorked = Math.round(calculatedHours * 100) / 100;
             }
           }
-        // Handle per-unit payment tasks
-          const isPerUnitTask = existingTask.payment_type === "per_unit";
-          const unitsCompleted =
-            completeTaskDto.units_completed ??
-            (isPerUnitTask ? existingTask.units_required : null);
-          const ratePerUnit =
-            completeTaskDto.rate_per_unit ?? existingTask.rate_per_unit;
-          const workUnitId =
-          completeTaskDto.work_unit_id ?? existingTask.work_unit_id;
-          let totalPayment: number | null = null;
-          if (isPerUnitTask && unitsCompleted && ratePerUnit) {
-            totalPayment = unitsCompleted * ratePerUnit;
+        // Fetch all active task assignments (additional workers beyond assigned_to)
+          const { data: taskAssignments } = await client
+            .from('task_assignments')
+            .select('worker_id, payment_included_in_salary, bonus_amount, units_completed, hours_worked')
+            .eq('task_id', taskId)
+            .neq('status', 'removed');
+
+          // Build list of all workers from task_assignments (includes primary worker)
+          const allWorkers: Array<{
+            worker_id: string;
+            payment_included_in_salary: boolean;
+            bonus_amount: number | null;
+            units_completed_override: number | null;
+            hours_worked_override: number | null;
+          }> = [];
+
+          const assignmentWorkerIds = new Set((taskAssignments || []).map((a: any) => a.worker_id));
+
+          // Add all workers from task_assignments
+          for (const assignment of taskAssignments || []) {
+            allWorkers.push({
+              worker_id: assignment.worker_id,
+              payment_included_in_salary: assignment.payment_included_in_salary ?? false,
+              bonus_amount: assignment.bonus_amount ?? null,
+              units_completed_override: assignment.units_completed ?? null,
+              hours_worked_override: assignment.hours_worked ?? null,
+            });
           }
 
-          const { data: workRecord, error: workRecordError } = await client
-            .from("work_records")
-            .insert({
+          // Fallback: if primary worker not in task_assignments, add them
+          if (existingTask.assigned_to && !assignmentWorkerIds.has(existingTask.assigned_to)) {
+            allWorkers.unshift({
               worker_id: existingTask.assigned_to,
-              farm_id: farmId,
-              organization_id: organizationId,
-              worker_type: isPerUnitTask ? "per_unit" : "daily",
-              work_date: now.split("T")[0],
-              hours_worked: hoursWorked,
-              task_description: `Tâche: ${existingTask.title || "Sans titre"} (ID: ${taskId})`,
-              payment_status: totalPayment ? "pending" : "not_applicable",
-              total_payment: totalPayment,
-              task_id: taskId,
-              units_completed: unitsCompleted,
-              rate_per_unit: ratePerUnit,
-              work_unit_id: workUnitId,
-              notes: JSON.stringify({
+              payment_included_in_salary: false,
+              bonus_amount: null,
+              units_completed_override: null,
+              hours_worked_override: null,
+            });
+          }
+
+          const isPerUnitTask = existingTask.payment_type === "per_unit";
+          const isForfaitTask = existingTask.payment_type === "forfait";
+          const ratePerUnit = completeTaskDto.rate_per_unit ?? existingTask.rate_per_unit;
+          const workUnitId = completeTaskDto.work_unit_id ?? existingTask.work_unit_id;
+
+          // Pre-validate accounting mappings if any worker may have payments
+          const hasPayableWorkers = allWorkers.some(w => !w.payment_included_in_salary);
+          if (hasPayableWorkers) {
+            const laborAccountId = await this.accountingAutomationService.resolveAccountId(organizationId, 'cost_type', 'labor');
+            const cashAccountId = await this.accountingAutomationService.resolveAccountId(organizationId, 'cash', 'bank');
+            if (!laborAccountId || !cashAccountId) {
+              throw new BadRequestException(
+                'Account mappings not configured for cost_type: labor. Please configure account mappings before completing tasks with payments.',
+              );
+            }
+          }
+
+          // Create work record for each worker
+          for (const workerEntry of allWorkers) {
+            // Determine units for this worker
+            // 1. Check worker_completions from DTO
+            const workerCompletion = (completeTaskDto as any).worker_completions?.find(
+              (wc: any) => wc.worker_id === workerEntry.worker_id
+            );
+            // For multi-worker per-unit tasks, units MUST come from worker_completions (per-worker input)
+            // Never divide dto.units_completed equally — each worker's contribution is tracked individually
+            const workerUnits = workerCompletion?.units_completed
+              ?? workerEntry.units_completed_override
+              ?? (allWorkers.length > 1 ? null : completeTaskDto.units_completed)
+              ?? (isPerUnitTask ? existingTask.units_required : null);
+            const workerHours = workerCompletion?.hours_worked
+              ?? workerEntry.hours_worked_override
+              ?? hoursWorked;
+
+            // For fixed salary workers with payment_included_in_salary = true, skip work record
+            if (workerEntry.payment_included_in_salary) {
+              this.logger.log(`Skipping work record for worker ${workerEntry.worker_id}: payment included in salary`);
+              continue;
+            }
+
+            let totalPayment: number | null = null;
+            if (workerEntry.bonus_amount) {
+              totalPayment = workerEntry.bonus_amount;
+            } else if (isForfaitTask && existingTask.forfait_amount) {
+              // Split forfait equally among non-salary workers
+              const billableWorkers = allWorkers.filter(w => !w.payment_included_in_salary).length;
+              totalPayment = existingTask.forfait_amount / (billableWorkers || 1);
+            } else if (isPerUnitTask && workerUnits && ratePerUnit) {
+              totalPayment = workerUnits * ratePerUnit;
+            }
+
+            const { data: workRecord, error: workRecordError } = await client
+              .from("work_records")
+              .insert({
+                worker_id: workerEntry.worker_id,
+                farm_id: farmId,
+                organization_id: organizationId,
+                worker_type: isForfaitTask ? "forfait" : isPerUnitTask ? "per_unit" : "daily",
+                work_date: now.split("T")[0],
+                hours_worked: workerHours,
+                task_description: `Tâche: ${existingTask.title || "Sans titre"} (ID: ${taskId})`,
+                payment_status: totalPayment ? "pending" : "not_applicable",
+                total_payment: totalPayment,
+                amount_paid: totalPayment,
                 task_id: taskId,
-                task_type: existingTask.task_type,
-                payment_type: existingTask.payment_type,
-                parcel_id: existingTask.parcel_id,
-                completed_at: now,
-              }),
-            })
-            .select()
-          .single();
-          if (workRecordError) {
-            this.logger.warn(
-              `Failed to create work record for task ${taskId}: ${workRecordError.message}`,
-            );
-          } else {
-            this.logger.log(
-              `Work record created automatically for task ${taskId}, worker ${existingTask.assigned_to}` +
-                (isPerUnitTask
-                  ? `, units: ${unitsCompleted}, payment: ${totalPayment}`
-                  : ""),
-            );
+                units_completed: workerUnits,
+                rate_per_unit: isForfaitTask ? null : ratePerUnit,
+                work_unit_id: workUnitId,
+                payment_included_in_salary: workerEntry.payment_included_in_salary ?? false,
+                notes: JSON.stringify({
+                  task_id: taskId,
+                  task_type: existingTask.task_type,
+                  payment_type: existingTask.payment_type,
+                  parcel_id: existingTask.parcel_id,
+                  completed_at: now,
+                }),
+              })
+              .select('id')
+              .single();
+
+            if (workRecordError) {
+              this.logger.warn(`Failed to create work record for worker ${workerEntry.worker_id}: ${workRecordError.message}`);
+            } else {
+              this.logger.log(`Work record created for task ${taskId}, worker ${workerEntry.worker_id}`);
+
+              // Create journal entry for labor cost
+              if (totalPayment && totalPayment > 0 && workRecord) {
+                try {
+                  await this.accountingAutomationService.createJournalEntryFromCost(
+                    organizationId,
+                    workRecord.id,
+                    'labor',
+                    totalPayment,
+                    new Date(now.split("T")[0]),
+                    `Task labor: ${existingTask.title || 'Sans titre'}`,
+                    userId,
+                    existingTask.parcel_id || undefined,
+                  );
+                  this.logger.log(`Labor journal entry created for work record ${workRecord.id}, worker ${workerEntry.worker_id}`);
+                } catch (journalError) {
+                  this.logger.error(
+                    `Failed to create labor journal entry for work record ${workRecord.id}: ${journalError.message}`,
+                    journalError.stack,
+                  );
+                }
+              }
+            }
           }
         } // end else (farmId exists)
       } catch (workRecordError) {
@@ -873,6 +1170,7 @@ export class TasksService {
           new Date(now),
           completeTaskDto.notes || `Cost for completed task: ${task.title}`,
           userId,
+          task.parcel_id || undefined,
         );
 
         this.logger.log(
@@ -897,15 +1195,6 @@ export class TasksService {
       );
     }
 
-    // Process consumed items - deduct from stock
-    await this.processConsumedItems(
-      userId,
-      organizationId,
-      taskId,
-      task,
-      completeTaskDto.consumed_items,
-    );
-
     return {
       ...task,
       worker_name: task.worker
@@ -918,6 +1207,45 @@ export class TasksService {
         ? task.parcel[0]?.name
         : task.parcel?.name,
     };
+  }
+
+  /**
+   * Start a task — sets status to in_progress and deducts planned stock immediately
+   */
+  async startTask(userId: string, organizationId: string, taskId: string): Promise<any> {
+    await this.verifyOrganizationAccess(userId, organizationId);
+    const client = this.databaseService.getAdminClient();
+
+    const { data: task, error } = await client
+      .from('tasks')
+      .select('*, worker:workers!assigned_to(first_name, last_name), farm:farms!farm_id(name), parcel:parcels!parcel_id(name)')
+      .eq('id', taskId)
+      .eq('organization_id', organizationId)
+      .maybeSingle();
+
+    if (error || !task) throw new Error('Task not found');
+
+    if (!['pending', 'assigned'].includes(task.status)) {
+      throw new Error(`Cannot start a task with status "${task.status}"`);
+    }
+
+    // Update status to in_progress
+    const { data: updated } = await client
+      .from('tasks')
+      .update({ status: 'in_progress', actual_start: new Date().toISOString() })
+      .eq('id', taskId)
+      .select()
+      .single();
+
+    // Auto clock-in to start time tracking
+    if (task.assigned_to) {
+      await this.autoClockIn(taskId, task.assigned_to);
+    }
+
+    // Deduct planned stock immediately — workers are taking the product now
+    await this.processConsumedItems(userId, organizationId, taskId, task);
+
+    return updated;
   }
 
   /**
@@ -935,7 +1263,7 @@ export class TasksService {
     // Verify task belongs to organization and is a harvest task
     const { data: existingTask } = await client
       .from("tasks")
-      .select("id, task_type, farm_id, parcel_id, assigned_to, notes")
+      .select("id, task_type, farm_id, parcel_id, assigned_to, notes, payment_type, rate_per_unit, title")
       .eq("id", taskId)
       .eq("organization_id", organizationId)
       .maybeSingle();
@@ -1035,6 +1363,11 @@ export class TasksService {
       throw new Error(`Failed to update task: ${taskError.message}`);
     }
 
+    // Auto clock-out when completing (not for partial harvests which stay in_progress)
+    if (!isPartial) {
+      await this.autoClockOut(taskId);
+    }
+
     // Get parcel crop_type if crop_id is not provided (virtual crop from parcel)
     let cropId = completeDto.crop_id;
     if (!cropId && existingTask.parcel_id) {
@@ -1082,6 +1415,49 @@ export class TasksService {
       throw new Error(
         `Failed to create harvest record: ${harvestError.message}`,
       );
+    }
+
+    // Create work records for per-unit payment harvest tasks
+    if (existingTask.payment_type === 'per_unit' && completeDto.workers && completeDto.workers.length > 0) {
+      // Prefer rate from DTO (user entered in harvest form) over task rate
+      const ratePerUnit = (completeDto as any).rate_per_unit ?? existingTask.rate_per_unit;
+      // Get payment_included_in_salary from task_assignments
+      const { data: taskAssignments } = await client
+        .from('task_assignments')
+        .select('worker_id, payment_included_in_salary')
+        .eq('task_id', taskId);
+      const assignmentMap = new Map((taskAssignments || []).map((a: any) => [a.worker_id, a]));
+
+      for (const workerEntry of completeDto.workers) {
+        const units = workerEntry.quantity_picked ?? 0;
+        const paymentIncluded = (assignmentMap.get(workerEntry.worker_id) as any)?.payment_included_in_salary ?? false;
+        if (paymentIncluded) continue; // salary worker, skip work record
+
+        const totalPayment = (units > 0 && ratePerUnit) ? units * Number(ratePerUnit) : null;
+
+        const { error: workRecordError } = await client
+          .from('work_records')
+          .insert({
+            worker_id: workerEntry.worker_id,
+            farm_id: existingTask.farm_id,
+            organization_id: organizationId,
+            worker_type: 'per_unit',
+            work_date: completeDto.harvest_date,
+            hours_worked: workerEntry.hours_worked ?? 0,
+            task_description: `Récolte: ${existingTask.title || taskId}`,
+            payment_status: totalPayment ? 'pending' : 'not_applicable',
+            total_payment: totalPayment,
+            amount_paid: totalPayment,
+            task_id: taskId,
+            units_completed: units,
+            rate_per_unit: ratePerUnit,
+            payment_included_in_salary: false,
+            notes: JSON.stringify({ task_id: taskId, task_type: 'harvesting', is_partial: isPartial }),
+          });
+        if (workRecordError) {
+          this.logger.error(`Failed to create work record for worker ${workerEntry.worker_id}: ${workRecordError.message}`);
+        }
+      }
     }
 
     // Automatically create a reception batch for this harvest
@@ -1151,31 +1527,53 @@ export class TasksService {
     await this.verifyOrganizationAccess(userId, organizationId);
     const client = this.databaseService.getAdminClient();
 
-    const { data: tasks, error } = await client
+    const { data: tasks, error, count } = await client
       .from("tasks")
-      .select("*")
+      .select("id, status, due_date, actual_cost", { count: "exact" })
       .eq("organization_id", organizationId);
 
     if (error) {
       throw new Error(`Failed to fetch task statistics: ${error.message}`);
     }
 
-    const total_tasks = tasks?.length || 0;
-    const completed_tasks =
-      tasks?.filter((t) => t.status === "completed").length || 0;
-    const in_progress_tasks =
-      tasks?.filter((t) => t.status === "in_progress").length || 0;
-    const overdue_tasks =
-      tasks?.filter((t) => t.status === "overdue").length || 0;
+    const total_tasks = count || 0;
+    const today = new Date().toISOString().split("T")[0];
+
+    const statusCounts = {
+      pending: 0,
+      assigned: 0,
+      in_progress: 0,
+      completed: 0,
+      cancelled: 0,
+      on_hold: 0,
+    };
+
+    let overdue_tasks = 0;
+    let total_cost = 0;
+
+    for (const t of tasks || []) {
+      if (t.status in statusCounts) {
+        statusCounts[t.status]++;
+      }
+      // Overdue: due_date is in the past AND status is not completed or cancelled
+      if (
+        t.due_date &&
+        t.due_date < today &&
+        t.status !== "completed" &&
+        t.status !== "cancelled"
+      ) {
+        overdue_tasks++;
+      }
+      total_cost += t.actual_cost || 0;
+    }
 
     return {
       total_tasks,
-      completed_tasks,
-      in_progress_tasks,
+      ...statusCounts,
       overdue_tasks,
       completion_rate:
-        total_tasks > 0 ? (completed_tasks / total_tasks) * 100 : 0,
-      total_cost: tasks?.reduce((sum, t) => sum + (t.actual_cost || 0), 0) || 0,
+        total_tasks > 0 ? (statusCounts.completed / total_tasks) * 100 : 0,
+      total_cost,
     };
   }
 
@@ -1240,15 +1638,27 @@ export class TasksService {
   /**
    * Get all comments for a task
    */
-  async getComments(taskId: string) {
+  async getComments(organizationId: string, taskId: string) {
     const client = this.databaseService.getAdminClient();
 
+    // Verify the task belongs to the organization
+    const { data: task, error: taskError } = await client
+      .from("tasks")
+      .select("id")
+      .eq("id", taskId)
+      .eq("organization_id", organizationId)
+      .single();
+
+    if (taskError || !task) {
+      throw new NotFoundException("Task not found in this organization");
+    }
+
+    // Fetch comments with worker join only (user_profiles has no direct FK from task_comments)
     const { data, error } = await client
       .from("task_comments")
       .select(
         `
         *,
-        user:user_profiles!user_id(id, full_name, email),
         worker:workers!worker_id(first_name, last_name)
       `,
       )
@@ -1259,9 +1669,24 @@ export class TasksService {
       throw new Error(`Failed to fetch task comments: ${error.message}`);
     }
 
+    // Resolve user names from user_profiles in a batch
+    const userIds = [...new Set((data || []).map((c) => c.user_id).filter(Boolean))];
+    let userMap: Record<string, { full_name?: string; email?: string }> = {};
+
+    if (userIds.length > 0) {
+      const { data: profiles } = await client
+        .from("user_profiles")
+        .select("id, full_name, email")
+        .in("id", userIds);
+
+      if (profiles) {
+        userMap = Object.fromEntries(profiles.map((p) => [p.id, p]));
+      }
+    }
+
     return (data || []).map((comment) => ({
       ...comment,
-      user_name: comment.user?.full_name || comment.user?.email,
+      user_name: userMap[comment.user_id]?.full_name || userMap[comment.user_id]?.email || undefined,
       worker_name: comment.worker
         ? `${comment.worker.first_name} ${comment.worker.last_name}`
         : undefined,
@@ -1271,8 +1696,20 @@ export class TasksService {
   /**
    * Add a comment to a task
    */
-  async addComment(userId: string, taskId: string, commentData: any) {
+  async addComment(userId: string, organizationId: string, taskId: string, commentData: any) {
     const client = this.databaseService.getAdminClient();
+
+    // Verify the task belongs to the organization
+    const { data: taskRecord, error: taskCheckError } = await client
+      .from("tasks")
+      .select("id, title, organization_id")
+      .eq("id", taskId)
+      .eq("organization_id", organizationId)
+      .single();
+
+    if (taskCheckError || !taskRecord) {
+      throw new NotFoundException("Task not found in this organization");
+    }
 
     const { data, error } = await client
       .from("task_comments")
@@ -1281,6 +1718,7 @@ export class TasksService {
         user_id: userId,
         comment: commentData.comment,
         worker_id: commentData.worker_id || null,
+        type: commentData.type || 'comment',
       })
       .select()
       .single();
@@ -1289,7 +1727,541 @@ export class TasksService {
       throw new BadRequestException(`Failed to add comment: ${error.message}`);
     }
 
+    // Parse @mentions and send notifications
+    // Pattern: @[Display Name](user-uuid)
+    const mentionRegex = /@\[([^\]]+)\]\(([a-f0-9-]{36})\)/g;
+    let match: RegExpExecArray | null;
+    const mentionedUserIds = new Set<string>();
+
+    while ((match = mentionRegex.exec(commentData.comment)) !== null) {
+      const mentionedUserId = match[2];
+      if (mentionedUserId !== userId) {
+        mentionedUserIds.add(mentionedUserId);
+      }
+    }
+
+    // Get the commenter name for the notification
+    if (mentionedUserIds.size > 0) {
+      const task = taskRecord;
+
+      const { data: commenter } = await client
+        .from("user_profiles")
+        .select("full_name, email")
+        .eq("id", userId)
+        .maybeSingle();
+
+      const commenterName = commenter?.full_name || commenter?.email || "Someone";
+
+      // Persist structured mention rows so we can query "tasks that mention me"
+      // and keep an audit trail separate from the comment body.
+      const mentionRows = Array.from(mentionedUserIds).map((mid) => ({
+        comment_id: data.id,
+        task_id: taskId,
+        mentioned_user_id: mid,
+      }));
+      if (mentionRows.length > 0) {
+        const { error: mentionInsertError } = await client.from("task_mentions").insert(mentionRows);
+        if (mentionInsertError) {
+          this.logger.warn(`Failed to persist task_mentions: ${mentionInsertError.message}`);
+        }
+      }
+
+      for (const mentionedId of mentionedUserIds) {
+        try {
+          await this.notificationsService.createNotification({
+            userId: mentionedId,
+            organizationId: task?.organization_id || "",
+            type: NotificationType.TASK_MENTION || NotificationType.TASK_STATUS_CHANGED,
+            title: `${commenterName} mentioned you in "${task?.title || "a task"}"`,
+            message: commentData.comment.replace(/@\[([^\]]+)\]\([a-f0-9-]{36}\)/g, "@$1").substring(0, 200),
+            data: {
+              taskId,
+              commentId: data.id,
+              mentionedBy: userId,
+            },
+          });
+        } catch (notifError) {
+          this.logger.warn(`Failed to send mention notification to ${mentionedId}: ${notifError}`);
+        }
+      }
+    }
+
+    // Also notify watchers of new activity on the task
+    await this.notifyWatchersOfActivity(taskRecord, userId, commentData.comment);
+
     return data;
+  }
+
+  /**
+   * Update the body of a comment. Only the author can edit their own comment.
+   */
+  async updateComment(
+    userId: string,
+    organizationId: string,
+    taskId: string,
+    commentId: string,
+    updates: { comment?: string },
+  ) {
+    const client = this.databaseService.getAdminClient();
+    const { data: existing, error: fetchError } = await client
+      .from('task_comments')
+      .select('id, user_id, task_id, comment, tasks!inner(organization_id)')
+      .eq('id', commentId)
+      .eq('task_id', taskId)
+      .maybeSingle();
+    if (fetchError || !existing) throw new NotFoundException('Comment not found');
+    if ((existing as any).tasks.organization_id !== organizationId) {
+      throw new NotFoundException('Comment not in this organization');
+    }
+    if (existing.user_id !== userId) {
+      throw new ForbiddenException('You can only edit your own comments');
+    }
+    if (!updates.comment || !updates.comment.trim()) {
+      throw new BadRequestException('Comment body is required');
+    }
+    const { data, error } = await client
+      .from('task_comments')
+      .update({
+        comment: updates.comment,
+        edited_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', commentId)
+      .select()
+      .single();
+    if (error) throw new BadRequestException(`Failed to update comment: ${error.message}`);
+    return data;
+  }
+
+  /**
+   * Delete a comment. Author or any org admin can delete.
+   */
+  async deleteComment(
+    userId: string,
+    organizationId: string,
+    taskId: string,
+    commentId: string,
+  ) {
+    const client = this.databaseService.getAdminClient();
+    const { data: existing, error: fetchError } = await client
+      .from('task_comments')
+      .select('id, user_id, task_id, tasks!inner(organization_id)')
+      .eq('id', commentId)
+      .eq('task_id', taskId)
+      .maybeSingle();
+    if (fetchError || !existing) throw new NotFoundException('Comment not found');
+    if ((existing as any).tasks.organization_id !== organizationId) {
+      throw new NotFoundException('Comment not in this organization');
+    }
+    if (existing.user_id !== userId) {
+      // Allow admins too (org_admin policy)
+      const { data: orgUser } = await client
+        .from('organization_users')
+        .select('roles(name)')
+        .eq('user_id', userId)
+        .eq('organization_id', organizationId)
+        .eq('is_active', true)
+        .maybeSingle();
+      const roleName = (orgUser as any)?.roles?.name;
+      if (roleName !== 'organization_admin' && roleName !== 'system_admin') {
+        throw new ForbiddenException('You can only delete your own comments');
+      }
+    }
+    const { error } = await client.from('task_comments').delete().eq('id', commentId);
+    if (error) throw new BadRequestException(`Failed to delete comment: ${error.message}`);
+    return { success: true };
+  }
+
+  /**
+   * Mark an "issue" comment as resolved. Any org member can resolve.
+   */
+  async resolveComment(
+    userId: string,
+    organizationId: string,
+    taskId: string,
+    commentId: string,
+    resolved: boolean,
+  ) {
+    const client = this.databaseService.getAdminClient();
+    const { data: existing, error: fetchError } = await client
+      .from('task_comments')
+      .select('id, tasks!inner(organization_id)')
+      .eq('id', commentId)
+      .eq('task_id', taskId)
+      .maybeSingle();
+    if (fetchError || !existing) throw new NotFoundException('Comment not found');
+    if ((existing as any).tasks.organization_id !== organizationId) {
+      throw new NotFoundException('Comment not in this organization');
+    }
+    const { data, error } = await client
+      .from('task_comments')
+      .update({
+        resolved_at: resolved ? new Date().toISOString() : null,
+        resolved_by: resolved ? userId : null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', commentId)
+      .select()
+      .single();
+    if (error) throw new BadRequestException(`Failed to update comment: ${error.message}`);
+    return data;
+  }
+
+  /**
+   * Notify watchers when a comment or status change happens on a task they follow.
+   * Quiet no-op if the watchers table is empty.
+   */
+  private async notifyWatchersOfActivity(
+    task: { id: string; title?: string; organization_id: string },
+    actorUserId: string,
+    snippet?: string,
+  ) {
+    const client = this.databaseService.getAdminClient();
+    try {
+      const { data: watchers } = await client
+        .from('task_watchers')
+        .select('user_id')
+        .eq('task_id', task.id);
+      if (!watchers || watchers.length === 0) return;
+      for (const w of watchers) {
+        if (w.user_id === actorUserId) continue;
+        try {
+          await this.notificationsService.createNotification({
+            userId: w.user_id,
+            organizationId: task.organization_id,
+            type: NotificationType.TASK_STATUS_CHANGED,
+            title: `New activity on "${task.title || 'a task'}"`,
+            message: (snippet || '').substring(0, 160),
+            data: { taskId: task.id },
+          });
+        } catch (err) {
+          this.logger.warn(`Failed to notify watcher ${w.user_id}: ${err}`);
+        }
+      }
+    } catch (err) {
+      this.logger.warn(`Failed to query task watchers: ${err}`);
+    }
+  }
+
+  /**
+   * Watchers: list, follow, unfollow.
+   */
+  async getWatchers(organizationId: string, taskId: string) {
+    const client = this.databaseService.getAdminClient();
+    const { data, error } = await client
+      .from('task_watchers')
+      .select('id, user_id, created_at, user_profile:user_profiles!task_watchers_user_id_fkey(id, first_name, last_name, email)')
+      .eq('task_id', taskId)
+      .eq('organization_id', organizationId);
+    if (error) throw new BadRequestException(`Failed to load watchers: ${error.message}`);
+    return data ?? [];
+  }
+
+  async addWatcher(userId: string, organizationId: string, taskId: string) {
+    const client = this.databaseService.getAdminClient();
+    const { data, error } = await client
+      .from('task_watchers')
+      .upsert({ task_id: taskId, user_id: userId, organization_id: organizationId }, { onConflict: 'task_id,user_id' })
+      .select()
+      .single();
+    if (error) throw new BadRequestException(`Failed to follow task: ${error.message}`);
+    return data;
+  }
+
+  async removeWatcher(userId: string, organizationId: string, taskId: string) {
+    const client = this.databaseService.getAdminClient();
+    const { error } = await client
+      .from('task_watchers')
+      .delete()
+      .eq('task_id', taskId)
+      .eq('user_id', userId)
+      .eq('organization_id', organizationId);
+    if (error) throw new BadRequestException(`Failed to unfollow task: ${error.message}`);
+    return { success: true };
+  }
+
+  // =====================================================
+  // TASK CHECKLIST
+  // =====================================================
+
+  /**
+   * Get checklist for a task
+   */
+  async getChecklist(userId: string, organizationId: string, taskId: string) {
+    await this.verifyOrganizationAccess(userId, organizationId);
+    const client = this.databaseService.getAdminClient();
+
+    const { data, error } = await client
+      .from("tasks")
+      .select("checklist")
+      .eq("id", taskId)
+      .eq("organization_id", organizationId)
+      .maybeSingle();
+
+    if (error) throw new Error(`Failed to fetch checklist: ${error.message}`);
+    if (!data) throw new NotFoundException("Task not found");
+
+    return data.checklist || [];
+  }
+
+  /**
+   * Update entire checklist for a task
+   */
+  async updateChecklist(userId: string, organizationId: string, taskId: string, checklist: any[]) {
+    await this.verifyOrganizationAccess(userId, organizationId);
+    const client = this.databaseService.getAdminClient();
+
+    // Calculate completion percentage from checklist
+    const total = checklist.length;
+    const completed = checklist.filter((item: any) => item.completed).length;
+    const completion_percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+    const { data, error } = await client
+      .from("tasks")
+      .update({ checklist, completion_percentage })
+      .eq("id", taskId)
+      .eq("organization_id", organizationId)
+      .select("checklist, completion_percentage")
+      .single();
+
+    if (error) throw new Error(`Failed to update checklist: ${error.message}`);
+
+    return data;
+  }
+
+  /**
+   * Add a single checklist item
+   */
+  async addChecklistItem(userId: string, organizationId: string, taskId: string, title: string) {
+    const currentChecklist = await this.getChecklist(userId, organizationId, taskId);
+
+    const newItem = {
+      id: crypto.randomUUID(),
+      title,
+      completed: false,
+    };
+
+    const updatedChecklist = [...currentChecklist, newItem];
+    await this.updateChecklist(userId, organizationId, taskId, updatedChecklist);
+
+    return newItem;
+  }
+
+  /**
+   * Toggle a checklist item
+   */
+  async toggleChecklistItem(userId: string, organizationId: string, taskId: string, itemId: string) {
+    const currentChecklist = await this.getChecklist(userId, organizationId, taskId);
+
+    const updatedChecklist = currentChecklist.map((item: any) => {
+      if (item.id === itemId) {
+        return {
+          ...item,
+          completed: !item.completed,
+          completed_at: !item.completed ? new Date().toISOString() : null,
+          completed_by: !item.completed ? userId : null,
+        };
+      }
+      return item;
+    });
+
+    return this.updateChecklist(userId, organizationId, taskId, updatedChecklist);
+  }
+
+  /**
+   * Remove a checklist item
+   */
+  async removeChecklistItem(userId: string, organizationId: string, taskId: string, itemId: string) {
+    const currentChecklist = await this.getChecklist(userId, organizationId, taskId);
+    const updatedChecklist = currentChecklist.filter((item: any) => item.id !== itemId);
+    return this.updateChecklist(userId, organizationId, taskId, updatedChecklist);
+  }
+
+  // =====================================================
+  // TASK DEPENDENCIES
+  // =====================================================
+
+  /**
+   * Get all dependencies for a task (both "depends on" and "required by")
+   */
+  async getDependencies(userId: string, organizationId: string, taskId: string) {
+    await this.verifyOrganizationAccess(userId, organizationId);
+    const client = this.databaseService.getAdminClient();
+
+    // Get tasks this task depends on
+    const { data: dependsOn, error: error1 } = await client
+      .from("task_dependencies")
+      .select(`
+        id,
+        depends_on_task_id,
+        dependency_type,
+        lag_days,
+        created_at,
+        depends_on_task:tasks!depends_on_task_id(id, title, status, due_date, priority, assigned_to)
+      `)
+      .eq("task_id", taskId);
+
+    if (error1) throw new Error(`Failed to fetch dependencies: ${error1.message}`);
+
+    // Get tasks that depend on this task (blocked by this)
+    const { data: requiredBy, error: error2 } = await client
+      .from("task_dependencies")
+      .select(`
+        id,
+        task_id,
+        dependency_type,
+        lag_days,
+        created_at,
+        dependent_task:tasks!task_id(id, title, status, due_date, priority, assigned_to)
+      `)
+      .eq("depends_on_task_id", taskId);
+
+    if (error2) throw new Error(`Failed to fetch dependents: ${error2.message}`);
+
+    return {
+      depends_on: (dependsOn || []).map((d: any) => ({
+        id: d.id,
+        task_id: d.depends_on_task_id,
+        title: d.depends_on_task?.title,
+        status: d.depends_on_task?.status,
+        due_date: d.depends_on_task?.due_date,
+        priority: d.depends_on_task?.priority,
+        dependency_type: d.dependency_type,
+        lag_days: d.lag_days,
+      })),
+      required_by: (requiredBy || []).map((d: any) => ({
+        id: d.id,
+        task_id: d.task_id,
+        title: d.dependent_task?.title,
+        status: d.dependent_task?.status,
+        due_date: d.dependent_task?.due_date,
+        priority: d.dependent_task?.priority,
+        dependency_type: d.dependency_type,
+        lag_days: d.lag_days,
+      })),
+    };
+  }
+
+  /**
+   * Add a dependency between tasks
+   */
+  async addDependency(
+    userId: string,
+    organizationId: string,
+    taskId: string,
+    dependsOnTaskId: string,
+    dependencyType: string = 'finish_to_start',
+    lagDays: number = 0,
+  ) {
+    await this.verifyOrganizationAccess(userId, organizationId);
+    const client = this.databaseService.getAdminClient();
+
+    // Prevent self-dependency
+    if (taskId === dependsOnTaskId) {
+      throw new BadRequestException("A task cannot depend on itself");
+    }
+
+    // Check for circular dependency
+    const hasCircular = await this.checkCircularDependency(client, dependsOnTaskId, taskId);
+    if (hasCircular) {
+      throw new BadRequestException("Adding this dependency would create a circular reference");
+    }
+
+    // Check if dependency already exists
+    const { data: existing } = await client
+      .from("task_dependencies")
+      .select("id")
+      .eq("task_id", taskId)
+      .eq("depends_on_task_id", dependsOnTaskId)
+      .maybeSingle();
+
+    if (existing) {
+      throw new BadRequestException("This dependency already exists");
+    }
+
+    const { data, error } = await client
+      .from("task_dependencies")
+      .insert({
+        task_id: taskId,
+        depends_on_task_id: dependsOnTaskId,
+        dependency_type: dependencyType,
+        lag_days: lagDays,
+      })
+      .select()
+      .single();
+
+    if (error) throw new Error(`Failed to add dependency: ${error.message}`);
+
+    return data;
+  }
+
+  /**
+   * Remove a dependency
+   */
+  async removeDependency(userId: string, organizationId: string, dependencyId: string) {
+    await this.verifyOrganizationAccess(userId, organizationId);
+    const client = this.databaseService.getAdminClient();
+
+    const { error } = await client
+      .from("task_dependencies")
+      .delete()
+      .eq("id", dependencyId);
+
+    if (error) throw new Error(`Failed to remove dependency: ${error.message}`);
+
+    return { message: "Dependency removed successfully" };
+  }
+
+  /**
+   * Check if a task is blocked (has unfinished dependencies)
+   */
+  async isTaskBlocked(userId: string, organizationId: string, taskId: string): Promise<{ blocked: boolean; blockers: any[] }> {
+    await this.verifyOrganizationAccess(userId, organizationId);
+    const client = this.databaseService.getAdminClient();
+
+    const { data: deps } = await client
+      .from("task_dependencies")
+      .select(`
+        depends_on_task:tasks!depends_on_task_id(id, title, status)
+      `)
+      .eq("task_id", taskId)
+      .eq("dependency_type", "finish_to_start");
+
+    const blockers = (deps || [])
+      .filter((d: any) => d.depends_on_task?.status !== "completed")
+      .map((d: any) => ({
+        id: d.depends_on_task?.id,
+        title: d.depends_on_task?.title,
+        status: d.depends_on_task?.status,
+      }));
+
+    return { blocked: blockers.length > 0, blockers };
+  }
+
+  /**
+   * Check for circular dependencies using BFS
+   */
+  private async checkCircularDependency(client: any, fromTaskId: string, toTaskId: string): Promise<boolean> {
+    const visited = new Set<string>();
+    const queue = [fromTaskId];
+
+    while (queue.length > 0) {
+      const current = queue.shift()!;
+      if (current === toTaskId) return true;
+      if (visited.has(current)) continue;
+      visited.add(current);
+
+      const { data: deps } = await client
+        .from("task_dependencies")
+        .select("depends_on_task_id")
+        .eq("task_id", current);
+
+      for (const dep of deps || []) {
+        queue.push(dep.depends_on_task_id);
+      }
+    }
+
+    return false;
   }
 
   // =====================================================
@@ -1299,8 +2271,20 @@ export class TasksService {
   /**
    * Get all time logs for a task
    */
-  async getTimeLogs(taskId: string) {
+  async getTimeLogs(organizationId: string, taskId: string) {
     const client = this.databaseService.getAdminClient();
+
+    // Verify the task belongs to the organization
+    const { data: task, error: taskError } = await client
+      .from("tasks")
+      .select("id")
+      .eq("id", taskId)
+      .eq("organization_id", organizationId)
+      .single();
+
+    if (taskError || !task) {
+      throw new NotFoundException("Task not found in this organization");
+    }
 
     const { data, error } = await client
       .from("task_time_logs")
@@ -1381,8 +2365,25 @@ export class TasksService {
   /**
    * Clock out from a task (end time tracking)
    */
-  async clockOut(userId: string, timeLogId: string, clockOutData: any) {
+  async clockOut(userId: string, organizationId: string, timeLogId: string, clockOutData: any) {
+    await this.verifyOrganizationAccess(userId, organizationId);
     const client = this.databaseService.getAdminClient();
+
+    // First verify the time log belongs to a task in this organization
+    const { data: timeLog, error: fetchError } = await client
+      .from("task_time_logs")
+      .select("id, task:tasks!task_id(id, organization_id)")
+      .eq("id", timeLogId)
+      .single();
+
+    if (fetchError || !timeLog) {
+      throw new NotFoundException("Time log not found");
+    }
+
+    const taskOrg = (timeLog.task as any)?.organization_id;
+    if (taskOrg !== organizationId) {
+      throw new ForbiddenException("Time log does not belong to this organization");
+    }
 
     const { data, error } = await client
       .from("task_time_logs")
@@ -1390,6 +2391,8 @@ export class TasksService {
         end_time: new Date().toISOString(),
         break_duration: clockOutData.break_duration || 0,
         notes: clockOutData.notes || null,
+        units_completed: clockOutData.units_completed ?? null,
+        photo_url: clockOutData.photo_url ?? null,
       })
       .eq("id", timeLogId)
       .select("*, task:tasks!task_id(id, organization_id)")
@@ -1400,6 +2403,51 @@ export class TasksService {
     }
 
     return data;
+  }
+
+  /**
+   * Auto clock-in: create a time log when a task transitions to in_progress
+   */
+  private async autoClockIn(taskId: string, workerId: string) {
+    const client = this.databaseService.getAdminClient();
+    try {
+      // Check if there's already an active session for this task
+      const { data: existing } = await client
+        .from("task_time_logs")
+        .select("id")
+        .eq("task_id", taskId)
+        .is("end_time", null)
+        .maybeSingle();
+
+      if (existing) {
+        return; // Already clocked in
+      }
+
+      await client.from("task_time_logs").insert({
+        task_id: taskId,
+        worker_id: workerId,
+        start_time: new Date().toISOString(),
+      });
+    } catch (err) {
+      this.logger.warn(`Auto clock-in failed for task ${taskId}: ${err}`);
+    }
+  }
+
+  /**
+   * Auto clock-out: close any open time logs when a task leaves in_progress
+   */
+  private async autoClockOut(taskId: string) {
+    const client = this.databaseService.getAdminClient();
+    try {
+      const now = new Date().toISOString();
+      await client
+        .from("task_time_logs")
+        .update({ end_time: now })
+        .eq("task_id", taskId)
+        .is("end_time", null);
+    } catch (err) {
+      this.logger.warn(`Auto clock-out failed for task ${taskId}: ${err}`);
+    }
   }
 
   /**
@@ -1454,16 +2502,17 @@ export class TasksService {
    * Auto-clock-out sessions that exceed max duration
    * Can be run periodically (e.g., every hour) to clean up stale sessions
    */
-  async autoClockOutStaleSessions(maxHours: number = 12) {
+  async autoClockOutStaleSessions(organizationId: string, maxHours: number = 12) {
     const client = this.databaseService.getAdminClient();
     const cutoffTime = new Date(
       Date.now() - maxHours * 60 * 60 * 1000,
     ).toISOString();
 
     // Find all sessions that started before cutoff and haven't ended
+    // Scoped to the organization via task join
     const { data: staleSessions, error } = await client
       .from("task_time_logs")
-      .select("id, worker_id, task_id, start_time")
+      .select("id, worker_id, task_id, start_time, task:tasks!task_id(organization_id)")
       .is("end_time", null)
       .lt("start_time", cutoffTime);
 
@@ -1472,10 +2521,15 @@ export class TasksService {
       return { autoClockedOut: 0, error: error.message };
     }
 
+    // Filter sessions to only those belonging to this organization
+    const orgSessions = (staleSessions || []).filter(
+      (s) => (s.task as any)?.organization_id === organizationId,
+    );
+
     let autoClockedOut = 0;
     const now = new Date().toISOString();
 
-    for (const session of staleSessions || []) {
+    for (const session of orgSessions) {
       try {
         const { error: updateError } = await client
           .from("task_time_logs")
@@ -1498,7 +2552,7 @@ export class TasksService {
       }
     }
 
-    return { autoClockedOut, totalFound: staleSessions?.length || 0 };
+    return { autoClockedOut, totalFound: orgSessions.length };
   }
 
   /**
@@ -1667,6 +2721,54 @@ export class TasksService {
     };
   }
 
+  async reprocessStockForTask(userId: string, organizationId: string, taskId: string): Promise<{ processed: number; skipped: boolean }> {
+    const client = this.databaseService.getAdminClient();
+    const { data: task } = await client
+      .from('tasks')
+      .select('*')
+      .eq('id', taskId)
+      .eq('organization_id', organizationId)
+      .maybeSingle();
+
+    if (!task) throw new Error('Task not found');
+
+    // Remove guard: force reprocess even if product_applications exist (idempotent via this endpoint)
+    const { data: taskData } = await client
+      .from('tasks')
+      .select('planned_items')
+      .eq('id', taskId)
+      .maybeSingle();
+
+    const itemsToProcess = taskData?.planned_items;
+    if (!itemsToProcess || !Array.isArray(itemsToProcess) || itemsToProcess.length === 0) {
+      return { processed: 0, skipped: true };
+    }
+
+    const completedDate = (task.completed_date || new Date().toISOString()).split('T')[0];
+    let processed = 0;
+
+    for (const item of itemsToProcess) {
+      try {
+        await this.productApplicationsService.createProductApplication(userId, organizationId, {
+          product_id: item.product_id,
+          variant_id: item.variant_id || undefined,
+          application_date: completedDate,
+          quantity_used: item.quantity,
+          area_treated: task.parcel_area || 0,
+          farm_id: task.farm_id,
+          parcel_id: task.parcel_id || undefined,
+          task_id: taskId,
+          notes: `Reprocessed stock deduction for task: ${task.title}`,
+        });
+        processed++;
+      } catch (error) {
+        this.logger.error(`Reprocess failed for product ${item.product_id}: ${error.message}`);
+      }
+    }
+
+    return { processed, skipped: false };
+  }
+
   private async processConsumedItems(
     userId: string,
     organizationId: string,
@@ -1694,20 +2796,19 @@ export class TasksService {
       return;
     }
 
-    const applicableTaskTypes = [
-      "fertilization",
-      "pest_control",
-      "irrigation",
-      "planting",
-      "soil_preparation",
-    ];
+    // Guard against double deduction: skip if product_applications already exist for this task
+    const { count: existingCount } = await client
+      .from('product_applications')
+      .select('id', { count: 'exact', head: true })
+      .eq('organization_id', organizationId)
+      .eq('task_id', taskId);
 
-    if (!applicableTaskTypes.includes(task.task_type)) {
-      this.logger.log(
-        `Task type ${task.task_type} does not consume stock items, skipping`,
-      );
+    if (existingCount && existingCount > 0) {
+      this.logger.log(`Task ${taskId} already has ${existingCount} product application(s), skipping stock deduction`);
       return;
     }
+
+    // Consume stock for any task that has planned_items — no task_type restriction
 
     const completedDate = new Date().toISOString().split("T")[0];
     const productApplications: any[] = [];
@@ -1720,6 +2821,7 @@ export class TasksService {
             organizationId,
             {
               product_id: item.product_id,
+              variant_id: item.variant_id || undefined,
               application_date: completedDate,
               quantity_used: item.quantity,
               area_treated: item.area_treated || task.parcel_area || 0,

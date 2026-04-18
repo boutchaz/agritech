@@ -36,7 +36,10 @@ export class ProductsController {
     const client = this.databaseService.getAdminClient();
 
     // Validate filename to prevent path traversal
-    const sanitizedName = filename.replace(/[^a-zA-Z0-9._/-]/g, '_');
+    if (filename.includes('..') || filename.startsWith('/')) {
+      throw new NotFoundException('Invalid image path');
+    }
+    const sanitizedName = filename.replace(/[^a-zA-Z0-9._-]/g, '_');
 
     this.logger.debug(`Serving product image: ${sanitizedName}`);
 

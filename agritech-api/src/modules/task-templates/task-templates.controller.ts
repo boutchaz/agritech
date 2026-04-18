@@ -2,11 +2,12 @@ import { Controller, Post, Body, UseGuards, Request, Param } from '@nestjs/commo
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { TaskTemplatesService, CreateTaskFromTemplateDto, UpdateTaskStatusDto } from './task-templates.service';
+import { OrganizationGuard } from '../../common/guards/organization.guard';
 
 @ApiTags('task-templates')
 @ApiBearerAuth('JWT-auth')
 @Controller('organizations/:organizationId')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, OrganizationGuard)
 export class TaskTemplatesController {
   constructor(private readonly taskTemplatesService: TaskTemplatesService) {}
 

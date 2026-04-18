@@ -193,9 +193,10 @@ export const financialReportsApi = {
   /**
    * Get trial balance report
    */
-  async getTrialBalance(asOfDate?: string, organizationId?: string): Promise<TrialBalanceReport> {
+  async getTrialBalance(asOfDate?: string, organizationId?: string, fiscalYearId?: string): Promise<TrialBalanceReport> {
     const params = new URLSearchParams();
     if (asOfDate) params.append('as_of_date', asOfDate);
+    if (fiscalYearId) params.append('fiscal_year_id', fiscalYearId);
     const query = params.toString();
     return apiClient.get<TrialBalanceReport>(
       `/api/v1/financial-reports/trial-balance${query ? `?${query}` : ''}`,
@@ -207,9 +208,10 @@ export const financialReportsApi = {
   /**
    * Get balance sheet report
    */
-  async getBalanceSheet(asOfDate?: string, organizationId?: string): Promise<BalanceSheetReport> {
+  async getBalanceSheet(asOfDate?: string, organizationId?: string, fiscalYearId?: string): Promise<BalanceSheetReport> {
     const params = new URLSearchParams();
     if (asOfDate) params.append('as_of_date', asOfDate);
+    if (fiscalYearId) params.append('fiscal_year_id', fiscalYearId);
     const query = params.toString();
     return apiClient.get<BalanceSheetReport>(
       `/api/v1/financial-reports/balance-sheet${query ? `?${query}` : ''}`,
@@ -221,9 +223,11 @@ export const financialReportsApi = {
   /**
    * Get profit and loss statement
    */
-  async getProfitLoss(startDate: string, endDate?: string, organizationId?: string): Promise<ProfitLossReport> {
-    const params = new URLSearchParams({ start_date: startDate });
+  async getProfitLoss(startDate?: string, endDate?: string, organizationId?: string, fiscalYearId?: string): Promise<ProfitLossReport> {
+    const params = new URLSearchParams();
+    if (startDate) params.append('start_date', startDate);
     if (endDate) params.append('end_date', endDate);
+    if (fiscalYearId) params.append('fiscal_year_id', fiscalYearId);
     return apiClient.get<ProfitLossReport>(
       `/api/v1/financial-reports/profit-loss?${params.toString()}`,
       {},
@@ -236,12 +240,15 @@ export const financialReportsApi = {
    */
   async getGeneralLedger(
     accountId: string,
-    startDate: string,
+    startDate?: string,
     endDate?: string,
-    organizationId?: string
+    organizationId?: string,
+    fiscalYearId?: string,
   ): Promise<GeneralLedgerReport> {
-    const params = new URLSearchParams({ start_date: startDate });
+    const params = new URLSearchParams();
+    if (startDate) params.append('start_date', startDate);
     if (endDate) params.append('end_date', endDate);
+    if (fiscalYearId) params.append('fiscal_year_id', fiscalYearId);
     return apiClient.get<GeneralLedgerReport>(
       `/api/v1/financial-reports/general-ledger/${accountId}?${params.toString()}`,
       {},
@@ -252,9 +259,10 @@ export const financialReportsApi = {
   /**
    * Get account summary by type
    */
-  async getAccountSummary(asOfDate?: string, organizationId?: string): Promise<AccountSummaryRow[]> {
+  async getAccountSummary(asOfDate?: string, organizationId?: string, fiscalYearId?: string): Promise<AccountSummaryRow[]> {
     const params = new URLSearchParams();
     if (asOfDate) params.append('as_of_date', asOfDate);
+    if (fiscalYearId) params.append('fiscal_year_id', fiscalYearId);
     const query = params.toString();
     return apiClient.get<AccountSummaryRow[]>(
       `/api/v1/financial-reports/account-summary${query ? `?${query}` : ''}`,
@@ -266,9 +274,10 @@ export const financialReportsApi = {
   /**
    * Get balance for a specific account
    */
-  async getAccountBalance(accountId: string, asOfDate?: string, organizationId?: string): Promise<AccountBalance | null> {
+  async getAccountBalance(accountId: string, asOfDate?: string, organizationId?: string, fiscalYearId?: string): Promise<AccountBalance | null> {
     const params = new URLSearchParams();
     if (asOfDate) params.append('as_of_date', asOfDate);
+    if (fiscalYearId) params.append('fiscal_year_id', fiscalYearId);
     const query = params.toString();
     return apiClient.get<AccountBalance | null>(
       `/api/v1/financial-reports/account-balance/${accountId}${query ? `?${query}` : ''}`,
@@ -302,9 +311,11 @@ export const financialReportsApi = {
   /**
    * Get cash flow statement
    */
-  async getCashFlow(startDate: string, endDate?: string, organizationId?: string): Promise<CashFlowReport> {
-    const params = new URLSearchParams({ start_date: startDate });
+  async getCashFlow(startDate?: string, endDate?: string, organizationId?: string, fiscalYearId?: string): Promise<CashFlowReport> {
+    const params = new URLSearchParams();
+    if (startDate) params.append('start_date', startDate);
     if (endDate) params.append('end_date', endDate);
+    if (fiscalYearId) params.append('fiscal_year_id', fiscalYearId);
     return apiClient.get<CashFlowReport>(
       `/api/v1/financial-reports/cash-flow?${params.toString()}`,
       {},

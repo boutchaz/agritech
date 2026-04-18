@@ -1,10 +1,9 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import {
   Calendar,
-  MapPin,
   Sprout,
   CheckCircle,
   Play,
@@ -25,11 +24,12 @@ import { useNavigate } from '@tanstack/react-router';
 import { format } from 'date-fns';
 
 import { Button } from '@/components/ui/button';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import { Textarea } from '@/components/ui/Textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/radix-select';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
@@ -53,6 +53,28 @@ import {
 } from '@/hooks/useAgriculturalAccounting';
 import { useCropTemplates } from '@/hooks/useCropTemplates';
 import { CropCycleStatus, HarvestEvent } from '@/types/agricultural-accounting';
+import { useQuery } from '@tanstack/react-query';
+import { apiClient } from '@/lib/api-client';
+import { useAuth } from '@/hooks/useAuth';
+
+interface CycleTask {
+  id: string;
+  title: string;
+  status: string;
+  task_type: string;
+  due_date?: string;
+  worker?: { first_name: string; last_name: string } | null;
+}
+
+interface CycleIntervention {
+  id: string;
+  description: string;
+  intervention_type: string;
+  status: string;
+  priority: string;
+  scheduled_date?: string;
+  product?: string;
+}
 
 // Schema for Harvest Event
 const harvestEventSchema = z.object({
@@ -72,14 +94,55 @@ interface CropCycleDetailProps {
 export function CropCycleDetail({ cycleId }: CropCycleDetailProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<{title:string;description?:string;variant?:"destructive"|"default";onConfirm:()=>void}>({title:"",onConfirm:()=>{}});
+  const _showConfirm = (title: string, onConfirm: () => void, opts?: {description?: string; variant?: "destructive" | "default"}) => {
+    setConfirmAction({title, onConfirm, ...opts});
+    setConfirmOpen(true);
+  };
+
   const [activeTab, setActiveTab] = useState('overview');
   
   // Queries
   const { data: cycle, isLoading: isCycleLoading } = useCropCycle(cycleId);
   const { data: stages = [], isLoading: isStagesLoading } = useCropCycleStages(cycleId);
   const { data: harvestEvents = [], isLoading: isHarvestsLoading } = useHarvestEvents(cycleId);
-  const { data: harvestStats, isLoading: isStatsLoading } = useHarvestEventStats(cycleId);
+  const { data: harvestStats, isLoading: _isStatsLoading } = useHarvestEventStats(cycleId);
   const { data: templates = [] } = useCropTemplates();
+  const { currentOrganization } = useAuth();
+
+  // Tasks linked to this cycle
+  const { data: cycleTasksData } = useQuery({
+    queryKey: ['tasks', 'cycle', cycleId],
+    queryFn: async () => {
+      if (!currentOrganization?.id) return { data: [] };
+      return apiClient.get<{ data: CycleTask[] }>(
+        `/api/v1/tasks?crop_cycle_id=${cycleId}&pageSize=50`,
+        {},
+        currentOrganization.id
+      );
+    },
+    enabled: !!cycleId && !!currentOrganization?.id && activeTab === 'tasks',
+    staleTime: 60_000,
+  });
+  const cycleTasks: CycleTask[] = cycleTasksData?.data || [];
+
+  // Interventions linked to this cycle (by crop_cycle_id or parcel overlap)
+  const { data: cycleInterventionsData } = useQuery({
+    queryKey: ['interventions', 'cycle', cycleId, cycle?.parcel_id],
+    queryFn: async () => {
+      if (!currentOrganization?.id || !cycle?.parcel_id) return [];
+      // Query plan_interventions for this parcel
+      return apiClient.get<CycleIntervention[]>(
+        `/api/v1/plan-interventions?parcel_id=${cycle.parcel_id}&pageSize=50`,
+        {},
+        currentOrganization.id
+      ).catch(() => []);
+    },
+    enabled: !!cycleId && !!currentOrganization?.id && !!cycle?.parcel_id && activeTab === 'interventions',
+    staleTime: 60_000,
+  });
+  const cycleInterventions: CycleIntervention[] = Array.isArray(cycleInterventionsData) ? cycleInterventionsData : (cycleInterventionsData as { data?: CycleIntervention[] })?.data || [];
 
   // Mutations
   const updateCycleMutation = useUpdateCropCycle();
@@ -135,7 +198,7 @@ export function CropCycleDetail({ cycleId }: CropCycleDetailProps) {
 
   // Helper Functions
   const getStatusBadge = (status: CropCycleStatus) => {
-    const config: Record<CropCycleStatus, { icon: any; color: string; label: string }> = {
+    const config: Record<CropCycleStatus, { icon: React.ComponentType<{ className?: string }>; color: string; label: string }> = {
       planned: { icon: Pause, color: 'bg-gray-100 text-gray-800 border-gray-200', label: t('cropCycles.status.planned', 'Planned') },
       land_prep: { icon: Sprout, color: 'bg-yellow-100 text-yellow-800 border-yellow-200', label: t('cropCycles.status.land_prep', 'Land Prep') },
       growing: { icon: Play, color: 'bg-green-100 text-green-800 border-green-200', label: t('cropCycles.status.growing', 'Growing') },
@@ -277,7 +340,7 @@ export function CropCycleDetail({ cycleId }: CropCycleDetailProps) {
           {cycle.status !== 'completed' && cycle.status !== 'cancelled' && (
              <Button 
                variant="default"
-               className="bg-green-600 hover:bg-green-700"
+               
                onClick={() => {
                  if (confirm(t('cropCycles.confirmComplete', 'Are you sure you want to mark this cycle as complete?'))) {
                    completeCycleMutation.mutate(cycle.id);
@@ -322,6 +385,8 @@ export function CropCycleDetail({ cycleId }: CropCycleDetailProps) {
           <TabsTrigger value="overview">{t('cropCycles.tabs.overview', 'Overview')}</TabsTrigger>
           <TabsTrigger value="stages">{t('cropCycles.tabs.stages', 'Stages')}</TabsTrigger>
           <TabsTrigger value="harvests">{t('cropCycles.tabs.harvests', 'Harvests')}</TabsTrigger>
+          <TabsTrigger value="tasks">{t('cropCycles.tabs.tasks', 'Tasks')}</TabsTrigger>
+          <TabsTrigger value="interventions">{t('cropCycles.tabs.interventions', 'Interventions')}</TabsTrigger>
         </TabsList>
 
         {/* Overview Tab */}
@@ -511,7 +576,7 @@ export function CropCycleDetail({ cycleId }: CropCycleDetailProps) {
                               </Button>
                             )}
                             {stage.status === 'in_progress' && (
-                              <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => handleStageStatusChange(stage.id, 'completed')}>
+                              <Button size="sm" onClick={() => handleStageStatusChange(stage.id, 'completed')}>
                                 {t('common.complete', 'Complete')}
                               </Button>
                             )}
@@ -532,7 +597,7 @@ export function CropCycleDetail({ cycleId }: CropCycleDetailProps) {
 
         {/* Harvests Tab */}
         <TabsContent value="harvests" className="mt-6">
-          <div className="grid gap-6 md:grid-cols-4 mb-6">
+          <div className="grid gap-6 lg:grid-cols-4 mb-6">
             <Card>
               <CardContent className="pt-6">
                 <div className="text-2xl font-bold">{harvestStats?.total_harvests || 0}</div>
@@ -593,7 +658,7 @@ export function CropCycleDetail({ cycleId }: CropCycleDetailProps) {
                      <div className="col-span-1">{t('common.unit', 'Unit')}</div>
                      <div className="col-span-1">{t('common.grade', 'Grade')}</div>
                      <div className="col-span-1">{t('common.notes', 'Notes')}</div>
-                     <div className="col-span-1 text-right">{t('common.actions', 'Actions')}</div>
+                     <div className="col-span-1 text-right">{t('common.actionsColumn', 'Actions')}</div>
                   </div>
                   <div className="divide-y">
                      {harvestEvents.map((harvest) => (
@@ -629,20 +694,110 @@ export function CropCycleDetail({ cycleId }: CropCycleDetailProps) {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {/* Tasks linked to this cycle */}
+        <TabsContent value="tasks" className="mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">{t('cropCycles.tabs.tasks', 'Tasks')}</CardTitle>
+              <CardDescription>{t('cropCycles.tasks.description', 'Tasks linked to this crop cycle')}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {cycleTasks.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <p>{t('cropCycles.tasks.empty', 'No tasks linked to this cycle yet.')}</p>
+                  <p className="text-sm mt-1">{t('cropCycles.tasks.emptyHint', 'Create tasks and link them to this cycle from the task form.')}</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {cycleTasks.map((task: CycleTask) => (
+                    <div
+                      key={task.id}
+                      className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 cursor-pointer"
+                      onClick={() => navigate({ to: `/tasks/${task.id}` })}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Badge variant={task.status === 'completed' ? 'default' : task.status === 'in_progress' ? 'secondary' : 'outline'} className="text-xs">
+                          {task.status}
+                        </Badge>
+                        <div>
+                          <p className="font-medium text-sm">{task.title}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {task.task_type} {task.due_date ? `• ${t('common.due', 'Due')}: ${new Date(task.due_date).toLocaleDateString()}` : ''}
+                          </p>
+                        </div>
+                      </div>
+                      {task.worker && (
+                        <span className="text-xs text-muted-foreground">{task.worker.first_name} {task.worker.last_name}</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Interventions (plan_interventions) */}
+        <TabsContent value="interventions" className="mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">{t('cropCycles.tabs.interventions', 'Interventions')}</CardTitle>
+              <CardDescription>{t('cropCycles.interventions.description', 'Planned interventions from annual plans')}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {cycleInterventions.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <p>{t('cropCycles.interventions.empty', 'No interventions linked to this cycle.')}</p>
+                  <p className="text-sm mt-1">{t('cropCycles.interventions.emptyHint', 'Interventions from annual plans will appear here when linked.')}</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {cycleInterventions.map((intervention: CycleIntervention) => (
+                    <div key={intervention.id} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <Badge variant={intervention.status === 'executed' ? 'default' : intervention.status === 'planned' ? 'outline' : 'secondary'} className="text-xs">
+                          {intervention.status}
+                        </Badge>
+                        <div>
+                          <p className="font-medium text-sm">{intervention.description}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {intervention.intervention_type}
+                            {intervention.scheduled_date ? ` • ${new Date(intervention.scheduled_date).toLocaleDateString()}` : ''}
+                            {intervention.product ? ` • ${intervention.product}` : ''}
+                          </p>
+                        </div>
+                      </div>
+                      <Badge variant="outline" className="text-xs">{intervention.priority}</Badge>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
 
       {/* Harvest Dialog */}
-      <Dialog open={isHarvestDialogOpen} onOpenChange={setIsHarvestDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-           <DialogHeader>
-             <DialogTitle>{editingHarvest ? t('cropCycles.harvests.edit', 'Edit Harvest') : t('cropCycles.harvests.new', 'Record Harvest')}</DialogTitle>
-             <DialogDescription>{t('cropCycles.harvests.dialogDesc', 'Enter the details of the harvest operation.')}</DialogDescription>
-           </DialogHeader>
-           
-           <form onSubmit={harvestForm.handleSubmit(handleHarvestSubmit)} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                   <Label htmlFor="harvest_date">{t('common.date', 'Date')} *</Label>
+      <ResponsiveDialog
+        open={isHarvestDialogOpen}
+        onOpenChange={setIsHarvestDialogOpen}
+        title={editingHarvest ? t('cropCycles.harvests.edit', 'Edit Harvest') : t('cropCycles.harvests.new', 'Record Harvest')}
+        description={t('cropCycles.harvests.dialogDesc', 'Enter the details of the harvest operation.')}
+        size="md"
+        footer={(
+          <>
+            <Button type="button" variant="outline" onClick={() => setIsHarvestDialogOpen(false)}>{t('common.cancel', 'Cancel')}</Button>
+            <Button type="submit" form="crop-cycle-harvest-form" disabled={createHarvestMutation.isPending || updateHarvestMutation.isPending}>
+              {editingHarvest ? t('common.save', 'Save Changes') : t('common.create', 'Record Harvest')}
+            </Button>
+          </>
+        )}
+      >
+           <form id="crop-cycle-harvest-form" onSubmit={harvestForm.handleSubmit(handleHarvestSubmit)} className="space-y-4">
+               <div className="grid grid-cols-2 gap-4">
+                 <div className="space-y-2">
+                    <Label htmlFor="harvest_date">{t('common.date', 'Date')} *</Label>
                    <Input id="harvest_date" type="date" {...harvestForm.register('harvest_date')} />
                    {harvestForm.formState.errors.harvest_date && (
                      <p className="text-xs text-destructive">{harvestForm.formState.errors.harvest_date.message}</p>
@@ -698,18 +853,18 @@ export function CropCycleDetail({ cycleId }: CropCycleDetailProps) {
                     id="quality_notes" 
                     placeholder="Describe quality, defects, or destination..." 
                     {...harvestForm.register('quality_notes')} 
-                 />
-              </div>
-
-              <DialogFooter>
-                 <Button type="button" variant="outline" onClick={() => setIsHarvestDialogOpen(false)}>{t('common.cancel', 'Cancel')}</Button>
-                 <Button type="submit" disabled={createHarvestMutation.isPending || updateHarvestMutation.isPending}>
-                   {editingHarvest ? t('common.save', 'Save Changes') : t('common.create', 'Record Harvest')}
-                 </Button>
-              </DialogFooter>
-           </form>
-        </DialogContent>
-      </Dialog>
+                  />
+               </div>
+            </form>
+      </ResponsiveDialog>
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title={confirmAction.title}
+        description={confirmAction.description}
+        variant={confirmAction.variant}
+        onConfirm={confirmAction.onConfirm}
+      />
     </div>
   );
 }

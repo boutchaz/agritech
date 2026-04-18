@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { CreateCostCenterDto, UpdateCostCenterDto } from './dto';
+import { sanitizeSearch } from '../../common/utils/sanitize-search';
 
 @Injectable()
 export class CostCentersService {
@@ -26,7 +27,8 @@ export class CostCentersService {
       }
 
       if (filters?.search) {
-        query = query.or(`name.ilike.%${filters.search}%,code.ilike.%${filters.search}%`);
+        const s = sanitizeSearch(filters.search);
+        if (s) query = query.or(`name.ilike.%${s}%,code.ilike.%${s}%`);
       }
 
       const { data, error } = await query;

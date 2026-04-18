@@ -181,7 +181,7 @@ export const salesOrdersApi = {
 
   // Alias for backwards compatibility
   async updateSalesOrder(id: string, input: UpdateSalesOrderInput, organizationId?: string) {
-    return this.update(id, data, organizationId);
+    return this.update(id, input, organizationId);
   },
 
   /**

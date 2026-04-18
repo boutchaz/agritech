@@ -1,5 +1,7 @@
-import React, { useEffect, useRef, useState } from 'react';
+import {  useEffect, useRef, useState  } from "react";
 import { useTranslation } from 'react-i18next';
+import { useHotkey } from '@tanstack/react-hotkeys';
+import { sanitizeHtml } from '../lib/sanitize';
 import 'ol/ol.css';
 import Map from 'ol/Map';
 import View from 'ol/View';
@@ -23,18 +25,18 @@ import { ParcelAutomation, ParcelDrawingAssist, parcelStyles } from '../utils/pa
 import { getCurrentPosition, searchMoroccanLocation, searchResultToOLCoordinates, type SearchResult } from '../utils/geocoding';
 import {
   calculatePlantCount,
+  PLANTING_SYSTEMS,
+  getCropTypesByCategory,
+  getVarietiesByCropType,
+  type CropCategory as StaticCropCategory,
 } from '../lib/plantingSystemData';
-import { useSoilTypes, useIrrigationTypes, useCropCategories, useCropTypes, useVarieties } from '../hooks/useReferenceData';
-import type { CropCategory as CropCategoryApi, CropType, Variety } from '../lib/api/reference-data';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from './ui/dialog';
+import { useSoilTypes, useIrrigationTypes } from '../hooks/useReferenceData';
+import { useSupportedCrops } from '../hooks/useAgromindSupport';
 import { Button } from './ui/button';
 import { toast } from 'sonner';
+import { ButtonLoader } from '@/components/ui/loader';
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
+
 
 interface MapProps {
   center: [number, number];
@@ -49,10 +51,10 @@ interface MapProps {
   sensors?: SensorData[];
   farmId?: string;
   enableDrawing?: boolean;
-  onParcelAdded?: (parcel: any) => void;
+  onParcelAdded?: (parcel: unknown) => void;
   selectedParcelId?: string | null;
   onParcelSelect?: (parcelId: string) => void;
-  parcels?: any[]; // Allow passing parcels as prop
+  parcels?: unknown[]; // Allow passing parcels as prop
   editingParcelId?: string | null;
   onBoundaryUpdated?: () => void;
 }
@@ -102,7 +104,7 @@ interface TimeSeriesResult {
   };
 }
 
-const MapComponent: React.FC<MapProps> = ({
+const MapComponent = ({
   center,
   zones,
   sensors = [],
@@ -114,7 +116,7 @@ const MapComponent: React.FC<MapProps> = ({
   parcels: propParcels,
   editingParcelId,
   onBoundaryUpdated
-}) => {
+}: MapProps) => {
   const roundToTwoDecimals = (value: number): number => Number(value.toFixed(2));
   const { t } = useTranslation();
   const tileProvider = useMapProvider();
@@ -122,6 +124,7 @@ const MapComponent: React.FC<MapProps> = ({
   const mapInstanceRef = useRef<Map | null>(null);
   const vectorSourceRef = useRef<VectorSource | null>(null);
   const drawInteractionRef = useRef<Draw | null>(null);
+  const onParcelSelectRef = useRef(onParcelSelect);
   const [showNameDialog, setShowNameDialog] = useState(false);
   const [parcelName, setParcelName] = useState('');
   const [tempBoundary, setTempBoundary] = useState<number[][]>([]);
@@ -144,95 +147,39 @@ const MapComponent: React.FC<MapProps> = ({
     rootstock: ''
   });
 
-  // Fetch reference data from Strapi CMS
-  const { data: soilTypesFromApi = [] } = useSoilTypes();
-  const { data: irrigationTypesFromApi = [] } = useIrrigationTypes();
-  const { data: cropCategories = [] } = useCropCategories();
-  
-  // Find the selected category by value (e.g., "trees", "cereals", "vegetables", "other")
-  // This matches the values used in the static data
-  const selectedCategory = parcelDetails.crop_category
-    ? (cropCategories as unknown as CropCategoryApi[]).find(cat => {
-        // Match by value first (most reliable), then by name or id
-        const catValue = cat.value?.toLowerCase();
-        const parcelValue = parcelDetails.crop_category?.toLowerCase();
-        return catValue === parcelValue || 
-               cat.id === parcelDetails.crop_category ||
-               cat.name?.toLowerCase() === parcelValue ||
-               cat.name_fr?.toLowerCase() === parcelValue;
-      })
-    : undefined;
-  
-  // Get crop types from the selected category (already populated from Strapi controller)
-  const cropTypesFromCategory: CropType[] = selectedCategory?.crop_types || [];
-  
-  // Fallback: fetch crop types by category ID if not populated in category
-  const selectedCategoryId = selectedCategory?.id;
-  const { data: cropTypesFromStrapi = [] } = useCropTypes(selectedCategoryId);
-  
-  // Use crop types from category if available, otherwise from hook
-  const allCropTypesFromStrapi: CropType[] = cropTypesFromCategory.length > 0 
-    ? cropTypesFromCategory 
-    : (cropTypesFromStrapi as unknown as CropType[]);
-  
-  // Find the selected crop type by value or name (e.g., "Olivier", "Pommier")
-  const selectedCropType = parcelDetails.crop_type && allCropTypesFromStrapi.length > 0
-    ? allCropTypesFromStrapi.find(ct => {
-        // Match by value, name, or name_fr
-        const ctValue = ct.value?.toLowerCase();
-        const ctName = ct.name?.toLowerCase();
-        const ctNameFr = ct.name_fr?.toLowerCase();
-        const parcelValue = parcelDetails.crop_type?.toLowerCase();
-        return ctValue === parcelValue || 
-               ct.id === parcelDetails.crop_type ||
-               ctName === parcelValue ||
-               ctNameFr === parcelValue;
-      })
-    : undefined;
-  
-  // Get varieties from the selected crop type (already populated from Strapi controller)
-  const varietiesFromCropType: Variety[] = selectedCropType?.varieties || [];
-  
-  // Fallback: fetch varieties by crop type ID if not populated in crop type
-  const selectedCropTypeId = selectedCropType?.id;
-  const { data: varietiesFromStrapi = [] } = useVarieties(selectedCropTypeId);
-  
-  // Use varieties from crop type if available, otherwise from hook
-  const allVarietiesFromStrapi: Variety[] = varietiesFromCropType.length > 0 
-    ? varietiesFromCropType 
-    : (varietiesFromStrapi as unknown as Variety[]);
+  // Reference data from NestJS
+  const { data: soilTypes = [] } = useSoilTypes();
+  const { data: irrigationTypes = [] } = useIrrigationTypes();
+  const { isCropSupported, isVarietySupported, getSupportedVarieties } = useSupportedCrops();
 
-  // Use CMS data only - no static fallbacks
-  const soilTypes = soilTypesFromApi;
-  const irrigationTypes = irrigationTypesFromApi;
+  // Crop categories — static list is the source of truth
+  const availableCropCategories = [
+    { value: 'trees', label: t('farmHierarchy.parcel.categories.trees', 'Arbres fruitiers') },
+    { value: 'cereals', label: t('farmHierarchy.parcel.categories.cereals', 'Céréales') },
+    { value: 'vegetables', label: t('farmHierarchy.parcel.categories.vegetables', 'Légumes') },
+    { value: 'legumes', label: t('farmHierarchy.parcel.categories.legumes', 'Légumineuses') },
+    { value: 'fourrages', label: t('farmHierarchy.parcel.categories.fourrages', 'Cultures fourragères') },
+    { value: 'industrielles', label: t('farmHierarchy.parcel.categories.industrielles', 'Cultures industrielles') },
+    { value: 'aromatiques', label: t('farmHierarchy.parcel.categories.aromatiques', 'Plantes aromatiques') },
+    { value: 'other', label: t('farmHierarchy.parcel.categories.other', 'Autre') },
+  ];
 
-  // Use CMS categories only - deduplicate by value to avoid duplicates
-  // Note: Deduplication is also done in useCropCategories hook, but we do it here as well for safety
-  // Use a plain object for deduplication to avoid conflict with OpenLayers Map
-  const categoryDeduplicationMap: Record<string, typeof cropCategories[0]> = {};
-  cropCategories.forEach(cat => {
-    const catValue = (cat as { value?: string }).value || '';
-    // Only add if we haven't seen this value before (value is the unique identifier)
-    // This ensures that even if there are duplicate entries in CMS with different IDs, we only show one
-    if (catValue && !categoryDeduplicationMap[catValue]) {
-      categoryDeduplicationMap[catValue] = cat;
-    }
-  });
-  const availableCropCategories = Object.values(categoryDeduplicationMap);
-
-  // Get available options based on selected crop category
-  // Use CMS data only - nested behavior: category -> crop type -> variety
-  const availableCropTypes = parcelDetails.crop_category && allCropTypesFromStrapi.length > 0
-    ? allCropTypesFromStrapi
+  // Crop types from static data
+  const availableCropTypes: string[] = parcelDetails.crop_category
+    ? getCropTypesByCategory(parcelDetails.crop_category as StaticCropCategory)
     : [];
 
-  const availableVarieties = parcelDetails.crop_type && allVarietiesFromStrapi.length > 0
-    ? allVarietiesFromStrapi
+  // Varieties: static first, then referential fallback (code as value, nom as label)
+  const staticVarietyNames = parcelDetails.crop_type
+    ? getVarietiesByCropType(parcelDetails.crop_type)
     : [];
+  const availableVarieties: { value: string; label: string }[] = staticVarietyNames.length > 0
+    ? staticVarietyNames.map((name) => ({ value: name, label: name }))
+    : (parcelDetails.crop_type
+        ? getSupportedVarieties(parcelDetails.crop_type).map((v) => ({ value: v.code, label: v.nom }))
+        : []);
 
-  // Planting systems - TODO: Add to CMS when available
-  // For now, empty array - will be populated from CMS in the future
-  const availablePlantingSystems: Array<{ type: string; spacing: string; treesPerHectare?: number; plantsPerHectare?: number; seedsPerHectare?: number }> = [];
+  const availablePlantingSystems: Array<{ type: string; spacing: string; treesPerHectare?: number; plantsPerHectare?: number; seedsPerHectare?: number }> = PLANTING_SYSTEMS;
   const [mapType, setMapType] = useState<'osm' | 'satellite'>('satellite');
   const [_showGeolocPrompt, setShowGeolocPrompt] = useState(false);
   const [showPlaceNames, setShowPlaceNames] = useState(true);
@@ -274,14 +221,14 @@ const MapComponent: React.FC<MapProps> = ({
       );
 
       if (pixel) {
-        return {
-          left: `${pixel[0]}px`,
-          top: `${pixel[1]}px`
-        };
-      }
-    } catch (error) {
-      console.warn('Error converting coordinates to pixels:', error);
-    }
+         return {
+           left: `${pixel[0]}px`,
+           top: `${pixel[1]}px`
+         };
+       }
+     } catch (_error) {
+       // Error converting coordinates to pixels
+     }
 
     return { left: '50%', top: '50%' };
   };
@@ -294,6 +241,7 @@ const MapComponent: React.FC<MapProps> = ({
   // Always call the hook, but pass farmId which might be undefined
   const addParcelMutation = useAddParcel();
   const updateParcelMutation = useUpdateParcel();
+  const isSavingParcel = addParcelMutation.isPending || updateParcelMutation.isPending;
 
   // Use prop parcels if provided, otherwise empty array
   const parcels = Array.isArray(propParcels) ? propParcels : [];
@@ -406,31 +354,29 @@ const MapComponent: React.FC<MapProps> = ({
     }
   }, [showPlaceNames]);
 
-  // Handle full-screen mode
+  useHotkey('Escape', () => setIsFullScreen(false), {
+    enabled: isFullScreen,
+    meta: { name: t('common.actions.exitFullscreen', 'Exit fullscreen (Esc)'), description: 'Exit map fullscreen' },
+  });
+
+  // Keep onParcelSelect ref in sync so the click handler always calls the latest callback
   useEffect(() => {
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && isFullScreen) {
-        setIsFullScreen(false);
-      }
-    };
+    onParcelSelectRef.current = onParcelSelect;
+  }, [onParcelSelect]);
 
-    if (isFullScreen) {
-      document.addEventListener('keydown', handleEscape);
-    }
-
-    // Resize map when entering/exiting full-screen
+  // Resize map when entering/exiting full-screen
+  useEffect(() => {
     const timer = setTimeout(() => {
       if (mapInstanceRef.current) {
         try {
           mapInstanceRef.current.updateSize();
-        } catch (error) {
-          console.warn('Error updating map size:', error);
+        } catch (_error) {
+          // Error updating map size
         }
       }
     }, 200);
 
     return () => {
-      document.removeEventListener('keydown', handleEscape);
       clearTimeout(timer);
     };
   }, [isFullScreen]);
@@ -501,8 +447,6 @@ const MapComponent: React.FC<MapProps> = ({
         }
       } else {
         // If parcel not found in current features, it might not have boundaries yet
-        console.warn(`Parcel ${selectedParcelId} not found on map. It may not have boundary data.`);
-
         // Try to find the parcel in the parcels array and center on it if it has boundary data
         const parcel = parcels.find(p => p.id === selectedParcelId);
         if (parcel && parcel.boundary && parcel.boundary.length > 0) {
@@ -724,7 +668,6 @@ const MapComponent: React.FC<MapProps> = ({
   useEffect(() => {
     try {
       if (!mapRef.current) {
-        console.warn('Map ref not available');
         return;
       }
 
@@ -1041,8 +984,8 @@ const MapComponent: React.FC<MapProps> = ({
                 });
 
                 // Notify parent component
-                if (onParcelSelect && properties.parcelId) {
-                  onParcelSelect(properties.parcelId);
+                if (onParcelSelectRef.current && properties.parcelId) {
+                  onParcelSelectRef.current(properties.parcelId);
                 }
               }
             }
@@ -1186,7 +1129,7 @@ const MapComponent: React.FC<MapProps> = ({
   // Layer visibility for mapType is handled by a separate useEffect that
   // toggles layers without destroying the map — preserving zoom/position.
    
-  }, [center, zones, sensors, parcels, farmId, enableDrawing, drawingMode, autoSnapEnabled, selectedParcelId, onParcelSelect, tileProvider]);
+  }, [center, zones, sensors, parcels, farmId, enableDrawing, drawingMode, autoSnapEnabled, tileProvider]);
 
   // Helper function to clean up drawing state
   const cleanupDrawingState = () => {
@@ -1227,7 +1170,7 @@ const MapComponent: React.FC<MapProps> = ({
   };
 
   const handleSaveParcel = async () => {
-    if (!farmId || !parcelName || tempBoundary.length === 0) return;
+    if (!farmId || !parcelName || tempBoundary.length === 0 || isSavingParcel) return;
 
     try {
       const normalizedIrrigation = normalizeIrrigationType(parcelDetails.irrigation_type);
@@ -1319,7 +1262,11 @@ const MapComponent: React.FC<MapProps> = ({
     <>
       {isFullScreen && <div className="fixed inset-0 z-40 bg-white" />}
       <div className={isFullScreen ? "fixed inset-0 z-50" : "space-y-4"}>
-        <div className={`relative w-full ${isFullScreen ? "h-full" : "h-96"}`}>
+        <div
+          className={`relative w-full ${
+            isFullScreen ? 'h-full' : 'h-[min(24rem,52dvh)] lg:h-96'
+          }`}
+        >
           <div
             ref={mapRef}
             className="w-full h-full"
@@ -1338,50 +1285,17 @@ const MapComponent: React.FC<MapProps> = ({
           {/* Full-Screen Close Button */}
           {isFullScreen && (
             <div className="absolute top-4 left-4 z-50">
-              <button
+              <Button
+                size="icon"
+                variant="outline"
                 onClick={() => setIsFullScreen(false)}
-                className="bg-white dark:bg-gray-800 p-2 rounded-lg shadow-md hover:shadow-lg transition-shadow"
-                title={t('map.exitFullscreen')}
+                aria-label={t('map.exitFullscreen')}
               >
-                <X className="h-5 w-5 text-gray-600" />
-              </button>
+                <X className="h-5 w-5" />
+              </Button>
             </div>
           )}
 
-          {/* First-visit geolocation prompt */}
-          {/* {showGeolocPrompt && (
-          <div className="absolute top-4 left-4 z-50">
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-3 sm:p-4 w-72 sm:w-80 border border-gray-200 dark:border-gray-700">
-              <div className="flex items-start justify-between">
-                <div className="pr-2">
-                  <p className="text-sm text-gray-800 dark:text-gray-100 font-medium">Activer la localisation ?</p>
-                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">Nous centrerons la carte sur votre position actuelle.</p>
-                </div>
-                <button
-                  className="text-gray-400 hover:text-gray-600"
-                  onClick={() => { try { localStorage.setItem('agritech:map:geolocPrompted', '1'); } catch {}; setShowGeolocPrompt(false); }}
-                  aria-label="Fermer"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-              <div className="mt-3 flex gap-2">
-                <button
-                  onClick={requestUserLocation}
-                  className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
-                >
-                  Activer
-                </button>
-                <button
-                  onClick={() => { try { localStorage.setItem('agritech:map:geolocPrompted', '1'); } catch {}; setShowGeolocPrompt(false); }}
-                  className="px-3 py-1.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-sm rounded hover:bg-gray-200 dark:hover:bg-gray-600"
-                >
-                  Plus tard
-                </button>
-              </div>
-            </div>
-          </div>
-        )} */}
           {/* React-based popup to avoid DOM manipulation conflicts */}
           {popupData.visible && popupData.position && (
             <div
@@ -1392,7 +1306,7 @@ const MapComponent: React.FC<MapProps> = ({
                 minWidth: '200px',
                 maxWidth: '300px'
               }}
-              dangerouslySetInnerHTML={{ __html: popupData.content }}
+              dangerouslySetInnerHTML={{ __html: sanitizeHtml(popupData.content) }}
             />
           )}
 
@@ -1409,33 +1323,48 @@ const MapComponent: React.FC<MapProps> = ({
                   autoFocus
                 />
                 <div className="flex justify-end space-x-3">
-                  <button
+                  <Button
+                    variant="ghost"
                     onClick={cleanupDrawingState}
-                    className="px-4 py-2 text-gray-600 hover:text-gray-800"
                   >
                     {t('map.cancel')}
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     onClick={handleNameSubmit}
-                    className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
                     disabled={!parcelName}
                   >
                     {t('map.next')}
-                  </button>
+                  </Button>
                 </div>
               </div>
             </div>
           )}
 
-          <Dialog open={isParcelFormDialogOpen} onOpenChange={(open) => {
-            if (!open) {
-              cleanupDrawingState();
-            }
-          }}>
-            <DialogContent className="max-w-[600px] max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-800">
-              <DialogHeader>
-                <DialogTitle className="text-gray-900 dark:text-white">{t('map.parcelDetails')} {parcelName}</DialogTitle>
-              </DialogHeader>
+          <ResponsiveDialog
+            open={isParcelFormDialogOpen}
+            onOpenChange={(open) => {
+              if (!open) {
+                cleanupDrawingState();
+              }
+            }}
+            title={`${t('map.parcelDetails')} ${parcelName}`}
+            size="lg"
+            className="bg-white dark:bg-gray-800"
+            contentClassName="max-h-[90vh] overflow-y-auto"
+            footer={(
+              <>
+                <Button
+                  variant="outline"
+                  onClick={cleanupDrawingState}
+                >
+                  {t('map.cancel')}
+                </Button>
+                <Button variant="green" onClick={handleSaveParcel} disabled={isSavingParcel}>
+                  {t('map.save')}
+                </Button>
+              </>
+            )}
+          >
 
               <div className="space-y-6 py-4">
                 {/* Basic Information */}
@@ -1534,25 +1463,21 @@ const MapComponent: React.FC<MapProps> = ({
                     </label>
                     <select
                       value={parcelDetails.crop_category}
-                      onChange={(e) => setParcelDetails(prev => ({
-                        ...prev,
-                        crop_category: e.target.value,
-                        crop_type: '', // Reset dependent fields
-                        variety: '',
-                        planting_system: ''
-                      }))}
+                      onChange={(e) => {
+                                            setParcelDetails(prev => ({
+                          ...prev,
+                          crop_category: e.target.value,
+                          crop_type: '', // Reset dependent fields
+                          variety: '',
+                          planting_system: ''
+                        }));
+                      }}
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white"
                     >
                       <option value="">{t('map.select')}</option>
-                      {availableCropCategories.map(category => {
-                        const cat = category as { id?: string; value?: string; name?: string; name_fr?: string };
-                        const key = cat.id || cat.value || '';
-                        const value = cat.value || '';
-                        const label = cat.name_fr || cat.name || cat.value || '';
-                        return (
-                          <option key={key} value={value}>{label}</option>
-                        );
-                      })}
+                      {availableCropCategories.map(cat => (
+                        <option key={cat.value} value={cat.value}>{cat.label}</option>
+                      ))}
                     </select>
                   </div>
 
@@ -1572,24 +1497,11 @@ const MapComponent: React.FC<MapProps> = ({
                           className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white"
                         >
                           <option value="">{t('map.select')}</option>
-                          {availableCropTypes.map(crop => {
-                            if (typeof crop === 'string') {
-                              return (
-                                <option key={crop} value={crop}>
-                                  {crop}
-                                </option>
-                              );
-                            }
-                            const cropType = crop as CropType;
-                            const key = cropType.id;
-                            const value = cropType.value;
-                            const label = cropType.name || cropType.name_fr || cropType.value;
-                            return (
-                              <option key={key} value={value}>
-                                {label}
-                              </option>
-                            );
-                          })}
+                          {availableCropTypes.map(crop => (
+                            <option key={crop} value={crop}>
+                              {crop}{isCropSupported(crop) ? ' ✦' : ''}
+                            </option>
+                          ))}
                         </select>
                       ) : (
                         <input
@@ -1603,64 +1515,54 @@ const MapComponent: React.FC<MapProps> = ({
                           placeholder={t('map.cropTypePlaceholder')}
                         />
                       )}
+                      {isCropSupported(parcelDetails.crop_type) && (
+                        <p className="flex items-center gap-1 text-[11px] text-amber-600 dark:text-amber-400 mt-1">
+                          ✦ {t('farmHierarchy.parcel.agromindSupported', 'Supporté par AgromindIA')}
+                        </p>
+                      )}
                     </div>
                   )}
 
-                  {availableVarieties.length > 0 && (
+                  {parcelDetails.crop_type && (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         {t('map.variety')}
                       </label>
-                      <select
-                        value={parcelDetails.variety}
-                        onChange={(e) => setParcelDetails(prev => ({
-                          ...prev,
-                          variety: e.target.value
-                        }))}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white"
-                      >
-                        <option value="">{t('map.select')}</option>
-                        {availableVarieties.map(variety => {
-                          if (typeof variety === 'string') {
-                            return (
-                              <option key={variety} value={variety}>
-                                {variety}
-                              </option>
-                            );
-                          }
-                          const varietyObj = variety as Variety;
-                          const key = varietyObj.id;
-                          const value = varietyObj.value;
-                          const label = varietyObj.name || varietyObj.name_fr || varietyObj.value;
-                          return (
-                            <option key={key} value={value}>
-                              {label}
+                      {availableVarieties.length > 0 ? (
+                        <select
+                          value={parcelDetails.variety}
+                          onChange={(e) => setParcelDetails(prev => ({
+                            ...prev,
+                            variety: e.target.value
+                          }))}
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white"
+                        >
+                          <option value="">{t('map.select')}</option>
+                          {availableVarieties.map(v => (
+                            <option key={v.value} value={v.value}>
+                              {v.label}{isVarietySupported(parcelDetails.crop_type, v.value) ? ' ✦' : ''}
                             </option>
-                          );
-                        })}
-                      </select>
+                          ))}
+                        </select>
+                      ) : (
+                        <input
+                          type="text"
+                          value={parcelDetails.variety}
+                          onChange={(e) => setParcelDetails(prev => ({
+                            ...prev,
+                            variety: e.target.value
+                          }))}
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white"
+                          placeholder={t('map.varietyPlaceholder', 'Saisir la variété...')}
+                        />
+                      )}
+                      {parcelDetails.variety === 'Menara/Haouzia' && (
+                        <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-1">
+                          Le calibrage AgromindIA utilisera les paramètres de la variété <strong>Menara</strong>.
+                        </p>
+                      )}
                     </div>
                   )}
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      {t('parcels.plantingType')}
-                    </label>
-                    <select
-                      value={parcelDetails.planting_type}
-                      onChange={(e) => setParcelDetails(prev => ({
-                        ...prev,
-                        planting_type: e.target.value
-                      }))}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white"
-                    >
-                      <option value="">{t('map.select')}</option>
-                      <option value="traditional">{t('parcels.plantingTypes.traditional')}</option>
-                      <option value="intensive">{t('parcels.plantingTypes.intensive')}</option>
-                      <option value="super_intensive">{t('parcels.plantingTypes.super_intensive')}</option>
-                      <option value="organic">{t('parcels.plantingTypes.organic')}</option>
-                    </select>
-                  </div>
 
                   {parcelDetails.crop_category === 'trees' && (
                     <div>
@@ -1681,155 +1583,146 @@ const MapComponent: React.FC<MapProps> = ({
                   )}
                 </div>
 
-                {/* Planting System */}
-                {availablePlantingSystems.length > 0 && (
-                  <div className="space-y-4">
-                    <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                      {t('map.plantingSystem')}
-                    </h4>
+                {/* Planting System — always visible */}
+                <div className="space-y-4">
+                  <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                    <Sprout className="w-4 h-4" />
+                    {t('map.plantingSystem')}
+                  </h4>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        {t('map.systemType')}
-                      </label>
-                      <select
-                        value={parcelDetails.planting_system}
-                        onChange={(e) => setParcelDetails(prev => ({
-                          ...prev,
-                          planting_system: e.target.value
-                        }))}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white"
-                      >
-                        <option value="">{t('map.select')}</option>
-                        {availablePlantingSystems.map((system, idx) => (
-                          <option key={idx} value={system.type}>
-                            {system.type} ({system.spacing})
-                          </option>
-                        ))}
-                      </select>
-                    </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      {t('map.plantingDate')}
+                    </label>
+                    <input
+                      type="date"
+                      value={parcelDetails.planting_date}
+                      onChange={(e) => setParcelDetails(prev => ({
+                        ...prev,
+                        planting_date: e.target.value
+                      }))}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white"
+                    />
+                    {parcelDetails.planting_date && (
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        {t('map.plantingYear')}: {new Date(parcelDetails.planting_date).getFullYear()}
+                      </p>
+                    )}
+                  </div>
 
-                    {parcelDetails.planting_system && (
-                      <>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                              {t('map.spacing')}
-                            </label>
-                            <input
-                              type="text"
-                              value={parcelDetails.spacing}
-                              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-700 dark:text-white"
-                              readOnly
-                            />
-                          </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      {t('map.systemType')}
+                    </label>
+                    <select
+                      value={parcelDetails.planting_system}
+                      onChange={(e) => setParcelDetails(prev => ({
+                        ...prev,
+                        planting_system: e.target.value
+                      }))}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white"
+                    >
+                      <option value="">{t('map.select')}</option>
+                      {availablePlantingSystems.map((system) => (
+                        <option key={`${system.type}-${system.spacing}`} value={`${system.type} (${system.spacing})`}>
+                          {system.type} ({system.spacing}) — {system.treesPerHectare} arb/ha
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                              {t('map.densityPlantsHa')}
-                            </label>
-                            <input
-                              type="number"
-                              value={parcelDetails.density_per_hectare}
-                              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-700 dark:text-white"
-                              readOnly
-                            />
-                          </div>
+                  {parcelDetails.planting_system && (
+                    <>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            {t('map.spacing')}
+                          </label>
+                          <input
+                            type="text"
+                            value={parcelDetails.spacing}
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-700 dark:text-white"
+                            readOnly
+                          />
                         </div>
 
                         <div>
                           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            {t('map.totalPlants')}
+                            {t('map.densityPlantsHa')}
                           </label>
                           <input
                             type="number"
-                            value={parcelDetails.plant_count}
+                            value={parcelDetails.density_per_hectare}
                             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-700 dark:text-white"
                             readOnly
                           />
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                            {t('map.autoCalculatedFormula', { area: parcelDetails.area, density: parcelDetails.density_per_hectare })}
-                          </p>
                         </div>
-                      </>
-                    )}
+                      </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        {t('map.plantingDate')}
-                      </label>
-                      <input
-                        type="date"
-                        value={parcelDetails.planting_date}
-                        onChange={(e) => setParcelDetails(prev => ({
-                          ...prev,
-                          planting_date: e.target.value
-                        }))}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white"
-                        placeholder="jj/mm/aaaa"
-                      />
-                      {parcelDetails.planting_date && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          {t('map.totalPlants')}
+                        </label>
+                        <input
+                          type="number"
+                          value={parcelDetails.plant_count}
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-700 dark:text-white"
+                          readOnly
+                        />
                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                          {t('map.plantingYear')}: {new Date(parcelDetails.planting_date).getFullYear()}
+                          {t('map.autoCalculatedFormula', { area: parcelDetails.area, density: parcelDetails.density_per_hectare })}
                         </p>
-                      )}
-                    </div>
-                  </div>
-                )}
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
 
-              <DialogFooter>
-                <Button
-                  variant="outline"
-                  onClick={cleanupDrawingState}
-                >
-                  {t('map.cancel')}
-                </Button>
-                <Button
-                  onClick={handleSaveParcel}
-                  className="bg-green-600 hover:bg-green-700"
-                >
-                  {t('map.save')}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+            </ResponsiveDialog>
 
           {/* Location and Search Controls */}
           <div className="absolute top-4 right-4 space-y-2 z-20">
             <div className="flex flex-col space-y-2">
               {/* Location Button */}
-              <button
+              <Button
+                size="icon"
+                variant="outline"
                 onClick={requestUserLocation}
-                className="bg-white dark:bg-gray-800 p-2 rounded-lg shadow-md hover:shadow-lg transition-shadow"
-                title={t('map.goToMyPosition')}
+                aria-label={t('map.goToMyPosition')}
+                className="bg-white dark:bg-gray-800 shadow-md"
               >
                 <Navigation className={`h-5 w-5 ${locationPermission === 'granted' ? 'text-blue-600' : 'text-gray-600'}`} />
-              </button>
+              </Button>
 
               {/* Search Button */}
-              <button
+              <Button
+                size="icon"
+                variant="outline"
                 onClick={() => setShowSearchBox(!showSearchBox)}
-                className="bg-white dark:bg-gray-800 p-2 rounded-lg shadow-md hover:shadow-lg transition-shadow"
-                title={t('map.searchLocation')}
+                aria-label={t('map.searchLocation')}
+                className="bg-white dark:bg-gray-800 shadow-md"
               >
                 <Search className="h-5 w-5 text-gray-600" />
-              </button>
+              </Button>
 
               {/* Place Names Toggle Button */}
-              <button
+              <Button
+                size="icon"
+                variant="outline"
                 onClick={() => setShowPlaceNames(!showPlaceNames)}
-                className="bg-white dark:bg-gray-800 p-2 rounded-lg shadow-md hover:shadow-lg transition-shadow"
-                title={showPlaceNames ? t('map.hidePlaceNames') : t('map.showPlaceNames')}
+                aria-label={showPlaceNames ? t('map.hidePlaceNames') : t('map.showPlaceNames')}
+                className="bg-white dark:bg-gray-800 shadow-md"
               >
                 <MapPin className={`h-5 w-5 ${showPlaceNames ? 'text-blue-600' : 'text-gray-600'}`} />
-              </button>
+              </Button>
 
               {/* Map Type Toggle Button */}
-              <button
+              <Button
+                size="icon"
+                variant="outline"
                 onClick={() => setMapType(mapType === 'osm' ? 'satellite' : 'osm')}
-                className="bg-white dark:bg-gray-800 p-2 rounded-lg shadow-md hover:shadow-lg transition-shadow"
-                title={mapType === 'osm' ? t('map.satelliteView') : t('map.mapView')}
+                aria-label={mapType === 'osm' ? t('map.satelliteView') : t('map.mapView')}
+                className="bg-white dark:bg-gray-800 shadow-md"
               >
                 {mapType === 'osm' ? (
                   <Satellite className="h-5 w-5 text-gray-600" />
@@ -1838,20 +1731,22 @@ const MapComponent: React.FC<MapProps> = ({
                     <div className="w-4 h-4 border-2 border-gray-600 rounded-sm"></div>
                   </div>
                 )}
-              </button>
+              </Button>
 
               {/* Full-Screen Toggle Button */}
-              <button
+              <Button
+                size="icon"
+                variant="outline"
                 onClick={() => setIsFullScreen(!isFullScreen)}
-                className="bg-white dark:bg-gray-800 p-2 rounded-lg shadow-md hover:shadow-lg transition-shadow"
-                title={isFullScreen ? t('map.exitFullscreenMode') : t('map.fullscreenMode')}
+                aria-label={isFullScreen ? t('map.exitFullscreenMode') : t('map.fullscreenMode')}
+                className="bg-white dark:bg-gray-800 shadow-md"
               >
                 {isFullScreen ? (
                   <Minimize2 className="h-5 w-5 text-gray-600" />
                 ) : (
                   <Maximize2 className="h-5 w-5 text-gray-600" />
                 )}
-              </button>
+              </Button>
             </div>
 
             {/* Search Box */}
@@ -1866,23 +1761,25 @@ const MapComponent: React.FC<MapProps> = ({
                     placeholder={t('map.searchPlaceholder')}
                     className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
-                  <button
+                  <Button
+                    size="icon"
                     onClick={handleSearch}
                     disabled={isSearching}
-                    className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400"
                   >
                     {isSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-                  </button>
-                  <button
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="ghost"
                     onClick={() => {
                       setShowSearchBox(false);
                       setSearchResults([]);
                       setSearchQuery('');
                     }}
-                    className="p-2 text-gray-500 hover:text-gray-700"
+                    aria-label={t('common.close', 'Close')}
                   >
                     <X className="h-4 w-4" />
-                  </button>
+                  </Button>
                 </div>
 
                 {/* Search Results */}
@@ -1922,27 +1819,24 @@ const MapComponent: React.FC<MapProps> = ({
                 </p>
 
                 <div className="flex items-center space-x-2 mb-3">
-                  <button
+                  <Button
+                    size="sm"
+                    variant={drawingMode === 'assisted' ? 'default' : 'outline'}
                     onClick={() => setDrawingMode(drawingMode === 'manual' ? 'assisted' : 'manual')}
-                    className={`flex items-center space-x-1 px-3 py-1 rounded-md text-sm ${drawingMode === 'assisted'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
-                      }`}
                   >
                     <Wand2 className="h-4 w-4" />
                     <span>{t('map.assistedMode')}</span>
-                  </button>
+                  </Button>
 
-                  <button
+                  <Button
+                    size="sm"
+                    variant={autoSnapEnabled ? 'default' : 'outline'}
                     onClick={() => setAutoSnapEnabled(!autoSnapEnabled)}
-                    className={`flex items-center space-x-1 px-3 py-1 rounded-md text-sm ${autoSnapEnabled
-                      ? 'bg-green-600 text-white'
-                      : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
-                      }`}
+                    className={autoSnapEnabled ? 'bg-green-600 hover:bg-green-700' : ''}
                   >
                     <Grid3x3 className="h-4 w-4" />
                     <span>{t('map.magnetism')}</span>
-                  </button>
+                  </Button>
                 </div>
 
                 {calculatedArea > 0 && (
@@ -2000,21 +1894,21 @@ const MapComponent: React.FC<MapProps> = ({
                       {t('map.indicesToCalculate')}
                     </label>
                     <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto border border-gray-200 dark:border-gray-600 rounded-md p-3">
-                      {availableIndices.map((index) => (
-                        <label key={index} className="flex items-center space-x-2 text-sm">
+                      {availableIndices.map((vegIndex) => (
+                        <label key={vegIndex} className="flex items-center space-x-2 text-sm">
                           <input
                             type="checkbox"
-                            checked={selectedIndices.includes(index)}
+                            checked={selectedIndices.includes(vegIndex)}
                             onChange={(e) => {
                               if (e.target.checked) {
-                                setSelectedIndices(prev => [...prev, index]);
+                                setSelectedIndices(prev => [...prev, vegIndex]);
                               } else {
-                                setSelectedIndices(prev => prev.filter(i => i !== index));
+                                setSelectedIndices(prev => prev.filter(i => i !== vegIndex));
                               }
                             }}
                             className="rounded border-gray-300"
                           />
-                          <span className="text-gray-700 dark:text-gray-300">{index}</span>
+                          <span className="text-gray-700 dark:text-gray-300">{vegIndex}</span>
                         </label>
                       ))}
                     </div>
@@ -2028,20 +1922,19 @@ const MapComponent: React.FC<MapProps> = ({
                 </div>
 
                 <div className="flex justify-end space-x-3 mt-6">
-                  <button
+                  <Button
+                    variant="ghost"
                     onClick={() => setShowIndicesDialog(false)}
-                    className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
                   >
                     {t('map.cancel')}
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     onClick={handleCalculateIndices}
                     disabled={indicesLoading || selectedIndices.length === 0}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 flex items-center space-x-2"
                   >
-                    {indicesLoading && <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>}
+                    {indicesLoading && <ButtonLoader />}
                     <span>{t('map.calculate')}</span>
-                  </button>
+                  </Button>
                 </div>
               </div>
             </div>
@@ -2092,8 +1985,8 @@ const MapComponent: React.FC<MapProps> = ({
                       onChange={(e) => setSelectedTimeSeriesIndex(e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                     >
-                      {availableIndices.map((index) => (
-                        <option key={index} value={index}>{index}</option>
+                      {availableIndices.map((vegIndex) => (
+                        <option key={vegIndex} value={vegIndex}>{vegIndex}</option>
                       ))}
                     </select>
                   </div>
@@ -2106,20 +1999,16 @@ const MapComponent: React.FC<MapProps> = ({
                 </div>
 
                 <div className="flex justify-end space-x-3 mt-6">
-                  <button
+                  <Button
+                    variant="ghost"
                     onClick={() => setShowTimeSeriesDialog(false)}
-                    className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
                   >
                     {t('map.cancel')}
-                  </button>
-                  <button
-                    onClick={handleGetTimeSeries}
-                    disabled={indicesLoading}
-                    className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:bg-gray-400 flex items-center space-x-2"
-                  >
-                    {indicesLoading && <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>}
+                  </Button>
+                  <Button variant="purple" onClick={handleGetTimeSeries} disabled={indicesLoading} >
+                    {indicesLoading && <ButtonLoader />}
                     <span>{t('map.analyze')}</span>
-                  </button>
+                  </Button>
                 </div>
               </div>
             </div>
@@ -2136,22 +2025,22 @@ const MapComponent: React.FC<MapProps> = ({
 
               {/* Actions */}
               <div className="flex space-x-2">
-                <button
+                <Button
+                  size="sm"
                   onClick={() => setShowIndicesDialog(true)}
-                  className="flex items-center space-x-1 px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm"
                   disabled={indicesLoading || !selectedParcel.boundary}
                 >
                   <Satellite className="h-4 w-4" />
-                  <span>Indices</span>
-                </button>
-                <button
+                  <span>{t('map.indices', 'Indices')}</span>
+                </Button>
+                <Button variant="purple"
+                  size="sm"
                   onClick={() => setShowTimeSeriesDialog(true)}
-                  className="flex items-center space-x-1 px-3 py-1 bg-purple-600 text-white rounded-md hover:bg-purple-700 text-sm"
                   disabled={indicesLoading || !selectedParcel.boundary}
                 >
                   <BarChart3 className="h-4 w-4" />
                   <span>{t('map.timeSeries')}</span>
-                </button>
+                </Button>
                 {/* Delete functionality removed - handled in parent component */}
               </div>
             </div>
@@ -2202,29 +2091,35 @@ const MapComponent: React.FC<MapProps> = ({
                   <Satellite className="h-4 w-4 text-blue-600" />
                   <span>{t('map.vegetationIndices')}</span>
                 </h4>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {indicesResults.map((result, index) => (
-                    <div key={index} className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm font-medium text-gray-600 dark:text-gray-300">
-                          {result.index}
-                        </span>
-                        <button
-                          onClick={() => handleExportIndexMap(result.index)}
-                          className="text-blue-600 hover:text-blue-800"
-                          title={t('map.downloadMap')}
-                        >
-                          <Download className="h-4 w-4" />
-                        </button>
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                  {indicesResults.map((result) => {
+                    const vegIndex = result.index;
+
+                    return (
+                      <div key={vegIndex} className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm font-medium text-gray-600 dark:text-gray-300">
+                            {vegIndex}
+                          </span>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => handleExportIndexMap(vegIndex)}
+                            aria-label={t('map.downloadMap')}
+                            className="h-auto w-auto p-1 text-blue-600 hover:text-blue-800"
+                          >
+                            <Download className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                          {result.value.toFixed(3)}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {new Date(result.timestamp).toLocaleDateString()}
+                        </p>
                       </div>
-                      <p className="text-lg font-semibold text-gray-900 dark:text-white">
-                        {result.value.toFixed(3)}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        {new Date(result.timestamp).toLocaleDateString()}
-                      </p>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -2238,7 +2133,7 @@ const MapComponent: React.FC<MapProps> = ({
                 </h4>
 
                 {timeSeriesResults.statistics && (
-                  <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
+                  <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
                     <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
                       <p className="text-xs text-gray-500">{t('map.average')}</p>
                       <p className="text-lg font-semibold">{timeSeriesResults.statistics.mean.toFixed(3)}</p>
@@ -2264,8 +2159,8 @@ const MapComponent: React.FC<MapProps> = ({
 
                 <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 max-h-64 overflow-y-auto">
                   <div className="space-y-2">
-                    {timeSeriesResults.data.map((point, index) => (
-                      <div key={index} className="flex justify-between items-center text-sm">
+                    {timeSeriesResults.data.map((point) => (
+                      <div key={point.date} className="flex justify-between items-center text-sm">
                         <span className="text-gray-600 dark:text-gray-300">
                           {new Date(point.date).toLocaleDateString()}
                         </span>

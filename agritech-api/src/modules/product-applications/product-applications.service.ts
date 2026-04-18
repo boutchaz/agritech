@@ -1,13 +1,20 @@
 import { Injectable, NotFoundException, InternalServerErrorException, BadRequestException, Logger } from '@nestjs/common';
 import { PoolClient } from 'pg';
 import { DatabaseService } from '../database/database.service';
+import { NotificationsService, OPERATIONAL_ROLES } from '../notifications/notifications.service';
+import { NotificationType } from '../notifications/dto/notification.dto';
+import { AccountingAutomationService } from '../journal-entries/accounting-automation.service';
 import { CreateProductApplicationDto } from './dto/create-product-application.dto';
 
 @Injectable()
 export class ProductApplicationsService {
   private readonly logger = new Logger(ProductApplicationsService.name);
 
-  constructor(private readonly databaseService: DatabaseService) {}
+  constructor(
+    private readonly databaseService: DatabaseService,
+    private readonly notificationsService: NotificationsService,
+    private readonly accountingAutomationService: AccountingAutomationService,
+  ) {}
 
   /**
    * Get a warehouse for the organization (first active warehouse)
@@ -39,6 +46,18 @@ export class ProductApplicationsService {
           items!inner (
             item_name,
             default_unit
+          ),
+          farms!product_applications_farm_id_fkey (
+            name
+          ),
+          parcels!product_applications_parcel_id_fkey (
+            name
+          ),
+          tasks (
+            id,
+            title,
+            status,
+            task_type
           )
         `)
         .eq('organization_id', organizationId)
@@ -50,15 +69,19 @@ export class ProductApplicationsService {
       }
 
       // Transform the response to match the expected DTO structure
-      // items (item_name, default_unit) -> inventory (name, unit)
       const transformedApplications = (data || []).map((app: any) => ({
         ...app,
         inventory: {
-          name: app.items.item_name,
-          unit: app.items.default_unit,
+          name: app.items?.item_name,
+          unit: app.items?.default_unit,
         },
-        // Remove the items property as it's transformed to inventory
+        farm: app.farms ? { name: app.farms.name } : null,
+        parcel: app.parcels ? { name: app.parcels.name } : null,
+        task: app.tasks ? { id: app.tasks.id, title: app.tasks.title, status: app.tasks.status, task_type: app.tasks.task_type } : null,
         items: undefined,
+        farms: undefined,
+        parcels: undefined,
+        tasks: undefined,
       }));
 
       return {
@@ -82,40 +105,65 @@ export class ProductApplicationsService {
     createDto: CreateProductApplicationDto,
   ) {
     return this.executeInPgTransaction(async (client) => {
+      // 0. Validate account mappings before proceeding
+      const expenseAccountId = await this.accountingAutomationService.resolveAccountId(organizationId, 'cost_type', 'materials');
+      const cashAccountId = await this.accountingAutomationService.resolveAccountId(organizationId, 'cash', 'bank');
+      if (!expenseAccountId || !cashAccountId) {
+        throw new BadRequestException(
+          'Account mappings not configured for cost_type: materials. Please configure account mappings before creating product applications.',
+        );
+      }
+
       // 1. Get warehouse for stock deduction
       const warehouseId = await this.getOrganizationWarehouse(organizationId);
       if (!warehouseId) {
         throw new BadRequestException('No active warehouse found for this organization. Please create a warehouse first.');
       }
 
+      const variantId = createDto.variant_id || null;
+
       // 2. Validate stock availability
       await this.validateStockAvailabilityPg(
         client,
         organizationId,
         createDto.product_id,
-        null, // variant_id not specified in product application
+        variantId,
         warehouseId,
         createDto.quantity_used,
       );
 
-      // 3. Get item details for unit
-      const itemResult = await client.query(
-        `SELECT default_unit FROM items WHERE id = $1 AND organization_id = $2`,
-        [createDto.product_id, organizationId],
-      );
-
-      if (itemResult.rows.length === 0) {
-        throw new NotFoundException('Product not found');
+      // 3. Get item details for unit (use variant unit if specified)
+      let unit: string;
+      if (variantId) {
+        const variantResult = await client.query(
+          `SELECT pv.quantity, wu.code as unit_code, i.default_unit
+           FROM product_variants pv
+           LEFT JOIN work_units wu ON wu.id = pv.unit_id
+           JOIN items i ON i.id = pv.item_id
+           WHERE pv.id = $1 AND pv.organization_id = $2`,
+          [variantId, organizationId],
+        );
+        if (variantResult.rows.length === 0) {
+          throw new NotFoundException('Product variant not found');
+        }
+        unit = variantResult.rows[0].unit_code || variantResult.rows[0].default_unit || 'unit';
+      } else {
+        const itemResult = await client.query(
+          `SELECT default_unit FROM items WHERE id = $1 AND organization_id = $2`,
+          [createDto.product_id, organizationId],
+        );
+        if (itemResult.rows.length === 0) {
+          throw new NotFoundException('Product not found');
+        }
+        unit = itemResult.rows[0].default_unit || 'unit';
       }
-
-      const unit = itemResult.rows[0].default_unit || 'unit';
 
       // 4. Consume valuation using FIFO to get cost
       const { totalCost, consumedBatches } = await this.consumeValuation(
         client,
         organizationId,
         createDto.product_id,
-        null, // variant_id not specified
+        variantId,
         warehouseId,
         createDto.quantity_used,
         'FIFO',
@@ -188,6 +236,35 @@ export class ProductApplicationsService {
         `stock deducted: ${totalCost} (${consumedBatches.length} batches consumed)`,
       );
 
+      // 8. Create journal entry for material cost
+      if (totalCost > 0) {
+        await this.accountingAutomationService.createJournalEntryFromCost(
+          organizationId,
+          application.id,
+          'materials',
+          totalCost,
+          new Date(createDto.application_date),
+          `Product application: ${createDto.product_id}`,
+          userId,
+          createDto.parcel_id,
+        );
+      }
+
+      // Notify operational roles about product application
+      try {
+        await this.notificationsService.createNotificationsForRoles(
+          organizationId,
+          OPERATIONAL_ROLES,
+          userId,
+          NotificationType.PRODUCT_APPLICATION_COMPLETED,
+          `🧪 Product applied: ${createDto.quantity_used} ${unit}`,
+          createDto.notes || undefined,
+          { applicationId: application.id, productId: createDto.product_id, parcelId: createDto.parcel_id, quantity: createDto.quantity_used },
+        );
+      } catch (notifError) {
+        this.logger.warn(`Failed to send product application notification: ${notifError}`);
+      }
+
       return {
         success: true,
         application: {
@@ -195,6 +272,99 @@ export class ProductApplicationsService {
           stock_movement_id: stockMovement.id,
         },
       };
+    });
+  }
+
+  /**
+   * Delete a product application and reverse stock movement, valuation, and journal entry
+   */
+  async deleteProductApplication(userId: string, organizationId: string, applicationId: string) {
+    return this.executeInPgTransaction(async (client) => {
+      // 1. Get the application
+      const appResult = await client.query(
+        `SELECT * FROM product_applications
+         WHERE id = $1 AND organization_id = $2`,
+        [applicationId, organizationId],
+      );
+
+      if (appResult.rows.length === 0) {
+        throw new NotFoundException('Product application not found');
+      }
+
+      const application = appResult.rows[0];
+
+      // 2. Find and delete related stock movement
+      const movementResult = await client.query(
+        `SELECT * FROM stock_movements
+         WHERE reference_type = 'ProductApplication' AND reference_id = $1
+         AND organization_id = $2`,
+        [applicationId, organizationId],
+      );
+
+      if (movementResult.rows.length > 0) {
+        const movement = movementResult.rows[0];
+
+        // 3. Reverse stock valuation — restore consumed quantities
+        // We need to add back the quantity that was consumed
+        const warehouseId = movement.warehouse_id;
+
+        // Find the most recent valuation batch for this item and add back stock
+        const valuationResult = await client.query(
+          `SELECT id FROM stock_valuation
+           WHERE organization_id = $1 AND item_id = $2 AND warehouse_id = $3
+           ORDER BY created_at DESC
+           LIMIT 1`,
+          [organizationId, application.product_id, warehouseId],
+        );
+
+        if (valuationResult.rows.length > 0) {
+          await client.query(
+            `UPDATE stock_valuation
+             SET remaining_quantity = remaining_quantity + $1
+             WHERE id = $2`,
+            [application.quantity_used, valuationResult.rows[0].id],
+          );
+        }
+
+        // 4. Delete the stock movement
+        await client.query(
+          `DELETE FROM stock_movements WHERE id = $1`,
+          [movement.id],
+        );
+      }
+
+      // 5. Delete related journal entries
+      const supabase = this.databaseService.getAdminClient();
+      const { data: journalEntries } = await supabase
+        .from('journal_entries')
+        .select('id')
+        .eq('organization_id', organizationId)
+        .eq('reference_id', applicationId);
+
+      if (journalEntries && journalEntries.length > 0) {
+        for (const entry of journalEntries) {
+          await client.query(
+            `DELETE FROM journal_entry_items WHERE journal_entry_id = $1`,
+            [entry.id],
+          );
+          await client.query(
+            `DELETE FROM journal_entries WHERE id = $1`,
+            [entry.id],
+          );
+        }
+      }
+
+      // 6. Delete the product application
+      await client.query(
+        `DELETE FROM product_applications WHERE id = $1`,
+        [applicationId],
+      );
+
+      this.logger.log(
+        `Product application ${applicationId} deleted with stock/accounting reversal`,
+      );
+
+      return { success: true, message: 'Product application deleted successfully' };
     });
   }
 
@@ -348,7 +518,7 @@ export class ProductApplicationsService {
       // Get all stock_valuation records with remaining_quantity > 0
       const { data: stockData, error: stockError } = await supabase
         .from('stock_valuation')
-        .select('item_id, remaining_quantity')
+        .select('item_id, variant_id, remaining_quantity')
         .eq('organization_id', organizationId)
         .gt('remaining_quantity', 0);
 
@@ -358,22 +528,21 @@ export class ProductApplicationsService {
       }
 
       if (!stockData || stockData.length === 0) {
-        return {
-          success: true,
-          products: [],
-          total: 0,
-        };
+        return { success: true, products: [], total: 0 };
       }
 
-      // Aggregate quantity by item_id in JavaScript
+      // Aggregate quantity by item_id
       const stockByItem = new Map<string, number>();
+      // Aggregate quantity by variant_id
+      const stockByVariant = new Map<string, number>();
       (stockData || []).forEach((stock: any) => {
-        const itemId = stock.item_id;
         const qty = parseFloat(stock.remaining_quantity || 0);
-        stockByItem.set(itemId, (stockByItem.get(itemId) || 0) + qty);
+        stockByItem.set(stock.item_id, (stockByItem.get(stock.item_id) || 0) + qty);
+        if (stock.variant_id) {
+          stockByVariant.set(stock.variant_id, (stockByVariant.get(stock.variant_id) || 0) + qty);
+        }
       });
 
-      // Get unique item IDs
       const itemIds = Array.from(stockByItem.keys());
 
       // Fetch item details
@@ -388,19 +557,40 @@ export class ProductApplicationsService {
         throw new InternalServerErrorException('Failed to fetch product details');
       }
 
-      // Merge stock data with item data
+      // Fetch active variants for these items that have stock
+      const variantIds = Array.from(stockByVariant.keys());
+      let variantsByItem = new Map<string, any[]>();
+
+      if (variantIds.length > 0) {
+        const { data: variants, error: variantsError } = await supabase
+          .from('product_variants')
+          .select('id, item_id, variant_name, unit_id, work_units:unit_id(code)')
+          .in('id', variantIds)
+          .eq('is_active', true);
+
+        if (!variantsError && variants) {
+          variants.forEach((v: any) => {
+            if (!variantsByItem.has(v.item_id)) variantsByItem.set(v.item_id, []);
+            variantsByItem.get(v.item_id)!.push({
+              id: v.id,
+              name: v.variant_name,
+              quantity: stockByVariant.get(v.id) || 0,
+              unit: v.work_units?.code || null,
+            });
+          });
+        }
+      }
+
+      // Merge stock data with item data and variants
       const products = (items || []).map((item: any) => ({
         id: item.id,
         name: item.item_name,
         quantity: stockByItem.get(item.id) || 0,
         unit: item.default_unit,
+        variants: variantsByItem.get(item.id) || [],
       }));
 
-      return {
-        success: true,
-        products: products,
-        total: products.length,
-      };
+      return { success: true, products, total: products.length };
     } catch (error) {
       this.logger.error('Error in getAvailableProducts:', error);
       throw error;

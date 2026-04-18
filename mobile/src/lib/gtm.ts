@@ -16,12 +16,7 @@ import * as SecureStore from 'expo-secure-store';
 // EXPO GO DETECTION & SAFE WRAPPER
 // ============================================
 
-const isExpoGo = Constants.appOwnership === 'expo';
-
-// No-op async function for mocking
-const noop = async (): Promise<void> => {};
-const noopWithArg = async (_arg: unknown): Promise<void> => {};
-const noopWithArgs = async (..._args: unknown[]): Promise<void> => {};
+const isExpoGo = Constants.executionEnvironment === 'storeClient';
 
 // ============================================
 // TYPES
@@ -103,8 +98,8 @@ async function getDeviceInfo() {
       device_type: deviceType,
       os_name: Platform.OS,
       os_version: String(Platform.Version),
-      app_version: Constants.expoConfig?.version ?? Constants.manifest?.version ?? '1.0.0',
-      app_name: Constants.expoConfig?.name ?? 'AgriTech Field',
+      app_version: Constants.expoConfig?.version ?? '1.0.0',
+      app_name: Constants.expoConfig?.name ?? 'AgroGina',
       platform: 'mobile',
     };
   } catch {
@@ -115,7 +110,7 @@ async function getDeviceInfo() {
       os_name: Platform.OS,
       os_version: String(Platform.Version),
       app_version: '1.0.0',
-      app_name: 'AgriTech Field',
+      app_name: 'AgroGina',
       platform: 'mobile',
     };
   }
@@ -127,12 +122,10 @@ async function getDeviceInfo() {
 
 async function sendEventImpl(eventName: string, params?: Record<string, string | number | boolean | undefined>): Promise<void> {
   if (isExpoGo) {
-    if (__DEV__) console.log('[GTM] Expo Go - skipping:', eventName);
     return;
   }
 
   if (!isConfigured) {
-    if (__DEV__) console.log('[GTM] Not configured - skipping:', eventName);
     return;
   }
 

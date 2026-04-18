@@ -27,14 +27,16 @@ import {
 import { format } from 'date-fns';
 
 import { useAuth } from '@/hooks/useAuth';
+import { DEFAULT_CURRENCY } from '@/utils/currencies';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
 import { FormField } from '@/components/ui/FormField';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import { workersApi } from '@/lib/api/workers';
 import { workUnitsApi } from '@/lib/api/work-units';
 import { tasksApi } from '@/lib/api/tasks';
@@ -44,7 +46,7 @@ import { pieceWorkApi } from '@/lib/api/piece-work';
 import type {
   WorkUnit,
 } from '@/types/work-units';
-import { QUALITY_RATINGS, PIECE_WORK_PAYMENT_STATUSES } from '@/types/work-units';
+import { QUALITY_RATINGS, PIECE_WORK_PAYMENT_STATUSES, type PieceWorkPaymentStatus } from '@/types/work-units';
 
 // =====================================================
 // VALIDATION SCHEMA
@@ -119,10 +121,11 @@ export function PieceWorkEntry({
     queryKey: ['tasks', currentOrganization?.id, currentFarm?.id],
     queryFn: async () => {
       if (!currentOrganization?.id || !currentFarm?.id) return [];
-      return tasksApi.getAll({
+      const result = await tasksApi.getAll(currentOrganization.id, {
         farm_id: currentFarm.id,
         status: ['assigned', 'in_progress', 'completed'],
-      }, currentOrganization.id);
+      });
+      return result?.data || [];
     },
     enabled: !!currentOrganization?.id && !!currentFarm?.id,
   });
@@ -251,8 +254,12 @@ export function PieceWorkEntry({
         {t('workers.pieceWork.buttons.record')}
       </Button>
 
-      <Dialog open={isDialogOpen} onOpenChange={handleCloseDialog}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <ResponsiveDialog
+        open={isDialogOpen}
+        onOpenChange={handleCloseDialog}
+        size="2xl"
+        contentClassName="max-h-[90vh] overflow-y-auto"
+      >
           <DialogHeader>
             <DialogTitle>{t('workers.pieceWork.title')}</DialogTitle>
           </DialogHeader>
@@ -433,7 +440,7 @@ export function PieceWorkEntry({
                     {t('workers.pieceWork.fields.totalAmount')}:
                   </span>
                   <span className="text-lg font-bold">
-                    {currentOrganization?.currency || 'MAD'} {totalAmount.toFixed(2)}
+                    {currentOrganization?.currency || DEFAULT_CURRENCY} {totalAmount.toFixed(2)}
                   </span>
                 </div>
               </div>
@@ -552,8 +559,7 @@ export function PieceWorkEntry({
               </div>
             )}
           </form>
-        </DialogContent>
-      </Dialog>
+      </ResponsiveDialog>
     </>
   );
 }
@@ -584,7 +590,7 @@ export function PieceWorkList({ workerId, filters }: PieceWorkListProps) {
         worker_id: workerId,
         start_date: filters?.startDate,
         end_date: filters?.endDate,
-        payment_status: filters?.status as any,
+        payment_status: filters?.status as PieceWorkPaymentStatus | undefined,
       });
     },
     enabled: !!currentOrganization?.id && !!currentFarm?.id,
@@ -625,7 +631,7 @@ export function PieceWorkList({ workerId, filters }: PieceWorkListProps) {
                   )}
                 </div>
 
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-1 text-sm text-muted-foreground">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-1 text-sm text-muted-foreground">
                   <div>
                     <Calendar className="inline h-3 w-3 mr-1" />
                     {format(new Date(record.work_date), 'MMM dd, yyyy')}
@@ -636,7 +642,7 @@ export function PieceWorkList({ workerId, filters }: PieceWorkListProps) {
                   </div>
                   <div>
                     <DollarSign className="inline h-3 w-3 mr-1" />
-                    {record.total_amount.toFixed(2)} {currentOrganization?.currency || 'MAD'}
+                    {record.total_amount.toFixed(2)} {currentOrganization?.currency || DEFAULT_CURRENCY}
                   </div>
                   {record.quality_rating && (
                     <div>

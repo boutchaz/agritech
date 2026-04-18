@@ -16,14 +16,10 @@ function TasksCalendarPage() {
         { organization_id: currentOrganization.id },
         currentOrganization.id
       );
-      // Handle paginated response: { success: true, farms: [...], total: ... }
-      let farmsList: any[] = [];
-      if (data && typeof data === 'object' && 'farms' in data && Array.isArray((data as { farms: any[] }).farms)) {
-        farmsList = (data as { farms: any[] }).farms;
-      } else if (Array.isArray(data)) {
-        farmsList = data;
-      }
-      return farmsList.map((f: any) => ({ id: f.farm_id || f.id, name: f.farm_name || f.name }));
+      return (data || []).map((f: { farm_id?: string; id?: string; farm_name?: string; name?: string }) => ({
+        id: f.farm_id || f.id || '',
+        name: f.farm_name || f.name || '',
+      }));
     },
     enabled: !!currentOrganization?.id,
   });

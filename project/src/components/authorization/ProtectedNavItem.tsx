@@ -12,11 +12,11 @@ interface ProtectedNavItemProps {
  * Component that only renders navigation items if the user has permission
  * Used in Sidebar to hide unauthorized menu items
  */
-export const ProtectedNavItem: React.FC<ProtectedNavItemProps> = ({
+export const ProtectedNavItem = ({
   action,
   subject,
   children,
-}) => {
+}: ProtectedNavItemProps) => {
   const ability = useAbility();
 
   // Check if user has permission

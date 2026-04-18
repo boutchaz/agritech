@@ -22,4 +22,8 @@ export class CustomerFiltersDto {
   @IsOptional()
   @IsString()
   assigned_to?: string;
+
+  @IsOptional()
+  @IsString()
+  search?: string;
 }

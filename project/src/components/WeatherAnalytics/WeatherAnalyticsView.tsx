@@ -1,14 +1,18 @@
-import React, { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Calendar, Cloud, Droplets, TrendingUp, CalendarDays } from 'lucide-react';
+import { Calendar, Cloud, Droplets, TrendingUp, CalendarDays, Waves } from 'lucide-react';
 import { useWeatherAnalytics, TimeRange } from '../../hooks/useWeatherAnalytics';
 import TemperatureCharts from './TemperatureCharts';
 import PrecipitationChart from './PrecipitationChart';
 import DryWetConditionsCharts from './DryWetConditionsCharts';
 import PhenologicalTemperatureCounters from './PhenologicalTemperatureCounters';
+import EvapotranspirationChart from './EvapotranspirationChart';
 import WeatherForecast from '../WeatherForecast';
+import { SectionLoader } from '@/components/ui/loader';
+import { Button } from '@/components/ui/button';
 
 interface WeatherAnalyticsViewProps {
+  parcelId?: string;
   parcelBoundary: number[][];
   parcelName: string;
   cropType?: string | null;
@@ -23,13 +27,14 @@ const formatDateInput = (date: Date): string => {
   return `${year}-${month}-${day}`;
 };
 
-const WeatherAnalyticsView: React.FC<WeatherAnalyticsViewProps> = ({
+const WeatherAnalyticsView = ({
+  parcelId,
   parcelBoundary,
   parcelName,
   cropType,
   treeType,
   variety,
-}) => {
+}: WeatherAnalyticsViewProps) => {
   const { t, i18n } = useTranslation();
   const [timeRange, setTimeRange] = useState<TimeRange>('last-12-months');
   const [customStartDate, setCustomStartDate] = useState('');
@@ -37,6 +42,7 @@ const WeatherAnalyticsView: React.FC<WeatherAnalyticsViewProps> = ({
   const [showCustomDates, setShowCustomDates] = useState(false);
 
   const { data, loading, error } = useWeatherAnalytics({
+    parcelId,
     parcelBoundary,
     timeRange,
     customStartDate: showCustomDates ? customStartDate : undefined,
@@ -59,58 +65,8 @@ const WeatherAnalyticsView: React.FC<WeatherAnalyticsViewProps> = ({
     }
   };
 
-  // Calculate the center of the parcel for weather forecast
-  // Convert from Web Mercator (EPSG:3857) to WGS84 (lat/lon) if needed
-  const parcelCenter = useMemo(() => {
-    if (!parcelBoundary || parcelBoundary.length === 0) {
-      return { latitude: 0, longitude: 0 };
-    }
-
-    // Check if coordinates are in Web Mercator (large values) or already in WGS84
-    const firstPoint = parcelBoundary[0];
-    const isWebMercator = Math.abs(firstPoint[0]) > 180 || Math.abs(firstPoint[1]) > 90;
-
-    let sumLat = 0;
-    let sumLng = 0;
-
-    if (isWebMercator) {
-      // Convert from Web Mercator to WGS84
-      parcelBoundary.forEach(point => {
-        const x = point[0];
-        const y = point[1];
-
-        // Web Mercator to WGS84 conversion
-        const lng = (x / 20037508.34) * 180;
-        const lat = (Math.atan(Math.exp((y / 20037508.34) * Math.PI)) * 360 / Math.PI) - 90;
-
-        sumLng += lng;
-        sumLat += lat;
-      });
-    } else {
-      // Coordinates are already in WGS84 (longitude, latitude format)
-      sumLng = parcelBoundary.reduce((sum, point) => sum + point[0], 0);
-      sumLat = parcelBoundary.reduce((sum, point) => sum + point[1], 0);
-    }
-
-    const center = {
-      latitude: sumLat / parcelBoundary.length,
-      longitude: sumLng / parcelBoundary.length,
-    };
-
-    return center;
-  }, [parcelBoundary]);
-
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">
-            {t('weather.loading')}
-          </p>
-        </div>
-      </div>
-    );
+    return <SectionLoader className="h-96 py-0" />;
   }
 
   if (error) {
@@ -148,7 +104,7 @@ const WeatherAnalyticsView: React.FC<WeatherAnalyticsViewProps> = ({
           </div>
 
           <div className="flex flex-wrap gap-2">
-            <button
+            <Button
               onClick={() => handleTimeRangeChange('last-3-months')}
               className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                 timeRange === 'last-3-months'
@@ -157,8 +113,8 @@ const WeatherAnalyticsView: React.FC<WeatherAnalyticsViewProps> = ({
               }`}
             >
               {t('weather.timeRanges.last3Months')}
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={() => handleTimeRangeChange('last-6-months')}
               className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                 timeRange === 'last-6-months'
@@ -167,8 +123,8 @@ const WeatherAnalyticsView: React.FC<WeatherAnalyticsViewProps> = ({
               }`}
             >
               {t('weather.timeRanges.last6Months')}
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={() => handleTimeRangeChange('last-12-months')}
               className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                 timeRange === 'last-12-months'
@@ -177,8 +133,8 @@ const WeatherAnalyticsView: React.FC<WeatherAnalyticsViewProps> = ({
               }`}
             >
               {t('weather.timeRanges.last12Months')}
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={() => handleTimeRangeChange('ytd')}
               className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                 timeRange === 'ytd'
@@ -187,8 +143,8 @@ const WeatherAnalyticsView: React.FC<WeatherAnalyticsViewProps> = ({
               }`}
             >
               {t('weather.timeRanges.yearToDate')}
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={() => handleTimeRangeChange('custom')}
               className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                 timeRange === 'custom'
@@ -197,7 +153,7 @@ const WeatherAnalyticsView: React.FC<WeatherAnalyticsViewProps> = ({
               }`}
             >
               {t('weather.timeRanges.custom')}
-            </button>
+            </Button>
           </div>
 
           {/* Custom Date Range Inputs */}
@@ -240,17 +196,25 @@ const WeatherAnalyticsView: React.FC<WeatherAnalyticsViewProps> = ({
         </div>
       </div>
 
-      {/* Weather Forecast Section */}
+      {/* Weather Forecast Section — data from Nest / Open-Meteo only (no browser OpenWeather key) */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
         <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
           <CalendarDays className="h-6 w-6 text-blue-500" />
           {t('weather.forecast.title')}
         </h3>
-        <WeatherForecast
-          latitude={parcelCenter.latitude}
-          longitude={parcelCenter.longitude}
-        />
+        <WeatherForecast forecast={data?.forecast} loading={loading} error={error} />
       </div>
+
+      {data && (
+        <PhenologicalTemperatureCounters
+          temperatureData={data.temperature_series}
+          cropType={cropType}
+          treeType={treeType}
+          variety={variety}
+          startDate={data.start_date}
+          endDate={data.end_date}
+        />
+      )}
 
       {data ? (
         <>
@@ -324,16 +288,6 @@ const WeatherAnalyticsView: React.FC<WeatherAnalyticsViewProps> = ({
             <TemperatureCharts data={data.temperature_series} />
           </div>
 
-          {/* Phenological Temperature Counters Section */}
-          <PhenologicalTemperatureCounters
-            temperatureData={data.temperature_series}
-            cropType={cropType}
-            treeType={treeType}
-            variety={variety}
-            startDate={data.start_date}
-            endDate={data.end_date}
-          />
-
           {/* Precipitation Analysis Section */}
           <div>
             <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
@@ -342,6 +296,20 @@ const WeatherAnalyticsView: React.FC<WeatherAnalyticsViewProps> = ({
             </h3>
             <PrecipitationChart data={data.monthly_precipitation} />
           </div>
+
+          {/* Evapotranspiration Section */}
+          {data.evapotranspiration_series && data.evapotranspiration_series.length > 0 && (
+            <div>
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                <Waves className="h-6 w-6 text-orange-500" />
+                {t('weather.sections.evapotranspiration', 'Evapotranspiration (ET₀)')}
+              </h3>
+              <EvapotranspirationChart
+                dailyData={data.evapotranspiration_series}
+                monthlyData={data.monthly_evapotranspiration}
+              />
+            </div>
+          )}
 
           {/* Dry/Wet Conditions Section */}
           <div>

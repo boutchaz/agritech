@@ -1,6 +1,7 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { DatabaseService } from '../database/database.service';
-import { SatelliteProxyService } from './satellite-proxy.service';
+import { Injectable, Logger } from "@nestjs/common";
+import { DatabaseService } from "../database/database.service";
+import { SatelliteProxyService } from "./satellite-proxy.service";
+import { resolveParcelSyncLookbackStartDate } from "./parcel-sync-lookback";
 
 interface CacheEntry {
   data: unknown;
@@ -10,10 +11,20 @@ interface CacheEntry {
 interface TimeSeriesPoint {
   date: string;
   value: number;
+  min_value?: number | null;
+  max_value?: number | null;
+  std_value?: number | null;
+  median_value?: number | null;
+  percentile_10?: number | null;
+  percentile_25?: number | null;
+  percentile_75?: number | null;
+  percentile_90?: number | null;
+  pixel_count?: number | null;
+  cloud_coverage?: number | null;
 }
 
 export interface ParcelSyncProgress {
-  status: 'idle' | 'syncing' | 'completed' | 'failed';
+  status: "idle" | "syncing" | "completed" | "failed";
   startedAt: string | null;
   completedAt: string | null;
   totalIndices: number;
@@ -22,24 +33,51 @@ export interface ParcelSyncProgress {
   results: Record<string, { points: number; error?: string }>;
 }
 
-const HEATMAP_L1_TTL_MS = 5 * 60 * 1000;            // 5 min in-memory
-const HEATMAP_DB_TTL_MS = 5 * 24 * 60 * 60 * 1000;  // 5 days in DB (Copernicus/Sentinel-2 revisit period)
-const AVAIL_DATES_L1_TTL_MS = 10 * 60 * 1000;       // 10 min in-memory
+const HEATMAP_L1_TTL_MS = 5 * 60 * 1000; // 5 min in-memory
+const HEATMAP_DB_TTL_MS = 5 * 24 * 60 * 60 * 1000; // 5 days in DB (Copernicus/Sentinel-2 revisit period)
+const AVAIL_DATES_L1_TTL_MS = 10 * 60 * 1000; // 10 min in-memory
 
-const CORE_INDICES = ['NIRv', 'EVI', 'NDRE', 'NDMI'];
+/**
+ * Vegetation indices fetched from GEE via /indices/timeseries and cached in
+ * satellite_indices_data. Must match FastAPI TimeSeriesIndex names (MSAVI2 not MSAVI).
+ * NIRvP is omitted — derived with PAR and not persisted as its own index rows.
+ */
+export const CALIBRATION_SATELLITE_INDICES = [
+  "NDVI",
+  "NIRv",
+  "EVI",
+  "NDRE",
+  "NDMI",
+  "GCI",
+  "MSI",
+  "MSAVI2",
+  "OSAVI",
+  "SAVI",
+  "MNDWI",
+  "MCARI",
+  "TCARI",
+  "TCARI_OSAVI",
+] as const;
+
+/** Default list for parcel sync (UI warmup, full sync, calibration gap-fill). */
+export const CORE_INDICES: string[] = [...CALIBRATION_SATELLITE_INDICES];
 
 /** Convert a single coordinate pair from Web Mercator (EPSG:3857) to WGS84 if needed. */
 function toWgs84(x: number, y: number): [number, number] {
   if (Math.abs(x) > 180 || Math.abs(y) > 90) {
     const lon = (x / 20037508.34) * 180;
-    const lat = (Math.atan(Math.exp((y / 20037508.34) * Math.PI)) * 360) / Math.PI - 90;
+    const lat =
+      (Math.atan(Math.exp((y / 20037508.34) * Math.PI)) * 360) / Math.PI - 90;
     return [lon, lat];
   }
   return [x, y];
 }
 
 /** Convert a parcel boundary (number[][]) to a GeoJSON Polygon geometry in WGS84. */
-function boundaryToGeoJSON(boundary: number[][]): { type: 'Polygon'; coordinates: number[][][] } {
+function boundaryToGeoJSON(boundary: number[][]): {
+  type: "Polygon";
+  coordinates: number[][][];
+} {
   const ring = boundary.map(([x, y]) => toWgs84(x, y));
   // Close the ring if not already closed
   if (ring.length > 0) {
@@ -49,7 +87,7 @@ function boundaryToGeoJSON(boundary: number[][]): { type: 'Polygon'; coordinates
       ring.push([fx, fy]);
     }
   }
-  return { type: 'Polygon', coordinates: [ring] };
+  return { type: "Polygon", coordinates: [ring] };
 }
 
 @Injectable()
@@ -73,27 +111,32 @@ export class SatelliteCacheService {
   async resolveAoiFromParcel(
     parcelId: string,
     organizationId?: string,
-  ): Promise<{ geometry: { type: 'Polygon'; coordinates: number[][][] }; name: string } | null> {
+  ): Promise<{
+    geometry: { type: "Polygon"; coordinates: number[][][] };
+    name: string;
+  } | null> {
     try {
       const client = this.db.getAdminClient();
 
-      let query = client
-        .from('parcels')
-        .select('boundary, name')
-        .eq('id', parcelId);
+      const query = client
+        .from("parcels")
+        .select("boundary, name")
+        .eq("id", parcelId);
 
       const { data, error } = await query.limit(1).single();
 
       if (error || !data?.boundary) {
         this.logger.warn(
-          `[resolveAoi] No boundary for parcel ${parcelId}: ${error?.message ?? 'null boundary'}`,
+          `[resolveAoi] No boundary for parcel ${parcelId}: ${error?.message ?? "null boundary"}`,
         );
         return null;
       }
 
       const boundary = data.boundary as number[][];
       if (!Array.isArray(boundary) || boundary.length < 3) {
-        this.logger.warn(`[resolveAoi] Boundary too short for parcel ${parcelId}: ${boundary.length} points`);
+        this.logger.warn(
+          `[resolveAoi] Boundary too short for parcel ${parcelId}: ${boundary.length} points`,
+        );
         return null;
       }
 
@@ -107,6 +150,51 @@ export class SatelliteCacheService {
       this.logger.error(`[resolveAoi] Failed for parcel ${parcelId}: ${err}`);
       return null;
     }
+  }
+
+  // ── Sync Start Date Resolution ─────────────────────────
+
+  /**
+   * Determine the optimal start date for syncing satellite data for a parcel.
+   * - If data exists: returns (last synced date - 1 day) for delta sync.
+   * - If no data: uses planting_year to determine historical depth:
+   *   - age ≥ 3 years → 36 months
+   *   - age 2-3 years → 24 months
+   *   - age < 2 years → Jan 1 of planting year
+   *   - no planting_year → 24 months (default)
+   */
+  async getParcelSyncStartDate(
+    parcelId: string,
+    organizationId: string,
+    plantingYear?: number | null,
+    cropType?: string | null,
+  ): Promise<string> {
+    try {
+      const client = this.db.getAdminClient();
+
+      const { data, error } = await client
+        .from("satellite_indices_data")
+        .select("date")
+        .eq("parcel_id", parcelId)
+        .eq("organization_id", organizationId)
+        .order("date", { ascending: false })
+        .limit(1)
+        .single();
+
+      if (!error && data?.date) {
+        // Delta sync: start from 1 day before last synced date
+        const lastDate = new Date(data.date);
+        lastDate.setDate(lastDate.getDate() - 1);
+        return lastDate.toISOString().split("T")[0];
+      }
+    } catch (err) {
+      this.logger.warn(
+        `[getParcelSyncStartDate] Failed to query max date for ${parcelId}: ${err}`,
+      );
+    }
+
+    // No existing data — lookback from planting year + crop referential phases_maturite_ans
+    return resolveParcelSyncLookbackStartDate(plantingYear, cropType ?? null);
   }
 
   /**
@@ -129,31 +217,121 @@ export class SatelliteCacheService {
   // ── Per-Parcel Async Sync ─────────────────────────────
 
   getParcelSyncProgress(parcelId: string): ParcelSyncProgress {
-    return this.parcelSyncProgress.get(parcelId) || {
-      status: 'idle',
-      startedAt: null,
-      completedAt: null,
-      totalIndices: 0,
-      completedIndices: 0,
-      currentIndex: null,
-      results: {},
-    };
+    return (
+      this.parcelSyncProgress.get(parcelId) || {
+        status: "idle",
+        startedAt: null,
+        completedAt: null,
+        totalIndices: 0,
+        completedIndices: 0,
+        currentIndex: null,
+        results: {},
+      }
+    );
+  }
+
+  /**
+   * Synchronously sync satellite data for a parcel — awaitable.
+   * Fetches time series from the satellite service and persists to DB.
+   * Used by calibration to ensure data exists before running the pipeline.
+   */
+  async syncParcelSatelliteData(
+    parcelId: string,
+    organizationId: string,
+    farmId?: string,
+    options?: {
+      startDate?: string;
+      endDate?: string;
+      indices?: string[];
+      /** User JWT for satellite service auth when INTERNAL_SERVICE_TOKEN is unset */
+      authToken?: string;
+    },
+  ): Promise<{ totalPoints: number }> {
+    const resolvedAoi = await this.resolveAoiFromParcel(
+      parcelId,
+      organizationId,
+    );
+    if (!resolvedAoi) {
+      this.logger.warn(
+        `[syncParcelSatelliteData] No boundary for parcel ${parcelId}`,
+      );
+      return { totalPoints: 0 };
+    }
+
+    const endDate = options?.endDate || new Date().toISOString().split("T")[0];
+    const startDate =
+      options?.startDate ||
+      new Date(new Date().setMonth(new Date().getMonth() - 24))
+        .toISOString()
+        .split("T")[0];
+    const indices = options?.indices || CORE_INDICES;
+
+    let totalPoints = 0;
+
+    for (const index of indices) {
+      try {
+        const result = (await this.proxy.post(
+          "/indices/timeseries",
+          {
+            aoi: resolvedAoi,
+            parcel_id: parcelId,
+            farm_id: farmId,
+            index,
+            force_refresh: true,
+            date_range: { start_date: startDate, end_date: endDate },
+            cloud_coverage: 10,
+          },
+          organizationId,
+          undefined,
+          300_000,
+          options?.authToken,
+        )) as Record<string, unknown>;
+
+        const points = (result.data as TimeSeriesPoint[]) || [];
+
+        await this.persistTimeSeriesSync(
+          parcelId,
+          index,
+          points,
+          organizationId,
+          farmId,
+        );
+
+        totalPoints += points.length;
+        this.logger.log(
+          `[syncParcelSatelliteData] ${parcelId} — ${index}: ${points.length} points`,
+        );
+      } catch (err) {
+        this.logger.warn(
+          `[syncParcelSatelliteData] ${parcelId} — ${index} failed: ${err instanceof Error ? err.message : err}`,
+        );
+      }
+    }
+
+    return { totalPoints };
   }
 
   /**
    * Starts async background sync for a single parcel.
    * Returns immediately — caller polls getParcelSyncProgress() for status.
    */
-  startParcelSync(body: Record<string, unknown>, organizationId?: string): ParcelSyncProgress {
+  startParcelSync(
+    body: Record<string, unknown>,
+    organizationId?: string,
+    /** User JWT for satellite when INTERNAL_SERVICE_TOKEN is unset on the API */
+    authToken?: string,
+  ): ParcelSyncProgress {
     const parcelId = body.parcel_id as string;
     const farmId = body.farm_id as string | undefined;
-    const dateRange = body.date_range as { start_date?: string; end_date?: string } | undefined;
+    const dateRange = body.date_range as
+      | { start_date?: string; end_date?: string }
+      | undefined;
     const cloudCoverage = (body.cloud_coverage as number) || 10;
     const indices = (body.indices as string[]) || CORE_INDICES;
 
     if (!parcelId || !dateRange?.start_date || !dateRange?.end_date) {
       return {
-        status: 'failed',
+        status: "failed",
         startedAt: new Date().toISOString(),
         completedAt: new Date().toISOString(),
         totalIndices: 0,
@@ -164,13 +342,15 @@ export class SatelliteCacheService {
     }
 
     const existing = this.parcelSyncProgress.get(parcelId);
-    if (existing?.status === 'syncing') {
-      this.logger.warn(`[ParcelSync] Already syncing parcel ${parcelId}, returning current progress`);
+    if (existing?.status === "syncing") {
+      this.logger.warn(
+        `[ParcelSync] Already syncing parcel ${parcelId}, returning current progress`,
+      );
       return existing;
     }
 
     const progress: ParcelSyncProgress = {
-      status: 'syncing',
+      status: "syncing",
       startedAt: new Date().toISOString(),
       completedAt: null,
       totalIndices: indices.length,
@@ -189,6 +369,7 @@ export class SatelliteCacheService {
       indices,
       body,
       organizationId,
+      authToken,
     );
 
     return progress;
@@ -203,15 +384,21 @@ export class SatelliteCacheService {
     indices: string[],
     originalBody: Record<string, unknown>,
     organizationId?: string,
+    authToken?: string,
   ): Promise<void> {
     const progress = this.parcelSyncProgress.get(parcelId)!;
 
-    const enrichedBody = await this.enrichBodyWithAoi(originalBody, organizationId);
+    const enrichedBody = await this.enrichBodyWithAoi(
+      originalBody,
+      organizationId,
+    );
 
     try {
       for (const index of indices) {
         progress.currentIndex = index;
-        this.logger.log(`[ParcelSync] ${parcelId} — syncing ${index} (${progress.completedIndices + 1}/${indices.length})`);
+        this.logger.log(
+          `[ParcelSync] ${parcelId} — syncing ${index} (${progress.completedIndices + 1}/${indices.length})`,
+        );
 
         try {
           const requestBody = {
@@ -222,13 +409,14 @@ export class SatelliteCacheService {
             cloud_coverage: cloudCoverage,
           };
 
-          const result = await this.proxy.post(
-            '/indices/timeseries',
+          const result = (await this.proxy.post(
+            "/indices/timeseries",
             requestBody,
             organizationId,
             undefined,
             300_000,
-          ) as Record<string, unknown>;
+            authToken,
+          )) as Record<string, unknown>;
 
           const points = (result.data as TimeSeriesPoint[]) || [];
 
@@ -241,33 +429,40 @@ export class SatelliteCacheService {
           );
 
           progress.results[index] = { points: points.length };
-          this.logger.log(`[ParcelSync] ${parcelId} — ${index} done: ${points.length} points`);
+          this.logger.log(
+            `[ParcelSync] ${parcelId} — ${index} done: ${points.length} points`,
+          );
         } catch (err) {
           const errMsg = err instanceof Error ? err.message : String(err);
           progress.results[index] = { points: 0, error: errMsg };
-          this.logger.warn(`[ParcelSync] ${parcelId} — ${index} failed: ${errMsg}`);
+          this.logger.warn(
+            `[ParcelSync] ${parcelId} — ${index} failed: ${errMsg}`,
+          );
         }
 
         progress.completedIndices++;
       }
 
-      progress.status = 'completed';
+      progress.status = "completed";
       progress.completedAt = new Date().toISOString();
       progress.currentIndex = null;
       this.logger.log(`[ParcelSync] ${parcelId} — sync complete`);
     } catch (err) {
-      progress.status = 'failed';
+      progress.status = "failed";
       progress.completedAt = new Date().toISOString();
       progress.currentIndex = null;
       this.logger.error(`[ParcelSync] ${parcelId} — fatal error: ${err}`);
     }
 
-    setTimeout(() => {
-      const current = this.parcelSyncProgress.get(parcelId);
-      if (current && current.status !== 'syncing') {
-        this.parcelSyncProgress.delete(parcelId);
-      }
-    }, 10 * 60 * 1000);
+    setTimeout(
+      () => {
+        const current = this.parcelSyncProgress.get(parcelId);
+        if (current && current.status !== "syncing") {
+          this.parcelSyncProgress.delete(parcelId);
+        }
+      },
+      10 * 60 * 1000,
+    );
   }
 
   /**
@@ -281,7 +476,7 @@ export class SatelliteCacheService {
     organizationId?: string,
     farmId?: string,
   ): Promise<{ saved: number; failed: number }> {
-    if (!organizationId || points.length === 0 || indexName === 'NIRvP') {
+    if (!organizationId || points.length === 0 || indexName === "NIRvP") {
       return { saved: 0, failed: 0 };
     }
 
@@ -291,20 +486,30 @@ export class SatelliteCacheService {
 
     for (const point of points) {
       if (point.value == null) continue;
-      const { error } = await client
-        .from('satellite_indices_data')
-        .upsert(
-          {
-            parcel_id: parcelId,
-            organization_id: organizationId,
-            farm_id: farmId || null,
-            index_name: indexName,
-            date: point.date,
-            mean_value: point.value,
-            image_source: 'sentinel-2',
-          },
-          { onConflict: 'parcel_id,index_name,date' },
-        );
+      const row: Record<string, unknown> = {
+        parcel_id: parcelId,
+        organization_id: organizationId,
+        farm_id: farmId || null,
+        index_name: indexName,
+        date: point.date,
+        mean_value: point.value,
+        image_source: "sentinel-2",
+      };
+      if (point.min_value != null) row.min_value = point.min_value;
+      if (point.max_value != null) row.max_value = point.max_value;
+      if (point.std_value != null) row.std_value = point.std_value;
+      if (point.median_value != null) row.median_value = point.median_value;
+      if (point.percentile_10 != null) row.percentile_10 = point.percentile_10;
+      if (point.percentile_25 != null) row.percentile_25 = point.percentile_25;
+      if (point.percentile_75 != null) row.percentile_75 = point.percentile_75;
+      if (point.percentile_90 != null) row.percentile_90 = point.percentile_90;
+      if (point.pixel_count != null) row.pixel_count = point.pixel_count;
+      if (point.cloud_coverage != null) row.cloud_coverage_percentage = point.cloud_coverage;
+
+      const { error } = await client.from("satellite_indices_data").upsert(
+        row,
+        { onConflict: "parcel_id,index_name,date" },
+      );
 
       if (error) {
         failed++;
@@ -324,15 +529,25 @@ export class SatelliteCacheService {
   async getTimeSeries(
     body: Record<string, unknown>,
     organizationId?: string,
+    authToken?: string,
   ): Promise<unknown> {
     const enrichedBody = await this.enrichBodyWithAoi(body, organizationId);
     const parcelId = enrichedBody.parcel_id as string | undefined;
-    const indexName = (enrichedBody.index as string) || '';
-    const dateRange = enrichedBody.date_range as { start_date?: string; end_date?: string } | undefined;
+    const indexName = (enrichedBody.index as string) || "";
+    const dateRange = enrichedBody.date_range as
+      | { start_date?: string; end_date?: string }
+      | undefined;
     const forceRefresh = enrichedBody.force_refresh as boolean | undefined;
 
     if (!parcelId || !dateRange?.start_date || !dateRange?.end_date) {
-      return this.proxy.post('/indices/timeseries', enrichedBody, organizationId);
+      return this.proxy.post(
+        "/indices/timeseries",
+        enrichedBody,
+        organizationId,
+        undefined,
+        undefined,
+        authToken,
+      );
     }
 
     if (!forceRefresh) {
@@ -357,26 +572,43 @@ export class SatelliteCacheService {
           start_date: dateRange.start_date,
           end_date: dateRange.end_date,
           data: cached,
-          statistics: values.length > 0 ? {
-            mean: values.reduce((s, v) => s + v, 0) / values.length,
-            std: Math.sqrt(
-              values.reduce((s, v) => s + (v - values.reduce((a, b) => a + b, 0) / values.length) ** 2, 0) / values.length,
-            ),
-            min: sorted[0],
-            max: sorted[sorted.length - 1],
-            median: sorted[Math.floor(sorted.length / 2)],
-          } : null,
-          _source: 'cache',
+          statistics:
+            values.length > 0
+              ? {
+                  mean: values.reduce((s, v) => s + v, 0) / values.length,
+                  std: Math.sqrt(
+                    values.reduce(
+                      (s, v) =>
+                        s +
+                        (v -
+                          values.reduce((a, b) => a + b, 0) / values.length) **
+                          2,
+                      0,
+                    ) / values.length,
+                  ),
+                  min: sorted[0],
+                  max: sorted[sorted.length - 1],
+                  median: sorted[Math.floor(sorted.length / 2)],
+                }
+              : null,
+          _source: "cache",
         };
       }
     }
 
     this.logger.log(
-      `[Cache ${forceRefresh ? 'BYPASS' : 'MISS'}] timeseries ${indexName} for parcel ${parcelId} → forwarding to satellite service`,
+      `[Cache ${forceRefresh ? "BYPASS" : "MISS"}] timeseries ${indexName} for parcel ${parcelId} → forwarding to satellite service`,
     );
 
     const start = Date.now();
-    const fresh = await this.proxy.post('/indices/timeseries', enrichedBody, organizationId) as Record<string, unknown>;
+    const fresh = (await this.proxy.post(
+      "/indices/timeseries",
+      enrichedBody,
+      organizationId,
+      undefined,
+      undefined,
+      authToken,
+    )) as Record<string, unknown>;
     this.logger.log(`[Proxy] timeseries response in ${Date.now() - start}ms`);
 
     this.persistTimeSeriesInBackground(
@@ -401,17 +633,17 @@ export class SatelliteCacheService {
       const client = this.db.getAdminClient();
 
       let query = client
-        .from('satellite_indices_data')
-        .select('date, mean_value')
-        .eq('parcel_id', parcelId)
-        .eq('index_name', indexName)
-        .gte('date', startDate)
-        .lte('date', endDate)
-        .not('mean_value', 'is', null)
-        .order('date', { ascending: true });
+        .from("satellite_indices_data")
+        .select("date, mean_value")
+        .eq("parcel_id", parcelId)
+        .eq("index_name", indexName)
+        .gte("date", startDate)
+        .lte("date", endDate)
+        .not("mean_value", "is", null)
+        .order("date", { ascending: true });
 
       if (organizationId) {
-        query = query.eq('organization_id', organizationId);
+        query = query.eq("organization_id", organizationId);
       }
 
       const { data, error } = await query;
@@ -425,7 +657,9 @@ export class SatelliteCacheService {
         value: row.mean_value,
       }));
     } catch (err) {
-      this.logger.warn(`Cache query failed for ${indexName}/${parcelId}: ${err}`);
+      this.logger.warn(
+        `Cache query failed for ${indexName}/${parcelId}: ${err}`,
+      );
       return null;
     }
   }
@@ -437,45 +671,57 @@ export class SatelliteCacheService {
     organizationId?: string,
     farmId?: string,
   ) {
-    if (!organizationId || points.length === 0 || indexName === 'NIRvP') return;
+    if (!organizationId || points.length === 0 || indexName === "NIRvP") return;
 
-    Promise.resolve().then(async () => {
-      const client = this.db.getAdminClient();
-      let saved = 0;
-      let failed = 0;
+    Promise.resolve()
+      .then(async () => {
+        const client = this.db.getAdminClient();
+        let saved = 0;
+        let failed = 0;
 
-      for (const point of points) {
-        if (point.value == null) continue;
-        const { error } = await client
-          .from('satellite_indices_data')
-          .upsert(
-            {
-              parcel_id: parcelId,
-              organization_id: organizationId,
-              farm_id: farmId || null,
-              index_name: indexName,
-              date: point.date,
-              mean_value: point.value,
-              image_source: 'sentinel-2',
-            },
-            { onConflict: 'parcel_id,index_name,date' },
+        for (const point of points) {
+          if (point.value == null) continue;
+          const row: Record<string, unknown> = {
+            parcel_id: parcelId,
+            organization_id: organizationId,
+            farm_id: farmId || null,
+            index_name: indexName,
+            date: point.date,
+            mean_value: point.value,
+            image_source: "sentinel-2",
+          };
+          if (point.min_value != null) row.min_value = point.min_value;
+          if (point.max_value != null) row.max_value = point.max_value;
+          if (point.std_value != null) row.std_value = point.std_value;
+          if (point.median_value != null) row.median_value = point.median_value;
+          if (point.percentile_10 != null) row.percentile_10 = point.percentile_10;
+          if (point.percentile_25 != null) row.percentile_25 = point.percentile_25;
+          if (point.percentile_75 != null) row.percentile_75 = point.percentile_75;
+          if (point.percentile_90 != null) row.percentile_90 = point.percentile_90;
+          if (point.pixel_count != null) row.pixel_count = point.pixel_count;
+          if (point.cloud_coverage != null) row.cloud_coverage_percentage = point.cloud_coverage;
+
+          const { error } = await client.from("satellite_indices_data").upsert(
+            row,
+            { onConflict: "parcel_id,index_name,date" },
           );
 
-        if (error) {
-          failed++;
-        } else {
-          saved++;
+          if (error) {
+            failed++;
+          } else {
+            saved++;
+          }
         }
-      }
 
-      if (saved > 0 || failed > 0) {
-        this.logger.log(
-          `[Cache WRITE] timeseries ${indexName}/${parcelId}: ${saved} saved, ${failed} failed out of ${points.length}`,
-        );
-      }
-    }).catch((err) => {
-      this.logger.error(`[Cache WRITE CRASH] timeseries persist: ${err}`);
-    });
+        if (saved > 0 || failed > 0) {
+          this.logger.log(
+            `[Cache WRITE] timeseries ${indexName}/${parcelId}: ${saved} saved, ${failed} failed out of ${points.length}`,
+          );
+        }
+      })
+      .catch((err) => {
+        this.logger.error(`[Cache WRITE CRASH] timeseries persist: ${err}`);
+      });
   }
 
   // ── Heatmap: DB-backed cache (L1 in-memory, L2 Supabase) ──
@@ -483,18 +729,21 @@ export class SatelliteCacheService {
   async getHeatmap(
     body: Record<string, unknown>,
     organizationId?: string,
+    authToken?: string,
   ): Promise<unknown> {
     const enrichedBody = await this.enrichBodyWithAoi(body, organizationId);
     const parcelId = enrichedBody.parcel_id as string | undefined;
-    const indexName = (enrichedBody.index as string) || '';
-    const date = (enrichedBody.date as string) || '';
+    const indexName = (enrichedBody.index as string) || "";
+    const date = (enrichedBody.date as string) || "";
     const gridSize = (enrichedBody.grid_size as number) || 1000;
 
     // L1: in-memory (short TTL for hot requests within same session)
     const memKey = this.heatmapMemKey(enrichedBody);
     const memCached = this.heatmapCache.get(memKey);
     if (memCached && memCached.expiresAt > Date.now()) {
-      this.logger.debug(`[Cache L1 HIT] heatmap mem key=${memKey.slice(0, 40)}…`);
+      this.logger.debug(
+        `[Cache L1 HIT] heatmap mem key=${memKey.slice(0, 40)}…`,
+      );
       return memCached.data;
     }
 
@@ -527,7 +776,14 @@ export class SatelliteCacheService {
     this.logger.debug(
       `[Cache MISS] heatmap ${indexName}/${date} → forwarding to satellite service`,
     );
-    const fresh = await this.proxy.post('/indices/heatmap', enrichedBody, organizationId);
+    const fresh = await this.proxy.post(
+      "/indices/heatmap",
+      enrichedBody,
+      organizationId,
+      undefined,
+      undefined,
+      authToken,
+    );
 
     // Store in L1
     this.heatmapCache.set(memKey, {
@@ -562,16 +818,16 @@ export class SatelliteCacheService {
       const client = this.db.getAdminClient();
 
       let query = client
-        .from('satellite_heatmap_cache')
-        .select('response_data')
-        .eq('parcel_id', parcelId)
-        .eq('index_name', indexName)
-        .eq('date', date)
-        .eq('grid_size', gridSize)
-        .gt('expires_at', new Date().toISOString());
+        .from("satellite_heatmap_cache")
+        .select("response_data")
+        .eq("parcel_id", parcelId)
+        .eq("index_name", indexName)
+        .eq("date", date)
+        .eq("grid_size", gridSize)
+        .gt("expires_at", new Date().toISOString());
 
       if (organizationId) {
-        query = query.eq('organization_id', organizationId);
+        query = query.eq("organization_id", organizationId);
       }
 
       const { data, error } = await query.limit(1).single();
@@ -582,7 +838,9 @@ export class SatelliteCacheService {
 
       return data.response_data;
     } catch (err) {
-      this.logger.warn(`Heatmap cache query failed for ${indexName}/${parcelId}/${date}: ${err}`);
+      this.logger.warn(
+        `Heatmap cache query failed for ${indexName}/${parcelId}/${date}: ${err}`,
+      );
       return null;
     }
   }
@@ -595,13 +853,14 @@ export class SatelliteCacheService {
     responseData: unknown,
     organizationId: string,
   ) {
-    Promise.resolve().then(async () => {
-      const client = this.db.getAdminClient();
-      const expiresAt = new Date(Date.now() + HEATMAP_DB_TTL_MS).toISOString();
+    Promise.resolve()
+      .then(async () => {
+        const client = this.db.getAdminClient();
+        const expiresAt = new Date(
+          Date.now() + HEATMAP_DB_TTL_MS,
+        ).toISOString();
 
-      const { error } = await client
-        .from('satellite_heatmap_cache')
-        .upsert(
+        const { error } = await client.from("satellite_heatmap_cache").upsert(
           {
             parcel_id: parcelId,
             organization_id: organizationId,
@@ -611,22 +870,23 @@ export class SatelliteCacheService {
             response_data: responseData,
             expires_at: expiresAt,
           },
-          { onConflict: 'parcel_id,index_name,date,grid_size' },
+          { onConflict: "parcel_id,index_name,date,grid_size" },
         );
 
-      if (error) {
-        this.logger.error(
-          `[Cache WRITE FAILED] heatmap ${indexName}/${date} for parcel ${parcelId}: ` +
-          `${error.message} (code=${error.code}, details=${error.details})`,
-        );
-      } else {
-        this.logger.log(
-          `[Cache WRITE OK] heatmap ${indexName}/${date} (grid=${gridSize}) for parcel ${parcelId}`,
-        );
-      }
-    }).catch((err) => {
-      this.logger.error(`[Cache WRITE CRASH] heatmap persist: ${err}`);
-    });
+        if (error) {
+          this.logger.error(
+            `[Cache WRITE FAILED] heatmap ${indexName}/${date} for parcel ${parcelId}: ` +
+              `${error.message} (code=${error.code}, details=${error.details})`,
+          );
+        } else {
+          this.logger.log(
+            `[Cache WRITE OK] heatmap ${indexName}/${date} (grid=${gridSize}) for parcel ${parcelId}`,
+          );
+        }
+      })
+      .catch((err) => {
+        this.logger.error(`[Cache WRITE CRASH] heatmap persist: ${err}`);
+      });
   }
 
   // ── Available Dates: DB-backed cache (permanent for past, 24h for current) ──
@@ -634,19 +894,34 @@ export class SatelliteCacheService {
   async getAvailableDates(
     body: Record<string, unknown>,
     organizationId?: string,
+    authToken?: string,
   ): Promise<unknown> {
     const enrichedBody = await this.enrichBodyWithAoi(body, organizationId);
     const parcelId = enrichedBody.parcel_id as string | undefined;
-    const startDate = (enrichedBody.start_date as string) || '';
-    const endDate = (enrichedBody.end_date as string) || '';
+    const startDate = (enrichedBody.start_date as string) || "";
+    const endDate = (enrichedBody.end_date as string) || "";
     const forceRefresh = enrichedBody.force_refresh as boolean | undefined;
 
     if (!parcelId) {
-      return this.proxy.post('/indices/available-dates', enrichedBody, organizationId);
+      return this.proxy.post(
+        "/indices/available-dates",
+        enrichedBody,
+        organizationId,
+        undefined,
+        undefined,
+        authToken,
+      );
     }
 
     if (!startDate || !endDate) {
-      return this.proxy.post('/indices/available-dates', enrichedBody, organizationId);
+      return this.proxy.post(
+        "/indices/available-dates",
+        enrichedBody,
+        organizationId,
+        undefined,
+        undefined,
+        authToken,
+      );
     }
 
     const memKey = `ad:${parcelId}:${startDate}:${endDate}`;
@@ -677,21 +952,32 @@ export class SatelliteCacheService {
           data: derived,
           expiresAt: Date.now() + AVAIL_DATES_L1_TTL_MS,
         });
+        this.evictExpiredAvailDatesEntries();
         return derived;
       }
     }
 
     this.logger.log(
-      `[available-dates] ${forceRefresh ? 'Force refresh' : 'No timeseries data'} — fetching from satellite service for ${parcelId} ${startDate}→${endDate}`,
+      `[available-dates] ${forceRefresh ? "Force refresh" : "No timeseries data"} — fetching from satellite service for ${parcelId} ${startDate}→${endDate}`,
     );
     const start = Date.now();
-    const fresh = await this.proxy.post('/indices/available-dates', enrichedBody, organizationId);
-    this.logger.log(`[Proxy] available-dates response in ${Date.now() - start}ms`);
+    const fresh = await this.proxy.post(
+      "/indices/available-dates",
+      enrichedBody,
+      organizationId,
+      undefined,
+      undefined,
+      authToken,
+    );
+    this.logger.log(
+      `[Proxy] available-dates response in ${Date.now() - start}ms`,
+    );
 
     this.availDatesCache.set(memKey, {
       data: fresh,
       expiresAt: Date.now() + AVAIL_DATES_L1_TTL_MS,
     });
+    this.evictExpiredAvailDatesEntries();
 
     return fresh;
   }
@@ -711,15 +997,15 @@ export class SatelliteCacheService {
       const client = this.db.getAdminClient();
 
       let query = client
-        .from('satellite_indices_data')
-        .select('date')
-        .eq('parcel_id', parcelId)
-        .gte('date', startDate)
-        .lte('date', endDate)
-        .not('mean_value', 'is', null);
+        .from("satellite_indices_data")
+        .select("date")
+        .eq("parcel_id", parcelId)
+        .gte("date", startDate)
+        .lte("date", endDate)
+        .not("mean_value", "is", null);
 
       if (organizationId) {
-        query = query.eq('organization_id', organizationId);
+        query = query.eq("organization_id", organizationId);
       }
 
       const { data, error } = await query;
@@ -728,16 +1014,20 @@ export class SatelliteCacheService {
         return null;
       }
 
-      const uniqueDates = [...new Set(data.map((row: { date: string }) => row.date))].sort();
+      const uniqueDates = [
+        ...new Set(data.map((row: { date: string }) => row.date)),
+      ].sort();
 
       return {
         available_dates: uniqueDates.map((date) => ({ date, available: true })),
         total_images: uniqueDates.length,
         date_range: { start: startDate, end: endDate },
-        _source: 'timeseries_cache',
+        _source: "timeseries_cache",
       };
     } catch (err) {
-      this.logger.warn(`Failed to derive available dates from timeseries: ${err}`);
+      this.logger.warn(
+        `Failed to derive available dates from timeseries: ${err}`,
+      );
       return null;
     }
   }
@@ -745,10 +1035,10 @@ export class SatelliteCacheService {
   // ── Shared helpers ────────────────────────────────────────
 
   private heatmapMemKey(body: Record<string, unknown>): string {
-    const index = body.index || '';
-    const date = body.date || '';
-    const gridSize = body.grid_size || '';
-    const parcelId = body.parcel_id || '';
+    const index = body.index || "";
+    const date = body.date || "";
+    const gridSize = body.grid_size || "";
+    const parcelId = body.parcel_id || "";
 
     // If parcel_id is available, use it directly (deterministic, no hash needed)
     if (parcelId) {
@@ -759,7 +1049,7 @@ export class SatelliteCacheService {
     const geo = body.aoi as Record<string, unknown> | undefined;
     const coords = geo?.geometry
       ? JSON.stringify((geo.geometry as Record<string, unknown>).coordinates)
-      : '';
+      : "";
 
     return `hm:${index}:${date}:${gridSize}:${this.simpleHash(coords)}`;
   }
@@ -768,7 +1058,7 @@ export class SatelliteCacheService {
     let hash = 0;
     for (let i = 0; i < str.length; i++) {
       const char = str.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
+      hash = (hash << 5) - hash + char;
       hash |= 0;
     }
     return hash.toString(36);
@@ -779,6 +1069,15 @@ export class SatelliteCacheService {
     for (const [key, entry] of this.heatmapCache) {
       if (entry.expiresAt <= now) {
         this.heatmapCache.delete(key);
+      }
+    }
+  }
+
+  private evictExpiredAvailDatesEntries() {
+    const now = Date.now();
+    for (const [key, entry] of this.availDatesCache) {
+      if (entry.expiresAt <= now) {
+        this.availDatesCache.delete(key);
       }
     }
   }

@@ -27,7 +27,7 @@
  * - getDensityFromSpacing(): Calculate density from spacing string
  */
 
-export type CropCategory = 'trees' | 'cereals' | 'vegetables' | 'other';
+export type CropCategory = 'trees' | 'cereals' | 'vegetables' | 'legumes' | 'fourrages' | 'industrielles' | 'aromatiques' | 'other';
 
 export interface PlantingSystem {
   type: string;
@@ -126,54 +126,27 @@ export const TREE_CATEGORIES = {
 // Flatten all tree types for easy dropdown
 export const ALL_TREE_TYPES = Object.values(TREE_CATEGORIES).flat();
 
-// Planting Systems from agritech_production.json
+// Planting Systems — olive reference table (rangées x espacement, densité/ha)
 export const PLANTING_SYSTEMS: PlantingSystem[] = [
-  {
-    type: 'Super intensif',
-    spacing: '4x1,5',
-    treesPerHectare: 1666,
-    plantingDate: 'Date de repiquage',
-  },
-  {
-    type: 'Super intensif',
-    spacing: '3x1,5',
-    treesPerHectare: 2222,
-  },
-  {
-    type: 'Intensif',
-    spacing: '4x2',
-    treesPerHectare: 1250,
-  },
-  {
-    type: 'Intensif',
-    spacing: '3x2',
-    treesPerHectare: 1666,
-  },
-  {
-    type: 'Semi-intensif',
-    spacing: '6x3',
-    treesPerHectare: 555,
-  },
-  {
-    type: 'Traditionnel amélioré',
-    spacing: '6x6',
-    treesPerHectare: 277,
-  },
-  {
-    type: 'Traditionnel',
-    spacing: '8x8',
-    treesPerHectare: 156,
-  },
-  {
-    type: 'Traditionnel',
-    spacing: '8x7',
-    treesPerHectare: 179,
-  },
-  {
-    type: 'Traditionnel très espacé',
-    spacing: '10x10',
-    treesPerHectare: 100,
-  },
+  { type: 'Traditionnelle',                  spacing: '12x12', treesPerHectare: 69   },
+  { type: 'Traditionnelle',                  spacing: '12x10', treesPerHectare: 83   },
+  { type: 'Traditionnelle',                  spacing: '10x10', treesPerHectare: 100  },
+  { type: 'Traditionnelle',                  spacing: '10x8',  treesPerHectare: 125  },
+  { type: 'Traditionnelle / Semi-Intensive', spacing: '8x8',   treesPerHectare: 156  },
+  { type: 'Semi-Intensive',                  spacing: '8x7',   treesPerHectare: 178  },
+  { type: 'Semi-Intensive',                  spacing: '7x7',   treesPerHectare: 204  },
+  { type: 'Semi-Intensive',                  spacing: '8x6',   treesPerHectare: 208  },
+  { type: 'Intensive',                       spacing: '7x6',   treesPerHectare: 238  },
+  { type: 'Intensive',                       spacing: '6x6',   treesPerHectare: 277  },
+  { type: 'Intensive',                       spacing: '7x5',   treesPerHectare: 285  },
+  { type: 'Intensive',                       spacing: '6x5',   treesPerHectare: 333  },
+  { type: 'Intensive',                       spacing: '5x5',   treesPerHectare: 400  },
+  { type: 'Super-Intensive',                 spacing: '4x2',   treesPerHectare: 1250 },
+  { type: 'Super-Intensive',                 spacing: '4x1,5', treesPerHectare: 1666 },
+  { type: 'Super-Intensive',                 spacing: '3,75x1,5', treesPerHectare: 1777 },
+  { type: 'Super-Intensive',                 spacing: '3,5x1,5',  treesPerHectare: 1904 },
+  { type: 'Super-Intensive',                 spacing: '3x1,5', treesPerHectare: 2222 },
+  { type: 'Super-Intensive',                 spacing: '3x1,35', treesPerHectare: 2469 },
 ];
 
 // Olive Varieties with yield data
@@ -218,6 +191,34 @@ export const OLIVE_VARIETIES: OliveVariety[] = [
       '6-8years': '15–40',
       '8-15years': '50–70+',
       '15years+': '50–70+',
+    },
+  },
+  {
+    variety: 'Menara',
+    origin: 'Maroc (INRA)',
+    mainUse: 'Huile et fruit',
+    yieldByAge: {
+      '0-2years': 0,
+      '3years': '2–12',
+      '4years': '15–40',
+      '5years': '15–40',
+      '6-8years': '15–40',
+      '8-15years': '45–65',
+      '15years+': '45–65',
+    },
+  },
+  {
+    variety: 'Haouzia',
+    origin: 'Maroc (INRA)',
+    mainUse: 'Huile et fruit',
+    yieldByAge: {
+      '0-2years': 0,
+      '3years': '2–8',
+      '4years': '15–35',
+      '5years': '15–35',
+      '6-8years': '15–35',
+      '8-15years': '40–60',
+      '15years+': '40–60',
     },
   },
   {
@@ -389,6 +390,67 @@ export const VEGETABLE_CROPS = [
   'Menthe',
 ];
 
+// Légumineuses (légumes secs / pulses)
+export const LEGUME_CROPS = [
+  'Pois chiche',
+  'Lentille',
+  'Fève',
+  'Haricot sec',
+  'Petit pois',
+  'Niébé',
+  'Soja',
+  'Lupin',
+  'Vesces',
+  'Lentillon',
+];
+
+// Cultures fourragères
+export const FOURRAGES_CROPS = [
+  'Luzerne',
+  'Trèfle',
+  'Sorgho fourrager',
+  'Avoine fourragère',
+  'Ray-grass',
+  'Fescue',
+  'Dactyle',
+  'Vesce-avoine',
+  'Maïs fourrage',
+  'Betterave fourragère',
+];
+
+// Cultures industrielles
+export const INDUSTRIELLES_CROPS = [
+  'Tournesol',
+  'Colza',
+  'Betterave à sucre',
+  'Coton',
+  'Lin',
+  'Chanvre',
+  'Tabac',
+  'Carthame',
+  'Arachide',
+  'Sésame',
+];
+
+// Plantes aromatiques et médicinales
+export const AROMATIQUES_CROPS = [
+  'Thym',
+  'Romarin',
+  'Lavande',
+  'Menthe poivrée',
+  'Origan',
+  'Fenouil',
+  'Cumin',
+  'Coriandre (graines)',
+  'Nigelle',
+  'Sauge',
+  'Basilic',
+  'Mélisse',
+  'Verveine',
+  'Camomille',
+  'Armoise',
+];
+
 // Vegetable Planting Systems
 export const VEGETABLE_PLANTING_SYSTEMS = [
   {
@@ -482,6 +544,14 @@ export function getCropTypesByCategory(category: CropCategory): string[] {
       return VEGETABLE_CROPS;
     case 'cereals':
       return CEREAL_CROPS;
+    case 'legumes':
+      return LEGUME_CROPS;
+    case 'fourrages':
+      return FOURRAGES_CROPS;
+    case 'industrielles':
+      return INDUSTRIELLES_CROPS;
+    case 'aromatiques':
+      return AROMATIQUES_CROPS;
     default:
       return [];
   }

@@ -1,5 +1,8 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { ChevronLeft, ChevronRight, MapPin, Droplets, TrendingUp, AlertTriangle, CheckCircle } from 'lucide-react';
+import { useHotkeys } from '@tanstack/react-hotkeys';
+import { Button } from '@/components/ui/button';
+import { StatusDot } from '@/components/ui/status-dot';
 
 interface Parcel {
   id: string;
@@ -18,47 +21,37 @@ interface SwipableParcelCardsProps {
   onParcelSelect?: (parcel: Parcel) => void;
 }
 
-const SwipableParcelCards: React.FC<SwipableParcelCardsProps> = ({
+const SwipableParcelCards = ({
   parcels,
   className = '',
   variant = 'default',
   selectedParcel = null,
   onParcelSelect
-}) => {
+}: SwipableParcelCardsProps) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [startX, setStartX] = useState(0);
   const [translateX, setTranslateX] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
+  const prevSelectedParcelIdRef = useRef(selectedParcel?.id);
 
-  // Sync currentIndex with selectedParcel
-  useEffect(() => {
+  if (selectedParcel?.id !== prevSelectedParcelIdRef.current) {
+    prevSelectedParcelIdRef.current = selectedParcel?.id;
     if (selectedParcel && parcels.length > 0) {
       const parcelIndex = parcels.findIndex(p => p.id === selectedParcel.id);
-      if (parcelIndex !== -1 && parcelIndex !== currentIndex) {
+      if (parcelIndex !== -1) {
         setCurrentIndex(parcelIndex);
       }
     }
-  }, [selectedParcel, parcels]);
+  }
 
   // Keyboard navigation
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowLeft') {
-        e.preventDefault();
-        prevSlide();
-      } else if (e.key === 'ArrowRight') {
-        e.preventDefault();
-        nextSlide();
-      }
-    };
-
-    const container = containerRef.current;
-    if (container) {
-      container.addEventListener('keydown', handleKeyDown);
-      return () => container.removeEventListener('keydown', handleKeyDown);
-    }
-  }, [currentIndex, parcels.length]);
+  useHotkeys(
+    [
+      { hotkey: 'ArrowLeft', callback: () => prevSlide() },
+      { hotkey: 'ArrowRight', callback: () => nextSlide() },
+    ],
+  );
 
   const handleMouseDown = (e: React.MouseEvent) => {
     setIsDragging(true);
@@ -287,7 +280,7 @@ const SwipableParcelCards: React.FC<SwipableParcelCardsProps> = ({
 
                     <div className="bg-white dark:bg-gray-700 rounded-lg p-3">
                       <div className="flex items-center space-x-2 mb-1">
-                        <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                        <StatusDot color="green" size="md" />
                         <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
                           NDVI
                         </span>
@@ -299,7 +292,7 @@ const SwipableParcelCards: React.FC<SwipableParcelCardsProps> = ({
 
                     <div className="bg-white dark:bg-gray-700 rounded-lg p-3">
                       <div className="flex items-center space-x-2 mb-1">
-                        <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                        <StatusDot color="blue" size="md" />
                         <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
                           Statut
                         </span>
@@ -318,8 +311,8 @@ const SwipableParcelCards: React.FC<SwipableParcelCardsProps> = ({
                         Attention requise:
                       </h4>
                       <div className="space-y-1">
-                        {data.issues.map((issue, idx) => (
-                          <div key={idx} className="flex items-center space-x-2 text-xs text-yellow-700 dark:text-yellow-400">
+                        {data.issues.map((issue) => (
+                          <div key={issue} className="flex items-center space-x-2 text-xs text-yellow-700 dark:text-yellow-400">
                             <AlertTriangle className="h-3 w-3" />
                             <span>{issue}</span>
                           </div>
@@ -343,38 +336,34 @@ const SwipableParcelCards: React.FC<SwipableParcelCardsProps> = ({
       {/* Navigation arrows (hidden on small screens, use swipe) */}
       {parcels.length > 1 && (
         <>
-          <button
+          <Button
             onClick={prevSlide}
             disabled={currentIndex === 0}
             aria-label="Parcelle précédente"
             className="hidden sm:flex absolute left-2 top-1/2 -translate-y-1/2 bg-white dark:bg-gray-800 rounded-full p-2 shadow-lg border border-gray-200 dark:border-gray-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50"
           >
             <ChevronLeft className="h-5 w-5 text-gray-600 dark:text-gray-400" />
-          </button>
+          </Button>
 
-          <button
+          <Button
             onClick={nextSlide}
             disabled={currentIndex === parcels.length - 1}
             aria-label="Parcelle suivante"
             className="hidden sm:flex absolute right-2 top-1/2 -translate-y-1/2 bg-white dark:bg-gray-800 rounded-full p-2 shadow-lg border border-gray-200 dark:border-gray-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50"
           >
             <ChevronRight className="h-5 w-5 text-gray-600 dark:text-gray-400" />
-          </button>
+          </Button>
         </>
       )}
 
       {/* Pagination dots */}
       {parcels.length > 1 && (
         <div className="flex justify-center space-x-2 mt-4">
-          {parcels.map((_, index) => (
-            <button
-              key={index}
+          {parcels.map((parcel, index) => (
+            <Button variant="green"
+              key={"dot-" + parcel.id}
               onClick={() => goToSlide(index)}
-              className={`w-2 h-2 rounded-full transition-colors ${
-                index === currentIndex
-                  ? 'bg-green-600'
-                  : 'bg-gray-300 dark:bg-gray-600 hover:bg-gray-400 dark:hover:bg-gray-500'
-              }`}
+              className={`w-2 h-2 rounded-full transition-colors ${ index === currentIndex ? '' : 'bg-gray-300 dark:bg-gray-600 hover:bg-gray-400 dark:hover:bg-gray-500'}`}
             />
           ))}
         </div>

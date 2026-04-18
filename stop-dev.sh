@@ -17,11 +17,11 @@ echo ""
 echo "🛑 Stopping Python services..."
 pkill -f "uvicorn app.main" 2>/dev/null && echo "✅ Satellite Service stopped" || echo "ℹ️  Satellite Service not running"
 
-# Stop Docker containers
+# Stop Supabase
 echo ""
-echo "🛑 Stopping Docker containers..."
-cd /Users/boutchaz/Documents/CodeLovers/agritech/supabase
-docker compose down 2>/dev/null && echo "✅ Supabase stopped" || echo "ℹ️  Supabase not running"
+echo "🛑 Stopping Supabase..."
+cd /Users/boutchaz/Documents/CodeLovers/agritech/project
+supabase stop 2>/dev/null && echo "✅ Supabase stopped" || echo "ℹ️  Supabase not running"
 
 echo ""
 echo "=========================================="

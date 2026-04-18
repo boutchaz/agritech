@@ -14,11 +14,12 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@ne
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { DocumentTemplatesService } from './document-templates.service';
 import { CreateDocumentTemplateDto, UpdateDocumentTemplateDto, DocumentType } from './dto';
+import { OrganizationGuard } from '../../common/guards/organization.guard';
 
 @ApiTags('Document Templates')
 @ApiBearerAuth()
 @Controller('organizations/:organizationId/document-templates')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, OrganizationGuard)
 export class DocumentTemplatesController {
   constructor(private readonly documentTemplatesService: DocumentTemplatesService) {}
 

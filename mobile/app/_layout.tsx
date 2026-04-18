@@ -1,3 +1,4 @@
+import '@/lib/i18n';
 import { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { Stack, router } from 'expo-router';
@@ -8,7 +9,10 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useAuthStore } from '@/stores/authStore';
 import { colors } from '@/constants/theme';
+import { ThemeProvider } from '@/providers/ThemeProvider';
 import { registerForPushNotifications } from '@/lib/notifications';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { OfflineBanner } from '@/components/OfflineBanner';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -17,6 +21,7 @@ const queryClient = new QueryClient({
     queries: {
       staleTime: 5 * 60 * 1000,
       retry: 2,
+      networkMode: 'offlineFirst',
     },
   },
 });
@@ -25,7 +30,7 @@ function CustomSplashScreen() {
   return (
     <View style={styles.splashContainer}>
       <View style={styles.logoContainer}>
-        <Text style={styles.logoText}>AgriTech</Text>
+        <Text style={styles.logoText}>AgroGina</Text>
         <Text style={styles.logoSubtext}>Field</Text>
       </View>
       <ActivityIndicator size="large" color={colors.white} style={styles.loader} />
@@ -99,40 +104,45 @@ export default function RootLayout() {
   }
 
   return (
+    <ThemeProvider>
     <QueryClientProvider client={queryClient}>
       <GestureHandlerRootView style={{ flex: 1 }}>
-        <StatusBar style="auto" />
-        <Stack
-          screenOptions={{
-            headerStyle: {
-              backgroundColor: colors.primary[600],
-            },
-            headerTintColor: colors.white,
-            headerTitleStyle: {
-              fontWeight: '600',
-            },
-          }}
-        >
-          <Stack.Screen name="index" options={{ headerShown: false }} />
-          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen
-            name="task/[id]"
-            options={{
-              title: 'Task Details',
-              presentation: 'card',
+        <OfflineBanner />
+        <ErrorBoundary>
+          <StatusBar style="auto" />
+          <Stack
+            screenOptions={{
+              headerStyle: {
+                backgroundColor: colors.primary[600],
+              },
+              headerTintColor: colors.white,
+              headerTitleStyle: {
+                fontWeight: '600',
+              },
             }}
-          />
-          <Stack.Screen
-            name="harvest/new"
-            options={{
-              title: 'Record Harvest',
-              presentation: 'modal',
-            }}
-          />
-        </Stack>
+          >
+            <Stack.Screen name="index" options={{ headerShown: false }} />
+            <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+            <Stack.Screen name="(drawer)" options={{ headerShown: false, title: '' }} />
+            <Stack.Screen
+              name="task/[id]"
+              options={{
+                title: 'Task Details',
+                presentation: 'card',
+              }}
+            />
+            <Stack.Screen
+              name="harvest/new"
+              options={{
+                title: 'Record Harvest',
+                presentation: 'modal',
+              }}
+            />
+          </Stack>
+        </ErrorBoundary>
       </GestureHandlerRootView>
     </QueryClientProvider>
+    </ThemeProvider>
   );
 }
 

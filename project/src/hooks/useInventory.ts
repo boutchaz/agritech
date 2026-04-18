@@ -52,13 +52,13 @@ export function useInventory() {
       const data = await itemsApi.getFarmStockLevels({}, currentOrganization.id);
 
       // Transform the response to match the expected interface
-      const transformedData = (data || []).map((item: any) => ({
+      const transformedData = (data || []).map((item: Record<string, unknown>) => ({
         ...item,
-        id: item.item_id, // Use item_id as id for compatibility
-        name: item.item_name, // Add name alias for backward compatibility
-        quantity: item.total_quantity || 0,
-        unit: item.default_unit || '',
-        min_stock_level: item.minimum_stock_level,
+        id: String(item.item_id ?? ''), // Use item_id as id for compatibility
+        name: String(item.item_name ?? ''), // Add name alias for backward compatibility
+        quantity: Number(item.total_quantity ?? 0),
+        unit: String(item.default_unit ?? ''),
+        min_stock_level: typeof item.minimum_stock_level === 'number' ? item.minimum_stock_level : undefined,
       }));
 
       return transformedData;

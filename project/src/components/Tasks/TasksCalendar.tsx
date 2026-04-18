@@ -45,6 +45,8 @@ import {
 import { format, parseISO, startOfMonth, endOfMonth, isToday, isTomorrow, isPast, differenceInDays } from 'date-fns';
 import { fr, enUS, ar } from 'date-fns/locale';
 import { useTranslation } from 'react-i18next';
+import { SectionLoader } from '@/components/ui/loader';
+import { StatusDot } from '@/components/ui/status-dot';
 
 interface TasksCalendarProps {
   organizationId: string;
@@ -107,14 +109,12 @@ const getDueDateStatus = (dueDate: string | null | undefined) => {
 };
 
 // Calendar content component (needs to be inside CalendarProvider)
-const CalendarContent: React.FC<{
-  tasks: Task[];
+const CalendarContent = ({ tasks, organizationId, onTaskSelect, onCreateTask, _currentMonth, _currentYear }: { tasks: Task[];
   organizationId: string;
   onTaskSelect: (task: Task) => void;
   onCreateTask: () => void;
   currentMonth: number;
-  currentYear: number;
-}> = ({ tasks, organizationId, onTaskSelect, onCreateTask, _currentMonth, _currentYear }) => {
+  currentYear: number; }) => {
   const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
   const updateTask = useUpdateTask();
@@ -247,7 +247,7 @@ const CalendarContent: React.FC<{
   return (
     <div className="space-y-6">
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-3">
         {/* Total */}
         <div className="bg-white dark:bg-gray-800 rounded-lg p-3 shadow border-l-4 border-slate-500">
           <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">{t('tasks.calendarPage.stats.total', 'Total')}</p>
@@ -341,19 +341,19 @@ const CalendarContent: React.FC<{
               <div className="flex flex-wrap items-center gap-3 text-xs">
                 <span className="text-gray-500 dark:text-gray-400">{t('tasks.calendarPage.legend', 'Legend')}:</span>
                 <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 rounded-full bg-gray-400" />
+                  <StatusDot color="gray" size="md" />
                   <span>{t('tasks.stats.pending')}</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 rounded-full bg-amber-500" />
+                  <StatusDot color="amber" size="md" />
                   <span>{t('tasks.stats.inProgress')}</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 rounded-full bg-green-500" />
+                  <StatusDot color="green" size="md" />
                   <span>{t('tasks.stats.completed')}</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 rounded-full bg-red-500" />
+                  <StatusDot color="red" size="md" />
                   <span>{t('tasks.stats.overdue')}</span>
                 </div>
               </div>
@@ -524,10 +524,7 @@ const CalendarContent: React.FC<{
                         )}
 
                         {canComplete && (
-                          <Button
-                            size="sm"
-                            className="bg-green-600 hover:bg-green-700 text-white h-7 text-xs"
-                            onClick={(e) => handleQuickComplete(e, task)}
+                          <Button variant="green" size="sm" className="h-7 text-xs" onClick={(e) => handleQuickComplete(e, task)}
                             disabled={updateTask.isPending}
                           >
                             <CheckCircle className="w-3 h-3 mr-1" />
@@ -576,7 +573,7 @@ const CalendarContent: React.FC<{
 };
 
 // Wrapper to track calendar month/year changes
-const TasksCalendarInner: React.FC<TasksCalendarProps> = ({ organizationId, farms }) => {
+const TasksCalendarInner = ({ organizationId, farms }: TasksCalendarProps) => {
   const [showTaskForm, setShowTaskForm] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
@@ -603,20 +600,15 @@ const TasksCalendarInner: React.FC<TasksCalendarProps> = ({ organizationId, farm
     setShowTaskForm(true);
   };
 
-  const handleCreateTask = () => {
-    setSelectedTask(null);
-    setShowTaskForm(true);
-  };
+   const handleCreateTask = () => {
+     setSelectedTask(null);
+     setShowTaskForm(true);
+   };
 
-  const { t } = useTranslation();
+   useTranslation();
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-        <span className="ml-3 text-gray-600 dark:text-gray-400">{t('tasks.calendarPage.loading')}</span>
-      </div>
-    );
+    return <SectionLoader />;
   }
 
   return (
@@ -651,7 +643,7 @@ const TasksCalendarInner: React.FC<TasksCalendarProps> = ({ organizationId, farm
 };
 
 // Main component wraps with CalendarProvider
-const TasksCalendar: React.FC<TasksCalendarProps> = (props) => {
+const TasksCalendar = (props: TasksCalendarProps) => {
   const { i18n } = useTranslation();
 
   // Map i18n language to calendar locale

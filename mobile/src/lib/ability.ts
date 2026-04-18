@@ -30,6 +30,8 @@ export type Subject =
   | 'SalesOrder' | 'PurchaseOrder' | 'Quote' | 'Delivery' | 'ReceptionBatch'
   // Quality & Lab
   | 'QualityControl' | 'LabService'
+  // Pest & Disease
+  | 'PestAlert'
   // Reporting & Analytics
   | 'Report' | 'SatelliteAnalysis' | 'ProductionIntelligence' | 'Dashboard'
   // Financial analytics

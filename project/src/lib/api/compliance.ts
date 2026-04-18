@@ -9,10 +9,14 @@ export enum CertificationType {
   HACCP = 'HACCP',
   ISO9001 = 'ISO9001',
   ISO14001 = 'ISO14001',
+  ISO22000 = 'ISO22000',
   ORGANIC = 'Organic',
   FAIRTRADE = 'FairTrade',
   RAINFOREST = 'Rainforest',
   USDA_ORGANIC = 'USDA_Organic',
+  MAROC_LABEL = 'Maroc_Label',
+  BRC_FOOD_SAFETY = 'BRC_Food_Safety',
+  IFS_FOOD = 'IFS_Food',
 }
 
 export enum CertificationStatus {
@@ -20,6 +24,7 @@ export enum CertificationStatus {
   EXPIRED = 'expired',
   PENDING_RENEWAL = 'pending_renewal',
   SUSPENDED = 'suspended',
+  PENDING = 'pending',
 }
 
 export enum ComplianceCheckType {
@@ -476,12 +481,18 @@ export const complianceApi = {
     organizationId: string,
     filters?: { certification_id?: string; status?: string; priority?: string }
   ): Promise<CorrectiveActionPlanResponseDto[]> {
-    const params = filters ? (filters as Record<string, string>) : {};
-    return apiClient.get<CorrectiveActionPlanResponseDto[]>(
-      `${API_BASE}/corrective-actions`,
-      params,
+    const queryParams = new URLSearchParams();
+    if (filters?.certification_id) queryParams.append('certification_id', filters.certification_id);
+    if (filters?.status) queryParams.append('status', filters.status);
+    if (filters?.priority) queryParams.append('priority', filters.priority);
+    const queryString = queryParams.toString();
+    const url = `${API_BASE}/corrective-actions${queryString ? `?${queryString}` : ''}`;
+    const res = await apiClient.get<{ data: CorrectiveActionPlanResponseDto[] }>(
+      url,
+      {},
       organizationId
     );
+    return res?.data || [];
   },
 
   async getCorrectiveAction(

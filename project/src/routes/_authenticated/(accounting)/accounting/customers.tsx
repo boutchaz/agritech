@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { useState } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Plus, Edit, Trash2, Mail, Phone, MapPin, Building2, Users } from 'lucide-react';
 import { toast } from 'sonner';
@@ -7,19 +7,13 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Button } from '@/components/ui/button';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
 import { FormField } from '@/components/ui/FormField';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { DialogFooter } from '@/components/ui/dialog';
 import {
   useCustomers,
   useCreateCustomer,
@@ -31,6 +25,12 @@ import { useAuth } from '@/hooks/useAuth';
 import { PageLayout } from '@/components/PageLayout';
 import ModernPageHeader from '@/components/ModernPageHeader';
 import { withRouteProtection } from '@/components/authorization/withRouteProtection';
+import { PageLoader } from '@/components/ui/loader';
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
+import { EmptyState } from '@/components/ui/empty-state';
+import { useServerTableState, DataTablePagination, ListPageLayout, ListPageHeader, FilterBar, ResponsiveList } from '@/components/ui/data-table';
+import { TableCell, TableHead } from '@/components/ui/table';
+
 
 // Zod schema for customer form validation
 const customerSchema = z.object({
@@ -63,9 +63,19 @@ function CustomersPage() {
   const updateCustomer = useUpdateCustomer();
   const deleteCustomer = useDeleteCustomer();
 
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<{title:string;description?:string;variant?:"destructive"|"default";onConfirm:()=>void}>({title:"",onConfirm:()=>{}});
+  const showConfirm = (title: string, onConfirm: () => void, opts?: {description?: string; variant?: "destructive" | "default"}) => {
+    setConfirmAction({title, onConfirm, ...opts});
+    setConfirmOpen(true);
+  };
+
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
+
+  const tableState = useServerTableState({
+    defaultPageSize: 12,
+  });
 
   const form = useForm<CustomerFormData>({
     resolver: zodResolver(customerSchema),
@@ -109,7 +119,7 @@ function CustomersPage() {
         tax_id: customer.tax_id || '',
         payment_terms: customer.payment_terms || '',
         credit_limit: customer.credit_limit?.toString() || '',
-        customer_type: (customer.customer_type as any) || '',
+        customer_type: (customer.customer_type || '') as '' | 'individual' | 'business' | 'government' | 'other',
         notes: customer.notes || '',
       });
     } else {
@@ -146,26 +156,26 @@ function CustomersPage() {
     try {
       const customerData = {
         name: formData.name,
-        credit_limit: formData.credit_limit ? parseFloat(formData.credit_limit) : null,
+        credit_limit: formData.credit_limit ? parseFloat(formData.credit_limit) : undefined,
         currency_code: currentOrganization?.currency || 'MAD',
         is_active: true,
-        customer_code: formData.customer_code || null,
-        contact_person: formData.contact_person || null,
-        email: formData.email || null,
-        phone: formData.phone || null,
-        mobile: formData.mobile || null,
-        address: formData.address || null,
-        city: formData.city || null,
-        state_province: formData.state_province || null,
-        postal_code: formData.postal_code || null,
-        country: formData.country || null,
-        website: formData.website || null,
-        tax_id: formData.tax_id || null,
-        payment_terms: formData.payment_terms || null,
-        customer_type: formData.customer_type || null,
-        price_list: null,
-        assigned_to: null,
-        notes: formData.notes || null,
+        customer_code: formData.customer_code || undefined,
+        contact_person: formData.contact_person || undefined,
+        email: formData.email || undefined,
+        phone: formData.phone || undefined,
+        mobile: formData.mobile || undefined,
+        address: formData.address || undefined,
+        city: formData.city || undefined,
+        state_province: formData.state_province || undefined,
+        postal_code: formData.postal_code || undefined,
+        country: formData.country || undefined,
+        website: formData.website || undefined,
+        tax_id: formData.tax_id || undefined,
+        payment_terms: formData.payment_terms || undefined,
+        customer_type: formData.customer_type || undefined,
+        price_list: undefined,
+        assigned_to: undefined,
+        notes: formData.notes || undefined,
       };
 
       if (editingCustomer) {
@@ -177,9 +187,9 @@ function CustomersPage() {
       }
 
       handleCloseDialog();
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Parse database constraint errors and set field-specific errors
-      if (error?.message?.includes('customer_type_check')) {
+      if (error instanceof Error && error.message.includes('customer_type_check')) {
         form.setError('customer_type', {
           type: 'manual',
           message: 'Invalid customer type. Must be one of: individual, business, government, or other',
@@ -191,34 +201,54 @@ function CustomersPage() {
   });
 
   const handleDelete = async (customer: Customer) => {
-    if (!confirm(`Are you sure you want to delete ${customer.name}?`)) {
-      return;
-    }
-
-    try {
-      await deleteCustomer.mutateAsync(customer.id);
-      toast.success('Customer deleted successfully');
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to delete customer');
-    }
+    showConfirm(`Are you sure you want to delete ${customer.name}?`, async () => {
+      try {
+        await deleteCustomer.mutateAsync(customer.id);
+        toast.success('Customer deleted successfully');
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Failed to delete customer');
+      }
+    }, {variant: "destructive"});
   };
 
-  const filteredCustomers = customers.filter(customer =>
-    customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    customer.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    customer.phone?.includes(searchTerm)
-  );
+  const filteredCustomers = useMemo(() => {
+    const q = tableState.search.trim().toLowerCase();
+    if (!q) return customers;
+    return customers.filter(
+      (customer) =>
+        customer.name.toLowerCase().includes(q) ||
+        customer.email?.toLowerCase().includes(q) ||
+        customer.phone?.toLowerCase().includes(q) ||
+        customer.mobile?.toLowerCase().includes(q) ||
+        customer.customer_code?.toLowerCase().includes(q) ||
+        customer.contact_person?.toLowerCase().includes(q),
+    );
+  }, [customers, tableState.search]);
+
+  const { page, pageSize, setPage, setSearch, setPageSize } = tableState;
+
+  const totalItems = filteredCustomers.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize) || 1);
+
+  useEffect(() => {
+    if (page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [page, totalPages, setPage]);
+
+  const paginatedCustomers = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return filteredCustomers.slice(start, start + pageSize);
+  }, [filteredCustomers, page, pageSize]);
+
+  const formatCustomerType = (customerType: string | null) => {
+    if (!customerType) return '—';
+    return t(`accountingModule.customers.types.${customerType}`, customerType);
+  };
 
   if (!currentOrganization || isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">
-            {!currentOrganization ? t('dashboard.loading', 'Loading organization...') : t('accountingModule.customers.loading', 'Loading customers...')}
-          </p>
-        </div>
-      </div>
+      <PageLoader />
     );
   }
 
@@ -236,119 +266,204 @@ function CustomersPage() {
         />
       }
     >
-      <div className="p-6 space-y-6">
-          {/* Header Actions */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4 flex-1">
-              <Input
-                placeholder={t('accountingModule.customers.searchPlaceholder', 'Search customers by name, email, or phone...')}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="max-w-md bg-white dark:bg-gray-800"
-              />
-            </div>
-            <Button onClick={() => handleOpenDialog()}>
-              <Plus className="mr-2 h-4 w-4" />
-              {t('accountingModule.customers.addCustomer', 'Add Customer')}
-            </Button>
-          </div>
-
-          {/* Customer List */}
-          <div data-tour="billing-customers">
-          {filteredCustomers.length === 0 ? (
-            <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-              <Building2 className="mx-auto h-12 w-12 text-gray-400" />
-              <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">{t('accountingModule.customers.noCustomers', 'No customers')}</h3>
-              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                {t('accountingModule.customers.getStarted', 'Get started by creating a new customer.')}
-              </p>
-              <div className="mt-6">
-                <Button onClick={() => handleOpenDialog()}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  {t('accountingModule.customers.addCustomer', 'Add Customer')}
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredCustomers.map((customer) => (
-                <div
-                  key={customer.id}
-                  className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 hover:shadow-md transition-shadow"
-                >
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-gray-900 dark:text-gray-100">{customer.name}</h3>
-                      {customer.customer_code && (
-                        <p className="text-sm text-gray-500 dark:text-gray-400">Code: {customer.customer_code}</p>
-                      )}
-                      {customer.customer_type && (
-                        <span className="inline-block mt-1 px-2 py-1 text-xs font-medium bg-blue-100 dark:bg-blue-900/20 text-blue-800 dark:text-blue-400 rounded">
-                          {customer.customer_type}
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => handleOpenDialog(customer)}
-                        className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(customer)}
-                        className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
-                    {customer.contact_person && (
-                      <p className="font-medium">{customer.contact_person}</p>
-                    )}
-                    {customer.email && (
-                      <p className="flex items-center gap-2">
-                        <Mail className="h-4 w-4" />
-                        {customer.email}
-                      </p>
-                    )}
-                    {customer.phone && (
-                      <p className="flex items-center gap-2">
-                        <Phone className="h-4 w-4" />
-                        {customer.phone}
-                      </p>
-                    )}
-                    {(customer.city || customer.country) && (
-                      <p className="flex items-center gap-2">
-                        <MapPin className="h-4 w-4" />
-                        {[customer.city, customer.country].filter(Boolean).join(', ')}
-                      </p>
-                    )}
-                    {customer.payment_terms && (
-                      <p className="text-xs mt-2 pt-2 border-t border-gray-100 dark:border-gray-700">
-                        Terms: {customer.payment_terms}
-                      </p>
-                    )}
-                  </div>
+      <div className="p-6">
+        <ListPageLayout
+          header={
+            <ListPageHeader
+              variant="shell"
+              actions={
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button onClick={() => handleOpenDialog()}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    {t('accountingModule.customers.addCustomer', 'Add Customer')}
+                  </Button>
                 </div>
-              ))}
-            </div>
-          )}
+              }
+            />
+          }
+          filters={
+            <FilterBar
+              searchValue={tableState.search}
+              onSearchChange={(value) => setSearch(value)}
+              searchPlaceholder={t('accountingModule.customers.searchPlaceholder', 'Search customers by name, email, or phone...')}
+              isSearching={isLoading}
+            />
+          }
+          pagination={
+            totalItems > 0 ? (
+              <DataTablePagination
+                page={page}
+                pageSize={pageSize}
+                totalItems={totalItems}
+                totalPages={totalPages}
+                onPageChange={setPage}
+                onPageSizeChange={setPageSize}
+                pageSizeOptions={[12, 24, 48, 96]}
+              />
+            ) : null
+          }
+        >
+          <div data-tour="billing-customers">
+            {customers.length === 0 ? (
+              <EmptyState
+                variant="card"
+                icon={Building2}
+                title={t('accountingModule.customers.noCustomers', 'No customers')}
+                description={t('accountingModule.customers.getStarted', 'Get started by creating a new customer.')}
+                action={{
+                  label: t('accountingModule.customers.addCustomer', 'Add Customer'),
+                  onClick: () => handleOpenDialog(),
+                }}
+              />
+            ) : filteredCustomers.length === 0 ? (
+              <EmptyState
+                variant="card"
+                icon={Building2}
+                title={t('app.noResults', 'No results found')}
+                description={t('accountingModule.customers.noSearchResults', 'No customers match your search.')}
+              />
+            ) : (
+              <ResponsiveList
+                items={paginatedCustomers}
+                isLoading={isLoading}
+                keyExtractor={(customer) => customer.id}
+                emptyIcon={Building2}
+                emptyMessage={t('accountingModule.customers.noSearchResults', 'No customers match your search.')}
+                renderCard={(customer) => (
+                  <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 hover:shadow-md transition-shadow">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-gray-900 dark:text-gray-100 truncate">{customer.name}</h3>
+                        {customer.customer_code && (
+                          <p className="text-sm text-gray-500 dark:text-gray-400">
+                            {t('accountingModule.customers.fields.code', 'Customer Code')}: {customer.customer_code}
+                          </p>
+                        )}
+                        {customer.customer_type && (
+                          <span className="inline-block mt-1 px-2 py-1 text-xs font-medium bg-blue-100 dark:bg-blue-900/20 text-blue-800 dark:text-blue-400 rounded">
+                            {formatCustomerType(customer.customer_type)}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex gap-1 shrink-0">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleOpenDialog(customer)}
+                          className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                          aria-label={t('app.edit', 'Edit')}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDelete(customer)}
+                          className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
+                          aria-label={t('app.delete', 'Delete')}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
+                      {customer.contact_person && <p className="font-medium">{customer.contact_person}</p>}
+                      {customer.email && (
+                        <p className="flex items-center gap-2 min-w-0">
+                          <Mail className="h-4 w-4 shrink-0" />
+                          <span className="truncate">{customer.email}</span>
+                        </p>
+                      )}
+                      {(customer.phone || customer.mobile) && (
+                        <p className="flex items-center gap-2">
+                          <Phone className="h-4 w-4 shrink-0" />
+                          {customer.phone || customer.mobile}
+                        </p>
+                      )}
+                      {(customer.city || customer.country) && (
+                        <p className="flex items-center gap-2">
+                          <MapPin className="h-4 w-4 shrink-0" />
+                          {[customer.city, customer.country].filter(Boolean).join(', ')}
+                        </p>
+                      )}
+                      {customer.payment_terms && (
+                        <p className="text-xs mt-2 pt-2 border-t border-gray-100 dark:border-gray-700">
+                          {t('accountingModule.customers.fields.paymentTerms', 'Payment terms')}: {customer.payment_terms}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+                renderTableHeader={
+                  <tr>
+                    <TableHead>{t('accountingModule.customers.table.name', 'Name')}</TableHead>
+                    <TableHead>{t('accountingModule.customers.table.code', 'Code')}</TableHead>
+                    <TableHead>{t('accountingModule.customers.table.type', 'Type')}</TableHead>
+                    <TableHead>{t('accountingModule.customers.table.contact', 'Contact')}</TableHead>
+                    <TableHead>{t('accountingModule.customers.table.email', 'Email')}</TableHead>
+                    <TableHead>{t('accountingModule.customers.table.phone', 'Phone')}</TableHead>
+                    <TableHead>{t('accountingModule.customers.table.location', 'Location')}</TableHead>
+                    <TableHead className="text-end w-[100px]">{t('accountingModule.customers.table.actions', 'Actions')}</TableHead>
+                  </tr>
+                }
+                renderTable={(customer) => (
+                  <>
+                    <TableCell className="font-medium text-gray-900 dark:text-gray-100 max-w-[160px]">
+                      <div className="truncate">{customer.name}</div>
+                    </TableCell>
+                    <TableCell className="text-gray-600 dark:text-gray-400">{customer.customer_code || '—'}</TableCell>
+                    <TableCell className="text-gray-600 dark:text-gray-400">{formatCustomerType(customer.customer_type)}</TableCell>
+                    <TableCell className="text-gray-600 dark:text-gray-400 max-w-[140px] truncate">{customer.contact_person || '—'}</TableCell>
+                    <TableCell className="text-gray-600 dark:text-gray-400 max-w-[180px] truncate">{customer.email || '—'}</TableCell>
+                    <TableCell className="text-gray-600 dark:text-gray-400 whitespace-nowrap">{customer.phone || customer.mobile || '—'}</TableCell>
+                    <TableCell className="text-gray-600 dark:text-gray-400 max-w-[160px] truncate">
+                      {[customer.city, customer.country].filter(Boolean).join(', ') || '—'}
+                    </TableCell>
+                    <TableCell className="text-end">
+                      <div className="flex justify-end gap-1">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleOpenDialog(customer)}
+                          className="h-8 w-8 text-blue-600 dark:text-blue-400"
+                          aria-label={t('app.edit', 'Edit')}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDelete(customer)}
+                          className="h-8 w-8 text-red-600 dark:text-red-400"
+                          aria-label={t('app.delete', 'Delete')}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </>
+                )}
+              />
+            )}
           </div>
+        </ListPageLayout>
 
           {/* Add/Edit Dialog */}
-          <Dialog open={isDialogOpen} onOpenChange={handleCloseDialog}>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>{editingCustomer ? t('accountingModule.customers.editCustomer', 'Edit Customer') : t('accountingModule.customers.addNewCustomer', 'Add New Customer')}</DialogTitle>
-                <DialogDescription>
-                  {editingCustomer
-                    ? t('accountingModule.customers.updateInfo', 'Update customer information')
-                    : t('accountingModule.customers.addForInvoices', 'Add a new customer for sales invoices')}
-                </DialogDescription>
-              </DialogHeader>
+          <ResponsiveDialog
+            open={isDialogOpen}
+            onOpenChange={handleCloseDialog}
+            title={editingCustomer ? t('accountingModule.customers.editCustomer', 'Edit Customer') : t('accountingModule.customers.addNewCustomer', 'Add New Customer')}
+            description={editingCustomer
+              ? t('accountingModule.customers.updateInfo', 'Update customer information')
+              : t('accountingModule.customers.addForInvoices', 'Add a new customer for sales invoices')}
+            size="2xl"
+            contentClassName="max-h-[90vh] overflow-y-auto"
+          >
 
               <form onSubmit={handleSubmit} className="space-y-6">
                 {/* Basic Information */}
@@ -561,9 +676,16 @@ function CustomersPage() {
                   </Button>
                 </DialogFooter>
               </form>
-            </DialogContent>
-          </Dialog>
+          </ResponsiveDialog>
         </div>
+          <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title={confirmAction.title}
+        description={confirmAction.description}
+        variant={confirmAction.variant}
+        onConfirm={confirmAction.onConfirm}
+      />
     </PageLayout>
   );
 }

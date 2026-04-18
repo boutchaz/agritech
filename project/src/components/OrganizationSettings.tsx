@@ -1,13 +1,21 @@
-import React, { useState, useEffect } from 'react';
-import { Save, Building, Mail, Phone, MapPin, Globe, AlertCircle, Loader2, ExternalLink, Bot, Map as MapIcon } from 'lucide-react';
+import {  useState, useEffect  } from "react";
+import { Save, Building, Mail, Phone, MapPin, Globe, AlertCircle, Loader2, ExternalLink, CheckCircle, User, Lock } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { organizationsApi } from '../lib/api/organizations';
 import { useQueryClient } from '@tanstack/react-query';
 import CurrencySelector from './CurrencySelector';
-import type { Currency } from '../utils/currencies';
+import { DEFAULT_CURRENCY, type Currency } from '../utils/currencies';
 import { useTranslation } from 'react-i18next';
-import AIProvidersSettings from './settings/AIProvidersSettings';
 import { getMarketplaceUrl } from '@/lib/marketplace-link';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/Input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/radix-select';
+import { Switch } from '@/components/ui/switch';
 
 interface OrganizationData {
   id: string;
@@ -29,12 +37,12 @@ interface OrganizationData {
   timezone?: string;
   currency_code?: string;
   is_active?: boolean;
-  map_provider?: 'default' | 'mapbox' | null;
+  allow_negative_stock?: boolean;
 }
 
 type SettingsTab = 'general' | 'ai-providers';
 
-const OrganizationSettings: React.FC = () => {
+const OrganizationSettings = () => {
   const { currentOrganization, user } = useAuth();
   const { t } = useTranslation();
   const queryClient = useQueryClient();
@@ -87,7 +95,7 @@ const OrganizationSettings: React.FC = () => {
           contact_person: data.contact_person,
           website: data.website,
           currency_symbol: undefined,
-          map_provider: data.map_provider,
+          allow_negative_stock: data.accounting_settings?.allow_negative_stock ?? true,
         });
       } catch (err) {
         console.error('Error fetching organization data:', err);
@@ -124,7 +132,7 @@ const OrganizationSettings: React.FC = () => {
         country: cleanString(orgData.country),
         contact_person: cleanString(orgData.contact_person),
         website: cleanString(orgData.website),
-        map_provider: orgData.map_provider,
+        accounting_settings: { allow_negative_stock: orgData.allow_negative_stock ?? true },
       });
 
       // Update local state with API response
@@ -149,7 +157,7 @@ const OrganizationSettings: React.FC = () => {
         contact_person: updatedOrg.contact_person ?? orgData.contact_person,
         website: updatedOrg.website ?? orgData.website,
         currency_symbol: orgData.currency_symbol,
-        map_provider: updatedOrg.map_provider ?? orgData.map_provider,
+        allow_negative_stock: updatedOrg.accounting_settings?.allow_negative_stock ?? orgData.allow_negative_stock ?? true,
       });
 
       // Invalidate ALL organization-related queries to ensure fresh data
@@ -209,398 +217,385 @@ const OrganizationSettings: React.FC = () => {
 
   const tabs = [
     { id: 'general' as const, label: t('organization.tabs.general', 'Général'), icon: Building },
-    { id: 'ai-providers' as const, label: t('organization.tabs.aiProviders', 'Fournisseurs IA'), icon: Bot },
   ];
 
   return (
-    <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div className="flex items-center gap-2 sm:gap-3">
-          <Building className="h-5 w-5 sm:h-6 sm:w-6 text-green-600 flex-shrink-0" />
-          <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
-            {t('organization.title')}
-          </h2>
+    <div className="min-w-0 max-w-full space-y-8 overflow-x-hidden animate-in fade-in duration-500">
+      {/* Header — lg+ row layout so sm/md widths are not split with flex-1 title + buttons */}
+      <div className="flex w-full min-w-0 flex-col gap-6 border-b border-slate-100 pb-8 dark:border-slate-800 lg:flex-row lg:items-end lg:justify-between lg:gap-8">
+        <div className="min-w-0 w-full space-y-2 lg:min-w-0 lg:flex-1">
+          <div className="flex min-w-0 items-start gap-3">
+            <div className="shrink-0 rounded-2xl bg-emerald-50 p-2.5 dark:bg-emerald-900/30">
+              <Building className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <h2 className="text-balance text-xl font-bold uppercase tracking-tight text-slate-900 dark:text-white md:text-2xl xl:text-3xl">
+                {t('organization.title')}
+              </h2>
+            </div>
+          </div>
+          <p className="text-pretty text-sm font-medium leading-relaxed text-slate-500 dark:text-slate-400">
+            {t(
+              'organization.pageSubtitle',
+              'Configure your organization identity, contact details and regional preferences',
+            )}
+          </p>
         </div>
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
-           <button
-             onClick={async () => {
-               const url = await getMarketplaceUrl(`/sellers/${orgData.slug}`);
-               window.open(url, '_blank', 'noopener,noreferrer');
-             }}
-             className="flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm"
-           >
-             <ExternalLink className="h-4 w-4" />
-             <span className="hidden sm:inline">Preview on Marketplace</span>
-             <span className="sm:hidden">Preview</span>
-           </button>
+
+        <div className="flex w-full min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap lg:w-auto lg:shrink-0 lg:justify-end">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={async () => {
+              const url = await getMarketplaceUrl(`/sellers/${orgData.slug}`);
+              window.open(url, '_blank', 'noopener,noreferrer');
+            }}
+            className="h-11 w-full rounded-2xl border-slate-200 px-4 text-xs font-semibold uppercase tracking-widest transition-all hover:bg-slate-50 dark:border-slate-700 sm:h-12 sm:min-w-0 sm:flex-1 lg:h-12 lg:w-auto lg:flex-none lg:px-6"
+          >
+            <ExternalLink className="mr-2 h-4 w-4 shrink-0" />
+            <span className="hidden sm:inline">
+              {t('organization.previewMarketplace', 'Preview Marketplace')}
+            </span>
+            <span className="sm:hidden">{t('organization.previewShort', 'Preview')}</span>
+          </Button>
+
           {activeTab === 'general' && (
-            <button
+            <Button
+              type="button"
+              variant="default"
               onClick={handleSave}
               disabled={saving}
-              className="flex items-center justify-center gap-2 px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-sm"
+              className="h-11 w-full rounded-2xl bg-emerald-600 px-6 font-semibold text-xs uppercase tracking-widest text-white shadow-lg shadow-emerald-100 transition-all duration-300 hover:bg-emerald-700 dark:shadow-none sm:h-12 sm:min-w-[10rem] sm:flex-1 lg:h-12 lg:w-auto lg:flex-none lg:px-8"
             >
               {saving ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
               ) : (
-                <Save className="h-4 w-4" />
+                <Save className="h-4 w-4 mr-2" />
               )}
-              <span>{saving ? t('organization.saving') : t('organization.save')}</span>
-            </button>
+              {saving ? t('organization.saving') : t('organization.save')}
+            </Button>
           )}
         </div>
       </div>
 
-      {/* Tabs Navigation */}
-      <div className="border-b border-gray-200 dark:border-gray-700 overflow-x-auto">
-        <nav className="flex space-x-2 sm:space-x-4 min-w-max">
-          {tabs.map((tab) => {
-            const TabIcon = tab.icon;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-3 sm:px-4 py-3 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
-                  activeTab === tab.id
-                    ? 'border-green-500 text-green-600 dark:text-green-400'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
-                }`}
-              >
-                <TabIcon className="h-4 w-4" />
-                <span>{tab.label}</span>
-              </button>
-            );
-          })}
-        </nav>
-      </div>
-
+      {/* Messages */}
       {error && (
-        <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg">
-          <div className="flex items-center space-x-2">
-            <AlertCircle className="h-5 w-5 text-red-600" />
-            <p className="text-red-600 dark:text-red-400">{error}</p>
-          </div>
+        <Alert variant="destructive" className="bg-rose-50 border-rose-200 text-rose-800 rounded-2xl">
+          <AlertCircle className="h-4 w-4 text-rose-600" />
+          <AlertTitle className="text-sm font-semibold uppercase tracking-tight">Error</AlertTitle>
+          <AlertDescription className="text-xs font-medium">{error}</AlertDescription>
+        </Alert>
+      )}
+
+      {success && (activeTab === 'general') && (
+        <div className="bg-emerald-50 dark:bg-emerald-900/20 p-4 rounded-2xl border border-emerald-100 dark:border-emerald-800 flex items-center gap-3">
+          <CheckCircle className="h-5 w-5 text-emerald-600" />
+          <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-400 uppercase tracking-widest">{t('organization.success')}</p>
         </div>
       )}
 
-      {activeTab === 'general' && success && (
-        <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
-          <p className="text-green-600 dark:text-green-400">
-            {t('organization.success')}
-          </p>
-        </div>
-      )}
-
-      {/* AI Providers Tab */}
-      {activeTab === 'ai-providers' && (
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
-          <AIProvidersSettings />
-        </div>
-      )}
+      {/* Tabs */}
+      <div
+        className={cn(
+          "grid w-full max-w-full gap-1 rounded-2xl border border-slate-200 bg-slate-100 p-1 dark:border-slate-700/50 dark:bg-slate-900/50",
+          tabs.length > 1 ? "grid-cols-2" : "grid-cols-1",
+        )}
+      >
+        {tabs.map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            onClick={() => setActiveTab(tab.id)}
+            className={cn(
+              "flex min-w-0 items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-[10px] font-medium uppercase tracking-widest transition-all sm:px-6",
+              activeTab === tab.id
+                ? "border border-slate-100 bg-white text-emerald-600 shadow-sm dark:border-slate-700 dark:bg-slate-800 dark:text-emerald-400"
+                : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-300",
+            )}
+          >
+            <tab.icon className="h-3.5 w-3.5 shrink-0" />
+            <span className="truncate">{tab.label}</span>
+          </button>
+        ))}
+      </div>
 
       {/* General Settings Tab */}
       {activeTab === 'general' && (
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Basic Information */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            {t('organization.sections.basicInfo')}
-          </h3>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t('organization.fields.name')} *
-              </label>
-              <input
-                type="text"
-                value={orgData.name}
-                onChange={(e) => handleInputChange('name', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 dark:bg-gray-700 dark:text-white"
-                placeholder={t('organization.placeholders.name')}
-              />
-            </div>
+        <div className="grid min-w-0 grid-cols-1 items-start gap-8 lg:grid-cols-12">
+          <div className="min-w-0 space-y-8 lg:col-span-7">
+            {/* Basic Information */}
+            <Card className="rounded-[2.5rem] border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
+              <CardHeader className="p-8 pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-blue-50 dark:bg-blue-900/30 rounded-xl">
+                    <Building className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <CardTitle className="text-base font-semibold text-slate-900 dark:text-white uppercase tracking-tight">
+                    {t('organization.sections.basicInfo')}
+                  </CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent className="p-8 pt-4 space-y-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">{t('organization.fields.name')} *</Label>
+                    <Input
+                      type="text"
+                      value={orgData.name}
+                      onChange={(e) => handleInputChange('name', e.target.value)}
+                      className="h-12 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border-slate-100 dark:border-slate-700 font-bold px-5 focus:ring-emerald-500/20"
+                      placeholder={t('organization.placeholders.name')}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">{t('organization.fields.slug')}</Label>
+                    <div className="relative">
+                      <Input
+                        type="text"
+                        value={orgData.slug}
+                        disabled
+                        className="h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 font-bold px-5 opacity-60 cursor-not-allowed"
+                      />
+                      <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                        <Lock className="h-3.5 w-3.5 text-slate-400" />
+                      </div>
+                    </div>
+                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest ml-1">{t('organization.fields.slugHelper')}</p>
+                  </div>
+                </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t('organization.fields.slug')}
-              </label>
-              <input
-                type="text"
-                value={orgData.slug}
-                disabled
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-gray-50 dark:bg-gray-700 text-gray-500 dark:text-gray-400"
-                placeholder={t('organization.placeholders.slug')}
-              />
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                {t('organization.fields.slugHelper')}
-              </p>
-            </div>
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">{t('organization.fields.description')}</Label>
+                  <textarea
+                    value={orgData.description || ''}
+                    onChange={(e) => handleInputChange('description', e.target.value)}
+                    rows={4}
+                    className="w-full p-5 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border-slate-100 dark:border-slate-700 font-medium text-sm focus:ring-2 focus:ring-emerald-500/20 transition-all outline-none"
+                    placeholder={t('organization.placeholders.description')}
+                  />
+                </div>
+              </CardContent>
+            </Card>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t('organization.fields.description')}
-              </label>
-              <textarea
-                value={orgData.description || ''}
-                onChange={(e) => handleInputChange('description', e.target.value)}
-                rows={3}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 dark:bg-gray-700 dark:text-white"
-                placeholder={t('organization.placeholders.description')}
-              />
-            </div>
+            {/* Address Information */}
+            <Card className="rounded-[2.5rem] border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
+              <CardHeader className="p-8 pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-purple-50 dark:bg-purple-900/30 rounded-xl">
+                    <MapPin className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                  </div>
+                  <CardTitle className="text-base font-semibold text-slate-900 dark:text-white uppercase tracking-tight">
+                    {t('organization.sections.address')}
+                  </CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent className="p-8 pt-4 space-y-8">
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">{t('organization.fields.address')}</Label>
+                  <Input
+                    type="text"
+                    value={orgData.address || ''}
+                    onChange={(e) => handleInputChange('address', e.target.value)}
+                    className="h-12 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border-slate-100 dark:border-slate-700 font-bold px-5"
+                    placeholder={t('organization.placeholders.address')}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">{t('organization.fields.city')}</Label>
+                    <Input
+                      type="text"
+                      value={orgData.city || ''}
+                      onChange={(e) => handleInputChange('city', e.target.value)}
+                      className="h-12 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border-slate-100 dark:border-slate-700 font-bold px-5"
+                      placeholder={t('organization.placeholders.city')}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">{t('organization.fields.state')}</Label>
+                    <Input
+                      type="text"
+                      value={orgData.state || ''}
+                      onChange={(e) => handleInputChange('state', e.target.value)}
+                      className="h-12 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border-slate-100 dark:border-slate-700 font-bold px-5"
+                      placeholder={t('organization.placeholders.state')}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">{t('organization.fields.postalCode')}</Label>
+                    <Input
+                      type="text"
+                      value={orgData.postal_code || ''}
+                      onChange={(e) => handleInputChange('postal_code', e.target.value)}
+                      className="h-12 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border-slate-100 dark:border-slate-700 font-bold px-5"
+                      placeholder={t('organization.placeholders.postalCode')}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">{t('organization.fields.country')}</Label>
+                    <Select
+                      value={orgData.country || undefined}
+                      onValueChange={(val) => handleInputChange('country', val)}
+                    >
+                      <SelectTrigger className="h-12 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border-slate-100 dark:border-slate-700 font-bold px-5">
+                        <SelectValue placeholder={t('organization.placeholders.selectCountry')} />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-xl border-slate-200">
+                        <SelectItem value="Morocco" className="font-bold text-xs uppercase">{t('organization.countries.morocco')}</SelectItem>
+                        <SelectItem value="France" className="font-bold text-xs uppercase">{t('organization.countries.france')}</SelectItem>
+                        <SelectItem value="Spain" className="font-bold text-xs uppercase">{t('organization.countries.spain')}</SelectItem>
+                        <SelectItem value="Tunisia" className="font-bold text-xs uppercase">{t('organization.countries.tunisia')}</SelectItem>
+                        <SelectItem value="Algeria" className="font-bold text-xs uppercase">{t('organization.countries.algeria')}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="min-w-0 space-y-8 lg:col-span-5">
+            {/* Contact Information */}
+            <Card className="rounded-[2.5rem] border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
+              <CardHeader className="p-8 pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-orange-50 dark:bg-orange-900/30 rounded-xl">
+                    <Mail className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+                  </div>
+                  <CardTitle className="text-base font-semibold text-slate-900 dark:text-white uppercase tracking-tight">
+                    {t('organization.sections.contactInfo')}
+                  </CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent className="p-8 pt-4 space-y-6">
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">{t('organization.fields.contactPerson')}</Label>
+                  <div className="relative">
+                    <User className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-300" />
+                    <Input
+                      type="text"
+                      value={orgData.contact_person || ''}
+                      onChange={(e) => handleInputChange('contact_person', e.target.value)}
+                      className="h-12 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border-slate-100 dark:border-slate-700 font-bold pl-11 pr-5"
+                      placeholder={t('organization.placeholders.contactPerson')}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">{t('organization.fields.email')}</Label>
+                  <div className="relative">
+                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-300" />
+                    <Input
+                      type="email"
+                      value={orgData.email || ''}
+                      onChange={(e) => handleInputChange('email', e.target.value)}
+                      className="h-12 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border-slate-100 dark:border-slate-700 font-bold pl-11 pr-5"
+                      placeholder={t('organization.placeholders.email')}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">{t('organization.fields.phone')}</Label>
+                  <div className="relative">
+                    <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-300" />
+                    <Input
+                      type="tel"
+                      value={orgData.phone || ''}
+                      onChange={(e) => handleInputChange('phone', e.target.value)}
+                      className="h-12 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border-slate-100 dark:border-slate-700 font-bold pl-11 pr-5"
+                      placeholder={t('organization.placeholders.phone')}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">{t('organization.fields.website')}</Label>
+                  <div className="relative">
+                    <Globe className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-300" />
+                    <Input
+                      type="url"
+                      value={orgData.website || ''}
+                      onChange={(e) => handleInputChange('website', e.target.value)}
+                      className="h-12 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border-slate-100 dark:border-slate-700 font-bold pl-11 pr-5"
+                      placeholder={t('organization.placeholders.website')}
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Regional & Stock Settings */}
+            <Card className="rounded-[2.5rem] border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
+              <CardHeader className="p-8 pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-indigo-50 dark:bg-indigo-900/30 rounded-xl">
+                    <Globe className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+                  </div>
+                  <CardTitle className="text-base font-semibold text-slate-900 dark:text-white uppercase tracking-tight">
+                    System Preferences
+                  </CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent className="p-8 pt-4 space-y-8">
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">{t('organization.sections.regionalSettings')}</Label>
+                  <div className="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-2xl border border-slate-100 dark:border-slate-700/50">
+                    <CurrencySelector
+                      value={orgData.currency || DEFAULT_CURRENCY}
+                      onChange={handleCurrencyChange}
+                      disabled={saving}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-4 pt-4 border-t border-slate-50 dark:border-slate-800">
+                  <div className="flex items-center justify-between group">
+                    <div className="space-y-1">
+                      <h4 className="text-xs font-semibold text-slate-900 dark:text-white uppercase tracking-tight group-hover:text-emerald-600 transition-colors">
+                        {t('organization.settings.allowNegativeStock', 'Allow Negative Stock')}
+                      </h4>
+                      <p className="text-[10px] font-medium text-slate-400 dark:text-slate-500 leading-tight max-w-[200px]">
+                        {t('organization.settings.allowNegativeStockDesc', 'Enable sales when stock is unavailable')}
+                      </p>
+                    </div>
+                    <Switch 
+                      checked={orgData.allow_negative_stock ?? true} 
+                      onCheckedChange={(val) => setOrgData({ ...orgData, allow_negative_stock: val })}
+                      className="data-[state=checked]:bg-emerald-600"
+                    />
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t border-slate-50 dark:border-slate-800">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-1">
+                      <h4 className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none">
+                        Current Status
+                      </h4>
+                      <div className="flex items-center gap-2 mt-2">
+                        <Badge className={cn(
+                          "border-none font-semibold text-[9px] tracking-[0.15em] px-3 py-1 uppercase",
+                          orgData.status === 'active' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30' : 'bg-rose-100 text-rose-700 dark:bg-rose-900/30'
+                        )}>
+                          {orgData.status === 'active' ? t('organization.status.active') : t('organization.status.suspended')}
+                        </Badge>
+                      </div>
+                    </div>
+                    <p className="text-[9px] font-bold text-slate-400 max-w-[120px] text-right italic">
+                      {t('organization.status.contactSupport')}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
-
-        {/* Contact Information */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            {t('organization.sections.contactInfo')}
-          </h3>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t('organization.fields.contactPerson')}
-              </label>
-              <input
-                type="text"
-                value={orgData.contact_person || ''}
-                onChange={(e) => handleInputChange('contact_person', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 dark:bg-gray-700 dark:text-white"
-                placeholder={t('organization.placeholders.contactPerson')}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                <Mail className="inline h-4 w-4 mr-1" />
-                {t('organization.fields.email')}
-              </label>
-              <input
-                type="email"
-                value={orgData.email || ''}
-                onChange={(e) => handleInputChange('email', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 dark:bg-gray-700 dark:text-white"
-                placeholder={t('organization.placeholders.email')}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                <Phone className="inline h-4 w-4 mr-1" />
-                {t('organization.fields.phone')}
-              </label>
-              <input
-                type="tel"
-                value={orgData.phone || ''}
-                onChange={(e) => handleInputChange('phone', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 dark:bg-gray-700 dark:text-white"
-                placeholder={t('organization.placeholders.phone')}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                <Globe className="inline h-4 w-4 mr-1" />
-                {t('organization.fields.website')}
-              </label>
-              <input
-                type="url"
-                value={orgData.website || ''}
-                onChange={(e) => handleInputChange('website', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 dark:bg-gray-700 dark:text-white"
-                placeholder={t('organization.placeholders.website')}
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Address Information */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 lg:col-span-2">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            <MapPin className="inline h-5 w-5 mr-2" />
-            {t('organization.sections.address')}
-          </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="sm:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t('organization.fields.address')}
-              </label>
-              <input
-                type="text"
-                value={orgData.address || ''}
-                onChange={(e) => handleInputChange('address', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 dark:bg-gray-700 dark:text-white"
-                placeholder={t('organization.placeholders.address')}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t('organization.fields.city')}
-              </label>
-              <input
-                type="text"
-                value={orgData.city || ''}
-                onChange={(e) => handleInputChange('city', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 dark:bg-gray-700 dark:text-white"
-                placeholder={t('organization.placeholders.city')}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t('organization.fields.state')}
-              </label>
-              <input
-                type="text"
-                value={orgData.state || ''}
-                onChange={(e) => handleInputChange('state', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 dark:bg-gray-700 dark:text-white"
-                placeholder={t('organization.placeholders.state')}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t('organization.fields.postalCode')}
-              </label>
-              <input
-                type="text"
-                value={orgData.postal_code || ''}
-                onChange={(e) => handleInputChange('postal_code', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 dark:bg-gray-700 dark:text-white"
-                placeholder={t('organization.placeholders.postalCode')}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t('organization.fields.country')}
-              </label>
-              <select
-                value={orgData.country || ''}
-                onChange={(e) => handleInputChange('country', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 dark:bg-gray-700 dark:text-white"
-              >
-                <option value="">{t('organization.placeholders.selectCountry')}</option>
-                <option value="Morocco">{t('organization.countries.morocco')}</option>
-                <option value="France">{t('organization.countries.france')}</option>
-                <option value="Spain">{t('organization.countries.spain')}</option>
-                <option value="Tunisia">{t('organization.countries.tunisia')}</option>
-                <option value="Algeria">{t('organization.countries.algeria')}</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        {/* Regional Settings */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            {t('organization.sections.regionalSettings')}
-          </h3>
-          <CurrencySelector
-            value={orgData.currency || 'MAD'}
-            onChange={handleCurrencyChange}
-            disabled={saving}
-          />
-        </div>
-
-        {/* Map Configuration */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            <MapIcon className="inline h-5 w-5 mr-2" />
-            {t('organization.sections.mapConfiguration', 'Map Configuration')}
-          </h3>
-          <div className="space-y-4">
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              {t('organization.mapProviderDescription', 'Select the tile source for map backgrounds.')}
-            </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {/* Default provider card */}
-              <button
-                type="button"
-                disabled={saving}
-                onClick={() => setOrgData({ ...orgData, map_provider: 'default' })}
-                className={`relative flex flex-col items-start p-4 rounded-lg border-2 transition-all text-left ${
-                  (orgData.map_provider || 'default') === 'default'
-                    ? 'border-green-500 bg-green-50 dark:bg-green-900/20 ring-1 ring-green-500'
-                    : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
-                } disabled:opacity-50 disabled:cursor-not-allowed`}
-              >
-                {(orgData.map_provider || 'default') === 'default' && (
-                  <span className="absolute top-2 right-2 flex h-5 w-5 items-center justify-center rounded-full bg-green-500 text-white text-xs">
-                    &#10003;
-                  </span>
-                )}
-                <Globe className="h-6 w-6 text-blue-600 dark:text-blue-400 mb-2" />
-                <span className="text-sm font-medium text-gray-900 dark:text-white">
-                  {t('organization.mapProviderDefault', 'Default (OpenStreetMap / ESRI)')}
-                </span>
-                <span className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  {t('organization.mapProviderDefaultDesc', 'Free, no API key required. Good general-purpose satellite and street tiles.')}
-                </span>
-              </button>
-
-              {/* Mapbox provider card */}
-              <button
-                type="button"
-                disabled={saving}
-                onClick={() => setOrgData({ ...orgData, map_provider: 'mapbox' })}
-                className={`relative flex flex-col items-start p-4 rounded-lg border-2 transition-all text-left ${
-                  orgData.map_provider === 'mapbox'
-                    ? 'border-green-500 bg-green-50 dark:bg-green-900/20 ring-1 ring-green-500'
-                    : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
-                } disabled:opacity-50 disabled:cursor-not-allowed`}
-              >
-                {orgData.map_provider === 'mapbox' && (
-                  <span className="absolute top-2 right-2 flex h-5 w-5 items-center justify-center rounded-full bg-green-500 text-white text-xs">
-                    &#10003;
-                  </span>
-                )}
-                <MapIcon className="h-6 w-6 text-purple-600 dark:text-purple-400 mb-2" />
-                <span className="text-sm font-medium text-gray-900 dark:text-white">
-                  {t('organization.mapProviderMapbox', 'Mapbox')}
-                </span>
-                <span className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  {t('organization.mapProviderMapboxDesc', 'Higher-quality satellite imagery. Requires an API token.')}
-                </span>
-              </button>
-            </div>
-
-            {/* Mapbox token warning */}
-            {orgData.map_provider === 'mapbox' && !import.meta.env.VITE_MAPBOX_TOKEN && (
-              <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
-                <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
-                <p className="text-xs text-amber-700 dark:text-amber-300">
-                  {t('organization.mapProviderTokenWarning', 'Mapbox requires a VITE_MAPBOX_TOKEN environment variable. The map will fall back to default tiles until one is configured.')}
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Organization Status */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            {t('organization.sections.status')}
-          </h3>
-          <div className="flex items-center space-x-4">
-            <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-              orgData.status === 'active'
-                ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                : orgData.status === 'inactive'
-                ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
-                : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-            }`}>
-              {orgData.status === 'active' && t('organization.status.active')}
-              {orgData.status === 'inactive' && t('organization.status.inactive')}
-              {orgData.status === 'suspended' && t('organization.status.suspended')}
-            </span>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              {t('organization.status.contactSupport')}
-            </p>
-          </div>
-        </div>
-      </div>
       )}
     </div>
   );

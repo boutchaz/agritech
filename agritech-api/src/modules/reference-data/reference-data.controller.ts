@@ -419,4 +419,50 @@ export class ReferenceDataController {
   async getDeliveryStatuses(@Query('locale') locale?: string) {
     return this.referenceDataService.getDeliveryStatuses(locale);
   }
+
+  // =====================================================
+  // AGRONOMIC REFERENCE TABLES (DB-backed)
+  // =====================================================
+
+  @Get('crop-index-thresholds')
+  @ApiOperation({ summary: 'Get crop vegetation index thresholds' })
+  @ApiQuery({ name: 'crop_type', required: false, description: 'Filter by crop type (e.g. olive, avocado)' })
+  @ApiQuery({ name: 'system', required: false, description: 'Filter by plantation system (e.g. traditional, intensive)' })
+  @ApiQuery({ name: 'index', required: false, description: 'Filter by index name (e.g. NDVI, NDMI, EVI)' })
+  @ApiResponse({ status: 200, description: 'Crop index thresholds retrieved successfully' })
+  async getCropIndexThresholds(
+    @Query('crop_type') cropType?: string,
+    @Query('system') system?: string,
+    @Query('index') indexName?: string,
+  ) {
+    return this.referenceDataService.getCropIndexThresholds(cropType, system, indexName);
+  }
+
+  @Get('crop-kc-coefficients')
+  @ApiOperation({ summary: 'Get crop Kc (crop coefficient) values for irrigation' })
+  @ApiQuery({ name: 'crop_type', required: false, description: 'Filter by crop type (e.g. olive, avocado)' })
+  @ApiResponse({ status: 200, description: 'Crop Kc coefficients retrieved successfully' })
+  async getCropKcCoefficients(@Query('crop_type') cropType?: string) {
+    return this.referenceDataService.getCropKcCoefficients(cropType);
+  }
+
+  @Get('crop-mineral-exports')
+  @ApiOperation({ summary: 'Get crop mineral export rates for fertilizer planning' })
+  @ApiQuery({ name: 'crop_type', required: false, description: 'Filter by crop type (e.g. olive, avocado)' })
+  @ApiQuery({ name: 'product_type', required: false, description: 'Filter by product type (e.g. fruit, oil)' })
+  @ApiResponse({ status: 200, description: 'Crop mineral exports retrieved successfully' })
+  async getCropMineralExports(
+    @Query('crop_type') cropType?: string,
+    @Query('product_type') productType?: string,
+  ) {
+    return this.referenceDataService.getCropMineralExports(cropType, productType);
+  }
+
+  @Get('crop-diseases')
+  @ApiOperation({ summary: 'Get crop disease reference data with treatment info' })
+  @ApiQuery({ name: 'crop_type', required: false, description: 'Filter by crop type (e.g. olive, avocado)' })
+  @ApiResponse({ status: 200, description: 'Crop diseases retrieved successfully' })
+  async getCropDiseases(@Query('crop_type') cropType?: string) {
+    return this.referenceDataService.getCropDiseases(cropType);
+  }
 }

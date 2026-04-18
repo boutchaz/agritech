@@ -1,12 +1,15 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useState, lazy, Suspense } from 'react';
-import { Satellite, TrendingUp, BarChart3, MapPin, Lock, Loader2 } from 'lucide-react';
+import { Satellite, TrendingUp, BarChart3, MapPin, Lock } from 'lucide-react';
+import { ContentSkeleton } from '@/components/ui/page-skeletons';
 import { useAuth } from '@/hooks/useAuth';
+import { useAutoStartTour } from '@/contexts/TourContext';
 import { useParcels } from '@/hooks/useParcels';
 import { IndexCalculationResponse } from '@/lib/satellite-api';
 import { useCan } from '@/lib/casl';
 import { useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
+import { Button } from '@/components/ui/button';
 
 // Lazy load heavy satellite components (ECharts + Recharts ~1.6MB)
 const IndicesCalculator = lazy(() => import('@/components/SatelliteAnalysisView/IndicesCalculator'));
@@ -15,6 +18,8 @@ const TimeSeriesChart = lazy(() => import('@/components/SatelliteAnalysisView/Ti
 function SatelliteAnalysisPage() {
   const { t } = useTranslation();
   const { currentFarm } = useAuth();
+
+  useAutoStartTour('satellite', 1500);
   const { can } = useCan();
   const navigate = useNavigate();
   const farmId = currentFarm?.id ?? null;
@@ -62,13 +67,13 @@ function SatelliteAnalysisPage() {
               <span>{t('production.satelliteAnalysis.featureHistorical')}</span>
             </div>
           </div>
-          <button
+          <Button variant="blue"
             onClick={() => navigate({ to: '/settings/subscription' })}
-            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium inline-flex items-center gap-2"
+            className="px-6 py-3 rounded-lg font-medium inline-flex items-center gap-2"
           >
             {t('production.satelliteAnalysis.upgradeButton')}
             <span>→</span>
-          </button>
+          </Button>
         </div>
       </div>
     );
@@ -178,12 +183,7 @@ function SatelliteAnalysisPage() {
               <BarChart3 className="w-5 h-5 text-green-600" />
               <h2 className="text-xl font-semibold">{t('production.satelliteAnalysis.vegetationIndicesTitle')}</h2>
             </div>
-            <Suspense fallback={
-              <div className="flex items-center justify-center p-12 bg-white rounded-lg shadow">
-                <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-                <span className="ml-3 text-gray-600">{t('production.satelliteAnalysis.loadingAnalysisTools')}</span>
-              </div>
-            }>
+            <Suspense fallback={<ContentSkeleton lines={6} className="p-6 bg-white rounded-lg shadow" />}>
               <IndicesCalculator
                 parcelName={selectedParcel.name}
                 boundary={selectedParcel.boundary}
@@ -198,12 +198,7 @@ function SatelliteAnalysisPage() {
               <TrendingUp className="w-5 h-5 text-blue-600" />
               <h2 className="text-xl font-semibold">{t('production.satelliteAnalysis.historicalTrendsTitle')}</h2>
             </div>
-            <Suspense fallback={
-              <div className="flex items-center justify-center p-12 bg-white rounded-lg shadow">
-                <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-                <span className="ml-3 text-gray-600">{t('production.satelliteAnalysis.loadingHistoricalData')}</span>
-              </div>
-            }>
+            <Suspense fallback={<ContentSkeleton lines={6} className="p-6 bg-white rounded-lg shadow" />}>
               <TimeSeriesChart
                 parcelId={selectedParcel.id}
                 parcelName={selectedParcel.name}
@@ -220,12 +215,16 @@ function SatelliteAnalysisPage() {
                 <div>
                   <h3 className="font-medium mb-3">{t('production.satelliteAnalysis.latestResultsTitle')}</h3>
                   <div className="space-y-2">
-                    {calculationResults.indices.map((result, index) => (
-                      <div key={index} className="flex justify-between items-center">
-                        <span className="text-gray-600">{result.index}:</span>
-                        <span className="font-medium">{result.value.toFixed(3)}</span>
-                      </div>
-                    ))}
+                    {calculationResults.indices.map((result) => {
+                      const vegIndex = result.index;
+
+                      return (
+                        <div key={vegIndex} className="flex justify-between items-center">
+                          <span className="text-gray-600">{result.index}:</span>
+                          <span className="font-medium">{result.value.toFixed(3)}</span>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
                 <div>

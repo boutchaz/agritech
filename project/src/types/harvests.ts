@@ -37,6 +37,7 @@ export interface HarvestRecord {
   supervisor_id?: string;
   
   // Storage & Destination
+  warehouse_id?: string;
   storage_location?: string;
   temperature?: number;
   humidity?: number;
@@ -434,4 +435,3 @@ export function calculateDeliveryBalance(delivery: Delivery): number {
 export function isDeliveryFullyPaid(delivery: Delivery): boolean {
   return delivery.payment_received >= delivery.total_amount;
 }
-

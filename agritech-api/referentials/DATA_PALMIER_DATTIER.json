@@ -1,0 +1,1030 @@
+{
+  "metadata": {
+    "version": "1.0",
+    "date": "2026-02",
+    "culture": "palmier_dattier",
+    "nom_scientifique": "Phoenix dactylifera L.",
+    "famille": "Arecaceae",
+    "pays": "Maroc"
+  },
+  "phases_maturite_ans": {
+    "juvenile": [
+      0,
+      5
+    ],
+    "entree_production": [
+      5,
+      10
+    ],
+    "pleine_production": [
+      10,
+      40
+    ],
+    "maturite_avancee": [
+      40,
+      60
+    ],
+    "senescence": [
+      60,
+      200
+    ]
+  },
+  "gdd": {
+    "tbase_c": 18.0,
+    "plafond_c": 45.0,
+    "reference": "Calibration engine — date palm growing degree days (caps)"
+  },
+  "seuils_meteo": {
+    "gel": {
+      "threshold_c": -5.0,
+      "detection_months": [
+        1,
+        2,
+        3
+      ],
+      "severity": "high"
+    },
+    "canicule": {
+      "tmax_c": 45.0,
+      "consecutive_days": 3,
+      "severity": "high"
+    },
+    "vent_chaud": {
+      "temperature_c": 42.0,
+      "wind_kmh": 60.0,
+      "humidity_max_pct": 25.0,
+      "severity": "medium"
+    },
+    "secheresse": {
+      "rain_mm_max_per_day": 5.0,
+      "dry_season_days": 90,
+      "transition_days": 45,
+      "rainy_season_days": 45,
+      "severity": "medium"
+    }
+  },
+  "capacites_calibrage": {
+    "supported": true,
+    "phenology_mode": "state_machine",
+    "subtypes": {
+      "traditionnel": {
+        "required_indices": [
+          "NDVI",
+          "NIRv",
+          "NDMI",
+          "NDRE",
+          "EVI",
+          "MSAVI",
+          "MSI",
+          "GCI"
+        ]
+      },
+      "intensif": {
+        "required_indices": [
+          "NDVI",
+          "NIRv",
+          "NDMI",
+          "NDRE",
+          "EVI",
+          "MSAVI",
+          "MSI",
+          "GCI"
+        ]
+      }
+    },
+    "min_observed_images": 10,
+    "min_history_days": 120,
+    "min_history_months_for_period_percentiles": 24,
+    "required_indices": [
+      "NDVI",
+      "NIRv",
+      "NDMI",
+      "NDRE",
+      "EVI",
+      "MSAVI",
+      "MSI",
+      "GCI"
+    ]
+  },
+  "caracteristiques_generales": {
+    "type": "monocotyledone_arborescente",
+    "origine": "Mesopotamie_Golfe_Persique",
+    "duree_vie_ans": [
+      100,
+      150
+    ],
+    "production_economique_ans": [
+      60,
+      80
+    ],
+    "hauteur_adulte_m": [
+      15,
+      25
+    ],
+    "systeme_racinaire": "fascicule_profond_6m",
+    "sexualite": "dioique",
+    "pollinisation": "manuelle_en_culture"
+  },
+  "exigences_climatiques": {
+    "temperature_optimale_C": [
+      32,
+      38
+    ],
+    "temperature_max_toleree_C": 50,
+    "temperature_min_vegetative_C": 7,
+    "gel_palmes_C": [
+      -5,
+      -7
+    ],
+    "gel_mortel_C": [
+      -10,
+      -12
+    ],
+    "GDD_floraison_recolte": 5000,
+    "HR_optimale_pct": 40,
+    "HR_critique_maturation_pct": 70
+  },
+  "tolerance_salinite": {
+    "CE_eau_sans_perte_dS_m": 4,
+    "CE_eau_perte_10pct_dS_m": 6,
+    "CE_eau_perte_25pct_dS_m": 10,
+    "CE_eau_perte_50pct_dS_m": 15,
+    "note": "PLUS TOLERANT salinité de toutes cultures fruitières - 8x plus que avocatier"
+  },
+  "varietes": [
+    {
+      "code": "MEJHOUL",
+      "nom": "Mejhoul",
+      "type": "molle",
+      "poids_g": [
+        15,
+        25
+      ],
+      "qualite": "premium_export",
+      "bayoud": "sensible",
+      "productivite_kg": [
+        80,
+        120
+      ]
+    },
+    {
+      "code": "BOUFEGGOUS",
+      "nom": "Boufeggous",
+      "type": "molle",
+      "poids_g": [
+        8,
+        12
+      ],
+      "qualite": "excellente",
+      "bayoud": "sensible",
+      "productivite_kg": [
+        60,
+        100
+      ]
+    },
+    {
+      "code": "JIHEL",
+      "nom": "Jihel",
+      "type": "semi_molle",
+      "poids_g": [
+        6,
+        10
+      ],
+      "qualite": "bonne",
+      "bayoud": "tolerante",
+      "productivite_kg": [
+        70,
+        100
+      ]
+    },
+    {
+      "code": "BOUSKRI",
+      "nom": "Bouskri",
+      "type": "semi_molle",
+      "poids_g": [
+        5,
+        8
+      ],
+      "qualite": "bonne",
+      "bayoud": "tolerante",
+      "productivite_kg": [
+        50,
+        80
+      ]
+    },
+    {
+      "code": "BOUSLIKHENE",
+      "nom": "Bouslikhène",
+      "type": "seche",
+      "poids_g": [
+        4,
+        7
+      ],
+      "qualite": "moyenne",
+      "bayoud": "resistante",
+      "productivite_kg": [
+        60,
+        90
+      ]
+    }
+  ],
+  "varietes_calibrage": [
+    {
+      "code": "MEJHOUL",
+      "nom": "Mejhoul",
+      "aliases": [
+        "Medjool"
+      ],
+      "yield_unit": "kg/tree",
+      "reference_range_kg_arbre": [
+        80,
+        120
+      ]
+    },
+    {
+      "code": "BOUFEGGOUS",
+      "nom": "Boufeggous",
+      "yield_unit": "kg/tree",
+      "reference_range_kg_arbre": [
+        60,
+        100
+      ]
+    },
+    {
+      "code": "JIHEL",
+      "nom": "Jihel",
+      "yield_unit": "kg/tree",
+      "reference_range_kg_arbre": [
+        70,
+        100
+      ]
+    },
+    {
+      "code": "BOUSKRI",
+      "nom": "Bouskri",
+      "yield_unit": "kg/tree",
+      "reference_range_kg_arbre": [
+        50,
+        80
+      ]
+    },
+    {
+      "code": "BOUSLIKHENE",
+      "nom": "Bouslikhène",
+      "yield_unit": "kg/tree",
+      "reference_range_kg_arbre": [
+        60,
+        90
+      ]
+    }
+  ],
+  "pollinisation": {
+    "type": "manuelle_obligatoire",
+    "ratio_males_pct": [
+      1,
+      2
+    ],
+    "fenetre_jours": [
+      1,
+      3
+    ],
+    "methode": "insertion_brins_ou_pulverisation",
+    "passages": [
+      2,
+      3
+    ],
+    "conservation_pollen": {
+      "frais": "1-2 jours",
+      "refrigere_4C": "2-4 semaines",
+      "congele": "6-12 mois"
+    }
+  },
+  "systemes": {
+    "traditionnel_oasien": {
+      "densite": [
+        80,
+        120
+      ],
+      "indice_cle": "NDVI",
+      "irrigation": "khettara_seguia",
+      "rendement_t_ha": [
+        3,
+        6
+      ]
+    },
+    "semi_intensif": {
+      "densite": [
+        120,
+        150
+      ],
+      "indice_cle": "NDVI",
+      "irrigation": "gravitaire_ameliore",
+      "rendement_t_ha": [
+        6,
+        10
+      ]
+    },
+    "intensif": {
+      "densite": [
+        150,
+        200
+      ],
+      "indice_cle": "NDVI",
+      "irrigation": "goutte_a_goutte",
+      "rendement_t_ha": [
+        10,
+        15
+      ]
+    }
+  },
+  "seuils_satellite": {
+    "traditionnel": {
+      "NDVI_optimal": [
+        0.35,
+        0.55
+      ],
+      "NDVI_alerte": 0.25,
+      "NDMI_optimal": [
+        0.05,
+        0.2
+      ]
+    },
+    "traditionnel_oasien": {
+      "NDVI": {
+        "optimal": [
+          0.35,
+          0.55
+        ],
+        "vigilance": 0.3,
+        "alerte": 0.25
+      },
+      "NDMI": {
+        "optimal": [
+          0.05,
+          0.2
+        ],
+        "vigilance": 0.03,
+        "alerte": 0.0
+      }
+    },
+    "semi_intensif": {
+      "NDVI": {
+        "optimal": [
+          0.4,
+          0.6
+        ],
+        "vigilance": 0.35,
+        "alerte": 0.3
+      },
+      "NDMI": {
+        "optimal": [
+          0.08,
+          0.24
+        ],
+        "vigilance": 0.05,
+        "alerte": 0.02
+      }
+    },
+    "intensif": {
+      "NDVI": {
+        "optimal": [
+          0.45,
+          0.65
+        ],
+        "vigilance": 0.4,
+        "alerte": 0.35
+      },
+      "NDMI": {
+        "optimal": [
+          0.1,
+          0.28
+        ],
+        "vigilance": 0.06,
+        "alerte": 0.03
+      },
+      "NDVI_optimal": [
+        0.45,
+        0.65
+      ],
+      "NDVI_alerte": 0.35,
+      "NDMI_optimal": [
+        0.1,
+        0.28
+      ]
+    }
+  },
+  "nutrition": {
+    "export_kg_100kg_dattes": {
+      "N": [
+        0.8,
+        1.2
+      ],
+      "P2O5": [
+        0.2,
+        0.4
+      ],
+      "K2O": [
+        1.5,
+        2.5
+      ]
+    },
+    "besoins_intensif_Mejhoul_kg_arbre": {
+      "N": [
+        1.5,
+        2.5
+      ],
+      "P2O5": [
+        0.5,
+        0.8
+      ],
+      "K2O": [
+        2.5,
+        4.0
+      ]
+    },
+    "fractionnement": {
+      "jan_fev": {
+        "N": 20,
+        "P": 40,
+        "K": 10
+      },
+      "mar_avr": {
+        "N": 25,
+        "P": 30,
+        "K": 15
+      },
+      "mai_juin": {
+        "N": 25,
+        "P": 20,
+        "K": 25
+      },
+      "juil_aout": {
+        "N": 15,
+        "P": 10,
+        "K": 30
+      },
+      "sept_oct": {
+        "N": 5,
+        "P": 0,
+        "K": 15
+      },
+      "nov_dec": {
+        "N": 10,
+        "P": 0,
+        "K": 5
+      }
+    },
+    "note_K": "Potassium CRITIQUE pour qualité dattes"
+  },
+  "seuils_foliaires": {
+    "N_pct": {
+      "carence": 1.8,
+      "optimal": [
+        2.2,
+        2.8
+      ]
+    },
+    "P_pct": {
+      "carence": 0.1,
+      "optimal": [
+        0.14,
+        0.2
+      ]
+    },
+    "K_pct": {
+      "carence": 0.8,
+      "optimal": [
+        1.2,
+        1.8
+      ]
+    },
+    "Mg_pct": {
+      "carence": 0.15,
+      "optimal": [
+        0.25,
+        0.5
+      ]
+    }
+  },
+  "irrigation": {
+    "besoins_m3_arbre_an": {
+      "traditionnel": [
+        15,
+        25
+      ],
+      "intensif": [
+        12,
+        20
+      ]
+    },
+    "Kc": {
+      "hiver": 0.75,
+      "printemps": 0.8,
+      "ete": 1.0,
+      "automne": 0.85
+    },
+    "frequence_ete_gag": "3-4x/sem ou quotidien"
+  },
+  "phytosanitaire": {
+    "bayoud": {
+      "agent": "Fusarium oxysporum f. sp. albedinis",
+      "gravite": "MORTELLE_INCURABLE",
+      "traitement": "AUCUN",
+      "prevention": [
+        "plants_certifies",
+        "varietes_tolerantes",
+        "destruction_arbres_atteints"
+      ]
+    },
+    "autres_maladies": [
+      "Khamedj",
+      "Graphiola",
+      "Pourriture_coeur"
+    ],
+    "ravageurs": [
+      "Cochenille_blanche",
+      "Boufaroua",
+      "Pyrale_dattes",
+      "Charancon_rouge_MENACE"
+    ]
+  },
+  "stades_maturite": {
+    "Hababouk": "Fruit noué",
+    "Kimri": "Vert croissance",
+    "Khalal": "Jaune/rouge dur",
+    "Rutab": "Ramollissement partiel",
+    "Tamr": "Maturité complète"
+  },
+  "alertes": [
+    {
+      "code": "PAL-01",
+      "nom": "Stress hydrique",
+      "priorite": "urgente"
+    },
+    {
+      "code": "PAL-05",
+      "nom": "Pluie maturation",
+      "priorite": "urgente"
+    },
+    {
+      "code": "PAL-08",
+      "nom": "Suspicion Bayoud",
+      "priorite": "critique"
+    },
+    {
+      "code": "PAL-09",
+      "nom": "Bayoud confirmé",
+      "priorite": "critique"
+    },
+    {
+      "code": "PAL-13",
+      "nom": "Pollinisation requise",
+      "priorite": "urgente"
+    },
+    {
+      "code": "PAL-16",
+      "nom": "Maturité récolte",
+      "priorite": "info"
+    }
+  ],
+  "modele_predictif": {
+    "precision_intensif": {
+      "R2": [
+        0.5,
+        0.65
+      ],
+      "MAE_pct": [
+        25,
+        35
+      ]
+    },
+    "limite_majeure": "Pluie maturation imprévisible - peut détruire 30-80% récolte"
+  },
+  "plan_annuel_Mejhoul": {
+    "jan": {
+      "NPK": "N0.3+P0.3+K0.3",
+      "travaux": "Taille"
+    },
+    "fev": {
+      "NPK": "N0.4+P0.2+K0.2",
+      "phyto": "Cuivre spathes"
+    },
+    "mar": {
+      "NPK": "N0.4+K0.4",
+      "travaux": "POLLINISATION"
+    },
+    "avr": {
+      "NPK": "N0.3+P0.1+K0.5",
+      "travaux": "Attachage"
+    },
+    "mai": {
+      "NPK": "N0.3+K0.6",
+      "travaux": "Éclaircissage"
+    },
+    "juin": {
+      "NPK": "K0.8",
+      "phyto": "Soufre Boufaroua"
+    },
+    "juil": {
+      "NPK": "K0.8",
+      "travaux": "Protection régimes"
+    },
+    "aout": {
+      "NPK": "K0.5",
+      "travaux": "Surveillance"
+    },
+    "sept": {
+      "NPK": "K0.3",
+      "travaux": "Début récolte"
+    },
+    "oct": {
+      "travaux": "Récolte principale"
+    },
+    "nov": {
+      "NPK": "N0.2",
+      "phyto": "Huile cochenilles"
+    },
+    "dec": {
+      "amendement": "Fumier 40kg",
+      "travaux": "Entretien"
+    }
+  },
+  "protocole_phenologique": {
+    "phases_par_maturite": {
+      "juvenile": [
+        "repos",
+        "debourrement",
+        "floraison",
+        "post_recolte"
+      ],
+      "entree_production": null,
+      "pleine_production": null,
+      "senescence": null
+    },
+    "phases": {
+      "_note": "Machine à états sur l'historique. Chaque phase a conditions entrée et sortie structurées. GDD calculé depuis referentiel.gdd.",
+      "calculs_preliminaires": {
+        "GDD_jour": "max(0, (min(Tmax, Tplafond) + max(Tmin, Tbase)) / 2 - Tbase)",
+        "NIRvP_norm": "(NIRvP - NIRvP_min_hist) / (NIRvP_max_hist - NIRvP_min_hist)",
+        "dNDVI_dt": "(NDVI(t) - NDVI(t-1)) / jours_entre_acquisitions",
+        "dNIRv_dt": "(NIRv(t) - NIRv(t-1)) / jours_entre_acquisitions",
+        "Perte_NDVI": "(NDVI_pic_cycle - NDVI_actuel) / NDVI_pic_cycle",
+        "Perte_NIRv": "(NIRv_pic_cycle - NIRv_actuel) / NIRv_pic_cycle",
+        "Ratio_decouplage": "Perte_NIRv / max(Perte_NDVI, 0.01)"
+      },
+      "DORMANCE": {
+        "nom": "Dormance hivernale",
+        "skip_when": {
+          "var": "Tmoy_Q25",
+          "gte": 15
+        },
+        "entry": {
+          "when": {
+            "and": [
+              {
+                "var": "Tmoy",
+                "lt_var": "Tmoy_Q25"
+              },
+              {
+                "var": "NIRv_norm",
+                "lte": 0.15
+              }
+            ]
+          }
+        },
+        "exit": [
+          {
+            "target": "DEBOURREMENT",
+            "when": {
+              "and": [
+                {
+                  "var": "chill_satisfied",
+                  "eq": true
+                },
+                {
+                  "var": "warm_streak",
+                  "gte": 10
+                }
+              ]
+            },
+            "on_enter": {
+              "reset": [
+                "GDD_cumul"
+              ]
+            },
+            "confidence": "MODEREE"
+          }
+        ]
+      },
+      "DEBOURREMENT": {
+        "nom": "Débourrement",
+        "entry": {},
+        "exit": [
+          {
+            "target": "FLORAISON",
+            "when": {
+              "and": [
+                {
+                  "var": "GDD_cumul",
+                  "gte": 350
+                },
+                {
+                  "var": "Tmoy",
+                  "gte": 18
+                }
+              ]
+            },
+            "confidence": "MODEREE"
+          }
+        ]
+      },
+      "FLORAISON": {
+        "nom": "Floraison",
+        "entry": {},
+        "exit": [
+          {
+            "target": "NOUAISON",
+            "when": {
+              "or": [
+                {
+                  "var": "GDD_cumul",
+                  "gt": 700
+                },
+                {
+                  "var": "hot_streak",
+                  "gte": 5
+                }
+              ]
+            },
+            "confidence": "MODEREE"
+          }
+        ]
+      },
+      "NOUAISON": {
+        "nom": "Nouaison / Clarification",
+        "entry": {},
+        "exit": [
+          {
+            "target": "STRESS_ESTIVAL",
+            "when": {
+              "var": "hot_dry_streak",
+              "gte": 3
+            },
+            "confidence": "ELEVEE"
+          }
+        ]
+      },
+      "STRESS_ESTIVAL": {
+        "nom": "Stress estival + Maturation",
+        "entry": {},
+        "exit": [
+          {
+            "target": "REPRISE_AUTOMNALE",
+            "when": {
+              "and": [
+                {
+                  "var": "precip_30j",
+                  "gt": 20
+                },
+                {
+                  "var": "Tmoy",
+                  "lt": 25
+                },
+                {
+                  "var": "d_nirv_dt",
+                  "gt": 0
+                }
+              ]
+            },
+            "confidence": "MODEREE"
+          },
+          {
+            "target": "DORMANCE",
+            "when": {
+              "var": "cold_streak",
+              "gte": 10
+            },
+            "confidence": "ELEVEE"
+          }
+        ]
+      },
+      "REPRISE_AUTOMNALE": {
+        "nom": "Reprise automnale",
+        "entry": {},
+        "exit": [
+          {
+            "target": "DORMANCE",
+            "when": {
+              "var": "cold_streak",
+              "gte": 10
+            },
+            "on_enter": {
+              "reset": [
+                "GDD_cumul"
+              ]
+            },
+            "confidence": "ELEVEE"
+          }
+        ]
+      }
+    }
+  },
+  "stades_bbch": [
+    {
+      "code": "00",
+      "nom": "Repos hivernal",
+      "mois": [
+        "dec",
+        "jan",
+        "feb"
+      ],
+      "gdd_cumul": [
+        0,
+        30
+      ],
+      "coef_nirvp": 0.3,
+      "phase_kc": "repos"
+    },
+    {
+      "code": "07",
+      "nom": "Spathe visible",
+      "mois": [
+        "feb",
+        "mar"
+      ],
+      "gdd_cumul": [
+        30,
+        80
+      ],
+      "coef_nirvp": 0.3,
+      "phase_kc": "debourrement"
+    },
+    {
+      "code": "51",
+      "nom": "Émission inflorescence",
+      "mois": [
+        "mar"
+      ],
+      "gdd_cumul": [
+        80,
+        180
+      ],
+      "coef_nirvp": 0.4,
+      "phase_kc": "floraison"
+    },
+    {
+      "code": "60",
+      "nom": "Début pollinisation",
+      "mois": [
+        "mar",
+        "apr"
+      ],
+      "gdd_cumul": [
+        180,
+        350
+      ],
+      "coef_nirvp": 0.5,
+      "phase_kc": "floraison"
+    },
+    {
+      "code": "65",
+      "nom": "Pleine pollinisation",
+      "mois": [
+        "apr"
+      ],
+      "gdd_cumul": [
+        350,
+        500
+      ],
+      "coef_nirvp": 0.6,
+      "phase_kc": "floraison"
+    },
+    {
+      "code": "69",
+      "nom": "Hababouk (nouaison)",
+      "mois": [
+        "apr",
+        "may"
+      ],
+      "gdd_cumul": [
+        500,
+        800
+      ],
+      "coef_nirvp": 0.7,
+      "phase_kc": "nouaison"
+    },
+    {
+      "code": "71",
+      "nom": "Kimri (fruit vert)",
+      "mois": [
+        "may",
+        "jun"
+      ],
+      "gdd_cumul": [
+        800,
+        1400
+      ],
+      "coef_nirvp": 0.8,
+      "phase_kc": "grossissement"
+    },
+    {
+      "code": "75",
+      "nom": "Khalal (fruit jaune)",
+      "mois": [
+        "jun",
+        "jul"
+      ],
+      "gdd_cumul": [
+        1400,
+        2200
+      ],
+      "coef_nirvp": 0.9,
+      "phase_kc": "grossissement"
+    },
+    {
+      "code": "79",
+      "nom": "Routab (ramollissement)",
+      "mois": [
+        "jul",
+        "aug"
+      ],
+      "gdd_cumul": [
+        2200,
+        3000
+      ],
+      "coef_nirvp": 1.0,
+      "phase_kc": "grossissement"
+    },
+    {
+      "code": "85",
+      "nom": "Tamar début",
+      "mois": [
+        "aug",
+        "sep"
+      ],
+      "gdd_cumul": [
+        3000,
+        3600
+      ],
+      "coef_nirvp": 0.9,
+      "phase_kc": "maturation"
+    },
+    {
+      "code": "89",
+      "nom": "Tamar maturité récolte",
+      "mois": [
+        "sep",
+        "oct"
+      ],
+      "gdd_cumul": [
+        3600,
+        4200
+      ],
+      "coef_nirvp": 0.7,
+      "phase_kc": "maturation"
+    },
+    {
+      "code": "92",
+      "nom": "Post-récolte",
+      "mois": [
+        "oct",
+        "nov",
+        "dec"
+      ],
+      "gdd_cumul": [
+        4200,
+        4500
+      ],
+      "coef_nirvp": 0.4,
+      "phase_kc": "post_recolte"
+    }
+  ],
+  "signaux": {
+    "streaks": {
+      "warm_streak": {
+        "var": "Tmoy",
+        "gt_var": "Tmoy_Q25"
+      },
+      "cold_streak": {
+        "var": "Tmoy",
+        "lt_var": "Tmoy_Q25"
+      },
+      "hot_streak": {
+        "var": "Tmoy",
+        "gt": 35
+      },
+      "hot_dry_streak": {
+        "and": [
+          {
+            "var": "Tmax",
+            "gt": 40
+          },
+          {
+            "var": "precip_30j",
+            "lt": 5
+          }
+        ]
+      }
+    }
+  }
+}

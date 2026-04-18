@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { useTranslation } from 'react-i18next';
 import { CheckCircle2, AlertTriangle, XCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -16,13 +16,13 @@ interface DataFreshnessIndicatorProps {
  * Visual indicator component for data freshness
  * Shows green for fresh, yellow for aging, red for stale data
  */
-export const DataFreshnessIndicator: React.FC<DataFreshnessIndicatorProps> = ({
+export const DataFreshnessIndicator = ({
   level,
   ageDays,
   showLabel = true,
   size = 'md',
   className,
-}) => {
+}: DataFreshnessIndicatorProps) => {
   const { t } = useTranslation();
 
   const config = {
@@ -126,12 +126,12 @@ interface DataFreshnessDotProps {
 /**
  * Simple dot indicator for data freshness
  */
-export const DataFreshnessDot: React.FC<DataFreshnessDotProps> = ({
+export const DataFreshnessDot = ({
   level,
   size = 'md',
   className,
   pulse = false,
-}) => {
+}: DataFreshnessDotProps) => {
   const dotColors = {
     fresh: 'bg-green-500',
     aging: 'bg-yellow-500',
@@ -168,13 +168,13 @@ interface DataSufficiencyBadgeProps {
 /**
  * Badge component showing data sufficiency status
  */
-export const DataSufficiencyBadge: React.FC<DataSufficiencyBadgeProps> = ({
+export const DataSufficiencyBadge = ({
   status,
   score,
   showScore = true,
   size = 'md',
   className,
-}) => {
+}: DataSufficiencyBadgeProps) => {
   const { t } = useTranslation();
 
   const config = {
@@ -239,12 +239,12 @@ interface FreshnessProgressBarProps {
 /**
  * Progress bar showing data age relative to freshness thresholds
  */
-export const FreshnessProgressBar: React.FC<FreshnessProgressBarProps> = ({
+export const FreshnessProgressBar = ({
   level,
   ageDays,
   maxDays,
   className,
-}) => {
+}: FreshnessProgressBarProps) => {
   const progressColors = {
     fresh: 'bg-green-500',
     aging: 'bg-yellow-500',

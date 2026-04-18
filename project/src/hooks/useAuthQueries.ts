@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { usersApi, type OrganizationWithRole } from '../lib/api/users';
 import { farmsApi } from '../lib/api/farms';
 import { parcelsApi } from '../lib/api/parcels';
@@ -41,18 +41,11 @@ export const useUserProfile = (userId: string | undefined) => {
           // Return null to stop retries
           return null;
         }
-        // Re-throw network errors to trigger retry
-        if (error instanceof Error && (
-          error.message?.includes('Failed to fetch') ||
-          error.message?.includes('NetworkError') ||
-          error.message?.includes('Network request failed')
-        )) {
-          console.warn('⚠️ Network error fetching profile, will retry:', error);
-          throw error;
-        }
-        // For other errors (404, 403), return null
-        console.error('Profile fetch error:', error);
-        return null;
+        // For ALL other errors (network, 403, 404, 500, etc.), THROW so TanStack Query
+        // keeps the previous cached data during background refetches instead of
+        // replacing valid profile data with null (which triggers false onboarding redirects)
+        console.warn('⚠️ Error fetching profile, keeping cached data:', error);
+        throw error;
       }
     },
     enabled: !!userId,
@@ -104,17 +97,10 @@ export const useUserOrganizations = (userId: string | undefined) => {
           // Return empty array to stop retries
           return [];
         }
-        // Re-throw network errors to trigger retry
-        if (error instanceof Error && (
-          error.message?.includes('Failed to fetch') ||
-          error.message?.includes('NetworkError') ||
-          error.message?.includes('Network request failed')
-        )) {
-          throw error;
-        }
-        // For other errors, return empty array
-        console.error('❌ Error fetching organizations:', error);
-        return [];
+        // THROW all other errors so TanStack Query keeps cached organizations
+        // during background refetches (prevents false onboarding redirects)
+        console.warn('⚠️ Error fetching organizations, keeping cached data:', error);
+        throw error;
       }
     },
     enabled: !!userId,
@@ -145,23 +131,21 @@ export const useUserOrganizations = (userId: string | undefined) => {
 // Organization farms query
 export const useOrganizationFarms = (organizationId: string | undefined) => {
   return useQuery({
-    queryKey: authKeys.farms(organizationId || ''),
+    queryKey: ['farms', 'organization', organizationId || ''],
     queryFn: async (): Promise<Farm[]> => {
       if (!organizationId) return [];
 
       try {
         // Use NestJS API instead of direct Supabase call
-        const data = await farmsApi.getAll({ organization_id: organizationId }, organizationId);
-        // API returns { success: true, farms: [...], total: ... }
-        if (data && typeof data === 'object' && 'farms' in data && Array.isArray((data as { farms: any[] }).farms)) {
-          const farmsData = (data as { farms: any[] }).farms;
+        const farmsData = await farmsApi.getAll({ organization_id: organizationId }, organizationId);
+        if (Array.isArray(farmsData) && farmsData.length > 0) {
 
           // Fetch all parcels for this organization to calculate total_area per farm
           let parcelsByFarm: Record<string, { totalArea: number }> = {};
           try {
             const parcelsData = await parcelsApi.getAll({ organization_id: organizationId }, organizationId);
             if (Array.isArray(parcelsData)) {
-              parcelsByFarm = parcelsData.reduce((acc: Record<string, { totalArea: number }>, parcel: any) => {
+              parcelsByFarm = parcelsData.reduce((acc: Record<string, { totalArea: number }>, parcel) => {
                 const farmId = parcel.farm_id;
                 if (!farmId) return acc;
                 if (!acc[farmId]) {
@@ -178,13 +162,13 @@ export const useOrganizationFarms = (organizationId: string | undefined) => {
           }
 
           // Map farm_id and farm_name to id and name for compatibility
-          return farmsData.map((farm: any) => {
+          return farmsData.map((farm) => {
             const farmId = farm.farm_id || farm.id;
             const parcelsData = parcelsByFarm[farmId];
             const farmSize = farm.farm_size ?? farm.size;
 
-            // If farm size is not set or 0, use the calculated area from parcels
-            const totalArea = (!farmSize || farmSize === 0) && parcelsData
+            // Always use calculated area from parcels when available; fall back to farm size
+            const totalArea = parcelsData?.totalArea
               ? parseFloat(parcelsData.totalArea.toFixed(2))
               : farmSize;
 
@@ -202,8 +186,7 @@ export const useOrganizationFarms = (organizationId: string | undefined) => {
             } as Farm & { total_area?: number };
           });
         }
-        // Fallback for direct array response
-        return Array.isArray(data) ? data : [];
+        return [];
       } catch (error) {
         // Check for session expired error (401)
         if (error instanceof Error && (
@@ -230,6 +213,8 @@ export const useOrganizationFarms = (organizationId: string | undefined) => {
     },
     enabled: !!organizationId,
     staleTime: 5 * 60 * 1000, // 5 minutes,
+    /** Avoid empty `farms` during refetch/invalidation — prevents losing farm context in UI (empty Select). */
+    placeholderData: keepPreviousData,
     retry: (failureCount, error) => {
       // Don't retry if session expired
       if (error instanceof Error && (
@@ -287,9 +272,19 @@ export const useSignOut = () => {
     onSuccess: () => {
       // Clear all auth-related queries
       queryClient.removeQueries({ queryKey: ['auth'] });
-      // Clear localStorage
       localStorage.removeItem('currentOrganization');
       localStorage.removeItem('currentFarm');
+
+      const userId = useAuthStore.getState().user?.id;
+      const tourKeyPrefix = userId ? `agritech_${userId}_` : 'agritech_';
+      const legacyTourKeys = ['agritech_completed_tours', 'agritech_dismissed_tours', 'agritech_tours_last_sync'];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key?.startsWith(tourKeyPrefix) || legacyTourKeys.includes(key)) {
+          localStorage.removeItem(key);
+          i--;
+        }
+      }
     },
   });
 };

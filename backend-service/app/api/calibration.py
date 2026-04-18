@@ -1,0 +1,840 @@
+from datetime import date, datetime
+import logging
+from typing import Any, SupportsFloat, TypedDict, cast
+
+import numpy as np
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel, Field
+
+from ..services.calibration.support.gdd_service import precompute_gdd
+from ..services.calibration.orchestrator import run_calibration_pipeline
+from ..services.calibration.types import CalibrationInput, CalibrationOutput
+from ..services.supabase_service import supabase_service
+
+router = APIRouter()
+logger = logging.getLogger(__name__)
+
+
+class PhenologyDefinition(TypedDict):
+    months: set[int]
+    stage: str
+    stage_code: str
+    description: str
+
+
+class NdviThresholds(BaseModel):
+    optimal: tuple[float, float]
+    vigilance: float
+    alerte: float
+
+
+VALID_CROP_TYPES = {
+    "olivier",
+    "agrumes",
+    "avocatier",
+    "palmier_dattier",
+    "vigne",
+    "rosacees",
+    "amandier",
+    "pistachier",
+    "caroubier",
+    "figuier",
+    "cereales",
+    "marichage",
+    "fourrage",
+    "canne_a_sucre",
+    "coton",
+}
+DEFAULT_CROP_TYPE = "olivier"
+CROP_TYPE_ALIASES = {
+    "olive": "olivier",
+    "olivier": "olivier",
+    "olives": "olivier",
+    "citrus": "agrumes",
+    "agrumes": "agrumes",
+    "orange": "agrumes",
+    "mandarine": "agrumes",
+    "citron": "agrumes",
+    "pomelo": "agrumes",
+    "avocado": "avocatier",
+    "avocatier": "avocatier",
+    "date_palm": "palmier_dattier",
+    "palmier": "palmier_dattier",
+    "palmier_dattier": "palmier_dattier",
+    "dattier": "palmier_dattier",
+    "vigne": "vigne",
+    "raisin": "vigne",
+    "vine": "vigne",
+    "grape": "vigne",
+    "rosacees": "rosacees",
+    "pommier": "rosacees",
+    "poirier": "rosacees",
+    "pecher": "rosacees",
+    "abricotier": "rosacees",
+    "cerisier": "rosacees",
+    "amandier": "amandier",
+    "almond": "amandier",
+    "pistachier": "pistachier",
+    "pistache": "pistachier",
+    "pistachio": "pistachier",
+    "caroubier": "caroubier",
+    "caroube": "caroubier",
+    "carob": "caroubier",
+    "figuier": "figuier",
+    "figue": "figuier",
+    "fig": "figuier",
+    "cereales": "cereales",
+    "ble": "cereales",
+    "orge": "cereales",
+    "mais": "cereales",
+    "wheat": "cereales",
+    "barley": "cereales",
+    "corn": "cereales",
+    "marichage": "marichage",
+    "tomate": "marichage",
+    "pomme_de_terre": "marichage",
+    "oignon": "marichage",
+    "legume": "marichage",
+    "vegetable": "marichage",
+    "market_garden": "marichage",
+    "fourrage": "fourrage",
+    "luzerne": "fourrage",
+    "bersim": "fourrage",
+    "fodder": "fourrage",
+    "alfalfa": "fourrage",
+    "canne_a_sucre": "canne_a_sucre",
+    "sugarcane": "canne_a_sucre",
+    "coton": "coton",
+    "cotton": "coton",
+}
+
+
+def _normalize_crop_type(crop_type: str | None) -> str:
+    """Accept any crop_type — map unknown ones to default with a log warning."""
+    if not crop_type or not crop_type.strip():
+        logger.warning(
+            "Empty crop_type received, defaulting to '%s'", DEFAULT_CROP_TYPE
+        )
+        return DEFAULT_CROP_TYPE
+
+    normalized = crop_type.strip().lower()
+    if normalized in VALID_CROP_TYPES:
+        return normalized
+
+    mapped = CROP_TYPE_ALIASES.get(normalized)
+    if mapped:
+        return mapped
+
+    logger.warning(
+        "Unknown crop_type '%s' not in %s — defaulting to '%s'",
+        crop_type,
+        VALID_CROP_TYPES,
+        DEFAULT_CROP_TYPE,
+    )
+    return DEFAULT_CROP_TYPE
+
+
+GENERIC_PHENOLOGY: list[PhenologyDefinition] = [
+    {
+        "months": {1, 2},
+        "stage": "repos_hivernal",
+        "stage_code": "RH",
+        "description": "Periode de repos hivernal.",
+    },
+    {
+        "months": {3, 4},
+        "stage": "reprise_vegetative",
+        "stage_code": "RV",
+        "description": "Reprise vegetative printaniere.",
+    },
+    {
+        "months": {5, 6},
+        "stage": "croissance_active",
+        "stage_code": "CA",
+        "description": "Phase de croissance active.",
+    },
+    {
+        "months": {7, 8},
+        "stage": "developpement",
+        "stage_code": "DV",
+        "description": "Developpement et production estivale.",
+    },
+    {
+        "months": {9, 10},
+        "stage": "maturation",
+        "stage_code": "MT",
+        "description": "Maturation progressive.",
+    },
+    {
+        "months": {11, 12},
+        "stage": "fin_cycle",
+        "stage_code": "FC",
+        "description": "Fin de cycle et preparation hivernale.",
+    },
+]
+
+PHENOLOGY_CONFIG: dict[str, list[PhenologyDefinition]] = {
+    "olivier": [
+        {
+            "months": {1, 2},
+            "stage": "repos_vegetatif",
+            "stage_code": "RV",
+            "description": "Phase hivernale de repos vegetatif.",
+        },
+        {
+            "months": {3, 4},
+            "stage": "debourrement",
+            "stage_code": "DB",
+            "description": "Reprise vegetative et sortie des bourgeons.",
+        },
+        {
+            "months": {5, 6},
+            "stage": "floraison",
+            "stage_code": "FL",
+            "description": "Floraison active et mise en place de la charge.",
+        },
+        {
+            "months": {7, 8},
+            "stage": "nouaison",
+            "stage_code": "NW",
+            "description": "Nouaison et fixation des jeunes fruits.",
+        },
+        {
+            "months": {9, 10},
+            "stage": "grossissement",
+            "stage_code": "GR",
+            "description": "Grossissement des fruits et accumulation de biomasse.",
+        },
+        {
+            "months": {11, 12},
+            "stage": "maturation",
+            "stage_code": "MT",
+            "description": "Maturation finale avant recolte.",
+        },
+    ],
+    "agrumes": [
+        {
+            "months": {1, 2},
+            "stage": "repos_hivernal",
+            "stage_code": "RH",
+            "description": "Ralentissement vegetatif hivernal.",
+        },
+        {
+            "months": {3, 4},
+            "stage": "floraison",
+            "stage_code": "FL",
+            "description": "Floraison printaniere des agrumes.",
+        },
+        {
+            "months": {5, 6},
+            "stage": "nouaison",
+            "stage_code": "NW",
+            "description": "Nouaison et premier developpement des fruits.",
+        },
+        {
+            "months": {7, 8},
+            "stage": "grossissement",
+            "stage_code": "GR",
+            "description": "Grossissement estival des fruits.",
+        },
+        {
+            "months": {9, 10},
+            "stage": "maturation",
+            "stage_code": "MT",
+            "description": "Maturation progressive des fruits.",
+        },
+        {
+            "months": {11, 12},
+            "stage": "recolte",
+            "stage_code": "RC",
+            "description": "Periode principale de recolte.",
+        },
+    ],
+    "avocatier": [
+        {
+            "months": {1, 2},
+            "stage": "repos_relief",
+            "stage_code": "RR",
+            "description": "Activite vegetative reduite en debut d annee.",
+        },
+        {
+            "months": {3, 4},
+            "stage": "floraison",
+            "stage_code": "FL",
+            "description": "Floraison et pollinisation de l avocatier.",
+        },
+        {
+            "months": {5, 6},
+            "stage": "nouaison",
+            "stage_code": "NW",
+            "description": "Nouaison et maintien des fruits.",
+        },
+        {
+            "months": {7, 8},
+            "stage": "croissance_fruits",
+            "stage_code": "CF",
+            "description": "Croissance active des fruits.",
+        },
+        {
+            "months": {9, 10},
+            "stage": "grossissement",
+            "stage_code": "GR",
+            "description": "Accumulation de matiere seche.",
+        },
+        {
+            "months": {11, 12},
+            "stage": "maturation",
+            "stage_code": "MT",
+            "description": "Maturation commerciale du fruit.",
+        },
+    ],
+    "palmier_dattier": [
+        {
+            "months": {1, 2},
+            "stage": "repos_relatif",
+            "stage_code": "RR",
+            "description": "Repos relatif avant reprise printaniere.",
+        },
+        {
+            "months": {3, 4},
+            "stage": "pollinisation",
+            "stage_code": "PL",
+            "description": "Floraison et pollinisation des palmiers.",
+        },
+        {
+            "months": {5, 6},
+            "stage": "nouaison",
+            "stage_code": "NW",
+            "description": "Nouaison et installation des regimes.",
+        },
+        {
+            "months": {7, 8},
+            "stage": "grossissement",
+            "stage_code": "GR",
+            "description": "Grossissement rapide des dattes.",
+        },
+        {
+            "months": {9, 10},
+            "stage": "maturation",
+            "stage_code": "MT",
+            "description": "Maturation et concentration en sucres.",
+        },
+        {
+            "months": {11, 12},
+            "stage": "post_recolte",
+            "stage_code": "PR",
+            "description": "Phase post-recolte et remise en reserve.",
+        },
+    ],
+    "vigne": [
+        {
+            "months": {1, 2},
+            "stage": "repos_hivernal",
+            "stage_code": "RH",
+            "description": "Repos hivernal de la vigne.",
+        },
+        {
+            "months": {3, 4},
+            "stage": "debourrement",
+            "stage_code": "DB",
+            "description": "Debourrement et croissance des rameaux.",
+        },
+        {
+            "months": {5, 6},
+            "stage": "floraison_nouaison",
+            "stage_code": "FN",
+            "description": "Floraison et nouaison des grappes.",
+        },
+        {
+            "months": {7, 8},
+            "stage": "grossissement",
+            "stage_code": "GR",
+            "description": "Grossissement des baies.",
+        },
+        {
+            "months": {9, 10},
+            "stage": "veraison_maturation",
+            "stage_code": "VM",
+            "description": "Veraison et maturation des raisins.",
+        },
+        {
+            "months": {11, 12},
+            "stage": "chute_feuilles",
+            "stage_code": "CF",
+            "description": "Chute des feuilles et entree en repos.",
+        },
+    ],
+    "amandier": [
+        {
+            "months": {1, 2},
+            "stage": "floraison",
+            "stage_code": "FL",
+            "description": "Floraison hivernale precoce de l amandier.",
+        },
+        {
+            "months": {3, 4},
+            "stage": "nouaison",
+            "stage_code": "NW",
+            "description": "Nouaison et debut croissance des fruits.",
+        },
+        {
+            "months": {5, 6},
+            "stage": "croissance",
+            "stage_code": "CR",
+            "description": "Croissance active des amandes.",
+        },
+        {
+            "months": {7, 8},
+            "stage": "durcissement",
+            "stage_code": "DU",
+            "description": "Durcissement de la coque.",
+        },
+        {
+            "months": {9, 10},
+            "stage": "maturation_recolte",
+            "stage_code": "MR",
+            "description": "Maturation et recolte des amandes.",
+        },
+        {
+            "months": {11, 12},
+            "stage": "repos",
+            "stage_code": "RP",
+            "description": "Repos vegetatif.",
+        },
+    ],
+    "cereales": [
+        {
+            "months": {11, 12, 1},
+            "stage": "semis_tallage",
+            "stage_code": "ST",
+            "description": "Semis et tallage des cereales d hiver.",
+        },
+        {
+            "months": {2, 3},
+            "stage": "montaison",
+            "stage_code": "MO",
+            "description": "Montaison et croissance active.",
+        },
+        {
+            "months": {4, 5},
+            "stage": "epiaison_floraison",
+            "stage_code": "EF",
+            "description": "Epiaison et floraison.",
+        },
+        {
+            "months": {5, 6},
+            "stage": "grossissement_grain",
+            "stage_code": "GG",
+            "description": "Grossissement et remplissage du grain.",
+        },
+        {
+            "months": {6, 7},
+            "stage": "maturation_recolte",
+            "stage_code": "MR",
+            "description": "Maturation et recolte.",
+        },
+        {
+            "months": {8, 9, 10},
+            "stage": "jachere_preparation",
+            "stage_code": "JP",
+            "description": "Jachere et preparation du sol.",
+        },
+    ],
+    "marichage": [
+        {
+            "months": {1, 2},
+            "stage": "plantation",
+            "stage_code": "PL",
+            "description": "Plantation des cultures maraicheres.",
+        },
+        {
+            "months": {3, 4},
+            "stage": "croissance",
+            "stage_code": "CR",
+            "description": "Croissance vegetative active.",
+        },
+        {
+            "months": {5, 6},
+            "stage": "floraison",
+            "stage_code": "FL",
+            "description": "Floraison et nouaison.",
+        },
+        {
+            "months": {7, 8},
+            "stage": "production",
+            "stage_code": "PR",
+            "description": "Production et recolte estivale.",
+        },
+        {
+            "months": {9, 10},
+            "stage": "recolte_fin",
+            "stage_code": "RF",
+            "description": "Fin de recolte et nettoyage.",
+        },
+        {
+            "months": {11, 12},
+            "stage": "preparation_hiver",
+            "stage_code": "PH",
+            "description": "Preparation des cultures d hiver.",
+        },
+    ],
+    "fourrage": [
+        {
+            "months": {1, 2},
+            "stage": "croissance_lente",
+            "stage_code": "CL",
+            "description": "Croissance ralentie par le froid.",
+        },
+        {
+            "months": {3, 4},
+            "stage": "reprise_printemps",
+            "stage_code": "RP",
+            "description": "Reprise de croissance printaniere.",
+        },
+        {
+            "months": {5, 6},
+            "stage": "floraison",
+            "stage_code": "FL",
+            "description": "Floraison et montaison.",
+        },
+        {
+            "months": {7, 8},
+            "stage": "production_estivale",
+            "stage_code": "PE",
+            "description": "Production estivale et fauches.",
+        },
+        {
+            "months": {9, 10},
+            "stage": "regrowth",
+            "stage_code": "RG",
+            "description": "Regrowth apres fauche et preparation automne.",
+        },
+        {
+            "months": {11, 12},
+            "stage": "repos_hivernal",
+            "stage_code": "RH",
+            "description": "Repos hivernal.",
+        },
+    ],
+}
+
+
+class CalibrationRunV2Request(BaseModel):
+    calibration_input: CalibrationInput
+    satellite_images: list[dict[str, Any]]
+    weather_rows: list[dict[str, Any]]
+    ndvi_raster_pixels: list[dict[str, Any]] | None = None
+
+
+class ExtractRasterRequest(BaseModel):
+    geometry: list[list[float]]
+    start_date: str
+    end_date: str
+    scale: int = 10
+
+
+class RasterPixel(BaseModel):
+    lon: float
+    lat: float
+    value: float
+
+
+class ExtractRasterResponse(BaseModel):
+    pixels: list[RasterPixel]
+    bounds: dict[str, float]
+    scale: int
+    count: int
+    stats: dict[str, float]
+
+
+class PrecomputeGddRequest(BaseModel):
+    latitude: float
+    longitude: float
+    crop_type: str
+    rows: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class PrecomputeGddResponse(BaseModel):
+    crop_type: str
+    updated_rows: int
+
+
+def _build_v2_error(step: str, reason: str) -> dict[str, str]:
+    return {"step": step, "reason": reason}
+
+
+def _validate_v2_request(request: CalibrationRunV2Request) -> None:
+    request.calibration_input.crop_type = _normalize_crop_type(
+        request.calibration_input.crop_type
+    )
+
+    if len(request.satellite_images) < 1:
+        raise HTTPException(
+            status_code=400,
+            detail=_build_v2_error(
+                "validation",
+                "Insufficient satellite data",
+            ),
+        )
+
+    if len(request.weather_rows) < 1:
+        raise HTTPException(
+            status_code=400,
+            detail=_build_v2_error(
+                "validation",
+                "Insufficient weather data",
+            ),
+        )
+
+
+async def _run_v2(request: CalibrationRunV2Request) -> CalibrationOutput:
+    _validate_v2_request(request)
+
+    try:
+        return await run_calibration_pipeline(
+            calibration_input=request.calibration_input,
+            satellite_images=request.satellite_images,
+            weather_rows=request.weather_rows,
+            storage=None,
+            ndvi_raster_pixels=request.ndvi_raster_pixels,
+            supabase_svc=supabase_service,
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail=_build_v2_error("pipeline", str(exc)),
+        ) from exc
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception("V2 calibration pipeline failed")
+        raise HTTPException(
+            status_code=500,
+            detail=_build_v2_error(
+                "pipeline",
+                "Internal error while running calibration V2",
+            ),
+        ) from exc
+
+
+class PercentilesRequest(BaseModel):
+    values: list[float]
+    percentiles: list[int]
+
+
+class PercentilesResponse(BaseModel):
+    percentiles: dict[str, float]
+
+
+class DetectAnomaliesRequest(BaseModel):
+    values: list[float]
+    threshold_std: float = 2.0
+
+
+class DetectAnomaliesResponse(BaseModel):
+    anomaly_indices: list[int]
+    anomaly_count: int
+    mean: float
+    std: float
+
+
+class ClassifyZonesRequest(BaseModel):
+    ndvi_values: list[float]
+    thresholds: NdviThresholds
+
+
+class ClassifyZonesResponse(BaseModel):
+    zones: list[str]
+    distribution: dict[str, int]
+
+
+class PhenologyRequest(BaseModel):
+    crop_type: str
+    month: int = Field(..., ge=1, le=12)
+    ndvi: float
+    ndre: float
+
+
+class PhenologyResponse(BaseModel):
+    stage: str
+    stage_code: str
+    description: str
+
+
+def _parse_thresholds(thresholds: NdviThresholds) -> tuple[float, float, float, float]:
+    optimal_min, optimal_max = thresholds.optimal
+    return optimal_min, optimal_max, thresholds.vigilance, thresholds.alerte
+
+
+def _classify_ndvi_value(value: float, thresholds: NdviThresholds) -> str:
+    optimal_min, optimal_max, vigilance, alerte = _parse_thresholds(thresholds)
+
+    if value <= alerte:
+        return "stressed"
+    if value < vigilance:
+        return "stressed"
+    if value >= optimal_min and value <= optimal_max:
+        return "optimal"
+    if value > optimal_max:
+        return "normal"
+    return "normal"
+
+
+def _detect_anomalies(
+    values: list[float], threshold_std: float
+) -> DetectAnomaliesResponse:
+    values_array = np.array(values, dtype=float)
+    mean_value = float(np.mean(values_array))
+    std_value = float(np.std(values_array))
+
+    if std_value == 0.0:
+        anomaly_indices: list[int] = []
+    else:
+        z_scores = [abs((value - mean_value) / std_value) for value in values]
+        anomaly_indices = [
+            int(index) for index, score in enumerate(z_scores) if score > threshold_std
+        ]
+
+    return DetectAnomaliesResponse(
+        anomaly_indices=anomaly_indices,
+        anomaly_count=len(anomaly_indices),
+        mean=round(mean_value, 4),
+        std=round(std_value, 4),
+    )
+
+
+def _get_phenology_stage(crop_type: str, month: int) -> PhenologyResponse:
+    crop_type = _normalize_crop_type(crop_type)
+
+    stages = PHENOLOGY_CONFIG.get(crop_type, GENERIC_PHENOLOGY)
+
+    for stage_config in stages:
+        if month in stage_config["months"]:
+            return PhenologyResponse(
+                stage=stage_config["stage"],
+                stage_code=stage_config["stage_code"],
+                description=stage_config["description"],
+            )
+
+    raise HTTPException(status_code=400, detail="Invalid month")
+
+
+def _extract_month(date_value: str) -> int:
+    try:
+        return datetime.fromisoformat(date_value).month
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="Invalid reading date") from exc
+
+
+@router.post("/v2/run", response_model=CalibrationOutput)
+async def run_calibration_v2(request: CalibrationRunV2Request):
+    return await _run_v2(request)
+
+
+@router.post("/run-v2", response_model=CalibrationOutput)
+async def run_calibration_v2_legacy(request: CalibrationRunV2Request):
+    return await _run_v2(request)
+
+
+@router.post("/v2/precompute-gdd", response_model=PrecomputeGddResponse)
+async def precompute_gdd_v2(request: PrecomputeGddRequest):
+    request.crop_type = _normalize_crop_type(request.crop_type)
+
+    updated_rows = precompute_gdd(
+        latitude=request.latitude,
+        longitude=request.longitude,
+        crop_type=request.crop_type,
+        rows=request.rows,
+        as_of=date.today(),
+    )
+
+    return PrecomputeGddResponse(crop_type=request.crop_type, updated_rows=updated_rows)
+
+
+@router.post("/v2/extract-raster", response_model=ExtractRasterResponse)
+async def extract_ndvi_raster(request: ExtractRasterRequest):
+    from ..services.earth_engine import EarthEngineService
+
+    ee_service = EarthEngineService()
+    try:
+        ee_service.initialize()
+    except Exception as exc:
+        message = str(exc)
+        if (
+            "earthengine authenticate" in message.lower()
+            or "authorize access" in message.lower()
+        ):
+            raise HTTPException(
+                status_code=503,
+                detail="Earth Engine is not authenticated on this environment. Run 'earthengine authenticate' or configure service-account credentials.",
+            ) from exc
+        raise HTTPException(
+            status_code=502,
+            detail=f"Earth Engine initialization failed: {message}",
+        ) from exc
+
+    geometry = {"type": "Polygon", "coordinates": [request.geometry]}
+
+    result = ee_service.extract_ndvi_raster(
+        geometry=geometry,
+        start_date=request.start_date,
+        end_date=request.end_date,
+        scale=request.scale,
+    )
+    return ExtractRasterResponse(**result)
+
+
+@router.post("/percentiles", response_model=PercentilesResponse)
+async def calculate_percentiles(request: PercentilesRequest):
+    if not request.values:
+        raise HTTPException(status_code=400, detail="values must not be empty")
+    if not request.percentiles:
+        raise HTTPException(status_code=400, detail="percentiles must not be empty")
+
+    try:
+        values_array = np.array(request.values, dtype=float)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=400, detail="Unable to compute percentiles"
+        ) from exc
+
+    return PercentilesResponse(
+        percentiles={
+            f"p{int(percentile)}": float(
+                cast(SupportsFloat, np.percentile(values_array, percentile))
+            )
+            for percentile in request.percentiles
+        }
+    )
+
+
+@router.post("/detect-anomalies", response_model=DetectAnomaliesResponse)
+async def detect_anomalies(request: DetectAnomaliesRequest):
+    if not request.values:
+        raise HTTPException(status_code=400, detail="values must not be empty")
+    if request.threshold_std <= 0:
+        raise HTTPException(status_code=400, detail="threshold_std must be positive")
+
+    return _detect_anomalies(request.values, request.threshold_std)
+
+
+@router.post("/classify-zones", response_model=ClassifyZonesResponse)
+async def classify_zones(request: ClassifyZonesRequest):
+    if not request.ndvi_values:
+        raise HTTPException(status_code=400, detail="ndvi_values must not be empty")
+
+    zones = [
+        _classify_ndvi_value(value, request.thresholds) for value in request.ndvi_values
+    ]
+    distribution = {
+        "optimal": zones.count("optimal"),
+        "normal": zones.count("normal"),
+        "stressed": zones.count("stressed"),
+    }
+
+    return ClassifyZonesResponse(zones=zones, distribution=distribution)
+
+
+@router.post("/phenology", response_model=PhenologyResponse)
+async def get_phenology(request: PhenologyRequest):
+    return _get_phenology_stage(request.crop_type, request.month)

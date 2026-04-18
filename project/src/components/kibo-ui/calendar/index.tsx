@@ -258,14 +258,14 @@ export const CalendarBody = ({ features, children, onDateClick }: CalendarBodyPr
 
   const days: ReactNode[] = [];
 
-  for (let i = 0; i < firstDay; i++) {
+  for (let prevDayIdx = 0; prevDayIdx < firstDay; prevDayIdx++) {
     const day =
       prevMonthData.prevMonthDaysArray[
-        prevMonthData.prevMonthDays - firstDay + i
+        prevMonthData.prevMonthDays - firstDay + prevDayIdx
       ];
 
     if (day) {
-      days.push(<OutOfBoundsDay day={day} key={`prev-${i}`} />);
+      days.push(<OutOfBoundsDay day={day} key={`prev-${prevDayIdx}`} />);
     }
   }
 
@@ -297,11 +297,11 @@ export const CalendarBody = ({ features, children, onDateClick }: CalendarBodyPr
 
   const remainingDays = 7 - ((firstDay + daysInMonth) % 7);
   if (remainingDays < 7) {
-    for (let i = 0; i < remainingDays; i++) {
-      const day = nextMonthData.nextMonthDaysArray[i];
+    for (let nextDayIdx = 0; nextDayIdx < remainingDays; nextDayIdx++) {
+      const day = nextMonthData.nextMonthDaysArray[nextDayIdx];
 
       if (day) {
-        days.push(<OutOfBoundsDay day={day} key={`next-${i}`} />);
+        days.push(<OutOfBoundsDay day={day} key={`next-${nextDayIdx}`} />);
       }
     }
   }
@@ -314,7 +314,7 @@ export const CalendarBody = ({ features, children, onDateClick }: CalendarBodyPr
             "relative aspect-square overflow-hidden border-t border-r",
             index % 7 === 6 && "border-r-0"
           )}
-          key={index}
+          key={`day-${String((day as { key?: string | null }).key)}`}
         >
           {day}
         </div>

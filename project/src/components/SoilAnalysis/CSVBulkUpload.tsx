@@ -2,6 +2,10 @@ import React, { useState } from 'react';
 import { Upload, Download, FileText, AlertCircle, CheckCircle, X } from 'lucide-react';
 import { parcelsApi } from '../../lib/api/parcels';
 import { soilAnalysesApi } from '../../lib/api/soil-analyses';
+import { Button } from '@/components/ui/button';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { ButtonLoader } from '@/components/ui/loader';
+
 
 interface CSVBulkUploadProps {
   onImportComplete: () => void;
@@ -21,7 +25,7 @@ interface ParsedAnalysis {
   notes?: string;
 }
 
-const CSVBulkUpload: React.FC<CSVBulkUploadProps> = ({ onImportComplete }) => {
+const CSVBulkUpload = ({ onImportComplete }: CSVBulkUploadProps) => {
   const [showModal, setShowModal] = useState(false);
   const [parsedData, setParsedData] = useState<ParsedAnalysis[]>([]);
   const [errors, setErrors] = useState<string[]>([]);
@@ -61,7 +65,7 @@ Parcelle C,2025-01-22,5.9,3.5,2.4,0.052,2.6,Sableux,30,Lab AgriTest,Nécessite c
       if (!line) continue;
 
       const values = line.split(',').map(v => v.trim());
-      const row: any = {};
+      const row: Record<string, string | undefined> = {};
 
       headers.forEach((header, index) => {
         row[header] = values[index];
@@ -94,8 +98,8 @@ Parcelle C,2025-01-22,5.9,3.5,2.4,0.052,2.6,Sableux,30,Lab AgriTest,Nécessite c
         }
 
         data.push(analysis);
-      } catch (err: any) {
-        newErrors.push(`Ligne ${i + 1}: ${err.message}`);
+      } catch (err: unknown) {
+        newErrors.push(`Ligne ${i + 1}: ${err instanceof Error ? err.message : 'Erreur inconnue'}`);
       }
     }
 
@@ -117,8 +121,8 @@ Parcelle C,2025-01-22,5.9,3.5,2.4,0.052,2.6,Sableux,30,Lab AgriTest,Nécessite c
         const text = e.target?.result as string;
         const parsed = parseCSV(text);
         setParsedData(parsed);
-      } catch (err: any) {
-        setErrors([err.message]);
+      } catch (err: unknown) {
+        setErrors([err instanceof Error ? err.message : 'Erreur inconnue']);
       }
     };
     reader.readAsText(uploadedFile);
@@ -184,8 +188,8 @@ Parcelle C,2025-01-22,5.9,3.5,2.4,0.052,2.6,Sableux,30,Lab AgriTest,Nécessite c
           setShowModal(false);
         }, 2000);
       }
-    } catch (err: any) {
-      setErrors([...errors, err.message]);
+    } catch (err: unknown) {
+      setErrors([...errors, err instanceof Error ? err.message : 'Erreur inconnue']);
     } finally {
       setImporting(false);
     }
@@ -193,13 +197,13 @@ Parcelle C,2025-01-22,5.9,3.5,2.4,0.052,2.6,Sableux,30,Lab AgriTest,Nécessite c
 
   return (
     <>
-      <button
+      <Button variant="blue"
         onClick={() => setShowModal(true)}
-        className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+        className="flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors"
       >
         <Upload className="w-4 h-4" />
         <span>Import CSV</span>
-      </button>
+      </Button>
 
       {showModal && (
         <div className="modal-overlay">
@@ -208,12 +212,12 @@ Parcelle C,2025-01-22,5.9,3.5,2.4,0.052,2.6,Sableux,30,Lab AgriTest,Nécessite c
               <h2 className="text-xl font-bold text-gray-900 dark:text-white">
                 Import en masse - Analyses de sol
               </h2>
-              <button
+              <Button
                 onClick={() => setShowModal(false)}
                 className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
               >
                 <X className="w-6 h-6" />
-              </button>
+              </Button>
             </div>
 
             <div className="p-6 space-y-6">
@@ -241,13 +245,10 @@ Parcelle C,2025-01-22,5.9,3.5,2.4,0.052,2.6,Sableux,30,Lab AgriTest,Nécessite c
                       <div>• lab_name (optionnel)</div>
                       <div>• notes (optionnel)</div>
                     </div>
-                    <button
-                      onClick={downloadTemplate}
-                      className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-                    >
+                    <Button variant="blue" onClick={downloadTemplate} className="flex items-center space-x-2 px-4 py-2 rounded-md transition-colors" >
                       <Download className="w-4 h-4" />
                       <span>Télécharger le modèle</span>
-                    </button>
+                    </Button>
                   </div>
                 </div>
               </div>
@@ -276,7 +277,7 @@ Parcelle C,2025-01-22,5.9,3.5,2.4,0.052,2.6,Sableux,30,Lab AgriTest,Nécessite c
                       </h4>
                       <ul className="text-sm text-red-800 dark:text-red-300 space-y-1">
                         {errors.map((error, index) => (
-                          <li key={index}>• {error}</li>
+                          <li key={error}>• {error}</li>
                         ))}
                       </ul>
                     </div>
@@ -291,32 +292,32 @@ Parcelle C,2025-01-22,5.9,3.5,2.4,0.052,2.6,Sableux,30,Lab AgriTest,Nécessite c
                     Aperçu des données ({parsedData.length} analyses)
                   </h3>
                   <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                      <thead className="bg-gray-50 dark:bg-gray-700">
-                        <tr>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300">Parcelle</th>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300">Date</th>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300">pH</th>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300">M.O.</th>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300">N</th>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300">P</th>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300">K</th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                    <Table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                      <TableHeader className="bg-gray-50 dark:bg-gray-700">
+                        <TableRow>
+                          <TableHead className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300">Parcelle</TableHead>
+                          <TableHead className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300">Date</TableHead>
+                          <TableHead className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300">pH</TableHead>
+                          <TableHead className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300">M.O.</TableHead>
+                          <TableHead className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300">N</TableHead>
+                          <TableHead className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300">P</TableHead>
+                          <TableHead className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300">K</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                         {parsedData.slice(0, 5).map((row, index) => (
-                          <tr key={index}>
-                            <td className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100">{row.parcel_name}</td>
-                            <td className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100">{row.sample_date}</td>
-                            <td className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100">{row.ph_level}</td>
-                            <td className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100">{row.organic_matter}%</td>
-                            <td className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100">{row.nitrogen}</td>
-                            <td className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100">{row.phosphorus}</td>
-                            <td className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100">{row.potassium}</td>
-                          </tr>
+                          <TableRow key={row.parcel_name}>
+                            <TableCell className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100">{row.parcel_name}</TableCell>
+                            <TableCell className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100">{row.sample_date}</TableCell>
+                            <TableCell className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100">{row.ph_level}</TableCell>
+                            <TableCell className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100">{row.organic_matter}%</TableCell>
+                            <TableCell className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100">{row.nitrogen}</TableCell>
+                            <TableCell className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100">{row.phosphorus}</TableCell>
+                            <TableCell className="px-4 py-2 text-sm text-gray-900 dark:text-gray-100">{row.potassium}</TableCell>
+                          </TableRow>
                         ))}
-                      </tbody>
-                    </table>
+                      </TableBody>
+                    </Table>
                     {parsedData.length > 5 && (
                       <div className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700">
                         ... et {parsedData.length - 5} autres analyses
@@ -347,22 +348,22 @@ Parcelle C,2025-01-22,5.9,3.5,2.4,0.052,2.6,Sableux,30,Lab AgriTest,Nécessite c
 
             {/* Footer Actions */}
             <div className="p-6 border-t border-gray-200 dark:border-gray-700 flex justify-end space-x-3">
-              <button
+              <Button
                 onClick={() => setShowModal(false)}
                 className="px-4 py-2 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
               >
                 Annuler
-              </button>
-              <button
+              </Button>
+              <Button variant="green"
                 onClick={handleImport}
                 disabled={parsedData.length === 0 || errors.length > 0 || importing}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                className="px-4 py-2 rounded-lg disabled:cursor-not-allowed flex items-center space-x-2"
               >
                 {importing && (
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  <ButtonLoader />
                 )}
                 <span>{importing ? 'Import en cours...' : 'Importer'}</span>
-              </button>
+              </Button>
             </div>
           </div>
         </div>

@@ -2,16 +2,17 @@ import type {Config} from '@docusaurus/types';
 import {themes as prismThemes} from 'prism-react-renderer';
 
 const config: Config = {
-  title: 'AgriTech Platform Documentation',
+  title: 'AgroGina Platform Documentation',
   tagline: 'Comprehensive agricultural technology platform with multi-tenant architecture, satellite data analysis, and AI-powered insights',
-  url: 'https://docs.agritech.example.com',
-  baseUrl: '/', // Make sure your new logo is at `static/img/logo.svg`
+  url: 'https://docs.agrogina.com',
+  baseUrl: '/',
   favicon: 'img/logo.svg',
-  organizationName: 'agritech',
-  projectName: 'agritech-platform',
+  organizationName: 'agrogina',
+  projectName: 'agrogina-platform',
   onBrokenLinks: 'warn',
   i18n: { defaultLocale: 'en', locales: ['en'] },
-  markdown: { 
+  markdown: {
+    format: 'detect',
     mermaid: true,
     hooks: {
       onBrokenMarkdownLinks: 'warn',
@@ -47,10 +48,10 @@ const config: Config = {
   ],
   themeConfig: {
     navbar: {
-      title: 'AgriTech Platform',
+      title: 'AgroGina Platform',
       logo: {
-        alt: 'AgriTech Platform',
-        src: 'img/logo.svg', // This path should point to your new logo
+        alt: 'AgroGina Platform',
+        src: 'img/logo.svg',
       },
       items: [
         {
@@ -60,7 +61,7 @@ const config: Config = {
           label: 'Docs',
         },
         {
-          href: 'https://github.com/agritech/platform',
+          href: 'https://github.com/boutchaz/agritech',
           label: 'GitHub',
           position: 'right',
         },
@@ -79,11 +80,11 @@ const config: Config = {
         {
           title: 'Community',
           items: [
-            { label: 'GitHub', href: 'https://github.com/agritech/platform' },
+            { label: 'GitHub', href: 'https://github.com/boutchaz/agritech' },
           ],
         },
       ],
-      copyright: `Copyright © ${new Date().getFullYear()} AgriTech Platform. Built with Docusaurus.`,
+      copyright: `Copyright © ${new Date().getFullYear()} AgroGina Platform. Built with Docusaurus.`,
     },
     prism: {
       theme: prismThemes.github,

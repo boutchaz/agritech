@@ -1,5 +1,7 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, ConflictException } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
+import { NotificationsService, OPERATIONAL_ROLES } from '../notifications/notifications.service';
+import { NotificationType } from '../notifications/dto/notification.dto';
 import {
   CreateTaskAssignmentDto,
   BulkCreateTaskAssignmentsDto,
@@ -32,7 +34,12 @@ export interface TaskAssignment {
 
 @Injectable()
 export class TaskAssignmentsService {
-  constructor(private readonly databaseService: DatabaseService) {}
+  private readonly logger = new Logger(TaskAssignmentsService.name);
+
+  constructor(
+    private readonly databaseService: DatabaseService,
+    private readonly notificationsService: NotificationsService,
+  ) {}
 
   async getTaskAssignments(
     organizationId: string,
@@ -77,13 +84,15 @@ export class TaskAssignmentsService {
 
     if (existing) {
       if (existing.status === 'removed') {
-        // Re-activate the assignment
+        // Re-activate the assignment — preserve payment fields from DTO
         const { data, error } = await client
           .from('task_assignments')
           .update({
             status: 'assigned',
             role: dto.role || 'worker',
             notes: dto.notes,
+            payment_included_in_salary: dto.payment_included_in_salary ?? false,
+            bonus_amount: dto.bonus_amount ?? null,
             updated_at: new Date().toISOString(),
           })
           .eq('id', existing.id)
@@ -107,6 +116,8 @@ export class TaskAssignmentsService {
         organization_id: organizationId,
         role: dto.role || 'worker',
         assigned_by: userId,
+        payment_included_in_salary: dto.payment_included_in_salary ?? false,
+        bonus_amount: dto.bonus_amount ?? null,
         notes: dto.notes,
       })
       .select(`
@@ -125,6 +136,23 @@ export class TaskAssignmentsService {
       .update({ status: 'assigned', updated_at: new Date().toISOString() })
       .eq('id', taskId)
       .eq('status', 'pending');
+
+    // Notify operational roles about new task assignment
+    try {
+      const worker = Array.isArray(data.worker) ? data.worker[0] : data.worker;
+      const workerName = worker ? `${worker.first_name || ''} ${worker.last_name || ''}`.trim() : 'Worker';
+      await this.notificationsService.createNotificationsForRoles(
+        organizationId,
+        OPERATIONAL_ROLES,
+        userId,
+        NotificationType.TASK_REASSIGNED,
+        `🔄 Task assigned to ${workerName}`,
+        `Worker assigned to task`,
+        { taskId, assignmentId: data.id, workerId: dto.worker_id, workerName },
+      );
+    } catch (notifError) {
+      this.logger.warn(`Failed to send task assignment notification: ${notifError}`);
+    }
 
     return data;
   }
@@ -150,6 +178,36 @@ export class TaskAssignmentsService {
     }
 
     return results;
+  }
+
+  async syncAssignments(
+    organizationId: string,
+    taskId: string,
+    dto: BulkCreateTaskAssignmentsDto,
+    userId: string,
+  ): Promise<TaskAssignment[]> {
+    const client = this.databaseService.getAdminClient();
+    const incomingWorkerIds = new Set(dto.assignments.map(a => a.worker_id));
+
+    // Remove workers no longer in the list
+    const { data: currentAssignments } = await client
+      .from('task_assignments')
+      .select('id, worker_id')
+      .eq('organization_id', organizationId)
+      .eq('task_id', taskId)
+      .neq('status', 'removed');
+
+    for (const current of currentAssignments || []) {
+      if (!incomingWorkerIds.has(current.worker_id)) {
+        await client
+          .from('task_assignments')
+          .update({ status: 'removed', updated_at: new Date().toISOString() })
+          .eq('id', current.id);
+      }
+    }
+
+    // Create or re-activate incoming workers
+    return this.bulkCreateAssignments(organizationId, taskId, dto, userId);
   }
 
   async updateAssignment(

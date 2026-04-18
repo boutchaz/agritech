@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import {  useMemo, useState  } from "react";
 import { Check, Building2, TrendingUp, Sprout } from 'lucide-react';
 import {
   SUBSCRIPTION_PLANS,
@@ -10,6 +10,7 @@ import {
 } from '../lib/polar';
 import { useSubscription } from '../hooks/useSubscription';
 import { useTranslation } from 'react-i18next';
+import { Button } from '@/components/ui/button';
 
 interface SubscriptionPlansProps {
   onSelectPlan: (
@@ -19,7 +20,7 @@ interface SubscriptionPlansProps {
   ) => void;
 }
 
-const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({ onSelectPlan }) => {
+const SubscriptionPlans = ({ onSelectPlan }: SubscriptionPlansProps) => {
   const { data: subscription } = useSubscription();
   const normalizedPlanType = normalizePlanType(
     subscription?.formula || subscription?.plan_type || null,
@@ -77,7 +78,7 @@ const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({ onSelectPlan }) =
         </div>
 
         <div className="inline-flex items-center rounded-full bg-gray-100 dark:bg-gray-800 p-1">
-          <button
+          <Button
             onClick={() => setBillingInterval('monthly')}
             className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
               billingInterval === 'monthly'
@@ -86,8 +87,8 @@ const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({ onSelectPlan }) =
             }`}
           >
             Monthly
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={() => setBillingInterval('semiannual')}
             className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
               billingInterval === 'semiannual'
@@ -96,8 +97,8 @@ const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({ onSelectPlan }) =
             }`}
           >
             Semiannual
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={() => setBillingInterval('annual')}
             className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
               billingInterval === 'annual'
@@ -106,7 +107,7 @@ const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({ onSelectPlan }) =
             }`}
           >
             Annual
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -146,31 +147,27 @@ const SubscriptionPlans: React.FC<SubscriptionPlansProps> = ({ onSelectPlan }) =
 
                 <div className="mb-6">
                   <span className="text-3xl font-bold text-gray-900 dark:text-white">
-                    {estimate.cycleTtc.toLocaleString()} MAD
+                    ${estimate.cycleTtc.toLocaleString()}
                   </span>
                   <span className="text-gray-500 dark:text-gray-400 ml-2 text-sm">
                     / {intervalLabel} TTC
                   </span>
                   <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                    {estimate.cycleHt.toLocaleString()} MAD HT + {estimate.cycleTva.toLocaleString()} MAD TVA
+                    ${estimate.cycleHt.toLocaleString()} HT + ${estimate.cycleTva.toLocaleString()} TVA
                   </div>
                 </div>
 
-                <button
+                <Button variant={!(isCurrentPlan) ? 'green' : undefined}
                   onClick={() => onSelectPlan(plan.id, billingInterval, contractedHectares)}
                   disabled={isCurrentPlan}
-                  className={`w-full py-2.5 px-4 rounded-lg font-semibold transition-colors ${
-                    isCurrentPlan
-                      ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
-                      : 'bg-green-600 hover:bg-green-700 text-white'
-                  }`}
+                  className={`w-full py-2.5 px-4 rounded-lg font-semibold transition-colors ${ isCurrentPlan ? 'bg-gray-300 text-gray-600 cursor-not-allowed' : ''}`}
                 >
                   {isCurrentPlan ? 'Current plan' : 'Select plan'}
-                </button>
+                </Button>
 
                 <div className="mt-6 space-y-2">
-                  {plan.features.map((feature, index) => (
-                    <div key={index} className="flex items-start space-x-2">
+                  {plan.features.map((feature) => (
+                    <div key={feature} className="flex items-start space-x-2">
                       <Check className="h-4 w-4 text-green-600 flex-shrink-0 mt-0.5" />
                       <span className="text-gray-700 dark:text-gray-300 text-sm">{feature}</span>
                     </div>

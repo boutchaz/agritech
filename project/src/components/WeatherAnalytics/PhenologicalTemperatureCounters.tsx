@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Thermometer, Snowflake, Sun, Flame, Leaf, Timer, Calendar, Settings2, X, ChevronDown, ChevronUp } from 'lucide-react';
+import { Snowflake, Sun, Flame, Leaf, Timer, Calendar } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { format, parseISO, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -352,18 +352,18 @@ interface PhenologicalTemperatureCountersProps {
   endDate?: string;
 }
 
-const PhenologicalTemperatureCounters: React.FC<PhenologicalTemperatureCountersProps> = ({
+const PhenologicalTemperatureCounters = ({
   temperatureData,
   cropType,
   treeType,
   startDate,
   endDate,
-}) => {
+}: PhenologicalTemperatureCountersProps) => {
   const { t } = useTranslation();
 
   // State for date range customization per stage
   const [stageDateRanges, setStageDateRanges] = useState<Record<string, StageDateRange>>({});
-  const [expandedStages, setExpandedStages] = useState<Record<string, boolean>>({});
+  const [_expandedStages, setExpandedStages] = useState<Record<string, boolean>>({});
 
   // Determine the crop type to use for configuration
   const effectiveCropType = useMemo(() => {
@@ -378,7 +378,7 @@ const PhenologicalTemperatureCounters: React.FC<PhenologicalTemperatureCountersP
   const phenologicalStages = cropPhenologicalConfig[effectiveCropType] || cropPhenologicalConfig.default;
 
   // Toggle date range customization for a stage
-  const toggleStageExpanded = (stageKey: string) => {
+  const _toggleStageExpanded = (stageKey: string) => {
     setExpandedStages(prev => ({
       ...prev,
       [stageKey]: !prev[stageKey]
@@ -386,7 +386,7 @@ const PhenologicalTemperatureCounters: React.FC<PhenologicalTemperatureCountersP
   };
 
   // Update date range for a stage
-  const updateStageDateRange = (stageKey: string, field: 'startDate' | 'endDate', value: string) => {
+  const _updateStageDateRange = (stageKey: string, field: 'startDate' | 'endDate', value: string) => {
     setStageDateRanges(prev => ({
       ...prev,
       [stageKey]: {
@@ -398,7 +398,7 @@ const PhenologicalTemperatureCounters: React.FC<PhenologicalTemperatureCountersP
   };
 
   // Clear date range for a stage
-  const clearStageDateRange = (stageKey: string) => {
+  const _clearStageDateRange = (stageKey: string) => {
     setStageDateRanges(prev => {
       const newRanges = { ...prev };
       delete newRanges[stageKey];
@@ -406,8 +406,8 @@ const PhenologicalTemperatureCounters: React.FC<PhenologicalTemperatureCountersP
     });
   };
 
-  // Filter temperature data by date range for a specific stage
-  const getFilteredDataForStage = (stageKey: string, stageIndex: number): TemperatureDataPoint[] => {
+   // Filter temperature data by date range for a specific stage
+   const getFilteredDataForStage = (stageKey: string, _stageIndex: number): TemperatureDataPoint[] => {
     const dateRange = stageDateRanges[stageKey];
 
     // Use custom stage range if set
@@ -444,8 +444,8 @@ const PhenologicalTemperatureCounters: React.FC<PhenologicalTemperatureCountersP
     return temperatureData;
   };
 
-  // Get formatted date range display for a stage
-  const getDateRangeDisplay = (stageKey: string, stage: PhenologicalStage): string => {
+   // Get formatted date range display for a stage
+   const _getDateRangeDisplay = (stageKey: string, _stage: PhenologicalStage): string => {
     const dateRange = stageDateRanges[stageKey];
 
     if (dateRange?.enabled && dateRange.startDate && dateRange.endDate) {
@@ -508,7 +508,7 @@ const PhenologicalTemperatureCounters: React.FC<PhenologicalTemperatureCountersP
   };
 
   // Calculate counters per stage with date filtering
-  const countersPerStage = useMemo(() => {
+  const _countersPerStage = useMemo(() => {
     if (!temperatureData || temperatureData.length === 0) return {};
 
     const results: Record<string, Record<string, number>> = {};
@@ -518,13 +518,12 @@ const PhenologicalTemperatureCounters: React.FC<PhenologicalTemperatureCountersP
       const counters = calculateCountersForData(filteredData, stage);
       const totalHours = filteredData.length * 24;
 
-      // Validate: Log warnings if counters exceed total hours (impossible values)
-      Object.entries(counters).forEach(([key, value]) => {
-        if (value > totalHours && totalHours > 0) {
-          console.warn(`[Temperature Validation] ${key}: ${value} hours exceeds period total of ${totalHours} hours (${filteredData.length} days)`);
-          console.warn(`  This indicates either: 1) Data spans wrong period, 2) Sinusoidal model issue, or 3) Data corruption`);
-        }
-      });
+       // Validate: Check if counters exceed total hours (impossible values)
+       Object.entries(counters).forEach(([_key, value]) => {
+         if (value > totalHours && totalHours > 0) {
+           // Data validation: counter exceeds period total (possible data corruption)
+         }
+       });
 
       results[stage.nameKey] = counters;
     });
@@ -539,7 +538,7 @@ const PhenologicalTemperatureCounters: React.FC<PhenologicalTemperatureCountersP
   };
 
   // Calculate total possible hours for a period (for percentage calculation)
-  const getTotalPossibleHours = (stageKey: string, stageIndex: number): number => {
+  const _getTotalPossibleHours = (stageKey: string, stageIndex: number): number => {
     return getDaysInPeriod(stageKey, stageIndex) * 24;
   };
 
@@ -746,7 +745,7 @@ const PhenologicalTemperatureCounters: React.FC<PhenologicalTemperatureCountersP
         </div>
 
         {/* Universal counters grid */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
           {universalRanges.map((range) => {
             const hours = universalCounters[range.key as keyof typeof universalCounters] as number;
             const percentage = universalCounters.totalHours > 0
@@ -792,160 +791,6 @@ const PhenologicalTemperatureCounters: React.FC<PhenologicalTemperatureCountersP
         </div>
       </div>
 
-      {/* Phenological Stage Counters Section */}
-      <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
-        <h4 className="text-md font-semibold text-gray-800 dark:text-gray-200 mb-4">
-          {t('phenological.byStage', 'Par Stade Phénologique')}: {effectiveCropType === 'default'
-            ? t('phenological.general', 'Général')
-            : effectiveCropType}
-        </h4>
-      </div>
-
-      <div className="space-y-6">
-        {phenologicalStages.map((stage, stageIndex) => {
-          const stageKey = stage.nameKey;
-          const isExpanded = expandedStages[stageKey] || false;
-          const hasCustomRange = stageDateRanges[stageKey]?.enabled;
-          const stageCounters = countersPerStage[stageKey] || {};
-
-          return (
-          <div key={stageIndex} className="space-y-3">
-            {/* Stage Header with date range controls */}
-            <div className="flex items-center justify-between">
-              <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2">
-                <Thermometer className="h-4 w-4" />
-                {t(stage.nameKey, stage.name)}
-              </h4>
-              <div className="flex items-center gap-2">
-                {/* Date range badge */}
-                <span className={`text-xs px-2 py-1 rounded-full ${hasCustomRange ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300' : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'}`}>
-                  <Calendar className="h-3 w-3 inline mr-1" />
-                  {getDateRangeDisplay(stageKey, stage)}
-                </span>
-                {/* Customize button */}
-                <button
-                  onClick={() => toggleStageExpanded(stageKey)}
-                  className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                  title={t('phenological.customizeDateRange', 'Personnaliser la période')}
-                >
-                  {isExpanded ? (
-                    <ChevronUp className="h-4 w-4 text-gray-500" />
-                  ) : (
-                    <Settings2 className="h-4 w-4 text-gray-500" />
-                  )}
-                </button>
-              </div>
-            </div>
-
-            {/* Date range picker (collapsible) */}
-            {isExpanded && (
-              <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
-                <div className="flex flex-wrap items-center gap-4">
-                  <div className="flex items-center gap-2">
-                    <label className="text-sm text-gray-600 dark:text-gray-400">
-                      {t('phenological.from', 'Du')}:
-                    </label>
-                    <input
-                      type="date"
-                      value={stageDateRanges[stageKey]?.startDate || ''}
-                      onChange={(e) => updateStageDateRange(stageKey, 'startDate', e.target.value)}
-                      className="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <label className="text-sm text-gray-600 dark:text-gray-400">
-                      {t('phenological.to', 'Au')}:
-                    </label>
-                    <input
-                      type="date"
-                      value={stageDateRanges[stageKey]?.endDate || ''}
-                      onChange={(e) => updateStageDateRange(stageKey, 'endDate', e.target.value)}
-                      className="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    />
-                  </div>
-                  {hasCustomRange && (
-                    <button
-                      onClick={() => clearStageDateRange(stageKey)}
-                      className="flex items-center gap-1 px-3 py-1.5 text-sm text-red-600 hover:text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                    >
-                      <X className="h-4 w-4" />
-                      {t('phenological.clearRange', 'Réinitialiser')}
-                    </button>
-                  )}
-                </div>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                  {t('phenological.dateRangeHint', 'Sélectionnez une plage de dates pour calculer les compteurs uniquement sur cette période')}
-                </p>
-              </div>
-            )}
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {stage.thresholds.map((threshold, thresholdIndex) => {
-                const key = `${stage.nameKey}_${threshold.nameKey}`;
-                const count = stageCounters[key] || 0;
-                const daysInPeriod = getDaysInPeriod(stageKey, stageIndex);
-                const totalPossibleHours = getTotalPossibleHours(stageKey, stageIndex);
-                const rawPercentage = totalPossibleHours > 0 ? (count / totalPossibleHours) * 100 : 0;
-                const equivalentDays = Math.round(count / 24 * 10) / 10; // 1 decimal place
-
-                // Cap percentage at 100% for display, but show >100% if it exceeds
-                const percentageDisplay = rawPercentage > 100
-                  ? `>100`
-                  : Math.round(rawPercentage).toString();
-
-                // Add warning if percentage exceeds 100% (data issue)
-                const isOverLimit = rawPercentage > 100;
-
-                return (
-                  <div
-                    key={thresholdIndex}
-                    className={`${threshold.bgColor} rounded-xl p-4 border ${isOverLimit ? 'border-red-300 dark:border-red-700' : 'border-gray-100 dark:border-gray-700'}`}
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <span className={`${threshold.color}`}>
-                        {threshold.icon}
-                      </span>
-                      <span className="text-xs text-gray-500 dark:text-gray-400">
-                        {threshold.comparison === 'below' && `< ${threshold.threshold}°C`}
-                        {threshold.comparison === 'above' && `> ${threshold.threshold}°C`}
-                        {threshold.comparison === 'between' && `${threshold.threshold}-${threshold.upperThreshold}°C`}
-                      </span>
-                    </div>
-                    <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                      {count.toLocaleString()}
-                      <span className="text-sm font-normal text-gray-500 dark:text-gray-400 ml-1">
-                        {t('phenological.hours', 'hrs')}
-                      </span>
-                    </p>
-                    <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 mt-1">
-                      <span>≈ {equivalentDays} {t('phenological.equivalentDays', 'jours équiv.')}</span>
-                      <span className="text-gray-300 dark:text-gray-600">|</span>
-                      <span className={`font-medium ${rawPercentage >= 50 ? threshold.color : ''} ${isOverLimit ? 'text-red-600 dark:text-red-400' : ''}`}>
-                        {percentageDisplay}%
-                      </span>
-                    </div>
-                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                      {t('phenological.outOf', 'sur')} {daysInPeriod} {t('phenological.daysOfData', 'jours de données')}
-                    </p>
-                    {isOverLimit && (
-                      <p className="text-xs text-red-500 dark:text-red-400 mt-1 font-medium">
-                        ⚠️ {t('phenological.exceedsPeriod', 'Dépasse la période d\'analyse')}
-                      </p>
-                    )}
-                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mt-2">
-                      {t(threshold.nameKey, threshold.name)}
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                      {t(threshold.descriptionKey, threshold.description)}
-                    </p>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-          );
-        })}
-      </div>
 
       {/* Info note */}
       <div className="mt-6 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">

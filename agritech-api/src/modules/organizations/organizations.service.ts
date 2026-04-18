@@ -1,7 +1,5 @@
 import { Injectable, Logger, BadRequestException, ConflictException, InternalServerErrorException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
-import { ConfigService } from '@nestjs/config';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 export interface CreateOrganizationDto {
     name: string;
@@ -48,28 +46,8 @@ export interface UpdateOrganizationDto {
 @Injectable()
 export class OrganizationsService {
     private readonly logger = new Logger(OrganizationsService.name);
-    private readonly supabaseAdmin: SupabaseClient;
 
-    constructor(
-        private databaseService: DatabaseService,
-        private configService: ConfigService,
-    ) {
-        const supabaseUrl = this.configService.get<string>('SUPABASE_URL');
-        const supabaseServiceKey = this.configService.get<string>(
-            'SUPABASE_SERVICE_ROLE_KEY',
-        );
-
-        if (!supabaseUrl || !supabaseServiceKey) {
-            throw new Error('Missing Supabase configuration');
-        }
-
-        this.supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-            auth: {
-                autoRefreshToken: false,
-                persistSession: false,
-            },
-        });
-    }
+    constructor(private readonly databaseService: DatabaseService) {}
 
     /**
      * Create a new organization
@@ -77,8 +55,7 @@ export class OrganizationsService {
      * Uses admin client to bypass RLS policies
      */
     async create(dto: CreateOrganizationDto) {
-        // Use supabaseAdmin directly - it's initialized with service role key
-        const client = this.supabaseAdmin;
+        const client = this.databaseService.getAdminClient();
         this.logger.debug(`Creating organization with admin client: ${dto.name}`);
 
         let slug = dto.slug;
@@ -160,7 +137,7 @@ export class OrganizationsService {
         this.logger.log(`Getting organization ${organizationId} for user ${userId}`);
 
         // Verify user access
-        const { data: orgUser, error: orgError } = await this.supabaseAdmin
+        const { data: orgUser, error: orgError } = await this.databaseService.getAdminClient()
             .from('organization_users')
             .select('organization_id')
             .eq('organization_id', organizationId)
@@ -174,7 +151,7 @@ export class OrganizationsService {
         }
 
         // Fetch organization with all fields
-        const { data: organization, error: fetchError } = await this.supabaseAdmin
+        const { data: organization, error: fetchError } = await this.databaseService.getAdminClient()
             .from('organizations')
             .select('*')
             .eq('id', organizationId)
@@ -192,7 +169,7 @@ export class OrganizationsService {
         this.logger.log(`Updating organization ${organizationId} for user ${userId}`);
 
         // Verify user access and get role through foreign key join
-        const { data: orgUser, error: orgError } = await this.supabaseAdmin
+        const { data: orgUser, error: orgError } = await this.databaseService.getAdminClient()
             .from('organization_users')
             .select(`
                 organization_id,
@@ -247,9 +224,19 @@ export class OrganizationsService {
         const logoUrl = (updateData as any).logo_url ?? (updateData as any).logoUrl;
         if (logoUrl !== undefined) dbUpdateData.logo_url = logoUrl || null;
         if (updateData.map_provider !== undefined) dbUpdateData.map_provider = updateData.map_provider;
+        const accountingSettings = (updateData as any).accounting_settings;
+        if (accountingSettings !== undefined) {
+          // Merge with existing accounting_settings to avoid overwriting unrelated keys
+          const { data: existing } = await this.databaseService.getAdminClient()
+            .from('organizations')
+            .select('accounting_settings')
+            .eq('id', organizationId)
+            .single();
+          dbUpdateData.accounting_settings = { ...((existing as any)?.accounting_settings || {}), ...accountingSettings };
+        }
 
         // Update organization
-        const { data: organization, error: updateError } = await this.supabaseAdmin
+        const { data: organization, error: updateError } = await this.databaseService.getAdminClient()
             .from('organizations')
             .update(dbUpdateData)
             .eq('id', organizationId)

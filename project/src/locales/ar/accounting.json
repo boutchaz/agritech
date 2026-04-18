@@ -1,0 +1,80 @@
+{
+  "reports": {
+    "title": "التقارير المالية",
+    "subtitle": "الوصول إلى التقارير والتحليلات المالية الشاملة",
+    "allReports": "جميع التقارير",
+    "viewReport": "عرض التقرير",
+    "totalAssets": "إجمالي الأصول",
+    "totalLiabilities": "إجمالي الخصوم",
+    "totalEquity": "إجمالي حقوق الملكية",
+    "totalRevenue": "إجمالي الإيرادات",
+    "balanceSheet": "الميزانية العمومية",
+    "balanceSheetDesc": "عرض وضعك المالي مع الأصول والخصوم وحقوق الملكية في تاريخ محدد.",
+    "profitLoss": "حساب الأرباح والخسائر",
+    "profitLossDesc": "تحليل الإيرادات والمصروفات والربحية خلال أي فترة.",
+    "trialBalance": "ميزان المراجعة",
+    "trialBalanceDesc": "تحقق من دفتر الأستاذ مع قائمة كاملة بجميع أرصدة الحسابات.",
+    "generalLedger": "دفتر الأستاذ العام",
+    "generalLedgerDesc": "عرض سجل المعاملات التفصيلي والأرصدة الجارية لكل حساب.",
+    "cashFlow": "التدفقات النقدية",
+    "cashFlowDesc": "تتبع التدفقات النقدية الداخلة والخارجة عبر الأنشطة التشغيلية والاستثمارية والتمويلية.",
+    "agedReceivables": "أعمار الذمم المدينة",
+    "agedReceivablesDesc": "تتبع الفواتير المستحقة وشرائح تقادم مدفوعات العملاء.",
+    "agedPayables": "أعمار الذمم الدائنة",
+    "agedPayablesDesc": "مراقبة الفواتير المعلقة وشرائح تقادم مدفوعات الموردين."
+  },
+  "payments": {
+    "form": {
+      "validation": {
+        "partyNameRequired": "اسم الطرف مطلوب",
+        "paymentDateRequired": "تاريخ الدفع مطلوب",
+        "amountMin": "يجب أن يكون المبلغ 0.01 على الأقل"
+      },
+      "errors": {
+        "saveFailed": "فشل في حفظ الدفعة"
+      },
+      "fields": {
+        "paymentType": "نوع الدفع",
+        "paymentDate": "تاريخ الدفع",
+        "customer": "العميل",
+        "supplier": "المورد",
+        "optional": "اختياري",
+        "partyName": "اسم الطرف",
+        "name": "الاسم",
+        "amount": "المبلغ",
+        "paymentMethod": "طريقة الدفع",
+        "referenceNumber": "رقم المرجع",
+        "remarks": "ملاحظات",
+        "status": "الحالة"
+      },
+      "paymentTypes": {
+        "received": "دفعة مستلمة",
+        "made": "دفعة صادرة"
+      },
+      "actions": {
+        "select": "اختر",
+        "enter": "أدخل"
+      },
+      "methods": {
+        "cash": "نقداً",
+        "bankTransfer": "تحويل بنكي",
+        "check": "شيك",
+        "mobileMoney": "الدفع عبر الهاتف"
+      },
+      "placeholders": {
+        "referenceNumber": "مثال: شيك-001، تحويل-2024-001",
+        "remarks": "ملاحظات إضافية حول هذه الدفعة"
+      },
+      "statuses": {
+        "draft": "مسودة",
+        "submitted": "مقدم",
+        "cancelled": "ملغى"
+      },
+      "buttons": {
+        "cancel": "إلغاء",
+        "update": "تحديث الدفعة",
+        "create": "إنشاء دفعة"
+      }
+    }
+  }
+}

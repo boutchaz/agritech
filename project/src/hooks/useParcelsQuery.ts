@@ -1,48 +1,71 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { parcelsService } from '../services/parcelsService';
-import { farmsService } from '../services/farmsService';
+import { parcelsService, type Parcel as ServiceParcel } from '../services/parcelsService';
+import { farmsService, type Farm as ServiceFarm } from '../services/farmsService';
 
-export interface Parcel {
-  id: string;
-  farm_id: string | null;
-  organization_id?: string | null;
-  name: string;
-  description: string | null;
+export interface Parcel extends Omit<ServiceParcel, 'area' | 'area_unit' | 'description'> {
   area: number | null;
   area_unit: string | null;
-  boundary?: number[][];
-  calculated_area?: number | null;
-  perimeter?: number | null;
-  soil_type?: string | null;
+  description: string | null;
   planting_density?: number | null;
-  irrigation_type?: string | null;
-  crop_type?: string | null;
-  crop_category?: string | null;
+  planting_type?: string | null;
   tree_type?: string | null;
   tree_count?: number | null;
-  planting_year?: number | null;
-  variety?: string | null;
-  rootstock?: string | null;
-  planting_date?: string | null;
-  planting_type?: string | null;
-  created_at: string | null;
-  updated_at: string | null;
+  irrigation_frequency?: string | null;
+  water_source?: string | null;
+  water_quantity_per_session?: number | null;
+  ai_phase?: string | null;
+  ai_enabled?: boolean | null;
+  ai_observation_only?: boolean | null;
+  ai_nutrition_option?: string | null;
 }
 
-export interface Farm {
-  id: string;
-  name: string;
+type FarmWithTotalArea = Pick<ServiceFarm, 'id' | 'name'> & {
   location: string | null;
   size: number | null;
   manager_name: string | null;
+  total_area: number | null;
+};
+
+function normalizeParcel(parcel: ServiceParcel): Parcel {
+  const extendedParcel = parcel as Parcel;
+
+  return {
+    ...extendedParcel,
+    description: parcel.description ?? null,
+    area: parcel.area ?? null,
+    area_unit: parcel.area_unit ?? null,
+    boundary: parcel.boundary,
+    calculated_area: parcel.calculated_area,
+    perimeter: parcel.perimeter,
+    soil_type: parcel.soil_type,
+    planting_density: extendedParcel.planting_density ?? null,
+    irrigation_type: parcel.irrigation_type,
+    crop_type: parcel.crop_type,
+    crop_category: parcel.crop_category,
+    tree_type: extendedParcel.tree_type ?? null,
+    tree_count: extendedParcel.tree_count ?? null,
+    planting_year: parcel.planting_year,
+    variety: parcel.variety,
+    rootstock: parcel.rootstock,
+    planting_date: parcel.planting_date,
+    planting_type: extendedParcel.planting_type ?? null,
+    planting_system: parcel.planting_system,
+    irrigation_frequency: extendedParcel.irrigation_frequency ?? null,
+    water_source: extendedParcel.water_source ?? null,
+    water_quantity_per_session: extendedParcel.water_quantity_per_session ?? null,
+    ai_phase: extendedParcel.ai_phase ?? null,
+    ai_enabled: extendedParcel.ai_enabled ?? null,
+    ai_observation_only: extendedParcel.ai_observation_only ?? null,
+    ai_nutrition_option: extendedParcel.ai_nutrition_option ?? null,
+  };
 }
 
 // Query keys
 export const parcelsKeys = {
   all: ['parcels'] as const,
-  byFarm: (farmId: string) => ['parcels', 'farm', farmId] as const,
-  byOrganization: (organizationId: string) => ['parcels', 'organization', organizationId] as const,
-  byFarms: (farmIds: string[]) => ['parcels', 'farms', farmIds.sort()] as const,
+  byFarm: (farmId: string, includeArchived?: boolean) => ['parcels', farmId, { includeArchived }] as const,
+  byOrganization: (organizationId: string, includeArchived?: boolean) => ['parcels', 'organization', organizationId, { includeArchived }] as const,
+  byFarms: (farmIds: string[]) => ['parcels', 'farms', [...farmIds].sort().join(',')] as const,
   byId: (parcelId: string) => ['parcels', parcelId] as const,
   applications: (parcelId: string) => ['parcels', parcelId, 'applications'] as const,
 };
@@ -53,21 +76,40 @@ export const farmsKeys = {
 };
 
 // Fetch farms for an organization using farmsService (apiClient)
+// Also computes total_area from parcels (sum of parcel areas) for each farm
 export const useFarms = (organizationId: string | undefined) => {
   return useQuery({
     queryKey: farmsKeys.byOrganization(organizationId || ''),
-    queryFn: async (): Promise<Farm[]> => {
+    queryFn: async (): Promise<FarmWithTotalArea[]> => {
       if (!organizationId) return [];
       const farms = await farmsService.listFarms(organizationId);
-      // Map to match expected Farm interface (convert undefined to null)
-      // Backend returns farm_id/farm_name in ListFarmsResponseDto
-      return farms.map((farm: any) => ({
-        id: farm.farm_id || farm.id,
-        name: farm.farm_name || farm.name,
-        location: farm.farm_location ?? farm.location ?? null,
-        size: farm.farm_size ?? farm.size ?? null,
-        manager_name: farm.manager_name ?? null,
-      }));
+
+      // Fetch parcels to compute total area per farm
+      let parcelAreaByFarm: Record<string, number> = {};
+      try {
+        const parcels = await parcelsService.listParcels(undefined, organizationId);
+        parcelAreaByFarm = parcels.reduce((acc: Record<string, number>, parcel: ServiceParcel) => {
+          const fid = parcel.farm_id;
+          if (!fid) return acc;
+          acc[fid] = (acc[fid] || 0) + (parcel.area || 0);
+          return acc;
+        }, {});
+      } catch {
+        // If parcels fetch fails, fall back to stored farm size
+      }
+
+      return farms.map((farm: ServiceFarm) => {
+        const storedSize = farm.size ?? null;
+        const calculatedArea = parcelAreaByFarm[farm.id];
+        return {
+          id: farm.id,
+          name: farm.name,
+          location: farm.location ?? null,
+          size: storedSize,
+          manager_name: farm.manager_name ?? null,
+          total_area: calculatedArea !== undefined ? parseFloat(calculatedArea.toFixed(2)) : storedSize,
+        };
+      });
     },
     enabled: !!organizationId,
     staleTime: 5 * 60 * 1000, // 5 minutes
@@ -76,80 +118,48 @@ export const useFarms = (organizationId: string | undefined) => {
 };
 
 // Fetch parcels for a specific farm using parcelsService (apiClient)
-export const useParcelsByFarm = (farmId: string | undefined) => {
+export const useParcelsByFarm = (farmId: string | undefined, organizationId?: string | null, includeArchived?: boolean) => {
   return useQuery({
-    queryKey: parcelsKeys.byFarm(farmId || ''),
+    queryKey: parcelsKeys.byFarm(farmId || '', includeArchived),
     queryFn: async (): Promise<Parcel[]> => {
       if (!farmId) return [];
-      const parcels = await parcelsService.listParcels(farmId);
-      return parcels.map(parcel => ({
-        ...parcel,
-        farm_id: parcel.farm_id ?? null,
-        description: parcel.description ?? null,
-        area: parcel.area ?? null,
-        area_unit: parcel.area_unit ?? null,
-        boundary: (parcel as any).boundary as number[][] | undefined,
-        calculated_area: (parcel as any).calculated_area ?? null,
-        perimeter: (parcel as any).perimeter ?? null,
-        soil_type: parcel.soil_type ?? null,
-        planting_density: (parcel as any).planting_density ?? null,
-        irrigation_type: parcel.irrigation_type ?? null,
-        crop_type: (parcel as any).crop_type ?? null,
-        crop_category: (parcel as any).crop_category ?? null,
-        tree_type: (parcel as any).tree_type ?? null,
-        tree_count: (parcel as any).tree_count ?? null,
-        planting_year: parcel.planting_year ?? null,
-        variety: parcel.variety ?? null,
-        rootstock: parcel.rootstock ?? null,
-        planting_date: parcel.planting_date ?? null,
-        planting_type: (parcel as any).planting_type ?? null,
-        created_at: parcel.created_at ?? null,
-        updated_at: parcel.updated_at ?? null,
-      }));
+      const parcels = await parcelsService.listParcels(farmId, organizationId, includeArchived);
+      return parcels.map(normalizeParcel);
     },
-    enabled: !!farmId,
+    enabled: !!farmId && !!organizationId,
     staleTime: 2 * 60 * 1000, // 2 minutes
     retry: 1,
   });
 };
 
 // Fetch parcels for multiple farms (organization-wide) using parcelsService (apiClient)
-export const useParcelsByFarms = (farmIds: string[]) => {
+export const useParcelsByFarms = (farmIds: string[], organizationId?: string | null) => {
   return useQuery({
     queryKey: parcelsKeys.byFarms(farmIds),
     queryFn: async (): Promise<Parcel[]> => {
       if (!farmIds.length) return [];
 
       // Fetch all parcels for organization and filter by farm IDs
-      const parcels = await parcelsService.listParcels();
+      const parcels = await parcelsService.listParcels(undefined, organizationId);
       const filteredParcels = parcels.filter(p => farmIds.includes(p.farm_id));
 
-      return filteredParcels.map(parcel => ({
-        ...parcel,
-        farm_id: parcel.farm_id ?? null,
-        description: parcel.description ?? null,
-        area: parcel.area ?? null,
-        area_unit: parcel.area_unit ?? null,
-        boundary: (parcel as any).boundary as number[][] | undefined,
-        calculated_area: (parcel as any).calculated_area ?? null,
-        perimeter: (parcel as any).perimeter ?? null,
-        soil_type: parcel.soil_type ?? null,
-        planting_density: (parcel as any).planting_density ?? null,
-        irrigation_type: parcel.irrigation_type ?? null,
-        crop_type: (parcel as any).crop_type ?? null,
-        crop_category: (parcel as any).crop_category ?? null,
-        tree_type: (parcel as any).tree_type ?? null,
-        tree_count: (parcel as any).tree_count ?? null,
-        planting_year: parcel.planting_year ?? null,
-        variety: parcel.variety ?? null,
-        rootstock: parcel.rootstock ?? null,
-        planting_date: parcel.planting_date ?? null,
-        planting_type: (parcel as any).planting_type ?? null,
-        created_at: parcel.created_at ?? null,
-        updated_at: parcel.updated_at ?? null,
-      }));
+      return filteredParcels.map(normalizeParcel);
     },
-    enabled: farmIds.length > 0,
+    enabled: farmIds.length > 0 && !!organizationId,
+    staleTime: 2 * 60 * 1000, // 2 minutes
+    retry: 1,
+  });
+};
+
+export const useParcelsByOrganization = (organizationId?: string | null, includeArchived?: boolean) => {
+  return useQuery({
+    queryKey: parcelsKeys.byOrganization(organizationId || '', includeArchived),
+    queryFn: async (): Promise<Parcel[]> => {
+      if (!organizationId) return [];
+      const parcels = await parcelsService.listParcels(undefined, organizationId, includeArchived);
+      return parcels.map(normalizeParcel);
+    },
+    enabled: !!organizationId,
     staleTime: 2 * 60 * 1000, // 2 minutes
     retry: 1,
   });
@@ -163,30 +173,7 @@ export const useParcelById = (parcelId: string | null | undefined) => {
       if (!parcelId) return null;
       const parcel = await parcelsService.getParcelById(parcelId);
       if (!parcel) return null;
-      return {
-        ...parcel,
-        farm_id: parcel.farm_id ?? null,
-        description: parcel.description ?? null,
-        area: parcel.area ?? null,
-        area_unit: parcel.area_unit ?? null,
-        boundary: (parcel as any).boundary as number[][] | undefined,
-        calculated_area: (parcel as any).calculated_area ?? null,
-        perimeter: (parcel as any).perimeter ?? null,
-        soil_type: parcel.soil_type ?? null,
-        planting_density: (parcel as any).planting_density ?? null,
-        irrigation_type: parcel.irrigation_type ?? null,
-        crop_type: (parcel as any).crop_type ?? null,
-        crop_category: (parcel as any).crop_category ?? null,
-        tree_type: (parcel as any).tree_type ?? null,
-        tree_count: (parcel as any).tree_count ?? null,
-        planting_year: parcel.planting_year ?? null,
-        variety: parcel.variety ?? null,
-        rootstock: parcel.rootstock ?? null,
-        planting_date: parcel.planting_date ?? null,
-        planting_type: (parcel as any).planting_type ?? null,
-        created_at: parcel.created_at ?? null,
-        updated_at: parcel.updated_at ?? null,
-      };
+      return normalizeParcel(parcel);
     },
     enabled: !!parcelId,
     staleTime: 2 * 60 * 1000, // 2 minutes
@@ -306,19 +293,37 @@ export const useUpdateParcel = () => {
   });
 };
 
-// Delete parcel mutation using parcelsService (apiClient)
-export const useDeleteParcel = () => {
+// Archive parcel mutation (soft delete)
+export const useArchiveParcel = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (parcelId: string) => {
-      await parcelsService.deleteParcel(parcelId);
+      await parcelsService.archiveParcel(parcelId);
       return parcelId;
     },
-    onSuccess: (_parcelId) => {
-      // Invalidate all parcel queries since we don't know which farm it belonged to
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: parcelsKeys.all });
       queryClient.invalidateQueries({ queryKey: farmsKeys.all });
     },
   });
 };
+
+// Restore archived parcel mutation
+export const useRestoreParcel = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (parcelId: string) => {
+      await parcelsService.restoreParcel(parcelId);
+      return parcelId;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: parcelsKeys.all });
+      queryClient.invalidateQueries({ queryKey: farmsKeys.all });
+    },
+  });
+};
+
+/** @deprecated Use useArchiveParcel instead */
+export const useDeleteParcel = useArchiveParcel;

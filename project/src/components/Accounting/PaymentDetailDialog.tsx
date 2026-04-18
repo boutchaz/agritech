@@ -1,10 +1,9 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import { Button } from '@/components/ui/button';
-import { useIsMobile } from '@/hooks/useMediaQuery';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Badge } from '@/components/ui/badge';
 import { type Payment, useDeletePayment } from '@/hooks/useAccountingPayments';
 import { CreditCard, Calendar, Building2, FileText, CheckCircle2, XCircle, Clock, Trash2 } from 'lucide-react';
@@ -18,17 +17,17 @@ interface PaymentDetailDialogProps {
   mode?: 'view' | 'edit';
 }
 
-export const PaymentDetailDialog: React.FC<PaymentDetailDialogProps> = ({
+export const PaymentDetailDialog = ({
   payment,
   open,
   onOpenChange,
   mode: initialMode = 'view',
-}) => {
+}: PaymentDetailDialogProps) => {
   const { t } = useTranslation();
-  const isMobile = useIsMobile();
   const [mode, setMode] = React.useState<'view' | 'edit'>(initialMode);
   const deletePayment = useDeletePayment();
   const [allocationOpen, setAllocationOpen] = React.useState(false);
+  const [confirmOpen, setConfirmOpen] = React.useState(false);
 
   React.useEffect(() => {
     setMode(initialMode);
@@ -37,21 +36,28 @@ export const PaymentDetailDialog: React.FC<PaymentDetailDialogProps> = ({
   React.useEffect(() => {
     if (!open) {
       setAllocationOpen(false);
+      setConfirmOpen(false);
     }
   }, [open]);
 
   if (!payment) return null;
 
   const handleDelete = async () => {
-    if (window.confirm(t('dialogs.paymentDetail.confirmDelete'))) {
-      try {
-        await deletePayment.mutateAsync(payment.id);
-        onOpenChange(false);
-      } catch (error) {
-        console.error('Failed to delete payment:', error);
-        toast.error(t('dialogs.paymentDetail.deleteFailed'));
-      }
+    try {
+      await deletePayment.mutateAsync(payment.id);
+      setConfirmOpen(false);
+      onOpenChange(false);
+    } catch (error) {
+      console.error('Failed to delete payment:', error);
+      toast.error(t('dialogs.paymentDetail.deleteFailed'));
     }
+  };
+
+  const confirmAction = {
+    title: t('dialogs.paymentDetail.confirmDeleteTitle', 'Delete payment'),
+    description: t('dialogs.paymentDetail.confirmDelete'),
+    variant: 'destructive' as const,
+    onConfirm: handleDelete,
   };
 
   const getStatusIcon = (status: string | null) => {
@@ -130,8 +136,8 @@ export const PaymentDetailDialog: React.FC<PaymentDetailDialogProps> = ({
             {/* Amount */}
             <div>
               <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">{t('dialogs.paymentDetail.amount')}</p>
-              <p className={`text-3xl font-bold ${payment.payment_type === 'received' ? 'text-green-600' : 'text-red-600'}`}>
-                {payment.payment_type === 'received' ? '+' : '-'} {payment.currency_code} {Number(payment.amount).toLocaleString('fr-FR', { minimumFractionDigits: 2 })}
+              <p className={`text-3xl font-bold ${payment.payment_type === 'receive' ? 'text-green-600' : 'text-red-600'}`}>
+                {payment.payment_type === 'receive' ? '+' : '-'} {payment.currency_code} {Number(payment.amount).toLocaleString('fr-FR', { minimumFractionDigits: 2 })}
               </p>
             </div>
 
@@ -139,8 +145,8 @@ export const PaymentDetailDialog: React.FC<PaymentDetailDialogProps> = ({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">{t('dialogs.paymentDetail.paymentType')}</p>
-                <Badge variant={payment.payment_type === 'received' ? 'default' : 'secondary'}>
-                  {payment.payment_type === 'received' ? t('dialogs.paymentDetail.paymentReceived') : t('dialogs.paymentDetail.paymentMade')}
+                <Badge variant={payment.payment_type === 'receive' ? 'default' : 'secondary'}>
+                  {payment.payment_type === 'receive' ? t('dialogs.paymentDetail.paymentReceived') : t('dialogs.paymentDetail.paymentMade')}
                 </Badge>
               </div>
               <div>
@@ -220,7 +226,7 @@ export const PaymentDetailDialog: React.FC<PaymentDetailDialogProps> = ({
                 <Button
                   variant="destructive"
                   size="sm"
-                  onClick={handleDelete}
+                  onClick={() => setConfirmOpen(true)}
                   disabled={deletePayment.isPending}
                 >
                   <Trash2 className="h-4 w-4 mr-2" />
@@ -231,47 +237,31 @@ export const PaymentDetailDialog: React.FC<PaymentDetailDialogProps> = ({
     </div>
   );
 
-  // Render Drawer on mobile, Dialog on desktop
-  if (isMobile) {
-    return (
-      <>
-        <Drawer open={open} onOpenChange={onOpenChange}>
-          <DrawerContent className="max-h-[90vh]">
-            <DrawerHeader>
-              <DrawerTitle>{headerContent}</DrawerTitle>
-              <DrawerDescription>{descriptionText}</DrawerDescription>
-            </DrawerHeader>
-            <div className="px-4 pb-4 overflow-y-auto max-h-[calc(90vh-10rem)]">
-              {mainContent}
-            </div>
-          </DrawerContent>
-        </Drawer>
-        <PaymentAllocationDialog
-          payment={payment}
-          open={allocationOpen}
-          onOpenChange={setAllocationOpen}
-          onAllocated={() => onOpenChange(false)}
-        />
-      </>
-    );
-  }
-
   return (
     <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{headerContent}</DialogTitle>
-            <DialogDescription>{descriptionText}</DialogDescription>
-          </DialogHeader>
-          {mainContent}
-        </DialogContent>
-      </Dialog>
+      <ResponsiveDialog
+        open={open}
+        onOpenChange={onOpenChange}
+        title={headerContent}
+        description={descriptionText}
+        size="2xl"
+        contentClassName="max-h-[90vh] overflow-y-auto"
+      >
+        {mainContent}
+      </ResponsiveDialog>
       <PaymentAllocationDialog
         payment={payment}
         open={allocationOpen}
         onOpenChange={setAllocationOpen}
         onAllocated={() => onOpenChange(false)}
+      />
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title={confirmAction.title}
+        description={confirmAction.description}
+        variant={confirmAction.variant}
+        onConfirm={confirmAction.onConfirm}
       />
     </>
   );

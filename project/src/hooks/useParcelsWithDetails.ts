@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
 import { parcelsApi } from '@/lib/api/parcels';
 import { farmsApi } from '@/lib/api/farms';
+import type { Farm } from '@/lib/api/farms';
 
 export interface ParcelWithDetails {
   id: string;
@@ -47,13 +48,7 @@ export function useParcelsWithDetails() {
           currentOrganization.id
         );
 
-        // Handle paginated response: { success: true, farms: [...], total: ... }
-        let farms: any[] = [];
-        if (data && typeof data === 'object' && 'farms' in data && Array.isArray((data as { farms: any[] }).farms)) {
-          farms = (data as { farms: any[] }).farms;
-        } else if (Array.isArray(data)) {
-          farms = data;
-        }
+        const farms: Farm[] = Array.isArray(data) ? data : [];
 
         console.warn('Found farms:', farms?.length || 0);
 
@@ -62,20 +57,14 @@ export function useParcelsWithDetails() {
           return [];
         }
 
-        const farmIds = farms.map((f: any) => f.farm_id || f.id);
+        const farmIds = farms.map((farm) => farm.id);
         console.warn('Farm IDs:', farmIds);
 
         // Step 2: Get all parcels for these farms using API
         // Fetch parcels for each farm and combine
         const parcelPromises = farmIds.map(async (farmId) => {
           const data = await parcelsApi.getAll({ farm_id: farmId, organization_id: currentOrganization.id }, currentOrganization.id);
-          // Handle paginated response: { success: true, parcels: [...] } or direct array
-          if (data && typeof data === 'object' && 'parcels' in data && Array.isArray((data as { parcels: any[] }).parcels)) {
-            return (data as { parcels: any[] }).parcels;
-          } else if (Array.isArray(data)) {
-            return data;
-          }
-          return [];
+          return Array.isArray(data) ? data : [];
         });
 
         const parcelResults = await Promise.all(parcelPromises);
@@ -137,12 +126,7 @@ export function useFarmParcelsWithDetails(farmId: string | undefined) {
         { farm_id: farmId, organization_id: currentOrganization.id },
         currentOrganization.id
       );
-      // Handle paginated response: { success: true, parcels: [...] } or direct array
-      const parcels = (data && typeof data === 'object' && 'parcels' in data && Array.isArray((data as { parcels: any[] }).parcels))
-        ? (data as { parcels: any[] }).parcels
-        : Array.isArray(data)
-          ? data
-          : [];
+      const parcels = Array.isArray(data) ? data : [];
 
       // Get farm details using API
       const farm = await farmsApi.getOne(farmId, currentOrganization.id);

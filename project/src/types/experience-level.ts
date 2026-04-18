@@ -7,6 +7,23 @@
 
 export type ExperienceLevel = 'basic' | 'medium' | 'expert';
 
+const VALID_EXPERIENCE_LEVELS: readonly ExperienceLevel[] = [
+  'basic',
+  'medium',
+  'expert',
+];
+
+/** Safe for API/DB values — invalid or missing values default to basic */
+export function normalizeExperienceLevel(value: unknown): ExperienceLevel {
+  if (
+    typeof value === 'string' &&
+    (VALID_EXPERIENCE_LEVELS as readonly string[]).includes(value)
+  ) {
+    return value as ExperienceLevel;
+  }
+  return 'basic';
+}
+
 export interface ExperienceLevelConfig {
   level: ExperienceLevel;
   label: string;
@@ -109,7 +126,8 @@ export function hasFeature(
   level: ExperienceLevel,
   feature: keyof ExperienceLevelConfig['features']
 ): boolean {
-  return EXPERIENCE_LEVELS[level].features[feature];
+  const normalized = normalizeExperienceLevel(level);
+  return EXPERIENCE_LEVELS[normalized].features[feature];
 }
 
 /**
@@ -119,8 +137,9 @@ export function suggestLevelUpgrade(
   currentLevel: ExperienceLevel,
   featureUsage: FeatureUsage
 ): ExperienceLevel | null {
+  const level = normalizeExperienceLevel(currentLevel);
   // Don't suggest if already expert
-  if (currentLevel === 'expert') return null;
+  if (level === 'expert') return null;
 
   // Calculate total actions
   const totalActions = Object.values(featureUsage).reduce(
@@ -129,12 +148,12 @@ export function suggestLevelUpgrade(
   );
 
   // Suggest medium after 50 actions at basic
-  if (currentLevel === 'basic' && totalActions >= 50) {
+  if (level === 'basic' && totalActions >= 50) {
     return 'medium';
   }
 
   // Suggest expert after 200 actions at medium
-  if (currentLevel === 'medium' && totalActions >= 200) {
+  if (level === 'medium' && totalActions >= 200) {
     return 'expert';
   }
 

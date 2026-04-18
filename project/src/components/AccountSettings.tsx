@@ -26,15 +26,28 @@ import {
   X,
   Bell,
   ShieldCheck,
+  FileText,
+  Zap,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { usersApi } from '@/lib/api/users';
-import { FormField } from '@/components/ui/FormField';
 import { Input } from '@/components/ui/Input';
-import { Select } from '@/components/ui/Select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/radix-select';
 import { useTranslation } from 'react-i18next';
+import { isRTLLocale } from '@/lib/is-rtl-locale';
+import { loadLanguage } from '@/i18n/config';
 import { useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { ExperienceLevelSelector } from '@/components/settings/ExperienceLevelSelector';
+import UserAvatar from '@/components/ui/UserAvatar';
+import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
+import { cn } from '@/lib/utils';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
+import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
 
 interface UserProfile {
   id: string;
@@ -56,7 +69,34 @@ interface PasswordChangeData {
 
 type TabId = 'profile' | 'preferences' | 'security';
 
-const AccountSettings: React.FC = () => {
+const SUPPORTED_LANGUAGES = new Set(['fr', 'en', 'ar']);
+
+/** Radix Select throws if value is not among SelectItems; API/i18n may send e.g. en-US */
+function normalizeProfileLanguage(lang: string | undefined, i18nFallback: string): string {
+  const match = (raw: string) => {
+    const lower = raw.toLowerCase();
+    if (SUPPORTED_LANGUAGES.has(lower)) return lower;
+    const base = lower.split('-')[0];
+    return SUPPORTED_LANGUAGES.has(base) ? base : null;
+  };
+  return match(lang || '') || match(i18nFallback || '') || 'fr';
+}
+
+const SUPPORTED_TIMEZONES = new Set([
+  'UTC',
+  'Africa/Casablanca',
+  'Europe/Paris',
+  'Europe/Madrid',
+  'Africa/Tunis',
+  'Africa/Algiers',
+]);
+
+function normalizeProfileTimezone(tz: string | undefined): string {
+  if (tz && SUPPORTED_TIMEZONES.has(tz)) return tz;
+  return 'UTC';
+}
+
+const AccountSettings = () => {
   const { user, currentOrganization, userRole } = useAuth();
   const { i18n, t } = useTranslation();
   const queryClient = useQueryClient();
@@ -85,7 +125,10 @@ const AccountSettings: React.FC = () => {
   // Avatar state
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [avatarError, setAvatarError] = useState<string | null>(null);
+  const [showCamera, setShowCamera] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
 
   // Notifications state
   const [notifications, setNotifications] = useState({
@@ -116,7 +159,6 @@ const AccountSettings: React.FC = () => {
     { value: 'fr', label: 'Français' },
     { value: 'en', label: 'English' },
     { value: 'ar', label: 'العربية' },
-    { value: 'es', label: 'Español' },
   ];
 
   // Load profile data
@@ -131,17 +173,26 @@ const AccountSettings: React.FC = () => {
         const data = await usersApi.getMe();
 
         if (data) {
-          setProfile(data);
+          setProfile({
+            ...data,
+            language: normalizeProfileLanguage(data.language, i18n.language),
+            timezone: normalizeProfileTimezone(data.timezone),
+          });
           // Initialize notifications from profile if available
-          if ((data as any).notifications) {
-            setNotifications((data as any).notifications);
+          if (data.notification_preferences) {
+            setNotifications({
+              email: data.notification_preferences.email ?? true,
+              push: data.notification_preferences.push ?? true,
+              alerts: data.notification_preferences.alerts ?? true,
+              reports: data.notification_preferences.reports ?? false,
+            });
           }
         } else {
           setProfile({
             id: user.id,
             email: user.email,
             timezone: 'UTC',
-            language: i18n.language || 'fr',
+            language: normalizeProfileLanguage(undefined, i18n.language),
           });
         }
       } catch (err) {
@@ -153,24 +204,31 @@ const AccountSettings: React.FC = () => {
     };
 
     fetchProfile();
-  }, [user, t, i18n.language]);
+  }, [user, i18n.language, t]);
 
-  // Handle language change immediately
+  // Handle language change — immediately apply + persist to DB
   const handleLanguageChange = async (newLanguage: string) => {
     if (!profile) return;
 
     setProfile({ ...profile, language: newLanguage });
 
-    // Immediately change i18n language
-    await i18n.changeLanguage(newLanguage);
+    // Load bundles then switch language
+    await loadLanguage(newLanguage);
 
     // Set document direction for RTL languages
-    if (newLanguage === 'ar') {
+    if (isRTLLocale(newLanguage)) {
       document.documentElement.dir = 'rtl';
-      document.documentElement.lang = 'ar';
+      document.documentElement.lang = newLanguage.split('-')[0] || 'ar';
     } else {
       document.documentElement.dir = 'ltr';
       document.documentElement.lang = newLanguage;
+    }
+
+    // Persist to DB immediately (don't wait for Save button)
+    try {
+      await usersApi.updateMe({ language: newLanguage });
+    } catch (err) {
+      console.warn('Failed to persist language to DB:', err);
     }
   };
 
@@ -190,6 +248,7 @@ const AccountSettings: React.FC = () => {
         phone: profile.phone,
         timezone: profile.timezone,
         language: profile.language,
+        notification_preferences: notifications,
       });
 
       setProfile(updatedProfile);
@@ -271,11 +330,11 @@ const AccountSettings: React.FC = () => {
       setProfile((prev) => prev ? { ...prev, avatar_url } : prev);
       queryClient.invalidateQueries({ queryKey: ['auth', 'profile', user.id] });
 
-      setSuccess(true);
-      setTimeout(() => setSuccess(false), 3000);
+      toast.success(t('profile.toast.photoUpdated', 'Profile photo updated'));
     } catch (err) {
       console.error('Error uploading avatar:', err);
       setAvatarError(t('profile.errors.uploadError'));
+      toast.error(t('profile.toast.photoUpdateFailed', 'Failed to update photo'));
     } finally {
       setUploadingAvatar(false);
       if (fileInputRef.current) {
@@ -297,14 +356,81 @@ const AccountSettings: React.FC = () => {
       setProfile((prev) => prev ? { ...prev, avatar_url: undefined } : prev);
       queryClient.invalidateQueries({ queryKey: ['auth', 'profile', user.id] });
 
-      setSuccess(true);
-      setTimeout(() => setSuccess(false), 3000);
+      toast.success(t('profile.toast.photoRemoved', 'Profile photo removed'));
     } catch (err) {
       console.error('Error removing avatar:', err);
       setAvatarError(t('profile.errors.removeError'));
+      toast.error(t('profile.toast.photoRemoveFailed', 'Failed to remove photo'));
     } finally {
       setUploadingAvatar(false);
     }
+  };
+
+  // Camera capture
+  const openCamera = async () => {
+    setAvatarError(null);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 640 } },
+      });
+      streamRef.current = stream;
+      setShowCamera(true);
+      // Wait for video element to mount, then attach stream
+      requestAnimationFrame(() => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+        }
+      });
+    } catch {
+      setAvatarError(t('profile.errors.cameraAccessDenied', 'Camera access denied. Please allow camera permissions.'));
+    }
+  };
+
+  const stopCamera = () => {
+    streamRef.current?.getTracks().forEach((track) => track.stop());
+    streamRef.current = null;
+    setShowCamera(false);
+  };
+
+  const capturePhoto = () => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const canvas = document.createElement('canvas');
+    const size = Math.min(video.videoWidth, video.videoHeight);
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Crop to center square
+    const sx = (video.videoWidth - size) / 2;
+    const sy = (video.videoHeight - size) / 2;
+    ctx.drawImage(video, sx, sy, size, size, 0, 0, size, size);
+
+    canvas.toBlob(
+      async (blob) => {
+        if (!blob || !user) return;
+        stopCamera();
+        const file = new File([blob], 'camera-photo.jpg', { type: 'image/jpeg' });
+
+        setUploadingAvatar(true);
+        try {
+          const { avatar_url } = await usersApi.uploadAvatar(file);
+          setProfile((prev) => (prev ? { ...prev, avatar_url } : prev));
+          queryClient.invalidateQueries({ queryKey: ['auth', 'profile', user.id] });
+          toast.success(t('profile.toast.photoUpdated', 'Profile photo updated'));
+        } catch (err) {
+          console.error('Error uploading captured photo:', err);
+          setAvatarError(t('profile.errors.uploadError'));
+          toast.error(t('profile.toast.photoUpdateFailed', 'Failed to update photo'));
+        } finally {
+          setUploadingAvatar(false);
+        }
+      },
+      'image/jpeg',
+      0.9,
+    );
   };
 
   // Get role badge styles
@@ -349,7 +475,7 @@ const AccountSettings: React.FC = () => {
 
   if (!profile) {
     return (
-      <div className="p-6">
+      <div className="min-w-0">
         <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg">
           <p className="text-red-600 dark:text-red-400">{t('profile.errors.notFound')}</p>
         </div>
@@ -358,489 +484,590 @@ const AccountSettings: React.FC = () => {
   }
 
   return (
-    <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+    <div className="min-w-0 max-w-full space-y-8 overflow-x-hidden animate-in fade-in duration-500">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div className="flex items-center gap-2 sm:gap-3">
-          <User className="h-5 w-5 sm:h-6 sm:w-6 text-green-600 flex-shrink-0" />
-          <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
-            {t('account.title', 'Account Settings')}
-          </h2>
+      <div className="flex flex-col gap-6 border-b border-slate-100 pb-8 dark:border-slate-800 sm:flex-row sm:items-end sm:justify-between">
+        <div className="min-w-0 flex-1 space-y-1">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="shrink-0 rounded-2xl bg-emerald-50 p-2.5 dark:bg-emerald-900/30">
+              <User className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+            </div>
+            <h2 className="break-words text-2xl font-bold uppercase tracking-tight text-slate-900 dark:text-white sm:text-3xl">
+              {t('account.title', 'Account Settings')}
+            </h2>
+          </div>
+          <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
+            Manage your personal information, preferences and security
+          </p>
         </div>
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+        
+        <Button 
+          variant="default" 
+          onClick={handleSave} 
+          disabled={saving} 
+          className="h-12 w-full shrink-0 rounded-2xl bg-emerald-600 px-8 font-semibold text-xs uppercase tracking-widest text-white shadow-lg shadow-emerald-100 transition-all duration-300 hover:bg-emerald-700 dark:shadow-none sm:w-auto"
         >
           {saving ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
+            <Loader2 className="h-4 w-4 animate-spin mr-2" />
           ) : (
-            <Save className="h-4 w-4" />
+            <Save className="h-4 w-4 mr-2" />
           )}
-          <span>{saving ? t('profile.saving') : t('profile.save')}</span>
-        </button>
+          {saving ? t('profile.saving') : t('profile.save')}
+        </Button>
       </div>
 
-      {/* Error/Success Messages */}
+      {/* Messages */}
       {error && (
-        <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg">
-          <div className="flex items-center space-x-2">
-            <AlertCircle className="h-5 w-5 text-red-600" />
-            <p className="text-red-600 dark:text-red-400">{error}</p>
-          </div>
-        </div>
+        <Alert variant="destructive" className="bg-rose-50 border-rose-200 text-rose-800 rounded-2xl">
+          <AlertCircle className="h-4 w-4 text-rose-600" />
+          <AlertTitle className="text-sm font-semibold uppercase tracking-tight">Error</AlertTitle>
+          <AlertDescription className="text-xs font-medium">{error}</AlertDescription>
+        </Alert>
       )}
 
       {success && (
-        <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
-          <p className="text-green-600 dark:text-green-400">{t('profile.success')}</p>
+        <div className="bg-emerald-50 dark:bg-emerald-900/20 p-4 rounded-2xl border border-emerald-100 dark:border-emerald-800 flex items-center gap-3">
+          <ShieldCheck className="h-5 w-5 text-emerald-600" />
+          <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-400 uppercase tracking-widest">{t('profile.success')}</p>
         </div>
       )}
 
-      {/* Tabs */}
-      <div className="border-b border-gray-200 dark:border-gray-700">
-        <nav className="-mb-px flex space-x-8" aria-label="Tabs">
-          {tabs.map((tab) => {
-            const Icon = tab.icon;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 py-3 px-1 border-b-2 font-medium text-sm transition-colors ${
-                  activeTab === tab.id
-                    ? 'border-green-500 text-green-600 dark:text-green-400'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
-                }`}
-              >
-                <Icon className="h-4 w-4" />
-                {tab.label}
-              </button>
-            );
-          })}
-        </nav>
+      {/* Tabs — full width on mobile/tablet to avoid horizontal scroll */}
+      <div className="grid w-full max-w-full grid-cols-3 gap-1 rounded-2xl border border-slate-200 bg-slate-100 p-1 dark:border-slate-700/50 dark:bg-slate-900/50">
+        {tabs.map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            onClick={() => setActiveTab(tab.id)}
+            className={cn(
+              "flex min-w-0 flex-col items-center justify-center gap-1 rounded-xl px-1 py-2.5 text-[9px] font-medium uppercase tracking-widest transition-all sm:flex-row sm:gap-2 sm:px-3 sm:text-[10px] md:px-5",
+              activeTab === tab.id
+                ? "border border-slate-100 bg-white text-emerald-600 shadow-sm dark:border-slate-700 dark:bg-slate-800 dark:text-emerald-400"
+                : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+            )}
+          >
+            <tab.icon className="h-3.5 w-3.5 shrink-0" />
+            <span className="max-w-full truncate text-center">{tab.label}</span>
+          </button>
+        ))}
       </div>
 
       {/* Tab Content */}
-      <div className="space-y-6">
+      <div className="min-w-0 space-y-8 min-h-[600px]">
         {/* Profile Tab */}
         {activeTab === 'profile' && (
-          <>
-            {/* Avatar Section */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                {t('profile.fields.profilePhoto')}
-              </h3>
-              <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4">
-                <div className="relative w-24 h-24 flex-shrink-0">
-                  {profile?.avatar_url ? (
-                    <>
-                      <img
-                        src={profile.avatar_url}
-                        alt="Profile"
-                        className="w-24 h-24 rounded-full object-cover"
+          <div className="grid min-w-0 grid-cols-1 items-start gap-8 lg:grid-cols-12">
+            {/* Left: Avatar & Identity Card */}
+            <div className="min-w-0 space-y-8 lg:col-span-4">
+              <Card className="overflow-hidden rounded-[2rem] border-slate-100 shadow-sm dark:border-slate-700">
+                <CardHeader className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-700/50 p-6">
+                  <CardTitle className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">Profile Identity</CardTitle>
+                </CardHeader>
+                <CardContent className="p-8 flex flex-col items-center">
+                  <div className="relative group/avatar cursor-pointer mb-6" onClick={() => fileInputRef.current?.click()}>
+                    <div className="p-1 rounded-full border-4 border-emerald-50 dark:border-emerald-900/20 group-hover:border-emerald-100 transition-all duration-500">
+                      <UserAvatar
+                        src={profile?.avatar_url}
+                        firstName={profile?.first_name}
+                        lastName={profile?.last_name}
+                        email={user?.email}
+                        size="2xl"
+                        className="w-32 h-32 text-4xl shadow-xl"
                       />
-                      <button
-                        onClick={handleRemoveAvatar}
-                        disabled={uploadingAvatar}
-                        className="absolute -top-1 -right-1 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                        title={t('profile.removePhoto')}
+                    </div>
+                    
+                    <div className="absolute inset-0 bg-emerald-600/60 rounded-full flex flex-col items-center justify-center text-white opacity-0 group-hover/avatar:opacity-100 transition-all duration-300 backdrop-blur-[2px]">
+                      <Camera className="h-8 w-8 mb-1" />
+                      <span className="text-[8px] font-medium uppercase tracking-widest">Change Photo</span>
+                    </div>
+
+                    {profile?.avatar_url && (
+                      <Button 
+                        variant="destructive" 
+                        size="icon"
+                        onClick={(e) => { e.stopPropagation(); handleRemoveAvatar(); }} 
+                        disabled={uploadingAvatar} 
+                        className="absolute -top-1 -right-1 h-8 w-8 rounded-full border-4 border-white dark:border-slate-800 shadow-lg z-10"
                       >
                         <X className="h-3 w-3" />
-                      </button>
-                    </>
-                  ) : (
-                    <div className="w-24 h-24 bg-gray-200 dark:bg-gray-600 rounded-full flex items-center justify-center">
-                      <User className="h-10 w-10 text-gray-400" />
-                    </div>
-                  )}
-                  {uploadingAvatar && (
-                    <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center">
-                      <Loader2 className="h-6 w-6 text-white animate-spin" />
-                    </div>
-                  )}
-                </div>
-                <div className="flex flex-col items-center sm:items-start gap-2 w-full sm:w-auto">
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/jpeg,image/png"
-                    onChange={handleAvatarUpload}
-                    className="hidden"
-                    disabled={uploadingAvatar}
-                  />
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={uploadingAvatar}
-                    className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <Camera className="h-4 w-4" />
-                    <span>{t('profile.changePhoto')}</span>
-                  </button>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 text-center sm:text-left">
-                    {t('profile.photoFormats')}
-                  </p>
+                      </Button>
+                    )}
+                    
+                    {uploadingAvatar && (
+                      <div className="absolute inset-0 bg-white/80 dark:bg-slate-900/80 rounded-full flex items-center justify-center z-20 backdrop-blur-sm">
+                        <Loader2 className="h-8 w-8 text-emerald-600 animate-spin" />
+                      </div>
+                    )}
+                  </div>
+
                   {avatarError && (
-                    <p className="text-xs text-red-600 dark:text-red-400 text-center sm:text-left">
+                    <p className="text-center text-xs font-medium text-rose-600 dark:text-rose-400 mb-4 max-w-xs px-2">
                       {avatarError}
                     </p>
                   )}
-                </div>
-              </div>
-            </div>
 
-            {/* Personal Information */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                {t('profile.sections.personalInfo')}
-              </h3>
-              <div className="space-y-4">
-                <FormField label={t('profile.fields.fullName')} htmlFor="full_name">
-                  <Input
-                    id="full_name"
-                    type="text"
-                    value={profile.full_name || ''}
-                    onChange={(e) => handleInputChange('full_name', e.target.value)}
-                    placeholder={t('profile.placeholders.fullName')}
-                  />
-                </FormField>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <FormField label={t('profile.fields.firstName')} htmlFor="first_name">
-                    <Input
-                      id="first_name"
-                      type="text"
-                      value={profile.first_name || ''}
-                      onChange={(e) => handleInputChange('first_name', e.target.value)}
-                      placeholder={t('profile.placeholders.firstName')}
-                    />
-                  </FormField>
-                  <FormField label={t('profile.fields.lastName')} htmlFor="last_name">
-                    <Input
-                      id="last_name"
-                      type="text"
-                      value={profile.last_name || ''}
-                      onChange={(e) => handleInputChange('last_name', e.target.value)}
-                      placeholder={t('profile.placeholders.lastName')}
-                    />
-                  </FormField>
-                </div>
-
-                <FormField
-                  label={
-                    <>
-                      <Mail className="inline h-4 w-4 mr-1" /> {t('profile.fields.email')}
-                    </>
-                  }
-                  htmlFor="email"
-                  helper={t('profile.fields.emailHelper')}
-                >
-                  <Input id="email" type="email" value={user?.email || ''} disabled />
-                </FormField>
-
-                <FormField
-                  label={
-                    <>
-                      <Shield className="inline h-4 w-4 mr-1" /> {t('profile.fields.role')}
-                    </>
-                  }
-                  htmlFor="role"
-                  helper={
-                    currentOrganization
-                      ? t('profile.fields.roleHelper', { orgName: currentOrganization.name })
-                      : t('profile.fields.roleHelperOrg')
-                  }
-                >
-                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                    <Input
-                      id="role"
-                      type="text"
-                      value={userRole?.role_display_name || userRole?.role_name || 'N/A'}
-                      disabled
-                      className="flex-1"
-                    />
-                    <span
-                      className={`px-3 py-2 rounded-md text-sm font-medium text-center whitespace-nowrap ${
-                        userRole ? getRoleBadgeStyles(userRole.role_name) : ''
-                      }`}
-                    >
-                      {userRole ? getRoleDisplayName(userRole.role_name) : 'N/A'}
-                    </span>
+                  <div className="text-center space-y-2 mb-8">
+                    <h3 className="text-xl font-semibold text-slate-900 dark:text-white uppercase tracking-tight">
+                      {profile.full_name || `${profile.first_name} ${profile.last_name}`.trim() || user?.email?.split('@')[0]}
+                    </h3>
+                    <div className="flex flex-wrap justify-center gap-2">
+                      <Badge className={cn("border-none font-semibold text-[9px] tracking-[0.15em] px-3 py-1 uppercase", userRole ? getRoleBadgeStyles(userRole.role_name) : '')}>
+                        {userRole ? getRoleDisplayName(userRole.role_name) : 'No Role'}
+                      </Badge>
+                      <Badge variant="outline" className="text-[9px] font-medium tracking-[0.15em] px-3 py-1 uppercase border-slate-200 text-slate-400">
+                        {currentOrganization?.name || 'No Org'}
+                      </Badge>
+                    </div>
                   </div>
-                </FormField>
 
-                <FormField
-                  label={
-                    <>
-                      <Phone className="inline h-4 w-4 mr-1" /> {t('profile.fields.phone')}
-                    </>
-                  }
-                  htmlFor="phone"
-                >
-                  <Input
-                    id="phone"
-                    type="tel"
-                    value={profile.phone || ''}
-                    onChange={(e) => handleInputChange('phone', e.target.value)}
-                    placeholder={t('profile.placeholders.phone')}
-                  />
-                </FormField>
-              </div>
+                  <div className="w-full flex flex-col gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={uploadingAvatar}
+                      className="w-full h-11 rounded-xl border-slate-200 dark:border-slate-700 text-[10px] font-medium uppercase tracking-widest hover:bg-slate-50 transition-all"
+                    >
+                      <Camera className="h-3.5 w-3.5 mr-2" />
+                      {t('profile.uploadPhoto', 'Upload New')}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      onClick={openCamera}
+                      disabled={uploadingAvatar}
+                      className="w-full h-11 rounded-xl text-[10px] font-medium uppercase tracking-widest text-slate-400 hover:text-emerald-600 transition-all"
+                    >
+                      <Camera className="h-3.5 w-3.5 mr-2" />
+                      {t('profile.takePhoto', 'Snap via Camera')}
+                    </Button>
+                  </div>
+                  
+                  <input ref={fileInputRef} type="file" accept="image/*" onChange={handleAvatarUpload} className="hidden" />
+                </CardContent>
+              </Card>
             </div>
-          </>
+
+            {/* Right: Detailed Information */}
+            <div className="min-w-0 space-y-8 lg:col-span-8">
+              <Card className="overflow-hidden rounded-[2.5rem] border-slate-100 shadow-sm dark:border-slate-700">
+                <CardHeader className="p-8 pb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-blue-50 dark:bg-blue-900/30 rounded-xl">
+                      <FileText className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                    </div>
+                    <CardTitle className="text-base font-semibold text-slate-900 dark:text-white uppercase tracking-tight">
+                      {t('profile.sections.personalInfo')}
+                    </CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-8 p-4 pt-4 sm:p-8 sm:pt-4">
+                  <div className="grid min-w-0 grid-cols-1 gap-6 md:grid-cols-2 md:gap-8">
+                    <div className="min-w-0 space-y-2">
+                      <Label className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">Full Display Name</Label>
+                      <Input
+                        id="full_name"
+                        value={profile.full_name || ''}
+                        onChange={(e) => handleInputChange('full_name', e.target.value)}
+                        className="h-12 min-w-0 w-full max-w-full rounded-2xl border-slate-100 bg-slate-50 px-5 font-bold focus:ring-emerald-500/20 dark:border-slate-700 dark:bg-slate-900/50"
+                        placeholder="e.g. John Doe"
+                      />
+                    </div>
+                    <div className="min-w-0 space-y-2">
+                      <Label className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">Phone Number</Label>
+                      <div className="relative min-w-0">
+                        <Phone className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-300" />
+                        <Input
+                          id="phone"
+                          value={profile.phone || ''}
+                          onChange={(e) => handleInputChange('phone', e.target.value)}
+                          className="h-12 min-w-0 w-full max-w-full rounded-2xl border-slate-100 bg-slate-50 pl-11 pr-5 font-bold focus:ring-emerald-500/20 dark:border-slate-700 dark:bg-slate-900/50"
+                          placeholder="+212 600 000 000"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid min-w-0 grid-cols-1 gap-6 md:grid-cols-2 md:gap-8">
+                    <div className="min-w-0 space-y-2">
+                      <Label className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">First Name</Label>
+                      <Input
+                        id="first_name"
+                        value={profile.first_name || ''}
+                        onChange={(e) => handleInputChange('first_name', e.target.value)}
+                        className="h-12 min-w-0 w-full max-w-full rounded-2xl border-slate-100 bg-slate-50 px-5 font-bold focus:ring-emerald-500/20 dark:border-slate-700 dark:bg-slate-900/50"
+                      />
+                    </div>
+                    <div className="min-w-0 space-y-2">
+                      <Label className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">Last Name</Label>
+                      <Input
+                        id="last_name"
+                        value={profile.last_name || ''}
+                        onChange={(e) => handleInputChange('last_name', e.target.value)}
+                        className="h-12 min-w-0 w-full max-w-full rounded-2xl border-slate-100 bg-slate-50 px-5 font-bold focus:ring-emerald-500/20 dark:border-slate-700 dark:bg-slate-900/50"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="min-w-0 space-y-2">
+                    <Label className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">Email Address</Label>
+                    <div className="group relative min-w-0">
+                      <Mail className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-300" />
+                      <Input
+                        value={user?.email || ''}
+                        disabled
+                        className="h-12 min-w-0 w-full max-w-full cursor-not-allowed rounded-2xl border-slate-200 bg-slate-100 pl-11 pr-5 font-bold opacity-60 dark:border-slate-700 dark:bg-slate-800"
+                      />
+                      <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                        <Lock className="h-3.5 w-3.5 text-slate-400" />
+                      </div>
+                    </div>
+                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest ml-1">{t('profile.fields.emailHelper')}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
         )}
 
         {/* Preferences Tab */}
         {activeTab === 'preferences' && (
-          <>
-            {/* Experience Level Selector */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
+          <div className="min-w-0 max-w-4xl space-y-8">
+            {/* Experience Level */}
+            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 p-3 shadow-inner dark:border-slate-700 dark:bg-slate-900/50 sm:rounded-3xl sm:p-4 md:rounded-[2.5rem] md:p-5">
               <ExperienceLevelSelector />
             </div>
 
-            {/* Interface Preferences */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">
-                {t('preferences.sections.interface')}
-              </h3>
-              <div className="space-y-6">
-                <FormField label={t('preferences.fields.language')} htmlFor="pref_language">
-                  <Select
-                    id="pref_language"
-                    value={profile.language}
-                    onChange={(e) => handleLanguageChange(e.target.value)}
-                  >
-                    {languages.map((lang) => (
-                      <option key={lang.value} value={lang.value}>
-                        {lang.label}
-                      </option>
-                    ))}
-                  </Select>
-                </FormField>
+            <div className="grid min-w-0 grid-cols-1 gap-8 md:grid-cols-2">
+              {/* Regional Preferences */}
+              <Card className="rounded-[2.5rem] border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
+                <CardHeader className="p-8 pb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-emerald-50 dark:bg-emerald-900/30 rounded-xl">
+                      <Globe className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                    </div>
+                    <CardTitle className="text-base font-semibold text-slate-900 dark:text-white uppercase tracking-tight">
+                      {t('preferences.sections.interface')}
+                    </CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-8 pt-4 space-y-6">
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">{t('preferences.fields.language')}</Label>
+                    <Select
+                      id="pref_language"
+                      value={profile.language}
+                      onValueChange={handleLanguageChange}
+                    >
+                      <SelectTrigger className="h-12 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border-slate-100 dark:border-slate-700 font-bold px-5">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-xl border-slate-200">
+                        {languages.map((lang) => (
+                          <SelectItem key={lang.value} value={lang.value} className="rounded-lg font-bold uppercase text-[10px] tracking-widest">{lang.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-                <FormField
-                  label={
-                    <>
-                      <Globe className="inline h-4 w-4 mr-1" /> {t('profile.fields.timezone')}
-                    </>
-                  }
-                  htmlFor="pref_timezone"
-                >
-                  <Select
-                    id="pref_timezone"
-                    value={profile.timezone}
-                    onChange={(e) => handleInputChange('timezone', e.target.value)}
-                  >
-                    {timezones.map((tz) => (
-                      <option key={tz.value} value={tz.value}>
-                        {tz.label}
-                      </option>
-                    ))}
-                  </Select>
-                </FormField>
-              </div>
-            </div>
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">{t('profile.fields.timezone')}</Label>
+                    <Select
+                      id="pref_timezone"
+                      value={profile.timezone}
+                      onValueChange={(val) => handleInputChange('timezone', val)}
+                    >
+                      <SelectTrigger className="h-12 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border-slate-100 dark:border-slate-700 font-bold px-5">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-xl border-slate-200 max-h-[300px]">
+                        {timezones.map((tz) => (
+                          <SelectItem key={tz.value} value={tz.value} className="rounded-lg font-bold text-xs">{tz.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </CardContent>
+              </Card>
 
-            {/* Notifications */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
-                <Bell className="h-5 w-5" />
-                {t('preferences.sections.notifications')}
-              </h3>
-              <div className="space-y-4">
-                {[
-                  { key: 'email', icon: Mail },
-                  { key: 'push', icon: Bell },
-                  { key: 'alerts', icon: AlertCircle },
-                  { key: 'reports', icon: ShieldCheck },
-                ].map(({ key, icon: _Icon }) => (
-                  <div key={key} className="flex items-center justify-between">
-                    <div>
-                      <h4 className="font-medium text-gray-900 dark:text-white">
-                        {t(`preferences.notifications.${key}.title`)}
+              {/* Data & Privacy */}
+              <Card className="rounded-[2.5rem] border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
+                <CardHeader className="p-8 pb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-purple-50 dark:bg-purple-900/30 rounded-xl">
+                      <Shield className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                    </div>
+                    <CardTitle className="text-base font-semibold text-slate-900 dark:text-white uppercase tracking-tight">
+                      {t('preferences.sections.dataPrivacy')}
+                    </CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-8 pt-4 space-y-6">
+                  <div className="flex min-w-0 flex-col gap-3 rounded-2xl border border-slate-100 bg-slate-50 p-4 transition-all group hover:border-purple-200 dark:border-slate-700/50 dark:bg-slate-900/50 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+                    <div className="min-w-0 flex-1 space-y-1">
+                      <h4 className="text-xs font-semibold uppercase tracking-tight text-slate-900 dark:text-white">
+                        {t('preferences.dataPrivacy.analytics.title')}
                       </h4>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
-                        {t(`preferences.notifications.${key}.description`)}
+                      <p className="text-[10px] font-medium leading-tight text-slate-400 dark:text-slate-500">
+                        {t('preferences.dataPrivacy.analytics.description')}
                       </p>
                     </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={notifications[key as keyof typeof notifications]}
-                        onChange={(e) =>
-                          setNotifications({ ...notifications, [key]: e.target.checked })
-                        }
-                        className="sr-only peer"
-                      />
-                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 dark:peer-focus:ring-green-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-green-600"></div>
-                    </label>
+                    <Switch defaultChecked className="shrink-0 data-[state=checked]:bg-purple-600" />
                   </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Data & Privacy */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                {t('preferences.sections.dataPrivacy')}
-              </h3>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                  <div>
-                    <h4 className="font-medium text-gray-900 dark:text-white">
-                      {t('preferences.dataPrivacy.analytics.title')}
-                    </h4>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      {t('preferences.dataPrivacy.analytics.description')}
+                  <div className="bg-slate-100 dark:bg-slate-800/50 p-4 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700">
+                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-relaxed">
+                      {t('preferences.dataPrivacy.privacyNote')}
                     </p>
                   </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" className="sr-only peer" defaultChecked />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 dark:peer-focus:ring-green-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-green-600"></div>
-                  </label>
-                </div>
-                <div className="text-sm text-gray-500 dark:text-gray-400">
-                  <p>{t('preferences.dataPrivacy.privacyNote')}</p>
-                </div>
-              </div>
+                </CardContent>
+              </Card>
             </div>
-          </>
+
+            {/* Notifications Card - Full Width */}
+            <Card className="rounded-[2.5rem] border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
+              <CardHeader className="p-8 pb-4 border-b border-slate-50 dark:border-slate-800/50 bg-slate-50/30">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 bg-amber-50 dark:bg-amber-900/30 rounded-xl">
+                    <Bell className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-base font-semibold text-slate-900 dark:text-white uppercase tracking-tight">
+                      {t('preferences.sections.notifications')}
+                    </CardTitle>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Configure your alert delivery channels</p>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="grid grid-cols-1 gap-x-8 gap-y-8 p-4 sm:p-8 md:grid-cols-2 md:gap-x-12">
+                {[
+                  { key: 'email', icon: Mail, color: 'text-blue-500' },
+                  { key: 'push', icon: Bell, color: 'text-emerald-500' },
+                  { key: 'alerts', icon: AlertCircle, color: 'text-rose-500' },
+                  { key: 'reports', icon: ShieldCheck, color: 'text-indigo-500' },
+                ].map(({ key, icon: Icon, color }) => (
+                  <div key={key} className="group flex min-w-0 items-start justify-between gap-3">
+                    <div className="flex min-w-0 flex-1 items-start gap-3 sm:gap-4">
+                      <div className={cn("shrink-0 rounded-xl border border-slate-100 bg-slate-50 p-2 transition-transform group-hover:scale-110 dark:border-slate-700 dark:bg-slate-900/50", color)}>
+                        <Icon className="h-4 w-4" />
+                      </div>
+                      <div className="min-w-0 space-y-1">
+                        <h4 className="text-xs font-semibold uppercase tracking-tight text-slate-900 transition-colors group-hover:text-emerald-600 dark:text-white">
+                          {t(`preferences.notifications.${key}.title`)}
+                        </h4>
+                        <p className="text-[10px] font-medium leading-tight text-slate-400 dark:text-slate-500">
+                          {t(`preferences.notifications.${key}.description`)}
+                        </p>
+                      </div>
+                    </div>
+                    <Switch
+                      checked={notifications[key as keyof typeof notifications]}
+                      onCheckedChange={(val) =>
+                        setNotifications({ ...notifications, [key]: val })
+                      }
+                      className="shrink-0 data-[state=checked]:bg-emerald-600"
+                    />
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          </div>
         )}
 
         {/* Security Tab */}
         {activeTab === 'security' && (
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-              <Lock className="inline h-5 w-5 mr-2" />
-              {t('profile.sections.security')}
-            </h3>
-
-            <div className="space-y-4">
-              {/* Current Password */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  {t('profile.password.current')}
-                </label>
-                <div className="relative">
-                  <input
-                    type={showPasswords.current ? 'text' : 'password'}
-                    value={passwordData.currentPassword}
-                    onChange={(e) =>
-                      setPasswordData({ ...passwordData, currentPassword: e.target.value })
-                    }
-                    className="w-full px-3 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 dark:bg-gray-600 dark:text-white"
-                    placeholder={t('profile.password.currentPlaceholder')}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPasswords({ ...showPasswords, current: !showPasswords.current })}
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                  >
-                    {showPasswords.current ? (
-                      <EyeOff className="h-4 w-4 text-gray-400" />
-                    ) : (
-                      <Eye className="h-4 w-4 text-gray-400" />
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              {/* New Password */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  {t('profile.password.new')}
-                </label>
-                <div className="relative">
-                  <input
-                    type={showPasswords.new ? 'text' : 'password'}
-                    value={passwordData.newPassword}
-                    onChange={(e) =>
-                      setPasswordData({ ...passwordData, newPassword: e.target.value })
-                    }
-                    className="w-full px-3 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 dark:bg-gray-600 dark:text-white"
-                    placeholder={t('profile.password.newPlaceholder')}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPasswords({ ...showPasswords, new: !showPasswords.new })}
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                  >
-                    {showPasswords.new ? (
-                      <EyeOff className="h-4 w-4 text-gray-400" />
-                    ) : (
-                      <Eye className="h-4 w-4 text-gray-400" />
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              {/* Confirm Password */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  {t('profile.password.confirm')}
-                </label>
-                <div className="relative">
-                  <input
-                    type={showPasswords.confirm ? 'text' : 'password'}
-                    value={passwordData.confirmPassword}
-                    onChange={(e) =>
-                      setPasswordData({ ...passwordData, confirmPassword: e.target.value })
-                    }
-                    className="w-full px-3 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 dark:bg-gray-600 dark:text-white"
-                    placeholder={t('profile.password.confirmPlaceholder')}
-                  />
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setShowPasswords({ ...showPasswords, confirm: !showPasswords.confirm })
-                    }
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                  >
-                    {showPasswords.confirm ? (
-                      <EyeOff className="h-4 w-4 text-gray-400" />
-                    ) : (
-                      <Eye className="h-4 w-4 text-gray-400" />
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              {/* Password mismatch warning */}
-              {passwordData.newPassword &&
-                passwordData.confirmPassword &&
-                passwordData.newPassword !== passwordData.confirmPassword && (
-                  <div className="flex items-center gap-2 text-red-600 dark:text-red-400 text-sm">
-                    <AlertCircle className="h-4 w-4" />
-                    {t('profile.errors.passwordMismatch')}
+          <div className="min-w-0 max-w-2xl">
+            <Card className="rounded-[2.5rem] border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
+              <CardHeader className="p-8 pb-4 bg-slate-50/30 border-b border-slate-50">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 bg-rose-50 dark:bg-rose-900/30 rounded-xl text-rose-600 dark:text-rose-400">
+                    <Lock className="h-5 w-5" />
                   </div>
-                )}
+                  <div>
+                    <CardTitle className="text-base font-semibold text-slate-900 dark:text-white uppercase tracking-tight">
+                      {t('profile.sections.security')}
+                    </CardTitle>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Update your account authentication details</p>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="p-8 space-y-8">
+                {/* Current Password */}
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">
+                    {t('profile.password.current')}
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      type={showPasswords.current ? 'text' : 'password'}
+                      value={passwordData.currentPassword}
+                      onChange={(e) =>
+                        setPasswordData({ ...passwordData, currentPassword: e.target.value })
+                      }
+                      className="h-12 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border-slate-100 dark:border-slate-700 font-bold px-5 pr-12 focus:ring-rose-500/20"
+                      placeholder={t('profile.password.currentPlaceholder')}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPasswords({ ...showPasswords, current: !showPasswords.current })}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500"
+                    >
+                      {showPasswords.current ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                    </button>
+                  </div>
+                </div>
 
-              {/* Submit Button */}
-              <div className="pt-4">
-                <button
-                  onClick={handlePasswordChange}
-                  disabled={
-                    changingPassword ||
-                    !passwordData.newPassword ||
-                    !passwordData.confirmPassword
-                  }
-                  className="flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {changingPassword ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Lock className="h-4 w-4" />
+                <div className="grid min-w-0 grid-cols-1 gap-8 pt-4 md:grid-cols-2">
+                  {/* New Password */}
+                  <div className="min-w-0 space-y-2">
+                    <Label className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">
+                      {t('profile.password.new')}
+                    </Label>
+                    <div className="relative">
+                      <Input
+                        type={showPasswords.new ? 'text' : 'password'}
+                        value={passwordData.newPassword}
+                        onChange={(e) =>
+                          setPasswordData({ ...passwordData, newPassword: e.target.value })
+                        }
+                        className="h-12 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border-slate-100 dark:border-slate-700 font-bold px-5 pr-12 focus:ring-emerald-500/20"
+                        placeholder={t('profile.password.newPlaceholder')}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPasswords({ ...showPasswords, new: !showPasswords.new })}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500"
+                      >
+                        {showPasswords.new ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Confirm Password */}
+                  <div className="min-w-0 space-y-2">
+                    <Label className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">
+                      {t('profile.password.confirm')}
+                    </Label>
+                    <div className="relative">
+                      <Input
+                        type={showPasswords.confirm ? 'text' : 'password'}
+                        value={passwordData.confirmPassword}
+                        onChange={(e) =>
+                          setPasswordData({ ...passwordData, confirmPassword: e.target.value })
+                        }
+                        className="h-12 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border-slate-100 dark:border-slate-700 font-bold px-5 pr-12 focus:ring-emerald-500/20"
+                        placeholder={t('profile.password.confirmPlaceholder')}
+                      />
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setShowPasswords({ ...showPasswords, confirm: !showPasswords.confirm })
+                        }
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500"
+                      >
+                        {showPasswords.confirm ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Password mismatch warning */}
+                {passwordData.newPassword &&
+                  passwordData.confirmPassword &&
+                  passwordData.newPassword !== passwordData.confirmPassword && (
+                    <div className="flex items-center gap-3 text-rose-600 bg-rose-50 dark:bg-rose-900/20 p-4 rounded-2xl border border-rose-100 dark:border-rose-900/30">
+                      <AlertCircle className="h-5 w-5 shrink-0" />
+                      <span className="text-[10px] font-medium uppercase tracking-widest">{t('profile.errors.passwordMismatch')}</span>
+                    </div>
                   )}
-                  <span>
+
+                <Separator className="opacity-50" />
+
+                {/* Submit Button */}
+                <div className="pt-4 flex justify-end">
+                  <Button 
+                    variant="default" 
+                    onClick={handlePasswordChange} 
+                    disabled={ changingPassword || !passwordData.newPassword || !passwordData.confirmPassword } 
+                    className="h-12 px-10 rounded-[1.25rem] bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-semibold text-xs uppercase tracking-widest hover:opacity-90 transition-all shadow-xl"
+                  >
+                    {changingPassword ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    ) : (
+                      <ShieldCheck className="h-4 w-4 mr-2" />
+                    )}
                     {changingPassword
                       ? t('profile.password.changing')
                       : t('profile.password.change')}
-                  </span>
-                </button>
-              </div>
-            </div>
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         )}
       </div>
+
+      {/* Camera Capture Modal */}
+      {showCamera && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/80 backdrop-blur-md p-4 animate-in fade-in duration-300">
+          <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-[0_32px_64px_-12px_rgba(0,0,0,0.3)] max-w-md w-full overflow-hidden border border-slate-100 dark:border-slate-800">
+            <div className="flex items-center justify-between px-8 py-6 border-b border-slate-50 dark:border-slate-800">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-emerald-50 dark:bg-emerald-900/30 rounded-xl">
+                  <Camera className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                </div>
+                <h3 className="text-lg font-semibold text-slate-900 dark:text-white uppercase tracking-tight">
+                  {t('profile.takePhoto', 'Capture Profile')}
+                </h3>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={stopCamera}
+                className="h-10 w-10 rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-400"
+              >
+                <X className="h-5 w-5" />
+              </Button>
+            </div>
+            <div className="relative bg-slate-950 aspect-square overflow-hidden group">
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                muted
+                className="w-full h-full object-cover scale-x-[-1]"
+              />
+              <div className="absolute inset-0 border-[16px] border-white/10 rounded-full pointer-events-none"></div>
+            </div>
+            <div className="flex items-center justify-center gap-4 p-8 bg-slate-50/50 dark:bg-slate-900/50">
+              <Button
+                onClick={stopCamera}
+                variant="ghost"
+                className="px-6 h-12 rounded-2xl text-[10px] font-medium uppercase tracking-widest text-slate-400"
+              >
+                {t('app.cancel', 'Cancel')}
+              </Button>
+              <Button 
+                variant="default" 
+                onClick={capturePhoto} 
+                className="px-10 h-12 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs uppercase tracking-widest shadow-lg shadow-emerald-100 dark:shadow-none"
+              >
+                <Zap className="h-4 w-4 mr-2" />
+                {t('profile.capture', 'Capture')}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

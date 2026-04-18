@@ -1,4 +1,4 @@
-import React from 'react';
+
 import {
   LineChart,
   Line,
@@ -41,7 +41,7 @@ const COLORS = {
   teal: '#14b8a6',
 };
 
-export const HealthScoreRadarChart: React.FC<{ sections: AIReportSections }> = ({ sections }) => {
+export const HealthScoreRadarChart = ({ sections }: { sections: AIReportSections }) => {
   const health = sections.healthAssessment;
   if (!health) return null;
 
@@ -78,7 +78,7 @@ export const HealthScoreRadarChart: React.FC<{ sections: AIReportSections }> = (
   );
 };
 
-export const RecommendationPriorityChart: React.FC<{ sections: AIReportSections }> = ({ sections }) => {
+export const RecommendationPriorityChart = ({ sections }: { sections: AIReportSections }) => {
   if (!sections.recommendations || sections.recommendations.length === 0) return null;
 
   const priorityCounts = sections.recommendations.reduce(
@@ -108,8 +108,8 @@ export const RecommendationPriorityChart: React.FC<{ sections: AIReportSections 
           fill="#8884d8"
           dataKey="value"
         >
-          {data.map((entry, index) => (
-            <Cell key={`cell-${index}`} fill={entry.color} />
+          {data.map((entry) => (
+            <Cell key={`cell-${entry.name}`} fill={entry.color} />
           ))}
         </Pie>
         <Tooltip />
@@ -118,7 +118,7 @@ export const RecommendationPriorityChart: React.FC<{ sections: AIReportSections 
   );
 };
 
-export const RecommendationCategoryChart: React.FC<{ sections: AIReportSections }> = ({ sections }) => {
+export const RecommendationCategoryChart = ({ sections }: { sections: AIReportSections }) => {
   if (!sections.recommendations || sections.recommendations.length === 0) return null;
 
   const categoryCounts = sections.recommendations.reduce(
@@ -147,9 +147,7 @@ export const RecommendationCategoryChart: React.FC<{ sections: AIReportSections 
   );
 };
 
-export const SatelliteIndicesChart: React.FC<{
-  timeSeries?: Array<{ date: string; ndvi?: number; ndmi?: number }>;
-}> = ({ timeSeries }) => {
+export const SatelliteIndicesChart = ({ timeSeries }: { timeSeries?: Array<{ date: string; ndvi?: number; ndmi?: number }>; }) => {
   if (!timeSeries || timeSeries.length === 0) return null;
 
   const data = timeSeries
@@ -191,9 +189,7 @@ export const SatelliteIndicesChart: React.FC<{
   );
 };
 
-export const YieldHistoryChart: React.FC<{
-  yieldHistory?: Array<{ season: string; year: number; yieldPerHa: number }>;
-}> = ({ yieldHistory }) => {
+export const YieldHistoryChart = ({ yieldHistory }: { yieldHistory?: Array<{ season: string; year: number; yieldPerHa: number }>; }) => {
   if (!yieldHistory || yieldHistory.length === 0) return null;
 
   const data = yieldHistory
@@ -216,7 +212,7 @@ export const YieldHistoryChart: React.FC<{
   );
 };
 
-export const RiskSeverityChart: React.FC<{ sections: AIReportSections }> = ({ sections }) => {
+export const RiskSeverityChart = ({ sections }: { sections: AIReportSections }) => {
   if (!sections.riskAlerts || sections.riskAlerts.length === 0) return null;
 
   const severityCounts = sections.riskAlerts.reduce(
@@ -243,8 +239,8 @@ export const RiskSeverityChart: React.FC<{ sections: AIReportSections }> = ({ se
         <YAxis />
         <Tooltip />
         <Bar dataKey="value" fill={COLORS.danger}>
-          {data.map((entry, index) => (
-            <Cell key={`cell-${index}`} fill={entry.color} />
+          {data.map((entry) => (
+            <Cell key={`cell-${entry.name}`} fill={entry.color} />
           ))}
         </Bar>
       </BarChart>
@@ -252,12 +248,12 @@ export const RiskSeverityChart: React.FC<{ sections: AIReportSections }> = ({ se
   );
 };
 
-export const AIReportCharts: React.FC<AIReportChartsProps> = ({
+export const AIReportCharts = ({
   sections,
   satelliteTimeSeries,
   yieldHistory,
   weatherData: _weatherData,
-}) => {
+}: AIReportChartsProps) => {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
       {/* Health Score Radar Chart */}

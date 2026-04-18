@@ -1,5 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { useTranslation } from 'react-i18next';
+import {  useState, useEffect, useMemo  } from "react";
 import {
   X,
   Play,
@@ -15,10 +14,24 @@ import {
   PackageCheck,
   Hash,
   Banknote,
+  Lock,
+  MessageSquare,
+  PlayCircle,
+  StopCircle,
+  Wallet,
+  Activity,
 } from 'lucide-react';
-import { useUpdateTask } from '../../hooks/useTasks';
+import {
+  useUpdateTask,
+  useTaskComments,
+  useTaskTimeLogs,
+  useIsTaskBlocked,
+  useTaskDependencies,
+} from '../../hooks/useTasks';
+import { useTaskAssignments } from '../../hooks/useTaskAssignments';
 import { tasksApi } from '../../lib/api/tasks';
-import { useCropsForTask, type Crop } from '../../hooks/useCrops';
+// crops module removed — parcel.crop_type used directly for harvest context
+type CropOption = { id: string; name: string; parcel_id?: string; parcel_name?: string; farm_id?: string; variety_id?: string; variety_name?: string; created_at?: string; updated_at?: string };
 import { useQueryClient } from '@tanstack/react-query';
 import type { Task, TaskSummary, CompleteHarvestTaskRequest } from '../../types/tasks';
 import { useParcelById } from '../../hooks/useParcelsQuery';
@@ -30,6 +43,7 @@ import {
   TASK_PRIORITY_COLORS,
 } from '../../types/tasks';
 import { Button } from '../ui/button';
+import { useTranslation } from 'react-i18next';
 import { Label } from '../ui/label';
 import { Input } from '../ui/Input';
 import { Textarea } from '../ui/Textarea';
@@ -43,6 +57,17 @@ import {
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
+type HarvestUnit = CompleteHarvestTaskRequest['unit'];
+type HarvestQualityGrade = NonNullable<CompleteHarvestTaskRequest['quality_grade']>;
+type TaskCompletionPayload = Parameters<typeof tasksApi.complete>[2] & {
+  units_completed: number;
+  rate_per_unit: number;
+  worker_completions?: Array<{
+    worker_id: string;
+    units_completed: number;
+  }>;
+};
+
 interface TaskDetailDialogProps {
   task: TaskSummary | Task;
   organizationId: string;
@@ -50,12 +75,12 @@ interface TaskDetailDialogProps {
   onEdit?: () => void;
 }
 
-const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
+const TaskDetailDialog = ({
   task,
   organizationId,
   onClose,
   onEdit,
-}) => {
+}: TaskDetailDialogProps) => {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const updateTask = useUpdateTask();
@@ -74,6 +99,147 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
     notes: '',
   });
 
+  // Load task assignments for multi-worker support
+  const { data: taskAssignments = [] } = useTaskAssignments(task.id);
+  const hasMultipleWorkers = taskAssignments.length > 1;
+
+  // Collaboration + worklog data — all surfaced via existing hooks
+  const { data: comments = [] } = useTaskComments(task.id);
+  const { data: timeLogs = [] } = useTaskTimeLogs(task.id);
+  const { data: blockedStatus } = useIsTaskBlocked(task.id);
+  const { data: dependencies } = useTaskDependencies(task.id);
+
+  // Merged activity timeline: status milestones + comments + clock events
+  const timelineEvents = useMemo(() => {
+    type TimelineEvent = {
+      id: string;
+      at: string;
+      kind: 'milestone' | 'comment' | 'clock';
+      icon: typeof Clock;
+      tone: 'neutral' | 'success' | 'warning' | 'info';
+      title: string;
+      body?: string;
+      author?: string;
+    };
+    const events: TimelineEvent[] = [];
+
+    if (task.created_at) {
+      events.push({
+        id: 'created',
+        at: task.created_at,
+        kind: 'milestone',
+        icon: Calendar,
+        tone: 'neutral',
+        title: 'Task created',
+      });
+    }
+    if (task.actual_start) {
+      events.push({
+        id: 'started',
+        at: task.actual_start,
+        kind: 'milestone',
+        icon: PlayCircle,
+        tone: 'info',
+        title: 'Work started',
+      });
+    }
+    if (task.actual_end) {
+      events.push({
+        id: 'ended',
+        at: task.actual_end,
+        kind: 'milestone',
+        icon: StopCircle,
+        tone: 'info',
+        title: 'Work ended',
+      });
+    }
+    if (task.approved_at) {
+      events.push({
+        id: 'approved',
+        at: task.approved_at,
+        kind: 'milestone',
+        icon: CheckCircle,
+        tone: 'success',
+        title: 'Task approved',
+      });
+    }
+    if (task.completed_date) {
+      events.push({
+        id: 'completed',
+        at: task.completed_date,
+        kind: 'milestone',
+        icon: CheckCircle,
+        tone: 'success',
+        title: 'Task completed',
+      });
+    }
+
+    for (const c of comments) {
+      events.push({
+        id: `comment-${c.id}`,
+        at: c.created_at,
+        kind: 'comment',
+        icon: MessageSquare,
+        tone: c.type === 'issue' ? 'warning' : 'neutral',
+        title: c.type === 'issue' ? 'Issue reported' : c.type === 'status_update' ? 'Status update' : 'Comment',
+        body: c.comment,
+        author: c.user_name || c.worker_id || undefined,
+      });
+    }
+
+    for (const log of timeLogs) {
+      events.push({
+        id: `clock-in-${log.id}`,
+        at: log.start_time,
+        kind: 'clock',
+        icon: PlayCircle,
+        tone: 'info',
+        title: 'Clocked in',
+        body: log.notes || undefined,
+        author: log.worker_id,
+      });
+      if (log.end_time) {
+        const hours = Number(log.total_hours || 0);
+        events.push({
+          id: `clock-out-${log.id}`,
+          at: log.end_time,
+          kind: 'clock',
+          icon: StopCircle,
+          tone: 'info',
+          title: `Clocked out · ${hours.toFixed(2)}h`,
+          body: log.notes || undefined,
+          author: log.worker_id,
+        });
+      }
+    }
+
+    return events.sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime());
+  }, [task.created_at, task.actual_start, task.actual_end, task.approved_at, task.completed_date, comments, timeLogs]);
+
+  // Running cost tile — combines piece-work completion and logged hours.
+  // If we had worker hourly rates we'd use them; without, we fall back to
+  // actual_cost when the service computes it.
+  const costSummary = useMemo(() => {
+    const totalHours = timeLogs.reduce((sum, l) => sum + Number(l.total_hours || 0), 0);
+    const unitsCompleted = Number(task.units_completed ?? 0);
+    const ratePerUnit = Number(task.rate_per_unit ?? 0);
+    const pieceWorkCost = unitsCompleted * ratePerUnit;
+    const actualCost = Number(task.actual_cost ?? 0);
+    const estimatedCost = Number(task.cost_estimate ?? 0);
+    return {
+      totalHours,
+      unitsCompleted,
+      ratePerUnit,
+      pieceWorkCost,
+      actualCost,
+      estimatedCost,
+      hasAny: totalHours > 0 || unitsCompleted > 0 || actualCost > 0 || estimatedCost > 0,
+    };
+  }, [timeLogs, task.units_completed, task.rate_per_unit, task.actual_cost, task.cost_estimate]);
+
+  // Per-worker unit completion (for per_unit tasks with multiple workers)
+  const [workerUnits, setWorkerUnits] = useState<Record<string, number>>({});
+
   // Generate lot number when harvest form opens
   useEffect(() => {
     if (showHarvestForm && !lotNumber) {
@@ -87,25 +253,14 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
     }
   }, [showHarvestForm, lotNumber, task.parcel_id, task.farm_id]);
 
-  const { data: crops = [] } = useCropsForTask({
-    farmId: task.farm_id,
-    parcelId: task.parcel_id,
-    enabled: !!task.farm_id,
-  });
-
-  // Fetch parcel details to get crop_type if no crops are found
+  // Fetch parcel details to get crop_type
   const { data: parcel } = useParcelById(task.parcel_id);
 
-  // Create a virtual crop from parcel if parcel has crop_type but no crops exist
-  const availableCrops: Crop[] = useMemo(() => {
-    if (crops.length > 0) {
-      return crops;
-    }
-    
-    // If no crops found but parcel has crop_type, create a virtual crop
+  // Build crop options from parcel crop_type
+  const availableCrops = useMemo(() => {
     if (parcel && parcel.crop_type && task.parcel_id) {
       return [{
-        id: `parcel-${parcel.id}`, // Virtual ID based on parcel - backend will handle this
+        id: `parcel-${parcel.id}`,
         name: parcel.crop_type,
         parcel_id: parcel.id,
         parcel_name: parcel.name,
@@ -114,15 +269,16 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
         variety_name: parcel.variety || undefined,
         created_at: parcel.created_at || new Date().toISOString(),
         updated_at: parcel.updated_at || new Date().toISOString(),
-      } as Crop];
+      } as CropOption];
     }
-    
-    return crops;
-  }, [crops, parcel, task.parcel_id, task.farm_id]);
+
+    return [];
+  }, [parcel, task.parcel_id, task.farm_id]);
 
   // Harvest completion form data
   // Auto-initialize crop_id with virtual crop from parcel if available and no crop_id in task
   const initialCropId = task.crop_id || (availableCrops.length > 0 ? availableCrops[0].id : '');
+  const firstAvailableCropId = availableCrops[0]?.id;
   const [harvestData, setHarvestData] = useState<Partial<CompleteHarvestTaskRequest>>({
     crop_id: initialCropId,
     harvest_date: new Date().toISOString().split('T')[0],
@@ -134,10 +290,10 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
 
   // Update crop_id when availableCrops changes (e.g., when parcel loads)
   useEffect(() => {
-    if (!harvestData.crop_id && availableCrops.length > 0) {
-      setHarvestData(prev => ({ ...prev, crop_id: availableCrops[0].id }));
+    if (!harvestData.crop_id && firstAvailableCropId) {
+      setHarvestData(prev => ({ ...prev, crop_id: firstAvailableCropId }));
     }
-  }, [availableCrops.length]); // Only depend on length to avoid infinite loops
+  }, [firstAvailableCropId, harvestData.crop_id]);
 
   const isHarvestingTask = task.task_type === 'harvesting';
   const canStart = task.status === 'pending' || task.status === 'assigned';
@@ -158,8 +314,8 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
         },
       });
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
-    } catch (err: any) {
-      setError(err.message || 'Erreur lors du démarrage de la tâche');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Erreur lors du démarrage de la tâche');
     } finally {
       setIsLoading(false);
     }
@@ -175,8 +331,8 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
         updates: { status: 'paused' },
       });
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
-    } catch (err: any) {
-      setError(err.message || 'Erreur lors de la pause de la tâche');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Erreur lors de la pause de la tâche');
     } finally {
       setIsLoading(false);
     }
@@ -192,8 +348,8 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
         updates: { status: 'in_progress' },
       });
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
-    } catch (err: any) {
-      setError(err.message || 'Erreur lors de la reprise de la tâche');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Erreur lors de la reprise de la tâche');
     } finally {
       setIsLoading(false);
     }
@@ -218,15 +374,15 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       queryClient.invalidateQueries({ queryKey: ['work-records'] });
       onClose();
-    } catch (err: any) {
-      setError(err.message || 'Erreur lors de la complétion de la tâche');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Erreur lors de la complétion de la tâche');
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleCompletePerUnit = async () => {
-    if (perUnitData.units_completed <= 0) {
+    if (!hasMultipleWorkers && perUnitData.units_completed <= 0) {
       setError('Veuillez entrer le nombre d\'unités complétées');
       return;
     }
@@ -234,18 +390,33 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
     try {
       setIsLoading(true);
       setError(null);
-      const totalCost = perUnitData.units_completed * perUnitData.rate_per_unit;
-      await tasksApi.complete(organizationId, task.id, {
-        units_completed: perUnitData.units_completed,
+
+      // Build per-worker completions if multiple workers
+      const worker_completions = hasMultipleWorkers
+        ? taskAssignments.map(a => ({
+            worker_id: a.worker_id,
+            units_completed: workerUnits[a.worker_id] ?? 0,
+          }))
+        : undefined;
+
+      const totalUnits = hasMultipleWorkers
+        ? Object.values(workerUnits).reduce((s, v) => s + v, 0)
+        : perUnitData.units_completed;
+
+      const totalCost = totalUnits * perUnitData.rate_per_unit;
+      const completionPayload: TaskCompletionPayload = {
+        units_completed: totalUnits,
         rate_per_unit: perUnitData.rate_per_unit,
         actual_cost: totalCost,
         notes: perUnitData.notes || undefined,
-      });
+        ...(worker_completions ? { worker_completions } : {}),
+      };
+      await tasksApi.complete(organizationId, task.id, completionPayload);
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       queryClient.invalidateQueries({ queryKey: ['work-records'] });
       onClose();
-    } catch (err: any) {
-      setError(err.message || 'Erreur lors de la complétion de la tâche');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Erreur lors de la complétion de la tâche');
     } finally {
       setIsLoading(false);
     }
@@ -331,8 +502,8 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
       } else {
         onClose();
       }
-    } catch (err: any) {
-      setError(err.message || 'Erreur lors de la complétion de la récolte');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Erreur lors de la complétion de la récolte');
     } finally {
       setIsLoading(false);
     }
@@ -371,19 +542,23 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
           </div>
           <div className="flex items-center gap-2">
             {onEdit && (
-              <button
+              <Button
+                size="icon"
+                variant="ghost"
                 onClick={onEdit}
-                className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                aria-label={t('common.edit', 'Edit')}
               >
                 <Edit className="w-5 h-5" />
-              </button>
+              </Button>
             )}
-            <button
+            <Button
+              size="icon"
+              variant="ghost"
               onClick={onClose}
-              className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              aria-label={t('common.close', 'Close')}
             >
               <X className="w-6 h-6" />
-            </button>
+            </Button>
           </div>
         </div>
 
@@ -396,6 +571,35 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
             </div>
           )}
 
+          {/* Blocked-by banner — surfaces unresolved dependencies so workers know
+              why the task can't be started yet. */}
+          {blockedStatus?.blocked && blockedStatus.blockers.length > 0 && (
+            <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <Lock className="w-5 h-5 text-amber-600 flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-amber-900 dark:text-amber-100">
+                    {t('tasks.blocked.title', 'Task is blocked by {{count}} unresolved dependency', {
+                      count: blockedStatus.blockers.length,
+                      defaultValue_plural: 'Task is blocked by {{count}} unresolved dependencies',
+                    })}
+                  </p>
+                  <ul className="mt-2 space-y-1">
+                    {blockedStatus.blockers.map((b, i) => (
+                      <li key={b.id ?? i} className="text-sm text-amber-800 dark:text-amber-200">
+                        • {b.title ?? 'Untitled task'}
+                        {b.status ? <span className="ml-2 text-xs italic">({b.status})</span> : null}
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">
+                    {t('tasks.blocked.hint', 'Complete the blockers above before starting this task.')}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Task Info */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
@@ -405,7 +609,7 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
               </p>
             </div>
 
-            {task.farm_name && (
+            {'farm_name' in task && task.farm_name && (
               <div className="space-y-1">
                 <p className="text-sm text-gray-500 dark:text-gray-400">Ferme</p>
                 <p className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
@@ -425,7 +629,7 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
               </div>
             )}
 
-            {task.worker_name && (
+            {'worker_name' in task && task.worker_name && (
               <div className="space-y-1">
                 <p className="text-sm text-gray-500 dark:text-gray-400">Assigné à</p>
                 <p className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
@@ -511,7 +715,52 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
                 Paiement à l'unité
               </h3>
 
+              {/* Tarif par unité (always shown) */}
               <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="rate_per_unit_completion">Tarif par unité (MAD) *</Label>
+                  <Input
+                    id="rate_per_unit_completion"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={perUnitData.rate_per_unit || ''}
+                    onChange={(e) => setPerUnitData({ ...perUnitData, rate_per_unit: parseFloat(e.target.value) || 0 })}
+                    placeholder="Ex: 5.00"
+                  />
+                </div>
+              </div>
+
+              {/* Per-worker units if multiple workers */}
+              {hasMultipleWorkers ? (
+                <div className="space-y-3">
+                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Unités par travailleur</p>
+                  {taskAssignments.map(assignment => (
+                    <div key={assignment.worker_id} className="flex items-center gap-3">
+                      <span className="text-sm text-gray-700 dark:text-gray-300 w-40 truncate">
+                        {assignment.worker?.first_name} {assignment.worker?.last_name}
+                      </span>
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={workerUnits[assignment.worker_id] ?? ''}
+                        onChange={(e) => setWorkerUnits(prev => ({
+                          ...prev,
+                          [assignment.worker_id]: parseFloat(e.target.value) || 0,
+                        }))}
+                        placeholder="0"
+                        className="w-32"
+                      />
+                      {workerUnits[assignment.worker_id] > 0 && perUnitData.rate_per_unit > 0 && (
+                        <span className="text-sm text-green-600 font-medium">
+                          = {(workerUnits[assignment.worker_id] * perUnitData.rate_per_unit).toFixed(2)} MAD
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
                 <div className="space-y-2">
                   <Label htmlFor="units_completed">Unités complétées *</Label>
                   <Input
@@ -529,34 +778,21 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
                     </p>
                   )}
                 </div>
+              )}
 
-                <div className="space-y-2">
-                  <Label htmlFor="rate_per_unit_completion">Tarif par unité (MAD) *</Label>
-                  <Input
-                    id="rate_per_unit_completion"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={perUnitData.rate_per_unit || ''}
-                    onChange={(e) => setPerUnitData({ ...perUnitData, rate_per_unit: parseFloat(e.target.value) || 0 })}
-                    placeholder="Ex: 5.00"
-                  />
-                </div>
-              </div>
-
-              {perUnitData.units_completed > 0 && perUnitData.rate_per_unit > 0 && (
+              {/* Total summary */}
+              {perUnitData.rate_per_unit > 0 && (
                 <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
                   <div className="flex justify-between items-center">
                     <span className="text-sm font-medium text-green-800 dark:text-green-200">
                       Paiement total
                     </span>
                     <span className="text-lg font-bold text-green-600 dark:text-green-400">
-                      {(perUnitData.units_completed * perUnitData.rate_per_unit).toFixed(2)} MAD
+                      {hasMultipleWorkers
+                        ? (Object.values(workerUnits).reduce((s, v) => s + v, 0) * perUnitData.rate_per_unit).toFixed(2)
+                        : (perUnitData.units_completed * perUnitData.rate_per_unit).toFixed(2)} MAD
                     </span>
                   </div>
-                  <p className="text-xs text-green-700 dark:text-green-300 mt-1">
-                    {perUnitData.units_completed} unités × {perUnitData.rate_per_unit} MAD/unité
-                  </p>
                 </div>
               )}
 
@@ -656,7 +892,7 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="__none__">Sélectionner une culture...</SelectItem>
-                      {availableCrops.map((crop: Crop) => (
+                      {availableCrops.map((crop: CropOption) => (
                         <SelectItem key={crop.id} value={crop.id}>
                           {crop.name} {crop.parcel_name ? `(${crop.parcel_name})` : ''}
                         </SelectItem>
@@ -701,7 +937,7 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
                   <Label htmlFor="unit">Unité</Label>
                   <Select
                     value={harvestData.unit}
-                    onValueChange={(value) => setHarvestData({ ...harvestData, unit: value as any })}
+                    onValueChange={(value) => setHarvestData({ ...harvestData, unit: value as HarvestUnit })}
                   >
                     <SelectTrigger id="unit">
                       <SelectValue placeholder="Sélectionner" />
@@ -721,7 +957,7 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
                   <Label htmlFor="quality_grade">Grade de qualité</Label>
                   <Select
                     value={harvestData.quality_grade}
-                    onValueChange={(value) => setHarvestData({ ...harvestData, quality_grade: value as any })}
+                    onValueChange={(value) => setHarvestData({ ...harvestData, quality_grade: value as HarvestQualityGrade })}
                   >
                     <SelectTrigger id="quality_grade">
                       <SelectValue placeholder="Sélectionner" />
@@ -767,6 +1003,144 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
               </div>
             </div>
           )}
+
+          {/* Running Cost tile — live summary of hours logged and piece-work earned */}
+          {costSummary.hasAny && (
+            <div className="bg-gradient-to-br from-emerald-50 to-blue-50 dark:from-emerald-900/20 dark:to-blue-900/20 border border-emerald-200/60 dark:border-emerald-800/60 rounded-lg p-4">
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
+                  <Wallet className="w-4 h-4 text-emerald-600" />
+                  {t('tasks.cost.title', 'Running cost')}
+                </h4>
+                {costSummary.estimatedCost > 0 && (
+                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                    {t('tasks.cost.vs', 'vs {{est}} MAD estimated', { est: costSummary.estimatedCost.toLocaleString('fr-FR') })}
+                  </span>
+                )}
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+                <div>
+                  <p className="text-gray-500 dark:text-gray-400 text-xs">
+                    {t('tasks.cost.hoursLogged', 'Hours logged')}
+                  </p>
+                  <p className="font-semibold text-gray-900 dark:text-white">
+                    {costSummary.totalHours.toFixed(2)}h
+                  </p>
+                </div>
+                <div>
+                  <p className="text-gray-500 dark:text-gray-400 text-xs">
+                    {t('tasks.cost.unitsDone', 'Units done')}
+                  </p>
+                  <p className="font-semibold text-gray-900 dark:text-white">
+                    {costSummary.unitsCompleted}
+                    {task.units_required ? (
+                      <span className="text-gray-400"> / {task.units_required}</span>
+                    ) : null}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-gray-500 dark:text-gray-400 text-xs">
+                    {t('tasks.cost.pieceWork', 'Piece-work')}
+                  </p>
+                  <p className="font-semibold text-emerald-700 dark:text-emerald-400">
+                    {costSummary.pieceWorkCost.toLocaleString('fr-FR')} MAD
+                  </p>
+                </div>
+                <div>
+                  <p className="text-gray-500 dark:text-gray-400 text-xs">
+                    {t('tasks.cost.actual', 'Actual cost')}
+                  </p>
+                  <p className="font-semibold text-gray-900 dark:text-white">
+                    {costSummary.actualCost.toLocaleString('fr-FR')} MAD
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Dependencies section — shows what this task depends on AND what depends on it */}
+          {dependencies && (dependencies.depends_on.length > 0 || dependencies.required_by.length > 0) && (
+            <div className="space-y-3">
+              <h4 className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
+                <Lock className="w-4 h-4 text-gray-500" />
+                {t('tasks.dependencies.title', 'Dependencies')}
+              </h4>
+              {dependencies.depends_on.length > 0 && (
+                <div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                    {t('tasks.dependencies.dependsOn', 'Depends on')}
+                  </p>
+                  <ul className="space-y-1">
+                    {dependencies.depends_on.map((d) => (
+                      <li key={d.id} className="text-sm text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                        <span className={`inline-block w-2 h-2 rounded-full ${d.status === 'completed' ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+                        {d.title}
+                        {d.status ? <span className="text-xs text-gray-400">({d.status})</span> : null}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {dependencies.required_by.length > 0 && (
+                <div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                    {t('tasks.dependencies.requiredBy', 'Required by')}
+                  </p>
+                  <ul className="space-y-1">
+                    {dependencies.required_by.map((d) => (
+                      <li key={d.id} className="text-sm text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                        <span className="inline-block w-2 h-2 rounded-full bg-blue-500" />
+                        {d.title}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Activity timeline — merged feed of milestones, comments, and clock events */}
+          {timelineEvents.length > 0 && (
+            <div className="space-y-3">
+              <h4 className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
+                <Activity className="w-4 h-4 text-gray-500" />
+                {t('tasks.activity.title', 'Activity')}
+                <span className="text-xs text-gray-400 font-normal">({timelineEvents.length})</span>
+              </h4>
+              <ol className="relative border-s border-gray-200 dark:border-gray-700 ps-6 space-y-4">
+                {timelineEvents.map((evt) => {
+                  const Icon = evt.icon;
+                  const toneClasses =
+                    evt.tone === 'success'
+                      ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-400'
+                      : evt.tone === 'warning'
+                      ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-400'
+                      : evt.tone === 'info'
+                      ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400'
+                      : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400';
+                  return (
+                    <li key={evt.id} className="relative">
+                      <span className={`absolute -start-9 flex h-6 w-6 items-center justify-center rounded-full ring-4 ring-white dark:ring-gray-800 ${toneClasses}`}>
+                        <Icon className="h-3 w-3" />
+                      </span>
+                      <div>
+                        <p className="text-sm font-medium text-gray-900 dark:text-white">{evt.title}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          {format(new Date(evt.at), 'PPp', { locale: fr })}
+                          {evt.author ? <span className="ml-2">· {evt.author}</span> : null}
+                        </p>
+                        {evt.body && (
+                          <p className="mt-1 text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+                            {evt.body}
+                          </p>
+                        )}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ol>
+            </div>
+          )}
         </div>
 
         {/* Actions */}
@@ -777,11 +1151,7 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
             </Button>
 
             {canStart && (
-              <Button
-                onClick={handleStartTask}
-                disabled={isLoading}
-                className="bg-blue-600 hover:bg-blue-700"
-              >
+              <Button variant="blue" onClick={handleStartTask} disabled={isLoading} >
                 <Play className="w-4 h-4 mr-2" />
                 Démarrer
               </Button>
@@ -799,22 +1169,14 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
             )}
 
             {canResume && (
-              <Button
-                onClick={handleResumeTask}
-                disabled={isLoading}
-                className="bg-blue-600 hover:bg-blue-700"
-              >
+              <Button variant="blue" onClick={handleResumeTask} disabled={isLoading} >
                 <Play className="w-4 h-4 mr-2" />
                 Reprendre
               </Button>
             )}
 
             {canComplete && !showHarvestForm && !showPerUnitForm && (
-              <Button
-                onClick={handleCompleteTask}
-                disabled={isLoading}
-                className="bg-green-600 hover:bg-green-700"
-              >
+              <Button variant="green" onClick={handleCompleteTask} disabled={isLoading} >
                 {isHarvestingTask ? (
                   <>
                     <Wheat className="w-4 h-4 mr-2" />
@@ -838,11 +1200,7 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
                 >
                   Annuler
                 </Button>
-                <Button
-                  onClick={handleCompletePerUnit}
-                  disabled={isLoading || perUnitData.units_completed <= 0}
-                  className="bg-green-600 hover:bg-green-700"
-                >
+                <Button variant="green" onClick={handleCompletePerUnit} disabled={isLoading || perUnitData.units_completed <= 0} >
                   {isLoading ? (
                     'Enregistrement...'
                   ) : (
@@ -867,9 +1225,9 @@ const TaskDetailDialog: React.FC<TaskDetailDialogProps> = ({
                   Annuler
                 </Button>
                 <Button
+                  variant={completionType === 'partial' ? 'amber' : 'green'}
                   onClick={handleCompleteWithHarvest}
                   disabled={isLoading}
-                  className={completionType === 'partial' ? 'bg-amber-600 hover:bg-amber-700' : 'bg-green-600 hover:bg-green-700'}
                 >
                   {completionType === 'partial' ? (
                     <PackageCheck className="w-4 h-4 mr-2" />

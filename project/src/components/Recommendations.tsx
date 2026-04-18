@@ -1,6 +1,7 @@
-import React from 'react';
+
 import { AlertTriangle, Info } from 'lucide-react';
 import type { Recommendation } from '../hooks/useRecommendations';
+import { SectionLoader } from '@/components/ui/loader';
 
 interface RecommendationsProps {
   recommendations: Recommendation[];
@@ -8,17 +9,13 @@ interface RecommendationsProps {
   error: string | null;
 }
 
-const Recommendations: React.FC<RecommendationsProps> = ({
+const Recommendations = ({
   recommendations,
   loading,
   error
-}) => {
+}: RecommendationsProps) => {
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-32">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
-      </div>
-    );
+    return <SectionLoader className="h-32 py-0" />;
   }
 
   if (error) {
@@ -41,7 +38,7 @@ const Recommendations: React.FC<RecommendationsProps> = ({
     <div className="space-y-3">
       {recommendations.map((recommendation, index) => (
         <div
-          key={index}
+          key={recommendation.message}
           className={`p-4 rounded-lg flex items-start space-x-3 ${
             recommendation.type === 'warning'
               ? 'bg-yellow-50 dark:bg-yellow-900/20'

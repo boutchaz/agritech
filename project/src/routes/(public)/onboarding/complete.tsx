@@ -2,7 +2,6 @@ import { createFileRoute } from '@tanstack/react-router';
 import { CompletionStep } from '@/components/onboarding/steps/CompletionStep';
 import { useOnboardingStore } from '@/stores/onboardingStore';
 import { useAuth } from '@/hooks/useAuth';
-import { usersApi } from '@/lib/api/users';
 import { onboardingApi } from '@/lib/api/onboarding';
 import { useState, useCallback } from 'react';
 
@@ -28,10 +27,6 @@ function CompleteStepComponent() {
 
     try {
       await onboardingApi.savePreferencesAndComplete(preferences);
-
-      if (user?.id) {
-        await usersApi.updateMe({ onboarding_completed: true });
-      }
 
       // Clear onboarding state after completion
       await clearState();

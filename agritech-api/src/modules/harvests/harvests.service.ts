@@ -7,6 +7,10 @@ import { DatabaseService } from '../database/database.service';
 import { AccountingAutomationService } from '../journal-entries/accounting-automation.service';
 import { ReceptionBatchesService } from '../reception-batches/reception-batches.service';
 import { AdoptionService, MilestoneType } from '../adoption/adoption.service';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationType } from '../notifications/dto/notification.dto';
+import { paginate } from '../../common/dto/paginated-query.dto';
+import { sanitizeSearch } from '../../common/utils/sanitize-search';
 
 @Injectable()
 export class HarvestsService {
@@ -17,6 +21,7 @@ export class HarvestsService {
     private readonly accountingAutomationService: AccountingAutomationService,
     private readonly receptionBatchesService: ReceptionBatchesService,
     private readonly adoptionService: AdoptionService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   private async verifyOrganizationAccess(userId: string, organizationId: string) {
@@ -38,76 +43,69 @@ export class HarvestsService {
     await this.verifyOrganizationAccess(userId, organizationId);
 
     const client = this.databaseService.getAdminClient();
-    
-    // Get total count first
-    let countQuery = client
-      .from('harvest_records')
-      .select('*', { count: 'exact', head: true })
-      .eq('organization_id', organizationId);
 
-    // Apply filters to count query
-    if (filters?.status) {
-      const statuses = filters.status.split(',');
-      countQuery = countQuery.in('status', statuses);
-    }
-    if (filters?.farm_id) countQuery = countQuery.eq('farm_id', filters.farm_id);
-    if (filters?.parcel_id) countQuery = countQuery.eq('parcel_id', filters.parcel_id);
-    if (filters?.crop_id) countQuery = countQuery.eq('crop_id', filters.crop_id);
-    if (filters?.dateFrom) countQuery = countQuery.gte('harvest_date', filters.dateFrom);
-    if (filters?.dateTo) countQuery = countQuery.lte('harvest_date', filters.dateTo);
-    if (filters?.intended_for) countQuery = countQuery.eq('intended_for', filters.intended_for);
-    if (filters?.quality_grade) {
-      const grades = filters.quality_grade.split(',');
-      countQuery = countQuery.in('quality_grade', grades);
-    }
-
-    const { count: totalCount, error: countError } = await countQuery;
-    if (countError) throw new Error(`Failed to count harvests: ${countError.message}`);
-
-    // Build main query
-    let query = client
-      .from('harvest_records')
-      .select('*')
-      .eq('organization_id', organizationId);
-
-    // Apply filters
-    if (filters?.status) {
-      const statuses = filters.status.split(',');
-      query = query.in('status', statuses);
-    }
-    if (filters?.farm_id) query = query.eq('farm_id', filters.farm_id);
-    if (filters?.parcel_id) query = query.eq('parcel_id', filters.parcel_id);
-    if (filters?.crop_id) query = query.eq('crop_id', filters.crop_id);
-    if (filters?.dateFrom) query = query.gte('harvest_date', filters.dateFrom);
-    if (filters?.dateTo) query = query.lte('harvest_date', filters.dateTo);
-    if (filters?.intended_for) query = query.eq('intended_for', filters.intended_for);
-    if (filters?.quality_grade) {
-      const grades = filters.quality_grade.split(',');
-      query = query.in('quality_grade', grades);
-    }
-
-    // Apply sorting
-    const sortBy = filters?.sortBy || 'harvest_date';
-    const sortDir = filters?.sortDir || 'desc';
-    query = query.order(sortBy, { ascending: sortDir === 'asc' });
-
-    // Apply pagination
-    const page = filters?.page || 1;
-    const pageSize = filters?.pageSize || 10;
-    const from = (page - 1) * pageSize;
-    const to = from + pageSize - 1;
-    query = query.range(from, to);
-
-    const { data, error } = await query;
-    if (error) throw new Error(`Failed to fetch harvests: ${error.message}`);
-
-    return {
-      data: data || [],
-      total: totalCount || 0,
-      page,
-      pageSize,
-      totalPages: Math.ceil((totalCount || 0) / pageSize),
+    const applyFilters = (q: any) => {
+      q = q.eq('organization_id', organizationId);
+      if (filters?.status) {
+        const statuses = filters.status.split(',');
+        q = q.in('status', statuses);
+      }
+      if (filters?.farm_id) q = q.eq('farm_id', filters.farm_id);
+      if (filters?.parcel_id) q = q.eq('parcel_id', filters.parcel_id);
+      if (filters?.crop_id) q = q.eq('crop_id', filters.crop_id);
+      if (filters?.dateFrom) q = q.gte('harvest_date', filters.dateFrom);
+      if (filters?.dateTo) q = q.lte('harvest_date', filters.dateTo);
+      if (filters?.intended_for) q = q.eq('intended_for', filters.intended_for);
+      if (filters?.quality_grade) {
+        const grades = filters.quality_grade.split(',');
+        q = q.in('quality_grade', grades);
+      }
+      if (filters?.search) {
+        const s = sanitizeSearch(filters.search);
+        if (s) q = q.or(`lot_number.ilike.%${s}%,notes.ilike.%${s}%,storage_location.ilike.%${s}%`);
+      }
+      return q;
     };
+
+    const result = await paginate(client, 'harvest_records', {
+      select: `
+        *,
+        farm:farms!farm_id(name),
+        parcel:parcels!parcel_id(name)
+      `,
+      filters: applyFilters,
+      page: filters?.page ?? 1,
+      pageSize: filters?.pageSize ?? 10,
+      orderBy: filters?.sortBy || 'harvest_date',
+      ascending: (filters?.sortDir || 'desc') === 'asc',
+      map: (row) => ({
+        ...row,
+        farm_name: Array.isArray(row.farm) ? row.farm[0]?.name : row.farm?.name,
+        parcel_name: Array.isArray(row.parcel) ? row.parcel[0]?.name : row.parcel?.name,
+        farm: undefined,
+        parcel: undefined,
+      }),
+    });
+
+    // Resolve crop names (crop_id has no FK constraint)
+    const cropIds = [...new Set(result.data.filter((h: any) => h.crop_id).map((h: any) => h.crop_id))];
+    let cropMap: Record<string, string> = {};
+    if (cropIds.length > 0) {
+      const { data: crops } = await client
+        .from('crops')
+        .select('id, name')
+        .in('id', cropIds);
+      cropMap = (crops || []).reduce((acc: Record<string, string>, c: any) => {
+        acc[c.id] = c.name;
+        return acc;
+      }, {});
+    }
+    result.data = result.data.map((h: any) => ({
+      ...h,
+      crop_name: h.crop_id ? cropMap[h.crop_id] || null : null,
+    }));
+
+    return result;
   }
 
   async findOne(userId: string, organizationId: string, harvestId: string) {
@@ -116,7 +114,11 @@ export class HarvestsService {
     const client = this.databaseService.getAdminClient();
     const { data, error } = await client
       .from('harvest_records')
-      .select('*')
+      .select(`
+        *,
+        farm:farms!farm_id(name),
+        parcel:parcels!parcel_id(name)
+      `)
       .eq('id', harvestId)
       .eq('organization_id', organizationId)
       .maybeSingle();
@@ -124,7 +126,25 @@ export class HarvestsService {
     if (error) throw new Error(`Failed to fetch harvest: ${error.message}`);
     if (!data) throw new NotFoundException('Harvest not found');
 
-    return data;
+    // Resolve crop name (crop_id has no FK constraint)
+    let cropName: string | null = null;
+    if (data.crop_id) {
+      const { data: crop } = await client
+        .from('crops')
+        .select('name')
+        .eq('id', data.crop_id)
+        .maybeSingle();
+      cropName = crop?.name || null;
+    }
+
+    return {
+      ...data,
+      farm_name: Array.isArray(data.farm) ? data.farm[0]?.name : data.farm?.name,
+      parcel_name: Array.isArray(data.parcel) ? data.parcel[0]?.name : data.parcel?.name,
+      crop_name: cropName,
+      farm: undefined,
+      parcel: undefined,
+    };
   }
 
   /**
@@ -194,6 +214,30 @@ export class HarvestsService {
     const lotNumber = createHarvestDto.lot_number || 
       await this.generateLotNumber(organizationId, createHarvestDto.parcel_id, isPartial, createHarvestDto.harvest_task_id);
 
+    // Compute estimated_revenue in application layer (no longer a generated column)
+    const estimatedRevenue =
+      (Number(createHarvestDto.quantity) || 0) *
+      (Number(createHarvestDto.expected_price_per_unit) || 0);
+
+    // Pre-validate account mappings if this harvest will generate revenue
+    if (estimatedRevenue > 0) {
+      const revenueAccountId = await this.accountingAutomationService.resolveAccountId(
+        organizationId,
+        'revenue_type',
+        'harvest',
+      );
+      const cashAccountId = await this.accountingAutomationService.resolveAccountId(
+        organizationId,
+        'cash',
+        'bank',
+      );
+      if (!revenueAccountId || !cashAccountId) {
+        throw new BadRequestException(
+          'Account mappings not configured for revenue_type: harvest. Please configure account mappings before creating harvests.',
+        );
+      }
+    }
+
     // Create harvest record
     const { data: harvest, error } = await client
       .from('harvest_records')
@@ -201,6 +245,7 @@ export class HarvestsService {
         ...createHarvestDto,
         organization_id: organizationId,
         lot_number: lotNumber,
+        estimated_revenue: Math.round(estimatedRevenue * 100) / 100,
         created_by: userId,
         status: 'stored',
       })
@@ -208,6 +253,36 @@ export class HarvestsService {
       .single();
 
     if (error) throw new Error(`Failed to create harvest: ${error.message}`);
+
+    // Create journal entry for harvest revenue FIRST — if it fails, compensate by deleting the harvest
+    // to keep books consistent with record-of-truth. Reception batch + notifications are best-effort
+    // (they don't affect GL).
+    if (estimatedRevenue > 0) {
+      try {
+        await this.accountingAutomationService.createJournalEntryFromRevenue(
+          organizationId,
+          harvest.id,
+          'harvest',
+          estimatedRevenue,
+          new Date(createHarvestDto.harvest_date),
+          `Harvest: ${createHarvestDto.crop_id || 'unknown crop'}`,
+          userId,
+          createHarvestDto.parcel_id,
+        );
+        this.logger.log(`Journal entry created for harvest ${harvest.id} with revenue ${estimatedRevenue}`);
+      } catch (journalError) {
+        const err = journalError as Error;
+        // Compensating action: delete the harvest so books + harvest table stay consistent
+        await client.from('harvest_records').delete().eq('id', harvest.id);
+        this.logger.error(
+          `Journal entry failed for harvest ${harvest.id}; harvest rolled back: ${err.message}`,
+          err.stack,
+        );
+        throw new BadRequestException(
+          `Harvest not created: journal entry failed — ${err.message}`,
+        );
+      }
+    }
 
     // Automatically create a reception batch for this harvest
     try {
@@ -241,8 +316,9 @@ export class HarvestsService {
         this.logger.warn(`No reception center warehouse found for organization ${organizationId}. Reception batch not created.`);
       }
     } catch (receptionError) {
-      // Log error but don't fail the harvest creation
-      this.logger.error(`Failed to create reception batch for harvest ${harvest.id}: ${receptionError.message}`, receptionError.stack);
+      const err = receptionError as Error;
+      // Log error but don't fail the harvest creation (GL already succeeded; reception batch is ancillary)
+      this.logger.error(`Failed to create reception batch for harvest ${harvest.id}: ${err.message}`, err.stack);
     }
 
     // Track first harvest recorded milestone
@@ -258,6 +334,47 @@ export class HarvestsService {
       },
     );
 
+    try {
+      const { data: orgUsers } = await client
+        .from('organization_users')
+        .select('user_id')
+        .eq('organization_id', organizationId)
+        .eq('is_active', true);
+
+      const userIds = (orgUsers || [])
+        .map((u: { user_id: string }) => u.user_id)
+        .filter((id: string) => id !== userId);
+
+      if (userIds.length > 0) {
+        const { data: parcel } = await client
+          .from('parcels')
+          .select('name')
+          .eq('id', harvest.parcel_id)
+          .maybeSingle();
+
+        const parcelName = parcel?.name || 'Unknown parcel';
+
+        await this.notificationsService.createNotificationsForUsers(
+          userIds,
+          organizationId,
+          NotificationType.HARVEST_COMPLETED,
+          `Harvest recorded: ${harvest.quantity} ${harvest.unit} from ${parcelName}`,
+          `Lot ${harvest.lot_number} — ${harvest.quantity} ${harvest.unit} harvested from ${parcelName}`,
+          {
+            harvestId: harvest.id,
+            lotNumber: harvest.lot_number,
+            quantity: harvest.quantity,
+            unit: harvest.unit,
+            parcelId: harvest.parcel_id,
+            parcelName,
+          },
+        );
+      }
+    } catch (notifError) {
+      const err = notifError as Error;
+      this.logger.warn(`Failed to send harvest notification: ${err.message}`);
+    }
+
     return harvest;
   }
 
@@ -265,23 +382,85 @@ export class HarvestsService {
     await this.verifyOrganizationAccess(userId, organizationId);
 
     const client = this.databaseService.getAdminClient();
-    const { data: existing } = await client
+    const { data: current } = await client
       .from('harvest_records')
-      .select('id')
+      .select('id, quantity, expected_price_per_unit, estimated_revenue, parcel_id, harvest_date, crop_id, lot_number')
       .eq('id', harvestId)
       .eq('organization_id', organizationId)
       .maybeSingle();
 
-    if (!existing) throw new NotFoundException('Harvest not found');
+    if (!current) throw new NotFoundException('Harvest not found');
+
+    // Recompute estimated_revenue if quantity or expected_price_per_unit changed
+    const updateData: Record<string, unknown> = { ...updateHarvestDto };
+    let newRevenue: number | null = null;
+    const oldRevenue = Number(current.estimated_revenue) || 0;
+
+    if (updateHarvestDto.quantity !== undefined || updateHarvestDto.expected_price_per_unit !== undefined) {
+      const qty = Number(updateHarvestDto.quantity ?? current.quantity) || 0;
+      const price = Number(updateHarvestDto.expected_price_per_unit ?? current.expected_price_per_unit) || 0;
+      newRevenue = Math.round(qty * price * 100) / 100;
+      updateData.estimated_revenue = newRevenue;
+    }
+
+    // If revenue changed and a posted revenue journal entry exists, reverse it and post a new one
+    const revenueChanged = newRevenue !== null && Math.abs(newRevenue - oldRevenue) >= 0.01;
+
+    if (revenueChanged) {
+      const { data: existingJe } = await client
+        .from('journal_entries')
+        .select('id')
+        .eq('organization_id', organizationId)
+        .eq('reference_type', 'revenue')
+        .eq('reference_id', harvestId)
+        .eq('status', 'posted')
+        .maybeSingle();
+
+      if (existingJe?.id) {
+        await this.accountingAutomationService.createReversalEntry(
+          organizationId,
+          existingJe.id,
+          userId,
+          `Harvest ${current.lot_number} update — revenue changed from ${oldRevenue} to ${newRevenue}`,
+        );
+      }
+    }
 
     const { data, error } = await client
       .from('harvest_records')
-      .update(updateHarvestDto)
+      .update(updateData)
       .eq('id', harvestId)
       .select()
       .single();
 
     if (error) throw new Error(`Failed to update harvest: ${error.message}`);
+
+    // Post new journal entry for updated revenue (non-zero only)
+    if (revenueChanged && newRevenue !== null && newRevenue > 0) {
+      try {
+        await this.accountingAutomationService.createJournalEntryFromRevenue(
+          organizationId,
+          harvestId,
+          'harvest',
+          newRevenue,
+          new Date(current.harvest_date),
+          `Harvest (updated): ${current.crop_id || 'unknown crop'}`,
+          userId,
+          current.parcel_id,
+        );
+        this.logger.log(`Journal entry re-posted for harvest ${harvestId} at new revenue ${newRevenue}`);
+      } catch (journalError) {
+        const err = journalError as Error;
+        this.logger.error(
+          `Failed to re-post journal entry for harvest ${harvestId} after update: ${err.message}`,
+          err.stack,
+        );
+        throw new BadRequestException(
+          `Harvest updated but new journal entry failed: ${err.message}. Original entry was reversed; please re-post manually.`,
+        );
+      }
+    }
+
     return data;
   }
 
@@ -291,12 +470,31 @@ export class HarvestsService {
     const client = this.databaseService.getAdminClient();
     const { data: existing } = await client
       .from('harvest_records')
-      .select('id')
+      .select('id, lot_number')
       .eq('id', harvestId)
       .eq('organization_id', organizationId)
       .maybeSingle();
 
     if (!existing) throw new NotFoundException('Harvest not found');
+
+    // If a posted revenue journal entry exists, reverse it before deleting the harvest
+    const { data: existingJe } = await client
+      .from('journal_entries')
+      .select('id')
+      .eq('organization_id', organizationId)
+      .eq('reference_type', 'revenue')
+      .eq('reference_id', harvestId)
+      .eq('status', 'posted')
+      .maybeSingle();
+
+    if (existingJe?.id) {
+      await this.accountingAutomationService.createReversalEntry(
+        organizationId,
+        existingJe.id,
+        userId,
+        `Deletion of harvest ${existing.lot_number}`,
+      );
+    }
 
     const { error } = await client
       .from('harvest_records')
@@ -488,8 +686,9 @@ export class HarvestsService {
         },
       };
     } catch (journalError) {
+      const err = journalError as Error;
       // Log the error but don't fail the entire sale
-      this.logger.error(`Failed to create journal entry for harvest sale ${harvestId}: ${journalError.message}`, journalError.stack);
+      this.logger.error(`Failed to create journal entry for harvest sale ${harvestId}: ${err.message}`, err.stack);
 
       // Return success but indicate journal entry issue
       return {
@@ -499,7 +698,7 @@ export class HarvestsService {
           harvest_id: harvestId,
           invoice_number: invoiceNumber,
           total_revenue: totalRevenue,
-          error: journalError.message,
+          error: err.message,
         },
       };
     }

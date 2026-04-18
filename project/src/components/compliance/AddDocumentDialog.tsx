@@ -2,18 +2,12 @@ import React, { useState, useRef, useCallback } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Loader2, Plus, Upload, FileText, X } from 'lucide-react';
+import { Loader2, Plus, Upload, X } from 'lucide-react';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import { FormField } from '@/components/ui/FormField';
 import {
   Select,
@@ -27,18 +21,8 @@ import { cn } from '@/lib/utils';
 import { useUpdateCertification } from '@/hooks/useCompliance';
 import { useAuth } from '@/hooks/useAuth';
 import { storageApi } from '@/lib/api/storage';
+import { filesApi } from '@/lib/api/files';
 import { type CertificationResponseDto, type DocumentDto } from '@/lib/api/compliance';
-
-const documentTypes = [
-  { value: 'certificate', label: 'Certificat' },
-  { value: 'audit_report', label: "Rapport d'audit" },
-  { value: 'inspection_report', label: "Rapport d'inspection" },
-  { value: 'training_record', label: 'Attestation de formation' },
-  { value: 'test_result', label: "Résultat d'analyse" },
-  { value: 'procedure', label: 'Procédure' },
-  { value: 'policy', label: 'Politique' },
-  { value: 'other', label: 'Autre' },
-];
 
 const ALLOWED_MIME_TYPES = [
   'application/pdf',
@@ -86,9 +70,21 @@ export function AddDocumentDialog({ certification }: AddDocumentDialogProps) {
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
+
   const { currentOrganization } = useAuth();
   const updateCertification = useUpdateCertification();
+  const { t } = useTranslation('compliance');
+
+  const documentTypes = [
+    { value: 'certificate', label: t('documentTypes.certificate') },
+    { value: 'audit_report', label: t('documentTypes.audit_report') },
+    { value: 'inspection_report', label: t('documentTypes.inspection_report') },
+    { value: 'training_record', label: t('documentTypes.training_record') },
+    { value: 'test_result', label: t('documentTypes.test_result') },
+    { value: 'procedure', label: t('documentTypes.procedure') },
+    { value: 'policy', label: t('documentTypes.policy') },
+    { value: 'other', label: t('documentTypes.other') },
+  ];
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -99,25 +95,25 @@ export function AddDocumentDialog({ certification }: AddDocumentDialogProps) {
 
   const validateFile = (file: File): string | null => {
     if (!ALLOWED_MIME_TYPES.includes(file.type)) {
-      return "Type de fichier non autorisé. Formats acceptés: PDF, Word, Excel, images (JPEG, PNG, TIFF), texte, CSV.";
+      return t('dialogs.addDocument.invalidFileType');
     }
     if (file.size > MAX_FILE_SIZE) {
-      return `Le fichier est trop volumineux. Taille maximale: ${formatFileSize(MAX_FILE_SIZE)}`;
+      return t('dialogs.addDocument.fileTooLarge', { maxSize: formatFileSize(MAX_FILE_SIZE) });
     }
     return null;
   };
 
   const handleFileSelect = useCallback((files: FileList | null) => {
     if (!files || files.length === 0) return;
-    
+
     const file = files[0];
     const error = validateFile(file);
-    
+
     if (error) {
       toast.error(error);
       return;
     }
-    
+
     setSelectedFile(file);
   }, []);
 
@@ -150,26 +146,41 @@ export function AddDocumentDialog({ certification }: AddDocumentDialogProps) {
     setUploading(true);
 
     try {
-       const timestamp = Date.now();
-       const randomId = Math.random().toString(36).substring(2, 8);
-       const sanitizedName = selectedFile.name
-         .replace(/[^a-zA-Z0-9.-]/g, '_')
-         .substring(0, 50);
-       const filePath = `${currentOrganization.id}/${certification.id}/${timestamp}-${randomId}-${sanitizedName}`;
+      const timestamp = Date.now();
+      const randomId = Math.random().toString(36).substring(2, 8);
+      const sanitizedName = selectedFile.name
+        .replace(/[^a-zA-Z0-9.-]/g, '_')
+        .substring(0, 50);
+      const filePath = `${currentOrganization.id}/${certification.id}/${timestamp}-${randomId}-${sanitizedName}`;
 
-       const { publicUrl } = await storageApi.upload('compliance-documents', filePath, selectedFile, {
-         cacheControl: '31536000',
-         upsert: false,
-       });
+      const { publicUrl } = await storageApi.upload('compliance-documents', filePath, selectedFile, {
+        cacheControl: '31536000',
+        upsert: false,
+      });
 
-       const newDocument: DocumentDto = {
-         type: values.type,
-         url: publicUrl,
-         uploaded_at: new Date().toISOString(),
-         name: selectedFile.name,
-         size: selectedFile.size,
-         mime_type: selectedFile.type,
-       };
+      try {
+        await filesApi.register({
+          bucket_name: 'compliance-documents',
+          file_path: filePath,
+          file_name: selectedFile.name,
+          file_size: selectedFile.size,
+          mime_type: selectedFile.type,
+          entity_type: 'certification',
+          entity_id: certification.id,
+          field_name: 'documents',
+        }, currentOrganization.id);
+      } catch (registerError) {
+        console.error('Failed to register file in tracking system:', registerError);
+      }
+
+      const newDocument: DocumentDto = {
+        type: values.type,
+        url: publicUrl,
+        uploaded_at: new Date().toISOString(),
+        name: selectedFile.name,
+        size: selectedFile.size,
+        mime_type: selectedFile.type,
+      };
 
       const existingDocuments = certification.documents || [];
 
@@ -181,13 +192,13 @@ export function AddDocumentDialog({ certification }: AddDocumentDialogProps) {
         },
       });
 
-      toast.success('Document ajouté avec succès');
+      toast.success(t('dialogs.addDocument.uploadSuccess'));
       setOpen(false);
       form.reset();
       setSelectedFile(null);
     } catch (error) {
       console.error('Failed to add document:', error);
-      toast.error("Échec de l'ajout du document");
+      toast.error(t('dialogs.addDocument.uploadError'));
     } finally {
       setUploading(false);
     }
@@ -202,37 +213,32 @@ export function AddDocumentDialog({ certification }: AddDocumentDialogProps) {
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>
-        <Button variant="outline" className="w-full">
-          <Plus className="mr-2 h-4 w-4" />
-          Ajouter un document
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5" />
-            Ajouter un document
-          </DialogTitle>
-          <DialogDescription>
-            Téléversez un document ou une preuve pour cette certification.
-          </DialogDescription>
-        </DialogHeader>
-        
+    <>
+      <Button variant="outline" className="w-full" onClick={() => setOpen(true)}>
+        <Plus className="mr-2 h-4 w-4" />
+        {t('dialogs.addDocument.button')}
+      </Button>
+      <ResponsiveDialog
+        open={open}
+        onOpenChange={handleOpenChange}
+        title={t('dialogs.addDocument.title')}
+        description={t('dialogs.addDocument.description')}
+        size="md"
+      >
+
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
           <Controller
             control={form.control}
             name="type"
             render={({ field }) => (
-              <FormField 
-                label="Type de document" 
+              <FormField
+                label={t('dialogs.addDocument.documentType')}
                 error={form.formState.errors.type?.message}
                 required
               >
                 <Select onValueChange={field.onChange} value={field.value}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Sélectionner un type" />
+                    <SelectValue placeholder={t('dialogs.addDocument.selectType')} />
                   </SelectTrigger>
                   <SelectContent>
                     {documentTypes.map((docType) => (
@@ -246,8 +252,8 @@ export function AddDocumentDialog({ certification }: AddDocumentDialogProps) {
             )}
           />
 
-          <FormField 
-            label="Fichier" 
+          <FormField
+            label={t('dialogs.addDocument.file')}
             error={!selectedFile ? undefined : undefined}
             required
           >
@@ -276,13 +282,13 @@ export function AddDocumentDialog({ certification }: AddDocumentDialogProps) {
                     <Upload className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
                   </div>
                   <p className="text-sm font-medium text-gray-900 dark:text-white mb-1">
-                    Glissez un fichier ici ou cliquez pour parcourir
+                    {t('dialogs.addDocument.dragOrClick')}
                   </p>
                   <p className="text-xs text-gray-500 dark:text-gray-400">
-                    PDF, Word, Excel, images (JPEG, PNG, TIFF), texte, CSV
+                    {t('dialogs.addDocument.allowedFormats')}
                   </p>
                   <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                    Taille maximale: 10 MB
+                    {t('dialogs.addDocument.maxSize')}
                   </p>
                 </div>
               </div>
@@ -314,21 +320,21 @@ export function AddDocumentDialog({ certification }: AddDocumentDialogProps) {
 
           <div className="flex justify-end gap-2 pt-4">
             <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>
-              Annuler
+              {t('dialogs.addDocument.cancel')}
             </Button>
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               disabled={uploading || !selectedFile || updateCertification.isPending}
             >
               {(uploading || updateCertification.isPending) && (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               )}
               <Upload className="mr-2 h-4 w-4" />
-              Téléverser
+              {t('dialogs.addDocument.upload')}
             </Button>
           </div>
         </form>
-      </DialogContent>
-    </Dialog>
+      </ResponsiveDialog>
+    </>
   );
 }

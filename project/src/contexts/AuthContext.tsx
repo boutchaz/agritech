@@ -10,9 +10,14 @@ export interface AuthOrganization {
   is_active: boolean;
   onboarding_completed?: boolean;
   currency?: string;
+  currency_code?: string;
+  currency_symbol?: string;
   timezone?: string;
   language?: string;
   map_provider?: 'default' | 'mapbox' | null;
+  accounting_settings?: {
+    allow_negative_stock?: boolean;
+  } | null;
 }
 
 export interface AuthFarm {
@@ -32,6 +37,11 @@ export interface AuthUserProfile {
   phone?: string | null;
   timezone: string | null;
   language: string | null;
+  dark_mode?: boolean | null;
+  experience_level?: string | null;
+  dismissed_hints?: string[] | null;
+  feature_usage?: Record<string, unknown> | null;
+  notification_preferences?: Record<string, boolean> | null;
   password_set?: boolean | null;
   onboarding_completed?: boolean | null;
   created_at?: string | null;

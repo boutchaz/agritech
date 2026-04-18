@@ -20,8 +20,49 @@ from app.services.satellite.interfaces import (
 )
 from app.services.earth_engine import earth_engine_service
 from app.services.satellite.types import parse_geometry
+from app.services.satellite.utils.sentinel2_dates import dedupe_s2_available_dates_by_day
 
 logger = logging.getLogger(__name__)
+
+
+def _gee_ts_item_to_point(item: Dict[str, Any]) -> TimeSeriesPoint:
+    """Build provider TimeSeriesPoint from earth_engine_service.get_time_series dict."""
+    v = item.get("value")
+    if v is None:
+        raise ValueError("time series item missing value")
+    kwargs: Dict[str, Any] = {
+        "date": str(item.get("date", "")),
+        "value": float(v),
+    }
+    for key in (
+        "min_value",
+        "max_value",
+        "std_value",
+        "median_value",
+        "percentile_10",
+        "percentile_25",
+        "percentile_75",
+        "percentile_90",
+    ):
+        raw = item.get(key)
+        if raw is not None:
+            try:
+                kwargs[key] = float(raw)
+            except (TypeError, ValueError):
+                pass
+    pc = item.get("pixel_count")
+    if pc is not None:
+        try:
+            kwargs["pixel_count"] = int(pc)
+        except (TypeError, ValueError):
+            pass
+    cc = item.get("cloud_coverage")
+    if cc is not None:
+        try:
+            kwargs["cloud_coverage"] = float(cc)
+        except (TypeError, ValueError):
+            pass
+    return TimeSeriesPoint(**kwargs)
 
 
 class GEEProvider(ISatelliteProvider):
@@ -125,14 +166,12 @@ class GEEProvider(ISatelliteProvider):
             use_aoi_cloud_filter=False,
         )
 
-        # Convert to TimeSeries model
-        time_series_points = [
-            TimeSeriesPoint(
-                date=item.get("date", ""),
-                value=item.get("value", 0.0),
-            )
-            for item in data
-        ]
+        time_series_points: List[TimeSeriesPoint] = []
+        for item in data:
+            try:
+                time_series_points.append(_gee_ts_item_to_point(item))
+            except (ValueError, TypeError) as e:
+                logger.debug(f"Skipping invalid time series item: {item!r} ({e})")
 
         # Calculate statistics
         values = [p.value for p in time_series_points if p.value is not None]
@@ -367,8 +406,10 @@ class GEEProvider(ISatelliteProvider):
                         'available': True
                     }
 
-        # Sort by date
-        available_dates = sorted(dates_dict.values(), key=lambda x: x['date'])
+        # Sort by date; dedupe if multiple images share a calendar day for this AOI
+        available_dates = dedupe_s2_available_dates_by_day(
+            sorted(dates_dict.values(), key=lambda x: x["date"])
+        )
 
         return {
             "available_dates": available_dates,

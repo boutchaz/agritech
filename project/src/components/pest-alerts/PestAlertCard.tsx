@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { 
@@ -48,7 +48,7 @@ const statusColors: Record<PestReportStatus, string> = {
   dismissed: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
 };
 
-export const PestAlertCard: React.FC<PestAlertCardProps> = ({ report }) => {
+export const PestAlertCard = ({ report }: PestAlertCardProps) => {
   return (
     <Card className="overflow-hidden hover:shadow-md transition-shadow border-l-4" style={{
       borderLeftColor: report.severity === 'critical' ? '#ef4444' : 
@@ -95,8 +95,8 @@ export const PestAlertCard: React.FC<PestAlertCardProps> = ({ report }) => {
 
         {report.photo_urls && report.photo_urls.length > 0 && (
           <div className="flex gap-2 mt-2 overflow-hidden">
-            {report.photo_urls.slice(0, 3).map((url, idx) => (
-              <div key={idx} className="h-12 w-12 rounded-md overflow-hidden bg-gray-100 border">
+            {report.photo_urls.slice(0, 3).map((url) => (
+              <div key={url} className="h-12 w-12 rounded-md overflow-hidden bg-gray-100 border">
                 <img src={url} alt="Preuve" className="h-full w-full object-cover" />
               </div>
             ))}

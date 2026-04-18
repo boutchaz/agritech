@@ -14,6 +14,7 @@ import {
   Plus,
 } from 'lucide-react';
 import { useDataAvailability } from '../../hooks/useAIReports';
+import { Button } from '@/components/ui/button';
 
 interface DataAvailabilityPreviewProps {
   parcelId: string;
@@ -34,7 +35,7 @@ interface DataSourceRowProps {
   onAction?: () => void;
 }
 
-const DataSourceRow: React.FC<DataSourceRowProps> = ({
+const DataSourceRow = ({
   icon,
   label,
   available,
@@ -45,38 +46,40 @@ const DataSourceRow: React.FC<DataSourceRowProps> = ({
   optionalLabel,
   actionLabel,
   onAction,
-}) => {
+}: DataSourceRowProps) => {
   return (
-    <div className="flex items-center justify-between py-2">
-      <div className="flex items-center space-x-3">
-        <div className={`p-1.5 rounded-lg ${available ? 'bg-green-100 dark:bg-green-900/30' : 'bg-gray-100 dark:bg-gray-700'}`}>
+    <div className="flex items-center justify-between gap-3 px-3 py-2.5 sm:px-4">
+      <div className="flex min-w-0 flex-1 items-center gap-3">
+        <div
+          className={`shrink-0 rounded-lg p-1.5 ${available ? 'bg-green-100 dark:bg-green-900/30' : 'bg-gray-100 dark:bg-gray-700'}`}
+        >
           {icon}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
           <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
             {label}
           </span>
           {optional && !available && (
-            <span className="text-xs text-gray-400 dark:text-gray-500 italic">
+            <span className="text-xs text-gray-400 italic dark:text-gray-500">
               ({optionalLabel})
             </span>
           )}
         </div>
       </div>
-      <div className="flex items-center space-x-2">
+      <div className="flex shrink-0 items-center gap-2">
         {detail && (
           <span className="text-xs text-gray-500 dark:text-gray-400">
             {detail}
           </span>
         )}
         {!available && onAction && (
-          <button
+          <Button
             onClick={onAction}
             className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 bg-primary-50 hover:bg-primary-100 dark:bg-primary-900/30 dark:hover:bg-primary-900/50 rounded transition-colors"
           >
             <Plus className="w-3 h-3" />
             {actionLabel}
-          </button>
+          </Button>
         )}
         {available ? (
           <CheckCircle className="w-5 h-5 text-green-500" />
@@ -98,11 +101,11 @@ const formatDate = (dateStr: string | null): string => {
   return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
 };
 
-export const DataAvailabilityPreview: React.FC<DataAvailabilityPreviewProps> = ({
+export const DataAvailabilityPreview = ({
   parcelId,
   startDate,
   endDate,
-}) => {
+}: DataAvailabilityPreviewProps) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { data, isLoading, error } = useDataAvailability(parcelId, startDate, endDate);

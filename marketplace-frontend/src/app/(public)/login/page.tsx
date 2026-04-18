@@ -52,7 +52,7 @@ function LoginForm() {
             <div className="sm:mx-auto sm:w-full sm:max-w-md">
                 <Link href="/" className="flex justify-center items-center space-x-2">
                     <span className="text-4xl">🌱</span>
-                    <span className="text-2xl font-bold text-green-700">AgriTech Market</span>
+                    <span className="text-2xl font-bold text-green-700">AgroGina Market</span>
                 </Link>
                 <h2 className="mt-6 text-center text-3xl font-bold text-gray-900">
                     Connectez-vous à votre compte
@@ -136,7 +136,7 @@ function LoginForm() {
                             </div>
 
                             <div className="text-sm">
-                                <a href="#" className="font-medium text-green-600 hover:text-green-500">
+                                <a href="/forgot-password" className="font-medium text-green-600 hover:text-green-500">
                                     Mot de passe oublié ?
                                 </a>
                             </div>
@@ -159,7 +159,7 @@ function LoginForm() {
                                 <div className="w-full border-t border-gray-300" />
                             </div>
                             <div className="relative flex justify-center text-sm">
-                                <span className="px-2 bg-white text-gray-500">Nouveau sur AgriTech Market ?</span>
+                                <span className="px-2 bg-white text-gray-500">Nouveau sur AgroGina Market ?</span>
                             </div>
                         </div>
 

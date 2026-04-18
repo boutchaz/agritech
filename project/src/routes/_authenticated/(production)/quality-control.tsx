@@ -1,21 +1,22 @@
+import { useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useAuth } from '@/hooks/useAuth';
 import ModernPageHeader from '@/components/ModernPageHeader';
-import { ClipboardCheck, Building2 } from 'lucide-react';
+import { ClipboardCheck, Building2, Plus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { SectionLoader } from '@/components/ui/loader';
+import { Button } from '@/components/ui/button';
+import QualityControlList from '@/components/QualityControl/QualityControlList';
+import QualityControlForm from '@/components/QualityControl/QualityControlForm';
 
 function QualityControlPage() {
-  const { t } = useTranslation();
+  const { t } = useTranslation('common');
   const { currentOrganization } = useAuth();
+  const [formOpen, setFormOpen] = useState(false);
 
   if (!currentOrganization) {
     return (
-      <div className="flex items-center justify-center p-12">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">{t('production.qualityControl.loadingOrganization')}</p>
-        </div>
-      </div>
+      <SectionLoader />
     );
   }
 
@@ -28,38 +29,22 @@ function QualityControlPage() {
         ]}
         title={t('production.qualityControl.title')}
         subtitle={t('production.qualityControl.subtitle')}
+        actions={
+          <Button type="button" variant="default" onClick={() => setFormOpen(true)}>
+            <Plus className="w-4 h-4 mr-2" />
+            {t('production.qualityControl.newInspection', 'New Inspection')}
+          </Button>
+        }
       />
 
-      <div className="p-6">
-        <div className="bg-white dark:bg-gray-800 rounded-lg p-8 text-center">
-          <ClipboardCheck className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-            {t('production.qualityControl.moduleTitle')}
-          </h2>
-          <p className="text-gray-600 dark:text-gray-400 mb-6">
-            {t('production.qualityControl.moduleDescription')}
-          </p>
-          <div className="max-w-2xl mx-auto text-left space-y-4">
-            <div className="border-l-4 border-blue-500 pl-4">
-              <h3 className="font-semibold text-gray-900 dark:text-white mb-1">{t('production.qualityControl.plannedFeaturesTitle')}</h3>
-              <ul className="list-disc list-inside text-gray-600 dark:text-gray-400 space-y-1">
-                <li>{t('production.qualityControl.featureChecklists')}</li>
-                <li>{t('production.qualityControl.featureDefectDetection')}</li>
-                <li>{t('production.qualityControl.featureGrades')}</li>
-                <li>{t('production.qualityControl.featureMetrics')}</li>
-                <li>{t('production.qualityControl.featureNonConformity')}</li>
-                <li>{t('production.qualityControl.featureWorkflow')}</li>
-                <li>{t('production.qualityControl.featureCertificates')}</li>
-              </ul>
-            </div>
-            <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
-              <p className="text-sm text-amber-800 dark:text-amber-200">
-                <strong>{t('production.qualityControl.noteLabel')}:</strong> {t('production.qualityControl.noteMessage')}
-              </p>
-            </div>
-          </div>
-        </div>
+      <div className="p-3 sm:p-4 md:p-6 pb-20 md:pb-6">
+        <QualityControlList />
       </div>
+
+      <QualityControlForm
+        open={formOpen}
+        onClose={() => setFormOpen(false)}
+      />
     </>
   );
 }

@@ -1,0 +1,48 @@
+{
+  "tabs": {
+    "home": "Accueil",
+    "tasks": "Tâches",
+    "harvest": "Récolte",
+    "clock": "Temps",
+    "profile": "Profil"
+  },
+  "domains": {
+    "production": "Production",
+    "workforce": "Main-d'oeuvre",
+    "inventory": "Inventaire",
+    "accounting": "Comptabilité",
+    "settings": "Paramètres",
+    "misc": "Divers",
+    "farms": "Mes Fermes",
+    "harvest": "Récoltes",
+    "tasks": "Tâches",
+    "timeTracking": "Suivi du Temps",
+    "alerts": "Alertes",
+    "team": "Équipe",
+    "approvals": "Approbations",
+    "finance": "Finance",
+    "pestAlerts": "Ravageurs & Maladies"
+  },
+  "drawer": {
+    "farmManagement": "Gestion Agricole",
+    "operations": "Opérations",
+    "peopleWork": "Personnel",
+    "business": "Gestion"
+  },
+  "screens": {
+    "dashboard": "Tableau de bord",
+    "tasks": "Tâches",
+    "harvests": "Récoltes",
+    "workers": "Travailleurs",
+    "parcels": "Parcelles",
+    "farms": "Fermes",
+    "inventory": "Inventaire",
+    "notifications": "Notifications",
+    "profile": "Profil"
+  },
+  "filters": {
+    "all": "Toutes",
+    "active": "Actives",
+    "done": "Terminées"
+  }
+}

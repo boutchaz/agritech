@@ -1,26 +1,10 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from '@/components/ui/dialog';
-import {
-  Drawer,
-  DrawerContent,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerDescription,
-  DrawerFooter,
-} from '@/components/ui/drawer';
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import { Button } from '@/components/ui/button';
-import { useIsMobile } from '@/hooks/useMediaQuery';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/Textarea';
@@ -122,12 +106,13 @@ const getStockEntrySchema = (entryType: StockEntryType) => {
   });
 };
 
-type StockEntryFormData = any; // Will be inferred from dynamic schema
+type StockEntryFormData = z.input<ReturnType<typeof getStockEntrySchema>>;
 
 interface StockEntryFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   defaultType?: StockEntryType;
+  prefilledItemId?: string;
   referenceType?: string;
   referenceId?: string;
   referenceNumber?: string;
@@ -137,13 +122,13 @@ export default function StockEntryForm({
   open,
   onOpenChange,
   defaultType = 'Material Receipt',
+  prefilledItemId,
   referenceType,
   referenceId,
   referenceNumber,
 }: StockEntryFormProps) {
-  const { t } = useTranslation();
+  const { t } = useTranslation('stock');
   const { currentOrganization } = useAuth();
-  const isMobile = useIsMobile();
   const createEntry = useCreateStockEntry();
   const { data: warehouses = [] } = useWarehouses();
   const { data: items = [], isLoading: itemsLoading } = useItemSelection({ 
@@ -151,6 +136,11 @@ export default function StockEntryForm({
   });
   const [variantOptionsByItemId, setVariantOptionsByItemId] = useState<Record<string, ProductVariant[]>>({});
   const [variantLoadingByItemId, setVariantLoadingByItemId] = useState<Record<string, boolean>>({});
+  /** Mirrors variant cache so applySelectedItem does not depend on that state (avoids infinite effect loops). */
+  const variantOptionsByItemIdRef = useRef<Record<string, ProductVariant[]>>({});
+  useEffect(() => {
+    variantOptionsByItemIdRef.current = variantOptionsByItemId;
+  }, [variantOptionsByItemId]);
   const [selectedType, setSelectedType] = useState<StockEntryType>(defaultType);
   const typeStyles = {
     green: {
@@ -199,6 +189,31 @@ export default function StockEntryForm({
 
   const config = STOCK_ENTRY_TYPES[selectedType];
 
+  const applySelectedItem = useCallback(
+    async (index: number, itemId: string) => {
+      const selectedItem = items.find(item => item.id === itemId);
+      if (!selectedItem) return;
+
+      form.setValue(`items.${index}.item_id`, itemId, { shouldValidate: true });
+      form.setValue(`items.${index}.item_name`, selectedItem.item_name, { shouldValidate: true });
+      form.setValue(`items.${index}.unit`, selectedItem.default_unit, { shouldValidate: true });
+      form.setValue(`items.${index}.variant_id`, '', { shouldValidate: false });
+
+      if (!variantOptionsByItemIdRef.current[itemId] && currentOrganization?.id) {
+        setVariantLoadingByItemId((prev) => ({ ...prev, [itemId]: true }));
+        try {
+          const variants = await itemsApi.getVariants(itemId, currentOrganization?.id);
+          setVariantOptionsByItemId((prev) => ({ ...prev, [itemId]: variants }));
+        } catch (error) {
+          console.error('Failed to load variants', error);
+        } finally {
+          setVariantLoadingByItemId((prev) => ({ ...prev, [itemId]: false }));
+        }
+      }
+    },
+    [currentOrganization?.id, form, items],
+  );
+
   useEffect(() => {
     if (open) {
       setSelectedType(defaultType);
@@ -211,7 +226,7 @@ export default function StockEntryForm({
         notes: '',
         items: [
           {
-            item_id: '',
+            item_id: prefilledItemId || '',
             item_name: '',
             variant_id: '',
             quantity: 1,
@@ -222,7 +237,12 @@ export default function StockEntryForm({
         ],
       });
     }
-  }, [open, defaultType, form]);
+  }, [open, defaultType, form, prefilledItemId]);
+
+  useEffect(() => {
+    if (!open || !prefilledItemId || items.length === 0) return;
+    void applySelectedItem(0, prefilledItemId);
+  }, [applySelectedItem, items.length, open, prefilledItemId]);
 
   // Update resolver when type changes and reset warehouse fields
   useEffect(() => {
@@ -326,7 +346,7 @@ export default function StockEntryForm({
   const formContent = (
     <form id="stock-entry-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           {/* Entry Type Selection */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 md:gap-4">
             {Object.values(STOCK_ENTRY_TYPES).map((type) => {
               const Icon =
                 type.icon === 'PackagePlus'
@@ -339,7 +359,7 @@ export default function StockEntryForm({
               const style = typeStyles[type.color as keyof typeof typeStyles];
 
               return (
-                <button
+                <Button
                   key={type.type}
                   type="button"
                   onClick={() => setSelectedType(type.type)}
@@ -352,7 +372,7 @@ export default function StockEntryForm({
                   <Icon className={`w-5 h-5 md:w-6 md:h-6 mb-1 md:mb-2 ${style.icon}`} />
                   <div className="font-medium text-xs md:text-sm">{type.label}</div>
                   <div className="text-xs text-gray-500 mt-1 hidden md:block">{type.description}</div>
-                </button>
+                </Button>
               );
             })}
           </div>
@@ -514,26 +534,8 @@ export default function StockEntryForm({
                       <Label>{t('stockEntries.form.item')} {t('stockEntries.form.required')}</Label>
                       <Select
                         value={form.watch(`items.${index}.item_id`) || ''}
-                        onValueChange={async (itemId) => {
-                          const selectedItem = items.find(item => item.id === itemId);
-                          if (selectedItem) {
-                            form.setValue(`items.${index}.item_id`, itemId, { shouldValidate: true });
-                            form.setValue(`items.${index}.item_name`, selectedItem.item_name, { shouldValidate: true });
-                            form.setValue(`items.${index}.unit`, selectedItem.default_unit, { shouldValidate: true });
-                            form.setValue(`items.${index}.variant_id`, '', { shouldValidate: false });
-
-                            if (!variantOptionsByItemId[itemId] && currentOrganization?.id) {
-                              setVariantLoadingByItemId((prev) => ({ ...prev, [itemId]: true }));
-                              try {
-                                const variants = await itemsApi.getVariants(itemId, currentOrganization?.id);
-                                setVariantOptionsByItemId((prev) => ({ ...prev, [itemId]: variants }));
-                              } catch (error) {
-                                console.error('Failed to load variants', error);
-                              } finally {
-                                setVariantLoadingByItemId((prev) => ({ ...prev, [itemId]: false }));
-                              }
-                            }
-                          }
+                        onValueChange={(itemId) => {
+                          void applySelectedItem(index, itemId);
                         }}
                       >
                         <SelectTrigger className="mt-1">
@@ -595,7 +597,7 @@ export default function StockEntryForm({
                           <Select
                             value={form.watch(`items.${index}.variant_id`) || ''}
                             onValueChange={(variantId) => {
-                              const selectedVariant = variants.find((variant) => variant.id === variantId);
+                              const selectedVariant = variants.find((variant) => variant.id === variantId) as (ProductVariant & { unit?: string | null }) | undefined;
                               form.setValue(`items.${index}.variant_id`, variantId, { shouldValidate: true });
                               if (selectedVariant?.unit) {
                                 form.setValue(`items.${index}.unit`, selectedVariant.unit, { shouldValidate: true });
@@ -738,38 +740,17 @@ export default function StockEntryForm({
         </form>
   );
 
-  // Render Drawer on mobile, Dialog on desktop
-  if (isMobile) {
-    return (
-      <Drawer open={open} onOpenChange={onOpenChange}>
-        <DrawerContent className="max-h-[90vh]">
-          <DrawerHeader>
-            <DrawerTitle>{headerContent}</DrawerTitle>
-            <DrawerDescription>{config.description}</DrawerDescription>
-          </DrawerHeader>
-          <div className="px-4 pb-4 overflow-y-auto max-h-[calc(90vh-12rem)]">
-            {formContent}
-          </div>
-          <DrawerFooter className="flex-row justify-end gap-2">
-            {footerContent}
-          </DrawerFooter>
-        </DrawerContent>
-      </Drawer>
-    );
-  }
-
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{headerContent}</DialogTitle>
-          <DialogDescription>{config.description}</DialogDescription>
-        </DialogHeader>
-        {formContent}
-        <DialogFooter className="pt-4 border-t">
-          {footerContent}
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <ResponsiveDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={headerContent}
+      description={config.description}
+      size="2xl"
+      contentClassName="max-h-[90vh] overflow-y-auto"
+      footer={<div className="flex w-full flex-row justify-end gap-2 border-t pt-4">{footerContent}</div>}
+    >
+      {formContent}
+    </ResponsiveDialog>
   );
 }

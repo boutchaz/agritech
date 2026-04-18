@@ -1,8 +1,10 @@
 import { Injectable, BadRequestException, NotFoundException, Logger } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
+import { sanitizeSearch } from '../../common/utils/sanitize-search';
 import { CreateItemDto } from './dto/create-item.dto';
 import { UpdateItemDto } from './dto/update-item.dto';
 import { CreateItemGroupDto, UpdateItemGroupDto } from './dto/create-item-group.dto';
+import { paginatedResponse, type PaginatedResponse } from '../../common/dto/paginated-query.dto';
 
 @Injectable()
 export class ItemsService {
@@ -14,31 +16,31 @@ export class ItemsService {
   // ITEM GROUPS
   // =====================================================
 
-  async findAllItemGroups(organizationId: string, filters?: any): Promise<any> {
+  async findAllItemGroups(organizationId: string, filters?: any): Promise<PaginatedResponse<any>> {
     const supabase = this.databaseService.getAdminClient();
+    const page = filters?.page || 1;
+    const pageSize = filters?.pageSize || 100;
 
-    let query = supabase
-      .from('item_groups')
-      .select('*')
-      .eq('organization_id', organizationId)
-      .order('sort_order', { ascending: true })
-      .order('name', { ascending: true });
-
-    if (filters?.parent_group_id !== undefined) {
-      if (filters.parent_group_id === null) {
-        query = query.is('parent_group_id', null);
-      } else {
-        query = query.eq('parent_group_id', filters.parent_group_id);
+    const applyFilters = (q: any) => {
+      q = q.eq('organization_id', organizationId);
+      q = q.is('deleted_at', null);
+      if (filters?.parent_group_id !== undefined) {
+        q = filters.parent_group_id === null
+          ? q.is('parent_group_id', null)
+          : q.eq('parent_group_id', filters.parent_group_id);
       }
-    }
+      if (filters?.is_active !== undefined) q = q.eq('is_active', filters.is_active);
+      if (filters?.search) { const s = sanitizeSearch(filters.search); if (s) q = q.or(`name.ilike.%${s}%,code.ilike.%${s}%,description.ilike.%${s}%`); }
+      return q;
+    };
 
-    if (filters?.is_active !== undefined) {
-      query = query.eq('is_active', filters.is_active);
-    }
+    const { count } = await applyFilters(
+      supabase.from('item_groups').select('id', { count: 'exact', head: true })
+    );
 
-    if (filters?.search) {
-      query = query.or(`name.ilike.%${filters.search}%,code.ilike.%${filters.search}%,description.ilike.%${filters.search}%`);
-    }
+    const from = (page - 1) * pageSize;
+    let query = applyFilters(supabase.from('item_groups').select('*'));
+    query = query.order('sort_order', { ascending: true }).order('name', { ascending: true }).range(from, from + pageSize - 1);
 
     const { data, error } = await query;
 
@@ -47,7 +49,7 @@ export class ItemsService {
       throw new BadRequestException(`Failed to fetch item groups: ${error.message}`);
     }
 
-    return data;
+    return paginatedResponse(data || [], count || 0, page, pageSize);
   }
 
   async findOneItemGroup(id: string, organizationId: string): Promise<any> {
@@ -58,6 +60,7 @@ export class ItemsService {
       .select('*')
       .eq('id', id)
       .eq('organization_id', organizationId)
+      .is('deleted_at', null)
       .maybeSingle();
 
     if (error) {
@@ -103,6 +106,7 @@ export class ItemsService {
       })
       .eq('id', id)
       .eq('organization_id', organizationId)
+      .is('deleted_at', null)
       .select()
       .single();
 
@@ -117,89 +121,332 @@ export class ItemsService {
   async deleteItemGroup(id: string, organizationId: string): Promise<any> {
     const supabase = this.databaseService.getAdminClient();
 
-    // Check if group has items
-    const { data: items } = await supabase
+    // Check if group (or any descendant) has items attached
+    const allIds = await this.collectGroupIds(supabase, id, organizationId);
+    const { data: linkedItems } = await supabase
       .from('items')
       .select('id')
-      .eq('item_group_id', id)
+      .in('item_group_id', allIds)
+      .is('deleted_at', null)
       .limit(1);
 
-    if (items && items.length > 0) {
+    if (linkedItems && linkedItems.length > 0) {
       throw new BadRequestException('Cannot delete item group with items. Please move or delete items first.');
     }
 
-    // Check if group has children
+    await this.deleteGroupCascade(supabase, id, organizationId);
+
+    return { message: 'Item group deleted successfully' };
+  }
+
+  private async collectGroupIds(supabase: any, parentId: string, organizationId: string): Promise<string[]> {
+    const ids: string[] = [parentId];
+    const { data: children } = await supabase
+      .from('item_groups')
+      .select('id')
+      .eq('parent_group_id', parentId)
+      .eq('organization_id', organizationId)
+      .is('deleted_at', null);
+
+    for (const child of children || []) {
+      const childIds = await this.collectGroupIds(supabase, child.id, organizationId);
+      ids.push(...childIds);
+    }
+    return ids;
+  }
+
+  private async deleteGroupCascade(supabase: any, id: string, organizationId: string): Promise<void> {
     const { data: children } = await supabase
       .from('item_groups')
       .select('id')
       .eq('parent_group_id', id)
-      .limit(1);
+      .eq('organization_id', organizationId)
+      .is('deleted_at', null);
 
-    if (children && children.length > 0) {
-      throw new BadRequestException('Cannot delete item group with child groups. Please move or delete child groups first.');
+    for (const child of children || []) {
+      await this.deleteGroupCascade(supabase, child.id, organizationId);
     }
 
     const { error } = await supabase
       .from('item_groups')
-      .delete()
+      .update({ deleted_at: new Date().toISOString(), is_active: false })
       .eq('id', id)
-      .eq('organization_id', organizationId);
+      .eq('organization_id', organizationId)
+      .is('deleted_at', null);
 
     if (error) {
-      this.logger.error(`Failed to delete item group: ${error.message}`);
+      this.logger.error(`Failed to delete item group ${id}: ${error.message}`);
       throw new BadRequestException(`Failed to delete item group: ${error.message}`);
     }
+  }
 
-    return { message: 'Item group deleted successfully' };
+  async seedPredefinedItemGroups(organizationId: string, userId: string): Promise<{ created: number; skipped: number }> {
+    const supabase = this.databaseService.getAdminClient();
+
+    type PredefinedSub = { name: string; code: string; description: string };
+    type PredefinedGroup = { name: string; code: string; description: string; subcategories: PredefinedSub[] };
+
+    const PREDEFINED_GROUPS: PredefinedGroup[] = [
+      {
+        name: 'Intrants agricoles',
+        code: 'INTRANTS',
+        description: 'Engrais, amendements et biostimulants pour la fertilisation des cultures',
+        subcategories: [
+          { name: 'Engrais solides', code: 'INTRANTS-ENGR-SOL', description: 'Engrais granulés, poudres et cristallins' },
+          { name: 'Engrais liquides', code: 'INTRANTS-ENGR-LIQ', description: 'Solutions fertilisantes et engrais foliaires' },
+          { name: 'Amendements organiques', code: 'INTRANTS-AMEND-ORG', description: 'Compost, fumier, tourbe et matières organiques' },
+          { name: 'Amendements minéraux', code: 'INTRANTS-AMEND-MIN', description: 'Chaux, gypse et correcteurs de pH' },
+          { name: 'Biostimulants', code: 'INTRANTS-BIOSTIM', description: 'Extraits d\'algues, acides aminés et micro-organismes bénéfiques' },
+          { name: 'Correcteurs de carences', code: 'INTRANTS-CARENCES', description: 'Oligo-éléments et micronutriments (fer, zinc, bore…)' },
+          { name: 'Acides humiques / fulviques', code: 'INTRANTS-HUMIQUE', description: 'Amendements à base d\'acides humiques et fulviques' },
+        ],
+      },
+      {
+        name: 'Produits phytosanitaires',
+        code: 'PHYTO',
+        description: 'Produits de protection des plantes contre les ravageurs et maladies',
+        subcategories: [
+          { name: 'Insecticides', code: 'PHYTO-INSECT', description: 'Lutte contre les insectes ravageurs' },
+          { name: 'Fongicides', code: 'PHYTO-FONGI', description: 'Traitement et prévention des maladies fongiques' },
+          { name: 'Herbicides', code: 'PHYTO-HERBI', description: 'Désherbage chimique sélectif et total' },
+          { name: 'Acaricides', code: 'PHYTO-ACARI', description: 'Traitement contre les acariens et tétranyques' },
+          { name: 'Nématicides', code: 'PHYTO-NEMAT', description: 'Lutte contre les nématodes parasites des racines' },
+          { name: 'Produits biologiques (biocontrôle)', code: 'PHYTO-BIO', description: 'Solutions naturelles à base d\'organismes vivants ou extraits végétaux' },
+          { name: 'Adjuvants / mouillants', code: 'PHYTO-ADJUV', description: 'Agents améliorant l\'efficacité des traitements phytosanitaires' },
+        ],
+      },
+      {
+        name: 'Irrigation',
+        code: 'IRR',
+        description: 'Matériel et équipements pour les systèmes d\'irrigation agricole',
+        subcategories: [
+          { name: 'Tuyaux et gaines', code: 'IRR-TUYAUX', description: 'Conduites principales, rampes et micro-tubes' },
+          { name: 'Goutteurs', code: 'IRR-GOUTTEURS', description: 'Goutteurs intégrés, en ligne et boutons pousseurs' },
+          { name: 'Vannes', code: 'IRR-VANNES', description: 'Vannes manuelles, électrovannes et vannes de secteur' },
+          { name: 'Filtres', code: 'IRR-FILTRES', description: 'Filtres à tamis, à disques et à sable' },
+          { name: 'Pompes', code: 'IRR-POMPES', description: 'Pompes de surface, immergées et surpresseurs' },
+          { name: 'Programmateurs', code: 'IRR-PROGRAM', description: 'Contrôleurs d\'irrigation, minuteries et automatismes' },
+          { name: 'Accessoires irrigation', code: 'IRR-ACCESS', description: 'Raccords, bouchons, piquets et supports divers' },
+        ],
+      },
+      {
+        name: 'Matériel agricole',
+        code: 'MATER',
+        description: 'Outils, engins et équipements pour le travail agricole',
+        subcategories: [
+          { name: 'Outils manuels', code: 'MATER-MANUELS', description: 'Pioches, houes, sécateurs, scies et outillage à main' },
+          { name: 'Matériel motorisé', code: 'MATER-MOTEUR', description: 'Motoculteurs, tondeuses et équipements à moteur' },
+          { name: 'Pulvérisateurs', code: 'MATER-PULV', description: 'Pulvérisateurs à dos, sur roues et tractés' },
+          { name: 'Équipements de fertilisation', code: 'MATER-FERTIL', description: 'Épandeurs, injecteurs et matériel de fertigation' },
+          { name: 'Pièces de rechange', code: 'MATER-PIECES', description: 'Pièces détachées et consommables pour engins agricoles' },
+        ],
+      },
+      {
+        name: 'Plantation & pépinière',
+        code: 'PLANT',
+        description: 'Matériel végétal et fournitures pour la plantation et la pépinière',
+        subcategories: [
+          { name: 'Plants / arbres', code: 'PLANT-PLANTS', description: 'Jeunes plants, greffons et arbres fruitiers' },
+          { name: 'Porte-greffes', code: 'PLANT-PORTEGREFFES', description: 'Sujets porte-greffes pour arbres fruitiers' },
+          { name: 'Tuteurs', code: 'PLANT-TUTEURS', description: 'Piquets, tuteurs bambou et supports de formation' },
+          { name: 'Protections plants', code: 'PLANT-PROTECT', description: 'Gaines, manchons et protège-plants' },
+          { name: 'Substrats', code: 'PLANT-SUBSTRATS', description: 'Terreau, perlite, vermiculite et mélanges horticoles' },
+        ],
+      },
+      {
+        name: 'Récolte',
+        code: 'RECOLTE',
+        description: 'Équipements et contenants pour la récolte et la manutention des produits',
+        subcategories: [
+          { name: 'Filets de récolte', code: 'RECOLTE-FILETS', description: 'Filets de sol pour olives, amandes et autres fruits' },
+          { name: 'Caisses / palox', code: 'RECOLTE-CAISSES', description: 'Caisses plastiques et palox bois pour le transport' },
+          { name: 'Peignes électriques', code: 'RECOLTE-PEIGNES', description: 'Vibreurs et peignes électriques pour la cueillette' },
+          { name: 'Bâches', code: 'RECOLTE-BACHES', description: 'Bâches de protection et de collecte au sol' },
+          { name: 'Sacs', code: 'RECOLTE-SACS', description: 'Sacs de récolte, sacs big-bag et contenants vrac' },
+        ],
+      },
+      {
+        name: 'Conditionnement & stockage',
+        code: 'COND',
+        description: 'Emballages et produits pour le conditionnement et la conservation',
+        subcategories: [
+          { name: 'Emballages', code: 'COND-EMBALL', description: 'Boîtes, plateaux, cagettes et films d\'emballage' },
+          { name: 'Bidons / cuves', code: 'COND-BIDONS', description: 'Bidons de stockage, jerricans et cuves IBC' },
+          { name: 'Étiquettes', code: 'COND-ETIQ', description: 'Étiquettes produits, autocollants et codes-barres' },
+          { name: 'Produits de conservation', code: 'COND-CONSERV', description: 'Cires, antifongiques de post-récolte et traitements conservation' },
+        ],
+      },
+      {
+        name: 'Carburants & énergie',
+        code: 'CARBU',
+        description: 'Carburants, lubrifiants et sources d\'énergie pour les équipements agricoles',
+        subcategories: [
+          { name: 'Gasoil', code: 'CARBU-GASOIL', description: 'Gazole et diesel pour tracteurs et engins agricoles' },
+          { name: 'Essence', code: 'CARBU-ESSENCE', description: 'Essence sans plomb pour petits moteurs' },
+          { name: 'Lubrifiants', code: 'CARBU-LUBRI', description: 'Huiles moteur, graisses et fluides hydrauliques' },
+          { name: 'Batteries', code: 'CARBU-BATT', description: 'Batteries pour véhicules, engins et équipements électriques' },
+        ],
+      },
+      {
+        name: 'Entretien & maintenance',
+        code: 'MAINT',
+        description: 'Produits et fournitures pour l\'entretien du matériel et des infrastructures',
+        subcategories: [
+          { name: 'Produits de nettoyage', code: 'MAINT-NETTOY', description: 'Désinfectants, détergents et produits d\'hygiène' },
+          { name: "Pièces d'usure", code: 'MAINT-USURE', description: 'Courroies, filtres, joints et pièces d\'usure courante' },
+          { name: 'Consommables atelier', code: 'MAINT-ATEL', description: 'Visserie, boulonnerie, fils et consommables divers' },
+        ],
+      },
+      {
+        name: 'Équipements de protection (EPI)',
+        code: 'EPI',
+        description: 'Équipements de protection individuelle pour les travailleurs agricoles',
+        subcategories: [
+          { name: 'Gants', code: 'EPI-GANTS', description: 'Gants de travail, anti-coupures et protection chimique' },
+          { name: 'Masques', code: 'EPI-MASQUES', description: 'Masques FFP, demi-masques et respirateurs' },
+          { name: 'Lunettes', code: 'EPI-LUNETTES', description: 'Lunettes de protection et écrans faciaux' },
+          { name: 'Combinaisons', code: 'EPI-COMBI', description: 'Combinaisons de protection chimique et vêtements de travail' },
+          { name: 'Bottes', code: 'EPI-BOTTES', description: 'Bottes de sécurité et chaussures de protection' },
+        ],
+      },
+      {
+        name: 'Divers / consommables',
+        code: 'DIVERS',
+        description: 'Articles non classés et fournitures diverses d\'usage général',
+        subcategories: [
+          { name: 'Fournitures diverses', code: 'DIVERS-FOURN', description: 'Articles de bureau, papeterie et fournitures générales' },
+          { name: 'Petits équipements', code: 'DIVERS-EQUIP', description: 'Petits appareils et équipements non catégorisés' },
+          { name: 'Articles non classés', code: 'DIVERS-NC', description: 'Articles en attente de classification' },
+        ],
+      },
+    ];
+
+    let created = 0;
+    let skipped = 0;
+
+    for (const group of PREDEFINED_GROUPS) {
+      // Check if parent group already exists
+      const { data: existing } = await supabase
+        .from('item_groups')
+        .select('id, code')
+        .eq('organization_id', organizationId)
+        .eq('name', group.name)
+        .is('parent_group_id', null)
+        .is('deleted_at', null)
+        .maybeSingle();
+
+      let parentId: string;
+
+      if (existing) {
+        parentId = existing.id;
+        // Patch code/description if missing
+        if (!existing.code) {
+          await supabase
+              .from('item_groups')
+              .update({ code: group.code, description: group.description, updated_by: userId })
+              .eq('id', parentId)
+              .is('deleted_at', null);
+        }
+        skipped++;
+      } else {
+        const { data: created_group, error } = await supabase
+          .from('item_groups')
+          .insert({
+            organization_id: organizationId,
+            name: group.name,
+            code: group.code,
+            description: group.description,
+            is_active: true,
+            created_by: userId,
+            updated_by: userId,
+          })
+          .select('id')
+          .single();
+
+        if (error) {
+          this.logger.error(`Failed to create group "${group.name}": ${error.message}`);
+          continue;
+        }
+
+        parentId = created_group.id;
+        created++;
+      }
+
+      // Create or update subcategories
+      for (const sub of group.subcategories) {
+        const { data: existingSub } = await supabase
+          .from('item_groups')
+          .select('id, code')
+          .eq('organization_id', organizationId)
+          .eq('name', sub.name)
+          .eq('parent_group_id', parentId)
+          .is('deleted_at', null)
+          .maybeSingle();
+
+        if (existingSub) {
+          // Patch code/description if missing
+          if (!existingSub.code) {
+            await supabase
+              .from('item_groups')
+              .update({ code: sub.code, description: sub.description, updated_by: userId })
+              .eq('id', existingSub.id)
+              .is('deleted_at', null);
+          }
+          skipped++;
+        } else {
+          const { error: subError } = await supabase.from('item_groups').insert({
+            organization_id: organizationId,
+            name: sub.name,
+            code: sub.code,
+            description: sub.description,
+            parent_group_id: parentId,
+            is_active: true,
+            created_by: userId,
+            updated_by: userId,
+          });
+
+          if (subError) {
+            this.logger.error(`Failed to create subcategory "${sub.name}": ${subError.message}`);
+          } else {
+            created++;
+          }
+        }
+      }
+    }
+
+    return { created, skipped };
   }
 
   // =====================================================
   // ITEMS
   // =====================================================
 
-  async findAllItems(organizationId: string, filters?: any): Promise<any> {
+  async findAllItems(organizationId: string, filters?: any): Promise<PaginatedResponse<any>> {
     const supabase = this.databaseService.getAdminClient();
+    const page = filters?.page || 1;
+    const pageSize = filters?.pageSize || 100;
 
-    let query = supabase
-      .from('items')
-      .select(`
-        *,
-        item_group:item_groups(id, name, code, path)
-      `)
-      .eq('organization_id', organizationId)
-      .order('item_code', { ascending: true });
+    const applyFilters = (q: any) => {
+      q = q.eq('organization_id', organizationId);
+      q = q.is('deleted_at', null);
+      if (filters?.item_group_id) q = q.eq('item_group_id', filters.item_group_id);
+      if (filters?.is_active !== undefined) q = q.eq('is_active', filters.is_active);
+      if (filters?.is_sales_item !== undefined) q = q.eq('is_sales_item', filters.is_sales_item);
+      if (filters?.is_purchase_item !== undefined) q = q.eq('is_purchase_item', filters.is_purchase_item);
+      if (filters?.is_stock_item !== undefined) q = q.eq('is_stock_item', filters.is_stock_item);
+      if (filters?.crop_type) q = q.eq('crop_type', filters.crop_type);
+      if (filters?.variety) q = q.eq('variety', filters.variety);
+      if (filters?.search) { const s = sanitizeSearch(filters.search); if (s) q = q.or(`item_code.ilike.%${s}%,item_name.ilike.%${s}%,barcode.ilike.%${s}%`); }
+      return q;
+    };
 
-    if (filters?.item_group_id) {
-      query = query.eq('item_group_id', filters.item_group_id);
-    }
+    const { count } = await applyFilters(
+      supabase.from('items').select('id', { count: 'exact', head: true })
+    );
 
-    if (filters?.is_active !== undefined) {
-      query = query.eq('is_active', filters.is_active);
-    }
-
-    if (filters?.is_sales_item !== undefined) {
-      query = query.eq('is_sales_item', filters.is_sales_item);
-    }
-
-    if (filters?.is_purchase_item !== undefined) {
-      query = query.eq('is_purchase_item', filters.is_purchase_item);
-    }
-
-    if (filters?.is_stock_item !== undefined) {
-      query = query.eq('is_stock_item', filters.is_stock_item);
-    }
-
-    if (filters?.crop_type) {
-      query = query.eq('crop_type', filters.crop_type);
-    }
-
-    if (filters?.variety) {
-      query = query.eq('variety', filters.variety);
-    }
-
-    if (filters?.search) {
-      query = query.or(`item_code.ilike.%${filters.search}%,item_name.ilike.%${filters.search}%,barcode.ilike.%${filters.search}%`);
-    }
+    const from = (page - 1) * pageSize;
+    let query = applyFilters(supabase.from('items').select(`*, item_group:item_groups(id, name, code, path)`));
+    query = query.order('item_code', { ascending: true }).range(from, from + pageSize - 1);
 
     const { data, error } = await query;
 
@@ -208,7 +455,47 @@ export class ItemsService {
       throw new BadRequestException(`Failed to fetch items: ${error.message}`);
     }
 
-    return data;
+    return paginatedResponse(data || [], count || 0, page, pageSize);
+  }
+
+  async findByBarcode(barcode: string, organizationId: string): Promise<any> {
+    const supabase = this.databaseService.getAdminClient();
+
+    const { data: variant, error: variantError } = await supabase
+      .from('product_variants')
+      .select('*, item:items(*)')
+      .eq('barcode', barcode)
+      .eq('organization_id', organizationId)
+      .is('deleted_at', null)
+      .maybeSingle();
+
+    if (variantError) {
+      this.logger.error(`Failed to fetch barcode variant: ${variantError.message}`);
+      throw new BadRequestException(`Failed to fetch barcode variant: ${variantError.message}`);
+    }
+
+    if (variant) {
+      return { type: 'variant', variant, item: variant.item };
+    }
+
+    const { data: item, error: itemError } = await supabase
+      .from('items')
+      .select('*, variants:product_variants(*)')
+      .eq('barcode', barcode)
+      .eq('organization_id', organizationId)
+      .is('deleted_at', null)
+      .maybeSingle();
+
+    if (itemError) {
+      this.logger.error(`Failed to fetch barcode item: ${itemError.message}`);
+      throw new BadRequestException(`Failed to fetch barcode item: ${itemError.message}`);
+    }
+
+    if (item) {
+      return { type: 'item', item };
+    }
+
+    throw new NotFoundException(`No item found with barcode: ${barcode}`);
   }
 
   // =====================================================
@@ -223,6 +510,7 @@ export class ItemsService {
       .select('*')
       .eq('organization_id', organizationId)
       .eq('item_id', itemId)
+      .is('deleted_at', null)
       .order('variant_name', { ascending: true });
 
     if (error) {
@@ -258,10 +546,14 @@ export class ItemsService {
       .update(dto)
       .eq('id', id)
       .eq('organization_id', organizationId)
+      .is('deleted_at', null)
       .select()
       .single();
 
     if (error) {
+      if (error.code === 'PGRST116' || error.message?.includes('0 rows')) {
+        throw new NotFoundException('Product variant not found');
+      }
       this.logger.error(`Failed to update product variant: ${error.message}`);
       throw new BadRequestException(`Failed to update product variant: ${error.message}`);
     }
@@ -278,9 +570,10 @@ export class ItemsService {
 
     const { error } = await supabase
       .from('product_variants')
-      .delete()
+      .update({ deleted_at: new Date().toISOString(), is_active: false })
       .eq('id', id)
-      .eq('organization_id', organizationId);
+      .eq('organization_id', organizationId)
+      .is('deleted_at', null);
 
     if (error) {
       this.logger.error(`Failed to delete product variant: ${error.message}`);
@@ -301,6 +594,7 @@ export class ItemsService {
       `)
       .eq('id', id)
       .eq('organization_id', organizationId)
+      .is('deleted_at', null)
       .single();
 
     if (error) {
@@ -324,6 +618,7 @@ export class ItemsService {
         .from('items')
         .select('item_code')
         .eq('organization_id', organizationId)
+        .is('deleted_at', null)
         .like('item_code', `%-${year}-%`);
 
       if (itemGroupId) {
@@ -355,13 +650,17 @@ export class ItemsService {
       const nextSeq = maxSeq + 1;
       return `${prefix}-${year}-${nextSeq.toString().padStart(5, '0')}`;
     } catch (error) {
-      this.logger.error(`Item code generation error: ${error.message}`);
+      const err = error as Error;
+      this.logger.error(`Item code generation error: ${err.message}`);
       throw error;
     }
   }
 
   async createItem(dto: CreateItemDto): Promise<any> {
     const supabase = this.databaseService.getAdminClient();
+
+    const dtoExt = dto as CreateItemDto & { is_inventory_item?: boolean };
+    const { is_inventory_item, ...dtoForInsert } = dtoExt;
 
     // Generate item code if not provided
     let itemCode = dto.item_code;
@@ -375,15 +674,16 @@ export class ItemsService {
 
     // Prepare item data with explicit defaults for boolean fields
     const itemData = {
-      ...dto,
+      ...dtoForInsert,
       item_code: itemCode,
       stock_uom: dto.stock_uom || dto.default_unit,
       updated_by: dto.created_by,
-      // Ensure boolean fields have proper defaults
       is_active: dto.is_active ?? true,
       is_sales_item: dto.is_sales_item ?? false,
       is_purchase_item: dto.is_purchase_item ?? false,
-      is_stock_item: dto.is_stock_item ?? true,
+      is_stock_item:
+        dto.is_stock_item ??
+        (is_inventory_item !== undefined ? is_inventory_item : true),
     };
 
     this.logger.debug(`Creating item with data: ${JSON.stringify(itemData)}`);
@@ -415,6 +715,7 @@ export class ItemsService {
       })
       .eq('id', id)
       .eq('organization_id', organizationId)
+      .is('deleted_at', null)
       .select()
       .single();
 
@@ -428,6 +729,8 @@ export class ItemsService {
 
   async deleteItem(id: string, organizationId: string): Promise<any> {
     const supabase = this.databaseService.getAdminClient();
+    const deletedAt = new Date().toISOString();
+    const warnings: string[] = [];
 
     // Check if item is used in stock entries
     const { data: stockEntries } = await supabase
@@ -437,7 +740,7 @@ export class ItemsService {
       .limit(1);
 
     if (stockEntries && stockEntries.length > 0) {
-      throw new BadRequestException('Cannot delete item used in stock transactions. Please deactivate it instead.');
+      warnings.push('Item is used in stock transactions');
     }
 
     // Check if item is used in invoices
@@ -448,21 +751,105 @@ export class ItemsService {
       .limit(1);
 
     if (invoices && invoices.length > 0) {
-      throw new BadRequestException('Cannot delete item used in invoices. Please deactivate it instead.');
+      warnings.push('Item is used in invoices');
     }
 
     const { error } = await supabase
       .from('items')
-      .delete()
+      .update({ deleted_at: deletedAt, is_active: false })
       .eq('id', id)
-      .eq('organization_id', organizationId);
+      .eq('organization_id', organizationId)
+      .is('deleted_at', null);
 
     if (error) {
       this.logger.error(`Failed to delete item: ${error.message}`);
       throw new BadRequestException(`Failed to delete item: ${error.message}`);
     }
 
-    return { message: 'Item deleted successfully' };
+    const { error: variantsError } = await supabase
+      .from('product_variants')
+      .update({ deleted_at: deletedAt, is_active: false })
+      .eq('item_id', id)
+      .eq('organization_id', organizationId)
+      .is('deleted_at', null);
+
+    if (variantsError) {
+      this.logger.error(`Failed to delete item variants: ${variantsError.message}`);
+      throw new BadRequestException(`Failed to delete item variants: ${variantsError.message}`);
+    }
+
+    return {
+      message: warnings.length > 0
+        ? `Item deleted successfully with warnings: ${warnings.join('; ')}`
+        : 'Item deleted successfully',
+      warnings,
+    };
+  }
+
+  async restoreItem(id: string, organizationId: string): Promise<any> {
+    const supabase = this.databaseService.getAdminClient();
+
+    const { data, error } = await supabase
+      .from('items')
+      .update({ deleted_at: null, is_active: true })
+      .eq('id', id)
+      .eq('organization_id', organizationId)
+      .select()
+      .single();
+
+    if (error) {
+      throw new BadRequestException(`Failed to restore item: ${error.message}`);
+    }
+
+    const { error: variantsError } = await supabase
+      .from('product_variants')
+      .update({ deleted_at: null, is_active: true })
+      .eq('item_id', id)
+      .eq('organization_id', organizationId)
+      .not('deleted_at', 'is', null);
+
+    if (variantsError) {
+      throw new BadRequestException(`Failed to restore item variants: ${variantsError.message}`);
+    }
+
+    return data;
+  }
+
+  async findDeletedItems(organizationId: string, filters?: any): Promise<PaginatedResponse<any>> {
+    const supabase = this.databaseService.getAdminClient();
+    const page = Number(filters?.page) || 1;
+    const pageSize = Number(filters?.pageSize) || 100;
+
+    const applyFilters = (q: any) => {
+      q = q.eq('organization_id', organizationId);
+      q = q.not('deleted_at', 'is', null);
+      if (filters?.item_group_id) q = q.eq('item_group_id', filters.item_group_id);
+      if (filters?.is_active !== undefined) q = q.eq('is_active', filters.is_active);
+      if (filters?.is_sales_item !== undefined) q = q.eq('is_sales_item', filters.is_sales_item);
+      if (filters?.is_purchase_item !== undefined) q = q.eq('is_purchase_item', filters.is_purchase_item);
+      if (filters?.is_stock_item !== undefined) q = q.eq('is_stock_item', filters.is_stock_item);
+      if (filters?.crop_type) q = q.eq('crop_type', filters.crop_type);
+      if (filters?.variety) q = q.eq('variety', filters.variety);
+      if (filters?.search) { const s = sanitizeSearch(filters.search); if (s) q = q.or(`item_code.ilike.%${s}%,item_name.ilike.%${s}%,barcode.ilike.%${s}%`); }
+      return q;
+    };
+
+    const { count } = await applyFilters(
+      supabase.from('items').select('id', { count: 'exact', head: true })
+    );
+
+    const from = (page - 1) * pageSize;
+    let query = applyFilters(supabase.from('items').select(`*, item_group:item_groups(id, name, code, path)`));
+    query = query.order('deleted_at', { ascending: false }).order('item_code', { ascending: true }).range(from, from + pageSize - 1);
+
+    const { data, error } = await query;
+
+    if (error) {
+      this.logger.error(`Failed to fetch deleted items: ${error.message}`);
+      throw new BadRequestException(`Failed to fetch deleted items: ${error.message}`);
+    }
+
+    return paginatedResponse(data || [], count || 0, page, pageSize);
   }
 
   // =====================================================
@@ -483,6 +870,7 @@ export class ItemsService {
         item_group:item_groups(id, name)
       `)
       .eq('organization_id', organizationId)
+      .is('deleted_at', null)
       .eq('is_active', true)
       .order('item_name', { ascending: true });
 
@@ -499,7 +887,8 @@ export class ItemsService {
     }
 
     if (filters?.search) {
-      query = query.or(`item_code.ilike.%${filters.search}%,item_name.ilike.%${filters.search}%`);
+      const s = sanitizeSearch(filters.search);
+      if (s) query = query.or(`item_code.ilike.%${s}%,item_name.ilike.%${s}%`);
     }
 
     const { data, error } = await query;
@@ -537,6 +926,7 @@ export class ItemsService {
         .select('id')
         .eq('organization_id', organizationId)
         .eq('farm_id', filters.farm_id)
+        .is('deleted_at', null)
         .eq('is_active', true);
 
       if (whError) {
@@ -550,7 +940,7 @@ export class ItemsService {
       }
     }
 
-    let query = supabase
+    let stockQuery = supabase
       .from('stock_valuation')
       .select(`
         item_id,
@@ -572,17 +962,19 @@ export class ItemsService {
         )
       `)
       .eq('organization_id', organizationId)
+      .is('warehouse.deleted_at', null)
+      .is('item.deleted_at', null)
       .gt('remaining_quantity', 0);
 
     if (warehouseIds) {
-      query = query.in('warehouse_id', warehouseIds);
+      stockQuery = stockQuery.in('warehouse_id', warehouseIds);
     }
 
     if (filters?.item_id) {
-      query = query.eq('item_id', filters.item_id);
+      stockQuery = stockQuery.eq('item_id', filters.item_id);
     }
 
-    const { data, error } = await query;
+    const { data, error } = await stockQuery;
 
     if (error) {
       this.logger.error(`Failed to fetch farm stock levels: ${error.message}`);
@@ -645,6 +1037,47 @@ export class ItemsService {
       }
     });
 
+    // Also fetch items with a minimum_stock_level that have no stock movements at all
+    // (they won't appear in stock_valuation, so they'd be silently missing from alerts)
+    let itemsQuery = supabase
+      .from('items')
+      .select('id, item_code, item_name, default_unit, minimum_stock_level')
+      .eq('organization_id', organizationId)
+      .is('deleted_at', null)
+      .eq('is_active', true)
+      .not('minimum_stock_level', 'is', null);
+
+    if (filters?.item_id) {
+      itemsQuery = itemsQuery.eq('id', filters.item_id);
+    }
+
+    const { data: itemsWithThreshold, error: itemsError } = await itemsQuery;
+
+    if (itemsError) {
+      this.logger.error(`Failed to fetch items with thresholds: ${itemsError.message}`);
+      // Non-fatal: continue with existing stock data
+    } else {
+      // Add zero-stock entries for items not already in the map
+      (itemsWithThreshold || []).forEach((item: any) => {
+        if (!itemMap.has(item.id)) {
+          const minStock = item.minimum_stock_level
+            ? parseFloat(item.minimum_stock_level)
+            : undefined;
+          itemMap.set(item.id, {
+            item_id: item.id,
+            item_code: item.item_code,
+            item_name: item.item_name,
+            default_unit: item.default_unit,
+            minimum_stock_level: minStock,
+            total_quantity: 0,
+            total_value: 0,
+            is_low_stock: minStock !== undefined && 0 <= minStock,
+            by_farm: [],
+          });
+        }
+      });
+    }
+
     let result = Array.from(itemMap.values());
 
     // Filter low stock only if requested
@@ -677,6 +1110,7 @@ export class ItemsService {
       `)
       .eq('organization_id', organizationId)
       .eq('item_id', itemId)
+      .is('warehouse.deleted_at', null)
       .eq('movement_type', 'OUT')
       .order('movement_date', { ascending: false });
 
@@ -684,34 +1118,34 @@ export class ItemsService {
       this.logger.warn(`Could not fetch stock movements: ${movementsError.message}`);
     }
 
-    // Query tasks that might reference this item
-    const { data: tasks, error: tasksError } = await supabase
-      .from('tasks')
+    // Query product_applications for this item (linked to tasks via task_id)
+    const { data: applications, error: applicationsError } = await supabase
+      .from('product_applications')
       .select(`
         id,
-        created_at,
+        task_id,
+        application_date,
+        quantity_used,
+        farm_id,
         parcel_id,
-        parcel:parcels(
-          id,
-          name,
-          farm_id,
-          farm:farms(id, name)
-        )
+        farm:farms(id, name),
+        parcel:parcels(id, name),
+        task:tasks(id, title)
       `)
       .eq('organization_id', organizationId)
-      .not('parcel_id', 'is', null)
-      .order('created_at', { ascending: false })
-      .limit(100);
+      .eq('product_id', itemId)
+      .not('task_id', 'is', null)
+      .order('application_date', { ascending: false });
 
-    if (tasksError) {
-      this.logger.warn(`Could not fetch tasks: ${tasksError.message}`);
+    if (applicationsError) {
+      this.logger.warn(`Could not fetch product applications: ${applicationsError.message}`);
     }
 
     // Aggregate usage by farm
     const farmMap = new Map<string, any>();
     const parcelMap = new Map<string, any>();
 
-    // Process stock movements
+    // Process stock movements (OUT movements = actual deductions)
     (movements || []).forEach((movement: any) => {
       const warehouse = movement.warehouse;
       const farm = warehouse?.farm;
@@ -719,7 +1153,7 @@ export class ItemsService {
       if (!farm) return;
 
       const farmId = farm.id;
-      const quantity = parseFloat(movement.quantity || 0);
+      const quantity = Math.abs(parseFloat(movement.quantity || 0));
       const movementDate = movement.movement_date;
 
       if (!farmMap.has(farmId)) {
@@ -729,6 +1163,7 @@ export class ItemsService {
           usage_count: 0,
           total_quantity_used: 0,
           task_ids: [],
+          tasks: [],
         });
       }
 
@@ -741,45 +1176,59 @@ export class ItemsService {
       }
     });
 
-    // Process tasks
-    (tasks || []).forEach((task: any) => {
-      const parcel = task.parcel;
-      if (!parcel || !parcel.farm) return;
+    // Process product_applications linked to tasks (filtered by this item's product_id)
+    (applications || []).forEach((app: any) => {
+      const farm = app.farm;
+      const parcel = app.parcel;
+      if (!farm || !app.task_id) return;
 
-      const farmId = parcel.farm.id;
-      const parcelId = parcel.id;
+      const farmId = farm.id;
 
-      const parcelKey = `${farmId}_${parcelId}`;
-      if (!parcelMap.has(parcelKey)) {
-        parcelMap.set(parcelKey, {
-          farm_id: farmId,
-          farm_name: parcel.farm.name,
-          parcel_id: parcelId,
-          parcel_name: parcel.name,
-          usage_count: 0,
-          total_quantity_used: 0,
-          task_ids: [],
-        });
+      if (parcel) {
+        const parcelKey = `${farmId}_${parcel.id}`;
+        if (!parcelMap.has(parcelKey)) {
+          parcelMap.set(parcelKey, {
+            farm_id: farmId,
+            farm_name: farm.name,
+            parcel_id: parcel.id,
+            parcel_name: parcel.name,
+            usage_count: 0,
+            total_quantity_used: 0,
+            task_ids: [],
+          });
+        }
+        const parcelUsage = parcelMap.get(parcelKey);
+        parcelUsage.usage_count += 1;
+        if (!parcelUsage.task_ids.includes(app.task_id)) {
+          parcelUsage.task_ids.push(app.task_id);
+        }
       }
-
-      const parcelUsage = parcelMap.get(parcelKey);
-      parcelUsage.usage_count += 1;
-      parcelUsage.task_ids.push(task.id);
 
       if (!farmMap.has(farmId)) {
         farmMap.set(farmId, {
           farm_id: farmId,
-          farm_name: parcel.farm.name,
+          farm_name: farm.name,
           usage_count: 0,
           total_quantity_used: 0,
           task_ids: [],
+          tasks: [],
         });
       }
 
       const farmUsage = farmMap.get(farmId);
       farmUsage.usage_count += 1;
-      if (!farmUsage.task_ids.includes(task.id)) {
-        farmUsage.task_ids.push(task.id);
+      farmUsage.total_quantity_used += parseFloat(app.quantity_used || 0);
+      if (!farmUsage.last_used_date || app.application_date > farmUsage.last_used_date) {
+        farmUsage.last_used_date = app.application_date;
+      }
+      if (!farmUsage.task_ids.includes(app.task_id)) {
+        farmUsage.task_ids.push(app.task_id);
+        if (app.task) {
+          if (!farmUsage.tasks) {
+            farmUsage.tasks = [];
+          }
+          farmUsage.tasks.push({ id: app.task.id, title: app.task.title });
+        }
       }
     });
 
@@ -830,11 +1279,12 @@ export class ItemsService {
       let warehouseIds: string[] | null = null;
       if (filters?.farm_id) {
         const { data: warehouses, error: whError } = await supabase
-          .from('warehouses')
-          .select('id')
-          .eq('organization_id', organizationId)
-          .eq('farm_id', filters.farm_id)
-          .eq('is_active', true);
+        .from('warehouses')
+        .select('id')
+        .eq('organization_id', organizationId)
+        .eq('farm_id', filters.farm_id)
+        .is('deleted_at', null)
+        .eq('is_active', true);
 
         if (whError) {
           this.logger.error(`Failed to fetch warehouses: ${whError.message}`);
@@ -886,12 +1336,14 @@ export class ItemsService {
       const { data: warehouses } = await supabase
         .from('warehouses')
         .select('id, name, farm_id, farm:farms(id, name)')
+        .is('deleted_at', null)
         .in('id', uniqueWarehouseIds);
 
       // Fetch item details separately
       const { data: items } = await supabase
         .from('items')
         .select('id, item_code, item_name, default_unit')
+        .is('deleted_at', null)
         .in('id', uniqueItemIds);
 
       // Create lookup maps
@@ -982,6 +1434,7 @@ export class ItemsService {
       .select('id, item_name, default_unit')
       .eq('id', itemId)
       .eq('organization_id', organizationId)
+      .is('deleted_at', null)
       .maybeSingle();
 
     if (itemError || !item) {

@@ -1,0 +1,27 @@
+{
+  "id": "features/notifications",
+  "title": "Notifications System",
+  "description": "Overview",
+  "source": "@site/docs/features/notifications.md",
+  "sourceDirName": "features",
+  "slug": "/features/notifications",
+  "permalink": "/features/notifications",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 14,
+  "frontMatter": {
+    "sidebar_position": 14,
+    "title": "Notifications System"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Real-time Communication",
+    "permalink": "/features/real-time"
+  },
+  "next": {
+    "title": "Tasks & Workforce",
+    "permalink": "/features/tasks-workforce"
+  }
+}

@@ -59,6 +59,19 @@ export interface ItemGroupWithChildren extends ItemGroup {
   items_count: number;
 }
 
+export interface MessageResponse {
+  message: string;
+}
+
+export interface SeedResultResponse {
+  created: number;
+  skipped: number;
+}
+
+export interface ItemGroupListResponse {
+  data: ItemGroup[];
+}
+
 // =====================================================
 // Item
 // =====================================================
@@ -168,6 +181,7 @@ export interface ItemWithDetails extends Item {
   unit_conversions: ItemUnitConversion[];
   current_stock?: number;
   current_warehouse_id?: string;
+  variantId?: string;
 }
 
 // =====================================================
@@ -561,4 +575,85 @@ export interface ItemSelectionOption {
     id: string;
     name: string;
   };
+}
+
+export interface FarmStockLevel {
+  farm_id: string | null;
+  farm_name: string | null;
+  warehouse_id: string;
+  warehouse_name: string;
+  item_id: string;
+  total_quantity: number;
+  total_value: number;
+  is_low_stock: boolean;
+  minimum_stock_level?: number;
+}
+
+export interface FarmStockLevelsByItem {
+  item_id: string;
+  item_code: string;
+  item_name: string;
+  default_unit: string;
+  minimum_stock_level?: number;
+  total_quantity: number;
+  total_value: number;
+  is_low_stock: boolean;
+  by_farm: FarmStockLevel[];
+}
+
+export interface ItemFarmUsage {
+  farm_id: string;
+  farm_name: string;
+  parcel_id?: string;
+  parcel_name?: string;
+  usage_count: number;
+  last_used_date?: string;
+  total_quantity_used: number;
+  task_ids: string[];
+  tasks?: { id: string; title: string }[];
+  parcels?: ItemFarmUsage[];
+}
+
+export interface ItemUsageSummary {
+  item_id: string;
+  total_usage_count: number;
+  last_used_date?: string;
+  total_quantity_used: number;
+  by_farm: ItemFarmUsage[];
+}
+
+export interface ItemStockLevelWarehouse {
+  warehouse_id: string;
+  warehouse_name: string;
+  farm_id: string | null;
+  farm_name: string | null;
+  quantity: number;
+  value: number;
+}
+
+export interface ItemStockLevelSummary {
+  total_quantity: number;
+  total_value: number;
+  is_low_stock?: boolean;
+  warehouses?: ItemStockLevelWarehouse[];
+}
+
+export type ItemStockLevelsResponse = Record<string, ItemStockLevelSummary>;
+
+export interface ItemSelectionFilters {
+  is_sales_item?: boolean;
+  is_purchase_item?: boolean;
+  is_stock_item?: boolean;
+  search?: string;
+}
+
+export interface FarmStockLevelFilters {
+  farm_id?: string;
+  item_id?: string;
+  low_stock_only?: boolean;
+}
+
+export interface StockLevelFilters {
+  farm_id?: string;
+  item_id?: string;
 }

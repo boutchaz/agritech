@@ -1,5 +1,8 @@
 import { Injectable, Logger, NotFoundException, ConflictException } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
+import { sanitizeSearch } from '../../common/utils/sanitize-search';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationType } from '../notifications/dto/notification.dto';
 import { CreateQualityInspectionDto, InspectionStatus } from './dto';
 import { QualityInspectionFiltersDto } from './dto/quality-inspection-filters.dto';
 
@@ -7,13 +10,20 @@ import { QualityInspectionFiltersDto } from './dto/quality-inspection-filters.dt
 export class QualityControlService {
   private readonly logger = new Logger(QualityControlService.name);
 
-  constructor(private readonly databaseService: DatabaseService) {}
+  constructor(
+    private readonly databaseService: DatabaseService,
+    private readonly notificationsService: NotificationsService,
+  ) {}
 
   async findAll(organizationId: string, filters: QualityInspectionFiltersDto = {}) {
     const client = this.databaseService.getAdminClient();
     let query = client
       .from('quality_inspections')
-      .select('*', { count: 'exact' })
+      .select(`
+        *,
+        parcel:parcels(id, name, farm:farms(id, name)),
+        farm:farms(id, name)
+      `, { count: 'exact' })
       .eq('organization_id', organizationId);
 
     // Apply filters
@@ -48,7 +58,8 @@ export class QualityControlService {
       query = query.lte('overall_score', filters.max_overall_score);
     }
     if (filters.search) {
-      query = query.or(`notes.ilike.%${filters.search}%,results.ilike.%${filters.search}%`);
+      const s = sanitizeSearch(filters.search);
+      if (s) query = query.or(`notes.ilike.%${s}%,results.ilike.%${s}%`);
     }
 
     // Apply pagination and sorting
@@ -82,7 +93,11 @@ export class QualityControlService {
     const client = this.databaseService.getAdminClient();
     const { data, error } = await client
       .from('quality_inspections')
-      .select('*')
+      .select(`
+        *,
+        parcel:parcels(id, name, farm:farms(id, name)),
+        farm:farms(id, name)
+      `)
       .eq('id', id)
       .eq('organization_id', organizationId)
       .single();
@@ -103,7 +118,7 @@ export class QualityControlService {
       .insert({
         organization_id: organizationId,
         created_by: userId,
-        status: createDto.status || InspectionStatus.PENDING,
+        status: createDto.status || InspectionStatus.SCHEDULED,
         ...createDto,
       })
       .select()
@@ -161,7 +176,7 @@ export class QualityControlService {
     }
 
     const { error } = await client
-      .from('quality_inspeections')
+      .from('quality_inspections')
       .delete()
       .eq('id', id)
       .eq('organization_id', organizationId);
@@ -184,7 +199,7 @@ export class QualityControlService {
     }
 
     const { data, error } = await client
-      .from('quality_inspeections')
+      .from('quality_inspections')
       .update({
         status,
         updated_by: userId,
@@ -200,6 +215,33 @@ export class QualityControlService {
       throw error;
     }
 
+    if (status === InspectionStatus.COMPLETED || status === InspectionStatus.FAILED) {
+      try {
+        const { data: orgUsers } = await client
+          .from('organization_users')
+          .select('user_id')
+          .eq('organization_id', organizationId)
+          .eq('is_active', true);
+
+        const userIds = (orgUsers || [])
+          .map((u: { user_id: string }) => u.user_id)
+          .filter((uid: string) => uid !== userId);
+
+        if (userIds.length > 0) {
+          await this.notificationsService.createNotificationsForUsers(
+            userIds,
+            organizationId,
+            NotificationType.QUALITY_INSPECTION_COMPLETED,
+            `Quality inspection completed${data?.overall_score ? ` — Score: ${data.overall_score}` : ''}`,
+            `A quality inspection has been completed${data?.type ? ` (${data.type})` : ''}`,
+            { inspectionId: id, score: data?.overall_score, type: data?.type },
+          );
+        }
+      } catch (notifError) {
+        this.logger.warn(`Failed to send quality inspection notification: ${notifError}`);
+      }
+    }
+
     return data;
   }
 
@@ -208,7 +250,7 @@ export class QualityControlService {
 
     // Get total count by type
     const { data: byType, error: typeError } = await client
-      .from('quality_inspeections')
+      .from('quality_inspections')
       .select('type')
       .eq('organization_id', organizationId);
 
@@ -217,14 +259,14 @@ export class QualityControlService {
       throw typeError;
     }
 
-    const typeCounts = byType.reduce((acc, inspeection) => {
-      acc[inspeection.type] = (acc[inspeection.type] || 0) + 1;
+    const typeCounts = (byType || []).reduce((acc, inspection) => {
+      acc[inspection.type] = (acc[inspection.type] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
 
     // Get total count by status
     const { data: byStatus, error: statusError } = await client
-      .from('quality_inspeections')
+      .from('quality_inspections')
       .select('status')
       .eq('organization_id', organizationId);
 
@@ -233,14 +275,14 @@ export class QualityControlService {
       throw statusError;
     }
 
-    const statusCounts = byStatus.reduce((acc, inspeection) => {
-      acc[inspeection.status] = (acc[inspeection.status] || 0) + 1;
+    const statusCounts = (byStatus || []).reduce((acc, inspection) => {
+      acc[inspection.status] = (acc[inspection.status] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
 
     // Get average score
     const { data: scores, error: scoreError } = await client
-      .from('quality_inspeections')
+      .from('quality_inspections')
       .select('overall_score')
       .eq('organization_id', organizationId);
 
@@ -249,13 +291,13 @@ export class QualityControlService {
       throw scoreError;
     }
 
-    const validScores = scores.filter(s => s.overall_score !== null);
+    const validScores = (scores || []).filter(s => s.overall_score !== null);
     const averageScore = validScores.length > 0
       ? validScores.reduce((sum, s) => sum + (s.overall_score || 0), 0) / validScores.length
       : 0;
 
     return {
-      total: byType.length,
+      total: (byType || []).length,
       averageScore: Math.round(averageScore * 100) / 100,
       byType: typeCounts,
       byStatus: statusCounts,

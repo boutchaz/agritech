@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios, { AxiosError } from 'axios';
+import { formatAxiosErrorForLog } from '../../../common/utils/safe-json-stringify';
 import * as jwt from 'jsonwebtoken';
 import { BaseAIProvider } from './base-ai.provider';
 import {
@@ -13,7 +14,7 @@ import {
 export class ZaiProvider extends BaseAIProvider {
   private readonly envApiKey: string;
   private readonly apiUrl = 'https://open.bigmodel.cn/api/paas/v4/chat/completions';
-  private readonly defaultModel = 'GLM-4.5-Flash';
+  private readonly defaultModel = 'GLM-4.7-Flash';
 
   constructor(configService: ConfigService) {
     super(configService, AIProvider.ZAI);
@@ -105,9 +106,7 @@ export class ZaiProvider extends BaseAIProvider {
       };
     } catch (error) {
       if (axios.isAxiosError(error)) {
-        const errorMessage = (error as AxiosError).response?.data
-          ? JSON.stringify((error as AxiosError).response?.data)
-          : error.message;
+        const errorMessage = formatAxiosErrorForLog(error as AxiosError);
         this.logger.error(`Z.ai API error: ${errorMessage}`);
         throw new Error(`Z.ai API error: ${errorMessage}`);
       }

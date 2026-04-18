@@ -1,0 +1,27 @@
+{
+  "id": "guides/platform-overview",
+  "title": "Platform Overview & Presentation",
+  "description": "Extraction de toutes les informations de la présentation",
+  "source": "@site/docs/guides/platform-overview.md",
+  "sourceDirName": "guides",
+  "slug": "/guides/platform-overview",
+  "permalink": "/guides/platform-overview",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 6,
+  "frontMatter": {
+    "sidebar_position": 6,
+    "title": "Platform Overview & Presentation"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Development Setup & Commands",
+    "permalink": "/guides/development-setup"
+  },
+  "next": {
+    "title": "Desktop App Implementation Plan",
+    "permalink": "/guides/desktop-app-plan"
+  }
+}

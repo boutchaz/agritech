@@ -33,22 +33,25 @@ interface WrapperProps {
   children: React.ReactNode;
 }
 
+function QueryProviderWrapper({ children, queryClient }: WrapperProps & { queryClient: QueryClient }) {
+  return (
+    <QueryClientProvider client={queryClient}>
+      {children}
+    </QueryClientProvider>
+  );
+}
+
 export function renderWithProviders(
   ui: React.ReactElement,
   options?: Omit<RenderOptions, 'wrapper'> & { queryClient?: QueryClient }
 ) {
   const queryClient = options?.queryClient ?? createTestQueryClient();
 
-  function Wrapper({ children }: WrapperProps) {
-    return (
-      <QueryClientProvider client={queryClient}>
-        {children}
-      </QueryClientProvider>
-    );
-  }
-
   return {
-    ...render(ui, { wrapper: Wrapper, ...options }),
+    ...render(ui, {
+      wrapper: ({ children }) => <QueryProviderWrapper queryClient={queryClient}>{children}</QueryProviderWrapper>,
+      ...options,
+    }),
     queryClient,
   };
 }

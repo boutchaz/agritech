@@ -20,6 +20,8 @@ import { useCurrency } from '@/hooks/useCurrency';
 import { useFarms } from '@/hooks/useParcelsQuery';
 import { useFormErrors } from '@/hooks/useFormErrors';
 import { Button } from '@/components/ui/button';
+import { FilterBar, ListPageLayout, ListPageHeader, ResponsiveList } from '@/components/ui/data-table';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/Textarea';
@@ -32,13 +34,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/radix-select';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from '@/components/ui/dialog';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -57,18 +52,19 @@ import {
   DrawerDescription,
   DrawerFooter,
 } from '@/components/ui/drawer';
-import { Plus, Trash2, Pencil, Package, Loader2, ExternalLink, Eye, AlertTriangle, Filter, ShoppingBag, Layers } from 'lucide-react';
+import { Plus, Trash2, Pencil, Package, Loader2, ExternalLink, Eye, AlertTriangle, ShoppingBag, Layers, Clock3 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from '@tanstack/react-router';
 import { itemsApi } from '@/lib/api/items';
 import { marketplaceCategoriesApi } from '@/lib/api/marketplace-categories';
 import { toast } from 'sonner';
-import type { Item, CreateItemInput, ProductVariant } from '@/types/items';
+import type { Item, CreateItemInput, ProductVariant, ItemStockLevelsResponse } from '@/types/items';
 import type { WorkUnit } from '@/types/work-units';
 import LowStockAlerts from './LowStockAlerts';
-import FarmStockLevels from './FarmStockLevels';
-import ItemFarmUsage from './ItemFarmUsage';
 import ProductImageUpload from './ProductImageUpload';
+import ItemStockTimeline from './ItemStockTimeline';
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
+import { EmptyState } from '@/components/ui/empty-state';
 
 // Zod schema for item form validation
 const itemFormSchema = z.object({
@@ -84,7 +80,7 @@ const itemFormSchema = z.object({
   is_sales_item: z.boolean().optional(),
   is_purchase_item: z.boolean().optional(),
   is_stock_item: z.boolean().optional(),
-  images: z.array(z.any()).optional(),
+  images: z.array(z.string()).optional(),
   website_description: z.string().optional(),
   marketplace_category_slug: z.string().optional(),
   show_in_website: z.boolean().optional(),
@@ -96,7 +92,10 @@ type ItemFormData = z.infer<typeof itemFormSchema>;
 const productVariantSchema = z.object({
   variant_name: z.string().min(1, 'Variant name is required'),
   variant_sku: z.string().optional(),
-  unit_id: z.string().uuid('Invalid unit ID').optional(),
+  unit_id: z.string().optional().refine(
+    (value) => !value || /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value),
+    'Invalid unit ID'
+  ),
   quantity: z.number().min(0, 'Quantity must be non-negative').optional(),
   min_stock_level: z.number().min(0, 'Minimum stock level must be non-negative').optional(),
   standard_rate: z.number().min(0, 'Standard rate must be non-negative').optional(),
@@ -120,7 +119,8 @@ interface ItemVariantsDialogProps {
 }
 
 function ItemGroupForm({ open, onOpenChange, onSuccess }: { open: boolean; onOpenChange: (open: boolean) => void; onSuccess?: () => void }) {
-  const { t } = useTranslation();
+  const { t } = useTranslation('stock');
+  const { t: tCommon } = useTranslation('common');
   const { currentOrganization } = useAuth();
   const createItemGroup = useCreateItemGroup();
   const [groupName, setGroupName] = useState('');
@@ -148,8 +148,8 @@ function ItemGroupForm({ open, onOpenChange, onSuccess }: { open: boolean; onOpe
       setGroupDescription('');
       onOpenChange(false);
       onSuccess?.();
-    } catch (error: any) {
-      toast.error(`Failed to create item group: ${error.message}`);
+    } catch (_error: unknown) {
+      toast.error(t('items.itemGroup.createFailed'));
     }
   };
 
@@ -202,7 +202,7 @@ function ItemGroupForm({ open, onOpenChange, onSuccess }: { open: boolean; onOpe
             onClick={() => onOpenChange(false)}
             disabled={createItemGroup.isPending}
           >
-            {t('app.cancel')}
+            {tCommon('app.cancel', 'Cancel')}
           </Button>
           <Button
             type="submit"
@@ -225,7 +225,8 @@ function ItemGroupForm({ open, onOpenChange, onSuccess }: { open: boolean; onOpe
 }
 
 function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
-  const { t } = useTranslation();
+  const { t } = useTranslation('stock');
+  const { t: tCommon } = useTranslation('common');
   const { currentOrganization } = useAuth();
   const { format: formatCurrency } = useCurrency();
   const navigate = useNavigate();
@@ -234,6 +235,7 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
   const updateItem = useUpdateItem();
   const { handleFormError } = useFormErrors<ItemFormData>();
   const [showGroupForm, setShowGroupForm] = useState(false);
+  const [selectedMainGroupId, setSelectedMainGroupId] = useState('');
 
   const {
     register,
@@ -273,12 +275,13 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
       if (!currentOrganization?.id) return [];
 
       const { apiClient } = await import('../../lib/api-client');
-      const data = await apiClient.get<WorkUnit[]>(
-        '/api/v1/work-units?is_active=true&orderBy=unit_category&order=asc',
+      const res = await apiClient.get<{ data: WorkUnit[] }>(
+        '/api/v1/work-units?is_active=true',
         {},
         currentOrganization.id,
       );
-      return Array.isArray(data) ? data : [];
+      const items = Array.isArray(res) ? res : res?.data || [];
+      return items;
     },
     enabled: !!currentOrganization?.id,
   });
@@ -314,18 +317,17 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
         // Transform API response to match expected format
         const itemStock = stockData[item.id];
         if (itemStock && itemStock.total_quantity > 0) {
-          return {
-            total_quantity: itemStock.total_quantity,
-            total_value: itemStock.total_value,
-            warehouses: itemStock.warehouses || [],
-          };
-        }
+         return {
+           total_quantity: itemStock.total_quantity,
+           total_value: itemStock.total_value,
+           warehouses: itemStock.warehouses || [],
+         };
+       }
 
-        return null;
-      } catch (error) {
-        console.warn('Could not fetch stock level:', error);
-        return null;
-      }
+       return null;
+     } catch (_error) {
+       return null;
+     }
     },
     enabled: !!item?.id && !!currentOrganization?.id && !!item?.is_stock_item,
   });
@@ -352,6 +354,15 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
         marketplace_category_slug: item.marketplace_category_slug || '',
         show_in_website: item.show_in_website ?? false,
       });
+      // Prefill the main group selector
+      if (item.item_group_id && itemGroups.length > 0) {
+        const group = itemGroups.find((g) => g.id === item.item_group_id);
+        if (group?.parent_group_id) {
+          setSelectedMainGroupId(group.parent_group_id);
+        } else {
+          setSelectedMainGroupId(item.item_group_id);
+        }
+      }
     } else {
       reset({
         item_code: '',
@@ -371,8 +382,9 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
         marketplace_category_slug: '',
         show_in_website: false,
       });
+      setSelectedMainGroupId(firstItemGroupId || '');
     }
-  }, [item, firstItemGroupId, reset]);
+  }, [item, firstItemGroupId, reset, itemGroups]);
 
   useEffect(() => {
     if (!item && itemGroups.length > 0 && !watch('item_group_id')) {
@@ -412,17 +424,17 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{item ? t('items.editItem') : t('items.createItem')}</DialogTitle>
-          <DialogDescription>
-            {item ? t('items.updateItemDescription') : t('items.createItemDescription')}
-          </DialogDescription>
-        </DialogHeader>
+    <ResponsiveDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={item ? t('items.editItem') : t('items.createItem')}
+      description={item ? t('items.updateItemDescription') : t('items.createItemDescription')}
+      size="2xl"
+      contentClassName="max-h-[90vh] overflow-y-auto"
+    >
 
         <form onSubmit={handleFormSubmit(onSubmit)} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="item_code">{t('items.itemCode')} *</Label>
               <Input
@@ -475,7 +487,7 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
             {itemGroups.length === 0 ? (
               <div className="mt-1 p-3 border border-dashed border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-800">
                 <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                  {t('items.itemGroup.noGroupsFound')}
+                  {t('items.itemGroup.noGroups')}
                 </p>
                 <Button
                   type="button"
@@ -487,23 +499,63 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
                   {t('items.itemGroup.createFirst')}
                 </Button>
               </div>
-            ) : (
-              <Select
-                value={watch('item_group_id') || ''}
-                onValueChange={(value) => setValue('item_group_id', value)}
-              >
-                <SelectTrigger className="mt-1">
-                  <SelectValue placeholder={t('items.selectItemGroup')} />
-                </SelectTrigger>
-                <SelectContent>
-                  {itemGroups.map((group) => (
-                    <SelectItem key={group.id} value={group.id}>
-                      {group.path || group.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
+            ) : (() => {
+              const mainGroups = itemGroups.filter((g) => !g.parent_group_id);
+              const subcategories = itemGroups.filter(
+                (g) => g.parent_group_id === selectedMainGroupId
+              );
+              const hasSubcategories = subcategories.length > 0;
+              return (
+                <div className="space-y-2 mt-1">
+                  {/* Main group selector */}
+                  <Select
+                    value={selectedMainGroupId || ''}
+                    onValueChange={(value) => {
+                      setSelectedMainGroupId(value);
+                      const subs = itemGroups.filter((g) => g.parent_group_id === value);
+                      if (subs.length === 0) {
+                        // No subcategories: set item_group_id directly
+                        setValue('item_group_id', value);
+                      } else {
+                        // Has subcategories: clear until user picks one
+                        setValue('item_group_id', '');
+                      }
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={t('items.selectItemGroup')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {mainGroups.map((group) => (
+                        <SelectItem key={group.id} value={group.id}>
+                          {group.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {/* Subcategory selector — shown only if the main group has children */}
+                  {hasSubcategories && (
+                    <Select
+                      value={watch('item_group_id') || ''}
+                      onValueChange={(value) => setValue('item_group_id', value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue
+                          placeholder={t('items.selectSubcategory', 'Sélectionner une sous-catégorie')}
+                        />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {subcategories.map((sub) => (
+                          <SelectItem key={sub.id} value={sub.id}>
+                            {sub.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
+              );
+            })()}
             {errors.item_group_id && (
               <p className="text-red-600 text-sm mt-1">{errors.item_group_id.message}</p>
             )}
@@ -523,7 +575,7 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <div className="flex items-center justify-between mb-1">
                 <Label htmlFor="default_unit">{t('items.defaultUnit')} *</Label>
@@ -628,35 +680,39 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                {...register('is_active')}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="flex items-center justify-between rounded-lg border p-3">
+              <Label htmlFor="is_active" className="text-sm cursor-pointer">{t('items.active')}</Label>
+              <Switch
+                id="is_active"
+                checked={watch('is_active') ?? true}
+                onCheckedChange={(checked) => setValue('is_active', checked)}
               />
-              <span className="text-sm">{t('items.active')}</span>
-            </label>
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                {...register('is_sales_item')}
+            </div>
+            <div className="flex items-center justify-between rounded-lg border p-3">
+              <Label htmlFor="is_sales_item" className="text-sm cursor-pointer">{t('items.salesItem')}</Label>
+              <Switch
+                id="is_sales_item"
+                checked={watch('is_sales_item') ?? true}
+                onCheckedChange={(checked) => setValue('is_sales_item', checked)}
               />
-              <span className="text-sm">{t('items.salesItem')}</span>
-            </label>
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                {...register('is_purchase_item')}
+            </div>
+            <div className="flex items-center justify-between rounded-lg border p-3">
+              <Label htmlFor="is_purchase_item" className="text-sm cursor-pointer">{t('items.purchaseItem')}</Label>
+              <Switch
+                id="is_purchase_item"
+                checked={watch('is_purchase_item') ?? true}
+                onCheckedChange={(checked) => setValue('is_purchase_item', checked)}
               />
-              <span className="text-sm">{t('items.purchaseItem')}</span>
-            </label>
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                {...register('is_stock_item')}
+            </div>
+            <div className="flex items-center justify-between rounded-lg border p-3">
+              <Label htmlFor="is_stock_item" className="text-sm cursor-pointer">{t('items.stockItem')}</Label>
+              <Switch
+                id="is_stock_item"
+                checked={watch('is_stock_item') ?? true}
+                onCheckedChange={(checked) => setValue('is_stock_item', checked)}
               />
-              <span className="text-sm">{t('items.stockItem')}</span>
-            </label>
+            </div>
           </div>
 
           {watch('is_sales_item') && (
@@ -681,12 +737,12 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
                     disabled={categoriesLoading}
                   >
                     <SelectTrigger className="mt-1">
-                      <SelectValue placeholder={categoriesLoading ? t('app.loading') : t('items.marketplace.selectCategory', 'Select a category')} />
+                      <SelectValue placeholder={categoriesLoading ? tCommon('app.loading', 'Loading...') : t('items.marketplace.selectCategory', 'Select a category')} />
                     </SelectTrigger>
                     <SelectContent>
                       {marketplaceCategories.length === 0 ? (
                         <div className="p-2 text-sm text-muted-foreground">
-                          {categoriesLoading ? t('app.loading') : 'No categories available. Check console for errors.'}
+                          {categoriesLoading ? tCommon('app.loading', 'Loading...') : 'No categories available. Check console for errors.'}
                         </div>
                       ) : (
                         marketplaceCategories.map((cat) => (
@@ -849,7 +905,7 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
                onClick={() => onOpenChange(false)}
                disabled={isSubmitting || createItem.isPending || updateItem.isPending}
              >
-               {t('app.cancel')}
+               {tCommon('app.cancel', 'Cancel')}
              </Button>
              <Button type="submit" disabled={isSubmitting || createItem.isPending || updateItem.isPending}>
                {isSubmitting || createItem.isPending || updateItem.isPending ? (
@@ -863,18 +919,17 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
              </Button>
            </div>
         </form>
-        <ItemGroupForm
-          open={showGroupForm}
-          onOpenChange={setShowGroupForm}
-          onSuccess={handleGroupCreated}
-        />
-      </DialogContent>
-    </Dialog>
+      <ItemGroupForm
+        open={showGroupForm}
+        onOpenChange={setShowGroupForm}
+        onSuccess={handleGroupCreated}
+      />
+    </ResponsiveDialog>
   );
 }
 
 function ItemVariantsDialog({ item, open, onOpenChange }: ItemVariantsDialogProps) {
-  const { t } = useTranslation();
+  const { t } = useTranslation('stock');
   const { currentOrganization } = useAuth();
   const { format: formatCurrency } = useCurrency();
   const { data: variants = [], isLoading } = useItemVariants(item?.id || null);
@@ -882,6 +937,7 @@ function ItemVariantsDialog({ item, open, onOpenChange }: ItemVariantsDialogProp
   const updateVariant = useUpdateItemVariant();
   const deleteVariant = useDeleteItemVariant();
   const [editingVariant, setEditingVariant] = useState<ProductVariant | null>(null);
+  const [variantToDelete, setVariantToDelete] = useState<ProductVariant | null>(null);
 
   // Fetch work units for unit selection
   const { data: workUnits = [], isLoading: workUnitsLoading } = useQuery({
@@ -889,12 +945,13 @@ function ItemVariantsDialog({ item, open, onOpenChange }: ItemVariantsDialogProp
     queryFn: async () => {
       if (!currentOrganization?.id) return [];
       const { apiClient } = await import('../../lib/api-client');
-      const data = await apiClient.get<WorkUnit[]>(
-        '/api/v1/work-units?is_active=true&orderBy=unit_category&order=asc',
+      const res = await apiClient.get<{ data: WorkUnit[] }>(
+        '/api/v1/work-units?is_active=true',
         {},
         currentOrganization.id,
       );
-      return Array.isArray(data) ? data : [];
+      const items = Array.isArray(res) ? res : res?.data || [];
+      return items;
     },
     enabled: !!currentOrganization?.id,
   });
@@ -995,21 +1052,25 @@ function ItemVariantsDialog({ item, open, onOpenChange }: ItemVariantsDialogProp
         is_active: true,
         notes: '',
       });
-    } catch (error: any) {
-      toast.error(`Failed to save variant: ${error.message}`);
+    } catch (error: unknown) {
+      toast.error(`Failed to save variant: ${error instanceof Error ? error.message : ''}`);
     }
   };
 
   const handleDelete = async (variant: ProductVariant) => {
-    if (!window.confirm(t('items.variants.deleteConfirm', 'Delete this variant?'))) {
-      return;
-    }
+    setVariantToDelete(variant);
+  };
+
+  const confirmVariantDelete = async () => {
+    if (!variantToDelete) return;
 
     try {
-      await deleteVariant.mutateAsync(variant.id);
+      await deleteVariant.mutateAsync(variantToDelete.id);
       toast.success(t('items.variants.deleted', 'Variant deleted'));
-    } catch (error: any) {
-      toast.error(`Failed to delete variant: ${error.message}`);
+    } catch (error: unknown) {
+      toast.error(`Failed to delete variant: ${error instanceof Error ? error.message : ''}`);
+    } finally {
+      setVariantToDelete(null);
     }
   };
 
@@ -1029,16 +1090,14 @@ function ItemVariantsDialog({ item, open, onOpenChange }: ItemVariantsDialogProp
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>
-            {t('items.variants.title', 'Variants')} - {item?.item_name}
-          </DialogTitle>
-          <DialogDescription>
-            {t('items.variants.subtitle', 'Manage stock dimensions for this item (1L, 5L, etc.)')}
-          </DialogDescription>
-        </DialogHeader>
+    <ResponsiveDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={`${t('items.variants.title', 'Variants')} - ${item?.item_name ?? ''}`}
+      description={t('items.variants.subtitle', 'Manage stock dimensions for this item (1L, 5L, etc.)')}
+      size="4xl"
+      contentClassName="max-h-[90vh] overflow-y-auto"
+    >
 
         <div className="space-y-6">
           <form id="variant-form" onSubmit={form.handleSubmit(onSubmit)} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1210,36 +1269,41 @@ function ItemVariantsDialog({ item, open, onOpenChange }: ItemVariantsDialogProp
                 <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
               </div>
             ) : variants.length === 0 ? (
-              <p className="text-sm text-gray-500">{t('items.variants.empty', 'No variants yet')}</p>
+              <EmptyState
+                variant="inline"
+                icon={Layers}
+                title={t('items.variants.emptyTitle', 'No variants yet')}
+                description={t('items.variants.empty', 'No variants yet')}
+              />
             ) : (
               <div className="border rounded-lg overflow-hidden">
-                <table className="w-full">
-                  <thead className="bg-gray-50 dark:bg-gray-800">
-                    <tr>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">
+                <Table className="w-full">
+                  <TableHeader className="bg-gray-50 dark:bg-gray-800">
+                    <TableRow>
+                      <TableHead className="px-4 py-2 text-left text-xs font-medium text-gray-500">
                         {t('items.variants.name', 'Variant name')}
-                      </th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">
+                      </TableHead>
+                      <TableHead className="px-4 py-2 text-left text-xs font-medium text-gray-500">
                         {t('items.variants.unit', 'Unit')}
-                      </th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">
+                      </TableHead>
+                      <TableHead className="px-4 py-2 text-left text-xs font-medium text-gray-500">
                         {t('items.variants.quantity', 'Quantity')}
-                      </th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">
+                      </TableHead>
+                      <TableHead className="px-4 py-2 text-left text-xs font-medium text-gray-500">
                         {t('items.variants.standardRate', 'Standard rate')}
-                      </th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">
+                      </TableHead>
+                      <TableHead className="px-4 py-2 text-left text-xs font-medium text-gray-500">
                         {t('items.variants.status', 'Status')}
-                      </th>
-                      <th className="px-4 py-2 text-right text-xs font-medium text-gray-500">
+                      </TableHead>
+                      <TableHead className="px-4 py-2 text-right text-xs font-medium text-gray-500">
                         {t('items.variants.actions', 'Actions')}
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y">
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody className="divide-y">
                     {variants.map((variant) => (
-                      <tr key={variant.id} className="text-sm">
-                        <td className="px-4 py-2">
+                      <TableRow key={variant.id} className="text-sm">
+                        <TableCell className="px-4 py-2">
                           <div className="flex flex-col">
                             <span className="font-medium text-gray-900 dark:text-white">
                               {variant.variant_name}
@@ -1248,19 +1312,19 @@ function ItemVariantsDialog({ item, open, onOpenChange }: ItemVariantsDialogProp
                               <span className="text-xs text-gray-500">{variant.variant_sku}</span>
                             )}
                           </div>
-                        </td>
-                        <td className="px-4 py-2 text-gray-700 dark:text-gray-300">
+                        </TableCell>
+                        <TableCell className="px-4 py-2 text-gray-700 dark:text-gray-300">
                           {variant.unit_id
                             ? workUnits.find((wu) => wu.id === variant.unit_id)?.code || variant.unit_id
                             : '-'}
-                        </td>
-                        <td className="px-4 py-2 text-gray-700 dark:text-gray-300">
+                        </TableCell>
+                        <TableCell className="px-4 py-2 text-gray-700 dark:text-gray-300">
                           {(variant.quantity ?? 0).toFixed(2)}
-                        </td>
-                        <td className="px-4 py-2 text-gray-700 dark:text-gray-300">
+                        </TableCell>
+                        <TableCell className="px-4 py-2 text-gray-700 dark:text-gray-300">
                           {variant.standard_rate ? formatCurrency(variant.standard_rate) : '-'}
-                        </td>
-                        <td className="px-4 py-2">
+                        </TableCell>
+                        <TableCell className="px-4 py-2">
                           <span
                             className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                               variant.is_active
@@ -1270,8 +1334,8 @@ function ItemVariantsDialog({ item, open, onOpenChange }: ItemVariantsDialogProp
                           >
                             {variant.is_active ? t('items.active') : t('items.inactive')}
                           </span>
-                        </td>
-                        <td className="px-4 py-2 text-right">
+                        </TableCell>
+                        <TableCell className="px-4 py-2 text-right">
                           <div className="flex items-center justify-end gap-2">
                             <Button
                               variant="ghost"
@@ -1289,28 +1353,54 @@ function ItemVariantsDialog({ item, open, onOpenChange }: ItemVariantsDialogProp
                               <Trash2 className="w-4 h-4" />
                             </Button>
                           </div>
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     ))}
-                  </tbody>
-                </table>
+                  </TableBody>
+                </Table>
               </div>
             )}
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+
+      <AlertDialog open={!!variantToDelete} onOpenChange={(open) => !open && setVariantToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('items.variants.deleteTitle', 'Delete Variant')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('items.variants.deleteConfirm', 'Are you sure you want to delete this variant? This action cannot be undone.')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('common.cancel', 'Cancel')}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmVariantDelete}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              {deleteVariant.isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  {t('items.deleting')}
+                </>
+              ) : (
+                t('items.delete')
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </ResponsiveDialog>
   );
 }
 
 export default function ItemManagement() {
-  const { t } = useTranslation();
+  const { t } = useTranslation('stock');
   const { currentOrganization } = useAuth();
   const { format: formatCurrency } = useCurrency();
+  const navigate = useNavigate();
   const [selectedFarm, setSelectedFarm] = useState<string>('all');
   const [lowStockOnly, setLowStockOnly] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedItemForDetails, setSelectedItemForDetails] = useState<Item | null>(null);
   
   const { data: items = [], isLoading } = useItems({ is_active: true, is_stock_item: true });
   const { data: farms = [] } = useFarms(currentOrganization?.id);
@@ -1321,9 +1411,10 @@ export default function ItemManagement() {
   const [itemToDelete, setItemToDelete] = useState<Item | null>(null);
   const [showVariantsDialog, setShowVariantsDialog] = useState(false);
   const [variantsItem, setVariantsItem] = useState<Item | null>(null);
+  const [timelineItem, setTimelineItem] = useState<Item | null>(null);
 
   // Fetch stock levels for items with farm context
-  const { data: stockLevels = {} } = useQuery({
+  const { data: stockLevels = {} } = useQuery<ItemStockLevelsResponse>({
     queryKey: ['items-stock-levels', currentOrganization?.id, selectedFarm],
     queryFn: async () => {
       if (!currentOrganization?.id) return {};
@@ -1432,272 +1523,364 @@ export default function ItemManagement() {
       toast.success(t('items.itemDeleted'));
       setShowDeleteDialog(false);
       setItemToDelete(null);
-    } catch (error: any) {
-      toast.error(`Failed to delete item: ${error.message}`);
+    } catch (error: unknown) {
+      toast.error(`Failed to delete item: ${error instanceof Error ? error.message : ''}`);
     }
   };
 
+  const openItemDetails = (item: Item) => {
+    void navigate({
+      to: '/stock/items/$itemId',
+      params: { itemId: item.id },
+    });
+  };
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">{t('items.title')}</h1>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-            {t('items.subtitle')}
-          </p>
-        </div>
-        <Button onClick={handleCreate}>
-          <Plus className="w-4 h-4 mr-2" />
-          {t('items.createItem')}
-        </Button>
-      </div>
+    <>
+      <ListPageLayout
+        header={
+          <ListPageHeader
+            variant="shell"
+            actions={
+              <Button onClick={handleCreate}>
+                <Plus className="w-4 h-4 mr-2" />
+                {t('items.createItem')}
+              </Button>
+            }
+          />
+        }
+        filters={
+          <>
+            {selectedFarm === 'all' && !lowStockOnly && (
+              <LowStockAlerts maxItems={5} showActions={true} />
+            )}
 
-      {/* Low Stock Alerts Section */}
-      {selectedFarm === 'all' && !lowStockOnly && (
-        <LowStockAlerts maxItems={5} showActions={true} />
-      )}
+            <Card className="bg-white dark:bg-gray-800">
+              <CardContent className="p-4 sm:p-6">
+                <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:gap-4">
+                  <div className="min-w-0 flex-1">
+                    <FilterBar
+                      searchValue={searchTerm}
+                      onSearchChange={setSearchTerm}
+                      searchPlaceholder={t('items.searchPlaceholder', 'Search items...')}
+                      className="w-full"
+                    />
+                  </div>
 
-      {/* Filters */}
-      <Card className="bg-white dark:bg-gray-800">
-        <CardContent className="p-4 sm:p-6">
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
-            {/* Search Input */}
-            <div className="flex-1 min-w-0">
-              <div className="relative">
-                <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-                <Input
-                  placeholder={t('items.searchPlaceholder', 'Search items...')}
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 w-full bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700 focus:border-green-500 dark:focus:border-green-500 focus:ring-green-500"
-                />
-              </div>
-            </div>
+                  <div className="w-full sm:w-auto sm:min-w-[200px]">
+                    <Select value={selectedFarm} onValueChange={setSelectedFarm}>
+                      <SelectTrigger className="w-full bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700 focus:border-green-500 dark:focus:border-green-500 focus:ring-green-500">
+                        <SelectValue placeholder={t('items.filterByFarm', 'Filter by Farm')} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">{t('items.allFarms', 'All Farms')}</SelectItem>
+                        {farms.map((farm) => {
+                          const farmId = farm.id;
+                          const farmName = farm.name;
+                          return (
+                            <SelectItem key={farmId} value={farmId}>
+                              {farmName}
+                            </SelectItem>
+                          );
+                        })}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-            {/* Farm Filter */}
-            <div className="w-full sm:w-auto sm:min-w-[200px]">
-              <Select value={selectedFarm} onValueChange={setSelectedFarm}>
-                <SelectTrigger className="w-full bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700 focus:border-green-500 dark:focus:border-green-500 focus:ring-green-500">
-                  <SelectValue placeholder={t('items.filterByFarm', 'Filter by Farm')} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{t('items.allFarms', 'All Farms')}</SelectItem>
-                  {farms.map((farm) => {
-                    const farmId = (farm as any).farm_id || farm.id;
-                    const farmName = (farm as any).farm_name || farm.name;
-                    return (
-                      <SelectItem key={farmId} value={farmId}>
-                        {farmName}
-                      </SelectItem>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Low Stock Filter */}
-            <div className="flex items-center justify-between sm:justify-start gap-3 px-4 py-2.5 sm:px-3 sm:py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer"
-                 onClick={() => setLowStockOnly(!lowStockOnly)}>
-              <div className="flex items-center gap-2 flex-1 sm:flex-initial">
-                <AlertTriangle className={`w-4 h-4 transition-colors ${lowStockOnly ? 'text-amber-600 dark:text-amber-400' : 'text-gray-400'}`} />
-                <span className={`text-sm font-medium transition-colors ${lowStockOnly ? 'text-amber-700 dark:text-amber-400' : 'text-gray-700 dark:text-gray-300'}`}>
-                  {t('items.lowStockOnly', 'Low Stock Only')}
-                </span>
-              </div>
-              <Switch
-                checked={lowStockOnly}
-                onCheckedChange={setLowStockOnly}
-                className="pointer-events-none"
-              />
-            </div>
+                  <button
+                    type="button"
+                    className="flex cursor-pointer items-center justify-between gap-3 rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 transition-colors hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-900 dark:hover:bg-gray-800 sm:justify-start sm:px-3 sm:py-2"
+                    onClick={() => setLowStockOnly(!lowStockOnly)}
+                  >
+                    <div className="flex flex-1 items-center gap-2 sm:flex-initial">
+                      <AlertTriangle className={`h-4 w-4 transition-colors ${lowStockOnly ? 'text-amber-600 dark:text-amber-400' : 'text-gray-400'}`} />
+                      <span className={`text-sm font-medium transition-colors ${lowStockOnly ? 'text-amber-700 dark:text-amber-400' : 'text-gray-700 dark:text-gray-300'}`}>
+                        {t('items.lowStockOnly', 'Low Stock Only')}
+                      </span>
+                    </div>
+                    <Switch
+                      checked={lowStockOnly}
+                      onCheckedChange={setLowStockOnly}
+                      className="pointer-events-none"
+                    />
+                  </button>
+                </div>
+              </CardContent>
+            </Card>
+          </>
+        }
+      >
+        {isLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
           </div>
-        </CardContent>
-      </Card>
+        ) : (
+          <ResponsiveList
+            items={filteredItems}
+            keyExtractor={(item) => item.id}
+            emptyIcon={Package}
+            emptyTitle={t('items.noItemsTitle', 'No items found')}
+            emptyMessage={t('items.noItemsFound')}
+            emptyAction={!searchTerm && selectedFarm === 'all' && !lowStockOnly ? {
+              label: t('items.createItem'),
+              onClick: handleCreate,
+            } : undefined}
+            onRowClick={openItemDetails}
+            renderCard={(item) => {
+              const stockLevel = stockLevels[item.id];
+              const isLowStock = stockLevel?.is_low_stock ||
+                (item.minimum_stock_level && stockLevel && stockLevel.total_quantity < item.minimum_stock_level);
 
-      {isLoading ? (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
-        </div>
-      ) : (
-        <div className="border rounded-lg overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[800px]">
-              <thead className="bg-gray-50 dark:bg-gray-800 border-b">
-              <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400">
-                  {t('items.itemCode')}
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400">
-                  {t('items.itemName')}
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400">
-                  {t('items.group')}
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400">
-                  {t('items.defaultUnit')}
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400">
-                  {t('items.standardRate')}
-                </th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-gray-600 dark:text-gray-400">
-                  {t('items.stockLevel')}
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400">
-                  {t('items.status')}
-                </th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-gray-600 dark:text-gray-400">
-                  {t('items.actions')}
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-              {filteredItems.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="px-4 py-8 text-center text-sm text-gray-500">
-                    {t('items.noItemsFound')}
-                  </td>
-                </tr>
-              ) : (
-                filteredItems.map((item) => {
-                  const stockLevel = (stockLevels as Record<string, {
-                    total_quantity: number;
-                    total_value: number;
-                    is_low_stock?: boolean;
-                    warehouses?: Array<{
-                      warehouse_id: string;
-                      warehouse_name: string;
-                      farm_id: string | null;
-                      farm_name: string | null;
-                      quantity: number;
-                      value: number;
-                    }>;
-                  }>)[item.id];
-                  const isLowStock = stockLevel?.is_low_stock || 
-                    (item.minimum_stock_level && stockLevel && 
-                     stockLevel.total_quantity < item.minimum_stock_level);
-                  
-                  return (
-                    <tr
-                      key={item.id}
-                      className="hover:bg-gray-50 dark:hover:bg-gray-800"
-                    >
-                      <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">
+              return (
+                <Card
+                  className="cursor-pointer border shadow-sm transition-colors hover:bg-muted/30"
+                  onClick={() => openItemDetails(item)}
+                >
+                  <CardContent className="space-y-4 p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
                         <div className="flex items-center gap-2">
-                          {item.item_code}
-                          {isLowStock && (
-                            <div title={t('items.lowStock', 'Low Stock')}>
-                              <AlertTriangle className="w-4 h-4 text-amber-500" />
-                            </div>
-                          )}
+                          <p className="truncate font-semibold text-gray-900 dark:text-white">{item.item_name}</p>
+                          {isLowStock && <AlertTriangle className="h-4 w-4 shrink-0 text-amber-500" />}
                         </div>
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">
-                        {item.item_name}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
-                        {(item.item_group as any)?.name || '-'}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
-                        {item.default_unit}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">
-                        {item.standard_rate ? formatCurrency(item.standard_rate) : '-'}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-right text-gray-900 dark:text-white">
-                        {stockLevel ? (
-                          <div className="flex flex-col items-end">
-                            <div className="flex items-center gap-1">
-                              <span className={`font-medium ${isLowStock ? 'text-amber-600 dark:text-amber-400' : ''}`}>
-                                {stockLevel.total_quantity.toFixed(3)} {item.default_unit}
+                        <p className="text-sm text-gray-500">{item.item_code}</p>
+                      </div>
+                      <div className="flex flex-col items-end gap-1">
+                        <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
+                          item.is_active
+                            ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400'
+                            : 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400'
+                        }`}>
+                          {item.is_active ? t('items.active') : t('items.inactive')}
+                        </span>
+                        {isLowStock && (
+                          <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-1 text-xs font-medium text-amber-800 dark:bg-amber-900/20 dark:text-amber-400">
+                            <AlertTriangle className="mr-1 h-3 w-3" />
+                            {t('items.lowStock', 'Low Stock')}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="grid gap-2 text-sm text-gray-600 dark:text-gray-400">
+                      <div><span className="font-medium text-gray-900 dark:text-white">{t('items.group')}:</span> {item.item_group?.name || '-'}</div>
+                      <div><span className="font-medium text-gray-900 dark:text-white">{t('items.defaultUnit')}:</span> {item.default_unit}</div>
+                      <div><span className="font-medium text-gray-900 dark:text-white">{t('items.standardRate')}:</span> {item.standard_rate ? formatCurrency(item.standard_rate) : '-'}</div>
+                      <div>
+                        <span className="font-medium text-gray-900 dark:text-white">{t('items.stockLevel')}:</span>{' '}
+                        {stockLevel ? `${stockLevel.total_quantity.toFixed(3)} ${item.default_unit}` : t('items.noStock')}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-end gap-1 sm:gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          handleVariants(item);
+                        }}
+                        className="p-1 text-emerald-600 hover:text-emerald-700 sm:p-2"
+                        title={t('items.variants.title', 'Variants')}
+                      >
+                        <Layers className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setTimelineItem(item);
+                        }}
+                        className="p-1 text-sky-600 hover:text-sky-700 sm:p-2"
+                        title={t('items.timeline.open', 'History')}
+                      >
+                        <Clock3 className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          openItemDetails(item);
+                        }}
+                        className="p-1 text-blue-600 hover:text-blue-700 sm:p-2"
+                        title={t('items.viewDetails', 'View Details')}
+                      >
+                        <Eye className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          handleEdit(item);
+                        }}
+                        className="p-1 sm:p-2"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          handleDelete(item);
+                        }}
+                        className="p-1 text-red-600 hover:text-red-700 sm:p-2"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            }}
+            renderTableHeader={(
+              <TableRow>
+                <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400">{t('items.itemCode')}</TableHead>
+                <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400">{t('items.itemName')}</TableHead>
+                <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400">{t('items.group')}</TableHead>
+                <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400">{t('items.defaultUnit')}</TableHead>
+                <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400">{t('items.standardRate')}</TableHead>
+                <TableHead className="px-4 py-3 text-right text-xs font-medium text-gray-600 dark:text-gray-400">{t('items.stockLevel')}</TableHead>
+                <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400">{t('items.status')}</TableHead>
+                <TableHead className="px-4 py-3 text-right text-xs font-medium text-gray-600 dark:text-gray-400">{t('items.actions')}</TableHead>
+              </TableRow>
+            )}
+            renderTable={(item) => {
+              const stockLevel = stockLevels[item.id];
+              const isLowStock = stockLevel?.is_low_stock ||
+                (item.minimum_stock_level && stockLevel && stockLevel.total_quantity < item.minimum_stock_level);
+
+              return (
+                <>
+                  <TableCell className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">
+                    <div className="flex items-center gap-2">
+                      {item.item_code}
+                      {isLowStock && (
+                        <div title={t('items.lowStock', 'Low Stock')}>
+                          <AlertTriangle className="w-4 h-4 text-amber-500" />
+                        </div>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-sm text-gray-900 dark:text-white">{item.item_name}</TableCell>
+                  <TableCell className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{item.item_group?.name || '-'}</TableCell>
+                  <TableCell className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{item.default_unit}</TableCell>
+                  <TableCell className="px-4 py-3 text-sm text-gray-900 dark:text-white">{item.standard_rate ? formatCurrency(item.standard_rate) : '-'}</TableCell>
+                  <TableCell className="px-4 py-3 text-right text-sm text-gray-900 dark:text-white">
+                    {stockLevel ? (
+                      <div className="flex flex-col items-end">
+                        <div className="flex items-center gap-1">
+                          <span className={`font-medium ${isLowStock ? 'text-amber-600 dark:text-amber-400' : ''}`}>
+                            {stockLevel.total_quantity.toFixed(3)} {item.default_unit}
+                          </span>
+                        </div>
+                        <span className="text-xs text-gray-500">{formatCurrency(stockLevel.total_value)}</span>
+                        {stockLevel.warehouses && stockLevel.warehouses.length > 0 && (
+                          <div className="mt-1 text-xs text-gray-500">
+                            {stockLevel.warehouses.length} {t('items.warehouse', 'warehouse(s)')}
+                            {selectedFarm === 'all' && stockLevel.warehouses.some((wh: { farm_name?: string | null }) => wh.farm_name) && (
+                              <span className="ml-1">
+                                ({stockLevel.warehouses
+                                  .filter((wh: { farm_name?: string | null }) => wh.farm_name)
+                                  .map((wh: { farm_name?: string | null }) => wh.farm_name)
+                                  .join(', ')})
                               </span>
-                            </div>
-                            <span className="text-xs text-gray-500">
-                              {formatCurrency(stockLevel.total_value)}
-                            </span>
-                            {stockLevel.warehouses && stockLevel.warehouses.length > 0 && (
-                              <div className="mt-1 text-xs text-gray-500">
-                                {stockLevel.warehouses.length} {t('items.warehouse', 'warehouse(s)')}
-                                {selectedFarm === 'all' && stockLevel.warehouses.some((wh: { farm_name?: string | null }) => wh.farm_name) && (
-                                  <span className="ml-1">
-                                    ({stockLevel.warehouses
-                                      .filter((wh: { farm_name?: string | null }) => wh.farm_name)
-                                      .map((wh: { farm_name?: string | null }) => wh.farm_name)
-                                      .join(', ')})
-                                  </span>
-                                )}
-                              </div>
                             )}
                           </div>
-                        ) : (
-                          <span className="text-gray-400">{t('items.noStock')}</span>
                         )}
-                      </td>
-                      <td className="px-4 py-3 text-sm">
-                        <div className="flex flex-col gap-1">
-                          <span
-                            className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                              item.is_active
-                                ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400'
-                                : 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400'
-                            }`}
-                          >
-                            {item.is_active ? t('items.active') : t('items.inactive')}
-                          </span>
-                          {isLowStock && (
-                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/20 dark:text-amber-400">
-                              <AlertTriangle className="w-3 h-3 mr-1" />
-                              {t('items.lowStock', 'Low Stock')}
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <div className="flex items-center justify-end gap-1 sm:gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleVariants(item)}
-                            className="text-emerald-600 hover:text-emerald-700 p-1 sm:p-2"
-                            title={t('items.variants.title', 'Variants')}
-                          >
-                            <Layers className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setSelectedItemForDetails(item)}
-                            className="text-blue-600 hover:text-blue-700 p-1 sm:p-2"
-                            title={t('items.viewDetails', 'View Details')}
-                          >
-                            <Eye className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEdit(item)}
-                            className="p-1 sm:p-2"
-                          >
-                            <Pencil className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDelete(item)}
-                            className="text-red-600 hover:text-red-700 p-1 sm:p-2"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+                      </div>
+                    ) : (
+                      <span className="text-gray-400">{t('items.noStock')}</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-sm">
+                    <div className="flex flex-col gap-1">
+                      <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
+                        item.is_active
+                          ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400'
+                          : 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400'
+                      }`}>
+                        {item.is_active ? t('items.active') : t('items.inactive')}
+                      </span>
+                      {isLowStock && (
+                        <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-1 text-xs font-medium text-amber-800 dark:bg-amber-900/20 dark:text-amber-400">
+                          <AlertTriangle className="mr-1 h-3 w-3" />
+                          {t('items.lowStock', 'Low Stock')}
+                        </span>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-right">
+                    <div className="flex items-center justify-end gap-1 sm:gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          handleVariants(item);
+                        }}
+                        className="p-1 text-emerald-600 hover:text-emerald-700 sm:p-2"
+                        title={t('items.variants.title', 'Variants')}
+                      >
+                        <Layers className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setTimelineItem(item);
+                        }}
+                        className="p-1 text-sky-600 hover:text-sky-700 sm:p-2"
+                        title={t('items.timeline.open', 'History')}
+                      >
+                        <Clock3 className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          openItemDetails(item);
+                        }}
+                        className="p-1 text-blue-600 hover:text-blue-700 sm:p-2"
+                        title={t('items.viewDetails', 'View Details')}
+                      >
+                        <Eye className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          handleEdit(item);
+                        }}
+                        className="p-1 sm:p-2"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          handleDelete(item);
+                        }}
+                        className="p-1 text-red-600 hover:text-red-700 sm:p-2"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </>
+              );
+            }}
+          />
+        )}
+      </ListPageLayout>
 
       <ItemForm item={selectedItem} open={showForm} onOpenChange={setShowForm} />
       <ItemVariantsDialog
@@ -1711,31 +1894,12 @@ export default function ItemManagement() {
         }}
       />
 
-      {/* Item Details Dialog */}
-      {selectedItemForDetails && (
-        <Dialog open={!!selectedItemForDetails} onOpenChange={(open) => !open && setSelectedItemForDetails(null)}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>{selectedItemForDetails.item_name}</DialogTitle>
-              <DialogDescription>
-                {t('items.itemDetails', 'Item Details and Stock Information')}
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-6 mt-4">
-              {/* Stock Levels by Farm */}
-              <div>
-                <h3 className="text-lg font-semibold mb-3">{t('items.stockByFarm', 'Stock by Farm')}</h3>
-                <FarmStockLevels item_id={selectedItemForDetails.id} showWarehouseDetails={true} />
-              </div>
-
-              {/* Farm Usage */}
-              <div>
-                <h3 className="text-lg font-semibold mb-3">{t('items.farmUsage', 'Farm Usage')}</h3>
-                <ItemFarmUsage item_id={selectedItemForDetails.id} showDetails={true} />
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
+      {timelineItem && (
+        <ItemStockTimeline
+          itemId={timelineItem.id}
+          itemName={timelineItem.item_name}
+          onClose={() => setTimelineItem(null)}
+        />
       )}
 
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
@@ -1751,7 +1915,7 @@ export default function ItemManagement() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>{t('app.cancel')}</AlertDialogCancel>
+            <AlertDialogCancel>{t('common.cancel', 'Cancel')}</AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmDelete}
               className="bg-red-600 hover:bg-red-700 text-white"
@@ -1767,7 +1931,7 @@ export default function ItemManagement() {
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
-      </AlertDialog>
-    </div>
+       </AlertDialog>
+     </>
   );
 }

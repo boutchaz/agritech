@@ -365,6 +365,8 @@ services:
       - config_file=/etc/postgresql/postgresql.conf
       - -c
       - log_min_messages=fatal
+      - -c
+      - max_connections=200
     networks:
       - agritech-supabase-5gdghc
   vector:

@@ -64,6 +64,21 @@ export class ParcelDto {
   @ApiProperty({ description: 'Irrigation type', required: false })
   irrigation_type?: string;
 
+  @ApiProperty({ description: 'AI calibration phase', required: false })
+  ai_phase?: string;
+
+  @ApiProperty({ description: 'AI features enabled for parcel', required: false })
+  ai_enabled?: boolean;
+
+  @ApiProperty({ description: 'AI observation-only mode', required: false })
+  ai_observation_only?: boolean;
+
+  @ApiProperty({ description: 'Selected nutrition option (A/B/C)', required: false })
+  ai_nutrition_option?: string;
+
+  @ApiProperty({ description: 'Current AI calibration record id', required: false })
+  ai_calibration_id?: string;
+
   @ApiProperty({ description: 'Is active' })
   is_active: boolean;
 
@@ -82,3 +97,10 @@ export class ListParcelsResponseDto {
   parcels: ParcelDto[];
 }
 
+export class GetParcelResponseDto {
+  @ApiProperty({ description: 'Whether the request was successful' })
+  success: boolean;
+
+  @ApiProperty({ description: 'Parcel', type: ParcelDto })
+  parcel: ParcelDto;
+}

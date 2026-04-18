@@ -10,6 +10,7 @@ export interface DailyWeatherData {
   temperature_max: number;
   precipitation: number;
   is_wet_day: boolean; // > 1mm
+  et0: number | null; // FAO-56 reference evapotranspiration (mm/day)
 }
 
 export interface MonthlyWeatherData {
@@ -26,6 +27,18 @@ export interface MonthlyWeatherData {
   short_dry_spells_ltn: number;
 }
 
+export interface EvapotranspirationTimeSeries {
+  date: string;
+  et0: number; // FAO-56 reference ET (mm/day)
+}
+
+export interface MonthlyEvapotranspirationData {
+  month: string; // "2024-01"
+  et0_total: number; // Total ET0 for the month (mm)
+  et0_avg: number; // Average daily ET0 for the month (mm/day)
+  days_count: number;
+}
+
 export interface TemperatureTimeSeries {
   date: string;
   current_min: number;
@@ -36,15 +49,30 @@ export interface TemperatureTimeSeries {
   ltn_max: number;
 }
 
+/** Daily outlook from Open-Meteo (same shape as Nest GET /weather/parcel/:id). */
+export interface ParcelForecastDay {
+  date: string;
+  temp: { day: number; min: number; max: number };
+  humidity: number;
+  windSpeed: number;
+  description: string;
+  icon: string;
+  precipitation: number;
+}
+
 export interface WeatherAnalyticsData {
   temperature_series: TemperatureTimeSeries[];
   monthly_precipitation: MonthlyWeatherData[];
+  evapotranspiration_series: EvapotranspirationTimeSeries[];
+  monthly_evapotranspiration: MonthlyEvapotranspirationData[];
   start_date: string;
   end_date: string;
   location: {
     latitude: number;
     longitude: number;
   };
+  /** Short-range daily forecast (Open-Meteo via Nest or browser; no OpenWeather API key). */
+  forecast?: ParcelForecastDay[];
 }
 
 export interface ClimateNormals {
@@ -97,8 +125,33 @@ function ensureWGS84(boundary: number[][]): number[][] {
   return boundary;
 }
 
+function wmoCodeToOpenWeatherStyleIcon(code: number): string {
+  if (code <= 1) return '01d';
+  if (code <= 3) return '02d';
+  if (code <= 48) return '50d';
+  if (code <= 55) return '09d';
+  if (code <= 65) return '10d';
+  if (code <= 77) return '13d';
+  if (code <= 82) return '09d';
+  if (code <= 99) return '11d';
+  return '03d';
+}
+
+function wmoCodeToDescription(code: number): string {
+  if (code === 0) return 'Clear sky';
+  if (code <= 3) return 'Partly cloudy';
+  if (code <= 48) return 'Fog';
+  if (code <= 55) return 'Drizzle';
+  if (code <= 65) return 'Rain';
+  if (code <= 77) return 'Snow';
+  if (code <= 82) return 'Rain showers';
+  if (code <= 99) return 'Thunderstorm';
+  return 'Unknown';
+}
+
 class WeatherClimateService {
   private readonly archiveUrl = 'https://archive-api.open-meteo.com/v1';
+  private readonly forecastUrl = 'https://api.open-meteo.com/v1/forecast';
 
   /**
    * Fetch current weather data for a date range
@@ -114,7 +167,7 @@ class WeatherClimateService {
       longitude: longitude.toString(),
       start_date: startDate,
       end_date: endDate,
-      daily: 'temperature_2m_min,temperature_2m_mean,temperature_2m_max,precipitation_sum',
+      daily: 'temperature_2m_min,temperature_2m_mean,temperature_2m_max,precipitation_sum,et0_fao_evapotranspiration',
       timezone: 'auto',
     });
 
@@ -134,6 +187,7 @@ class WeatherClimateService {
       temperature_max: data.daily.temperature_2m_max[i],
       precipitation: data.daily.precipitation_sum[i],
       is_wet_day: data.daily.precipitation_sum[i] > 1,
+      et0: data.daily.et0_fao_evapotranspiration?.[i] ?? null,
     }));
   }
 
@@ -358,6 +412,52 @@ class WeatherClimateService {
   }
 
   /**
+   * Open-Meteo short-range forecast (no API key). Used when analytics are built in the browser.
+   */
+  private async fetchShortForecastOpenMeteo(
+    lat: number,
+    lon: number,
+  ): Promise<ParcelForecastDay[]> {
+    try {
+      const params = new URLSearchParams({
+        latitude: lat.toString(),
+        longitude: lon.toString(),
+        daily:
+          'temperature_2m_max,temperature_2m_min,precipitation_sum,weather_code,wind_speed_10m_max',
+        timezone: 'auto',
+        forecast_days: '16',
+      });
+      const res = await fetch(`${this.forecastUrl}?${params}`);
+      if (!res.ok) return [];
+      const json = await res.json();
+      const d = json.daily;
+      if (!d?.time?.length) return [];
+      const out: ParcelForecastDay[] = [];
+      for (let i = 0; i < d.time.length; i++) {
+        const wmo = d.weather_code?.[i] ?? 0;
+        const wMs = d.wind_speed_10m_max?.[i] ?? 0;
+        out.push({
+          date: d.time[i],
+          temp: {
+            day:
+              ((d.temperature_2m_max?.[i] ?? 0) + (d.temperature_2m_min?.[i] ?? 0)) / 2,
+            min: d.temperature_2m_min?.[i] ?? 0,
+            max: d.temperature_2m_max?.[i] ?? 0,
+          },
+          humidity: 0,
+          windSpeed: Math.round(wMs * 3.6),
+          description: wmoCodeToDescription(wmo),
+          icon: wmoCodeToOpenWeatherStyleIcon(wmo),
+          precipitation: d.precipitation_sum?.[i] ?? 0,
+        });
+      }
+      return out;
+    } catch {
+      return [];
+    }
+  }
+
+  /**
    * Main method to get complete weather analytics for a parcel
    */
   async getWeatherAnalytics(
@@ -371,8 +471,10 @@ class WeatherClimateService {
     // Calculate centroid
     const { lat, lon } = calculateCentroid(wgs84Boundary);
 
-    // Fetch current weather data
-    const dailyData = await this.getCurrentWeatherData(lat, lon, startDate, endDate);
+    const [dailyData, forecast] = await Promise.all([
+      this.getCurrentWeatherData(lat, lon, startDate, endDate),
+      this.fetchShortForecastOpenMeteo(lat, lon),
+    ]);
 
     // Fetch climate normals
     const normals = await this.getClimateNormals(lat, lon);
@@ -401,16 +503,58 @@ class WeatherClimateService {
     // Calculate monthly precipitation and derived metrics
     const monthly_precipitation = this.calculateMonthlyMetrics(dailyData, normals);
 
+    // Build evapotranspiration time series
+    const evapotranspiration_series: EvapotranspirationTimeSeries[] = dailyData
+      .filter((day) => day.et0 != null)
+      .map((day) => ({
+        date: day.date,
+        et0: day.et0!,
+      }));
+
+    // Calculate monthly evapotranspiration aggregates
+    const monthly_evapotranspiration = this.calculateMonthlyET(dailyData);
+
     return {
       temperature_series,
       monthly_precipitation,
+      evapotranspiration_series,
+      monthly_evapotranspiration,
       start_date: startDate,
       end_date: endDate,
       location: {
         latitude: lat,
         longitude: lon,
       },
+      forecast,
     };
+  }
+
+  /**
+   * Calculate monthly evapotranspiration aggregates
+   */
+  private calculateMonthlyET(dailyData: DailyWeatherData[]): MonthlyEvapotranspirationData[] {
+    const monthlyMap = new Map<string, { total: number; count: number }>();
+
+    dailyData.forEach((day) => {
+      if (day.et0 == null) return;
+      const monthKey = day.date.substring(0, 7);
+      const existing = monthlyMap.get(monthKey);
+      if (existing) {
+        existing.total += day.et0;
+        existing.count++;
+      } else {
+        monthlyMap.set(monthKey, { total: day.et0, count: 1 });
+      }
+    });
+
+    return Array.from(monthlyMap.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([month, { total, count }]) => ({
+        month,
+        et0_total: Math.round(total * 10) / 10,
+        et0_avg: Math.round((total / count) * 10) / 10,
+        days_count: count,
+      }));
   }
 }
 

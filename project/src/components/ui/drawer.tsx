@@ -31,12 +31,13 @@ DrawerOverlay.displayName = DialogPrimitive.Overlay.displayName
 
 interface DrawerContentProps extends React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> {
   side?: "left" | "right" | "top" | "bottom"
+  hideClose?: boolean
 }
 
 const DrawerContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   DrawerContentProps
->(({ side = "right", className, children, ...props }, ref) => (
+>(({ side = "right", className, children, hideClose = false, ...props }, ref) => (
   <DrawerPortal>
     <DrawerOverlay />
     <DialogPrimitive.Content
@@ -46,16 +47,20 @@ const DrawerContent = React.forwardRef<
         side === "right" && "inset-y-0 right-0 h-full w-full max-w-lg border-l border-gray-200 dark:border-gray-700 data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right",
         side === "left" && "inset-y-0 left-0 h-full w-full max-w-lg border-r border-gray-200 dark:border-gray-700 data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left",
         side === "top" && "inset-x-0 top-0 border-b border-gray-200 dark:border-gray-700 data-[state=closed]:slide-out-to-top data-[state=open]:slide-in-from-top",
-        side === "bottom" && "inset-x-0 bottom-0 border-t border-gray-200 dark:border-gray-700 data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom",
+        /* flex + min-h-0 + overflow-hidden: inner flex-1 overflow-y-auto gets a real max height (otherwise the sheet grows to content and touch-scroll fails on Android). */
+        side === "bottom" &&
+          "inset-x-0 bottom-0 flex min-h-0 flex-col overflow-hidden border-t border-gray-200 dark:border-gray-700 data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom",
         className
       )}
       {...props}
     >
       {children}
-      <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
-        <X className="h-4 w-4" />
-        <span className="sr-only">Close</span>
-      </DialogPrimitive.Close>
+      {!hideClose && (
+        <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
+          <X className="h-4 w-4" />
+          <span className="sr-only">Close</span>
+        </DialogPrimitive.Close>
+      )}
     </DialogPrimitive.Content>
   </DrawerPortal>
 ))
@@ -96,7 +101,7 @@ const DrawerTitle = React.forwardRef<
   <DialogPrimitive.Title
     ref={ref}
     className={cn(
-      "text-lg font-semibold leading-none tracking-tight",
+      "text-lg font-semibold leading-none tracking-tight text-foreground",
       className
     )}
     {...props}

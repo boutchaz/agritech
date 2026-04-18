@@ -22,6 +22,9 @@ export interface Parcel {
   rootstock?: string;
   soil_type?: string;
   irrigation_type?: string;
+  irrigation_frequency?: string;
+  water_quantity_per_session?: number;
+  water_quantity_unit?: string;
   boundary?: number[][];
   calculated_area?: number;
   perimeter?: number;
@@ -74,27 +77,32 @@ function getCurrentOrganizationId(): string | null {
 }
 
 class ParcelsService {
-  async listParcels(farmId?: string): Promise<Parcel[]> {
-    const organizationId = getCurrentOrganizationId();
+  async listParcels(farmId?: string, organizationId?: string | null, includeArchived?: boolean): Promise<Parcel[]> {
+    const orgId = organizationId || getCurrentOrganizationId();
 
-    if (!organizationId) {
+    if (!orgId) {
       throw new OrganizationRequiredError();
     }
 
     const url = new URL('/api/v1/parcels', 'http://dummy');
-    url.searchParams.append('organization_id', organizationId);
+    url.searchParams.append('organization_id', orgId);
 
     if (farmId) {
       url.searchParams.append('farm_id', farmId);
+    }
+    if (includeArchived) {
+      url.searchParams.append('include_archived', 'true');
     }
 
     // Pass organizationId in header as well
     const result = await apiClient.get<ListParcelsResponse>(
       url.pathname + url.search,
       {},
-      organizationId
+      orgId
     );
-    return result.parcels || [];
+    type ListResponse = { data?: Parcel[]; parcels?: Parcel[] };
+    const resp = result as unknown as ListResponse;
+    return resp.data || resp.parcels || [];
   }
 
   async createParcel(data: {
@@ -111,10 +119,13 @@ class ParcelsService {
     density_per_hectare?: number;
     plant_count?: number;
     planting_date?: string;
-    planting_year?: number;
-    rootstock?: string;
-    soil_type?: string;
-    irrigation_type?: string;
+      planting_year?: number;
+      rootstock?: string;
+      soil_type?: string;
+      irrigation_type?: string;
+      irrigation_frequency?: string;
+      water_quantity_per_session?: number;
+      water_quantity_unit?: string;
   }): Promise<Parcel> {
     const organizationId = getCurrentOrganizationId();
     return apiClient.post<Parcel>(
@@ -144,6 +155,9 @@ class ParcelsService {
       rootstock?: string;
       soil_type?: string;
       irrigation_type?: string;
+      irrigation_frequency?: string;
+      water_quantity_per_session?: number;
+      water_quantity_unit?: string;
     }
   ): Promise<Parcel> {
     const organizationId = getCurrentOrganizationId();
@@ -162,16 +176,26 @@ class ParcelsService {
     return parcels.find(p => p.id === parcelId) || null;
   }
 
-  async deleteParcel(parcelId: string): Promise<{ success: boolean; deleted_parcel?: { id: string; name: string } }> {
-    // Use apiRequest directly since DELETE with body is needed
+  async archiveParcel(parcelId: string): Promise<{ success: boolean; archived_parcel?: { id: string; name: string } }> {
     const { apiRequest } = await import('../lib/api-client');
     const organizationId = getCurrentOrganizationId();
-    return apiRequest<{ success: boolean; deleted_parcel?: { id: string; name: string } }>(
+    return apiRequest<{ success: boolean; archived_parcel?: { id: string; name: string } }>(
       '/api/v1/parcels',
       {
         method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ parcel_id: parcelId }),
       },
+      organizationId
+    );
+  }
+
+  async restoreParcel(parcelId: string): Promise<{ success: boolean; restored_parcel?: { id: string; name: string } }> {
+    const { apiRequest } = await import('../lib/api-client');
+    const organizationId = getCurrentOrganizationId();
+    return apiRequest<{ success: boolean; restored_parcel?: { id: string; name: string } }>(
+      `/api/v1/parcels/${parcelId}/restore`,
+      { method: 'PATCH' },
       organizationId
     );
   }
@@ -187,4 +211,3 @@ class ParcelsService {
 }
 
 export const parcelsService = new ParcelsService();
-

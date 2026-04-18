@@ -28,6 +28,8 @@
     "lightMode": "Light mode",
     "active": "Active",
     "inactive": "Inactive",
+    "goBack": "Go Back",
+    "goHome": "Go to Dashboard",
     "retry": "Retry",
     "noResults": "No results found",
     "selectFarm": "Select a farm",
@@ -123,9 +125,9 @@
     },
     "roiCalculator": {
       "title": "Calculate your return on investment",
-      "subtitle": "Discover in 30 seconds how much AgriTech can save you each year. Get a personalized report by email.",
+      "subtitle": "Discover in 30 seconds how much AgroGina can save you each year. Get a personalized report by email.",
       "calculatorTitle": "ROI Calculator",
-      "calculatorSubtitle": "Discover how much you could save with AgriTech",
+      "calculatorSubtitle": "Discover how much you could save with AgroGina",
       "farmSize": "Farm size (hectares)",
       "farmSizeUnit": "ha",
       "currentYield": "Current yield (tonnes/ha)",
@@ -249,7 +251,11 @@
       "street": "Street",
       "all": "All",
       "totalPoints": "Total Points",
-      "activeLocations": "Active locations"
+      "activeLocations": "Active locations",
+      "activeFarm": "Active Farm",
+      "activeFarms": "Active farms",
+      "noFarms": "No active farms found",
+      "noFarmsHint": "Add coordinates to your farms to see them on the map"
     }
   },
   "nav": {
@@ -306,9 +312,38 @@
     "campaigns": "Campaigns",
     "cropCycles": "Crop Cycles",
     "chat": "AI Assistant",
+    "biologicalAssets": "Biological Assets",
     "compliance": "Compliance",
     "certifications": "Certifications",
-    "correctiveActions": "Corrective Actions"
+    "correctiveActions": "Corrective Actions",
+    "marketplace": "Marketplace",
+    "receivedRequests": "Received Requests",
+    "sentRequests": "Sent Requests",
+    "viewMarketplace": "View Marketplace",
+    "paymentRecords": "Payment Records",
+    "bankAccounts": "Bank Accounts"
+  },
+  "sidebar": {
+    "collapse": "Collapse",
+    "expand": "Expand sidebar"
+  },
+  "orgSwitcher": {
+    "organizations": "Organizations",
+    "orgSettings": "Organization Settings",
+    "manageTeam": "Manage Team",
+    "signOut": "Sign Out",
+    "backToOrganizations": "← Back to organizations",
+    "farms": "Farms - {{orgName}}",
+    "manager": "Manager: {{name}}",
+    "noFarms": "No farms found",
+    "createFirstFarm": "Create your first farm",
+    "roles": {
+      "owner": "Owner",
+      "admin": "Administrator",
+      "manager": "Manager",
+      "member": "Member",
+      "viewer": "Viewer"
+    }
   },
   "stock": {
     "title": "Stock Management",
@@ -382,10 +417,6 @@
         "cta": "Explore analyses"
       }
     },
-    "unifiedView": {
-      "title": "Unified operational view",
-      "subtitle": "Monitor your key indicators live: priority tasks, weather data and financial performance"
-    },
     "structuredData": {
       "platformName": "agricultural management platform",
       "description": "Unified agricultural management solution: farms, parcels, tasks, accounting and analyses.",
@@ -413,9 +444,23 @@
         "stockKeywords": "stock inventory",
         "infrastructure": "View infrastructure",
         "infrastructureKeywords": "infrastructure irrigation equipment",
+        "farmHierarchy": "Manage farms",
+        "farmHierarchyKeywords": "farms hierarchy",
+        "tasks": "Manage tasks",
+        "tasksKeywords": "tasks missions work",
         "settings": "Open settings",
         "settingsKeywords": "settings organization"
       },
+      "create": {
+        "parcel": "Create parcel",
+        "task": "Create task",
+        "cycle": "Create crop cycle",
+        "stockEntry": "Create stock entry",
+        "invoice": "Create invoice",
+        "worker": "Add worker"
+      },
+      "searchPlaceholder": "Search for an action or page...",
+      "noResults": "No results found.",
       "modules": {
         "subtitle": "Available modules"
       },
@@ -648,7 +693,20 @@
       "topRow": "Top Row",
       "middleRow": "Middle Row",
       "bottomRow": "Bottom Row",
-      "helper": "Hold Ctrl/Cmd to select multiple options"
+      "helper": "Hold Ctrl/Cmd to select multiple options",
+      "structureTitle": "How the dashboard is organized",
+      "structureIntro": "The top of your dashboard is fixed: farm context, KPI cards, tasks, workforce, accounting, and analyses always appear in that order.",
+      "fixedStripLabel": "Fixed — always on",
+      "fixedStripDetail": "Farm selector · 4 KPIs · Tasks & crew · Accounting & lab analyses",
+      "optionalBlockTitle": "Optional widgets below",
+      "optionalTwoCol": "Wide row (2 columns on large screens)",
+      "optionalThreeCol": "Tile row (3 columns on large screens)",
+      "toggleHint": "Tap a card to show or hide that widget on the dashboard.",
+      "previewFixed": "Fixed layout",
+      "previewOptional": "Your optional widgets",
+      "legacyBottomNote": "Some saved tiles are not shown on the dashboard yet and are ignored: {{keys}}",
+      "toggleOn": "Shown",
+      "toggleOff": "Hidden"
     },
     "layoutOptions": {
       "soil": "Soil Data",
@@ -665,7 +723,8 @@
     "preview": {
       "title": "Layout Preview"
     },
-    "save": {
+    "save": "Save",
+    "saveResult": {
       "success": "Settings saved successfully",
       "failed": "Failed to save settings",
       "failedDescription": "An error occurred while saving the settings."
@@ -712,7 +771,25 @@
       "legacyCosts": "Legacy Costs",
       "legacyRevenue": "Legacy Revenue",
       "ledgerExpenses": "Ledger Expenses",
-      "ledgerRevenue": "Ledger Revenue"
+      "ledgerRevenue": "Ledger Revenue",
+      "totalCosts": "Total Costs",
+      "totalRevenue": "Total Revenue",
+      "netProfit": "Net Profit",
+      "profitMargin": "Profit Margin"
+    },
+    "operational": {
+      "taskLabor": "Task Labor Costs",
+      "materialCosts": "Material Costs",
+      "harvestRevenues": "Harvest Revenues",
+      "metayageSettlements": "Metayage Settlements",
+      "product": "Product",
+      "harvest": "Harvest",
+      "gross": "Gross",
+      "charges": "charges",
+      "workerShare": "Worker share",
+      "noMaterialData": "No material cost data available for this period",
+      "noHarvestData": "No harvest revenue data available for this period",
+      "noMetayageData": "No metayage settlement data available for this period"
     },
     "accounts": {
       "title": "Breakdown by Chart of Accounts",
@@ -785,6 +862,15 @@
       "journalEntryHelp": "Automatically create a journal entry in the accounting ledger"
     }
   },
+  "paid": "paid",
+  "pending": "pending",
+  "notFound": {
+    "title": "Page not found",
+    "description": "The page you're looking for doesn't exist or has been moved.",
+    "goHome": "Back to home",
+    "goBack": "Previous page",
+    "hint": "Check the URL or use the navigation"
+  },
   "auth": {
     "login": "Login",
     "logout": "Logout",
@@ -793,7 +879,7 @@
     "forgotPassword": "Forgot password?",
     "signUp": "Sign up",
     "signIn": {
-      "title": "Sign in to Agritech",
+        "title": "Sign in to AgroGina",
       "subtitle": "Welcome back",
       "helperText": "Access your satellite insights, operations dashboard, and farm collaborators from one secure workspace.",
       "noAccount": "Don't have an account yet?",
@@ -899,6 +985,19 @@
       "exportAll": "Export all",
       "import": "Import",
       "searchPlaceholder": "Search for a farm",
+      "selectedSingle": "selected farm",
+      "selectedMultiple": "selected farms",
+      "clearSelection": "Clear selection",
+      "selectAll": "Select all",
+      "filterAllTypes": "All types",
+      "filterMainFarms": "Main farms",
+      "filterSubFarms": "Sub-farms",
+      "filterAllStatuses": "All statuses",
+      "batchDeleteConfirmTitle": "Confirm bulk deletion",
+      "batchDeleteConfirmDescription": "You are about to delete",
+      "batchDeleteIrreversible": "This action is irreversible. All associated data (parcels, tasks, satellite analyses, etc.) will also be deleted.",
+      "batchDeleteAction_one": "Delete {{count}} farm",
+      "batchDeleteAction_other": "Delete {{count}} farms",
       "deleteConfirm": "Confirm farm deletion",
       "deleteWarning": "Are you sure you want to delete the farm",
       "deleteIrreversible": "This action is irreversible and will delete all data associated with this farm.",
@@ -911,8 +1010,35 @@
       "noSearchResults": "No farms match your search",
       "validation": {
         "nameRequired": "Name must contain at least 2 characters"
-      }
+      },
+      "deleting": "Deleting...",
+      "noEmail": "No email",
+      "noUsersFound": "No users found",
+      "noUsersInOrganization": "No users in organization",
+      "searchUsersPlaceholder": "Search for a user...",
+      "selectManagerError": "Error selecting manager",
+      "unnamedUser": "Unnamed user",
+      "exportSuccess": "Export successful!",
+      "exportError": "Error during export",
+      "deleteSuccess": "Farm \"{{name}}\" and all associated data deleted successfully.",
+      "deleteError": "Error deleting farm",
+      "batchDeleteSuccess": "{{deleted}} farm(s) deleted successfully.{{failed,}}",
+      "relatedParcels_one": "{{count}} parcel",
+      "relatedParcels_other": "{{count}} parcels",
+      "relatedTasks_one": "{{count}} task",
+      "relatedTasks_other": "{{count}} tasks",
+      "relatedSatellite_one": "{{count}} satellite analysis",
+      "relatedSatellite_other": "{{count}} satellite analyses",
+      "relatedWarehouses_one": "{{count}} warehouse",
+      "relatedWarehouses_other": "{{count}} warehouses",
+      "relatedInventory_one": "{{count}} inventory item",
+      "relatedInventory_other": "{{count}} inventory items",
+      "relatedStructures_one": "{{count}} structure",
+      "relatedStructures_other": "{{count}} structures",
+      "relatedWorkers_one": "{{count}} worker (will be dissociated)",
+      "relatedWorkers_other": "{{count}} workers (will be dissociated)"
     },
+    "parcels": "Parcels",
     "details": {
       "title": "Farm Details",
       "information": "Farm Information",
@@ -941,6 +1067,8 @@
       "cropCategory": "Crop category",
       "cropType": "Crop type",
       "variety": "Variety",
+      "agromindSupported": "Supported by AgromindIA",
+      "agromindVarietySupported": "AgromindIA referenced variety",
       "plantingSystem": "Planting system",
       "spacing": "Spacing",
       "spacingPlaceholder": "Ex: 4x1.5",
@@ -960,6 +1088,19 @@
       "deleteWarning": "Are you sure you want to delete the parcel",
       "deleteIrreversibleWarning": "This action will also delete all analyses, tasks and other data associated with this parcel. This action is irreversible.",
       "deleting": "Deleting...",
+      "archiveConfirm": "Archive parcel",
+      "archiveWarning": "Are you sure you want to archive the parcel",
+      "archiveNote": "Historical data (harvests, costs, tasks) will be preserved.",
+      "archiving": "Archiving...",
+      "archive": "Archive",
+      "archiveSuccess": "Parcel archived successfully",
+      "archiveError": "Error archiving parcel",
+      "archiveFailed": "Archiving failed",
+      "restoreConfirm": "Restore parcel",
+      "restore": "Restore",
+      "restored": "Parcel restored successfully",
+      "archived": "Archived",
+      "showArchived": "Show archived",
       "noParcels": "No parcels created",
       "sections": {
         "basicInfo": "Basic information",
@@ -971,6 +1112,10 @@
         "trees": "Fruit trees",
         "cereals": "Cereals",
         "vegetables": "Vegetables",
+        "legumes": "Legumes",
+        "fourrages": "Forage crops",
+        "industrielles": "Industrial crops",
+        "aromatiques": "Aromatic plants",
         "other": "Other"
       },
       "irrigation": {
@@ -991,7 +1136,7 @@
         "backToParcels": "Back to parcels",
         "tabs": {
           "overview": "Overview",
-          "soil": "Soil Analysis",
+          "soil": "Analysis",
           "satellite": "Satellite Imagery",
           "weather": "Weather & Climate",
           "production": "Production Intelligence",
@@ -1098,171 +1243,136 @@
     }
   },
   "landing": {
+    "nav": {
+      "features": "Features",
+      "howItWorks": "How it works",
+      "faq": "FAQ",
+      "blog": "Blog",
+      "menuAria": "Main menu",
+      "closeMenu": "Close menu"
+    },
     "hero": {
-      "title": "Transform your agriculture with",
-      "titleHighlight": "data",
-      "subtitle": "Complete agricultural management platform. Parcels, teams, inventory, satellite analysis, soil and profitability. All in one place.",
-      "ctaPrimary": "Get started now",
-      "ctaSecondary": "Discover features",
-      "freeTrial": "Free trial",
-      "noCommitment": "No commitment",
-      "supportIncluded": "Support included"
+      "title": "Pilot your farm with artificial intelligence",
+      "highlight": "One platform. One vision. Everything connected.",
+      "subtitle": "AGROGINA centralizes the management of your plots, inventory, teams, finances, analytics, and marketplace — with an AI that transforms your data into decisions.",
+      "ctaDemo": "Request a Demo",
+      "ctaDiscover": "Discover Features",
+      "badge1": "Free Trial",
+      "badge2": "No Commitment",
+      "badge3": "Support Included",
+      "demoInteractive": "INTERACTIVE DEMO"
     },
-    "features": {
-      "title": "Complete features",
-      "subtitle": "All the tools you need to manage your farm",
-      "parcelManagement": "Parcel Management",
-      "parcelDesc": "Manage your parcels with precision. Track crops, surfaces and geospatial data.",
-      "teamManagement": "Team Management",
-      "teamDesc": "Permanent employees and day laborers. Attendance, wages and optimized scheduling.",
-      "satelliteAnalysis": "Satellite Analysis",
-      "satelliteDesc": "NDVI, NDWI, NDMI indices to monitor crop health via satellite.",
-      "soilAnalysis": "Soil Analysis",
-      "soilDesc": "pH, humidity, NPK, organic matter. Laboratory and field analyses.",
-      "stockManagement": "Stock Management",
-      "stockDesc": "Inputs, fertilizers, seeds. Low stock alerts and expiration management.",
-      "profitability": "Parcel Profitability",
-      "profitabilityDesc": "Calculate costs and revenues per parcel. Optimize your profitability.",
-      "analytics": "Reports & Analytics",
-      "analyticsDesc": "Customizable dashboards. Export your data and reports.",
-      "infrastructure": "Infrastructure Management",
-      "infrastructureDesc": "Equipment, buildings, irrigation systems. Maintenance and tracking.",
-      "weather": "Weather & Services",
-      "weatherDesc": "Integrated weather forecasts and utility services for your farm.",
-      "multiOrg": "Multi-Organization",
-      "multiOrgDesc": "Manage multiple farms. Permissions and roles per organization.",
-      "secure": "Secure & Compliant",
-      "secureDesc": "Secure authentication, Supabase RLS. Your data is protected.",
-      "realtime": "Real-time",
-      "realtimeDesc": "Real-time updates with React Query. Reactive interface."
+    "modules": {
+      "title": "A complete suite for every aspect of your farm",
+      "subtitle": "Everything you need, in a single interface.",
+      "parcels": "Plot Management",
+      "parcelsDesc": "Map, track your crops, manage multi-sites",
+      "stocks": "Inventory & Inputs",
+      "stocksDesc": "Real-time inventory, low stock alerts",
+      "hr": "Staff & Tasks",
+      "hrDesc": "Plan, assign, track progress",
+      "finance": "Finance & Sales",
+      "financeDesc": "Quotes, invoices, costs per plot",
+      "accounting": "Advanced Accounting",
+      "accountingDesc": "Chart of accounts, journals, balance sheet, tax",
+      "analytics": "Analytics",
+      "analyticsDesc": "Soil, water, plants, analytical weather",
+      "marketplace": "Marketplace",
+      "marketplaceDesc": "Buy inputs, sell harvest, connect partners",
+      "ai": "AgromindIA",
+      "aiDesc": "The AI that recommends, connects, optimizes",
+      "learnMore": "Learn More"
     },
-    "benefits": {
-      "title": "Why choose AGROGINA?",
-      "productivity": "Increased productivity",
-      "productivityDesc": "Automate your tasks and save time on daily management.",
-      "costReduction": "Cost reduction",
-      "costReductionDesc": "Optimize your inputs and reduce waste through data.",
-      "betterYields": "Better yields",
-      "betterYieldsDesc": "Make data-driven decisions to maximize your harvests.",
-      "sustainable": "Sustainable agriculture",
-      "sustainableDesc": "Reduce your environmental impact with precise management."
+    "steps": {
+      "title": "Operational in 3 steps",
+      "step1Title": "Connect your data",
+      "step1Desc": "Import your existing plots, inventory, and teams",
+      "step2Title": "Let AI analyze",
+      "step2Desc": "AgromindIA learns your farm and generates recommendations",
+      "step3Title": "Make the right decisions",
+      "step3Desc": "Every action is connected, every impact is visible"
     },
-    "cta": {
-      "title": "Ready to modernize your agriculture?",
-      "subtitle": "Join agricultural teams already optimizing their operations.",
-      "button": "Start for free"
+    "why": {
+      "title": "What sets us apart",
+      "connected": "Everything connected",
+      "connectedDesc": "A created task automatically impacts inventory, staff, and costs",
+      "ai": "Integrated AI",
+      "aiDesc": "Not a gimmick, a real decision engine",
+      "morocco": "Made in Morocco",
+      "moroccoDesc": "Designed for Moroccan agricultural realities",
+      "simple": "Simple and accessible",
+      "simpleDesc": "No technical jargon, quick to learn"
+    },
+    "regions": {
+      "title": "Supported Agricultural Regions",
+      "subtitle": "Our platform is available for agricultural land in the following countries:"
+    },
+    "pricing": {
+      "title": "Custom Pricing",
+      "subtitle": "Every farm is unique. Contact us for a quote tailored to your needs.",
+      "text": "From your first plot to hundreds of hectares, AGROGINA scales with you.",
+      "cta": "Request a Quote"
+    },
+    "bp": {
+      "title": "FDA Business Plan Simulator",
+      "subtitle": "Calculate your Moroccan state subsidies in a few clicks.",
+      "desc": "A complete and exclusive tool to simulate and automatically generate your business plan for the Agricultural Development Fund. Simple, fast, and designed to prevent abuse.",
+      "feature1": "Free for new members (Max 2 generations)",
+      "feature2": "Automatic framing according to DPA/ORMVA standards",
+      "feature3": "Ready for official submission",
+      "cta": "Simulate my project"
+    },
+    "faq": {
+      "title": "Frequently Asked Questions",
+      "q1": "What size of farm does AGROGINA work for?",
+      "a1": "From 10 to 10,000 hectares, the platform adapts to your scale.",
+      "q2": "How long does it take to get operational?",
+      "a2": "Initial setup in a few days, onboarding support included.",
+      "q3": "Is my data secure?",
+      "a3": "Secure hosting, automatic backups, controlled access.",
+      "q4": "Does AI replace the farmer?",
+      "a4": "No. It amplifies your expertise by giving you the right information at the right time.",
+      "q5": "Can I test before committing?",
+      "a5": "Yes, we offer a free trial period.",
+      "q6": "How can I get a quote?",
+      "a6": "Fill out the contact form, we will respond within 48h."
+    },
+    "contact": {
+      "title": "Ready to transform your farm management?",
+      "subtitle": "Request a personalized demo with our team.",
+      "formName": "Full Name",
+      "formEmail": "Professional Email",
+      "formPhone": "Phone Number",
+      "formSize": "Farm Size",
+      "formSize1": "Under 50 ha",
+      "formSize2": "50 to 200 ha",
+      "formSize3": "200 to 500 ha",
+      "formSize4": "Over 500 ha",
+      "formMsg": "Message (optional)",
+      "formSizePlaceholder": "Select farm size",
+      "validationRequired": "Please fill in all required fields.",
+      "submit": "Submit Request"
     },
     "footer": {
-      "tagline": "The complete platform to modernize your agriculture.",
+      "tagline": "AGROGINA centralizes the management of your plots, inventory, teams, finances, analytics, and marketplace.",
       "product": "Product",
+      "company": "Company",
+      "about": "About Us",
+      "legal": "Legal",
+      "terms": "Terms of Service",
+      "privacy": "Privacy Policy",
+      "madeInCredit": "Made with love in Morocco by <codelovers>CodeLovers</codelovers>",
+      "copyright": "All rights reserved.",
       "features": "Features",
       "pricing": "Pricing",
-      "freeTrial": "Free trial",
-      "blog": "Blog",
-      "support": "Support",
-      "documentation": "Documentation",
-      "contact": "Contact",
       "faq": "FAQ",
-      "legal": "Legal",
-      "privacy": "Privacy",
-      "terms": "Terms of Service",
-      "legalNotice": "Legal Notice",
-      "copyright": "All rights reserved."
-    },
-    "trustedBy": "Trusted by agricultural professionals",
-    "trusted": {
-      "agronomists": "Agronomists",
-      "coops": "Cooperatives",
-      "exporters": "Exporters",
-      "labs": "Laboratories"
-    },
-    "nav": {
-      "blog": "Blog"
+      "blog": "Blog",
+      "contact": "Contact"
     },
     "seo": {
       "title": "AGROGINA - The All-in-One Agricultural Management Suite | Morocco",
       "description": "AGROGINA revolutionizes agriculture in Morocco. A unique platform to manage production, finance, HR, inventory and marketing. Precision agriculture and simplified farm management.",
-      "keywords": "agricultural management, agriculture software morocco, agricultural erp, parcels, NDVI, satellite analysis, agricultural accounting, farm management, precision agriculture, agricultural marketplace, fruit quality control, agricultural labor management, agrogina, agritech"
-    },
-    "modules": {
-      "title": "The modules that orchestrate your operations",
-      "subtitle": "An integrated suite connecting parcel planning, team work, accounting and agronomic analysis.",
-      "cta": "Discover the module",
-      "parcels": {
-        "title": "Parcel Management",
-        "desc": "Map your parcels, track crops and link them to soil analyses."
-      },
-      "tasks": {
-        "title": "Task Planning",
-        "desc": "Assign your teams, measure time spent and track progress in real time."
-      },
-      "accounting": {
-        "title": "Integrated Accounting",
-        "desc": "Automate invoices, payments and cost tracking per farm or parcel."
-      },
-      "analytics": {
-        "title": "Analyses & Services",
-        "desc": "Leverage satellite imagery and order your laboratory analyses in a few clicks."
-      }
-    },
-    "siam": {
-      "title": "SIAM 2026 • Meet AGROGINA",
-      "description": "Book a product demonstration slot at the AGROGINA booth.",
-      "features": {
-        "demo": "Live platform demonstration.",
-        "focus": "Focus on satellite, tasks, stock and accounting.",
-        "slots": "Available slots from local cache."
-      },
-      "form": {
-        "title": "Meeting Request",
-        "description": "We will get back to you quickly with confirmation of the time slot.",
-        "fullName": "Full name",
-        "email": "Professional email",
-        "phone": "Phone",
-        "submit": "Book a SIAM Meeting",
-        "success": "Request registered. Our team confirms the meeting slot within 24h."
-      }
-    },
-    "blog": {
-      "label": "Blog",
-      "title": "Latest Insights",
-      "subtitle": "Stay updated with the latest trends and best practices in agricultural technology.",
-      "viewAll": "View all articles",
-      "readingTime": "min"
-    },
-    "pricing": {
-      "title": "Simple and transparent pricing",
-      "subtitle": "Choose the plan that fits your needs",
-      "mostPopular": "Most popular",
-      "perMonth": "/month",
-      "perHaYear": "/ha/year HT",
-      "getStarted": "Get started",
-      "contactUs": "Contact us"
-    },
-    "stats": {
-      "farms": "Farms Managed",
-      "parcels": "Parcels Tracked",
-      "hectares": "Hectares Monitored",
-      "satisfaction": "Customer Satisfaction"
-    },
-    "testimonials": {
-      "title": "Trusted by Moroccan Farmers",
-      "subtitle": "See what agricultural professionals say about AGROGINA",
-      "farmer1": {
-        "quote": "AGROGINA transformed our 200-hectare citrus operation. We reduced water usage by 30% and improved our export quality compliance.",
-        "author": "Hassan B.",
-        "role": "Citrus Grower, Souss-Massa"
-      },
-      "coop1": {
-        "quote": "Managing 50+ member farms was a nightmare before. Now we have complete visibility on costs, yields, and profitability for each plot.",
-        "author": "Fatima Z.",
-        "role": "Director, Olive Cooperative, Meknès"
-      },
-      "exporter1": {
-        "quote": "The satellite analysis and quality tracking features helped us achieve GlobalGAP certification across all our supplier farms.",
-        "author": "Karim M.",
-        "role": "Export Director, AgriExport Maroc"
-      }
+    "keywords": "agricultural management, agriculture software morocco, agricultural erp, parcels, NDVI, satellite analysis, agricultural accounting, farm management, precision agriculture, agricultural marketplace, fruit quality control, agricultural labor management, agrogina"
     }
   },
   "suppliers": {
@@ -1343,6 +1453,8 @@
     "deleteConfirmTitle": "Confirm Deletion",
     "deleteConfirmation": "Are you sure you want to delete the warehouse",
     "deleteWarning": "This action is irreversible and will remove all associated stock data.",
+    "createDescription": "Create a warehouse to manage your production stock",
+    "editDescription": "Edit warehouse information and settings",
     "table": {
       "name": "Name",
       "location": "Location",
@@ -1499,7 +1611,9 @@
       "updated": "Item group updated successfully",
       "deleted": "Item group deleted successfully",
       "deleteTitle": "Delete Item Group",
-      "deleteConfirmation": "Are you sure you want to delete the item group \"{{name}}\"? This action cannot be undone."
+      "deleteConfirmation": "Are you sure you want to delete the item group \"{{name}}\"? This action cannot be undone.",
+      "noGroupsFound": "No item groups found",
+      "noOrganization": "No organization selected"
     },
     "unit": {
       "manage": "Manage Units",
@@ -1544,7 +1658,87 @@
       "fiscalYears": "Fiscal Years",
       "fiscalYearsDescription": "Manage fiscal years and accounting periods",
       "biologicalAssets": "Biological Assets",
-      "biologicalAssetsDescription": "Manage orchards, livestock and perennial assets"
+      "biologicalAssetsDescription": "Manage orchards, livestock and perennial assets",
+      "costCenters": "Cost Centers",
+      "costCentersDescription": "Manage cost centers for expense tracking",
+      "accountMappings": "Account Mappings",
+      "accountMappingsDescription": "Configure automatic journal entry mappings",
+      "emailTemplates": "Email Templates",
+      "emailTemplatesDescription": "Manage email notification templates",
+      "files": "File Management",
+      "filesDescription": "Manage files and detect orphans",
+      "dangerZone": "Danger Zone",
+      "dangerZoneDescription": "Manage demo data and critical actions",
+      "legal": "Legal",
+      "legalDescription": "Terms of service and privacy policy",
+      "banners": "Banners",
+      "bannersDescription": "In-app announcements",
+      "billing": "Billing & Invoices",
+      "billingDescription": "Manage billing and view invoices",
+      "changelog": "Changelog",
+      "changelogDescription": "Product change history",
+      "sections": {
+        "personal": "Personal",
+        "organization": "Organization",
+        "accounting": "Accounting & Finance",
+        "content": "Content & Display",
+        "legal": "Legal",
+        "system": "System"
+      }
+    }
+  },
+  "banners": {
+    "title": "Banners",
+    "description": "Temporary in-app messages for your organization",
+    "empty": "No banners yet. Create one to notify your team.",
+    "dismissible": "Dismissible"
+  },
+  "changelog": {
+    "title": "Changelog",
+    "description": "Public history of product changes",
+    "empty": "No changelog entries yet. Document your first release."
+  },
+  "emailTemplates": {
+    "title": "Email Templates",
+    "description": "View and customize email notification templates sent by the system",
+    "search": "Search templates...",
+    "noTemplates": "No email templates found",
+    "noResults": "No templates match your search",
+    "selectTemplate": "Select a template to view details",
+    "edit": "Edit",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "deleted": "Template deleted",
+    "deleteFailed": "Failed to delete template",
+    "duplicated": "Template duplicated",
+    "duplicateFailed": "Failed to duplicate template",
+    "updated": "Template updated",
+    "updateFailed": "Failed to update template",
+    "active": "Active",
+    "inactive": "Inactive",
+    "system": "System",
+    "subject": "Subject",
+    "htmlBody": "HTML Body",
+    "preview": "Preview",
+    "variables": "Variables",
+    "categories": {
+      "all": "All",
+      "marketplace": "Marketplace",
+      "invoice": "Invoices",
+      "quote": "Quotes",
+      "order": "Orders",
+      "task": "Tasks",
+      "reminder": "Reminders",
+      "general": "General"
+    }
+  },
+  "account": {
+    "title": "Account Settings",
+    "tabs": {
+      "profile": "Profile",
+      "preferences": "Preferences",
+      "security": "Security"
     }
   },
   "profile": {
@@ -1554,6 +1748,9 @@
     "success": "Profile saved successfully",
     "cancel": "Cancel",
     "changePhoto": "Change photo",
+    "uploadPhoto": "Upload",
+    "takePhoto": "Take Photo",
+    "capture": "Capture",
     "photoFormats": "Accepted formats: JPG, PNG (max 2MB)",
     "sections": {
       "personalInfo": "Personal Information",
@@ -1619,7 +1816,13 @@
       "uploadError": "Error uploading photo. Please try again.",
       "removeError": "Error removing photo. Please try again."
     },
-    "removePhoto": "Remove photo"
+    "removePhoto": "Remove photo",
+    "toast": {
+      "photoUpdated": "Profile photo updated",
+      "photoUpdateFailed": "Failed to update photo",
+      "photoRemoved": "Profile photo removed",
+      "photoRemoveFailed": "Failed to remove photo"
+    }
   },
   "preferences": {
     "title": "Preferences",
@@ -1714,6 +1917,9 @@
   },
   "organization": {
     "title": "Organization Settings",
+    "pageSubtitle": "Configure your organization identity, contact details and regional preferences",
+    "previewMarketplace": "Preview Marketplace",
+    "previewShort": "Preview",
     "save": "Save",
     "saving": "Saving...",
     "success": "Settings saved successfully",
@@ -1746,7 +1952,7 @@
     "mapProviderMapbox": "Mapbox",
     "mapProviderMapboxDesc": "Higher-quality satellite imagery. Requires an API token.",
     "mapProviderDescription": "Select the tile source for map backgrounds.",
-    "mapProviderTokenWarning": "Mapbox requires a VITE_MAPBOX_TOKEN environment variable. The map will fall back to default tiles until one is configured.",
+    "mapProviderTokenWarning": "Mapbox basemaps need VITE_MAPBOX_TOKEN and VITE_MAP_PROVIDER=mapbox. Set VITE_MAP_PROVIDER=default to use free OSM/Esri tiles only and avoid Mapbox tile usage.",
     "placeholders": {
       "name": "Your organization name",
       "slug": "organization-slug",
@@ -1778,6 +1984,11 @@
       "notFound": "Organization not found",
       "loadError": "Error loading organization data",
       "saveError": "Error saving changes"
+    },
+    "currency": {
+      "label": "Currency",
+      "placeholder": "Select a currency",
+      "helper": "The currency will be used for all financial amounts (utilities, invoices, etc.)"
     }
   },
   "subscription": {
@@ -1819,7 +2030,69 @@
       "mostPopular": "Most Popular",
       "currentPlan": "Current Plan",
       "contactSales": "Contact Sales",
-      "getStarted": "Get Started"
+      "getStarted": "Get Started",
+      "upgrade": "Upgrade",
+      "downgrade": "Downgrade",
+      "hectares": "Hectares",
+      "hectaresUpTo": "up to {{max}}",
+      "hectaresAbove": ">{{min}}",
+      "users": "Users",
+      "support": "Support",
+      "sla": "SLA",
+      "slaIncluded": "Included",
+      "slaNotIncluded": "Not included",
+      "pricePerHa": "{{price}} MAD/ha/year (HT)"
+    },
+    "processing": "Processing...",
+    "contractInputs": "Contract Inputs",
+    "contractedHectares": "Contracted hectares",
+    "billingCycle": "Billing cycle",
+    "billingCycles": {
+      "monthly": "Monthly",
+      "semiannual": "Semiannual",
+      "annual": "Annual"
+    },
+    "billedCycle": "Billed {{cycle}}",
+    "currentContract": "Current Contract",
+    "usageLimits": "Usage and Limits",
+    "contractTimeline": "Contract Timeline",
+    "timeline": {
+      "start": "Start",
+      "end": "End",
+      "renewalNotice": "Renewal notice",
+      "daysBeforeEnd": "{{days}} days before end"
+    },
+    "details": {
+      "status": "Status",
+      "contractedHectares": "Contracted hectares",
+      "includedUsers": "Included users",
+      "unlimited": "Unlimited",
+      "contractEnd": "Contract end",
+      "nextBilling": "Next billing"
+    },
+    "billingManagementTitle": "Billing Management",
+    "billingManagementDescription": "Open checkout with your current contract context to update payment and invoice settings.",
+    "manageBilling": "Manage Billing",
+    "addons": {
+      "title": "Add-ons",
+      "active": "Active",
+      "buy": "Buy",
+      "noAddons": "No addon modules configured.",
+      "coreModules": "Included core modules",
+      "perMonth": "${{price}}/mo"
+    },
+    "modular": {
+      "title": "Choose Your Modules",
+      "subtitle": "Select the ERP modules and hectares for your farm",
+      "switchToModular": "Switch to modular",
+      "changeModules": "Change modules",
+      "activeModules": "Active Modules",
+      "customPlan": "Custom Plan",
+      "modulesLabel": "modules",
+      "moduleCount": "{{count}} modules",
+      "erpMonthly": "ERP/month",
+      "haAnnual": "Ha/year",
+      "annualHt": "Annual HT"
     },
     "errors": {
       "noOrganization": "No organization selected. Please select an organization first.",
@@ -1854,7 +2127,10 @@
       "inactive": "Inactive"
     },
     "actions": {
-      "viewPassword": "View Password"
+      "viewPassword": "View Password",
+      "activate": "Activate User",
+      "deactivate": "Deactivate User",
+      "remove": "Remove User"
     },
     "invite": {
       "title": "Invite User",
@@ -1930,6 +2206,8 @@
     "used": "Used {{count}} times",
     "used_plural": "Used {{count}} times",
     "cancel": "Cancel",
+    "createLabel": "Create",
+    "updateLabel": "Update",
     "create": {
       "success": "Work unit created successfully",
       "failed": "Failed to create work unit",
@@ -2016,6 +2294,9 @@
       "title": "No templates yet",
       "description": "Create your first template to customize document headers and footers"
     },
+    "editor": {
+      "preview": "Preview"
+    },
     "actions": {
       "preview": "Preview",
       "setDefault": "Set Default",
@@ -2032,6 +2313,40 @@
     "setDefault": {
       "success": "Default template updated",
       "failed": "Failed to set default template"
+    },
+    "preview": {
+      "title": "Preview: {{name}}",
+      "loadingTitle": "Template preview",
+      "notFound": "Template could not be loaded.",
+      "draftHint": "You are viewing unsaved changes from the editor.",
+      "sampleCompany": "Company name",
+      "sampleAddress": "123 Business Street",
+      "sampleCity": "City, Country",
+      "sampleEmail": "contact@example.com",
+      "sampleInvoiceTitle": "Invoice #INV-2024-001",
+      "sampleQuoteTitle": "Quote #QUO-2024-001",
+      "sampleSalesOrderTitle": "Sales Order #SO-2024-001",
+      "samplePurchaseOrderTitle": "Purchase Order #PO-2024-001",
+      "sampleReportTitle": "Report title",
+      "sampleGeneralTitle": "Document title",
+      "sampleDate": "Date: {{date}}",
+      "sampleCustomer": "Customer name",
+      "sampleCustomerStreet": "456 Customer Avenue",
+      "sampleCustomerCity": "City, Country",
+      "colDescription": "Description",
+      "colQty": "Qty",
+      "colUnitPrice": "Unit price",
+      "colAmount": "Amount",
+      "line1": "Sample product A",
+      "line2": "Sample product B",
+      "total": "Total",
+      "reportSample1": "This sample shows how report content will use your margins and typography.",
+      "reportSample2": "Final text and figures come from generated reports.",
+      "generalSample": "This sample shows how general documents will use your page layout and styles.",
+      "footerContactLine": "Address · Phone · Email (sample)",
+      "pageOf": "Page 1 of 3",
+      "contentHeight": "Content area height: {{mm}} mm",
+      "note": "Sample content only. Generated documents will use live data."
     }
   },
   "network": {
@@ -2427,6 +2742,21 @@
       "title": "Customers",
       "subtitle": "Manage your customers for sales invoices",
       "searchPlaceholder": "Search customers by name, email, or phone...",
+      "viewMode": {
+        "card": "Card view",
+        "list": "List view"
+      },
+      "noSearchResults": "No customers match your search.",
+      "table": {
+        "name": "Name",
+        "code": "Code",
+        "type": "Type",
+        "contact": "Contact",
+        "email": "Email",
+        "phone": "Phone",
+        "location": "Location",
+        "actions": "Actions"
+      },
       "fields": {
         "name": "Customer Name",
         "code": "Customer Code",
@@ -2882,14 +3212,14 @@
   },
   "authPages": {
     "login": {
-      "title": "Sign in to Agritech",
+        "title": "Sign in to AgroGina",
       "subtitle": "Welcome back",
       "emailLabel": "Email address",
       "passwordLabel": "Password",
       "passwordPlaceholder": "Enter your password"
     },
     "register": {
-      "title": "Create your Agritech account",
+      "title": "Create your AgroGina account",
       "subtitle": "Get started in minutes",
       "organizationLabel": "Organization name",
       "organizationPlaceholder": "Green Acres Cooperative",
@@ -3067,6 +3397,11 @@
     "deleteParcel": "Delete parcel",
     "deleteConfirm": "Are you sure you want to delete the parcel \"{{name}}\"?",
     "deleteError": "Error deleting parcel",
+    "archiveParcel": "Archive parcel",
+    "archiveConfirmMsg": "Archive this parcel? Historical data will be preserved.",
+    "archiveSuccess": "Parcel archived successfully",
+    "archiveError": "Error archiving parcel",
+    "restoreParcel": "Restore parcel",
     "updateError": "Error updating parcel",
     "form": {
       "name": "Name",
@@ -3104,7 +3439,8 @@
     "detail": {
       "tabs": {
         "overview": "Overview",
-        "soil": "Soil Analysis",
+        "agromind": "Agromind IA",
+        "soil": "Analysis",
         "satellite": "Satellite",
         "weather": "Weather",
         "production": "Production",
@@ -3114,6 +3450,7 @@
       "loading": "Loading parcel details...",
       "notFound": "Parcel not found",
       "backToParcels": "Back to Parcels",
+      "tabsNavAria": "Parcel sections",
       "breadcrumbs": {
         "farm": "Farm",
         "parcels": "Parcels"
@@ -3259,7 +3596,9 @@
       "list": "Personnel Management",
       "payments": "Payments",
       "paymentsShort": "Pay",
-      "calculator": "Sharecropping Calculator"
+      "calculator": "Sharecropping Calculator",
+      "productionSharing": "Production Sharing",
+      "productionSharingShort": "Sharing"
     },
     "list": {
       "title": "Personnel Management",
@@ -3321,7 +3660,10 @@
     },
     "confirmations": {
       "deactivate": "Are you sure you want to deactivate this worker?",
-      "delete": "Are you sure you want to permanently delete this worker? This action cannot be undone."
+      "delete": "Are you sure you want to permanently delete this worker? This action cannot be undone.",
+      "duplicateTitle": "A worker with this name already exists",
+      "duplicateQuestion": "Do you still want to create this worker? (They may be different people.)",
+      "duplicateContinue": "Continue anyway"
     },
     "workerTypes": {
       "fixed_salary": "Fixed salary",
@@ -3491,6 +3833,33 @@
         "fillAllRequired": "Please fill all required fields",
         "settlementSaved": "Settlement saved successfully",
         "saveError": "Error saving settlement"
+      }
+    },
+    "productionSharing": {
+      "addHint": "Add a worker of type \"Sharecropping\" to start tracking",
+      "summary": {
+        "grossRevenue": "Total Gross Revenue",
+        "totalCharges": "Total Charges",
+        "workerShares": "Worker Shares",
+        "ownerShare": "Owner Share"
+      },
+      "pending": "pending",
+      "paid": "paid",
+      "settlements": "settlements",
+      "workerTotal": "Total for",
+      "noSettlements": "No settlements recorded. Use the calculator to create a settlement.",
+      "statusPaid": "Paid",
+      "statusPending": "Pending",
+      "statusCancelled": "Cancelled",
+      "table": {
+        "period": "Period",
+        "grossRevenue": "Gross Revenue",
+        "charges": "Charges",
+        "basis": "Basis",
+        "percentage": "%",
+        "workerShare": "Worker Share",
+        "verification": "Verification",
+        "status": "Status"
       }
     },
     "configuration": {
@@ -4029,6 +4398,35 @@
         "quality": "Quality",
         "destination": "Destination",
         "status": "Status"
+      },
+      "viewMode": {
+        "card": "Card view",
+        "table": "Table view"
+      },
+      "table": {
+        "date": "Date",
+        "crop": "Crop",
+        "parcel": "Parcel",
+        "quantity": "Quantity",
+        "quality": "Quality",
+        "status": "Status",
+        "destination": "Destination",
+        "revenue": "Revenue",
+        "actions": "Actions"
+      },
+      "actions": {
+        "viewDetails": "View details",
+        "createReception": "Create Reception Batch"
+      },
+      "unspecifiedCrop": "Unspecified crop",
+      "estimated": "estimated",
+      "destination": "Destination",
+      "intendedFor": {
+        "market": "Market",
+        "storage": "Storage",
+        "processing": "Processing",
+        "export": "Export",
+        "direct_client": "Direct Client"
       }
     },
     "intelligence": {
@@ -4068,6 +4466,63 @@
       "note": {
         "label": "Note",
         "message": "Quality data can already be recorded in the Reception Batch form. This dedicated page will provide advanced quality control workflows and analytics."
+      },
+      "list": {
+        "title": "Quality Inspections",
+        "subtitle": "{{count}} inspections",
+        "subtitleEmpty": "No inspections yet",
+        "loading": "Loading inspections...",
+        "search": "Search inspections...",
+        "stats": {
+          "total": "Total Inspections",
+          "avgScore": "Average Score",
+          "completed": "Completed",
+          "inProgress": "In Progress"
+        },
+        "filters": {
+          "allTypes": "All Types",
+          "allStatuses": "All Statuses",
+          "type": {
+            "preHarvest": "Pre-Harvest",
+            "postHarvest": "Post-Harvest",
+            "storage": "Storage",
+            "transport": "Transport",
+            "processing": "Processing"
+          },
+          "status": {
+            "scheduled": "Scheduled",
+            "inProgress": "In Progress",
+            "completed": "Completed",
+            "failed": "Failed",
+            "cancelled": "Cancelled"
+          }
+        },
+        "table": {
+          "type": "Type",
+          "date": "Date",
+          "parcel": "Parcel / Farm",
+          "score": "Score",
+          "status": "Status",
+          "actions": "Actions"
+        },
+        "actions": {
+          "delete": "Delete"
+        },
+        "confirm": {
+          "deleteTitle": "Delete Inspection",
+          "deleteDescription": "This action cannot be undone. Are you sure you want to delete this quality inspection?",
+          "cancel": "Cancel",
+          "deleteAction": "Delete"
+        },
+        "empty": {
+          "title": "No inspections yet",
+          "description": "Quality inspections will appear here once created",
+          "searchTitle": "No results found",
+          "searchDescription": "Try adjusting your search"
+        },
+        "mobile": {
+          "empty": "No inspections yet"
+        }
       }
     },
     "satelliteAnalysis": {
@@ -4149,6 +4604,10 @@
       "statsPending": "Pending",
       "statsTotalAmount": "Total Amount",
       "statsWorkers": "Workers"
+    },
+    "errors": {
+      "farmsFetchFailed": "Failed to load farms",
+      "farmsFetchHint": "Please try again or contact the administrator"
     }
   },
   "tasks": {
@@ -4157,7 +4616,18 @@
     "loading": "Loading...",
     "list": "List",
     "calendar": "Calendar",
+    "kanban": "Board",
     "navigation": "Tasks navigation",
+    "kanbanTitle": "Task Board",
+    "kanbanSubtitle": "Drag tasks between columns to update their status",
+    "kanbanEmpty": "No tasks",
+    "kanbanError": "Failed to load tasks.",
+    "kanbanDueOverdue": "Overdue",
+    "kanbanDueToday": "Today",
+    "kanbanDueTomorrow": "Tomorrow",
+    "kanbanRecurring": "Recurring: {{frequency}}",
+    "kanbanSubtask": "Part of recurring series",
+    "kanbanSaving": "Saving...",
     "stats": {
       "pending": "Pending",
       "inProgress": "In Progress",
@@ -4240,7 +4710,193 @@
         "empty": "No month found",
         "search": "Search for a month..."
       }
+    },
+    "form": {
+      "editTitle": "Edit Task",
+      "createTitle": "New Task",
+      "titleLabel": "Title *",
+      "titlePlaceholder": "E.g.: Pruning fruit trees",
+      "taskTypeLabel": "Task Type *",
+      "taskTypePlaceholder": "Select type",
+      "priorityLabel": "Priority *",
+      "priorityPlaceholder": "Select priority",
+      "priorities": {
+        "low": "Low",
+        "medium": "Medium",
+        "high": "High",
+        "urgent": "Urgent"
+      },
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "Task details...",
+      "farmLabel": "Farm *",
+      "farmPlaceholder": "Select a farm",
+      "parcelLabel": "Parcel",
+      "parcelPlaceholder": "Select parcel",
+      "parcelPlaceholderNoFarm": "Select a farm first",
+      "parcelNone": "None",
+      "parcelCropInfo": "Crop: {{crop}}",
+      "parcelCropUndefined": "Not defined",
+      "parcelVarietyInfo": "Variety: {{variety}}",
+      "parcelTreeCount": "{{count}} trees",
+      "parcelRequiredForHarvest": "Select a parcel for harvest tasks",
+      "assignedToLabel": "Assigned to (workers)",
+      "selectedCount": "{{count}} selected",
+      "noWorkersNoFarm": "No workers available. Select a farm to filter workers.",
+      "noWorkersForFarm": "No workers found for this farm",
+      "workerTypes": {
+        "fixedSalary": "Fixed salary",
+        "dailyWorker": "Daily worker",
+        "metayage": "Sharecropper"
+      },
+      "multiWorkerHint": "You can select multiple workers for this task",
+      "startDateLabel": "Start Date *",
+      "dueDateLabel": "Due Date *",
+      "durationLabel": "Duration (hours)",
+      "paymentSection": "Payment and Work Units",
+      "fixedSalarySelected": "Fixed salary employees selected - payment optional",
+      "fixedSalaryNote": "<strong>Note:</strong> Fixed salary workers are already paid monthly. Payment for this task is optional (bonus/premium for exceptional work).",
+      "paymentTypeLabel": "Payment type",
+      "paymentTypeOptional": "(optional)",
+      "paymentTypePlaceholder": "Select",
+      "paymentTypes": {
+        "none": "None (included in salary)",
+        "daily": "Per day",
+        "perUnit": "Per unit (Piece-work)",
+        "monthly": "Monthly",
+        "metayage": "Sharecropping"
+      },
+      "workUnitLabel": "Work Unit *",
+      "workUnitPlaceholder": "Select...",
+      "workUnitNone": "None",
+      "unitsEstimatedLabel": "Estimated units",
+      "unitsEstimatedPlaceholder": "E.g.: 100 (optional)",
+      "unitsEstimatedHint": "Actual units will be recorded when the task is completed",
+      "ratePerUnitLabel": "Rate per unit (MAD)",
+      "ratePerUnitPlaceholder": "E.g.: 5.00 (optional)",
+      "estimatedTotal": "Estimated total: {{amount}} MAD",
+      "enableStockAccess": "Use products from stock",
+      "enableStockAccessHint": "Check this if the task requires products from stock (e.g. harvest crates, maintenance supplies...).",
+      "productsSection": "Products to Use (Stock)",
+      "addProduct": "Add product",
+      "noProductsAvailable": "No products available in stock. Add products in Stock > Receipts.",
+      "productsHint": "Add the products that will be used for this task. Stock will be automatically deducted upon completion.",
+      "productLabel": "Product",
+      "productPlaceholder": "Select a product",
+      "productSelectDefault": "-- Select --",
+      "quantityLabel": "Quantity",
+      "exceedsStock": "Exceeds stock ({{available}})",
+      "stockDeductionNote": "<strong>Note:</strong> Stock will be automatically deducted when the task is marked as completed.",
+      "notesLabel": "Notes",
+      "notesPlaceholder": "Additional notes...",
+      "cancel": "Cancel",
+      "saving": "Saving...",
+      "save": "Save",
+      "validation": {
+        "titleRequired": "Title is required",
+        "taskTypeRequired": "Task type is required",
+        "priorityRequired": "Priority is required",
+        "farmRequired": "Farm is required",
+        "startDateRequired": "Start date is required",
+        "dueDateRequired": "Due date is required",
+        "dueDateAfterStart": "Due date must be after start date",
+        "parcelRequiredForHarvest": "Parcel is required for harvesting tasks"
+      }
+    },
+    "checklist": {
+      "check": "Check item",
+      "uncheck": "Uncheck item",
+      "removeItem": "Remove item"
     }
+  },
+  "dangerZone": {
+    "title": "Danger Zone",
+    "subtitle": "Irreversible actions on your organization's data",
+    "adminOnly": "Only administrators can access this section.",
+    "stats": {
+      "title": "Data Statistics",
+      "totalRecords": "Total records",
+      "farms": "Farms",
+      "parcels": "Parcels",
+      "workers": "Workers",
+      "tasks": "Tasks",
+      "harvest_records": "Harvests",
+      "reception_batches": "Reception batches",
+      "warehouses": "Warehouses",
+      "items": "Items",
+      "item_groups": "Item groups",
+      "customers": "Customers",
+      "suppliers": "Suppliers",
+      "quotes": "Quotes",
+      "sales_orders": "Sales orders",
+      "purchase_orders": "Purchase orders",
+      "invoices": "Invoices",
+      "payments": "Payments",
+      "journal_entries": "Journal entries",
+      "utilities": "Utilities",
+      "costs": "Costs",
+      "revenues": "Revenues",
+      "structures": "Structures",
+      "cost_centers": "Cost centers",
+      "stock_entries": "Stock entries",
+      "crop_templates": "Crop Templates",
+      "stock_movements": "Stock Movements",
+      "inventory_batches": "Inventory Batches",
+      "payment_advances": "Payment Advances",
+      "metayage_settlements": "Sharecrop Settlements",
+      "biological_asset_valuations": "Bio Asset Valuations",
+      "pest_disease_reports": "Pest/Disease Reports",
+      "calibrations": "AI Calibrations"
+    },
+    "exportImport": {
+      "title": "Export / Import Data",
+      "description": "Back up all your data in a JSON file or restore from a previous backup.",
+      "exportTitle": "Export",
+      "exportDescription": "Download all your organization's data in a JSON file.",
+      "exportButton": "Export Data",
+      "exportSuccess": "Export successful!",
+      "exportError": "Error during export",
+      "importTitle": "Import",
+      "importDescription": "Restore your data from a previously exported JSON file.",
+      "importSelectFile": "Select a File",
+      "importConfirmTitle": "Confirm import",
+      "importFile": "File:",
+      "importExportDate": "Export date:",
+      "importWarning": "<strong>Warning:</strong> Importing will add data to the existing content. Identifiers will be regenerated and relationships preserved.",
+      "importConfirmButton": "Confirm Import",
+      "importSuccess": "Import successful! {{count}} records imported.",
+      "importError": "An error occurred during import.",
+      "invalidJsonFile": "Invalid JSON file"
+    },
+    "demoData": {
+      "title": "Demo Data",
+      "description": "Generate demo data to explore the platform features. This will create farms, parcels, workers, tasks, harvests, invoices and more.",
+      "generateButton": "Generate Demo Data",
+      "confirmGenerate": "Are you sure you want to generate demo data?",
+      "existingDataNote": "Note: You already have {{count}} records. New data will be added.",
+      "generateSuccess": "Demo data generated successfully!"
+    },
+    "deleteDemoOnly": {
+      "title": "Delete Demo Data Only",
+      "description": "Deletes only the demo-generated data while keeping your personal data.",
+      "button": "Delete Demo Data",
+      "confirmMessage": "Confirm deletion of demo data only.",
+      "success": "Demo data deleted.",
+      "successCount": "Demo data deleted. Total deleted: {{count}} records.",
+      "error": "An error occurred while deleting demo data."
+    },
+    "deleteAll": {
+      "title": "Delete All Data",
+      "warning": "<strong>Warning!</strong> This action will permanently delete all your organization's data, including farms, parcels, workers, tasks, harvests, invoices and all other data. This action is <strong>irreversible</strong>.",
+      "noData": "No data to delete. Your organization is empty.",
+      "button": "Delete All Data",
+      "confirmPrompt": "To confirm, type your organization name: <strong>{{name}}</strong>",
+      "confirmPlaceholder": "Type the organization name",
+      "confirmButton": "Delete Permanently",
+      "success": "All data has been deleted. Total deleted: {{count}} records.",
+      "error": "An error occurred while deleting data."
+    },
+    "confirm": "Confirm",
+    "cancel": "Cancel"
   },
   "tour": {
     "buttons": {
@@ -4254,304 +4910,296 @@
     },
     "welcome": {
       "step1": {
-        "title": "Welcome to AgriTech! 🌾",
-        "content": "Discover how to efficiently manage your farm. This guided tour will introduce you to the main features of the platform."
+        "title": "Welcome to AgroGina! 🌾",
+        "content": "Your complete farm management platform. This quick tour shows you the main areas — it takes less than a minute."
       },
       "step2": {
-        "title": "Main Navigation",
-        "content": "Use this menu to access all sections of the application: farms, parcels, tasks, stock, accounting and more."
+        "title": "Navigation",
+        "content": "Everything is organized in this sidebar: your land, your team, your production, and your finances. We'll walk through each layer."
       },
       "step3": {
-        "title": "Organization Switcher",
-        "content": "If you manage multiple farms, you can easily switch between them here."
+        "title": "Your Organization",
+        "content": "Switch between organizations if you manage multiple farms or cooperatives. All data is isolated per organization."
       },
       "step4": {
-        "title": "Your Profile",
-        "content": "Access your settings, preferences and logout options from this menu."
+        "title": "Your Account",
+        "content": "Access your profile, preferences, language settings, and logout from here."
       }
     },
     "fullApp": {
       "step1": {
-        "title": "Complete App Tour 🌾",
-        "content": "Discover all the features of AgriTech in one complete guided tour. We will go through each module of the platform."
+        "title": "The Complete Tour 🌾",
+        "content": "AgroGina follows your farm's natural workflow: Define your land → Work it → Grow & monitor → Sell & account. Let's see how each module fits."
       },
       "step2": {
-        "title": "1. Main Navigation",
-        "content": "The sidebar gives you access to all modules. Let's explore each section of your farm together."
+        "title": "Your Organization",
+        "content": "Everything starts here. Switch between farms or cooperatives — each has its own data, team, and settings."
       },
       "step3": {
-        "title": "2. Multi-Organization",
-        "content": "AgriTech is multi-tenant. Manage multiple farms from a single account and easily switch between them."
+        "title": "Dashboard — Your Command Center",
+        "content": "See key metrics at a glance: parcel health, urgent tasks, and production stats. This is where you start your day."
       },
       "step4": {
-        "title": "3. Dashboard",
-        "content": "Your command center. View key statistics, urgent tasks and crop health status at a glance."
+        "title": "🌍 Layer 1: Farms",
+        "content": "Start by defining your farms. A farm groups parcels, workers, and equipment under one roof. Think of it as your organizational unit."
       },
       "step5": {
-        "title": "4. Farm Management",
-        "content": "Organize your operations into farms and sub-farms. Each farm can contain multiple parcels with their own crops."
+        "title": "🌍 Layer 1: Parcels",
+        "content": "Each farm contains parcels — the actual plots of land. Define their boundaries, soil type, irrigation, and current crop. Parcels are the heart of everything."
       },
       "step6": {
-        "title": "5. Parcels",
-        "content": "Define your parcels with their geographic boundaries, soil types, irrigation systems and crops."
+        "title": "🌍 Layer 1: Infrastructure",
+        "content": "Wells, basins, pumping stations, hangars — register your physical assets. They connect to parcels and appear in maintenance schedules."
       },
       "step7": {
-        "title": "6. Inventory",
-        "content": "Track your input stock: seeds, fertilizers, plant protection products, equipment. Receive low stock alerts."
+        "title": "👥 Layer 2: Personnel",
+        "content": "Your team: permanent workers, day laborers, managers. Assign tasks, track hours, calculate pay. Tasks link people to parcels."
       },
       "step8": {
-        "title": "7. Infrastructure",
-        "content": "Manage your buildings, wells, basins, pumping stations and other equipment."
+        "title": "📦 Layer 2: Inventory",
+        "content": "Seeds, fertilizers, plant protection products, equipment. Track stock levels, get low-stock alerts, and record every movement in/out."
       },
       "step9": {
-        "title": "8. Personnel",
-        "content": "Manage your team: workers, assigned tasks. Track their hours and calculate their salaries."
+        "title": "🌱 Layer 3: Production",
+        "content": "Campaigns, crop cycles, harvests, quality control. This is where parcels + tasks + inputs come together into actual production data."
       },
       "step10": {
-        "title": "9. Production",
-        "content": "Track your campaigns, crop cycles, harvests and quality control. Complete production traceability."
+        "title": "✅ Layer 3: Compliance",
+        "content": "Certifications (GlobalGAP, Bio, etc.), audits, and corrective actions. All your traceability data feeds into compliance reports automatically."
       },
       "step11": {
-        "title": "10. Sales & Purchases",
-        "content": "Create quotes, purchase orders and manage your commercial transactions."
+        "title": "💰 Layer 4: Sales & Purchases",
+        "content": "Create quotes, convert to orders, manage suppliers and customers. The commercial side of your operation."
       },
       "step12": {
-        "title": "11. Accounting",
-        "content": "Double-entry accounting adapted to agriculture. Chart of accounts, journals, invoices and financial reports."
+        "title": "📊 Layer 4: Accounting",
+        "content": "Invoices, payments, journal entries, chart of accounts — double-entry bookkeeping adapted for agriculture. Connected to sales and production."
       },
       "step13": {
-        "title": "12. Reports",
-        "content": "Generate detailed reports: production, profitability, labor. Export to PDF or Excel."
+        "title": "🤖 AgromindIA — Your AI Assistant",
+        "content": "The brain of AgroGina. Ask questions about your farm in natural language. It sees your stocks, tasks, weather, and costs to give actionable advice."
       },
       "step14": {
-        "title": "13. Settings",
-        "content": "Manage your customers, suppliers, warehouses and access application settings."
+        "title": "📈 Reports & Analytics",
+        "content": "Production reports, profitability per parcel, labor costs, financial statements. Export to PDF or Excel."
       },
       "step15": {
-        "title": "14. Your Profile",
-        "content": "Access your personal settings, preferences and logout options."
+        "title": "Settings & Profile",
+        "content": "Configure your organization, manage team access, enable/disable modules, and set your preferences."
       },
       "step16": {
-        "title": "Ready to Start! 🚀",
-        "content": "You now have an overview of all features. Click the help button (?) at the bottom right to review this tour or access module guides."
+        "title": "You're Ready! 🚀",
+        "content": "Start with Farms → Parcels → Tasks — that's the core workflow. Click the help button (?) anytime to replay a module tour."
       }
     },
     "dashboard": {
       "step1": {
-        "title": "Key Statistics",
-        "content": "View important metrics of your farm at a glance: area, harvests, revenue and ongoing tasks."
+        "title": "Key Metrics",
+        "content": "Your farm stats at a glance — total area, active parcels, harvests, and revenue. These update in real-time from your data."
       },
       "step2": {
-        "title": "Recent Tasks",
-        "content": "Track urgent tasks and their progress directly from the dashboard."
+        "title": "Parcel Health",
+        "content": "Quick view of your parcels and their current status. Click any parcel to see satellite analysis, tasks, and profitability."
       },
       "step3": {
-        "title": "Weather",
-        "content": "Check weather forecasts to plan your agricultural activities."
-      },
-      "step4": {
-        "title": "Parcel Overview",
-        "content": "View the health status of your crops using satellite indices."
+        "title": "Upcoming Tasks",
+        "content": "Tasks that need attention today. Each task links to a parcel, assigned worker, and required inputs — the core of daily operations."
       }
     },
     "farmManagement": {
       "step1": {
-        "title": "Your Farms",
-        "content": "Manage all your agricultural operations from this view. Each farm can contain multiple parcels."
+        "title": "Farm Overview",
+        "content": "Your farms at a glance — total count, combined area, and import/export options. Farms are the top level of your organizational hierarchy."
       },
       "step2": {
-        "title": "Add a Farm",
-        "content": "Click here to create a new farm and define its characteristics: name, location, area, soil type, etc."
+        "title": "Create a Farm",
+        "content": "Add a new farm to get started. You'll then add parcels inside it, assign workers, and begin tracking production."
       },
       "step3": {
-        "title": "Map View",
-        "content": "View your farms and parcels on the map. You can draw parcel boundaries directly on the map."
+        "title": "Your Farms",
+        "content": "Each card is a farm with its parcels and sub-farms. Click to see details, manage parcels, or assign a farm manager."
       }
     },
     "parcels": {
       "step1": {
-        "title": "Parcel List",
-        "content": "All your parcels are displayed here with their current crops, areas and health status."
+        "title": "Your Parcels",
+        "content": "Each parcel represents a plot of land with its crop, area, and health status. Parcels are where production, tasks, and satellite data meet."
       },
       "step2": {
-        "title": "Filters",
-        "content": "Filter your parcels by crop, farm or status to quickly find what you're looking for."
+        "title": "Filter & Search",
+        "content": "Filter by farm, crop type, or status to focus on what matters. Useful when managing dozens of parcels across multiple farms."
       },
       "step3": {
-        "title": "Quick Actions",
-        "content": "Quickly access satellite analysis, weather, tasks and profitability for each parcel."
+        "title": "Parcel Actions",
+        "content": "For each parcel: view satellite imagery, check weather, assign tasks, or analyze profitability. Everything is one click away."
       }
     },
     "tasks": {
       "step1": {
-        "title": "Task Management",
-        "content": "Plan and track all agricultural tasks: irrigation, fertilization, harvest, treatments, etc."
+        "title": "Task List",
+        "content": "All agricultural tasks: irrigation, fertilization, harvest, treatments. Each task links to a parcel and can be assigned to a worker."
       },
       "step2": {
         "title": "Calendar View",
-        "content": "View your tasks on a calendar to better plan your activities."
+        "content": "Switch to calendar view to plan your week. See task distribution across time and avoid worker conflicts."
       },
       "step3": {
         "title": "Create a Task",
-        "content": "Create new tasks, assign them to workers and set priorities and deadlines."
+        "content": "New task: pick a parcel, assign a worker, set priority and deadline. Tasks with stock inputs will automatically deduct from inventory."
       }
     },
     "workers": {
       "step1": {
-        "title": "Worker Management",
-        "content": "Manage your team: permanent workers, day laborers, and sharecroppers. Track their payments and performance."
+        "title": "Your Team",
+        "content": "All workers — permanent, day laborers, and sharecroppers. See their assigned tasks, availability, and payment history."
       },
       "step2": {
         "title": "Payments",
-        "content": "Automatically calculate salaries based on time worked, tasks completed or piece work."
+        "content": "Calculate pay based on hours worked, tasks completed, or piece rates. Payments flow into your accounting journal automatically."
       },
       "step3": {
         "title": "Add a Worker",
-        "content": "Register new team members with their information and payment terms."
+        "content": "Register a new team member with their role, contact info, and pay terms. They'll appear in task assignment dropdowns immediately."
       }
     },
     "inventory": {
       "step1": {
         "title": "Stock Overview",
-        "content": "View the status of your inventory: products in stock, low levels, and total value."
+        "content": "Your inventory dashboard: total value, low-stock alerts, and recent movements. Stock is consumed when tasks are completed."
       },
       "step2": {
         "title": "Item Catalog",
-        "content": "Manage your product catalog: inputs, fertilizers, seeds, equipment, etc."
+        "content": "All your products: seeds, fertilizers, chemicals, equipment. Each item tracks current quantity, min threshold, and cost."
       },
       "step3": {
         "title": "Warehouses",
-        "content": "Organize your stock by warehouse and track movements between locations."
+        "content": "Organize stock by location. Transfer between warehouses and keep track of what's stored where."
       },
       "step4": {
         "title": "Stock Movements",
-        "content": "Record entries, exits and stock transfers with complete traceability."
+        "content": "Every entry and exit is recorded: supplier deliveries, field consumption, transfers. Full traceability for compliance."
       }
     },
     "accounting": {
       "step1": {
-        "title": "Accounting",
-        "content": "Manage all your agricultural accounting: invoices, payments, journals and financial reports."
+        "title": "Accounting Hub",
+        "content": "Your financial overview: outstanding invoices, recent payments, and journal activity. All connected to your sales and production."
       },
       "step2": {
         "title": "Invoices",
-        "content": "Create and manage your customer and supplier invoices. Track payments and receivables."
+        "content": "Customer and supplier invoices. Created from sales orders or manually. Track payment status and send reminders."
       },
       "step3": {
-        "title": "Accounting Journal",
-        "content": "Record your journal entries in double-entry according to the agricultural chart of accounts."
+        "title": "Journal Entries",
+        "content": "Double-entry bookkeeping with the Moroccan agricultural chart of accounts. Worker payments and stock movements generate entries automatically."
       },
       "step4": {
         "title": "Financial Reports",
-        "content": "Generate reports: balance sheet, income statement, trial balance, and profitability analyses."
+        "content": "Balance sheet, income statement, trial balance, and profitability analysis. Export for your accountant or for bank submissions."
       }
     },
     "satellite": {
       "step1": {
-        "title": "Satellite Analysis",
-        "content": "View the health of your crops using satellite imagery. NDVI, NDWI and other indices help you detect problems."
+        "title": "Satellite Imagery",
+        "content": "See your parcels from space. NDVI shows crop vigor, NDWI shows water stress. Detect problems before they're visible in the field."
       },
       "step2": {
         "title": "Vegetation Indices",
-        "content": "Compare different indices to understand the status of your crops: water stress, vegetative vigor, etc."
+        "content": "Compare different indices side by side. Each tells a different story — vegetative health, moisture, chlorophyll concentration."
       },
       "step3": {
-        "title": "History",
-        "content": "Navigate through time to see the evolution of your parcels and detect trends."
+        "title": "Time Travel",
+        "content": "Navigate through historical imagery to see how your parcels evolved. Spot trends, compare seasons, and validate treatment effects."
       }
     },
     "reports": {
       "step1": {
-        "title": "Reports",
-        "content": "Access all your reports: production, finance, labor, and profitability analyses."
+        "title": "Reports Center",
+        "content": "All your reports in one place: production, finance, labor, and profitability. Each report pulls live data from across all modules."
       },
       "step2": {
         "title": "Export",
-        "content": "Export your reports to PDF or Excel to share or archive them."
+        "content": "Download as PDF or Excel. Share with your team, your bank, or your certification auditor."
       },
       "step3": {
-        "title": "Filters and Periods",
-        "content": "Customize your reports by filtering by period, farm, parcel or crop type."
+        "title": "Filters & Periods",
+        "content": "Customize by date range, farm, parcel, or crop. Compare this season to last season to measure improvement."
       }
     },
     "harvests": {
       "step1": {
-        "title": "Harvest Statistics",
-        "content": "View the summary of your harvests: total quantities, estimated value, distribution by crop."
+        "title": "Harvest Dashboard",
+        "content": "Total quantities, estimated revenue, and distribution by crop. This is the output of your entire production chain."
       },
       "step2": {
-        "title": "Harvest List",
-        "content": "All your harvests are listed here with date, parcel, crop, quantity and quality."
+        "title": "Harvest Records",
+        "content": "Each record links to a parcel and includes quantity, quality grade, and date. Quality data feeds into compliance reports."
       },
       "step3": {
-        "title": "New Harvest",
-        "content": "Record a new harvest by specifying the parcel, quantity harvested and product quality."
+        "title": "Record a Harvest",
+        "content": "Log a harvest: select parcel, enter quantity and quality. This updates your production stats and can trigger a sales order."
       },
       "step4": {
-        "title": "Filters",
-        "content": "Filter your harvests by period, farm, crop or status to quickly find information."
+        "title": "Filter & Analyze",
+        "content": "Filter by period, crop, or farm to compare yields. Which parcels perform best? Which crops are most profitable?"
       }
     },
     "infrastructure": {
       "step1": {
         "title": "Your Infrastructure",
-        "content": "Manage all your buildings and equipment: wells, basins, pumping stations, hangars, offices."
+        "content": "Wells, basins, pumping stations, hangars, offices. Each links to a farm and can have maintenance schedules."
       },
       "step2": {
         "title": "Add Infrastructure",
-        "content": "Create new infrastructure with their type, location, capacity and commissioning date."
-      },
-      "step3": {
-        "title": "Maintenance",
-        "content": "Plan and track maintenance of your equipment to avoid breakdowns and optimize their lifespan."
+        "content": "Register a new asset: type, location, capacity, and commissioning date. Maintenance reminders keep your equipment running."
       }
     },
     "billing": {
       "step1": {
         "title": "Billing Overview",
-        "content": "View the summary of your billing: quotes in progress, orders to deliver, invoices to collect."
+        "content": "Quotes pending, orders to deliver, invoices to collect. The commercial pipeline that turns your production into revenue."
       },
       "step2": {
         "title": "Quotes",
-        "content": "Create professional quotes for your clients. Track their status: sent, accepted, converted to order."
+        "content": "Create professional quotes for buyers. When accepted, convert to a sales order with one click."
       },
       "step3": {
-        "title": "Purchase Orders",
-        "content": "Manage your customer and supplier orders. Track deliveries and receipts."
+        "title": "Orders",
+        "content": "Sales orders and purchase orders. Track deliveries and receipts. Orders generate invoices and update your accounting."
       },
       "step4": {
         "title": "Invoices",
-        "content": "Issue invoices and track payments. Manage reminders and customer receivables."
+        "content": "Issue invoices and track payments. Overdue invoices show in your dashboard and can trigger automatic reminders."
       },
       "step5": {
-        "title": "Customers and Suppliers",
-        "content": "Manage your address book: customers, suppliers, transporters with their contact details and history."
+        "title": "Contacts",
+        "content": "Your customers, suppliers, and transporters. Contact history and transaction records in one place."
       }
     },
     "settings": {
       "step1": {
-        "title": "Settings",
-        "content": "Access all your organization settings from this menu."
+        "title": "Settings Menu",
+        "content": "All configuration options organized by category. Start with Organization to set up your farm details."
       },
       "step2": {
         "title": "Organization",
-        "content": "Configure your farm information: name, address, logo, currency and fiscal year."
+        "content": "Your farm's identity: name, address, logo, currency, and fiscal year. This information appears on invoices and reports."
       },
       "step3": {
-        "title": "Users",
-        "content": "Manage your team members, their roles and access permissions to the platform."
+        "title": "Team Members",
+        "content": "Invite team members and assign roles: admin, farm manager, agronomist, worker, or viewer. Each role sees different features."
       },
       "step4": {
         "title": "Subscription",
-        "content": "Check your current plan, included features and upgrade if needed."
+        "content": "Your current plan and features. Upgrade to unlock more parcels, satellite analysis, or advanced AI recommendations."
       },
       "step5": {
         "title": "Modules",
-        "content": "Enable or disable modules according to your needs: accounting, satellite, sharecropping, etc."
+        "content": "Enable only what you need: accounting, satellite, compliance, fruit trees. Disabled modules are hidden from the sidebar."
       },
       "step6": {
-        "title": "Preferences",
-        "content": "Customize your experience: language, theme, date format, notifications."
+        "title": "Your Profile",
+        "content": "Personal preferences: language (French, English, Arabic), theme, notification settings. Your settings follow you across devices."
       }
     }
   },
@@ -4970,7 +5618,11 @@
     "dataRange": "Data from {{startDate}} to {{endDate}}",
     "location": "Location",
     "forecast": {
-      "title": "15-Day Weather Forecast"
+      "title": "16-day weather forecast",
+      "empty": "No short-range forecast is available right now.",
+      "precip": "Precip.",
+      "wind": "Wind",
+      "humidity": "Humidity"
     },
     "summary": {
       "avgTemperature": "Average Temperature",
@@ -4983,14 +5635,30 @@
       "temperatureAnalysis": "Temperature Analysis",
       "precipitationAnalysis": "Precipitation Analysis",
       "dryWetConditions": "Dry & Wet Conditions",
-      "insightsRecommendations": "Insights and Recommendations"
+      "insightsRecommendations": "Insights and Recommendations",
+      "evapotranspiration": "Evapotranspiration (ET₀)"
     },
     "insights": {
       "comparison": "Data is compared to long-term climate normals (LTN) to identify significant deviations from usual conditions.",
       "wetDay": "A wet day is defined as a day with more than 1mm of precipitation. Dry periods are analyzed to optimize irrigation management.",
       "drought": "Drought conditions (5 consecutive days with less than 5mm) require special attention for crop water management."
     },
-    "noData": "Select a period to display weather analyses"
+    "noData": "Select a period to display weather analyses",
+    "et": {
+      "whatIsET": "What is Evapotranspiration (ET)?",
+      "description": "Evapotranspiration (ET) is the total water loss from land to the atmosphere, combining evaporation (water turning into vapor from soil, water bodies, or wet surfaces) and transpiration (water released by plants through their leaves). ET₀ (reference ET) is key for irrigation planning.",
+      "noData": "No evapotranspiration data available",
+      "totalET": "Total ET₀",
+      "avgDaily": "Avg. Daily ET₀",
+      "maxDaily": "Max Daily ET₀",
+      "minDaily": "Min Daily ET₀",
+      "dailyChart": "Daily Reference Evapotranspiration (ET₀)",
+      "dailyET0": "Daily ET₀",
+      "movingAvg": "7-day Moving Avg.",
+      "monthlyChart": "Monthly Evapotranspiration (ET₀)",
+      "monthlyTotal": "Monthly Total ET₀ (mm)",
+      "irrigationInsight": "ET₀ represents the water demand of the atmosphere. Multiply ET₀ by the crop coefficient (Kc) to estimate actual crop water needs (ETc = ET₀ × Kc). Higher ET₀ values indicate greater irrigation requirements."
+    }
   },
   "satellite": {
     "loading": "Loading satellite analysis...",
@@ -5120,6 +5788,39 @@
         "save": "Save Harvest",
         "update": "Update"
       }
+    },
+    "unspecifiedCrop": "Unspecified crop",
+    "estimated": "estimated",
+    "destination": "Destination",
+    "intendedFor": {
+      "market": "Local market",
+      "storage": "Storage",
+      "processing": "Processing",
+      "export": "Export",
+      "direct_client": "Direct client"
+    },
+    "stats": {
+      "totalHarvests": "Total Harvests",
+      "totalQuantity": "Total Quantity",
+      "estimatedRevenue": "Estimated Revenue",
+      "avgPerHarvest": "Avg. per harvest"
+    },
+    "details": {
+      "title": "Harvest Details",
+      "crop": "Crop",
+      "parcel": "Parcel",
+      "date": "Date",
+      "quality": "Quality",
+      "score": "Score",
+      "estimated": "estimated",
+      "storage": "Storage",
+      "destination": "Destination",
+      "notes": "Notes",
+      "unspecifiedCrop": "Not specified"
+    },
+    "actions": {
+      "viewDetails": "View details",
+      "createReception": "Create reception batch"
     }
   },
   "utilities": {
@@ -5336,10 +6037,62 @@
       "flood": "Flood",
       "furrow": "Furrow",
       "none": "None (Rainfed)"
+    },
+    "waterSources": {
+      "well": "Well",
+      "dam": "Dam / Reservoir",
+      "canal": "Canal / Seguia",
+      "municipal": "Municipal network",
+      "mixed": "Mixed",
+      "other": "Other"
+    },
+    "irrigationFrequencies": {
+      "daily": "Daily",
+      "2_3_per_week": "2-3 times/week",
+      "weekly": "Once a week",
+      "biweekly": "Every 2 weeks",
+      "monthly": "Once a month",
+      "other": "Other"
+    },
+    "harvestRegularity": {
+      "stable": "Stable",
+      "marked_alternance": "Marked alternance",
+      "very_irregular": "Very irregular"
+    },
+    "pruningTypes": {
+      "formation": "Formation",
+      "production": "Production",
+      "rejuvenation": "Rejuvenation",
+      "sanitary": "Sanitary",
+      "mixed": "Mixed"
+    },
+    "pruningIntensities": {
+      "light": "Light (<15%)",
+      "medium": "Medium (15-25%)",
+      "heavy": "Heavy (>25%)"
+    },
+    "fertilizationStatus": {
+      "yes": "Yes",
+      "no": "No",
+      "partial": "Partial"
+    },
+    "fertilizationTypes": {
+      "organic": "Organic",
+      "mineral": "Mineral",
+      "both": "Both",
+      "unknown": "Unknown"
     }
   },
   "moduleView": {
     "moduleNotFound": "Module not found",
+    "moduleNotFoundDesc": "The module \"{{name}}\" does not exist or is not active.",
+    "moduleNotFoundSuggestion": "Did you mean:",
+    "availableModules": "Available modules",
+    "searchModules": "Search modules...",
+    "noModulesMatch": "No modules match your search.",
+    "goToDashboard": "Back to Dashboard",
+    "allCategories": "All",
+    "moduleNotFoundHint": "Press Esc to return to the dashboard",
     "fruitTrees": "Fruit Trees",
     "noParcelsFound": "No parcels found",
     "noParcelsDescription": "No parcels have been found for this farm. First create parcels in the Parcels section.",
@@ -5360,6 +6113,7 @@
     "parcelCounter": "{{current}} of {{total}} parcels",
     "maximizeModule": "Maximize your module",
     "assignDescription": "Assign parcels to this module to get specific data and recommendations.",
+    "selectFarmHint": "Select a farm from the header to load parcels and data for this module.",
     "errors": {
       "noFarmSelected": "No farm selected",
       "noOrgSelected": "No organization selected",
@@ -5517,14 +6271,36 @@
       "title": "AI Assistant",
       "subtitle": "Ask questions about your farm, workers, accounting, and more",
       "placeholder": "Ask about your farm, workers, accounting, inventory...",
-      "welcome": "Hello! I'm your AgriTech assistant. How can I help you today?",
+      "welcome": "Hello! I'm your AgroGina assistant. How can I help you today?",
       "listening": "Listening...",
       "voiceNotSupported": "Voice input is not supported in this browser",
       "clear": "Clear",
       "send": "Send",
+      "imageUpload": "Upload image",
+      "imageRemove": "Remove image",
+      "analyzingImage": "Analyzing image...",
       "error": "Error sending message",
-      "retry": "Retry"
+      "retry": "Retry",
+      "suggestions": {
+        "overview": "Farm overview",
+        "lowStock": "Low stock alerts",
+        "weather": "Weather forecast",
+        "financial": "Financial summary",
+        "tasks": "Worker tasks today",
+        "harvests": "Upcoming harvests"
+      }
     }
+  },
+  "calibrationZones": {
+    "A": "High Vigor",
+    "B": "Good Vigor",
+    "C": "Average",
+    "D": "Watch Zone",
+    "E": "Stress Zone",
+    "spatialHomogeneity": "Spatial Homogeneity",
+    "zoneDistribution": "Zone Distribution",
+    "comingSoon": "Zone analysis requires per-pixel satellite rasters.",
+    "comingSoonSub": "Coming soon — parcel-level summary is used for now."
   },
   "emptyState": {
     "noData": "No data available",
@@ -5551,6 +6327,436 @@
       "creatingOrg": "Creating organization...",
       "activatingTrial": "Activating trial...",
       "complete": "Complete!"
+    }
+  },
+  "modulesSettings": {
+    "title": "Modules",
+    "subtitle": "Enable or disable modules according to your needs. Disabled modules will not appear in the navigation.",
+    "loading": "Loading modules...",
+    "error": "Error loading modules. Please try again.",
+    "currentPlan": "Current plan: {{plan}}",
+    "allModulesAvailable": "All modules are available",
+    "modulesAvailable": "{{count}} modules available",
+    "viewSubscription": "View subscription",
+    "activeCount": "{{active}}/{{total}} active",
+    "noModulesInCategory": "No modules available in this category.",
+    "upgrade": "Upgrade →",
+    "upgradePrompt": "This module is not available in your current plan. Would you like to see upgrade options?",
+    "configurationOf": "Configuration of {{name}}",
+    "noSettings": "No specific settings available for this module",
+    "treeManagement": "Tree type management",
+    "farmManagementSettings": "Farm Management Settings",
+    "generalSettings": "General settings",
+    "pruningNotifications": "Pruning notifications",
+    "diseaseAlerts": "Disease alerts",
+    "harvestForecasts": "Harvest forecasts",
+    "sections": {
+      "agriculture": "Agriculture",
+      "agricultureDesc": "Agricultural production modules",
+      "elevage": "Livestock",
+      "elevageDesc": "Livestock and animal management modules",
+      "functional": "Functional Modules",
+      "functionalDesc": "Management, accounting, stock, HR, analytics..."
+    },
+    "categories": {
+      "core": "Core Module",
+      "production": "Production",
+      "operations": "Operations",
+      "hr": "Human Resources",
+      "inventory": "Inventory & Stock",
+      "sales": "Sales",
+      "purchasing": "Purchasing",
+      "accounting": "Accounting",
+      "analytics": "Analytics"
+    },
+    "activityModules": {
+      "arbres_fruitiers": "Fruit Trees",
+      "aeroponie": "Aeroponics",
+      "hydroponie": "Hydroponics",
+      "maraichage": "Market Gardening",
+      "myciculture": "Mushroom Farming",
+      "pisciculture": "Fish Farming",
+      "bovin": "Cattle",
+      "ovin": "Sheep",
+      "camelin": "Camels",
+      "caprin": "Goats",
+      "aviculture": "Poultry",
+      "couveuses": "Hatchery"
+    },
+    "activityDescriptions": {
+      "arbres_fruitiers": "Apple trees, citrus, pomegranates, avocados...",
+      "aeroponie": "Soilless aeroponic cultivation",
+      "hydroponie": "Hydroponic cultivation in aqueous medium",
+      "maraichage": "Vegetable and market garden crops",
+      "myciculture": "Mushroom cultivation",
+      "pisciculture": "Fish farming",
+      "bovin": "Cattle breeding",
+      "ovin": "Sheep breeding",
+      "camelin": "Camel breeding",
+      "caprin": "Goat breeding",
+      "aviculture": "Poultry farming",
+      "couveuses": "Chicks, broilers, laying hens"
+    }
+  },
+  "costCenters": {
+    "title": "Cost Centers",
+    "description": "Manage cost centers for expense tracking and profitability analysis.",
+    "addNew": "Add Cost Center",
+    "searchPlaceholder": "Search by code or name...",
+    "filterStatus": "Filter by status",
+    "allStatus": "All Status",
+    "activeOnly": "Active Only",
+    "inactiveOnly": "Inactive Only",
+    "listTitle": "Cost Center List",
+    "listDescription": "Total: {{count}} cost centers",
+    "loading": "Loading cost centers...",
+    "noSearchResults": "No cost centers found matching your search.",
+    "empty": "No cost centers yet. Create your first one to get started.",
+    "noPermission": "You do not have permission to manage cost centers.",
+    "active": "Active",
+    "inactive": "Inactive",
+    "activate": "Activate",
+    "deactivate": "Deactivate",
+    "activated": "Cost center activated",
+    "deactivated": "Cost center deactivated",
+    "toggleFailed": "Failed to update cost center status",
+    "table": {
+      "code": "Code",
+      "name": "Name",
+      "parent": "Parent",
+      "location": "Location",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "create": {
+      "title": "Create Cost Center",
+      "description": "Add a new cost center for expense tracking.",
+      "success": "Cost center created successfully",
+      "failed": "Failed to create cost center"
+    },
+    "edit": {
+      "title": "Edit Cost Center",
+      "description": "Update the cost center details.",
+      "success": "Cost center updated successfully",
+      "failed": "Failed to update cost center"
+    },
+    "update": {
+      "success": "Cost center updated successfully",
+      "failed": "Failed to update cost center"
+    },
+    "delete": {
+      "title": "Delete Cost Center",
+      "description": "Are you sure you want to delete \"{{name}}\"? This action cannot be undone. If this cost center has associated journal entries, deletion will fail.",
+      "success": "Cost center deleted successfully",
+      "failed": "Failed to delete cost center. It may have associated journal entries."
+    },
+    "form": {
+      "code": "Code",
+      "codePlaceholder": "e.g., CC001",
+      "name": "Name",
+      "namePlaceholder": "e.g., North Field Operations",
+      "description": "Description",
+      "descriptionPlaceholder": "Brief description of this cost center...",
+      "parent": "Parent Cost Center",
+      "parentPlaceholder": "Select parent (optional)",
+      "noParent": "No parent (top level)",
+      "parentHelp": "Organize cost centers hierarchically for roll-up reporting.",
+      "farm": "Farm",
+      "farmPlaceholder": "Select farm (optional)",
+      "noFarm": "No farm",
+      "farmHelp": "Link this cost center to a specific farm for tracking.",
+      "parcel": "Parcel",
+      "parcelPlaceholder": "Select parcel (optional)",
+      "noParcel": "No parcel",
+      "parcelHelp": "Further narrow down to a specific parcel for granular tracking.",
+      "active": "Active",
+      "activeHelp": "Inactive cost centers cannot be used in new transactions.",
+      "update": "Update",
+      "create": "Create"
+    },
+    "accountMappings": {
+      "title": "Account Mappings",
+      "description": "Configure how business events map to GL accounts for automatic journal entries.",
+      "noPermission": "You do not have permission to manage account mappings.",
+      "initializeDefaults": "Initialize Defaults",
+      "addNew": "Add Mapping",
+      "infoTitle": "How Account Mappings Work",
+      "infoDescription": "Account mappings link business events (like task completion or harvest sales) to specific GL accounts. When a task is completed or a harvest is sold, the system automatically creates journal entries using these mappings.",
+      "searchPlaceholder": "Search by key or account...",
+      "filterType": "Filter by type",
+      "filterStatus": "Status",
+      "allTypes": "All Types",
+      "allStatus": "All Status",
+      "activeOnly": "Active",
+      "inactiveOnly": "Inactive",
+      "loading": "Loading account mappings...",
+      "noSearchResults": "No mappings found matching your filters.",
+      "empty": "No account mappings configured. Click \"Initialize Defaults\" to set up standard mappings, or add them manually.",
+      "typeCount": "{{count}} mappings",
+      "active": "Active",
+      "inactive": "Inactive",
+      "activate": "Activate",
+      "deactivate": "Deactivate",
+      "activated": "Account mapping activated",
+      "deactivated": "Account mapping deactivated",
+      "toggleFailed": "Failed to update mapping status",
+      "table": {
+        "key": "Key",
+        "account": "Account",
+        "description": "Description",
+        "status": "Status",
+        "actions": "Actions"
+      },
+      "create": {
+        "title": "Create Account Mapping",
+        "description": "Map a business event to a GL account.",
+        "success": "Account mapping created successfully",
+        "failed": "Failed to create account mapping"
+      },
+      "edit": {
+        "title": "Edit Account Mapping",
+        "description": "Update the account mapping details.",
+        "success": "Account mapping updated successfully",
+        "failed": "Failed to update account mapping"
+      },
+      "update": {
+        "success": "Account mapping updated successfully",
+        "failed": "Failed to update account mapping"
+      },
+      "delete": {
+        "title": "Delete Account Mapping",
+        "description": "Are you sure you want to delete the mapping for \"{{key}}\"? This will not affect existing journal entries, but new automatic entries will fail without this mapping.",
+        "success": "Account mapping deleted successfully",
+        "failed": "Failed to delete account mapping"
+      },
+      "initialize": {
+        "success": "Initialized {{count}} default mappings",
+        "failed": "Failed to initialize default mappings"
+      },
+      "form": {
+        "type": "Mapping Type",
+        "typePlaceholder": "Select mapping type",
+        "key": "Mapping Key",
+        "keyPlaceholder": "Select mapping key",
+        "account": "GL Account",
+        "accountPlaceholder": "Select account",
+        "description": "Description",
+        "descriptionPlaceholder": "Optional description...",
+        "active": "Active",
+        "activeHelp": "Inactive mappings are ignored during journal creation.",
+        "update": "Update",
+        "create": "Create"
+      },
+      "labels": {
+        "cost_type": "Cost Type",
+        "revenue_type": "Revenue Type",
+        "harvest_sale": "Harvest Sale",
+        "cash": "Cash/Bank",
+        "planting": "Planting",
+        "harvesting": "Harvesting",
+        "irrigation": "Irrigation",
+        "fertilization": "Fertilization",
+        "pesticide": "Pesticide Application",
+        "pruning": "Pruning",
+        "maintenance": "Maintenance",
+        "transport": "Transport",
+        "labor": "Labor",
+        "materials": "Materials",
+        "utilities": "Utilities",
+        "other": "Other",
+        "product_sales": "Product Sales",
+        "service_income": "Service Income",
+        "other_income": "Other Income",
+        "market": "Market Sale",
+        "export": "Export Sale",
+        "wholesale": "Wholesale",
+        "direct": "Direct Sale",
+        "processing": "Processing",
+        "bank": "Bank Account",
+        "petty_cash": "Petty Cash"
+      }
+    }
+  },
+  "siamRdv": {
+    "hero": {
+      "badge": "SIAM 2026 · Meknes",
+      "title": "Book your meeting with AGROGINA",
+      "subtitle": "Discover how our AgroGina platform transforms farm management. Personalized demo at our stand."
+    },
+    "sections": {
+      "info": "Your information",
+      "farm": "Your farm",
+      "slot": "Choose your slot"
+    },
+    "form": {
+      "namePlaceholder": "Full name *",
+      "companyPlaceholder": "Company / Farm",
+      "phonePlaceholder": "Phone *",
+      "emailPlaceholder": "Email",
+      "surface": "Cultivated area",
+      "region": "Region",
+      "other": "Other",
+      "otherCulturePlaceholder": "Specify your crop",
+      "submit": "Confirm my meeting request",
+      "submitting": "Submitting..."
+    },
+    "surface": {
+      "lt50": "Less than 50 ha",
+      "s50_150": "50 - 150 ha",
+      "s150_300": "150 - 300 ha",
+      "s300_600": "300 - 600 ha",
+      "gt600": "More than 600 ha"
+    },
+    "validation": {
+      "nameMin": "Please enter your full name",
+      "phoneRequired": "Please enter a valid phone number",
+      "emailInvalid": "Please enter a valid email",
+      "slotRequired": "Please choose a time slot",
+      "phoneInvalid": "Invalid phone number"
+    },
+    "success": {
+      "title": "Request sent!",
+      "message": "Hello {{name}}, your request for slot {{slot}} has been received.",
+      "fallbackName": "there",
+      "subtext": "Our team will contact you within 24h."
+    },
+    "error": {
+      "submitFailed": "Unable to send your request. Please try again."
+    },
+    "crops": {
+      "olive": "Olive",
+      "citrus": "Citrus",
+      "avocado": "Avocado",
+      "datePalm": "Date palm",
+      "cereals": "Cereals",
+      "vegetables": "Market gardening"
+    },
+    "regions": {
+      "meknesFes": "Meknes-Fes",
+      "soussMassa": "Souss-Massa",
+      "marrakechSafi": "Marrakech-Safi",
+      "beniMellal": "Beni Mellal-Khenifra",
+      "rabatSale": "Rabat-Sale",
+      "tangerTetouan": "Tanger-Tetouan",
+      "oriental": "Oriental",
+      "other": "Other"
+    }
+  },
+  "retry": "Retry",
+  "close": "Close",
+  "edit": "Edit",
+  "clearSearch": "Clear search",
+  "resetFilters": "Reset filters",
+  "viewAll": "View all",
+  "gridView": "Grid view",
+  "listView": "List view",
+  "dragHandle": "Drag to reorder",
+  "toggleSatellite": "Toggle satellite view",
+  "fullscreen": "Fullscreen",
+  "exitFullscreen": "Exit fullscreen",
+  "crops": {
+    "pageTitle": "Crops",
+    "description": "Manage your crop plantings and track growth.",
+    "addCrop": "Add Crop",
+    "noCrops": "No crops yet",
+    "noCropsDescription": "Start by adding your first crop planting.",
+    "farm": "Farm",
+    "parcel": "Parcel",
+    "area": "Area",
+    "plantingDate": "Planted",
+    "expectedHarvest": "Expected Harvest"
+  },
+  "bankAccounts": {
+    "pageTitle": "Bank Accounts",
+    "description": "Manage your organization bank accounts.",
+    "addAccount": "Add Account",
+    "noAccounts": "No bank accounts yet",
+    "noAccountsDescription": "Start by adding your first bank account.",
+    "bankName": "Bank",
+    "accountNumber": "Account #",
+    "currency": "Currency",
+    "confirmDelete": "Delete Bank Account",
+    "confirmDeleteDescription": "Are you sure you want to delete this bank account?",
+    "deleteSuccess": "Bank account deleted successfully",
+    "deleteError": "Failed to delete bank account"
+  },
+  "deliveries": {
+    "pageTitle": "Deliveries",
+    "description": "Track and manage your product deliveries.",
+    "addDelivery": "New Delivery",
+    "noDeliveries": "No deliveries yet",
+    "noDeliveriesDescription": "Create your first delivery to start tracking.",
+    "date": "Date",
+    "type": "Type",
+    "cancelSuccess": "Delivery cancelled",
+    "cancelError": "Failed to cancel delivery"
+  },
+  "payments": {
+    "pageTitle": "Payment Records",
+    "description": "Track worker payments, advances, and approvals.",
+    "newPayment": "New Payment",
+    "noPayments": "No payment records yet",
+    "noPaymentsDescription": "Payment records will appear here once created.",
+    "type": "Type",
+    "period": "Period",
+    "approve": "Approve",
+    "process": "Process",
+    "approveSuccess": "Payment approved",
+    "approveError": "Failed to approve payment",
+    "processSuccess": "Payment processed",
+    "processError": "Failed to process payment"
+  },
+  "productApplications": {
+    "pageTitle": "Product Applications",
+    "description": "Track crop treatments and product usage from inventory.",
+    "addApplication": "Record Application",
+    "noApplications": "No product applications yet",
+    "noApplicationsDescription": "Record your first product application to track treatments.",
+    "date": "Date",
+    "quantityUsed": "Quantity",
+    "areaTreated": "Area"
+  },
+  "modules": {
+    "title": "Modules",
+    "subtitle": "Access all platform features based on your role and permissions",
+    "accessible": "accessible",
+    "rolesLegend": "Roles",
+    "sections": {
+      "main": "Main"
+    },
+    "marketplace": {
+      "received": "Received Requests",
+      "sent": "Sent Requests"
+    },
+    "desc": {
+      "dashboard": "Overview of farm activity, metrics, and alerts",
+      "farmHierarchy": "Manage farms, sectors, and organizational structure",
+      "parcels": "View and manage agricultural parcels and maps",
+      "stock": "Track inventory, products, and warehouse movements",
+      "infrastructure": "Manage buildings, equipment, and farm structures",
+      "chat": "Ask AgromindIA for intelligent recommendations",
+      "workers": "Manage employees, day laborers, and team assignments",
+      "tasks": "Create, assign, and track field and operational tasks",
+      "campaigns": "Plan and monitor seasonal production campaigns",
+      "cropCycles": "Track crop lifecycle from planting to harvest",
+      "harvests": "Record and manage harvest operations and yields",
+      "receptionBatches": "Manage incoming product reception and batching",
+      "qualityControl": "Quality checks, grading, and compliance testing",
+      "trees": "Inventory and monitor fruit tree plantations",
+      "orchards": "Manage orchard blocks, varieties, and planting plans",
+      "pruning": "Schedule and track pruning operations",
+      "compliance": "Track regulatory compliance and audit readiness",
+      "certifications": "Manage certifications (GlobalGAP, organic, etc.)",
+      "quotes": "Create and manage price quotations",
+      "salesOrders": "Process customer sales orders",
+      "purchaseOrders": "Manage supplier purchase orders",
+      "accounting": "Financial overview and accounting dashboard",
+      "invoices": "Create and manage invoices",
+      "payments": "Track payments and settlements",
+      "journal": "Accounting journal entries and ledger",
+      "reports": "Financial reports, P&L, and balance sheets",
+      "marketplaceReceived": "View and respond to incoming quote requests",
+      "marketplaceSent": "Track outgoing quote requests"
     }
   }
 }

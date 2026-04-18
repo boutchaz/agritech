@@ -1,10 +1,11 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import { 
-  ArrowLeft, 
   Calendar, 
   Award, 
   Building, 
+  Building2,
   FileText, 
   Trash2,
   ExternalLink,
@@ -14,7 +15,9 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
 import { Button } from '@/components/ui/button';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ComplianceChecksList } from '@/components/compliance/ComplianceChecksList';
 import { EditCertificationDialog } from '@/components/compliance/EditCertificationDialog';
@@ -24,11 +27,14 @@ import { ScheduleAuditDialog } from '@/components/compliance/ScheduleAuditDialog
 import { CorrectiveActionsList } from '@/components/compliance/CorrectiveActionsList';
 import { CreateCorrectiveActionDialog } from '@/components/compliance/CreateCorrectiveActionDialog';
 import { UpdateActionStatusDialog } from '@/components/compliance/UpdateActionStatusDialog';
+import ModernPageHeader from '@/components/ModernPageHeader';
+import { PageLayout } from '@/components/PageLayout';
 
 import {
   useCertification,
   useComplianceChecks,
   useDeleteCertification,
+  useDeleteComplianceCheck,
   useCorrectiveActions,
   useDeleteCorrectiveAction,
 } from '@/hooks/useCompliance';
@@ -40,6 +46,7 @@ export const Route = createFileRoute('/_authenticated/compliance/certifications/
 });
 
 function CertificationDetailPage() {
+  const { t } = useTranslation('compliance');
   const { certId } = Route.useParams();
   const navigate = useNavigate();
   const { currentOrganization } = useAuth();
@@ -48,7 +55,15 @@ function CertificationDetailPage() {
   const { data: checks, isLoading: isLoadingChecks } = useComplianceChecks(orgId);
   const { data: correctiveActions, isLoading: isLoadingActions } = useCorrectiveActions(orgId, { certification_id: certId });
   const deleteCertification = useDeleteCertification();
+  const deleteComplianceCheck = useDeleteComplianceCheck();
   const deleteCorrectiveAction = useDeleteCorrectiveAction();
+
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<{title:string;description?:string;variant?:"destructive"|"default";onConfirm:()=>void}>({title:"",onConfirm:()=>{}});
+  const showConfirm = (title: string, onConfirm: () => void, opts?: {description?: string; variant?: "destructive" | "default"}) => {
+    setConfirmAction({title, onConfirm, ...opts});
+    setConfirmOpen(true);
+  };
 
   const [selectedAction, setSelectedAction] = useState<CorrectiveActionPlanResponseDto | null>(null);
   const [showUpdateDialog, setShowUpdateDialog] = useState(false);
@@ -56,34 +71,8 @@ function CertificationDetailPage() {
   const certificationChecks = checks?.filter(check => check.certification_id === certId) || [];
   const certCorrectiveActions = correctiveActions || [];
 
-  if (isLoadingCert) {
-    return (
-      <div className="container mx-auto px-4 py-6">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-muted rounded w-1/3" />
-          <div className="h-4 bg-muted rounded w-1/4" />
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
-            <div className="md:col-span-2 h-64 bg-muted rounded" />
-            <div className="h-64 bg-muted rounded" />
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (!certification) {
-    return (
-      <div className="container mx-auto px-4 py-6 text-center">
-        <h2 className="text-xl font-bold">Certification introuvable</h2>
-        <Button asChild className="mt-4">
-          <Link to="/compliance/certifications">Retour à la liste</Link>
-        </Button>
-      </div>
-    );
-  }
-
   const handleDelete = () => {
-    if (confirm('Êtes-vous sûr de vouloir supprimer cette certification ?')) {
+    if (confirm(t('certifications.deleteCertificationConfirm'))) {
       if (!currentOrganization) return;
       deleteCertification.mutate(
         { organizationId: currentOrganization.id, certificationId: certId },
@@ -118,76 +107,147 @@ function CertificationDetailPage() {
   const getStatusLabel = (status: CertificationStatus) => {
     switch (status) {
       case CertificationStatus.ACTIVE:
-        return 'Active';
+        return t('status.active');
       case CertificationStatus.EXPIRED:
-        return 'Expirée';
+        return t('status.expired');
       case CertificationStatus.PENDING_RENEWAL:
-        return 'Renouvellement';
+        return t('status.pendingRenewal');
       case CertificationStatus.SUSPENDED:
-        return 'Suspendue';
+        return t('status.suspended');
       default:
         return status;
     }
   };
 
+  const breadcrumbs = [
+    { icon: Building2, label: currentOrganization?.name || '', path: '/dashboard' },
+    { icon: Award, label: t('breadcrumb.compliance'), path: '/compliance' },
+    { icon: Award, label: t('breadcrumb.certifications'), path: '/compliance/certifications' },
+    { icon: Award, label: certification?.certification_type || t('certifications.title'), isActive: true },
+  ];
+
   return (
-    <div className="container mx-auto px-4 py-6 space-y-8">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" asChild>
-            <Link to="/compliance/certifications">
-              <ArrowLeft className="h-5 w-5" />
-            </Link>
-          </Button>
-          <div>
-            <div className="flex items-center gap-3">
-              <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
-                {certification.certification_type}
-              </h1>
-              <Badge variant={getStatusVariant(certification.status)}>
-                {getStatusLabel(certification.status)}
-              </Badge>
+    <PageLayout
+      header={
+        <ModernPageHeader
+          breadcrumbs={breadcrumbs}
+          title={certification?.certification_type}
+          subtitle={certification?.certification_number}
+          actions={
+            certification && (
+              <div className="flex items-center gap-2">
+                <Badge variant={getStatusVariant(certification.status)}>
+                  {getStatusLabel(certification.status)}
+                </Badge>
+                <Button 
+                  variant="outline" 
+                  onClick={handleDelete} 
+                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                  disabled={deleteCertification.isPending}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  {t('certifications.delete')}
+                </Button>
+                <EditCertificationDialog certification={certification} />
+              </div>
+            )
+          }
+        />
+      }
+    >
+      {isLoadingCert ? (
+        <div className="container mx-auto px-4 py-6 space-y-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="md:col-span-2 space-y-6">
+              <div className="rounded-lg border bg-card p-6 space-y-4">
+                <Skeleton className="h-6 w-48" />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="flex items-start gap-3">
+                    <Skeleton className="h-5 w-5 rounded" />
+                    <div>
+                      <Skeleton className="h-4 w-32 mb-1" />
+                      <Skeleton className="h-4 w-24" />
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <Skeleton className="h-5 w-5 rounded" />
+                    <div>
+                      <Skeleton className="h-4 w-28 mb-1" />
+                      <Skeleton className="h-4 w-40" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-4">
+                <Skeleton className="h-6 w-44" />
+                <div className="rounded-md border">
+                  {[1, 2, 3].map((skIdx) => (
+                    <div key={"sk-" + skIdx} className="flex items-center gap-4 p-4 border-b last:border-b-0">
+                      <Skeleton className="h-4 w-20" />
+                      <Skeleton className="h-4 w-24" />
+                      <Skeleton className="h-4 w-20" />
+                      <Skeleton className="h-4 w-16" />
+                      <Skeleton className="h-4 w-10" />
+                      <Skeleton className="h-6 w-20 rounded-full" />
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
-            <p className="text-muted-foreground mt-1">
-              {certification.certification_number}
-            </p>
+            <div className="space-y-6">
+              <div className="rounded-lg border bg-card p-6 space-y-4">
+                <Skeleton className="h-6 w-36" />
+                <div className="space-y-2">
+                  {[1, 2].map((skIdx) => (
+                    <div key={"sk-" + skIdx} className="flex items-center justify-between p-2 border rounded-md">
+                      <div className="flex items-center gap-2">
+                        <Skeleton className="h-4 w-4" />
+                        <Skeleton className="h-4 w-24" />
+                      </div>
+                      <Skeleton className="h-8 w-8 rounded" />
+                    </div>
+                  ))}
+                </div>
+                <Skeleton className="h-9 w-full rounded-md" />
+              </div>
+              <div className="rounded-lg border bg-blue-50 dark:bg-blue-900/20 p-6 space-y-3">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-8 w-32" />
+                <Skeleton className="h-3 w-28" />
+                <Skeleton className="h-9 w-full rounded-md mt-2" />
+              </div>
+            </div>
           </div>
         </div>
-        <div className="flex gap-2">
-          <Button 
-            variant="outline" 
-            onClick={handleDelete} 
-            className="text-red-600 hover:text-red-700 hover:bg-red-50"
-            disabled={deleteCertification.isPending}
-          >
-            <Trash2 className="mr-2 h-4 w-4" />
-            Supprimer
+      ) : !certification ? (
+        <div className="container mx-auto px-4 py-6 text-center">
+          <h2 className="text-xl font-bold">{t('certifications.certificationNotFound')}</h2>
+          <Button asChild className="mt-4">
+            <Link to="/compliance/certifications">{t('certifications.backToList')}</Link>
           </Button>
-          <EditCertificationDialog certification={certification} />
         </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      ) : (
+        <div className="container mx-auto px-4 py-6 space-y-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Main Info */}
         <div className="md:col-span-2 space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Détails de la certification</CardTitle>
+              <CardTitle>{t('certifications.certificationDetails')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="flex items-start gap-3">
                   <Building className="h-5 w-5 text-muted-foreground mt-0.5" />
                   <div>
-                    <p className="text-sm font-medium">Organisme certificateur</p>
+                    <p className="text-sm font-medium">{t('certifications.issuingBody')}</p>
                     <p className="text-sm text-muted-foreground">{certification.issuing_body}</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
                   <Calendar className="h-5 w-5 text-muted-foreground mt-0.5" />
                   <div>
-                    <p className="text-sm font-medium">Période de validité</p>
+                    <p className="text-sm font-medium">{t('certifications.validityPeriod')}</p>
                     <p className="text-sm text-muted-foreground">
                       Du {format(new Date(certification.issued_date), 'dd MMM yyyy', { locale: fr })} au {format(new Date(certification.expiry_date), 'dd MMM yyyy', { locale: fr })}
                     </p>
@@ -196,8 +256,8 @@ function CertificationDetailPage() {
                 <div className="flex items-start gap-3 md:col-span-2">
                   <Award className="h-5 w-5 text-muted-foreground mt-0.5" />
                   <div>
-                    <p className="text-sm font-medium">Portée (Scope)</p>
-                    <p className="text-sm text-muted-foreground">{certification.scope || 'Non spécifié'}</p>
+                    <p className="text-sm font-medium">{t('certifications.scope')}</p>
+                    <p className="text-sm text-muted-foreground">{certification.scope || t('certifications.notSpecified')}</p>
                   </div>
                 </div>
               </div>
@@ -206,29 +266,38 @@ function CertificationDetailPage() {
 
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold">Contrôles de conformité</h2>
+              <h2 className="text-xl font-semibold">{t('certifications.complianceChecks')}</h2>
               <CreateComplianceCheckDialog certificationId={certId} />
             </div>
-            <ComplianceChecksList checks={certificationChecks} isLoading={isLoadingChecks} />
+            <ComplianceChecksList
+              checks={certificationChecks}
+              isLoading={isLoadingChecks}
+              onDelete={(check) => {
+                if (!currentOrganization) return;
+                showConfirm(
+                  t('checks.deleteConfirm'),
+                  () => deleteComplianceCheck.mutate({ organizationId: currentOrganization.id, checkId: check.id }),
+                  { variant: 'destructive' }
+                );
+              }}
+            />
           </div>
 
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <ShieldAlert className="h-5 w-5 text-orange-500" />
-                <h2 className="text-xl font-semibold">Actions Correctives</h2>
+                <h2 className="text-xl font-semibold">{t('correctiveActions.title')}</h2>
                 {certCorrectiveActions.length > 0 && (
                   <Badge variant="secondary" className="ml-1">
                     {certCorrectiveActions.length}
                   </Badge>
                 )}
               </div>
-              {certificationChecks.length > 0 && (
-                <CreateCorrectiveActionDialog
-                  certificationId={certId}
-                  complianceCheckId={certificationChecks[0].id}
-                />
-              )}
+              <CreateCorrectiveActionDialog
+                certificationId={certId}
+                complianceCheckId={certificationChecks[0]?.id}
+              />
             </div>
             <CorrectiveActionsList
               actions={certCorrectiveActions}
@@ -239,7 +308,7 @@ function CertificationDetailPage() {
               }}
               onDelete={(action) => {
                 if (!currentOrganization) return;
-                if (confirm('Supprimer cette action corrective ?')) {
+                if (confirm(t('correctiveActions.deleteShortConfirm'))) {
                   deleteCorrectiveAction.mutate({
                     organizationId: currentOrganization.id,
                     actionId: action.id,
@@ -265,13 +334,13 @@ function CertificationDetailPage() {
         <div className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Documents & Preuves</CardTitle>
+              <CardTitle>{t('certifications.documentsAndEvidence')}</CardTitle>
             </CardHeader>
             <CardContent>
               {certification.documents && certification.documents.length > 0 ? (
                 <div className="space-y-2">
-                  {certification.documents.map((doc, index) => (
-                    <div key={index} className="flex items-center justify-between p-2 border rounded-md hover:bg-muted/50 transition-colors">
+                  {certification.documents.map((doc) => (
+                    <div key={doc.url} className="flex items-center justify-between p-2 border rounded-md hover:bg-muted/50 transition-colors">
                       <div className="flex items-center gap-2 overflow-hidden">
                         <FileText className="h-4 w-4 text-blue-500 flex-shrink-0" />
                         <span className="text-sm truncate">{doc.type}</span>
@@ -281,7 +350,7 @@ function CertificationDetailPage() {
                         size="icon" 
                         className="h-8 w-8"
                         onClick={() => handleDownloadDocument(doc.url)}
-                        title="Ouvrir le document"
+                        title={t('certifications.openDocument')}
                       >
                         <ExternalLink className="h-4 w-4" />
                       </Button>
@@ -290,7 +359,7 @@ function CertificationDetailPage() {
                 </div>
               ) : (
                 <div className="text-center py-6 text-muted-foreground text-sm border-2 border-dashed rounded-md">
-                  Aucun document associé
+                  {t('certifications.noDocuments')}
                 </div>
               )}
               <div className="mt-4">
@@ -301,7 +370,7 @@ function CertificationDetailPage() {
 
           <Card className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
             <CardHeader>
-              <CardTitle className="text-blue-800 dark:text-blue-300 text-sm">Prochain Audit</CardTitle>
+              <CardTitle className="text-blue-800 dark:text-blue-300 text-sm">{t('certifications.nextAudit')}</CardTitle>
             </CardHeader>
             <CardContent>
               {certification.audit_schedule?.next_audit_date ? (
@@ -311,18 +380,18 @@ function CertificationDetailPage() {
                   </div>
                   {certification.audit_schedule.auditor_name && (
                     <p className="text-xs text-blue-700 dark:text-blue-400">
-                      Auditeur: {certification.audit_schedule.auditor_name}
+                      {t('certifications.auditor') + ':'} {certification.audit_schedule.auditor_name}
                     </p>
                   )}
                   {certification.audit_schedule.audit_frequency && (
                     <p className="text-xs text-blue-700 dark:text-blue-400">
-                      Fréquence: {certification.audit_schedule.audit_frequency}
+                      {t('certifications.frequency') + ':'} {certification.audit_schedule.audit_frequency}
                     </p>
                   )}
                 </div>
               ) : (
                 <p className="text-sm text-blue-700 dark:text-blue-400">
-                  Aucun audit planifié
+                  {t('certifications.noAuditScheduled')}
                 </p>
               )}
               <div className="mt-4">
@@ -332,6 +401,16 @@ function CertificationDetailPage() {
           </Card>
         </div>
       </div>
-    </div>
+          <ConfirmDialog
+            open={confirmOpen}
+            onOpenChange={setConfirmOpen}
+            title={confirmAction.title}
+            description={confirmAction.description}
+            variant={confirmAction.variant}
+            onConfirm={confirmAction.onConfirm}
+          />
+        </div>
+      )}
+    </PageLayout>
   );
 }

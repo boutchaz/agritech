@@ -173,6 +173,7 @@ export function useCreateReceptionBatch() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['reception-batches'] });
       queryClient.invalidateQueries({ queryKey: ['reception-batch-stats'] });
+      queryClient.resetQueries({ queryKey: ['reception-batches', 'paginated'] });
     },
   });
 }
@@ -202,6 +203,7 @@ export function useUpdateReceptionBatch() {
       queryClient.invalidateQueries({ queryKey: ['reception-batches'] });
       queryClient.invalidateQueries({ queryKey: ['reception-batch', variables.batchId] });
       queryClient.invalidateQueries({ queryKey: ['reception-batch-stats'] });
+      queryClient.resetQueries({ queryKey: ['reception-batches', 'paginated'] });
     },
   });
 }
@@ -231,6 +233,7 @@ export function useUpdateQualityControl() {
       queryClient.invalidateQueries({ queryKey: ['reception-batches'] });
       queryClient.invalidateQueries({ queryKey: ['reception-batch', variables.batchId] });
       queryClient.invalidateQueries({ queryKey: ['reception-batch-stats'] });
+      queryClient.resetQueries({ queryKey: ['reception-batches', 'paginated'] });
     },
   });
 }
@@ -262,6 +265,7 @@ export function useMakeReceptionDecision() {
       queryClient.invalidateQueries({ queryKey: ['reception-batch-stats'] });
       queryClient.invalidateQueries({ queryKey: ['stock-entries'] });
       queryClient.invalidateQueries({ queryKey: ['sales-orders'] });
+      queryClient.resetQueries({ queryKey: ['reception-batches', 'paginated'] });
     },
   });
 }
@@ -285,6 +289,7 @@ export function useCancelReceptionBatch() {
       queryClient.invalidateQueries({ queryKey: ['reception-batches'] });
       queryClient.invalidateQueries({ queryKey: ['reception-batch', batchId] });
       queryClient.invalidateQueries({ queryKey: ['reception-batch-stats'] });
+      queryClient.resetQueries({ queryKey: ['reception-batches', 'paginated'] });
     },
   });
 }
@@ -307,6 +312,7 @@ export function useDeleteReceptionBatch() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['reception-batches'] });
       queryClient.invalidateQueries({ queryKey: ['reception-batch-stats'] });
+      queryClient.resetQueries({ queryKey: ['reception-batches', 'paginated'] });
     },
   });
 }

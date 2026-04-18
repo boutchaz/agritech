@@ -1,0 +1,27 @@
+{
+  "id": "guides/development-setup",
+  "title": "Development Setup & Commands",
+  "description": "AI agent reference for this multi-tenant agricultural SaaS monorepo.",
+  "source": "@site/docs/guides/development-setup.md",
+  "sourceDirName": "guides",
+  "slug": "/guides/development-setup",
+  "permalink": "/guides/development-setup",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 5,
+  "frontMatter": {
+    "sidebar_position": 5,
+    "title": "Development Setup & Commands"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Mobile Responsive Guidelines",
+    "permalink": "/guides/mobile-responsive"
+  },
+  "next": {
+    "title": "Platform Overview & Presentation",
+    "permalink": "/guides/platform-overview"
+  }
+}

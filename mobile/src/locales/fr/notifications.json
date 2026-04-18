@@ -1,0 +1,47 @@
+{
+  "title": "Notifications",
+  "all": "Tout",
+  "unread": "Non lues",
+  "noUnread": "Aucune notification non lue",
+  "empty": "Aucune notification",
+  "allCaughtUp": "Vous êtes à jour !",
+  "willAppearHere": "Les nouvelles notifications apparaîtront ici",
+  "markAllRead": "Tout marquer comme lu",
+  "types": {
+    "task": "Tâche",
+    "harvest": "Récolte",
+    "alert": "Alerte",
+    "system": "Système",
+    "approval": "Approbation",
+    "calibration": "Calibration",
+    "weather": "Météo",
+    "inventory": "Inventaire"
+  },
+  "approvals": {
+    "title": "Approbations",
+    "pending": "En attente",
+    "approved": "Approuvées",
+    "rejected": "Rejetées",
+    "approve": "Approuver",
+    "reject": "Rejeter",
+    "noPending": "Aucune approbation en attente",
+    "empty": "Aucune approbation",
+    "allDone": "Vous êtes à jour !",
+    "willAppearHere": "Les approbations apparaîtront ici",
+    "confirmApprove": "Approuver la demande",
+    "confirmApproveMessage": "Êtes-vous sûr de vouloir approuver cette demande ?",
+    "confirmReject": "Rejeter la demande",
+    "confirmRejectMessage": "Êtes-vous sûr de vouloir rejeter cette demande ?",
+    "status": {
+      "pending": "En attente",
+      "approved": "Approuvée",
+      "rejected": "Rejetée"
+    },
+    "types": {
+      "task_completion": "Achèvement de tâche",
+      "harvest_validation": "Validation de récolte",
+      "time_log": "Feuille de temps",
+      "expense": "Dépense"
+    }
+  }
+}

@@ -51,15 +51,14 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
     if (databaseUrl) {
       this.pgPool = new Pool({
         connectionString: databaseUrl,
-        max: 20, // Maximum number of clients in the pool
-        min: 2, // Minimum number of clients
-        idleTimeoutMillis: 30000, // Close idle clients after 30s
-        connectionTimeoutMillis: 10000, // Increased from 2s to 10s
-        // Add these for better reliability
+        max: 10, // Reduced: Supabase has limited connection slots
+        min: 0, // Don't hold idle connections — release them back to Supabase
+        idleTimeoutMillis: 10000, // Release idle connections faster (10s)
+        connectionTimeoutMillis: 10000,
         keepAlive: true,
         keepAliveInitialDelayMillis: 10000,
-        allowExitOnIdle: false, // Keep pool alive
-        statement_timeout: 60000, // 60s statement timeout
+        allowExitOnIdle: false, // Keep pool object alive (not connections)
+        statement_timeout: 30000, // 30s — fail fast, don't hog connections
       });
 
       this.pgPool.on('error', (err) => {
@@ -110,8 +109,12 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
-   * Create a client with a specific user's JWT token
-   * Useful for operations that need to respect RLS for a specific user
+   * Create a client with a specific user's JWT token.
+   * Useful for operations that need to respect RLS for a specific user.
+   *
+   * WARNING: Each call creates a new SupabaseClient instance.
+   * Callers should NOT store references beyond the request lifecycle.
+   * For high-throughput paths, prefer getAdminClient() with explicit org_id filters.
    */
   getClientWithAuth(accessToken: string): SupabaseClient {
     const supabaseUrl = this.configService.get<string>('SUPABASE_URL');

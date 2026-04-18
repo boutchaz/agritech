@@ -10,6 +10,7 @@ import { DatabaseModule } from '../database/database.module';
 import { UsersModule } from '../users/users.module';
 import { OrganizationsModule } from '../organizations/organizations.module';
 import { DemoDataModule } from '../demo-data/demo-data.module';
+import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
 
 @Global()
 @Module({
@@ -19,6 +20,7 @@ import { DemoDataModule } from '../demo-data/demo-data.module';
     UsersModule,
     OrganizationsModule,
     DemoDataModule,
+    SubscriptionsModule,
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -33,6 +35,7 @@ import { DemoDataModule } from '../demo-data/demo-data.module';
   ],
   controllers: [AuthController],
   providers: [AuthService, JwtStrategy, JwtAuthGuard],
-  exports: [AuthService, JwtAuthGuard, JwtStrategy],
+  // Export JwtModule so JwtService is injectable in any module (e.g. MarketplaceService verifies tokens with verifyAsync + secret per call).
+  exports: [AuthService, JwtAuthGuard, JwtStrategy, JwtModule],
 })
 export class AuthModule { }

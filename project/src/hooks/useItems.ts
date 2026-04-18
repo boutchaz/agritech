@@ -1,19 +1,22 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import React from 'react';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { useAuth } from '../hooks/useAuth';
-import { itemsApi } from '../lib/api/items';
+import { itemsApi, type PaginatedItemQuery } from '../lib/api/items';
+import type { PaginatedResponse } from '../lib/api/types';
 import type {
   ItemGroupWithChildren,
-  ItemPrice,
+  Item,
   CreateItemInput,
   UpdateItemInput,
   CreateItemGroupInput,
   UpdateItemGroupInput,
   CreateProductVariantInput,
   UpdateProductVariantInput,
-  ProductVariant,
   ItemFilters,
   ItemGroupFilters,
 } from '../types/items';
+
+export type { PaginatedItemQuery };
 
 // =====================================================
 // ITEM GROUPS QUERIES
@@ -62,34 +65,35 @@ export function useItemGroup(groupId: string | null) {
  * Hook to fetch item group tree (hierarchical)
  */
 export function useItemGroupTree() {
-  const { currentOrganization } = useAuth();
   const { data: allGroups } = useItemGroups({ is_active: true });
 
-  return useQuery({
-    queryKey: ['item-group-tree', currentOrganization?.id],
-    queryFn: async () => {
-      if (!allGroups || !currentOrganization?.id) {
-        return [];
-      }
+  // Derive tree from allGroups via useMemo instead of a dependent query.
+  // Using a query here would capture `allGroups` in a stale closure.
+  const tree = React.useMemo(() => {
+    if (!allGroups || allGroups.length === 0) return [];
 
-      // Build tree structure
-      const buildTree = (parentId: string | null = null): ItemGroupWithChildren[] => {
-        return allGroups
-          .filter((group) => 
-            (parentId === null && !group.parent_group_id) ||
-            (parentId !== null && group.parent_group_id === parentId)
-          )
-          .map((group) => ({
-            ...group,
-            children: buildTree(group.id),
-            items_count: 0, // Would need to fetch from items table
-          }));
-      };
+    const buildTree = (parentId: string | null = null): ItemGroupWithChildren[] => {
+      return allGroups
+        .filter((group) =>
+          (parentId === null && !group.parent_group_id) ||
+          (parentId !== null && group.parent_group_id === parentId)
+        )
+        .map((group) => ({
+          ...group,
+          children: buildTree(group.id),
+          items_count: 0,
+        }));
+    };
 
-      return buildTree();
-    },
-    enabled: !!allGroups && !!currentOrganization?.id,
-  });
+    return buildTree();
+  }, [allGroups]);
+
+  // Return a shape compatible with useQuery so callers don't break
+  return {
+    data: tree,
+    isLoading: !allGroups,
+    error: null,
+  };
 }
 
 // =====================================================
@@ -112,6 +116,25 @@ export function useItems(filters?: ItemFilters) {
       return itemsApi.getAll(filters, currentOrganization.id);
     },
     enabled: !!currentOrganization?.id,
+  });
+}
+
+export function usePaginatedItems(query: PaginatedItemQuery) {
+  const { currentOrganization } = useAuth();
+  const queryKey = JSON.stringify(query);
+
+  return useQuery({
+    queryKey: ['items', 'paginated', currentOrganization?.id, queryKey],
+    queryFn: async (): Promise<PaginatedResponse<Item>> => {
+      if (!currentOrganization?.id) {
+        return { data: [], total: 0, page: 1, pageSize: 10, totalPages: 0 };
+      }
+
+      return itemsApi.getPaginated(currentOrganization.id, query);
+    },
+    enabled: !!currentOrganization?.id,
+    placeholderData: keepPreviousData,
+    staleTime: 30 * 1000,
   });
 }
 

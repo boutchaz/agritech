@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { getNutrientStatus, getNutrientColor } from '../../utils/soilRecommendations';
 
 interface NutrientData {
@@ -14,7 +14,7 @@ interface NutrientBarChartProps {
   title?: string;
 }
 
-const NutrientBarChart: React.FC<NutrientBarChartProps> = ({ nutrients, title }) => {
+const NutrientBarChart = ({ nutrients, title }: NutrientBarChartProps) => {
   const getBarWidth = (value: number, min: number, max: number): number => {
     // Calculate percentage relative to optimal range
     const range = max - min;
@@ -37,7 +37,7 @@ const NutrientBarChart: React.FC<NutrientBarChartProps> = ({ nutrients, title })
           const colorClass = getNutrientColor(status);
 
           return (
-            <div key={index} className="space-y-2">
+            <div key={nutrient.name} className="space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                   {nutrient.name}

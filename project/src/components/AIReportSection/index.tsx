@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import {  useState, useEffect  } from "react";
 import { Bot, Sparkles, Loader, AlertCircle, Calendar } from 'lucide-react';
 import { useAIProviders, useGenerateAIReport, useCalibrationStatus, useCalibrate, useFetchData } from '../../hooks/useAIReports';
-import type { AIProvider, AIReportResponse } from '../../lib/api/ai-reports';
+import { aiReportsApi, type AIProvider, type AIReportResponse } from '../../lib/api/ai-reports';
 import { AIProviderSelector } from './AIProviderSelector';
 import { CalibrationStatusPanel } from './CalibrationStatusPanel';
 import { AIReportPreview } from './AIReportPreview';
@@ -10,16 +10,17 @@ import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../../hooks/useAuth';
 import { satelliteIndicesApi } from '../../lib/api/satellite-indices';
 import { productionIntelligenceApi } from '../../lib/api/production-intelligence';
+import { Button } from '../ui/button';
 
 interface AIReportSectionProps {
   parcelId: string;
   parcelName: string;
 }
 
-export const AIReportSection: React.FC<AIReportSectionProps> = ({
+export const AIReportSection = ({
   parcelId,
   parcelName,
-}) => {
+}: AIReportSectionProps) => {
   const [selectedProvider, setSelectedProvider] = useState<AIProvider | null>(null);
   const [dateRange, setDateRange] = useState({
     start: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
@@ -64,16 +65,18 @@ export const AIReportSection: React.FC<AIReportSectionProps> = ({
         // Merge data by date
         const dataMap = new Map<string, { date: string; ndvi?: number; ndmi?: number }>();
         
-        (Array.isArray(ndviData) ? ndviData : []).forEach((item: any) => {
-          const date = item.date?.split('T')[0] || item.date;
+        (Array.isArray(ndviData) ? ndviData : []).forEach((item: { date?: string; mean_value?: number }) => {
+          const date = item.date?.split('T')[0] || item.date || '';
+          if (!date) return;
           if (!dataMap.has(date)) {
             dataMap.set(date, { date });
           }
           dataMap.get(date)!.ndvi = item.mean_value;
         });
         
-        (Array.isArray(ndmiData) ? ndmiData : []).forEach((item: any) => {
-          const date = item.date?.split('T')[0] || item.date;
+        (Array.isArray(ndmiData) ? ndmiData : []).forEach((item: { date?: string; mean_value?: number }) => {
+          const date = item.date?.split('T')[0] || item.date || '';
+          if (!date) return;
           if (!dataMap.has(date)) {
             dataMap.set(date, { date });
           }
@@ -105,7 +108,7 @@ export const AIReportSection: React.FC<AIReportSectionProps> = ({
         );
         
         const data = Array.isArray(response) ? response : [];
-        return data.slice(0, 10).map((item: any) => ({
+        return data.slice(0, 10).map((item) => ({
           season: item.harvest_season || '',
           year: new Date(item.harvest_date || item.created_at || Date.now()).getFullYear(),
           yieldPerHa: item.actual_yield_per_hectare || 0,
@@ -139,14 +142,14 @@ export const AIReportSection: React.FC<AIReportSectionProps> = ({
     if (!selectedProvider) return;
 
     try {
-      const report = await generateMutation.mutateAsync({
+      const job = await generateMutation.mutateAsync({
         parcel_id: parcelId,
         provider: selectedProvider,
         data_start_date: dateRange.start,
         data_end_date: dateRange.end,
         language: 'fr',
       });
-      setGeneratedReport(report);
+      setGeneratedReport(aiReportsApi.mapJobResultToReport(job));
     } catch (error) {
       console.error('Error generating AI report:', error);
     }
@@ -220,17 +223,18 @@ export const AIReportSection: React.FC<AIReportSectionProps> = ({
 
             {/* Date Range */}
             <div className="space-y-3">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              <div className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Période d'analyse
-              </label>
+              </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
+                  <label htmlFor="ai-report-start-date" className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
                     Date de début
                   </label>
                   <div className="relative">
                     <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                     <input
+                      id="ai-report-start-date"
                       type="date"
                       value={dateRange.start}
                       onChange={(e) =>
@@ -241,12 +245,13 @@ export const AIReportSection: React.FC<AIReportSectionProps> = ({
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
+                  <label htmlFor="ai-report-end-date" className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
                     Date de fin
                   </label>
                   <div className="relative">
                     <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                     <input
+                      id="ai-report-end-date"
                       type="date"
                       value={dateRange.end}
                       onChange={(e) =>
@@ -262,6 +267,7 @@ export const AIReportSection: React.FC<AIReportSectionProps> = ({
             {/* Calibration Status Panel */}
             {calibrationStatus && (
               <CalibrationStatusPanel
+                parcelId={parcelId}
                 status={calibrationStatus}
                 onRecalibrate={async () => {
                   try {
@@ -292,7 +298,7 @@ export const AIReportSection: React.FC<AIReportSectionProps> = ({
             )}
 
             {/* Generate Button */}
-            <button
+            <Button
               onClick={handleGenerate}
               disabled={
                 !selectedProvider ||
@@ -312,7 +318,7 @@ export const AIReportSection: React.FC<AIReportSectionProps> = ({
                   <span>Générer le Rapport IA</span>
                 </>
               )}
-            </button>
+            </Button>
 
             {calibrationStatus?.status === 'blocked' && (
               <p className="text-sm text-red-600 dark:text-red-400 text-center mt-2">
@@ -338,12 +344,12 @@ export const AIReportSection: React.FC<AIReportSectionProps> = ({
           <div className="space-y-4">
             {/* Actions */}
             <div className="flex items-center justify-between">
-              <button
+              <Button
                 onClick={() => setGeneratedReport(null)}
                 className="text-sm text-purple-600 dark:text-purple-400 hover:underline"
               >
                 ← Générer un nouveau rapport
-              </button>
+              </Button>
               <AIReportExport
                 sections={generatedReport.sections}
                 parcelName={parcelName}

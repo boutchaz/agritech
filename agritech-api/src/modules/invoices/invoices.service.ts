@@ -1,8 +1,11 @@
 import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { SequencesService } from '../sequences/sequences.service';
-import { NotificationsService, InvoiceEmailData } from '../notifications/notifications.service';
+import { sanitizeSearch } from '../../common/utils/sanitize-search';
+import { NotificationsService, InvoiceEmailData, MANAGEMENT_ROLES } from '../notifications/notifications.service';
+import { NotificationType } from '../notifications/dto/notification.dto';
 import { StockEntriesService } from '../stock-entries/stock-entries.service';
+import { AccountingAutomationService } from '../journal-entries/accounting-automation.service';
 import { StockEntryType, StockEntryStatus } from '../stock-entries/dto/create-stock-entry.dto';
 import { InvoiceFiltersDto, UpdateInvoiceStatusDto, CreateInvoiceDto, UpdateInvoiceDto } from './dto';
 import { buildInvoiceLedgerLines } from '../journal-entries/helpers/ledger.helper';
@@ -17,6 +20,7 @@ export class InvoicesService {
     private readonly sequencesService: SequencesService,
     private readonly notificationsService: NotificationsService,
     private readonly stockEntriesService: StockEntriesService,
+    private readonly accountingAutomationService: AccountingAutomationService,
   ) {}
 
   async findAll(
@@ -51,9 +55,12 @@ export class InvoicesService {
       .eq('organization_id', organizationId);
 
     if (search) {
-      const searchFilter = `invoice_number.ilike.%${search}%,party_name.ilike.%${search}%`;
-      countQuery = countQuery.or(searchFilter);
-      dataQuery = dataQuery.or(searchFilter);
+      const safeSearch = sanitizeSearch(search);
+      if (safeSearch) {
+        const searchFilter = `invoice_number.ilike.%${safeSearch}%,party_name.ilike.%${safeSearch}%`;
+        countQuery = countQuery.or(searchFilter);
+        dataQuery = dataQuery.or(searchFilter);
+      }
     }
 
     if (invoice_type) {
@@ -206,7 +213,6 @@ export class InvoicesService {
         tax_amount: item.tax_amount,
         line_total: item.line_total,
         item_id: item.item_id || null,
-        variant_id: item.variant_id || null,
       }));
 
       const { error: itemsError } = await supabaseClient
@@ -218,6 +224,22 @@ export class InvoicesService {
         await supabaseClient.from('invoices').delete().eq('id', invoice.id);
         this.logger.error(`Failed to create invoice items: ${itemsError.message}`);
         throw new BadRequestException(`Failed to create invoice items: ${itemsError.message}`);
+      }
+
+      // Notify management about new invoice
+      try {
+        const typeLabel = dto.invoice_type === 'sales' ? 'Sales' : 'Purchase';
+        await this.notificationsService.createNotificationsForRoles(
+          organizationId,
+          MANAGEMENT_ROLES,
+          userId,
+          NotificationType.INVOICE_CREATED,
+          `🧾 ${typeLabel} Invoice ${invoiceNumber} created`,
+          `${dto.party_name} — ${grandTotal} ${dto.currency_code || 'MAD'}`,
+          { invoiceId: invoice.id, invoiceNumber, invoiceType: dto.invoice_type, amount: grandTotal, currency: dto.currency_code || 'MAD' },
+        );
+      } catch (notifError) {
+        this.logger.warn(`Failed to send invoice  otification: ${notifError}`);
       }
 
       // Fetch the complete invoice with items
@@ -318,7 +340,6 @@ export class InvoicesService {
         tax_amount: item.tax_amount,
         line_total: item.line_total,
         item_id: item.item_id || null,
-        variant_id: item.variant_id || null,
       }));
 
       const { error: insertError } = await supabaseClient
@@ -371,7 +392,7 @@ export class InvoicesService {
     // Fetch current invoice to validate transition
     const { data: currentInvoice, error: fetchError } = await supabaseClient
       .from('invoices')
-      .select('status, journal_entry_id')
+      .select('status, journal_entry_id, grand_total, outstanding_amount, party_id, party_name, party_type, currency_code, invoice_type, invoice_number')
       .eq('id', id)
       .eq('organization_id', organizationId)
       .single();
@@ -385,19 +406,38 @@ export class InvoicesService {
       this.validateInvoiceStatusTransition(currentInvoice.status, dto.status);
     }
 
-    // Additional business rules
-    // Cannot cancel invoice that has been posted to journal
-    if (dto.status === 'cancelled' && currentInvoice.journal_entry_id) {
-      throw new BadRequestException(
-        'Cannot cancel invoice that has been posted to journal. Please create a reversing entry instead.'
-      );
-    }
-
     // Cannot manually set to 'submitted' - must use postInvoice endpoint
     if (dto.status === 'submitted' && currentInvoice.status === 'draft') {
       throw new BadRequestException(
         'Cannot manually set invoice to submitted. Please use the post invoice endpoint to submit and create journal entry.'
       );
+    }
+
+    // Cancel on a posted invoice: block if payments allocated, else reverse the GL entry
+    let reversalEntryId: string | null = null;
+    if (dto.status === 'cancelled' && currentInvoice.journal_entry_id) {
+      const { count: allocationCount, error: allocError } = await supabaseClient
+        .from('payment_allocations')
+        .select('id', { count: 'exact', head: true })
+        .eq('invoice_id', id);
+
+      if (allocError) {
+        throw new BadRequestException(`Failed to check payment allocations: ${allocError.message}`);
+      }
+
+      if ((allocationCount ?? 0) > 0) {
+        throw new BadRequestException(
+          'Cannot cancel invoice with payment allocations. Un-allocate or refund payments first.',
+        );
+      }
+
+      const reversal = await this.accountingAutomationService.createReversalEntry(
+        organizationId,
+        currentInvoice.journal_entry_id,
+        userId,
+        `Cancellation of invoice ${currentInvoice.invoice_number}`,
+      );
+      reversalEntryId = reversal.reversalEntryId;
     }
 
     const updateData: any = {
@@ -414,6 +454,13 @@ export class InvoicesService {
       updateData.submitted_by = userId;
     }
 
+    // When marking as paid, also set paid_amount and outstanding_amount
+    if (dto.status === 'paid') {
+      const total = Number(currentInvoice.grand_total) || 0;
+      updateData.paid_amount = total;
+      updateData.outstanding_amount = 0;
+    }
+
     const { data, error } = await supabaseClient
       .from('invoices')
       .update(updateData)
@@ -427,7 +474,51 @@ export class InvoicesService {
       throw new BadRequestException(`Failed to update invoice status: ${error.message}`);
     }
 
-    return data;
+    // When marking as paid, create an accounting_payments record + allocation
+    if (dto.status === 'paid') {
+      try {
+        const paymentNumber = await this.sequencesService.generatePaymentNumber(organizationId);
+        const paymentType = currentInvoice.invoice_type === 'sales' ? 'receive' : 'pay';
+
+        const { data: payment, error: payError } = await supabaseClient
+          .from('accounting_payments')
+          .insert({
+            organization_id: organizationId,
+            payment_number: paymentNumber,
+            payment_date: new Date().toISOString().split('T')[0],
+            payment_type: paymentType,
+            payment_method: 'cash',
+            party_id: currentInvoice.party_id || null,
+            party_name: currentInvoice.party_name || 'Unknown',
+            party_type: currentInvoice.party_type || (currentInvoice.invoice_type === 'sales' ? 'customer' : 'supplier'),
+            amount: Number(currentInvoice.grand_total) || 0,
+            currency_code: currentInvoice.currency_code || 'MAD',
+            reference_number: currentInvoice.invoice_number,
+            remarks: `Payment for invoice ${currentInvoice.invoice_number}`,
+            status: 'submitted',
+            created_by: userId,
+          })
+          .select()
+          .single();
+
+        if (!payError && payment) {
+          await supabaseClient
+            .from('payment_allocations')
+            .insert({
+              payment_id: payment.id,
+              invoice_id: id,
+              allocated_amount: Number(currentInvoice.grand_total) || 0,
+            });
+        } else {
+          this.logger.warn(`Failed to create payment record for invoice ${id}: ${payError?.message}`);
+        }
+      } catch (paymentErr) {
+        // Don't fail the status update if payment record creation fails
+        this.logger.error(`Error creating payment record for invoice ${id}: ${paymentErr instanceof Error ? paymentErr.message : String(paymentErr)}`);
+      }
+    }
+
+    return reversalEntryId ? { ...data, reversal_entry_id: reversalEntryId } : data;
   }
 
   /**
@@ -442,8 +533,7 @@ export class InvoicesService {
   ): Promise<any> {
     const supabaseClient = this.databaseService.getAdminClient();
 
-    // Fetch invoice with items
-    // Note: Only selecting columns that exist in the current database schema
+    // Fetch invoice with items (read only — status re-checked under pg row lock inside tx)
     const { data: invoice, error: invoiceError } = await supabaseClient
       .from('invoices')
       .select(`
@@ -454,9 +544,10 @@ export class InvoicesService {
           item_name,
           description,
           quantity,
-          unit,
+          unit_of_measure,
           amount,
-          tax_amount
+          tax_amount,
+          account_id
         )
       `)
       .eq('id', invoiceId)
@@ -471,54 +562,71 @@ export class InvoicesService {
       throw new BadRequestException('Only draft invoices can be posted');
     }
 
-    // Get required GL accounts based on invoice type
-    const SALES_ACCOUNT_CODES = ['1200', '2150']; // AR, Taxes Payable
-    const PURCHASE_ACCOUNT_CODES = ['2110', '1400']; // AP, Prepaid taxes
-    const requiredCodes =
-      invoice.invoice_type === 'sales' ? SALES_ACCOUNT_CODES : PURCHASE_ACCOUNT_CODES;
+    // Block posting to closed fiscal periods
+    await this.accountingAutomationService.assertPeriodOpen(organizationId, postingDate);
 
-    const { data: accountRows, error: accountsError } = await supabaseClient
-      .from('accounts')
-      .select('id, code')
-      .eq('organization_id', organizationId)
-      .in('code', requiredCodes);
+    // Resolve GL accounts via account_mappings (country-generic)
+    const isSales = invoice.invoice_type === 'sales';
 
-    if (accountsError) {
-      throw new BadRequestException(`Failed to load ledger accounts: ${accountsError.message}`);
+    const [receivableAccountId, payableAccountId, taxCollectedAccountId, taxDeductibleAccountId, defaultRevenueAccountId, defaultExpenseAccountId] = await Promise.all([
+      isSales ? this.accountingAutomationService.resolveAccountId(organizationId, 'receivable', 'trade') : Promise.resolve(null),
+      !isSales ? this.accountingAutomationService.resolveAccountId(organizationId, 'payable', 'trade') : Promise.resolve(null),
+      isSales ? this.accountingAutomationService.resolveAccountId(organizationId, 'tax', 'collected') : Promise.resolve(null),
+      !isSales ? this.accountingAutomationService.resolveAccountId(organizationId, 'tax', 'deductible') : Promise.resolve(null),
+      isSales ? this.accountingAutomationService.resolveAccountId(organizationId, 'revenue', 'default') : Promise.resolve(null),
+      !isSales ? this.accountingAutomationService.resolveAccountId(organizationId, 'expense', 'default') : Promise.resolve(null),
+    ]);
+
+    // Hard-fail if the required AR/AP mapping is missing — do not silently post without GL
+    if (isSales && !receivableAccountId) {
+      throw new BadRequestException(
+        'Account mapping missing for receivable/trade. Configure account mappings before posting sales invoices.',
+      );
+    }
+    if (!isSales && !payableAccountId) {
+      throw new BadRequestException(
+        'Account mapping missing for payable/trade. Configure account mappings before posting purchase invoices.',
+      );
     }
 
-    const codeToAccountId = new Map<string, string>(
-      (accountRows ?? []).map((row) => [row.code, row.id]),
-    );
-
-    // Generate journal entry number
+    // Generate entry number outside tx (uses its own tx internally)
     const entryNumber = await this.generateJournalEntryNumber(supabaseClient, organizationId);
+    const now = new Date().toISOString();
 
-    // Create journal entry header
-    const { data: journalEntry, error: journalError } = await supabaseClient
-      .from('journal_entries')
-      .insert({
-        organization_id: organizationId,
-        entry_number: entryNumber,
-        entry_date: postingDate,
-        posting_date: postingDate,
-        reference_type: invoice.invoice_type === 'sales' ? 'Sales Invoice' : 'Purchase Invoice',
-        reference_number: invoice.invoice_number,
-        remarks: `Journal entry for ${invoice.invoice_type} invoice ${invoice.invoice_number}`,
-        created_by: userId,
-        status: 'draft',
-      })
-      .select()
-      .single();
+    // ACID posting: lock invoice row, create journal entry + items, update invoice — all-or-nothing
+    const { journalEntryId } = await this.databaseService.executeInPgTransaction(async (pgClient) => {
+      // Lock invoice row and re-check status under lock to prevent double-post races
+      const lockResult = await pgClient.query(
+        `SELECT status FROM invoices WHERE id = $1 AND organization_id = $2 FOR UPDATE`,
+        [invoiceId, organizationId],
+      );
+      if (lockResult.rowCount === 0) {
+        throw new NotFoundException('Invoice not found');
+      }
+      if (lockResult.rows[0].status !== 'draft') {
+        throw new BadRequestException('Invoice is no longer in draft state (concurrent post?)');
+      }
 
-    if (journalError || !journalEntry) {
-      throw new BadRequestException(`Failed to create journal entry: ${journalError?.message}`);
-    }
+      // Create journal entry header (draft; totals set when posting)
+      const jeResult = await pgClient.query(
+        `INSERT INTO journal_entries (organization_id, entry_number, entry_date, reference_type, reference_number, reference_id, remarks, created_by, status)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
+        [
+          organizationId,
+          entryNumber,
+          postingDate,
+          isSales ? 'Sales Invoice' : 'Purchase Invoice',
+          invoice.invoice_number,
+          invoice.id,
+          `Journal entry for ${invoice.invoice_type} invoice ${invoice.invoice_number}`,
+          userId,
+          'draft',
+        ],
+      );
+      const jeId = jeResult.rows[0].id;
 
-    try {
-      // Build journal lines
-      // Note: income_account_id, expense_account_id, cost_center_id are optional
-      // and may not exist in the current database schema
+      // Build ledger lines via pure helper (throws on missing per-item accounts).
+      // GL is posted in base currency — multiply foreign-currency amounts by the invoice's exchange_rate.
       const lines = buildInvoiceLedgerLines(
         {
           id: invoice.id,
@@ -533,162 +641,124 @@ export class InvoicesService {
             description: item.description,
             amount: Number(item.amount),
             tax_amount: Number(item.tax_amount ?? 0),
-            income_account_id: item.income_account_id || null,
-            expense_account_id: item.expense_account_id || null,
+            account_id: item.account_id || null,
             cost_center_id: item.cost_center_id || null,
           })),
         },
-        journalEntry.id,
+        jeId,
         {
-          receivableAccountId: codeToAccountId.get('1200') ?? '',
-          payableAccountId: codeToAccountId.get('2110') ?? '',
-          taxPayableAccountId: codeToAccountId.get('2150'),
-          taxReceivableAccountId: codeToAccountId.get('1400'),
+          receivableAccountId: receivableAccountId ?? '',
+          payableAccountId: payableAccountId ?? '',
+          taxPayableAccountId: taxCollectedAccountId ?? undefined,
+          taxReceivableAccountId: taxDeductibleAccountId ?? undefined,
+          defaultRevenueAccountId: defaultRevenueAccountId ?? undefined,
+          defaultExpenseAccountId: defaultExpenseAccountId ?? undefined,
         },
+        Number(invoice.exchange_rate ?? 1),
       );
 
-      // Calculate totals for double-entry validation
       const totalDebit = lines.reduce((sum, line) => sum + line.debit, 0);
       const totalCredit = lines.reduce((sum, line) => sum + line.credit, 0);
-
-      // Validate double-entry principle before inserting
       if (Math.abs(totalDebit - totalCredit) >= 0.01) {
-        await supabaseClient.from('journal_entries').delete().eq('id', journalEntry.id);
         throw new BadRequestException(
           `Journal entry is not balanced: debits=${totalDebit}, credits=${totalCredit}`,
         );
       }
 
-      // Insert journal items
-      const { error: insertLinesError } = await supabaseClient
-        .from('journal_items')
-        .insert(lines);
-
-      if (insertLinesError) {
-        await supabaseClient.from('journal_entries').delete().eq('id', journalEntry.id);
-        throw new BadRequestException(`Failed to create journal lines: ${insertLinesError.message}`);
+      for (const line of lines) {
+        await pgClient.query(
+          `INSERT INTO journal_items (journal_entry_id, account_id, description, debit, credit, cost_center_id)
+           VALUES ($1, $2, $3, $4, $5, $6)`,
+          [line.journal_entry_id, line.account_id, line.description || null, line.debit, line.credit, line.cost_center_id || null],
+        );
       }
 
-      // Note: The database trigger will automatically update total_debit and total_credit
-      // in the journal_entries table and validate the constraint
+      // Post journal entry with correct totals
+      await pgClient.query(
+        `UPDATE journal_entries SET status = 'posted', posted_by = $1, posted_at = $2, total_debit = $3, total_credit = $4 WHERE id = $5`,
+        [userId, now, totalDebit, totalCredit, jeId],
+      );
 
-      const now = new Date().toISOString();
+      // Mark invoice submitted and link to journal entry
+      await pgClient.query(
+        `UPDATE invoices SET status = 'submitted', journal_entry_id = $1, submitted_at = $2, submitted_by = $3, updated_at = $2 WHERE id = $4`,
+        [jeId, now, userId, invoiceId],
+      );
 
-      // Update invoice status
-      const { error: invoiceUpdateError } = await supabaseClient
-        .from('invoices')
-        .update({
-          status: 'submitted',
-          journal_entry_id: journalEntry.id,
-          updated_at: now,
-        })
-        .eq('id', invoiceId)
-        .eq('organization_id', organizationId);
+      return { journalEntryId: jeId };
+    });
 
-      if (invoiceUpdateError) {
-        throw new BadRequestException(`Failed to update invoice status: ${invoiceUpdateError.message}`);
-      }
+    this.logger.log(`Invoice ${invoice.invoice_number} posted with journal entry ${entryNumber}`);
 
-      // Post journal entry
-      const { error: postJournalError } = await supabaseClient
-        .from('journal_entries')
-        .update({
-          status: 'posted',
-          posted_by: userId,
-          posted_at: now,
-        })
-        .eq('id', journalEntry.id);
+    // Update stock if invoice items have item_id (shared by both paths)
+    const stockableItems = (invoice.items || []).filter((item: any) => item.item_id);
 
-      if (postJournalError) {
-        throw new BadRequestException(`Failed to post journal entry: ${postJournalError.message}`);
-      }
+    if (stockableItems.length > 0) {
+      try {
+        const entryType = invoice.invoice_type === 'sales'
+          ? StockEntryType.MATERIAL_ISSUE
+          : StockEntryType.MATERIAL_RECEIPT;
 
-      this.logger.log(`Invoice ${invoice.invoice_number} posted with journal entry ${entryNumber}`);
+        const { data: warehouses } = await supabaseClient
+          .from('warehouses')
+          .select('id')
+          .eq('organization_id', organizationId)
+          .eq('is_active', true)
+          .limit(1);
 
-      // Update stock if invoice items have item_id
-      // Only process stockable items (items with item_id)
-      const stockableItems = (invoice.items || []).filter((item: any) => item.item_id);
-      
-      if (stockableItems.length > 0) {
-        try {
-          // For sales invoices: Material Issue (OUT) - deduct stock
-          // For purchase invoices: Material Receipt (IN) - add stock
-          const entryType = invoice.invoice_type === 'sales' 
-            ? StockEntryType.MATERIAL_ISSUE 
-            : StockEntryType.MATERIAL_RECEIPT;
+        const warehouseId = warehouses && warehouses.length > 0 ? warehouses[0].id : null;
 
-          // Get default warehouse for the organization
-          // Note: In a real scenario, you might want to get warehouse from invoice or organization settings
-          const { data: warehouses } = await supabaseClient
-            .from('warehouses')
-            .select('id')
-            .eq('organization_id', organizationId)
-            .eq('is_active', true)
-            .limit(1);
+        if (!warehouseId) {
+          this.logger.warn(`No active warehouse found for organization ${organizationId}. Skipping stock update.`);
+        } else {
+          const stockEntryItems = stockableItems.map((item: any) => ({
+            item_id: item.item_id,
+            variant_id: item.variant_id,
+            item_name: item.item_name,
+            quantity: Number(item.quantity) || 0,
+            unit: item.unit || 'unit',
+            ...(entryType === StockEntryType.MATERIAL_ISSUE
+              ? { source_warehouse_id: warehouseId }
+              : { target_warehouse_id: warehouseId }),
+          }));
 
-          const warehouseId = warehouses && warehouses.length > 0 ? warehouses[0].id : null;
+          const stockEntry = await this.stockEntriesService.createStockEntry({
+            organization_id: organizationId,
+            entry_type: entryType,
+            entry_date: new Date(postingDate),
+            ...(entryType === StockEntryType.MATERIAL_ISSUE
+              ? { from_warehouse_id: warehouseId }
+              : { to_warehouse_id: warehouseId }),
+            reference_type: invoice.invoice_type === 'sales' ? 'Sales Invoice' : 'Purchase Invoice',
+            reference_id: invoiceId,
+            reference_number: invoice.invoice_number,
+            purpose: `Stock ${entryType === StockEntryType.MATERIAL_ISSUE ? 'issue' : 'receipt'} for ${invoice.invoice_type} invoice ${invoice.invoice_number}`,
+            notes: `Auto-generated from invoice ${invoice.invoice_number}`,
+            status: StockEntryStatus.POSTED,
+            items: stockEntryItems,
+            created_by: userId,
+          });
 
-          if (!warehouseId) {
-            this.logger.warn(`No active warehouse found for organization ${organizationId}. Skipping stock update.`);
-          } else {
-            // Prepare stock entry items
-            const stockEntryItems = stockableItems.map((item: any) => ({
-              item_id: item.item_id,
-              variant_id: item.variant_id,
-              item_name: item.item_name,
-              quantity: Number(item.quantity) || 0,
-              unit: item.unit || 'unit',
-              ...(entryType === StockEntryType.MATERIAL_ISSUE
-                ? { source_warehouse_id: warehouseId }
-                : { target_warehouse_id: warehouseId }),
-            }));
-
-            // Create stock entry
-            const stockEntry = await this.stockEntriesService.createStockEntry({
-              organization_id: organizationId,
-              entry_type: entryType,
-              entry_date: new Date(postingDate),
-              ...(entryType === StockEntryType.MATERIAL_ISSUE 
-                ? { from_warehouse_id: warehouseId }
-                : { to_warehouse_id: warehouseId }),
-              reference_type: invoice.invoice_type === 'sales' ? 'Sales Invoice' : 'Purchase Invoice',
-              reference_id: invoiceId,
-              reference_number: invoice.invoice_number,
-              purpose: `Stock ${entryType === StockEntryType.MATERIAL_ISSUE ? 'issue' : 'receipt'} for ${invoice.invoice_type} invoice ${invoice.invoice_number}`,
-              notes: `Auto-generated from invoice ${invoice.invoice_number}`,
-              status: StockEntryStatus.POSTED, // Post immediately
-              items: stockEntryItems,
-              created_by: userId,
-            });
-
-            this.logger.log(`Stock entry ${stockEntry.id} created for invoice ${invoice.invoice_number}`);
-          }
-        } catch (stockError) {
-          // Log error but don't fail the invoice posting
-          this.logger.error(`Failed to create stock entry for invoice ${invoice.invoice_number}: ${stockError.message}`, stockError.stack);
+          this.logger.log(`Stock entry ${stockEntry.id} created for invoice ${invoice.invoice_number}`);
         }
+      } catch (stockError) {
+        const err = stockError as Error;
+        this.logger.error(`Failed to create stock entry for invoice ${invoice.invoice_number}: ${err.message}`, err.stack);
       }
-
-      return {
-        success: true,
-        message: 'Invoice posted successfully',
-        data: {
-          invoice_id: invoiceId,
-          journal_entry_id: journalEntry.id,
-        },
-      };
-    } catch (error) {
-      // Rollback: delete journal entry if anything fails
-      await supabaseClient.from('journal_entries').delete().eq('id', journalEntry.id);
-      throw error;
     }
+
+    return {
+      success: true,
+      message: 'Invoice posted successfully',
+      data: { invoice_id: invoiceId, journal_entry_id: journalEntryId },
+    };
   }
 
   /**
    * Generate journal entry number
    */
   private async generateJournalEntryNumber(
-    supabaseClient: any,
+    _supabaseClient: any,
     organizationId: string,
   ): Promise<string> {
     return await this.sequencesService.generateJournalEntryNumber(organizationId);
@@ -826,6 +896,71 @@ export class InvoicesService {
     return {
       success: true,
       message: `Invoice email sent successfully to ${partyEmail}`,
+    };
+  }
+
+  /**
+   * Recalculate outstanding_amount and paid_amount from payment_allocations.
+   * Use this to fix drift between stored amounts and actual allocations.
+   */
+  async recalculateOutstanding(
+    invoiceId: string,
+    organizationId: string,
+  ): Promise<{ paid_amount: number; outstanding_amount: number; status: string }> {
+    const supabaseClient = this.databaseService.getAdminClient();
+
+    const { data: invoice, error: invoiceError } = await supabaseClient
+      .from('invoices')
+      .select('id, grand_total, status')
+      .eq('id', invoiceId)
+      .eq('organization_id', organizationId)
+      .single();
+
+    if (invoiceError || !invoice) {
+      throw new NotFoundException('Invoice not found');
+    }
+
+    const { data: allocations, error: allocError } = await supabaseClient
+      .from('payment_allocations')
+      .select('allocated_amount')
+      .eq('invoice_id', invoiceId);
+
+    if (allocError) {
+      throw new BadRequestException(`Failed to fetch allocations: ${allocError.message}`);
+    }
+
+    const paidAmount = (allocations ?? []).reduce(
+      (sum, a) => sum + Number(a.allocated_amount || 0),
+      0,
+    );
+    const grandTotal = Number(invoice.grand_total) || 0;
+    const outstandingAmount = Math.max(0, grandTotal - paidAmount);
+
+    // Determine correct status based on amounts
+    let status = invoice.status;
+    if (paidAmount >= grandTotal && grandTotal > 0) {
+      status = 'paid';
+    } else if (paidAmount > 0 && paidAmount < grandTotal) {
+      status = 'partially_paid';
+    }
+
+    const { error: updateError } = await supabaseClient
+      .from('invoices')
+      .update({
+        paid_amount: Math.round(paidAmount * 100) / 100,
+        outstanding_amount: Math.round(outstandingAmount * 100) / 100,
+        status,
+      })
+      .eq('id', invoiceId);
+
+    if (updateError) {
+      throw new BadRequestException(`Failed to update invoice: ${updateError.message}`);
+    }
+
+    return {
+      paid_amount: Math.round(paidAmount * 100) / 100,
+      outstanding_amount: Math.round(outstandingAmount * 100) / 100,
+      status,
     };
   }
 }

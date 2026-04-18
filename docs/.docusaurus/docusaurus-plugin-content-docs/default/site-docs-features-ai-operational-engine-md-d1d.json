@@ -1,0 +1,26 @@
+{
+  "id": "features/ai-operational-engine",
+  "title": "AI Operational Engine",
+  "description": "Overview",
+  "source": "@site/docs/features/ai-operational-engine.md",
+  "sourceDirName": "features",
+  "slug": "/features/ai-operational-engine",
+  "permalink": "/features/ai-operational-engine",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 5,
+  "frontMatter": {
+    "sidebar_position": 5
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "AI Calibration Engine",
+    "permalink": "/features/ai-calibration"
+  },
+  "next": {
+    "title": "AI Chat & LLM Providers",
+    "permalink": "/features/ai-chat"
+  }
+}

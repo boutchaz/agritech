@@ -1,16 +1,16 @@
-import React, { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { DocumentTemplatePreview } from './DocumentTemplatePreview';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
-  Dialog,
-  DialogContent,
   DialogHeader,
   DialogTitle,
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { Label } from '@/components/ui/label';
@@ -26,7 +26,7 @@ import {
 } from '@/hooks/useDocumentTemplates';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
-import { Loader2, FileText, ImageIcon, Ruler, Palette, Table, Type, Droplets, Settings2 } from 'lucide-react';
+import { Loader2, FileText, ImageIcon, Ruler, Palette, Table, Type, Droplets, Settings2, Eye } from 'lucide-react';
 
 const templateSchema = z.object({
   name: z.string().min(1, 'Template name is required'),
@@ -146,6 +146,8 @@ export function DocumentTemplateEditor({
   documentType,
 }: DocumentTemplateEditorProps) {
   const { t } = useTranslation();
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewDraft, setPreviewDraft] = useState<Record<string, unknown> | null>(null);
   const { data: template, isLoading: loadingTemplate } = useDocumentTemplate(templateId);
   const createTemplate = useCreateDocumentTemplate();
   const updateTemplate = useUpdateDocumentTemplate();
@@ -155,6 +157,7 @@ export function DocumentTemplateEditor({
     handleSubmit,
     reset,
     watch,
+    getValues,
     setValue,
     formState: { errors, isSubmitting },
   } = useForm<TemplateFormData>({
@@ -328,9 +331,20 @@ export function DocumentTemplateEditor({
     }
   };
 
+  const handleOpenPreview = () => {
+    setPreviewDraft(getValues() as unknown as Record<string, unknown>);
+    setPreviewOpen(true);
+  };
+
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-5xl max-h-[95vh] p-0">
+    <>
+    <ResponsiveDialog
+      open={isOpen}
+      onOpenChange={onClose}
+      size="full"
+      className="max-w-5xl p-0"
+      contentClassName="max-h-[95vh] p-0"
+    >
         <DialogHeader className="px-6 pt-6 pb-2">
           <DialogTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5 text-green-600" />
@@ -440,7 +454,7 @@ export function DocumentTemplateEditor({
                         <Ruler className="h-4 w-4" />
                         {t('documents.editor.pageMargins', 'Page Margins (mm)')}
                       </h4>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                         <div>
                           <Label htmlFor="page_margin_top">{t('documents.editor.marginTop', 'Top')}</Label>
                           <Input
@@ -946,7 +960,16 @@ export function DocumentTemplateEditor({
               </div>
             </ScrollArea>
 
-            <DialogFooter className="px-6 py-4 border-t">
+            <DialogFooter className="px-6 py-4 border-t flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="secondary"
+                className="gap-2 mr-auto"
+                onClick={handleOpenPreview}
+              >
+                <Eye className="h-4 w-4" />
+                {t('documents.editor.preview', 'Preview')}
+              </Button>
               <Button type="button" variant="outline" onClick={onClose}>
                 {t('documents.cancel', 'Cancel')}
               </Button>
@@ -957,7 +980,16 @@ export function DocumentTemplateEditor({
             </DialogFooter>
           </form>
         )}
-      </DialogContent>
-    </Dialog>
+    </ResponsiveDialog>
+      <DocumentTemplatePreview
+        isOpen={previewOpen}
+        onClose={() => {
+          setPreviewOpen(false);
+          setPreviewDraft(null);
+        }}
+        templateId={null}
+        draftTemplate={previewDraft}
+      />
+    </>
   );
 }

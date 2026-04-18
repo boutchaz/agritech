@@ -1,64 +1,23 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsString, IsUUID, IsEnum, IsNumber, IsDate, IsIn } from 'class-validator';
+import { IsOptional, IsString, IsEnum, IsIn, IsNumber, IsUUID } from 'class-validator';
 import { Type } from 'class-transformer';
 import { CampaignType, CampaignStatus } from './create-campaign.dto';
 
 export class CampaignFiltersDto {
-  @ApiPropertyOptional({ description: 'Filter by campaign type' })
+  @ApiPropertyOptional({ description: 'Filter by campaign type', enum: CampaignType })
   @IsOptional()
   @IsEnum(CampaignType)
-  type?: CampaignType;
+  campaign_type?: CampaignType;
 
-  @ApiPropertyOptional({ description: 'Filter by status' })
+  @ApiPropertyOptional({ description: 'Filter by status', enum: CampaignStatus })
   @IsOptional()
   @IsEnum(CampaignStatus)
   status?: CampaignStatus;
 
-  @ApiPropertyOptional({ description: 'Filter by farm ID' })
+  @ApiPropertyOptional({ description: 'Filter by primary fiscal year' })
   @IsOptional()
   @IsUUID()
-  farm_id?: string;
-
-  @ApiPropertyOptional({ description: 'Filter by parcel ID' })
-  @IsOptional()
-  @IsUUID()
-  parcel_id?: string;
-
-  @ApiPropertyOptional({ description: 'Filter by start date from' })
-  @IsOptional()
-  @IsDate()
-  @Type(() => Date)
-  start_date_from?: Date;
-
-  @ApiPropertyOptional({ description: 'Filter by start date to' })
-  @IsOptional()
-  @IsDate()
-  @Type(() => Date)
-  start_date_to?: Date;
-
-  @ApiPropertyOptional({ description: 'Filter by end date from' })
-  @IsOptional()
-  @IsDate()
-  @Type(() => Date)
-  end_date_from?: Date;
-
-  @ApiPropertyOptional({ description: 'Filter by end date to' })
-  @IsOptional()
-  @IsDate()
-  @Type(() => Date)
-  end_date_to?: Date;
-
-  @ApiPropertyOptional({ description: 'Filter by minimum priority' })
-  @IsOptional()
-  @Type(() => Number)
-  @IsNumber()
-  min_priority?: number;
-
-  @ApiPropertyOptional({ description: 'Filter by maximum priority' })
-  @IsOptional()
-  @Type(() => Number)
-  @IsNumber()
-  max_priority?: number;
+  primary_fiscal_year_id?: string;
 
   @ApiPropertyOptional({ description: 'Search by name or description' })
   @IsOptional()

@@ -1,4 +1,4 @@
-import { Controller, Delete, Body, UseGuards, Request, Get, Query, Post, Put, Param } from '@nestjs/common';
+import { Controller, Delete, Body, UseGuards, Request, Get, Query, Post, Put, Patch, Param } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -9,6 +9,7 @@ import {
 } from '@nestjs/swagger';
 import { ParcelsService } from './parcels.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { OrganizationGuard } from '../../common/guards/organization.guard';
 import { PoliciesGuard } from '../casl/policies.guard';
 import { CheckPolicies } from '../casl/check-policies.decorator';
 import { Action } from '../casl/action.enum';
@@ -19,12 +20,15 @@ import {
 } from './dto/delete-parcel.dto';
 import { CreateParcelDto } from './dto/create-parcel.dto';
 import { UpdateParcelDto } from './dto/update-parcel.dto';
-import { ListParcelsResponseDto } from './dto/list-parcels.dto';
+import {
+  GetParcelResponseDto,
+  ListParcelsResponseDto,
+} from './dto/list-parcels.dto';
 import { ListParcelApplicationsResponseDto } from './dto/list-parcel-applications.dto';
 
 @ApiTags('parcels')
 @Controller('parcels')
-@UseGuards(JwtAuthGuard, PoliciesGuard)
+@UseGuards(JwtAuthGuard, OrganizationGuard, PoliciesGuard)
 export class ParcelsController {
   constructor(private parcelsService: ParcelsService) { }
 
@@ -39,6 +43,11 @@ export class ParcelsController {
     required: false,
     description: 'Optional farm ID to filter parcels',
   })
+  @ApiQuery({
+    name: 'include_archived',
+    required: false,
+    description: 'Include archived (is_active=false) parcels in the response',
+  })
   @ApiResponse({
     status: 200,
     description: 'Parcels retrieved successfully',
@@ -50,9 +59,15 @@ export class ParcelsController {
   async listParcels(
     @Request() req,
     @Query('farm_id') farmId?: string,
+    @Query('include_archived') includeArchived?: string,
   ) {
     const organizationId = req.headers['x-organization-id'] as string;
-    return this.parcelsService.listParcels(req.user.id, organizationId, farmId);
+    return this.parcelsService.listParcels(
+      req.user.id,
+      organizationId,
+      farmId,
+      includeArchived === 'true',
+    );
   }
 
   @Post()
@@ -161,17 +176,46 @@ export class ParcelsController {
     );
   }
 
+  @Get(':id')
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Get a single parcel',
+    description:
+      'Returns one parcel by ID when it belongs to the current organization.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'Parcel ID',
+    type: String,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Parcel retrieved successfully',
+    type: GetParcelResponseDto,
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - no access to organization' })
+  @ApiResponse({ status: 404, description: 'Parcel not found' })
+  @CheckPolicies((ability: AppAbility) => ability.can(Action.Read, 'Parcel'))
+  async getParcel(@Request() req, @Param('id') parcelId: string) {
+    const organizationId = req.headers['x-organization-id'] as string;
+    if (!organizationId) {
+      throw new Error('Organization ID is required');
+    }
+    return this.parcelsService.getParcel(req.user.id, organizationId, parcelId);
+  }
+
   @Delete()
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({
-    summary: 'Delete a parcel',
+    summary: 'Archive a parcel (soft delete)',
     description:
-      'Delete a parcel with subscription validation. Checks for active subscription before deletion.',
+      'Archives a parcel by setting is_active=false. All related historical data (harvests, costs, tasks) is preserved.',
   })
   @ApiResponse({
     status: 200,
-    description: 'Parcel deleted successfully',
+    description: 'Parcel archived successfully',
     type: DeleteParcelResponseDto,
   })
   @ApiResponse({ status: 400, description: 'Bad request' })
@@ -179,6 +223,35 @@ export class ParcelsController {
   @ApiResponse({ status: 403, description: 'Forbidden - invalid subscription' })
   @ApiResponse({ status: 404, description: 'Parcel or farm not found' })
   async deleteParcel(@Request() req, @Body() deleteParcelDto: DeleteParcelDto) {
-    return this.parcelsService.deleteParcel(req.user.id, deleteParcelDto);
+    return this.parcelsService.archiveParcel(req.user.id, deleteParcelDto);
+  }
+
+  @Patch(':id/restore')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Restore an archived parcel',
+    description: 'Restores a previously archived parcel by setting is_active=true.',
+  })
+  @ApiParam({ name: 'id', description: 'Parcel ID to restore', type: String })
+  @ApiResponse({ status: 200, description: 'Parcel restored successfully' })
+  @ApiResponse({ status: 403, description: 'Forbidden - subscription limit reached' })
+  @ApiResponse({ status: 404, description: 'Parcel not found' })
+  async restoreParcel(@Request() req, @Param('id') parcelId: string) {
+    return this.parcelsService.restoreParcel(req.user.id, parcelId);
+  }
+
+  @Post(':id/sync-and-calibrate')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Trigger full satellite sync and auto-calibration for a parcel',
+    description: 'Syncs all core satellite indices and starts calibration if data is sufficient.',
+  })
+  @ApiParam({ name: 'id', description: 'Parcel ID', type: String })
+  @ApiResponse({ status: 200, description: 'Sync and calibration triggered' })
+  async syncAndCalibrate(@Request() req, @Param('id') parcelId: string) {
+    const organizationId = req.headers['x-organization-id'];
+    return this.parcelsService.triggerFullSyncAndCalibration(parcelId, organizationId);
   }
 }

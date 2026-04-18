@@ -92,7 +92,7 @@ export const paymentsApi = {
     const queryString = params.toString();
     const url = queryString ? `${BASE_URL}?${queryString}` : BASE_URL;
     const response = await apiClient.get<PaginatedResponse<Payment>>(url, {}, organizationId);
-    return response.data;
+    return response.data || [];
   },
 
   async getPaginated(

@@ -9,19 +9,19 @@ import {
   WifiOff,
   X,
   Star,
-  Filter,
 } from 'lucide-react';
 import { useNavigate } from '@tanstack/react-router';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { headerToolbarIconTriggerClass } from '@/lib/header-toolbar';
+import { getNotificationRedirect } from '@/lib/notification-routes';
 import { Button } from './ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { ScrollArea } from './ui/scroll-area';
 import { useNotifications } from '@/hooks/useNotifications';
-import { socketManager, NotificationData } from '@/lib/socket';
-import { NotificationItem } from './notifications/NotificationItem';
+import { NotificationData } from '@/lib/socket';
+import { BELL_EVENT } from '@/components/NotificationRealtimeBridge';
 import { NotificationFilters, NotificationTypeFilter, NotificationStatusFilter } from './notifications/NotificationFilters';
-import { NotificationQuickActions } from './notifications/NotificationQuickActions';
 
 interface EnhancedNotificationItemProps {
   notification: NotificationData;
@@ -60,6 +60,34 @@ function EnhancedNotificationItem({
         return '⚠️';
       case 'payment_processed':
         return '💳';
+      case 'ai_recommendation_created':
+        return '🤖';
+      case 'ai_alert_triggered':
+        return '🚨';
+      case 'crop_cycle_status_changed':
+        return '🌱';
+      case 'campaign_status_changed':
+        return '📅';
+      case 'task_reassigned':
+        return '🔄';
+      case 'piece_work_created':
+        return '💼';
+      case 'invoice_created':
+        return '🧾';
+      case 'journal_entry_posted':
+        return '📒';
+      case 'payment_status_changed':
+        return '💳';
+      case 'lab_results_available':
+        return '🔬';
+      case 'product_application_completed':
+        return '🧪';
+      case 'soil_analysis_completed':
+        return '🌍';
+      case 'harvest_event_recorded':
+        return '🌾';
+      case 'work_unit_completed':
+        return '📊';
       default:
         return '🔔';
     }
@@ -83,6 +111,34 @@ function EnhancedNotificationItem({
         return 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400';
       case 'payment_processed':
         return 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400';
+      case 'ai_recommendation_created':
+        return 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400';
+      case 'ai_alert_triggered':
+        return 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400';
+      case 'crop_cycle_status_changed':
+        return 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400';
+      case 'campaign_status_changed':
+        return 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400';
+      case 'task_reassigned':
+        return 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400';
+      case 'piece_work_created':
+        return 'bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400';
+      case 'invoice_created':
+        return 'bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400';
+      case 'journal_entry_posted':
+        return 'bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-400';
+      case 'payment_status_changed':
+        return 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400';
+      case 'lab_results_available':
+        return 'bg-sky-50 dark:bg-sky-900/20 text-sky-700 dark:text-sky-400';
+      case 'product_application_completed':
+        return 'bg-lime-50 dark:bg-lime-900/20 text-lime-700 dark:text-lime-400';
+      case 'soil_analysis_completed':
+        return 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400';
+      case 'harvest_event_recorded':
+        return 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400';
+      case 'work_unit_completed':
+        return 'bg-cyan-50 dark:bg-cyan-900/20 text-cyan-700 dark:text-cyan-400';
       default:
         return 'bg-gray-50 dark:bg-gray-800/50 text-gray-700 dark:text-gray-400';
     }
@@ -110,7 +166,15 @@ function EnhancedNotificationItem({
           : 'hover:bg-muted/50',
         isNew && 'notification-slide-in'
       )}
+      role="button"
+      tabIndex={0}
       onClick={onClick}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onClick();
+        }
+      }}
     >
       <span className="text-lg" role="img" aria-label={notification.type}>
         {getTypeIcon(notification.type)}
@@ -199,7 +263,6 @@ export function NotificationBell() {
     notifications,
     unreadCount,
     isLoading,
-    isConnected,
     socketStatus,
     markAsRead,
     markAllAsRead,
@@ -227,56 +290,41 @@ export function NotificationBell() {
 
   const importantCount = importantNotifications.size;
 
-  // Show toast and animate bell for new notifications
-  useEffect(() => {
-    const unsubscribe = socketManager.on('notification:new', (notification: NotificationData) => {
-      // Add to new notifications set for animation
-      setNewNotificationIds((prev) => new Set(prev).add(notification.id));
-
-      // Trigger bell shake animation
-      setIsBellAnimating(true);
-      setTimeout(() => setIsBellAnimating(false), 500);
-
-      // Show toast
-      toast(notification.title, {
-        description: notification.message,
-        action: notification.data?.taskId || notification.data?.orderId ? {
-          label: 'View',
-          onClick: () => handleNotificationClick(notification),
-        } : undefined,
-      });
-
-      // Remove from new notifications after animation
-      setTimeout(() => {
-        setNewNotificationIds((prev) => {
-          const next = new Set(prev);
-          next.delete(notification.id);
-          return next;
-        });
-      }, 3000);
-    });
-
-    return unsubscribe;
-  }, []);
-
   const handleNotificationClick = useCallback((notification: NotificationData) => {
-    // Mark as read
     if (!notification.is_read) {
       markAsRead(notification.id);
     }
 
-    // Navigate based on notification type
-    const { data } = notification;
-    if (data?.taskId) {
-      navigate({ to: '/tasks/$taskId', params: { taskId: data.taskId } });
-    } else if (data?.orderId) {
-      navigate({ to: '/marketplace/orders', search: { id: data.orderId } });
-    } else if (data?.quoteRequestId) {
-      navigate({ to: '/marketplace/quotes', search: { id: data.quoteRequestId } });
+    const redirect = getNotificationRedirect(notification);
+    if (redirect) {
+      navigate(redirect);
     }
 
     setOpen(false);
   }, [markAsRead, navigate]);
+
+  // Bell animation only — toasts come from NotificationRealtimeBridge (single subscriber)
+  useEffect(() => {
+    const onNew = (e: Event) => {
+      const id = (e as CustomEvent<{ id: string }>).detail?.id;
+      if (!id) return;
+
+      setNewNotificationIds((prev) => new Set(prev).add(id));
+      setIsBellAnimating(true);
+      setTimeout(() => setIsBellAnimating(false), 500);
+
+      setTimeout(() => {
+        setNewNotificationIds((prev) => {
+          const next = new Set(prev);
+          next.delete(id);
+          return next;
+        });
+      }, 3000);
+    };
+
+    window.addEventListener(BELL_EVENT, onNew);
+    return () => window.removeEventListener(BELL_EVENT, onNew);
+  }, []);
 
   const handleMarkAllRead = useCallback(async () => {
     await markAllAsRead();
@@ -298,8 +346,8 @@ export function NotificationBell() {
     });
   }, []);
 
-  const handleDismiss = useCallback((id: string) => {
-    // In a real app, this would call an API to dismiss the notification
+  const handleDismiss = useCallback((_id: string) => {
+    // TODO: Call API to dismiss the notification when backend supports it
     toast.success('Notification dismissed');
   }, []);
 
@@ -319,12 +367,12 @@ export function NotificationBell() {
     }}>
       <PopoverTrigger asChild>
         <Button
+          type="button"
           ref={bellRef}
-          variant="ghost"
-          size="icon"
           className={cn(
-            'relative h-9 w-9 transition-transform',
-            isBellAnimating && 'bell-shake'
+            headerToolbarIconTriggerClass,
+            'relative transition-transform',
+            isBellAnimating && 'bell-shake',
           )}
           aria-label={`Notifications ${unreadCount > 0 ? `(${unreadCount} unread)` : ''}`}
         >
@@ -333,14 +381,13 @@ export function NotificationBell() {
             <>
               <span
                 className={cn(
-                  'absolute -top-0.5 -right-0.5 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-medium text-white',
-                  unreadCount > 0 && 'glow-pulse'
+                  'absolute -end-0.5 -top-0.5 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-medium text-white',
+                  unreadCount > 0 && 'glow-pulse',
                 )}
               >
                 {unreadCount > 99 ? '99+' : unreadCount}
               </span>
-              {/* Pulse ring effect */}
-              <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 rounded-full bg-red-500 pulse-ring" />
+              <span className="absolute -end-0.5 -top-0.5 flex h-4 w-4 rounded-full bg-red-500 pulse-ring" />
             </>
           )}
         </Button>

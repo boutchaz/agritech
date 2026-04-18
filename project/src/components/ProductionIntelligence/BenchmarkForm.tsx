@@ -1,16 +1,15 @@
-import React from 'react';
+
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
-  Dialog,
-  DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/Select';
@@ -42,11 +41,11 @@ interface BenchmarkFormProps {
   onSuccess?: () => void;
 }
 
-export const BenchmarkForm: React.FC<BenchmarkFormProps> = ({
+export const BenchmarkForm = ({
   isOpen,
   onClose,
   onSuccess,
-}) => {
+}: BenchmarkFormProps) => {
   const { currentOrganization } = useAuth();
   const createBenchmark = useCreateYieldBenchmark();
 
@@ -80,8 +79,12 @@ export const BenchmarkForm: React.FC<BenchmarkFormProps> = ({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+    <ResponsiveDialog
+      open={isOpen}
+      onOpenChange={onClose}
+      size="2xl"
+      contentClassName="max-h-[90vh] overflow-y-auto"
+    >
         <DialogHeader>
           <DialogTitle>Set Yield Benchmark</DialogTitle>
           <DialogDescription>
@@ -255,7 +258,6 @@ export const BenchmarkForm: React.FC<BenchmarkFormProps> = ({
             </Button>
           </DialogFooter>
         </form>
-      </DialogContent>
-    </Dialog>
+    </ResponsiveDialog>
   );
 };

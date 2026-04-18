@@ -12,27 +12,18 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
-import { Route as AuthenticatedJobsRouteImport } from './routes/_authenticated/jobs'
-import { Route as AuthenticatedReferenceWorkUnitsRouteImport } from './routes/_authenticated/reference/work-units'
-import { Route as AuthenticatedReferenceTreeCategoriesRouteImport } from './routes/_authenticated/reference/tree-categories'
-import { Route as AuthenticatedReferenceSoilTypesRouteImport } from './routes/_authenticated/reference/soil-types'
-import { Route as AuthenticatedReferenceRootstocksRouteImport } from './routes/_authenticated/reference/rootstocks'
-import { Route as AuthenticatedReferenceRolesRouteImport } from './routes/_authenticated/reference/roles'
-import { Route as AuthenticatedReferencePlantationSystemsRouteImport } from './routes/_authenticated/reference/plantation-systems'
-import { Route as AuthenticatedReferencePermissionsRouteImport } from './routes/_authenticated/reference/permissions'
-import { Route as AuthenticatedReferenceModulesRouteImport } from './routes/_authenticated/reference/modules'
-import { Route as AuthenticatedReferenceItemCategoriesRouteImport } from './routes/_authenticated/reference/item-categories'
-import { Route as AuthenticatedReferenceIrrigationTypesRouteImport } from './routes/_authenticated/reference/irrigation-types'
-import { Route as AuthenticatedReferenceCurrenciesRouteImport } from './routes/_authenticated/reference/currencies'
-import { Route as AuthenticatedReferenceCropTypesRouteImport } from './routes/_authenticated/reference/crop-types'
-import { Route as AuthenticatedReferenceAccountTemplatesRouteImport } from './routes/_authenticated/reference/account-templates'
-import { Route as AuthenticatedReferenceAccountMappingsRouteImport } from './routes/_authenticated/reference/account-mappings'
-import { Route as AuthenticatedAnalyticsSubscriptionsRouteImport } from './routes/_authenticated/analytics/subscriptions'
-import { Route as AuthenticatedAnalyticsOverviewRouteImport } from './routes/_authenticated/analytics/overview'
-import { Route as AuthenticatedAnalyticsOrganizationsRouteImport } from './routes/_authenticated/analytics/organizations'
-import { Route as AuthenticatedAnalyticsEventsRouteImport } from './routes/_authenticated/analytics/events'
-import { Route as AuthenticatedAnalyticsAdoptionRouteImport } from './routes/_authenticated/analytics/adoption'
-import { Route as AuthenticatedAnalyticsOrganizationsOrgIdRouteImport } from './routes/_authenticated/analytics/organizations.$orgId'
+import { Route as AuthenticatedSupportedCountriesRouteImport } from './routes/_authenticated/supported-countries'
+import { Route as AuthenticatedSubscriptionModelRouteImport } from './routes/_authenticated/subscription-model'
+import { Route as AuthenticatedRdvRouteImport } from './routes/_authenticated/rdv'
+import { Route as AuthenticatedRagSourcesRouteImport } from './routes/_authenticated/rag-sources'
+import { Route as AuthenticatedModulesRouteImport } from './routes/_authenticated/modules'
+import { Route as AuthenticatedEmailTemplatesRouteImport } from './routes/_authenticated/email-templates'
+import { Route as AuthenticatedCronJobsRouteImport } from './routes/_authenticated/cron-jobs'
+import { Route as AuthenticatedClientsRouteImport } from './routes/_authenticated/clients'
+import { Route as AuthenticatedChangelogRouteImport } from './routes/_authenticated/changelog'
+import { Route as AuthenticatedBannersRouteImport } from './routes/_authenticated/banners'
+import { Route as AuthenticatedReferentielsCropRouteImport } from './routes/_authenticated/referentiels/$crop'
+import { Route as AuthenticatedClientsOrgIdRouteImport } from './routes/_authenticated/clients/$orgId'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -48,286 +39,172 @@ const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
-const AuthenticatedJobsRoute = AuthenticatedJobsRouteImport.update({
-  id: '/jobs',
-  path: '/jobs',
+const AuthenticatedSupportedCountriesRoute =
+  AuthenticatedSupportedCountriesRouteImport.update({
+    id: '/supported-countries',
+    path: '/supported-countries',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedSubscriptionModelRoute =
+  AuthenticatedSubscriptionModelRouteImport.update({
+    id: '/subscription-model',
+    path: '/subscription-model',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedRdvRoute = AuthenticatedRdvRouteImport.update({
+  id: '/rdv',
+  path: '/rdv',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
-const AuthenticatedReferenceWorkUnitsRoute =
-  AuthenticatedReferenceWorkUnitsRouteImport.update({
-    id: '/reference/work-units',
-    path: '/reference/work-units',
+const AuthenticatedRagSourcesRoute = AuthenticatedRagSourcesRouteImport.update({
+  id: '/rag-sources',
+  path: '/rag-sources',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedModulesRoute = AuthenticatedModulesRouteImport.update({
+  id: '/modules',
+  path: '/modules',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedEmailTemplatesRoute =
+  AuthenticatedEmailTemplatesRouteImport.update({
+    id: '/email-templates',
+    path: '/email-templates',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
-const AuthenticatedReferenceTreeCategoriesRoute =
-  AuthenticatedReferenceTreeCategoriesRouteImport.update({
-    id: '/reference/tree-categories',
-    path: '/reference/tree-categories',
+const AuthenticatedCronJobsRoute = AuthenticatedCronJobsRouteImport.update({
+  id: '/cron-jobs',
+  path: '/cron-jobs',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedClientsRoute = AuthenticatedClientsRouteImport.update({
+  id: '/clients',
+  path: '/clients',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedChangelogRoute = AuthenticatedChangelogRouteImport.update({
+  id: '/changelog',
+  path: '/changelog',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedBannersRoute = AuthenticatedBannersRouteImport.update({
+  id: '/banners',
+  path: '/banners',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedReferentielsCropRoute =
+  AuthenticatedReferentielsCropRouteImport.update({
+    id: '/referentiels/$crop',
+    path: '/referentiels/$crop',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
-const AuthenticatedReferenceSoilTypesRoute =
-  AuthenticatedReferenceSoilTypesRouteImport.update({
-    id: '/reference/soil-types',
-    path: '/reference/soil-types',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
-const AuthenticatedReferenceRootstocksRoute =
-  AuthenticatedReferenceRootstocksRouteImport.update({
-    id: '/reference/rootstocks',
-    path: '/reference/rootstocks',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
-const AuthenticatedReferenceRolesRoute =
-  AuthenticatedReferenceRolesRouteImport.update({
-    id: '/reference/roles',
-    path: '/reference/roles',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
-const AuthenticatedReferencePlantationSystemsRoute =
-  AuthenticatedReferencePlantationSystemsRouteImport.update({
-    id: '/reference/plantation-systems',
-    path: '/reference/plantation-systems',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
-const AuthenticatedReferencePermissionsRoute =
-  AuthenticatedReferencePermissionsRouteImport.update({
-    id: '/reference/permissions',
-    path: '/reference/permissions',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
-const AuthenticatedReferenceModulesRoute =
-  AuthenticatedReferenceModulesRouteImport.update({
-    id: '/reference/modules',
-    path: '/reference/modules',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
-const AuthenticatedReferenceItemCategoriesRoute =
-  AuthenticatedReferenceItemCategoriesRouteImport.update({
-    id: '/reference/item-categories',
-    path: '/reference/item-categories',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
-const AuthenticatedReferenceIrrigationTypesRoute =
-  AuthenticatedReferenceIrrigationTypesRouteImport.update({
-    id: '/reference/irrigation-types',
-    path: '/reference/irrigation-types',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
-const AuthenticatedReferenceCurrenciesRoute =
-  AuthenticatedReferenceCurrenciesRouteImport.update({
-    id: '/reference/currencies',
-    path: '/reference/currencies',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
-const AuthenticatedReferenceCropTypesRoute =
-  AuthenticatedReferenceCropTypesRouteImport.update({
-    id: '/reference/crop-types',
-    path: '/reference/crop-types',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
-const AuthenticatedReferenceAccountTemplatesRoute =
-  AuthenticatedReferenceAccountTemplatesRouteImport.update({
-    id: '/reference/account-templates',
-    path: '/reference/account-templates',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
-const AuthenticatedReferenceAccountMappingsRoute =
-  AuthenticatedReferenceAccountMappingsRouteImport.update({
-    id: '/reference/account-mappings',
-    path: '/reference/account-mappings',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
-const AuthenticatedAnalyticsSubscriptionsRoute =
-  AuthenticatedAnalyticsSubscriptionsRouteImport.update({
-    id: '/analytics/subscriptions',
-    path: '/analytics/subscriptions',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
-const AuthenticatedAnalyticsOverviewRoute =
-  AuthenticatedAnalyticsOverviewRouteImport.update({
-    id: '/analytics/overview',
-    path: '/analytics/overview',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
-const AuthenticatedAnalyticsOrganizationsRoute =
-  AuthenticatedAnalyticsOrganizationsRouteImport.update({
-    id: '/analytics/organizations',
-    path: '/analytics/organizations',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
-const AuthenticatedAnalyticsEventsRoute =
-  AuthenticatedAnalyticsEventsRouteImport.update({
-    id: '/analytics/events',
-    path: '/analytics/events',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
-const AuthenticatedAnalyticsAdoptionRoute =
-  AuthenticatedAnalyticsAdoptionRouteImport.update({
-    id: '/analytics/adoption',
-    path: '/analytics/adoption',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
-const AuthenticatedAnalyticsOrganizationsOrgIdRoute =
-  AuthenticatedAnalyticsOrganizationsOrgIdRouteImport.update({
+const AuthenticatedClientsOrgIdRoute =
+  AuthenticatedClientsOrgIdRouteImport.update({
     id: '/$orgId',
     path: '/$orgId',
-    getParentRoute: () => AuthenticatedAnalyticsOrganizationsRoute,
+    getParentRoute: () => AuthenticatedClientsRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
   '/login': typeof LoginRoute
-  '/jobs': typeof AuthenticatedJobsRoute
-  '/analytics/adoption': typeof AuthenticatedAnalyticsAdoptionRoute
-  '/analytics/events': typeof AuthenticatedAnalyticsEventsRoute
-  '/analytics/organizations': typeof AuthenticatedAnalyticsOrganizationsRouteWithChildren
-  '/analytics/overview': typeof AuthenticatedAnalyticsOverviewRoute
-  '/analytics/subscriptions': typeof AuthenticatedAnalyticsSubscriptionsRoute
-  '/reference/account-mappings': typeof AuthenticatedReferenceAccountMappingsRoute
-  '/reference/account-templates': typeof AuthenticatedReferenceAccountTemplatesRoute
-  '/reference/crop-types': typeof AuthenticatedReferenceCropTypesRoute
-  '/reference/currencies': typeof AuthenticatedReferenceCurrenciesRoute
-  '/reference/irrigation-types': typeof AuthenticatedReferenceIrrigationTypesRoute
-  '/reference/item-categories': typeof AuthenticatedReferenceItemCategoriesRoute
-  '/reference/modules': typeof AuthenticatedReferenceModulesRoute
-  '/reference/permissions': typeof AuthenticatedReferencePermissionsRoute
-  '/reference/plantation-systems': typeof AuthenticatedReferencePlantationSystemsRoute
-  '/reference/roles': typeof AuthenticatedReferenceRolesRoute
-  '/reference/rootstocks': typeof AuthenticatedReferenceRootstocksRoute
-  '/reference/soil-types': typeof AuthenticatedReferenceSoilTypesRoute
-  '/reference/tree-categories': typeof AuthenticatedReferenceTreeCategoriesRoute
-  '/reference/work-units': typeof AuthenticatedReferenceWorkUnitsRoute
-  '/analytics/organizations/$orgId': typeof AuthenticatedAnalyticsOrganizationsOrgIdRoute
+  '/banners': typeof AuthenticatedBannersRoute
+  '/changelog': typeof AuthenticatedChangelogRoute
+  '/clients': typeof AuthenticatedClientsRouteWithChildren
+  '/cron-jobs': typeof AuthenticatedCronJobsRoute
+  '/email-templates': typeof AuthenticatedEmailTemplatesRoute
+  '/modules': typeof AuthenticatedModulesRoute
+  '/rag-sources': typeof AuthenticatedRagSourcesRoute
+  '/rdv': typeof AuthenticatedRdvRoute
+  '/subscription-model': typeof AuthenticatedSubscriptionModelRoute
+  '/supported-countries': typeof AuthenticatedSupportedCountriesRoute
+  '/clients/$orgId': typeof AuthenticatedClientsOrgIdRoute
+  '/referentiels/$crop': typeof AuthenticatedReferentielsCropRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
-  '/jobs': typeof AuthenticatedJobsRoute
+  '/banners': typeof AuthenticatedBannersRoute
+  '/changelog': typeof AuthenticatedChangelogRoute
+  '/clients': typeof AuthenticatedClientsRouteWithChildren
+  '/cron-jobs': typeof AuthenticatedCronJobsRoute
+  '/email-templates': typeof AuthenticatedEmailTemplatesRoute
+  '/modules': typeof AuthenticatedModulesRoute
+  '/rag-sources': typeof AuthenticatedRagSourcesRoute
+  '/rdv': typeof AuthenticatedRdvRoute
+  '/subscription-model': typeof AuthenticatedSubscriptionModelRoute
+  '/supported-countries': typeof AuthenticatedSupportedCountriesRoute
   '/': typeof AuthenticatedIndexRoute
-  '/analytics/adoption': typeof AuthenticatedAnalyticsAdoptionRoute
-  '/analytics/events': typeof AuthenticatedAnalyticsEventsRoute
-  '/analytics/organizations': typeof AuthenticatedAnalyticsOrganizationsRouteWithChildren
-  '/analytics/overview': typeof AuthenticatedAnalyticsOverviewRoute
-  '/analytics/subscriptions': typeof AuthenticatedAnalyticsSubscriptionsRoute
-  '/reference/account-mappings': typeof AuthenticatedReferenceAccountMappingsRoute
-  '/reference/account-templates': typeof AuthenticatedReferenceAccountTemplatesRoute
-  '/reference/crop-types': typeof AuthenticatedReferenceCropTypesRoute
-  '/reference/currencies': typeof AuthenticatedReferenceCurrenciesRoute
-  '/reference/irrigation-types': typeof AuthenticatedReferenceIrrigationTypesRoute
-  '/reference/item-categories': typeof AuthenticatedReferenceItemCategoriesRoute
-  '/reference/modules': typeof AuthenticatedReferenceModulesRoute
-  '/reference/permissions': typeof AuthenticatedReferencePermissionsRoute
-  '/reference/plantation-systems': typeof AuthenticatedReferencePlantationSystemsRoute
-  '/reference/roles': typeof AuthenticatedReferenceRolesRoute
-  '/reference/rootstocks': typeof AuthenticatedReferenceRootstocksRoute
-  '/reference/soil-types': typeof AuthenticatedReferenceSoilTypesRoute
-  '/reference/tree-categories': typeof AuthenticatedReferenceTreeCategoriesRoute
-  '/reference/work-units': typeof AuthenticatedReferenceWorkUnitsRoute
-  '/analytics/organizations/$orgId': typeof AuthenticatedAnalyticsOrganizationsOrgIdRoute
+  '/clients/$orgId': typeof AuthenticatedClientsOrgIdRoute
+  '/referentiels/$crop': typeof AuthenticatedReferentielsCropRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/login': typeof LoginRoute
-  '/_authenticated/jobs': typeof AuthenticatedJobsRoute
+  '/_authenticated/banners': typeof AuthenticatedBannersRoute
+  '/_authenticated/changelog': typeof AuthenticatedChangelogRoute
+  '/_authenticated/clients': typeof AuthenticatedClientsRouteWithChildren
+  '/_authenticated/cron-jobs': typeof AuthenticatedCronJobsRoute
+  '/_authenticated/email-templates': typeof AuthenticatedEmailTemplatesRoute
+  '/_authenticated/modules': typeof AuthenticatedModulesRoute
+  '/_authenticated/rag-sources': typeof AuthenticatedRagSourcesRoute
+  '/_authenticated/rdv': typeof AuthenticatedRdvRoute
+  '/_authenticated/subscription-model': typeof AuthenticatedSubscriptionModelRoute
+  '/_authenticated/supported-countries': typeof AuthenticatedSupportedCountriesRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
-  '/_authenticated/analytics/adoption': typeof AuthenticatedAnalyticsAdoptionRoute
-  '/_authenticated/analytics/events': typeof AuthenticatedAnalyticsEventsRoute
-  '/_authenticated/analytics/organizations': typeof AuthenticatedAnalyticsOrganizationsRouteWithChildren
-  '/_authenticated/analytics/overview': typeof AuthenticatedAnalyticsOverviewRoute
-  '/_authenticated/analytics/subscriptions': typeof AuthenticatedAnalyticsSubscriptionsRoute
-  '/_authenticated/reference/account-mappings': typeof AuthenticatedReferenceAccountMappingsRoute
-  '/_authenticated/reference/account-templates': typeof AuthenticatedReferenceAccountTemplatesRoute
-  '/_authenticated/reference/crop-types': typeof AuthenticatedReferenceCropTypesRoute
-  '/_authenticated/reference/currencies': typeof AuthenticatedReferenceCurrenciesRoute
-  '/_authenticated/reference/irrigation-types': typeof AuthenticatedReferenceIrrigationTypesRoute
-  '/_authenticated/reference/item-categories': typeof AuthenticatedReferenceItemCategoriesRoute
-  '/_authenticated/reference/modules': typeof AuthenticatedReferenceModulesRoute
-  '/_authenticated/reference/permissions': typeof AuthenticatedReferencePermissionsRoute
-  '/_authenticated/reference/plantation-systems': typeof AuthenticatedReferencePlantationSystemsRoute
-  '/_authenticated/reference/roles': typeof AuthenticatedReferenceRolesRoute
-  '/_authenticated/reference/rootstocks': typeof AuthenticatedReferenceRootstocksRoute
-  '/_authenticated/reference/soil-types': typeof AuthenticatedReferenceSoilTypesRoute
-  '/_authenticated/reference/tree-categories': typeof AuthenticatedReferenceTreeCategoriesRoute
-  '/_authenticated/reference/work-units': typeof AuthenticatedReferenceWorkUnitsRoute
-  '/_authenticated/analytics/organizations/$orgId': typeof AuthenticatedAnalyticsOrganizationsOrgIdRoute
+  '/_authenticated/clients/$orgId': typeof AuthenticatedClientsOrgIdRoute
+  '/_authenticated/referentiels/$crop': typeof AuthenticatedReferentielsCropRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
     | '/login'
-    | '/jobs'
-    | '/analytics/adoption'
-    | '/analytics/events'
-    | '/analytics/organizations'
-    | '/analytics/overview'
-    | '/analytics/subscriptions'
-    | '/reference/account-mappings'
-    | '/reference/account-templates'
-    | '/reference/crop-types'
-    | '/reference/currencies'
-    | '/reference/irrigation-types'
-    | '/reference/item-categories'
-    | '/reference/modules'
-    | '/reference/permissions'
-    | '/reference/plantation-systems'
-    | '/reference/roles'
-    | '/reference/rootstocks'
-    | '/reference/soil-types'
-    | '/reference/tree-categories'
-    | '/reference/work-units'
-    | '/analytics/organizations/$orgId'
+    | '/banners'
+    | '/changelog'
+    | '/clients'
+    | '/cron-jobs'
+    | '/email-templates'
+    | '/modules'
+    | '/rag-sources'
+    | '/rdv'
+    | '/subscription-model'
+    | '/supported-countries'
+    | '/clients/$orgId'
+    | '/referentiels/$crop'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
-    | '/jobs'
+    | '/banners'
+    | '/changelog'
+    | '/clients'
+    | '/cron-jobs'
+    | '/email-templates'
+    | '/modules'
+    | '/rag-sources'
+    | '/rdv'
+    | '/subscription-model'
+    | '/supported-countries'
     | '/'
-    | '/analytics/adoption'
-    | '/analytics/events'
-    | '/analytics/organizations'
-    | '/analytics/overview'
-    | '/analytics/subscriptions'
-    | '/reference/account-mappings'
-    | '/reference/account-templates'
-    | '/reference/crop-types'
-    | '/reference/currencies'
-    | '/reference/irrigation-types'
-    | '/reference/item-categories'
-    | '/reference/modules'
-    | '/reference/permissions'
-    | '/reference/plantation-systems'
-    | '/reference/roles'
-    | '/reference/rootstocks'
-    | '/reference/soil-types'
-    | '/reference/tree-categories'
-    | '/reference/work-units'
-    | '/analytics/organizations/$orgId'
+    | '/clients/$orgId'
+    | '/referentiels/$crop'
   id:
     | '__root__'
     | '/_authenticated'
     | '/login'
-    | '/_authenticated/jobs'
+    | '/_authenticated/banners'
+    | '/_authenticated/changelog'
+    | '/_authenticated/clients'
+    | '/_authenticated/cron-jobs'
+    | '/_authenticated/email-templates'
+    | '/_authenticated/modules'
+    | '/_authenticated/rag-sources'
+    | '/_authenticated/rdv'
+    | '/_authenticated/subscription-model'
+    | '/_authenticated/supported-countries'
     | '/_authenticated/'
-    | '/_authenticated/analytics/adoption'
-    | '/_authenticated/analytics/events'
-    | '/_authenticated/analytics/organizations'
-    | '/_authenticated/analytics/overview'
-    | '/_authenticated/analytics/subscriptions'
-    | '/_authenticated/reference/account-mappings'
-    | '/_authenticated/reference/account-templates'
-    | '/_authenticated/reference/crop-types'
-    | '/_authenticated/reference/currencies'
-    | '/_authenticated/reference/irrigation-types'
-    | '/_authenticated/reference/item-categories'
-    | '/_authenticated/reference/modules'
-    | '/_authenticated/reference/permissions'
-    | '/_authenticated/reference/plantation-systems'
-    | '/_authenticated/reference/roles'
-    | '/_authenticated/reference/rootstocks'
-    | '/_authenticated/reference/soil-types'
-    | '/_authenticated/reference/tree-categories'
-    | '/_authenticated/reference/work-units'
-    | '/_authenticated/analytics/organizations/$orgId'
+    | '/_authenticated/clients/$orgId'
+    | '/_authenticated/referentiels/$crop'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -358,226 +235,132 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/jobs': {
-      id: '/_authenticated/jobs'
-      path: '/jobs'
-      fullPath: '/jobs'
-      preLoaderRoute: typeof AuthenticatedJobsRouteImport
+    '/_authenticated/supported-countries': {
+      id: '/_authenticated/supported-countries'
+      path: '/supported-countries'
+      fullPath: '/supported-countries'
+      preLoaderRoute: typeof AuthenticatedSupportedCountriesRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/reference/work-units': {
-      id: '/_authenticated/reference/work-units'
-      path: '/reference/work-units'
-      fullPath: '/reference/work-units'
-      preLoaderRoute: typeof AuthenticatedReferenceWorkUnitsRouteImport
+    '/_authenticated/subscription-model': {
+      id: '/_authenticated/subscription-model'
+      path: '/subscription-model'
+      fullPath: '/subscription-model'
+      preLoaderRoute: typeof AuthenticatedSubscriptionModelRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/reference/tree-categories': {
-      id: '/_authenticated/reference/tree-categories'
-      path: '/reference/tree-categories'
-      fullPath: '/reference/tree-categories'
-      preLoaderRoute: typeof AuthenticatedReferenceTreeCategoriesRouteImport
+    '/_authenticated/rdv': {
+      id: '/_authenticated/rdv'
+      path: '/rdv'
+      fullPath: '/rdv'
+      preLoaderRoute: typeof AuthenticatedRdvRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/reference/soil-types': {
-      id: '/_authenticated/reference/soil-types'
-      path: '/reference/soil-types'
-      fullPath: '/reference/soil-types'
-      preLoaderRoute: typeof AuthenticatedReferenceSoilTypesRouteImport
+    '/_authenticated/rag-sources': {
+      id: '/_authenticated/rag-sources'
+      path: '/rag-sources'
+      fullPath: '/rag-sources'
+      preLoaderRoute: typeof AuthenticatedRagSourcesRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/reference/rootstocks': {
-      id: '/_authenticated/reference/rootstocks'
-      path: '/reference/rootstocks'
-      fullPath: '/reference/rootstocks'
-      preLoaderRoute: typeof AuthenticatedReferenceRootstocksRouteImport
+    '/_authenticated/modules': {
+      id: '/_authenticated/modules'
+      path: '/modules'
+      fullPath: '/modules'
+      preLoaderRoute: typeof AuthenticatedModulesRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/reference/roles': {
-      id: '/_authenticated/reference/roles'
-      path: '/reference/roles'
-      fullPath: '/reference/roles'
-      preLoaderRoute: typeof AuthenticatedReferenceRolesRouteImport
+    '/_authenticated/email-templates': {
+      id: '/_authenticated/email-templates'
+      path: '/email-templates'
+      fullPath: '/email-templates'
+      preLoaderRoute: typeof AuthenticatedEmailTemplatesRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/reference/plantation-systems': {
-      id: '/_authenticated/reference/plantation-systems'
-      path: '/reference/plantation-systems'
-      fullPath: '/reference/plantation-systems'
-      preLoaderRoute: typeof AuthenticatedReferencePlantationSystemsRouteImport
+    '/_authenticated/cron-jobs': {
+      id: '/_authenticated/cron-jobs'
+      path: '/cron-jobs'
+      fullPath: '/cron-jobs'
+      preLoaderRoute: typeof AuthenticatedCronJobsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/reference/permissions': {
-      id: '/_authenticated/reference/permissions'
-      path: '/reference/permissions'
-      fullPath: '/reference/permissions'
-      preLoaderRoute: typeof AuthenticatedReferencePermissionsRouteImport
+    '/_authenticated/clients': {
+      id: '/_authenticated/clients'
+      path: '/clients'
+      fullPath: '/clients'
+      preLoaderRoute: typeof AuthenticatedClientsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/reference/modules': {
-      id: '/_authenticated/reference/modules'
-      path: '/reference/modules'
-      fullPath: '/reference/modules'
-      preLoaderRoute: typeof AuthenticatedReferenceModulesRouteImport
+    '/_authenticated/changelog': {
+      id: '/_authenticated/changelog'
+      path: '/changelog'
+      fullPath: '/changelog'
+      preLoaderRoute: typeof AuthenticatedChangelogRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/reference/item-categories': {
-      id: '/_authenticated/reference/item-categories'
-      path: '/reference/item-categories'
-      fullPath: '/reference/item-categories'
-      preLoaderRoute: typeof AuthenticatedReferenceItemCategoriesRouteImport
+    '/_authenticated/banners': {
+      id: '/_authenticated/banners'
+      path: '/banners'
+      fullPath: '/banners'
+      preLoaderRoute: typeof AuthenticatedBannersRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/reference/irrigation-types': {
-      id: '/_authenticated/reference/irrigation-types'
-      path: '/reference/irrigation-types'
-      fullPath: '/reference/irrigation-types'
-      preLoaderRoute: typeof AuthenticatedReferenceIrrigationTypesRouteImport
+    '/_authenticated/referentiels/$crop': {
+      id: '/_authenticated/referentiels/$crop'
+      path: '/referentiels/$crop'
+      fullPath: '/referentiels/$crop'
+      preLoaderRoute: typeof AuthenticatedReferentielsCropRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/reference/currencies': {
-      id: '/_authenticated/reference/currencies'
-      path: '/reference/currencies'
-      fullPath: '/reference/currencies'
-      preLoaderRoute: typeof AuthenticatedReferenceCurrenciesRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/reference/crop-types': {
-      id: '/_authenticated/reference/crop-types'
-      path: '/reference/crop-types'
-      fullPath: '/reference/crop-types'
-      preLoaderRoute: typeof AuthenticatedReferenceCropTypesRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/reference/account-templates': {
-      id: '/_authenticated/reference/account-templates'
-      path: '/reference/account-templates'
-      fullPath: '/reference/account-templates'
-      preLoaderRoute: typeof AuthenticatedReferenceAccountTemplatesRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/reference/account-mappings': {
-      id: '/_authenticated/reference/account-mappings'
-      path: '/reference/account-mappings'
-      fullPath: '/reference/account-mappings'
-      preLoaderRoute: typeof AuthenticatedReferenceAccountMappingsRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/analytics/subscriptions': {
-      id: '/_authenticated/analytics/subscriptions'
-      path: '/analytics/subscriptions'
-      fullPath: '/analytics/subscriptions'
-      preLoaderRoute: typeof AuthenticatedAnalyticsSubscriptionsRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/analytics/overview': {
-      id: '/_authenticated/analytics/overview'
-      path: '/analytics/overview'
-      fullPath: '/analytics/overview'
-      preLoaderRoute: typeof AuthenticatedAnalyticsOverviewRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/analytics/organizations': {
-      id: '/_authenticated/analytics/organizations'
-      path: '/analytics/organizations'
-      fullPath: '/analytics/organizations'
-      preLoaderRoute: typeof AuthenticatedAnalyticsOrganizationsRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/analytics/events': {
-      id: '/_authenticated/analytics/events'
-      path: '/analytics/events'
-      fullPath: '/analytics/events'
-      preLoaderRoute: typeof AuthenticatedAnalyticsEventsRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/analytics/adoption': {
-      id: '/_authenticated/analytics/adoption'
-      path: '/analytics/adoption'
-      fullPath: '/analytics/adoption'
-      preLoaderRoute: typeof AuthenticatedAnalyticsAdoptionRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/analytics/organizations/$orgId': {
-      id: '/_authenticated/analytics/organizations/$orgId'
+    '/_authenticated/clients/$orgId': {
+      id: '/_authenticated/clients/$orgId'
       path: '/$orgId'
-      fullPath: '/analytics/organizations/$orgId'
-      preLoaderRoute: typeof AuthenticatedAnalyticsOrganizationsOrgIdRouteImport
-      parentRoute: typeof AuthenticatedAnalyticsOrganizationsRoute
+      fullPath: '/clients/$orgId'
+      preLoaderRoute: typeof AuthenticatedClientsOrgIdRouteImport
+      parentRoute: typeof AuthenticatedClientsRoute
     }
   }
 }
 
-interface AuthenticatedAnalyticsOrganizationsRouteChildren {
-  AuthenticatedAnalyticsOrganizationsOrgIdRoute: typeof AuthenticatedAnalyticsOrganizationsOrgIdRoute
+interface AuthenticatedClientsRouteChildren {
+  AuthenticatedClientsOrgIdRoute: typeof AuthenticatedClientsOrgIdRoute
 }
 
-const AuthenticatedAnalyticsOrganizationsRouteChildren: AuthenticatedAnalyticsOrganizationsRouteChildren =
-  {
-    AuthenticatedAnalyticsOrganizationsOrgIdRoute:
-      AuthenticatedAnalyticsOrganizationsOrgIdRoute,
-  }
+const AuthenticatedClientsRouteChildren: AuthenticatedClientsRouteChildren = {
+  AuthenticatedClientsOrgIdRoute: AuthenticatedClientsOrgIdRoute,
+}
 
-const AuthenticatedAnalyticsOrganizationsRouteWithChildren =
-  AuthenticatedAnalyticsOrganizationsRoute._addFileChildren(
-    AuthenticatedAnalyticsOrganizationsRouteChildren,
-  )
+const AuthenticatedClientsRouteWithChildren =
+  AuthenticatedClientsRoute._addFileChildren(AuthenticatedClientsRouteChildren)
 
 interface AuthenticatedRouteChildren {
-  AuthenticatedJobsRoute: typeof AuthenticatedJobsRoute
+  AuthenticatedBannersRoute: typeof AuthenticatedBannersRoute
+  AuthenticatedChangelogRoute: typeof AuthenticatedChangelogRoute
+  AuthenticatedClientsRoute: typeof AuthenticatedClientsRouteWithChildren
+  AuthenticatedCronJobsRoute: typeof AuthenticatedCronJobsRoute
+  AuthenticatedEmailTemplatesRoute: typeof AuthenticatedEmailTemplatesRoute
+  AuthenticatedModulesRoute: typeof AuthenticatedModulesRoute
+  AuthenticatedRagSourcesRoute: typeof AuthenticatedRagSourcesRoute
+  AuthenticatedRdvRoute: typeof AuthenticatedRdvRoute
+  AuthenticatedSubscriptionModelRoute: typeof AuthenticatedSubscriptionModelRoute
+  AuthenticatedSupportedCountriesRoute: typeof AuthenticatedSupportedCountriesRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
-  AuthenticatedAnalyticsAdoptionRoute: typeof AuthenticatedAnalyticsAdoptionRoute
-  AuthenticatedAnalyticsEventsRoute: typeof AuthenticatedAnalyticsEventsRoute
-  AuthenticatedAnalyticsOrganizationsRoute: typeof AuthenticatedAnalyticsOrganizationsRouteWithChildren
-  AuthenticatedAnalyticsOverviewRoute: typeof AuthenticatedAnalyticsOverviewRoute
-  AuthenticatedAnalyticsSubscriptionsRoute: typeof AuthenticatedAnalyticsSubscriptionsRoute
-  AuthenticatedReferenceAccountMappingsRoute: typeof AuthenticatedReferenceAccountMappingsRoute
-  AuthenticatedReferenceAccountTemplatesRoute: typeof AuthenticatedReferenceAccountTemplatesRoute
-  AuthenticatedReferenceCropTypesRoute: typeof AuthenticatedReferenceCropTypesRoute
-  AuthenticatedReferenceCurrenciesRoute: typeof AuthenticatedReferenceCurrenciesRoute
-  AuthenticatedReferenceIrrigationTypesRoute: typeof AuthenticatedReferenceIrrigationTypesRoute
-  AuthenticatedReferenceItemCategoriesRoute: typeof AuthenticatedReferenceItemCategoriesRoute
-  AuthenticatedReferenceModulesRoute: typeof AuthenticatedReferenceModulesRoute
-  AuthenticatedReferencePermissionsRoute: typeof AuthenticatedReferencePermissionsRoute
-  AuthenticatedReferencePlantationSystemsRoute: typeof AuthenticatedReferencePlantationSystemsRoute
-  AuthenticatedReferenceRolesRoute: typeof AuthenticatedReferenceRolesRoute
-  AuthenticatedReferenceRootstocksRoute: typeof AuthenticatedReferenceRootstocksRoute
-  AuthenticatedReferenceSoilTypesRoute: typeof AuthenticatedReferenceSoilTypesRoute
-  AuthenticatedReferenceTreeCategoriesRoute: typeof AuthenticatedReferenceTreeCategoriesRoute
-  AuthenticatedReferenceWorkUnitsRoute: typeof AuthenticatedReferenceWorkUnitsRoute
+  AuthenticatedReferentielsCropRoute: typeof AuthenticatedReferentielsCropRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
-  AuthenticatedJobsRoute: AuthenticatedJobsRoute,
+  AuthenticatedBannersRoute: AuthenticatedBannersRoute,
+  AuthenticatedChangelogRoute: AuthenticatedChangelogRoute,
+  AuthenticatedClientsRoute: AuthenticatedClientsRouteWithChildren,
+  AuthenticatedCronJobsRoute: AuthenticatedCronJobsRoute,
+  AuthenticatedEmailTemplatesRoute: AuthenticatedEmailTemplatesRoute,
+  AuthenticatedModulesRoute: AuthenticatedModulesRoute,
+  AuthenticatedRagSourcesRoute: AuthenticatedRagSourcesRoute,
+  AuthenticatedRdvRoute: AuthenticatedRdvRoute,
+  AuthenticatedSubscriptionModelRoute: AuthenticatedSubscriptionModelRoute,
+  AuthenticatedSupportedCountriesRoute: AuthenticatedSupportedCountriesRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
-  AuthenticatedAnalyticsAdoptionRoute: AuthenticatedAnalyticsAdoptionRoute,
-  AuthenticatedAnalyticsEventsRoute: AuthenticatedAnalyticsEventsRoute,
-  AuthenticatedAnalyticsOrganizationsRoute:
-    AuthenticatedAnalyticsOrganizationsRouteWithChildren,
-  AuthenticatedAnalyticsOverviewRoute: AuthenticatedAnalyticsOverviewRoute,
-  AuthenticatedAnalyticsSubscriptionsRoute:
-    AuthenticatedAnalyticsSubscriptionsRoute,
-  AuthenticatedReferenceAccountMappingsRoute:
-    AuthenticatedReferenceAccountMappingsRoute,
-  AuthenticatedReferenceAccountTemplatesRoute:
-    AuthenticatedReferenceAccountTemplatesRoute,
-  AuthenticatedReferenceCropTypesRoute: AuthenticatedReferenceCropTypesRoute,
-  AuthenticatedReferenceCurrenciesRoute: AuthenticatedReferenceCurrenciesRoute,
-  AuthenticatedReferenceIrrigationTypesRoute:
-    AuthenticatedReferenceIrrigationTypesRoute,
-  AuthenticatedReferenceItemCategoriesRoute:
-    AuthenticatedReferenceItemCategoriesRoute,
-  AuthenticatedReferenceModulesRoute: AuthenticatedReferenceModulesRoute,
-  AuthenticatedReferencePermissionsRoute:
-    AuthenticatedReferencePermissionsRoute,
-  AuthenticatedReferencePlantationSystemsRoute:
-    AuthenticatedReferencePlantationSystemsRoute,
-  AuthenticatedReferenceRolesRoute: AuthenticatedReferenceRolesRoute,
-  AuthenticatedReferenceRootstocksRoute: AuthenticatedReferenceRootstocksRoute,
-  AuthenticatedReferenceSoilTypesRoute: AuthenticatedReferenceSoilTypesRoute,
-  AuthenticatedReferenceTreeCategoriesRoute:
-    AuthenticatedReferenceTreeCategoriesRoute,
-  AuthenticatedReferenceWorkUnitsRoute: AuthenticatedReferenceWorkUnitsRoute,
+  AuthenticatedReferentielsCropRoute: AuthenticatedReferentielsCropRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(

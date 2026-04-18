@@ -1,5 +1,7 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
+import { NotificationsService, MANAGEMENT_ROLES } from '../notifications/notifications.service';
+import { NotificationType } from '../notifications/dto/notification.dto';
 import {
   LabServiceOrderFiltersDto,
   CreateLabServiceOrderDto,
@@ -16,7 +18,12 @@ import {
 
 @Injectable()
 export class LabServicesService {
-  constructor(private readonly databaseService: DatabaseService) {}
+  private readonly logger = new Logger(LabServicesService.name);
+
+  constructor(
+    private readonly databaseService: DatabaseService,
+    private readonly notificationsService: NotificationsService,
+  ) {}
 
   private async verifyOrganizationAccess(
     userId: string,
@@ -24,10 +31,11 @@ export class LabServicesService {
   ): Promise<void> {
     const client = this.databaseService.getAdminClient();
     const { data, error } = await client
-      .from('organization_members')
+      .from('organization_users')
       .select('id')
       .eq('user_id', userId)
       .eq('organization_id', organizationId)
+      .eq('is_active', true)
       .single();
 
     if (error || !data) {
@@ -237,6 +245,23 @@ export class LabServicesService {
 
     if (error) {
       throw new BadRequestException(`Failed to update order: ${error.message}`);
+    }
+
+    // Notify management when lab results become available
+    if (dto.status === 'completed') {
+      try {
+        await this.notificationsService.createNotificationsForRoles(
+          organizationId,
+          MANAGEMENT_ROLES,
+          userId,
+          NotificationType.LAB_RESULTS_AVAILABLE,
+          `🔬 Lab results available: ${data.service_type || 'Lab order'}`,
+          `Lab order results are ready for review`,
+          { labOrderId: orderId, serviceType: data.service_type },
+        );
+      } catch (notifError) {
+        this.logger.warn(`Failed to send lab results notification: ${notifError}`);
+      }
     }
 
     return data;

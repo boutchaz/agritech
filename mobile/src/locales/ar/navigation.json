@@ -1,0 +1,48 @@
+{
+  "tabs": {
+    "home": "الرئيسية",
+    "tasks": "المهام",
+    "harvest": "الحصاد",
+    "clock": "الوقت",
+    "profile": "الملف الشخصي"
+  },
+  "domains": {
+    "production": "الإنتاج",
+    "workforce": "القوى العاملة",
+    "inventory": "المخزون",
+    "accounting": "المحاسبة",
+    "settings": "الإعدادات",
+    "misc": "متفرقات",
+    "farms": "مزارعي",
+    "harvest": "الحصاد",
+    "tasks": "المهام",
+    "timeTracking": "تتبع الوقت",
+    "alerts": "التنبيهات",
+    "team": "الفريق",
+    "approvals": "الموافقات",
+    "finance": "المالية",
+    "pestAlerts": "الآفات والأمراض"
+  },
+  "drawer": {
+    "farmManagement": "إدارة المزرعة",
+    "operations": "العمليات",
+    "peopleWork": "الموظفون",
+    "business": "الأعمال"
+  },
+  "screens": {
+    "dashboard": "لوحة التحكم",
+    "tasks": "المهام",
+    "harvests": "عمليات الحصاد",
+    "workers": "العمال",
+    "parcels": "القطع",
+    "farms": "المزارع",
+    "inventory": "المخزون",
+    "notifications": "الإشعارات",
+    "profile": "الملف الشخصي"
+  },
+  "filters": {
+    "all": "الكل",
+    "active": "نشطة",
+    "done": "مكتملة"
+  }
+}

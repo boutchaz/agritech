@@ -1,5 +1,6 @@
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
+import { sanitizeSearch } from '../../common/utils/sanitize-search';
 import {
   ReferenceDataTable,
   ImportReferenceDataDto,
@@ -46,7 +47,8 @@ export class AdminService {
       queryBuilder = queryBuilder.not('published_at', 'is', null);
     }
     if (query.search) {
-      queryBuilder = queryBuilder.or(`name.ilike.%${query.search}%,code.ilike.%${query.search}%`);
+      const s = sanitizeSearch(query.search);
+      if (s) queryBuilder = queryBuilder.or(`name.ilike.%${s}%,code.ilike.%${s}%`);
     }
 
     // Apply sorting
@@ -413,7 +415,8 @@ export class AdminService {
       queryBuilder = queryBuilder.eq('subscription_status', query.status);
     }
     if (query.search) {
-      queryBuilder = queryBuilder.ilike('name', `%${query.search}%`);
+      const s = sanitizeSearch(query.search);
+      if (s) queryBuilder = queryBuilder.ilike('name', `%${s}%`);
     }
 
     const sortBy = query.sortBy || 'created_at';
@@ -713,5 +716,399 @@ export class AdminService {
     }
 
     return created;
+  }
+
+  // ============================================
+  // Admin Subscription Management
+  // ============================================
+
+  async getOrgSubscription(orgId: string) {
+    const client = this.databaseService.getAdminClient();
+    const { data, error } = await client
+      .from('subscriptions')
+      .select('*')
+      .eq('organization_id', orgId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error) throw new BadRequestException(error.message);
+    return data;
+  }
+
+  async extendSubscription(
+    orgId: string,
+    dto: {
+      days?: number;
+      newEndDate?: string;
+      reason?: string;
+    },
+    adminUserId: string,
+  ) {
+    const client = this.databaseService.getAdminClient();
+
+    const { data: sub, error: fetchErr } = await client
+      .from('subscriptions')
+      .select('*')
+      .eq('organization_id', orgId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (fetchErr) throw new BadRequestException(fetchErr.message);
+    if (!sub) throw new NotFoundException('No subscription found for this organization');
+
+    let newEnd: string;
+    if (dto.newEndDate) {
+      newEnd = dto.newEndDate;
+    } else if (dto.days) {
+      const current = sub.current_period_end
+        ? new Date(sub.current_period_end)
+        : new Date();
+      current.setDate(current.getDate() + dto.days);
+      newEnd = current.toISOString();
+    } else {
+      throw new BadRequestException('Provide either days or newEndDate');
+    }
+
+    const { error: updateErr } = await client
+      .from('subscriptions')
+      .update({
+        current_period_end: newEnd,
+        contract_end_at: newEnd,
+        status: 'active',
+      })
+      .eq('id', sub.id);
+
+    if (updateErr) throw new BadRequestException(updateErr.message);
+
+    // Log the event
+    await client.from('subscription_events').insert({
+      organization_id: orgId,
+      subscription_id: sub.id,
+      event_type: 'admin_extension',
+      actor_type: 'admin',
+      actor_id: adminUserId,
+      payload: { days: dto.days, newEndDate: newEnd, reason: dto.reason },
+    });
+
+    return { success: true, subscriptionId: sub.id, newPeriodEnd: newEnd };
+  }
+
+  async updateSubscription(
+    orgId: string,
+    dto: {
+      formula?: string;
+      billing_cycle?: string;
+      contracted_hectares?: number;
+      selected_modules?: any[];
+      discount_pct?: number;
+      status?: string;
+      max_farms?: number;
+      max_users?: number;
+      max_parcels?: number;
+    },
+    adminUserId: string,
+  ) {
+    const client = this.databaseService.getAdminClient();
+
+    const { data: sub, error: fetchErr } = await client
+      .from('subscriptions')
+      .select('id')
+      .eq('organization_id', orgId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (fetchErr) throw new BadRequestException(fetchErr.message);
+    if (!sub) throw new NotFoundException('No subscription found for this organization');
+
+    const updates: Record<string, any> = {};
+    if (dto.formula !== undefined) updates.formula = dto.formula;
+    if (dto.billing_cycle !== undefined) updates.billing_cycle = dto.billing_cycle;
+    if (dto.contracted_hectares !== undefined) updates.contracted_hectares = dto.contracted_hectares;
+    if (dto.selected_modules !== undefined) updates.selected_modules = dto.selected_modules;
+    if (dto.discount_pct !== undefined) updates.discount_pct = dto.discount_pct;
+    if (dto.status !== undefined) updates.status = dto.status;
+    if (dto.max_farms !== undefined) updates.max_farms = dto.max_farms;
+    if (dto.max_users !== undefined) updates.max_users = dto.max_users;
+    if (dto.max_parcels !== undefined) updates.max_parcels = dto.max_parcels;
+
+    if (Object.keys(updates).length === 0) {
+      throw new BadRequestException('No fields to update');
+    }
+
+    const { error: updateErr } = await client
+      .from('subscriptions')
+      .update(updates)
+      .eq('id', sub.id);
+
+    if (updateErr) throw new BadRequestException(updateErr.message);
+
+    await client.from('subscription_events').insert({
+      organization_id: orgId,
+      subscription_id: sub.id,
+      event_type: 'admin_update',
+      actor_type: 'admin',
+      actor_id: adminUserId,
+      payload: updates,
+    });
+
+    return { success: true, subscriptionId: sub.id, updates };
+  }
+
+  async createSubscription(
+    orgId: string,
+    dto: {
+      formula: string;
+      billing_cycle: string;
+      contracted_hectares: number;
+      status?: string;
+      days?: number;
+      selected_modules?: any[];
+      discount_pct?: number;
+    },
+    adminUserId: string,
+  ) {
+    const client = this.databaseService.getAdminClient();
+
+    const now = new Date();
+    const end = new Date(now);
+    end.setDate(end.getDate() + (dto.days ?? 365));
+
+    const { data, error } = await client
+      .from('subscriptions')
+      .insert({
+        organization_id: orgId,
+        formula: dto.formula,
+        billing_cycle: dto.billing_cycle,
+        contracted_hectares: dto.contracted_hectares,
+        status: dto.status ?? 'active',
+        current_period_start: now.toISOString(),
+        current_period_end: end.toISOString(),
+        contract_start_at: now.toISOString(),
+        contract_end_at: end.toISOString(),
+        selected_modules: dto.selected_modules ?? [],
+        discount_pct: dto.discount_pct ?? 10,
+        currency: 'MAD',
+        vat_rate: 0.20,
+      })
+      .select('id')
+      .single();
+
+    if (error) throw new BadRequestException(error.message);
+
+    await client.from('subscription_events').insert({
+      organization_id: orgId,
+      subscription_id: data.id,
+      event_type: 'admin_create',
+      actor_type: 'admin',
+      actor_id: adminUserId,
+      payload: dto,
+    });
+
+    return { success: true, subscriptionId: data.id };
+  }
+
+  // ============================================
+  // Banner Admin Methods (cross-org)
+  // ============================================
+
+  async getAllBanners() {
+    const client = this.databaseService.getAdminClient();
+    const { data, error } = await client
+      .from('banners')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(200);
+
+    if (error) throw error;
+    return data || [];
+  }
+
+  async createBanner(dto: any, userId: string) {
+    const client = this.databaseService.getAdminClient();
+    const { data, error } = await client
+      .from('banners')
+      .insert({ ...dto, created_by: userId })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  async updateBanner(id: string, dto: any) {
+    const client = this.databaseService.getAdminClient();
+    const { data, error } = await client
+      .from('banners')
+      .update(dto)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    if (!data) throw new NotFoundException(`Banner ${id} not found`);
+    return data;
+  }
+
+  async deleteBanner(id: string) {
+    const client = this.databaseService.getAdminClient();
+    const { error } = await client
+      .from('banners')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+    return { success: true };
+  }
+
+  // ============================================
+  // Module Management
+  // ============================================
+
+  async getModules() {
+    const client = this.databaseService.getAdminClient();
+    const { data, error } = await client
+      .from('modules')
+      .select('*, module_translations(*)')
+      .order('display_order', { ascending: true });
+
+    if (error) throw error;
+    return data || [];
+  }
+
+  async getModule(id: string) {
+    const client = this.databaseService.getAdminClient();
+    const { data, error } = await client
+      .from('modules')
+      .select('*, module_translations(*)')
+      .eq('id', id)
+      .single();
+
+    if (error) throw new NotFoundException('Module not found');
+    return data;
+  }
+
+  async createModule(input: Record<string, unknown>) {
+    const client = this.databaseService.getAdminClient();
+
+    // Check slug uniqueness
+    if (input.slug) {
+      const { data: existing } = await client
+        .from('modules')
+        .select('id')
+        .eq('slug', input.slug as string)
+        .maybeSingle();
+
+      if (existing) {
+        throw new BadRequestException(`Module with slug "${input.slug}" already exists`);
+      }
+    }
+
+    const { data, error } = await client
+      .from('modules')
+      .insert({
+        name: input.name || input.slug,
+        slug: input.slug,
+        icon: input.icon || null,
+        color: input.color || null,
+        category: input.category || 'other',
+        description: input.description || null,
+        display_order: input.display_order || 0,
+        price_monthly: input.price_monthly || 0,
+        is_required: input.is_required || false,
+        is_recommended: input.is_recommended || false,
+        is_addon_eligible: input.is_addon_eligible || false,
+        is_available: input.is_available !== false,
+        required_plan: input.required_plan || null,
+        dashboard_widgets: input.dashboard_widgets || [],
+        navigation_items: input.navigation_items || [],
+        features: input.features || [],
+      })
+      .select('*, module_translations(*)')
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  async updateModule(id: string, input: Record<string, unknown>) {
+    const client = this.databaseService.getAdminClient();
+
+    // Check module exists
+    const { data: existing } = await client
+      .from('modules')
+      .select('id')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (!existing) throw new NotFoundException('Module not found');
+
+    // Build update payload — only include provided fields
+    const update: Record<string, unknown> = { updated_at: new Date().toISOString() };
+    const allowedFields = [
+      'name', 'slug', 'icon', 'color', 'category', 'description',
+      'display_order', 'price_monthly', 'is_required', 'is_recommended',
+      'is_addon_eligible', 'is_available', 'required_plan',
+      'dashboard_widgets', 'navigation_items', 'features',
+    ];
+    for (const field of allowedFields) {
+      if (field in input) {
+        update[field] = input[field];
+      }
+    }
+
+    const { data, error } = await client
+      .from('modules')
+      .update(update)
+      .eq('id', id)
+      .select('*, module_translations(*)')
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  async deleteModule(id: string) {
+    const client = this.databaseService.getAdminClient();
+
+    // Soft delete — set is_available = false
+    const { data, error } = await client
+      .from('modules')
+      .update({ is_available: false, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw new NotFoundException('Module not found');
+    return data;
+  }
+
+  async upsertModuleTranslation(
+    moduleId: string,
+    locale: string,
+    input: { name?: string; description?: string; features?: string[] },
+  ) {
+    const client = this.databaseService.getAdminClient();
+
+    const { data, error } = await client
+      .from('module_translations')
+      .upsert(
+        {
+          module_id: moduleId,
+          locale,
+          name: input.name,
+          description: input.description,
+          features: input.features,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'module_id,locale' },
+      )
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
   }
 }

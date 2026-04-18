@@ -78,6 +78,13 @@ interface AccountApiRecord {
   is_group?: boolean;
 }
 
+interface JournalEntryItemInput {
+  account_id: string;
+  debit: number;
+  credit: number;
+  description: string;
+}
+
 /**
  * Get account ID by type and subtype with caching
  */
@@ -241,7 +248,7 @@ export async function syncSalesInvoiceToLedger(
     }
 
     // Build journal entry items
-    const items: any[] = [
+    const items: JournalEntryItemInput[] = [
       {
         account_id: receivableAccountId,
         debit: invoice.total_amount,
@@ -352,7 +359,7 @@ export async function syncPurchaseInvoiceToLedger(
     }
 
     // Build journal entry items
-    const items: any[] = [
+    const items: JournalEntryItemInput[] = [
       {
         account_id: expenseAccountId,
         debit: invoice.subtotal,

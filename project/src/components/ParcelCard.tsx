@@ -1,6 +1,6 @@
-import React, { useMemo, useCallback, useState, lazy, Suspense } from 'react';
+import {  useMemo, useCallback, useState, lazy, Suspense  } from "react";
 import { TrendingUp, FlaskConical as Flask, Satellite, BarChart3 as ChartBar, FileSpreadsheet, MapPin, Droplets, Trees as Tree, DollarSign, Cloud, Plus, Loader2, Leaf, Droplet } from 'lucide-react';
-import type { SensorData } from '../types';
+import type { Module, SensorData } from '../types';
 import SensorChart from './SensorChart';
 import Recommendations from './Recommendations';
 import { useRecommendations } from '../hooks/useRecommendations';
@@ -9,8 +9,10 @@ import { useNavigate } from '@tanstack/react-router';
 import { useAnalyses } from '../hooks/useAnalyses';
 import AnalysisCard from './Analysis/AnalysisCard';
 import { useLatestSatelliteIndices, calculateHealthStatus, calculateIrrigationIndex } from '../hooks/useLatestSatelliteIndices';
+import { AIStatusBadge } from './ai/AIStatusBadge';
+import { Button } from '@/components/ui/button';
+import { StatusDot } from '@/components/ui/status-dot';
 
-// Lazy load heavy chart components (ECharts + Recharts ~1.6MB)
 const IndicesCalculator = lazy(() => import('./SatelliteAnalysisView/IndicesCalculator'));
 const TimeSeriesChart = lazy(() => import('./SatelliteAnalysisView/TimeSeriesChart'));
 const StatisticsCalculator = lazy(() => import('./SatelliteAnalysisView/StatisticsCalculator'));
@@ -31,6 +33,7 @@ interface Parcel {
   variety?: string | null;
   rootstock?: string | null;
   organization_id?: string | null;
+  ai_phase?: string | null;
 }
 
 interface ParcelCardProps {
@@ -42,15 +45,22 @@ interface ParcelCardProps {
   disableInnerScroll?: boolean;
 }
 
-const ParcelCard: React.FC<ParcelCardProps> = ({ parcel, activeTab, onTabChange, sensorData, isAssigned = false, disableInnerScroll = false }) => {
+const ParcelCard = ({ parcel, activeTab, onTabChange, sensorData, isAssigned = false, disableInnerScroll = false }: ParcelCardProps) => {
   const navigate = useNavigate();
 
   // Fetch latest satellite indices for this parcel
   const { data: satelliteData, isLoading: satelliteLoading } = useLatestSatelliteIndices(parcel.id);
 
   // Memoize the module object to prevent infinite re-renders
-  const fruitTreesModule = useMemo(() => ({ id: 'fruit-trees' }), []);
-  const { recommendations, loading, error } = useRecommendations(fruitTreesModule as any, sensorData);
+  const fruitTreesModule = useMemo<Module>(() => ({
+    id: 'fruit-trees',
+    name: 'Fruit Trees',
+    icon: 'trees',
+    active: true,
+    category: 'production',
+    description: 'Fruit tree module',
+  }), []);
+  const { recommendations, loading, error } = useRecommendations(fruitTreesModule, sensorData);
 
   // State for analysis tab selection
   const [analysisTab, setAnalysisTab] = useState<'soil' | 'plant' | 'water'>('soil');
@@ -60,19 +70,19 @@ const ParcelCard: React.FC<ParcelCardProps> = ({ parcel, activeTab, onTabChange,
     parcel.id,
     'soil',
     'parcel',
-    parcel.organization_id
+    parcel.organization_id ?? undefined
   );
   const { analyses: plantAnalyses, loading: plantLoading } = useAnalyses(
     parcel.id,
     'plant',
     'parcel',
-    parcel.organization_id
+    parcel.organization_id ?? undefined
   );
   const { analyses: waterAnalyses, loading: waterLoading } = useAnalyses(
     parcel.id,
     'water',
     'parcel',
-    parcel.organization_id
+    parcel.organization_id ?? undefined
   );
 
   const analysesLoading = soilLoading || plantLoading || waterLoading;
@@ -224,7 +234,7 @@ const ParcelCard: React.FC<ParcelCardProps> = ({ parcel, activeTab, onTabChange,
 
               <div className="bg-white dark:bg-gray-700 rounded-lg p-3">
                 <div className="flex items-center space-x-2 mb-1">
-                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                  <StatusDot color="green" size="md" />
                   <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
                     NDVI
                   </span>
@@ -252,7 +262,7 @@ const ParcelCard: React.FC<ParcelCardProps> = ({ parcel, activeTab, onTabChange,
 
               <div className="bg-white dark:bg-gray-700 rounded-lg p-3">
                 <div className="flex items-center space-x-2 mb-1">
-                  <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                  <StatusDot color="blue" size="md" />
                   <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
                     Statut
                   </span>
@@ -307,7 +317,7 @@ const ParcelCard: React.FC<ParcelCardProps> = ({ parcel, activeTab, onTabChange,
             {/* Analysis Type Tabs */}
             <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
               <div className="flex border-b border-gray-200 dark:border-gray-700">
-                <button
+                <Button
                   onClick={() => setAnalysisTab('soil')}
                   className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
                     analysisTab === 'soil'
@@ -319,8 +329,8 @@ const ParcelCard: React.FC<ParcelCardProps> = ({ parcel, activeTab, onTabChange,
                     <Flask className="h-4 w-4" />
                     Sol ({soilAnalyses.length})
                   </div>
-                </button>
-                <button
+                </Button>
+                <Button
                   onClick={() => setAnalysisTab('plant')}
                   className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
                     analysisTab === 'plant'
@@ -332,8 +342,8 @@ const ParcelCard: React.FC<ParcelCardProps> = ({ parcel, activeTab, onTabChange,
                     <Leaf className="h-4 w-4" />
                     Plante ({plantAnalyses.length})
                   </div>
-                </button>
-                <button
+                </Button>
+                <Button
                   onClick={() => setAnalysisTab('water')}
                   className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
                     analysisTab === 'water'
@@ -345,18 +355,24 @@ const ParcelCard: React.FC<ParcelCardProps> = ({ parcel, activeTab, onTabChange,
                     <Droplet className="h-4 w-4" />
                     Eau ({waterAnalyses.length})
                   </div>
-                </button>
+                </Button>
               </div>
 
               {/* Add Analysis Button */}
               <div className="p-4 bg-gray-50 dark:bg-gray-900">
-                <button
-                  onClick={() => navigate({ to: '/analyses', search: { parcelId: parcel.id, type: analysisTab } })}
-                  className="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm"
+                <Button variant="green"
+                  onClick={() =>
+                    navigate({
+                      to: '/parcels/$parcelId/analyse',
+                      params: { parcelId: parcel.id },
+                      search: { type: analysisTab, returnTo: 'stay', farmId: undefined },
+                    })
+                  }
+                  className="w-full flex items-center justify-center space-x-2 px-4 py-2 rounded-md text-sm"
                 >
                   <Plus className="h-4 w-4" />
                   <span>Nouvelle analyse de {analysisTab === 'soil' ? 'sol' : analysisTab === 'plant' ? 'plante' : 'eau'}</span>
-                </button>
+                </Button>
               </div>
             </div>
 
@@ -371,6 +387,7 @@ const ParcelCard: React.FC<ParcelCardProps> = ({ parcel, activeTab, onTabChange,
                   <AnalysisCard
                     key={analysis.id}
                     analysis={analysis}
+                    viewMode="card"
                     onDelete={() => deleteAnalysis(analysis.id)}
                   />
                 ))}
@@ -381,13 +398,19 @@ const ParcelCard: React.FC<ParcelCardProps> = ({ parcel, activeTab, onTabChange,
                 <p className="text-gray-600 dark:text-gray-400 mb-4">
                   Aucune analyse de {analysisTab === 'soil' ? 'sol' : analysisTab === 'plant' ? 'plante' : 'eau'} enregistrée
                 </p>
-                <button
-                  onClick={() => navigate({ to: '/analyses', search: { parcelId: parcel.id, type: analysisTab } })}
-                  className="inline-flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+                <Button variant="green"
+                  onClick={() =>
+                    navigate({
+                      to: '/parcels/$parcelId/analyse',
+                      params: { parcelId: parcel.id },
+                      search: { type: analysisTab, returnTo: 'stay', farmId: undefined },
+                    })
+                  }
+                  className="inline-flex items-center space-x-2 px-4 py-2 rounded-md"
                 >
                   <Plus className="h-4 w-4" />
                   <span>Ajouter une première analyse</span>
-                </button>
+                </Button>
               </div>
             )}
 
@@ -844,21 +867,24 @@ const ParcelCard: React.FC<ParcelCardProps> = ({ parcel, activeTab, onTabChange,
               {parcel.area ? `${parcel.area} hectares` : 'Superficie non définie'}
             </p>
           </div>
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-2 flex-wrap">
             {isAssigned ? (
               <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                <StatusDot color="green" size="sm" />
                 <span className="text-xs text-green-600 dark:text-green-400 font-medium">Assignée</span>
               </div>
             ) : (
               <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
+                <StatusDot color="gray" size="sm" />
                 <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">Non assignée</span>
               </div>
             )}
             <span className={`font-medium ${data.healthColor}`}>
               {data.health}
             </span>
+            {parcel.ai_phase && parcel.ai_phase !== 'awaiting_data' && (
+              <AIStatusBadge status={parcel.ai_phase as Parameters<typeof AIStatusBadge>[0]['status']} />
+            )}
           </div>
         </div>
 
@@ -879,7 +905,7 @@ const ParcelCard: React.FC<ParcelCardProps> = ({ parcel, activeTab, onTabChange,
       <div className="border-b border-gray-200 dark:border-gray-700 overflow-x-hidden">
         <nav className="flex space-x-2 px-3 sm:px-4 overflow-x-auto overscroll-x-contain scrollbar-hide w-full min-w-0" style={{scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch'}}>
           {tabs.map((tab) => (
-            <button
+            <Button
               key={tab.id}
               onClick={() => handleTabClick(tab.id)}
               className={`
@@ -892,7 +918,7 @@ const ParcelCard: React.FC<ParcelCardProps> = ({ parcel, activeTab, onTabChange,
             >
               <tab.icon className="h-4 w-4" />
               <span>{tab.name}</span>
-            </button>
+            </Button>
           ))}
         </nav>
       </div>

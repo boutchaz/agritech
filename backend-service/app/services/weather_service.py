@@ -1,5 +1,6 @@
 import httpx
 import logging
+from datetime import date, timedelta
 from typing import Dict, List, Optional
 
 logger = logging.getLogger(__name__)
@@ -60,6 +61,87 @@ class WeatherService:
             "et0_fao_evapotranspiration",
         ]
     )
+
+    async def fetch_with_db_cache(
+        self,
+        latitude: float,
+        longitude: float,
+        start_date: str,
+        end_date: str,
+    ) -> List[Dict]:
+        """Cache-aside: read from weather_daily_data, fill gaps with Open-Meteo, persist back.
+
+        Returns a list of parsed daily weather records (same shape as parse_open_meteo_response).
+        Never calls the API for dates already cached.
+        """
+        from app.services.supabase_service import supabase_service
+
+        cached = await supabase_service.get_cached_weather(
+            latitude, longitude, start_date, end_date
+        )
+
+        cached_dates: set[str] = {str(row["date"]) for row in cached}
+
+        # Build list of all expected dates in range
+        d_start = date.fromisoformat(start_date)
+        d_end = date.fromisoformat(end_date)
+        all_dates: set[str] = set()
+        cur = d_start
+        while cur <= d_end:
+            all_dates.add(cur.isoformat())
+            cur += timedelta(days=1)
+
+        missing_dates = sorted(all_dates - cached_dates)
+
+        fetched_records: List[Dict] = []
+        if missing_dates:
+            # Group contiguous missing date ranges to minimize API calls
+            ranges = self._contiguous_ranges(missing_dates)
+            for gap_start, gap_end in ranges:
+                try:
+                    raw = await self.fetch_historical(latitude, longitude, gap_start, gap_end)
+                    gap_records = self.parse_open_meteo_response(raw)
+                    fetched_records.extend(gap_records)
+                    # Persist asynchronously — do not block on failure
+                    await supabase_service.upsert_weather_daily(latitude, longitude, gap_records)
+                except Exception as e:
+                    logger.warning(f"Could not fetch gap {gap_start}..{gap_end}: {e}")
+
+        # Merge: convert cached rows to the shared record format, then append fetched
+        def _from_db_row(row: Dict) -> Dict:
+            return {
+                "date": str(row["date"]),
+                "temp_min": row.get("temperature_min"),
+                "temp_max": row.get("temperature_max"),
+                "precip": row.get("precipitation_sum"),
+                "et0": row.get("et0_fao_evapotranspiration"),
+                "wind_speed_max": row.get("wind_speed_max"),
+                "temperature_min": row.get("temperature_min"),
+                "temperature_max": row.get("temperature_max"),
+                "precipitation_sum": row.get("precipitation_sum"),
+                "et0_fao_evapotranspiration": row.get("et0_fao_evapotranspiration"),
+            }
+
+        all_records = [_from_db_row(r) for r in cached] + fetched_records
+        all_records.sort(key=lambda r: str(r["date"]))
+        return all_records
+
+    @staticmethod
+    def _contiguous_ranges(dates: List[str]) -> List[tuple]:
+        """Group sorted ISO date strings into contiguous (start, end) range pairs."""
+        if not dates:
+            return []
+        ranges = []
+        start = end = date.fromisoformat(dates[0])
+        for ds in dates[1:]:
+            d = date.fromisoformat(ds)
+            if (d - end).days == 1:
+                end = d
+            else:
+                ranges.append((start.isoformat(), end.isoformat()))
+                start = end = d
+        ranges.append((start.isoformat(), end.isoformat()))
+        return ranges
 
     async def fetch_historical(
         self,

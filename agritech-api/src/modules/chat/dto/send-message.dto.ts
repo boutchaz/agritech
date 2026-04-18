@@ -26,4 +26,20 @@ export class SendMessageDto {
   @IsOptional()
   @IsBoolean()
   save_history?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Enable agentic tool calling for non-stream text chat',
+    default: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  enableTools?: boolean;
+
+   @ApiPropertyOptional({
+    description: 'Base64-encoded image data URL for vision analysis',
+    example: 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD...',
+  })
+  @IsOptional()
+  @IsString()
+  image?: string;
 }

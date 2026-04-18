@@ -3,20 +3,17 @@ import { IsString, IsDate, IsUUID, IsOptional, IsEnum, IsNotEmpty, IsNumber, Min
 import { Type } from 'class-transformer';
 
 export enum InspectionType {
-  HARVEST = 'harvest',
-  PLANTING = 'planting',
-  GROWTH = 'growth',
-  SOIL = 'soil',
-  WATER = 'water',
-  PEST = 'pest',
-  FERTILIZER = 'fertilizer',
-  OTHER = 'other',
+  PRE_HARVEST = 'pre_harvest',
+  POST_HARVEST = 'post_harvest',
+  STORAGE = 'storage',
+  TRANSPORT = 'transport',
+  PROCESSING = 'processing',
 }
 
 export enum InspectionStatus {
-  PENDING = 'pending',
+  SCHEDULED = 'scheduled',
   IN_PROGRESS = 'in_progress',
-  PASSED = 'passed',
+  COMPLETED = 'completed',
   FAILED = 'failed',
   CANCELLED = 'cancelled',
 }

@@ -1,44 +1,91 @@
-import { IsString, IsOptional, IsBoolean, IsUUID, IsObject, IsEnum } from 'class-validator';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import {
+  IsString,
+  IsOptional,
+  IsBoolean,
+  IsUUID,
+  IsObject,
+  IsEnum,
+} from "class-validator";
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 
 export enum NotificationType {
-  TASK_ASSIGNED = 'task_assigned',
-  TASK_STATUS_CHANGED = 'task_status_changed',
-  TASK_REMINDER = 'task_reminder',
-  ORDER_STATUS_CHANGED = 'order_status_changed',
-  QUOTE_RECEIVED = 'quote_received',
-  QUOTE_RESPONDED = 'quote_responded',
-  HARVEST_COMPLETED = 'harvest_completed',
-  LOW_INVENTORY = 'low_inventory',
-  PAYMENT_PROCESSED = 'payment_processed',
-  AUDIT_REMINDER = 'audit_reminder',
-  CERTIFICATION_EXPIRY = 'certification_expiry',
-  GENERAL = 'general',
+  TASK_ASSIGNED = "task_assigned",
+  TASK_STATUS_CHANGED = "task_status_changed",
+  TASK_REMINDER = "task_reminder",
+  ORDER_STATUS_CHANGED = "order_status_changed",
+  QUOTE_RECEIVED = "quote_received",
+  QUOTE_RESPONDED = "quote_responded",
+  HARVEST_COMPLETED = "harvest_completed",
+  LOW_INVENTORY = "low_inventory",
+  PAYMENT_PROCESSED = "payment_processed",
+  AUDIT_REMINDER = "audit_reminder",
+  CERTIFICATION_EXPIRY = "certification_expiry",
+  SATELLITE_DOWNLOAD_COMPLETE = "satellite_download_complete",
+  CALIBRATION_COMPLETE = "calibration_complete",
+  CALIBRATION_FAILED = "calibration_failed",
+  CRITICAL_ALERT = "critical_alert",
+  SEASON_REMINDER = "season_reminder",
+  SALES_ORDER_CREATED = "sales_order_created",
+  SALES_ORDER_STATUS_CHANGED = "sales_order_status_changed",
+  PURCHASE_ORDER_CREATED = "purchase_order_created",
+  PURCHASE_ORDER_STATUS_CHANGED = "purchase_order_status_changed",
+  STOCK_ENTRY_CREATED = "stock_entry_created",
+  RECEPTION_BATCH_DECISION = "reception_batch_decision",
+  QUALITY_INSPECTION_COMPLETED = "quality_inspection_completed",
+  DELIVERY_STATUS_CHANGED = "delivery_status_changed",
+  DELIVERY_COMPLETED = "delivery_completed",
+  MEMBER_ADDED = "member_added",
+  MEMBER_REMOVED = "member_removed",
+  ROLE_CHANGED = "role_changed",
+  WORKER_ADDED = "worker_added",
+  TASK_MENTION = "task_mention",
+  // Phase 1 — AgromindIA
+  AI_RECOMMENDATION_CREATED = "ai_recommendation_created",
+  AI_ALERT_TRIGGERED = "ai_alert_triggered",
+  // Phase 2 — Operations
+  CROP_CYCLE_STATUS_CHANGED = "crop_cycle_status_changed",
+  CAMPAIGN_STATUS_CHANGED = "campaign_status_changed",
+  TASK_REASSIGNED = "task_reassigned",
+  PIECE_WORK_CREATED = "piece_work_created",
+  // Phase 3 — Finance
+  INVOICE_CREATED = "invoice_created",
+  JOURNAL_ENTRY_POSTED = "journal_entry_posted",
+  PAYMENT_STATUS_CHANGED = "payment_status_changed",
+  // Phase 4 — Agronomy
+  LAB_RESULTS_AVAILABLE = "lab_results_available",
+  PRODUCT_APPLICATION_COMPLETED = "product_application_completed",
+  SOIL_ANALYSIS_COMPLETED = "soil_analysis_completed",
+  HARVEST_EVENT_RECORDED = "harvest_event_recorded",
+  WORK_UNIT_COMPLETED = "work_unit_completed",
+  WEATHER_ALERT = "weather_alert",
+  GENERAL = "general",
 }
 
 export class CreateNotificationDto {
-  @ApiProperty({ description: 'User ID to send notification to' })
+  @ApiProperty({ description: "User ID to send notification to" })
   @IsUUID()
   userId: string;
 
-  @ApiProperty({ description: 'Organization ID' })
+  @ApiProperty({ description: "Organization ID" })
   @IsUUID()
   organizationId: string;
 
-  @ApiProperty({ enum: NotificationType, description: 'Type of notification' })
+  @ApiProperty({ enum: NotificationType, description: "Type of notification" })
   @IsEnum(NotificationType)
   type: NotificationType;
 
-  @ApiProperty({ description: 'Notification title' })
+  @ApiProperty({ description: "Notification title" })
   @IsString()
   title: string;
 
-  @ApiPropertyOptional({ description: 'Notification message' })
+  @ApiPropertyOptional({ description: "Notification message" })
   @IsOptional()
   @IsString()
   message?: string;
 
-  @ApiPropertyOptional({ description: 'Additional data (e.g., task_id, order_id)' })
+  @ApiPropertyOptional({
+    description: "Additional data (e.g., task_id, order_id)",
+  })
   @IsOptional()
   @IsObject()
   data?: Record<string, any>;
@@ -77,27 +124,30 @@ export class NotificationResponseDto {
 }
 
 export class MarkAsReadDto {
-  @ApiProperty({ description: 'Notification ID' })
+  @ApiProperty({ description: "Notification ID" })
   @IsUUID()
   notificationId: string;
 }
 
 export class NotificationFiltersDto {
-  @ApiPropertyOptional({ description: 'Filter by read status' })
+  @ApiPropertyOptional({ description: "Filter by read status" })
   @IsOptional()
   @IsBoolean()
   isRead?: boolean;
 
-  @ApiPropertyOptional({ enum: NotificationType, description: 'Filter by type' })
+  @ApiPropertyOptional({
+    enum: NotificationType,
+    description: "Filter by type",
+  })
   @IsOptional()
   @IsEnum(NotificationType)
   type?: NotificationType;
 
-  @ApiPropertyOptional({ description: 'Limit results', default: 50 })
+  @ApiPropertyOptional({ description: "Limit results", default: 50 })
   @IsOptional()
   limit?: number;
 
-  @ApiPropertyOptional({ description: 'Offset for pagination', default: 0 })
+  @ApiPropertyOptional({ description: "Offset for pagination", default: 0 })
   @IsOptional()
   offset?: number;
 }

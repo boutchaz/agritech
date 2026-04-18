@@ -17,6 +17,7 @@
 # Temporary / scratch files
 temp.txt
 temp/
+/calibration.json
 
 # Dependencies
 node_modules/
@@ -59,6 +60,7 @@ logs/
 coverage/
 test-results/
 playwright-report/
+playwright-report-integration/
 
 # Supabase local
 supabase/.branches/
@@ -67,4 +69,5 @@ supabase/.temp/
 
 
 # 
-debug_gee.py
+debug_gee.pyproject/.env
+.gstack/

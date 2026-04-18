@@ -1,0 +1,27 @@
+{
+  "id": "specs/operational-engine-spec",
+  "title": "Operational Engine Specification",
+  "description": "MOTEUR OPÉRATIONNEL IA",
+  "source": "@site/docs/specs/operational-engine-spec.md",
+  "sourceDirName": "specs",
+  "slug": "/specs/operational-engine-spec",
+  "permalink": "/specs/operational-engine-spec",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 8,
+  "frontMatter": {
+    "sidebar_position": 8,
+    "title": "Operational Engine Specification"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Calibration Engine Specification",
+    "permalink": "/specs/calibration-engine-spec"
+  },
+  "next": {
+    "title": "Crop Referentials Overview",
+    "permalink": "/referentials/overview"
+  }
+}

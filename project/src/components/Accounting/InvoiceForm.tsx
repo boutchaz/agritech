@@ -1,79 +1,108 @@
-import { useAuth } from '@/hooks/useAuth';
-import { getLocalDate, getLocalDateOffset } from '@/utils/date';
-import { Button } from '@/components/ui/button';
+import { useAuth } from "@/hooks/useAuth";
+import { DEFAULT_CURRENCY } from "@/utils/currencies";
+import { getLocalDate, getLocalDateOffset } from "@/utils/date";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
-  DialogContent,
-  DialogDescription,
   DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/Input';
-import { Label } from '@/components/ui/label';
-import { Select } from '@/components/ui/Select';
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/Input";
+import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/Select";
 import {
   Select as RadixSelect,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/radix-select';
-import { useAccounts } from '@/hooks/useAccounts';
-import { useCreateInvoice, useUpdateInvoice, useInvoice } from '@/hooks/useInvoices';
-import { useSuppliers } from '@/hooks/useSuppliers';
-import { useCustomers } from '@/hooks/useCustomers';
-import { useTaxes } from '@/hooks/useTaxes';
-import { useItemSelection } from '@/hooks/useItems';
-import { useParcelsByFarm } from '@/hooks/useParcelsQuery';
-import { calculateInvoiceTotals } from '@/lib/taxCalculations';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { Plus, Trash2, ExternalLink, PackagePlus } from 'lucide-react';
-import React, { useState, useEffect } from 'react';
-import { useFieldArray, useForm } from 'react-hook-form';
-import { useNavigate } from '@tanstack/react-router';
-import { toast } from 'sonner';
-import { z } from 'zod';
-import { QuickCreateItem } from '../Billing/QuickCreateItem';
-import { useTranslation } from 'react-i18next';
+} from "@/components/ui/radix-select";
+import { useAccounts } from "@/hooks/useAccounts";
+import {
+  useCreateInvoice,
+  useUpdateInvoice,
+  useInvoice,
+} from "@/hooks/useInvoices";
+import { useSuppliers } from "@/hooks/useSuppliers";
+import { useCustomers } from "@/hooks/useCustomers";
+import { useTaxes } from "@/hooks/useTaxes";
+import { useItemSelection } from "@/hooks/useItems";
+import { useParcelsByFarm } from "@/hooks/useParcelsQuery";
+import { calculateInvoiceTotals } from "@/lib/taxCalculations";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Plus, Trash2, ExternalLink, PackagePlus } from "lucide-react";
+import {  useState, useEffect  } from "react";
+import { useFieldArray, useForm } from "react-hook-form";
+import { useNavigate } from "@tanstack/react-router";
+import { toast } from "sonner";
+import { z } from "zod";
+import { QuickCreateItem } from "../Billing/QuickCreateItem";
+import { useTranslation } from "react-i18next";
+import { SectionLoader } from '@/components/ui/loader';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
+
 
 // Invoice item schema
-const getInvoiceItemSchema = (t: (key: string) => string) => z.object({
-  item_id: z.string().optional(),
-  item_name: z.string().min(1, t('accountingModule.invoices.form.validation.itemNameRequired')),
-  description: z.string().optional(),
-  quantity: z.coerce.number().min(1, t('accountingModule.invoices.form.validation.quantityMin')),
-  rate: z.coerce.number().min(0, t('accountingModule.invoices.form.validation.ratePositive')),
-  account_id: z.string().min(1, t('accountingModule.invoices.form.validation.accountRequired')),
-  tax_id: z.string().optional(),
-});
+const getInvoiceItemSchema = (t: (key: string) => string) =>
+  z.object({
+    item_id: z.string().optional(),
+    item_name: z
+      .string()
+      .min(1, t("accountingModule.invoices.form.validation.itemNameRequired")),
+    description: z.string().optional(),
+    quantity: z.coerce
+      .number()
+      .min(1, t("accountingModule.invoices.form.validation.quantityMin")),
+    rate: z.coerce
+      .number()
+      .min(0, t("accountingModule.invoices.form.validation.ratePositive")),
+    account_id: z
+      .string()
+      .min(1, t("accountingModule.invoices.form.validation.accountRequired")),
+    tax_id: z.string().optional(),
+  });
 
 // Invoice schema with date validation
-const getInvoiceSchema = (t: (key: string) => string) => z
-  .object({
-    invoice_type: z.enum(['sales', 'purchase']),
-    party_id: z.string().min(1, t('accountingModule.invoices.form.validation.partyRequired')),
-    invoice_date: z.string().min(1, t('accountingModule.invoices.form.validation.invoiceDateRequired')),
-    due_date: z.string().min(1, t('accountingModule.invoices.form.validation.dueDateRequired')),
-    items: z.array(getInvoiceItemSchema(t)).min(1, t('accountingModule.invoices.form.validation.atLeastOneItem')),
-    remarks: z.string().optional(),
-    farm_id: z.string().nullable().optional(),
-    parcel_id: z.string().nullable().optional(),
-  })
-  .refine(
-    data => {
-      // Validate due_date >= invoice_date
-      const invoiceDate = new Date(data.invoice_date);
-      const dueDate = new Date(data.due_date);
-      return dueDate >= invoiceDate;
-    },
-    {
-      message: t('accountingModule.invoices.form.validation.dueDateAfterInvoiceDate'),
-      path: ['due_date'],
-    }
-  );
+const getInvoiceSchema = (t: (key: string) => string) =>
+  z
+    .object({
+      invoice_type: z.enum(["sales", "purchase"]),
+      party_id: z
+        .string()
+        .min(1, t("accountingModule.invoices.form.validation.partyRequired")),
+      invoice_date: z
+        .string()
+        .min(
+          1,
+          t("accountingModule.invoices.form.validation.invoiceDateRequired"),
+        ),
+      due_date: z
+        .string()
+        .min(1, t("accountingModule.invoices.form.validation.dueDateRequired")),
+      items: z
+        .array(getInvoiceItemSchema(t))
+        .min(1, t("accountingModule.invoices.form.validation.atLeastOneItem")),
+      remarks: z.string().optional(),
+      farm_id: z.string().nullable().optional(),
+      parcel_id: z.string().nullable().optional(),
+    })
+    .refine(
+      (data) => {
+        // Validate due_date >= invoice_date
+        const invoiceDate = new Date(data.invoice_date);
+        const dueDate = new Date(data.due_date);
+        return dueDate >= invoiceDate;
+      },
+      {
+        message: t(
+          "accountingModule.invoices.form.validation.dueDateAfterInvoiceDate",
+        ),
+        path: ["due_date"],
+      },
+    );
 
 type InvoiceFormData = z.infer<ReturnType<typeof getInvoiceSchema>>;
+type InvoiceFormInput = z.input<ReturnType<typeof getInvoiceSchema>>;
 
 interface InvoiceFormProps {
   isOpen: boolean;
@@ -82,13 +111,20 @@ interface InvoiceFormProps {
   editInvoiceId?: string | null;
 }
 
-export const InvoiceForm: React.FC<InvoiceFormProps> = ({ isOpen, onClose, onSuccess, editInvoiceId }) => {
+export const InvoiceForm = ({
+  isOpen,
+  onClose,
+  onSuccess,
+  editInvoiceId,
+}: InvoiceFormProps) => {
   const { t } = useTranslation();
   const { currentOrganization, currentFarm, farms } = useAuth();
   const navigate = useNavigate();
   const createInvoice = useCreateInvoice();
   const updateInvoice = useUpdateInvoice();
-  const { data: existingInvoice, isLoading: isLoadingInvoice } = useInvoice(editInvoiceId || null);
+  const { data: existingInvoice, isLoading: isLoadingInvoice } = useInvoice(
+    editInvoiceId || null,
+  );
 
   const isEditMode = !!editInvoiceId;
   const { data: accounts = [] } = useAccounts();
@@ -103,7 +139,12 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({ isOpen, onClose, onSuc
     subtotal: number;
     tax_total: number;
     grand_total: number;
-    tax_breakdown: Array<{ tax_id: string; tax_name: string; tax_rate: number; tax_amount: number }>;
+    tax_breakdown: Array<{
+      tax_id: string;
+      tax_name: string;
+      tax_rate: number;
+      tax_amount: number;
+    }>;
   }>({
     subtotal: 0,
     tax_total: 0,
@@ -112,19 +153,27 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({ isOpen, onClose, onSuc
   });
 
   // Get organization currency (default to MAD if not set)
-  const currencySymbol = currentOrganization?.currency_symbol || 'MAD';
+  const currencySymbol = currentOrganization?.currency_symbol || DEFAULT_CURRENCY;
 
   // Filter accounts for dropdown
-  const expenseAccounts = accounts.filter(acc => acc.account_type === 'Expense' && !acc.is_group);
-  const revenueAccounts = accounts.filter(acc => acc.account_type === 'Revenue' && !acc.is_group);
+  const expenseAccounts = accounts.filter(
+    (acc) => acc.account_type === "Expense" && !acc.is_group,
+  );
+  const revenueAccounts = accounts.filter(
+    (acc) => acc.account_type === "Revenue" && !acc.is_group,
+  );
 
   // Fetch items for selection based on invoice type
-  const { data: salesItems = [], isLoading: salesItemsLoading } = useItemSelection({
-    is_sales_item: true
-  });
-  const { data: purchaseItems = [], isLoading: purchaseItemsLoading } = useItemSelection({
-    is_purchase_item: true
-  });
+  const { data: salesItems = [], isLoading: salesItemsLoading } =
+    useItemSelection({
+      is_sales_item: true,
+    });
+  const { data: purchaseItems = [], isLoading: purchaseItemsLoading } =
+    useItemSelection({
+      is_purchase_item: true,
+    });
+
+  const invoiceSchema = getInvoiceSchema(t);
 
   const {
     register,
@@ -134,44 +183,46 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({ isOpen, onClose, onSuc
     setValue,
     formState: { errors },
     reset,
-  } = useForm<InvoiceFormData>({
-    resolver: zodResolver(getInvoiceSchema(t)),
+  } = useForm<InvoiceFormInput, unknown, InvoiceFormData>({
+    resolver: zodResolver(invoiceSchema),
     defaultValues: {
-      invoice_type: 'sales',
+      invoice_type: "sales",
       invoice_date: getLocalDate(),
       due_date: getLocalDateOffset(30), // 30 days from now
       farm_id: currentFarm?.id || null,
       parcel_id: null,
       items: [
         {
-          item_id: '',
-          item_name: '',
-          description: '',
+          item_id: "",
+          item_name: "",
+          description: "",
           quantity: 1,
           rate: 0,
-          account_id: '',
+          account_id: "",
         },
       ],
-      remarks: '',
+      remarks: "",
     },
   });
 
   const { fields, append, remove } = useFieldArray({
     control,
-    name: 'items',
+    name: "items",
   });
 
-  const watchItems = watch('items');
-  const watchInvoiceType = watch('invoice_type');
-  const selectedFarmId = watch('farm_id');
+  const watchItems = watch("items");
+  const watchInvoiceType = watch("invoice_type");
+  const selectedFarmId = watch("farm_id");
 
   // Get items based on invoice type
-  const availableItems = watchInvoiceType === 'sales' ? salesItems : purchaseItems;
-  const itemsLoading = watchInvoiceType === 'sales' ? salesItemsLoading : purchaseItemsLoading;
+  const availableItems =
+    watchInvoiceType === "sales" ? salesItems : purchaseItems;
+  const itemsLoading =
+    watchInvoiceType === "sales" ? salesItemsLoading : purchaseItemsLoading;
 
   // Get taxes based on invoice type
   const { data: allTaxes = [] } = useTaxes(watchInvoiceType);
-  
+
   // Fetch parcels for the selected farm
   const { data: parcels = [] } = useParcelsByFarm(selectedFarmId || undefined);
 
@@ -186,13 +237,17 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({ isOpen, onClose, onSuc
       // Filter valid items and coerce values to numbers
       // (watch() returns raw form values which may be strings)
       const validItems = watchItems
-        .map(item => ({
+        .map((item) => ({
           ...item,
           quantity: Number(item.quantity) || 0,
           rate: Number(item.rate) || 0,
         }))
         .filter(
-          item => item.item_name && item.quantity > 0 && item.rate >= 0 && item.account_id
+          (item) =>
+            item.item_name &&
+            item.quantity > 0 &&
+            item.rate >= 0 &&
+            item.account_id,
         );
 
       if (validItems.length === 0) {
@@ -206,17 +261,23 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({ isOpen, onClose, onSuc
       }
 
       // Calculate simple subtotal first for immediate feedback
-      const simpleSubtotal = validItems.reduce((sum, item) => sum + (item.quantity * item.rate), 0);
+      const simpleSubtotal = validItems.reduce(
+        (sum, item) => sum + item.quantity * item.rate,
+        0,
+      );
 
       // Update with simple subtotal immediately
-      setCalculatedTotals(prev => ({
+      setCalculatedTotals((prev) => ({
         ...prev,
         subtotal: simpleSubtotal,
         grand_total: simpleSubtotal + prev.tax_total,
       }));
 
       try {
-        const result = await calculateInvoiceTotals(validItems, watchInvoiceType);
+        const result = await calculateInvoiceTotals(
+          validItems,
+          watchInvoiceType,
+        );
         setCalculatedTotals({
           subtotal: result.subtotal,
           tax_total: result.tax_total,
@@ -224,7 +285,7 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({ isOpen, onClose, onSuc
           tax_breakdown: result.tax_breakdown,
         });
       } catch (error) {
-        console.error('Error calculating totals with taxes:', error);
+        console.error("Error calculating totals with taxes:", error);
         // Keep the simple subtotal on error
         setCalculatedTotals({
           subtotal: simpleSubtotal,
@@ -243,28 +304,30 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({ isOpen, onClose, onSuc
     if (isEditMode && existingInvoice && !isLoadingInvoice) {
       reset({
         invoice_type: existingInvoice.invoice_type,
-        party_id: existingInvoice.party_id || '',
+        party_id: existingInvoice.party_id || "",
         invoice_date: existingInvoice.invoice_date,
         due_date: existingInvoice.due_date,
         farm_id: existingInvoice.farm_id || null,
         parcel_id: existingInvoice.parcel_id || null,
-        remarks: existingInvoice.remarks || '',
-        items: existingInvoice.items?.map(item => ({
-          item_id: (item as any).item_id || '',
+        remarks: existingInvoice.remarks || "",
+        items: existingInvoice.items?.map((item) => ({
+          item_id: item.item_id || "",
           item_name: item.item_name,
-          description: item.description || '',
+          description: item.description || "",
           quantity: item.quantity,
           rate: item.rate,
           account_id: item.account_id,
           tax_id: item.tax_id || undefined,
-        })) || [{
-          item_id: '',
-          item_name: '',
-          description: '',
-          quantity: 1,
-          rate: 0,
-          account_id: '',
-        }],
+        })) || [
+          {
+            item_id: "",
+            item_name: "",
+            description: "",
+            quantity: 1,
+            rate: 0,
+            account_id: "",
+          },
+        ],
       });
     }
   }, [isEditMode, existingInvoice, isLoadingInvoice, reset]);
@@ -287,13 +350,14 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({ isOpen, onClose, onSuc
         await updateInvoice.mutateAsync({
           invoiceId: editInvoiceId,
           party_id: data.party_id,
-          party_name: data.invoice_type === 'sales'
-            ? customers.find(c => c.id === data.party_id)?.name
-            : suppliers.find(s => s.id === data.party_id)?.name,
+          party_name:
+            data.invoice_type === "sales"
+              ? customers.find((c) => c.id === data.party_id)?.name
+              : suppliers.find((s) => s.id === data.party_id)?.name,
           invoice_date: data.invoice_date,
           due_date: data.due_date,
           notes: data.remarks,
-          items: transformedItems.map(item => ({
+          items: transformedItems.map((item) => ({
             item_name: item.item_name,
             description: item.description,
             quantity: item.quantity,
@@ -305,7 +369,7 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({ isOpen, onClose, onSuc
             line_total: item.quantity * item.rate,
           })),
         });
-        toast.success(t('accountingModule.invoices.form.toast.updateSuccess'));
+        toast.success(t("accountingModule.invoices.form.toast.updateSuccess"));
       } else {
         // Create new invoice with transformed items
         await createInvoice.mutateAsync({
@@ -318,14 +382,25 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({ isOpen, onClose, onSuc
           farm_id: data.farm_id,
           parcel_id: data.parcel_id,
         });
-        toast.success(t('accountingModule.invoices.form.toast.createSuccess'));
+        toast.success(t("accountingModule.invoices.form.toast.createSuccess"));
       }
       reset();
       onClose();
       onSuccess?.();
     } catch (error) {
-      console.error(`Failed to ${isEditMode ? 'update' : 'create'} invoice:`, error);
-      toast.error(error instanceof Error ? error.message : t('accountingModule.invoices.form.toast.saveError', { action: isEditMode ? t('accountingModule.invoices.form.actions.update') : t('accountingModule.invoices.form.actions.create') }));
+      console.error(
+        `Failed to ${isEditMode ? "update" : "create"} invoice:`,
+        error,
+      );
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : t("accountingModule.invoices.form.toast.saveError", {
+              action: isEditMode
+                ? t("accountingModule.invoices.form.actions.update")
+                : t("accountingModule.invoices.form.actions.create"),
+            }),
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -337,459 +412,823 @@ export const InvoiceForm: React.FC<InvoiceFormProps> = ({ isOpen, onClose, onSuc
   };
 
   // Get available accounts based on invoice type
-  const availableAccounts = watchInvoiceType === 'sales' ? revenueAccounts : expenseAccounts;
+  const availableAccounts =
+    watchInvoiceType === "sales" ? revenueAccounts : expenseAccounts;
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{isEditMode ? t('accountingModule.invoices.form.title.edit') : t('accountingModule.invoices.form.title.create')}</DialogTitle>
-          <DialogDescription>
-            {isEditMode ? t('accountingModule.invoices.form.description.edit') : t('accountingModule.invoices.form.description.create')}
-          </DialogDescription>
-        </DialogHeader>
+    <ResponsiveDialog
+      open={isOpen}
+      onOpenChange={handleClose}
+      title={isEditMode
+        ? t("accountingModule.invoices.form.title.edit")
+        : t("accountingModule.invoices.form.title.create")}
+      description={isEditMode
+        ? t("accountingModule.invoices.form.description.edit")
+        : t("accountingModule.invoices.form.description.create")}
+      size="4xl"
+      contentClassName="max-h-[90vh] overflow-y-auto"
+    >
 
         {isEditMode && isLoadingInvoice ? (
-          <div className="flex items-center justify-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
-            <span className="ml-2 text-gray-600">{t('accountingModule.invoices.form.loading')}</span>
-          </div>
+          <SectionLoader />
         ) : (
-
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-          {/* Invoice Header */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="invoice_type">{t('accountingModule.invoices.form.fields.invoiceType')} *</Label>
-              <Select
-                id="invoice_type"
-                {...register('invoice_type')}
-              >
-                <option value="sales">{t('accountingModule.invoices.form.invoiceTypes.sales')}</option>
-                <option value="purchase">{t('accountingModule.invoices.form.invoiceTypes.purchase')}</option>
-              </Select>
-              {errors.invoice_type && (
-                <p className="text-sm text-red-600 mt-1">{errors.invoice_type.message}</p>
-              )}
-            </div>
-
-            <div>
-              <Label htmlFor="party_id">
-                {watchInvoiceType === 'sales' ? t('accountingModule.invoices.form.fields.customer') : t('accountingModule.invoices.form.fields.supplier')} *
-              </Label>
-              <Select
-                id="party_id"
-                {...register('party_id')}
-              >
-                <option value="">{t('accountingModule.invoices.form.fields.selectParty', { party: watchInvoiceType === 'sales' ? t('accountingModule.invoices.form.fields.customer').toLowerCase() : t('accountingModule.invoices.form.fields.supplier').toLowerCase() })}</option>
-                {watchInvoiceType === 'sales'
-                  ? customers.map(customer => (
-                      <option key={customer.id} value={customer.id}>
-                        {customer.name}
-                      </option>
-                    ))
-                  : suppliers.map(supplier => (
-                      <option key={supplier.id} value={supplier.id}>
-                        {supplier.name}
-                      </option>
-                    ))
-                }
-              </Select>
-              {errors.party_id && (
-                <p className="text-sm text-red-600 mt-1">{errors.party_id.message}</p>
-              )}
-              {watchInvoiceType === 'sales' && customers.length === 0 && (
-                <div className="mt-2 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
-                  <p className="text-sm text-amber-800 dark:text-amber-200 mb-2">{t('accountingModule.invoices.form.errors.noCustomers')}</p>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      onClose();
-                      navigate({ to: '/accounting/customers' });
-                    }}
-                    className="w-full"
-                  >
-                    <ExternalLink className="mr-2 h-4 w-4" />
-                    {t('accountingModule.invoices.form.buttons.goToCustomers')}
-                  </Button>
-                </div>
-              )}
-              {watchInvoiceType === 'purchase' && suppliers.length === 0 && (
-                <div className="mt-2 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
-                  <p className="text-sm text-amber-800 dark:text-amber-200 mb-2">{t('accountingModule.invoices.form.errors.noSuppliers')}</p>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      onClose();
-                      navigate({ to: '/stock/suppliers' });
-                    }}
-                    className="w-full"
-                  >
-                    <ExternalLink className="mr-2 h-4 w-4" />
-                    {t('accountingModule.invoices.form.buttons.goToStockManagement')}
-                  </Button>
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="invoice_date">{t('accountingModule.invoices.form.fields.invoiceDate')} *</Label>
-              <Input
-                id="invoice_date"
-                type="date"
-                {...register('invoice_date')}
-              />
-              {errors.invoice_date && (
-                <p className="text-sm text-red-600 mt-1">{errors.invoice_date.message}</p>
-              )}
-            </div>
-
-            <div>
-              <Label htmlFor="due_date">{t('accountingModule.invoices.form.fields.dueDate')} *</Label>
-              <Input
-                id="due_date"
-                type="date"
-                {...register('due_date')}
-              />
-              {errors.due_date && (
-                <p className="text-sm text-red-600 mt-1">{errors.due_date.message}</p>
-              )}
-            </div>
-          </div>
-
-          {/* Farm and Parcel (Optional) */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="farm_id">{t('accountingModule.invoices.form.fields.farm')} ({t('accountingModule.invoices.form.optional')})</Label>
-              <Select
-                id="farm_id"
-                {...register('farm_id')}
-              >
-                <option value="">{t('accountingModule.invoices.form.fields.noFarmSelected')}</option>
-                {farms?.map(farm => (
-                  <option key={farm.id} value={farm.id}>
-                    {farm.name}
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            {/* Invoice Header */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="invoice_type">
+                  {t("accountingModule.invoices.form.fields.invoiceType")} *
+                </Label>
+                <Select id="invoice_type" {...register("invoice_type")}>
+                  <option value="sales">
+                    {t("accountingModule.invoices.form.invoiceTypes.sales")}
                   </option>
-                ))}
-              </Select>
-              <p className="text-xs text-gray-500 mt-1">
-                {t('accountingModule.invoices.form.fields.farmHelp')}
-              </p>
-            </div>
-
-            <div>
-              <Label htmlFor="parcel_id">{t('accountingModule.invoices.form.fields.parcel')} ({t('accountingModule.invoices.form.optional')})</Label>
-              <Select
-                id="parcel_id"
-                {...register('parcel_id')}
-                disabled={!watch('farm_id')}
-              >
-                <option value="">{t('accountingModule.invoices.form.fields.noParcelSelected')}</option>
-                {parcels.map(parcel => (
-                  <option key={parcel.id} value={parcel.id}>
-                    {parcel.name}
+                  <option value="purchase">
+                    {t("accountingModule.invoices.form.invoiceTypes.purchase")}
                   </option>
-                ))}
-              </Select>
-              <p className="text-xs text-gray-500 mt-1">
-                {!watch('farm_id')
-                  ? t('accountingModule.invoices.form.fields.parcelHelpSelectFarm')
-                  : parcels.length === 0
-                    ? t('accountingModule.invoices.form.fields.parcelHelpNoParcels')
-                    : t('accountingModule.invoices.form.fields.parcelHelp')}
-              </p>
-            </div>
-          </div>
+                </Select>
+                {errors.invoice_type && (
+                  <p className="text-sm text-red-600 mt-1">
+                    {errors.invoice_type.message}
+                  </p>
+                )}
+              </div>
 
-          {/* Invoice Items */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <Label className="text-lg font-semibold">{t('accountingModule.invoices.form.items.title')}</Label>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  append({
-                    item_id: '',
-                    item_name: '',
-                    description: '',
-                    quantity: 1,
-                    rate: 0,
-                    account_id: '',
-                  })
-                }
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                {t('accountingModule.invoices.form.items.addItem')}
-              </Button>
+              <div>
+                <Label htmlFor="party_id">
+                  {watchInvoiceType === "sales"
+                    ? t("accountingModule.invoices.form.fields.customer")
+                    : t("accountingModule.invoices.form.fields.supplier")}{" "}
+                  *
+                </Label>
+                <Select id="party_id" {...register("party_id")}>
+                  <option value="">
+                    {t("accountingModule.invoices.form.fields.selectParty", {
+                      party:
+                        watchInvoiceType === "sales"
+                          ? t(
+                              "accountingModule.invoices.form.fields.customer",
+                            ).toLowerCase()
+                          : t(
+                              "accountingModule.invoices.form.fields.supplier",
+                            ).toLowerCase(),
+                    })}
+                  </option>
+                  {watchInvoiceType === "sales"
+                    ? customers.map((customer) => (
+                        <option key={customer.id} value={customer.id}>
+                          {customer.name}
+                        </option>
+                      ))
+                    : suppliers.map((supplier) => (
+                        <option key={supplier.id} value={supplier.id}>
+                          {supplier.name}
+                        </option>
+                      ))}
+                </Select>
+                {errors.party_id && (
+                  <p className="text-sm text-red-600 mt-1">
+                    {errors.party_id.message}
+                  </p>
+                )}
+                {watchInvoiceType === "sales" && customers.length === 0 && (
+                  <div className="mt-2 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                    <p className="text-sm text-amber-800 dark:text-amber-200 mb-2">
+                      {t("accountingModule.invoices.form.errors.noCustomers")}
+                    </p>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        onClose();
+                        navigate({ to: "/accounting/customers" });
+                      }}
+                      className="w-full"
+                    >
+                      <ExternalLink className="mr-2 h-4 w-4" />
+                      {t(
+                        "accountingModule.invoices.form.buttons.goToCustomers",
+                      )}
+                    </Button>
+                  </div>
+                )}
+                {watchInvoiceType === "purchase" && suppliers.length === 0 && (
+                  <div className="mt-2 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                    <p className="text-sm text-amber-800 dark:text-amber-200 mb-2">
+                      {t("accountingModule.invoices.form.errors.noSuppliers")}
+                    </p>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        onClose();
+                        navigate({ to: "/stock/suppliers" });
+                      }}
+                      className="w-full"
+                    >
+                      <ExternalLink className="mr-2 h-4 w-4" />
+                      {t(
+                        "accountingModule.invoices.form.buttons.goToStockManagement",
+                      )}
+                    </Button>
+                  </div>
+                )}
+              </div>
             </div>
 
-            <div className="border rounded-lg overflow-x-auto">
-              <table className="w-full min-w-[800px]">
-                <thead className="bg-gray-50 dark:bg-gray-800">
-                  <tr>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-600 dark:text-gray-400 whitespace-nowrap min-w-[140px]">
-                      {t('accountingModule.invoices.form.items.columns.itemName')} *
-                    </th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-600 dark:text-gray-400 whitespace-nowrap min-w-[120px]">
-                      {t('accountingModule.invoices.form.items.columns.description')}
-                    </th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-600 dark:text-gray-400 whitespace-nowrap min-w-[120px]">
-                      {t('accountingModule.invoices.form.items.columns.account')} *
-                    </th>
-                    <th className="px-3 py-2 text-left text-xs font-medium text-gray-600 dark:text-gray-400 whitespace-nowrap min-w-[80px]">
-                      {t('accountingModule.invoices.form.items.columns.tax')}
-                    </th>
-                    <th className="px-3 py-2 text-right text-xs font-medium text-gray-600 dark:text-gray-400 whitespace-nowrap min-w-[60px]">
-                      {t('accountingModule.invoices.form.items.columns.quantity')} *
-                    </th>
-                    <th className="px-3 py-2 text-right text-xs font-medium text-gray-600 dark:text-gray-400 whitespace-nowrap min-w-[60px]">
-                      {t('accountingModule.invoices.form.items.columns.rate')} *
-                    </th>
-                    <th className="px-3 py-2 text-right text-xs font-medium text-gray-600 dark:text-gray-400 whitespace-nowrap min-w-[70px]">
-                      {t('accountingModule.invoices.form.items.columns.amount')}
-                    </th>
-                    <th className="px-3 py-2 text-center text-xs font-medium text-gray-600 dark:text-gray-400 whitespace-nowrap min-w-[50px]">
-                      {t('accountingModule.invoices.form.items.columns.action')}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                  {fields.map((field, index) => (
-                    <tr key={field.id}>
-                      <td className="px-3 py-2">
-                        <RadixSelect
-                          value={watch(`items.${index}.item_id`) || ''}
-                          onValueChange={(itemId) => {
-                            const selectedItem = availableItems.find(item => item.id === itemId);
-                            if (selectedItem) {
-                              setValue(`items.${index}.item_id`, itemId, { shouldValidate: true });
-                              setValue(`items.${index}.item_name`, selectedItem.item_name, { shouldValidate: true });
-                              // Auto-populate rate from standard_rate if available
-                              if (selectedItem.standard_rate) {
-                                setValue(`items.${index}.rate`, selectedItem.standard_rate, { shouldValidate: true });
-                              }
-                            }
-                          }}
-                        >
-                          <SelectTrigger className="w-full h-9">
-                            <SelectValue placeholder={t('accountingModule.invoices.form.items.selectItem')} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <div className="sticky top-0 bg-white dark:bg-gray-800 border-b pb-1">
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                className="w-full justify-start text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                                onClick={() => {
-                                  setCurrentItemIndex(index);
-                                  setShowItemModal(true);
-                                }}
-                              >
-                                <PackagePlus className="h-4 w-4 mr-2" />
-                                {t('accountingModule.invoices.form.items.addNewItem')}
-                              </Button>
-                            </div>
-                            {itemsLoading ? (
-                              <SelectItem value="_loading" disabled>
-                                {t('accountingModule.invoices.form.items.loadingItems')}
-                              </SelectItem>
-                            ) : availableItems.length === 0 ? (
-                              <SelectItem value="_none" disabled>
-                                {t('accountingModule.invoices.form.items.noItemsFound')}
-                              </SelectItem>
-                            ) : (
-                              availableItems.map((item) => (
-                                <SelectItem key={item.id} value={item.id} className="truncate max-w-[200px]">
-                                  <span className="truncate block">{item.item_code} - {item.item_name}</span>
-                                </SelectItem>
-                              ))
-                            )}
-                          </SelectContent>
-                        </RadixSelect>
-                        {/* Note: item_id and item_name are controlled via setValue from RadixSelect */}
-                        {errors.items?.[index]?.item_name && (
-                          <p className="text-xs text-red-600 mt-1">
-                            {errors.items[index]?.item_name?.message}
-                          </p>
-                        )}
-                      </td>
-                      <td className="px-3 py-2 min-w-[120px]">
-                        <Input
-                          {...register(`items.${index}.description`)}
-                          placeholder={t('accountingModule.invoices.form.items.placeholders.description')}
-                          className="h-9 text-sm"
-                        />
-                      </td>
-                      <td className="px-3 py-2">
-                        <Select
-                          {...register(`items.${index}.account_id`)}
-                          className="h-9 max-w-[180px]"
-                        >
-                          <option value="">{t('accountingModule.invoices.form.items.selectAccount')}</option>
-                          {availableAccounts.map((account) => (
-                            <option key={account.id} value={account.id} title={`${account.code} - ${account.name}`}>
-                              {account.code} - {account.name}
-                            </option>
-                          ))}
-                        </Select>
-                        {errors.items?.[index]?.account_id && (
-                          <p className="text-xs text-red-600 mt-1">
-                            {errors.items[index]?.account_id?.message}
-                          </p>
-                        )}
-                      </td>
-                      <td className="px-3 py-2">
-                        <Select
-                          {...register(`items.${index}.tax_id`)}
-                          className="h-9"
-                        >
-                          <option value="">{t('accountingModule.invoices.form.items.noTax')}</option>
-                          {allTaxes.map((tax) => (
-                            <option key={tax.id} value={tax.id}>
-                              {tax.name} ({tax.rate}%)
-                            </option>
-                          ))}
-                        </Select>
-                      </td>
-                      <td className="px-3 py-2">
-                        <Input
-                          type="number"
-                          step="0.01"
-                          {...register(`items.${index}.quantity`)}
-                          placeholder={t('accountingModule.invoices.form.items.placeholders.quantity')}
-                          className="h-9 text-right"
-                        />
-                      </td>
-                      <td className="px-3 py-2">
-                        <Input
-                          type="number"
-                          step="0.01"
-                          {...register(`items.${index}.rate`)}
-                          placeholder={t('accountingModule.invoices.form.items.placeholders.rate')}
-                          className="h-9 text-right"
-                        />
-                      </td>
-                      <td className="px-3 py-2 text-right font-medium">
-                        {calculateItemTotal(
-                          watchItems[index]?.quantity || 0,
-                          watchItems[index]?.rate || 0
-                        ).toFixed(2)}
-                      </td>
-                      <td className="px-3 py-2 text-center">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="invoice_date">
+                  {t("accountingModule.invoices.form.fields.invoiceDate")} *
+                </Label>
+                <Input
+                  id="invoice_date"
+                  type="date"
+                  {...register("invoice_date")}
+                />
+                {errors.invoice_date && (
+                  <p className="text-sm text-red-600 mt-1">
+                    {errors.invoice_date.message}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <Label htmlFor="due_date">
+                  {t("accountingModule.invoices.form.fields.dueDate")} *
+                </Label>
+                <Input id="due_date" type="date" {...register("due_date")} />
+                {errors.due_date && (
+                  <p className="text-sm text-red-600 mt-1">
+                    {errors.due_date.message}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Farm and Parcel (Optional) */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="farm_id">
+                  {t("accountingModule.invoices.form.fields.farm")} (
+                  {t("accountingModule.invoices.form.optional")})
+                </Label>
+                <Select id="farm_id" {...register("farm_id")}>
+                  <option value="">
+                    {t("accountingModule.invoices.form.fields.noFarmSelected")}
+                  </option>
+                  {farms?.map((farm) => (
+                    <option key={farm.id} value={farm.id}>
+                      {farm.name}
+                    </option>
+                  ))}
+                </Select>
+                <p className="text-xs text-gray-500 mt-1">
+                  {t("accountingModule.invoices.form.fields.farmHelp")}
+                </p>
+              </div>
+
+              <div>
+                <Label htmlFor="parcel_id">
+                  {t("accountingModule.invoices.form.fields.parcel")} (
+                  {t("accountingModule.invoices.form.optional")})
+                </Label>
+                <Select
+                  id="parcel_id"
+                  {...register("parcel_id")}
+                  disabled={!watch("farm_id")}
+                >
+                  <option value="">
+                    {t(
+                      "accountingModule.invoices.form.fields.noParcelSelected",
+                    )}
+                  </option>
+                  {parcels.map((parcel) => (
+                    <option key={parcel.id} value={parcel.id}>
+                      {parcel.name}
+                    </option>
+                  ))}
+                </Select>
+                <p className="text-xs text-gray-500 mt-1">
+                  {!watch("farm_id")
+                    ? t(
+                        "accountingModule.invoices.form.fields.parcelHelpSelectFarm",
+                      )
+                    : parcels.length === 0
+                      ? t(
+                          "accountingModule.invoices.form.fields.parcelHelpNoParcels",
+                        )
+                      : t("accountingModule.invoices.form.fields.parcelHelp")}
+                </p>
+              </div>
+            </div>
+
+            {/* Invoice Items */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <Label className="text-lg font-semibold">
+                  {t("accountingModule.invoices.form.items.title")}
+                </Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    append({
+                      item_id: "",
+                      item_name: "",
+                      description: "",
+                      quantity: 1,
+                      rate: 0,
+                      account_id: "",
+                    })
+                  }
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  {t("accountingModule.invoices.form.items.addItem")}
+                </Button>
+              </div>
+
+              {/* Mobile-friendly stacked items */}
+              <div className="space-y-3 md:hidden">
+                {fields.map((field, index) => {
+                  const itemTotal = calculateItemTotal(
+                    Number(watchItems[index]?.quantity || 0),
+                    Number(watchItems[index]?.rate || 0),
+                  );
+                  return (
+                    <div
+                      key={field.id}
+                      className="rounded-lg border p-3 space-y-3 bg-gray-50 dark:bg-gray-800"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                          {t("accountingModule.invoices.form.items.title")} #
+                          {index + 1}
+                        </span>
                         {fields.length > 1 && (
                           <Button
                             type="button"
                             variant="ghost"
                             size="sm"
                             onClick={() => remove(index)}
-                            className="text-red-600 hover:text-red-700"
+                            className="text-red-600 hover:text-red-700 min-h-[44px] min-w-[44px]"
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {errors.items && typeof errors.items === 'object' && 'message' in errors.items && (
-              <p className="text-sm text-red-600">{errors.items.message as string}</p>
-            )}
-          </div>
-
-          {/* Totals */}
-          <div className="flex justify-end">
-            <div className="w-80 space-y-2">
-              <div className="flex justify-between items-center py-2 border-t border-gray-200 dark:border-gray-700">
-                <span className="font-medium text-gray-700 dark:text-gray-300">{t('accountingModule.invoices.form.totals.subtotal')}:</span>
-                <span className="font-semibold text-gray-900 dark:text-white">
-                  {currencySymbol} {calculatedTotals.subtotal.toFixed(2)}
-                </span>
+                      </div>
+                      <div className="space-y-2">
+                        <div>
+                          <Label className="text-xs text-gray-500 dark:text-gray-400">
+                            {t(
+                              "accountingModule.invoices.form.items.columns.itemName",
+                            )}{" "}
+                            *
+                          </Label>
+                          <RadixSelect
+                            value={watch(`items.${index}.item_id`) || ""}
+                            onValueChange={(itemId) => {
+                              const selectedItem = availableItems.find(
+                                (item) => item.id === itemId,
+                              );
+                              if (selectedItem) {
+                                setValue(`items.${index}.item_id`, itemId, {
+                                  shouldValidate: true,
+                                });
+                                setValue(
+                                  `items.${index}.item_name`,
+                                  selectedItem.item_name,
+                                  { shouldValidate: true },
+                                );
+                                if (selectedItem.standard_rate) {
+                                  setValue(
+                                    `items.${index}.rate`,
+                                    selectedItem.standard_rate,
+                                    { shouldValidate: true },
+                                  );
+                                }
+                              }
+                            }}
+                          >
+                            <SelectTrigger className="w-full h-9">
+                              <SelectValue
+                                placeholder={t(
+                                  "accountingModule.invoices.form.items.selectItem",
+                                )}
+                              />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <div className="sticky top-0 bg-white dark:bg-gray-800 border-b pb-1">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  className="w-full justify-start text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                  onClick={() => {
+                                    setCurrentItemIndex(index);
+                                    setShowItemModal(true);
+                                  }}
+                                >
+                                  <PackagePlus className="h-4 w-4 mr-2" />
+                                  {t(
+                                    "accountingModule.invoices.form.items.addNewItem",
+                                  )}
+                                </Button>
+                              </div>
+                              {itemsLoading ? (
+                                <SelectItem value="_loading" disabled>
+                                  {t(
+                                    "accountingModule.invoices.form.items.loadingItems",
+                                  )}
+                                </SelectItem>
+                              ) : availableItems.length === 0 ? (
+                                <SelectItem value="_none" disabled>
+                                  {t(
+                                    "accountingModule.invoices.form.items.noItemsFound",
+                                  )}
+                                </SelectItem>
+                              ) : (
+                                availableItems.map((item) => (
+                                  <SelectItem key={item.id} value={item.id}>
+                                    {item.item_code} - {item.item_name}
+                                  </SelectItem>
+                                ))
+                              )}
+                            </SelectContent>
+                          </RadixSelect>
+                          {errors.items?.[index]?.item_name && (
+                            <p className="text-xs text-red-600 mt-1">
+                              {errors.items[index]?.item_name?.message}
+                            </p>
+                          )}
+                        </div>
+                        <Input
+                          {...register(`items.${index}.description`)}
+                          placeholder={t(
+                            "accountingModule.invoices.form.items.placeholders.description",
+                          )}
+                          className="h-9 text-sm"
+                        />
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <Label className="text-xs text-gray-500 dark:text-gray-400">
+                              {t(
+                                "accountingModule.invoices.form.items.columns.account",
+                              )}{" "}
+                              *
+                            </Label>
+                            <Select
+                              {...register(`items.${index}.account_id`)}
+                              className="h-9 w-full"
+                            >
+                              <option value="">
+                                {t(
+                                  "accountingModule.invoices.form.items.selectAccount",
+                                )}
+                              </option>
+                              {availableAccounts.map((account) => (
+                                <option key={account.id} value={account.id}>
+                                  {account.code} - {account.name}
+                                </option>
+                              ))}
+                            </Select>
+                            {errors.items?.[index]?.account_id && (
+                              <p className="text-xs text-red-600 mt-1">
+                                {errors.items[index]?.account_id?.message}
+                              </p>
+                            )}
+                          </div>
+                          <div>
+                            <Label className="text-xs text-gray-500 dark:text-gray-400">
+                              {t(
+                                "accountingModule.invoices.form.items.columns.tax",
+                              )}
+                            </Label>
+                            <Select
+                              {...register(`items.${index}.tax_id`)}
+                              className="h-9 w-full"
+                            >
+                              <option value="">
+                                {t(
+                                  "accountingModule.invoices.form.items.noTax",
+                                )}
+                              </option>
+                              {allTaxes.map((tax) => (
+                                <option key={tax.id} value={tax.id}>
+                                  {tax.name} ({tax.rate}%)
+                                </option>
+                              ))}
+                            </Select>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-3 gap-2">
+                          <div>
+                            <Label className="text-xs text-gray-500 dark:text-gray-400">
+                              {t(
+                                "accountingModule.invoices.form.items.columns.quantity",
+                              )}{" "}
+                              *
+                            </Label>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              {...register(`items.${index}.quantity`)}
+                              placeholder={t(
+                                "accountingModule.invoices.form.items.placeholders.quantity",
+                              )}
+                              className="h-9 text-right"
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-xs text-gray-500 dark:text-gray-400">
+                              {t(
+                                "accountingModule.invoices.form.items.columns.rate",
+                              )}{" "}
+                              *
+                            </Label>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              {...register(`items.${index}.rate`)}
+                              placeholder={t(
+                                "accountingModule.invoices.form.items.placeholders.rate",
+                              )}
+                              className="h-9 text-right"
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-xs text-gray-500 dark:text-gray-400">
+                              {t(
+                                "accountingModule.invoices.form.items.columns.amount",
+                              )}
+                            </Label>
+                            <div className="h-9 flex items-center justify-end font-medium text-sm bg-white dark:bg-gray-900 border rounded px-3">
+                              {currencySymbol} {itemTotal.toFixed(2)}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
 
-              {/* Tax Breakdown */}
-              {calculatedTotals.tax_breakdown.length > 0 && (
-                <div className="space-y-1">
-                  {calculatedTotals.tax_breakdown.map((tax) => (
-                    <div key={tax.tax_id} className="flex justify-between items-center py-1 pl-4">
-                      <span className="text-sm text-gray-600 dark:text-gray-400">
-                        {tax.tax_name} ({tax.tax_rate}%):
-                      </span>
-                      <span className="text-sm text-gray-900 dark:text-white">
-                        {currencySymbol} {tax.tax_amount.toFixed(2)}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
+              {/* Desktop table */}
+              <div className="border rounded-lg overflow-x-auto hidden md:block">
+                <Table className="w-full min-w-[800px]">
+                  <TableHeader className="bg-gray-50 dark:bg-gray-800">
+                    <TableRow>
+                      <TableHead className="px-3 py-2 text-left text-xs font-medium text-gray-600 dark:text-gray-400 whitespace-nowrap min-w-[140px]">
+                        {t(
+                          "accountingModule.invoices.form.items.columns.itemName",
+                        )}{" "}
+                        *
+                      </TableHead>
+                      <TableHead className="px-3 py-2 text-left text-xs font-medium text-gray-600 dark:text-gray-400 whitespace-nowrap min-w-[120px]">
+                        {t(
+                          "accountingModule.invoices.form.items.columns.description",
+                        )}
+                      </TableHead>
+                      <TableHead className="px-3 py-2 text-left text-xs font-medium text-gray-600 dark:text-gray-400 whitespace-nowrap min-w-[120px]">
+                        {t(
+                          "accountingModule.invoices.form.items.columns.account",
+                        )}{" "}
+                        *
+                      </TableHead>
+                      <TableHead className="px-3 py-2 text-left text-xs font-medium text-gray-600 dark:text-gray-400 whitespace-nowrap min-w-[80px]">
+                        {t("accountingModule.invoices.form.items.columns.tax")}
+                      </TableHead>
+                      <TableHead className="px-3 py-2 text-right text-xs font-medium text-gray-600 dark:text-gray-400 whitespace-nowrap min-w-[60px]">
+                        {t(
+                          "accountingModule.invoices.form.items.columns.quantity",
+                        )}{" "}
+                        *
+                      </TableHead>
+                      <TableHead className="px-3 py-2 text-right text-xs font-medium text-gray-600 dark:text-gray-400 whitespace-nowrap min-w-[60px]">
+                        {t("accountingModule.invoices.form.items.columns.rate")}{" "}
+                        *
+                      </TableHead>
+                      <TableHead className="px-3 py-2 text-right text-xs font-medium text-gray-600 dark:text-gray-400 whitespace-nowrap min-w-[70px]">
+                        {t(
+                          "accountingModule.invoices.form.items.columns.amount",
+                        )}
+                      </TableHead>
+                      <TableHead className="px-3 py-2 text-center text-xs font-medium text-gray-600 dark:text-gray-400 whitespace-nowrap min-w-[50px]">
+                        {t(
+                          "accountingModule.invoices.form.items.columns.action",
+                        )}
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody className="divide-y divide-gray-200 dark:divide-gray-700">
+                    {fields.map((field, index) => (
+                      <TableRow key={field.id}>
+                        <TableCell className="px-3 py-2">
+                          <RadixSelect
+                            value={watch(`items.${index}.item_id`) || ""}
+                            onValueChange={(itemId) => {
+                              const selectedItem = availableItems.find(
+                                (item) => item.id === itemId,
+                              );
+                              if (selectedItem) {
+                                setValue(`items.${index}.item_id`, itemId, {
+                                  shouldValidate: true,
+                                });
+                                setValue(
+                                  `items.${index}.item_name`,
+                                  selectedItem.item_name,
+                                  { shouldValidate: true },
+                                );
+                                // Auto-populate rate from standard_rate if available
+                                if (selectedItem.standard_rate) {
+                                  setValue(
+                                    `items.${index}.rate`,
+                                    selectedItem.standard_rate,
+                                    { shouldValidate: true },
+                                  );
+                                }
+                              }
+                            }}
+                          >
+                            <SelectTrigger className="w-full h-9">
+                              <SelectValue
+                                placeholder={t(
+                                  "accountingModule.invoices.form.items.selectItem",
+                                )}
+                              />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <div className="sticky top-0 bg-white dark:bg-gray-800 border-b pb-1">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  className="w-full justify-start text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                  onClick={() => {
+                                    setCurrentItemIndex(index);
+                                    setShowItemModal(true);
+                                  }}
+                                >
+                                  <PackagePlus className="h-4 w-4 mr-2" />
+                                  {t(
+                                    "accountingModule.invoices.form.items.addNewItem",
+                                  )}
+                                </Button>
+                              </div>
+                              {itemsLoading ? (
+                                <SelectItem value="_loading" disabled>
+                                  {t(
+                                    "accountingModule.invoices.form.items.loadingItems",
+                                  )}
+                                </SelectItem>
+                              ) : availableItems.length === 0 ? (
+                                <SelectItem value="_none" disabled>
+                                  {t(
+                                    "accountingModule.invoices.form.items.noItemsFound",
+                                  )}
+                                </SelectItem>
+                              ) : (
+                                availableItems.map((item) => (
+                                  <SelectItem
+                                    key={item.id}
+                                    value={item.id}
+                                    className="truncate max-w-[200px]"
+                                  >
+                                    <span className="truncate block">
+                                      {item.item_code} - {item.item_name}
+                                    </span>
+                                  </SelectItem>
+                                ))
+                              )}
+                            </SelectContent>
+                          </RadixSelect>
+                          {/* Note: item_id and item_name are controlled via setValue from RadixSelect */}
+                          {errors.items?.[index]?.item_name && (
+                            <p className="text-xs text-red-600 mt-1">
+                              {errors.items[index]?.item_name?.message}
+                            </p>
+                          )}
+                        </TableCell>
+                        <TableCell className="px-3 py-2 min-w-[120px]">
+                          <Input
+                            {...register(`items.${index}.description`)}
+                            placeholder={t(
+                              "accountingModule.invoices.form.items.placeholders.description",
+                            )}
+                            className="h-9 text-sm"
+                          />
+                        </TableCell>
+                        <TableCell className="px-3 py-2">
+                          <Select
+                            {...register(`items.${index}.account_id`)}
+                            className="h-9 max-w-[180px]"
+                          >
+                            <option value="">
+                              {t(
+                                "accountingModule.invoices.form.items.selectAccount",
+                              )}
+                            </option>
+                            {availableAccounts.map((account) => (
+                              <option
+                                key={account.id}
+                                value={account.id}
+                                title={`${account.code} - ${account.name}`}
+                              >
+                                {account.code} - {account.name}
+                              </option>
+                            ))}
+                          </Select>
+                          {errors.items?.[index]?.account_id && (
+                            <p className="text-xs text-red-600 mt-1">
+                              {errors.items[index]?.account_id?.message}
+                            </p>
+                          )}
+                        </TableCell>
+                        <TableCell className="px-3 py-2">
+                          <Select
+                            {...register(`items.${index}.tax_id`)}
+                            className="h-9"
+                          >
+                            <option value="">
+                              {t("accountingModule.invoices.form.items.noTax")}
+                            </option>
+                            {allTaxes.map((tax) => (
+                              <option key={tax.id} value={tax.id}>
+                                {tax.name} ({tax.rate}%)
+                              </option>
+                            ))}
+                          </Select>
+                        </TableCell>
+                        <TableCell className="px-3 py-2">
+                          <Input
+                            type="number"
+                            step="0.01"
+                            {...register(`items.${index}.quantity`)}
+                            placeholder={t(
+                              "accountingModule.invoices.form.items.placeholders.quantity",
+                            )}
+                            className="h-9 text-right"
+                          />
+                        </TableCell>
+                        <TableCell className="px-3 py-2">
+                          <Input
+                            type="number"
+                            step="0.01"
+                            {...register(`items.${index}.rate`)}
+                            placeholder={t(
+                              "accountingModule.invoices.form.items.placeholders.rate",
+                            )}
+                            className="h-9 text-right"
+                          />
+                        </TableCell>
+                        <TableCell className="px-3 py-2 text-right font-medium">
+                          {calculateItemTotal(
+                            Number(watchItems[index]?.quantity || 0),
+                            Number(watchItems[index]?.rate || 0),
+                          ).toFixed(2)}
+                        </TableCell>
+                        <TableCell className="px-3 py-2 text-center">
+                          {fields.length > 1 && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => remove(index)}
+                              className="text-red-600 hover:text-red-700"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
 
-              {calculatedTotals.tax_total > 0 && (
+              {errors.items &&
+                typeof errors.items === "object" &&
+                "message" in errors.items && (
+                  <p className="text-sm text-red-600">
+                    {errors.items.message as string}
+                  </p>
+                )}
+            </div>
+
+            {/* Totals */}
+            <div className="flex justify-end">
+              <div className="w-80 space-y-2">
                 <div className="flex justify-between items-center py-2 border-t border-gray-200 dark:border-gray-700">
-                  <span className="font-medium text-gray-700 dark:text-gray-300">{t('accountingModule.invoices.form.totals.totalTax')}:</span>
+                  <span className="font-medium text-gray-700 dark:text-gray-300">
+                    {t("accountingModule.invoices.form.totals.subtotal")}:
+                  </span>
                   <span className="font-semibold text-gray-900 dark:text-white">
-                    {currencySymbol} {calculatedTotals.tax_total.toFixed(2)}
+                    {currencySymbol} {calculatedTotals.subtotal.toFixed(2)}
                   </span>
                 </div>
-              )}
 
-              <div className="flex justify-between items-center py-2 border-t-2 border-gray-900 dark:border-white">
-                <span className="font-bold text-gray-900 dark:text-white text-lg">{t('accountingModule.invoices.form.totals.grandTotal')}:</span>
-                <span className="font-bold text-gray-900 dark:text-white text-lg">
-                  {currencySymbol} {calculatedTotals.grand_total.toFixed(2)}
-                </span>
+                {/* Tax Breakdown */}
+                {calculatedTotals.tax_breakdown.length > 0 && (
+                  <div className="space-y-1">
+                    {calculatedTotals.tax_breakdown.map((tax) => (
+                      <div
+                        key={tax.tax_id}
+                        className="flex justify-between items-center py-1 pl-4"
+                      >
+                        <span className="text-sm text-gray-600 dark:text-gray-400">
+                          {tax.tax_name} ({tax.tax_rate}%):
+                        </span>
+                        <span className="text-sm text-gray-900 dark:text-white">
+                          {currencySymbol} {tax.tax_amount.toFixed(2)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {calculatedTotals.tax_total > 0 && (
+                  <div className="flex justify-between items-center py-2 border-t border-gray-200 dark:border-gray-700">
+                    <span className="font-medium text-gray-700 dark:text-gray-300">
+                      {t("accountingModule.invoices.form.totals.totalTax")}:
+                    </span>
+                    <span className="font-semibold text-gray-900 dark:text-white">
+                      {currencySymbol} {calculatedTotals.tax_total.toFixed(2)}
+                    </span>
+                  </div>
+                )}
+
+                <div className="flex justify-between items-center py-2 border-t-2 border-gray-900 dark:border-white">
+                  <span className="font-bold text-gray-900 dark:text-white text-lg">
+                    {t("accountingModule.invoices.form.totals.grandTotal")}:
+                  </span>
+                  <span className="font-bold text-gray-900 dark:text-white text-lg">
+                    {currencySymbol} {calculatedTotals.grand_total.toFixed(2)}
+                  </span>
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Remarks */}
-          <div>
-            <Label htmlFor="remarks">{t('accountingModule.invoices.form.fields.remarks')}</Label>
-            <Input
-              id="remarks"
-              {...register('remarks')}
-              placeholder={t('accountingModule.invoices.form.fields.remarksPlaceholder')}
-            />
-          </div>
+            {/* Remarks */}
+            <div>
+              <Label htmlFor="remarks">
+                {t("accountingModule.invoices.form.fields.remarks")}
+              </Label>
+              <Input
+                id="remarks"
+                {...register("remarks")}
+                placeholder={t(
+                  "accountingModule.invoices.form.fields.remarksPlaceholder",
+                )}
+              />
+            </div>
 
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={handleClose}>
-              {t('accountingModule.invoices.form.buttons.cancel')}
-            </Button>
-            <Button type="submit" disabled={isSubmitting || createInvoice.isPending || updateInvoice.isPending}>
-              {isSubmitting || createInvoice.isPending || updateInvoice.isPending
-                ? (isEditMode ? t('accountingModule.invoices.form.buttons.updating') : t('accountingModule.invoices.form.buttons.creating'))
-                : (isEditMode ? t('accountingModule.invoices.form.buttons.update') : t('accountingModule.invoices.form.buttons.create'))}
-            </Button>
-          </DialogFooter>
-        </form>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={handleClose}>
+                {t("accountingModule.invoices.form.buttons.cancel")}
+              </Button>
+              <Button
+                type="submit"
+                disabled={
+                  isSubmitting ||
+                  createInvoice.isPending ||
+                  updateInvoice.isPending
+                }
+              >
+                {isSubmitting ||
+                createInvoice.isPending ||
+                updateInvoice.isPending
+                  ? isEditMode
+                    ? t("accountingModule.invoices.form.buttons.updating")
+                    : t("accountingModule.invoices.form.buttons.creating")
+                  : isEditMode
+                    ? t("accountingModule.invoices.form.buttons.update")
+                    : t("accountingModule.invoices.form.buttons.create")}
+              </Button>
+            </DialogFooter>
+          </form>
         )}
-      </DialogContent>
 
       {/* Quick Create Item Modal */}
       <QuickCreateItem
         open={showItemModal}
         onOpenChange={setShowItemModal}
-        type={watchInvoiceType === 'sales' ? 'sales' : 'purchase'}
+        type={watchInvoiceType === "sales" ? "sales" : "purchase"}
         onSuccess={(itemId, itemName) => {
           if (currentItemIndex !== null) {
-            setValue(`items.${currentItemIndex}.item_id`, itemId, { shouldValidate: true });
-            setValue(`items.${currentItemIndex}.item_name`, itemName, { shouldValidate: true });
+            setValue(`items.${currentItemIndex}.item_id`, itemId, {
+              shouldValidate: true,
+            });
+            setValue(`items.${currentItemIndex}.item_name`, itemName, {
+              shouldValidate: true,
+            });
           }
           setShowItemModal(false);
           setCurrentItemIndex(null);
         }}
       />
-    </Dialog>
+    </ResponsiveDialog>
   );
 };

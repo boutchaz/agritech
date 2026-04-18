@@ -1,9 +1,24 @@
-import React, { useState, useRef, useEffect } from 'react';
+import type React from 'react';
+import { useState, useRef, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useHotkey } from '@tanstack/react-hotkeys';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigate } from '@tanstack/react-router';
 import { Building, ChevronDown, Check, Settings, Users, LogOut } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import UserAvatar from '@/components/ui/UserAvatar';
+import {
+  headerToolbarTextTriggerClass,
+  headerToolbarTightTriggerClass,
+} from '@/lib/header-toolbar';
+import { Button } from '@/components/ui/button';
 
-const OrganizationSwitcher: React.FC = () => {
+interface OrganizationSwitcherProps {
+  compact?: boolean;
+}
+
+const OrganizationSwitcher = ({ compact = false }: OrganizationSwitcherProps) => {
+  const { t } = useTranslation();
   const {
     organizations,
     currentOrganization,
@@ -23,52 +38,88 @@ const OrganizationSwitcher: React.FC = () => {
 
   const [isOpen, setIsOpen] = useState(false);
   const [showFarms, setShowFarms] = useState(false);
-  const [dropdownPosition, setDropdownPosition] = useState<'left' | 'right'>('left');
+  const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
   const dropdownRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
+    if (!isOpen) return;
+
+    const close = () => {
+      setIsOpen(false);
+      setShowFarms(false);
+    };
+
+    const handlePointerDown = (event: PointerEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-        setShowFarms(false);
+        close();
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  useEffect(() => {
-    if (isOpen && buttonRef.current) {
-      const buttonRect = buttonRef.current.getBoundingClientRect();
-      const windowWidth = window.innerWidth;
-      const dropdownWidth = 320; // w-80 = 20rem = 320px
-
-      // Check available space on both sides
-      // const spaceOnRight = windowWidth - buttonRect.left;
-      // const spaceOnLeft = buttonRect.right;
-
-      // If button is on the right half of the screen, align dropdown to right edge
-      // Otherwise align to left edge, but only if it fits
-      if (buttonRect.left > windowWidth / 2) {
-        // Button is on the right side - align dropdown to right
-        setDropdownPosition('right');
-      } else if (buttonRect.left + dropdownWidth > windowWidth - 20) {
-        // Button is on left but dropdown would overflow - align to right if possible
-        setDropdownPosition('right');
-      } else {
-        setDropdownPosition('left');
-      }
-    }
+    document.addEventListener('pointerdown', handlePointerDown, true);
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown, true);
+    };
   }, [isOpen]);
 
-  const handleOrganizationSelect = async (org: any) => {
+  useHotkey('Escape', () => {
+    setIsOpen(false);
+    setShowFarms(false);
+  }, {
+    enabled: isOpen,
+    meta: { name: t('close', 'Close'), description: 'Close organization switcher' },
+  });
+
+  useEffect(() => {
+    if (!isOpen || !buttonRef.current) return;
+
+    const updatePosition = () => {
+      if (!buttonRef.current || !dropdownRef.current) return;
+      const buttonRect = buttonRef.current.getBoundingClientRect();
+      const parentRect = dropdownRef.current.getBoundingClientRect();
+      const windowWidth = window.innerWidth;
+      const dropdownWidth = Math.min(320, windowWidth - 24);
+      const margin = 12;
+
+      // Calculate where the dropdown's left edge would be if right-aligned to button
+      const rightAlignedLeft = buttonRect.right - dropdownWidth;
+      // Calculate where the dropdown's right edge would be if left-aligned to button
+      const leftAlignedRight = buttonRect.left + dropdownWidth;
+
+      let left: number;
+
+      if (rightAlignedLeft >= margin) {
+        // Right-align: dropdown ends at button's right edge
+        left = buttonRect.right - dropdownWidth - parentRect.left;
+      } else if (leftAlignedRight <= windowWidth - margin) {
+        // Left-align: dropdown starts at button's left edge
+        left = buttonRect.left - parentRect.left;
+      } else {
+        // Center in viewport as fallback
+        left = (windowWidth - dropdownWidth) / 2 - parentRect.left;
+      }
+
+      setDropdownStyle({
+        left: `${left}px`,
+        width: `${dropdownWidth}px`,
+      });
+    };
+
+    updatePosition();
+    window.addEventListener('resize', updatePosition);
+    window.addEventListener('scroll', updatePosition, true);
+    return () => {
+      window.removeEventListener('resize', updatePosition);
+      window.removeEventListener('scroll', updatePosition, true);
+    };
+  }, [isOpen]);
+
+  const handleOrganizationSelect = async (org: { id: string; name: string; role: string }) => {
     setCurrentOrganization(org);
     setShowFarms(true);
   };
 
-  const handleFarmSelect = (farm: any) => {
+  const handleFarmSelect = (farm: { id: string; name: string; location?: string | null; size?: number | null }) => {
     setCurrentFarm(farm);
     setIsOpen(false);
     setShowFarms(false);
@@ -83,7 +134,7 @@ const OrganizationSwitcher: React.FC = () => {
   const handleUserProfile = () => {
     setIsOpen(false);
     setShowFarms(false);
-    navigate({ to: '/settings/profile' });
+    navigate({ to: '/settings/account' });
   };
 
   const handleTeamManagement = () => {
@@ -103,14 +154,9 @@ const OrganizationSwitcher: React.FC = () => {
   };
 
   const getRoleLabel = (role: string) => {
-    switch (role) {
-      case 'owner': return 'Propriétaire';
-      case 'admin': return 'Administrateur';
-      case 'manager': return 'Gestionnaire';
-      case 'member': return 'Membre';
-      case 'viewer': return 'Lecteur';
-      default: return role;
-    }
+    const key = `orgSwitcher.roles.${role}`;
+    const translated = t(key);
+    return translated !== key ? translated : role;
   };
 
   if (!currentOrganization) {
@@ -119,51 +165,70 @@ const OrganizationSwitcher: React.FC = () => {
 
   return (
     <div className="relative w-full sm:w-auto" ref={dropdownRef} data-tour="org-switcher">
-      <button
+      <Button
+        type="button"
         ref={buttonRef}
         onClick={() => setIsOpen(!isOpen)}
         data-tour="user-menu"
-        className="flex w-full sm:w-auto items-center justify-between sm:justify-start gap-2 sm:gap-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 sm:px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+        title={
+          !compact && currentFarm?.name
+            ? `${currentOrganization.name} — ${currentFarm.name}`
+            : currentOrganization.name
+        }
+        className={cn(
+          compact ? headerToolbarTightTriggerClass : cn(headerToolbarTextTriggerClass, 'justify-between'),
+          'w-full sm:w-auto',
+        )}
       >
-        <div className="flex items-center gap-2 min-w-0">
-          <Building className="h-5 w-5 text-gray-500 flex-shrink-0" />
-          <div className="text-left min-w-0">
-            <div className="font-medium text-gray-900 dark:text-white text-sm leading-tight truncate max-w-[160px] sm:max-w-[220px]">
-              {currentOrganization.name}
+        {compact ? (
+          <>
+            <Building className="h-5 w-5 shrink-0 text-gray-500" />
+            <ChevronDown
+              className={cn('h-4 w-4 shrink-0 text-gray-500 transition-transform', isOpen && 'rotate-180')}
+            />
+          </>
+        ) : (
+          <>
+            <div className="flex min-w-0 flex-1 items-center gap-2">
+              <Building className="h-5 w-5 shrink-0 text-gray-500" />
+              <span className="truncate text-start text-sm font-medium text-gray-900 dark:text-white">
+                {currentOrganization.name}
+                {currentFarm?.name ? ` · ${currentFarm.name}` : ''}
+              </span>
             </div>
-            {currentFarm && (
-              <div className="text-xs text-gray-500 dark:text-gray-400 leading-tight truncate max-w-[160px] sm:max-w-[220px]">
-                {currentFarm.name}
-              </div>
-            )}
-          </div>
-        </div>
-        <ChevronDown className={`h-4 w-4 text-gray-500 flex-shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
-      </button>
+            <ChevronDown
+              className={cn('h-4 w-4 shrink-0 text-gray-500 transition-transform', isOpen && 'rotate-180')}
+            />
+          </>
+        )}
+      </Button>
 
       {isOpen && (
-        <div className={`absolute top-full mt-2 w-full sm:w-80 min-w-[260px] max-w-[calc(100vw-0.75rem)] sm:max-w-[calc(100vw-2rem)] max-h-[80vh] overflow-y-auto bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50 ${
-          dropdownPosition === 'right' ? 'right-0' : 'left-0'
-        }`}>
+        <div
+          className="absolute top-full z-[200] mt-2 max-h-[80vh] overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800"
+          style={dropdownStyle}
+        >
           {/* User Info */}
           <button
+            type="button"
             onClick={handleUserProfile}
             className="w-full px-4 py-3 border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
           >
-            <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center">
-                <span className="text-white text-sm font-medium">
-                  {profile?.first_name?.[0] || user?.email?.[0]?.toUpperCase() || '?'}
-                  {profile?.last_name?.[0] || ''}
-                </span>
-              </div>
+            <div className="flex items-center gap-3">
+              <UserAvatar
+                src={profile?.avatar_url}
+                firstName={profile?.first_name}
+                lastName={profile?.last_name}
+                email={user?.email}
+                size="sm"
+              />
               <div className="flex-1 min-w-0">
-                <div className="font-medium text-gray-900 dark:text-white">
+                <div className="font-medium text-gray-900 dark:text-white text-start">
                   {profile?.first_name && profile?.last_name
                     ? `${profile.first_name} ${profile.last_name}`
                     : user?.email?.split('@')[0] || 'User'}
                 </div>
-                <div className="text-sm text-gray-500 dark:text-gray-400 truncate">
+                <div className="text-sm text-gray-500 dark:text-gray-400 truncate text-start">
                   {user?.email || 'No email'}
                 </div>
               </div>
@@ -175,23 +240,24 @@ const OrganizationSwitcher: React.FC = () => {
             <>
               <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700">
                 <div className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                  Organisations
+                  {t('orgSwitcher.organizations')}
                 </div>
               </div>
               <div className="max-h-64 overflow-y-auto overflow-x-hidden">
                 {organizations.map((org) => (
                   <button
+                    type="button"
                     key={org.id}
                     onClick={() => handleOrganizationSelect(org)}
-                    className="w-full px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center justify-between gap-3"
+                    className="w-full px-4 py-3 text-start hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center justify-between gap-3"
                   >
-                    <div className="flex items-center space-x-2">
-                      <Building className="h-4 w-4 text-gray-400" />
+                    <div className="flex min-w-0 flex-1 items-center gap-2.5">
+                      <Building className="h-4 w-4 shrink-0 text-gray-400" />
                       <div className="min-w-0">
                         <div className="font-medium text-gray-900 dark:text-white text-sm truncate max-w-[180px]">
                           {org.name}
                         </div>
-                        <div className="flex items-center space-x-2 mt-0.5">
+                        <div className="mt-0.5 flex flex-wrap items-center gap-2">
                           <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium max-w-[150px] truncate ${getRoleColor(org.role)}`}>
                             {getRoleLabel(org.role)}
                           </span>
@@ -199,7 +265,7 @@ const OrganizationSwitcher: React.FC = () => {
                       </div>
                     </div>
                     {currentOrganization.id === org.id && (
-                      <Check className="h-4 w-4 text-green-600" />
+                      <Check className="h-4 w-4 shrink-0 text-green-600" />
                     )}
                   </button>
                 ))}
@@ -208,25 +274,30 @@ const OrganizationSwitcher: React.FC = () => {
               {/* Actions */}
               <div className="border-t border-gray-200 dark:border-gray-700">
                 <button
-                  className="w-full px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center space-x-3 text-sm"
+                  type="button"
+                  className="flex w-full items-center gap-3 px-4 py-3 text-start text-sm hover:bg-gray-50 dark:hover:bg-gray-700"
                   onClick={handleOrganizationSettings}
                 >
-                  <Settings className="h-4 w-4 text-gray-400" />
-                  <span className="text-gray-700 dark:text-gray-300">Paramètres de l'organisation</span>
+                  <Settings className="h-4 w-4 shrink-0 text-gray-400" />
+                  <span className="min-w-0 flex-1 text-gray-700 dark:text-gray-300">
+                    {t('orgSwitcher.orgSettings')}
+                  </span>
                 </button>
                 <button
-                  className="w-full px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center space-x-3 text-sm"
+                  type="button"
+                  className="flex w-full items-center gap-3 px-4 py-3 text-start text-sm hover:bg-gray-50 dark:hover:bg-gray-700"
                   onClick={handleTeamManagement}
                 >
-                  <Users className="h-4 w-4 text-gray-400" />
-                  <span className="text-gray-700 dark:text-gray-300">Gérer l'équipe</span>
+                  <Users className="h-4 w-4 shrink-0 text-gray-400" />
+                  <span className="min-w-0 flex-1 text-gray-700 dark:text-gray-300">{t('orgSwitcher.manageTeam')}</span>
                 </button>
                 <button
+                  type="button"
                   onClick={signOut}
-                  className="w-full px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center space-x-3 text-sm text-red-600"
+                  className="flex w-full items-center gap-3 px-4 py-3 text-start text-sm text-red-600 hover:bg-gray-50 dark:hover:bg-gray-700"
                 >
-                  <LogOut className="h-4 w-4" />
-                  <span>Se déconnecter</span>
+                  <LogOut className="h-4 w-4 shrink-0" />
+                  <span className="min-w-0 flex-1">{t('orgSwitcher.signOut')}</span>
                 </button>
               </div>
             </>
@@ -235,13 +306,14 @@ const OrganizationSwitcher: React.FC = () => {
             <>
               <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700">
                 <button
+                  type="button"
                   onClick={() => setShowFarms(false)}
                   className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
                 >
-                  ← Retour aux organisations
+                  {t('orgSwitcher.backToOrganizations')}
                 </button>
                 <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mt-2">
-                  Fermes - {currentOrganization.name}
+                  {t('orgSwitcher.farms', { orgName: currentOrganization.name })}
                 </div>
               </div>
               <div className="max-h-64 overflow-y-auto overflow-x-hidden">
@@ -249,8 +321,9 @@ const OrganizationSwitcher: React.FC = () => {
                   farms.map((farm) => (
                     <button
                       key={farm.id}
+                      type="button"
                       onClick={() => handleFarmSelect(farm)}
-                      className="w-full px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center justify-between"
+                      className="flex w-full items-center justify-between gap-3 px-4 py-3 text-start hover:bg-gray-50 dark:hover:bg-gray-700"
                     >
                       <div className="flex-1 min-w-0">
                         <div className="font-medium text-gray-900 dark:text-white truncate">
@@ -260,7 +333,7 @@ const OrganizationSwitcher: React.FC = () => {
                           {farm.location ? `${farm.location} • ` : ''}{farm.size ? `${farm.size} ha` : ''}
                         </div>
                         <div className="text-xs text-gray-400 truncate">
-                          Gestionnaire: {farm.manager_name}
+                          {t('orgSwitcher.manager', { name: farm.manager_name })}
                         </div>
                       </div>
                       {currentFarm?.id === farm.id && (
@@ -271,8 +344,8 @@ const OrganizationSwitcher: React.FC = () => {
                 ) : (
                   <div className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
                     <Building className="h-8 w-8 mx-auto mb-2 text-gray-300" />
-                    <p>Aucune ferme trouvée</p>
-                    <p className="text-xs">Créez votre première ferme</p>
+                    <p>{t('orgSwitcher.noFarms')}</p>
+                    <p className="text-xs">{t('orgSwitcher.createFirstFarm')}</p>
                   </div>
                 )}
               </div>

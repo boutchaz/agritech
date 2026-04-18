@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -6,14 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/label';
 import { NativeSelect } from '@/components/ui/NativeSelect';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import { useCreateTax } from '@/hooks/useTaxes';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
@@ -33,12 +26,12 @@ const taxSchema = z.object({
 
 type TaxFormData = z.infer<typeof taxSchema>;
 
-export const QuickCreateTax: React.FC<QuickCreateTaxProps> = ({
+export const QuickCreateTax = ({
   open,
   onOpenChange,
   onSuccess,
   taxType = 'sales',
-}) => {
+}: QuickCreateTaxProps) => {
   const createTax = useCreateTax();
 
   const {
@@ -74,16 +67,32 @@ export const QuickCreateTax: React.FC<QuickCreateTaxProps> = ({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>Quick Create Tax</DialogTitle>
-          <DialogDescription>
-            Add a new tax rate. You can edit details later.
-          </DialogDescription>
-        </DialogHeader>
-
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+    <ResponsiveDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title="Quick Create Tax"
+      description="Add a new tax rate. You can edit details later."
+      size="md"
+      footer={(
+        <>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              reset();
+              onOpenChange(false);
+            }}
+          >
+            Cancel
+          </Button>
+          <Button type="submit" form="quick-create-tax-form" disabled={isSubmitting}>
+            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Create Tax
+          </Button>
+        </>
+      )}
+    >
+      <form id="quick-create-tax-form" onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div>
             <Label htmlFor="tax_name">Tax Name *</Label>
             <Input
@@ -126,24 +135,7 @@ export const QuickCreateTax: React.FC<QuickCreateTaxProps> = ({
             </p>
           </div>
 
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                reset();
-                onOpenChange(false);
-              }}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Create Tax
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+      </form>
+    </ResponsiveDialog>
   );
 };

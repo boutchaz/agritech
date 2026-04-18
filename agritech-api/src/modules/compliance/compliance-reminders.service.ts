@@ -293,18 +293,13 @@ export class ComplianceRemindersService {
     reminderType: string,
     formattedDate: string
   ): Promise<boolean> {
-    return this.emailService.sendEmail({
-      to: email,
-      subject: this.getAuditReminderTitle(reminderType, certification),
-      template: 'audit-reminder',
-      context: {
-        firstName: firstName || 'Utilisateur',
-        certificationType: certification.certification_type,
-        certificationNumber: certification.certification_number,
-        auditDate: formattedDate,
-        reminderType,
-        dashboardUrl: `${process.env.FRONTEND_URL}/compliance/certifications/${certification.id}`,
-      },
+    return this.emailService.sendByType('audit_reminder', email, {
+      firstName: firstName || 'Utilisateur',
+      certificationType: certification.certification_type,
+      certificationNumber: certification.certification_number,
+      auditDate: formattedDate,
+      reminderType,
+      dashboardUrl: `${process.env.FRONTEND_URL}/compliance/certifications/${certification.id}`,
     });
   }
 }

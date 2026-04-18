@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import {  useMemo, useState  } from "react";
 import { useForm, FormProvider, useFormContext } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Save, X } from 'lucide-react';
@@ -7,6 +7,7 @@ import { FormField } from '../ui/FormField';
 import { Input } from '../ui/Input';
 import { Select } from '../ui/Select';
 import { Checkbox } from '../ui/checkbox';
+import { Button } from '@/components/ui/button';
 
 interface Parcel {
   id: string;
@@ -20,7 +21,7 @@ interface SoilAnalysisFormProps {
   selectedParcel?: Parcel | null;
 }
 
-type SoilParamKey = Exclude<keyof SoilAnalysisFormValues, 'analysisDate' | 'laboratory' | 'notes'>;
+type SoilParamKey = Exclude<keyof SoilAnalysisFormValues, 'analysisDate' | 'laboratory' | 'notes' | 'sampling_depth'>;
 
 interface ParameterItem {
   key: SoilParamKey;
@@ -31,104 +32,110 @@ interface ParameterItem {
 
 const SOIL_PARAMETER_GROUPS: Array<{ category: string; parameters: ParameterItem[] }> = [
   {
-    category: 'Proprietes physiques',
+    category: 'Propriétés physiques',
     parameters: [
-      { key: 'ph_level', label: 'pH', unit: '' },
-      { key: 'texture', label: 'Texture du sol', fieldType: 'select' },
-      { key: 'moisture_percentage', label: 'Humidite', unit: '%' },
-      { key: 'bulk_density', label: 'Densite apparente', unit: 'g/cm3' },
-      { key: 'granulometry_sand_pct', label: 'Granulometrie sable', unit: '%' },
-      { key: 'granulometry_silt_pct', label: 'Granulometrie limon', unit: '%' },
-      { key: 'granulometry_clay_pct', label: 'Granulometrie argile', unit: '%' },
-      { key: 'granulometry_fine_sand_pct', label: 'Granulometrie sable fin', unit: '%' },
-      { key: 'granulometry_coarse_sand_pct', label: 'Granulometrie sable grossier', unit: '%' },
+      { key: 'granulometry_sand_pct', label: 'Sable', unit: '%' },
+      { key: 'granulometry_silt_pct', label: 'Limon', unit: '%' },
+      { key: 'granulometry_clay_pct', label: 'Argile', unit: '%' },
+      { key: 'granulometry_fine_sand_pct', label: 'Granulométrie fractions', unit: '%' },
     ],
   },
   {
-    category: 'Macro elements',
+    category: 'Propriétés chimiques générales',
     parameters: [
-      { key: 'organic_matter_percentage', label: 'Matiere organique', unit: '%' },
-      { key: 'nitrogen_ppm', label: 'Azote total (N)', unit: 'ppm' },
-      { key: 'ammonium_nitrogen_ppm', label: 'Azote ammoniacal (N-NH4)', unit: 'ppm' },
-      { key: 'nitrate_nitrogen_ppm', label: 'Azote nitrique (N-NO3)', unit: 'ppm' },
-      { key: 'phosphorus_ppm', label: 'Phosphore (P)', unit: 'ppm' },
-      { key: 'phosphorus_olsen_ppm', label: 'Phosphore Olsen (P2O5)', unit: 'ppm' },
-      { key: 'potassium_ppm', label: 'Potassium (K)', unit: 'ppm' },
-      { key: 'calcium_ppm', label: 'Calcium (Ca)', unit: 'ppm' },
-      { key: 'magnesium_ppm', label: 'Magnesium (Mg)', unit: 'ppm' },
-      { key: 'sulfur_ppm', label: 'Soufre (S)', unit: 'ppm' },
-      { key: 'sodium_ppm', label: 'Sodium (Na2O)', unit: 'ppm' },
-      { key: 'chloride_ppm', label: 'Chlorure (Cl)', unit: 'ppm' },
+      { key: 'ph_level', label: 'pH', unit: 'pH' },
+      { key: 'electrical_conductivity', label: 'Conductivité électrique (CE)', unit: 'dS/m' },
+      { key: 'organic_matter_percentage', label: 'Matière organique', unit: '%' },
       { key: 'total_limestone_pct', label: 'Calcaire total', unit: '%' },
       { key: 'active_limestone_pct', label: 'Calcaire actif', unit: '%' },
+      { key: 'cec_meq_per_100g', label: 'CEC', unit: 'cmol(+)/kg' },
     ],
   },
   {
-    category: 'Oligo-elements',
+    category: 'Azote',
     parameters: [
-      { key: 'iron_ppm', label: 'Fer (Fe)', unit: 'ppm' },
-      { key: 'zinc_ppm', label: 'Zinc (Zn)', unit: 'ppm' },
-      { key: 'copper_ppm', label: 'Cuivre (Cu)', unit: 'ppm' },
-      { key: 'manganese_ppm', label: 'Manganese (Mn)', unit: 'ppm' },
-      { key: 'boron_ppm', label: 'Bore (B)', unit: 'ppm' },
-      { key: 'silicon_ppm', label: 'Silicium (Si)', unit: 'ppm' },
-      { key: 'selenium_ppm', label: 'Selenium (Se)', unit: 'ppm' },
-      { key: 'gold_ppm', label: 'Or (Au)', unit: 'ppm' },
-      { key: 'lithium_ppm', label: 'Lithium (Li)', unit: 'ppm' },
-      { key: 'aluminum_ppm', label: 'Aluminium (Al)', unit: 'ppm' },
-      { key: 'antimony_ppm', label: 'Antimoine (Sb)', unit: 'ppm' },
-      { key: 'bismuth_ppm', label: 'Bismuth (Bi)', unit: 'ppm' },
+      { key: 'ammonium_nitrogen_ppm', label: 'Azote ammoniacal (N-NH4)', unit: 'mg/kg' },
+      { key: 'nitrate_nitrogen_ppm', label: 'Azote nitrique (N-NO3)', unit: 'mg/kg' },
+      { key: 'nitrogen_ppm', label: 'Azote minéral total', unit: 'mg/kg' },
     ],
   },
   {
-    category: 'Metaux lourds',
+    category: 'Phosphore',
     parameters: [
-      { key: 'cadmium_ppm', label: 'Cadmium (Cd)', unit: 'ppm' },
-      { key: 'lead_ppm', label: 'Plomb (Pb)', unit: 'ppm' },
-      { key: 'nickel_ppm', label: 'Nickel (Ni)', unit: 'ppm' },
-      { key: 'chromium_ppm', label: 'Chrome (Cr)', unit: 'ppm' },
-      { key: 'arsenic_ppm', label: 'Arsenic (As)', unit: 'ppm' },
-      { key: 'mercury_ppm', label: 'Mercure (Hg)', unit: 'ppm' },
+      { key: 'phosphorus_olsen_ppm', label: 'Phosphore assimilable (P2O5 Olsen)', unit: 'mg/kg' },
     ],
   },
   {
-    category: 'Cations echangeables',
+    category: 'Cations échangeables',
     parameters: [
-      { key: 'cao_meq', label: 'CaO', unit: 'meq/100g' },
-      { key: 'mgo_meq', label: 'MgO', unit: 'meq/100g' },
-      { key: 'k2o_meq', label: 'K2O', unit: 'meq/100g' },
-      { key: 'na2o_meq', label: 'Na2O', unit: 'meq/100g' },
-      { key: 'cec_meq_per_100g', label: 'CEC', unit: 'meq/100g' },
-      { key: 'base_saturation_percentage', label: 'Saturation des bases', unit: '%' },
+      { key: 'cao_meq', label: 'Calcium (Ca)', unit: 'cmol(+)/kg' },
+      { key: 'mgo_meq', label: 'Magnésium (Mg)', unit: 'cmol(+)/kg' },
+      { key: 'k2o_meq', label: 'Potassium (K)', unit: 'cmol(+)/kg' },
+      { key: 'na2o_meq', label: 'Sodium (Na)', unit: 'cmol(+)/kg' },
     ],
   },
   {
-    category: 'Indicateurs du sol',
+    category: 'Anions',
     parameters: [
-      { key: 'salinity_level', label: 'Salinite', unit: 'dS/m' },
-      { key: 'electrical_conductivity', label: 'Conductivite electrique', unit: 'dS/m' },
-      { key: 'earthworm_count', label: 'Nombre de vers de terre', unit: '' },
-      { key: 'biological_carbon', label: 'Carbone biologique', unit: 'ppm' },
+      { key: 'sulfates_ppm', label: 'Sulfates (SO4)', unit: 'mg/kg' },
+    ],
+  },
+  {
+    category: 'Oligo-éléments',
+    parameters: [
+      { key: 'boron_ppm', label: 'Bore (B)', unit: 'mg/kg' },
+      { key: 'copper_ppm', label: 'Cuivre (Cu)', unit: 'mg/kg' },
+      { key: 'iron_ppm', label: 'Fer (Fe)', unit: 'mg/kg' },
+      { key: 'manganese_ppm', label: 'Manganèse (Mn)', unit: 'mg/kg' },
+      { key: 'zinc_ppm', label: 'Zinc (Zn)', unit: 'mg/kg' },
+    ],
+  },
+  {
+    category: 'Métaux lourds',
+    parameters: [
+      { key: 'cadmium_ppm', label: 'Cadmium (Cd)', unit: 'mg/kg' },
+      { key: 'lead_ppm', label: 'Plomb (Pb)', unit: 'mg/kg' },
+      { key: 'nickel_ppm', label: 'Nickel (Ni)', unit: 'mg/kg' },
+      { key: 'chromium_ppm', label: 'Chrome (Cr)', unit: 'mg/kg' },
+      { key: 'arsenic_ppm', label: 'Arsenic (As)', unit: 'mg/kg' },
+      { key: 'mercury_ppm', label: 'Mercure (Hg)', unit: 'mg/kg' },
+    ],
+  },
+  {
+    category: 'Éléments traces',
+    parameters: [
+      { key: 'silicon_ppm', label: 'Silicium (Si)', unit: 'mg/kg' },
+      { key: 'selenium_ppm', label: 'Sélénium (Se)', unit: 'mg/kg' },
+      { key: 'lithium_ppm', label: 'Lithium (Li)', unit: 'mg/kg' },
+      { key: 'aluminum_ppm', label: 'Aluminium (Al)', unit: 'mg/kg' },
+    ],
+  },
+  {
+    category: 'Éléments rares',
+    parameters: [
+      { key: 'gold_ppm', label: 'Or (Au)', unit: 'mg/kg' },
+      { key: 'antimony_ppm', label: 'Antimoine (Sb)', unit: 'mg/kg' },
+      { key: 'bismuth_ppm', label: 'Bismuth (Bi)', unit: 'mg/kg' },
     ],
   },
 ];
 
 const DEFAULT_SOIL_PARAMS: SoilParamKey[] = [
   'ph_level',
-  'texture',
+  'electrical_conductivity',
   'organic_matter_percentage',
+  'total_limestone_pct',
+  'active_limestone_pct',
   'nitrogen_ppm',
-  'phosphorus_ppm',
-  'potassium_ppm',
-  'calcium_ppm',
-  'magnesium_ppm',
-  'sulfur_ppm',
-  'salinity_level',
+  'phosphorus_olsen_ppm',
+  'cao_meq',
+  'mgo_meq',
+  'k2o_meq',
   'cec_meq_per_100g',
 ];
 
 // TextField component using useFormContext
-const TextField: React.FC<{
+const TextField = ({ name, label, type = 'text', step, min, max, required, placeholder }: {
   name: keyof SoilAnalysisFormValues;
   label: string;
   type?: 'text' | 'number' | 'date';
@@ -137,7 +144,7 @@ const TextField: React.FC<{
   max?: string;
   required?: boolean;
   placeholder?: string;
-}> = ({ name, label, type = 'text', step, min, max, required, placeholder }) => {
+}) => {
   const { register, formState: { errors } } = useFormContext<SoilAnalysisFormValues>();
 
   return (
@@ -150,7 +157,11 @@ const TextField: React.FC<{
         max={max}
         placeholder={placeholder}
         {...register(name, type === 'number' ? {
-          setValueAs: (value: string) => value === '' ? undefined : Number(value),
+          setValueAs: (v: string) => {
+            if (v === '' || v == null) return undefined;
+            const n = parseFloat(v);
+            return Number.isNaN(n) ? undefined : n;
+          },
         } : undefined)}
         aria-invalid={errors[name] ? 'true' : 'false'}
         aria-describedby={errors[name] ? `${name}-error` : undefined}
@@ -165,12 +176,12 @@ const TextField: React.FC<{
 };
 
 // SelectField component using useFormContext
-const SelectField: React.FC<{
+const SelectField = ({ name, label, options, required }: {
   name: keyof SoilAnalysisFormValues;
   label: string;
   options: { value: string; label: string }[];
   required?: boolean;
-}> = ({ name, label, options, required }) => {
+}) => {
   const { register, formState: { errors } } = useFormContext<SoilAnalysisFormValues>();
 
   return (
@@ -198,12 +209,12 @@ const SelectField: React.FC<{
 };
 
 // TextareaField component using useFormContext
-const TextareaField: React.FC<{
+const TextareaField = ({ name, label, placeholder, rows = 4 }: {
   name: keyof SoilAnalysisFormValues;
   label: string;
   placeholder?: string;
   rows?: number;
-}> = ({ name, label, placeholder, rows = 4 }) => {
+}) => {
   const { register, formState: { errors } } = useFormContext<SoilAnalysisFormValues>();
 
   return (
@@ -226,7 +237,7 @@ const TextareaField: React.FC<{
   );
 };
 
-const SoilAnalysisForm: React.FC<SoilAnalysisFormProps> = ({ onSave, onCancel, selectedParcel }) => {
+const SoilAnalysisForm = ({ onSave, onCancel, selectedParcel }: SoilAnalysisFormProps) => {
   const methods = useForm<SoilAnalysisFormValues>({
     resolver: zodResolver(soilAnalysisSchema),
     mode: 'onSubmit',
@@ -234,17 +245,7 @@ const SoilAnalysisForm: React.FC<SoilAnalysisFormProps> = ({ onSave, onCancel, s
       analysisDate: new Date().toISOString().split('T')[0],
       laboratory: '',
       notes: '',
-      ph_level: undefined,
-      texture: undefined,
-      organic_matter_percentage: undefined,
-      nitrogen_ppm: undefined,
-      phosphorus_ppm: undefined,
-      potassium_ppm: undefined,
-      calcium_ppm: undefined,
-      magnesium_ppm: undefined,
-      sulfur_ppm: undefined,
-      salinity_level: undefined,
-      cec_meq_per_100g: undefined,
+      sampling_depth: '',
     },
   });
 
@@ -275,6 +276,10 @@ const SoilAnalysisForm: React.FC<SoilAnalysisFormProps> = ({ onSave, onCancel, s
         notes: values.notes?.trim() || '',
       };
 
+      if (values.sampling_depth) {
+        cleanValues.sampling_depth = values.sampling_depth;
+      }
+
       selectedParams.forEach((key) => {
         const value = values[key];
         if (value !== undefined && !(typeof value === 'number' && Number.isNaN(value))) {
@@ -283,7 +288,7 @@ const SoilAnalysisForm: React.FC<SoilAnalysisFormProps> = ({ onSave, onCancel, s
       });
 
       await onSave(cleanValues as SoilAnalysisFormValues);
-      methods.reset();
+      methods.reset({ analysisDate: new Date().toISOString().split('T')[0], laboratory: '', notes: '', sampling_depth: '' });
       setSelectedParams(DEFAULT_SOIL_PARAMS);
     } catch (error) {
       console.error('Error submitting form:', error);
@@ -308,13 +313,13 @@ const SoilAnalysisForm: React.FC<SoilAnalysisFormProps> = ({ onSave, onCancel, s
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
       <div className="flex items-center justify-between mb-6">
         <h3 className="text-lg font-semibold">Nouvelle Analyse de Sol</h3>
-        <button
+        <Button
           onClick={onCancel}
           className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
           aria-label="Annuler"
         >
           <X className="h-5 w-5" />
-        </button>
+        </Button>
       </div>
 
       <FormProvider {...methods}>
@@ -349,6 +354,18 @@ const SoilAnalysisForm: React.FC<SoilAnalysisFormProps> = ({ onSave, onCancel, s
               placeholder="Nom du laboratoire"
             />
           </div>
+
+          <SelectField
+            name="sampling_depth"
+            label="Profondeur de prélèvement (optionnel)"
+            options={[
+              { value: '0-30', label: '0 – 30 cm' },
+              { value: '30-60', label: '30 – 60 cm' },
+              { value: '60-90', label: '60 – 90 cm' },
+              { value: '90-120', label: '90 – 120 cm' },
+              { value: 'profil_complet', label: 'Profil complet' },
+            ]}
+          />
 
           <div className="space-y-3">
             <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Parametres analyses</p>
@@ -435,22 +452,18 @@ const SoilAnalysisForm: React.FC<SoilAnalysisFormProps> = ({ onSave, onCancel, s
 
           {/* Actions */}
           <div className="flex justify-end space-x-3">
-            <button
+            <Button
               type="button"
               onClick={onCancel}
               className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
               disabled={isSubmitting}
             >
               Annuler
-            </button>
-            <button
-              type="submit"
-              className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled={isSubmitting}
-            >
+            </Button>
+            <Button variant="green" type="submit" className="px-4 py-2 rounded-md flex items-center space-x-2 disabled:cursor-not-allowed" disabled={isSubmitting} >
               <Save className="h-4 w-4" />
               <span>{isSubmitting ? 'Enregistrement...' : 'Enregistrer'}</span>
-            </button>
+            </Button>
           </div>
         </form>
       </FormProvider>

@@ -1,4 +1,4 @@
-// Blog Categories based on AgriTech platform features
+// Blog Categories based on AgroGina platform features
 export const blogCategories = [
   {
     name: 'Farm Management',
@@ -32,15 +32,15 @@ export const blogCategories = [
   },
 ];
 
-// Blog Posts showcasing AgriTech platform capabilities
+// Blog Posts showcasing AgroGina platform capabilities
 export const blogPosts = [
   {
     title: 'Getting Started with Digital Farm Management',
     slug: 'getting-started-digital-farm-management',
-    excerpt: 'Discover how our AgriTech platform can transform your farm operations with integrated management tools for parcels, crops, workers, and finances.',
+    excerpt: 'Discover how our AgroGina platform can transform your farm operations with integrated management tools for parcels, crops, workers, and finances.',
     content: `# Getting Started with Digital Farm Management
 
-The agricultural industry is rapidly evolving, and digital tools are becoming essential for modern farm management. Our AgriTech platform provides a comprehensive solution to manage every aspect of your farming operations.
+The agricultural industry is rapidly evolving, and digital tools are becoming essential for modern farm management. Our AgroGina platform provides a comprehensive solution to manage every aspect of your farming operations.
 
 ## Key Features
 
@@ -72,13 +72,13 @@ Every operation connects directly to your financial records:
 5. **Analyze results**: Review financial reports and performance metrics
 
 Start your digital transformation journey today and experience the power of integrated farm management.`,
-    author: 'AgriTech Team',
+    author: 'AgroGina Team',
     reading_time: 5,
     is_featured: true,
     category_slug: 'farm-management',
     tags: ['getting started', 'farm management', 'digital transformation'],
-    seo_title: 'Digital Farm Management Guide | AgriTech Platform',
-    seo_description: 'Learn how to get started with digital farm management using our comprehensive AgriTech platform. Manage farms, parcels, crops, and finances in one place.',
+    seo_title: 'Digital Farm Management Guide | AgroGina Platform',
+    seo_description: 'Learn how to get started with digital farm management using our comprehensive AgroGina platform. Manage farms, parcels, crops, and finances in one place.',
     imageFilePath: 'cms/seed-assets/digital-farm-management.png',
   },
   {
@@ -142,7 +142,7 @@ The harvest flows through a 4-step stepper process:
 ## Getting Started
 
 Enable the harvest-to-finance workflow in your settings and start experiencing the power of automated agricultural accounting.`,
-    author: 'AgriTech Team',
+    author: 'AgroGina Team',
     reading_time: 7,
     is_featured: true,
     category_slug: 'financial-management',
@@ -212,7 +212,7 @@ Choose the valuation method that fits your business:
 - **Meet compliance**: Maintain required records and traceability
 
 Transform your warehouse operations with intelligent inventory management designed for agriculture.`,
-    author: 'AgriTech Team',
+    author: 'AgroGina Team',
     reading_time: 6,
     is_featured: true,
     category_slug: 'stock-inventory',
@@ -294,12 +294,12 @@ Use these insights to:
 5. Adjust strategies based on insights
 
 Let data guide your agricultural decisions and maximize the profitability of every parcel.`,
-    author: 'AgriTech Team',
+    author: 'AgroGina Team',
     reading_time: 6,
     is_featured: false,
     category_slug: 'farm-management',
     tags: ['profitability', 'analytics', 'data-driven', 'parcel management', 'ROI'],
-    seo_title: 'Parcel Profitability Analysis for Farms | AgriTech Analytics',
+    seo_title: 'Parcel Profitability Analysis for Farms | AgroGina Analytics',
     seo_description: 'Maximize farm profitability with data-driven parcel analysis. Track costs, revenues, and ROI to make informed agricultural decisions.',
     imageFilePath: 'cms/seed-assets/parcel-profitability.png',
   },
@@ -397,7 +397,7 @@ Every payment automatically:
 5. Review and process payments regularly
 
 Transform your workforce management with automation designed for agricultural operations.`,
-    author: 'AgriTech Team',
+    author: 'AgroGina Team',
     reading_time: 7,
     is_featured: false,
     category_slug: 'farm-management',
@@ -500,7 +500,7 @@ Our platform helps maintain records for:
 5. Monitor progress regularly
 
 Build a more sustainable agricultural operation while maintaining profitability and productivity.`,
-    author: 'AgriTech Team',
+    author: 'AgroGina Team',
     reading_time: 8,
     is_featured: false,
     category_slug: 'sustainability',
@@ -603,7 +603,7 @@ Embrace precision farming technologies to stay competitive and sustainable in mo
     is_featured: false,
     category_slug: 'technology-innovation',
     tags: ['precision farming', 'satellite imagery', 'IoT', 'technology', 'sensors'],
-    seo_title: 'Precision Farming with Satellite & IoT | AgriTech',
+    seo_title: 'Precision Farming with Satellite & IoT | AgroGina',
     seo_description: 'Discover how satellite imagery and IoT sensors are transforming agriculture. Optimize yields and reduce waste with precision farming technology.',
     imageFilePath: 'cms/seed-assets/precision-farming.png',
   },
@@ -726,12 +726,12 @@ Key performance indicators:
 - Post-harvest losses
 
 Optimize your harvest operations with careful planning and execution to maximize both yield and profitability.`,
-    author: 'AgriTech Team',
+    author: 'AgroGina Team',
     reading_time: 6,
     is_featured: false,
     category_slug: 'harvest-production',
     tags: ['harvest', 'yield optimization', 'planning', 'quality control', 'production'],
-    seo_title: 'Harvest Planning & Yield Optimization Guide | AgriTech',
+    seo_title: 'Harvest Planning & Yield Optimization Guide | AgroGina',
     seo_description: 'Master harvest planning to maximize yields and minimize losses. Learn strategies for effective harvest management and yield optimization.',
     imageFilePath: 'cms/seed-assets/harvest-planning-yield.png',
   },
@@ -872,12 +872,12 @@ Key metrics:
 - Inventory turnover
 
 Build a resilient supply chain that can adapt to challenges while maintaining quality and efficiency.`,
-    author: 'AgriTech Team',
+    author: 'AgroGina Team',
     reading_time: 8,
     is_featured: false,
     category_slug: 'farm-management',
     tags: ['supply chain', 'logistics', 'resilience', 'quality', 'distribution'],
-    seo_title: 'Resilient Agricultural Supply Chain | AgriTech Guide',
+    seo_title: 'Resilient Agricultural Supply Chain | AgroGina Guide',
     seo_description: 'Build a resilient agricultural supply chain that withstands disruptions. Learn strategies for supply chain management and risk mitigation.',
     imageFilePath: 'cms/seed-assets/resilient-supply-chain.png',
   },
@@ -1046,12 +1046,12 @@ Effective financial management is crucial for agricultural success. This guide c
 - [ ] Professional advice sought when needed
 
 Master financial planning and budgeting to ensure your agricultural operation remains profitable and sustainable.`,
-    author: 'AgriTech Team',
+    author: 'AgroGina Team',
     reading_time: 7,
     is_featured: false,
     category_slug: 'financial-management',
     tags: ['financial planning', 'budgeting', 'accounting', 'cash flow', 'profitability'],
-    seo_title: 'Financial Planning & Budgeting for Agriculture | AgriTech',
+    seo_title: 'Financial Planning & Budgeting for Agriculture | AgroGina',
     seo_description: 'Master financial planning and budgeting for agricultural operations. Learn strategies for cost management, cash flow, and profitability.',
     imageFilePath: 'cms/seed-assets/financial-planning-budgeting.png',
   },

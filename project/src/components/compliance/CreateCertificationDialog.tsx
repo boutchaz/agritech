@@ -1,20 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useForm, Controller } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Plus, Loader2, RefreshCw } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
 import { FormField } from '@/components/ui/FormField';
 import { Input } from '@/components/ui/Input';
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import {
   Select,
   SelectContent,
@@ -47,6 +41,7 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 export function CreateCertificationDialog() {
+  const { t } = useTranslation('compliance');
   const [open, setOpen] = useState(false);
   const { currentOrganization } = useAuth();
   const createCertification = useCreateCertification();
@@ -101,34 +96,31 @@ export function CreateCertificationDialog() {
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button>
-          <Plus className="mr-2 h-4 w-4" />
-          Nouvelle Certification
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>Ajouter une certification</DialogTitle>
-          <DialogDescription>
-            Enregistrez une nouvelle certification pour votre organisation.
-          </DialogDescription>
-        </DialogHeader>
-        
+    <>
+      <Button type="button" variant="default" onClick={() => setOpen(true)}>
+        <Plus className="mr-2 h-4 w-4" />
+        {t('dialogs.createCertification.button')}
+      </Button>
+      <ResponsiveDialog
+        open={open}
+        onOpenChange={setOpen}
+        title={t('dialogs.createCertification.title')}
+        description={t('dialogs.createCertification.description')}
+        size="sm"
+      >
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
           <Controller
             control={form.control}
             name="certification_type"
             render={({ field }) => (
               <FormField 
-                label="Type de certification" 
+                label={t('dialogs.createCertification.certType')} 
                 error={form.formState.errors.certification_type?.message}
                 required
               >
                 <Select onValueChange={field.onChange} defaultValue={field.value}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Sélectionner un type" />
+                    <SelectValue placeholder={t('dialogs.createCertification.selectType')} />
                   </SelectTrigger>
                   <SelectContent>
                     {Object.values(CertificationType).map((type) => (
@@ -147,18 +139,18 @@ export function CreateCertificationDialog() {
             name="certification_number"
             render={({ field }) => (
               <FormField 
-                label="Numéro de certification" 
+                label={t('dialogs.createCertification.certNumber')} 
                 error={form.formState.errors.certification_number?.message}
                 required
               >
                 <div className="flex gap-2">
-                  <Input placeholder="ex: CERT-2024-001" {...field} className="flex-1" />
+                  <Input placeholder={t('dialogs.createCertification.certNumberPlaceholder')} {...field} className="flex-1" />
                   <Button
                     type="button"
                     variant="outline"
                     size="icon"
                     onClick={() => form.setValue('certification_number', generateCertificationNumber(selectedType))}
-                    title="Générer un nouveau numéro"
+                    title={t('dialogs.createCertification.generateNumber')}
                   >
                     <RefreshCw className="h-4 w-4" />
                   </Button>
@@ -172,11 +164,11 @@ export function CreateCertificationDialog() {
             name="issuing_body"
             render={({ field }) => (
               <FormField 
-                label="Organisme certificateur" 
+                label={t('dialogs.createCertification.issuingBody')} 
                 error={form.formState.errors.issuing_body?.message}
                 required
               >
-                <Input placeholder="ex: Bureau Veritas" {...field} />
+                <Input placeholder={t('dialogs.createCertification.issuingBodyPlaceholder')} {...field} />
               </FormField>
             )}
           />
@@ -186,15 +178,15 @@ export function CreateCertificationDialog() {
               control={form.control}
               name="issued_date"
               render={({ field }) => (
-                <FormField 
-                  label="Date d'émission" 
+                <FormField
+                  label={t('dialogs.createCertification.issuedDate')}
                   error={form.formState.errors.issued_date?.message}
                   required
                 >
                   <DatePicker
                     value={field.value}
                     onChange={field.onChange}
-                    placeholder="Choisir date"
+                    placeholder={t('dialogs.createCertification.selectDate')}
                   />
                 </FormField>
               )}
@@ -204,15 +196,15 @@ export function CreateCertificationDialog() {
               control={form.control}
               name="expiry_date"
               render={({ field }) => (
-                <FormField 
-                  label="Date d'expiration" 
+                <FormField
+                  label={t('dialogs.createCertification.expiryDate')}
                   error={form.formState.errors.expiry_date?.message}
                   required
                 >
                   <DatePicker
                     value={field.value}
                     onChange={field.onChange}
-                    placeholder="Choisir date"
+                    placeholder={t('dialogs.createCertification.selectDate')}
                   />
                 </FormField>
               )}
@@ -224,19 +216,19 @@ export function CreateCertificationDialog() {
             name="status"
             render={({ field }) => (
               <FormField 
-                label="Statut" 
+                label={t('dialogs.createCertification.status')} 
                 error={form.formState.errors.status?.message}
                 required
               >
                 <Select onValueChange={field.onChange} defaultValue={field.value}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Sélectionner un statut" />
+                    <SelectValue placeholder={t('dialogs.createCertification.selectStatus')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value={CertificationStatus.ACTIVE}>Active</SelectItem>
-                    <SelectItem value={CertificationStatus.PENDING_RENEWAL}>Renouvellement</SelectItem>
-                    <SelectItem value={CertificationStatus.EXPIRED}>Expirée</SelectItem>
-                    <SelectItem value={CertificationStatus.SUSPENDED}>Suspendue</SelectItem>
+                    <SelectItem value={CertificationStatus.ACTIVE}>{t('status.active')}</SelectItem>
+                    <SelectItem value={CertificationStatus.PENDING_RENEWAL}>{t('status.pendingRenewal')}</SelectItem>
+                    <SelectItem value={CertificationStatus.EXPIRED}>{t('status.expired')}</SelectItem>
+                    <SelectItem value={CertificationStatus.SUSPENDED}>{t('status.suspended')}</SelectItem>
                   </SelectContent>
                 </Select>
               </FormField>
@@ -245,17 +237,17 @@ export function CreateCertificationDialog() {
 
           <div className="flex justify-end gap-2 pt-4">
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-              Annuler
+              {t('dialogs.createCertification.cancel')}
             </Button>
             <Button type="submit" disabled={createCertification.isPending}>
               {createCertification.isPending && (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               )}
-              Créer
+              {t('dialogs.createCertification.create')}
             </Button>
           </div>
         </form>
-      </DialogContent>
-    </Dialog>
+      </ResponsiveDialog>
+    </>
   );
 }

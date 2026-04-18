@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { Activity, AlertTriangle, MapPin } from 'lucide-react';
 import type { SensorData, DashboardSettings } from '../types';
 import { useSensorData } from '../hooks/useSensorData';
@@ -13,15 +13,18 @@ import AnalysisWidget from './Dashboard/AnalysisWidget';
 import HarvestSummaryWidget from './Dashboard/HarvestSummaryWidget';
 import SalesOverviewWidget from './Dashboard/SalesOverviewWidget';
 import AccountingWidget from './Dashboard/AccountingWidget';
+import CostPerParcelWidget from './Dashboard/CostPerParcelWidget';
 import InlineFarmSelector from './InlineFarmSelector';
 import { useTranslation } from 'react-i18next';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface DashboardProps {
   sensorData: SensorData[];
   settings: DashboardSettings;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ sensorData: _sensorData, settings }) => {
+const Dashboard = ({ sensorData: _sensorData, settings }: DashboardProps) => {
   const { t } = useTranslation();
   const { latestReadings } = useSensorData();
   const { currentFarm } = useAuth();
@@ -49,8 +52,8 @@ const Dashboard: React.FC<DashboardProps> = ({ sensorData: _sensorData, settings
             <div className="flex items-center justify-between">
               <div className="min-w-0 flex-1">
                 <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">{t('dashboard.widgets.farm.title')}</p>
-                <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 dark:text-white mt-1 sm:mt-2 truncate">
-                  {currentFarm ? currentFarm.name : t('dashboard.widgets.farm.noFarm')}
+                <h3 className="text-lg sm:text-xl lg:text-2xl font-semibold text-gray-900 dark:text-white mt-1 sm:mt-2 truncate">
+                  {currentFarm?.name ?? t('dashboard.widgets.farm.noFarm')}
                 </h3>
               </div>
               <MapPin className="h-6 w-6 sm:h-8 sm:w-8 text-green-500 flex-shrink-0 ml-2" />
@@ -58,30 +61,33 @@ const Dashboard: React.FC<DashboardProps> = ({ sensorData: _sensorData, settings
             <div className="mt-3 sm:mt-4 grid grid-cols-3 gap-2 sm:gap-4 text-xs sm:text-sm">
               <div>
                 <div className="text-gray-500 text-xs sm:text-sm">{t('dashboard.widgets.farm.parcels')}</div>
-                <div className="text-base sm:text-lg font-semibold">{dashboardLoading ? '…' : parcelCount}</div>
+                <div className="text-base sm:text-lg font-semibold">{dashboardLoading ? <Skeleton className="h-6 w-10 inline-block" /> : parcelCount}</div>
               </div>
               <div>
                 <div className="text-gray-500 text-xs sm:text-sm">{t('dashboard.widgets.farm.surface')}</div>
-                <div className="text-base sm:text-lg font-semibold">{dashboardLoading ? '…' : totalArea.toFixed(2)} ha</div>
+                <div className="text-base sm:text-lg font-semibold">{dashboardLoading ? <Skeleton className="h-6 w-16 inline-block" /> : <>{totalArea.toFixed(2)} ha</>}</div>
               </div>
               <div>
                 <div className="text-gray-500 text-xs sm:text-sm">{t('dashboard.widgets.farm.analyses')}</div>
-                <div className="text-base sm:text-lg font-semibold">{dashboardLoading ? '…' : analysesCount}</div>
+                <div className="text-base sm:text-lg font-semibold">{dashboardLoading ? <Skeleton className="h-6 w-10 inline-block" /> : analysesCount}</div>
               </div>
             </div>
             <div className="mt-3 sm:mt-4 flex flex-col sm:flex-row gap-2 sm:gap-3">
-              <button
+              <Button
+                size="sm"
+                variant="outline"
                 onClick={() => navigate({ to: '/parcels' })}
-                className="px-3 py-1.5 text-xs sm:text-sm rounded-md bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-100 w-full sm:w-auto"
+                className="w-full sm:w-auto"
               >
                 {t('dashboard.widgets.farm.viewParcels')}
-              </button>
-              <button
+              </Button>
+              <Button
+                size="sm"
                 onClick={() => navigate({ to: '/parcels' })}
-                className="px-3 py-1.5 text-xs sm:text-sm rounded-md bg-green-600 hover:bg-green-700 text-white w-full sm:w-auto"
+                className="w-full sm:w-auto"
               >
                 {t('dashboard.widgets.farm.addParcel')}
-              </button>
+              </Button>
             </div>
           </div>
         );
@@ -167,45 +173,73 @@ const Dashboard: React.FC<DashboardProps> = ({ sensorData: _sensorData, settings
 
   return (
     <div className="space-y-6">
-      <InlineFarmSelector message={t('dashboard.widgets.noFarmSelected')} />
-
-      {/* Row 1: Key Performance Indicators */}
-      <div data-tour="dashboard-stats" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div data-tour="dashboard-parcels"><ParcelsOverviewWidget /></div>
-        {settings.showStockAlerts && <StockAlertsWidget />}
-        <HarvestSummaryWidget />
-        <SalesOverviewWidget />
+      {/* Farm Selection Context */}
+      <div className="bg-white dark:bg-slate-800 rounded-3xl p-1 shadow-sm border border-slate-100 dark:border-slate-700">
+        <InlineFarmSelector message={t('dashboard.widgets.noFarmSelected')} />
       </div>
 
-      {/* Row 2: Action Items & Financial Overview */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {settings.showTaskAlerts && <div data-tour="dashboard-tasks"><UpcomingTasksWidget /></div>}
-        <AccountingWidget />
+      {/* Primary KPI Tier: Critical Business Metrics */}
+      <div data-tour="dashboard-stats" className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-6">
+        <div data-tour="dashboard-parcels" className="h-full">
+          <ParcelsOverviewWidget />
+        </div>
+        <div className="h-full">
+          <StockAlertsWidget />
+        </div>
+        <div className="h-full">
+          <HarvestSummaryWidget />
+        </div>
+        <div className="h-full">
+          <SalesOverviewWidget />
+        </div>
       </div>
 
-      {/* Row 3: Operational Data */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {settings.showSoilData && <AnalysisWidget />}
-        <WorkersActivityWidget />
+      {/* Main Operational Tier: Actionable Insights */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* Left Column: Tasks & Workforce */}
+        <div className="lg:col-span-7 space-y-6">
+          <div data-tour="dashboard-tasks" className="bg-white dark:bg-slate-800 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
+            <UpcomingTasksWidget />
+          </div>
+          
+          <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
+            <WorkersActivityWidget />
+          </div>
+        </div>
+
+        {/* Right Column: Financials & Data Analysis */}
+        <div className="lg:col-span-5 space-y-6">
+          <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
+            <AccountingWidget />
+          </div>
+
+          <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
+            <CostPerParcelWidget />
+          </div>
+
+          <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
+            <AnalysisWidget />
+          </div>
+        </div>
       </div>
 
-      {/* Additional Widgets from Settings */}
-      {settings.layout?.middleRow && settings.layout.middleRow.length > 0 && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Dynamic Widgets Tier */}
+      {(settings.layout?.middleRow?.length ?? 0) > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {settings.layout.middleRow
-            .filter(w => !['tasks', 'soil'].includes(w))
-            .map((widgetType, index) => (
-              <div key={`middle-${widgetType}-${index}`}>
+            .filter(w => !['tasks', 'soil', 'parcels', 'stock', 'workers', 'harvests'].includes(w))
+            .map((widgetType) => (
+              <div key={`middle-${widgetType}`} className="bg-white dark:bg-slate-800 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
                 {renderWidget(widgetType)}
               </div>
             ))}
         </div>
       )}
 
-      {settings.layout?.bottomRow && settings.layout.bottomRow.length > 0 && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {settings.layout.bottomRow.map((widgetType, index) => (
-            <div key={`bottom-${widgetType}-${index}`}>
+      {(settings.layout?.bottomRow?.length ?? 0) > 0 && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {settings.layout.bottomRow.map((widgetType) => (
+            <div key={`bottom-${widgetType}`} className="bg-white dark:bg-slate-800 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
               {renderWidget(widgetType)}
             </div>
           ))}

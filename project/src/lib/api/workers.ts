@@ -1,8 +1,11 @@
 import { apiClient } from '../api-client';
 import { requireOrganizationId } from './createCrudApi';
+import type { PaginatedQuery, PaginatedResponse } from './types';
+import { buildPaginatedQueryString } from './types';
+import type { WorkRecord, MetayageSettlement } from '../../types/workers';
 
 export type WorkerType = 'fixed_salary' | 'daily_worker' | 'metayage';
-export type PaymentFrequency = 'monthly' | 'daily' | 'per_task' | 'harvest_share';
+export type PaymentFrequency = 'monthly' | 'daily' | 'per_task' | 'per_unit' | 'harvest_share';
 export type MetayageType = 'khammass' | 'rebaa' | 'tholth' | 'custom';
 export type CalculationBasis = 'gross_revenue' | 'net_revenue';
 export type PaymentStatus = 'pending' | 'paid' | 'cancelled';
@@ -68,7 +71,7 @@ export interface Worker {
 
   // Metadata
   notes?: string;
-  documents?: unknown;
+  documents?: Array<{ id: string; name: string; url: string; type: string; uploaded_at: string }>;
   created_at: string;
   updated_at: string;
   created_by?: string;
@@ -127,15 +130,37 @@ export interface WorkerFilters {
   is_active?: boolean;
 }
 
+export interface PaginatedWorkerQuery extends PaginatedQuery {
+  workerType?: WorkerType;
+  isActive?: boolean;
+  farmId?: string;
+  platformAccess?: 'with' | 'without';
+}
+
 export const workersApi = {
   /**
    * Get all workers for an organization
    */
   async getAll(filters?: WorkerFilters, organizationId?: string): Promise<Worker[]> {
     requireOrganizationId(organizationId, 'workersApi.getAll');
-    // Only include farmId param if it's a non-empty string
-    const params = filters?.farmId && filters.farmId.trim() ? `?farmId=${filters.farmId}` : '';
-    return apiClient.get<Worker[]>(`/api/v1/organizations/${organizationId}/workers${params}`, {}, organizationId);
+    const params = new URLSearchParams();
+    if (filters?.farmId && filters.farmId.trim()) params.append('farmId', filters.farmId);
+    const queryString = params.toString();
+    const res = await apiClient.get<{ data: Worker[] }>(`/api/v1/organizations/${organizationId}/workers?${queryString}`, {}, organizationId);
+    return res.data || [];
+  },
+
+  async getPaginated(
+    organizationId: string,
+    query: PaginatedWorkerQuery,
+  ): Promise<PaginatedResponse<Worker>> {
+    requireOrganizationId(organizationId, 'workersApi.getPaginated');
+    const queryString = buildPaginatedQueryString(query as PaginatedQuery & Record<string, unknown>);
+    const url = queryString
+      ? `/api/v1/organizations/${organizationId}/workers?${queryString}`
+      : `/api/v1/organizations/${organizationId}/workers`;
+
+    return apiClient.get<PaginatedResponse<Worker>>(url, {}, organizationId);
   },
 
   /**
@@ -205,12 +230,12 @@ export const workersApi = {
     workerId: string,
     startDate?: string,
     endDate?: string,
-  ): Promise<any[]> {
+  ): Promise<WorkRecord[]> {
     const params = new URLSearchParams();
     if (startDate) params.append('startDate', startDate);
     if (endDate) params.append('endDate', endDate);
     const queryString = params.toString() ? `?${params.toString()}` : '';
-    return apiClient.get<any[]>(
+    return apiClient.get<WorkRecord[]>(
       `/api/v1/organizations/${organizationId}/workers/${workerId}/work-records${queryString}`,
       {},
       organizationId,
@@ -220,8 +245,8 @@ export const workersApi = {
   /**
    * Create a work record for a worker
    */
-  async createWorkRecord(organizationId: string, workerId: string, data: any): Promise<any> {
-    return apiClient.post<any>(
+  async createWorkRecord(organizationId: string, workerId: string, data: Partial<WorkRecord>): Promise<WorkRecord> {
+    return apiClient.post<WorkRecord>(
       `/api/v1/organizations/${organizationId}/workers/${workerId}/work-records`,
       data,
       {},
@@ -236,9 +261,9 @@ export const workersApi = {
     organizationId: string,
     workerId: string,
     recordId: string,
-    data: any,
-  ): Promise<any> {
-    return apiClient.patch<any>(
+    data: Partial<WorkRecord>,
+  ): Promise<WorkRecord> {
+    return apiClient.patch<WorkRecord>(
       `/api/v1/organizations/${organizationId}/workers/${workerId}/work-records/${recordId}`,
       data,
       {},
@@ -249,8 +274,8 @@ export const workersApi = {
   /**
    * Get métayage settlements for a worker
    */
-  async getMetayageSettlements(organizationId: string, workerId: string): Promise<any[]> {
-    return apiClient.get<any[]>(
+  async getMetayageSettlements(organizationId: string, workerId: string): Promise<MetayageSettlement[]> {
+    return apiClient.get<MetayageSettlement[]>(
       `/api/v1/organizations/${organizationId}/workers/${workerId}/metayage-settlements`,
       {},
       organizationId,
@@ -260,8 +285,8 @@ export const workersApi = {
   /**
    * Create a métayage settlement for a worker
    */
-  async createMetayageSettlement(organizationId: string, workerId: string, data: any): Promise<any> {
-    return apiClient.post<any>(
+  async createMetayageSettlement(organizationId: string, workerId: string, data: Partial<MetayageSettlement>): Promise<MetayageSettlement> {
+    return apiClient.post<MetayageSettlement>(
       `/api/v1/organizations/${organizationId}/workers/${workerId}/metayage-settlements`,
       data,
       {},

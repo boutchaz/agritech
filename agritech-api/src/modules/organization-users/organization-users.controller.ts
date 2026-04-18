@@ -23,6 +23,7 @@ import {
   OrganizationUserFiltersDto,
   CreateOrganizationUserDto,
   UpdateOrganizationUserDto,
+  InviteOrganizationUserDto,
 } from './dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { OrganizationGuard } from '../../common/guards/organization.guard';
@@ -59,6 +60,26 @@ export class OrganizationUsersController {
   async getAssignableUsers(@Req() req) {
     const organizationId = req.headers['x-organization-id'];
     return this.organizationUsersService.getAssignableUsers(organizationId);
+  }
+
+  @Post('invite')
+  @ApiOperation({ summary: 'Invite a user to the organization by email' })
+  @ApiResponse({
+    status: 201,
+    description: 'User invited successfully',
+  })
+  @ApiResponse({ status: 400, description: 'Invalid input data' })
+  async invite(@Req() req, @Body() dto: InviteOrganizationUserDto) {
+    const organizationId = dto.organization_id || req.headers['x-organization-id'];
+    const invitedBy = req.user.sub;
+    return this.organizationUsersService.inviteUser(
+      dto.email,
+      dto.role_id,
+      organizationId,
+      invitedBy,
+      dto.first_name,
+      dto.last_name,
+    );
   }
 
   @Get(':userId')

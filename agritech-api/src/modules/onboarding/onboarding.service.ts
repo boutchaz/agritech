@@ -1,5 +1,7 @@
 import { Injectable, Logger, BadRequestException, InternalServerErrorException } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
+import { SubscriptionsService } from '../subscriptions/subscriptions.service';
+import { TrialPlanInput } from '../subscriptions/dto/create-trial-subscription.dto';
 import {
   SaveOnboardingProfileDto,
   SaveOnboardingOrganizationDto,
@@ -15,7 +17,10 @@ const STORAGE_VERSION = 2;
 export class OnboardingService {
   private readonly logger = new Logger(OnboardingService.name);
 
-  constructor(private databaseService: DatabaseService) {}
+  constructor(
+    private databaseService: DatabaseService,
+    private subscriptionsService: SubscriptionsService,
+  ) {}
 
   /**
    * Check if a slug is available for use
@@ -335,6 +340,19 @@ export class OnboardingService {
       if (orgUserError) {
         this.logger.error(`Failed to add user to organization: ${orgUserError.message}`);
         throw new InternalServerErrorException('Failed to add user to organization');
+      }
+
+      try {
+        await this.subscriptionsService.createTrialSubscription(userId, {
+          organization_id: organizationId,
+          plan_type: TrialPlanInput.STARTER,
+        });
+        this.logger.log(`Trial subscription created for organization ${organizationId}`);
+      } catch (trialError) {
+        this.logger.error(
+          `Failed to create trial subscription (non-critical): ${trialError.message}`,
+          trialError.stack,
+        );
       }
 
       return { id: organizationId };

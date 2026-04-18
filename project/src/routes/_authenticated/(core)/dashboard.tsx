@@ -1,11 +1,12 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import {  useEffect, useMemo, useState  } from "react";
+import { cn } from '@/lib/utils'
 import { useAuth } from '@/hooks/useAuth'
 import Dashboard from '@/components/Dashboard'
 import ModernPageHeader from '@/components/ModernPageHeader'
 import { Home, Building2, Search, Activity, RefreshCw } from 'lucide-react'
 import type { DashboardSettings } from '@/types'
 import { createFileRoute } from '@tanstack/react-router'
-import { useKBar } from 'kbar'
+import { useCommandPaletteToggle } from '@/components/GlobalCommandPalette'
 import { useQuery } from '@tanstack/react-query'
 import { dashboardSettingsApi } from '@/lib/api/dashboard-settings'
 import { withRouteProtection } from '@/components/authorization/withRouteProtection'
@@ -22,10 +23,11 @@ import {
 } from '@/components/LiveDashboard'
 import {
   trackDashboardView,
-  trackLiveModeToggle,
   trackRefreshMetrics,
   trackPageView,
 } from '@/lib/analytics'
+import DashboardSkeleton from '@/components/Dashboard/DashboardSkeleton'
+import { Button } from '@/components/ui/button';
 
 // Sensor data is now fetched via useSensorData hook in Dashboard component
 // No mock data needed - the hook handles real sensor connections when available
@@ -46,28 +48,40 @@ const defaultDashboardSettings: DashboardSettings = {
   }
 };
 
-const AppContent: React.FC = () => {
+const LIVE_MODE_KEY = 'agrogina:dashboard:live-mode';
+
+function getStoredLiveMode(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    return localStorage.getItem(LIVE_MODE_KEY) === 'true';
+  } catch (_) {
+    return false;
+  }
+}
+
+const AppContent = () => {
   const { t } = useTranslation();
   const { currentOrganization, currentFarm, user } = useAuth();
   const siteOrigin = typeof window !== 'undefined' ? window.location.origin : 'https://app.agritech.local';
 
-  // Live mode toggle state
-  const [isLiveMode, setIsLiveMode] = useState(false);
+  const [isLiveMode, setIsLiveMode] = useState(getStoredLiveMode);
+
+  const toggleLiveMode = (value: boolean) => {
+    setIsLiveMode(value);
+    try {
+      localStorage.setItem(LIVE_MODE_KEY, String(value));
+    } catch { /* localStorage unavailable */ }
+  };
 
   // Auto-start welcome tour for new users (with 2 second delay)
   useAutoStartTour('welcome', 2000);
 
-  // Track dashboard page view and mode changes
+  // Track dashboard page view (fire once on mount + when live mode changes)
   useEffect(() => {
     trackPageView({
-      title: isLiveMode ? t('liveDashboard.title') : t('dashboard.pageTitle'),
+      title: isLiveMode ? 'Live Dashboard' : 'Dashboard',
     });
     trackDashboardView(isLiveMode ? 'live' : 'regular');
-  }, [isLiveMode, t]);
-
-  // Track live mode toggle changes
-  useEffect(() => {
-    trackLiveModeToggle(isLiveMode);
   }, [isLiveMode]);
 
   // Fetch dashboard settings from database
@@ -100,7 +114,7 @@ const AppContent: React.FC = () => {
       }
     },
     enabled: !!user && !!currentOrganization,
-    staleTime: 60000,
+    staleTime: 10 * 60 * 1000, // 10 min — settings rarely change mid-session
   });
 
   // Fetch live metrics with auto-refresh (only when live mode is enabled)
@@ -124,7 +138,7 @@ const AppContent: React.FC = () => {
 
   // Set page title
   useEffect(() => {
-    const organizationName = currentOrganization?.name ?? 'Agritech Suite';
+    const organizationName = currentOrganization?.name ?? 'AgroGina Suite';
     const farmName = currentFarm?.name ? ` · ${currentFarm.name}` : '';
     const modeTitle = isLiveMode ? t('liveDashboard.title') : t('dashboard.pageTitle');
     const title = `${organizationName}${farmName} | ${modeTitle}`;
@@ -133,7 +147,7 @@ const AppContent: React.FC = () => {
 
   // Structured data for SEO
   const structuredData = useMemo(() => {
-    const organizationName = currentOrganization?.name ?? 'Agritech Suite';
+    const organizationName = currentOrganization?.name ?? 'AgroGina Suite';
     return {
       '@context': 'https://schema.org',
       '@type': 'Product',
@@ -148,14 +162,7 @@ const AppContent: React.FC = () => {
   }, [currentOrganization, siteOrigin, t]);
 
   if (!currentOrganization) {
-    return (
-      <div className="flex items-center justify-center p-12">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">{t('dashboard.loading')}</p>
-        </div>
-      </div>
-    );
+    return <DashboardSkeleton />;
   }
 
   return (
@@ -163,56 +170,64 @@ const AppContent: React.FC = () => {
       <ModernPageHeader
         breadcrumbs={[
           { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
-          ...(currentFarm ? [{ icon: Home, label: currentFarm.name, path: '/farm-hierarchy' }] : []),
+          ...(currentFarm?.name ? [{ icon: Home, label: currentFarm.name, path: '/farm-hierarchy' }] : []),
           { icon: isLiveMode ? Activity : Home, label: isLiveMode ? t('liveDashboard.title') : t('nav.dashboard'), isActive: true }
         ]}
-        title={isLiveMode ? t('liveDashboard.title') : t('dashboard.title')}
+        title={isLiveMode ? t('liveDashboard.title') : `${t('dashboard.title')}, ${user?.user_metadata?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || ''}`}
         subtitle={isLiveMode ? t('liveDashboard.subtitle') : t('dashboard.subtitle')}
         actions={
-          <div className="flex items-center gap-3">
-            {/* Live Mode Toggle */}
-            <label className="flex items-center gap-2 cursor-pointer">
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-200">Live</span>
-              <div className="relative">
+          <div className="flex flex-wrap items-center gap-3 sm:gap-4 w-full min-w-0 xl:w-auto">
+            {/* Enhanced Live Mode Toggle */}
+            <div className="flex items-center gap-3 bg-slate-100 dark:bg-slate-800/50 p-1.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-inner">
+              <span className={cn(
+                "text-[10px] font-medium uppercase tracking-widest px-2 transition-colors",
+                isLiveMode ? "text-slate-400" : "text-slate-600 dark:text-slate-300"
+              )}>Static</span>
+              <label className="relative inline-flex items-center cursor-pointer">
                 <input
                   type="checkbox"
                   checked={isLiveMode}
-                  onChange={(e) => setIsLiveMode(e.target.checked)}
-                  className="sr-only"
+                  onChange={(e) => toggleLiveMode(e.target.checked)}
+                  className="sr-only peer"
                 />
-                <div className={`w-11 h-6 rounded-full transition-colors duration-200 ${isLiveMode ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'}`}>
-                  <div className={`absolute top-0.5 left-0.5 bg-white w-5 h-5 rounded-full shadow-md transform transition-transform duration-200 ${isLiveMode ? 'translate-x-5' : 'translate-x-0'}`}></div>
-                </div>
-              </div>
-            </label>
+                <div className="w-10 h-5 bg-slate-300 dark:bg-slate-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500 shadow-sm"></div>
+              </label>
+              <span className={cn(
+                "text-[10px] font-medium uppercase tracking-widest px-2 transition-colors",
+                isLiveMode ? "text-emerald-600 dark:text-emerald-400" : "text-slate-400"
+              )}>Live</span>
+            </div>
+
             {/* Live mode refresh button */}
             {isLiveMode && (
-              <button
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={() => {
                   refetchMetrics();
                   trackRefreshMetrics();
                 }}
-                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                className="hidden sm:flex items-center gap-2 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 transition-all shadow-sm"
               >
-                <RefreshCw className="h-4 w-4" />
-                {t('liveDashboard.refresh')}
-              </button>
+                <RefreshCw className={cn("h-3.5 w-3.5", summaryLoading && "animate-spin")} />
+                <span className="text-xs font-bold uppercase tracking-tight">{t('liveDashboard.refresh')}</span>
+              </Button>
             )}
             <QuickActionsButton />
           </div>
         }
       />
 
-      <div className="p-3 sm:p-4 lg:p-6 pb-6 space-y-6">
+      <div className="mx-auto w-full min-w-0 max-w-[1920px] space-y-6 px-2 sm:px-3 md:px-3 lg:px-4 py-3 md:py-4 lg:py-6">
         {isLiveMode ? (
-          <>
+          <div className="animate-in fade-in duration-500 space-y-6">
             {/* Live Dashboard Content */}
             <LiveSummaryCards summary={liveSummary} isLoading={summaryLoading} />
 
             {/* Main Grid - Heat Map and Concurrent Users */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Heat Map - Takes 2 columns */}
-              <div className="lg:col-span-2">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              {/* Heat Map - Takes 8 columns */}
+              <div className="lg:col-span-8">
                 <ActivityHeatMap
                   data={heatmapData || []}
                   isLoading={heatmapLoading}
@@ -220,8 +235,8 @@ const AppContent: React.FC = () => {
                 />
               </div>
 
-              {/* Concurrent Users */}
-              <div className="lg:col-span-1">
+              {/* Concurrent Users - Takes 4 columns */}
+              <div className="lg:col-span-4">
                 <ConcurrentUsersWidget
                   users={liveMetrics?.concurrentUsers.users || []}
                   total={liveMetrics?.concurrentUsers.total || 0}
@@ -248,34 +263,28 @@ const AppContent: React.FC = () => {
               />
             </div>
 
-            {/* Feature Usage */}
-            <FeatureUsageWidget
-              features={liveMetrics?.featureUsage || []}
-              isLoading={metricsLoading}
-            />
+            <div className="p-1 rounded-3xl bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 shadow-inner">
+              {/* Feature Usage */}
+              <FeatureUsageWidget
+                features={liveMetrics?.featureUsage || []}
+                isLoading={metricsLoading}
+              />
+            </div>
 
             {/* Last Updated Footer */}
             {liveMetrics?.lastUpdated && (
-              <div className="text-center text-xs text-gray-500 dark:text-gray-400">
-                {t('liveDashboard.lastUpdated')}: {new Date(liveMetrics.lastUpdated).toLocaleString()}
+              <div className="flex items-center justify-center gap-2 py-4">
+                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">
+                  {t('liveDashboard.lastUpdated')}: {new Date(liveMetrics.lastUpdated).toLocaleTimeString()}
+                </span>
               </div>
             )}
-          </>
+          </div>
         ) : (
-          <>
-            {/* Regular Dashboard Content */}
-            <div className="space-y-4">
-              <div>
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                  {t('dashboard.unifiedView.title')}
-                </h2>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  {t('dashboard.unifiedView.subtitle')}
-                </p>
-              </div>
-              <Dashboard sensorData={[]} settings={dashboardSettings} />
-            </div>
-          </>
+          <div className="animate-in fade-in duration-500 space-y-6">
+            <Dashboard sensorData={[]} settings={dashboardSettings} />
+          </div>
         )}
       </div>
 
@@ -293,29 +302,29 @@ export const Route = createFileRoute('/_authenticated/(core)/dashboard')({
   component: withRouteProtection(AppContent, 'read', 'Dashboard'),
 })
 
-const QuickActionsButton: React.FC = () => {
+const QuickActionsButton = () => {
   const { t } = useTranslation();
-  const { query } = useKBar()
+  const { toggle } = useCommandPaletteToggle();
 
   const handleClick = () => {
-    query.toggle();
+    toggle();
   };
 
   return (
-    <button
+    <Button
       type="button"
       onClick={handleClick}
-      className="flex items-center justify-between gap-2 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm transition hover:border-green-500 hover:text-green-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:ring-offset-2 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:border-green-400 dark:hover:text-green-300"
+      className="flex items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white px-4 h-10 text-xs font-semibold uppercase tracking-widest text-slate-700 shadow-sm transition-all hover:border-emerald-500 hover:text-emerald-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:border-emerald-400 dark:hover:text-emerald-300"
     >
       <span className="flex items-center gap-2">
-        <Search className="h-4 w-4" />
+        <Search className="h-3.5 w-3.5" />
         {t('dashboard.quickActions')}
       </span>
-      <span className="hidden items-center gap-1 rounded border border-gray-200 bg-gray-50 px-2 py-0.5 text-xs text-gray-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 sm:flex">
-        <kbd className="font-semibold">Cmd</kbd>
-        <span>+</span>
-        <kbd className="font-semibold">K</kbd>
+      <span className="hidden items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-medium text-slate-400 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-500 sm:flex">
+        <kbd className="tracking-tighter">CMD</kbd>
+        <span className="opacity-50">+</span>
+        <kbd className="tracking-tighter">K</kbd>
       </span>
-    </button>
+    </Button>
   )
 }

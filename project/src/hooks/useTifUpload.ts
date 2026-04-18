@@ -47,17 +47,25 @@ export function useTifUpload({ parcelId, parcelName, onSuccess }: UseTifUploadOp
       setUploadProgress(0);
 
       try {
-        // Create unique file path
-        const timestamp = Date.now();
-        const sanitizedName = parcelName.replace(/[^a-zA-Z0-9]/g, '_');
-        const filePath = `tif-images/${parcelId}/${sanitizedName}_${timestamp}.tif`;
+      // Get organization ID from auth context
+      const { data: { user } } = await apiClient.get('/api/v1/auth/me');
+      const organizationId = user?.organization_id;
 
-        // Upload to Supabase storage
-        setUploadProgress(30);
-        const result = await storageApi.upload('agritech-documents', filePath, file, {
-          cacheControl: '86400', // 24 hours
-          upsert: false,
-        });
+      if (!organizationId) {
+        throw new Error('Organization ID not found');
+      }
+
+      // Create unique file path with organization_id for tenant separation
+      const timestamp = Date.now();
+      const sanitizedName = parcelName.replace(/[^a-zA-Z0-9]/g, '_');
+      const filePath = `${organizationId}/tif-images/${parcelId}/${sanitizedName}_${timestamp}.tif`;
+
+      // Upload to Supabase storage
+      setUploadProgress(30);
+      const result = await storageApi.upload('agritech-documents', filePath, file, {
+        cacheControl: '86400', // 24 hours
+        upsert: false,
+      });
 
         setUploadProgress(70);
 

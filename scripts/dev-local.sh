@@ -10,7 +10,10 @@
 # - Frontend Dashboard (port 5173)
 #
 # Usage:
-#   ./scripts/dev-local.sh           # Start all services
+#   ./scripts/dev-local.sh              # Start all services (incl. satellite uvicorn)
+#   ./scripts/dev-local.sh start-no-satellite
+#                                     # Supabase + API + frontend only — use when satellite
+#                                     # runs separately, e.g. ./scripts/run-satellite-with-debugpy.sh + VS Code attach
 #   ./scripts/dev-local.sh stop      # Stop all services
 #   ./scripts/dev-local.sh status    # Check service status
 #   ./scripts/dev-local.sh logs      # View all logs
@@ -363,7 +366,7 @@ start_all() {
     
     start_supabase
     start_api
-    start_satellite
+    # start_satellite
     start_frontend
     
     echo ""
@@ -374,8 +377,44 @@ start_all() {
     print_info "Services:"
     echo "  - Frontend:  http://localhost:5173"
     echo "  - API:       http://localhost:3001"
-    echo "  - Satellite: http://localhost:8001"
+    # echo "  - Satellite: http://localhost:8001"
     echo "  - Supabase:  http://127.0.0.1:54323 (Studio)"
+    echo ""
+    print_info "Commands:"
+    echo "  - ./scripts/dev-local.sh status  # Check status"
+    echo "  - ./scripts/dev-local.sh logs    # View logs"
+    echo "  - ./scripts/dev-local.sh stop    # Stop all"
+    echo ""
+}
+
+start_without_satellite() {
+    print_header
+
+    check_dependencies
+    setup_env_files
+
+    echo ""
+    print_info "Starting stack without satellite (run satellite separately, e.g. debugpy)..."
+    echo ""
+
+    start_supabase
+    start_api
+    start_frontend
+
+    echo ""
+    echo -e "${GREEN}==========================================${NC}"
+    echo -e "${GREEN}  Stack started (no satellite process)   ${NC}"
+    echo -e "${GREEN}==========================================${NC}"
+    echo ""
+    print_info "Services:"
+    echo "  - Frontend:  http://localhost:5173"
+    echo "  - API:       http://localhost:3001"
+    echo "  - Supabase:  http://127.0.0.1:54323 (Studio)"
+    echo ""
+    print_warning "Satellite was NOT started by this script."
+    echo "  Start it under the debugger, then attach in VS Code:"
+    echo "    ./scripts/run-satellite-with-debugpy.sh"
+    echo "  Ensure agritech-api SATELLITE_SERVICE_URL=http://localhost:8001"
     echo ""
     print_info "Commands:"
     echo "  - ./scripts/dev-local.sh status  # Check status"
@@ -388,6 +427,9 @@ start_all() {
 case "${1:-start}" in
     start)
         start_all
+        ;;
+    start-no-satellite|no-satellite)
+        start_without_satellite
         ;;
     stop)
         stop_services
@@ -420,7 +462,7 @@ case "${1:-start}" in
         print_status "Database reset complete"
         ;;
     *)
-        echo "Usage: $0 {start|stop|status|logs|restart|reset}"
+        echo "Usage: $0 {start|start-no-satellite|stop|status|logs|restart|reset}"
         exit 1
         ;;
 esac

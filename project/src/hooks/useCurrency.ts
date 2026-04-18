@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useAuth } from '../hooks/useAuth';
-import { formatCurrency, getCurrency } from '../utils/currencies';
+import { formatCurrency, getCurrency, DEFAULT_CURRENCY } from '../utils/currencies';
 
 /**
  * Custom hook for currency formatting synced with organization settings
@@ -9,8 +9,8 @@ import { formatCurrency, getCurrency } from '../utils/currencies';
 export function useCurrency() {
   const { currentOrganization } = useAuth();
 
-  // Get organization currency or default to MAD (Moroccan Dirham)
-  const currencyCode = currentOrganization?.currency || 'MAD';
+  // Get organization currency or use the app-wide default
+  const currencyCode = currentOrganization?.currency || DEFAULT_CURRENCY;
   const currency = getCurrency(currencyCode);
 
   // Memoized formatter function

@@ -14,7 +14,7 @@ export interface NotificationData {
   type: string;
   title: string;
   message?: string;
-  data?: Record<string, any>;
+  data?: Record<string, unknown>;
   is_read: boolean;
   created_at: string;
   read_at?: string;
@@ -22,16 +22,15 @@ export interface NotificationData {
 
 export type SocketStatus = 'connecting' | 'connected' | 'disconnected' | 'error';
 
-type SocketEventHandler = (data: any) => void;
+type SocketEventHandler = (data: unknown) => void;
 
 class SocketManager {
   private socket: Socket | null = null;
   private status: SocketStatus = 'disconnected';
   private organizationId: string | null = null;
-  private reconnectAttempts = 0;
-  private maxReconnectAttempts = 5;
   private eventHandlers: Map<string, Set<SocketEventHandler>> = new Map();
   private statusHandlers: Set<(status: SocketStatus) => void> = new Set();
+  private visibilityHandlerAttached = false;
 
   async connect(organizationId: string): Promise<void> {
     // Disconnect existing connection if any
@@ -64,26 +63,36 @@ class SocketManager {
         },
         transports: ['websocket', 'polling'],
         reconnection: true,
-        reconnectionAttempts: this.maxReconnectAttempts,
+        reconnectionAttempts: Infinity,
         reconnectionDelay: 1000,
-        reconnectionDelayMax: 5000,
+        reconnectionDelayMax: 30000,
         timeout: 10000,
-        // Add path explicitly if needed
-        // path: '/socket.io',
       });
 
       this.setupEventListeners();
+      this.attachVisibilityListener();
     } catch (error) {
       console.error('[Socket] Connection error:', error);
       this.setStatus('error');
     }
   }
 
+  /** Reconnect when tab becomes visible after being hidden (mobile backgrounding, laptop sleep) */
+  private attachVisibilityListener(): void {
+    if (this.visibilityHandlerAttached) return;
+    this.visibilityHandlerAttached = true;
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && this.organizationId && !this.socket?.connected) {
+        void this.connect(this.organizationId);
+      }
+    });
+  }
+
   private setupEventListeners(): void {
     if (!this.socket) return;
 
     this.socket.on('connect', () => {
-      this.reconnectAttempts = 0;
       this.setStatus('connected');
     });
 
@@ -96,11 +105,7 @@ class SocketManager {
 
     this.socket.on('connect_error', (error) => {
       console.error('[Socket] Connection error:', error.message);
-      this.reconnectAttempts++;
-
-      if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-        this.setStatus('error');
-      }
+      this.setStatus('error');
     });
 
     // Handle notification events
@@ -115,6 +120,18 @@ class SocketManager {
     this.socket.on('notification:read-all', (data: { count: number; readAt: string }) => {
       this.emit('notification:read-all', data);
     });
+
+    this.socket.on('calibration:phase-changed', (data: unknown) => {
+      this.emit('calibration:phase-changed', data);
+    });
+
+    this.socket.on('calibration:failed', (data: unknown) => {
+      this.emit('calibration:failed', data);
+    });
+
+    this.socket.on('calibration:progress', (data: unknown) => {
+      this.emit('calibration:progress', data);
+    });
   }
 
   disconnect(): void {
@@ -128,7 +145,9 @@ class SocketManager {
 
   private setStatus(status: SocketStatus): void {
     this.status = status;
-    this.statusHandlers.forEach((handler) => handler(status));
+    this.statusHandlers.forEach((handler) => {
+      handler(status);
+    });
   }
 
   getStatus(): SocketStatus {
@@ -156,7 +175,7 @@ class SocketManager {
     this.eventHandlers.get(event)?.delete(handler);
   }
 
-  private emit(event: string, data: any): void {
+  private emit(event: string, data: unknown): void {
     this.eventHandlers.get(event)?.forEach((handler) => {
       try {
         handler(data);

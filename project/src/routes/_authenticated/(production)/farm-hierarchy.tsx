@@ -8,6 +8,8 @@ import FarmRoleManager from '@/components/FarmRoleManager';
 import { useState } from 'react';
 import { Building2 } from 'lucide-react';
 import { useAutoStartTour } from '@/contexts/TourContext';
+import { PageLoader } from '@/components/ui/loader';
+import { Button } from '@/components/ui/button';
 
 function FarmHierarchyPage() {
   const navigate = useNavigate();
@@ -19,14 +21,7 @@ function FarmHierarchyPage() {
   useAutoStartTour('farm-management', 1500);
 
   if (!currentOrganization) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">{t('farmHierarchy.organizationLoading')}</p>
-        </div>
-      </div>
-    );
+    return <PageLoader className="min-h-screen" />;
   }
 
   if (!user) {
@@ -54,16 +49,16 @@ function FarmHierarchyPage() {
         />
       }
     >
-      <div className="p-3 sm:p-4 lg:p-6">
+      <div className="p-3 sm:p-4 md:p-6 pb-20 md:pb-6">
         {selectedFarm ? (
           <div>
             {/* Back Button */}
-            <button
+            <Button
               onClick={() => setSelectedFarm(null)}
               className="mb-6 flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
             >
               ← {t('farmHierarchy.backToHierarchy')}
-            </button>
+            </Button>
 
             {/* Role Manager */}
             <FarmRoleManager

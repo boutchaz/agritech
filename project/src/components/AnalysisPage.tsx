@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Plus, FileText, Loader2, Grid, List, ChevronLeft, ChevronRight, MapPin, Beaker, Leaf, Droplet } from 'lucide-react';
+import { Plus, FileText, Loader2, Grid, List, MapPin, Beaker, Leaf, Droplet } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { useAuth } from '../hooks/useAuth';
@@ -11,18 +11,23 @@ import WaterAnalysisForm from './Analysis/WaterAnalysisForm';
 import AnalysisCard from './Analysis/AnalysisCard';
 import { useAnalysesByFarm, useParcels, useAddAnalysis, useDeleteAnalysis } from '../hooks/useAnalysesQuery';
 import type { SoilAnalysisFormValues } from '../schemas/analysisSchemas';
-
-const ITEMS_PER_PAGE = 6;
+import { Button } from '@/components/ui/button';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { DataTablePagination, ListPageLayout, ResponsiveList } from '@/components/ui/data-table';
 
 // Parcel interface removed - using the type from useParcels hook instead
 
-const AnalysisPage: React.FC = () => {
+const AnalysisPage = () => {
   const { t } = useTranslation('common');
   const { currentFarm, currentOrganization } = useAuth();
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmAction] = useState<{title:string;description?:string;variant?:"destructive"|"default";onConfirm:()=>void}>({title:"",onConfirm:()=>{}});
+
   const [activeTab, setActiveTab] = useState<AnalysisType>('soil');
   const [showForm, setShowForm] = useState(false);
   const [viewMode, setViewMode] = useState<'card' | 'list'>('card');
   const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(6);
   const [selectedParcelId, setSelectedParcelId] = useState<string | null>(null);
 
   const { data: analyses = [], isLoading: loading, error } = useAnalysesByFarm(currentFarm?.id, activeTab, currentOrganization?.id);
@@ -38,13 +43,13 @@ const AnalysisPage: React.FC = () => {
     return analyses.filter(analysis => analysis.parcel_id === selectedParcelId);
   }, [analyses, selectedParcelId]);
 
-  const totalPages = Math.ceil(filteredAnalyses.length / ITEMS_PER_PAGE);
+  const totalPages = Math.ceil(filteredAnalyses.length / pageSize);
 
   const paginatedAnalyses = useMemo(() => {
-    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    const endIndex = startIndex + ITEMS_PER_PAGE;
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
     return filteredAnalyses.slice(startIndex, endIndex);
-  }, [filteredAnalyses, currentPage]);
+  }, [filteredAnalyses, currentPage, pageSize]);
 
   // Reset to page 1 if current page exceeds total pages
   React.useEffect(() => {
@@ -153,7 +158,7 @@ const AnalysisPage: React.FC = () => {
           {tabs.map((tab) => {
             const Icon = tab.icon;
             return (
-              <button
+              <Button
                 key={tab.id}
                 onClick={() => {
                   setActiveTab(tab.id);
@@ -167,7 +172,7 @@ const AnalysisPage: React.FC = () => {
               >
                 <Icon className="h-5 w-5" />
                 <span>{t(`analysis.types.${tab.id}`)}</span>
-              </button>
+              </Button>
             );
           })}
         </div>
@@ -209,107 +214,83 @@ const AnalysisPage: React.FC = () => {
         </div>
       </div>
 
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
-        <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
-          {t(`analysis.types.${activeTab}`)}
-        </h2>
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4 w-full sm:w-auto">
-          <div className="flex items-center space-x-2 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
-            <button
-              onClick={() => setViewMode('card')}
-              className={`p-2 rounded ${viewMode === 'card' ? 'bg-white dark:bg-gray-700 shadow-sm' : ''}`}
-              title={t('analysis.cardView')}
-            >
-              <Grid className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-            </button>
-            <button
-              onClick={() => setViewMode('list')}
-              className={`p-2 rounded ${viewMode === 'list' ? 'bg-white dark:bg-gray-700 shadow-sm' : ''}`}
-              title={t('analysis.listView')}
-            >
-              <List className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-            </button>
-          </div>
-          <button
-            onClick={() => setShowForm(true)}
-            disabled={!selectedParcelId}
-            className="px-3 sm:px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-            title={!selectedParcelId ? t('analysis.selectParcelToAdd') : t('analysis.addNewAnalysis')}
-          >
-            <Plus className="h-4 w-4 sm:h-5 sm:w-5" />
-            <span>{t('analysis.newAnalysis')}</span>
-          </button>
-        </div>
-      </div>
-
-      {filteredAnalyses.length === 0 ? (
-        <div className="text-center py-12">
-          <FileText className="h-10 w-10 sm:h-12 sm:w-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-base sm:text-lg font-medium text-gray-900 dark:text-white mb-2">
-            {t('analysis.noAnalyses')}
-          </h3>
-          <p className="text-sm sm:text-base text-gray-500 dark:text-gray-400">
-            {t('analysis.startByAdding', { type: t(`analysis.tabs.${activeTab}`).toLowerCase() })}
-          </p>
-        </div>
-      ) : (
-        <>
-          <div className={viewMode === 'card' ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6' : 'space-y-4'}>
-            {paginatedAnalyses.map(analysis => (
-              <AnalysisCard
-                key={analysis.id}
-                analysis={analysis}
-                viewMode={viewMode}
-                parcelName={!selectedParcelId ? parcels.find(p => p.id === analysis.parcel_id)?.name : undefined}
-                onDelete={handleDelete}
-              />
-            ))}
-          </div>
-
-          {totalPages > 1 && (
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-0 mt-4 sm:mt-6">
-              <p className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 text-center sm:text-left">
-                {t('analysis.displayingResults', {
-                  from: ((currentPage - 1) * ITEMS_PER_PAGE) + 1,
-                  to: Math.min(currentPage * ITEMS_PER_PAGE, filteredAnalyses.length),
-                  total: filteredAnalyses.length
-                })}
-              </p>
-              <div className="flex items-center space-x-2">
-                <button
-                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                  disabled={currentPage === 1}
-                  className="p-1.5 sm:p-2 rounded-md bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700"
+      <ListPageLayout
+        header={
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center sm:justify-end gap-2 sm:gap-4 w-full">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4 w-full sm:w-auto">
+              <div className="flex items-center space-x-2 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+                <Button
+                  onClick={() => setViewMode('card')}
+                  className={`p-2 rounded ${viewMode === 'card' ? 'bg-white dark:bg-gray-700 shadow-sm' : ''}`}
+                  title={t('analysis.cardView')}
                 >
-                  <ChevronLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                </button>
-                <div className="flex items-center space-x-1">
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                    <button
-                      key={page}
-                      onClick={() => setCurrentPage(page)}
-                      className={`px-2.5 sm:px-3 py-1 rounded-md text-xs sm:text-sm ${
-                        currentPage === page
-                          ? 'bg-green-600 text-white'
-                          : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
-                      }`}
-                    >
-                      {page}
-                    </button>
-                  ))}
-                </div>
-                <button
-                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                  disabled={currentPage === totalPages}
-                  className="p-1.5 sm:p-2 rounded-md bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-700"
+                  <Grid className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                </Button>
+                <Button
+                  onClick={() => setViewMode('list')}
+                  className={`p-2 rounded ${viewMode === 'list' ? 'bg-white dark:bg-gray-700 shadow-sm' : ''}`}
+                  title={t('analysis.listView')}
                 >
-                  <ChevronRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                </button>
+                  <List className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                </Button>
               </div>
+              <Button variant="green"
+                onClick={() => setShowForm(true)}
+                disabled={!selectedParcelId}
+                className="px-3 sm:px-4 py-2 rounded-md flex items-center justify-center space-x-2 disabled:cursor-not-allowed text-sm"
+                title={!selectedParcelId ? t('analysis.selectParcelToAdd') : t('analysis.addNewAnalysis')}
+              >
+                <Plus className="h-4 w-4 sm:h-5 sm:w-5" />
+                <span>{t('analysis.newAnalysis')}</span>
+              </Button>
             </div>
+          </div>
+        }
+      >
+        <ResponsiveList
+          items={paginatedAnalyses}
+          isLoading={loading}
+          keyExtractor={(analysis) => analysis.id}
+          emptyIcon={FileText}
+          emptyTitle={t('analysis.noAnalyses')}
+          emptyMessage={t('analysis.startByAdding', { type: t(`analysis.tabs.${activeTab}`).toLowerCase() })}
+          renderCard={(analysis) => (
+            <AnalysisCard
+              analysis={analysis}
+              viewMode="card"
+              parcelName={!selectedParcelId ? parcels.find(p => p.id === analysis.parcel_id)?.name : undefined}
+              onDelete={handleDelete}
+            />
           )}
-        </>
-      )}
+          renderTable={(analysis) => (
+            <AnalysisCard
+              analysis={analysis}
+              viewMode="list"
+              parcelName={!selectedParcelId ? parcels.find(p => p.id === analysis.parcel_id)?.name : undefined}
+              onDelete={handleDelete}
+            />
+          )}
+        />
+
+        {totalPages > 1 && (
+          <DataTablePagination
+            page={currentPage}
+            totalPages={totalPages}
+            pageSize={pageSize}
+            totalItems={filteredAnalyses.length}
+            onPageChange={(page) => setCurrentPage(page)}
+            onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1); }}
+          />
+        )}
+      </ListPageLayout>
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title={confirmAction.title}
+        description={confirmAction.description}
+        variant={confirmAction.variant}
+        onConfirm={confirmAction.onConfirm}
+      />
     </div>
   );
 };

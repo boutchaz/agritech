@@ -30,7 +30,7 @@ const CATEGORY_COLORS = {
  * Only shown to users in basic/medium modes
  * Can be permanently dismissed per hint ID
  */
-export const ContextualHelp: React.FC<ContextualHelpProps> = ({ hint, className = '' }) => {
+export const ContextualHelp = ({ hint, className = '' }: ContextualHelpProps) => {
   const { level, config, isHintDismissed, dismissHint } = useExperienceLevel();
 
   // Don't show if contextual help is disabled for this level
@@ -84,7 +84,7 @@ interface HelpTriggerProps {
   className?: string;
 }
 
-export const HelpTrigger: React.FC<HelpTriggerProps> = ({ content, className = '' }) => {
+export const HelpTrigger = ({ content, className = '' }: HelpTriggerProps) => {
   const { config } = useExperienceLevel();
   const [isOpen, setIsOpen] = React.useState(false);
 
@@ -94,14 +94,14 @@ export const HelpTrigger: React.FC<HelpTriggerProps> = ({ content, className = '
 
   return (
     <div className={`relative inline-block ${className}`}>
-      <button
+      <Button
         onMouseEnter={() => setIsOpen(true)}
         onMouseLeave={() => setIsOpen(false)}
         onClick={() => setIsOpen(!isOpen)}
         className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
       >
         <HelpCircle className="h-4 w-4" />
-      </button>
+      </Button>
       {isOpen && (
         <div className="absolute z-50 left-1/2 -translate-x-1/2 bottom-full mb-2 px-3 py-2 bg-gray-900 dark:bg-gray-700 text-white text-sm rounded-lg shadow-lg w-64">
           <div className="text-xs">{content}</div>

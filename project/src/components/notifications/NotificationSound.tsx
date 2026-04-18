@@ -8,10 +8,12 @@ interface NotificationSoundProps {
 // Generate a subtle notification sound using Web Audio API
 function playNotificationSound(): void {
   try {
-    const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-    if (!AudioContext) return;
+    const AudioContextConstructor: typeof AudioContext | undefined =
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!AudioContextConstructor) return;
 
-    const audioContext = new AudioContext();
+    const audioContext = new AudioContextConstructor();
     const oscillator = audioContext.createOscillator();
     const gainNode = audioContext.createGain();
 
@@ -25,11 +27,11 @@ function playNotificationSound(): void {
     gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
     gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.15);
 
-    oscillator.start(audioContext.currentTime);
-    oscillator.stop(audioContext.currentTime + 0.15);
-  } catch (error) {
-    console.warn('Failed to play notification sound:', error);
-  }
+     oscillator.start(audioContext.currentTime);
+     oscillator.stop(audioContext.currentTime + 0.15);
+   } catch (_error) {
+     // Failed to play notification sound
+   }
 }
 
 // Trigger haptic feedback on mobile devices
@@ -81,7 +83,7 @@ export function useNotificationSound(enabled: boolean = true) {
  * This component can be used to add sound controls to settings pages
  */
 export function NotificationSound({ enabled, onPlay }: NotificationSoundProps) {
-  const { isSoundEnabled, toggleSound, play } = useNotificationSound(enabled);
+   const { toggleSound, play } = useNotificationSound(enabled);
 
   useEffect(() => {
     if (enabled !== undefined) {

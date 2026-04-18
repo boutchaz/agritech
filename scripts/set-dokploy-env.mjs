@@ -195,6 +195,7 @@ async function main() {
     SMTP_USER: env.SMTP_USER || '',
     SMTP_PASS: env.SMTP_PASS || '',
     EMAIL_FROM: env.EMAIL_FROM || '',
+    OPENWEATHER_API_KEY: env.OPENWEATHER_API_KEY || '',
   };
   await composeUpdate(COMPOSE_IDS.api, envToString(apiEnv));
   console.log('✓ api');
@@ -242,7 +243,6 @@ async function main() {
     DASHBOARD_TRAEFIK_HOST: dashboardTraefikHost,
     DASHBOARD_PUBLIC_HOST: dashboardPublicHost,
     TRAEFIK_NETWORK: env.TRAEFIK_NETWORK || 'dokploy-network',
-    VITE_OPENWEATHER_API_KEY: env.VITE_OPENWEATHER_API_KEY || '',
     VITE_GA_MEASUREMENT_ID: env.VITE_GA_MEASUREMENT_ID || '',
     VITE_CLARITY_ENABLED: env.VITE_CLARITY_ENABLED || 'true',
     VITE_ANALYTICS_DEBUG: env.VITE_ANALYTICS_DEBUG || 'false',

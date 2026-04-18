@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import {  useState, useEffect  } from "react";
 import { usersApi } from '@/lib/api/users';
 import { onboardingApi } from '@/lib/api/onboarding';
 import { farmsApi } from '@/lib/api/farms';
@@ -9,9 +9,11 @@ import { FormField } from './ui/FormField';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { Textarea } from './ui/Textarea';
+import { SectionLoader } from '@/components/ui/loader';
+import { Button } from '@/components/ui/button';
 
 interface OnboardingFlowProps {
-  user: any;
+  user: { id: string; email?: string };
   onComplete: () => void;
 }
 
@@ -43,7 +45,7 @@ interface FarmData {
   description: string;
 }
 
-const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ user, onComplete }) => {
+const OnboardingFlow = ({ user, onComplete }: OnboardingFlowProps) => {
   const roundToTwoDecimals = (value: number): number => Number(value.toFixed(2));
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -329,9 +331,9 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ user, onComplete }) => 
       }
 
       onComplete();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Onboarding error:', error);
-      setError(error.message || 'Une erreur est survenue lors de la création');
+      setError(error instanceof Error ? error.message : 'Une erreur est survenue lors de la création');
     } finally {
       setLoading(false);
     }
@@ -345,14 +347,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ user, onComplete }) => 
 
   // Show loading state while checking existing data
   if (initialLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">Préparation de votre espace...</p>
-        </div>
-      </div>
-    );
+    return <SectionLoader className="min-h-screen" />;
   }
 
   return (
@@ -484,19 +479,19 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ user, onComplete }) => 
                       type="text"
                       value={organizationData.name}
                       onChange={(e) => handleOrganizationNameChange(e.target.value)}
-                      placeholder="Ma Ferme AgriTech"
+                      placeholder="Ma Ferme AgroGina"
                       data-testid="onboarding-org-name"
                     />
                   </FormField>
                 </div>
                 <div>
-                  <FormField label="Identifiant URL" htmlFor="onb_org_slug" helper={`Sera utilisé dans l'URL: agritech.app/org/${organizationData.slug}`}>
+                  <FormField label="Identifiant URL" htmlFor="onb_org_slug" helper={`Sera utilisé dans l'URL: agrogina.app/org/${organizationData.slug}`}>
                     <Input
                       id="onb_org_slug"
                       type="text"
                       value={organizationData.slug}
                       onChange={(e) => setOrganizationData(prev => ({ ...prev, slug: e.target.value }))}
-                      placeholder="ma-ferme-agritech"
+                      placeholder="ma-ferme-agrogina"
                     />
                   </FormField>
                   {/* helper moved into FormField */}
@@ -620,32 +615,21 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ user, onComplete }) => 
 
           {/* Navigation */}
           <div className="flex justify-between mt-8">
-            <button
+            <Button
               type="button"
               onClick={handlePrevious}
               disabled={currentStep === 1}
               className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-200 rounded-md hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Précédent
-            </button>
+            </Button>
 
             {currentStep < 3 ? (
-              <button
-                type="button"
-                onClick={handleNext}
-                className="px-6 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
-                data-testid="onboarding-next-button"
-              >
+              <Button variant="blue" type="button" onClick={handleNext} className="px-6 py-2 text-sm font-medium rounded-md" data-testid="onboarding-next-button" >
                 {canSkipStep(currentStep) ? 'Continuer' : 'Suivant'}
-              </button>
+              </Button>
             ) : (
-              <button
-                type="button"
-                onClick={handleComplete}
-                disabled={loading || seedingData}
-                className="px-6 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                data-testid="onboarding-complete-button"
-              >
+              <Button variant="green" type="button" onClick={handleComplete} disabled={loading || seedingData} className="px-6 py-2 text-sm font-medium rounded-md disabled:cursor-not-allowed flex items-center gap-2" data-testid="onboarding-complete-button" >
                 {seedingData ? (
                   <>
                     <Database className="w-4 h-4 animate-pulse" />
@@ -656,7 +640,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ user, onComplete }) => 
                 ) : (
                   'Terminer'
                 )}
-              </button>
+              </Button>
             )}
           </div>
         </div>

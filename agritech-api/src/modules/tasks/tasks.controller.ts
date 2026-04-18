@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Put,
   Patch,
   Delete,
   Body,
@@ -45,13 +46,19 @@ export class TasksController {
   @CanReadTasks()
   @ApiOperation({ summary: 'Get all tasks assigned to the current user across all organizations' })
   @ApiQuery({ name: 'includeCompleted', required: false, description: 'Include completed tasks in results', type: Boolean })
+  @ApiQuery({ name: 'page', required: false, description: 'Page number (1-based)', type: Number })
+  @ApiQuery({ name: 'pageSize', required: false, description: 'Number of items per page', type: Number })
   @ApiResponse({ status: 200, description: 'Tasks retrieved successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async getMyTasks(
     @Request() req,
     @Query('includeCompleted') includeCompleted?: string,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
   ) {
-    return this.tasksService.findMyTasks(req.user.id, includeCompleted === 'true');
+    const pageNum = page ? parseInt(page, 10) : undefined;
+    const pageSizeNum = pageSize ? parseInt(pageSize, 10) : undefined;
+    return this.tasksService.findMyTasks(req.user.id, includeCompleted === 'true', pageNum, pageSizeNum);
   }
 
   @Get()
@@ -76,6 +83,134 @@ export class TasksController {
   async getTaskStatistics(@Request() req) {
     const organizationId = req.headers['x-organization-id'] as string;
     return this.tasksService.getStatistics(req.user.id, organizationId);
+  }
+
+  @Post('bulk')
+  @CanCreateTask()
+  @ApiOperation({ summary: 'Bulk create tasks' })
+  @ApiResponse({ status: 201, description: 'Tasks created successfully' })
+  @ApiResponse({ status: 400, description: 'Bad request - validation error' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async bulkCreateTasks(
+    @Request() req,
+    @Body() createTaskDtos: CreateTaskDto[],
+  ) {
+    const organizationId = req.headers['x-organization-id'] as string;
+    return this.tasksService.bulkCreate(req.user.id, organizationId, createTaskDtos);
+  }
+
+  @Patch('bulk-status')
+  @CanUpdateTask()
+  @ApiOperation({ summary: 'Bulk update task statuses' })
+  @ApiResponse({ status: 200, description: 'Task statuses updated successfully' })
+  @ApiResponse({ status: 400, description: 'Bad request - validation error' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async bulkUpdateTaskStatus(
+    @Request() req,
+    @Body() body: { taskIds: string[]; status: string },
+  ) {
+    const organizationId = req.headers['x-organization-id'] as string;
+    return this.tasksService.bulkUpdateStatus(req.user.id, organizationId, body.taskIds, body.status);
+  }
+
+  @Delete('bulk')
+  @CanDeleteTask()
+  @ApiOperation({ summary: 'Bulk delete tasks' })
+  @ApiResponse({ status: 200, description: 'Tasks deleted successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async bulkDeleteTasks(
+    @Request() req,
+    @Body() body: { taskIds: string[] },
+  ) {
+    const organizationId = req.headers['x-organization-id'] as string;
+    return this.tasksService.bulkDelete(req.user.id, organizationId, body.taskIds);
+  }
+
+  @Delete('dependencies/:dependencyId')
+  @CanUpdateTask()
+  @ApiOperation({ summary: 'Remove a dependency' })
+  async removeDependency(@Request() req: any, @Param('dependencyId') dependencyId: string) {
+    const organizationId = req.headers['x-organization-id'] as string;
+    return this.tasksService.removeDependency(req.user.id, organizationId, dependencyId);
+  }
+
+  // =====================================================
+  // TASK CHECKLIST
+  // =====================================================
+
+  @Get(':taskId/checklist')
+  @CanReadTasks()
+  @ApiOperation({ summary: 'Get checklist for a task' })
+  async getChecklist(@Request() req, @Param('taskId') taskId: string) {
+    const organizationId = req.headers['x-organization-id'] as string;
+    return this.tasksService.getChecklist(req.user.id, organizationId, taskId);
+  }
+
+  @Put(':taskId/checklist')
+  @CanUpdateTask()
+  @ApiOperation({ summary: 'Update entire checklist' })
+  async updateChecklist(@Request() req, @Param('taskId') taskId: string, @Body() body: { checklist: any[] }) {
+    const organizationId = req.headers['x-organization-id'] as string;
+    return this.tasksService.updateChecklist(req.user.id, organizationId, taskId, body.checklist);
+  }
+
+  @Post(':taskId/checklist/items')
+  @CanUpdateTask()
+  @ApiOperation({ summary: 'Add checklist item' })
+  async addChecklistItem(@Request() req, @Param('taskId') taskId: string, @Body() body: { title: string }) {
+    const organizationId = req.headers['x-organization-id'] as string;
+    return this.tasksService.addChecklistItem(req.user.id, organizationId, taskId, body.title);
+  }
+
+  @Patch(':taskId/checklist/items/:itemId/toggle')
+  @CanUpdateTask()
+  @ApiOperation({ summary: 'Toggle checklist item' })
+  async toggleChecklistItem(@Request() req, @Param('taskId') taskId: string, @Param('itemId') itemId: string) {
+    const organizationId = req.headers['x-organization-id'] as string;
+    return this.tasksService.toggleChecklistItem(req.user.id, organizationId, taskId, itemId);
+  }
+
+  @Delete(':taskId/checklist/items/:itemId')
+  @CanUpdateTask()
+  @ApiOperation({ summary: 'Remove checklist item' })
+  async removeChecklistItem(@Request() req, @Param('taskId') taskId: string, @Param('itemId') itemId: string) {
+    const organizationId = req.headers['x-organization-id'] as string;
+    return this.tasksService.removeChecklistItem(req.user.id, organizationId, taskId, itemId);
+  }
+
+  // =====================================================
+  // TASK DEPENDENCIES
+  // =====================================================
+
+  @Get(':taskId/dependencies')
+  @CanReadTasks()
+  @ApiOperation({ summary: 'Get task dependencies' })
+  async getDependencies(@Request() req: any, @Param('taskId') taskId: string) {
+    const organizationId = req.headers['x-organization-id'] as string;
+    return this.tasksService.getDependencies(req.user.id, organizationId, taskId);
+  }
+
+  @Post(':taskId/dependencies')
+  @CanUpdateTask()
+  @ApiOperation({ summary: 'Add a dependency' })
+  async addDependency(
+    @Request() req: any,
+    @Param('taskId') taskId: string,
+    @Body() body: { depends_on_task_id: string; dependency_type?: string; lag_days?: number },
+  ) {
+    const organizationId = req.headers['x-organization-id'] as string;
+    return this.tasksService.addDependency(
+      req.user.id, organizationId, taskId,
+      body.depends_on_task_id, body.dependency_type, body.lag_days,
+    );
+  }
+
+  @Get(':taskId/blocked')
+  @CanReadTasks()
+  @ApiOperation({ summary: 'Check if task is blocked by dependencies' })
+  async isTaskBlocked(@Request() req: any, @Param('taskId') taskId: string) {
+    const organizationId = req.headers['x-organization-id'] as string;
+    return this.tasksService.isTaskBlocked(req.user.id, organizationId, taskId);
   }
 
   @Get(':taskId')
@@ -139,6 +274,23 @@ export class TasksController {
   ) {
     const organizationId = req.headers['x-organization-id'] as string;
     return this.tasksService.assign(req.user.id, organizationId, taskId, assignTaskDto);
+  }
+
+  @Post(':taskId/reprocess-stock')
+  @CanManageTasks()
+  @ApiOperation({ summary: 'Reprocess stock deduction for a task (admin fix)' })
+  async reprocessStock(@Request() req, @Param('taskId') taskId: string) {
+    const organizationId = req.headers['x-organization-id'] as string;
+    return this.tasksService.reprocessStockForTask(req.user.id, organizationId, taskId);
+  }
+
+  @Post(':taskId/start')
+  @CanUpdateTask()
+  @ApiOperation({ summary: 'Start a task and deduct planned stock from inventory' })
+  @ApiParam({ name: 'taskId', description: 'Task ID' })
+  async startTask(@Request() req, @Param('taskId') taskId: string) {
+    const organizationId = req.headers['x-organization-id'] as string;
+    return this.tasksService.startTask(req.user.id, organizationId, taskId);
   }
 
   @Patch(':taskId/complete')
@@ -230,9 +382,11 @@ export class TasksController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 404, description: 'Task not found' })
   async getTaskComments(
+    @Request() req,
     @Param('taskId') taskId: string,
   ) {
-    return this.tasksService.getComments(taskId);
+    const organizationId = req.headers['x-organization-id'] as string;
+    return this.tasksService.getComments(organizationId, taskId);
   }
 
   @Post(':taskId/comments')
@@ -248,7 +402,74 @@ export class TasksController {
     @Param('taskId') taskId: string,
     @Body() createCommentDto: any,
   ) {
-    return this.tasksService.addComment(req.user.id, taskId, createCommentDto);
+    const organizationId = req.headers['x-organization-id'] as string;
+    return this.tasksService.addComment(req.user.id, organizationId, taskId, createCommentDto);
+  }
+
+  @Patch(':taskId/comments/:commentId')
+  @CanUpdateTask()
+  @ApiOperation({ summary: 'Edit a comment (author only)' })
+  async updateTaskComment(
+    @Request() req,
+    @Param('taskId') taskId: string,
+    @Param('commentId') commentId: string,
+    @Body() body: { comment?: string },
+  ) {
+    const organizationId = req.headers['x-organization-id'] as string;
+    return this.tasksService.updateComment(req.user.id, organizationId, taskId, commentId, body);
+  }
+
+  @Delete(':taskId/comments/:commentId')
+  @CanUpdateTask()
+  @ApiOperation({ summary: 'Delete a comment (author or admin)' })
+  async deleteTaskComment(
+    @Request() req,
+    @Param('taskId') taskId: string,
+    @Param('commentId') commentId: string,
+  ) {
+    const organizationId = req.headers['x-organization-id'] as string;
+    return this.tasksService.deleteComment(req.user.id, organizationId, taskId, commentId);
+  }
+
+  @Patch(':taskId/comments/:commentId/resolve')
+  @CanUpdateTask()
+  @ApiOperation({ summary: 'Mark a comment (typically an issue) as resolved or reopen it' })
+  async resolveTaskComment(
+    @Request() req,
+    @Param('taskId') taskId: string,
+    @Param('commentId') commentId: string,
+    @Body() body: { resolved?: boolean },
+  ) {
+    const organizationId = req.headers['x-organization-id'] as string;
+    return this.tasksService.resolveComment(req.user.id, organizationId, taskId, commentId, body.resolved ?? true);
+  }
+
+  // =====================================================
+  // TASK WATCHERS
+  // =====================================================
+
+  @Get(':taskId/watchers')
+  @CanReadTasks()
+  @ApiOperation({ summary: 'Get all watchers for a task' })
+  async getTaskWatchers(@Request() req, @Param('taskId') taskId: string) {
+    const organizationId = req.headers['x-organization-id'] as string;
+    return this.tasksService.getWatchers(organizationId, taskId);
+  }
+
+  @Post(':taskId/watchers')
+  @CanReadTasks()
+  @ApiOperation({ summary: 'Follow a task — any org member can watch' })
+  async followTask(@Request() req, @Param('taskId') taskId: string) {
+    const organizationId = req.headers['x-organization-id'] as string;
+    return this.tasksService.addWatcher(req.user.id, organizationId, taskId);
+  }
+
+  @Delete(':taskId/watchers')
+  @CanReadTasks()
+  @ApiOperation({ summary: 'Unfollow a task' })
+  async unfollowTask(@Request() req, @Param('taskId') taskId: string) {
+    const organizationId = req.headers['x-organization-id'] as string;
+    return this.tasksService.removeWatcher(req.user.id, organizationId, taskId);
   }
 
   // =====================================================
@@ -263,9 +484,11 @@ export class TasksController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 404, description: 'Task not found' })
   async getTaskTimeLogs(
+    @Request() req,
     @Param('taskId') taskId: string,
   ) {
-    return this.tasksService.getTimeLogs(taskId);
+    const organizationId = req.headers['x-organization-id'] as string;
+    return this.tasksService.getTimeLogs(organizationId, taskId);
   }
 
   @Post(':taskId/clock-in')
@@ -298,7 +521,8 @@ export class TasksController {
     @Param('timeLogId') timeLogId: string,
     @Body() clockOutDto: any,
   ) {
-    return this.tasksService.clockOut(req.user.id, timeLogId, clockOutDto);
+    const organizationId = req.headers['x-organization-id'] as string;
+    return this.tasksService.clockOut(req.user.id, organizationId, timeLogId, clockOutDto);
   }
 
   @Get('time-logs/active-session')
@@ -334,7 +558,7 @@ export class TasksController {
   }
 
   @Post('time-logs/auto-clock-out')
-  @CanUpdateTask()
+  @CanManageTasks()
   @ApiOperation({ summary: 'Auto-clock-out stale sessions (admin function)' })
   @ApiResponse({ status: 200, description: 'Stale sessions processed' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -342,7 +566,8 @@ export class TasksController {
     @Request() req,
     @Query('maxHours') maxHours?: string,
   ) {
+    const organizationId = req.headers['x-organization-id'] as string;
     const maxHoursNum = maxHours ? parseInt(maxHours, 10) : 12;
-    return this.tasksService.autoClockOutStaleSessions(maxHoursNum);
+    return this.tasksService.autoClockOutStaleSessions(organizationId, maxHoursNum);
   }
 }

@@ -1,5 +1,5 @@
 import math
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
 from datetime import date
 from typing import Optional
 from app.models.weather_schemas import (
@@ -14,7 +14,9 @@ from app.services.weather_service import weather_service
 from app.services.supabase_service import supabase_service
 import logging
 
-router = APIRouter()
+from app.middleware.auth import get_current_user_or_service
+
+router = APIRouter(dependencies=[Depends(get_current_user_or_service)])
 logger = logging.getLogger(__name__)
 
 
@@ -29,20 +31,19 @@ async def get_historical_weather(
         raise HTTPException(
             status_code=400, detail="start_date must be before end_date"
         )
-    if (end_date - start_date).days > 365 * 3:
-        raise HTTPException(status_code=400, detail="Maximum date range is 3 years")
+    if (end_date - start_date).days > 365 * 4:
+        raise HTTPException(status_code=400, detail="Maximum date range is 4 years")
 
     try:
-        raw_data = await weather_service.fetch_historical(
+        records = await weather_service.fetch_with_db_cache(
             latitude, longitude, str(start_date), str(end_date)
         )
-        records = weather_service.parse_open_meteo_response(raw_data)
-        daily_data = [DailyWeatherData(**r) for r in records]
+        daily_data = [DailyWeatherData(**{k: v for k, v in r.items() if k in DailyWeatherData.model_fields}) for r in records]
 
         return WeatherDataResponse(
             latitude=round(latitude, 2),
             longitude=round(longitude, 2),
-            elevation=raw_data.get("elevation"),
+            elevation=None,
             data=daily_data,
         )
     except HTTPException:
@@ -93,10 +94,9 @@ async def calculate_derived_variables(request: DerivedWeatherRequest):
 
         lat, lon = _extract_centroid_from_boundary(boundary)
 
-        raw_data = await weather_service.fetch_historical(
+        records = await weather_service.fetch_with_db_cache(
             lat, lon, str(request.start_date), str(request.end_date)
         )
-        records = weather_service.parse_open_meteo_response(raw_data)
 
         thresholds = weather_service.get_crop_thresholds(crop_type)
         tbase = request.tbase if request.tbase is not None else thresholds["tbase"]
@@ -140,16 +140,15 @@ async def get_parcel_weather(
 
         lat, lon = _extract_centroid_from_boundary(boundary)
 
-        raw_data = await weather_service.fetch_historical(
+        records = await weather_service.fetch_with_db_cache(
             lat, lon, str(start_date), str(end_date)
         )
-        records = weather_service.parse_open_meteo_response(raw_data)
         daily_data = [DailyWeatherData(**r) for r in records]
 
         return WeatherDataResponse(
             latitude=round(lat, 2),
             longitude=round(lon, 2),
-            elevation=raw_data.get("elevation"),
+            elevation=None,
             data=daily_data,
         )
     except HTTPException:
@@ -197,3 +196,5 @@ def _extract_centroid_from_boundary(boundary) -> tuple:
         return (lat_wgs84, lon_wgs84)
 
     return (avg_lat, avg_lon)
+
+

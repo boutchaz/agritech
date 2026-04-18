@@ -1,4 +1,4 @@
-import { IsOptional, IsString, IsBoolean, IsEmail, Matches, IsUrl, IsIn } from 'class-validator';
+import { IsOptional, IsString, IsBoolean, IsEmail, Matches, IsUrl, IsIn, IsObject } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export class UpdateOrganizationDto {
@@ -133,4 +133,12 @@ export class UpdateOrganizationDto {
   @IsString()
   @IsIn(['default', 'mapbox'])
   map_provider?: string;
+
+  @ApiPropertyOptional({
+    description: 'Accounting and business settings (JSONB)',
+    example: { allow_negative_stock: true }
+  })
+  @IsOptional()
+  @IsObject()
+  accounting_settings?: Record<string, any>;
 }

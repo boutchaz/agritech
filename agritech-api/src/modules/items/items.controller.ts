@@ -95,6 +95,15 @@ export class ItemsController {
     return this.itemsService.updateItemGroup(id, organizationId, userId, updateItemGroupDto);
   }
 
+  @Post('groups/seed-predefined')
+  @ApiOperation({ summary: 'Seed predefined item groups and subcategories (idempotent)' })
+  @ApiResponse({ status: 201, description: 'Seeding completed' })
+  async seedPredefinedItemGroups(@Req() req: any) {
+    const organizationId = req.headers['x-organization-id'];
+    const userId = req.user.sub;
+    return this.itemsService.seedPredefinedItemGroups(organizationId, userId);
+  }
+
   @Delete('groups/:id')
   @ApiOperation({ summary: 'Delete an item group' })
   @ApiParam({ name: 'id', description: 'Item group ID' })
@@ -165,6 +174,24 @@ export class ItemsController {
       variety,
       search,
     });
+  }
+
+  @Get('deleted')
+  @ApiOperation({ summary: 'Get soft-deleted items with optional filters' })
+  @ApiResponse({ status: 200, description: 'Deleted items retrieved successfully' })
+  async findDeletedItems(@Req() req: any, @Query() filters: any) {
+    const organizationId = req.headers['x-organization-id'];
+    return this.itemsService.findDeletedItems(organizationId, filters);
+  }
+
+  @Get('by-barcode/:barcode')
+  @ApiOperation({ summary: 'Find an item or variant by barcode' })
+  @ApiParam({ name: 'barcode', description: 'Item or variant barcode' })
+  @ApiResponse({ status: 200, description: 'Barcode match retrieved successfully' })
+  @ApiResponse({ status: 404, description: 'No item found with barcode' })
+  async findByBarcode(@Req() req: any, @Param('barcode') barcode: string) {
+    const organizationId = req.headers['x-organization-id'];
+    return this.itemsService.findByBarcode(barcode, organizationId);
   }
 
   // =====================================================
@@ -318,6 +345,15 @@ export class ItemsController {
     createItemDto.organization_id = organizationId;
     createItemDto.created_by = req.user.sub;
     return this.itemsService.createItem(createItemDto);
+  }
+
+  @Patch(':id/restore')
+  @ApiOperation({ summary: 'Restore a soft-deleted item' })
+  @ApiParam({ name: 'id', description: 'Item ID' })
+  @ApiResponse({ status: 200, description: 'Item restored successfully' })
+  async restoreItem(@Req() req: any, @Param('id') id: string) {
+    const organizationId = req.headers['x-organization-id'];
+    return this.itemsService.restoreItem(id, organizationId);
   }
 
   @Patch(':id')

@@ -175,3 +175,31 @@ Update subscription status via Polar webhooks
 - Pagination for large datasets (parcels, inventory, tasks)
 - Virtual scrolling for long lists (workers, tasks)
 - Debounced search inputs
+
+## Dual-Backend Architecture
+
+### NestJS API (`agritech-api/`, port 3001)
+The primary backend. Handles ALL business logic:
+- 100+ modules: tasks, workers, parcels, farms, accounting, invoices, AI chat, AI recommendations, compliance, stocks, harvests, onboarding, subscriptions, etc.
+- Auth: Supabase JWT → JwtAuthGuard → OrganizationGuard → PoliciesGuard
+- Database: Supabase PostgreSQL via `DatabaseService.getAdminClient()`
+- Frontend calls this for everything except satellite/weather
+
+### FastAPI Satellite Service (`backend-service/`, port 8001)
+Satellite and remote sensing only:
+- Google Earth Engine integration (vegetation indices: NDVI, NDRE, NDMI, MNDWI, GCI, SAVI, etc.)
+- Weather data processing
+- Calibration services
+- Cloud masking and image processing
+- Uses Celery + Redis for async/batch processing
+
+### Frontend Routing
+- `VITE_API_URL` (env var) → NestJS for all business endpoints
+- `VITE_SATELLITE_SERVICE_URL` (env var) → FastAPI for satellite/weather only
+- Satellite API client: `src/lib/satellite-api.ts`
+- NestJS API clients: `src/lib/api/*.ts` (per-module)
+
+### Data Ownership
+- NestJS owns all business tables (tasks, workers, parcels, invoices, accounts, etc.)
+- FastAPI writes only to `satellite_data` table and Supabase Storage buckets
+- Both services authenticate against the same Supabase instance

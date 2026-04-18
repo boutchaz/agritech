@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/commo
 import { CreateUtilityDto } from './dto/create-utility.dto';
 import { UpdateUtilityDto } from './dto/update-utility.dto';
 import { DatabaseService } from '../database/database.service';
+import { paginate, type PaginatedResponse } from '../../common/dto/paginated-query.dto';
 
 @Injectable()
 export class UtilitiesService {
@@ -28,21 +29,17 @@ export class UtilitiesService {
   /**
    * Get all utilities for a farm
    */
-  async findAll(userId: string, organizationId: string, farmId: string) {
+  async findAll(userId: string, organizationId: string, farmId: string, page = 1, pageSize = 50): Promise<PaginatedResponse<any>> {
     await this.verifyOrganizationAccess(userId, organizationId);
-
     const client = this.databaseService.getAdminClient();
-    const { data: utilities, error } = await client
-      .from('utilities')
-      .select('*')
-      .eq('farm_id', farmId)
-      .order('billing_date', { ascending: false });
 
-    if (error) {
-      throw new Error(`Failed to fetch utilities: ${error.message}`);
-    }
-
-    return utilities || [];
+    return paginate(client, 'utilities', {
+      filters: (q) => q.eq('farm_id', farmId),
+      page,
+      pageSize,
+      orderBy: 'billing_date',
+      ascending: false,
+    });
   }
 
   /**

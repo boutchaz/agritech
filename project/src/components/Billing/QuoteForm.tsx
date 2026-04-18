@@ -4,11 +4,12 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useTranslation} from 'react-i18next';
 import { Button } from '@/components/ui/button';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { NativeSelect } from '@/components/ui/NativeSelect';
 import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import {
   Select,
   SelectContent,
@@ -17,15 +18,17 @@ import {
   SelectValue,
 } from '@/components/ui/radix-select';
 import { useCreateQuote, useUpdateQuote, useQuote } from '@/hooks/useQuotes';
-import type { Quote } from '@/hooks/useQuotes';
+import type { QuoteResponse as Quote } from '@/types/quotes';
 import { useCustomers } from '@/hooks/useCustomers';
 import { useAccounts } from '@/hooks/useAccounts';
 import { useTaxes } from '@/hooks/useTaxes';
 import { useItemSelection } from '@/hooks/useItems';
-import { Plus, Trash2, Loader2, UserPlus, PackagePlus, FolderPlus, PercentCircle } from 'lucide-react';
+import { useFarmStockLevels } from '@/hooks/useFarmStockLevels';
+import { Plus, Trash2, Loader2, UserPlus, PackagePlus, FolderPlus, PercentCircle, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { DEFAULT_CURRENCY } from '@/utils/currencies';
 import { InvoiceTotalsDisplay } from '@/components/Accounting/TaxBreakdown';
-import { calculateInvoiceTotals } from '@/lib/taxCalculations';
+import { calculateInvoiceTotals, type InvoiceTotals } from '@/lib/taxCalculations';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import i18n from '@/i18n/config';
@@ -41,7 +44,7 @@ interface QuoteFormProps {
   quote?: Quote | null;
 }
 
-export const QuoteForm: React.FC<QuoteFormProps> = ({ open, onOpenChange, onSuccess, quote }) => {
+export const QuoteForm = ({ open, onOpenChange, onSuccess, quote }: QuoteFormProps) => {
   const { t } = useTranslation();
   const { currentOrganization } = useAuth();
   const createQuote = useCreateQuote();
@@ -54,11 +57,23 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ open, onOpenChange, onSucc
     is_sales_item: true
   });
 
+  // Stock control setting (default: allow selling without stock)
+  const allowNegativeStock = currentOrganization?.accounting_settings?.allow_negative_stock ?? true;
+  const { data: stockLevels = [] } = useFarmStockLevels();
+  // Build a quick lookup: item_id → total_quantity
+  const stockMap = React.useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const s of stockLevels) {
+      map[s.item_id] = s.total_quantity;
+    }
+    return map;
+  }, [stockLevels]);
+
   const isEditMode = !!quote;
 
   const isRTL = i18n.language === 'ar';
 
-  const [totals, setTotals] = useState<any>(null);
+  const [totals, setTotals] = useState<InvoiceTotals | null>(null);
   const [showCustomerModal, setShowCustomerModal] = useState(false);
   const [showItemModal, setShowItemModal] = useState(false);
   const [showAccountModal, setShowAccountModal] = useState(false);
@@ -148,7 +163,7 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ open, onOpenChange, onSucc
         customer_id: quoteWithItems.customer_id || '',
         quote_date: quoteWithItems.quote_date?.split('T')[0] || new Date().toISOString().split('T')[0],
         valid_until: quoteWithItems.valid_until?.split('T')[0] || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        items: quoteItems.length > 0 ? quoteItems.map((item: any) => ({
+        items: quoteItems.length > 0 ? quoteItems.map((item: Record<string, unknown>) => ({
           item_id: item.item_id || '',
           item_name: item.item_name || '',
           description: item.description || '',
@@ -229,6 +244,19 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ open, onOpenChange, onSucc
   }, [watchItems]);
 
   const onSubmit = async (data: z.infer<typeof quoteSchema>) => {
+    // Stock check: if negative stock is not allowed, block items with insufficient stock
+    if (!allowNegativeStock) {
+      const insufficientItems = data.items.filter(item => {
+        if (!item.item_id) return false; // manual items not linked to stock
+        const available = stockMap[item.item_id] ?? 0;
+        return Number(item.quantity) > available;
+      });
+      if (insufficientItems.length > 0) {
+        toast.error(t('quotes.form.errors.insufficientStock', 'Stock insuffisant pour un ou plusieurs articles. Veuillez réduire les quantités ou activer la vente sans stock dans les paramètres.'));
+        return;
+      }
+    }
+
     try {
       const transformedItems = data.items.map((item, index) => ({
         line_number: index + 1,
@@ -270,20 +298,18 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ open, onOpenChange, onSucc
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        className={cn(
-          "w-[95vw] sm:w-auto max-w-6xl max-h-[90vh] overflow-y-auto p-4 sm:p-6",
-          isRTL && "text-right"
-        )}
-        dir={isRTL ? 'rtl' : 'ltr'}
+    <>
+      <ResponsiveDialog
+        open={open}
+        onOpenChange={onOpenChange}
+        title={quote ? t('quotes.form.edit') : t('quotes.form.create')}
+        description={quote ? t('quotes.form.editDescription') : t('quotes.form.createDescription')}
+        size="2xl"
+        className={cn('w-[95vw] min-w-[min(95vw,980px)] p-4 sm:p-6', isRTL && 'text-right')}
+        contentClassName="max-h-[90vh] overflow-y-auto"
       >
-        <DialogHeader>
-          <DialogTitle>{quote ? t('quotes.form.edit') : t('quotes.form.create')}</DialogTitle>
-          <DialogDescription>{quote ? t('quotes.form.editDescription') : t('quotes.form.createDescription')}</DialogDescription>
-        </DialogHeader>
-
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        <div dir={isRTL ? 'rtl' : 'ltr'}>
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           {/* Header Information */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
             <div>
@@ -311,15 +337,6 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ open, onOpenChange, onSucc
               {errors.customer_id && (
                 <p className="text-sm text-red-600 mt-1">{errors.customer_id.message}</p>
               )}
-            </div>
-
-            <div>
-              <Label htmlFor="reference_number">{t('quotes.form.referenceNumber')}</Label>
-              <Input
-                id="reference_number"
-                {...register('reference_number')}
-                placeholder={t('quotes.form.referencePlaceholder')}
-              />
             </div>
 
             <div>
@@ -441,23 +458,44 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ open, onOpenChange, onSucc
                         type="hidden"
                         {...register(`items.${index}.item_id`)}
                       />
-                      <input
-                        type="hidden"
+                      <Input
                         {...register(`items.${index}.item_name`)}
+                        placeholder={t('quotes.form.itemName', 'Nom de l\'article *')}
+                        className="w-full"
                       />
+                      {errors.items?.[index]?.item_name && (
+                        <p className="text-xs text-red-600">{errors.items[index]?.item_name?.message}</p>
+                      )}
                       <Input
                         {...register(`items.${index}.description`)}
                         placeholder={t('quotes.form.description')}
                         className="w-full"
                       />
                       <div className="grid grid-cols-2 gap-3">
-                        <Input
-                          type="number"
-                          step="0.01"
-                          {...register(`items.${index}.quantity`)}
-                          placeholder={t('quotes.form.quantity')}
-                          className="w-full"
-                        />
+                        <div>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            {...register(`items.${index}.quantity`)}
+                            placeholder={t('quotes.form.quantity')}
+                            className="w-full"
+                          />
+                          {(() => {
+                            const itemId = watch(`items.${index}.item_id`);
+                            if (!itemId) return null;
+                            const available = stockMap[itemId] ?? 0;
+                            const qty = Number(watch(`items.${index}.quantity`)) || 0;
+                            const insufficient = qty > available;
+                            return (
+                              <div className={`flex items-center gap-1 mt-1 text-xs ${insufficient ? 'text-red-600' : 'text-green-600'}`}>
+                                {insufficient
+                                  ? <><AlertTriangle className="h-3 w-3" />{available} {t('quotes.form.stock.available', 'en stock')}</>
+                                  : <><CheckCircle2 className="h-3 w-3" />{available} {t('quotes.form.stock.available', 'en stock')}</>
+                                }
+                              </div>
+                            );
+                          })()}
+                        </div>
                         <Input
                           type="number"
                           step="0.01"
@@ -490,6 +528,9 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ open, onOpenChange, onSucc
                             <FolderPlus className="h-4 w-4 text-blue-600" />
                           </Button>
                         </div>
+                        {errors.items?.[index]?.account_id && (
+                          <p className="text-xs text-red-600 mt-1">{errors.items[index]?.account_id?.message}</p>
+                        )}
                         <div className="flex gap-2">
                           <NativeSelect {...register(`items.${index}.tax_id`)} className="w-full">
                             <option value="">{t('quotes.form.noTax')}</option>
@@ -526,27 +567,27 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ open, onOpenChange, onSucc
             {/* Desktop table */}
             <div className="border rounded-lg overflow-hidden hidden md:block">
               <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-gray-50 dark:bg-gray-800">
-                    <tr>
-                      <th className={cn("text-left py-2 px-3 text-sm font-medium", isRTL && "text-right")}>{t('quotes.form.item')} *</th>
-                      <th className={cn("text-left py-2 px-3 text-sm font-medium", isRTL && "text-right")}>{t('quotes.form.description')}</th>
-                      <th className={cn("text-left py-2 px-3 text-sm font-medium w-32", isRTL && "text-right")}>{t('quotes.form.quantity')}</th>
-                      <th className={cn("text-left py-2 px-3 text-sm font-medium w-36", isRTL && "text-right")}>{t('quotes.form.rate')}</th>
-                      <th className={cn("text-left py-2 px-3 text-sm font-medium w-48", isRTL && "text-right")}>{t('quotes.form.account')}</th>
-                      <th className={cn("text-left py-2 px-3 text-sm font-medium w-40", isRTL && "text-right")}>{t('quotes.form.tax')}</th>
-                      <th className={cn("text-right py-2 px-3 text-sm font-medium w-36", isRTL && "text-left")}>{t('quotes.form.amount')}</th>
-                      <th className="w-12"></th>
-                    </tr>
-                  </thead>
-                  <tbody>
+                <Table className="w-full min-w-[800px]">
+                  <TableHeader className="bg-gray-50 dark:bg-gray-800">
+                    <TableRow>
+                      <TableHead className={cn("text-left py-2 px-3 text-sm font-medium w-44", isRTL && "text-right")}>{t('quotes.form.item')}</TableHead>
+                      <TableHead className={cn("text-left py-2 px-3 text-sm font-medium w-44", isRTL && "text-right")}>{t('quotes.form.itemName', 'Nom')} * / {t('quotes.form.description')}</TableHead>
+                      <TableHead className={cn("text-left py-2 px-3 text-sm font-medium w-28", isRTL && "text-right")}>{t('quotes.form.quantity')}</TableHead>
+                      <TableHead className={cn("text-left py-2 px-3 text-sm font-medium w-32", isRTL && "text-right")}>{t('quotes.form.rate')}</TableHead>
+                      <TableHead className={cn("text-left py-2 px-3 text-sm font-medium w-40", isRTL && "text-right")}>{t('quotes.form.account')}</TableHead>
+                      <TableHead className={cn("text-left py-2 px-3 text-sm font-medium w-36", isRTL && "text-right")}>{t('quotes.form.tax')}</TableHead>
+                      <TableHead className={cn("text-right py-2 px-3 text-sm font-medium w-24", isRTL && "text-left")}>{t('quotes.form.amount')}</TableHead>
+                      <TableHead className="w-8"></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {fields.map((field, index) => {
                       const item = watchItems[index];
                       const amount = (Number(item?.quantity) || 0) * (Number(item?.rate) || 0);
 
                       return (
-                        <tr key={field.id} className="border-t">
-                          <td className="py-2 px-3">
+                        <TableRow key={field.id} className="border-t">
+                          <TableCell className="py-2 px-3">
                             <Select
                               value={watch(`items.${index}.item_id`) || ''}
                               onValueChange={(itemId) => {
@@ -597,40 +638,58 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ open, onOpenChange, onSucc
                                 )}
                               </SelectContent>
                             </Select>
-                            {/* Hidden field for item_name (required for backward compatibility) */}
                             <input
                               type="hidden"
                               {...register(`items.${index}.item_id`)}
                             />
-                            <input
-                              type="hidden"
+                          </TableCell>
+                          <TableCell className="py-2 px-3">
+                            <Input
                               {...register(`items.${index}.item_name`)}
+                              placeholder={t('quotes.form.itemName', 'Nom de l\'article *')}
+                              className={cn("w-full", errors.items?.[index]?.item_name && "border-red-500")}
                             />
-                          </td>
-                          <td className="py-2 px-3">
+                            {errors.items?.[index]?.item_name && (
+                              <p className="text-xs text-red-600 mt-1">{errors.items[index]?.item_name?.message}</p>
+                            )}
                             <Input
                               {...register(`items.${index}.description`)}
                               placeholder={t('quotes.form.description')}
-                              className="w-full"
+                              className="w-full mt-1"
                             />
-                          </td>
-                          <td className="py-2 px-3">
+                          </TableCell>
+                          <TableCell className="py-2 px-3">
                             <Input
                               type="number"
                               step="0.01"
                               {...register(`items.${index}.quantity`)}
-                              className="w-full"
+                              className="w-full [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                             />
-                          </td>
-                          <td className="py-2 px-3">
+                            {(() => {
+                              const itemId = watch(`items.${index}.item_id`);
+                              if (!itemId) return null;
+                              const available = stockMap[itemId] ?? 0;
+                              const qty = Number(watch(`items.${index}.quantity`)) || 0;
+                              const insufficient = qty > available;
+                              return (
+                                <div className={`flex items-center gap-1 mt-1 text-xs ${insufficient ? 'text-red-600' : 'text-green-600'}`}>
+                                  {insufficient
+                                    ? <><AlertTriangle className="h-3 w-3" />{available} {t('quotes.form.stock.available', 'en stock')}</>
+                                    : <><CheckCircle2 className="h-3 w-3" />{available} {t('quotes.form.stock.available', 'en stock')}</>
+                                  }
+                                </div>
+                              );
+                            })()}
+                          </TableCell>
+                          <TableCell className="py-2 px-3">
                             <Input
                               type="number"
                               step="0.01"
                               {...register(`items.${index}.rate`)}
-                              className="w-full"
+                              className="w-full [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                             />
-                          </td>
-                          <td className="py-2 px-3">
+                          </TableCell>
+                          <TableCell className="py-2 px-3">
                             <div className="flex gap-1">
                               <NativeSelect {...register(`items.${index}.account_id`)} className="w-full">
                                 <option value="">{t('quotes.form.selectAccount')}</option>
@@ -654,8 +713,11 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ open, onOpenChange, onSucc
                                 <FolderPlus className="h-4 w-4 text-blue-600" />
                               </Button>
                             </div>
-                          </td>
-                          <td className="py-2 px-3">
+                            {errors.items?.[index]?.account_id && (
+                              <p className="text-xs text-red-600 mt-1">{errors.items[index]?.account_id?.message}</p>
+                            )}
+                          </TableCell>
+                          <TableCell className="py-2 px-3">
                             <div className="flex gap-1">
                               <NativeSelect {...register(`items.${index}.tax_id`)} className="w-full">
                                 <option value="">{t('quotes.form.noTax')}</option>
@@ -679,11 +741,11 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ open, onOpenChange, onSucc
                                 <PercentCircle className="h-4 w-4 text-blue-600" />
                               </Button>
                             </div>
-                          </td>
-                          <td className={cn("py-2 px-3 font-medium", isRTL ? "text-left" : "text-right")}>
+                          </TableCell>
+                          <TableCell className={cn("py-2 px-3 font-medium", isRTL ? "text-left" : "text-right")}>
                             {amount.toFixed(2)}
-                          </td>
-                          <td className="py-2 px-3">
+                          </TableCell>
+                          <TableCell className="py-2 px-3">
                             {fields.length > 1 && (
                               <Button
                                 type="button"
@@ -694,12 +756,12 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ open, onOpenChange, onSucc
                                 <Trash2 className="h-4 w-4 text-red-500" />
                               </Button>
                             )}
-                          </td>
-                        </tr>
+                          </TableCell>
+                        </TableRow>
                       );
                     })}
-                  </tbody>
-                </table>
+                  </TableBody>
+                </Table>
               </div>
             </div>
             {errors.items && (
@@ -715,7 +777,7 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ open, onOpenChange, onSucc
                 taxTotal={totals.tax_total}
                 grandTotal={totals.grand_total}
                 taxBreakdown={totals.tax_breakdown}
-                currency={currentOrganization?.currency || 'MAD'}
+                currency={currentOrganization?.currency || DEFAULT_CURRENCY}
               />
             </div>
           )}
@@ -771,8 +833,9 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ open, onOpenChange, onSucc
               {isEditMode ? t('quotes.form.updateQuote', 'Update Quote') : t('quotes.form.createQuote')}
             </Button>
           </div>
-        </form>
-      </DialogContent>
+          </form>
+        </div>
+      </ResponsiveDialog>
 
       {/* Quick Create Modals */}
       <QuickCreateCustomer
@@ -823,6 +886,6 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ open, onOpenChange, onSucc
           setCurrentItemIndex(null);
         }}
       />
-    </Dialog>
+    </>
   );
 };

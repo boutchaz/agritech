@@ -1,6 +1,7 @@
 import React, { useState, lazy, Suspense } from 'react';
 import { useStockMovements } from '@/hooks/useStockEntries';
 import { useAuth } from '@/hooks/useAuth';
+import { DEFAULT_CURRENCY } from '@/utils/currencies';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -28,6 +29,7 @@ import { Badge } from '@/components/ui/badge';
 import { useFarmStockLevels } from '@/hooks/useFarmStockLevels';
 import { useCurrency } from '@/hooks/useCurrency';
 import { useTranslation } from 'react-i18next';
+import { isRTLLocale } from '@/lib/is-rtl-locale';
 
 // Lazy load chart components
 const LineChart = lazy(() =>
@@ -57,7 +59,8 @@ const ResponsiveContainer = lazy(() =>
 export default function StockReportsDashboard() {
   const { currentOrganization } = useAuth();
   const { format: formatCurrency } = useCurrency();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation('stock');
+  const isRTL = isRTLLocale(i18n.language);
   const [dateRange, setDateRange] = useState<'7d' | '30d' | '90d' | 'all'>('30d');
   const [filters, setFilters] = useState<StockMovementFilters>({});
 
@@ -146,84 +149,84 @@ export default function StockReportsDashboard() {
     return (
       <div className="flex items-center justify-center p-12">
         <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-        <span className="ml-3 text-gray-600">Loading reports...</span>
+        <span className="ms-3 text-gray-600">{t('reports.loading')}</span>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" dir={isRTL ? 'rtl' : 'ltr'}>
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Stock Reports & Analytics</h2>
-          <p className="text-gray-600">Track stock movements, valuation, and alerts</p>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{t('reports.title')}</h2>
+          <p className="text-gray-600 dark:text-gray-400">{t('reports.subtitle')}</p>
         </div>
         <div className="flex items-center gap-3">
-          <Select value={dateRange} onValueChange={(val: any) => setDateRange(val)}>
+          <Select value={dateRange} onValueChange={(val: string) => setDateRange(val)}>
             <SelectTrigger className="w-40">
-              <Calendar className="w-4 h-4 mr-2" />
+              <Calendar className="w-4 h-4 me-2" />
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="7d">Last 7 days</SelectItem>
-              <SelectItem value="30d">Last 30 days</SelectItem>
-              <SelectItem value="90d">Last 90 days</SelectItem>
-              <SelectItem value="all">All time</SelectItem>
+              <SelectItem value="7d">{t('reports.dateRanges.7days')}</SelectItem>
+              <SelectItem value="30d">{t('reports.dateRanges.30days')}</SelectItem>
+              <SelectItem value="90d">{t('reports.dateRanges.90days')}</SelectItem>
+              <SelectItem value="all">{t('reports.dateRanges.all')}</SelectItem>
             </SelectContent>
           </Select>
           <Button variant="outline">
-            <Download className="w-4 h-4 mr-2" />
-            Export
+            <Download className="w-4 h-4 me-2" />
+            {t('reports.export')}
           </Button>
         </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Total Inward</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-600">{t('reports.cards.totalInward')}</CardTitle>
             <TrendingUp className="w-4 h-4 text-green-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.totalIn.toFixed(2)}</div>
-            <p className="text-xs text-gray-500 mt-1">Units received</p>
+            <p className="text-xs text-gray-500 mt-1">{t('reports.cards.unitsReceived')}</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Total Outward</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-600">{t('reports.cards.totalOutward')}</CardTitle>
             <TrendingDown className="w-4 h-4 text-red-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.totalOut.toFixed(2)}</div>
-            <p className="text-xs text-gray-500 mt-1">Units issued</p>
+            <p className="text-xs text-gray-500 mt-1">{t('reports.cards.unitsIssued')}</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Net Movement</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-600">{t('reports.cards.netMovement')}</CardTitle>
             <Package className="w-4 h-4 text-blue-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.netMovement.toFixed(2)}</div>
-            <p className="text-xs text-gray-500 mt-1">Net change</p>
+            <p className="text-xs text-gray-500 mt-1">{t('reports.cards.netChange')}</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Total Value</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-600">{t('reports.cards.totalValue')}</CardTitle>
             <DollarSign className="w-4 h-4 text-green-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {currentOrganization?.currency || 'MAD'} {stats.totalValue.toFixed(2)}
+              {currentOrganization?.currency || DEFAULT_CURRENCY} {stats.totalValue.toFixed(2)}
             </div>
-            <p className="text-xs text-gray-500 mt-1">Inventory value</p>
+            <p className="text-xs text-gray-500 mt-1">{t('reports.cards.inventoryValue')}</p>
           </CardContent>
         </Card>
       </div>
@@ -231,15 +234,15 @@ export default function StockReportsDashboard() {
       {/* Charts */}
       <Tabs defaultValue="movements" className="space-y-4">
         <TabsList>
-          <TabsTrigger value="movements">Stock Movements</TabsTrigger>
-          <TabsTrigger value="distribution">Distribution</TabsTrigger>
-          <TabsTrigger value="alerts">Alerts & Warnings</TabsTrigger>
+          <TabsTrigger value="movements">{t('reports.tabs.movements')}</TabsTrigger>
+          <TabsTrigger value="distribution">{t('reports.tabs.distribution')}</TabsTrigger>
+          <TabsTrigger value="alerts">{t('reports.tabs.alerts')}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="movements" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Stock Movement Trends</CardTitle>
+              <CardTitle>{t('reports.movementTrends')}</CardTitle>
             </CardHeader>
             <CardContent>
               <Suspense
@@ -250,24 +253,24 @@ export default function StockReportsDashboard() {
                 }
               >
                 <ResponsiveContainer width="100%" height={400}>
-                  <LineChart data={movementsByDate}>
+                  <LineChart data={movementsByDate} layout="horizontal">
                     <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="date" />
-                    <YAxis />
+                    <XAxis dataKey="date" reversed={isRTL} />
+                    <YAxis orientation={isRTL ? 'right' : 'left'} />
                     <Tooltip />
                     <Legend />
                     <Line
                       type="monotone"
                       dataKey="in"
                       stroke="#10b981"
-                      name="Inward"
+                      name={t('reports.inward')}
                       strokeWidth={2}
                     />
                     <Line
                       type="monotone"
                       dataKey="out"
                       stroke="#ef4444"
-                      name="Outward"
+                      name={t('reports.outward')}
                       strokeWidth={2}
                     />
                   </LineChart>
@@ -279,7 +282,7 @@ export default function StockReportsDashboard() {
           {/* Recent Movements Table */}
           <Card>
             <CardHeader>
-              <CardTitle>Recent Movements</CardTitle>
+              <CardTitle>{t('reports.recentMovements')}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
@@ -293,19 +296,19 @@ export default function StockReportsDashboard() {
                         {movement.movement_type}
                       </Badge>
                       <div>
-                        <p className="font-medium">{movement.item?.item_name || 'Unknown Item'}</p>
+                        <p className="font-medium">{movement.item?.item_name || t('reports.unknownItem')}</p>
                         <p className="text-sm text-gray-500">
                           {new Date(movement.movement_date).toLocaleString()}
                         </p>
                       </div>
                     </div>
-                    <div className="text-right">
+                    <div className="text-end">
                       <p className="font-medium">
                         {movement.quantity > 0 ? '+' : ''}
                         {movement.quantity.toFixed(2)} {movement.unit}
                       </p>
                       <p className="text-sm text-gray-500">
-                        Balance: {movement.balance_quantity.toFixed(2)}
+                        {t('reports.balance')} {movement.balance_quantity.toFixed(2)}
                       </p>
                     </div>
                   </div>
@@ -318,7 +321,7 @@ export default function StockReportsDashboard() {
         <TabsContent value="distribution">
           <Card>
             <CardHeader>
-              <CardTitle>Movement Type Distribution</CardTitle>
+              <CardTitle>{t('reports.typeDistribution')}</CardTitle>
             </CardHeader>
             <CardContent>
               <Suspense
@@ -340,8 +343,8 @@ export default function StockReportsDashboard() {
                       fill="#8884d8"
                       dataKey="value"
                     >
-                      {movementsByType.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[entry.name as keyof typeof COLORS]} />
+                      {movementsByType.map((entry) => (
+                        <Cell key={`cell-${entry.name}`} fill={COLORS[entry.name as keyof typeof COLORS]} />
                       ))}
                     </Pie>
                     <Tooltip />
@@ -358,9 +361,9 @@ export default function StockReportsDashboard() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <AlertTriangle className="w-5 h-5 text-orange-600" />
-                  Low Stock Items
+                  {t('reports.lowStockItems')}
                   {lowStockItems.length > 0 && (
-                    <Badge variant="destructive" className="ml-2">
+                    <Badge variant="destructive" className="ms-2">
                       {lowStockItems.length}
                     </Badge>
                   )}
@@ -373,7 +376,7 @@ export default function StockReportsDashboard() {
                   </div>
                 ) : lowStockItems.length === 0 ? (
                   <p className="text-gray-500 text-center py-8">
-                    No low stock items at the moment
+                    {t('reports.noLowStock')}
                   </p>
                 ) : (
                   <div className="space-y-3">
@@ -390,26 +393,26 @@ export default function StockReportsDashboard() {
                           <AlertTriangle className="w-4 h-4 text-orange-600 flex-shrink-0" />
                         </div>
                         <div className="flex items-center justify-between text-sm">
-                          <span className="text-gray-600">Current Stock:</span>
+                          <span className="text-gray-600">{t('reports.currentStock')}</span>
                           <span className="font-medium text-orange-700">
                             {parseFloat(item.total_quantity.toFixed(3))} {item.default_unit}
                           </span>
                         </div>
                         {item.minimum_stock_level && (
                           <div className="flex items-center justify-between text-sm mt-1">
-                            <span className="text-gray-600">Minimum Level:</span>
+                            <span className="text-gray-600">{t('reports.minimumLevel')}</span>
                             <span className="font-medium">{item.minimum_stock_level} {item.default_unit}</span>
                           </div>
                         )}
                         <div className="flex items-center justify-between text-sm mt-1">
-                          <span className="text-gray-600">Total Value:</span>
+                          <span className="text-gray-600">{t('reports.totalValue')}</span>
                           <span className="font-medium">{formatCurrency(item.total_value)}</span>
                         </div>
                       </div>
                     ))}
                     {lowStockItems.length > 5 && (
                       <p className="text-sm text-gray-500 text-center pt-2">
-                        And {lowStockItems.length - 5} more items...
+                        {t('reports.moreItems', { count: lowStockItems.length - 5 })}
                       </p>
                     )}
                   </div>
@@ -421,11 +424,11 @@ export default function StockReportsDashboard() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <AlertTriangle className="w-5 h-5 text-red-600" />
-                  Expiring Soon
+                  {t('reports.expiringSoon')}
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-gray-500 text-center py-8">No expiring items in next 30 days</p>
+                <p className="text-gray-500 text-center py-8">{t('reports.noExpiring')}</p>
               </CardContent>
             </Card>
           </div>

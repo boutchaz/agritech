@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import {  useState, useEffect  } from "react";
 import {
   FileText,
   Download,
@@ -18,20 +18,21 @@ import { generateParcelReport } from '../lib/edge-functions-api';
 import { storageApi } from '../lib/api/storage';
 import type { ReportTemplate, GeneratedReport } from '../types/reports';
 import { AIReportGenerator, AIReportPreview, AIReportExport } from './AIReportSection';
+import { Button } from '@/components/ui/button';
 
 interface ParcelReportGeneratorProps {
   parcelId: string;
   parcelName: string;
-  parcelData: any;
-  searchParams?: any;
+  parcelData: Record<string, unknown>;
+  searchParams?: Record<string, unknown>;
 }
 
-const ParcelReportGenerator: React.FC<ParcelReportGeneratorProps> = ({
+const ParcelReportGenerator = ({
   parcelId,
   parcelName: _parcelName,
   parcelData,
   searchParams
-}) => {
+}: ParcelReportGeneratorProps) => {
   const _queryClient = useQueryClient();
   const [reports, setReports] = useState<GeneratedReport[]>([]);
   const [templates, setTemplates] = useState<ReportTemplate[]>([]);
@@ -109,9 +110,9 @@ const ParcelReportGenerator: React.FC<ParcelReportGeneratorProps> = ({
       setShowTemplateSelector(false);
       setError(null);
     },
-    onError: (err: any) => {
+    onError: (err: unknown) => {
       console.error('Error generating report:', err);
-      setError(err.message || 'Failed to generate report');
+      setError(err instanceof Error ? err.message : 'Failed to generate report');
     }
   });
 
@@ -169,9 +170,9 @@ const ParcelReportGenerator: React.FC<ParcelReportGeneratorProps> = ({
       }
 
       throw new Error('Aucun contenu de rapport disponible');
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error downloading report:', err);
-      toast.error(err.message || 'Erreur lors du téléchargement du rapport');
+      toast.error(err instanceof Error ? err.message : 'Erreur lors du téléchargement du rapport');
     }
   };
 
@@ -228,13 +229,13 @@ const ParcelReportGenerator: React.FC<ParcelReportGeneratorProps> = ({
             Générez et téléchargez des rapports personnalisés
           </p>
         </div>
-        <button
+        <Button variant="green"
           onClick={() => setShowTemplateSelector(!showTemplateSelector)}
-          className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+          className="flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors"
         >
           <Plus className="w-4 h-4" />
           <span>Nouveau Rapport</span>
-        </button>
+        </Button>
       </div>
 
       {/* Error Display */}
@@ -253,7 +254,7 @@ const ParcelReportGenerator: React.FC<ParcelReportGeneratorProps> = ({
           </h5>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {templates.map((template) => (
-              <button
+              <Button
                 key={template.id}
                 onClick={() => generateReportMutation.mutate(template.id)}
                 disabled={generateReportMutation.isPending}
@@ -273,7 +274,7 @@ const ParcelReportGenerator: React.FC<ParcelReportGeneratorProps> = ({
                 <div className="mt-2 text-xs text-gray-500 dark:text-gray-500">
                   {template.sections.length} sections
                 </div>
-              </button>
+              </Button>
             ))}
           </div>
         </div>
@@ -345,21 +346,21 @@ const ParcelReportGenerator: React.FC<ParcelReportGeneratorProps> = ({
                 {report.status === 'completed' && (
                   <div className="flex items-center gap-2 ml-4">
                     {isAIReport(report) && (
-                      <button
+                      <Button
                         onClick={() => handleViewAIReport(report)}
                         className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
                         title="Voir le rapport IA"
                       >
                         <Eye className="w-5 h-5" />
-                      </button>
+                      </Button>
                     )}
-                    <button
+                    <Button
                       onClick={() => downloadReport(report.id)}
                       className="p-2 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-colors"
                       title="Télécharger le rapport"
                     >
                       <Download className="w-5 h-5" />
-                    </button>
+                    </Button>
                   </div>
                 )}
               </div>
@@ -386,12 +387,12 @@ const ParcelReportGenerator: React.FC<ParcelReportGeneratorProps> = ({
                     generatedAt={viewingAIReport.generated_at}
                     provider={viewingAIReport.metadata?.provider || 'unknown'}
                   />
-                  <button
+                  <Button
                     onClick={() => setViewingAIReport(null)}
                     className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
                   >
                     <X className="w-6 h-6 text-gray-500" />
-                  </button>
+                  </Button>
                 </div>
               </div>
               <div className="p-6 max-h-[80vh] overflow-y-auto">

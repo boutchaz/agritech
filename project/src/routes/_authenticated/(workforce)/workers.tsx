@@ -1,11 +1,13 @@
 import { createFileRoute, Link, Outlet, useLocation } from '@tanstack/react-router';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Users, Calculator, Building2, UserCog, Lock, AlertCircle, Settings, Banknote } from 'lucide-react';
+import { Users, Calculator, Building2, UserCog, Lock, AlertCircle, Settings, Banknote, Handshake } from 'lucide-react';
 import WorkersList from '@/components/Workers/WorkersList';
 import MetayageCalculator from '@/components/Workers/MetayageCalculator';
 import WorkersPaymentsList from '@/components/Workers/WorkersPaymentsList';
+import ProductionSharingTab from '@/components/Workers/ProductionSharingTab';
 import { useAuth } from '@/hooks/useAuth';
+import { useAutoStartTour } from '@/contexts/TourContext';
 import { PageLayout } from '@/components/PageLayout';
 import ModernPageHeader from '@/components/ModernPageHeader';
 import { useCan } from '@/lib/casl/AbilityContext';
@@ -14,11 +16,17 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { PageLoader, SectionLoader } from '@/components/ui/loader';
 import { farmsApi } from '@/lib/api/farms';
+import { cn } from '@/lib/utils';
+import { isRTLLocale } from '@/lib/is-rtl-locale';
 
 function WorkersPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isRTL = isRTLLocale(i18n.language);
   const { currentOrganization, currentFarm } = useAuth();
+
+  useAutoStartTour('workers', 1500);
   const { can } = useCan();
   const location = useLocation();
   const [farms, setFarms] = useState<{ id: string; name: string }[]>([]);
@@ -31,7 +39,7 @@ function WorkersPage() {
   // Check if user has access to workers page
   const canReadWorkers = can('read', 'Worker');
 
-  const fetchFarms = async () => {
+  const fetchFarms = useCallback(async () => {
     if (!currentOrganization?.id) {
       setFarmsLoading(false);
       return;
@@ -44,21 +52,11 @@ function WorkersPage() {
         currentOrganization.id
       );
       
-      // Handle paginated response: { success: true, farms: [...], total: ... }
-      if (data && typeof data === 'object' && 'farms' in data && Array.isArray((data as { farms: any[] }).farms)) {
-        const farmsData = (data as { farms: any[] }).farms;
-        // Map farm_id and farm_name to id and name for compatibility
-        const mappedFarms = farmsData.map((farm: any) => ({
-          id: farm.farm_id || farm.id,
-          name: farm.farm_name || farm.name,
-        }));
-        setFarms(mappedFarms);
-      } else if (Array.isArray(data)) {
-        // Fallback for direct array response
-        setFarms(data);
-      } else {
-        setFarms([]);
-      }
+      const farmsList = (data || []).map((farm: { farm_id?: string; id?: string; farm_name?: string; name?: string }) => ({
+        id: farm.farm_id || farm.id || '',
+        name: farm.farm_name || farm.name || '',
+      }));
+      setFarms(farmsList);
     } catch (error) {
       console.error('Error fetching farms:', error);
       setFarms([]); // Set empty array on error
@@ -66,23 +64,16 @@ function WorkersPage() {
     } finally {
       setFarmsLoading(false);
     }
-  };
+  }, [currentOrganization?.id, t]);
 
   useEffect(() => {
     if (currentOrganization) {
       fetchFarms();
     }
-  }, [currentOrganization]);
+  }, [currentOrganization, fetchFarms]);
 
   if (!currentOrganization) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">{t('workers.loadingOrganization')}</p>
-        </div>
-      </div>
-    );
+    return <PageLoader className="min-h-screen" />;
   }
 
   // Access denied - user doesn't have permission to view workers
@@ -99,7 +90,7 @@ function WorkersPage() {
           />
         }
       >
-        <div className="p-4 sm:p-6">
+        <div className="p-3 sm:p-4 md:p-6 pb-20 md:pb-6">
           <div className="max-w-2xl mx-auto mt-8 sm:mt-12">
             <Card>
               <CardContent className="p-6 sm:p-8 text-center">
@@ -143,14 +134,11 @@ function WorkersPage() {
         />
       }
     >
-      <div className="p-3 sm:p-4 lg:p-6">
+      <div className="p-3 sm:p-4 md:p-6 pb-20 md:pb-6">
           {isChildRoute ? (
             <Outlet />
           ) : farmsLoading ? (
-            <div className="flex items-center justify-center p-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-              <span className="ml-3 text-gray-600 dark:text-gray-400">{t('workers.loading')}</span>
-            </div>
+            <SectionLoader />
           ) : (
             <div className="space-y-4 sm:space-y-6">
               {farmsError && (
@@ -190,32 +178,54 @@ function WorkersPage() {
                 <div className="mt-3 sm:mt-0 sm:ml-4 flex-shrink-0">
                   <Link to="/settings/users">
                     <Button variant="default" size="sm" className="whitespace-nowrap w-full sm:w-auto">
-                      <Settings className="w-4 h-4 mr-2" />
+                      <Settings className="h-4 w-4 me-2" />
                       {t('workers.banner.usersButton')}
                     </Button>
                   </Link>
                 </div>
               </Alert>
 
-              {/* Tabs with shadcn/ui */}
+              {/* Tabs — RTL: bar aligned end + dir on list (same pattern as /stock) */}
               <Tabs defaultValue="list" className="w-full">
-                <TabsList className="grid w-full grid-cols-3 h-auto">
-                  <TabsTrigger value="list" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm py-2 px-2 sm:px-4">
-                    <Users className="w-4 h-4 flex-shrink-0" />
-                    <span className="hidden xs:inline sm:inline">{t('workers.tabs.list')}</span>
-                    <span className="xs:hidden sm:hidden">{t('nav.personnel')}</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="payments" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm py-2 px-2 sm:px-4">
-                    <Banknote className="w-4 h-4 flex-shrink-0" />
-                    <span className="hidden xs:inline sm:inline">{t('workers.tabs.payments')}</span>
-                    <span className="xs:hidden sm:hidden">{t('workers.tabs.paymentsShort')}</span>
-                  </TabsTrigger>
-                  <TabsTrigger value="calculator" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm py-2 px-2 sm:px-4" data-tour="worker-payments">
-                    <Calculator className="w-4 h-4 flex-shrink-0" />
-                    <span className="hidden xs:inline sm:inline">{t('workers.tabs.calculator')}</span>
-                    <span className="xs:hidden sm:hidden">{t('workers.metayage.calculator')}</span>
-                  </TabsTrigger>
-                </TabsList>
+                <div
+                  className={cn(
+                    'flex w-full min-w-0',
+                    isRTL ? 'justify-end' : 'justify-start',
+                  )}
+                >
+                  <TabsList
+                    dir={isRTL ? 'rtl' : 'ltr'}
+                    className="w-max max-w-full min-w-0 justify-start overflow-x-auto whitespace-nowrap rounded-lg sm:overflow-visible"
+                  >
+                    <TabsTrigger value="list" className="shrink-0 gap-2.5 px-2 text-xs sm:px-3 sm:text-sm">
+                      <Users className="h-4 w-4 shrink-0" />
+                      <span className="hidden xs:inline sm:inline">{t('workers.tabs.list')}</span>
+                      <span className="xs:hidden sm:hidden">{t('nav.personnel')}</span>
+                    </TabsTrigger>
+                    <TabsTrigger value="payments" className="shrink-0 gap-2.5 px-2 text-xs sm:px-3 sm:text-sm">
+                      <Banknote className="h-4 w-4 shrink-0" />
+                      <span className="hidden xs:inline sm:inline">{t('workers.tabs.payments')}</span>
+                      <span className="xs:hidden sm:hidden">{t('workers.tabs.paymentsShort')}</span>
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="production-sharing"
+                      className="shrink-0 gap-2.5 px-2 text-xs sm:px-3 sm:text-sm"
+                    >
+                      <Handshake className="h-4 w-4 shrink-0" />
+                      <span className="hidden xs:inline sm:inline">{t('workers.tabs.productionSharing', 'Partage de Production')}</span>
+                      <span className="xs:hidden sm:hidden">{t('workers.tabs.productionSharingShort', 'Partage')}</span>
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="calculator"
+                      className="shrink-0 gap-2.5 px-2 text-xs sm:px-3 sm:text-sm"
+                      data-tour="worker-payments"
+                    >
+                      <Calculator className="h-4 w-4 shrink-0" />
+                      <span className="hidden xs:inline sm:inline">{t('workers.tabs.calculator')}</span>
+                      <span className="xs:hidden sm:hidden">{t('workers.metayage.calculator')}</span>
+                    </TabsTrigger>
+                  </TabsList>
+                </div>
 
                 <TabsContent value="list" className="mt-4 sm:mt-6">
                   <WorkersList
@@ -226,6 +236,13 @@ function WorkersPage() {
 
                 <TabsContent value="payments" className="mt-4 sm:mt-6">
                   <WorkersPaymentsList organizationId={currentOrganization.id} />
+                </TabsContent>
+
+                <TabsContent value="production-sharing" className="mt-4 sm:mt-6">
+                  <ProductionSharingTab
+                    organizationId={currentOrganization.id}
+                    farmId={currentFarm?.id}
+                  />
                 </TabsContent>
 
                 <TabsContent value="calculator" className="mt-4 sm:mt-6">

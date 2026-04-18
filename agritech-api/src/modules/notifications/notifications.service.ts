@@ -1,7 +1,9 @@
-import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
+import { Injectable, Logger, Inject, forwardRef, Optional } from '@nestjs/common';
 import * as nodemailer from 'nodemailer';
 import { DatabaseService } from '../database/database.service';
+import { paginatedResponse, type PaginatedResponse } from '../../common/dto/paginated-query.dto';
 import { NotificationsGateway } from './notifications.gateway';
+import { EmailService } from '../email/email.service';
 import {
   CreateNotificationDto,
   NotificationResponseDto,
@@ -82,6 +84,11 @@ export interface InvoiceEmailData {
   invoiceUrl?: string;
 }
 
+// Role targeting constants — used by all modules to declare who should see a notification
+export const MANAGEMENT_ROLES = ['organization_admin', 'farm_manager'];
+export const OPERATIONAL_ROLES = ['organization_admin', 'farm_manager', 'farm_worker'];
+export const ADMIN_ONLY_ROLES = ['organization_admin'];
+
 @Injectable()
 export class NotificationsService {
   private readonly logger = new Logger(NotificationsService.name);
@@ -91,6 +98,7 @@ export class NotificationsService {
     private readonly databaseService: DatabaseService,
     @Inject(forwardRef(() => NotificationsGateway))
     private readonly gateway: NotificationsGateway,
+    @Optional() @Inject(EmailService) private readonly emailServiceDb?: EmailService,
   ) {
     this.initializeTransporter();
   }
@@ -173,15 +181,172 @@ export class NotificationsService {
   }
 
   /**
+   * Resolve user IDs by role within an organization.
+   * Queries organization_users JOIN roles to find users with matching role names.
+   */
+  private async getUserIdsByRoles(
+    organizationId: string,
+    roles: string[],
+    excludeUserId?: string | null,
+  ): Promise<string[]> {
+    const client = this.databaseService.getAdminClient();
+
+    const { data, error } = await client
+      .from('organization_users')
+      .select('user_id, roles!inner(name)')
+      .eq('organization_id', organizationId)
+      .eq('is_active', true)
+      .in('roles.name', roles);
+
+    if (error) {
+      this.logger.error(`Failed to resolve users by roles: ${error.message}`);
+      return [];
+    }
+
+    if (!data || data.length === 0) {
+      return [];
+    }
+
+    let userIds = data.map((row: any) => row.user_id as string);
+
+    // Exclude the actor (the user who triggered the action)
+    if (excludeUserId) {
+      userIds = userIds.filter((id) => id !== excludeUserId);
+    }
+
+    return userIds;
+  }
+
+  /**
+   * Create notifications for users matching specific roles in an organization.
+   * The actor (excludeUserId) is automatically excluded from recipients.
+   *
+   * @param organizationId - The organization to target
+   * @param roles - Role names to target (e.g. MANAGEMENT_ROLES, OPERATIONAL_ROLES)
+   * @param excludeUserId - The user who triggered the action (excluded from notifications), null for system/AI actions
+   * @param type - Notification type enum value
+   * @param title - Notification title
+   * @param message - Optional notification message
+   * @param data - Optional additional data payload
+   */
+  async createNotificationsForRoles(
+    organizationId: string,
+    roles: string[],
+    excludeUserId: string | null,
+    type: NotificationType,
+    title: string,
+    message?: string,
+    data?: Record<string, any>,
+  ): Promise<void> {
+    try {
+      const userIds = await this.getUserIdsByRoles(organizationId, roles, excludeUserId);
+
+      if (userIds.length === 0) {
+        this.logger.debug(`No users found for roles [${roles.join(', ')}] in org ${organizationId}`);
+        return;
+      }
+
+      await this.createNotificationsForUsers(userIds, organizationId, type, title, message, data);
+    } catch (error) {
+      this.logger.warn(`Failed to create role-based notifications: ${error.message || error}`);
+      // Never fail the main operation — notifications are best-effort
+    }
+  }
+
+  /**
+   * Emails of active members in an organization whose role name is in `roleNames`.
+   */
+  async getManagementEmailsForOrganization(
+    organizationId: string,
+    roleNames: string[] = MANAGEMENT_ROLES,
+  ): Promise<string[]> {
+    const client = this.databaseService.getAdminClient();
+    const { data, error } = await client
+      .from('organization_users')
+      .select(
+        'user_id, user_profiles!organization_users_user_profile_fkey(email), roles!inner(name)',
+      )
+      .eq('organization_id', organizationId)
+      .eq('is_active', true)
+      .in('roles.name', roleNames);
+
+    if (error) {
+      this.logger.warn(
+        `getManagementEmailsForOrganization: query failed for org ${organizationId}: ${error.message}`,
+      );
+      return [];
+    }
+
+    const emails = new Set<string>();
+    for (const row of data ?? []) {
+      const profile = (row as { user_profiles?: { email?: string | null } }).user_profiles;
+      const e = profile?.email?.trim().toLowerCase();
+      if (e && e.includes('@')) {
+        emails.add(e);
+      }
+    }
+    return [...emails];
+  }
+
+  /**
+   * Send the same operational email to each deduped management email (best-effort, no throw).
+   */
+  async sendOperationalEmailToManagementRoles(
+    organizationId: string,
+    payload: Pick<EmailOptions, 'subject' | 'html' | 'text'>,
+    roleNames: string[] = MANAGEMENT_ROLES,
+  ): Promise<void> {
+    const recipients = await this.getManagementEmailsForOrganization(
+      organizationId,
+      roleNames,
+    );
+    if (recipients.length === 0) {
+      this.logger.debug(
+        `No management emails for org ${organizationId}; skipping operational email`,
+      );
+      return;
+    }
+    for (const to of recipients) {
+      try {
+        let ok = false;
+        if (this.emailServiceDb) {
+          ok = await this.emailServiceDb.sendRaw(to, payload.subject, payload.html, payload.text);
+        } else {
+          ok = await this.sendEmail({ to, ...payload });
+        }
+        if (!ok) {
+          this.logger.warn(`Operational email not delivered to ${to} (transporter disabled or error)`);
+        }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        this.logger.warn(`Operational email failed for ${to}: ${msg}`);
+      }
+    }
+  }
+
+  /**
    * Get notifications for a user
    */
   async getNotifications(
     userId: string,
     organizationId: string,
     filters: NotificationFiltersDto = {},
-  ): Promise<NotificationResponseDto[]> {
+  ): Promise<PaginatedResponse<NotificationResponseDto>> {
     const client = this.databaseService.getAdminClient();
+    const page = (filters as any).page || 1;
+    const pageSize = filters.limit || 50;
 
+    // Count query
+    let countQuery = client
+      .from('notifications')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('organization_id', organizationId);
+    if (filters.isRead !== undefined) countQuery = countQuery.eq('is_read', filters.isRead);
+    if (filters.type) countQuery = countQuery.eq('type', filters.type);
+    const { count } = await countQuery;
+
+    // Data query
     let query = client
       .from('notifications')
       .select('*')
@@ -197,15 +362,8 @@ export class NotificationsService {
       query = query.eq('type', filters.type);
     }
 
-    if (filters.limit) {
-      query = query.limit(filters.limit);
-    } else {
-      query = query.limit(50);
-    }
-
-    if (filters.offset) {
-      query = query.range(filters.offset, filters.offset + (filters.limit || 50) - 1);
-    }
+    const from = (page - 1) * pageSize;
+    query = query.range(from, from + pageSize - 1);
 
     const { data, error } = await query;
 
@@ -214,7 +372,7 @@ export class NotificationsService {
       throw new Error(`Failed to fetch notifications: ${error.message}`);
     }
 
-    return data || [];
+    return paginatedResponse(data || [], count || 0, page, pageSize);
   }
 
   /**
@@ -259,11 +417,7 @@ export class NotificationsService {
     }
 
     // Notify all user's connected clients about the read status
-    this.gateway.sendToUser(userId, {
-      type: 'notification:read',
-      notificationId,
-      readAt: new Date().toISOString(),
-    });
+    this.gateway.emitRead(userId, notificationId, new Date().toISOString());
   }
 
   /**
@@ -291,11 +445,7 @@ export class NotificationsService {
     const count = data?.length || 0;
 
     // Notify all user's connected clients
-    this.gateway.sendToUser(userId, {
-      type: 'notification:read-all',
-      count,
-      readAt: new Date().toISOString(),
-    });
+    this.gateway.emitReadAll(userId, count, new Date().toISOString());
 
     return count;
   }
@@ -698,17 +848,13 @@ export class NotificationsService {
     sellerEmail: string,
     data: QuoteRequestEmailData,
   ): Promise<boolean> {
-    const subject = `Nouvelle demande de devis - ${data.productTitle}`;
+    if (this.emailServiceDb) {
+      return this.emailServiceDb.sendByType('quote_request_received', sellerEmail, data);
+    }
 
     const html = this.generateQuoteRequestEmail(data);
     const text = this.generateQuoteRequestEmailText(data);
-
-    return this.sendEmail({
-      to: sellerEmail,
-      subject,
-      html,
-      text,
-    });
+    return this.sendEmail({ to: sellerEmail, subject: `Nouvelle demande de devis - ${data.productTitle}`, html, text });
   }
 
   /**
@@ -802,7 +948,7 @@ export class NotificationsService {
   <div class="content">
     <p>Bonjour,</p>
 
-    <p>Vous avez reçu une nouvelle demande de devis sur AgriTech Marketplace.</p>
+    <p>Vous avez reçu une nouvelle demande de devis sur AgroGina Marketplace.</p>
 
     <div class="info-row">
       <div class="info-label">Produit:</div>
@@ -853,7 +999,7 @@ export class NotificationsService {
 
   <div class="footer">
     <p>
-      © 2025 AgriTech Marketplace. Tous droits réservés.<br>
+      © 2025 AgroGina Marketplace. Tous droits réservés.<br>
       <a href="https://marketplace.thebzlab.online" style="color: #10b981; text-decoration: none;">marketplace.thebzlab.online</a>
     </p>
   </div>
@@ -867,7 +1013,7 @@ export class NotificationsService {
    */
   private generateQuoteRequestEmailText(data: QuoteRequestEmailData): string {
     let text = `Nouvelle Demande de Devis\n\n`;
-    text += `Vous avez reçu une nouvelle demande de devis sur AgriTech Marketplace.\n\n`;
+    text += `Vous avez reçu une nouvelle demande de devis sur AgroGina Marketplace.\n\n`;
     text += `Produit: ${data.productTitle}\n`;
 
     if (data.requestedQuantity) {
@@ -887,7 +1033,7 @@ export class NotificationsService {
 
     text += `\nRépondre à la demande: ${data.quoteRequestUrl}\n`;
     text += `\nConnectez-vous à votre tableau de bord pour consulter tous les détails et envoyer votre devis.\n`;
-    text += `\n© 2025 AgriTech Marketplace\n`;
+    text += `\n© 2025 AgroGina Marketplace\n`;
     text += `https://marketplace.thebzlab.online\n`;
 
     return text;
@@ -900,17 +1046,13 @@ export class NotificationsService {
     buyerEmail: string,
     data: QuoteResponseEmailData,
   ): Promise<boolean> {
-    const subject = `Réponse à votre demande de devis - ${data.productTitle}`;
+    if (this.emailServiceDb) {
+      return this.emailServiceDb.sendByType('quote_response_sent', buyerEmail, data as any);
+    }
 
     const html = this.generateQuoteResponseEmail(data);
     const text = this.generateQuoteResponseEmailText(data);
-
-    return this.sendEmail({
-      to: buyerEmail,
-      subject,
-      html,
-      text,
-    });
+    return this.sendEmail({ to: buyerEmail, subject: `Réponse à votre demande de devis - ${data.productTitle}`, html, text });
   }
 
   /**
@@ -1077,7 +1219,7 @@ export class NotificationsService {
 
   <div class="footer">
     <p>
-      © 2025 AgriTech Marketplace. Tous droits réservés.<br>
+      © 2025 AgroGina Marketplace. Tous droits réservés.<br>
       <a href="https://marketplace.thebzlab.online" style="color: #10b981; text-decoration: none;">marketplace.thebzlab.online</a>
     </p>
   </div>
@@ -1116,7 +1258,7 @@ export class NotificationsService {
     text += `\nConditions et informations du vendeur:\n${data.sellerResponse}\n`;
     text += `\nConsulter le devis: ${data.quoteRequestUrl}\n`;
     text += `\nConnectez-vous à votre tableau de bord pour consulter tous les détails, accepter ou décliner ce devis.\n`;
-    text += `\n© 2025 AgriTech Marketplace\n`;
+    text += `\n© 2025 AgroGina Marketplace\n`;
     text += `https://marketplace.thebzlab.online\n`;
 
     return text;
@@ -1126,34 +1268,26 @@ export class NotificationsService {
    * Send order confirmation email to buyer
    */
   async sendOrderConfirmationEmail(data: OrderEmailData): Promise<boolean> {
-    const subject = `Commande confirmée #${data.orderNumber} - AgriTech Marketplace`;
+    if (this.emailServiceDb) {
+      return this.emailServiceDb.sendByType('order_confirmed', data.buyerEmail, data as any);
+    }
 
     const html = this.generateOrderConfirmationEmail(data);
     const text = this.generateOrderConfirmationEmailText(data);
-
-    return this.sendEmail({
-      to: data.buyerEmail,
-      subject,
-      html,
-      text,
-    });
+    return this.sendEmail({ to: data.buyerEmail, subject: `Commande confirmée #${data.orderNumber} - AgroGina Marketplace`, html, text });
   }
 
   /**
    * Send new order notification to seller
    */
   async sendNewOrderNotificationToSeller(sellerEmail: string, data: OrderEmailData): Promise<boolean> {
-    const subject = `Nouvelle commande #${data.orderNumber} - AgriTech Marketplace`;
+    if (this.emailServiceDb) {
+      return this.emailServiceDb.sendByType('new_order_to_seller', sellerEmail, data as any);
+    }
 
     const html = this.generateNewOrderSellerEmail(data);
     const text = this.generateNewOrderSellerEmailText(data);
-
-    return this.sendEmail({
-      to: sellerEmail,
-      subject,
-      html,
-      text,
-    });
+    return this.sendEmail({ to: sellerEmail, subject: `Nouvelle commande #${data.orderNumber} - AgroGina Marketplace`, html, text });
   }
 
   /**
@@ -1166,19 +1300,19 @@ export class NotificationsService {
       delivered: 'livrée',
       cancelled: 'annulée',
     };
-
     const statusText = statusTexts[data.status || ''] || data.status;
-    const subject = `Commande #${data.orderNumber} ${statusText} - AgriTech Marketplace`;
+
+    if (this.emailServiceDb) {
+      return this.emailServiceDb.sendByType('order_status_update', data.buyerEmail, {
+        ...data,
+        statusText,
+        statusMessage: `Votre commande a été ${statusText}.`,
+      } as any);
+    }
 
     const html = this.generateOrderStatusUpdateEmail(data);
     const text = this.generateOrderStatusUpdateEmailText(data);
-
-    return this.sendEmail({
-      to: data.buyerEmail,
-      subject,
-      html,
-      text,
-    });
+    return this.sendEmail({ to: data.buyerEmail, subject: `Commande #${data.orderNumber} ${statusText} - AgroGina Marketplace`, html, text });
   }
 
   /**
@@ -1335,7 +1469,7 @@ export class NotificationsService {
 
   <div style="text-align: center; color: #6b7280; font-size: 14px; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
     <p>
-      © 2025 AgriTech Marketplace. Tous droits réservés.<br>
+      © 2025 AgroGina Marketplace. Tous droits réservés.<br>
       <a href="https://marketplace.thebzlab.online" style="color: #10b981; text-decoration: none;">marketplace.thebzlab.online</a>
     </p>
   </div>
@@ -1368,7 +1502,7 @@ export class NotificationsService {
     text += `Adresse de livraison: ${data.shippingAddress}\n\n`;
     text += `Voir ma commande: ${data.orderUrl}\n\n`;
     text += `Vous recevrez un email dès que le vendeur confirmera votre commande.\n\n`;
-    text += `© 2025 AgriTech Marketplace\n`;
+    text += `© 2025 AgroGina Marketplace\n`;
     text += `https://marketplace.thebzlab.online\n`;
 
     return text;
@@ -1492,7 +1626,7 @@ export class NotificationsService {
   </div>
 
   <div style="text-align: center; color: #6b7280; font-size: 14px; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
-    <p>© 2025 AgriTech Marketplace</p>
+    <p>© 2025 AgroGina Marketplace</p>
   </div>
 </body>
 </html>
@@ -1520,7 +1654,7 @@ export class NotificationsService {
     text += `Adresse de livraison: ${data.shippingAddress}\n\n`;
     text += `Gérer cette commande: ${data.orderUrl}\n\n`;
     text += `Connectez-vous à votre tableau de bord pour confirmer et traiter cette commande.\n\n`;
-    text += `© 2025 AgriTech Marketplace\n`;
+    text += `© 2025 AgroGina Marketplace\n`;
 
     return text;
   }
@@ -1635,7 +1769,7 @@ export class NotificationsService {
   </div>
 
   <div style="text-align: center; color: #6b7280; font-size: 14px; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
-    <p>© 2025 AgriTech Marketplace</p>
+    <p>© 2025 AgroGina Marketplace</p>
   </div>
 </body>
 </html>
@@ -1663,7 +1797,7 @@ export class NotificationsService {
       text += `N'oubliez pas de laisser un avis! Votre retour nous aide à améliorer nos services.\n\n`;
     }
 
-    text += `© 2025 AgriTech Marketplace\n`;
+    text += `© 2025 AgroGina Marketplace\n`;
 
     return text;
   }
@@ -1672,8 +1806,32 @@ export class NotificationsService {
    * Send invoice email to customer/supplier
    */
   async sendInvoiceEmail(data: InvoiceEmailData): Promise<boolean> {
+    // Use DB-backed template via EmailService if available
+    if (this.emailServiceDb) {
+      const isSales = data.invoiceType === 'sales';
+      return this.emailServiceDb.sendByType('invoice_email', data.partyEmail, {
+        partyName: data.partyName,
+        invoiceNumber: data.invoiceNumber,
+        invoiceType: data.invoiceType,
+        invoiceTypeLabel: isSales ? 'Facture de Vente' : "Facture d'Achat",
+        invoiceIntro: isSales
+          ? `Veuillez trouver ci-joint votre facture de ${data.organizationName}.`
+          : `Voici la facture d'achat de ${data.organizationName}.`,
+        organizationName: data.organizationName,
+        invoiceDate: data.invoiceDate,
+        dueDate: data.dueDate,
+        subtotal: data.subtotal,
+        taxAmount: data.taxAmount,
+        grandTotal: data.grandTotal,
+        currency: data.currency,
+        items: data.items,
+        notes: data.notes,
+      });
+    }
+
+    // Fallback to hardcoded HTML
     const isSales = data.invoiceType === 'sales';
-    const subject = isSales 
+    const subject = isSales
       ? `Facture ${data.invoiceNumber} - ${data.organizationName}`
       : `Facture d'achat ${data.invoiceNumber} - ${data.organizationName}`;
 
@@ -1928,6 +2086,12 @@ export class NotificationsService {
     to: string,
     data: Parameters<(typeof marketplaceEmailTemplates)[typeof type]>[0],
   ): Promise<boolean> {
+    // Try DB template first
+    if (this.emailServiceDb) {
+      return this.emailServiceDb.sendByType(type, to, data as any);
+    }
+
+    // Fallback to hardcoded templates
     const templateFn = marketplaceEmailTemplates[type] as (data: any) => {
       subject: string;
       html: string;

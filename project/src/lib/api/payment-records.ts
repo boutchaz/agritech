@@ -1,5 +1,6 @@
 import { apiClient } from '../api-client';
-import { buildQueryUrl, requireOrganizationId } from './createCrudApi';
+import { requireOrganizationId } from './createCrudApi';
+import type { PaginatedResponse } from './types';
 import type {
   PaymentRecord,
   PaymentSummary,
@@ -14,6 +15,16 @@ import type {
   CalculatePaymentRequest,
   CalculatePaymentResponse,
 } from '../../types/payments';
+
+export interface PaginatedPaymentRecordsQuery {
+  page?: number;
+  pageSize?: number;
+  sortBy?: string;
+  sortDir?: 'asc' | 'desc';
+  search?: string;
+  status?: string;
+  worker_type?: string;
+}
 
 export const paymentRecordsApi = {
   /**
@@ -39,9 +50,30 @@ export const paymentRecordsApi = {
     if (filters?.period_end) params.append('period_end', filters.period_end);
 
     const queryString = params.toString();
-    const url = `/api/v1/organizations/${organizationId}/payment-records${queryString ? `?${queryString}` : ''}`;
+    const url = `/api/v1/organizations/${organizationId}/payment-records?${queryString}`;
 
-    return apiClient.get<PaymentSummary[]>(url);
+    const res = await apiClient.get<{ data: PaymentSummary[] }>(url);
+    return res.data || [];
+  },
+
+  async getPaginated(
+    organizationId: string,
+    query: PaginatedPaymentRecordsQuery,
+  ): Promise<PaginatedResponse<PaymentSummary>> {
+    const params = new URLSearchParams();
+
+    Object.entries(query).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        params.append(key, String(value));
+      }
+    });
+
+    const queryString = params.toString();
+    const url = queryString
+      ? `/api/v1/organizations/${organizationId}/payment-records?${queryString}`
+      : `/api/v1/organizations/${organizationId}/payment-records`;
+
+    return apiClient.get<PaginatedResponse<PaymentSummary>>(url);
   },
 
   /**
@@ -134,7 +166,11 @@ export const paymentRecordsApi = {
   /**
    * Process a payment (mark as paid)
    */
-  async process(organizationId: string, paymentId: string, data: ProcessPaymentRequest): Promise<PaymentRecord> {
+  async process(
+    organizationId: string,
+    paymentId: string,
+    data: Omit<ProcessPaymentRequest, 'payment_id'>,
+  ): Promise<PaymentRecord> {
     return apiClient.patch<PaymentRecord>(
       `/api/v1/organizations/${organizationId}/payment-records/${paymentId}/process`,
       data
@@ -154,7 +190,11 @@ export const paymentRecordsApi = {
   /**
    * Approve an advance
    */
-  async approveAdvance(organizationId: string, advanceId: string, data: ApproveAdvanceRequest): Promise<PaymentAdvance> {
+  async approveAdvance(
+    organizationId: string,
+    advanceId: string,
+    data: Omit<ApproveAdvanceRequest, 'advance_id'>,
+  ): Promise<PaymentAdvance> {
     return apiClient.patch<PaymentAdvance>(
       `/api/v1/organizations/${organizationId}/payment-records/advances/${advanceId}/approve`,
       data

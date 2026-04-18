@@ -22,6 +22,7 @@ import {
 import { CustomersService } from './customers.service';
 import { CreateCustomerDto, UpdateCustomerDto, CustomerFiltersDto } from './dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { OrganizationGuard } from '../../common/guards/organization.guard';
 
 @ApiTags('CRM - Customers')
 @ApiBearerAuth('JWT-auth')
@@ -31,7 +32,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
   required: true,
 })
 @Controller('customers')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, OrganizationGuard)
 export class CustomersController {
   constructor(private readonly customersService: CustomersService) {}
 

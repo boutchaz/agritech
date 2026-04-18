@@ -82,6 +82,11 @@ export class ReceptionBatchFiltersDto {
   @IsDateString()
   dateTo?: string;
 
+  @ApiPropertyOptional({ description: 'Text search across batch_code, producer_name, notes' })
+  @IsOptional()
+  @IsString()
+  search?: string;
+
   @ApiPropertyOptional({
     description: 'Filter by quality grade',
     enum: ['A', 'B', 'C', 'Extra', 'First', 'Second', 'Third']

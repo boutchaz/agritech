@@ -1,12 +1,18 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Plus, X, Edit2, Trash2, User } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { workersApi, type Worker } from '../lib/api/workers';
 import { tasksApi } from '../lib/api/tasks';
 import { useAuth } from '../hooks/useAuth';
 import { FormField } from './ui/FormField';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
+import { Button } from '@/components/ui/button';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { FilterBar, ListPageLayout, ResponsiveList } from '@/components/ui/data-table';
+import { EmptyState } from '@/components/ui/empty-state';
+
 
 interface TaskCategory {
   id: string;
@@ -30,12 +36,21 @@ interface DayLaborer {
   farm_id: string;
 }
 
-const DayLaborerManagement: React.FC = () => {
+const DayLaborerManagement = () => {
   const { currentFarm, currentOrganization } = useAuth();
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const farmId = currentFarm?.id;
   const organizationId = currentOrganization?.id;
   const currency = currentOrganization?.currency || 'EUR';
+  const [searchValue, setSearchValue] = useState('');
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<{title:string;description?:string;variant?:"destructive"|"default";onConfirm:()=>void}>({title:"",onConfirm:()=>{}});
+  const showConfirm = (title: string, onConfirm: () => void, opts?: {description?: string; variant?: "destructive" | "default"}) => {
+    setConfirmAction({title, onConfirm, ...opts});
+    setConfirmOpen(true);
+  };
+
   const [showAddModal, setShowAddModal] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [editingLaborer, setEditingLaborer] = useState<DayLaborer | null>(null);
@@ -106,7 +121,7 @@ const DayLaborerManagement: React.FC = () => {
   const addLaborerMutation = useMutation({
     mutationFn: async ({ laborer, specialties }: { laborer: Partial<DayLaborer>; specialties: string[] }) => {
       if (!organizationId || !farmId) {
-        throw new Error('Sélectionnez une ferme pour ajouter un ouvrier.');
+        throw new Error(t('dayLaborers.errors.selectFarmToAdd', 'Sélectionnez une ferme pour ajouter un ouvrier.'));
       }
 
       const paymentFrequency = laborer.payment_type === 'task' || laborer.payment_type === 'unit'
@@ -154,14 +169,14 @@ const DayLaborerManagement: React.FC = () => {
     },
     onError: (mutationError) => {
       console.error('Error adding day laborer:', mutationError);
-      setError('Failed to add day laborer');
+      setError(t('dayLaborers.errors.addFailed', 'Échec de l’ajout de l’ouvrier journalier.'));
     },
   });
 
   const updateLaborerMutation = useMutation({
     mutationFn: async (laborer: DayLaborer) => {
       if (!organizationId || !farmId) {
-        throw new Error('Sélectionnez une ferme pour modifier un ouvrier.');
+        throw new Error(t('dayLaborers.errors.selectFarmToEdit', 'Sélectionnez une ferme pour modifier un ouvrier.'));
       }
 
       const paymentFrequency = laborer.payment_type === 'task' || laborer.payment_type === 'unit'
@@ -194,14 +209,14 @@ const DayLaborerManagement: React.FC = () => {
     },
     onError: (mutationError) => {
       console.error('Error updating laborer:', mutationError);
-      setError('Failed to update laborer');
+      setError(t('dayLaborers.errors.updateFailed', 'Échec de la mise à jour de l’ouvrier journalier.'));
     },
   });
 
   const deleteLaborerMutation = useMutation({
     mutationFn: async (id: string) => {
       if (!organizationId || !farmId) {
-        throw new Error('Sélectionnez une ferme pour supprimer un ouvrier.');
+        throw new Error(t('dayLaborers.errors.selectFarmToDelete', 'Sélectionnez une ferme pour supprimer un ouvrier.'));
       }
       await workersApi.delete(id, organizationId);
     },
@@ -211,20 +226,70 @@ const DayLaborerManagement: React.FC = () => {
     },
     onError: (mutationError) => {
       console.error('Error deleting laborer:', mutationError);
-      setError('Failed to delete laborer');
+      setError(t('dayLaborers.errors.deleteFailed', 'Échec de la suppression de l’ouvrier journalier.'));
     },
   });
 
   const laborers = laborersQuery.data || [];
   const taskCategories = taskCategoriesQuery.data || [];
   const loading = laborersQuery.isLoading || taskCategoriesQuery.isLoading;
+  const isFetching = laborersQuery.isFetching || taskCategoriesQuery.isFetching;
   const displayError = error
-    || (laborersQuery.isError ? 'Failed to fetch laborers' : null)
-    || (taskCategoriesQuery.isError ? 'Failed to fetch task categories' : null);
+    || (laborersQuery.isError ? t('dayLaborers.errors.fetchLaborersFailed', 'Échec du chargement des ouvriers journaliers.') : null)
+    || (taskCategoriesQuery.isError ? t('dayLaborers.errors.fetchTaskCategoriesFailed', 'Échec du chargement des catégories de tâches.') : null);
+
+  const filteredLaborers = laborers.filter((laborer) => {
+    const query = searchValue.trim().toLowerCase();
+
+    if (!query) return true;
+
+    const searchableValues = [
+      laborer.first_name,
+      laborer.last_name,
+      `${laborer.first_name} ${laborer.last_name}`,
+      laborer.cin,
+    ];
+
+    return searchableValues.some((value) => value?.toLowerCase().includes(query));
+  });
+
+  const getPaymentTypeLabel = (paymentType: DayLaborer['payment_type']) => {
+    if (paymentType === 'task') {
+      return t('dayLaborers.paymentType.task', 'Par tâche');
+    }
+
+    if (paymentType === 'unit') {
+      return t('dayLaborers.paymentType.unit', 'Par unité');
+    }
+
+    return t('dayLaborers.paymentType.daily', 'Journalier');
+  };
+
+  const getRateLabel = (laborer: DayLaborer) => {
+    if (laborer.payment_type === 'task') {
+      return laborer.task_rate
+        ? `${t('dayLaborers.labels.taskRate', 'Taux par tâche')}: ${laborer.task_rate} ${currency}`
+        : '—';
+    }
+
+    if (laborer.payment_type === 'unit') {
+      return laborer.unit_rate
+        ? `${t('dayLaborers.labels.unitRate', 'Taux par unité')}${laborer.unit_type ? ` (${laborer.unit_type})` : ''}: ${laborer.unit_rate} ${currency}`
+        : '—';
+    }
+
+    return `${laborer.daily_rate} ${currency}`;
+  };
+
+  const renderCreateAction = () => ({
+    label: t('dayLaborers.actions.addFirst', 'Ajouter votre premier ouvrier'),
+    onClick: () => setShowAddModal(true),
+    variant: 'default' as const,
+  });
 
   const handleAddLaborer = async () => {
     if (!farmId) {
-      setError('Sélectionnez une ferme pour ajouter un ouvrier.');
+      setError(t('dayLaborers.errors.selectFarmToAdd', 'Sélectionnez une ferme pour ajouter un ouvrier.'));
       return;
     }
 
@@ -236,22 +301,26 @@ const DayLaborerManagement: React.FC = () => {
   };
 
   const handleDeleteLaborer = async (id: string) => {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer cet ouvrier ?')) return;
-
-    try {
-      if (!farmId) {
-        setError('Sélectionnez une ferme pour supprimer un ouvrier.');
-        return;
+    showConfirm(t('dayLaborers.confirm.deleteTitle', 'Êtes-vous sûr de vouloir supprimer cet ouvrier ?'), () => {
+      try {
+        if (!farmId) {
+          setError(t('dayLaborers.errors.selectFarmToDelete', 'Sélectionnez une ferme pour supprimer un ouvrier.'));
+          return;
+        }
+        deleteLaborerMutation.mutate(id);
+      } catch (error) {
+        console.error('Error deleting laborer:', error);
+        setError(t('dayLaborers.errors.deleteFailed', 'Échec de la suppression de l’ouvrier journalier.'));
       }
-      deleteLaborerMutation.mutate(id);
-    } catch (error) {
-      console.error('Error deleting laborer:', error);
-      setError('Failed to delete laborer');
-    }
+    }, {variant: "destructive"});
   };
 
   const renderSpecialtiesSelect = () => (
-    <FormField label="Spécialités" htmlFor="laborer_specialties" helper="Maintenez Ctrl/Cmd pour sélectionner plusieurs">
+    <FormField
+      label={t('dayLaborers.fields.specialties', 'Spécialités')}
+      htmlFor="laborer_specialties"
+      helper={t('dayLaborers.fields.specialtiesHelper', 'Maintenez Ctrl/Cmd pour sélectionner plusieurs')}
+    >
       <Select
         id="laborer_specialties"
         multiple
@@ -276,7 +345,7 @@ const DayLaborerManagement: React.FC = () => {
     const idToName = new Map(taskCategories.map(c => [c.id, c.name] as const));
     return (
       <div className="mt-2">
-        <p className="font-medium">Spécialités:</p>
+        <p className="font-medium">{t('dayLaborers.fields.specialtiesLabel', 'Spécialités:')}</p>
         <div className="flex flex-wrap gap-2 mt-1">
           {laborer.specialties.map((value) => {
             const label = idToName.get(value) || value;
@@ -294,32 +363,37 @@ const DayLaborerManagement: React.FC = () => {
     );
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
-      </div>
-    );
-  }
-
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-          Gestion des Ouvriers Journaliers
-        </h2>
-        <button
-          type="button"
-          onClick={() => setShowAddModal(true)}
-          disabled={!currentFarm?.id}
-          className={`flex items-center space-x-2 px-4 py-2 rounded-md ${currentFarm?.id ? 'bg-green-600 text-white hover:bg-green-700' : 'bg-gray-300 text-gray-600 cursor-not-allowed'}`}
-          title={!currentFarm?.id ? 'Sélectionnez une ferme pour ajouter un ouvrier' : undefined}
-        >
-          <Plus className="h-5 w-5" />
-          <span>Nouvel Ouvrier</span>
-        </button>
-      </div>
-
+    <>
+    <ListPageLayout
+      header={
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+              {t('dayLaborers.title', 'Gestion des Ouvriers Journaliers')}
+            </h2>
+          </div>
+          <Button
+            type="button"
+            onClick={() => setShowAddModal(true)}
+            disabled={!currentFarm?.id}
+            variant={currentFarm?.id ? 'green' : undefined}
+            className={`flex items-center space-x-2 px-4 py-2 rounded-md ${!currentFarm?.id ? 'bg-gray-300 text-gray-600 cursor-not-allowed' : ''}`}
+            title={!currentFarm?.id ? t('dayLaborers.errors.selectFarmToAdd', 'Sélectionnez une ferme pour ajouter un ouvrier.') : undefined}
+          >
+            <Plus className="h-5 w-5" />
+            <span>{t('dayLaborers.actions.newLaborer', 'Nouvel Ouvrier')}</span>
+          </Button>
+        </div>
+      }
+      filters={
+        <FilterBar
+          searchValue={searchValue}
+          onSearchChange={setSearchValue}
+          searchPlaceholder={t('dayLaborers.searchPlaceholder', 'Rechercher par nom ou CIN')}
+        />
+      }
+    >
       {displayError && (
         <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg">
           <p className="text-red-600 dark:text-red-400">{displayError}</p>
@@ -327,108 +401,155 @@ const DayLaborerManagement: React.FC = () => {
       )}
 
       {!farmId && (
-        <div className="bg-amber-50 dark:bg-amber-900/20 p-3 rounded-md text-amber-800 dark:text-amber-300 text-sm">
-          Sélectionnez une ferme pour gérer les ouvriers journaliers.
-        </div>
+        <EmptyState
+          variant="inline"
+          icon={User}
+          description={t('dayLaborers.selectFarmMessage', 'Sélectionnez une ferme pour gérer les ouvriers journaliers.')}
+        />
       )}
 
-      {!loading && laborers.length === 0 && (
-        <div className="flex flex-col items-center justify-center p-12 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800">
-          <User className="h-12 w-12 text-gray-400" />
-          <p className="mt-4 text-gray-600 dark:text-gray-300">Aucun ouvrier pour l’instant.</p>
-          <button
-            type="button"
-            onClick={() => setShowAddModal(true)}
-            className="mt-6 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
-          >
-            Ajouter votre premier ouvrier
-          </button>
-        </div>
-      )}
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {laborers.map(laborer => (
-          <div
-            key={laborer.id}
-            className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6"
-          >
-            <div className="flex justify-between items-start mb-4">
-              <div className="flex items-center space-x-3">
-                <User className="h-10 w-10 text-gray-400" />
-                <div>
-                  <h3 className="text-lg font-semibold">
-                    {laborer.first_name} {laborer.last_name}
-                  </h3>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    CIN: {laborer.cin}
-                  </p>
+      {farmId && (
+        <ResponsiveList
+          items={filteredLaborers}
+          isLoading={loading}
+          isFetching={isFetching}
+          keyExtractor={(laborer) => laborer.id}
+          emptyIcon={User}
+          emptyMessage={searchValue
+            ? t('dayLaborers.empty.filtered', 'Aucun ouvrier ne correspond à votre recherche.')
+            : t('dayLaborers.empty.default', 'Aucun ouvrier pour l’instant.')}
+          emptyAction={renderCreateAction()}
+          renderCard={(laborer) => (
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+              <div className="flex justify-between items-start mb-4 gap-4">
+                <div className="flex items-center space-x-3 min-w-0">
+                  <User className="h-10 w-10 text-gray-400 shrink-0" />
+                  <div className="min-w-0">
+                    <h3 className="text-lg font-semibold truncate">
+                      {laborer.first_name} {laborer.last_name}
+                    </h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
+                      {t('dayLaborers.fields.cinLabel', 'CIN')}: {laborer.cin || '—'}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex space-x-2 shrink-0">
+                  <Button
+                    type="button"
+                    onClick={() => setEditingLaborer(laborer)}
+                    className="text-gray-400 hover:text-gray-500"
+                  >
+                    <Edit2 className="h-5 w-5" />
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={() => handleDeleteLaborer(laborer.id)}
+                    className="text-gray-400 hover:text-red-500"
+                  >
+                    <Trash2 className="h-5 w-5" />
+                  </Button>
                 </div>
               </div>
-              <div className="flex space-x-2">
-                <button
-                  type="button"
-                  onClick={() => setEditingLaborer(laborer)}
-                  className="text-gray-400 hover:text-gray-500"
-                >
-                  <Edit2 className="h-5 w-5" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleDeleteLaborer(laborer.id)}
-                  className="text-gray-400 hover:text-red-500"
-                >
-                  <Trash2 className="h-5 w-5" />
-                </button>
-              </div>
-            </div>
 
-            <div className="space-y-2 text-sm">
-              {laborer.phone && (
+              <div className="space-y-2 text-sm">
                 <p className="text-gray-600 dark:text-gray-300">
-                  Tél: {laborer.phone}
+                  {t('dayLaborers.fields.phoneLabel', 'Tél')}: {laborer.phone || '—'}
                 </p>
-              )}
-              {laborer.address && (
-                <p className="text-gray-600 dark:text-gray-300">
-                  Adresse: {laborer.address}
-                </p>
-              )}
-              <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
-                <p className="font-medium">Type de paiement: {laborer.payment_type === 'daily' ? 'Journalier' : laborer.payment_type === 'task' ? 'Par tâche' : 'Par unité'}</p>
-                {laborer.payment_type === 'daily' && (
-                  <p>Taux journalier: {laborer.daily_rate} {currency}</p>
+                {laborer.address && (
+                  <p className="text-gray-600 dark:text-gray-300">
+                    {t('dayLaborers.fields.address', 'Adresse')}: {laborer.address}
+                  </p>
                 )}
-                {laborer.payment_type === 'task' && laborer.task_rate && (
-                  <p>Taux par tâche: {laborer.task_rate} {currency}</p>
-                )}
-                {laborer.payment_type === 'unit' && laborer.unit_rate && (
-                  <p>Taux par {laborer.unit_type}: {laborer.unit_rate} {currency}</p>
-                )}
+                <div className="pt-2 border-t border-gray-200 dark:border-gray-700 space-y-1">
+                  <p className="font-medium">
+                    {t('dayLaborers.fields.paymentType', 'Type de paiement')}: {getPaymentTypeLabel(laborer.payment_type)}
+                  </p>
+                  <p>
+                    {t('dayLaborers.fields.rate', 'Tarif')}: {getRateLabel(laborer)}
+                  </p>
+                </div>
+                {renderSpecialties(laborer)}
               </div>
-              {renderSpecialties(laborer)}
             </div>
-          </div>
-        ))}
-      </div>
+          )}
+          renderTableHeader={(
+            <tr>
+              <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                {t('dayLaborers.table.name', 'Nom')}
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                {t('dayLaborers.table.cin', 'CIN')}
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                {t('dayLaborers.table.phone', 'Téléphone')}
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                {t('dayLaborers.table.paymentType', 'Type de paiement')}
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                {t('dayLaborers.table.rate', 'Tarif')}
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                {t('dayLaborers.table.specialties', 'Spécialités')}
+              </th>
+              <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                {t('dayLaborers.table.actions', 'Actions')}
+              </th>
+            </tr>
+          )}
+          renderTable={(laborer) => (
+            <>
+              <td className="px-4 py-4 text-sm font-medium text-gray-900 dark:text-white">
+                {laborer.first_name} {laborer.last_name}
+              </td>
+              <td className="px-4 py-4 text-sm text-gray-600 dark:text-gray-300">{laborer.cin || '—'}</td>
+              <td className="px-4 py-4 text-sm text-gray-600 dark:text-gray-300">{laborer.phone || '—'}</td>
+              <td className="px-4 py-4 text-sm text-gray-600 dark:text-gray-300">{getPaymentTypeLabel(laborer.payment_type)}</td>
+              <td className="px-4 py-4 text-sm text-gray-600 dark:text-gray-300">{getRateLabel(laborer)}</td>
+              <td className="px-4 py-4 text-sm text-gray-600 dark:text-gray-300">
+                {laborer.specialties?.length ? renderSpecialties(laborer) : '—'}
+              </td>
+              <td className="px-4 py-4 text-sm text-right">
+                <div className="flex items-center justify-end gap-2">
+                  <Button
+                    type="button"
+                    onClick={() => setEditingLaborer(laborer)}
+                    className="text-gray-400 hover:text-gray-500"
+                  >
+                    <Edit2 className="h-5 w-5" />
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={() => handleDeleteLaborer(laborer.id)}
+                    className="text-gray-400 hover:text-red-500"
+                  >
+                    <Trash2 className="h-5 w-5" />
+                  </Button>
+                </div>
+              </td>
+            </>
+          )}
+        />
+      )}
 
       {showAddModal && (
         <div className="modal-overlay overflow-y-auto">
           <div className="modal-panel p-6 max-w-lg max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-                Nouvel Ouvrier
+                {t('dayLaborers.modal.addTitle', 'Nouvel Ouvrier')}
               </h3>
-              <button
+              <Button
                 type="button"
                 onClick={() => setShowAddModal(false)}
                 className="text-gray-400 hover:text-gray-500"
               >
                 <X className="h-6 w-6" />
-              </button>
+              </Button>
             </div>
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <FormField label="Prénom" htmlFor="dl_first_name" required>
+                <FormField label={t('common.firstName', 'Prénom')} htmlFor="dl_first_name" required>
                   <Input
                     id="dl_first_name"
                     type="text"
@@ -437,7 +558,7 @@ const DayLaborerManagement: React.FC = () => {
                     required
                   />
                 </FormField>
-                <FormField label="Nom" htmlFor="dl_last_name" required>
+                <FormField label={t('common.lastName', 'Nom')} htmlFor="dl_last_name" required>
                   <Input
                     id="dl_last_name"
                     type="text"
@@ -449,7 +570,7 @@ const DayLaborerManagement: React.FC = () => {
               </div>
 
               <div>
-                <FormField label="CIN" htmlFor="dl_cin" required>
+                <FormField label={t('dayLaborers.fields.cin', 'CIN')} htmlFor="dl_cin" required>
                   <Input
                     id="dl_cin"
                     type="text"
@@ -461,7 +582,7 @@ const DayLaborerManagement: React.FC = () => {
               </div>
 
               <div>
-                <FormField label="Téléphone" htmlFor="dl_phone">
+                <FormField label={t('common.phone', 'Téléphone')} htmlFor="dl_phone">
                   <Input
                     id="dl_phone"
                     type="tel"
@@ -472,7 +593,7 @@ const DayLaborerManagement: React.FC = () => {
               </div>
 
               <div>
-                <FormField label="Adresse" htmlFor="dl_address">
+                <FormField label={t('common.address', 'Adresse')} htmlFor="dl_address">
                   <Input
                     id="dl_address"
                     type="text"
@@ -483,7 +604,7 @@ const DayLaborerManagement: React.FC = () => {
               </div>
 
               <div>
-                <FormField label="Type de paiement" htmlFor="dl_payment_type" required>
+                <FormField label={t('dayLaborers.fields.paymentType', 'Type de paiement')} htmlFor="dl_payment_type" required>
                   <Select
                     id="dl_payment_type"
                     value={newLaborer.payment_type}
@@ -493,34 +614,34 @@ const DayLaborerManagement: React.FC = () => {
                     })}
                     required
                   >
-                    <option value="daily">Journalier</option>
-                    <option value="task">Par tâche</option>
-                    <option value="unit">Par unité</option>
+                    <option value="daily">{t('dayLaborers.paymentType.daily', 'Journalier')}</option>
+                    <option value="task">{t('dayLaborers.paymentType.task', 'Par tâche')}</option>
+                    <option value="unit">{t('dayLaborers.paymentType.unit', 'Par unité')}</option>
                   </Select>
                 </FormField>
               </div>
 
               {newLaborer.payment_type === 'daily' && (
-                <FormField label={`Taux journalier (${currency})`} htmlFor="dl_daily_rate" required>
+                  <FormField label={t('dayLaborers.fields.dailyRateWithCurrency', { defaultValue: 'Taux journalier ({{currency}})', currency })} htmlFor="dl_daily_rate" required>
                   <Input
                     id="dl_daily_rate"
                     type="number"
                     value={newLaborer.daily_rate}
                     onChange={(e) => setNewLaborer({ ...newLaborer, daily_rate: Number(e.target.value) })}
-                    placeholder={`Taux journalier en ${currency}`}
+                      placeholder={t('dayLaborers.fields.dailyRatePlaceholder', { defaultValue: 'Taux journalier en {{currency}}', currency })}
                     required
                   />
                 </FormField>
               )}
 
               {newLaborer.payment_type === 'task' && (
-                <FormField label={`Taux par tâche (${currency})`} htmlFor="dl_task_rate" required>
+                  <FormField label={t('dayLaborers.fields.taskRateWithCurrency', { defaultValue: 'Taux par tâche ({{currency}})', currency })} htmlFor="dl_task_rate" required>
                   <Input
                     id="dl_task_rate"
                     type="number"
                     value={newLaborer.task_rate || ''}
                     onChange={(e) => setNewLaborer({ ...newLaborer, task_rate: Number(e.target.value) })}
-                    placeholder={`Taux par tâche en ${currency}`}
+                      placeholder={t('dayLaborers.fields.taskRatePlaceholder', { defaultValue: 'Taux par tâche en {{currency}}', currency })}
                     required
                   />
                 </FormField>
@@ -528,23 +649,23 @@ const DayLaborerManagement: React.FC = () => {
 
               {newLaborer.payment_type === 'unit' && (
                 <>
-                  <FormField label="Type d'unité" htmlFor="dl_unit_type" required>
+                   <FormField label={t('dayLaborers.fields.unitType', "Type d'unité")} htmlFor="dl_unit_type" required>
                     <Input
                       id="dl_unit_type"
                       type="text"
                       value={newLaborer.unit_type || ''}
                       onChange={(e) => setNewLaborer({ ...newLaborer, unit_type: e.target.value })}
-                      placeholder="Ex: kg, caisse, arbre..."
+                      placeholder={t('dayLaborers.fields.unitTypePlaceholder', 'Ex: kg, caisse, arbre...')}
                       required
                     />
                   </FormField>
-                  <FormField label={`Taux par unité (${currency})`} htmlFor="dl_unit_rate" required>
+                   <FormField label={t('dayLaborers.fields.unitRateWithCurrency', { defaultValue: 'Taux par unité ({{currency}})', currency })} htmlFor="dl_unit_rate" required>
                     <Input
                       id="dl_unit_rate"
                       type="number"
                       value={newLaborer.unit_rate || ''}
                       onChange={(e) => setNewLaborer({ ...newLaborer, unit_rate: Number(e.target.value) })}
-                      placeholder={`Taux par unité en ${currency}`}
+                      placeholder={t('dayLaborers.fields.unitRatePlaceholder', { defaultValue: 'Taux par unité en {{currency}}', currency })}
                       required
                     />
                   </FormField>
@@ -555,20 +676,16 @@ const DayLaborerManagement: React.FC = () => {
             </div>
 
             <div className="mt-6 flex justify-end space-x-3">
-              <button
+              <Button
                 type="button"
                 onClick={() => setShowAddModal(false)}
                 className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-500"
               >
-                Annuler
-              </button>
-              <button
-                type="button"
-                onClick={handleAddLaborer}
-                className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md"
-              >
-                Ajouter
-              </button>
+                {t('common.cancel', 'Annuler')}
+              </Button>
+              <Button variant="green" type="button" onClick={handleAddLaborer} className="px-4 py-2 text-sm font-medium rounded-md" >
+                {t('common.add', 'Ajouter')}
+              </Button>
             </div>
           </div>
         </div>
@@ -579,19 +696,19 @@ const DayLaborerManagement: React.FC = () => {
           <div className="modal-panel p-6 max-w-lg max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-                Modifier l'Ouvrier
+                {t('dayLaborers.modal.editTitle', "Modifier l'Ouvrier")}
               </h3>
-              <button
+              <Button
                 type="button"
                 onClick={() => setEditingLaborer(null)}
                 className="text-gray-400 hover:text-gray-500"
               >
                 <X className="h-6 w-6" />
-              </button>
+              </Button>
             </div>
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <FormField label="Prénom" htmlFor="dl_edit_first_name" required>
+                <FormField label={t('common.firstName', 'Prénom')} htmlFor="dl_edit_first_name" required>
                   <Input
                     id="dl_edit_first_name"
                     type="text"
@@ -603,7 +720,7 @@ const DayLaborerManagement: React.FC = () => {
                     required
                   />
                 </FormField>
-                <FormField label="Nom" htmlFor="dl_edit_last_name" required>
+                <FormField label={t('common.lastName', 'Nom')} htmlFor="dl_edit_last_name" required>
                   <Input
                     id="dl_edit_last_name"
                     type="text"
@@ -618,7 +735,7 @@ const DayLaborerManagement: React.FC = () => {
               </div>
 
               <div>
-                <FormField label="CIN" htmlFor="dl_edit_cin" required>
+                <FormField label={t('dayLaborers.fields.cin', 'CIN')} htmlFor="dl_edit_cin" required>
                   <Input
                     id="dl_edit_cin"
                     type="text"
@@ -633,7 +750,7 @@ const DayLaborerManagement: React.FC = () => {
               </div>
 
               <div>
-                <FormField label="Téléphone" htmlFor="dl_edit_phone">
+                <FormField label={t('common.phone', 'Téléphone')} htmlFor="dl_edit_phone">
                   <Input
                     id="dl_edit_phone"
                     type="tel"
@@ -647,7 +764,7 @@ const DayLaborerManagement: React.FC = () => {
               </div>
 
               <div>
-                <FormField label="Adresse" htmlFor="dl_edit_address">
+                <FormField label={t('common.address', 'Adresse')} htmlFor="dl_edit_address">
                   <Input
                     id="dl_edit_address"
                     type="text"
@@ -661,7 +778,7 @@ const DayLaborerManagement: React.FC = () => {
               </div>
 
               <div>
-                <FormField label="Type de paiement" htmlFor="dl_edit_payment_type" required>
+                <FormField label={t('dayLaborers.fields.paymentType', 'Type de paiement')} htmlFor="dl_edit_payment_type" required>
                   <Select
                     id="dl_edit_payment_type"
                     value={editingLaborer.payment_type}
@@ -671,15 +788,15 @@ const DayLaborerManagement: React.FC = () => {
                     })}
                     required
                   >
-                    <option value="daily">Journalier</option>
-                    <option value="task">Par tâche</option>
-                    <option value="unit">Par unité</option>
+                    <option value="daily">{t('dayLaborers.paymentType.daily', 'Journalier')}</option>
+                    <option value="task">{t('dayLaborers.paymentType.task', 'Par tâche')}</option>
+                    <option value="unit">{t('dayLaborers.paymentType.unit', 'Par unité')}</option>
                   </Select>
                 </FormField>
               </div>
 
               {editingLaborer.payment_type === 'daily' && (
-                <FormField label={`Taux journalier (${currency})`} htmlFor="dl_edit_daily_rate" required>
+                 <FormField label={t('dayLaborers.fields.dailyRateWithCurrency', { defaultValue: 'Taux journalier ({{currency}})', currency })} htmlFor="dl_edit_daily_rate" required>
                   <Input
                     id="dl_edit_daily_rate"
                     type="number"
@@ -688,14 +805,14 @@ const DayLaborerManagement: React.FC = () => {
                       ...editingLaborer,
                       daily_rate: Number(e.target.value)
                     })}
-                    placeholder={`Taux journalier en ${currency}`}
+                     placeholder={t('dayLaborers.fields.dailyRatePlaceholder', { defaultValue: 'Taux journalier en {{currency}}', currency })}
                     required
                   />
                 </FormField>
               )}
 
               {editingLaborer.payment_type === 'task' && (
-                <FormField label={`Taux par tâche (${currency})`} htmlFor="dl_edit_task_rate" required>
+                 <FormField label={t('dayLaborers.fields.taskRateWithCurrency', { defaultValue: 'Taux par tâche ({{currency}})', currency })} htmlFor="dl_edit_task_rate" required>
                   <Input
                     id="dl_edit_task_rate"
                     type="number"
@@ -704,7 +821,7 @@ const DayLaborerManagement: React.FC = () => {
                       ...editingLaborer,
                       task_rate: Number(e.target.value)
                     })}
-                    placeholder={`Taux par tâche en ${currency}`}
+                     placeholder={t('dayLaborers.fields.taskRatePlaceholder', { defaultValue: 'Taux par tâche en {{currency}}', currency })}
                     required
                   />
                 </FormField>
@@ -712,7 +829,7 @@ const DayLaborerManagement: React.FC = () => {
 
               {editingLaborer.payment_type === 'unit' && (
                 <>
-                  <FormField label="Type d'unité" htmlFor="dl_edit_unit_type" required>
+                   <FormField label={t('dayLaborers.fields.unitType', "Type d'unité")} htmlFor="dl_edit_unit_type" required>
                     <Input
                       id="dl_edit_unit_type"
                       type="text"
@@ -721,11 +838,11 @@ const DayLaborerManagement: React.FC = () => {
                         ...editingLaborer,
                         unit_type: e.target.value
                       })}
-                      placeholder="Ex: kg, caisse, arbre..."
+                       placeholder={t('dayLaborers.fields.unitTypePlaceholder', 'Ex: kg, caisse, arbre...')}
                       required
                     />
                   </FormField>
-                  <FormField label={`Taux par unité (${currency})`} htmlFor="dl_edit_unit_rate" required>
+                   <FormField label={t('dayLaborers.fields.unitRateWithCurrency', { defaultValue: 'Taux par unité ({{currency}})', currency })} htmlFor="dl_edit_unit_rate" required>
                     <Input
                       id="dl_edit_unit_rate"
                       type="number"
@@ -734,7 +851,7 @@ const DayLaborerManagement: React.FC = () => {
                         ...editingLaborer,
                         unit_rate: Number(e.target.value)
                       })}
-                      placeholder={`Taux par unité en ${currency}`}
+                       placeholder={t('dayLaborers.fields.unitRatePlaceholder', { defaultValue: 'Taux par unité en {{currency}}', currency })}
                       required
                     />
                   </FormField>
@@ -745,25 +862,34 @@ const DayLaborerManagement: React.FC = () => {
             </div>
 
             <div className="mt-6 flex justify-end space-x-3">
-              <button
+              <Button
                 type="button"
                 onClick={() => setEditingLaborer(null)}
                 className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-500"
               >
-                Annuler
-              </button>
-              <button
+                {t('common.cancel', 'Annuler')}
+              </Button>
+              <Button variant="green"
                 type="button"
                 onClick={() => handleUpdateLaborer(editingLaborer)}
-                className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md"
+                className="px-4 py-2 text-sm font-medium rounded-md"
               >
-                Enregistrer
-              </button>
+                {t('common.save', 'Enregistrer')}
+              </Button>
             </div>
           </div>
         </div>
       )}
-    </div>
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title={confirmAction.title}
+        description={confirmAction.description}
+        variant={confirmAction.variant}
+        onConfirm={confirmAction.onConfirm}
+      />
+    </ListPageLayout>
+    </>
   );
 };
 

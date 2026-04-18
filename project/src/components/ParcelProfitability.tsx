@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import {  useState  } from "react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
   TrendingUp,
   TrendingDown,
@@ -25,12 +26,11 @@ import { Input } from './ui/Input';
 import { NativeSelect } from './ui/NativeSelect';
 import { Label } from './ui/label';
 import {
-  Dialog,
-  DialogContent,
   DialogFooter,
   DialogHeader,
   DialogTitle,
 } from './ui/dialog';
+import { ResponsiveDialog } from './ui/responsive-dialog';
 import {
   Tabs,
   TabsContent,
@@ -38,13 +38,14 @@ import {
   TabsTrigger,
 } from './ui/tabs';
 import { useTranslation } from 'react-i18next';
+import { cn } from '@/lib/utils';
 
 interface ParcelProfitabilityProps {
   parcelId: string;
   parcelName: string;
 }
 
-const ParcelProfitability: React.FC<ParcelProfitabilityProps> = ({ parcelId }) => {
+const ParcelProfitability = ({ parcelId }: ParcelProfitabilityProps) => {
   const { t } = useTranslation();
   const { currentOrganization, user } = useAuth();
   const { format: formatCurrency, currencyCode, symbol: currencySymbol } = useCurrency();
@@ -242,21 +243,33 @@ const ParcelProfitability: React.FC<ParcelProfitabilityProps> = ({ parcelId }) =
             />
           </div>
         </div>
-        <div className="flex space-x-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button
-            onClick={() => setShowAddCost(true)}
-            variant="destructive"
+            type="button"
+            variant="outline"
             size="sm"
+            onClick={() => setShowAddCost(true)}
+            className={cn(
+              'rounded-lg border shadow-sm',
+              'border-rose-200/90 bg-rose-50/90 !text-rose-900 hover:bg-rose-100/90 hover:!text-rose-950',
+              'dark:border-rose-500/40 dark:bg-rose-950/35 dark:!text-rose-100 dark:hover:bg-rose-950/55 dark:hover:!text-white'
+            )}
           >
-            <Plus className="h-4 w-4 mr-2" />
+            <Plus aria-hidden />
             {t('profitability.buttons.addCost')}
           </Button>
           <Button
-            onClick={() => setShowAddRevenue(true)}
-            className="bg-green-600 hover:bg-green-700"
+            type="button"
+            variant="outline"
             size="sm"
+            onClick={() => setShowAddRevenue(true)}
+            className={cn(
+              'rounded-lg border shadow-sm',
+              'border-emerald-200/90 bg-emerald-50/90 !text-emerald-900 hover:bg-emerald-100/90 hover:!text-emerald-950',
+              'dark:border-emerald-500/40 dark:bg-emerald-950/35 dark:!text-emerald-100 dark:hover:bg-emerald-950/55 dark:hover:!text-white'
+            )}
           >
-            <Plus className="h-4 w-4 mr-2" />
+            <Plus aria-hidden />
             {t('profitability.buttons.addRevenue')}
           </Button>
         </div>
@@ -269,7 +282,7 @@ const ParcelProfitability: React.FC<ParcelProfitabilityProps> = ({ parcelId }) =
       ) : (
         <>
           {/* Summary Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
             <Card>
               <CardContent className="p-4">
                 <div className="flex items-center justify-between mb-2">
@@ -396,7 +409,7 @@ const ParcelProfitability: React.FC<ParcelProfitabilityProps> = ({ parcelId }) =
                       </div>
                     ))}
                     {/* Ledger expenses */}
-                    {(profitabilityData?.ledgerExpenses || []).slice(0, 5).map((expense: any) => (
+                    {(profitabilityData?.ledgerExpenses || []).slice(0, 5).map((expense: { id: string; description?: string; account_name?: string; entry_date: string; entry_number?: string; debit?: number; credit?: number }) => (
                       <div key={expense.id} className="flex justify-between items-start py-2 border-b border-gray-200 dark:border-gray-600">
                         <div className="flex-1">
                           <div className="text-sm font-medium text-gray-900 dark:text-white">
@@ -446,7 +459,7 @@ const ParcelProfitability: React.FC<ParcelProfitabilityProps> = ({ parcelId }) =
                       </div>
                     ))}
                     {/* Ledger revenues */}
-                    {(profitabilityData?.ledgerRevenues || []).slice(0, 5).map((revenue: any) => (
+                    {(profitabilityData?.ledgerRevenues || []).slice(0, 5).map((revenue: { id: string; description?: string; account_name?: string; entry_date: string; entry_number?: string; credit?: number; debit?: number }) => (
                       <div key={revenue.id} className="flex justify-between items-start py-2 border-b border-gray-200 dark:border-gray-600">
                         <div className="flex-1">
                           <div className="text-sm font-medium text-gray-900 dark:text-white">
@@ -466,6 +479,165 @@ const ParcelProfitability: React.FC<ParcelProfitabilityProps> = ({ parcelId }) =
               </CardContent>
             </Card>
           </div>
+
+          {/* Operational Data Sections */}
+          {/* Task Labor Costs */}
+          {(profitabilityData?.taskLaborCosts?.length ?? 0) > 0 && (
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-base font-semibold text-gray-900 dark:text-white">
+                    {t('profitability.operational.taskLabor', 'Task Labor Costs')}
+                  </h3>
+                  <span className="text-sm font-bold text-red-600">
+                    − {formatCurrency(profitabilityData?.taskLaborTotal ?? 0)}
+                  </span>
+                </div>
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {profitabilityData!.taskLaborCosts!.map((wr) => (
+                    <div key={wr.id} className="flex justify-between items-start py-2 border-b border-gray-100 dark:border-gray-700">
+                      <div className="flex-1">
+                        <div className="text-sm font-medium text-gray-900 dark:text-white">{wr.task_title}</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                          {new Date(wr.work_date).toLocaleDateString()} • {wr.worker_type} • {wr.hours_worked ? `${wr.hours_worked}h` : wr.task_description}
+                          {wr.payment_status === 'paid' && <span className="ml-2 text-green-600">✓ {t('common.paid', 'paid')}</span>}
+                          {wr.payment_status === 'pending' && <span className="ml-2 text-orange-500">{t('common.pending', 'pending')}</span>}
+                        </div>
+                      </div>
+                      <div className="text-sm font-medium text-red-600 dark:text-red-400">
+                        {formatCurrency(Number(wr.total_payment || 0))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Material / Product Application Costs */}
+          {(profitabilityData?.materialCosts?.length ?? 0) > 0 ? (
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-base font-semibold text-gray-900 dark:text-white">
+                    {t('profitability.operational.materialCosts', 'Material Costs')}
+                  </h3>
+                  <span className="text-sm font-bold text-red-600">
+                    − {formatCurrency(profitabilityData?.materialCostTotal ?? 0)}
+                  </span>
+                </div>
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {profitabilityData!.materialCosts!.map((app) => (
+                    <div key={app.id} className="flex justify-between items-start py-2 border-b border-gray-100 dark:border-gray-700">
+                      <div className="flex-1">
+                        <div className="text-sm font-medium text-gray-900 dark:text-white">{app.item_name ?? t('profitability.operational.product', 'Product')}</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                          {new Date(app.application_date).toLocaleDateString()}
+                          {' • '}{app.quantity_used} {app.unit ?? t('common.units', 'units')}
+                          {app.quantity_used > 0 && app.cost > 0
+                            ? ` × ${formatCurrency(app.cost / app.quantity_used)}/unité`
+                            : ''}
+                          {app.task_title && ` • ${app.task_title}`}
+                        </div>
+                      </div>
+                      <div className="text-sm font-medium text-red-600 dark:text-red-400">
+                        {formatCurrency(Number(app.cost || 0))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center h-32 text-gray-500 dark:text-gray-400 border-dashed">
+                <p className="text-sm">{t('profitability.operational.noMaterialData', 'No material cost data available for this period')}</p>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Harvest Revenues */}
+          {(profitabilityData?.harvestRevenues?.length ?? 0) > 0 ? (
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-base font-semibold text-gray-900 dark:text-white">
+                    {t('profitability.operational.harvestRevenues', 'Harvest Revenues')}
+                  </h3>
+                  <span className="text-sm font-bold text-green-600">
+                    + {formatCurrency(profitabilityData?.harvestRevenueTotal ?? 0)}
+                  </span>
+                </div>
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {profitabilityData!.harvestRevenues!.map((hr) => (
+                    <div key={hr.id} className="flex justify-between items-start py-2 border-b border-gray-100 dark:border-gray-700">
+                      <div className="flex-1">
+                        <div className="text-sm font-medium text-gray-900 dark:text-white">
+                          {hr.crop_type ?? t('profitability.operational.harvest', 'Harvest')}{hr.lot_number ? ` — Lot ${hr.lot_number}` : ''}
+                        </div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                          {new Date(hr.harvest_date).toLocaleDateString()} • {hr.quantity} {hr.unit}
+                          {hr.expected_price_per_unit ? ` × ${formatCurrency(hr.expected_price_per_unit)}` : ''}
+                        </div>
+                      </div>
+                      <div className="text-sm font-medium text-green-600 dark:text-green-400">
+                        {formatCurrency(Number(hr.estimated_revenue || 0))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center h-32 text-gray-500 dark:text-gray-400 border-dashed">
+                <p className="text-sm">{t('profitability.operational.noHarvestData', 'No harvest revenue data available for this period')}</p>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Metayage Settlements */}
+          {(profitabilityData?.metayageSettlements?.length ?? 0) > 0 ? (
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-base font-semibold text-gray-900 dark:text-white">
+                    {t('profitability.operational.metayageSettlements', 'Metayage Settlements')}
+                  </h3>
+                  <span className="text-sm font-bold text-green-600">
+                    + {formatCurrency(profitabilityData?.metayageTotal ?? 0)}
+                  </span>
+                </div>
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {profitabilityData!.metayageSettlements!.map((ms) => (
+                    <div key={ms.id} className="flex justify-between items-start py-2 border-b border-gray-100 dark:border-gray-700">
+                      <div className="flex-1">
+                        <div className="text-sm font-medium text-gray-900 dark:text-white">
+                          {t('profitability.operational.gross', 'Gross')} {formatCurrency(Number(ms.gross_revenue))} — {t('profitability.operational.charges', 'charges')} {formatCurrency(Number(ms.total_charges || 0))}
+                        </div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                          {ms.payment_date ? new Date(ms.payment_date).toLocaleDateString() : '—'}
+                          {ms.worker_percentage ? ` • ${t('profitability.operational.workerShare', 'Worker share')} ${ms.worker_percentage}%` : ''}
+                          <span className={`ml-2 ${ms.payment_status === 'paid' ? 'text-green-600' : 'text-orange-500'}`}>
+                            {ms.payment_status === 'paid' ? `✓ ${t('common.paid', 'paid')}` : ms.payment_status}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="text-sm font-medium text-green-600 dark:text-green-400">
+                        {formatCurrency(Number(ms.net_revenue || 0))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center h-32 text-gray-500 dark:text-gray-400 border-dashed">
+                <p className="text-sm">{t('profitability.operational.noMetayageData', 'No metayage settlement data available for this period')}</p>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Enhanced Profitability Analysis with Tabs */}
           {profitabilityData && (
@@ -503,48 +675,34 @@ const ParcelProfitability: React.FC<ParcelProfitabilityProps> = ({ parcelId }) =
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <p className="text-sm text-gray-600 dark:text-gray-400">
-                          {t('profitability.overview.legacyCosts', 'Legacy Costs')}
+                          {t('profitability.overview.totalCosts', 'Total Costs')}
                         </p>
-                        <p className="text-xl font-bold text-gray-900 dark:text-white">
-                          {formatCurrency(
-                            (profitabilityData?.costs || []).reduce((sum, c) => sum + Number(c.amount || 0), 0)
-                          )}
+                        <p className="text-xl font-bold text-red-600 dark:text-red-400">
+                          {formatCurrency(profitabilityData?.totalCosts ?? 0)}
                         </p>
                       </div>
                       <div>
                         <p className="text-sm text-gray-600 dark:text-gray-400">
-                          {t('profitability.overview.legacyRevenue', 'Legacy Revenue')}
+                          {t('profitability.overview.totalRevenue', 'Total Revenue')}
                         </p>
-                        <p className="text-xl font-bold text-gray-900 dark:text-white">
-                          {formatCurrency(
-                            (profitabilityData?.revenues || []).reduce((sum, r) => sum + Number(r.amount || 0), 0)
-                          )}
+                        <p className="text-xl font-bold text-green-600 dark:text-green-400">
+                          {formatCurrency(profitabilityData?.totalRevenue ?? 0)}
                         </p>
                       </div>
                       <div>
                         <p className="text-sm text-gray-600 dark:text-gray-400">
-                          {t('profitability.overview.ledgerExpenses', 'Ledger Expenses')}
+                          {t('profitability.overview.netProfit', 'Net Profit')}
                         </p>
-                        <p className="text-xl font-bold text-gray-900 dark:text-white">
-                          {formatCurrency(
-                            (profitabilityData?.ledgerExpenses || []).reduce(
-                              (sum, e) => sum + (Number(e.debit || 0) - Number(e.credit || 0)),
-                              0
-                            )
-                          )}
+                        <p className={`text-xl font-bold ${(profitabilityData?.netProfit ?? 0) >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                          {formatCurrency(profitabilityData?.netProfit ?? 0)}
                         </p>
                       </div>
                       <div>
                         <p className="text-sm text-gray-600 dark:text-gray-400">
-                          {t('profitability.overview.ledgerRevenue', 'Ledger Revenue')}
+                          {t('profitability.overview.profitMargin', 'Profit Margin')}
                         </p>
-                        <p className="text-xl font-bold text-gray-900 dark:text-white">
-                          {formatCurrency(
-                            (profitabilityData?.ledgerRevenues || []).reduce(
-                              (sum, r) => sum + (Number(r.credit || 0) - Number(r.debit || 0)),
-                              0
-                            )
-                          )}
+                        <p className={`text-xl font-bold ${(profitabilityData?.profitMargin ?? 0) >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                          {(profitabilityData?.profitMargin ?? 0).toFixed(1)}%
                         </p>
                       </div>
                     </div>
@@ -565,61 +723,61 @@ const ParcelProfitability: React.FC<ParcelProfitabilityProps> = ({ parcelId }) =
                       </p>
                     ) : (
                       <div className="overflow-x-auto">
-                        <table className="w-full">
-                          <thead>
-                            <tr className="border-b border-gray-200 dark:border-gray-700">
-                              <th className="text-left py-3 px-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                        <Table className="w-full">
+                          <TableHeader>
+                            <TableRow className="border-b border-gray-200 dark:border-gray-700">
+                              <TableHead className="text-left py-3 px-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
                                 {t('profitability.accounts.code', 'Code')}
-                              </th>
-                              <th className="text-left py-3 px-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                              </TableHead>
+                              <TableHead className="text-left py-3 px-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
                                 {t('profitability.accounts.name', 'Account Name')}
-                              </th>
-                              <th className="text-left py-3 px-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                              </TableHead>
+                              <TableHead className="text-left py-3 px-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
                                 {t('profitability.accounts.type', 'Type')}
-                              </th>
-                              <th className="text-right py-3 px-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                              </TableHead>
+                              <TableHead className="text-right py-3 px-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
                                 {t('profitability.accounts.debit', 'Debit')}
-                              </th>
-                              <th className="text-right py-3 px-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                              </TableHead>
+                              <TableHead className="text-right py-3 px-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
                                 {t('profitability.accounts.credit', 'Credit')}
-                              </th>
-                              <th className="text-right py-3 px-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                              </TableHead>
+                              <TableHead className="text-right py-3 px-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
                                 {t('profitability.accounts.net', 'Net')}
-                              </th>
-                            </tr>
-                          </thead>
-                          <tbody>
+                              </TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
                             {profitabilityData?.accountBreakdown?.map((acc) => (
-                              <tr
+                              <TableRow
                                 key={acc.account_code}
                                 className="border-b border-gray-100 dark:border-gray-800"
                               >
-                                <td className="py-3 px-2 text-sm font-mono text-gray-900 dark:text-white">
+                                <TableCell className="py-3 px-2 text-sm font-mono text-gray-900 dark:text-white">
                                   {acc.account_code}
-                                </td>
-                                <td className="py-3 px-2 text-sm text-gray-900 dark:text-white">
+                                </TableCell>
+                                <TableCell className="py-3 px-2 text-sm text-gray-900 dark:text-white">
                                   {acc.account_name}
-                                </td>
-                                <td className="py-3 px-2 text-sm text-gray-600 dark:text-gray-400">
+                                </TableCell>
+                                <TableCell className="py-3 px-2 text-sm text-gray-600 dark:text-gray-400">
                                   {acc.account_type}
-                                </td>
-                                <td className="py-3 px-2 text-sm text-right text-gray-900 dark:text-white">
+                                </TableCell>
+                                <TableCell className="py-3 px-2 text-sm text-right text-gray-900 dark:text-white">
                                   {formatCurrency(acc.total_debit)}
-                                </td>
-                                <td className="py-3 px-2 text-sm text-right text-gray-900 dark:text-white">
+                                </TableCell>
+                                <TableCell className="py-3 px-2 text-sm text-right text-gray-900 dark:text-white">
                                   {formatCurrency(acc.total_credit)}
-                                </td>
-                                <td
+                                </TableCell>
+                                <TableCell
                                   className={`py-3 px-2 text-sm text-right font-semibold ${
                                     acc.net_amount >= 0 ? 'text-green-600' : 'text-red-600'
                                   }`}
                                 >
                                   {formatCurrency(Math.abs(acc.net_amount))}
-                                </td>
-                              </tr>
+                                </TableCell>
+                              </TableRow>
                             ))}
-                          </tbody>
-                        </table>
+                          </TableBody>
+                        </Table>
                       </div>
                     )}
                   </CardContent>
@@ -694,7 +852,7 @@ const ParcelProfitability: React.FC<ParcelProfitabilityProps> = ({ parcelId }) =
                       </p>
                     ) : (
                       <div className="space-y-3">
-                        {journalEntries.map((entry: any) => (
+                        {journalEntries.map((entry: { id: string; entry_number: string; entry_date: string; description?: string; journal_items: Array<{ id: string; debit: number; credit: number; description?: string; accounts?: { code?: string; name?: string } }> }) => (
                           <div
                             key={entry.id}
                             className="border border-gray-200 dark:border-gray-700 rounded-lg p-4"
@@ -723,10 +881,10 @@ const ParcelProfitability: React.FC<ParcelProfitabilityProps> = ({ parcelId }) =
                               <div className="flex items-center space-x-2">
                                 <span className="text-sm font-semibold text-gray-900 dark:text-white">
                                   {formatCurrency(
-                                    entry.journal_items.reduce(
-                                      (sum: number, item: any) => sum + Number(item.debit),
-                                      0
-                                    )
+                                      entry.journal_items.reduce(
+                                       (sum: number, item) => sum + Number(item.debit),
+                                       0
+                                     )
                                   )}
                                 </span>
                                 {expandedJournalEntry === entry.id ? (
@@ -739,22 +897,22 @@ const ParcelProfitability: React.FC<ParcelProfitabilityProps> = ({ parcelId }) =
 
                             {expandedJournalEntry === entry.id && (
                               <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                                <table className="w-full text-sm">
-                                  <thead>
-                                    <tr className="text-left text-gray-600 dark:text-gray-400">
-                                      <th className="pb-2">{t('profitability.journal.account', 'Account')}</th>
-                                      <th className="pb-2 text-right">
+                                <Table className="w-full text-sm">
+                                  <TableHeader>
+                                    <TableRow className="text-left text-gray-600 dark:text-gray-400">
+                                      <TableHead className="pb-2">{t('profitability.journal.account', 'Account')}</TableHead>
+                                      <TableHead className="pb-2 text-right">
                                         {t('profitability.journal.debit', 'Debit')}
-                                      </th>
-                                      <th className="pb-2 text-right">
+                                      </TableHead>
+                                      <TableHead className="pb-2 text-right">
                                         {t('profitability.journal.credit', 'Credit')}
-                                      </th>
-                                    </tr>
-                                  </thead>
-                                  <tbody>
-                                    {entry.journal_items.map((item: any) => (
-                                      <tr key={item.id} className="border-t border-gray-100 dark:border-gray-800">
-                                        <td className="py-2">
+                                      </TableHead>
+                                    </TableRow>
+                                  </TableHeader>
+                                  <TableBody>
+                                     {entry.journal_items.map((item) => (
+                                      <TableRow key={item.id} className="border-t border-gray-100 dark:border-gray-800">
+                                        <TableCell className="py-2">
                                           <div>
                                             <span className="font-mono">{item.accounts?.code}</span>
                                             <span className="ml-2 text-gray-600 dark:text-gray-400">
@@ -764,17 +922,17 @@ const ParcelProfitability: React.FC<ParcelProfitabilityProps> = ({ parcelId }) =
                                           {item.description && (
                                             <div className="text-xs text-gray-500 mt-1">{item.description}</div>
                                           )}
-                                        </td>
-                                        <td className="py-2 text-right">
+                                        </TableCell>
+                                        <TableCell className="py-2 text-right">
                                           {item.debit > 0 ? formatCurrency(item.debit) : '-'}
-                                        </td>
-                                        <td className="py-2 text-right">
+                                        </TableCell>
+                                        <TableCell className="py-2 text-right">
                                           {item.credit > 0 ? formatCurrency(item.credit) : '-'}
-                                        </td>
-                                      </tr>
+                                        </TableCell>
+                                      </TableRow>
                                     ))}
-                                  </tbody>
-                                </table>
+                                  </TableBody>
+                                </Table>
                               </div>
                             )}
                           </div>
@@ -871,8 +1029,7 @@ const ParcelProfitability: React.FC<ParcelProfitabilityProps> = ({ parcelId }) =
       )}
 
       {/* Add Cost Modal */}
-      <Dialog open={showAddCost} onOpenChange={setShowAddCost}>
-        <DialogContent>
+      <ResponsiveDialog open={showAddCost} onOpenChange={setShowAddCost} size="lg">
           <DialogHeader>
             <DialogTitle>{t('profitability.addCost.title')}</DialogTitle>
           </DialogHeader>
@@ -955,12 +1112,10 @@ const ParcelProfitability: React.FC<ParcelProfitabilityProps> = ({ parcelId }) =
               {addCostMutation.isPending ? t('profitability.addCost.adding') : t('profitability.addCost.add')}
             </Button>
           </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      </ResponsiveDialog>
 
       {/* Add Revenue Modal */}
-      <Dialog open={showAddRevenue} onOpenChange={setShowAddRevenue}>
-        <DialogContent>
+      <ResponsiveDialog open={showAddRevenue} onOpenChange={setShowAddRevenue} size="lg">
           <DialogHeader>
             <DialogTitle>{t('profitability.addRevenue.title')}</DialogTitle>
           </DialogHeader>
@@ -1053,16 +1208,13 @@ const ParcelProfitability: React.FC<ParcelProfitabilityProps> = ({ parcelId }) =
             >
               {t('profitability.addRevenue.cancel')}
             </Button>
-            <Button
-              className="bg-green-600 hover:bg-green-700"
-              onClick={() => addRevenueMutation.mutate(newRevenue)}
+            <Button variant="green" onClick={() => addRevenueMutation.mutate(newRevenue)}
               disabled={addRevenueMutation.isPending || !newRevenue.amount}
             >
               {addRevenueMutation.isPending ? t('profitability.addRevenue.adding') : t('profitability.addRevenue.add')}
             </Button>
           </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      </ResponsiveDialog>
     </div>
   );
 };

@@ -3,12 +3,13 @@ import { FlaskConical, MapPin, Clock, DollarSign, Plus } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { SectionLoader } from '@/components/ui/loader';
 import type { ServiceCategory } from '@/hooks/useLabServices';
 import { OrderLabServiceDialog } from './OrderLabServiceDialog';
 
 interface LabServiceMarketplaceProps {
-  providers: any[];
-  serviceTypes: any[];
+  providers: Array<{ id: string; name: string; location?: string; turnaround_days?: number }>;
+  serviceTypes: Array<{ id: string; provider_id: string; category?: ServiceCategory; name: string; price?: number; currency?: string; turnaround_days?: number; description?: string }>;
   isLoading: boolean;
   selectedCategory?: ServiceCategory;
   onCategoryChange: (category: ServiceCategory | undefined) => void;
@@ -29,20 +30,16 @@ export function LabServiceMarketplace({
   selectedCategory,
   onCategoryChange,
 }: LabServiceMarketplaceProps) {
-  const [selectedService, setSelectedService] = useState<any | null>(null);
+  const [selectedService, setSelectedService] = useState<LabServiceMarketplaceProps['serviceTypes'][number] | null>(null);
   const [orderDialogOpen, setOrderDialogOpen] = useState(false);
 
-  const handleOrderService = (service: any) => {
+  const handleOrderService = (service: LabServiceMarketplaceProps['serviceTypes'][number]) => {
     setSelectedService(service);
     setOrderDialogOpen(true);
   };
 
   if (isLoading) {
-    return (
-      <div className="flex justify-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
-      </div>
-    );
+    return <SectionLoader />;
   }
 
   return (
@@ -151,8 +148,8 @@ export function LabServiceMarketplace({
                               Paramètres analysés:
                             </p>
                             <div className="flex flex-wrap gap-1">
-                              {service.parameters_tested.slice(0, 3).map((param: string, idx: number) => (
-                                <Badge key={idx} variant="outline" className="text-xs">
+                              {service.parameters_tested.slice(0, 3).map((param: string) => (
+                                <Badge key={param} variant="outline" className="text-xs">
                                   {param}
                                 </Badge>
                               ))}

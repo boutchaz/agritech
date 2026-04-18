@@ -79,7 +79,7 @@ export function createWebDataProvider(): DataProvider {
     farms: {
       async getAll(orgId: string) {
         const result = await farmsApi.getAll({ organization_id: orgId }, orgId);
-        const farms = 'farms' in result ? (result as { farms: unknown[] }).farms : result;
+        const farms = Array.isArray(result) ? result : [];
         return (farms as unknown[]).map((farm: unknown) => {
           const f = farm as Record<string, unknown>;
           return {

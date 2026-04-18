@@ -1,6 +1,10 @@
 import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { SequencesService } from '../sequences/sequences.service';
+import { FiscalYearsService } from '../fiscal-years/fiscal-years.service';
+import { sanitizeSearch } from '../../common/utils/sanitize-search';
+import { NotificationsService, ADMIN_ONLY_ROLES } from '../notifications/notifications.service';
+import { NotificationType } from '../notifications/dto/notification.dto';
 
 export interface CreateJournalEntryDto {
   entry_date: string;
@@ -9,6 +13,7 @@ export interface CreateJournalEntryDto {
   remarks?: string;
   reference_type?: string;
   reference_number?: string;
+  fiscal_year_id?: string;
   items: {
     account_id: string;
     debit: number;
@@ -25,6 +30,7 @@ export interface UpdateJournalEntryDto {
   entry_type?: 'expense' | 'revenue' | 'transfer' | 'adjustment';
   description?: string;
   remarks?: string;
+  fiscal_year_id?: string;
   items?: {
     account_id: string;
     debit: number;
@@ -43,6 +49,8 @@ export class JournalEntriesService {
   constructor(
     private readonly databaseService: DatabaseService,
     private readonly sequencesService: SequencesService,
+    private readonly notificationsService: NotificationsService,
+    private readonly fiscalYearsService: FiscalYearsService,
   ) {}
 
   async findAll(organizationId: string, filters?: any) {
@@ -98,9 +106,12 @@ export class JournalEntriesService {
       }
 
       if (search) {
-        const searchPattern = `%${search}%`;
-        query = query.or(`entry_number.ilike.${searchPattern},reference_number.ilike.${searchPattern},remarks.ilike.${searchPattern}`);
-        countQuery = countQuery.or(`entry_number.ilike.${searchPattern},reference_number.ilike.${searchPattern},remarks.ilike.${searchPattern}`);
+        const safeSearch = sanitizeSearch(search);
+        if (safeSearch) {
+          const searchPattern = `%${safeSearch}%`;
+          query = query.or(`entry_number.ilike.${searchPattern},reference_number.ilike.${searchPattern},remarks.ilike.${searchPattern}`);
+          countQuery = countQuery.or(`entry_number.ilike.${searchPattern},reference_number.ilike.${searchPattern},remarks.ilike.${searchPattern}`);
+        }
       }
 
       if (filters?.account_id) {
@@ -117,6 +128,11 @@ export class JournalEntriesService {
 
       if (filters?.parcel_id) {
         query = query.filter('journal_items.parcel_id', 'eq', filters.parcel_id);
+      }
+
+      if (filters?.fiscal_year_id) {
+        query = query.eq('fiscal_year_id', filters.fiscal_year_id);
+        countQuery = countQuery.eq('fiscal_year_id', filters.fiscal_year_id);
       }
 
       query = query.order(sortBy, { ascending: sortDir === 'asc' });
@@ -198,6 +214,13 @@ export class JournalEntriesService {
     const supabaseClient = this.databaseService.getAdminClient();
 
     try {
+      if (!dto?.entry_date || String(dto.entry_date).trim() === '') {
+        throw new BadRequestException('entry_date is required');
+      }
+      if (!dto.items || !Array.isArray(dto.items) || dto.items.length === 0) {
+        throw new BadRequestException('At least one journal line item is required');
+      }
+
       // Validate double-entry principle
       const totalDebit = dto.items.reduce((sum, item) => sum + (item.debit || 0), 0);
       const totalCredit = dto.items.reduce((sum, item) => sum + (item.credit || 0), 0);
@@ -210,6 +233,10 @@ export class JournalEntriesService {
 
        // Generate entry number
        const entryNumber = await this.sequencesService.generateJournalEntryNumber(organizationId);
+
+      // Resolve fiscal year from date if not provided
+      const fiscalYearId = dto.fiscal_year_id ||
+        await this.fiscalYearsService.resolveFiscalYear(organizationId, dto.entry_date);
 
       // Create journal entry
       // Note: entry_type and description columns don't exist in the database schema
@@ -226,6 +253,7 @@ export class JournalEntriesService {
           total_credit: totalCredit,
           status: 'draft',
           created_by: userId,
+          ...(fiscalYearId ? { fiscal_year_id: fiscalYearId } : {}),
         })
         .select()
         .single();
@@ -245,6 +273,7 @@ export class JournalEntriesService {
         cost_center_id: item.cost_center_id,
         farm_id: item.farm_id,
         parcel_id: item.parcel_id,
+        ...(fiscalYearId ? { fiscal_year_id: fiscalYearId } : {}),
       }));
 
       const { error: itemsError } = await supabaseClient
@@ -327,6 +356,11 @@ export class JournalEntriesService {
           throw new BadRequestException(`Failed to delete existing items: ${deleteError.message}`);
         }
 
+        // Resolve fiscal year for updated items
+        const entryDate = dto.entry_date || entry.entry_date;
+        const updateFiscalYearId = dto.fiscal_year_id || entry.fiscal_year_id ||
+          await this.fiscalYearsService.resolveFiscalYear(organizationId, entryDate);
+
         // Insert new items
         const items = dto.items.map(item => ({
           journal_entry_id: id,
@@ -337,6 +371,7 @@ export class JournalEntriesService {
           cost_center_id: item.cost_center_id,
           farm_id: item.farm_id,
           parcel_id: item.parcel_id,
+          ...(updateFiscalYearId ? { fiscal_year_id: updateFiscalYearId } : {}),
         }));
 
         const { error: insertError } = await supabaseClient
@@ -381,6 +416,21 @@ export class JournalEntriesService {
 
       if (error) {
         throw new BadRequestException(`Failed to post journal entry: ${error.message}`);
+      }
+
+      // Notify admins about posted journal entry
+      try {
+        await this.notificationsService.createNotificationsForRoles(
+          organizationId,
+          ADMIN_ONLY_ROLES,
+          userId,
+          NotificationType.JOURNAL_ENTRY_POSTED,
+          `📒 Journal entry ${entry.entry_number || id} posted`,
+          entry.description || undefined,
+          { journalEntryId: id, entryNumber: entry.entry_number },
+        );
+      } catch (notifError) {
+        this.logger.warn(`Failed to send journal entry notification: ${notifError}`);
       }
 
       return this.findOne(id, organizationId);

@@ -1,4 +1,6 @@
 import { Injectable, Logger, HttpException, HttpStatus } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 import { DatabaseService } from '../database/database.service';
 import { AddToCartDto, UpdateCartItemDto } from './dto/add-to-cart.dto';
 
@@ -6,44 +8,53 @@ import { AddToCartDto, UpdateCartItemDto } from './dto/add-to-cart.dto';
 export class CartService {
     private readonly logger = new Logger(CartService.name);
 
-    constructor(private readonly databaseService: DatabaseService) {}
+    constructor(
+        private readonly databaseService: DatabaseService,
+        private readonly jwtService: JwtService,
+        private readonly configService: ConfigService,
+    ) {}
 
-    /**
-     * Get or create a cart for the authenticated user
-     */
-    async getOrCreateCart(token: string) {
-        const supabase = this.databaseService.getClientWithAuth(token);
+    private getAdminClient() {
+        return this.databaseService.getAdminClient();
+    }
 
-        // Get current user
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
-        if (userError || !user) {
-            throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
-        }
+    private getJwtSecret(): string | undefined {
+        return this.configService.get<string>('SUPABASE_JWT_SECRET') || this.configService.get<string>('JWT_SECRET');
+    }
 
-        // Get user's organization
-        const { data: userData } = await supabase
+    private async resolveUserOrg(token: string): Promise<{ userId: string; organizationId: string | null }> {
+        const payload = await this.jwtService.verifyAsync<{ sub: string }>(token, {
+            secret: this.getJwtSecret(),
+        });
+        const userId = payload.sub;
+
+        const { data: userData } = await this.getAdminClient()
             .from('auth_users_view')
             .select('organization_id')
-            .eq('id', user.id)
+            .eq('id', userId)
             .single();
 
-        // Check for existing cart
-        const { data: existingCart, error: cartError } = await supabase
+        return { userId, organizationId: userData?.organization_id ?? null };
+    }
+
+    async getOrCreateCartForUser(userId: string, organizationId: string | null) {
+        const adminClient = this.getAdminClient();
+
+        const { data: existingCart } = await adminClient
             .from('marketplace_carts')
             .select('*')
-            .eq('user_id', user.id)
+            .eq('user_id', userId)
             .single();
 
         if (existingCart) {
             return existingCart;
         }
 
-        // Create new cart
-        const { data: newCart, error: createError } = await supabase
+        const { data: newCart, error: createError } = await adminClient
             .from('marketplace_carts')
             .insert({
-                user_id: user.id,
-                organization_id: userData?.organization_id || null,
+                user_id: userId,
+                organization_id: organizationId,
             })
             .select()
             .single();
@@ -56,19 +67,10 @@ export class CartService {
         return newCart;
     }
 
-    /**
-     * Get user's cart with items
-     */
-    async getCart(token: string) {
-        const supabase = this.databaseService.getClientWithAuth(token);
+    async getCartForUser(userId: string) {
+        const adminClient = this.getAdminClient();
 
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
-        if (userError || !user) {
-            throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
-        }
-
-        // Get cart with items
-        const { data: cart, error: cartError } = await supabase
+        const { data: cart, error: cartError } = await adminClient
             .from('marketplace_carts')
             .select(`
                 *,
@@ -86,7 +88,7 @@ export class CartService {
                     updated_at
                 )
             `)
-            .eq('user_id', user.id)
+            .eq('user_id', userId)
             .single();
 
         if (cartError && cartError.code !== 'PGRST116') {
@@ -95,17 +97,15 @@ export class CartService {
         }
 
         if (!cart) {
-            // Return empty cart structure
             return {
                 id: null,
-                user_id: user.id,
+                user_id: userId,
                 items: [],
                 total: 0,
                 item_count: 0,
             };
         }
 
-        // Calculate totals
         const items = cart.items || [];
         const total = items.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
         const itemCount = items.reduce((count, item) => count + item.quantity, 0);
@@ -117,19 +117,74 @@ export class CartService {
         };
     }
 
+    async clearCartForUser(userId: string) {
+        const adminClient = this.getAdminClient();
+
+        const { data: cart, error: cartError } = await adminClient
+            .from('marketplace_carts')
+            .select('id')
+            .eq('user_id', userId)
+            .single();
+
+        if (cartError || !cart) {
+            return { message: 'Cart cleared', items: [], total: 0, item_count: 0 };
+        }
+
+        const { error: deleteError } = await adminClient
+            .from('marketplace_cart_items')
+            .delete()
+            .eq('cart_id', cart.id);
+
+        if (deleteError) {
+            this.logger.error(`Failed to clear cart: ${deleteError.message}`);
+            throw new HttpException('Failed to clear cart', HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+
+        return { message: 'Cart cleared', items: [], total: 0, item_count: 0 };
+    }
+
+    /**
+     * Get or create a cart for the authenticated user
+     */
+    async getOrCreateCart(token: string) {
+        const { userId, organizationId } = await this.resolveUserOrg(token);
+        if (!userId) {
+            throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
+        }
+
+        return this.getOrCreateCartForUser(userId, organizationId);
+    }
+
+    /**
+     * Get user's cart with items
+     */
+    async getCart(token: string) {
+        const { userId } = await this.resolveUserOrg(token);
+        if (!userId) {
+            throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
+        }
+
+        return this.getCartForUser(userId);
+    }
+
     /**
      * Add item to cart
      */
     async addToCart(token: string, dto: AddToCartDto) {
-        const supabase = this.databaseService.getClientWithAuth(token);
+        const adminSupabase = this.getAdminClient();
 
         // Validate that at least one ID is provided
         if (!dto.listing_id && !dto.item_id) {
             throw new HttpException('Either listing_id or item_id is required', HttpStatus.BAD_REQUEST);
         }
 
+        const { userId, organizationId } = await this.resolveUserOrg(token);
+        if (!userId) {
+            throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
+        }
+
         // Get or create cart
-        const cart = await this.getOrCreateCart(token);
+        const cart = await this.getOrCreateCartForUser(userId, organizationId);
 
         // Fetch product details based on source
         let productData: {
@@ -139,8 +194,6 @@ export class CartService {
             image_url: string | null;
             seller_organization_id: string;
         };
-
-        const adminSupabase = this.databaseService.getAdminClient();
 
         if (dto.listing_id) {
             // Fetch from marketplace_listings
@@ -188,7 +241,8 @@ export class CartService {
             const { data: stockData } = await adminSupabase
                 .from('stock_valuation')
                 .select('remaining_quantity')
-                .eq('item_id', dto.item_id);
+                .eq('item_id', dto.item_id)
+                .eq('organization_id', item.organization_id);
 
             const availableStock = stockData?.reduce((sum, batch) => sum + (batch.remaining_quantity || 0), 0) || 0;
 
@@ -209,10 +263,11 @@ export class CartService {
         }
 
         // Check if item already exists in cart
-        const existingItemQuery = supabase
+        const existingItemQuery = adminSupabase
             .from('marketplace_cart_items')
             .select('*')
-            .eq('cart_id', cart.id);
+            .eq('cart_id', cart.id)
+            .eq('cart.user_id', userId);
 
         if (dto.listing_id) {
             existingItemQuery.eq('listing_id', dto.listing_id);
@@ -225,7 +280,7 @@ export class CartService {
         if (existingItem) {
             // Update quantity
             const newQuantity = Number(existingItem.quantity) + dto.quantity;
-            const { data: updated, error: updateError } = await supabase
+            const { data: updated, error: updateError } = await adminSupabase
                 .from('marketplace_cart_items')
                 .update({
                     quantity: newQuantity,
@@ -240,11 +295,11 @@ export class CartService {
                 throw new HttpException('Failed to update cart', HttpStatus.INTERNAL_SERVER_ERROR);
             }
 
-            return this.getCart(token);
+            return this.getCartForUser(userId);
         }
 
         // Add new item to cart
-        const { error: insertError } = await supabase
+        const { error: insertError } = await adminSupabase
             .from('marketplace_cart_items')
             .insert({
                 cart_id: cart.id,
@@ -263,41 +318,39 @@ export class CartService {
             throw new HttpException('Failed to add to cart', HttpStatus.INTERNAL_SERVER_ERROR);
         }
 
-        return this.getCart(token);
+        return this.getCartForUser(userId);
     }
 
     /**
      * Update cart item quantity
      */
     async updateCartItem(token: string, cartItemId: string, dto: UpdateCartItemDto) {
-        const supabase = this.databaseService.getClientWithAuth(token);
-
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
-        if (userError || !user) {
+        const adminSupabase = this.getAdminClient();
+        const { userId } = await this.resolveUserOrg(token);
+        if (!userId) {
             throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
         }
 
         // Verify item belongs to user's cart
-        const { data: cartItem, error: findError } = await supabase
+        const { data: cartItem, error: findError } = await adminSupabase
             .from('marketplace_cart_items')
             .select(`
                 *,
                 cart:marketplace_carts!inner(user_id)
             `)
             .eq('id', cartItemId)
+            .eq('cart.user_id', userId)
             .single();
 
         if (findError || !cartItem) {
             throw new HttpException('Cart item not found', HttpStatus.NOT_FOUND);
         }
 
-        if (cartItem.cart.user_id !== user.id) {
+        if (cartItem.cart.user_id !== userId) {
             throw new HttpException('Unauthorized', HttpStatus.FORBIDDEN);
         }
 
         // Validate stock availability before updating
-        const adminSupabase = this.databaseService.getAdminClient();
-
         if (cartItem.listing_id) {
             // Check marketplace listing stock
             const { data: listing } = await adminSupabase
@@ -317,7 +370,8 @@ export class CartService {
             const { data: stockData } = await adminSupabase
                 .from('stock_valuation')
                 .select('remaining_quantity')
-                .eq('item_id', cartItem.item_id);
+                .eq('item_id', cartItem.item_id)
+                .eq('organization_id', cartItem.seller_organization_id);
 
             const availableStock = stockData?.reduce((sum, batch) => sum + (batch.remaining_quantity || 0), 0) || 0;
 
@@ -336,7 +390,7 @@ export class CartService {
         }
 
         // Update quantity
-        const { error: updateError } = await supabase
+        const { error: updateError } = await adminSupabase
             .from('marketplace_cart_items')
             .update({
                 quantity: dto.quantity,
@@ -349,40 +403,40 @@ export class CartService {
             throw new HttpException('Failed to update cart item', HttpStatus.INTERNAL_SERVER_ERROR);
         }
 
-        return this.getCart(token);
+        return this.getCartForUser(userId);
     }
 
     /**
      * Remove item from cart
      */
     async removeFromCart(token: string, cartItemId: string) {
-        const supabase = this.databaseService.getClientWithAuth(token);
-
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
-        if (userError || !user) {
+        const adminSupabase = this.getAdminClient();
+        const { userId } = await this.resolveUserOrg(token);
+        if (!userId) {
             throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
         }
 
         // Verify item belongs to user's cart
-        const { data: cartItem, error: findError } = await supabase
+        const { data: cartItem, error: findError } = await adminSupabase
             .from('marketplace_cart_items')
             .select(`
                 *,
                 cart:marketplace_carts!inner(user_id)
             `)
             .eq('id', cartItemId)
+            .eq('cart.user_id', userId)
             .single();
 
         if (findError || !cartItem) {
             throw new HttpException('Cart item not found', HttpStatus.NOT_FOUND);
         }
 
-        if (cartItem.cart.user_id !== user.id) {
+        if (cartItem.cart.user_id !== userId) {
             throw new HttpException('Unauthorized', HttpStatus.FORBIDDEN);
         }
 
         // Delete item
-        const { error: deleteError } = await supabase
+        const { error: deleteError } = await adminSupabase
             .from('marketplace_cart_items')
             .delete()
             .eq('id', cartItemId);
@@ -392,43 +446,18 @@ export class CartService {
             throw new HttpException('Failed to remove item from cart', HttpStatus.INTERNAL_SERVER_ERROR);
         }
 
-        return this.getCart(token);
+        return this.getCartForUser(userId);
     }
 
     /**
      * Clear entire cart
      */
     async clearCart(token: string) {
-        const supabase = this.databaseService.getClientWithAuth(token);
-
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
-        if (userError || !user) {
+        const { userId } = await this.resolveUserOrg(token);
+        if (!userId) {
             throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
         }
 
-        // Get user's cart
-        const { data: cart, error: cartError } = await supabase
-            .from('marketplace_carts')
-            .select('id')
-            .eq('user_id', user.id)
-            .single();
-
-        if (cartError || !cart) {
-            // No cart to clear
-            return { message: 'Cart cleared', items: [], total: 0, item_count: 0 };
-        }
-
-        // Delete all items in cart
-        const { error: deleteError } = await supabase
-            .from('marketplace_cart_items')
-            .delete()
-            .eq('cart_id', cart.id);
-
-        if (deleteError) {
-            this.logger.error(`Failed to clear cart: ${deleteError.message}`);
-            throw new HttpException('Failed to clear cart', HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-
-        return { message: 'Cart cleared', items: [], total: 0, item_count: 0 };
+        return this.clearCartForUser(userId);
     }
 }

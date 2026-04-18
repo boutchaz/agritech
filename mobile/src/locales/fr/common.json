@@ -1,0 +1,128 @@
+{
+  "app": {
+    "name": "AgroGina"
+  },
+  "actions": {
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "add": "Ajouter",
+    "back": "Retour",
+    "close": "Fermer",
+    "confirm": "Confirmer",
+    "retry": "Réessayer",
+    "refresh": "Actualiser",
+    "search": "Rechercher",
+    "filter": "Filtrer",
+    "seeAll": "Voir tout",
+    "loading": "Chargement...",
+    "submit": "Envoyer",
+    "creating": "Création...",
+    "submitting": "Envoi..."
+  },
+  "form": {
+    "dateFormat": "AAAA-MM-JJ",
+    "quantity": "Qté",
+    "unitPrice": "Prix unitaire"
+  },
+  "status": {
+    "pending": "En attente",
+    "in_progress": "En cours",
+    "completed": "Terminée",
+    "cancelled": "Annulée",
+    "active": "Active",
+    "inactive": "Inactive"
+  },
+  "priority": {
+    "low": "Faible",
+    "medium": "Moyenne",
+    "high": "Haute",
+    "urgent": "Urgente"
+  },
+  "time": {
+    "today": "Aujourd'hui",
+    "yesterday": "Hier",
+    "thisWeek": "Cette semaine",
+    "hoursToday": "Heures aujourd'hui",
+    "hoursWeek": "Heures cette semaine",
+    "todaysTasks": "Tâches du jour"
+  },
+  "errors": {
+    "generic": "Une erreur s'est produite",
+    "network": "Erreur réseau. Veuillez réessayer.",
+    "unauthorized": "Vous n'avez pas l'autorisation d'effectuer cette action",
+    "notFound": "Introuvable"
+  },
+  "offline": {
+    "title": "Vous êtes hors ligne",
+    "message": "Certaines fonctionnalités peuvent être indisponibles"
+  },
+  "empty": {
+    "noData": "Aucune donnée disponible",
+    "noResults": "Aucun résultat trouvé",
+    "noRecentActivity": "Aucune activité récente",
+    "noItemsFound": "Aucun article trouvé",
+    "typeToSearch": "Tapez pour rechercher"
+  },
+  "severity": {
+    "low": "Faible",
+    "medium": "Moyen",
+    "high": "Élevé",
+    "critical": "Critique"
+  },
+  "detectionMethods": {
+    "visual_inspection": "Inspection visuelle",
+    "trap_monitoring": "Suivi par pièges",
+    "lab_test": "Test en laboratoire",
+    "field_scout": "Prospection terrain",
+    "automated_sensor": "Capteur automatique",
+    "worker_report": "Signalement ouvrier"
+  },
+  "greetings": {
+    "morning": "Bonjour",
+    "afternoon": "Bon après-midi",
+    "evening": "Bonsoir"
+  },
+  "dashboard": {
+    "quickActions": "Actions rapides",
+    "recentActivity": "Activité récente",
+    "activity": {
+      "completed": "Tâche terminée - {{title}}",
+      "inProgress": "Tâche démarrée - {{title}}",
+      "new": "Nouvelle tâche - {{title}}"
+    },
+    "actions": {
+      "newHarvest": {
+        "title": "Nouvelle récolte",
+        "subtitle": "Enregistrer la récolte"
+      },
+      "myTasks": {
+        "title": "Mes tâches",
+        "subtitle": "Voir les tâches"
+      },
+      "clock": {
+        "title": "Pointage",
+        "subtitle": "Suivre le temps"
+      },
+      "photo": {
+        "title": "Prendre une photo",
+        "subtitle": "Documenter"
+      }
+    }
+  },
+  "tasks": {
+    "loading": "Chargement des tâches...",
+    "empty": {
+      "assigned": "Aucune tâche ne vous est assignée",
+      "filtered": "Aucune tâche {{status}}"
+    }
+  },
+  "inventory": {
+    "toWarehouse": "Vers l'entrepôt",
+    "fromWarehouse": "De l'entrepôt"
+  },
+  "pestAlerts": {
+    "noneManualEntry": "Aucun (saisie manuelle)"
+  }
+}

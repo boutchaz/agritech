@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import {  useEffect  } from "react";
 import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { Home, Building2, Activity, RefreshCw } from 'lucide-react';
@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import ModernPageHeader from '@/components/ModernPageHeader';
 import { withRouteProtection } from '@/components/authorization/withRouteProtection';
 import { useLiveMetrics, useLiveSummary, useActivityHeatmap } from '@/hooks/useLiveMetrics';
+import { PageLoader } from '@/components/ui/loader';
 import {
   ConcurrentUsersWidget,
   ActiveOperationsWidget,
@@ -14,8 +15,9 @@ import {
   LiveSummaryCards,
   ActivityHeatMap,
 } from '@/components/LiveDashboard';
+import { Button } from '@/components/ui/button';
 
-const LiveDashboardPage: React.FC = () => {
+const LiveDashboardPage = () => {
   const { t } = useTranslation();
   const { currentOrganization, currentFarm } = useAuth();
 
@@ -40,20 +42,13 @@ const LiveDashboardPage: React.FC = () => {
 
   // Set page title
   useEffect(() => {
-    const organizationName = currentOrganization?.name ?? 'Agritech Suite';
+    const organizationName = currentOrganization?.name ?? 'AgroGina Suite';
     const farmName = currentFarm?.name ? ` - ${currentFarm.name}` : '';
     document.title = `${t('liveDashboard.pageTitle')} | ${organizationName}${farmName}`;
   }, [currentOrganization, currentFarm, t]);
 
   if (!currentOrganization) {
-    return (
-      <div className="flex items-center justify-center p-12">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">{t('common.loading')}</p>
-        </div>
-      </div>
-    );
+    return <PageLoader />;
   }
 
   return (
@@ -61,7 +56,7 @@ const LiveDashboardPage: React.FC = () => {
       <ModernPageHeader
         breadcrumbs={[
           { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
-          ...(currentFarm ? [{ icon: Home, label: currentFarm.name, path: '/farm-hierarchy' }] : []),
+          ...(currentFarm?.name ? [{ icon: Home, label: currentFarm.name, path: '/farm-hierarchy' }] : []),
           { icon: Activity, label: t('liveDashboard.title'), isActive: true },
         ]}
         title={t('liveDashboard.title')}
@@ -75,13 +70,13 @@ const LiveDashboardPage: React.FC = () => {
               </span>
               <span>{t('liveDashboard.autoRefresh')}</span>
             </div>
-            <button
+            <Button
               onClick={() => refetchMetrics()}
               className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
             >
               <RefreshCw className="h-4 w-4" />
               {t('liveDashboard.refresh')}
-            </button>
+            </Button>
           </div>
         }
       />
@@ -98,6 +93,7 @@ const LiveDashboardPage: React.FC = () => {
               data={heatmapData || []}
               isLoading={heatmapLoading}
               lastUpdated={liveMetrics?.lastUpdated}
+              recentActivities={liveMetrics?.farmActivities.activities || []}
             />
           </div>
 

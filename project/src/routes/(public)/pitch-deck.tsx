@@ -1,13 +1,15 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { marked } from 'marked'
 import { ChevronLeft, ChevronRight, Maximize2, X } from 'lucide-react'
+import { useHotkeys } from '@tanstack/react-hotkeys'
+import { Button } from '@/components/ui/button';
 
 export const Route = createFileRoute('/(public)/pitch-deck')({
     component: PitchDeck,
 })
 
-const RAW_MARKDOWN = `# Pitch Deck: CodeLovers Agritech Platform
+const RAW_MARKDOWN = `# Pitch Deck: CodeLovers AgroGina Platform
 
 ## Slide 1: The Problem
 **Farming is Complex, Data is Fragmented**
@@ -162,19 +164,12 @@ function PitchDeck() {
     }, [])
 
     // Keyboard navigation
-    useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === 'ArrowRight' || e.key === 'Space') {
-                nextSlide()
-            } else if (e.key === 'ArrowLeft') {
-                prevSlide()
-            } else if (e.key === 'f') {
-                toggleFullScreen()
-            }
-        }
-        window.addEventListener('keydown', handleKeyDown)
-        return () => window.removeEventListener('keydown', handleKeyDown)
-    }, [nextSlide, prevSlide])
+    useHotkeys([
+        { hotkey: 'ArrowRight', callback: () => nextSlide() },
+        { hotkey: 'Space', callback: () => nextSlide() },
+        { hotkey: 'ArrowLeft', callback: () => prevSlide() },
+        { hotkey: 'F', callback: () => toggleFullScreen() },
+    ])
 
     const toggleFullScreen = () => {
         if (!document.fullscreenElement) {
@@ -205,15 +200,15 @@ function PitchDeck() {
             {/* Controls Header */}
             <div className="fixed top-0 left-0 right-0 z-50 p-4 flex justify-between items-center opacity-0 hover:opacity-100 transition-opacity duration-300">
                 <div className="text-sm font-medium text-slate-400">
-                    CodeLovers Agritech
+                    CodeLovers AgroGina
                 </div>
                 <div className="flex gap-2">
-                    <button
+                    <Button
                         onClick={toggleFullScreen}
                         className="p-2 hover:bg-white/10 rounded-full transition-colors"
                     >
                         {isFullScreen ? <X size={20} /> : <Maximize2 size={20} />}
-                    </button>
+                    </Button>
                 </div>
             </div>
 
@@ -251,25 +246,25 @@ function PitchDeck() {
 
             {/* Navigation Footer */}
             <div className="fixed bottom-8 left-0 right-0 z-50 flex justify-center items-center gap-4">
-                <button
+                <Button
                     onClick={prevSlide}
                     disabled={currentSlide === 0}
                     className="p-3 rounded-full bg-white/10 backdrop-blur-md border border-white/10 hover:bg-emerald-500 hover:border-emerald-500 transition-all disabled:opacity-50 disabled:hover:bg-white/10"
                 >
                     <ChevronLeft size={24} />
-                </button>
+                </Button>
 
                 <div className="px-4 py-2 rounded-full bg-black/30 backdrop-blur-md border border-white/10 text-slate-400 font-mono text-sm">
                     {currentSlide + 1} / {slides.length}
                 </div>
 
-                <button
+                <Button
                     onClick={nextSlide}
                     disabled={currentSlide === slides.length - 1}
                     className="p-3 rounded-full bg-white/10 backdrop-blur-md border border-white/10 hover:bg-emerald-500 hover:border-emerald-500 transition-all disabled:opacity-50 disabled:hover:bg-white/10"
                 >
                     <ChevronRight size={24} />
-                </button>
+                </Button>
             </div>
 
             {/* Progress Bar */}

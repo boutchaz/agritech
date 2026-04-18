@@ -5,6 +5,12 @@ export interface Currency {
   locale: string;
 }
 
+/**
+ * Default currency code used as fallback when no organization currency is configured.
+ * Change this single constant to update the fallback currency across the entire app.
+ */
+export const DEFAULT_CURRENCY = 'MAD';
+
 export const CURRENCIES: Currency[] = [
   { code: 'EUR', name: 'Euro', symbol: '€', locale: 'fr-FR' },
   { code: 'USD', name: 'US Dollar', symbol: '$', locale: 'en-US' },

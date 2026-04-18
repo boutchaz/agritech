@@ -1,0 +1,27 @@
+{
+  "id": "specs/reference-data-specs",
+  "title": "Reference Data Specifications",
+  "description": "Reference specifications extracted from crop knowledge-base documents.",
+  "source": "@site/docs/specs/reference-data-specs.md",
+  "sourceDirName": "specs",
+  "slug": "/specs/reference-data-specs",
+  "permalink": "/specs/reference-data-specs",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 4,
+  "frontMatter": {
+    "sidebar_position": 4,
+    "title": "Reference Data Specifications"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "AI Feature Specifications",
+    "permalink": "/specs/ai-feature-specs"
+  },
+  "next": {
+    "title": "Calibration Input Forms (F1/F2/F3)",
+    "permalink": "/specs/calibration-input-forms"
+  }
+}

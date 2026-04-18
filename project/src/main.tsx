@@ -1,12 +1,24 @@
-import React from 'react'
+import React, { useState } from 'react'
 import ReactDOM from 'react-dom/client'
 import { createRouter, RouterProvider } from '@tanstack/react-router'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { routeTree } from './routeTree.gen'
-import { initGA, initClarity, markRouterNavigating, markRouterStable } from './lib/analytics'
+import { initGA } from './lib/analytics'
 import { useAuthStore, waitForHydration } from './stores/authStore'
+import { WowIntro } from './components/WowIntro'
+import { wireOfflineQueue } from './lib/offlineTaskQueue'
 import './i18n/config'
 import './index.css'
+
+// Install listeners that replay any queued clock-in/clock-out and comments
+// the moment the browser fires the 'online' event. Safe to run early —
+// idempotent and only touches localStorage on this tab.
+wireOfflineQueue((summary) => {
+  if (summary.sent > 0 || summary.remaining > 0) {
+    // eslint-disable-next-line no-console
+    console.info('[offlineQueue] flushed', summary);
+  }
+});
 
 // Initialize Locator for React DevTools debugging (development only)
 if (import.meta.env.DEV) {
@@ -19,22 +31,22 @@ if (import.meta.env.DEV) {
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 5 * 60 * 1000, // 5 minutes - prevents excessive refetching
-      gcTime: 10 * 60 * 1000, // 10 minutes garbage collection
+      staleTime: 5 * 60 * 1000,
+      gcTime: 10 * 60 * 1000,
       retry: 1,
-      refetchOnWindowFocus: false, // Disable globally - prevents refetch on tab switch
-      refetchOnReconnect: true, // Refetch when network reconnects
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: true,
     },
   },
 })
 
-// Export queryClient for use in other modules (e.g., to clear cache on auth changes)
+// Export queryClient for use in other modules
 export { queryClient }
 
 // Create router context with auth
 const routerContext = {
   auth: {
-    user: null as any,
+    user: null as { id: string; email: string } | null,
     isLoading: true,
   },
 }
@@ -54,10 +66,65 @@ declare module '@tanstack/react-router' {
   }
 }
 
+/**
+ * One-time cleanup: unregister any rogue/manually-registered service workers
+ */
+async function cleanupLegacyServiceWorkers() {
+  const CLEANUP_KEY = 'agrogina:sw-cleanup-v1';
+  if (localStorage.getItem(CLEANUP_KEY)) return;
+
+  if ('serviceWorker' in navigator) {
+    try {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      for (const registration of registrations) {
+        if (registration.active?.scriptURL && !registration.active.scriptURL.endsWith('/sw.js')) {
+          console.warn('[sw-cleanup] Unregistering legacy SW:', registration.active.scriptURL);
+          await registration.unregister();
+        }
+      }
+      if ('caches' in window) {
+        const cacheNames = await caches.keys();
+        for (const name of cacheNames) {
+          if (!name.startsWith('workbox-') && !name.startsWith('api-cache')) {
+            console.warn('[sw-cleanup] Deleting legacy cache:', name);
+            await caches.delete(name);
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('[sw-cleanup] Cleanup failed (non-fatal):', err);
+    }
+  }
+  localStorage.setItem(CLEANUP_KEY, String(Date.now()));
+}
+
+const App = () => {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+  const isLandingPage = window.location.pathname === '/'
+  const [showIntro, setShowIntro] = useState(!isAuthenticated && isLandingPage);
+
+  const handleIntroComplete = () => {
+    setShowIntro(false);
+  };
+
+  return (
+    <>
+      {showIntro && <WowIntro onComplete={handleIntroComplete} />}
+      <QueryClientProvider client={queryClient}>
+        <RouterProvider router={router} context={routerContext} />
+      </QueryClientProvider>
+    </>
+  );
+};
+
 async function init() {
+  await cleanupLegacyServiceWorkers();
+
+  if (import.meta.env.PROD) {
+    import('./lib/sentry').then(({ initSentry }) => initSentry(router));
+  }
   initGA()
 
-  // Wait for Zustand store to hydrate from localStorage before making auth decisions
   await waitForHydration()
 
   const authStore = useAuthStore.getState()
@@ -78,31 +145,29 @@ async function init() {
       router.invalidate()
       queryClient.clear()
     }
-
-    if (state.isAuthenticated && !prevState.isAuthenticated) {
-      setTimeout(() => {
-        markRouterStable()
-        initClarity()
-      }, 500)
-    }
-  })
-
-  // Track router state for Clarity safety
-  router.subscribe('onBeforeNavigate', () => {
-    markRouterNavigating()
-  })
-
-  router.subscribe('onResolved', () => {
-    markRouterStable()
   })
 
   ReactDOM.createRoot(document.getElementById('root')!).render(
     <React.StrictMode>
-      <QueryClientProvider client={queryClient}>
-        <RouterProvider router={router} context={routerContext} />
-      </QueryClientProvider>
+      <App />
     </React.StrictMode>,
   )
 }
 
-init()
+init().catch((err) => {
+  console.error('[init] Fatal error during app initialization:', err);
+  const loader = document.getElementById('app-loader');
+  if (loader) loader.remove();
+  const root = document.getElementById('root');
+  if (root) {
+    root.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:system-ui,sans-serif;background:#f9fafb;">
+        <div style="text-align:center;max-width:400px;padding:24px;">
+          <h2 style="color:#dc2626;margin-bottom:8px;">Application Error</h2>
+          <p style="color:#6b7280;margin-bottom:16px;">Something went wrong loading the application. Please try refreshing.</p>
+          <button onclick="location.reload()" style="padding:8px 24px;background:#10b981;color:white;border:none;border-radius:6px;cursor:pointer;font-size:14px;">Refresh Page</button>
+        </div>
+      </div>
+    `;
+  }
+})

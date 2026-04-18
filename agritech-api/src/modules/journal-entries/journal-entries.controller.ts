@@ -19,6 +19,7 @@ export class AccountingController {
       amount: number;
       date: Date;
       description: string;
+      parcel_id?: string;
     },
     @Req() req: any,
   ) {
@@ -30,6 +31,7 @@ export class AccountingController {
       body.date,
       body.description,
       req.user.sub,
+      body.parcel_id,
     );
   }
 
@@ -42,6 +44,7 @@ export class AccountingController {
       amount: number;
       date: Date;
       description: string;
+      parcel_id?: string;
     },
     @Req() req: any,
   ) {
@@ -53,6 +56,7 @@ export class AccountingController {
       body.date,
       body.description,
       req.user.sub,
+      body.parcel_id,
     );
   }
 }

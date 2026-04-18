@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { farmsService } from '../../services/farmsService';
@@ -13,14 +13,15 @@ import {
   Layers
 } from 'lucide-react';
 import {
-  Dialog,
-  DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '../ui/dialog';
 import { Button } from '../ui/button';
 import { Card, CardContent } from '../ui/card';
+import { SectionLoader } from '@/components/ui/loader';
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
+
 
 interface FarmDetailsModalProps {
   farmId: string;
@@ -29,12 +30,12 @@ interface FarmDetailsModalProps {
   onManageParcels?: () => void;
 }
 
-const FarmDetailsModal: React.FC<FarmDetailsModalProps> = ({
+const FarmDetailsModal = ({
   farmId,
   onClose,
   onEdit,
   onManageParcels
-}) => {
+}: FarmDetailsModalProps) => {
   const { t } = useTranslation();
 
   // Fetch farm details using farmsService (apiClient)
@@ -61,20 +62,20 @@ const FarmDetailsModal: React.FC<FarmDetailsModalProps> = ({
 
   if (isLoading || !farm) {
     return (
-      <Dialog open={true} onOpenChange={(open) => !open && onClose()}>
-        <DialogContent className="max-w-3xl">
-          <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
-            <span className="ml-3 text-gray-600 dark:text-gray-400">{t('farmHierarchy.details.loading')}</span>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <ResponsiveDialog open={true} onOpenChange={(open) => !open && onClose()} size="3xl">
+          <SectionLoader />
+      </ResponsiveDialog>
     );
   }
 
   return (
-    <Dialog open={true} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col p-0">
+    <ResponsiveDialog
+      open={true}
+      onOpenChange={(open) => !open && onClose()}
+      size="3xl"
+      className="p-0"
+      contentClassName="max-h-[90vh]"
+    >
         {/* Header with gradient */}
         <div className="bg-gradient-to-r from-green-500 to-emerald-600 p-6 text-white flex-shrink-0">
           <DialogHeader className="space-y-4">
@@ -270,8 +271,7 @@ const FarmDetailsModal: React.FC<FarmDetailsModalProps> = ({
             )}
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+    </ResponsiveDialog>
   );
 };
 

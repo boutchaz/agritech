@@ -64,6 +64,23 @@ export class DemoDataController {
     };
   }
 
+  @Post('seed-siam')
+  @HttpCode(HttpStatus.CREATED)
+  async seedSiamDemoData(
+    @Param('organizationId') organizationId: string,
+    @Request() req: any,
+  ) {
+    await this.verifyAdminAccess(req.user.id, organizationId);
+    await this.demoDataService.seedSiamDemoData(organizationId, req.user.id);
+    const stats = await this.demoDataService.getDataStats(organizationId);
+
+    return {
+      message: 'SIAM demo data seeded successfully',
+      organizationId,
+      stats,
+    };
+  }
+
   /**
    * Clear all data for an organization
    */

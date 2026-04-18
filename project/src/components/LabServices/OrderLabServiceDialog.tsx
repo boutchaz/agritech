@@ -3,16 +3,17 @@ import { useTranslation } from 'react-i18next';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { FormField } from '@/components/ui/FormField';
 import { NativeSelect } from '@/components/ui/NativeSelect';
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import { Textarea } from '@/components/ui/Textarea';
 import { farmsApi } from '@/lib/api/farms';
 import { useQuery } from '@tanstack/react-query';
 import { useParcels } from '@/hooks/useParcels';
 import { useCreateLabServiceOrder } from '@/hooks/useLabServices';
 import { toast } from 'sonner';
+import { DEFAULT_CURRENCY } from '@/utils/currencies';
 
 const orderSchema = z.object({
   farm_id: z.string().uuid('Sélectionnez une ferme'),
@@ -25,7 +26,16 @@ type OrderFormData = z.infer<typeof orderSchema>;
 interface OrderLabServiceDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  service: any | null;
+  service: {
+    id: string;
+    provider_id: string;
+    name: string;
+    price?: number;
+    currency?: string;
+    turnaround_days?: number;
+    parameters_tested?: string[];
+    sample_requirements?: string;
+  } | null;
 }
 
 export function OrderLabServiceDialog({ isOpen, onClose, service }: OrderLabServiceDialogProps) {
@@ -67,7 +77,7 @@ export function OrderLabServiceDialog({ isOpen, onClose, service }: OrderLabServ
         farm_id: data.farm_id,
         parcel_id: data.parcel_id || null,
         quoted_price: service.price,
-        currency: service.currency || 'MAD',
+        currency: service.currency || DEFAULT_CURRENCY,
         notes: data.notes,
         status: 'pending',
       });
@@ -84,11 +94,15 @@ export function OrderLabServiceDialog({ isOpen, onClose, service }: OrderLabServ
   if (!service) return null;
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{t('dialogs.orderLabService.title')}: {service.name}</DialogTitle>
-        </DialogHeader>
+    <ResponsiveDialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+      title={`${t('dialogs.orderLabService.title')}: ${service.name}`}
+      size="2xl"
+      contentClassName="max-h-[90vh] overflow-y-auto"
+    >
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           {/* Service Details */}
@@ -107,9 +121,9 @@ export function OrderLabServiceDialog({ isOpen, onClose, service }: OrderLabServ
               <div>
                 <span className="font-medium">{t('dialogs.orderLabService.parameters')}:</span>
                 <div className="flex flex-wrap gap-1 mt-1">
-                  {service.parameters_tested.map((param: string, idx: number) => (
+                  {service.parameters_tested.map((param: string) => (
                     <span
-                      key={idx}
+                      key={param}
                       className="text-xs bg-white dark:bg-gray-700 px-2 py-1 rounded border border-gray-200 dark:border-gray-600"
                     >
                       {param}
@@ -184,7 +198,6 @@ export function OrderLabServiceDialog({ isOpen, onClose, service }: OrderLabServ
             </Button>
           </div>
         </form>
-      </DialogContent>
-    </Dialog>
+    </ResponsiveDialog>
   );
 }

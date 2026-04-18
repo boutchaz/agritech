@@ -1,149 +1,295 @@
-import React, { useMemo, useState } from 'react';
-import { useNavigate, useLocation } from '@tanstack/react-router';
-import { Building, Boxes, Users, Sliders, LayoutGrid, CreditCard, User, FileText, Package, Menu, X, ArrowLeft, FolderTree, Link2, AlertTriangle, HardDrive, Calendar, TreeDeciduous } from 'lucide-react';
-import { useAuth } from '../hooks/useAuth';
-import { useTranslation } from 'react-i18next';
+import React, { useEffect, useMemo, useState } from "react";
+import { useNavigate, useLocation } from "@tanstack/react-router";
+import type { LucideIcon } from "lucide-react";
+import {
+  Building,
+  Boxes,
+  Users,
+  LayoutGrid,
+  CreditCard,
+  User,
+  FileText,
+  Package,
+  Menu,
+  X,
+  ArrowLeft,
+  AlertTriangle,
+  HardDrive,
+  Brain,
+  PanelLeftClose,
+  PanelLeft,
+  ChevronDown,
+  Home,
+  Receipt,
+} from "lucide-react";
+import { useAuth } from "../hooks/useAuth";
+import { useTranslation } from "react-i18next";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "./ui/drawer";
+import { Separator } from "./ui/separator";
+import { Button } from "./ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "./ui/tooltip";
+import { ALL_ROLES, ADMIN_ROLES, ADMIN_AND_MANAGER_ROLES } from "../types/auth";
+import type { RoleName } from "../types/auth";
+import { cn } from "../lib/utils";
+import { useSidebarCollapsed } from "../hooks/useSidebarLayout";
+
+interface SettingsMenuItem {
+  id: string;
+  name: string;
+  icon: LucideIcon;
+  path: string;
+  description: string;
+  roles: RoleName[];
+}
+
+interface SettingsSection {
+  id: string;
+  label: string;
+  items: SettingsMenuItem[];
+}
 
 interface SettingsLayoutProps {
   children: React.ReactNode;
 }
 
-const SettingsLayout: React.FC<SettingsLayoutProps> = ({ children }) => {
+const SETTINGS_COLLAPSED_KEY = "settingsSidebarCollapsed";
+const SETTINGS_SECTIONS_COLLAPSED_KEY = "settingsSectionsCollapsed";
+
+function loadCollapsedSectionIds(): Set<string> {
+  if (typeof window === "undefined") return new Set();
+  try {
+    const raw = localStorage.getItem(SETTINGS_SECTIONS_COLLAPSED_KEY);
+    if (raw) return new Set(JSON.parse(raw) as string[]);
+  } catch {
+    /* ignore */
+  }
+  return new Set();
+}
+
+const SettingsLayout = ({ children }: SettingsLayoutProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { userRole } = useAuth();
   const { t } = useTranslation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const mainSidebarCollapsed = useSidebarCollapsed();
+  const [isCollapsed, setIsCollapsed] = useState(() => {
+    const saved = localStorage.getItem(SETTINGS_COLLAPSED_KEY);
+    return saved === "true";
+  });
+  const bothRailsCollapsed = mainSidebarCollapsed && isCollapsed;
+  const [collapsedSectionIds, setCollapsedSectionIds] = useState<Set<string>>(
+    loadCollapsedSectionIds,
+  );
 
-  // Define menu items with role requirements
-  const allMenuItems = useMemo(() => [
-    {
-      id: 'profile',
-      name: t('settings.menu.profile'),
-      icon: User,
-      path: '/settings/profile',
-      description: t('settings.menu.profileDescription'),
-      roles: ['system_admin', 'organization_admin', 'farm_manager', 'farm_worker', 'day_laborer', 'viewer'] // All roles
-    },
-    {
-      id: 'preferences',
-      name: t('settings.menu.preferences'),
-      icon: Sliders,
-      path: '/settings/preferences',
-      description: t('settings.menu.preferencesDescription'),
-      roles: ['system_admin', 'organization_admin', 'farm_manager', 'farm_worker', 'day_laborer', 'viewer'] // All roles
-    },
-    {
-      id: 'organization',
-      name: t('settings.menu.organization'),
-      icon: Building,
-      path: '/settings/organization',
-      description: t('settings.menu.organizationDescription'),
-      roles: ['system_admin', 'organization_admin'] // Admin only
-    },
-    {
-      id: 'subscription',
-      name: t('settings.menu.subscription'),
-      icon: CreditCard,
-      path: '/settings/subscription',
-      description: t('settings.menu.subscriptionDescription'),
-      roles: ['system_admin', 'organization_admin'] // Admin only
-    },
-    {
-      id: 'modules',
-      name: t('settings.menu.modules'),
-      icon: Boxes,
-      path: '/settings/modules',
-      description: t('settings.menu.modulesDescription'),
-      roles: ['system_admin', 'organization_admin'] // Admin only
-    },
-    {
-      id: 'users',
-      name: t('settings.menu.users'),
-      icon: Users,
-      path: '/settings/users',
-      description: t('settings.menu.usersDescription'),
-      roles: ['system_admin', 'organization_admin'] // Admin only
-    },
-    {
-      id: 'work-units',
-      name: t('settings.menu.workUnits'),
-      icon: Package,
-      path: '/settings/work-units',
-      description: t('settings.menu.workUnitsDescription'),
-      roles: ['system_admin', 'organization_admin'] // Admin only
-    },
-    {
-      id: 'cost-centers',
-      name: t('settings.menu.costCenters', 'Cost Centers'),
-      icon: FolderTree,
-      path: '/settings/cost-centers',
-      description: t('settings.menu.costCentersDescription', 'Manage cost centers for expense tracking'),
-      roles: ['system_admin', 'organization_admin'] // Admin only
-    },
-    {
-      id: 'account-mappings',
-      name: t('settings.menu.accountMappings', 'Account Mappings'),
-      icon: Link2,
-      path: '/settings/account-mappings',
-      description: t('settings.menu.accountMappingsDescription', 'Configure automatic journal entry mappings'),
-      roles: ['system_admin', 'organization_admin'] // Admin only
-    },
-    {
-      id: 'fiscal-years',
-      name: t('settings.menu.fiscalYears', 'Fiscal Years'),
-      icon: Calendar,
-      path: '/settings/fiscal-years',
-      description: t('settings.menu.fiscalYearsDescription', 'Manage fiscal years for financial reporting'),
-      roles: ['system_admin', 'organization_admin']
-    },
-    {
-      id: 'biological-assets',
-      name: t('settings.menu.biologicalAssets', 'Biological Assets'),
-      icon: TreeDeciduous,
-      path: '/settings/biological-assets',
-      description: t('settings.menu.biologicalAssetsDescription', 'Manage orchards, livestock and perennial assets'),
-      roles: ['system_admin', 'organization_admin', 'farm_manager']
-    },
-    {
-      id: 'dashboard',
-      name: t('settings.menu.dashboard'),
-      icon: LayoutGrid,
-      path: '/settings/dashboard',
-      description: t('settings.menu.dashboardDescription'),
-      roles: ['system_admin', 'organization_admin', 'farm_manager'] // Admin and managers
-    },
-    {
-      id: 'documents',
-      name: t('settings.menu.documents'),
-      icon: FileText,
-      path: '/settings/documents',
-      description: t('settings.menu.documentsDescription'),
-      roles: ['system_admin', 'organization_admin'] // Admin only
-    },
-    {
-      id: 'files',
-      name: t('settings.menu.files', 'Gestion des Fichiers'),
-      icon: HardDrive,
-      path: '/settings/files',
-      description: t('settings.menu.filesDescription', 'Gérer les fichiers et détecter les orphelins'),
-      roles: ['system_admin', 'organization_admin'] // Admin only
-    },
-    {
-      id: 'danger-zone',
-      name: t('settings.menu.dangerZone', 'Zone de Danger'),
-      icon: AlertTriangle,
-      path: '/settings/danger-zone',
-      description: t('settings.menu.dangerZoneDescription', 'Gérer les données de démo et actions critiques'),
-      roles: ['system_admin', 'organization_admin'] // Admin only
-    }
-  ], [t]);
+  const toggleCollapse = () => {
+    const newValue = !isCollapsed;
+    setIsCollapsed(newValue);
+    localStorage.setItem(SETTINGS_COLLAPSED_KEY, String(newValue));
+    window.dispatchEvent(
+      new CustomEvent("settingsSidebarCollapse", {
+        detail: { collapsed: newValue },
+      }),
+    );
+  };
 
-  // Filter menu items based on user role
-  const menuItems = useMemo(() => {
+  const toggleSectionOpen = (sectionId: string) => {
+    setCollapsedSectionIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(sectionId)) next.delete(sectionId);
+      else next.add(sectionId);
+      try {
+        localStorage.setItem(
+          SETTINGS_SECTIONS_COLLAPSED_KEY,
+          JSON.stringify([...next]),
+        );
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  };
+
+  const isSectionExpanded = (sectionId: string) =>
+    !collapsedSectionIds.has(sectionId);
+
+  useEffect(() => {
+    const el =
+      document.querySelector("[data-settings-content-scroll]") ??
+      document.querySelector("[data-main-scroll]");
+    el?.scrollTo({ top: 0 });
+  }, [location.pathname]);
+
+  // Define menu sections with grouped items
+  const allSections: SettingsSection[] = useMemo(
+    () => [
+      {
+        id: "personal",
+        label: t("settings.menu.sections.personal"),
+        items: [
+          {
+            id: "account",
+            name: t("settings.menu.account", t("settings.menu.profile")),
+            icon: User,
+            path: "/settings/account",
+            description: t("settings.menu.accountDescription", t("settings.menu.profileDescription")),
+            roles: ALL_ROLES,
+          },
+        ],
+      },
+      {
+        id: "organization",
+        label: t("settings.menu.sections.organization"),
+        items: [
+          {
+            id: "organization",
+            name: t("settings.menu.organization"),
+            icon: Building,
+            path: "/settings/organization",
+            description: t("settings.menu.organizationDescription"),
+            roles: ADMIN_ROLES,
+          },
+          {
+            id: "subscription",
+            name: t("settings.menu.subscription"),
+            icon: CreditCard,
+            path: "/settings/subscription",
+            description: t("settings.menu.subscriptionDescription"),
+            roles: ADMIN_ROLES,
+          },
+          {
+            id: "billing",
+            name: t("settings.menu.billing", "Billing & Invoices"),
+            icon: Receipt,
+            path: "/settings/billing",
+            description: t("settings.menu.billingDescription", "Manage billing and view invoices"),
+            roles: ADMIN_ROLES,
+          },
+          {
+            id: "modules",
+            name: t("settings.menu.modules"),
+            icon: Boxes,
+            path: "/settings/modules",
+            description: t("settings.menu.modulesDescription"),
+            roles: ADMIN_ROLES,
+          },
+          {
+            id: "users",
+            name: t("settings.menu.users"),
+            icon: Users,
+            path: "/settings/users",
+            description: t("settings.menu.usersDescription"),
+            roles: ADMIN_ROLES,
+          },
+          {
+            id: "ai",
+            name: t("settings.menu.ai", "AI"),
+            icon: Brain,
+            path: "/settings/ai",
+            description: t("settings.menu.aiDescription", "AI usage, quotas, and provider settings"),
+            roles: ADMIN_ROLES,
+          },
+        ],
+      },
+      {
+        id: "operations",
+        label: t("settings.menu.sections.operations", "Operations"),
+        items: [
+          {
+            id: "work-units",
+            name: t("settings.menu.workUnits"),
+            icon: Package,
+            path: "/settings/work-units",
+            description: t("settings.menu.workUnitsDescription"),
+            roles: ADMIN_ROLES,
+          },
+        ],
+      },
+      {
+        id: "content",
+        label: t("settings.menu.sections.content"),
+        items: [
+          {
+            id: "dashboard",
+            name: t("settings.menu.dashboard"),
+            icon: LayoutGrid,
+            path: "/settings/dashboard",
+            description: t("settings.menu.dashboardDescription"),
+            roles: ADMIN_AND_MANAGER_ROLES,
+          },
+          {
+            id: "documents",
+            name: t("settings.menu.documents"),
+            icon: FileText,
+            path: "/settings/documents",
+            description: t("settings.menu.documentsDescription"),
+            roles: ADMIN_ROLES,
+          },
+        ],
+      },
+      {
+        id: "legal",
+        label: t("settings.menu.sections.legal", "Légal"),
+        items: [
+          {
+            id: "legal",
+            name: t("settings.menu.legal", "Mentions Légales"),
+            icon: FileText,
+            path: "/settings/legal",
+            description: t("settings.menu.legalDescription", "CGU et politique de confidentialité"),
+            roles: ALL_ROLES,
+          },
+        ],
+      },
+      {
+        id: "system",
+        label: t("settings.menu.sections.system"),
+        items: [
+          {
+            id: "files",
+            name: t("settings.menu.files"),
+            icon: HardDrive,
+            path: "/settings/files",
+            description: t("settings.menu.filesDescription"),
+            roles: ADMIN_ROLES,
+          },
+          {
+            id: "danger-zone",
+            name: t("settings.menu.dangerZone"),
+            icon: AlertTriangle,
+            path: "/settings/danger-zone",
+            description: t("settings.menu.dangerZoneDescription"),
+            roles: ADMIN_ROLES,
+          },
+        ],
+      },
+    ],
+    [t],
+  );
+
+  // Filter sections: remove items the user can't see, then remove empty sections
+  const visibleSections = useMemo(() => {
     if (!userRole) return [];
-    return allMenuItems.filter(item => item.roles.includes(userRole.role_name));
-  }, [allMenuItems, userRole]);
+    return allSections
+      .map((section) => ({
+        ...section,
+        items: section.items.filter((item) =>
+          item.roles.includes(userRole.role_name as RoleName),
+        ),
+      }))
+      .filter((section) => section.items.length > 0);
+  }, [allSections, userRole]);
+
+  // Flat list of all visible items (for mobile bar lookup)
+  const allVisibleItems = useMemo(
+    () => visibleSections.flatMap((s) => s.items),
+    [visibleSections],
+  );
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -152,151 +298,314 @@ const SettingsLayout: React.FC<SettingsLayoutProps> = ({ children }) => {
     setIsMobileMenuOpen(false);
   };
 
-  return (
-    <div className="flex h-full relative">
-      {/* Mobile Menu Button - Fixed FAB for quick access */}
-      <button
-        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-        className="md:hidden fixed bottom-6 right-6 z-[60] h-14 w-14 rounded-full bg-green-600 hover:bg-green-700 text-white shadow-2xl flex items-center justify-center transition-all active:scale-95"
-        aria-label="Toggle settings menu"
-      >
-        {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-      </button>
+  /** Compact = icon rail (desktop collapsed). Mobile drawer always passes `false` so labels stay visible. */
+  const renderItem = (item: SettingsMenuItem, compact: boolean) => {
+    const Icon = item.icon;
+    const active = isActive(item.path);
 
-      {/* Mobile Navigation Overlay */}
-      {isMobileMenuOpen && (
-        <div
-          className="md:hidden fixed inset-0 bg-black/50 z-[45] backdrop-blur-sm"
-          onClick={() => setIsMobileMenuOpen(false)}
-        />
-      )}
-
-      {/* Settings Navigation Sidebar */}
-      <div className={`
-        fixed md:static inset-y-0 left-0 z-[50]
-        w-full sm:w-80
-        bg-white dark:bg-gray-800
-        border-r border-gray-200 dark:border-gray-700
-        transform transition-transform duration-300 ease-in-out
-        ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
-        overflow-y-auto
-      `}>
-        <div className="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{t('settings.title')}</h1>
-              <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">
-                {t('settings.subtitle')}
-              </p>
-            </div>
+    if (compact) {
+      return (
+        <Tooltip key={item.id}>
+          <TooltipTrigger asChild>
             <button
-              onClick={() => setIsMobileMenuOpen(false)}
-              className="md:hidden p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+              type="button"
+              onClick={() => handleNavigate(item.path)}
+              data-tour={`settings-${item.id}`}
+              className={cn(
+                "w-10 h-10 flex items-center justify-center rounded-xl transition-all duration-300",
+                active
+                  ? "bg-emerald-600 text-white shadow-lg shadow-emerald-200 dark:shadow-emerald-900/20"
+                  : "text-slate-900 hover:bg-slate-50 dark:text-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100"
+              )}
             >
-              <X className="h-5 w-5" />
+              <Icon className="h-5 w-5 flex-shrink-0" />
             </button>
+          </TooltipTrigger>
+          <TooltipContent side="right" sideOffset={12} className="rounded-xl border-slate-200 dark:border-slate-700 shadow-xl bg-white dark:bg-slate-800 p-3">
+            <p className="font-semibold text-[10px] uppercase tracking-widest text-slate-900 dark:text-white">{item.name}</p>
+            <p className="text-[10px] font-medium text-slate-400 mt-1 max-w-[180px]">{item.description}</p>
+          </TooltipContent>
+        </Tooltip>
+      );
+    }
+
+    return (
+      <button
+        key={item.id}
+        type="button"
+        onClick={() => handleNavigate(item.path)}
+        data-tour={`settings-${item.id}`}
+        className={cn(
+          "w-full flex items-center gap-3 p-3 rounded-2xl transition-all duration-300 group",
+          active
+            ? "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-800 shadow-sm"
+            : "hover:bg-slate-50 dark:hover:bg-slate-800/50 text-slate-900 dark:text-slate-100 hover:text-slate-900 dark:hover:text-slate-100 border border-transparent"
+        )}
+      >
+        <div className={cn(
+          "p-2 rounded-xl transition-colors duration-300",
+          active ? "bg-emerald-100 dark:bg-emerald-900/40" : "bg-slate-100 dark:bg-slate-800 group-hover:bg-slate-200 dark:group-hover:bg-slate-700"
+        )}>
+          <Icon className="h-4 w-4" />
+        </div>
+        <div className="flex-1 min-w-0 text-left">
+          <div className="font-semibold text-[11px] uppercase tracking-widest truncate">
+            {item.name}
+          </div>
+          <div className="text-[10px] font-medium text-slate-400 dark:text-slate-500 truncate mt-0.5">
+            {item.description}
+          </div>
+        </div>
+      </button>
+    );
+  };
+
+  const renderSections = (compact: boolean) =>
+    visibleSections.map((section, sectionIndex) => (
+      <div key={section.id} data-tour={`settings-section-${section.id}`} className="mb-6">
+        {!compact && (
+          <div className="px-3 mb-2 flex items-center justify-between gap-2">
+            <button
+              type="button"
+              onClick={() => toggleSectionOpen(section.id)}
+              className="flex min-w-0 flex-1 items-center gap-2 rounded-xl py-1.5 ps-0 pe-2 text-start transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/80"
+              aria-expanded={isSectionExpanded(section.id)}
+            >
+              <ChevronDown
+                className={cn(
+                  "h-3.5 w-3.5 shrink-0 text-slate-900 transition-transform duration-200 dark:text-slate-100",
+                  !isSectionExpanded(section.id) && "-rotate-90",
+                )}
+              />
+              <span className="text-[10px] font-medium uppercase tracking-[0.2em] text-slate-900 dark:text-slate-100 truncate">
+                {section.label}
+              </span>
+            </button>
+            {sectionIndex === 0 && (
+              <div className="h-px min-w-[2rem] flex-1 bg-slate-100 dark:bg-slate-800 opacity-50" />
+            )}
+          </div>
+        )}
+        {(compact || isSectionExpanded(section.id)) && (
+          <div
+            className={cn(
+              "space-y-1",
+              compact && "flex flex-col items-center gap-2",
+            )}
+          >
+            {section.items.map((item) => renderItem(item, compact))}
+          </div>
+        )}
+      </div>
+    ));
+
+  return (
+    <TooltipProvider delayDuration={200}>
+      <div className="relative flex min-h-0 h-full min-w-0 w-full max-w-full flex-1 flex-col overflow-x-hidden bg-slate-50/50 dark:bg-slate-900/50 md:h-full md:min-h-0 md:flex-row md:overflow-hidden">
+        {/* Desktop Settings Sidebar — full viewport height so collapse control stays visible */}
+        <div
+          className={cn(
+            "z-20 hidden shrink-0 flex-col overflow-hidden border-r border-slate-200 bg-white transition-all duration-500 ease-in-out dark:border-slate-800 dark:bg-slate-900",
+            /* Match parent row height (inside main), not 100dvh — dvh was taller than the scroll
+               port and clipped the collapse footer on tablet / devtools iPad frames. */
+            "md:flex md:min-h-0 md:h-full md:max-h-full md:self-stretch",
+            isCollapsed ? (bothRailsCollapsed ? "w-16" : "w-20") : "w-80",
+          )}
+        >
+          {/* Header */}
+          <div className={cn("flex-shrink-0 p-4 pt-5 sm:p-6", isCollapsed && "px-3")}>
+            {isCollapsed ? (
+              <div className="flex flex-col items-center gap-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => navigate({ to: "/dashboard" })}
+                  className="h-11 w-11 rounded-2xl bg-slate-50 text-slate-900 transition-all hover:text-emerald-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:text-emerald-400"
+                  aria-label={t("settings.backToDashboard", "Return to Dashboard")}
+                >
+                  <Home className="h-5 w-5" />
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={toggleCollapse}
+                  className="h-11 w-11 rounded-2xl bg-slate-50 text-slate-900 transition-all hover:text-emerald-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:text-emerald-400"
+                  aria-label={t("sidebar.expand", "Expand sidebar")}
+                >
+                  <PanelLeft className="h-5 w-5" />
+                </Button>
+              </div>
+            ) : (
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex min-w-0 flex-1 items-center gap-3 sm:gap-4">
+                  <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-2.5 dark:border-emerald-800 dark:bg-emerald-900/30 sm:p-3">
+                    <Menu className="h-5 w-5 text-emerald-600 dark:text-emerald-400 sm:h-6 sm:w-6" />
+                  </div>
+                  <div className="min-w-0">
+                    <h1 className="text-lg font-semibold uppercase leading-none tracking-tight text-slate-900 dark:text-white sm:text-xl">
+                      {t("settings.title")}
+                    </h1>
+                    <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                      Workspace Management
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={toggleCollapse}
+                  className="h-10 w-10 shrink-0 rounded-xl text-slate-900 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-100 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+                  aria-label={t("sidebar.collapse", "Collapse sidebar")}
+                >
+                  <PanelLeftClose className="h-5 w-5" />
+                </Button>
+              </div>
+            )}
+          </div>
+
+          <Separator
+            className={cn("w-auto opacity-50", isCollapsed ? "mx-3" : "mx-6")}
+          />
+
+          {/* Navigation */}
+          <nav
+            className={cn(
+              "min-h-0 flex-1 overflow-y-auto py-4 no-scrollbar sm:py-6",
+              isCollapsed ? "px-3" : "px-4",
+            )}
+            data-tour="settings-menu"
+          >
+            {renderSections(isCollapsed)}
+          </nav>
+
+          {/* Collapse Toggle (duplicate control for mouse users) */}
+          <div className="flex-shrink-0 border-t border-slate-100 p-3 dark:border-slate-800 sm:p-4">
+            <Button
+              type="button"
+              variant="ghost"
+              className={cn(
+                "h-11 w-full rounded-2xl text-slate-900 transition-all hover:bg-slate-50 hover:text-slate-900 dark:text-slate-100 dark:hover:bg-slate-800 dark:hover:text-slate-100 sm:h-12",
+                isCollapsed ? "justify-center px-0" : "justify-start px-3 sm:px-4",
+              )}
+              onClick={toggleCollapse}
+            >
+              {isCollapsed ? (
+                <PanelLeft className="h-5 w-5" />
+              ) : (
+                <>
+                  <PanelLeftClose className="mr-2 h-5 w-5 shrink-0 sm:mr-3" />
+                  <span className="truncate text-[10px] font-medium uppercase tracking-widest sm:text-[11px]">
+                    {t("sidebar.collapse", "Collapse Sidebar")}
+                  </span>
+                </>
+              )}
+            </Button>
           </div>
         </div>
 
-        <nav className="p-3 sm:p-4 space-y-2" data-tour="settings-menu">
-          {/* Back to Dashboard button - only on mobile */}
+        {/* Main content: only this column scrolls when shell uses flex-1 + overflow-hidden */}
+      <div
+        className="flex min-h-0 min-w-0 max-w-full flex-1 flex-col overflow-x-hidden overflow-y-auto bg-slate-50/30 dark:bg-slate-900/30 max-md:pb-[var(--app-nested-scroll-bottom-pad,1.25rem)] max-md:[scroll-padding-bottom:var(--app-nested-scroll-bottom-pad,1.25rem)] md:pb-0 md:scroll-pb-0"
+        data-settings-content-scroll
+      >
+        {/* Mobile section title bar */}
+        <div className="md:hidden sticky top-0 z-20 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-100 dark:border-slate-800 px-3 py-3 shadow-sm sm:px-4 md:px-6">
           <button
-            onClick={() => {
-              navigate({ to: '/' });
-              setIsMobileMenuOpen(false);
-            }}
-            className="md:hidden w-full text-left p-3 sm:p-4 rounded-lg transition-colors group bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 mb-4"
-          >
-            <div className="flex items-center gap-3">
-              <ArrowLeft className="h-5 w-5 flex-shrink-0 text-gray-600 dark:text-gray-300" />
-              <div className="flex-1 min-w-0">
-                <div className="font-medium text-start text-sm sm:text-base text-gray-900 dark:text-white">
-                  {t('settings.backToDashboard') || 'Back to Dashboard'}
-                </div>
-                <div className="text-xs sm:text-sm mt-1 text-start text-gray-500 dark:text-gray-400">
-                  {t('settings.returnToMainApp') || 'Return to main app'}
-                </div>
-              </div>
-            </div>
-          </button>
-
-          {menuItems.map((item) => {
-            const Icon = item.icon;
-            const active = isActive(item.path);
-
-            return (
-              <button
-                key={item.id}
-                onClick={() => handleNavigate(item.path)}
-                data-tour={`settings-${item.id}`}
-                className={`w-full text-left p-3 sm:p-4 rounded-lg transition-colors group ${
-                  active
-                    ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800'
-                    : 'hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
-                }`}
-              >
-                <div className="flex items-start gap-3">
-                  <Icon className={`h-5 w-5 mt-0.5 flex-shrink-0 ${
-                    active ? 'text-green-600 dark:text-green-400' : 'text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300'
-                  }`} />
-                  <div className="flex-1 min-w-0">
-                    <div className={`font-medium text-start text-sm sm:text-base ${active ? 'text-green-700 dark:text-green-300' : 'text-gray-900 dark:text-white'}`}>
-                      {item.name}
-                    </div>
-                    <div className={`text-xs sm:text-sm mt-1 text-start ${
-                      active ? 'text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-gray-400'
-                    }`}>
-                      {item.description}
-                    </div>
-                  </div>
-                </div>
-              </button>
-            );
-          })}
-        </nav>
-      </div>
-
-      {/* Main Content Area */}
-      <div className="flex-1 overflow-auto w-full pb-20 md:pb-0">
-        {/* Mobile Menu Bar - Shows current section and menu toggle */}
-        <div className="md:hidden sticky top-0 z-30 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3">
-          <button
+            type="button"
             onClick={() => setIsMobileMenuOpen(true)}
-            className="flex items-center justify-between w-full"
+            className="flex h-11 w-full items-center justify-between rounded-2xl border border-slate-100 bg-slate-50 px-3 shadow-inner dark:border-slate-700 dark:bg-slate-800 sm:px-4"
           >
             <div className="flex items-center gap-3">
               {(() => {
-                const currentItem = menuItems.find(item => isActive(item.path));
+                const currentItem = allVisibleItems.find((item) => isActive(item.path));
                 if (currentItem) {
                   const Icon = currentItem.icon;
                   return (
                     <>
-                      <Icon className="h-5 w-5 text-green-600" />
-                      <span className="font-medium text-gray-900 dark:text-white">
+                      <div className="p-1.5 bg-emerald-100 dark:bg-emerald-900/40 rounded-lg">
+                        <Icon className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                      </div>
+                      <span className="text-xs font-semibold uppercase tracking-widest text-slate-900 dark:text-white">
                         {currentItem.name}
                       </span>
                     </>
                   );
                 }
                 return (
-                  <>
-                    <Menu className="h-5 w-5 text-gray-600" />
-                    <span className="font-medium text-gray-900 dark:text-white">
-                      {t('settings.title')}
-                    </span>
-                  </>
+                  <span className="text-xs font-semibold uppercase tracking-widest text-slate-900 dark:text-white">
+                    {t("settings.title")}
+                  </span>
                 );
               })()}
             </div>
-            <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
-              <span className="text-sm">{t('settings.menu.changeSection', 'Menu')}</span>
-              <Menu className="h-5 w-5" />
-            </div>
+            <ChevronDown className="h-4 w-4 text-slate-400" />
           </button>
         </div>
-        {children}
+        
+        {/* Shared surface for every /settings/* child: consistent horizontal rhythm + max width */}
+        <div
+          className={cn(
+            "flex-1 min-h-0 min-w-0 w-full",
+            "mx-auto max-w-6xl xl:max-w-7xl",
+            "px-3 py-4 pb-8 sm:px-4 sm:py-5 sm:pb-10 md:px-6 md:py-6 md:pb-10",
+          )}
+          data-settings-page-surface
+        >
+          {children}
+        </div>
       </div>
-    </div>
+
+      {/* Mobile Settings Drawer */}
+      <Drawer open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
+        <DrawerContent side="bottom" hideClose className="max-h-[85vh] rounded-t-[2.5rem] p-0 bg-white dark:bg-slate-900 border-none shadow-2xl">
+          <DrawerHeader className="shrink-0 px-6 py-6 border-b border-slate-50 dark:border-slate-800/50">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-emerald-50 dark:bg-emerald-900/30 rounded-xl">
+                  <Menu className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                </div>
+                <DrawerTitle className="text-lg font-semibold uppercase tracking-tight">
+                  {t("settings.title")}
+                </DrawerTitle>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="h-10 w-10 rounded-xl bg-slate-50 dark:bg-slate-800"
+              >
+                <X className="h-5 w-5 text-slate-400" />
+              </Button>
+            </div>
+          </DrawerHeader>
+          <div
+            className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-4 py-6 no-scrollbar touch-pan-y"
+            style={{ paddingBottom: "calc(max(14px, env(safe-area-inset-bottom, 0px)) + 24px)" }}
+          >
+            <button
+              type="button"
+              onClick={() => {
+                navigate({ to: "/" });
+                setIsMobileMenuOpen(false);
+              }}
+              className="w-full flex items-center gap-4 p-4 rounded-[1.5rem] bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 shadow-inner mb-8 group"
+            >
+              <div className="p-2.5 bg-white dark:bg-slate-900 rounded-xl shadow-sm group-active:scale-95 transition-all">
+                <ArrowLeft className="h-5 w-5 text-slate-600 dark:text-slate-300" />
+              </div>
+              <span className="font-semibold text-xs uppercase tracking-[0.15em] text-slate-900 dark:text-white">
+                {t("settings.backToDashboard", "Return to Dashboard")}
+              </span>
+            </button>
+            {renderSections(false)}
+          </div>
+        </DrawerContent>
+      </Drawer>
+      </div>
+    </TooltipProvider>
   );
 };
 

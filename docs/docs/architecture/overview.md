@@ -4,7 +4,7 @@ sidebar_position: 1
 
 # Architecture Overview
 
-The AgriTech Platform is built as a **multi-tenant SaaS application** using a monorepo structure with pnpm workspaces.
+The AgroGina Platform is built as a **multi-tenant SaaS application** using a monorepo structure with pnpm workspaces.
 
 ## Monorepo Structure
 
@@ -12,14 +12,13 @@ The AgriTech Platform is built as a **multi-tenant SaaS application** using a mo
 agritech/
 ├── agritech-api/          # NestJS backend API
 ├── project/               # React frontend (web app)
-├── mobile/                # React Native mobile app
+├── mobile/                # Expo SDK 54 mobile app (field workers)
 ├── admin-app/             # Admin application
 ├── admin-tool/            # Admin CLI tool
 ├── cms/                   # Content management system
 ├── directus/              # Directus CMS instance
 ├── supabase/              # Supabase functions and migrations
-├── backend-service/       # Shared backend services
-├── agritech-remotion/     # Video generation with Remotion
+├── backend-service/       # Python/FastAPI satellite and AI calibration service
 ├── marketplace-frontend/  # Marketplace subdomain
 ├── docs/                  # Docusaurus documentation
 └── scripts/               # Build and deployment scripts
@@ -31,13 +30,15 @@ agritech/
 graph TB
     subgraph "Client Layer"
         WEB[React Web App]
-        MOBILE[React Native App]
+        MOBILE[Expo Mobile App]
+        DESKTOP[Tauri Desktop App]
         ADMIN[Admin App]
     end
 
     subgraph "API Layer"
         API[NestJS API]
         AUTH[Supabase Auth]
+        WS[Socket.IO Gateway\n/notifications]
     end
 
     subgraph "Services Layer"
@@ -45,32 +46,50 @@ graph TB
         NOTIFICATIONS[Notifications]
         MARKETPLACE[Marketplace]
         ANALYTICS[Analytics]
+        AI[AI Calibration Engine]
+    end
+
+    subgraph "Python Service"
+        PYAPI[FastAPI backend-service]
+        PIPELINE[Calibration V2 Pipeline]
+        WEATHER[Weather Service]
+        RASTER[Raster Extraction]
     end
 
     subgraph "Data Layer"
         PG[(PostgreSQL via Supabase)]
         REDIS[(Redis Cache)]
+        SQLITE[(SQLite - Desktop)]
     end
 
     subgraph "External Services"
         POLAR[Polar.sh Payments]
-        SATELLITE_API[Satellite APIs]
+        SATELLITE_API[Satellite APIs\nGEE / CDSE]
     end
 
     WEB --> API
+    WEB --> WS
     MOBILE --> API
+    DESKTOP --> SQLITE
     ADMIN --> API
 
     API --> AUTH
     API --> SATELLITE
     API --> NOTIFICATIONS
     API --> MARKETPLACE
+    API --> AI
+    WS --> NOTIFICATIONS
+
+    AI --> PYAPI
+    PYAPI --> PIPELINE
+    PYAPI --> WEATHER
+    PYAPI --> RASTER
 
     API --> PG
     API --> REDIS
 
     API --> POLAR
-    SATELLITE --> SATELLITE_API
+    PYAPI --> SATELLITE_API
 ```
 
 ## Frontend Architecture (project/)
@@ -78,7 +97,7 @@ graph TB
 ### Tech Stack
 
 - **React 18** with TypeScript
-- **TanStack Router v7** (formerly React Router) - File-based routing with loaders
+- **TanStack Router** - File-based routing with loaders
 - **TanStack Query** - Server state management
 - **Zustand** - Client state management
 - **TailwindCSS** - Styling
@@ -179,6 +198,7 @@ Routes are organized by functional area using TanStack Router's file-based routi
 - **Supabase Auth** - Authentication
 - **CASL** - Authorization
 - **Bull** - Job queue
+- **Socket.IO** - Real-time WebSocket gateway
 - **Swagger** - API documentation
 
 ### Directory Structure
@@ -201,6 +221,7 @@ agritech-api/
 │   │   ├── parcels/        # Parcel management
 │   │   ├── crops/          # Crop management
 │   │   ├── harvests/       # Harvest tracking
+│   │   ├── calibration/    # AI Calibration Engine
 │   │   ├── subscriptions/  # Subscription management
 │   │   ├── module-config/  # Module configuration
 │   │   ├── organization-modules/ # Org module assignment
@@ -220,7 +241,7 @@ agritech-api/
 │   │   ├── compliance/     # Compliance & certifications
 │   │   ├── ai-reports/     # AI-powered reports
 │   │   ├── chat/           # Chat functionality
-│   │   ├── notifications/  # Notification service
+│   │   ├── notifications/  # Notification service + Socket.IO gateway
 │   │   ├── satellite-indices/ # Satellite imagery
 │   │   └── ...
 │   ├── database/           # Database utilities
@@ -244,11 +265,256 @@ The backend is organized into feature modules:
 
 **Analytics**: satellite-indices, soil-analyses, production-intelligence, profitability, analyses
 
+**AI**: calibration (state machine, V2 pipeline, nutrition options)
+
 **Services**: marketplace, ai-reports, chat, notifications, reminders, pest-alerts, document-templates
+
+## AI Calibration Engine
+
+The AI Calibration Engine automates parcel analysis through a state machine and a multi-step satellite pipeline.
+
+### State Machine
+
+Parcel calibration progresses through the following states:
+
+```
+disabled
+  -> downloading        (satellite data fetch initiated)
+  -> pret_calibrage     (data ready, awaiting pipeline start)
+  -> calibrating        (V2 pipeline running)
+  -> awaiting_validation (pipeline complete, user must validate results)
+  -> awaiting_nutrition_option (user selects nutrition plan)
+  -> active             (ai_enabled flag set, calibration complete)
+```
+
+The `ai_enabled` flag is only set after explicit user validation. Phase gating ensures no state is skipped.
+
+### V2 Pipeline (8 Steps)
+
+The calibration pipeline runs in `backend-service/` via FastAPI:
+
+| Step | Description |
+|------|-------------|
+| 1 | Satellite extraction (Sentinel-2 NDVI, EVI, NDWI) |
+| 2 | Weather data integration (historical + forecast) |
+| 3 | Percentile computation (baseline statistics) |
+| 4 | Phenology analysis (growth stage detection) |
+| 5 | Anomaly detection (stress and disease indicators) |
+| 6 | Yield estimation (predicted harvest output) |
+| 7 | Zone mapping (spatial variability within parcel) |
+| 8 | Health score computation (composite parcel score) |
+
+### Nutrition Option Selection
+
+After pipeline validation, users select a nutrition plan:
+
+| Option | Label | Description |
+|--------|-------|-------------|
+| A | Standard | Baseline fertilization program |
+| B | Enhanced | Optimized nutrient delivery |
+| C | Intensive | Maximum yield nutrition protocol |
+
+### Real-time Progress Streaming
+
+Pipeline progress is streamed to the frontend via Socket.IO. See the WebSocket section below for event details.
+
+### Cron Jobs
+
+| Job | Schedule (UTC) | Description |
+|-----|----------------|-------------|
+| Satellite fetch | 06:00 daily | Pull latest Sentinel-2 imagery |
+| Weather fetch | 06:30 daily | Fetch historical and forecast weather |
+| AI pipeline | 08:00 daily | Run calibration pipeline for active parcels |
+
+## WebSocket / Real-time Architecture
+
+### Socket.IO Gateway
+
+The NestJS notifications module exposes a Socket.IO gateway on the `/notifications` namespace.
+
+**Authentication**: JWT token required on connection (validated by `JwtAuthGuard`).
+
+**Rooms**: Clients are placed in organization-scoped and user-scoped rooms:
+- `org:{orgId}` - All users in an organization
+- `user:{userId}` - Individual user notifications
+
+### Events
+
+| Event | Direction | Description |
+|-------|-----------|-------------|
+| `calibration:phase-changed` | Server -> Client | Calibration state machine transition |
+| `calibration:progress` | Server -> Client | Pipeline step progress (0-100%) |
+| `calibration:failed` | Server -> Client | Pipeline error with reason |
+| `notification:new` | Server -> Client | New in-app notification |
+
+## Python Satellite Service (backend-service/)
+
+### Tech Stack
+
+- **FastAPI** - API framework
+- **Google Earth Engine (GEE)** - Development / fallback satellite provider
+- **Copernicus Data Space (CDSE / openEO)** - Production satellite provider
+- **NumPy / Rasterio** - Raster processing
+
+### API Endpoints
+
+| Endpoint | Description |
+|----------|-------------|
+| `POST /api/calibration/v2/run` | Start the 8-step calibration pipeline |
+| `POST /api/calibration/v2/precompute-gdd` | Precompute GDD per daily row (`latitude`, `longitude`, `crop_type`, `rows[]` with temps — see `calibration.py` / OpenAPI) |
+| `POST /api/calibration/v2/extract-raster` | Extract raster values for a parcel geometry |
+| `GET /api/weather/historical` | Fetch historical weather data |
+| `GET /api/weather/forecast` | Fetch weather forecast |
+
+### Multi-Provider Support
+
+| Provider | Use Case | Cost | Commercial |
+|----------|----------|------|------------|
+| **GEE** | Development/Fallback | Free (research/dev) | Requires license |
+| **CDSE/openEO** | Production | Free tier (10K credits/mo) | Allowed |
+
+### Integration Points
+
+- **API**: FastAPI endpoints in `backend-service/app/api/`
+- **Backend**: Called by NestJS calibration module
+- **Frontend**: Progress streamed via Socket.IO
+- **Factory**: `SatelliteServiceFactory` for provider selection
+
+See [Satellite Analysis](/features/satellite-analysis) for complete details.
+
+## Mobile App Architecture (mobile/)
+
+### Tech Stack
+
+- **Expo SDK 54** with React Native
+- **expo-router** - File-based navigation
+- **TanStack Query** - Server state management
+- **Zustand** - Client state management
+- **expo-sqlite** - Offline local database
+
+### Tab Navigation
+
+| Tab | Description |
+|-----|-------------|
+| Home | Dashboard with today's summary |
+| Tasks | View and complete assigned tasks |
+| Harvest | Record new harvests with GPS and photos |
+| Clock | Clock in/out, view time entries |
+| Profile | User settings and logout |
+
+### Directory Structure
+
+```
+mobile/
+├── app/                  # Expo Router pages
+│   ├── _layout.tsx       # Root layout with providers
+│   ├── (auth)/           # Auth screens
+│   ├── (tabs)/           # Main tab navigation
+│   │   ├── index.tsx     # Home dashboard
+│   │   ├── tasks.tsx     # Task list
+│   │   ├── harvest.tsx   # Harvest recording
+│   │   ├── clock.tsx     # Time tracking
+│   │   └── profile.tsx   # User profile
+│   ├── task/[id].tsx     # Task detail screen
+│   └── harvest/new.tsx   # New harvest modal
+├── src/
+│   ├── hooks/            # React Query hooks
+│   ├── stores/           # Zustand stores
+│   ├── lib/              # API client, offline sync
+│   └── types/            # TypeScript types
+└── app.json
+```
+
+### Key Capabilities
+
+- Offline-first with expo-sqlite local cache
+- Biometric authentication (Face ID / fingerprint)
+- Camera integration for harvest photo capture
+- GPS tracking for harvest location recording
+- Push notifications for task reminders
+
+## Desktop App Architecture (project/src-tauri/)
+
+### Tech Stack
+
+- **Tauri v1** - Desktop framework (Rust backend + web frontend)
+- **SQLite** - Local database via rusqlite
+- **bcrypt** - Offline password hashing
+- **aes-gcm** - Encrypted data bundle import
+
+### Key Features
+
+- **Offline-first**: Fully functional without internet connection
+- **Data Import**: Import encrypted organization data bundles exported from the web app
+- **Full CRUD**: Manage farms, parcels, tasks, workers, harvests, inventory locally
+- **Cross-platform**: macOS, Windows, Linux
+
+### Database Schema
+
+The desktop SQLite database mirrors the cloud PostgreSQL schema with 35+ tables:
+
+| Category | Tables |
+|----------|--------|
+| Core | organizations, roles, user_profiles, organization_users |
+| Farm | farms, parcels, structures, warehouses, cost_centers |
+| Workforce | workers, tasks, task_assignments |
+| Harvest | harvest_records, reception_batches |
+| Inventory | items, item_groups, stock_entries, stock_entry_items |
+| Sales | customers, quotes, sales_orders, invoices |
+| Purchasing | suppliers, purchase_orders |
+| Accounting | accounts, journal_entries, costs, revenues, payments |
+
+### Directory Structure
+
+```
+project/src-tauri/
+├── src/
+│   ├── main.rs           # Tauri app entry point
+│   ├── commands/         # Tauri IPC commands (Rust)
+│   │   ├── auth.rs       # Local login/logout/setup
+│   │   ├── farms.rs      # Farm CRUD operations
+│   │   ├── parcels.rs    # Parcel CRUD operations
+│   │   ├── organizations.rs
+│   │   ├── import.rs     # Bundle import/validation
+│   │   └── data.rs       # Generic table operations
+│   └── db/
+│       ├── mod.rs        # SQLite database initialization
+│       └── schema.sql    # Full database schema
+├── Cargo.toml           # Rust dependencies
+└── tauri.conf.json      # Tauri configuration
+```
+
+### Data Bundle Import Flow
+
+1. Web app exports organization data as an encrypted bundle (AES-GCM)
+2. User provides passphrase to decrypt
+3. Desktop app validates bundle integrity
+4. Data is imported into local SQLite database
+5. User works fully offline with complete data access
 
 ## Multi-Tenancy
 
 The platform uses **organization-based multi-tenancy**:
+
+### Hierarchy
+
+```
+Organizations
+  -> Farms
+    -> Parcels
+      -> Sub-parcels
+```
+
+### Roles
+
+| Role | Level |
+|------|-------|
+| system_admin | Platform-wide administration |
+| organization_admin | Full organization access |
+| farm_manager | Manage assigned farms |
+| farm_worker | Operational farm tasks |
+| day_laborer | Limited task execution |
+| viewer | Read-only access |
 
 ### Database Pattern
 
@@ -310,42 +576,11 @@ The platform uses a **database-driven module system**:
 | **Accounting** | Accounts, Journal Entries, Invoices, Quotes, Sales Orders |
 | **Workforce** | Workers, Tasks, Piece Work |
 | **Analytics** | Satellite Analysis, Quality Control, Production Intelligence |
+| **AI** | Calibration Engine, Nutrition Options |
 | **Marketplace** | B2B Marketplace integration |
 | **Compliance** | Certifications, Document Management |
 
 See [Subscriptions](/features/subscriptions) for complete details.
-
-## Satellite Service
-
-### Architecture
-
-The satellite service provides multi-provider access to Sentinel-2 data through a unified interface:
-
-```
-Satellite Indices Module (backend-service/)
-├── Provider Factory (auto-selects GEE or CDSE)
-│   ├── GEEProvider (Google Earth Engine - dev/fallback)
-│   └── CDSEProvider (Copernicus Data Space - commercial)
-├── Abstract Interface (ISatelliteProvider)
-├── Shared Types & Utilities
-└── FastAPI Endpoints
-```
-
-### Multi-Provider Support
-
-| Provider | Use Case | Cost | Commercial |
-|----------|----------|------|------------|
-| **GEE** | Development/Fallback | Free (research/dev) | ❌ Requires license |
-| **CDSE/openEO** | Production | Free tier (10K credits/mo) | ✅ Allowed |
-
-### Integration Points
-
-- **API**: FastAPI endpoints in `backend-service/app/api/`
-- **Backend**: Python service with openEO integration
-- **Frontend**: `/parcels/:parcelId/satellite` route for visualization
-- **Factory**: `SatelliteServiceFactory` for provider selection
-
-See [Satellite Analysis](/features/satellite-analysis) for complete details.
 
 ## Marketplace Service
 
@@ -408,6 +643,12 @@ DATABASE_URL=postgresql://...
 SUPABASE_URL=https://...
 SUPABASE_ANON_KEY=...
 JWT_SECRET=...
+
+# backend-service/.env
+GEE_SERVICE_ACCOUNT=...
+GEE_PRIVATE_KEY=...
+SUPABASE_URL=...
+SUPABASE_KEY=...
 ```
 
 See [Deployment](/deployment/production) for full details.

@@ -3,6 +3,7 @@ import {
   CanActivate,
   ExecutionContext,
   ForbiddenException,
+  Logger,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { DatabaseService } from '../../database/database.service';
@@ -13,6 +14,8 @@ import { DatabaseService } from '../../database/database.service';
  */
 @Injectable()
 export class InternalAdminGuard implements CanActivate {
+  private readonly logger = new Logger(InternalAdminGuard.name);
+
   constructor(
     private reflector: Reflector,
     private databaseService: DatabaseService,
@@ -54,7 +57,7 @@ export class InternalAdminGuard implements CanActivate {
       .limit(1);
 
     if (error) {
-      console.error('Error checking internal admin status:', error);
+      this.logger.error(`Error checking internal admin status: ${error.message}`);
       return false;
     }
 

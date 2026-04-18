@@ -22,13 +22,37 @@ import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { ChatService } from './chat.service';
 import { SendMessageDto, ChatResponseDto } from './dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { OrganizationGuard } from '../../common/guards/organization.guard';
 import { Res } from '@nestjs/common';
 import { Response } from 'express';
+
+function buildChatStreamDoneMetadata(metadata: Record<string, unknown> | undefined) {
+  const m = metadata ?? {};
+  return {
+    provider: typeof m.provider === 'string' ? m.provider : 'zai',
+    model: typeof m.model === 'string' ? m.model : '',
+    timestamp:
+      m.timestamp instanceof Date
+        ? m.timestamp.toISOString()
+        : typeof m.timestamp === 'string'
+          ? m.timestamp
+          : new Date().toISOString(),
+    suggestions: Array.isArray(m.suggestions)
+      ? m.suggestions.filter((s): s is string => typeof s === 'string')
+      : [],
+    cleanText: typeof m.cleanText === 'string' ? m.cleanText : undefined,
+  };
+}
+
+function chatStreamErrorMessage(err: unknown): string {
+  if (err instanceof Error) return err.message;
+  return String(err);
+}
 
 @ApiTags('Chat')
 @ApiBearerAuth()
 @Controller('organizations/:organizationId/chat')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, OrganizationGuard)
 export class ChatController {
   constructor(private readonly chatService: ChatService) {}
 
@@ -36,8 +60,8 @@ export class ChatController {
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   @ApiOperation({
     summary: 'Send chat message and get AI response',
-    description:
-      'Queries all modules and provides intelligent responses using Z.ai GLM-4.5-Flash model',
+      description:
+        'Queries all modules and provides intelligent responses using Z.ai GLM-4.7-Flash model',
   })
   @ApiParam({
     name: 'organizationId',
@@ -93,7 +117,13 @@ export class ChatController {
     required: false,
     type: Number,
     description: 'Maximum number of messages to retrieve',
-    example: 10,
+    example: 20,
+  })
+  @ApiQuery({
+    name: 'before',
+    required: false,
+    type: String,
+    description: 'Cursor: ISO timestamp to fetch messages before (for loading older messages)',
   })
   @ApiResponse({
     status: 200,
@@ -111,6 +141,7 @@ export class ChatController {
     @Req() req,
     @Param('organizationId') organizationId: string,
     @Query('limit') limit?: number,
+    @Query('before') before?: string,
   ) {
     const userId = req.user?.id || req.user?.sub;
     if (!userId) {
@@ -121,6 +152,7 @@ export class ChatController {
       userId,
       organizationId,
       limit,
+      before,
     );
   }
 
@@ -156,6 +188,71 @@ export class ChatController {
     }
 
     return this.chatService.clearConversationHistory(userId, organizationId);
+  }
+
+  @Post('stream')
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @ApiOperation({
+    summary: 'Send chat message and get streaming AI response',
+    description: 'Streams AI response tokens via Server-Sent Events',
+  })
+  @ApiParam({
+    name: 'organizationId',
+    description: 'Organization ID',
+    type: String,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Streaming response started',
+  })
+  @ApiResponse({
+    status: 429,
+    description: 'Too Many Requests',
+  })
+  async sendMessageStream(
+    @Req() req,
+    @Param('organizationId') organizationId: string,
+    @Body() dto: SendMessageDto,
+    @Res() res: Response,
+  ): Promise<void> {
+    const userId = req.user?.id || req.user?.sub;
+    if (!userId) {
+      throw new BadRequestException('User ID not found in token');
+    }
+
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
+    res.flushHeaders();
+
+    try {
+      await this.chatService.sendMessageStream(userId, organizationId, dto, {
+        onToken: (token: string) => {
+          res.write(`data: ${JSON.stringify({ type: 'token', content: token })}\n\n`);
+        },
+        onComplete: (metadata: unknown) => {
+          const safe = buildChatStreamDoneMetadata(
+            metadata && typeof metadata === 'object' && !Array.isArray(metadata)
+              ? (metadata as Record<string, unknown>)
+              : undefined,
+          );
+          res.write(`data: ${JSON.stringify({ type: 'done', metadata: safe })}\n\n`);
+          res.end();
+        },
+        onError: (error: Error) => {
+          res.write(
+            `data: ${JSON.stringify({ type: 'error', message: chatStreamErrorMessage(error) })}\n\n`,
+          );
+          res.end();
+        },
+      });
+    } catch (error) {
+      res.write(
+        `data: ${JSON.stringify({ type: 'error', message: chatStreamErrorMessage(error) })}\n\n`,
+      );
+      res.end();
+    }
   }
 
   @Post('tts')

@@ -1,25 +1,19 @@
-import React from 'react'
+
 import { createFileRoute } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/hooks/useAuth'
 import { PageLayout } from '@/components/PageLayout'
 import DayLaborerManagement from '@/components/DayLaborerManagement'
 import OrganizationSwitcher from '@/components/OrganizationSwitcher'
-import { Loader2 } from 'lucide-react';
+import LanguageSwitcher from '@/components/LanguageSwitcher'
+import { ListPageSkeleton } from '@/components/ui/page-skeletons';
 
-const AppContent: React.FC = () => {
+const AppContent = () => {
   const { t } = useTranslation();
   const { currentOrganization, currentFarm } = useAuth();
 
   if (!currentOrganization) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <div className="text-center">
-          <Loader2 className="h-12 w-12 animate-spin text-green-600 mx-auto" />
-          <p className="mt-4 text-gray-600 dark:text-gray-400">{t('workers.loadingOrganization')}</p>
-        </div>
-      </div>
-    );
+    return <ListPageSkeleton className="p-6" />;
   }
 
   return (
@@ -35,7 +29,10 @@ const AppContent: React.FC = () => {
             </span>
           )}
         </div>
-        <OrganizationSwitcher />
+        <div className="flex flex-wrap items-center gap-2">
+          <OrganizationSwitcher />
+          <LanguageSwitcher />
+        </div>
       </div>
       <DayLaborerManagement />
     </PageLayout>

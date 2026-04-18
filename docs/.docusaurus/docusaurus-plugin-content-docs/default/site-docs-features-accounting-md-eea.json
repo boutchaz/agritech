@@ -1,7 +1,7 @@
 {
   "id": "features/accounting",
-  "title": "Accounting Module",
-  "description": "Overview",
+  "title": "Accounting & Finance",
+  "description": "The AgroGina platform includes a full-featured accounting module built on double-entry bookkeeping principles. It provides a chart of accounts with multi-country templates, journal entry management, invoice lifecycle handling, financial reporting, cost center tracking, and worker payment processing -- all scoped to individual organizations via multi-tenant isolation.",
   "source": "@site/docs/features/accounting.md",
   "sourceDirName": "features",
   "slug": "/features/accounting",
@@ -10,14 +10,18 @@
   "unlisted": false,
   "tags": [],
   "version": "current",
-  "frontMatter": {},
+  "sidebarPosition": 8,
+  "frontMatter": {
+    "sidebar_position": 8,
+    "title": "Accounting & Finance"
+  },
   "sidebar": "docs",
   "previous": {
-    "title": "Weather Analytics",
-    "permalink": "/features/weather"
+    "title": "Tasks & Workforce",
+    "permalink": "/features/tasks-workforce"
   },
   "next": {
-    "title": "Billing Cycle: Quotes, Orders, and Bills",
-    "permalink": "/features/billing-cycle"
+    "title": "Inventory & Stock Management",
+    "permalink": "/features/inventory"
   }
 }

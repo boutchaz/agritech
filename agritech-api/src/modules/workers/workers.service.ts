@@ -2,7 +2,11 @@ import { Injectable, NotFoundException, ForbiddenException, BadRequestException,
 import { CreateWorkerDto } from './dto/create-worker.dto';
 import { UpdateWorkerDto } from './dto/update-worker.dto';
 import { DatabaseService } from '../database/database.service';
+import { paginate, type PaginatedResponse } from '../../common/dto/paginated-query.dto';
 import { EmailService } from '../email/email.service';
+import { NotificationsService } from '../notifications/notifications.service';
+import { AccountingAutomationService } from '../journal-entries/accounting-automation.service';
+import { NotificationType } from '../notifications/dto/notification.dto';
 
 export interface WorkerProfile {
   id: string;
@@ -28,6 +32,8 @@ export class WorkersService {
   constructor(
     private readonly databaseService: DatabaseService,
     private readonly emailService: EmailService,
+    private readonly notificationsService: NotificationsService,
+    private readonly accountingAutomationService: AccountingAutomationService,
   ) {}
   /**
    * Verify user has access to the organization
@@ -50,39 +56,31 @@ export class WorkersService {
   /**
    * Get all workers for an organization
    */
-  async findAll(userId: string, organizationId: string, farmId?: string) {
+  async findAll(userId: string, organizationId: string, farmId?: string, page: number = 1, pageSize: number = 50): Promise<PaginatedResponse<any>> {
     await this.verifyOrganizationAccess(userId, organizationId);
-
     const client = this.databaseService.getAdminClient();
-    let query = client
-      .from('workers')
-      .select(`
-        *,
-        organizations!inner(name),
-        farms(name)
-      `)
-      .eq('organization_id', organizationId)
-      .order('last_name', { ascending: true });
 
-    if (farmId) {
-      query = query.eq('farm_id', farmId);
-    }
-
-    const { data: workers, error } = await query;
-
-    if (error) {
-      throw new Error(`Failed to fetch workers: ${error.message}`);
-    }
-
-    return (workers || []).map(worker => ({
-      ...worker,
-      organization_name: Array.isArray(worker.organizations)
-        ? worker.organizations[0]?.name
-        : worker.organizations?.name,
-      farm_name: Array.isArray(worker.farms)
-        ? worker.farms[0]?.name
-        : worker.farms?.name,
-    }));
+    return paginate(client, 'workers', {
+      select: '*, organizations!inner(name), farms(name)',
+      filters: (q) => {
+        q = q.eq('organization_id', organizationId);
+        if (farmId) q = q.or(`farm_id.eq.${farmId.replace(/[,.()'"]/g, '')},farm_id.is.null`);
+        return q;
+      },
+      page,
+      pageSize,
+      orderBy: 'last_name',
+      ascending: true,
+      map: (worker) => ({
+        ...worker,
+        organization_name: Array.isArray(worker.organizations)
+          ? worker.organizations[0]?.name
+          : worker.organizations?.name,
+        farm_name: Array.isArray(worker.farms)
+          ? worker.farms[0]?.name
+          : worker.farms?.name,
+      }),
+    });
   }
 
   /**
@@ -184,6 +182,7 @@ export class WorkersService {
       metayage_percentage: createWorkerDto.metayage_percentage || null,
       calculation_basis: createWorkerDto.calculation_basis || null,
       payment_frequency: createWorkerDto.payment_frequency || null,
+      payment_frequencies: createWorkerDto.payment_frequencies || null,
       metayage_contract_details: createWorkerDto.metayage_contract_details || null,
       specialties: createWorkerDto.specialties || null,
       certifications: createWorkerDto.certifications || null,
@@ -201,6 +200,34 @@ export class WorkersService {
 
     if (error) {
       throw new Error(`Failed to create worker: ${error.message}`);
+    }
+
+    try {
+      const { data: orgUsers } = await client
+        .from('organization_users')
+        .select('user_id')
+        .eq('organization_id', organizationId)
+        .eq('is_active', true);
+
+      const userIds = (orgUsers || [])
+        .map((u: { user_id: string }) => u.user_id)
+        .filter((id: string) => id !== userId);
+
+      if (userIds.length > 0) {
+        const workerName = `${worker.first_name || ''} ${worker.last_name || ''}`.trim();
+        const farmName = Array.isArray(worker.farms) ? worker.farms[0]?.name : worker.farms?.name;
+
+        await this.notificationsService.createNotificationsForUsers(
+          userIds,
+          organizationId,
+          NotificationType.WORKER_ADDED,
+          `New worker added: ${workerName}`,
+          `${workerName} has been added${farmName ? ` to ${farmName}` : ''}${worker.position ? ` as ${worker.position}` : ''}`,
+          { workerId: worker.id, workerName, farmName, position: worker.position },
+        );
+      }
+    } catch (notifError) {
+      this.logger.warn(`Failed to send worker added notification: ${notifError}`);
     }
 
     return {
@@ -253,6 +280,7 @@ export class WorkersService {
     if ('metayage_percentage' in sanitizedData) sanitizedData.metayage_percentage = sanitizedData.metayage_percentage || null;
     if ('calculation_basis' in sanitizedData) sanitizedData.calculation_basis = sanitizedData.calculation_basis || null;
     if ('payment_frequency' in sanitizedData) sanitizedData.payment_frequency = sanitizedData.payment_frequency || null;
+    if ('payment_frequencies' in sanitizedData) sanitizedData.payment_frequencies = sanitizedData.payment_frequencies || null;
     if ('metayage_contract_details' in sanitizedData) sanitizedData.metayage_contract_details = sanitizedData.metayage_contract_details || null;
     if ('specialties' in sanitizedData) sanitizedData.specialties = sanitizedData.specialties || null;
     if ('certifications' in sanitizedData) sanitizedData.certifications = sanitizedData.certifications || null;
@@ -383,7 +411,7 @@ export class WorkersService {
 
     const { data: workRecords } = await client
       .from('work_records')
-      .select('amount_paid, payment_status')
+      .select('amount_paid, payment_status, work_date, task_id, hours_worked')
       .eq('worker_id', workerId);
 
     const workRecordsPaid = (workRecords || [])
@@ -393,6 +421,14 @@ export class WorkersService {
     const workRecordsPending = (workRecords || [])
       .filter(r => r.payment_status === 'pending')
       .reduce((sum, r) => sum + (r.amount_paid || 0), 0);
+
+    // Count distinct work dates as "days worked"
+    const distinctDates = new Set((workRecords || []).map(r => r.work_date).filter(Boolean));
+    const totalDaysWorked = distinctDates.size;
+
+    // Count distinct completed tasks
+    const distinctTasks = new Set((workRecords || []).map(r => r.task_id).filter(Boolean));
+    const totalTasksCompleted = distinctTasks.size;
 
     const { data: paymentRecords } = await client
       .from('payment_records')
@@ -426,8 +462,8 @@ export class WorkersService {
       totalWorkRecords: workRecords?.length || 0,
       totalPaid: workRecordsPaid + paymentsPaid + metayageTotal,
       pendingPayments: workRecordsPending + paymentsPending,
-      totalDaysWorked: worker.total_days_worked || 0,
-      totalTasksCompleted: worker.total_tasks_completed || 0,
+      totalDaysWorked,
+      totalTasksCompleted,
     };
   }
 
@@ -637,6 +673,18 @@ export class WorkersService {
       throw new NotFoundException('Worker not found');
     }
 
+    // Validate account mappings before insert
+    const [revenueAccountId, cashAccountId] = await Promise.all([
+      this.accountingAutomationService.resolveAccountId(organizationId, 'revenue_type', 'metayage'),
+      this.accountingAutomationService.resolveAccountId(organizationId, 'cash', 'bank'),
+    ]);
+
+    if (!revenueAccountId || !cashAccountId) {
+      throw new BadRequestException(
+        'Account mappings not configured for revenue_type: metayage. Please configure account mappings before creating metayage settlements.',
+      );
+    }
+
     const { data: settlement, error } = await client
       .from('metayage_settlements')
       .insert({
@@ -649,6 +697,20 @@ export class WorkersService {
 
     if (error) {
       throw new Error(`Failed to create métayage settlement: ${error.message}`);
+    }
+
+    // Create journal entry for the metayage revenue
+    const settlementAmount = Number(settlement.amount || data.amount);
+    if (settlementAmount > 0) {
+      await this.accountingAutomationService.createJournalEntryFromRevenue(
+        organizationId,
+        settlement.id,
+        'metayage',
+        settlementAmount,
+        new Date(settlement.settlement_date || data.settlement_date),
+        `Metayage settlement: worker ${workerId}`,
+        userId,
+      );
     }
 
     return settlement;
@@ -1042,7 +1104,7 @@ export class WorkersService {
         .eq('id', organizationId)
         .single();
 
-      const organizationName = org?.name || 'AgriTech';
+      const organizationName = org?.name || 'AgroGina';
 
       // Send welcome email with temporary password
       const emailSent = await this.emailService.sendUserCreatedEmail(
@@ -1076,9 +1138,11 @@ export class WorkersService {
    */
   private generateRandomPassword(): string {
     const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
+    // Use crypto.randomInt for cryptographically secure random password generation
+    const crypto = require('crypto');
     let password = '';
     for (let i = 0; i < 16; i++) {
-      password += chars.charAt(Math.floor(Math.random() * chars.length));
+      password += chars.charAt(crypto.randomInt(chars.length));
     }
     return password;
   }

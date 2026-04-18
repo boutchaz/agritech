@@ -4,7 +4,6 @@ import { DatabaseService } from '../database/database.service';
 import { SatelliteCacheService } from './satellite-cache.service';
 
 const CORE_INDICES = ['NIRv', 'EVI', 'NDRE', 'NDMI'];
-const MONTHS_TO_SYNC = 6;
 const CONCURRENCY = 1;
 
 interface ParcelRow {
@@ -13,6 +12,8 @@ interface ParcelRow {
   boundary: number[][] | null;
   farm_id: string | null;
   organization_id: string;
+  planting_year: number | null;
+  crop_type: string | null;
 }
 
 export interface SyncProgress {
@@ -98,7 +99,7 @@ export class SatelliteSyncService {
     const client = this.db.getAdminClient();
     const { data, error } = await client
       .from('parcels')
-      .select('id, name, boundary, farm_id, organization_id')
+      .select('id, name, boundary, farm_id, organization_id, planting_year, crop_type')
       .eq('is_active', true)
       .not('boundary', 'is', null);
 
@@ -119,7 +120,7 @@ export class SatelliteSyncService {
       const geometry = this.boundaryToGeoJSON(parcel.boundary!);
       const aoi = { geometry, name: parcel.name || 'Parcel' };
 
-      await this.syncTimeSeries(parcel, aoi);
+      await this.syncTimeSeries(parcel);
       await this.syncLatestHeatmaps(parcel, aoi);
 
       this.progress.processedParcels++;
@@ -131,30 +132,33 @@ export class SatelliteSyncService {
     }
   }
 
-  private async syncTimeSeries(parcel: ParcelRow, aoi: { geometry: unknown; name: string }) {
+  private async syncTimeSeries(parcel: ParcelRow) {
+    const startDate = await this.cache.getParcelSyncStartDate(
+      parcel.id,
+      parcel.organization_id,
+      parcel.planting_year,
+      parcel.crop_type,
+    );
     const endDate = this.formatDate(new Date());
-    const startDate = this.formatDate(
-      new Date(new Date().setMonth(new Date().getMonth() - MONTHS_TO_SYNC)),
+
+    this.logger.log(
+      `[Sync] Timeseries delta sync for ${parcel.name}: ${startDate} → ${endDate}`,
     );
 
-    for (const index of CORE_INDICES) {
-      try {
-        await this.cache.getTimeSeries(
-          {
-            aoi,
-            date_range: { start_date: startDate, end_date: endDate },
-            index,
-            interval: 'week',
-            cloud_coverage: 10,
-            parcel_id: parcel.id,
-            farm_id: parcel.farm_id,
-          },
-          parcel.organization_id,
-        );
-        this.logger.debug(`[Sync] Timeseries cached: ${parcel.name} ${index}`);
-      } catch (err) {
-        this.logger.warn(`[Sync] Timeseries failed for ${parcel.name} ${index}: ${err}`);
-      }
+    try {
+      await this.cache.syncParcelSatelliteData(
+        parcel.id,
+        parcel.organization_id,
+        parcel.farm_id ?? undefined,
+        {
+          startDate,
+          endDate,
+          indices: CORE_INDICES,
+        },
+      );
+      this.logger.debug(`[Sync] Timeseries synced: ${parcel.name}`);
+    } catch (err) {
+      this.logger.warn(`[Sync] Timeseries failed for ${parcel.name}: ${err}`);
     }
   }
 

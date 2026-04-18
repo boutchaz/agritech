@@ -1,6 +1,7 @@
-import React, { useMemo, useState } from 'react';
+import {  useMemo, useState  } from "react";
+import { cn } from '@/lib/utils';
 import { useNavigate } from '@tanstack/react-router';
-import { TestTube, TrendingUp, ChevronRight, AlertCircle, CheckCircle, Leaf, Droplets } from 'lucide-react';
+import { TestTube, ChevronRight, AlertCircle, CheckCircle, Leaf, Droplets } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useAnalysesByFarm } from '../../hooks/useAnalysesQuery';
 import { format, parseISO } from 'date-fns';
@@ -9,8 +10,10 @@ import { fr } from 'date-fns/locale';
 import { ar } from 'date-fns/locale';
 import { enUS } from 'date-fns/locale';
 import type { Analysis, AnalysisType, SoilAnalysisData, PlantAnalysisData, WaterAnalysisData } from '../../types/analysis';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
 
-const AnalysisWidget: React.FC = () => {
+const AnalysisWidget = () => {
   const navigate = useNavigate();
   const { currentFarm, currentOrganization } = useAuth();
   const { t, i18n } = useTranslation();
@@ -140,146 +143,153 @@ const AnalysisWidget: React.FC = () => {
     navigate({ to: '/analytics' });
   };
 
-  const getActiveColor = () => {
-    switch (activeType) {
-      case 'soil': return 'teal';
-      case 'plant': return 'green';
-      case 'water': return 'blue';
-      default: return 'teal';
-    }
-  };
-
   if (isLoading) {
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
-        <div className="animate-pulse space-y-4">
-          <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-1/3"></div>
-          <div className="h-20 bg-gray-200 dark:bg-gray-700 rounded"></div>
+      <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-700 p-6 h-full flex flex-col gap-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Skeleton className="h-10 w-10 rounded-2xl" />
+            <Skeleton className="h-5 w-24 rounded-lg" />
+          </div>
+          <Skeleton className="h-8 w-8 rounded-xl" />
+        </div>
+        <div className="flex gap-1 p-1 bg-slate-100 dark:bg-slate-900/50 rounded-2xl border border-slate-200 dark:border-slate-700/50">
+          {[1, 2, 3].map((_, skIdx) => (
+            <Skeleton key={"sk-" + skIdx} className="flex-1 h-9 rounded-xl" />
+          ))}
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <Skeleton className="h-24 rounded-2xl" />
+          <Skeleton className="h-24 rounded-2xl" />
+        </div>
+        <div className="space-y-3 mt-auto">
+          <div className="flex items-center justify-between px-1 mb-3">
+            <Skeleton className="h-3 w-28 rounded" />
+            <Skeleton className="h-px flex-1 mx-3 rounded" />
+          </div>
+          <Skeleton className="h-20 w-full rounded-2xl" />
         </div>
       </div>
     );
   }
 
-  const color = getActiveColor();
-
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+    <div className="bg-white dark:bg-slate-800 p-6 flex flex-col gap-6 h-full">
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-          <TestTube className={`h-5 w-5 text-${color}-600`} />
-          {t('dashboard.widgets.analysis.title', 'Analyses')}
-        </h3>
-        <button
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-blue-50 dark:bg-blue-900/30 rounded-2xl">
+            <TestTube className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+          </div>
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-white tracking-tight uppercase">
+            {t('dashboard.widgets.analysis.title', 'Analyses')}
+          </h3>
+        </div>
+        <Button
+          variant="ghost"
+          size="sm"
           onClick={handleViewAnalyses}
-          className="text-sm text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300 flex items-center gap-1"
+          className="text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 h-8 rounded-xl px-2 transition-colors"
         >
-          {t('dashboard.widgets.viewAll')}
-          <ChevronRight className="h-4 w-4" />
-        </button>
+          <ChevronRight className="h-5 w-5" />
+        </Button>
       </div>
 
       {/* Type Tabs */}
-      <div className="flex gap-1 mb-4 p-1 bg-gray-100 dark:bg-gray-700 rounded-lg">
-        {tabs.map(({ type, icon: Icon, color: tabColor }) => (
+      <div className="flex gap-1 p-1 bg-slate-100 dark:bg-slate-900/50 rounded-2xl border border-slate-200 dark:border-slate-700/50">
+        {tabs.map(({ type, icon: Icon }) => (
           <button
             key={type}
             onClick={() => setActiveType(type)}
-            className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+            className={cn(
+              "flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-[10px] font-medium uppercase tracking-widest transition-all",
               activeType === type
-                ? `bg-white dark:bg-gray-600 text-${tabColor}-600 dark:text-${tabColor}-400 shadow-sm`
-                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
-            }`}
+                ? "bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-sm border border-slate-100 dark:border-slate-700"
+                : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+            )}
           >
-            <Icon className="h-4 w-4" />
+            <Icon className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">{t(`dashboard.widgets.analysis.tabs.${type}`, type)}</span>
           </button>
         ))}
       </div>
 
       {stats.total > 0 ? (
-        <>
+        <div className="space-y-6 flex-1 flex flex-col">
           {/* Stats Grid */}
-          <div className="grid grid-cols-2 gap-4 mb-4">
-            <div className={`bg-${color}-50 dark:bg-${color}-900/20 rounded-lg p-4`}>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm text-gray-600 dark:text-gray-400">{t('dashboard.widgets.analysis.total', 'Total')}</span>
-                <TestTube className={`h-4 w-4 text-${color}-600`} />
-              </div>
-              <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                {stats.total}
-              </div>
-              <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                {t('dashboard.widgets.analysis.analyses', 'analyses')}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="relative bg-slate-50 dark:bg-slate-900/50 rounded-2xl p-4 overflow-hidden group/card border border-slate-100 dark:border-slate-700/50">
+              <div className="absolute top-0 right-0 w-16 h-16 bg-blue-500/5 rounded-full -mr-8 -mt-8 group-hover/card:scale-150 transition-transform duration-700"></div>
+              <div className="relative">
+                <span className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-widest">{t('dashboard.widgets.analysis.total', 'Total')}</span>
+                <div className="text-2xl font-bold text-slate-900 dark:text-white tabular-nums mt-1">{stats.total}</div>
+                <div className="text-[9px] font-bold text-blue-600 dark:text-blue-400 mt-1 uppercase tracking-tighter">{t('dashboard.widgets.analysis.analyses', 'analyses')}</div>
               </div>
             </div>
 
-            <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm text-gray-600 dark:text-gray-400">{t('dashboard.widgets.analysis.recent', 'Recent')}</span>
-                <TrendingUp className="h-4 w-4 text-blue-600" />
-              </div>
-              <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                {stats.recent}
-              </div>
-              <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                {t('dashboard.widgets.analysis.last30Days', 'last 30 days')}
+            <div className="relative bg-slate-50 dark:bg-slate-900/50 rounded-2xl p-4 overflow-hidden group/card border border-slate-100 dark:border-slate-700/50">
+              <div className="absolute top-0 right-0 w-16 h-16 bg-emerald-500/5 rounded-full -mr-8 -mt-8 group-hover/card:scale-150 transition-transform duration-700"></div>
+              <div className="relative">
+                <span className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-widest">{t('dashboard.widgets.analysis.recent', 'Recent')}</span>
+                <div className="text-2xl font-bold text-slate-900 dark:text-white tabular-nums mt-1">{stats.recent}</div>
+                <div className="text-[9px] font-bold text-emerald-600 dark:text-emerald-400 mt-1 uppercase tracking-tighter">Last 30 days</div>
               </div>
             </div>
           </div>
 
           {/* Attention Needed */}
           {stats.needsAttention > 0 && (
-            <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
-              <div className="flex items-center gap-2">
-                <AlertCircle className="h-5 w-5 text-amber-600" />
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-amber-900 dark:text-amber-200">
-                    {t('dashboard.widgets.analysis.needsAttention', { count: stats.needsAttention })}
-                  </p>
-                  <p className="text-xs text-amber-700 dark:text-amber-300">
-                    {t('dashboard.widgets.analysis.outOfNorm', 'Parameters out of normal range')}
-                  </p>
-                </div>
+            <div className="p-4 bg-amber-50/50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/30 rounded-2xl flex items-center gap-4 animate-pulse">
+              <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-xl">
+                <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+              </div>
+              <div className="flex-1">
+                <p className="text-[10px] font-medium text-amber-800 dark:text-amber-300 uppercase tracking-widest">
+                  {t('dashboard.widgets.analysis.needsAttention', { count: stats.needsAttention })}
+                </p>
+                <p className="text-[9px] font-bold text-amber-600 dark:text-amber-500 uppercase tracking-tight mt-0.5">
+                  {t('dashboard.widgets.analysis.outOfNorm')}
+                </p>
               </div>
             </div>
           )}
 
           {/* Latest Analysis */}
           {stats.latestAnalysis && (
-            <div>
-              <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {t('dashboard.widgets.analysis.latestAnalysis', 'Latest Analysis')}
-              </h4>
-              <div className="p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
-                <div className="flex items-start justify-between mb-2">
-                  <div>
-                    <p className="text-sm font-medium text-gray-900 dark:text-white">
+            <div className="mt-auto">
+              <div className="flex items-center justify-between mb-3 px-1">
+                <h4 className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+                  {t('dashboard.widgets.analysis.latestAnalysis', 'Latest Analysis')}
+                </h4>
+                <div className="h-px flex-1 bg-slate-100 dark:bg-slate-800 mx-3"></div>
+              </div>
+              <div className="p-4 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700/50 rounded-2xl shadow-sm">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold text-slate-900 dark:text-white truncate uppercase tracking-tight">
                       {t('dashboard.widgets.analysis.parcel', 'Parcel')}
                     </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      {format(parseISO(stats.latestAnalysis.analysis_date), 'dd MMMM yyyy', { locale: getLocale() })}
+                    <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase mt-0.5">
+                      {format(parseISO(stats.latestAnalysis.analysis_date), 'dd MMM yyyy', { locale: getLocale() })}
                     </p>
                   </div>
-                  {stats.latestAnalysis && (
-                    <div className="text-right">
-                      <div className="text-xs text-gray-500 dark:text-gray-400">
-                        {getPrimaryIndicator(stats.latestAnalysis).label}
-                      </div>
-                      <div className={`text-sm font-bold text-${color}-600 dark:text-${color}-400`}>
-                        {getPrimaryIndicator(stats.latestAnalysis).value}
-                      </div>
+                  <div className="text-right ml-3 flex-shrink-0">
+                    <div className="text-[9px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+                      {getPrimaryIndicator(stats.latestAnalysis).label}
                     </div>
-                  )}
+                    <div className="text-lg font-semibold text-blue-600 dark:text-blue-400 tabular-nums leading-none mt-1">
+                      {getPrimaryIndicator(stats.latestAnalysis).value}
+                    </div>
+                  </div>
                 </div>
 
                 {/* Secondary Indicators */}
-                <div className="grid grid-cols-3 gap-2 mt-3">
-                  {stats.latestAnalysis && getSecondaryIndicators(stats.latestAnalysis).map((indicator, idx) => (
+                <div className="grid grid-cols-3 gap-3 mt-4 pt-4 border-t border-slate-50 dark:border-slate-700/50">
+                  {getSecondaryIndicators(stats.latestAnalysis).map((indicator) => (
                     indicator.value !== undefined && indicator.value !== null && (
-                      <div key={idx} className="text-center">
-                        <div className="text-xs text-gray-500 dark:text-gray-400">{indicator.label}</div>
-                        <div className="text-sm font-semibold text-gray-900 dark:text-white">
+                      <div key={indicator.label} className="text-center bg-slate-50 dark:bg-slate-900/50 py-2 rounded-xl border border-slate-100 dark:border-slate-700/30">
+                        <div className="text-[8px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-widest">{indicator.label}</div>
+                        <div className="text-xs font-semibold text-slate-700 dark:text-slate-300 tabular-nums mt-0.5">
                           {typeof indicator.value === 'number' ? indicator.value.toFixed(1) : indicator.value}
                         </div>
                       </div>
@@ -291,24 +301,25 @@ const AnalysisWidget: React.FC = () => {
           )}
 
           {stats.needsAttention === 0 && stats.total > 0 && (
-            <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400 mt-4">
-              <CheckCircle className="h-4 w-4" />
-              <span>{t('dashboard.widgets.analysis.allInNorm', 'All analyses are within normal range')}</span>
+            <div className="flex items-center justify-center gap-2 py-2 px-4 bg-emerald-50/50 dark:bg-emerald-900/10 rounded-full mt-auto">
+              <CheckCircle className="h-3 w-3 text-emerald-500" />
+              <span className="text-[10px] font-medium text-emerald-700 dark:text-emerald-400 uppercase tracking-widest">{t('dashboard.widgets.analysis.allInNorm')}</span>
             </div>
           )}
-        </>
+        </div>
       ) : (
-        <div className="text-center py-6">
-          <TestTube className="h-12 w-12 mx-auto mb-2 text-gray-300" />
-          <p className="text-sm text-gray-500 dark:text-gray-400">
+        <div className="text-center py-12 bg-slate-50 dark:bg-slate-900/30 rounded-3xl border-2 border-dashed border-slate-100 dark:border-slate-800 mt-auto flex-1 flex flex-col justify-center">
+          <TestTube className="h-10 w-10 text-slate-200 dark:text-slate-700 mx-auto mb-3" />
+          <p className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-4">
             {t('dashboard.widgets.analysis.empty', 'No analyses available')}
           </p>
-          <button
+          <Button
+            size="sm"
             onClick={handleViewAnalyses}
-            className="mt-2 text-sm text-green-600 hover:text-green-700 dark:text-green-400"
+            className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-[10px] uppercase tracking-widest rounded-xl px-4 w-fit mx-auto"
           >
-            {t('dashboard.widgets.analysis.addAnalysis', 'Add an analysis')}
-          </button>
+            {t('dashboard.widgets.analysis.addAnalysis', 'Add New')}
+          </Button>
         </div>
       )}
     </div>

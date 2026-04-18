@@ -38,7 +38,7 @@ export class RemindersService {
         description,
         due_date,
         organization_id,
-        assigned_user_id,
+        assigned_to,
         worker:workers!assigned_to(user_id)
       `)
       .in('status', ['pending', 'assigned', 'in_progress'])
@@ -77,7 +77,7 @@ export class RemindersService {
         description,
         due_date,
         organization_id,
-        assigned_user_id,
+        assigned_to,
         worker:workers!assigned_to(user_id)
       `)
       .lt('due_date', today)
@@ -96,6 +96,10 @@ export class RemindersService {
         await this.sendTaskReminder(task, 'overdue_1d');
       } else if (daysOverdue === 3) {
         await this.sendTaskReminder(task, 'overdue_3d');
+      } else if (daysOverdue === 7) {
+        await this.sendTaskReminder(task, 'overdue_7d');
+      } else if (daysOverdue === 14) {
+        await this.sendTaskReminder(task, 'overdue_14d');
       }
     }
 
@@ -122,8 +126,8 @@ export class RemindersService {
       return;
     }
 
-    // Get user ID (from assigned_user_id or worker.user_id)
-    const userId = task.assigned_user_id || task.worker?.user_id;
+    // Get user ID from the assigned worker's user_id
+    const userId = task.worker?.user_id;
     if (!userId) {
       this.logger.warn(`No user assigned to task ${task.id}, skipping reminder`);
       return;
@@ -188,6 +192,10 @@ export class RemindersService {
         return `Task Overdue: ${task.title}`;
       case 'overdue_3d':
         return `Task 3 Days Overdue: ${task.title}`;
+      case 'overdue_7d':
+        return `Task 1 Week Overdue: ${task.title}`;
+      case 'overdue_14d':
+        return `Task 2 Weeks Overdue: ${task.title}`;
       default:
         return `Task Reminder: ${task.title}`;
     }
@@ -205,6 +213,10 @@ export class RemindersService {
         return `This task was due on ${dueDate} and is now 1 day overdue.`;
       case 'overdue_3d':
         return `This task was due on ${dueDate} and is now 3 days overdue. Immediate action required.`;
+      case 'overdue_7d':
+        return `This task was due on ${dueDate} and is now 1 week overdue. Escalating priority.`;
+      case 'overdue_14d':
+        return `This task was due on ${dueDate} and is now 2 weeks overdue. Requires management attention.`;
       default:
         return `Task due date: ${dueDate}`;
     }
@@ -223,34 +235,31 @@ export class RemindersService {
       return false;
     }
 
-    const templateName = this.getEmailTemplate(reminderType);
+    const templateType = this.getEmailTemplateType(reminderType);
 
-    return this.emailService.sendEmail({
-      to: profile.email,
-      subject: this.getReminderTitle(reminderType, task),
-      template: templateName,
-      context: {
-        firstName: profile.first_name || 'User',
-        taskTitle: task.title,
-        taskDescription: task.description || 'No description',
-        dueDate: new Date(task.due_date).toLocaleDateString(),
-        reminderType,
-        taskUrl: `${process.env.FRONTEND_URL}/workforce/tasks`,
-      },
+    return this.emailService.sendByType(templateType, profile.email, {
+      firstName: profile.first_name || 'User',
+      taskTitle: task.title,
+      taskDescription: task.description || 'No description',
+      dueDate: new Date(task.due_date).toLocaleDateString(),
+      reminderType,
+      taskUrl: `${process.env.FRONTEND_URL}/workforce/tasks`,
     });
   }
 
-  private getEmailTemplate(reminderType: string): string {
+  private getEmailTemplateType(reminderType: string): string {
     switch (reminderType) {
       case 'due_soon':
-        return 'task-due-soon';
+        return 'task_due_soon';
       case 'due_today':
-        return 'task-due-today';
+        return 'task_due_today';
       case 'overdue_1d':
       case 'overdue_3d':
-        return 'task-overdue';
+      case 'overdue_7d':
+      case 'overdue_14d':
+        return 'task_overdue';
       default:
-        return 'task-reminder';
+        return 'task_overdue';
     }
   }
 

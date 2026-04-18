@@ -1,13 +1,19 @@
 {
   "expo": {
-    "name": "AgriTech Field",
-    "slug": "agritech-field",
+    "name": "AgroGina",
+    "slug": "agrogina",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
-    "scheme": "agritech",
+    "scheme": "agrogina",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/8d011fff-336d-4f7a-a3d9-fd1b63149ea7"
+    },
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -15,32 +21,47 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.agritech.field",
+      "bundleIdentifier": "com.agrogina.field",
+      "buildNumber": "1",
       "infoPlist": {
-        "NSCameraUsageDescription": "AgriTech needs camera access to capture harvest photos and document crop conditions.",
-        "NSLocationWhenInUseUsageDescription": "AgriTech needs location access to record harvest locations and track deliveries.",
-        "NSLocationAlwaysAndWhenInUseUsageDescription": "AgriTech needs background location for delivery tracking and geofenced clock-in.",
-        "NSFaceIDUsageDescription": "AgriTech uses Face ID for secure and quick authentication.",
-        "NSMicrophoneUsageDescription": "AgriTech needs microphone access for voice notes in the field."
+        "NSCameraUsageDescription": "AgroGina needs camera access to capture harvest photos and document crop conditions.",
+        "NSLocationWhenInUseUsageDescription": "AgroGina needs location access to record harvest locations and track deliveries.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "AgroGina needs background location for delivery tracking and geofenced clock-in.",
+        "NSFaceIDUsageDescription": "AgroGina uses Face ID for secure and quick authentication.",
+        "NSMicrophoneUsageDescription": "AgroGina needs microphone access for voice notes in the field."
       }
     },
     "android": {
-      "package": "com.agritech.field",
+      "package": "com.agrogina.field",
+      "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#16a34a"
       },
       "edgeToEdgeEnabled": true,
       "permissions": [
-        "CAMERA",
-        "ACCESS_FINE_LOCATION",
-        "ACCESS_COARSE_LOCATION",
-        "ACCESS_BACKGROUND_LOCATION",
-        "RECORD_AUDIO",
-        "USE_BIOMETRIC",
-        "USE_FINGERPRINT",
-        "VIBRATE",
-        "RECEIVE_BOOT_COMPLETED"
+        "android.permission.CAMERA",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_BACKGROUND_LOCATION",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.USE_BIOMETRIC",
+        "android.permission.USE_FINGERPRINT",
+        "android.permission.VIBRATE",
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_LOCATION",
+        "android.permission.CAMERA",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_BACKGROUND_LOCATION",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.USE_BIOMETRIC",
+        "android.permission.USE_FINGERPRINT",
+        "android.permission.VIBRATE",
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_LOCATION"
       ]
     },
     "plugins": [
@@ -50,40 +71,42 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Allow AgriTech to access your camera for harvest documentation."
+          "cameraPermission": "Allow AgroGina to access your camera for harvest documentation."
         }
       ],
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "Allow AgriTech to use your location for field tracking and geofencing.",
+          "locationAlwaysAndWhenInUsePermission": "Allow AgroGina to use your location for field tracking and geofencing.",
           "isAndroidBackgroundLocationEnabled": true
         }
       ],
       [
         "expo-image-picker",
         {
-          "photosPermission": "Allow AgriTech to access your photos for documentation."
+          "photosPermission": "Allow AgroGina to access your photos for documentation."
         }
       ],
       [
         "expo-local-authentication",
         {
-          "faceIDPermission": "Allow AgriTech to use Face ID for quick login."
+          "faceIDPermission": "Allow AgroGina to use Face ID for quick login."
         }
       ],
-      "expo-sqlite"
+      "expo-sqlite",
+      "expo-font"
     ],
     "experiments": {
       "typedRoutes": true
     },
     "extra": {
       "eas": {
-        "projectId": "your-eas-project-id"
+        "projectId": "8d011fff-336d-4f7a-a3d9-fd1b63149ea7"
       },
       "firebaseAnalyticsEnabled": true,
       "ga4MeasurementId": "G-XXXXXXXXXX",
-      "ga4ApiSecret": "your-ga4-api-secret"
+      "ga4ApiSecret": "your-ga4-api-secret",
+      "router": {}
     }
   }
 }

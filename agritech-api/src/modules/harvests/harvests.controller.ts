@@ -12,6 +12,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiParam, ApiResponse, ApiHeader, ApiQuery } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { OrganizationGuard } from '../../common/guards/organization.guard';
 import { HarvestsService } from './harvests.service';
 import { CreateHarvestDto } from './dto/create-harvest.dto';
 import { UpdateHarvestDto } from './dto/update-harvest.dto';
@@ -20,7 +21,7 @@ import { SellHarvestDto } from './dto/sell-harvest.dto';
 
 @ApiTags('Production - Harvests')
 @ApiBearerAuth('JWT-auth')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, OrganizationGuard)
 @Controller('organizations/:organizationId/harvests')
 export class HarvestsController {
   constructor(private readonly harvestsService: HarvestsService) {}
@@ -32,6 +33,8 @@ export class HarvestsController {
   @ApiQuery({ name: 'dateTo', required: false, description: 'Filter to date (YYYY-MM-DD)' })
   @ApiQuery({ name: 'date_from', required: false, description: 'Filter from date (YYYY-MM-DD) - legacy format' })
   @ApiQuery({ name: 'date_to', required: false, description: 'Filter to date (YYYY-MM-DD) - legacy format' })
+  @ApiQuery({ name: 'farmId', required: false, description: 'Filter by farm ID (camelCase; same as farm_id)' })
+  @ApiQuery({ name: 'parcelId', required: false, description: 'Filter by parcel ID (camelCase; same as parcel_id)' })
   @ApiResponse({
     status: 200,
     description: 'Harvests retrieved successfully',
@@ -55,11 +58,13 @@ export class HarvestsController {
     @Query('date_from') legacyDateFrom?: string,
     @Query('date_to') legacyDateTo?: string,
   ) {
-    // Support both camelCase and snake_case date parameters
+    // Support both camelCase and snake_case (dates, farm, parcel)
     const finalFilters = {
       ...filters,
       dateFrom: filters.dateFrom || legacyDateFrom,
       dateTo: filters.dateTo || legacyDateTo,
+      farm_id: filters.farm_id ?? filters.farmId,
+      parcel_id: filters.parcel_id ?? filters.parcelId,
     };
     return this.harvestsService.findAll(req.user.id, organizationId, finalFilters);
   }

@@ -6,7 +6,7 @@ import {
   IsOptional,
   IsDateString,
 } from 'class-validator';
-import { AIProvider } from '../interfaces';
+import { AIProvider, AgromindReportType } from '../interfaces';
 
 export class GenerateAIReportDto {
   @ApiProperty({ description: 'Parcel ID to generate report for' })
@@ -38,6 +38,43 @@ export class GenerateAIReportDto {
   @IsOptional()
   @IsString()
   language?: string;
+
+  @ApiPropertyOptional({
+    enum: AgromindReportType,
+    description: 'Agromind report type (defaults to general for backward compatibility)',
+    default: AgromindReportType.GENERAL,
+  })
+  @IsOptional()
+  @IsEnum(AgromindReportType)
+  reportType?: AgromindReportType;
+
+  @ApiPropertyOptional({
+    enum: ['F2_partiel', 'F3_complet'],
+    description:
+      'Only used when reportType=recalibration. F2_partiel for user-declared changes, F3_complet for post-campaign annual re-baselining. Defaults to F3_complet.',
+  })
+  @IsOptional()
+  @IsString()
+  recalibrationMode?: 'F2_partiel' | 'F3_complet';
+
+  @ApiPropertyOptional({
+    description:
+      'Only used when reportType=recalibration with F2_partiel. Describes the user-declared change driving the partial re-calibration.',
+  })
+  @IsOptional()
+  recalibrationChange?: {
+    type:
+      | 'source_eau'
+      | 'regime_irrigation'
+      | 'taille_severe'
+      | 'arrachage'
+      | 'replantation'
+      | 'nouvelle_analyse'
+      | 'autre';
+    description: string;
+    date: string;
+    details?: Record<string, unknown>;
+  };
 }
 
 export class AIProviderInfoDto {

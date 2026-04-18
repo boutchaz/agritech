@@ -1,0 +1,27 @@
+{
+  "id": "features/cron-jobs",
+  "title": "Scheduled Jobs & Cron",
+  "description": "Overview",
+  "source": "@site/docs/features/cron-jobs.md",
+  "sourceDirName": "features",
+  "slug": "/features/cron-jobs",
+  "permalink": "/features/cron-jobs",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 15,
+  "frontMatter": {
+    "sidebar_position": 15,
+    "title": "Scheduled Jobs & Cron"
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "Compliance & Certifications",
+    "permalink": "/features/compliance"
+  },
+  "next": {
+    "title": "Calibration V2 — Multi-Stakeholder Validation Report",
+    "permalink": "/features/calibration-v2-validation-report"
+  }
+}

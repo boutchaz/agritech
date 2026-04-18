@@ -1,6 +1,7 @@
 import { Controller, Get, Post, Patch, Body, UseGuards, Request, Param } from '@nestjs/common';
 import { OrganizationsService, CreateOrganizationDto } from './organizations.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { OrganizationGuard } from '../../common/guards/organization.guard';
 import { PoliciesGuard } from '../casl/policies.guard';
 import { CheckPolicies } from '../casl/check-policies.decorator';
 import { Action } from '../casl/action.enum';
@@ -10,7 +11,7 @@ import { UpdateOrganizationDto } from './dto/update-organization.dto';
 
 @ApiTags('organizations')
 @Controller('organizations')
-@UseGuards(JwtAuthGuard, PoliciesGuard)
+@UseGuards(JwtAuthGuard, OrganizationGuard, PoliciesGuard)
 @ApiBearerAuth()
 export class OrganizationsController {
     constructor(private readonly organizationsService: OrganizationsService) { }

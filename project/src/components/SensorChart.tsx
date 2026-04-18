@@ -1,4 +1,4 @@
-import React from 'react';
+
 import {
   LineChart,
   Line,
@@ -15,7 +15,7 @@ interface SensorChartProps {
   data: SensorData[];
 }
 
-const SensorChart: React.FC<SensorChartProps> = ({ data }) => {
+const SensorChart = ({ data }: SensorChartProps) => {
   const formatTimestamp = (timestamp: Date) => {
     return new Date(timestamp).toLocaleTimeString('fr-FR', {
       hour: '2-digit',

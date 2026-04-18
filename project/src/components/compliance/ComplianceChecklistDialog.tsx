@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { 
-  AlertTriangle, 
+import { useTranslation } from 'react-i18next';
+import {
+  AlertTriangle,
   Circle,
   Filter,
   FileText,
@@ -9,14 +10,8 @@ import {
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
+import { StatusDot } from '@/components/ui/status-dot';
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import { Input } from '@/components/ui/Input';
 import {
   Select,
@@ -27,6 +22,7 @@ import {
 } from '@/components/ui/radix-select';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Skeleton } from '@/components/ui/skeleton';
 
 import { useComplianceRequirements } from '@/hooks/useCompliance';
 import { CertificationType, type ComplianceRequirementDto } from '@/lib/api/compliance';
@@ -40,18 +36,19 @@ export function ComplianceChecklistDialog({ defaultCertificationType }: Complian
   const [certType, setCertType] = useState<string>(defaultCertificationType || 'GlobalGAP');
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const { t } = useTranslation('compliance');
 
   const { data: requirements, isLoading } = useComplianceRequirements(certType);
 
-  const categories = requirements 
+  const categories = requirements
     ? [...new Set(requirements.map(r => r.category))].sort()
     : [];
 
   const filteredRequirements = requirements?.filter(req => {
-    const matchesSearch = 
+    const matchesSearch =
       req.requirement_code.toLowerCase().includes(search.toLowerCase()) ||
       req.requirement_description.toLowerCase().includes(search.toLowerCase());
-    
+
     const matchesCategory = categoryFilter === 'all' || req.category === categoryFilter;
 
     return matchesSearch && matchesCategory;
@@ -66,29 +63,25 @@ export function ComplianceChecklistDialog({ defaultCertificationType }: Complian
   }, {} as Record<string, ComplianceRequirementDto[]>);
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button className="w-full" variant="secondary">
-          <ClipboardList className="mr-2 h-4 w-4" />
-          Voir la checklist complète
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-[700px] max-h-[85vh]">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5 text-primary" />
-            Checklist de Conformité
-          </DialogTitle>
-          <DialogDescription>
-            Exigences requises pour la certification. Les points critiques sont marqués en rouge.
-          </DialogDescription>
-        </DialogHeader>
+    <>
+      <Button className="w-full" variant="secondary" onClick={() => setOpen(true)}>
+        <ClipboardList className="mr-2 h-4 w-4" />
+        {t('dialogs.checklist.button')}
+      </Button>
+      <ResponsiveDialog
+        open={open}
+        onOpenChange={setOpen}
+        title={t('dialogs.checklist.title')}
+        description={t('dialogs.checklist.description')}
+        size="xl"
+        contentClassName="max-h-[85vh] overflow-y-auto"
+      >
 
         <div className="flex flex-col gap-4">
           <div className="flex flex-col sm:flex-row gap-3">
             <Select value={certType} onValueChange={setCertType}>
               <SelectTrigger className="w-full sm:w-[180px]">
-                <SelectValue placeholder="Type de certification" />
+                <SelectValue placeholder={t('dialogs.checklist.certType')} />
               </SelectTrigger>
               <SelectContent>
                 {Object.values(CertificationType).map((type) => (
@@ -101,11 +94,11 @@ export function ComplianceChecklistDialog({ defaultCertificationType }: Complian
               <SelectTrigger className="w-full sm:w-[180px]">
                 <div className="flex items-center gap-2">
                   <Filter className="h-4 w-4" />
-                  <SelectValue placeholder="Catégorie" />
+                  <SelectValue placeholder={t('dialogs.checklist.category')} />
                 </div>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Toutes catégories</SelectItem>
+                <SelectItem value="all">{t('dialogs.checklist.allCategories')}</SelectItem>
                 {categories.map((cat) => (
                   <SelectItem key={cat} value={cat}>{cat}</SelectItem>
                 ))}
@@ -115,7 +108,7 @@ export function ComplianceChecklistDialog({ defaultCertificationType }: Complian
             <div className="relative flex-1">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Rechercher..."
+                placeholder={t('dialogs.checklist.searchPlaceholder')}
                 className="pl-9"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -125,32 +118,51 @@ export function ComplianceChecklistDialog({ defaultCertificationType }: Complian
 
           <div className="flex items-center gap-4 text-xs text-muted-foreground">
             <div className="flex items-center gap-1">
-              <div className="w-2 h-2 rounded-full bg-red-500" />
-              <span>Critique</span>
+              <StatusDot color="red" size="sm" />
+              <span>{t('dialogs.checklist.critical')}</span>
             </div>
             <div className="flex items-center gap-1">
-              <div className="w-2 h-2 rounded-full bg-blue-500" />
-              <span>Standard</span>
+              <StatusDot color="blue" size="sm" />
+              <span>{t('dialogs.checklist.standard')}</span>
             </div>
             <span className="ml-auto">
-              {filteredRequirements.length} exigence{filteredRequirements.length !== 1 ? 's' : ''}
+              {filteredRequirements.length !== 1
+                ? t('dialogs.checklist.requirementCountPlural', { count: filteredRequirements.length })
+                : t('dialogs.checklist.requirementCount', { count: filteredRequirements.length })}
             </span>
           </div>
 
           <ScrollArea className="h-[400px] pr-4">
             {isLoading ? (
-              <div className="space-y-4">
-                {[1, 2, 3, 4, 5].map((i) => (
-                  <div key={i} className="space-y-2">
-                    <div className="h-4 w-24 bg-muted animate-pulse rounded" />
-                    <div className="h-16 w-full bg-muted animate-pulse rounded" />
+              <div className="space-y-6">
+                {[1, 2, 3].map((group) => (
+                  <div key={group} className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Skeleton className="w-2 h-2 rounded-full" />
+                      <Skeleton className="h-4 w-32" />
+                      <Skeleton className="h-5 w-8 rounded-full ml-auto" />
+                    </div>
+                    {[1, 2].map((item) => (
+                      <div key={item} className="p-3 rounded-lg border space-y-2">
+                        <div className="flex items-start gap-3">
+                          <Skeleton className="h-4 w-4 mt-0.5" />
+                          <div className="flex-1 space-y-2">
+                            <div className="flex items-center gap-2">
+                              <Skeleton className="h-5 w-16 rounded" />
+                            </div>
+                            <Skeleton className="h-4 w-full" />
+                            <Skeleton className="h-4 w-3/4" />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 ))}
               </div>
             ) : filteredRequirements.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 <FileText className="h-10 w-10 mx-auto mb-2 opacity-50" />
-                <p>Aucune exigence trouvée pour ce filtre.</p>
+                <p>{t('dialogs.checklist.noRequirementsFound')}</p>
               </div>
             ) : (
               <div className="space-y-6">
@@ -174,19 +186,20 @@ export function ComplianceChecklistDialog({ defaultCertificationType }: Complian
             )}
           </ScrollArea>
         </div>
-      </DialogContent>
-    </Dialog>
+      </ResponsiveDialog>
+    </>
   );
 }
 
 function RequirementItem({ requirement }: { requirement: ComplianceRequirementDto }) {
   const isCritical = requirement.severity === 'critical' || requirement.severity === 'major';
+  const { t } = useTranslation('compliance');
 
   return (
     <div className={`
       p-3 rounded-lg border transition-colors
-      ${isCritical 
-        ? 'border-red-200 bg-red-50/50 dark:border-red-900 dark:bg-red-950/20' 
+      ${isCritical
+        ? 'border-red-200 bg-red-50/50 dark:border-red-900 dark:bg-red-950/20'
         : 'border-border bg-card hover:bg-muted/50'
       }
     `}>
@@ -205,8 +218,8 @@ function RequirementItem({ requirement }: { requirement: ComplianceRequirementDt
           <div className="flex items-center gap-2 mb-1">
             <code className={`
               text-xs font-mono px-1.5 py-0.5 rounded
-              ${isCritical 
-                ? 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300' 
+              ${isCritical
+                ? 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300'
                 : 'bg-muted text-muted-foreground'
               }
             `}>
@@ -214,7 +227,7 @@ function RequirementItem({ requirement }: { requirement: ComplianceRequirementDt
             </code>
             {isCritical && (
               <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
-                Critique
+                {t('dialogs.checklist.critical')}
               </Badge>
             )}
           </div>

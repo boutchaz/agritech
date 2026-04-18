@@ -3,6 +3,7 @@ import React, { useState } from 'react'
 import { AuthLayout } from '@/components/AuthLayout'
 import { FormField } from '@/components/ui/FormField'
 import { Input } from '@/components/ui/Input'
+import { Button } from '@/components/ui/button';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -56,7 +57,7 @@ function ForgotPasswordPage() {
     <AuthLayout
       title="Reset your password"
       subtitle="We all forget sometimes"
-      helperText="Enter the email you use for Agritech and we will send you a link to create a new password."
+      helperText="Enter the email you use for AgroGina and we will send you a link to create a new password."
       switchLabel="Remembered it?"
       switchHref="/login"
       switchCta="Go back to sign in"
@@ -74,7 +75,7 @@ function ForgotPasswordPage() {
           </div>
 
           <div className="space-y-3">
-            <button
+            <Button
               type="button"
               onClick={() => {
                 setIsSubmitted(false)
@@ -84,7 +85,7 @@ function ForgotPasswordPage() {
               className="w-full rounded-xl bg-gradient-to-r from-emerald-500 to-lime-400 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-500/30 transition hover:from-emerald-600 hover:to-lime-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500"
             >
               Send another email
-            </button>
+            </Button>
             <Link
               to="/login"
               className="flex w-full items-center justify-center rounded-xl border border-emerald-500/30 bg-white/90 py-3 text-sm font-semibold text-emerald-700 shadow-sm transition hover:border-emerald-500 hover:text-emerald-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
@@ -99,7 +100,7 @@ function ForgotPasswordPage() {
             <FormField
               label="Email address"
               htmlFor="reset-email"
-              helper="Use the email connected to your Agritech account."
+              helper="Use the email connected to your AgroGina account."
               required
             >
               <Input
@@ -126,13 +127,13 @@ function ForgotPasswordPage() {
             </div>
           )}
 
-          <button
+          <Button
             type="submit"
             disabled={isLoading}
             className="w-full rounded-xl bg-gradient-to-r from-emerald-500 to-lime-400 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-500/30 transition hover:from-emerald-600 hover:to-lime-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isLoading ? 'Sending reset link...' : 'Send reset link'}
-          </button>
+          </Button>
         </form>
       )}
     </AuthLayout>

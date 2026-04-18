@@ -53,7 +53,7 @@ export class PestAlertsService {
         pest_disease:pest_disease_library(id, name, type, symptoms, treatment, prevention),
         farm:farms(id, name),
         parcel:parcels(id, name),
-        reporter:user_profiles(id, first_name, last_name)
+        reporter:user_profiles!reporter_id(id, first_name, last_name)
       `)
       .eq('organization_id', organizationId)
       .order('created_at', { ascending: false });
@@ -79,7 +79,7 @@ export class PestAlertsService {
         pest_disease:pest_disease_library(id, name, type, symptoms, treatment, prevention),
         farm:farms(id, name),
         parcel:parcels(id, name),
-        reporter:user_profiles(id, first_name, last_name),
+        reporter:user_profiles!reporter_id(id, first_name, last_name),
         verifier:user_profiles!verified_by(id, first_name, last_name)
       `)
       .eq('id', reportId)
@@ -169,7 +169,7 @@ export class PestAlertsService {
         pest_disease:pest_disease_library(id, name, type, symptoms, treatment, prevention),
         farm:farms(id, name),
         parcel:parcels(id, name),
-        reporter:user_profiles(id, first_name, last_name)
+        reporter:user_profiles!reporter_id(id, first_name, last_name)
       `)
       .single();
 
@@ -263,7 +263,7 @@ export class PestAlertsService {
         pest_disease:pest_disease_library(id, name, type, symptoms, treatment, prevention),
         farm:farms(id, name),
         parcel:parcels(id, name),
-        reporter:user_profiles(id, first_name, last_name),
+        reporter:user_profiles!reporter_id(id, first_name, last_name),
         verifier:user_profiles!verified_by(id, first_name, last_name)
       `)
       .eq('id', reportId)
@@ -402,5 +402,149 @@ export class PestAlertsService {
 
     this.logger.log(`Pest report escalated to alert: ${reportId} -> ${alertId}`);
     return { alert_id: alertId };
+  }
+
+  /**
+   * Get disease risk assessment based on current weather conditions
+   */
+  async getDiseaseRisk(
+    parcelId: string,
+    organizationId: string,
+  ): Promise<{
+    parcel_id: string;
+    crop_type: string;
+    risks: Array<{
+      disease_name: string;
+      disease_name_fr: string | null;
+      pathogen_name: string | null;
+      disease_type: string | null;
+      severity: string | null;
+      risk_active: boolean;
+      temperature_range: { min: number | null; max: number | null };
+      humidity_threshold: number | null;
+      treatment_product: string | null;
+      treatment_dose: string | null;
+      treatment_timing: string | null;
+      satellite_signal: string | null;
+    }>;
+    weather: {
+      temperature: number | null;
+      humidity: number | null;
+      date: string | null;
+    };
+  }> {
+    const supabase = this.databaseService.getAdminClient();
+
+    // 1. Fetch parcel to get crop_type
+    const { data: parcel, error: parcelError } = await supabase
+      .from('parcels')
+      .select('id, crop_type, farm_id, farms(organization_id)')
+      .eq('id', parcelId)
+      .single();
+
+    if (parcelError || !parcel) {
+      throw new NotFoundException('Parcel not found');
+    }
+
+    const farmOrg = this.extractFarmOrganizationId(parcel.farms);
+    if (farmOrg?.trim().toLowerCase() !== organizationId.trim().toLowerCase()) {
+      throw new NotFoundException('Parcel not found');
+    }
+
+    const cropType = parcel.crop_type ?? 'olive';
+
+    // 2. Query crop_diseases for this crop type
+    const { data: diseases, error: diseaseError } = await supabase
+      .from('crop_diseases')
+      .select('*')
+      .eq('crop_type_name', cropType);
+
+    if (diseaseError) {
+      this.logger.error(`Failed to fetch crop diseases: ${diseaseError.message}`);
+      throw new InternalServerErrorException('Failed to fetch crop diseases');
+    }
+
+    // 3. Fetch latest weather for this parcel
+    const { data: weather, error: weatherError } = await supabase
+      .from('weather_daily_data')
+      .select('temperature_2m_mean, relative_humidity_2m_mean, date')
+      .eq('parcel_id', parcelId)
+      .order('date', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (weatherError) {
+      this.logger.warn(`Failed to fetch weather for parcel ${parcelId}: ${weatherError.message}`);
+    }
+
+    const currentTemp = weather?.temperature_2m_mean != null
+      ? Number(weather.temperature_2m_mean)
+      : null;
+    const currentHumidity = weather?.relative_humidity_2m_mean != null
+      ? Number(weather.relative_humidity_2m_mean)
+      : null;
+
+    // 4. Evaluate disease risk for each disease
+    const risks = (diseases ?? []).map((disease: any) => {
+      const tempMin = disease.temperature_min != null ? Number(disease.temperature_min) : null;
+      const tempMax = disease.temperature_max != null ? Number(disease.temperature_max) : null;
+      const humThreshold = disease.humidity_threshold != null ? Number(disease.humidity_threshold) : null;
+
+      let riskActive = false;
+      if (currentTemp !== null && !Number.isNaN(currentTemp)) {
+        const tempInRange =
+          (tempMin === null || currentTemp >= tempMin) &&
+          (tempMax === null || currentTemp <= tempMax);
+        const humidityMet =
+          humThreshold === null ||
+          currentHumidity === null ||
+          currentHumidity >= humThreshold;
+
+        riskActive = tempInRange && humidityMet;
+      }
+
+      return {
+        disease_name: disease.disease_name,
+        disease_name_fr: disease.disease_name_fr ?? null,
+        pathogen_name: disease.pathogen_name ?? null,
+        disease_type: disease.disease_type ?? null,
+        severity: disease.severity ?? null,
+        risk_active: riskActive,
+        temperature_range: { min: tempMin, max: tempMax },
+        humidity_threshold: humThreshold,
+        treatment_product: disease.treatment_product ?? null,
+        treatment_dose: disease.treatment_dose ?? null,
+        treatment_timing: disease.treatment_timing ?? null,
+        satellite_signal: disease.satellite_signal ?? null,
+      };
+    });
+
+    return {
+      parcel_id: parcelId,
+      crop_type: cropType,
+      risks,
+      weather: {
+        temperature: currentTemp,
+        humidity: currentHumidity,
+        date: weather?.date ?? null,
+      },
+    };
+  }
+
+  private extractFarmOrganizationId(farms: unknown): string | null {
+    if (Array.isArray(farms)) {
+      const first = farms[0];
+      if (first && typeof first === 'object' && typeof first.organization_id === 'string') {
+        return first.organization_id;
+      }
+      return null;
+    }
+    if (farms && typeof farms === 'object' && !Array.isArray(farms)) {
+      const obj = farms as Record<string, unknown>;
+      if (typeof obj.organization_id === 'string') {
+        return obj.organization_id;
+      }
+    }
+    return null;
   }
 }

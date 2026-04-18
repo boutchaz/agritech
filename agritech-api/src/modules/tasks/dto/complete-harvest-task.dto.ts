@@ -150,4 +150,10 @@ export class CompleteHarvestTaskDto {
   @ApiPropertyOptional({ description: 'Whether this is a partial harvest (task stays in progress)' })
   @IsOptional()
   is_partial?: boolean;
+
+  @ApiPropertyOptional({ description: 'Rate per unit for per-unit payment tasks (overrides task rate)' })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  rate_per_unit?: number;
 }

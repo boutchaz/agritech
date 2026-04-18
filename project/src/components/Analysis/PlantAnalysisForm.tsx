@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import {  useMemo, useState  } from "react";
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -9,6 +9,7 @@ import { FormField } from '../ui/FormField';
 import { Input } from '../ui/Input';
 import { Select } from '../ui/Select';
 import { Checkbox } from '../ui/checkbox';
+import { Button } from '@/components/ui/button';
 
 interface Parcel {
   id: string;
@@ -31,58 +32,64 @@ interface ParameterItem {
 
 const PLANT_PARAMETER_GROUPS: Array<{ category: string; parameters: ParameterItem[] }> = [
   {
-    category: 'Macro elements',
+    category: 'Macro-éléments',
     parameters: [
       { key: 'nitrogen_percentage', label: 'Azote (N)', unit: '%' },
       { key: 'phosphorus_percentage', label: 'Phosphore (P)', unit: '%' },
       { key: 'potassium_percentage', label: 'Potassium (K)', unit: '%' },
       { key: 'calcium_percentage', label: 'Calcium (Ca)', unit: '%' },
-      { key: 'magnesium_percentage', label: 'Magnesium (Mg)', unit: '%' },
-      { key: 'sulfur_percentage', label: 'Soufre (S)', unit: '%' },
+      { key: 'magnesium_percentage', label: 'Magnésium (Mg)', unit: '%' },
       { key: 'sodium_percentage', label: 'Sodium (Na)', unit: '%' },
       { key: 'chlorine_percentage', label: 'Chlore (Cl)', unit: '%' },
+      { key: 'sulfur_percentage', label: 'Soufre (S)', unit: '%' },
     ],
   },
   {
-    category: 'Oligo-elements',
+    category: 'Oligo-éléments',
     parameters: [
-      { key: 'iron_ppm', label: 'Fer (Fe)', unit: 'ppm' },
-      { key: 'zinc_ppm', label: 'Zinc (Zn)', unit: 'ppm' },
-      { key: 'copper_ppm', label: 'Cuivre (Cu)', unit: 'ppm' },
-      { key: 'manganese_ppm', label: 'Manganese (Mn)', unit: 'ppm' },
-      { key: 'boron_ppm', label: 'Bore (B)', unit: 'ppm' },
-      { key: 'molybdenum_ppm', label: 'Molybdene (Mo)', unit: 'ppm' },
-      { key: 'chlorine_ppm', label: 'Chlore (Cl)', unit: 'ppm' },
-      { key: 'cobalt_ppm', label: 'Cobalt (Co)', unit: 'ppm' },
-      { key: 'silver_ppm', label: 'Argent (Ag)', unit: 'ppm' },
-      { key: 'barium_ppm', label: 'Barium (Ba)', unit: 'ppm' },
-      { key: 'vanadium_ppm', label: 'Vanadium (V)', unit: 'ppm' },
-      { key: 'nickel_ppm', label: 'Nickel (Ni)', unit: 'ppm' },
-      { key: 'chromium_ppm', label: 'Chrome (Cr)', unit: 'ppm' },
-      { key: 'silicon_ppm', label: 'Silicium (Si)', unit: 'ppm' },
-      { key: 'selenium_ppm', label: 'Selenium (Se)', unit: 'ppm' },
-      { key: 'gold_ppm', label: 'Or (Au)', unit: 'ppm' },
-      { key: 'lithium_ppm', label: 'Lithium (Li)', unit: 'ppm' },
-      { key: 'aluminum_ppm', label: 'Aluminium (Al)', unit: 'ppm' },
-      { key: 'antimony_ppm', label: 'Antimoine (Sb)', unit: 'ppm' },
-      { key: 'bismuth_ppm', label: 'Bismuth (Bi)', unit: 'ppm' },
+      { key: 'boron_ppm', label: 'Bore (B)', unit: 'mg/kg' },
+      { key: 'copper_ppm', label: 'Cuivre (Cu)', unit: 'mg/kg' },
+      { key: 'iron_ppm', label: 'Fer (Fe)', unit: 'mg/kg' },
+      { key: 'manganese_ppm', label: 'Manganèse (Mn)', unit: 'mg/kg' },
+      { key: 'zinc_ppm', label: 'Zinc (Zn)', unit: 'mg/kg' },
     ],
   },
   {
-    category: 'Metaux lourds',
+    category: 'Métaux lourds',
     parameters: [
-      { key: 'cadmium_ppm', label: 'Cadmium (Cd)', unit: 'ppm' },
-      { key: 'lead_ppm', label: 'Plomb (Pb)', unit: 'ppm' },
-      { key: 'arsenic_ppm', label: 'Arsenic (As)', unit: 'ppm' },
-      { key: 'mercury_ppm', label: 'Mercure (Hg)', unit: 'ppm' },
+      { key: 'cadmium_ppm', label: 'Cadmium (Cd)', unit: 'mg/kg' },
+      { key: 'lead_ppm', label: 'Plomb (Pb)', unit: 'mg/kg' },
+      { key: 'arsenic_ppm', label: 'Arsenic (As)', unit: 'mg/kg' },
+      { key: 'nickel_ppm', label: 'Nickel (Ni)', unit: 'mg/kg' },
+      { key: 'chromium_ppm', label: 'Chrome (Cr)', unit: 'mg/kg' },
+      { key: 'mercury_ppm', label: 'Mercure (Hg)', unit: 'mg/kg' },
     ],
   },
   {
-    category: 'Indicateurs de sante',
+    category: 'Éléments traces',
     parameters: [
-      { key: 'dry_matter_percentage', label: 'Matiere seche', unit: '%' },
-      { key: 'moisture_percentage', label: 'Humidite', unit: '%' },
-      { key: 'chlorophyll_content', label: 'Chlorophylle', unit: 'SPAD' },
+      { key: 'cobalt_ppm', label: 'Cobalt (Co)', unit: 'mg/kg' },
+      { key: 'silver_ppm', label: 'Argent (Ag)', unit: 'mg/kg' },
+      { key: 'barium_ppm', label: 'Baryum (Ba)', unit: 'mg/kg' },
+      { key: 'vanadium_ppm', label: 'Vanadium (V)', unit: 'mg/kg' },
+      { key: 'molybdenum_ppm', label: 'Molybdène (Mo)', unit: 'mg/kg' },
+    ],
+  },
+  {
+    category: 'Éléments secondaires',
+    parameters: [
+      { key: 'silicon_ppm', label: 'Silicium (Si)', unit: 'mg/kg' },
+      { key: 'selenium_ppm', label: 'Sélénium (Se)', unit: 'mg/kg' },
+      { key: 'lithium_ppm', label: 'Lithium (Li)', unit: 'mg/kg' },
+      { key: 'aluminum_ppm', label: 'Aluminium (Al)', unit: 'mg/kg' },
+    ],
+  },
+  {
+    category: 'Éléments rares',
+    parameters: [
+      { key: 'gold_ppm', label: 'Or (Au)', unit: 'mg/kg' },
+      { key: 'antimony_ppm', label: 'Antimoine (Sb)', unit: 'mg/kg' },
+      { key: 'bismuth_ppm', label: 'Bismuth (Bi)', unit: 'mg/kg' },
     ],
   },
 ];
@@ -94,8 +101,6 @@ const DEFAULT_PLANT_PARAMS: PlantParamKey[] = [
   'calcium_percentage',
   'magnesium_percentage',
   'sulfur_percentage',
-  'dry_matter_percentage',
-  'chlorophyll_content',
 ];
 
 const plantAnalysisSchema = z.object({
@@ -143,7 +148,7 @@ const plantAnalysisSchema = z.object({
 
 type PlantAnalysisFormData = z.infer<typeof plantAnalysisSchema>;
 
-const PlantAnalysisForm: React.FC<PlantAnalysisFormProps> = ({ onSave, onCancel, selectedParcel }) => {
+const PlantAnalysisForm = ({ onSave, onCancel, selectedParcel }: PlantAnalysisFormProps) => {
   const { handleFormError } = useFormErrors<PlantAnalysisFormData>();
   const [selectedParams, setSelectedParams] = useState<PlantParamKey[]>(DEFAULT_PLANT_PARAMS);
   const selectedParamSet = useMemo(() => new Set(selectedParams), [selectedParams]);
@@ -212,12 +217,12 @@ const PlantAnalysisForm: React.FC<PlantAnalysisFormProps> = ({ onSave, onCancel,
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
       <div className="flex items-center justify-between mb-6">
         <h3 className="text-lg font-semibold">Nouvelle Analyse de Plante</h3>
-        <button
+        <Button
           onClick={onCancel}
           className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
         >
           <X className="h-5 w-5" />
-        </button>
+        </Button>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -366,22 +371,18 @@ const PlantAnalysisForm: React.FC<PlantAnalysisFormProps> = ({ onSave, onCancel,
         </FormField>
 
         <div className="flex justify-end space-x-3">
-          <button
+          <Button
             type="button"
             onClick={onCancel}
             disabled={isSubmitting}
             className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50"
           >
             Annuler
-          </button>
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 flex items-center space-x-2"
-          >
+          </Button>
+          <Button variant="green" type="submit" disabled={isSubmitting} className="px-4 py-2 rounded-md flex items-center space-x-2" >
             <Save className="h-4 w-4" />
             <span>{isSubmitting ? 'Enregistrement...' : 'Enregistrer'}</span>
-          </button>
+          </Button>
         </div>
       </form>
     </div>

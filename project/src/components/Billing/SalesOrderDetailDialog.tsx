@@ -1,15 +1,14 @@
-import React, { useState } from 'react';
+import {  useState  } from "react";
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { salesOrdersApi } from '@/lib/api/sales-orders';
 import {
-  Dialog,
-  DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -25,6 +24,8 @@ import type { SalesOrder } from '@/hooks/useSalesOrders';
 import { useSalesOrder, useConvertOrderToInvoice, useIssueStock } from '@/hooks/useSalesOrders';
 import { useWarehouses } from '@/hooks/useWarehouses';
 import { formatCurrency } from '@/lib/taxCalculations';
+import { SectionLoader } from '@/components/ui/loader';
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import { toast } from 'sonner';
 import { useAuth } from '../../hooks/useAuth';
 
@@ -62,12 +63,12 @@ interface SalesOrderDetailDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-export const SalesOrderDetailDialog: React.FC<SalesOrderDetailDialogProps> = ({
+export const SalesOrderDetailDialog = ({
   salesOrder,
   open,
   onOpenChange,
-}) => {
-  const { t } = useTranslation();
+}: SalesOrderDetailDialogProps) => {
+  useTranslation();
   const { currentOrganization } = useAuth();
   const queryClient = useQueryClient();
   const convertToInvoice = useConvertOrderToInvoice();
@@ -180,29 +181,22 @@ export const SalesOrderDetailDialog: React.FC<SalesOrderDetailDialogProps> = ({
 
   if (isDetailLoading || !resolvedSalesOrder) {
     return (
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-md">
-          <div className="flex flex-col items-center gap-3 py-10 text-sm text-gray-500 dark:text-gray-400">
-            <div className="size-8 animate-spin rounded-full border-b-2 border-emerald-500" />
-            Loading sales order details...
-          </div>
-        </DialogContent>
-      </Dialog>
+      <ResponsiveDialog open={open} onOpenChange={onOpenChange} size="4xl" contentClassName="max-h-[90vh] overflow-y-auto">
+          <SectionLoader className="py-10" />
+      </ResponsiveDialog>
     );
   }
 
   if (detailError) {
     return (
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-md">
+      <ResponsiveDialog open={open} onOpenChange={onOpenChange} size="4xl" contentClassName="max-h-[90vh] overflow-y-auto">
           <div className="flex flex-col items-center gap-3 py-10 text-center text-sm text-red-600 dark:text-red-400">
             Failed to load sales order details.
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               Close
             </Button>
           </div>
-        </DialogContent>
-      </Dialog>
+      </ResponsiveDialog>
     );
   }
 
@@ -269,8 +263,7 @@ export const SalesOrderDetailDialog: React.FC<SalesOrderDetailDialogProps> = ({
   const remainingToInvoice = Math.max(0, Number(so.grand_total) - Number(so.invoiced_amount));
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+    <ResponsiveDialog open={open} onOpenChange={onOpenChange} size="4xl" contentClassName="max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center justify-between">
             <div>
@@ -289,7 +282,7 @@ export const SalesOrderDetailDialog: React.FC<SalesOrderDetailDialogProps> = ({
         </DialogHeader>
 
         <div className="space-y-6">
-          <div className="grid gap-4 lg:grid-cols-[2fr,1fr]">
+          <div className="grid gap-4 sm:grid-cols-[2fr,1fr]">
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
@@ -537,67 +530,67 @@ export const SalesOrderDetailDialog: React.FC<SalesOrderDetailDialogProps> = ({
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-gray-200 dark:border-gray-700">
-                      <th className="text-left py-2 px-2 text-xs font-medium text-gray-600 dark:text-gray-400">
+                <Table className="w-full">
+                  <TableHeader>
+                    <TableRow className="border-b border-gray-200 dark:border-gray-700">
+                      <TableHead className="text-left py-2 px-2 text-xs font-medium text-gray-600 dark:text-gray-400">
                         Item
-                      </th>
-                      <th className="text-left py-2 px-2 text-xs font-medium text-gray-600 dark:text-gray-400">
+                      </TableHead>
+                      <TableHead className="text-left py-2 px-2 text-xs font-medium text-gray-600 dark:text-gray-400">
                         Description
-                      </th>
-                      <th className="text-right py-2 px-2 text-xs font-medium text-gray-600 dark:text-gray-400">
+                      </TableHead>
+                      <TableHead className="text-right py-2 px-2 text-xs font-medium text-gray-600 dark:text-gray-400">
                         Qty
-                      </th>
-                      <th className="text-right py-2 px-2 text-xs font-medium text-gray-600 dark:text-gray-400">
+                      </TableHead>
+                      <TableHead className="text-right py-2 px-2 text-xs font-medium text-gray-600 dark:text-gray-400">
                         Rate
-                      </th>
-                      <th className="text-right py-2 px-2 text-xs font-medium text-gray-600 dark:text-gray-400">
+                      </TableHead>
+                      <TableHead className="text-right py-2 px-2 text-xs font-medium text-gray-600 dark:text-gray-400">
                         Amount
-                      </th>
-                      <th className="text-right py-2 px-2 text-xs font-medium text-gray-600 dark:text-gray-400">
+                      </TableHead>
+                      <TableHead className="text-right py-2 px-2 text-xs font-medium text-gray-600 dark:text-gray-400">
                         Tax
-                      </th>
-                      <th className="text-right py-2 px-2 text-xs font-medium text-gray-600 dark:text-gray-400">
+                      </TableHead>
+                      <TableHead className="text-right py-2 px-2 text-xs font-medium text-gray-600 dark:text-gray-400">
                         Total
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {so.items?.map((item) => (
-                      <tr key={item.id} className="border-b border-gray-100 dark:border-gray-800">
-                        <td className="py-2 px-2 text-sm font-medium text-gray-900 dark:text-white">
+                      <TableRow key={item.id} className="border-b border-gray-100 dark:border-gray-800">
+                        <TableCell className="py-2 px-2 text-sm font-medium text-gray-900 dark:text-white">
                           {item.item_name}
-                        </td>
-                        <td className="py-2 px-2 text-sm text-gray-600 dark:text-gray-400">
+                        </TableCell>
+                        <TableCell className="py-2 px-2 text-sm text-gray-600 dark:text-gray-400">
                           {item.description || '-'}
-                        </td>
-                        <td className="py-2 px-2 text-sm text-right text-gray-900 dark:text-white">
+                        </TableCell>
+                        <TableCell className="py-2 px-2 text-sm text-right text-gray-900 dark:text-white">
                           {item.quantity}
-                        </td>
-                        <td className="py-2 px-2 text-sm text-right text-gray-900 dark:text-white">
+                        </TableCell>
+                        <TableCell className="py-2 px-2 text-sm text-right text-gray-900 dark:text-white">
                           {formatCurrency(Number(item.unit_price), so.currency_code)}
-                        </td>
-                        <td className="py-2 px-2 text-sm text-right text-gray-900 dark:text-white">
+                        </TableCell>
+                        <TableCell className="py-2 px-2 text-sm text-right text-gray-900 dark:text-white">
                           {formatCurrency(Number(item.amount), so.currency_code)}
-                        </td>
-                        <td className="py-2 px-2 text-sm text-right text-gray-600 dark:text-gray-400">
+                        </TableCell>
+                        <TableCell className="py-2 px-2 text-sm text-right text-gray-600 dark:text-gray-400">
                           {formatCurrency(Number(item.tax_amount ?? 0), so.currency_code)}
-                        </td>
-                        <td className="py-2 px-2 text-sm text-right font-medium text-gray-900 dark:text-white">
+                        </TableCell>
+                        <TableCell className="py-2 px-2 text-sm text-right font-medium text-gray-900 dark:text-white">
                           {formatCurrency(Number(item.line_total ?? (Number(item.amount) + Number(item.tax_amount ?? 0))), so.currency_code)}
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     ))}
                     {(!so.items || so.items.length === 0) && (
-                      <tr>
-                        <td colSpan={7} className="py-8 text-center text-sm text-gray-500 dark:text-gray-400">
+                      <TableRow>
+                        <TableCell colSpan={7} className="py-8 text-center text-sm text-gray-500 dark:text-gray-400">
                           No line items found for this sales order.
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     )}
-                  </tbody>
-                </table>
+                  </TableBody>
+                </Table>
               </div>
             </CardContent>
           </Card>
@@ -655,7 +648,6 @@ export const SalesOrderDetailDialog: React.FC<SalesOrderDetailDialogProps> = ({
             </Button>
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+    </ResponsiveDialog>
   );
 };

@@ -3,19 +3,13 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Loader2, RefreshCw } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
 import { FormField } from '@/components/ui/FormField';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import {
   Select,
   SelectContent,
@@ -30,14 +24,6 @@ import {
   CorrectiveActionStatus,
   type CorrectiveActionPlanResponseDto,
 } from '@/lib/api/compliance';
-
-const statusLabels: Record<CorrectiveActionStatus, string> = {
-  [CorrectiveActionStatus.OPEN]: 'Ouverte',
-  [CorrectiveActionStatus.IN_PROGRESS]: 'En cours',
-  [CorrectiveActionStatus.RESOLVED]: 'Résolue',
-  [CorrectiveActionStatus.VERIFIED]: 'Vérifiée',
-  [CorrectiveActionStatus.OVERDUE]: 'En retard',
-};
 
 const formSchema = z.object({
   status: z.nativeEnum(CorrectiveActionStatus),
@@ -64,6 +50,15 @@ export function UpdateActionStatusDialog({
 
   const { currentOrganization } = useAuth();
   const updateAction = useUpdateCorrectiveAction();
+  const { t } = useTranslation('compliance');
+
+  const statusLabels: Record<CorrectiveActionStatus, string> = {
+    [CorrectiveActionStatus.OPEN]: t('status.open'),
+    [CorrectiveActionStatus.IN_PROGRESS]: t('status.inProgress'),
+    [CorrectiveActionStatus.RESOLVED]: t('status.resolved'),
+    [CorrectiveActionStatus.VERIFIED]: t('status.verified'),
+    [CorrectiveActionStatus.OVERDUE]: t('status.overdue'),
+  };
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -118,23 +113,20 @@ export function UpdateActionStatusDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <>
       {controlledOpen === undefined && (
-        <DialogTrigger asChild>
-          <Button variant="ghost" size="sm">
-            <RefreshCw className="mr-2 h-4 w-4" />
-            Mettre à jour
-          </Button>
-        </DialogTrigger>
+        <Button variant="ghost" size="sm" onClick={() => setOpen(true)}>
+          <RefreshCw className="mr-2 h-4 w-4" />
+          {t('dialogs.updateStatus.button')}
+        </Button>
       )}
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>Mettre à jour le statut</DialogTitle>
-          <DialogDescription>
-            Modifiez le statut de cette action corrective.
-          </DialogDescription>
-        </DialogHeader>
-
+      <ResponsiveDialog
+        open={open}
+        onOpenChange={setOpen}
+        title={t('dialogs.updateStatus.title')}
+        description={t('dialogs.updateStatus.description')}
+        size="sm"
+      >
         <div className="mb-4 p-3 bg-muted/50 rounded-lg text-sm">
           <p className="font-medium mb-1">{action.finding_description}</p>
           <p className="text-muted-foreground">{action.action_description}</p>
@@ -146,13 +138,13 @@ export function UpdateActionStatusDialog({
             name="status"
             render={({ field }) => (
               <FormField
-                label="Nouveau statut"
+                label={t('dialogs.updateStatus.newStatus')}
                 error={form.formState.errors.status?.message}
                 required
               >
                 <Select onValueChange={field.onChange} value={field.value}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Sélectionner un statut" />
+                    <SelectValue placeholder={t('dialogs.updateStatus.selectStatus')} />
                   </SelectTrigger>
                   <SelectContent>
                     {Object.entries(statusLabels).map(([value, label]) => (
@@ -171,11 +163,11 @@ export function UpdateActionStatusDialog({
               name="resolution_notes"
               render={({ field }) => (
                 <FormField
-                  label="Notes de résolution"
+                  label={t('dialogs.updateStatus.resolutionNotes')}
                   error={form.formState.errors.resolution_notes?.message}
                 >
                   <Textarea
-                    placeholder="Décrivez comment la non-conformité a été corrigée..."
+                    placeholder={t('dialogs.updateStatus.resolutionNotesPlaceholder')}
                     rows={3}
                     {...field}
                   />
@@ -190,10 +182,10 @@ export function UpdateActionStatusDialog({
               name="verified_by"
               render={({ field }) => (
                 <FormField
-                  label="Vérifié par"
+                  label={t('dialogs.updateStatus.verifiedBy')}
                   error={form.formState.errors.verified_by?.message}
                 >
-                  <Input placeholder="Nom du vérificateur" {...field} />
+                  <Input placeholder={t('dialogs.updateStatus.verifiedByPlaceholder')} {...field} />
                 </FormField>
               )}
             />
@@ -201,17 +193,17 @@ export function UpdateActionStatusDialog({
 
           <div className="flex justify-end gap-2 pt-4">
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-              Annuler
+              {t('dialogs.updateStatus.cancel')}
             </Button>
             <Button type="submit" disabled={updateAction.isPending}>
               {updateAction.isPending && (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               )}
-              Enregistrer
+              {t('dialogs.updateStatus.save')}
             </Button>
           </div>
         </form>
-      </DialogContent>
-    </Dialog>
+      </ResponsiveDialog>
+    </>
   );
 }

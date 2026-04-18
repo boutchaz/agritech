@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router';
+import { Leaf } from 'lucide-react';
 import { PageLayout } from '@/components/PageLayout';
 import ModernPageHeader from '@/components/ModernPageHeader';
 import { CampaignManagement } from '@/components/settings/CampaignManagement';
@@ -14,14 +15,22 @@ function CampaignsPage() {
       header={
         <ModernPageHeader
           title={t('campaigns.pageTitle', 'Agricultural Campaigns')}
+          subtitle={t(
+            'campaigns.description',
+            'Manage agricultural campaigns (Campagne Agricole) for production planning.',
+          )}
           breadcrumbs={[
             { label: t('nav.dashboard', 'Dashboard'), path: '/dashboard' },
-            { label: t('campaigns.pageTitle', 'Campaigns'), isActive: true },
+            {
+              icon: Leaf,
+              label: t('campaigns.pageTitle', 'Campaigns'),
+              isActive: true,
+            },
           ]}
         />
       }
     >
-      <div className="p-6">
+      <div className="p-3 sm:p-4 md:p-6 pb-20 md:pb-6">
         <CampaignManagement />
       </div>
     </PageLayout>

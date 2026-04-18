@@ -1,7 +1,8 @@
 import { useState } from 'react';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { useTranslation } from 'react-i18next';
 import { createFileRoute } from '@tanstack/react-router';
 import {
-  Search,
   Filter,
   ShieldAlert,
   AlertTriangle,
@@ -10,9 +11,9 @@ import {
   RefreshCw,
   CircleDot,
   ShieldCheck,
+  Building2,
 } from 'lucide-react';
 
-import { Input } from '@/components/ui/Input';
 import {
   Select,
   SelectContent,
@@ -23,6 +24,10 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CorrectiveActionsList } from '@/components/compliance/CorrectiveActionsList';
 import { UpdateActionStatusDialog } from '@/components/compliance/UpdateActionStatusDialog';
+import { FilterBar, ListPageLayout } from '@/components/ui/data-table';
+
+import ModernPageHeader from '@/components/ModernPageHeader';
+import { PageLayout } from '@/components/PageLayout';
 
 import { useCorrectiveActions, useCorrectiveActionStats, useDeleteCorrectiveAction } from '@/hooks/useCompliance';
 import { useAuth } from '@/hooks/useAuth';
@@ -36,24 +41,28 @@ export const Route = createFileRoute('/_authenticated/compliance/corrective-acti
   component: CorrectiveActionsPage,
 });
 
-const statusLabels: Record<CorrectiveActionStatus, string> = {
-  [CorrectiveActionStatus.OPEN]: 'Ouverte',
-  [CorrectiveActionStatus.IN_PROGRESS]: 'En cours',
-  [CorrectiveActionStatus.RESOLVED]: 'Résolue',
-  [CorrectiveActionStatus.VERIFIED]: 'Vérifiée',
-  [CorrectiveActionStatus.OVERDUE]: 'En retard',
-};
-
-const priorityLabels: Record<CorrectiveActionPriority, string> = {
-  [CorrectiveActionPriority.CRITICAL]: 'Critique',
-  [CorrectiveActionPriority.HIGH]: 'Haute',
-  [CorrectiveActionPriority.MEDIUM]: 'Moyenne',
-  [CorrectiveActionPriority.LOW]: 'Basse',
-};
-
 function CorrectiveActionsPage() {
+  const { t } = useTranslation('compliance');
   const { currentOrganization } = useAuth();
   const orgId = currentOrganization?.id || null;
+
+  const statusLabels: Record<CorrectiveActionStatus, string> = {
+    [CorrectiveActionStatus.OPEN]: t('status.open'),
+    [CorrectiveActionStatus.IN_PROGRESS]: t('status.inProgress'),
+    [CorrectiveActionStatus.RESOLVED]: t('status.resolved'),
+    [CorrectiveActionStatus.VERIFIED]: t('status.verified'),
+    [CorrectiveActionStatus.OVERDUE]: t('status.overdue'),
+  };
+
+  const priorityLabels: Record<CorrectiveActionPriority, string> = {
+    [CorrectiveActionPriority.CRITICAL]: t('priority.critical'),
+    [CorrectiveActionPriority.HIGH]: t('priority.high'),
+    [CorrectiveActionPriority.MEDIUM]: t('priority.medium'),
+    [CorrectiveActionPriority.LOW]: t('priority.low'),
+  };
+
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const confirmAction: {title:string;description?:string;variant?:"destructive"|"default";onConfirm:()=>void} = {title:"",onConfirm:()=>{}};
 
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -88,7 +97,7 @@ function CorrectiveActionsPage() {
 
   const handleDelete = (action: CorrectiveActionPlanResponseDto) => {
     if (!currentOrganization) return;
-    if (confirm('Êtes-vous sûr de vouloir supprimer cette action corrective ?')) {
+    if (confirm(t('correctiveActions.deleteConfirm'))) {
       deleteAction.mutate({
         organizationId: currentOrganization.id,
         actionId: action.id,
@@ -97,138 +106,154 @@ function CorrectiveActionsPage() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-6 space-y-8">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
-            Actions Correctives
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Suivez et gérez les actions correctives issues de vos contrôles de conformité.
-          </p>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <StatCard
-          title="Ouvertes"
-          value={stats?.open ?? 0}
-          icon={CircleDot}
-          iconColor="text-gray-600"
+    <PageLayout
+      header={
+        <ModernPageHeader
+          breadcrumbs={[
+            { icon: Building2, label: currentOrganization?.name || '', path: '/dashboard' },
+            { icon: ShieldAlert, label: t('breadcrumb.compliance'), path: '/compliance' },
+            { icon: ShieldAlert, label: t('breadcrumb.correctiveActions'), isActive: true },
+          ]}
+          title={t('correctiveActions.title')}
+          subtitle={t('correctiveActions.subtitle')}
         />
-        <StatCard
-          title="En cours"
-          value={stats?.in_progress ?? 0}
-          icon={RefreshCw}
-          iconColor="text-blue-600"
-        />
-        <StatCard
-          title="En retard"
-          value={stats?.overdue ?? 0}
-          icon={AlertTriangle}
-          iconColor="text-red-600"
-        />
-        <StatCard
-          title="Résolues"
-          value={stats?.resolved ?? 0}
-          icon={CheckCircle2}
-          iconColor="text-green-600"
-        />
-        <StatCard
-          title="Vérifiées"
-          value={stats?.verified ?? 0}
-          icon={ShieldCheck}
-          iconColor="text-emerald-600"
-        />
-      </div>
-
-      {stats && stats.total > 0 && (
-        <Card className="bg-gradient-to-r from-emerald-50 to-green-50 dark:from-emerald-950/20 dark:to-green-950/20 border-emerald-200 dark:border-emerald-800">
-          <CardContent className="py-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-emerald-100 dark:bg-emerald-900/40 rounded-lg">
-                  <ShieldCheck className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-emerald-900 dark:text-emerald-100">
-                    Taux de résolution
-                  </p>
-                  <p className="text-xs text-emerald-700 dark:text-emerald-300">
-                    {stats.resolved + stats.verified} sur {stats.total} actions traitées
-                  </p>
-                </div>
-              </div>
-              <div className="text-3xl font-bold text-emerald-700 dark:text-emerald-300">
-                {Math.round(stats.resolution_rate)}%
-              </div>
+      }
+    >
+    <div className="container mx-auto px-4 py-6">
+      <ListPageLayout
+        stats={
+          <>
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+              <StatCard
+                title={t('status.open')}
+                value={stats?.open ?? 0}
+                icon={CircleDot}
+                iconColor="text-gray-600"
+              />
+              <StatCard
+                title={t('status.inProgress')}
+                value={stats?.in_progress ?? 0}
+                icon={RefreshCw}
+                iconColor="text-blue-600"
+              />
+              <StatCard
+                title={t('status.overdue')}
+                value={stats?.overdue ?? 0}
+                icon={AlertTriangle}
+                iconColor="text-red-600"
+              />
+              <StatCard
+                title={t('status.resolved')}
+                value={stats?.resolved ?? 0}
+                icon={CheckCircle2}
+                iconColor="text-green-600"
+              />
+              <StatCard
+                title={t('status.verified')}
+                value={stats?.verified ?? 0}
+                icon={ShieldCheck}
+                iconColor="text-emerald-600"
+              />
             </div>
-          </CardContent>
-        </Card>
-      )}
 
-      <div className="flex flex-col md:flex-row gap-4 items-center bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border">
-        <div className="relative flex-1 w-full">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Rechercher par constat, action, responsable..."
-            className="pl-9"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
-        <div className="flex gap-2 w-full md:w-auto">
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[160px]">
-              <div className="flex items-center gap-2">
-                <Clock className="h-4 w-4" />
-                <SelectValue placeholder="Statut" />
-              </div>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tous les statuts</SelectItem>
-              {Object.entries(statusLabels).map(([value, label]) => (
-                <SelectItem key={value} value={value}>{label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            {stats && stats.total > 0 && (
+              <Card className="bg-gradient-to-r from-emerald-50 to-green-50 dark:from-emerald-950/20 dark:to-green-950/20 border-emerald-200 dark:border-emerald-800">
+                <CardContent className="py-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-emerald-100 dark:bg-emerald-900/40 rounded-lg">
+                        <ShieldCheck className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-emerald-900 dark:text-emerald-100">
+                          {t('correctiveActions.resolutionRate')}
+                        </p>
+                        <p className="text-xs text-emerald-700 dark:text-emerald-300">
+                          {t('correctiveActions.actionsProcessed', { resolved: stats.resolved + stats.verified, total: stats.total })}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-3xl font-bold text-emerald-700 dark:text-emerald-300">
+                      {Math.round(stats.resolution_rate)}%
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </>
+        }
+        filters={
+          <div className="flex flex-col gap-4 md:flex-row md:items-center">
+            <div className="flex-1">
+              <FilterBar
+                searchValue={search}
+                onSearchChange={setSearch}
+                searchPlaceholder={t('correctiveActions.searchPlaceholder')}
+              />
+            </div>
+            <div className="flex gap-2 w-full md:w-auto">
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-[160px]">
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4" />
+                    <SelectValue placeholder={t('table.status')} />
+                  </div>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t('correctiveActions.allStatuses')}</SelectItem>
+                  {Object.entries(statusLabels).map(([value, label]) => (
+                    <SelectItem key={value} value={value}>{label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
-          <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-            <SelectTrigger className="w-[150px]">
-              <div className="flex items-center gap-2">
-                <Filter className="h-4 w-4" />
-                <SelectValue placeholder="Priorité" />
-              </div>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Toutes priorités</SelectItem>
-              {Object.entries(priorityLabels).map(([value, label]) => (
-                <SelectItem key={value} value={value}>{label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      <CorrectiveActionsList
-        actions={filteredActions}
-        isLoading={isLoading}
-        showCertification
-        onUpdateStatus={handleUpdateStatus}
-        onDelete={handleDelete}
-      />
-
-      {selectedAction && (
-        <UpdateActionStatusDialog
-          action={selectedAction}
-          open={showUpdateDialog}
-          onOpenChange={(open) => {
-            setShowUpdateDialog(open);
-            if (!open) setSelectedAction(null);
-          }}
+              <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+                <SelectTrigger className="w-[150px]">
+                  <div className="flex items-center gap-2">
+                    <Filter className="h-4 w-4" />
+                    <SelectValue placeholder={t('correctiveActions.priority')} />
+                  </div>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t('correctiveActions.allPriorities')}</SelectItem>
+                  {Object.entries(priorityLabels).map(([value, label]) => (
+                    <SelectItem key={value} value={value}>{label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        }
+      >
+        <CorrectiveActionsList
+          actions={filteredActions}
+          isLoading={isLoading}
+          showCertification
+          onUpdateStatus={handleUpdateStatus}
+          onDelete={handleDelete}
         />
-      )}
+
+        {selectedAction && (
+          <UpdateActionStatusDialog
+            action={selectedAction}
+            open={showUpdateDialog}
+            onOpenChange={(open) => {
+              setShowUpdateDialog(open);
+              if (!open) setSelectedAction(null);
+            }}
+          />
+        )}
+      </ListPageLayout>
     </div>
+    <ConfirmDialog
+      open={confirmOpen}
+      onOpenChange={setConfirmOpen}
+        title={confirmAction.title}
+        description={confirmAction.description}
+        variant={confirmAction.variant}
+        onConfirm={confirmAction.onConfirm}
+      />
+    </PageLayout>
   );
 }
 

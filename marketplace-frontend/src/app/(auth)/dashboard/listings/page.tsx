@@ -85,7 +85,7 @@ export default function ListingsPage() {
                     <div className="flex items-center justify-between h-16">
                         <Link href="/dashboard" className="flex items-center space-x-2">
                             <span className="text-2xl">🌱</span>
-                            <span className="text-xl font-bold text-green-700">AgriTech Market</span>
+                            <span className="text-xl font-bold text-green-700">AgroGina Market</span>
                         </Link>
                         <div className="flex items-center space-x-4">
                             <Link href="/dashboard" className="text-gray-700 hover:text-green-700 flex items-center gap-2">
@@ -96,6 +96,7 @@ export default function ListingsPage() {
                                 {user?.email}
                             </div>
                             <button
+                                type="button"
                                 onClick={handleLogout}
                                 className="flex items-center space-x-1 text-gray-700 hover:text-red-600"
                             >
@@ -211,6 +212,7 @@ export default function ListingsPage() {
                                             Modifier
                                         </Link>
                                         <button
+                                            type="button"
                                             onClick={() => handleToggleVisibility(listing)}
                                             className="flex items-center justify-center px-4 py-2 border-2 border-gray-300 text-gray-700 rounded-lg hover:border-green-600 hover:text-green-700 transition"
                                             title={listing.is_public ? 'Masquer' : 'Publier'}
@@ -218,6 +220,7 @@ export default function ListingsPage() {
                                             {listing.is_public ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                                         </button>
                                         <button
+                                            type="button"
                                             onClick={() => handleDelete(listing.id)}
                                             disabled={deleteListing.isPending}
                                             className="flex items-center justify-center px-4 py-2 border-2 border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition disabled:opacity-50"

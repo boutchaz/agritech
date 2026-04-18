@@ -1,12 +1,13 @@
-import React, { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/hooks/useAuth';
 import { PageLayout } from '@/components/PageLayout';
 import ModernPageHeader from '@/components/ModernPageHeader';
-import { Building2, BookOpen, Loader2, AlertCircle, Download, Calendar, FileText } from 'lucide-react';
+import { Building2, BookOpen, AlertCircle, Download, Calendar, FileText } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/label';
 import { NativeSelect } from '@/components/ui/NativeSelect';
@@ -14,8 +15,11 @@ import { withRouteProtection } from '@/components/authorization/withRouteProtect
 import { useGeneralLedger, useTrialBalance } from '@/hooks/useFinancialReports';
 import { formatCurrency } from '@/lib/utils/format';
 import { exportGeneralLedgerCsv } from '@/lib/utils/report-export';
+import { PageLoader } from '@/components/ui/loader';
+import { AccountingReportSkeleton } from '@/components/ui/page-skeletons';
 
-const AppContent: React.FC = () => {
+
+const AppContent = () => {
   const { t } = useTranslation();
   const { currentOrganization } = useAuth();
 
@@ -29,8 +33,30 @@ const AppContent: React.FC = () => {
   const { data: trialBalanceReport, isLoading: isLoadingAccounts } = useTrialBalance(today);
   const accounts = trialBalanceReport?.accounts ?? [];
 
+  // Auto-select the most-active account (first with non-zero balance) when nothing
+  // has been explicitly selected. Derived — no effect needed.
+  const autoSelectedAccountId = useMemo(() => {
+    if (!accounts.length) return '';
+    const firstWithBalance = accounts.find(
+      (a) => Number(a.total_debit ?? 0) !== 0 || Number(a.total_credit ?? 0) !== 0,
+    );
+    return (firstWithBalance ?? accounts[0]).account_id;
+  }, [accounts]);
+
+  const effectiveAccountId = selectedAccountId || autoSelectedAccountId;
+
+  // Shortcut buttons for common accounts (Cash, A/R, A/P)
+  const quickAccounts = useMemo(() => {
+    const byPrefix = (prefix: string) => accounts.find((a) => a.account_code?.startsWith(prefix));
+    return {
+      cash: byPrefix('51') || byPrefix('10'), // CGNC 514/516 or IFRS 10xx
+      ar: byPrefix('342') || byPrefix('11'),
+      ap: byPrefix('441') || byPrefix('20'),
+    };
+  }, [accounts]);
+
   const { data: report, isLoading, error } = useGeneralLedger(
-    selectedAccountId || undefined,
+    effectiveAccountId || undefined,
     startDate || undefined,
     endDate || undefined
   );
@@ -39,12 +65,7 @@ const AppContent: React.FC = () => {
 
   if (!currentOrganization) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">{t('dashboard.loading', 'Loading organization...')}</p>
-        </div>
-      </div>
+      <PageLoader />
     );
   }
 
@@ -65,7 +86,7 @@ const AppContent: React.FC = () => {
       <div className="p-6 space-y-6">
         {/* Filters */}
         <Card>
-          <CardContent className="pt-6">
+          <CardContent className="pt-6 space-y-4">
             <div className="flex flex-wrap items-end gap-4">
               <div className="flex-1 min-w-[250px]">
                 <Label htmlFor="account_select" className="flex items-center gap-2 mb-2">
@@ -74,7 +95,7 @@ const AppContent: React.FC = () => {
                 </Label>
                 <NativeSelect
                   id="account_select"
-                  value={selectedAccountId}
+                  value={effectiveAccountId}
                   onChange={(e) => setSelectedAccountId(e.target.value)}
                   disabled={isLoadingAccounts}
                 >
@@ -136,6 +157,42 @@ const AppContent: React.FC = () => {
                 {t('reportsModule.generalLedger.exportCsv', 'Export CSV')}
               </Button>
             </div>
+
+            {/* Quick-jump shortcuts for common accounts */}
+            {(quickAccounts.cash || quickAccounts.ar || quickAccounts.ap) && (
+              <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-gray-100 dark:border-gray-800">
+                <span className="text-xs text-gray-500 dark:text-gray-400 mr-1">
+                  {t('reportsModule.generalLedger.quickJump', 'Quick jump:')}
+                </span>
+                {quickAccounts.cash && (
+                  <Button
+                    size="sm"
+                    variant={effectiveAccountId === quickAccounts.cash.account_id ? 'default' : 'outline'}
+                    onClick={() => setSelectedAccountId(quickAccounts.cash!.account_id)}
+                  >
+                    {t('reportsModule.generalLedger.quick.cash', 'Cash / Bank')}
+                  </Button>
+                )}
+                {quickAccounts.ar && (
+                  <Button
+                    size="sm"
+                    variant={effectiveAccountId === quickAccounts.ar.account_id ? 'default' : 'outline'}
+                    onClick={() => setSelectedAccountId(quickAccounts.ar!.account_id)}
+                  >
+                    {t('reportsModule.generalLedger.quick.ar', 'Receivables')}
+                  </Button>
+                )}
+                {quickAccounts.ap && (
+                  <Button
+                    size="sm"
+                    variant={effectiveAccountId === quickAccounts.ap.account_id ? 'default' : 'outline'}
+                    onClick={() => setSelectedAccountId(quickAccounts.ap!.account_id)}
+                  >
+                    {t('reportsModule.generalLedger.quick.ap', 'Payables')}
+                  </Button>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -153,12 +210,7 @@ const AppContent: React.FC = () => {
         )}
 
         {/* Loading State */}
-        {isLoading && (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-green-600" />
-            <span className="ml-2 text-gray-600 dark:text-gray-400">{t('reportsModule.generalLedger.loading', 'Loading general ledger...')}</span>
-          </div>
-        )}
+        {isLoading && <AccountingReportSkeleton />}
 
         {/* Error State */}
         {error && (
@@ -240,101 +292,101 @@ const AppContent: React.FC = () => {
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
-                    <table
+                    <Table
                       className="w-full"
                       aria-label={t('reportsModule.generalLedger.title', 'General Ledger')}
                     >
-                      <thead className="bg-gray-50 dark:bg-gray-800">
-                        <tr>
-                          <th scope="col" className="text-left px-4 py-3 text-sm font-medium text-gray-600 dark:text-gray-400">
+                      <TableHeader className="bg-gray-50 dark:bg-gray-800">
+                        <TableRow>
+                          <TableHead scope="col" className="text-left px-4 py-3 text-sm font-medium text-gray-600 dark:text-gray-400">
                             {t('reportsModule.generalLedger.table.date', 'Date')}
-                          </th>
-                          <th scope="col" className="text-left px-4 py-3 text-sm font-medium text-gray-600 dark:text-gray-400">
+                          </TableHead>
+                          <TableHead scope="col" className="text-left px-4 py-3 text-sm font-medium text-gray-600 dark:text-gray-400">
                             {t('reportsModule.generalLedger.table.entryNumber', 'Entry #')}
-                          </th>
-                          <th scope="col" className="text-left px-4 py-3 text-sm font-medium text-gray-600 dark:text-gray-400">
+                          </TableHead>
+                          <TableHead scope="col" className="text-left px-4 py-3 text-sm font-medium text-gray-600 dark:text-gray-400">
                             {t('reportsModule.generalLedger.table.description', 'Description')}
-                          </th>
-                          <th scope="col" className="text-left px-4 py-3 text-sm font-medium text-gray-600 dark:text-gray-400">
+                          </TableHead>
+                          <TableHead scope="col" className="text-left px-4 py-3 text-sm font-medium text-gray-600 dark:text-gray-400">
                             {t('reportsModule.generalLedger.table.reference', 'Reference')}
-                          </th>
-                          <th scope="col" className="text-right px-4 py-3 text-sm font-medium text-gray-600 dark:text-gray-400">
+                          </TableHead>
+                          <TableHead scope="col" className="text-right px-4 py-3 text-sm font-medium text-gray-600 dark:text-gray-400">
                             {t('reportsModule.generalLedger.table.debit', 'Debit')}
-                          </th>
-                          <th scope="col" className="text-right px-4 py-3 text-sm font-medium text-gray-600 dark:text-gray-400">
+                          </TableHead>
+                          <TableHead scope="col" className="text-right px-4 py-3 text-sm font-medium text-gray-600 dark:text-gray-400">
                             {t('reportsModule.generalLedger.table.credit', 'Credit')}
-                          </th>
-                          <th scope="col" className="text-right px-4 py-3 text-sm font-medium text-gray-600 dark:text-gray-400">
+                          </TableHead>
+                          <TableHead scope="col" className="text-right px-4 py-3 text-sm font-medium text-gray-600 dark:text-gray-400">
                             {t('reportsModule.generalLedger.table.balance', 'Balance')}
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
+                          </TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
                         {/* Opening Balance Row */}
-                        <tr className="bg-blue-50/50 dark:bg-blue-900/10 border-t border-gray-100 dark:border-gray-700">
-                          <td colSpan={4} className="px-4 py-3 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                        <TableRow className="bg-blue-50/50 dark:bg-blue-900/10 border-t border-gray-100 dark:border-gray-700">
+                          <TableCell colSpan={4} className="px-4 py-3 text-sm font-semibold text-gray-700 dark:text-gray-300">
                             {t('reportsModule.generalLedger.openingBalanceRow', 'Opening Balance')}
-                          </td>
-                          <td className="px-4 py-3 text-sm text-right text-gray-400">-</td>
-                          <td className="px-4 py-3 text-sm text-right text-gray-400">-</td>
-                          <td className="px-4 py-3 text-sm text-right font-semibold text-gray-900 dark:text-white">
+                          </TableCell>
+                          <TableCell className="px-4 py-3 text-sm text-right text-gray-400">-</TableCell>
+                          <TableCell className="px-4 py-3 text-sm text-right text-gray-400">-</TableCell>
+                          <TableCell className="px-4 py-3 text-sm text-right font-semibold text-gray-900 dark:text-white">
                             {formatCurrency(report.opening_balance, currencySymbol)}
-                          </td>
-                        </tr>
-                        {report.entries.map((entry, index) => (
-                          <tr
-                            key={`${entry.journal_entry_id}-${index}`}
+                          </TableCell>
+                        </TableRow>
+                        {report.entries.map((entry) => (
+                          <TableRow
+                            key={`${entry.journal_entry_id}`}
                             className="border-t border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
                           >
-                            <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
+                            <TableCell className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
                               {new Date(entry.entry_date).toLocaleDateString('fr-FR')}
-                            </td>
-                            <td className="px-4 py-3 text-sm font-mono text-gray-600 dark:text-gray-400">
+                            </TableCell>
+                            <TableCell className="px-4 py-3 text-sm font-mono text-gray-600 dark:text-gray-400">
                               {entry.entry_number}
-                            </td>
-                            <td className="px-4 py-3 text-sm text-gray-900 dark:text-white max-w-xs truncate">
+                            </TableCell>
+                            <TableCell className="px-4 py-3 text-sm text-gray-900 dark:text-white max-w-xs truncate">
                               {entry.description || '-'}
-                            </td>
-                            <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
+                            </TableCell>
+                            <TableCell className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
                               {entry.reference_type && entry.reference_number
                                 ? `${entry.reference_type} ${entry.reference_number}`
                                 : '-'}
-                            </td>
-                            <td className="px-4 py-3 text-sm text-right font-medium text-blue-600 dark:text-blue-400">
+                            </TableCell>
+                            <TableCell className="px-4 py-3 text-sm text-right font-medium text-blue-600 dark:text-blue-400">
                               {Number(entry.debit) > 0 ? formatCurrency(Number(entry.debit), currencySymbol) : '-'}
-                            </td>
-                            <td className="px-4 py-3 text-sm text-right font-medium text-purple-600 dark:text-purple-400">
+                            </TableCell>
+                            <TableCell className="px-4 py-3 text-sm text-right font-medium text-purple-600 dark:text-purple-400">
                               {Number(entry.credit) > 0 ? formatCurrency(Number(entry.credit), currencySymbol) : '-'}
-                            </td>
-                            <td className="px-4 py-3 text-sm text-right font-medium text-gray-900 dark:text-white">
+                            </TableCell>
+                            <TableCell className="px-4 py-3 text-sm text-right font-medium text-gray-900 dark:text-white">
                               {formatCurrency(Number(entry.running_balance), currencySymbol)}
-                            </td>
-                          </tr>
+                            </TableCell>
+                          </TableRow>
                         ))}
-                      </tbody>
-                      <tfoot className="bg-gray-100 dark:bg-gray-700 font-bold">
-                        <tr>
-                          <td colSpan={4} className="px-4 py-3 text-sm text-gray-900 dark:text-white">
+                      </TableBody>
+                      <TableFooter className="bg-gray-100 dark:bg-gray-700 font-bold">
+                        <TableRow>
+                          <TableCell colSpan={4} className="px-4 py-3 text-sm text-gray-900 dark:text-white">
                             {t('reportsModule.generalLedger.closingBalanceRow', 'Closing Balance')}
-                          </td>
-                          <td className="px-4 py-3 text-sm text-right text-blue-700 dark:text-blue-300">
+                          </TableCell>
+                          <TableCell className="px-4 py-3 text-sm text-right text-blue-700 dark:text-blue-300">
                             {formatCurrency(
                               report.entries.reduce((sum, e) => sum + Number(e.debit), 0),
                               currencySymbol
                             )}
-                          </td>
-                          <td className="px-4 py-3 text-sm text-right text-purple-700 dark:text-purple-300">
+                          </TableCell>
+                          <TableCell className="px-4 py-3 text-sm text-right text-purple-700 dark:text-purple-300">
                             {formatCurrency(
                               report.entries.reduce((sum, e) => sum + Number(e.credit), 0),
                               currencySymbol
                             )}
-                          </td>
-                          <td className="px-4 py-3 text-sm text-right text-green-700 dark:text-green-300">
+                          </TableCell>
+                          <TableCell className="px-4 py-3 text-sm text-right text-green-700 dark:text-green-300">
                             {formatCurrency(report.closing_balance, currencySymbol)}
-                          </td>
-                        </tr>
-                      </tfoot>
-                    </table>
+                          </TableCell>
+                        </TableRow>
+                      </TableFooter>
+                    </Table>
                   </div>
                 )}
               </CardContent>

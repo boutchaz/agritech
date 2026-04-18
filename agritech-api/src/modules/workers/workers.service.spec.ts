@@ -2,6 +2,9 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { WorkersService } from './workers.service';
 import { DatabaseService } from '../database/database.service';
+import { EmailService } from '../email/email.service';
+import { NotificationsService } from '../notifications/notifications.service';
+import { AccountingAutomationService } from '../journal-entries/accounting-automation.service';
 import {
   createMockSupabaseClient,
   createMockQueryBuilder,
@@ -87,6 +90,9 @@ describe('WorkersService', () => {
       providers: [
         WorkersService,
         { provide: DatabaseService, useValue: mockDatabaseService },
+        { provide: EmailService, useValue: { sendEmail: jest.fn() } },
+        { provide: NotificationsService, useValue: { sendNotification: jest.fn(), createNotification: jest.fn() } },
+        { provide: AccountingAutomationService, useValue: { createJournalEntryFromRevenue: jest.fn() } },
       ],
     }).compile();
 
@@ -1133,36 +1139,197 @@ describe('WorkersService', () => {
   });
 
   describe('Métayage Calculations', () => {
-    it('should default to khammass percentage when not specified', async () => {
+    // Helper: set up a metayage worker mock
+    function setupMetayageWorker(workerFields: Record<string, any>) {
       const accessQuery = setupOrganizationAccess();
       const workerQuery = createMockQueryBuilder();
       workerQuery.eq.mockReturnValue(workerQuery);
       workerQuery.select.mockReturnValue(workerQuery);
       workerQuery.maybeSingle.mockResolvedValue(
-        mockQueryResult({
-          id: TEST_IDS.worker,
-          metayage_percentage: null,
-          metayage_type: 'khammass',
-          calculation_basis: 'gross_revenue',
-        })
+        mockQueryResult({ id: TEST_IDS.worker, ...workerFields }),
       );
-
       mockClient.from.mockImplementation((table) => {
-        if (table === 'organization_users') {
-          return accessQuery;
-        }
+        if (table === 'organization_users') return accessQuery;
+        return workerQuery;
+      });
+    }
+
+    // ── Traditional types resolve correct percentages ──────────
+
+    it('khammass (1/5) → 20% of gross revenue', async () => {
+      setupMetayageWorker({
+        metayage_percentage: null,
+        metayage_type: 'khammass',
+        calculation_basis: 'gross_revenue',
+      });
+      const result = await service.calculateMetayageShare(
+        TEST_IDS.user, TEST_IDS.organization, TEST_IDS.worker, 100000, 30000,
+      );
+      // 20% of 100,000 gross = 20,000
+      expect(result.share).toBe(20000);
+    });
+
+    it('rebaa (1/4) → 25% of gross revenue', async () => {
+      setupMetayageWorker({
+        metayage_percentage: null,
+        metayage_type: 'rebaa',
+        calculation_basis: 'gross_revenue',
+      });
+      const result = await service.calculateMetayageShare(
+        TEST_IDS.user, TEST_IDS.organization, TEST_IDS.worker, 100000, 30000,
+      );
+      // 25% of 100,000 gross = 25,000
+      expect(result.share).toBe(25000);
+    });
+
+    it('tholth (1/3) → 33.33% of gross revenue', async () => {
+      setupMetayageWorker({
+        metayage_percentage: null,
+        metayage_type: 'tholth',
+        calculation_basis: 'gross_revenue',
+      });
+      const result = await service.calculateMetayageShare(
+        TEST_IDS.user, TEST_IDS.organization, TEST_IDS.worker, 100000, 30000,
+      );
+      // 33.33% of 100,000 = 33,330
+      expect(result.share).toBeCloseTo(33330, 0);
+    });
+
+    // ── Calculation basis: gross vs net ────────────────────────
+
+    it('net_revenue basis deducts charges before applying percentage', async () => {
+      setupMetayageWorker({
+        metayage_percentage: 25,
+        metayage_type: 'custom',
+        calculation_basis: 'net_revenue',
+      });
+      const result = await service.calculateMetayageShare(
+        TEST_IDS.user, TEST_IDS.organization, TEST_IDS.worker, 100000, 40000,
+      );
+      // net = 100,000 - 40,000 = 60,000; 25% of 60,000 = 15,000
+      expect(result.share).toBe(15000);
+    });
+
+    it('gross_revenue basis ignores charges', async () => {
+      setupMetayageWorker({
+        metayage_percentage: 25,
+        metayage_type: 'custom',
+        calculation_basis: 'gross_revenue',
+      });
+      const result = await service.calculateMetayageShare(
+        TEST_IDS.user, TEST_IDS.organization, TEST_IDS.worker, 100000, 40000,
+      );
+      // 25% of 100,000 gross = 25,000 (charges irrelevant)
+      expect(result.share).toBe(25000);
+    });
+
+    it('defaults to gross_revenue when calculation_basis is null', async () => {
+      setupMetayageWorker({
+        metayage_percentage: 20,
+        metayage_type: 'custom',
+        calculation_basis: null,
+      });
+      const result = await service.calculateMetayageShare(
+        TEST_IDS.user, TEST_IDS.organization, TEST_IDS.worker, 80000, 20000,
+      );
+      // Default = gross; 20% of 80,000 = 16,000
+      expect(result.share).toBe(16000);
+    });
+
+    // ── Edge cases & validation ────────────────────────────────
+
+    it('rejects when charges exceed gross revenue on net basis', async () => {
+      setupMetayageWorker({
+        metayage_percentage: 25,
+        metayage_type: 'custom',
+        calculation_basis: 'net_revenue',
+      });
+      await expect(
+        service.calculateMetayageShare(
+          TEST_IDS.user, TEST_IDS.organization, TEST_IDS.worker, 10000, 15000,
+        ),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('returns 0 share when gross revenue is 0', async () => {
+      setupMetayageWorker({
+        metayage_percentage: 25,
+        metayage_type: 'custom',
+        calculation_basis: 'gross_revenue',
+      });
+      const result = await service.calculateMetayageShare(
+        TEST_IDS.user, TEST_IDS.organization, TEST_IDS.worker, 0, 0,
+      );
+      expect(result.share).toBe(0);
+    });
+
+    it('worker not found throws NotFoundException', async () => {
+      const accessQuery = setupOrganizationAccess();
+      const workerQuery = createMockQueryBuilder();
+      workerQuery.eq.mockReturnValue(workerQuery);
+      workerQuery.select.mockReturnValue(workerQuery);
+      workerQuery.maybeSingle.mockResolvedValue(mockQueryResult(null, null));
+      mockClient.from.mockImplementation((table) => {
+        if (table === 'organization_users') return accessQuery;
         return workerQuery;
       });
 
+      await expect(
+        service.calculateMetayageShare(
+          TEST_IDS.user, TEST_IDS.organization, 'nonexistent', 100000,
+        ),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    // ── Real-world Moroccan farm scenarios ─────────────────────
+
+    it('olive harvest: Khammass on net revenue', async () => {
+      setupMetayageWorker({
+        metayage_percentage: null,
+        metayage_type: 'khammass',
+        calculation_basis: 'net_revenue',
+      });
+      // Olive season: gross 150,000 DH, charges 45,000 DH
       const result = await service.calculateMetayageShare(
-        TEST_IDS.user,
-        TEST_IDS.organization,
-        TEST_IDS.worker,
-        100000,
-        30000
+        TEST_IDS.user, TEST_IDS.organization, TEST_IDS.worker, 150000, 45000,
+      );
+      // net = 105,000; 20% = 21,000 DH
+      expect(result.share).toBe(21000);
+    });
+
+    it('citrus harvest: Rebaa on gross revenue', async () => {
+      setupMetayageWorker({
+        metayage_percentage: null,
+        metayage_type: 'rebaa',
+        calculation_basis: 'gross_revenue',
+      });
+      const result = await service.calculateMetayageShare(
+        TEST_IDS.user, TEST_IDS.organization, TEST_IDS.worker, 200000, 60000,
+      );
+      // 25% of 200,000 gross = 50,000 DH
+      expect(result.share).toBe(50000);
+    });
+
+    it('gross basis always gives worker more than net basis', async () => {
+      setupMetayageWorker({
+        metayage_percentage: 25,
+        metayage_type: 'custom',
+        calculation_basis: 'gross_revenue',
+      });
+      const grossResult = await service.calculateMetayageShare(
+        TEST_IDS.user, TEST_IDS.organization, TEST_IDS.worker, 100000, 40000,
       );
 
-      expect(result.share).toBe(20000);
+      setupMetayageWorker({
+        metayage_percentage: 25,
+        metayage_type: 'custom',
+        calculation_basis: 'net_revenue',
+      });
+      const netResult = await service.calculateMetayageShare(
+        TEST_IDS.user, TEST_IDS.organization, TEST_IDS.worker, 100000, 40000,
+      );
+
+      expect(grossResult.share).toBeGreaterThan(netResult.share);
     });
   });
 });

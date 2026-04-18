@@ -12,7 +12,7 @@ export interface AccountMapping {
   account_id?: string;
   description?: string | null;
   is_active?: boolean;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   created_at?: string;
   account?: {
     id: string;
@@ -40,7 +40,7 @@ export interface CreateAccountMappingInput {
   account_id: string;
   is_active?: boolean;
   description?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface UpdateAccountMappingInput {
@@ -50,7 +50,7 @@ export interface UpdateAccountMappingInput {
   account_id?: string;
   is_active?: boolean;
   description?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export const accountMappingsApi = {
@@ -61,38 +61,40 @@ export const accountMappingsApi = {
     if (filters?.search) params.append('search', filters.search);
     const queryString = params.toString();
     return apiClient.get<AccountMapping[]>(
-      `/account-mappings${queryString ? `?${queryString}` : ''}`,
+      `/api/v1/account-mappings${queryString ? `?${queryString}` : ''}`,
+      {},
       organizationId
     );
   },
 
   async getOne(id: string, organizationId?: string): Promise<AccountMapping> {
-    return apiClient.get<AccountMapping>(`/account-mappings/${id}`, organizationId);
+    return apiClient.get<AccountMapping>(`/api/v1/account-mappings/${id}`, {}, organizationId);
   },
 
   async getMappingTypes(organizationId?: string): Promise<string[]> {
-    return apiClient.get<string[]>('/account-mappings/types', organizationId);
+    return apiClient.get<string[]>('/api/v1/account-mappings/types', {}, organizationId);
   },
 
   async getMappingOptions(organizationId?: string): Promise<AccountMappingOptions> {
-    return apiClient.get<AccountMappingOptions>('/account-mappings/options', organizationId);
+    return apiClient.get<AccountMappingOptions>('/api/v1/account-mappings/options', {}, organizationId);
   },
 
   async create(data: CreateAccountMappingInput, organizationId?: string): Promise<AccountMapping> {
-    return apiClient.post<AccountMapping>('/account-mappings', data, organizationId);
+    return apiClient.post<AccountMapping>('/api/v1/account-mappings', data, {}, organizationId);
   },
 
   async update(id: string, data: UpdateAccountMappingInput, organizationId?: string): Promise<AccountMapping> {
-    return apiClient.patch<AccountMapping>(`/account-mappings/${id}`, data, organizationId);
+    return apiClient.patch<AccountMapping>(`/api/v1/account-mappings/${id}`, data, {}, organizationId);
   },
 
   async delete(id: string, organizationId?: string): Promise<void> {
-    await apiClient.delete(`/account-mappings/${id}`, organizationId);
+    await apiClient.delete(`/api/v1/account-mappings/${id}`, {}, organizationId);
   },
 
   async initializeDefaults(countryCode: string, organizationId?: string): Promise<{ message: string; count: number }> {
     return apiClient.post<{ message: string; count: number }>(
-      `/account-mappings/initialize?country_code=${countryCode}`,
+      `/api/v1/account-mappings/initialize?country_code=${countryCode}`,
+      {},
       {},
       organizationId
     );

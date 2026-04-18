@@ -1,0 +1,1179 @@
+{
+  "_description": "Fichier de configuration du moteur IA AgromindIA. Chargé EN PREMIER avant le référentiel culture. Contient tout ce que le moteur doit savoir pour lire correctement chaque référentiel.",
+  "_version": "1.0",
+  "_date": "2026-03",
+  "conventions_globales": {
+    "mois": "English 3-letter uniquement : Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec",
+    "ranges": "[min, max] — jamais un seul nombre quand une plage existe",
+    "doses": "{valeur: number|[min,max], unite: string} — jamais du texte libre",
+    "conditions_alertes": "liste de {indice, operateur, valeur} — évaluables directement",
+    "null": "null = non applicable pour cette culture. Ne pas confondre avec 0.",
+    "operateurs_supportes": [
+      "<",
+      ">",
+      ">=",
+      "<=",
+      "==",
+      "!=",
+      "between",
+      "in"
+    ],
+    "valeurs_percentiles_dans_conditions": "P10 P15 P25 P30 P75 P90 = lire depuis baseline parcellaire calibrée"
+  },
+  "sections_communes": {
+    "metadata": "Infos version et conventions",
+    "systemes": "Systèmes de plantation avec densité, écartement, durée vie",
+    "seuils_satellite": "Seuils NDVI/NIRv/NDMI par système — garde-fous génériques",
+    "stades_phenomenologiques": "Cycle phénologique avec mois, coef_nirvp, phase_kc",
+    "kc_par_periode": "Coefficients culturaux par mois → calcul ETc",
+    "options_nutrition": "A/B/C avec conditions évaluables",
+    "entretien_kg_ha": "Besoins entretien NPK par système",
+    "fractionnement_pct": "% NPK par période avec stade et mois",
+    "seuils_foliaires": "Niveaux carence/suffisant/optimal/excès par élément",
+    "seuils_eau": "Seuils qualité eau irrigation",
+    "calendrier_biostimulants": "Applications biostimulants par période avec doses structurées",
+    "calendrier_phyto": "Traitements préventifs par mois/événement avec doses structurées",
+    "alertes": "Liste alertes avec seuil_entree/sortie structurés",
+    "modele_predictif": "Variables, poids, précision attendue par système",
+    "plan_annuel": "Calendrier type mensuel de référence",
+    "couts_indicatifs_DH": "Prix intrants en DH/unité pour calcul budget"
+  },
+  "cultures": {
+    "olivier": {
+      "fichier_referentiel": "DATA_OLIVIER_v5.json",
+      "prefixe_alertes": "OLI",
+      "langue_rapport_defaut": "fr",
+      "phenomenologie": {
+        "type": "stades_bbch",
+        "section": "stades_bbch",
+        "identifiant_stade": "code",
+        "champ_mois": "mois",
+        "champ_gdd": "gdd_cumul",
+        "champ_phase_kc": "phase_kc",
+        "gdd_tbase_c": 7.5,
+        "heures_froid": true,
+        "note": "Tbase 7.5°C + plafond 30°C (Moriondo 2001). Machine à états phénologique 6 phases : DORMANCE → DEBOURREMENT → FLORAISON → NOUAISON → STRESS_ESTIVAL → REPRISE_AUTOMNALE. Protocole Phénologique = document technique de référence.",
+        "gdd_plafond_c": 30,
+        "gdd_formule": "GDD = max(0, (min(Tmax, plafond_c) + max(Tmin, tbase_c)) / 2 - tbase_c)",
+        "gdd_activation": "Double condition : Tmoy > tbase_c ET hausse NIRv/NIRvP >= 20% vs passage précédent — lire referentiel.gdd.activation_forcing",
+        "gdd_section_referentiel": "referentiel.gdd"
+      },
+      "indices_satellites": {
+        "indices_calculer": [
+          "NDVI",
+          "NIRv",
+          "NIRvP",
+          "NDMI",
+          "NDRE",
+          "EVI",
+          "MSAVI",
+          "MSI",
+          "GCI"
+        ],
+        "calcul_NIRvP": {
+          "formule": "NIRvP = NIRv / coef_nirvp_stade",
+          "source_coef": "referentiel.stades_bbch[stade_actuel].coef_nirvp",
+          "usage": "Normalise NIRv par l'activité phénologique attendue — compare ainsi des stades différents entre eux",
+          "section_modele": "referentiel.modele_predictif.variables[NIRvP_cumule_Apr_Sep]"
+        },
+        "roles": {
+          "NDVI": "Vigueur végétative générale — premier signal rapide",
+          "NIRv": "Productivité photosynthétique — plus précis que NDVI pour biomasse active",
+          "NIRvP": "NIRv normalisé par stade phénologique — INDICE PHÉNOLOGIQUE PRINCIPAL olivier",
+          "NDMI": "Teneur en eau végétation — stress hydrique foliaire",
+          "NDRE": "Teneur en chlorophylle et azote — état nutritionnel",
+          "EVI": "Vigueur corrigée atmosphère — complément NDVI zones denses",
+          "MSAVI": "Vigueur corrigée sol nu — SPÉCIFIQUE OLIVIER (sol visible inter-rang 40-80%)",
+          "MSI": "Moisture Stress Index — stress hydrique sévère (inverse NDMI)",
+          "GCI": "Green Chlorophyll Index — teneur chlorophylle confirmation NDRE"
+        },
+        "croisements_diagnostic": {
+          "vigueur_vegetative": {
+            "indice_principal": "NIRv",
+            "confirmation_1": "NDVI",
+            "confirmation_2": "EVI",
+            "regle": "NIRv en baisse + NDVI confirme + EVI confirme → vigueur dégradée réelle. NIRv seul sans NDVI = ambiguïté.",
+            "faux_positifs_eviter": "MSAVI peut baisser si sol plus visible (taille, sol travaillé) sans lien avec vigueur réelle"
+          },
+          "stress_hydrique": {
+            "indice_principal": "NDMI",
+            "confirmation_1": "MSI",
+            "confirmation_2": "bilan_hydrique_meteo",
+            "regle": "NDMI < P15 ET MSI > seuil_alerte ET jours_sans_pluie > 10 → stress confirmé. NDMI seul = insuffisant.",
+            "note": "MSI inverse de NDMI — si NDMI baisse ET MSI monte = double confirmation stress"
+          },
+          "etat_nutritionnel_azote": {
+            "indice_principal": "NDRE",
+            "confirmation_1": "GCI",
+            "confirmation_2": "NIRv_tendance",
+            "regle": "NDRE < P10 ET GCI en déclin → carence N probable. NDRE seul peut être affecté par stade phénologique.",
+            "croisement_stade": "Toujours normaliser NDRE par stade BBCH courant — floraison naturellement plus faible"
+          },
+          "phenologie": {
+            "indice_principal": "NIRvP",
+            "confirmation_1": "GDD_cumul",
+            "confirmation_2": "NIRv_courbe",
+            "regle": "NIRvP comparé à NIRvP même stade années précédentes (N-1, N-2) — détecte anomalie floraison (alerte OLI-09, OLI-13)",
+            "formule_alerte_09": "NIRvP_N << NIRvP_N-2 (écart > 30%) au stade floraison → Année OFF probable"
+          },
+          "alternance": {
+            "indices": [
+              "NIRvP_floraison",
+              "historique_rendements"
+            ],
+            "regle": "NIRvP pic floraison + rendement N-1 → détecter cycle ON/OFF. Confirmer avec historique rendements si disponible."
+          },
+          "deperissement_maladie": {
+            "indice_principal": "NIRv",
+            "confirmation_1": "NDVI",
+            "signature": {
+              "chute_brutale": "NIRv -25% en < 15j + NDVI confirme → événement ponctuel (gel, grêle, maladie aiguë)",
+              "declin_progressif": "NIRv déclin > 3 passages + NDVI suit → stress chronique ou Verticilliose",
+              "asymetrie_spatiale": "Hétérogénéité NIRv intra-parcelle → foyer maladie ou zone drainage"
+            }
+          }
+        },
+        "specificites_culture": {
+          "MSAVI_obligatoire": "Système traditionnel (sol visible 60-80%) et intensif (40-60%) — MSAVI discrimine végétation du sol nu. Super-intensif : MSAVI moins utile (sol très peu visible).",
+          "NIRvP_indice_cle": "L'indice phénologique principal de l'olivier est NIRvP, pas NIRv brut. Utiliser NIRv × (1/coef_nirvp) pour comparer entre stades.",
+          "MSI_stress_severe": "MSI utilisé pour détecter stress hydrique sévère (Chergui, canicule) — seuils dans referentiel.seuils_satellite[systeme].MSI"
+        }
+      },
+      "calcul_rendement": {
+        "section_export": "export_npk_kg_par_tonne_fruit",
+        "unite_export": "kg_par_tonne_fruit",
+        "section_entretien": "entretien_kg_ha",
+        "formule_N": "rendement_cible_t_ha × export.N.valeur[1] + entretien[systeme].N[1]",
+        "formule_P": "rendement_cible_t_ha × export.P2O5.valeur[1] + entretien[systeme].P2O5[1]",
+        "formule_K": "rendement_cible_t_ha × export.K2O.valeur[1] + entretien[systeme].K2O[1]"
+      },
+      "specificites": {
+        "alternance": true,
+        "section_ajustement_alternance": "ajustement_alternance",
+        "section_ajustement_cible": "ajustement_cible",
+        "porte_greffe": false,
+        "pollinisation_manuelle": false,
+        "salinite_seuil_option_C_CE_eau": 2.5,
+        "salinite_seuil_option_C_CE_sol": 3.0,
+        "bayoud": false,
+        "tristeza": false,
+        "phytophthora_critique": false,
+        "kcl_tolere": false,
+        "signal_satellite_mixte": false
+      },
+      "rapport_agriculteur": {
+        "score_sante_labels": {
+          "80_100": {
+            "fr": "Excellente",
+            "ar": "ممتازة"
+          },
+          "60_80": {
+            "fr": "Bonne",
+            "ar": "جيدة"
+          },
+          "40_60": {
+            "fr": "Moyenne",
+            "ar": "متوسطة"
+          },
+          "20_40": {
+            "fr": "Faible",
+            "ar": "ضعيفة"
+          },
+          "0_20": {
+            "fr": "Critique",
+            "ar": "حرجة"
+          }
+        },
+        "icone_score": {
+          "80_100": "🌿🌿🌿",
+          "60_80": "🌿🌿",
+          "40_60": "🌿",
+          "20_40": "⚠️",
+          "0_20": "🔴"
+        },
+        "sections_rapport": [
+          "score_global",
+          "points_forts",
+          "points_attention",
+          "prevision_rendement",
+          "donnees_manquantes"
+        ]
+      }
+    },
+    "agrumes": {
+      "fichier_referentiel": "DATA_AGRUMES_v1.json",
+      "prefixe_alertes": "AGR",
+      "langue_rapport_defaut": "fr",
+      "phenomenologie": {
+        "type": "flush_vegetatifs_multiples",
+        "section": "stades_phenomenologiques",
+        "identifiant_stade": "code",
+        "champ_mois": "mois",
+        "champ_phase_kc": "phase_kc",
+        "gdd_tbase_c": 13,
+        "heures_froid": true,
+        "floraisons_multiples": true,
+        "note": "Citronnier remontant : 3 floraisons/an. Signal NIRv variable selon espèce. Pas de BBCH."
+      },
+      "indices_satellites": {
+        "indices_calculer": [
+          "NDVI",
+          "NIRv",
+          "NDMI",
+          "NDRE",
+          "EVI",
+          "MSI",
+          "GCI"
+        ],
+        "calcul_NIRvP": {
+          "formule": "NIRvP = NIRv / coef_nirvp_periode",
+          "source_coef": "referentiel.stades_phenomenologiques[periode_actuelle].coef_nirvp",
+          "usage": "Normalise NIRv par activité attendue — comparaison inter-périodes flush/repos",
+          "note": "Moins discriminant que olivier — agrumes sempervirents, variations NIRv plus faibles"
+        },
+        "roles": {
+          "NDVI": "Vigueur générale — signal stable (feuillage dense persistant)",
+          "NIRv": "Productivité photosynthétique — varie lors des flush végétatifs",
+          "NDMI": "Teneur en eau végétation — stress hydrique foliaire",
+          "NDRE": "Chlorophylle / azote — chlorose ferrique visible ici (pH > 7.5)",
+          "EVI": "Vigueur corrigée — complément NDVI",
+          "MSI": "Stress hydrique sévère — confirmation NDMI",
+          "GCI": "Chlorophylle confirmation — croiser avec NDRE pour carences"
+        },
+        "croisements_diagnostic": {
+          "vigueur_vegetative": {
+            "indice_principal": "NIRv",
+            "confirmation_1": "NDVI",
+            "confirmation_2": "GCI",
+            "regle": "NIRv + NDVI cohérents → vigueur confirmée. Déclin NIRv seul peut être lié à cycle flush (normal).",
+            "faux_positifs": "Déclin NIRv en période inter-flush = NORMAL. Ne pas alarmer sans croiser avec GDD et stade."
+          },
+          "stress_hydrique": {
+            "indice_principal": "NDMI",
+            "confirmation_1": "MSI",
+            "confirmation_2": "bilan_hydrique",
+            "regle": "NDMI < P15 ET MSI élevé ET bilan hydrique négatif → stress réel. Seuil plus bas que olivier.",
+            "seuil_option_C": "CE eau > 1.5 dS/m — agrumes plus sensibles que olivier (2.5)"
+          },
+          "chlorose_ferrique": {
+            "indice_principal": "NDRE",
+            "confirmation_1": "GCI",
+            "confirmation_2": "pH_sol",
+            "regle": "NDRE < P10 + GCI déclin + pH sol > 7.5 → chlorose ferrique probable. Alerte AGR-11.",
+            "note": "Chlorose ferrique = cause principale de NDRE bas chez agrumes sur sol calcaire"
+          },
+          "phenologie_flush": {
+            "indice_principal": "NIRv",
+            "confirmation_1": "NDVI_variation",
+            "regle": "Pic NIRv = flush végétatif actif. Comparer amplitude du pic vs historique même période.",
+            "citronnier": "Jusqu'à 3 pics/an — ne pas confondre flush avec anomalie"
+          },
+          "deperissement_tristeza": {
+            "indice_principal": "NDVI",
+            "confirmation_1": "NIRv",
+            "signature": "Déclin rapide NDVI + NIRv sur arbres porte-greffe Bigaradier → Tristeza suspectée. Alerte AGR-20.",
+            "porte_greffe_a_surveiller": "bigaradier"
+          },
+          "gommose_phytophthora": {
+            "indice_principal": "NDMI",
+            "confirmation_1": "bilan_hydrique",
+            "signature": "NDMI très élevé (P95+) + sol saturé > 48h + T 18-28°C → Gommose. Alerte AGR-07.",
+            "note": "Paradoxal : NDMI haut = trop d'eau = risque gommose chez agrumes"
+          }
+        },
+        "specificites_culture": {
+          "pas_de_MSAVI": "Couverture végétale dense — MSAVI non discriminant, ne pas calculer.",
+          "variations_NIRv_faibles": "Agrumes sempervirents — variations NIRv plus subtiles que caducs. Seuils de détection plus fins.",
+          "NIRvP_reference_flush": "NIRvP utile pour normaliser l'activité lors des flush vs périodes calmes.",
+          "sensibilite_chlorures": "Surveiller accumulation Cl foliaire (> 0.70% toxique). Alerte AGR-13.",
+          "porte_greffe_module_signal": "Le porte-greffe influence la vigueur — Volkameriana plus vigoureux que Poncirus."
+        }
+      },
+      "calcul_rendement": {
+        "section_export": "especes",
+        "unite_export": "kg_par_tonne_fruit",
+        "section_entretien": "entretien_kg_ha",
+        "note": "Lire export depuis especes[code].export_kg_t_fruit selon variété déclarée"
+      },
+      "specificites": {
+        "alternance": true,
+        "section_ajustement_alternance": null,
+        "section_ajustement_cible": null,
+        "porte_greffe": true,
+        "section_porte_greffes": "porte_greffes",
+        "pollinisation_manuelle": false,
+        "salinite_seuil_option_C_CE_eau": 1.5,
+        "salinite_seuil_option_C_CE_sol": 2.0,
+        "bayoud": false,
+        "tristeza": true,
+        "tristeza_note": "Vérifier porte-greffe dans porte_greffes[] — bigaradier RISQUE",
+        "phytophthora_critique": false,
+        "chlorures_sensible": true,
+        "kcl_tolere": false,
+        "signal_satellite_mixte": false
+      },
+      "rapport_agriculteur": {
+        "score_sante_labels": {
+          "80_100": {
+            "fr": "Excellente",
+            "ar": "ممتازة"
+          },
+          "60_80": {
+            "fr": "Bonne",
+            "ar": "جيدة"
+          },
+          "40_60": {
+            "fr": "Moyenne",
+            "ar": "متوسطة"
+          },
+          "20_40": {
+            "fr": "Faible",
+            "ar": "ضعيفة"
+          },
+          "0_20": {
+            "fr": "Critique",
+            "ar": "حرجة"
+          }
+        },
+        "icone_score": {
+          "80_100": "🍊🍊🍊",
+          "60_80": "🍊🍊",
+          "40_60": "🍊",
+          "20_40": "⚠️",
+          "0_20": "🔴"
+        },
+        "sections_rapport": [
+          "score_global",
+          "points_forts",
+          "points_attention",
+          "prevision_rendement",
+          "donnees_manquantes"
+        ]
+      }
+    },
+    "avocatier": {
+      "fichier_referentiel": "DATA_AVOCATIER_v1.json",
+      "prefixe_alertes": "AVO",
+      "langue_rapport_defaut": "fr",
+      "phenomenologie": {
+        "type": "flush_vegetatifs_chevauchement_cycles",
+        "section": "stades_phenomenologiques",
+        "identifiant_stade": "code",
+        "champ_mois": "mois",
+        "champ_phase_kc": "phase_kc",
+        "gdd_tbase_c": 10,
+        "heures_froid": false,
+        "chevauchement_cycles": true,
+        "note": "Fruits N-1 en récolte pendant floraison N. NIRvP moins discriminant que olivier. Flush 1 (Feb-Mar) + Flush 2 (Jul-Aug)."
+      },
+      "indices_satellites": {
+        "indices_calculer": [
+          "NDVI",
+          "NIRv",
+          "NDMI",
+          "NDRE",
+          "EVI",
+          "MSI",
+          "GCI"
+        ],
+        "calcul_NIRvP": {
+          "formule": "NIRvP = NIRv / coef_nirvp_periode",
+          "source_coef": "referentiel.stades_phenomenologiques[periode_actuelle].coef_nirvp",
+          "usage": "Normalisation par période — mais ATTENTION : NIRvP moins discriminant avocatier",
+          "note": "Feuillage dense persistant + superposition cycles → variations saisonnières NIRvP très faibles. Préférer tendances 3+ passages."
+        },
+        "roles": {
+          "NDVI": "Vigueur générale — signal plus stable que NIRv sur avocatier",
+          "NIRv": "Productivité photosynthétique — varie lors flush végétatifs",
+          "NDMI": "Teneur en eau végétation — CRITIQUE : avocatier très sensible (système racinaire superficiel)",
+          "NDRE": "Chlorophylle / azote — chlorose ferrique fréquente (sol calcaire)",
+          "EVI": "Vigueur corrigée — utile couverture dense",
+          "MSI": "Stress hydrique sévère — confirmation NDMI en situation critique",
+          "GCI": "Chlorophylle confirmation — croiser NDRE"
+        },
+        "croisements_diagnostic": {
+          "vigueur_vegetative": {
+            "indice_principal": "NIRv",
+            "confirmation_1": "NDVI",
+            "confirmation_2": "GCI",
+            "regle": "NIRv en baisse + NDVI confirme sur 3+ passages → vigueur dégradée. NIRv seul sur avocatier = bruit.",
+            "attention": "NIRvP peu discriminant avocatier — toujours confirmer sur 3 passages minimum avant diagnostic"
+          },
+          "stress_hydrique": {
+            "indice_principal": "NDMI",
+            "confirmation_1": "MSI",
+            "confirmation_2": "bilan_hydrique",
+            "regle": "NDMI < P15 ET MSI élevé ET bilan négatif → stress réel. CRITIQUE : avocatier système racinaire superficiel réagit vite.",
+            "seuil_option_C": "CE eau > 1.0 dS/m — culture la plus sensible salinité des 4",
+            "double_risque": "NDMI très bas = stress hydrique (AVO-01). NDMI très haut + sol saturé = Phytophthora (AVO-02/07)."
+          },
+          "phytophthora_risque": {
+            "indice_principal": "NDMI",
+            "confirmation_1": "bilan_hydrique",
+            "confirmation_2": "NIRv_tendance",
+            "signature": "NDMI > P95 + pluie > 50mm/semaine + T 20-28°C → risque Phytophthora CRITIQUE. Alerte AVO-02/07.",
+            "progression": "Si Phytophthora établi : NIRv déclin progressif + NDVI suit + feuilles pâles terrain. Alerte AVO-08.",
+            "note": "DRAINAGE NON NÉGOCIABLE — sol saturé > 48h = risque mortel avocatier"
+          },
+          "stress_salin_chlorures": {
+            "indice_principal": "NDRE",
+            "confirmation_1": "GCI",
+            "confirmation_2": "CE_sol_mesure",
+            "signature": "NDRE bas + GCI déclin + brûlures terrain → toxicité Cl/Na. Alerte AVO-13.",
+            "seuil": "Cl foliaire > 0.50% toxique (vs 0.70% agrumes, 0.80% palmier)"
+          },
+          "phenologie_chevauchement": {
+            "indice_principal": "NIRv",
+            "confirmation_1": "GDD_cumul",
+            "regle": "Flush 1 détectable Feb-Mar (pic NIRv). Flush 2 Jul-Aug. Entre les deux : grossissement continu.",
+            "piege": "Superposition récolte N-1 + floraison N → ne pas interpréter le signal de floraison comme anomalie"
+          },
+          "alternance": {
+            "indices": [
+              "NIRv_flush_1",
+              "historique_rendements"
+            ],
+            "regle": "Flush 1 faible Feb-Mar (< 60% attendu) + année N-1 productive → Année OFF probable. Alerte AVO-17.",
+            "note": "Alternance avocatier modérée à forte selon variété (Fuerte forte, Pinkerton faible)"
+          }
+        },
+        "specificites_culture": {
+          "pas_de_MSAVI": "Couverture végétale dense — MSAVI non utile.",
+          "NIRvP_faiblement_discriminant": "FEUILLAGE DENSE + CHEVAUCHEMENT CYCLES → variations NIRvP saisonnières très atténuées. Toujours confirmer sur 3 passages minimum.",
+          "NDMI_double_sens": "NDMI bas = stress hydrique. NDMI très haut = excès eau = risque Phytophthora. Les deux sont des alertes.",
+          "racines_superficielles": "Système racinaire 0.5-1.5m — réaction rapide aux variations NDMI. Délai stress-signal très court.",
+          "sensibilite_salinite_max": "Seuil salinité le plus bas des 4 cultures : CE eau > 1.0 dS/m → option C. KCl INTERDIT."
+        }
+      },
+      "calcul_rendement": {
+        "section_export": "export_npk_kg_par_tonne_fruit",
+        "unite_export": "kg_par_tonne_fruit",
+        "section_entretien": "entretien_kg_ha",
+        "formule_N": "rendement_cible_t_ha × export.N.valeur[1] + entretien[systeme].N[1]",
+        "formule_P": "rendement_cible_t_ha × export.P2O5.valeur[1] + entretien[systeme].P2O5[1]",
+        "formule_K": "rendement_cible_t_ha × export.K2O.valeur[1] + entretien[systeme].K2O[1]"
+      },
+      "specificites": {
+        "alternance": true,
+        "section_ajustement_alternance": null,
+        "porte_greffe": true,
+        "section_porte_greffes": null,
+        "pollinisation_manuelle": false,
+        "types_floraux_AB": true,
+        "section_pollinisation": "pollinisation",
+        "salinite_seuil_option_C_CE_eau": 1.0,
+        "salinite_seuil_option_C_CE_sol": 1.5,
+        "bayoud": false,
+        "tristeza": false,
+        "phytophthora_critique": true,
+        "phytophthora_note": "Drainage NON NÉGOCIABLE — sol saturé > 48h = risque mortel",
+        "chlorures_sensible": true,
+        "kcl_tolere": false,
+        "signal_satellite_mixte": false
+      },
+      "rapport_agriculteur": {
+        "score_sante_labels": {
+          "80_100": {
+            "fr": "Excellente",
+            "ar": "ممتازة"
+          },
+          "60_80": {
+            "fr": "Bonne",
+            "ar": "جيدة"
+          },
+          "40_60": {
+            "fr": "Moyenne",
+            "ar": "متوسطة"
+          },
+          "20_40": {
+            "fr": "Faible",
+            "ar": "ضعيفة"
+          },
+          "0_20": {
+            "fr": "Critique",
+            "ar": "حرجة"
+          }
+        },
+        "icone_score": {
+          "80_100": "🥑🥑🥑",
+          "60_80": "🥑🥑",
+          "40_60": "🥑",
+          "20_40": "⚠️",
+          "0_20": "🔴"
+        },
+        "sections_rapport": [
+          "score_global",
+          "points_forts",
+          "points_attention",
+          "prevision_rendement",
+          "donnees_manquantes"
+        ]
+      }
+    },
+    "palmier_dattier": {
+      "fichier_referentiel": "DATA_PALMIER_v1.json",
+      "prefixe_alertes": "PAL",
+      "langue_rapport_defaut": "ar",
+      "phenomenologie": {
+        "type": "stades_nommes_kimri_khalal_rutab_tamr",
+        "section": "stades_phenomenologiques",
+        "identifiant_stade": "code",
+        "champ_mois": "mois",
+        "champ_gdd": "gdd_depuis_floraison",
+        "champ_phase_kc": "phase_kc",
+        "gdd_tbase_c": 18,
+        "gdd_periode": "depuis_floraison",
+        "heures_froid": false,
+        "note": "Signal satellite ATTÉNUÉ — canopée stable. NDVI préféré à NIRvP. En oasis traditionnel : signal MIXTE 3 strates."
+      },
+      "indices_satellites": {
+        "indices_calculer": [
+          "NDVI",
+          "NIRv",
+          "NDMI",
+          "NDRE",
+          "EVI",
+          "MSI"
+        ],
+        "calcul_NIRvP": {
+          "formule": "NIRvP = NIRv / coef_nirvp_stade",
+          "source_coef": "referentiel.stades_phenomenologiques[stade_actuel].coef_nirvp",
+          "usage": "Normalise NIRv pour comparaisons inter-stades",
+          "note": "SIGNAL ATTÉNUÉ palmier — canopée stable, stipe non ramifié, variations saisonnières NIRvP très faibles. NDVI préféré à NIRvP pour diagnostic principal."
+        },
+        "roles": {
+          "NDVI": "INDICE PRINCIPAL palmier — vigueur + état général. Plus stable et discriminant que NIRv sur palmier.",
+          "NIRv": "Productivité photosynthétique — signal atténué. Utilisé en confirmation et pour NIRvP.",
+          "NDMI": "Teneur en eau végétation — CRITIQUE stade Kimri. Stress irréversible sur calibre dattes.",
+          "NDRE": "Chlorophylle / azote — carences nutritionnelles",
+          "EVI": "Vigueur corrigée — utile en système mono-spécifique intensif",
+          "MSI": "Stress hydrique sévère — confirmation NDMI"
+        },
+        "croisements_diagnostic": {
+          "vigueur_vegetative": {
+            "indice_principal": "NDVI",
+            "confirmation_1": "NIRv",
+            "confirmation_2": "EVI",
+            "regle": "NDVI déclin + NIRv confirme → vigueur dégradée. NDVI seul peut baisser en post-taille (normal).",
+            "attention_signal_attenue": "Variations NDVI palmier < 15% même en cas de stress modéré. Seuils de détection plus fins que autres cultures."
+          },
+          "stress_hydrique": {
+            "indice_principal": "NDMI",
+            "confirmation_1": "MSI",
+            "confirmation_2": "bilan_hydrique",
+            "stade_critique": "KIMRI — stress irréversible sur calibre. Alerte PAL-01 et PAL-02 priorité maximale pendant Kimri.",
+            "regle": "NDMI < P15 + MSI élevé + stade Kimri → URGENCE. Perte calibre dattes irréversible.",
+            "hors_kimri": "Hors stade Kimri : stress hydrique moins critique mais surveiller quand même NDMI."
+          },
+          "maturation_risque_pluie": {
+            "indice_principal": "aucun_satellite",
+            "confirmation": "meteo_pluie_mm",
+            "regle": "Stade Khalal-Rutab-Tamr + pluie > 10mm → URGENCE fermentation. Alerte PAL-05.",
+            "note": "Aucun indice satellite ne détecte la fermentation — surveillance météo pure pendant maturation"
+          },
+          "bayoud_detection": {
+            "indice_principal": "NDVI",
+            "signature": "NDVI_pattern = dessechement_asymetrique_demi_couronne",
+            "regle": "Asymétrie spatiale NDVI sur demi-couronne d'un arbre → SUSPICION BAYOUD. Alerte PAL-08 priorité maximale.",
+            "note": "NDVI_asymetrie est détectée à l'échelle arbre (résolution Sentinel-2 10m = limite). Confirmer terrain obligatoire.",
+            "action": "Signalement immédiat + inspection terrain + diagnostic laboratoire avant toute conclusion"
+          },
+          "etat_nutritionnel": {
+            "indice_principal": "NDRE",
+            "confirmation_1": "GCI",
+            "regle": "NDRE bas + GCI déclin → carence N ou Fe probable. K non visible satellite — évaluer via plan fertilisation.",
+            "note_potassium": "K = élément clé qualité dattes (sucres, texture) mais non détectable par satellite. Évaluer via analyse foliaire."
+          },
+          "signal_mixte_oasis": {
+            "systeme_concerne": "traditionnel_oasien",
+            "regle": "SIGNAL = mélange palmiers + arbres strate moyenne + cultures sol. Impossuble de distinguer par indices.",
+            "action": "Percentiles parcellaires OBLIGATOIRES — seuils génériques inutilisables en oasis traditionnel.",
+            "indices_les_moins_afectes": [
+              "NDVI",
+              "NIRv"
+            ],
+            "indices_les_plus_affectes": [
+              "NDMI",
+              "NDRE"
+            ]
+          }
+        },
+        "specificites_culture": {
+          "NDVI_indice_principal": "Pour palmier, NDVI > NIRvP comme indice diagnostique principal. Stipe non ramifié + canopée stable = NIRvP peu variable.",
+          "signal_tres_attenue": "Variations saisonnières indices palmier < 10-15% même en conditions normales. Calibrage percentiles parcellaires INDISPENSABLE.",
+          "MSI_utile_chergui": "MSI utile détection Chergui (vent chaud sec) — MSI monte brutalement pendant épisode Chergui. Alerte PAL-07.",
+          "pas_de_MSAVI": "Palmier : peu de sol visible entre arbres adultes (canopée dense). MSAVI non calculé.",
+          "oasis_traditionnel": "Système traditionnel : signal mixte 3 strates. Impossible séparer signal palmier des autres cultures. Percentiles parcellaires = seule référence valide.",
+          "kcl_tolere_contrairement_aux_autres": "KCl utilisable en fertilisation — palmier tolère les chlorures (Cl foliaire toxique seulement > 0.80%).",
+          "salinite_tolerance_exceptionnelle": "CE eau tolérée jusqu'à 8-10 dS/m. Option C activée seulement à 6 dS/m (vs 1.0 avocatier)."
+        }
+      },
+      "calcul_rendement": {
+        "section_export": "export_npk_kg_par_100kg_dattes",
+        "unite_export": "kg_par_100kg_dattes",
+        "section_besoins_directs": "besoins_annuels_kg_arbre",
+        "methode_preferee": "besoins_directs_par_arbre",
+        "formule_conversion": "doses_kg_arbre × densite_arbres_ha = doses_kg_ha"
+      },
+      "specificites": {
+        "alternance": false,
+        "section_ajustement_alternance": null,
+        "porte_greffe": false,
+        "dioique": true,
+        "pollinisation_manuelle_obligatoire": true,
+        "section_pollinisation": "pollinisation",
+        "pollinisation_fenetre_jours": [
+          1,
+          5
+        ],
+        "salinite_tres_tolerante": true,
+        "salinite_seuil_option_C_CE_eau": 6.0,
+        "salinite_seuil_sans_perte": 4.0,
+        "bayoud": true,
+        "bayoud_note": "Maladie MORTELLE INCURABLE — arrachage + incinération. Alerte PAL-08/09 priorité maximale.",
+        "tristeza": false,
+        "phytophthora_critique": false,
+        "kcl_tolere": true,
+        "signal_satellite_mixte": true,
+        "fumure_organique_importante": true
+      },
+      "rapport_agriculteur": {
+        "score_sante_labels": {
+          "80_100": {
+            "fr": "Excellente",
+            "ar": "ممتازة",
+            "ber": "Afilki afellay"
+          },
+          "60_80": {
+            "fr": "Bonne",
+            "ar": "جيدة",
+            "ber": "Afilki"
+          },
+          "40_60": {
+            "fr": "Moyenne",
+            "ar": "متوسطة",
+            "ber": "Amecnaw"
+          },
+          "20_40": {
+            "fr": "Faible",
+            "ar": "ضعيفة",
+            "ber": "Ameqqran"
+          },
+          "0_20": {
+            "fr": "Critique",
+            "ar": "حرجة",
+            "ber": "Iggez"
+          }
+        },
+        "icone_score": {
+          "80_100": "🌴🌴🌴",
+          "60_80": "🌴🌴",
+          "40_60": "🌴",
+          "20_40": "⚠️",
+          "0_20": "🔴"
+        },
+        "sections_rapport": [
+          "score_global",
+          "points_forts",
+          "points_attention",
+          "prevision_rendement",
+          "alerte_bayoud",
+          "donnees_manquantes"
+        ]
+      }
+    }
+  },
+  "regles_moteur": {
+    "hierarchie_seuils": {
+      "1_prioritaire": "Percentiles parcellaires calculés depuis historique réel",
+      "2_garde_fou": "Seuils génériques du référentiel (section seuils_satellite)",
+      "regle": "Si P50 parcelle < seuil_alerte référentiel → signaler parcelle historiquement dégradée"
+    },
+    "confiance_minimum_recommandations": 25,
+    "confiance_minimum_prevision_rendement": 50,
+    "historique_satellite_minimum_mois": 12,
+    "score_confiance_points": {
+      "_structure": "Bloc A (25 pts) + Bloc B (75 pts) = 100 pts total",
+      "bloc_A_satellite": {
+        "36_plus_mois": 20,
+        "24_36_mois": 13,
+        "12_24_mois": 7,
+        "moins_12_mois": "BLOQUE_collecte_donnees_uniquement",
+        "coherence_ok": 5,
+        "coherence_mineures": 2,
+        "coherence_majeures": 0,
+        "total_max": 25
+      },
+      "bloc_B_utilisateur": {
+        "sol_complet_moins_2_ans": 20,
+        "sol_partiel": 10,
+        "sol_absent": 0,
+        "eau_complete": 23,
+        "eau_partielle": 12,
+        "eau_absente": 0,
+        "foliaire_juillet_complete": 15,
+        "foliaire_autre_periode": 8,
+        "foliaire_absente": 0,
+        "rendements_5_plus_ans": 11,
+        "rendements_3_4_ans": 8,
+        "rendements_1_2_ans": 4,
+        "rendements_aucun": 0,
+        "profil_cultural_complet": 6,
+        "total_max": 75
+      },
+      "seuils_niveau": {
+        "75_100": "ELEVE — recommandations haute confiance",
+        "50_75": "MOYEN — recommandations avec prudence, vérification terrain suggérée",
+        "25_50": "FAIBLE — recommandations limitées, nombreuses vérifications requises",
+        "0_25": "MINIMAL — mode observation, pas de recommandations actives"
+      },
+      "profil_typique_marocain": {
+        "cas": "36 mois satellite + profil seul, sans sol ni eau",
+        "calcul": "20+5+0+0+0+0+6 = 31 pts",
+        "niveau": "FAIBLE (valide)",
+        "note": "Le système N'EXCLUT JAMAIS un agriculteur sans analyses. Il adapte ses recommandations."
+      }
+    },
+    "score_sante_composantes": {
+      "vigueur_vegetative_pct": 30,
+      "homogeneite_spatiale_pct": 20,
+      "stabilite_temporelle_pct": 15,
+      "etat_hydrique_pct": 20,
+      "etat_nutritionnel_pct": 15
+    },
+    "zones_intraparcellaires": {
+      "A": "NIRv > P90 — Zone très vigoureuse",
+      "B": "NIRv P75-P90 — Zone vigoureuse",
+      "C": "NIRv P25-P75 — Zone normale",
+      "D": "NIRv P10-P25 — Zone faible",
+      "E": "NIRv < P10 — Zone problématique"
+    },
+    "anomalies_a_exclure_percentiles": [
+      "gel_tardif",
+      "canicule_prolongee",
+      "secheresse_plus_3_mois",
+      "grele",
+      "taille_severe",
+      "inondation",
+      "pluie_maturation_palmier"
+    ],
+    "rapport_agriculteur_regles": {
+      "langue": "Utiliser la langue déclarée dans profil_parcelle.langue — défaut depuis moteur_config.cultures[culture].langue_rapport_defaut",
+      "interdictions": [
+        "Aucun indice satellite (NDVI, NIRv, NDMI, NDRE, MSI...)",
+        "Aucun terme statistique (percentile, P10, P90, baseline...)",
+        "Aucune formule ou calcul visible",
+        "Aucun code alerte (OLI-01, PAL-08...)",
+        "Aucun terme technique agronomique sans explication"
+      ],
+      "ton": "Simple, direct, rassurant quand tout va bien, alarmant quand urgence réelle",
+      "structure_obligatoire": [
+        "1. Score de santé global avec icône + label simple",
+        "2. Ce qui va bien (2-4 points positifs)",
+        "3. Points d'attention (2-4 points, si applicable)",
+        "4. Prévision récolte en kg/arbre ou T/ha selon culture",
+        "5. Ce qu'il manque pour un meilleur suivi (données absentes)"
+      ],
+      "format": "Texte lisible paragraphes courts — PAS de JSON, PAS de tableaux techniques"
+    },
+    "historique_satellite_note": "12 mois = 1 cycle phénologique complet minimum. Sous ce seuil : mode collecte de données uniquement. Jeune plantation juvénile : télécharger 12 mois dès la création de la parcelle (pas 6).",
+    "mode_amorcage": {
+      "_description": "Distinct de la phase 'juvenile' basée sur l'âge. L'amorçage est basé sur la quantité de données disponibles.",
+      "condition": "nombre_cycles_complets < 3",
+      "effet_confiance": {
+        "ELEVEE": "dégrade vers MODEREE",
+        "MODEREE": "dégrade vers FAIBLE",
+        "FAIBLE": "dégrade vers TRES_FAIBLE"
+      },
+      "affichage": "MODE AMORÇAGE — {N} cycles disponibles, minimum 3 recommandé",
+      "coexistence_juvenile": "Une plantation juvénile peut aussi être en mode amorçage. Les deux conditions sont indépendantes."
+    }
+  },
+  "phases_age": {
+    "_description": "Logique de gestion des phases d'âge. Lire entree_production_annee et pleine_production_annee depuis referentiel.systemes[systeme_parcelle] pour obtenir les seuils réels.",
+    "phases": {
+      "juvenile": {
+        "condition": "age_ans < entree_production_annee[0]",
+        "label": {
+          "fr": "Jeune plantation",
+          "ar": "مزروع حديث"
+        },
+        "production": 0,
+        "signal_satellite": "trop_faible_pour_calibrage",
+        "calibrage": {
+          "mode": "lecture_pure",
+          "executer": false,
+          "raison": "Signal satellite insuffisant — couverture végétale < 30% — percentiles non représentatifs",
+          "message_utilisateur": {
+            "fr": "Votre plantation est trop jeune pour un calibrage complet. Le système surveille votre parcelle et se calibrera automatiquement quand elle aura atteint l'âge de production.",
+            "ar": "مزرعتك صغيرة السن بعد للمعايرة الكاملة. النظام يراقب قطعتك وسيعمل المعايرة تلقائياً عند بلوغها سن الإنتاج."
+          }
+        },
+        "plan_annuel": {
+          "mode": "standard_jeune_plantation",
+          "source": "referentiel_uniquement",
+          "description": "Programme annuel standard basé uniquement sur : culture + système + âge déclaré + données référentiel. Pas de personnalisation satellite.",
+          "sections_referentiel_a_lire": [
+            "fractionnement_pct",
+            "kc_par_periode",
+            "calendrier_phyto",
+            "calendrier_biostimulants",
+            "stades_phenomenologiques"
+          ],
+          "ajustement_doses": {
+            "regle": "Lire rendement_kg_arbre[phase_maturite] depuis referentiel.varietes[variete] (cles: juvenile, entree_production, pleine_production, maturite_avancee, senescence) avec tranches d'age definies par referentiel.phases_maturite_ans",
+            "facteur_N": 0.4,
+            "facteur_P": 0.6,
+            "facteur_K": 0.3,
+            "note": "Jeune plantation : priorité enracinement (P élevé) et croissance végétative (N modéré). K réduit — peu de fruits."
+          },
+          "focus_programme": [
+            "Enracinement et croissance végétative",
+            "Prévention maladies racinaires",
+            "Établissement du système irrigation",
+            "Aucune pression de rendement"
+          ]
+        },
+        "recommandations_operationnelles": {
+          "activer": true,
+          "note": "Le moteur opérationnel PEUT générer des recommandations pour jeune plantation MAIS basées sur référentiel uniquement, pas sur baseline satellite.",
+          "alertes_actives": [
+            "gel",
+            "stress_hydrique_severe",
+            "maladie"
+          ],
+          "alertes_desactivees": [
+            "alternance",
+            "prevision_rendement",
+            "carence_satellite"
+          ]
+        },
+        "data_collection": {
+          "periode_telechargement_mois": 12,
+          "note": "Télécharger 12 mois (1 cycle complet) dès la création de la parcelle, pas 6 mois. Le calibrage sera lancé quand l'utilisateur le décidera, une fois les données disponibles et la parcelle arrivée en production."
+        }
+      },
+      "entree_production": {
+        "condition": "age_ans >= entree_production_annee[0] AND age_ans < pleine_production_annee[0]",
+        "label": {
+          "fr": "Entrée en production",
+          "ar": "بداية الإنتاج"
+        },
+        "production": "croissante",
+        "signal_satellite": "utilisable_confiance_reduite",
+        "calibrage": {
+          "mode": "calibrage_progressif",
+          "executer": true,
+          "confiance_max_pct": 65,
+          "note": "Calibrage possible mais signal encore en développement. Confiance plafonnée à 65% — percentiles basés sur peu d'années.",
+          "ajustement_seuils": {
+            "regle": "Appliquer coefficient réduction seuils vigueur selon âge",
+            "juvenile_0_5_ans_coeff": 0.7,
+            "entree_prod_coeff": 0.85,
+            "note": "Seuils NDVI/NIRv abaissés — végétation en développement normal"
+          }
+        },
+        "plan_annuel": {
+          "mode": "standard_adapte_age",
+          "description": "Programme annuel du référentiel avec doses ajustées selon tranche d'âge réelle",
+          "ajustement_doses": {
+            "regle": "Lire rendement_kg_arbre[phase_maturite] (memes cles que phases_maturite_ans) pour calculer export réaliste",
+            "facteur_N": 0.7,
+            "facteur_P": 0.8,
+            "facteur_K": 0.6
+          }
+        },
+        "recommandations_operationnelles": {
+          "activer": true,
+          "note": "Recommandations actives avec mention systématique du niveau de confiance réduit"
+        }
+      },
+      "pleine_production": {
+        "condition": "age_ans >= pleine_production_annee[0] AND age_ans <= duree_vie_economique_ans[1]",
+        "label": {
+          "fr": "Pleine production",
+          "ar": "الإنتاج الكامل"
+        },
+        "production": "maximale",
+        "signal_satellite": "optimal",
+        "calibrage": {
+          "mode": "calibrage_complet",
+          "executer": true,
+          "confiance_max_pct": 100,
+          "note": "Calibrage complet sans restriction d'âge"
+        },
+        "plan_annuel": {
+          "mode": "personnalise_satellite",
+          "description": "Plan annuel complet basé sur calibrage satellite + référentiel"
+        },
+        "recommandations_operationnelles": {
+          "activer": true,
+          "note": "Toutes recommandations actives"
+        }
+      },
+      "senescence": {
+        "condition": "age_ans > duree_vie_economique_ans[1]",
+        "label": {
+          "fr": "Sénescence",
+          "ar": "شيخوخة"
+        },
+        "production": "en_déclin",
+        "signal_satellite": "signal_attenué_normal",
+        "calibrage": {
+          "mode": "calibrage_avec_signalement",
+          "executer": true,
+          "confiance_max_pct": 80,
+          "note": "Calibrage exécuté mais rapport signale le déclin attendu lié à l'âge",
+          "ajustement_seuils": {
+            "regle": "Seuils NDVI/NIRv abaissés de 10-20% — déclin végétatif normal",
+            "coefficient": 0.85
+          },
+          "message_signalement": {
+            "fr": "Cette plantation dépasse son âge de production économique optimal. Un déclin progressif des rendements est normal. Envisagez un renouvellement progressif.",
+            "ar": "هذه المزرعة تجاوزت عمرها الاقتصادي الأمثل. تراجع تدريجي في الإنتاج أمر طبيعي. يُنصح بالتفكير في تجديد تدريجي."
+          }
+        },
+        "plan_annuel": {
+          "mode": "entretien_minimal",
+          "description": "Programme entretien orienté maintien + conseil renouvellement",
+          "ajustement_doses": {
+            "facteur_N": 0.7,
+            "facteur_P": 0.8,
+            "facteur_K": 0.75
+          },
+          "ajouter_conseil_renouvellement": true
+        },
+        "recommandations_operationnelles": {
+          "activer": true,
+          "note": "Recommandations actives avec mention déclin naturel lié à l'âge"
+        }
+      }
+    },
+    "algorithme_detection_phase": "\n1. Lire age_ans depuis profil_parcelle\n2. Lire systeme depuis profil_parcelle\n3. Lire depuis referentiel.systemes[systeme] :\n   - entree_production_annee = [min, max]\n   - pleine_production_annee = [min, max]\n   - duree_vie_economique_ans = [min, max]\n4. Appliquer conditions dans l'ordre :\n   IF age_ans < entree_production_annee[0]         → phase = \"juvenile\"\n   IF age_ans < pleine_production_annee[0]          → phase = \"entree_production\"\n   IF age_ans <= duree_vie_economique_ans[1]        → phase = \"pleine_production\"\n   IF age_ans > duree_vie_economique_ans[1]         → phase = \"senescence\"\n5. Le mode_calibrage et le mode_plan_annuel découlent directement de la phase\n",
+    "cas_speciaux": {
+      "super_intensif_olivier": {
+        "culture": "olivier",
+        "systeme": "super_intensif",
+        "note": "Entrée production dès 2-3 ans — phase juvénile très courte. Super-intensif mature vite.",
+        "entree_prod_min": 2
+      },
+      "super_intensif_agrumes": {
+        "culture": "agrumes",
+        "systeme": "super_intensif",
+        "note": "Production possible dès an 2-3. Durée vie économique 15-20 ans.",
+        "entree_prod_min": 2
+      },
+      "palmier_juvénile_long": {
+        "culture": "palmier_dattier",
+        "note": "Phase juvénile plus longue (4-8 ans selon système). Pas de production avant an 5 minimum.",
+        "entree_prod_min": 4
+      },
+      "plantation_sans_age": {
+        "note": "Si age_ans non renseigné dans le profil → demander à l'utilisateur. Bloquer le calibrage jusqu'à obtenir l'âge.",
+        "action": "demander_age_utilisateur"
+      }
+    }
+  },
+  "gouvernance_recommandations": {
+    "_description": "Règles métier encadrant TOUTE recommandation émise par l'IA. S'applique après activation du Moteur Opérationnel.",
+    "types": {
+      "REACTIVE": {
+        "description": "Déclenchée par une alerte satellite, météo ou croisement de données en temps réel",
+        "cycle_vie_etats": [
+          "PROPOSEE",
+          "VALIDEE",
+          "EN_ATTENTE",
+          "EXECUTEE",
+          "EVALUEE",
+          "CLOTUREE",
+          "REJETEE",
+          "EXPIREE"
+        ],
+        "source": "Alertes OLI-XX / AGR-XX / AVO-XX / PAL-XX"
+      },
+      "PLANIFIEE": {
+        "description": "Issue du plan annuel généré après calibrage. Interventions programmées.",
+        "cycle_vie_etats": [
+          "PROGRAMMEE",
+          "RAPPELEE",
+          "EXECUTEE",
+          "EVALUEE",
+          "CLOTUREE"
+        ]
+      }
+    },
+    "limites_simultanées": {
+      "reactives_max": 3,
+      "planifiees_rappelees_max": 2,
+      "total_max": 5,
+      "priorite_URGENTE": "Une recommandation 🔴 URGENTE N'EST JAMAIS reportée pour limite atteinte. Elle prend toujours la priorité."
+    },
+    "delais_minimum_entre_recommandations": {
+      "irrigation": {
+        "jours": 3,
+        "exception": "Alerte 🔴 stress hydrique sévère"
+      },
+      "fertilisation_N": {
+        "jours": 10,
+        "exception": "Aucune"
+      },
+      "traitement_phytosanitaire": {
+        "jours": 7,
+        "exception": "OLI-18 lessivage (délai ignoré)"
+      },
+      "amendement_sol": {
+        "jours": 30,
+        "exception": "Aucune"
+      },
+      "biostimulants": {
+        "jours": 7,
+        "exception": "Aucune"
+      },
+      "taille": {
+        "jours": 90,
+        "exception": "Taille sanitaire urgente"
+      }
+    },
+    "durees_expiration": {
+      "URGENTE": {
+        "duree_h": "48-72",
+        "action": "Statut Expirée + alerte journal + compteur ignorance incrémenté"
+      },
+      "PRIORITAIRE": {
+        "duree_j": 10,
+        "action": "Statut Expirée. Si signal persiste : nouvelle recommandation réémise"
+      },
+      "VIGILANCE": {
+        "duree_j": 5,
+        "action": "Statut Expirée si signal normalisé, renouvellement si signal persiste"
+      },
+      "INFORMATION": {
+        "duree_j": 10,
+        "action": "Statut Expirée. Archivage simple."
+      }
+    },
+    "structure_6_blocs_obligatoire": {
+      "_regle": "TOUTE recommandation (réactive ou planifiée) DOIT respecter cette structure. Aucun bloc ne peut être omis.",
+      "bloc_1": "CONSTAT SPECTRAL — valeurs indices, position vs baseline (percentile), tendance 3 derniers passages, cohérence inter-indices",
+      "bloc_2": "DIAGNOSTIC — hypothèse principale + alternatives + niveau confiance (⭐/⭐⭐/⭐⭐⭐). Jamais une cause unique affirmée.",
+      "bloc_3": "ACTION — type intervention, produit, dose/ha, méthode, zone ciblée. Lire depuis referentiel.alertes[code].prescription",
+      "bloc_4": "FENÊTRE D'INTERVENTION — niveau urgence (🔴/🟠/🟡/🟢), période optimale, date limite",
+      "bloc_5": "CONDITIONS D'APPLICATION — température, humidité, vent, restrictions (pluie, heure). Croiser avec prévisions J+7",
+      "bloc_6": "SUIVI POST-APPLICATION — fenêtre évaluation, indicateur, réponse attendue. Lire depuis referentiel.alertes[code].prescription.suivi"
+    },
+    "mention_responsabilite_obligatoire": "Cette recommandation est basée sur l'analyse des données disponibles (satellite, météo, historique). La décision et la responsabilité de l'application reviennent à l'exploitant.",
+    "detection_ignorance": {
+      "seuil_1": {
+        "consecutives": 1,
+        "action": "Normal — peut être un oubli"
+      },
+      "seuil_2": {
+        "consecutives": 2,
+        "action": "Notification discrète tableau de bord"
+      },
+      "seuil_3": {
+        "consecutives": 3,
+        "action": "Mode fréquence réduite pour ce thème — 🟡/🟢 non émises, 🟠 en synthèse hebdo, 🔴 jamais supprimées"
+      }
+    },
+    "desescalade": {
+      "regle": "Désescalade progressive avec hystérésis. 🔴 ne passe JAMAIS directement à FIN_ALERTE.",
+      "chemin": "🔴 → [2+ passages amélioration] → 🟠 → [1+ passage amélioration] → 🟡 → [seuil sortie atteint] → FIN_ALERTE",
+      "acceleration": "Si intervention réalisée ET réponse satellite positive → désescalade accélérée (1 passage au lieu de 2)",
+      "alertes_irreversibles": [
+        "OLI-06 (Verticilliose)",
+        "OLI-11 (Arbre mort)",
+        "OLI-17 (Fin cycle super-intensif)"
+      ]
+    },
+    "rejet": {
+      "URGENTE": {
+        "justification_obligatoire": true,
+        "message": "Vous vous apprêtez à rejeter une recommandation URGENTE. Veuillez indiquer votre motif."
+      },
+      "PRIORITAIRE": {
+        "justification_obligatoire": true,
+        "message": "Veuillez indiquer le motif de votre rejet."
+      },
+      "VIGILANCE": {
+        "justification_obligatoire": false,
+        "message": "Recommandation rejetée."
+      },
+      "INFORMATION": {
+        "justification_obligatoire": false,
+        "message": "Recommandation rejetée."
+      },
+      "motifs_predefined": [
+        "Déjà réalisé (non déclaré)",
+        "Pas les moyens matériels",
+        "En désaccord avec le diagnostic",
+        "Contrainte économique",
+        "Intervention par un autre canal",
+        "Autre"
+      ]
+    },
+    "fenetres_evaluation_post_application": {
+      "fertilisation_N": {
+        "delai_j": "7-14",
+        "indicateur": "NDRE",
+        "reponse_attendue": "Hausse 5-15%"
+      },
+      "irrigation": {
+        "delai_j": "3-7",
+        "indicateur": "NDMI",
+        "reponse_attendue": "Hausse vers P50"
+      },
+      "amendement_sol": {
+        "delai_j": "30-90",
+        "indicateur": "Multiple",
+        "reponse_attendue": "Amélioration progressive"
+      },
+      "biostimulants": {
+        "delai_j": "5-10",
+        "indicateur": "NIRv",
+        "reponse_attendue": "Stabilisation ou hausse"
+      },
+      "chelate_Fe": {
+        "delai_j": "10-20",
+        "indicateur": "GCI",
+        "reponse_attendue": "Hausse (verdissement)"
+      },
+      "traitement_preventif": {
+        "delai_j": "N/A",
+        "indicateur": "Aucun",
+        "reponse_attendue": "Absence symptômes"
+      },
+      "traitement_mouche_curatif": {
+        "delai_j": "7",
+        "indicateur": "Captures pièges",
+        "reponse_attendue": "Baisse"
+      }
+    }
+  },
+  "navigation_plan_annuel": {
+    "_description": "Comment le moteur plan annuel navigue dans le referentiel. Toutes les données sont dans le referentiel, pas ici.",
+    "option_nutrition_determination": {
+      "regle": "Option nutrition déterminée AUTOMATIQUEMENT par l'IA. PAS un choix utilisateur.",
+      "ordre_priorite": "C (si salinité) → A (si analyses récentes) → B (par défaut)",
+      "section_referentiel": "referentiel.options_nutrition"
+    },
+    "calcul_doses_npk": {
+      "formule": "Dose = (Rdt_cible × coef_export) + entretien - correction_sol - correction_eau",
+      "section_export": "referentiel.export_npk_kg_par_tonne_fruit",
+      "section_entretien": "referentiel.entretien_kg_ha[systeme] — utiliser milieu de fourchette",
+      "section_corrections": "referentiel.seuils_foliaires + analyses disponibles",
+      "note": "Si option B : réduire toutes doses fertigation de 30% (lire referentiel.options_nutrition.B.fertigation_pct)"
+    },
+    "fractionnement": "referentiel.fractionnement_pct — % fixes, ne varient pas selon option",
+    "formes_engrais": "referentiel.formes_engrais — sélection par condition pH sol et option",
+    "microelements": "referentiel.microelements — obligatoires selon calcaire_actif et pH",
+    "biostimulants": "referentiel.calendrier_biostimulants × referentiel.options_nutrition[option].biostimulants_pct",
+    "irrigation": "referentiel.kc_par_periode[stade][systeme] × ETo locale × surface_arbre / efficience × (1 + FL)",
+    "fraction_lessivage": "referentiel.fraction_lessivage.formule — seulement si option C",
+    "rdi": "referentiel.rdi — seulement si conditions d'activation remplies",
+    "taille": "referentiel.systemes[systeme] + calibrage.phase_age + calibrage.annee_cycle",
+    "phyto_preventif": "referentiel.calendrier_phyto — fixe",
+    "phyto_reactif": "referentiel.alertes[code].prescription — déclenché par alertes uniquement",
+    "co_occurrence": "referentiel.co_occurrence — matrice déterministe"
+  }
+}

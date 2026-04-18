@@ -1,6 +1,9 @@
 import React from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { PageLoader } from '@/components/ui/loader';
+
 
 interface RoleProtectedRouteProps {
   children: React.ReactNode;
@@ -12,11 +15,11 @@ interface RoleProtectedRouteProps {
  * Component to protect routes based on user role
  * If user doesn't have required role, shows access denied or redirects
  */
-export const RoleProtectedRoute: React.FC<RoleProtectedRouteProps> = ({
+export const RoleProtectedRoute = ({
   children,
   allowedRoles,
-  redirectTo = '/settings/profile'
-}) => {
+  redirectTo = '/settings/account'
+}: RoleProtectedRouteProps) => {
   const { userRole, loading, currentOrganization, refreshUserData } = useAuth();
 
   // Show loading state while checking role
@@ -24,12 +27,7 @@ export const RoleProtectedRoute: React.FC<RoleProtectedRouteProps> = ({
   const isWaitingForRole = currentOrganization && !userRole && !loading;
   if (loading || isWaitingForRole) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">Vérification des permissions...</p>
-        </div>
-      </div>
+      <PageLoader />
     );
   }
 
@@ -56,19 +54,19 @@ export const RoleProtectedRoute: React.FC<RoleProtectedRouteProps> = ({
             </p>
           )}
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <button
+            <Button variant="green"
               onClick={() => refreshUserData()}
-              className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors"
+              className="inline-flex items-center justify-center gap-2 px-6 py-3 font-medium rounded-lg transition-colors"
             >
               <RefreshCw className="w-4 h-4" />
               Réessayer
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={() => window.location.href = redirectTo}
               className="inline-flex items-center justify-center px-6 py-3 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-medium rounded-lg transition-colors"
             >
               Retour
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -95,12 +93,12 @@ export const RoleProtectedRoute: React.FC<RoleProtectedRouteProps> = ({
           <p className="text-sm text-gray-500 dark:text-gray-500 mb-6">
             Rôle requis: {allowedRoles.join(', ')}
           </p>
-          <button
+          <Button variant="green"
             onClick={() => window.location.href = redirectTo}
-            className="inline-flex items-center justify-center px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors"
+            className="inline-flex items-center justify-center px-6 py-3 font-medium rounded-lg transition-colors"
           >
             Retour aux paramètres
-          </button>
+          </Button>
         </div>
       </div>
     );

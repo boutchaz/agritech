@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, UseGuards, Request, Headers } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Body, UseGuards, Request, Headers } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -6,9 +6,11 @@ import {
   ApiBearerAuth,
   ApiHeader,
   ApiProperty,
+  ApiPropertyOptional,
 } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { OrganizationGuard } from '../../common/guards/organization.guard';
 import { Public } from './decorators/public.decorator';
 import { SignupDto, SignupResponseDto, SetupOrganizationDto, SetupOrganizationResponseDto } from './dto/signup.dto';
 import { IsEmail, IsNotEmpty, IsString, IsBoolean, IsOptional } from 'class-validator';
@@ -31,6 +33,11 @@ export class LoginDto {
 }
 
 export class ChangePasswordDto {
+  @ApiPropertyOptional({ example: 'oldPassword123!', description: 'Current password (required if password was previously set)' })
+  @IsString()
+  @IsOptional()
+  currentPassword?: string;
+
   @ApiProperty({ example: 'newStrongPassword123!' })
   @IsString()
   @IsNotEmpty()
@@ -70,6 +77,42 @@ export class OAuthUrlDto {
 
 export class OAuthCallbackDto {
   @ApiProperty({ example: 'abcd1234oauthcode' })
+  @IsString()
+  @IsNotEmpty()
+  code: string;
+}
+
+export class UpdateProfileDto {
+  @ApiPropertyOptional({ example: 'John' })
+  @IsString()
+  @IsOptional()
+  first_name?: string;
+
+  @ApiPropertyOptional({ example: 'Doe' })
+  @IsString()
+  @IsOptional()
+  last_name?: string;
+
+  @ApiPropertyOptional({ example: '+212612345678' })
+  @IsString()
+  @IsOptional()
+  phone?: string;
+
+  @ApiPropertyOptional({ example: 'https://example.com/avatar.jpg' })
+  @IsString()
+  @IsOptional()
+  avatar_url?: string;
+}
+
+export class RefreshTokenDto {
+  @ApiProperty({ example: 'eyJhbGciOiJIUzI1NiIs...' })
+  @IsString()
+  @IsNotEmpty()
+  refreshToken: string;
+}
+
+export class RedeemExchangeCodeDto {
+  @ApiProperty({ example: 'eyJhbGciOiJIUzI1NiIs...' })
   @IsString()
   @IsNotEmpty()
   code: string;
@@ -138,6 +181,16 @@ export class AuthController {
     return this.authService.getUserProfile(req.user.id);
   }
 
+  @Patch('me')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update current user profile' })
+  @ApiResponse({ status: 200, description: 'Profile updated' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async updateProfile(@Request() req, @Body() body: UpdateProfileDto) {
+    return this.authService.updateUserProfile(req.user.id, body);
+  }
+
   @Get('organizations')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
@@ -149,7 +202,7 @@ export class AuthController {
   }
 
   @Get('me/role')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, OrganizationGuard)
   @ApiBearerAuth()
   @ApiHeader({ name: 'x-organization-id', required: true, description: 'Organization ID' })
   @ApiOperation({ summary: 'Get current user role and permissions in organization' })
@@ -163,7 +216,7 @@ export class AuthController {
   }
 
   @Get('me/abilities')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, OrganizationGuard)
   @ApiBearerAuth()
   @ApiHeader({ name: 'x-organization-id', required: true, description: 'Organization ID' })
   @ApiOperation({
@@ -236,7 +289,7 @@ export class AuthController {
    @ApiResponse({ status: 400, description: 'Bad request' })
    @ApiResponse({ status: 401, description: 'Unauthorized' })
    async changePassword(@Request() req, @Body() dto: ChangePasswordDto) {
-     return this.authService.changePassword(req.user.id, dto.newPassword);
+     return this.authService.changePassword(req.user.id, dto.currentPassword, dto.newPassword);
    }
 
    @Post('logout')
@@ -277,7 +330,7 @@ export class AuthController {
   @ApiOperation({ summary: 'Refresh access token using refresh token' })
   @ApiResponse({ status: 200, description: 'Token refreshed successfully' })
   @ApiResponse({ status: 401, description: 'Invalid refresh token' })
-  async refreshToken(@Body() body: { refreshToken: string }) {
+  async refreshToken(@Body() body: RefreshTokenDto) {
     return this.authService.refreshToken(body.refreshToken);
   }
 
@@ -296,7 +349,7 @@ export class AuthController {
   @ApiOperation({ summary: 'Redeem exchange code for session tokens' })
   @ApiResponse({ status: 200, description: 'Session tokens returned' })
   @ApiResponse({ status: 401, description: 'Invalid or expired code' })
-  async redeemExchangeCode(@Body() body: { code: string }) {
+  async redeemExchangeCode(@Body() body: RedeemExchangeCodeDto) {
     return this.authService.redeemExchangeCode(body.code);
   }
 }

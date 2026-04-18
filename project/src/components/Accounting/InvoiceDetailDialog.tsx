@@ -1,24 +1,26 @@
-import React, { useState } from 'react';
+import {  useState  } from "react";
 import { useTranslation } from 'react-i18next';
 import {
-  Dialog,
-  DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
 import { useInvoice, useUpdateInvoiceStatus, usePostInvoice } from '@/hooks/useInvoices';
-import { Receipt, Calendar, User, FileText, CheckCircle2, XCircle, Mail, Loader2, DollarSign, Send, MapPin, Building2 } from 'lucide-react';
+import { Receipt, Calendar, User, FileText, CheckCircle2, XCircle, Mail, Loader2, DollarSign, Send, MapPin, Building2, Ban } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useFarms } from '@/hooks/useParcelsQuery';
 import { useParcelById } from '@/hooks/useParcelsQuery';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { invoiceStatus, renderStatusIcon } from '@/lib/statusUtils';
 import { invoicesApi } from '@/lib/api/invoices';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
+import { SectionLoader } from '@/components/ui/loader';
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
+
 
 interface InvoiceDetailDialogProps {
   isOpen: boolean;
@@ -26,15 +28,22 @@ interface InvoiceDetailDialogProps {
   invoiceId: string | null;
 }
 
-export const InvoiceDetailDialog: React.FC<InvoiceDetailDialogProps> = ({
+export const InvoiceDetailDialog = ({
   isOpen,
   onClose,
   invoiceId,
-}) => {
+}: InvoiceDetailDialogProps) => {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { currentOrganization } = useAuth();
   const { data: invoice, isLoading, error } = useInvoice(invoiceId);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<{title:string;description?:string;variant?:"destructive"|"default";onConfirm:()=>void}>({title:"",onConfirm:()=>{}});
+  const showConfirm = (title: string, onConfirm: () => void, opts?: {description?: string; variant?: "destructive" | "default"}) => {
+    setConfirmAction({title, onConfirm, ...opts});
+    setConfirmOpen(true);
+  };
+
   const [isSendingEmail, setIsSendingEmail] = useState(false);
   const updateInvoiceStatus = useUpdateInvoiceStatus();
   const postInvoice = usePostInvoice();
@@ -86,6 +95,42 @@ export const InvoiceDetailDialog: React.FC<InvoiceDetailDialogProps> = ({
 
   const canMarkAsPaid = invoice && (invoice.status === 'submitted' || invoice.status === 'partially_paid' || invoice.status === 'overdue');
   const canSubmit = invoice && invoice.status === 'draft';
+  const canCancel = invoice && (invoice.status === 'submitted' || invoice.status === 'overdue' || invoice.status === 'partially_paid');
+
+  const handleCancelInvoice = () => {
+    if (!invoiceId || !invoice) return;
+    showConfirm(
+      t('invoices.cancel.confirmTitle', 'Void this invoice?'),
+      async () => {
+        try {
+          const result = await updateInvoiceStatus.mutateAsync({
+            invoice_id: invoiceId,
+            status: 'cancelled',
+            remarks: invoice.remarks || undefined,
+          });
+          const reversalId = (result as { reversal_entry_id?: string } | undefined)?.reversal_entry_id;
+          toast.success(
+            reversalId
+              ? t('invoices.cancel.successWithReversal', `Invoice voided. Reversing journal entry created.`)
+              : t('invoices.cancel.success', 'Invoice voided successfully'),
+          );
+          queryClient.invalidateQueries({ queryKey: ['invoice', invoiceId] });
+          queryClient.invalidateQueries({ queryKey: ['invoices', currentOrganization?.id] });
+          queryClient.invalidateQueries({ queryKey: ['journal_entries'] });
+        } catch (err) {
+          console.error('Error cancelling invoice:', err);
+          toast.error(err instanceof Error ? err.message : t('invoices.cancel.error', 'Failed to void invoice'));
+        }
+      },
+      {
+        variant: 'destructive',
+        description: t(
+          'invoices.cancel.confirmDescription',
+          'Voiding a posted invoice will create a reversing journal entry in the General Ledger. This cannot be undone.',
+        ),
+      },
+    );
+  };
 
   const handleSubmitInvoice = async () => {
     if (!invoiceId || !invoice) return;
@@ -112,22 +157,23 @@ export const InvoiceDetailDialog: React.FC<InvoiceDetailDialogProps> = ({
   if (!invoiceId) return null;
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Receipt className="h-5 w-5 text-green-600" />
-            {t('dialogs.invoiceDetail.title')}
-          </DialogTitle>
-          <DialogDescription>
-            {t('dialogs.invoiceDetail.description')}
-          </DialogDescription>
-        </DialogHeader>
+    <ResponsiveDialog
+      open={isOpen}
+      onOpenChange={onClose}
+      title={t('dialogs.invoiceDetail.title')}
+      description={t('dialogs.invoiceDetail.description')}
+      size="3xl"
+      contentClassName="max-h-[90vh] overflow-y-auto"
+    >
+      <DialogHeader>
+        <DialogTitle className="flex items-center gap-2">
+          <Receipt className="h-5 w-5 text-green-600" />
+          {t('dialogs.invoiceDetail.title')}
+        </DialogTitle>
+      </DialogHeader>
 
         {isLoading && (
-          <div className="flex justify-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
-          </div>
+          <SectionLoader />
         )}
 
         {error && (
@@ -262,47 +308,47 @@ export const InvoiceDetailDialog: React.FC<InvoiceDetailDialogProps> = ({
             <div>
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">{t('dialogs.invoiceDetail.lineItems')}</h3>
               <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
-                <table className="w-full">
-                  <thead className="bg-gray-50 dark:bg-gray-800">
-                    <tr>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">
+                <Table className="w-full">
+                  <TableHeader className="bg-gray-50 dark:bg-gray-800">
+                    <TableRow>
+                      <TableHead className="text-left py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">
                         {t('dialogs.invoiceDetail.item')}
-                      </th>
-                      <th className="text-right py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">
+                      </TableHead>
+                      <TableHead className="text-right py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">
                         {t('dialogs.invoiceDetail.quantity')}
-                      </th>
-                      <th className="text-right py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">
+                      </TableHead>
+                      <TableHead className="text-right py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">
                         {t('dialogs.invoiceDetail.rate')}
-                      </th>
-                      <th className="text-right py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">
+                      </TableHead>
+                      <TableHead className="text-right py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">
                         {t('dialogs.invoiceDetail.amount')}
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white dark:bg-gray-900">
-                    {invoice.items?.map((item, index) => (
-                      <tr key={item.id} className={index !== (invoice.items?.length ?? 0) - 1 ? 'border-b border-gray-200 dark:border-gray-800' : ''}>
-                        <td className="py-3 px-4">
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody className="bg-white dark:bg-gray-900">
+                    {invoice.items?.map((item, rowIdx) => (
+                      <TableRow key={item.id} className={rowIdx !== (invoice.items?.length ?? 0) - 1 ? 'border-b border-gray-200 dark:border-gray-800' : ''}>
+                        <TableCell className="py-3 px-4">
                           <div>
                             <p className="font-medium text-gray-900 dark:text-white">{item.item_name}</p>
                             {item.description && (
                               <p className="text-sm text-gray-500 dark:text-gray-400">{item.description}</p>
                             )}
                           </div>
-                        </td>
-                        <td className="py-3 px-4 text-right text-gray-900 dark:text-white">
+                        </TableCell>
+                        <TableCell className="py-3 px-4 text-right text-gray-900 dark:text-white">
                           {item.quantity}
-                        </td>
-                        <td className="py-3 px-4 text-right text-gray-900 dark:text-white">
+                        </TableCell>
+                        <TableCell className="py-3 px-4 text-right text-gray-900 dark:text-white">
                           {invoice.currency_code} {Number(item.rate).toLocaleString('fr-FR', { minimumFractionDigits: 2 })}
-                        </td>
-                        <td className="py-3 px-4 text-right font-medium text-gray-900 dark:text-white">
+                        </TableCell>
+                        <TableCell className="py-3 px-4 text-right font-medium text-gray-900 dark:text-white">
                           {invoice.currency_code} {Number(item.amount).toLocaleString('fr-FR', { minimumFractionDigits: 2 })}
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     ))}
-                  </tbody>
-                </table>
+                  </TableBody>
+                </Table>
               </div>
             </div>
 
@@ -391,11 +437,32 @@ export const InvoiceDetailDialog: React.FC<InvoiceDetailDialogProps> = ({
                   )}
                   {t('invoices.actions.sendEmail', 'Send Email')}
                 </Button>
+                {canCancel && (
+                  <Button
+                    variant="destructive"
+                    onClick={handleCancelInvoice}
+                    disabled={updateInvoiceStatus.isPending}
+                  >
+                    {updateInvoiceStatus.isPending ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Ban className="h-4 w-4 mr-2" />
+                    )}
+                    {t('invoices.cancel.button', 'Void / Cancel')}
+                  </Button>
+                )}
               </div>
             </DialogFooter>
           </div>
         )}
-      </DialogContent>
-    </Dialog>
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title={confirmAction.title}
+        description={confirmAction.description}
+        variant={confirmAction.variant}
+        onConfirm={confirmAction.onConfirm}
+      />
+    </ResponsiveDialog>
   );
 };

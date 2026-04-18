@@ -1,22 +1,17 @@
-import React from 'react'
+
 import { createFileRoute } from '@tanstack/react-router'
 import { useAuth } from '@/hooks/useAuth'
 import { PageLayout } from '@/components/PageLayout'
 import EmployeeManagement from '@/components/EmployeeManagement'
 import OrganizationSwitcher from '@/components/OrganizationSwitcher'
+import LanguageSwitcher from '@/components/LanguageSwitcher'
+import { PageLoader } from '@/components/ui/loader'
 
-const AppContent: React.FC = () => {
+const AppContent = () => {
   const { currentOrganization, currentFarm } = useAuth();
 
   if (!currentOrganization) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">Chargement de l'organisation...</p>
-        </div>
-      </div>
-    );
+    return <PageLoader className="min-h-screen" />;
   }
 
   return (
@@ -32,7 +27,10 @@ const AppContent: React.FC = () => {
             </span>
           )}
         </div>
-        <OrganizationSwitcher />
+        <div className="flex flex-wrap items-center gap-2">
+          <OrganizationSwitcher />
+          <LanguageSwitcher />
+        </div>
       </div>
       <EmployeeManagement />
     </PageLayout>

@@ -1,15 +1,25 @@
+// Import Sentry instrumentation first!
+import './instrument';
+
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger, ExceptionFilter, Catch, ArgumentsHost, HttpException, BadRequestException } from '@nestjs/common';
+import * as Sentry from '@sentry/nestjs';
 import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { IoAdapter } from '@nestjs/platform-socket.io';
-import { json } from 'express';
+import { json, urlencoded } from 'express';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
 
 // Global exception filter to log all 403 exceptions with stack traces
 @Catch()
 class AllExceptionsFilter implements ExceptionFilter {
+  private errorRecorder: { recordError: () => void } | null = null;
+
+  setErrorRecorder(recorder: { recordError: () => void }) {
+    this.errorRecorder = recorder;
+  }
+
   catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse();
@@ -31,19 +41,33 @@ class AllExceptionsFilter implements ExceptionFilter {
         message = exceptionResponse;
       }
       stack = exception.stack || '';
+    } else if (
+      exception instanceof Error &&
+      (exception.constructor.name === 'PayloadTooLargeError' ||
+        (exception as { type?: string }).type === 'entity.too.large')
+    ) {
+      status = 413;
+      message = exception.message || 'Request body too large';
+      stack = exception.stack || '';
     } else if (exception instanceof Error) {
       message = exception.message;
       stack = exception.stack || '';
     }
 
-    // Log 403 errors with full details to identify the source
-    if (status === 403) {
-      console.error(`\n========== [EXCEPTION FILTER #${requestId}] 403 FORBIDDEN ==========`);
+    // Log 403 and 500 errors with full details
+    if (status === 403 || status >= 500) {
+      console.error(`\n========== [EXCEPTION FILTER #${requestId}] ${status} ==========`);
       console.error(`URL: ${request.method} ${request.url}`);
-      console.error(`Message: ${message}`);
+      console.error(`Message: ${typeof message === 'object' ? JSON.stringify(message) : message}`);
       console.error(`Exception Type: ${exception?.constructor?.name}`);
       console.error(`Stack trace (first 15 lines):\n${stack.split('\n').slice(0, 15).join('\n')}`);
       console.error(`==========================================================\n`);
+    }
+
+    // Track error rate for health monitoring
+    if (status >= 500) {
+      this.errorRecorder?.recordError();
+      Sentry.captureException(exception);
     }
 
     // Build response object, preserving validation error structure
@@ -68,6 +92,8 @@ class AllExceptionsFilter implements ExceptionFilter {
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     logger: ['error', 'warn', 'log', 'debug', 'verbose'],
+    // Use our own express.json() below so we can set BODY_JSON_LIMIT (Nest default is ~100kb).
+    bodyParser: false,
   });
 
   const logger = new Logger('Bootstrap');
@@ -75,35 +101,49 @@ async function bootstrap() {
   // Get config service
   const configService = app.get(ConfigService);
 
-  // Capture raw body for webhook signature verification
-  app.use(json({
-    verify: (req, _res, buf) => {
-      (req as any).rawBody = buf.toString('utf8');
-    },
-  }));
+  const bodyJsonLimit =
+    configService.get<string>('BODY_JSON_LIMIT') ?? '50mb';
+
+  // Capture raw body for webhook signature verification.
+  // Default Express JSON limit is 100kb — too small for org demo-data import payloads.
+  app.use(
+    json({
+      limit: bodyJsonLimit,
+      verify: (req, _res, buf) => {
+        (req as any).rawBody = buf.toString('utf8');
+      },
+    }),
+  );
+  app.use(urlencoded({ extended: true, limit: bodyJsonLimit }));
+  logger.log(`JSON / urlencoded body size limit: ${bodyJsonLimit}`);
 
   // Configure WebSocket adapter for Socket.IO
   app.useWebSocketAdapter(new IoAdapter(app));
 
-  // Global request logger middleware - logs every incoming request
+  // Global request logger middleware
+  // In production, only log slow or error responses to reduce log noise
+  const isProduction = configService.get('NODE_ENV') === 'production';
   let requestCounter = 0;
   app.use((req, res, next) => {
     const requestId = ++requestCounter;
+    // Reset counter to prevent overflow (safe since Node.js is single-threaded)
+    if (requestCounter > 1_000_000_000) requestCounter = 0;
     const start = Date.now();
-    console.log(`[Request #${requestId}] ${req.method} ${req.url}`, {
-      headers: {
-        authorization: req.headers.authorization ? 'Bearer ***' : 'missing',
-        'x-organization-id': req.headers['x-organization-id'] || 'missing',
-      },
-    });
 
     // Store requestId on request for later use
     (req as any).requestId = requestId;
 
+    if (!isProduction) {
+      logger.debug(`[Request #${requestId}] ${req.method} ${req.url}`);
+    }
+
     // Log response when finished
     res.on('finish', () => {
       const duration = Date.now() - start;
-      console.log(`[Response #${requestId}] ${req.method} ${req.url} - ${res.statusCode} (${duration}ms)`);
+      // In production: only log slow (>3s) or error responses
+      if (!isProduction || res.statusCode >= 400 || duration > 3000) {
+        logger.log(`[${requestId}] ${req.method} ${req.url} ${res.statusCode} ${duration}ms`);
+      }
     });
 
     next();
@@ -158,7 +198,15 @@ async function bootstrap() {
   );
 
   // Global exception filter to capture and log 403 errors with stack traces
-  app.useGlobalFilters(new AllExceptionsFilter());
+  const exceptionFilter = new AllExceptionsFilter();
+  try {
+    const { HealthService } = await import('./modules/health/health.service');
+    const healthService = app.get(HealthService);
+    exceptionFilter.setErrorRecorder(healthService);
+  } catch {
+    // HealthService not available — error rate tracking disabled
+  }
+  app.useGlobalFilters(exceptionFilter);
 
   // Enable CORS
   const corsOrigin = configService.get('CORS_ORIGIN', 'http://localhost:5173');
@@ -203,8 +251,14 @@ async function bootstrap() {
         return callback(null, true);
       }
 
-      // For thebzlab.online subdomains, allow them
-      if (origin.endsWith('.thebzlab.online')) {
+      // For thebzlab.online subdomains, only allow known app prefixes
+      // to prevent abuse via attacker-controlled subdomains
+      const ALLOWED_THEBZLAB_SUBDOMAINS = [
+        'marketplace', 'dashboard', 'agritech', 'agritech-dashboard',
+        'agritech-api', 'agritech-marketplace', 'agritech-satellite',
+      ];
+      const thebzlabMatch = origin.match(/^https:\/\/([a-z0-9-]+)\.thebzlab\.online$/);
+      if (thebzlabMatch && ALLOWED_THEBZLAB_SUBDOMAINS.includes(thebzlabMatch[1])) {
         logger.debug(`CORS: Allowing thebzlab.online subdomain: ${origin}`);
         return callback(null, true);
       }
@@ -250,17 +304,19 @@ async function bootstrap() {
 
   // Set global prefix
   const apiPrefix = configService.get('API_PREFIX', 'api/v1');
-  app.setGlobalPrefix(apiPrefix);
+  app.setGlobalPrefix(apiPrefix, {
+    exclude: ['blog', 'blog/(.*)', 'sitemap.xml', 'rss.xml'],
+  });
 
   logger.log(`Global prefix set to: ${apiPrefix}`);
 
   // Swagger API documentation
   const config = new DocumentBuilder()
-    .setTitle('AgriTech API')
+    .setTitle('AgroGina API')
     .setDescription(`
-# AgriTech Platform Business Logic API
+# AgroGina Platform Business Logic API
 
-NestJS-based backend service handling complex business logic for the AgriTech multi-tenant agricultural SaaS platform.
+NestJS-based backend service handling complex business logic for the AgroGina multi-tenant agricultural SaaS platform.
 
 ## Overview
 
@@ -303,7 +359,7 @@ All errors follow a standard format:
 \`\`\`
     `)
     .setVersion('1.0.0')
-    .setContact('AgriTech Team', 'https://agritech.thebzlab.online', 'support@thebzlab.online')
+    .setContact('AgroGina Team', 'https://agrogina.thebzlab.online', 'support@thebzlab.online')
     .setLicense('ISC', 'https://opensource.org/licenses/ISC')
     .addBearerAuth(
       {
@@ -413,7 +469,7 @@ All errors follow a standard format:
   console.log(`
   ╔═══════════════════════════════════════════════════════╗
   ║                                                       ║
-  ║   🌾 AgriTech API Server                             ║
+   ║   🌾 AgroGina API Server                             ║
   ║                                                       ║
   ║   Server running on: http://0.0.0.0:${port}             ║
   ║   API Docs: http://0.0.0.0:${port}/api/docs             ║

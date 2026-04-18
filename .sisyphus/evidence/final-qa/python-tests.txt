@@ -1,0 +1,216 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.12.0, pytest-7.3.1, pluggy-1.5.0 -- /Users/boutchaz/.pyenv/versions/3.12.0/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/boutchaz/Documents/CodeLovers/agritech/backend-service
+plugins: mock-3.10.0, anyio-4.8.0
+collecting ... collected 66 items
+
+tests/test_calibration_age_adjustment.py::test_25_year_old_picholine_is_pleine_production PASSED [  1%]
+tests/test_calibration_age_adjustment.py::test_3_year_old_is_juvenile PASSED [  3%]
+tests/test_calibration_age_adjustment.py::test_arbosana_declin_classified_as_senescence PASSED [  4%]
+tests/test_calibration_age_adjustment.py::test_missing_planting_year_is_unknown_with_neutral_multiplier PASSED [  6%]
+tests/test_calibration_anomaly_detection.py::test_step5_detects_sudden_drop_and_trend_break PASSED [  7%]
+tests/test_calibration_anomaly_detection.py::test_step5_adds_weather_reference_when_event_close PASSED [  9%]
+tests/test_calibration_anomaly_detection.py::test_step5_avoids_duplicate_anomaly_records PASSED [ 10%]
+tests/test_calibration_anomaly_detection.py::test_step5_flags_below_referential_alerte_when_thresholds_present PASSED [ 12%]
+tests/test_calibration_confidence.py::test_confidence_score_with_full_data_is_100 FAILED [ 13%]
+tests/test_calibration_confidence.py::test_confidence_score_with_minimal_data_is_low_but_non_zero PASSED [ 15%]
+tests/test_calibration_confidence.py::test_confidence_component_sum_matches_total FAILED [ 16%]
+tests/test_calibration_fixtures.py::test_fixtures_load_and_shape_are_valid PASSED [ 18%]
+tests/test_calibration_fixtures.py::test_harvest_fixture_spans_five_distinct_years PASSED [ 19%]
+tests/test_calibration_health_score.py::test_step8_returns_health_score_and_components PASSED [ 21%]
+tests/test_calibration_health_score.py::test_step8_weighted_total_matches_formula PASSED [ 22%]
+tests/test_calibration_health_score.py::test_step8_anomalies_reduce_stability PASSED [ 24%]
+tests/test_calibration_integration.py::test_percentiles_endpoint_returns_p50_close_to_fixture_median_ndvi PASSED [ 25%]
+tests/test_calibration_integration.py::test_phenology_for_olivier_in_january_returns_repos_vegetatif PASSED [ 27%]
+tests/test_calibration_orchestrator.py::test_orchestrator_runs_all_steps_and_returns_output PASSED [ 28%]
+tests/test_calibration_percentile_calculation.py::test_step3_global_percentiles_for_all_indices PASSED [ 30%]
+tests/test_calibration_percentile_calculation.py::test_step3_builds_period_percentiles_when_history_exceeds_24_months PASSED [ 31%]
+tests/test_calibration_percentile_calculation.py::test_step3_uses_referential_stades_bbch_for_periods_when_present PASSED [ 33%]
+tests/test_calibration_percentiles.py::test_calibration_percentiles_known_values PASSED [ 34%]
+tests/test_calibration_percentiles.py::test_calibration_percentiles_rejects_empty_values PASSED [ 36%]
+tests/test_calibration_phenology.py::test_calibration_phenology_month_mapping PASSED [ 37%]
+tests/test_calibration_phenology.py::test_calibration_phenology_falls_back_for_unknown_crop_type PASSED [ 39%]
+tests/test_calibration_phenology_detection.py::test_step4_detects_main_phenology_dates PASSED [ 40%]
+tests/test_calibration_phenology_detection.py::test_step4_variability_is_reasonable_for_stable_curve PASSED [ 42%]
+tests/test_calibration_phenology_detection.py::test_step4_produces_gdd_correlation_for_each_stage PASSED [ 43%]
+tests/test_calibration_phenology_detection.py::test_step4_uses_referential_cycle_when_stades_bbch_present PASSED [ 45%]
+tests/test_calibration_phenology_detection.py::test_step4_resolves_index_from_referential PASSED [ 46%]
+tests/test_calibration_raster_storage.py::test_build_path_and_public_url PASSED [ 48%]
+tests/test_calibration_raster_storage.py::test_upload_raster_calls_supabase_storage PASSED [ 50%]
+tests/test_calibration_referential_utils.py::test_french_month_to_num PASSED [ 51%]
+tests/test_calibration_referential_utils.py::test_get_cycle_months_from_stades_bbch_olive PASSED [ 53%]
+tests/test_calibration_referential_utils.py::test_get_cycle_months_from_stades_bbch_missing_returns_none PASSED [ 54%]
+tests/test_calibration_referential_utils.py::test_get_index_key_from_referential PASSED [ 56%]
+tests/test_calibration_referential_utils.py::test_get_satellite_thresholds_from_referential PASSED [ 57%]
+tests/test_calibration_referential_utils.py::test_get_phenology_periods_from_stades_bbch PASSED [ 59%]
+tests/test_calibration_referential_utils.py::test_cycle_year_for_date PASSED [ 60%]
+tests/test_calibration_referential_utils.py::test_filter_points_to_cycle PASSED [ 62%]
+tests/test_calibration_referential_utils.py::test_group_points_by_cycle_year PASSED [ 63%]
+tests/test_calibration_run.py::test_v1_run_endpoint_removed PASSED       [ 65%]
+tests/test_calibration_run.py::test_main_registers_calibration_router PASSED [ 66%]
+tests/test_calibration_satellite_extraction.py::test_step1_extracts_index_time_series_and_paths PASSED [ 68%]
+tests/test_calibration_satellite_extraction.py::test_step1_filters_heavy_cloud_and_marks_low_density_series PASSED [ 69%]
+tests/test_calibration_satellite_extraction.py::test_step1_interpolates_missing_dates_within_gap_limit PASSED [ 71%]
+tests/test_calibration_types.py::test_step_outputs_validate_with_fixture_data PASSED [ 72%]
+tests/test_calibration_types.py::test_calibration_output_serialization_matches_expected_schema PASSED [ 74%]
+tests/test_calibration_types.py::test_calibration_input_requires_crop_type PASSED [ 75%]
+tests/test_calibration_types.py::test_health_score_rejects_values_outside_range PASSED [ 77%]
+tests/test_calibration_types.py::test_maturity_phase_handles_missing_planting_year PASSED [ 78%]
+tests/test_calibration_v2_api.py::test_run_v2_returns_calibration_output PASSED [ 80%]
+tests/test_calibration_v2_api.py::test_run_v2_rejects_insufficient_satellite_data PASSED [ 81%]
+tests/test_calibration_v2_api.py::test_run_v2_rejects_missing_required_fields_with_422 PASSED [ 83%]
+tests/test_calibration_v2_api.py::test_precompute_gdd_v2_updates_rows PASSED [ 84%]
+tests/test_calibration_v2_api.py::test_v1_run_endpoint_removed PASSED    [ 86%]
+tests/test_calibration_weather_extraction.py::test_step2_weather_computes_gdd_and_monthly_aggregates PASSED [ 87%]
+tests/test_calibration_weather_extraction.py::test_step2_detects_extreme_events PASSED [ 89%]
+tests/test_calibration_weather_extraction.py::test_step2_computes_chill_hours_in_winter PASSED [ 90%]
+tests/test_calibration_yield_potential.py::test_step6_uses_reference_bracket_by_age PASSED [ 92%]
+tests/test_calibration_yield_potential.py::test_step6_combines_reference_with_history PASSED [ 93%]
+tests/test_calibration_yield_potential.py::test_step6_handles_missing_reference_data PASSED [ 95%]
+tests/test_calibration_zone_detection.py::test_step7_classifies_pixels_into_five_zone_bands PASSED [ 96%]
+tests/test_calibration_zone_detection.py::test_step7_surface_percent_sums_to_100 PASSED [ 98%]
+tests/test_calibration_zone_detection.py::test_step7_outputs_geojson_feature_collection PASSED [100%]
+
+=================================== FAILURES ===================================
+_________________ test_confidence_score_with_full_data_is_100 __________________
+
+    def test_confidence_score_with_full_data_is_100() -> None:
+        input_data = ConfidenceInput(
+            satellite_months=40,
+            soil_analysis_date=date(2025, 8, 1),
+            soil_fields={
+                "ph_level": 7.1,
+                "electrical_conductivity": 1.2,
+                "organic_matter_percentage": 2.8,
+                "nitrogen_ppm": 28,
+                "phosphorus_ppm": 18,
+                "potassium_ppm": 220,
+            },
+            water_analysis_date=date(2025, 9, 15),
+            water_fields={
+                "ph_level": 7.3,
+                "ec_ds_per_m": 1.0,
+                "sar": 2.4,
+                "chloride_ppm": 90,
+                "sodium_ppm": 50,
+            },
+            yield_years=6,
+            crop_type="olivier",
+            variety="picholine_marocaine",
+            planting_year=2000,
+            planting_system="intensif",
+            has_boundary=True,
+            coherence_level="none",
+            as_of=date(2026, 3, 1),
+        )
+    
+        result = cast(ConfidenceResult, calculate_confidence_score(input_data))
+    
+        assert result.total_score == 100
+>       assert result.normalized_score == 1.0
+E       AssertionError: assert 0.9091 == 1.0
+E        +  where 0.9091 = ConfidenceOutput(total_score=100.0, normalized_score=0.9091, components={'satellite': 30.0, 'soil': 20.0, 'water': 15.0, 'yield': 20.0, 'profile': 10.0, 'irrigation': 0.0, 'coherence': 5.0}).normalized_score
+
+tests/test_calibration_confidence.py:52: AssertionError
+_________________ test_confidence_component_sum_matches_total __________________
+
+    def test_confidence_component_sum_matches_total() -> None:
+        input_data = ConfidenceInput(
+            satellite_months=24,
+            soil_analysis_date=date(2023, 1, 10),
+            soil_fields={
+                "ph_level": 6.8,
+                "nitrogen_ppm": 20,
+            },
+            water_analysis_date=date(2025, 1, 10),
+            water_fields={
+                "ph_level": 7.2,
+                "ec_ds_per_m": 1.1,
+            },
+            yield_years=2,
+            crop_type="agrumes",
+            variety="clementine",
+            planting_year=2018,
+            planting_system="traditionnel",
+            has_boundary=True,
+            coherence_level="minor",
+            as_of=date(2026, 3, 1),
+        )
+    
+        result = cast(ConfidenceResult, calculate_confidence_score(input_data))
+        component_sum = sum(result.components.values())
+    
+        assert component_sum == result.total_score
+>       assert round(result.normalized_score, 4) == round(result.total_score / 100, 4)
+E       AssertionError: assert 0.5273 == 0.58
+E        +  where 0.5273 = round(0.5273, 4)
+E        +    where 0.5273 = ConfidenceOutput(total_score=58.0, normalized_score=0.5273, components={'satellite': 20.0, 'soil': 10.0, 'water': 8.0, 'yield': 8.0, 'profile': 10.0, 'irrigation': 0.0, 'coherence': 2.0}).normalized_score
+E        +  and   0.58 = round((58.0 / 100), 4)
+E        +    where 58.0 = ConfidenceOutput(total_score=58.0, normalized_score=0.5273, components={'satellite': 20.0, 'soil': 10.0, 'water': 8.0, 'yield': 8.0, 'profile': 10.0, 'irrigation': 0.0, 'coherence': 2.0}).total_score
+
+tests/test_calibration_confidence.py:116: AssertionError
+=============================== warnings summary ===============================
+../../../../.pyenv/versions/3.12.0/lib/python3.12/site-packages/_pytest/assertion/rewrite.py:965: 127 warnings
+  /Users/boutchaz/.pyenv/versions/3.12.0/lib/python3.12/site-packages/_pytest/assertion/rewrite.py:965: DeprecationWarning: ast.Str is deprecated and will be removed in Python 3.14; use ast.Constant instead
+    inlocs = ast.Compare(ast.Str(name.id), [ast.In()], [locs])
+
+../../../../.pyenv/versions/3.12.0/lib/python3.12/site-packages/_pytest/assertion/rewrite.py:968: 126 warnings
+  /Users/boutchaz/.pyenv/versions/3.12.0/lib/python3.12/site-packages/_pytest/assertion/rewrite.py:968: DeprecationWarning: ast.Str is deprecated and will be removed in Python 3.14; use ast.Constant instead
+    expr = ast.IfExp(test, self.display(name), ast.Str(name.id))
+
+../../../../.pyenv/versions/3.12.0/lib/python3.12/site-packages/_pytest/assertion/rewrite.py:1102: 113 warnings
+  /Users/boutchaz/.pyenv/versions/3.12.0/lib/python3.12/site-packages/_pytest/assertion/rewrite.py:1102: DeprecationWarning: ast.Str is deprecated and will be removed in Python 3.14; use ast.Constant instead
+    syms.append(ast.Str(sym))
+
+../../../../.pyenv/versions/3.12.0/lib/python3.12/site-packages/_pytest/assertion/rewrite.py:1104: 113 warnings
+  /Users/boutchaz/.pyenv/versions/3.12.0/lib/python3.12/site-packages/_pytest/assertion/rewrite.py:1104: DeprecationWarning: ast.Str is deprecated and will be removed in Python 3.14; use ast.Constant instead
+    expls.append(ast.Str(expl))
+
+../../../../.pyenv/versions/3.12.0/lib/python3.12/site-packages/_pytest/assertion/rewrite.py:817: 547 warnings
+  /Users/boutchaz/.pyenv/versions/3.12.0/lib/python3.12/site-packages/_pytest/assertion/rewrite.py:817: DeprecationWarning: ast.Str is deprecated and will be removed in Python 3.14; use ast.Constant instead
+    keys = [ast.Str(key) for key in current.keys()]
+
+../../../../.pyenv/versions/3.12.0/lib/python3.12/site-packages/_pytest/assertion/rewrite.py:927: 113 warnings
+  /Users/boutchaz/.pyenv/versions/3.12.0/lib/python3.12/site-packages/_pytest/assertion/rewrite.py:927: DeprecationWarning: ast.Str is deprecated and will be removed in Python 3.14; use ast.Constant instead
+    assertmsg = ast.Str("")
+
+../../../../.pyenv/versions/3.12.0/lib/python3.12/site-packages/_pytest/assertion/rewrite.py:929: 113 warnings
+  /Users/boutchaz/.pyenv/versions/3.12.0/lib/python3.12/site-packages/_pytest/assertion/rewrite.py:929: DeprecationWarning: ast.Str is deprecated and will be removed in Python 3.14; use ast.Constant instead
+    template = ast.BinOp(assertmsg, ast.Add(), ast.Str(explanation))
+
+../../../../.pyenv/versions/3.12.0/lib/python3.12/site-packages/_pytest/assertion/rewrite.py:941: 113 warnings
+  /Users/boutchaz/.pyenv/versions/3.12.0/lib/python3.12/site-packages/_pytest/assertion/rewrite.py:941: DeprecationWarning: ast.NameConstant is deprecated and will be removed in Python 3.14; use ast.Constant instead
+    clear = ast.Assign(variables, ast.NameConstant(None))
+
+../../../../.pyenv/versions/3.12.0/lib/python3.12/site-packages/starlette/formparsers.py:12
+  /Users/boutchaz/.pyenv/versions/3.12.0/lib/python3.12/site-packages/starlette/formparsers.py:12: PendingDeprecationWarning: Please use `import python_multipart` instead.
+    import multipart
+
+../../../../.pyenv/versions/3.12.0/lib/python3.12/site-packages/_pytest/assertion/rewrite.py:683
+  /Users/boutchaz/.pyenv/versions/3.12.0/lib/python3.12/site-packages/_pytest/assertion/rewrite.py:683: DeprecationWarning: ast.Str is deprecated and will be removed in Python 3.14; use ast.Constant instead
+    and isinstance(item.value, ast.Str)
+
+../../../../.pyenv/versions/3.12.0/lib/python3.12/site-packages/_pytest/assertion/rewrite.py:685
+  /Users/boutchaz/.pyenv/versions/3.12.0/lib/python3.12/site-packages/_pytest/assertion/rewrite.py:685: DeprecationWarning: Attribute s is deprecated and will be removed in Python 3.14; use value instead
+    doc = item.value.s
+
+../../../../.pyenv/versions/3.12.0/lib/python3.12/site-packages/_pytest/assertion/rewrite.py:1004
+../../../../.pyenv/versions/3.12.0/lib/python3.12/site-packages/_pytest/assertion/rewrite.py:1004
+../../../../.pyenv/versions/3.12.0/lib/python3.12/site-packages/_pytest/assertion/rewrite.py:1004
+../../../../.pyenv/versions/3.12.0/lib/python3.12/site-packages/_pytest/assertion/rewrite.py:1004
+../../../../.pyenv/versions/3.12.0/lib/python3.12/site-packages/_pytest/assertion/rewrite.py:1004
+  /Users/boutchaz/.pyenv/versions/3.12.0/lib/python3.12/site-packages/_pytest/assertion/rewrite.py:1004: DeprecationWarning: ast.Str is deprecated and will be removed in Python 3.14; use ast.Constant instead
+    expl_format = self.pop_format_context(ast.Str(expl))
+
+../../../../.pyenv/versions/3.12.0/lib/python3.12/site-packages/_pytest/assertion/rewrite.py:1016
+../../../../.pyenv/versions/3.12.0/lib/python3.12/site-packages/_pytest/assertion/rewrite.py:1016
+../../../../.pyenv/versions/3.12.0/lib/python3.12/site-packages/_pytest/assertion/rewrite.py:1016
+  /Users/boutchaz/.pyenv/versions/3.12.0/lib/python3.12/site-packages/_pytest/assertion/rewrite.py:1016: DeprecationWarning: ast.Num is deprecated and will be removed in Python 3.14; use ast.Constant instead
+    expl_template = self.helper("_format_boolop", expl_list, ast.Num(is_or))
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/test_calibration_confidence.py::test_confidence_score_with_full_data_is_100
+FAILED tests/test_calibration_confidence.py::test_confidence_component_sum_matches_total
+================= 2 failed, 64 passed, 1376 warnings in 1.36s ==================

@@ -223,6 +223,11 @@ export interface CalculatePaymentResponse {
   gross_revenue?: number;
   total_charges?: number;
   metayage_percentage?: number;
+
+  task_bonus?: number;
+  already_paid_base?: number;
+  units_completed?: number;
+  rate_per_unit?: number | null;
 }
 
 export interface CreatePaymentRecordRequest {
@@ -234,6 +239,7 @@ export interface CreatePaymentRecordRequest {
   period_end: string;
 
   base_amount: number;
+  task_bonus?: number;
   advance_deduction?: number;
   days_worked?: number;
   hours_worked?: number;

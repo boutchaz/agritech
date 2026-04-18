@@ -101,6 +101,12 @@ export class CreateWorkerDto {
   @Min(0)
   daily_rate?: number;
 
+  @ApiPropertyOptional({ description: 'Per-unit rate for piece work' })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  per_unit_rate?: number;
+
   @ApiPropertyOptional({
     description: 'Métayage type',
     enum: ['khammass', 'rebaa', 'tholth', 'custom']
@@ -154,11 +160,17 @@ export class CreateWorkerDto {
 
   @ApiPropertyOptional({
     description: 'Payment frequency',
-    enum: ['monthly', 'daily', 'per_task', 'harvest_share']
+    enum: ['monthly', 'daily', 'per_task', 'per_unit', 'harvest_share']
   })
   @IsOptional()
-  @IsIn(['monthly', 'daily', 'per_task', 'harvest_share'])
+  @IsIn(['monthly', 'daily', 'per_task', 'per_unit', 'harvest_share'])
   payment_frequency?: string;
+
+  @ApiPropertyOptional({ description: 'Accepted payment modes for daily workers (multi-select)', type: [String] })
+  @IsOptional()
+  @IsArray()
+  @IsIn(['monthly', 'daily', 'per_task', 'harvest_share', 'per_unit'], { each: true })
+  payment_frequencies?: string[];
 
   @ApiPropertyOptional({ description: 'Bank account number' })
   @IsOptional()

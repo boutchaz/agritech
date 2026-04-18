@@ -1,22 +1,27 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   useStockEntries,
   usePostStockEntry,
-  useCancelStockEntry,
+  useReverseStockEntry,
   useDeleteStockEntry,
 } from '@/hooks/useStockEntries';
 import {
-  Table,
-  TableBody,
   TableCell,
   TableHead,
-  TableHeader,
   TableRow,
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/Input';
+import {
+  DataTablePagination,
+  FilterBar,
+  ListPageLayout,
+  ResponsiveList,
+} from '@/components/ui/data-table';
+import { EmptyState } from '@/components/ui/empty-state';
+import { SectionLoader } from '@/components/ui/loader';
 import {
   Select,
   SelectContent,
@@ -49,9 +54,11 @@ import {
   Edit,
   Trash2,
   CheckCircle,
-  XCircle,
-  Search, Download,
-  Loader2
+  Download,
+  CalendarDays,
+  Hash,
+  MapPin,
+  RotateCcw,
 } from 'lucide-react';
 import type {
   StockEntry,
@@ -64,30 +71,86 @@ import {
   STOCK_ENTRY_STATUS_COLORS,
 } from '@/types/stock-entries';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
+
+/** Full class names so Tailwind generates them; dynamic `bg-${color}-100` is not picked up by JIT. */
+const STOCK_ENTRY_STAT_ICON: Record<string, { bg: string; fg: string }> = {
+  green: {
+    bg: 'bg-green-100 dark:bg-green-950/70',
+    fg: 'text-green-600 dark:text-green-400',
+  },
+  orange: {
+    bg: 'bg-orange-100 dark:bg-orange-950/70',
+    fg: 'text-orange-600 dark:text-orange-400',
+  },
+  blue: {
+    bg: 'bg-blue-100 dark:bg-blue-950/70',
+    fg: 'text-blue-600 dark:text-blue-400',
+  },
+  purple: {
+    bg: 'bg-purple-100 dark:bg-purple-950/70',
+    fg: 'text-purple-600 dark:text-purple-400',
+  },
+};
 
 interface StockEntryListProps {
   onCreateClick: () => void;
   onViewClick: (entry: StockEntry) => void;
 }
 
+type StockEntryListItem = StockEntry & {
+  from_warehouse?: { id: string; name: string } | null;
+  to_warehouse?: { id: string; name: string } | null;
+  farm_name?: string | null;
+  farm?: { name?: string | null } | string | null;
+  quantity?: number | null;
+  unit?: string | null;
+  item_name?: string | null;
+  product_name?: string | null;
+  items?: Array<{
+    quantity?: number | null;
+    unit?: string | null;
+    item_name?: string | null;
+    product_name?: string | null;
+    item?: { item_name?: string | null; default_unit?: string | null } | null;
+    farm?: { name?: string | null } | string | null;
+    farm_name?: string | null;
+  }>;
+};
+
 export default function StockEntryList({ onCreateClick, onViewClick }: StockEntryListProps) {
-  const { t } = useTranslation();
+  const { t } = useTranslation('stock');
   const [filters, setFilters] = useState<StockEntryFilters>({});
   const [searchTerm, setSearchTerm] = useState('');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [confirmAction, setConfirmAction] = useState<{
     entry: StockEntry;
-    action: 'post' | 'cancel' | 'delete';
+    action: 'post' | 'delete' | 'reverse';
   } | null>(null);
+  const [reverseReason, setReverseReason] = useState('');
 
   const { data: entries = [], isLoading } = useStockEntries(filters);
   const postEntry = usePostStockEntry();
-  const cancelEntry = useCancelStockEntry();
+  const reverseEntry = useReverseStockEntry();
   const deleteEntry = useDeleteStockEntry();
 
   // Filter entries by search term
-  const filteredEntries = entries.filter((entry) =>
-    entry.entry_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    entry.notes?.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredEntries = useMemo(
+    () =>
+      entries.filter((entry) =>
+        entry.entry_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        entry.notes?.toLowerCase().includes(searchTerm.toLowerCase())
+      ),
+    [entries, searchTerm],
+  );
+
+  const totalItems = filteredEntries.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  const effectivePage = page > totalPages ? totalPages : page;
+  const paginatedEntries = useMemo(
+    () => filteredEntries.slice((effectivePage - 1) * pageSize, effectivePage * pageSize),
+    [filteredEntries, effectivePage, pageSize],
   );
 
   const handlePost = async (entryId: string) => {
@@ -98,17 +161,6 @@ export default function StockEntryList({ onCreateClick, onViewClick }: StockEntr
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : '';
       toast.error(`${t('stockEntries.toast.postError')}: ${message}`);
-    }
-  };
-
-  const handleCancel = async (entryId: string) => {
-    try {
-      await cancelEntry.mutateAsync(entryId);
-      toast.success(t('stockEntries.toast.cancelSuccess'));
-      setConfirmAction(null);
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : '';
-      toast.error(`${t('stockEntries.toast.cancelError')}: ${message}`);
     }
   };
 
@@ -123,7 +175,26 @@ export default function StockEntryList({ onCreateClick, onViewClick }: StockEntr
     }
   };
 
-  const getActionLabel = (action: 'post' | 'cancel' | 'delete') => {
+  const handleReverse = async (entryId: string) => {
+    const reason = reverseReason.trim();
+
+    if (!reason) {
+      toast.error(t('stockEntries.toast.reverseReasonRequired', 'Reversal reason is required'));
+      return;
+    }
+
+    try {
+      await reverseEntry.mutateAsync({ entryId, reason });
+      toast.success(t('stockEntries.toast.reverseSuccess', 'Stock entry reversed successfully'));
+      setConfirmAction(null);
+      setReverseReason('');
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : '';
+      toast.error(`${t('stockEntries.toast.reverseError', 'Failed to reverse stock entry')}: ${message}`);
+    }
+  };
+
+  const getActionLabel = (action: 'post' | 'delete' | 'reverse') => {
     switch (action) {
       case 'post':
         return {
@@ -131,258 +202,392 @@ export default function StockEntryList({ onCreateClick, onViewClick }: StockEntr
           description: t('stockEntries.confirm.postDescription'),
           confirmLabel: t('stockEntries.confirm.postConfirm'),
         };
-      case 'cancel':
-        return {
-          title: t('stockEntries.confirm.cancelTitle'),
-          description: t('stockEntries.confirm.cancelDescription'),
-          confirmLabel: t('stockEntries.confirm.cancelConfirm'),
-        };
       case 'delete':
         return {
           title: t('stockEntries.confirm.deleteTitle'),
           description: t('stockEntries.confirm.deleteDescription'),
           confirmLabel: t('stockEntries.confirm.deleteConfirm'),
         };
+      case 'reverse':
+        return {
+          title: t('stockEntries.confirm.reverseTitle', 'Reverse stock entry'),
+          description: t(
+            'stockEntries.confirm.reverseDescription',
+            'This will create reversal movements and mark the original entry as reversed.'
+          ),
+          confirmLabel: t('stockEntries.confirm.reverseConfirm', 'Reverse entry'),
+        };
     }
   };
 
-  if (isLoading) {
+  const getWarehouseDisplay = (entry: StockEntryListItem) => {
+    const fromWarehouse = entry.from_warehouse;
+    const toWarehouse = entry.to_warehouse;
+
+    if (fromWarehouse && toWarehouse) {
+      return (
+        <div className="flex flex-col">
+          <span className="text-xs text-gray-500 dark:text-gray-400">
+            {t('stockEntries.table.from')}: {fromWarehouse.name}
+          </span>
+          <span className="text-xs text-gray-500 dark:text-gray-400">
+            {t('stockEntries.table.to')}: {toWarehouse.name}
+          </span>
+        </div>
+      );
+    }
+
+    if (fromWarehouse) {
+      return <span>{t('stockEntries.table.from')}: {fromWarehouse.name}</span>;
+    }
+
+    if (toWarehouse) {
+      return <span>{t('stockEntries.table.to')}: {toWarehouse.name}</span>;
+    }
+
+    return '-';
+  };
+
+  const getPrimaryItem = (entry: StockEntryListItem) => entry.items?.[0];
+
+  const getProductName = (entry: StockEntryListItem) => {
+    const primaryItem = getPrimaryItem(entry);
     return (
-      <div className="flex items-center justify-center p-12">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-        <span className="ml-3 text-gray-600">{t('stockEntries.loading')}</span>
-      </div>
+      primaryItem?.item?.item_name ||
+      primaryItem?.item_name ||
+      primaryItem?.product_name ||
+      entry.item_name ||
+      entry.product_name ||
+      t('stockEntries.card.productFallback', '—')
     );
+  };
+
+  const getFarmName = (entry: StockEntryListItem) => {
+    const primaryItem = getPrimaryItem(entry);
+    const farm = primaryItem?.farm ?? entry.farm;
+
+    if (typeof farm === 'string') {
+      return farm;
+    }
+
+    return primaryItem?.farm_name || entry.farm_name || farm?.name || t('stockEntries.card.farmFallback', '—');
+  };
+
+  const getQuantityValue = (entry: StockEntryListItem) => {
+    const primaryItem = getPrimaryItem(entry);
+    return primaryItem?.quantity ?? entry.quantity;
+  };
+
+  const getUnitValue = (entry: StockEntryListItem) => {
+    const primaryItem = getPrimaryItem(entry);
+    return primaryItem?.unit || primaryItem?.item?.default_unit || entry.unit;
+  };
+
+  const renderActions = (entry: StockEntry) => (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="sm">
+          <MoreVertical className="w-4 h-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem onClick={() => onViewClick(entry)}>
+          <Eye className="w-4 h-4 mr-2" />
+          {t('stockEntries.actions.viewDetails')}
+        </DropdownMenuItem>
+
+        {entry.status === 'Draft' && (
+          <>
+            <DropdownMenuItem>
+              <Edit className="w-4 h-4 mr-2" />
+              {t('stockEntries.actions.edit')}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => setConfirmAction({ entry, action: 'post' })}>
+              <CheckCircle className="w-4 h-4 mr-2 text-green-600" />
+              {t('stockEntries.actions.postEntry')}
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => setConfirmAction({ entry, action: 'delete' })}
+              className="text-red-600"
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              {t('stockEntries.actions.delete')}
+            </DropdownMenuItem>
+          </>
+        )}
+
+        {entry.status === 'Posted' && (
+          <DropdownMenuItem
+            onClick={() => {
+              setReverseReason('');
+              setConfirmAction({ entry, action: 'reverse' });
+            }}
+          >
+            <RotateCcw className="w-4 h-4 mr-2 text-orange-600" />
+            {t('stockEntries.actions.reverseEntry', 'Reverse entry')}
+          </DropdownMenuItem>
+        )}
+
+        <DropdownMenuSeparator />
+        <DropdownMenuItem>
+          <Download className="w-4 h-4 mr-2" />
+          {t('stockEntries.actions.exportPdf')}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+
+  if (isLoading) {
+    return <SectionLoader />;
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{t('stockEntries.title')}</h2>
-          <p className="text-gray-600 dark:text-gray-400">{t('stockEntries.subtitle')}</p>
-        </div>
-        <Button onClick={onCreateClick}>
-          <Plus className="w-4 h-4 mr-2" />
-          {t('stockEntries.newEntry')}
-        </Button>
-      </div>
-
-      {/* Filters */}
-      <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border dark:border-gray-700">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          {/* Search */}
-          <div className="md:col-span-2">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <Input
-                placeholder={t('stockEntries.searchPlaceholder')}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
+    <>
+      <ListPageLayout
+        header={
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{t('stockEntries.title')}</h2>
+              <p className="text-gray-600 dark:text-gray-400">{t('stockEntries.subtitle')}</p>
             </div>
+            <Button variant="default" onClick={onCreateClick}>
+              <Plus className="w-4 h-4 mr-2" />
+              {t('stockEntries.newEntry')}
+            </Button>
           </div>
-
-          {/* Entry Type Filter */}
-          <div>
-            <Select
-              value={filters.entry_type || 'all'}
-              onValueChange={(value) =>
-                setFilters({
-                  ...filters,
-                  entry_type: value === 'all' ? undefined : (value as StockEntryType),
-                })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder={t('stockEntries.allTypes')} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t('stockEntries.allTypes')}</SelectItem>
-                {Object.values(STOCK_ENTRY_TYPES).map((type) => (
-                  <SelectItem key={type.type} value={type.type}>
-                    {type.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Status Filter */}
-          <div>
-            <Select
-              value={filters.status || 'all'}
-              onValueChange={(value) =>
-                setFilters({
-                  ...filters,
-                  status: value === 'all' ? undefined : (value as StockEntryStatus),
-                })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder={t('stockEntries.allStatuses')} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t('stockEntries.allStatuses')}</SelectItem>
-                <SelectItem value="Draft">{t('stockEntries.status.draft')}</SelectItem>
-                <SelectItem value="Submitted">{t('stockEntries.status.submitted')}</SelectItem>
-                <SelectItem value="Posted">{t('stockEntries.status.posted')}</SelectItem>
-                <SelectItem value="Cancelled">{t('stockEntries.status.cancelled')}</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        {Object.values(STOCK_ENTRY_TYPES).map((type) => {
-          const count = entries.filter((e) => e.entry_type === type.type).length;
-          return (
-            <div key={type.type} className="bg-white p-4 rounded-lg shadow-sm border">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600">{type.label}</p>
-                  <p className="text-2xl font-bold mt-1">{count}</p>
-                </div>
-                <div className={`w-12 h-12 rounded-full bg-${type.color}-100 flex items-center justify-center`}>
-                  <Package className={`w-6 h-6 text-${type.color}-600`} />
-                </div>
+        }
+        filters={
+          <div className="rounded-lg border bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
+              <div className="md:col-span-2">
+                <FilterBar
+                  searchValue={searchTerm}
+                  onSearchChange={(value) => {
+                    setSearchTerm(value);
+                    setPage(1);
+                  }}
+                  searchPlaceholder={t('stockEntries.searchPlaceholder')}
+                />
               </div>
-            </div>
-          );
-        })}
-      </div>
 
-      {/* Table */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border dark:border-gray-700 overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>{t('stockEntries.table.entryNumber')}</TableHead>
-              <TableHead>{t('stockEntries.table.date')}</TableHead>
-              <TableHead>{t('stockEntries.table.type')}</TableHead>
-              <TableHead>{t('stockEntries.table.warehouse')}</TableHead>
-              <TableHead>{t('stockEntries.table.reference')}</TableHead>
-              <TableHead>{t('stockEntries.table.status')}</TableHead>
-              <TableHead className="text-right">{t('stockEntries.table.actions')}</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredEntries.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-gray-500 dark:text-gray-400">
-                  <Package className="w-12 h-12 mx-auto mb-3 text-gray-400" />
-                  <p>{t('stockEntries.noEntries')}</p>
-                  <p className="text-sm mt-1">{t('stockEntries.noEntriesHint')}</p>
-                </TableCell>
-              </TableRow>
-            ) : (
-              filteredEntries.map((entry) => {
-                const typeConfig = STOCK_ENTRY_TYPES[entry.entry_type];
-                return (
-                  <TableRow key={entry.id}>
-                    <TableCell className="font-medium">{entry.entry_number}</TableCell>
-                    <TableCell>{new Date(entry.entry_date).toLocaleDateString()}</TableCell>
-                    <TableCell>
+              <div>
+                <Select
+                  value={filters.entry_type || 'all'}
+                  onValueChange={(value) => {
+                    setFilters({
+                      ...filters,
+                      entry_type: value === 'all' ? undefined : (value as StockEntryType),
+                    });
+                    setPage(1);
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={t('stockEntries.allTypes')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">{t('stockEntries.allTypes')}</SelectItem>
+                    {Object.values(STOCK_ENTRY_TYPES).map((type) => (
+                      <SelectItem key={type.type} value={type.type}>
+                        {type.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Select
+                  value={filters.status || 'all'}
+                  onValueChange={(value) => {
+                    setFilters({
+                      ...filters,
+                      status: value === 'all' ? undefined : (value as StockEntryStatus),
+                    });
+                    setPage(1);
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={t('stockEntries.allStatuses')} />
+                  </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">{t('stockEntries.allStatuses')}</SelectItem>
+                      <SelectItem value="Draft">{t('stockEntries.status.draft')}</SelectItem>
+                      <SelectItem value="Posted">{t('stockEntries.status.posted')}</SelectItem>
+                      <SelectItem value="Cancelled">{t('stockEntries.status.cancelled')}</SelectItem>
+                      <SelectItem value="Reversed">{t('stockEntries.status.reversed', 'Reversed')}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+            </div>
+          </div>
+        }
+        stats={
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
+            {Object.values(STOCK_ENTRY_TYPES).map((type) => {
+              const count = entries.filter((e) => e.entry_type === type.type).length;
+              const icon = STOCK_ENTRY_STAT_ICON[type.color] ?? STOCK_ENTRY_STAT_ICON.green;
+              return (
+                <div
+                  key={type.type}
+                  className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800"
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">{type.label}</p>
+                      <p className="mt-1 text-2xl font-bold text-gray-900 dark:text-white">{count}</p>
+                    </div>
+                    <div
+                      className={cn(
+                        'flex h-12 w-12 items-center justify-center rounded-full',
+                        icon.bg,
+                      )}
+                    >
+                      <Package className={cn('h-6 w-6', icon.fg)} />
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        }
+        pagination={
+          totalItems > 0 ? (
+            <DataTablePagination
+              page={page}
+              totalPages={totalPages}
+              pageSize={pageSize}
+              totalItems={totalItems}
+              onPageChange={setPage}
+              onPageSizeChange={(size) => {
+                setPageSize(size);
+                setPage(1);
+              }}
+            />
+          ) : null
+        }
+      >
+        {filteredEntries.length === 0 ? (
+          <EmptyState
+            variant="card"
+            icon={Package}
+            title={t('stockEntries.noEntries')}
+            description={t('stockEntries.noEntriesHint')}
+            action={{
+              label: t('stockEntries.newEntry'),
+              onClick: onCreateClick,
+            }}
+          />
+        ) : (
+          <ResponsiveList
+            items={paginatedEntries}
+            isLoading={isLoading}
+            keyExtractor={(item) => item.id}
+            emptyIcon={Package}
+            emptyMessage={t('stockEntries.noEntries')}
+            renderCard={(entry) => {
+              const listEntry = entry as StockEntryListItem;
+              const typeConfig = STOCK_ENTRY_TYPES[entry.entry_type];
+              const quantity = getQuantityValue(listEntry);
+              const unit = getUnitValue(listEntry);
+
+              return (
+                <div className="rounded-lg border bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate font-semibold text-gray-900 dark:text-white">
+                        {getProductName(listEntry)}
+                      </p>
+                      <p className="mt-1 truncate text-sm text-gray-500 dark:text-gray-400">
+                        {getFarmName(listEntry)}
+                      </p>
+                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                        {entry.entry_number}
+                      </p>
+                    </div>
+                    <Badge className={STOCK_ENTRY_STATUS_COLORS[entry.status]}>{entry.status}</Badge>
+                  </div>
+
+                  <div className="mt-4 space-y-2 text-sm text-gray-600 dark:text-gray-300">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="inline-flex items-center gap-2">
+                        <Hash className="h-4 w-4" />
+                        {t('stockEntries.table.type')}
+                      </span>
                       <Badge className={`bg-${typeConfig.color}-100 text-${typeConfig.color}-800`}>
                         {entry.entry_type}
                       </Badge>
-                    </TableCell>
-                    <TableCell className="text-sm text-gray-600 dark:text-gray-400">
-                      {(() => {
-                        const fromWarehouse = (entry as unknown as { from_warehouse?: { name: string } }).from_warehouse;
-                        const toWarehouse = (entry as unknown as { to_warehouse?: { name: string } }).to_warehouse;
-                        
-                        if (fromWarehouse && toWarehouse) {
-                          return (
-                            <div className="flex flex-col">
-                              <span className="text-xs text-gray-500 dark:text-gray-400">{t('stockEntries.table.from')}: {fromWarehouse.name}</span>
-                              <span className="text-xs text-gray-500 dark:text-gray-400">{t('stockEntries.table.to')}: {toWarehouse.name}</span>
-                            </div>
-                          );
-                        }
-                        if (fromWarehouse) {
-                          return <span>{t('stockEntries.table.from')}: {fromWarehouse.name}</span>;
-                        }
-                        if (toWarehouse) {
-                          return <span>{t('stockEntries.table.to')}: {toWarehouse.name}</span>;
-                        }
-                        return '-';
-                      })()}
-                    </TableCell>
-                    <TableCell className="text-sm">
-                      {entry.reference_number || '-'}
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={STOCK_ENTRY_STATUS_COLORS[entry.status]}>
-                        {entry.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm">
-                            <MoreVertical className="w-4 h-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => onViewClick(entry)}>
-                            <Eye className="w-4 h-4 mr-2" />
-                            {t('stockEntries.actions.viewDetails')}
-                          </DropdownMenuItem>
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="inline-flex items-center gap-2">
+                        <MapPin className="h-4 w-4" />
+                        {t('stockEntries.card.quantity', 'Quantity')}
+                      </span>
+                      <span className="font-medium text-gray-900 dark:text-white">
+                        {quantity != null ? `${quantity} ${unit || ''}`.trim() : '—'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="inline-flex items-center gap-2">
+                        <CalendarDays className="h-4 w-4" />
+                        {t('stockEntries.table.date')}
+                      </span>
+                      <span className="font-medium text-gray-900 dark:text-white">
+                        {new Date(entry.entry_date).toLocaleDateString()}
+                      </span>
+                    </div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">{getWarehouseDisplay(listEntry)}</div>
+                  </div>
 
-                          {entry.status === 'Draft' && (
-                            <>
-                              <DropdownMenuItem>
-                                <Edit className="w-4 h-4 mr-2" />
-                                {t('stockEntries.actions.edit')}
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                onClick={() => setConfirmAction({ entry, action: 'post' })}
-                              >
-                                <CheckCircle className="w-4 h-4 mr-2 text-green-600" />
-                                {t('stockEntries.actions.postEntry')}
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => setConfirmAction({ entry, action: 'delete' })}
-                                className="text-red-600"
-                              >
-                                <Trash2 className="w-4 h-4 mr-2" />
-                                {t('stockEntries.actions.delete')}
-                              </DropdownMenuItem>
-                            </>
-                          )}
+                  <div className="mt-4 flex items-center justify-between gap-2">
+                    <Button variant="outline" size="sm" onClick={() => onViewClick(entry)}>
+                      <Eye className="mr-2 h-4 w-4" />
+                      {t('stockEntries.actions.viewDetails')}
+                    </Button>
+                    {renderActions(entry)}
+                  </div>
+                </div>
+              );
+            }}
+            renderTableHeader={
+              <TableRow>
+                <TableHead>{t('stockEntries.table.entryNumber')}</TableHead>
+                <TableHead>{t('stockEntries.table.date')}</TableHead>
+                <TableHead>{t('stockEntries.table.type')}</TableHead>
+                <TableHead>{t('stockEntries.table.warehouse')}</TableHead>
+                <TableHead>{t('stockEntries.table.reference')}</TableHead>
+                <TableHead>{t('stockEntries.table.status')}</TableHead>
+                <TableHead className="text-right">{t('stockEntries.table.actions')}</TableHead>
+              </TableRow>
+            }
+            renderTable={(entry) => {
+              const listEntry = entry as StockEntryListItem;
+              const typeConfig = STOCK_ENTRY_TYPES[entry.entry_type];
 
-                          {entry.status === 'Posted' && (
-                            <DropdownMenuItem
-                              onClick={() => setConfirmAction({ entry, action: 'cancel' })}
-                            >
-                              <XCircle className="w-4 h-4 mr-2 text-orange-600" />
-                              {t('stockEntries.actions.cancelEntry')}
-                            </DropdownMenuItem>
-                          )}
+              return (
+                <>
+                  <TableCell className="font-medium">{entry.entry_number}</TableCell>
+                  <TableCell>{new Date(entry.entry_date).toLocaleDateString()}</TableCell>
+                  <TableCell>
+                    <Badge className={`bg-${typeConfig.color}-100 text-${typeConfig.color}-800`}>
+                      {entry.entry_type}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-sm text-gray-600 dark:text-gray-400">
+                    {getWarehouseDisplay(listEntry)}
+                  </TableCell>
+                  <TableCell className="text-sm">{entry.reference_number || '-'}</TableCell>
+                  <TableCell>
+                    <Badge className={STOCK_ENTRY_STATUS_COLORS[entry.status]}>{entry.status}</Badge>
+                  </TableCell>
+                  <TableCell className="text-right">{renderActions(entry)}</TableCell>
+                </>
+              );
+            }}
+          />
+        )}
+      </ListPageLayout>
 
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem>
-                            <Download className="w-4 h-4 mr-2" />
-                            {t('stockEntries.actions.exportPdf')}
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                );
-              })
-            )}
-          </TableBody>
-        </Table>
-      </div>
-
-      {/* Confirmation Dialog */}
       {confirmAction && (
         <AlertDialog open={!!confirmAction} onOpenChange={() => setConfirmAction(null)}>
           <AlertDialogContent>
@@ -391,6 +596,25 @@ export default function StockEntryList({ onCreateClick, onViewClick }: StockEntr
               <AlertDialogDescription>
                 {getActionLabel(confirmAction.action).description}
               </AlertDialogDescription>
+              {confirmAction.action === 'reverse' && (
+                <div className="mt-4 space-y-2">
+                  <label
+                    htmlFor="stock-entry-reversal-reason"
+                    className="text-sm font-medium text-gray-900 dark:text-gray-100"
+                  >
+                    {t('stockEntries.form.reversalReason', 'Reversal reason')}
+                  </label>
+                  <Input
+                    id="stock-entry-reversal-reason"
+                    value={reverseReason}
+                    onChange={(event) => setReverseReason(event.target.value)}
+                    placeholder={t(
+                      'stockEntries.form.reversalReasonPlaceholder',
+                      'Explain why this stock entry is being reversed'
+                    )}
+                  />
+                </div>
+              )}
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>{t('stockEntries.confirm.cancel')}</AlertDialogCancel>
@@ -398,7 +622,7 @@ export default function StockEntryList({ onCreateClick, onViewClick }: StockEntr
                 onClick={() => {
                   const { entry, action } = confirmAction;
                   if (action === 'post') handlePost(entry.id);
-                  else if (action === 'cancel') handleCancel(entry.id);
+                  else if (action === 'reverse') handleReverse(entry.id);
                   else if (action === 'delete') handleDelete(entry.id);
                 }}
                 className={
@@ -406,6 +630,8 @@ export default function StockEntryList({ onCreateClick, onViewClick }: StockEntr
                     ? 'bg-red-600 hover:bg-red-700'
                     : confirmAction.action === 'post'
                     ? 'bg-green-600 hover:bg-green-700'
+                    : confirmAction.action === 'reverse'
+                    ? 'bg-orange-600 hover:bg-orange-700'
                     : ''
                 }
               >
@@ -415,6 +641,6 @@ export default function StockEntryList({ onCreateClick, onViewClick }: StockEntr
           </AlertDialogContent>
         </AlertDialog>
       )}
-    </div>
+    </>
   );
 }

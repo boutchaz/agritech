@@ -162,6 +162,9 @@ export function useInitializeAccountMappings() {
       queryClient.invalidateQueries({ queryKey: ['account-mappings', currentOrganization?.id] });
       queryClient.invalidateQueries({ queryKey: ['account-mapping-types', currentOrganization?.id] });
       queryClient.invalidateQueries({ queryKey: ['account-mapping-options', currentOrganization?.id] });
+      // Backend may persist organization country_code / accounting_standard when missing
+      queryClient.invalidateQueries({ queryKey: ['auth', 'organizations'] });
+      queryClient.invalidateQueries({ queryKey: ['organizations'] });
     },
   });
 }

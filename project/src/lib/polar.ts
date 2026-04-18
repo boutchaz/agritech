@@ -406,3 +406,134 @@ export function isSubscriptionValid(
 
   return true;
 }
+
+export interface ErpModule {
+  id: string;
+  name: string;
+  desc: string;
+  isBase: boolean;
+  pricePerMonth: number;
+}
+
+export interface HaPriceTier {
+  maxHa: number | null;
+  label: string;
+  pricePerHaYear: number;
+}
+
+export interface SizeMultiplierTier {
+  minHa: number;
+  maxHa: number | null;
+  multiplier: number;
+}
+
+export const ERP_MODULES: ErpModule[] = [
+  { id: 'erp-multiferme', name: 'Multi-Fermes & Parcellaire', desc: 'Gestion multi-fermes, parcelles, roles, historique', isBase: true, pricePerMonth: 100 },
+  { id: 'erp-dashboard', name: 'Dashboard & Live Map', desc: 'Dashboard normal et live avec carte des taches en cours', isBase: true, pricePerMonth: 50 },
+  { id: 'erp-taches', name: 'Taches Agronomiques', desc: 'Planification, demarrer/pause, lie au personnel et stocks', isBase: true, pricePerMonth: 80 },
+  { id: 'erp-recolte', name: 'Recolte & Tracabilite', desc: 'Gestion recolte, destination, tracabilite complete', isBase: true, pricePerMonth: 50 },
+  { id: 'erp-rh', name: 'RH & Paie Agronomique', desc: 'Personnel fixe/jour/tache, paie auto, partage production', isBase: false, pricePerMonth: 80 },
+  { id: 'erp-stocks', name: 'Stocks & Entrepots', desc: 'Alertes, fournisseurs, clients, infrastructures', isBase: false, pricePerMonth: 60 },
+  { id: 'erp-compta', name: 'Compta & Facturation', desc: 'Devis, factures, relances auto', isBase: false, pricePerMonth: 250 },
+  { id: 'erp-qualite', name: 'Controle Qualite', desc: 'Tests, certificats', isBase: false, pricePerMonth: 40 },
+  { id: 'erp-conformite', name: 'Conformite & Normes', desc: 'Global GAP, BIO, tracabilite reglementaire', isBase: false, pricePerMonth: 60 },
+  { id: 'erp-marketplace', name: 'Marketplace', desc: 'Plateforme de vente integree', isBase: false, pricePerMonth: 50 },
+  { id: 'erp-assistant', name: 'Assistant IA', desc: 'Chat IA avec acces aux donnees fermes et taches', isBase: false, pricePerMonth: 60 },
+];
+
+export const HA_PRICE_TIERS: HaPriceTier[] = [
+  { maxHa: 5, label: '< 5 ha', pricePerHaYear: 500 },
+  { maxHa: 20, label: '5-20 ha', pricePerHaYear: 400 },
+  { maxHa: 100, label: '20-100 ha', pricePerHaYear: 300 },
+  { maxHa: 200, label: '100-200 ha', pricePerHaYear: 250 },
+  { maxHa: 400, label: '200-400 ha', pricePerHaYear: 200 },
+  { maxHa: 500, label: '400-500 ha', pricePerHaYear: 180 },
+  { maxHa: null, label: '500+ ha', pricePerHaYear: 150 },
+];
+
+export const SIZE_MULTIPLIER_TIERS: SizeMultiplierTier[] = [
+  { minHa: 0, maxHa: 100, multiplier: 1 },
+  { minHa: 100, maxHa: 500, multiplier: 2.5 },
+  { minHa: 500, maxHa: null, multiplier: 5 },
+];
+
+export const DEFAULT_DISCOUNT_PERCENT = 10;
+
+export function computeErpMonthly(selectedModuleIds: string[]): number {
+  return ERP_MODULES
+    .filter(m => selectedModuleIds.includes(m.id))
+    .reduce((sum, m) => sum + m.pricePerMonth, 0);
+}
+
+export function resolveSizeMultiplier(hectares: number): number {
+  for (const tier of SIZE_MULTIPLIER_TIERS) {
+    const maxOk = !tier.maxHa || hectares <= tier.maxHa;
+    if (hectares >= tier.minHa && maxOk) return tier.multiplier;
+  }
+  return SIZE_MULTIPLIER_TIERS[SIZE_MULTIPLIER_TIERS.length - 1].multiplier;
+}
+
+export function computeHaTotalPrice(hectares: number): number {
+  const sorted = [...HA_PRICE_TIERS].sort((a, b) => (a.maxHa ?? 999999) - (b.maxHa ?? 999999));
+  let remaining = hectares;
+  let total = 0;
+  let prevMax = 0;
+  for (const tier of sorted) {
+    const isLast = !tier.maxHa || tier.maxHa >= 999999;
+    const currentMax = tier.maxHa ?? 999999;
+    const tierWidth = isLast ? remaining : currentMax - prevMax;
+    const haInTier = Math.min(remaining, tierWidth);
+    if (haInTier <= 0) break;
+    total += haInTier * tier.pricePerHaYear;
+    remaining -= haInTier;
+    prevMax = isLast ? prevMax : currentMax;
+  }
+  return total;
+}
+
+export interface ModularQuoteResult {
+  erpMonthly: number;
+  sizeMultiplier: number;
+  haAnnual: number;
+  annualSubtotal: number;
+  discountPercent: number;
+  discountAmount: number;
+  annualHt: number;
+  cycleHt: number;
+  cycleTva: number;
+  cycleTtc: number;
+}
+
+export function computeModularQuote(params: {
+  selectedModules: string[];
+  hectares: number;
+  billingCycle: BillingInterval;
+  discountPercent?: number;
+}): ModularQuoteResult {
+  const { selectedModules, hectares, billingCycle, discountPercent = DEFAULT_DISCOUNT_PERCENT } = params;
+  const erpMonthly = computeErpMonthly(selectedModules) * resolveSizeMultiplier(hectares);
+  const haAnnual = computeHaTotalPrice(hectares);
+  const annualSubtotal = erpMonthly * 12 + haAnnual;
+  const discount = annualSubtotal * (discountPercent / 100);
+  const annualHt = annualSubtotal - discount;
+  const cycleDivisor = billingCycle === 'monthly' ? 12 : billingCycle === 'semiannual' ? 2 : 1;
+  const cycleHt = annualHt / cycleDivisor;
+  const vatRate = 0.20;
+  const cycleTva = cycleHt * vatRate;
+  const cycleTtc = cycleHt + cycleTva;
+
+  return {
+    erpMonthly: Math.round(erpMonthly * 100) / 100,
+    sizeMultiplier: resolveSizeMultiplier(hectares),
+    haAnnual: Math.round(haAnnual * 100) / 100,
+    annualSubtotal: Math.round(annualSubtotal * 100) / 100,
+    discountPercent,
+    discountAmount: Math.round(discount * 100) / 100,
+    annualHt: Math.round(annualHt * 100) / 100,
+    cycleHt: Math.round(cycleHt * 100) / 100,
+    cycleTva: Math.round(cycleTva * 100) / 100,
+    cycleTtc: Math.round(cycleTtc * 100) / 100,
+  };
+}
+
+export const BASE_MODULE_IDS = ERP_MODULES.filter(m => m.isBase).map(m => m.id);

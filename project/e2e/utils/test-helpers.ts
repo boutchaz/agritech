@@ -7,7 +7,7 @@ import type { Page, Locator } from '@playwright/test';
 /**
  * Wait for API response and return the JSON data
  */
-export async function waitForAPIResponse<T = any>(
+export async function waitForAPIResponse<T = unknown>(
   page: Page,
   urlPattern: string | RegExp,
   action: () => Promise<void>
@@ -223,7 +223,8 @@ export async function getTableCellText(
   tableSelector: string = 'table'
 ): Promise<string> {
   const cell = page.locator(`${tableSelector} tbody tr:nth-child(${row}) td:nth-child(${column})`);
-  return cell.textContent() || '';
+  const text = await cell.textContent();
+  return text ?? '';
 }
 
 /**

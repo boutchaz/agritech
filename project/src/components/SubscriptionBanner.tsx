@@ -4,8 +4,9 @@ import { useNavigate } from '@tanstack/react-router';
 import { useSubscription } from '../hooks/useSubscription';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../lib/utils';
+import { Button } from '@/components/ui/button';
 
-const SubscriptionBanner: React.FC = () => {
+const SubscriptionBanner = () => {
   const { data: subscription } = useSubscription();
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
@@ -18,43 +19,78 @@ const SubscriptionBanner: React.FC = () => {
   const isPastDue = subscription.status === 'past_due';
   const isCanceled = subscription.status === 'canceled';
 
-  // Calculate days remaining for trial
+  // Calendar-day remaining, not millisecond ceiling. Previously used
+  // Math.ceil on the raw ms diff, which meant the counter "flipped"
+  // 24h after trial creation hour (e.g. 10:32 → 10:32 the next day),
+  // and stayed on 14 for most of the first calendar day. Compare at
+  // local midnight so the displayed number decrements at midnight like
+  // users expect.
   const daysRemaining = subscription.current_period_end
-    ? Math.ceil(
-        (new Date(subscription.current_period_end).getTime() - new Date().getTime()) /
-          (1000 * 60 * 60 * 24)
-      )
+    ? (() => {
+        const end = new Date(subscription.current_period_end);
+        const endMidnight = new Date(end.getFullYear(), end.getMonth(), end.getDate()).getTime();
+        const now = new Date();
+        const nowMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+        return Math.max(0, Math.round((endMidnight - nowMidnight) / (1000 * 60 * 60 * 24)));
+      })()
     : 0;
+  const trialEndLabel = subscription.current_period_end
+    ? new Date(subscription.current_period_end).toLocaleDateString(i18n.language, {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+      })
+    : null;
 
   if (!isTrialing && !isPastDue && !isCanceled) return null;
 
   return (
     <div
       className={cn(
-        "relative border-b px-4 py-3",
+        'relative border-b px-4 py-3.5',
         isTrialing
-          ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'
-          : 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800',
-        isRTL && "text-right"
+          ? 'border-primary/20 bg-primary/5 dark:border-primary/30 dark:bg-primary/10'
+          : 'border-amber-200/80 bg-amber-50/90 dark:border-amber-900/60 dark:bg-amber-950/25',
+        isRTL && 'text-right'
       )}
       dir={isRTL ? 'rtl' : 'ltr'}
+      role="status"
     >
-      <div className={cn("flex items-center justify-between max-w-7xl mx-auto gap-4", isRTL && "flex-row-reverse")}>
-        {/* Text - on right for Arabic, on left for LTR */}
-        <div className={cn("flex items-center flex-1", isRTL ? "flex-row-reverse justify-end space-x-reverse space-x-3" : "space-x-3")}>
+      <div
+        className={cn(
+          'mx-auto flex max-w-7xl flex-col gap-3 md:flex-row md:items-center md:justify-between md:gap-4',
+          isRTL && 'md:flex-row-reverse'
+        )}
+      >
+        <div
+          className={cn(
+            'flex min-w-0 flex-1 items-start gap-3 md:items-center',
+            isRTL && 'flex-row-reverse'
+          )}
+        >
           {isTrialing ? (
-            <Zap className={cn("h-5 w-5 flex-shrink-0", isTrialing ? "text-blue-600 dark:text-blue-400" : "")} />
+            <Zap className="h-5 w-5 flex-shrink-0 text-primary" aria-hidden />
           ) : (
-            <AlertTriangle className={cn("h-5 w-5 flex-shrink-0", "text-yellow-600 dark:text-yellow-400")} />
+            <AlertTriangle
+              className="h-5 w-5 flex-shrink-0 text-amber-600 dark:text-amber-400"
+              aria-hidden
+            />
           )}
 
-          <div className={isRTL ? "text-right" : ""}>
+          <div className={cn('min-w-0 flex-1', isRTL ? 'text-right' : 'text-left')}>
             {isTrialing && (
-              <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
+              <p
+                className="text-pretty text-sm font-medium leading-snug text-blue-900 dark:text-blue-100"
+                title={trialEndLabel ?? undefined}
+              >
                 {t('subscriptionBanner.trialPeriod')}{' '}
                 {daysRemaining > 0 ? (
                   <>
-                    <span className="font-bold">{daysRemaining} {t('subscriptionBanner.days')}</span> {t('subscriptionBanner.remaining')}.
+                    <span className="font-bold">
+                      {daysRemaining} {t('subscriptionBanner.days')}
+                    </span>{' '}
+                    {t('subscriptionBanner.remaining')}
+                    {trialEndLabel ? ` (${trialEndLabel})` : ''}.
                   </>
                 ) : (
                   <span className="font-bold">{t('subscriptionBanner.trialEndingSoon')}</span>
@@ -63,40 +99,44 @@ const SubscriptionBanner: React.FC = () => {
             )}
 
             {isPastDue && (
-              <p className="text-sm font-medium text-yellow-900 dark:text-yellow-100">
+              <p className="text-pretty text-sm font-medium leading-snug text-yellow-900 dark:text-yellow-100">
                 {t('subscriptionBanner.pastDue')}
               </p>
             )}
 
             {isCanceled && (
-              <p className="text-sm font-medium text-yellow-900 dark:text-yellow-100">
+              <p className="text-pretty text-sm font-medium leading-snug text-yellow-900 dark:text-yellow-100">
                 {t('subscriptionBanner.canceled')}
               </p>
             )}
           </div>
         </div>
 
-        {/* Actions - on left for Arabic, on right for LTR */}
-        <div className={cn("flex items-center flex-shrink-0", isRTL ? "flex-row-reverse space-x-reverse space-x-3" : "space-x-3")}>
-          <button
+        <div
+          className={cn(
+            'flex w-full shrink-0 items-center gap-2 md:w-auto md:justify-end',
+            isRTL && 'flex-row-reverse'
+          )}
+        >
+          <Button
+            type="button"
+            variant="default"
             onClick={() => navigate({ to: '/settings/subscription' })}
-            className={cn(
-              "px-4 py-2 rounded-md text-sm font-medium",
-              isTrialing
-                ? 'bg-blue-600 hover:bg-blue-700 text-white'
-                : 'bg-yellow-600 hover:bg-yellow-700 text-white'
-            )}
+            className="h-10 flex-1 rounded-md px-4 text-sm font-medium md:flex-initial"
           >
             {isTrialing ? t('subscriptionBanner.upgradeNow') : t('subscriptionBanner.manageSubscription')}
-          </button>
+          </Button>
 
-          <button
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
             onClick={() => setDismissed(true)}
-            className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+            className="h-10 w-10 shrink-0 text-muted-foreground hover:bg-accent hover:text-foreground"
             aria-label={t('app.close')}
           >
             <X className="h-5 w-5" />
-          </button>
+          </Button>
         </div>
       </div>
     </div>

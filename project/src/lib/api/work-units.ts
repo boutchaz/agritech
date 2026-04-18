@@ -56,7 +56,8 @@ export const workUnitsApi = {
     if (filters?.name) params.append('name', filters.name);
 
     const url = `${BASE_URL}${params.toString() ? `?${params.toString()}` : ''}`;
-    return apiClient.get(url, {}, organizationId);
+    const res = await apiClient.get<{ data: WorkUnit[] }>(url, {}, organizationId);
+    return res?.data || [];
   },
 
   /**

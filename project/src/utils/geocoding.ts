@@ -20,7 +20,7 @@ class NominatimService implements GeocodingService {
   private baseUrl = 'https://nominatim.openstreetmap.org';
   private headers = {
     'Accept': 'application/json',
-    'User-Agent': 'AgriTech-Platform/1.0' // Required by Nominatim
+    'User-Agent': 'AgroGina-Platform/1.0' // Required by Nominatim
   };
 
   async search(query: string): Promise<SearchResult[]> {

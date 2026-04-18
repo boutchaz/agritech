@@ -1,18 +1,18 @@
-import React from 'react';
+
 import { LineChart, Line, Area, BarChart, Bar, PieChart as RechartsPieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { TrendingUp, PieChart, Activity } from 'lucide-react';
 
 interface UtilitiesDashboardProps {
   chartData: {
-    monthlyTrend: any[];
-    costByType: any[];
-    consumptionData: any[];
+    monthlyTrend: Array<{ month: string; amount: number; count: number }>;
+    costByType: Array<{ label: string; amount: number }>;
+    consumptionData: Array<{ name: string; amount: number; consumption: number; unitCost: number }>;
   };
-  utilities: any[];
+  utilities: Array<{ is_recurring?: boolean; payment_status?: string }>;
   currency: string;
 }
 
-const UtilitiesDashboard: React.FC<UtilitiesDashboardProps> = ({ chartData, utilities, currency }) => {
+const UtilitiesDashboard = ({ chartData, utilities, currency }: UtilitiesDashboardProps) => {
   return (
     <div className="space-y-6">
       {/* Chart Grid */}
@@ -32,10 +32,7 @@ const UtilitiesDashboard: React.FC<UtilitiesDashboardProps> = ({ chartData, util
                 <XAxis dataKey="month" />
                 <YAxis />
                 <Tooltip
-                  formatter={(value: any, name: string) => [
-                    `${value} ${currency}`,
-                    name === 'amount' ? 'Montant' : 'Nombre'
-                  ]}
+                  formatter={(value, name) => [`${String(value ?? '')} ${currency}`, name === 'amount' ? 'Montant' : 'Nombre']}
                 />
                 <Legend />
                 <Area type="monotone" dataKey="amount" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.3} name="amount" />
@@ -61,7 +58,7 @@ const UtilitiesDashboard: React.FC<UtilitiesDashboardProps> = ({ chartData, util
             <ResponsiveContainer width="100%" height={300}>
               <RechartsPieChart>
                 <Tooltip
-                  formatter={(value: any) => [`${value} ${currency}`, 'Montant']}
+                  formatter={(value) => [`${String(value ?? '')} ${currency}`, 'Montant']}
                 />
                 <Legend />
                 <Pie
@@ -71,10 +68,10 @@ const UtilitiesDashboard: React.FC<UtilitiesDashboardProps> = ({ chartData, util
                   cx="50%"
                   cy="50%"
                   outerRadius={80}
-                  label={({ label, percent }: any) => `${label}: ${(percent * 100).toFixed(1)}%`}
+                  label={(props) => `${String((props as { name?: string }).name ?? '')}: ${((((props as { percent?: number }).percent) ?? 0) * 100).toFixed(1)}%`}
                 >
-                  {chartData.costByType.map((_, index) => (
-                    <Cell key={`cell-${index}`} fill={`hsl(${index * 45}, 70%, 60%)`} />
+                  {chartData.costByType.map((entry, hueIdx) => (
+                    <Cell key={`cell-${entry.label}`} fill={`hsl(${hueIdx * 45}, 70%, 60%)`} />
                   ))}
                 </Pie>
               </RechartsPieChart>
@@ -107,7 +104,7 @@ const UtilitiesDashboard: React.FC<UtilitiesDashboardProps> = ({ chartData, util
               />
               <YAxis />
               <Tooltip
-                formatter={(value: any, name: string) => {
+                formatter={(value, name) => {
                   if (name === 'amount') return [`${value} ${currency}`, 'Montant'];
                   if (name === 'consumption') return [`${value}`, 'Consommation'];
                   if (name === 'unitCost') return [`${value} ${currency}/unité`, 'Coût unitaire'];
@@ -127,7 +124,7 @@ const UtilitiesDashboard: React.FC<UtilitiesDashboardProps> = ({ chartData, util
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
           Statistiques détaillées
         </h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="text-center">
             <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
               {chartData.costByType.length}
@@ -142,13 +139,13 @@ const UtilitiesDashboard: React.FC<UtilitiesDashboardProps> = ({ chartData, util
           </div>
           <div className="text-center">
             <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">
-              {utilities.filter((u: any) => u.is_recurring).length}
+              {utilities.filter((u) => u.is_recurring).length}
             </p>
             <p className="text-sm text-gray-500 dark:text-gray-400">Charges récurrentes</p>
           </div>
           <div className="text-center">
             <p className="text-2xl font-bold text-red-600 dark:text-red-400">
-              {utilities.filter((u: any) => u.payment_status === 'overdue').length}
+              {utilities.filter((u) => u.payment_status === 'overdue').length}
             </p>
             <p className="text-sm text-gray-500 dark:text-gray-400">En retard</p>
           </div>

@@ -125,12 +125,12 @@ interface PermissionGuardProps {
   children: React.ReactNode;
 }
 
-export const PermissionGuard: React.FC<PermissionGuardProps> = ({
+export const PermissionGuard = ({
   resource,
   action,
   fallback = null,
   children,
-}) => {
+}: PermissionGuardProps) => {
   const { hasPermission, loading } = useRoleBasedAccess();
 
   if (loading) {
@@ -151,11 +151,11 @@ interface RoleGuardProps {
   children: React.ReactNode;
 }
 
-export const RoleGuard: React.FC<RoleGuardProps> = ({
+export const RoleGuard = ({
   roles,
   fallback = null,
   children,
-}) => {
+}: RoleGuardProps) => {
   const { hasRole, loading } = useRoleBasedAccess();
 
   if (loading) {

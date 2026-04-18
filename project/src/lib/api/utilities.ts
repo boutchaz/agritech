@@ -56,7 +56,8 @@ export const utilitiesApi = {
    * Get all utilities for a farm
    */
   async getAll(organizationId: string, farmId: string): Promise<Utility[]> {
-    return apiClient.get<Utility[]>(`/api/v1/organizations/${organizationId}/farms/${farmId}/utilities`, {}, organizationId);
+    const res = await apiClient.get<{ data: Utility[] }>(`/api/v1/organizations/${organizationId}/farms/${farmId}/utilities`, {}, organizationId);
+    return res?.data || [];
   },
 
   /**

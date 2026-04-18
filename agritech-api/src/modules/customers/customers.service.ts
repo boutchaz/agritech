@@ -1,6 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { CreateCustomerDto, UpdateCustomerDto, CustomerFiltersDto } from './dto';
+import { paginatedResponse, type PaginatedResponse } from '../../common/dto/paginated-query.dto';
+import { sanitizeSearch } from '../../common/utils/sanitize-search';
 
 @Injectable()
 export class CustomersService {
@@ -9,38 +11,41 @@ export class CustomersService {
   /**
    * Get all customers with optional filters
    */
-  async findAll(organizationId: string, filters?: CustomerFiltersDto) {
+  async findAll(organizationId: string, filters?: CustomerFiltersDto): Promise<PaginatedResponse<any>> {
     const client = this.databaseService.getAdminClient();
+    const page = (filters as any)?.page || 1;
+    const pageSize = (filters as any)?.pageSize || 100;
 
-    let query = client
-      .from('customers')
-      .select('*')
-      .eq('organization_id', organizationId);
+    const applyFilters = (q: any) => {
+      q = q.eq('organization_id', organizationId);
+      if (filters?.name) { const s = sanitizeSearch(filters.name); if (s) q = q.ilike('name', `%${s}%`); }
+      if (filters?.customer_code) q = q.eq('customer_code', filters.customer_code);
+      if (filters?.customer_type) q = q.eq('customer_type', filters.customer_type);
+      if (filters?.assigned_to) q = q.eq('assigned_to', filters.assigned_to);
+      if (filters?.is_active !== undefined) {
+        q = q.eq('is_active', filters.is_active);
+      } else {
+        q = q.eq('is_active', true);
+      }
+      if (filters?.search) {
+        const s = sanitizeSearch(filters.search);
+        if (s) {
+          const pattern = `%${s}%`;
+          q = q.or(
+            `name.ilike.${pattern},email.ilike.${pattern},phone.ilike.${pattern},mobile.ilike.${pattern},contact_person.ilike.${pattern}`,
+          );
+        }
+      }
+      return q;
+    };
 
-    if (filters?.name) {
-      query = query.ilike('name', `%${filters.name}%`);
-    }
+    const { count } = await applyFilters(
+      client.from('customers').select('id', { count: 'exact', head: true })
+    );
 
-    if (filters?.customer_code) {
-      query = query.eq('customer_code', filters.customer_code);
-    }
-
-    if (filters?.customer_type) {
-      query = query.eq('customer_type', filters.customer_type);
-    }
-
-    if (filters?.assigned_to) {
-      query = query.eq('assigned_to', filters.assigned_to);
-    }
-
-    if (filters?.is_active !== undefined) {
-      query = query.eq('is_active', filters.is_active);
-    } else {
-      // Default to active customers only
-      query = query.eq('is_active', true);
-    }
-
-    query = query.order('name', { ascending: true });
+    const from = (page - 1) * pageSize;
+    let query = applyFilters(client.from('customers').select('*'));
+    query = query.order('name', { ascending: true }).range(from, from + pageSize - 1);
 
     const { data, error } = await query;
 
@@ -48,7 +53,7 @@ export class CustomersService {
       throw new Error(`Failed to fetch customers: ${error.message}`);
     }
 
-    return data;
+    return paginatedResponse(data || [], count || 0, page, pageSize);
   }
 
   /**

@@ -31,7 +31,12 @@ import {
   CheckSubscriptionDto,
   SubscriptionCheckResponseDto,
 } from './dto/check-subscription.dto';
-import { CreateQuoteDto, QuoteResponseDto } from './dto/quote.dto';
+import {
+  CreateModularQuoteDto,
+  CreateQuoteDto,
+  ModularQuoteResponseDto,
+  QuoteResponseDto,
+} from './dto/quote.dto';
 import { SubscriptionCatalogResponseDto } from './dto/catalog.dto';
 import {
   RenewalNoticeDto,
@@ -112,6 +117,14 @@ export class SubscriptionsController {
   @ApiResponse({ status: 201, type: QuoteResponseDto })
   async createQuote(@Body() dto: CreateQuoteDto) {
     return this.subscriptionsService.createQuote(dto);
+  }
+
+  @Post('quote/modular')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Generate pricing quote for modular pricing selection' })
+  @ApiResponse({ status: 201, type: ModularQuoteResponseDto })
+  async createModularQuote(@Body() dto: CreateModularQuoteDto) {
+    return this.subscriptionsService.createModularQuote(dto);
   }
 
   @Post('checkout')

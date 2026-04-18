@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import {  useState  } from "react";
 import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { FlaskConical, Calendar, Package, TrendingUp, Building2, Home } from 'lucide-react';
@@ -16,9 +16,21 @@ import {
 import { LabServiceMarketplace } from '@/components/LabServices/LabServiceMarketplace';
 import { LabOrdersList } from '@/components/LabServices/LabOrdersList';
 import { SampleSchedulesList } from '@/components/LabServices/SampleSchedulesList';
+import { SectionLoader } from '@/components/ui/loader';
+
+
+import { ModuleGate } from '@/components/authorization/ModuleGate';
+
+function LabServicesGuarded() {
+  return (
+    <ModuleGate>
+      <LabServicesPage />
+    </ModuleGate>
+  );
+}
 
 export const Route = createFileRoute('/_authenticated/(misc)/lab-services')({
-  component: LabServicesPage,
+  component: LabServicesGuarded,
 });
 
 function LabServicesPage() {
@@ -47,12 +59,7 @@ function LabServicesPage() {
 
   if (!currentOrganization) {
     return (
-      <div className="flex items-center justify-center p-12">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">{t('labServices.loading')}</p>
-        </div>
-      </div>
+      <SectionLoader />
     );
   }
 
@@ -61,7 +68,7 @@ function LabServicesPage() {
       <ModernPageHeader
         breadcrumbs={[
           { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
-          ...(currentFarm ? [{ icon: Home, label: currentFarm.name, path: '/farm-hierarchy' }] : []),
+          ...(currentFarm?.name ? [{ icon: Home, label: currentFarm.name, path: '/farm-hierarchy' }] : []),
           { icon: FlaskConical, label: t('labServices.title'), isActive: true }
         ]}
         title={t('labServices.title')}

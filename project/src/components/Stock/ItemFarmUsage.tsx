@@ -6,11 +6,30 @@ import { useTranslation } from 'react-i18next';
 
 interface ItemFarmUsageProps {
   item_id: string;
+  unit?: string;
   showDetails?: boolean;
 }
 
-export default function ItemFarmUsage({ item_id, showDetails = true }: ItemFarmUsageProps) {
-  const { t } = useTranslation();
+const UNIT_LABELS: Record<string, Record<string, string>> = {
+  LITER:  { fr: 'litre',     en: 'liter',    ar: 'لتر'   },
+  KG:     { fr: 'kg',        en: 'kg',        ar: 'كغ'    },
+  G:      { fr: 'g',         en: 'g',         ar: 'غ'     },
+  TON:    { fr: 'tonne',     en: 'ton',       ar: 'طن'    },
+  UNIT:   { fr: 'unité',     en: 'unit',      ar: 'وحدة'  },
+  BOX:    { fr: 'boîte',     en: 'box',       ar: 'صندوق' },
+  BAG:    { fr: 'sac',       en: 'bag',       ar: 'كيس'   },
+  BOTTLE: { fr: 'bouteille', en: 'bottle',    ar: 'زجاجة' },
+};
+
+function localizeUnit(unit: string | undefined, lang: string): string {
+  if (!unit) return '';
+  const key = unit.toUpperCase();
+  return UNIT_LABELS[key]?.[lang] ?? unit.toLowerCase();
+}
+
+export default function ItemFarmUsage({ item_id, unit, showDetails = true }: ItemFarmUsageProps) {
+  const { t, i18n } = useTranslation('stock');
+  const lang = i18n.language?.slice(0, 2) || 'fr';
   const navigate = useNavigate();
 
   const { data: usageData, isLoading } = useItemFarmUsage(item_id);
@@ -55,7 +74,7 @@ export default function ItemFarmUsage({ item_id, showDetails = true }: ItemFarmU
               {t('stock.itemFarmUsage.totalQuantity', 'Total Quantity Used')}
             </p>
             <p className="text-lg font-semibold text-gray-900 dark:text-white">
-              {usageData.total_quantity_used.toFixed(3)}
+              {usageData.total_quantity_used.toFixed(2)}{unit ? ` ${localizeUnit(unit, lang)}` : ''}
             </p>
           </div>
           <div>
@@ -112,7 +131,7 @@ export default function ItemFarmUsage({ item_id, showDetails = true }: ItemFarmU
                   {t('stock.itemFarmUsage.quantityUsed', 'Quantity Used')}:
                 </span>
                 <span className="font-medium text-gray-900 dark:text-white">
-                  {farmUsage.total_quantity_used.toFixed(3)}
+                  {farmUsage.total_quantity_used.toFixed(2)}{unit ? ` ${localizeUnit(unit, lang)}` : ''}
                 </span>
               </div>
               {farmUsage.last_used_date && (
@@ -148,14 +167,14 @@ export default function ItemFarmUsage({ item_id, showDetails = true }: ItemFarmU
                   {t('stock.itemFarmUsage.relatedTasks', 'Related Tasks')} ({farmUsage.task_ids.length})
                 </p>
                 <div className="flex flex-wrap gap-2">
-                  {farmUsage.task_ids.slice(0, 5).map((taskId) => (
+                  {(farmUsage.tasks?.length ? farmUsage.tasks : farmUsage.task_ids.map(id => ({ id, title: null }))).slice(0, 5).map((task) => (
                     <Button
-                      key={taskId}
+                      key={task.id}
                       size="sm"
                       variant="outline"
-                      onClick={() => navigate({ to: '/tasks', search: { taskId } })}
+                      onClick={() => navigate({ to: '/tasks/$taskId', params: { taskId: task.id } })}
                     >
-                      {t('stock.itemFarmUsage.viewTask', 'View Task')} {taskId.slice(0, 8)}
+                      {task.title ?? `${t('stock.itemFarmUsage.viewTask', 'Tâche')} ${task.id.slice(0, 8)}`}
                     </Button>
                   ))}
                   {farmUsage.task_ids.length > 5 && (

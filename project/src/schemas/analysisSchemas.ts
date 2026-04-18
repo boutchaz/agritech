@@ -71,6 +71,12 @@ export const soilAnalysisSchema = z.object({
   k2o_meq: z.number().min(0).optional(),
   na2o_meq: z.number().min(0).optional(),
 
+  // Anions
+  sulfates_ppm: z.number().min(0).optional(),
+
+  // Sampling metadata
+  sampling_depth: z.string().optional(),
+
   // Soil health indicators
   salinity_level: z.number().min(0).optional(),
   electrical_conductivity: z.number().min(0).optional(),
@@ -205,6 +211,19 @@ export const waterAnalysisSchema = z.object({
   cadmium_ppb: z.number().min(0).optional(),
   arsenic_ppb: z.number().min(0).optional(),
   mercury_ppb: z.number().min(0).optional(),
+  nickel_ppb: z.number().min(0).optional(),
+  chromium_ppb: z.number().min(0).optional(),
+  cobalt_ppb: z.number().min(0).optional(),
+  silver_ppb: z.number().min(0).optional(),
+  barium_ppb: z.number().min(0).optional(),
+  vanadium_ppb: z.number().min(0).optional(),
+  molybdenum_ppb: z.number().min(0).optional(),
+  selenium_ppb: z.number().min(0).optional(),
+  lithium_ppb: z.number().min(0).optional(),
+  aluminum_ppb: z.number().min(0).optional(),
+  gold_ppb: z.number().min(0).optional(),
+  antimony_ppb: z.number().min(0).optional(),
+  bismuth_ppb: z.number().min(0).optional(),
 
   // Water quality indicators
   sar: z.number().min(0).optional(),

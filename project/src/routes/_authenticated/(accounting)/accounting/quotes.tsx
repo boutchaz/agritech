@@ -1,14 +1,15 @@
-import React, { useState } from 'react';
+import {  useState  } from "react";
 import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import i18n from '@/i18n/config';
 import { useAuth } from '@/hooks/useAuth';
+import { useAutoStartTour } from '@/contexts/TourContext';
 import { PageLayout } from '@/components/PageLayout';
 import ModernPageHeader from '@/components/ModernPageHeader';
-import { MobileNavBar } from '@/components/MobileNavBar';
-import { Building2, FileText, Plus, Eye, CheckCircle2, Clock, XCircle, Send, Download, Edit, MoreVertical, Search } from 'lucide-react';
+
+import { Building2, FileText, Plus, Eye, CheckCircle2, Clock, XCircle, Send, Download, Edit, MoreVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/Input';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -20,19 +21,23 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { withRouteProtection } from '@/components/authorization/withRouteProtection';
-import { useQuotes, usePaginatedQuotes, type Quote } from '@/hooks/useQuotes';
+import { useQuotes, usePaginatedQuotes } from '@/hooks/useQuotes';
+import type { QuoteResponse as Quote } from '@/types/quotes';
 import { QuoteForm } from '@/components/Billing/QuoteForm';
 import { QuoteDetailDialog } from '@/components/Billing/QuoteDetailDialog';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { fr, ar, enUS } from 'date-fns/locale';
-import { useServerTableState, SortableHeader, DateRangeFilter, DataTablePagination } from '@/components/ui/data-table';
-import { Loader2 } from 'lucide-react';
+import { useServerTableState, SortableHeader, DataTablePagination, FilterBar, ListPageLayout, ListPageHeader, type DatePreset as FilterDatePreset } from '@/components/ui/data-table';
 import { toast } from 'sonner';
+import { SectionLoader } from '@/components/ui/loader';
 
-const AppContent: React.FC = () => {
+
+const AppContent = () => {
   const { t } = useTranslation();
   const { currentOrganization } = useAuth();
+
+  useAutoStartTour('billing', 1500);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null);
@@ -77,11 +82,12 @@ const AppContent: React.FC = () => {
         return;
       }
 
-      const backendUrl = import.meta.env.VITE_BACKEND_SERVICE_URL || import.meta.env.VITE_SATELLITE_SERVICE_URL || 'http://localhost:8001';
-      const response = await fetch(`${backendUrl}/api/billing/quotes/${quote.id}/pdf`, {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+      const response = await fetch(`${apiUrl}/api/v1/satellite-proxy/billing/quotes/${quote.id}/pdf`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${accessToken}`,
+          'X-Organization-Id': quote.organization_id || '',
         },
       });
 
@@ -173,14 +179,7 @@ const AppContent: React.FC = () => {
   };
 
   if (!currentOrganization) {
-    return (
-      <div className={cn("min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900", isRTL && "flex-row-reverse")} dir={isRTL ? 'rtl' : 'ltr'}>
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">{t('quotes.loading')}</p>
-        </div>
-      </div>
-    );
+    return <SectionLoader />;
   }
 
   if (isLoading) {
@@ -200,9 +199,7 @@ const AppContent: React.FC = () => {
           </div>
         }
       >
-        <div className="p-6 flex items-center justify-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
-        </div>
+        <SectionLoader />
       </PageLayout>
     );
   }
@@ -225,129 +222,124 @@ const AppContent: React.FC = () => {
     <PageLayout
       activeModule="accounting"
       header={
-        <>
-          {/* Mobile Navigation Bar */}
-          <MobileNavBar title={t('quotes.pageTitle')} />
-
-          {/* Desktop Header */}
-          <div className="hidden md:block">
-            <ModernPageHeader
-              breadcrumbs={[
-                { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
-                { icon: FileText, label: t('quotes.pageTitle'), isActive: true }
-              ]}
-              title={t('quotes.title')}
-              subtitle={t('quotes.subtitle')}
-            />
-          </div>
-        </>
+        <ModernPageHeader
+          breadcrumbs={[
+            { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
+            { icon: FileText, label: t('quotes.pageTitle'), isActive: true }
+          ]}
+          title={t('quotes.title')}
+          subtitle={t('quotes.subtitle')}
+        />
       }
     >
-      <div className="p-3 sm:p-4 md:p-6 pb-20 md:pb-6 space-y-4 sm:space-y-6">
-          <div className="flex flex-col gap-4">
-            <div className={cn("flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3", isRTL && "flex-row-reverse")}>
-              <div className="min-w-0">
-                <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white truncate">{t('quotes.allQuotes')}</h2>
-                <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mt-1 line-clamp-2">
-                  {t('quotes.description')}
-                </p>
-              </div>
-              <div className={cn("flex gap-2 flex-shrink-0", isRTL && "flex-row-reverse")}>
+      <div className="p-3 sm:p-4 md:p-6 pb-20 md:pb-6">
+        <ListPageLayout
+          header={
+            <ListPageHeader
+              variant="shell"
+              actions={
                 <Button onClick={() => setCreateDialogOpen(true)} className="flex-1 sm:flex-none">
                   <Plus className={cn("h-4 w-4 sm:mr-2", isRTL && "sm:ml-2")} />
                   <span className="hidden sm:inline">{t('quotes.actions.newQuote')}</span>
                   <span className="sm:hidden">New</span>
                 </Button>
-              </div>
+              }
+              className={isRTL ? 'sm:flex-row-reverse' : undefined}
+            />
+          }
+          filters={
+            <FilterBar
+              searchValue={tableState.search}
+              onSearchChange={(value) => tableState.setSearch(value)}
+              searchPlaceholder={t('quotes.search', 'Search by quote number or customer...')}
+              isSearching={isFetching}
+              datePreset={tableState.datePreset as FilterDatePreset}
+              onDatePresetChange={(preset) => {
+                if (preset !== 'custom') {
+                  tableState.setDatePreset(preset);
+                }
+              }}
+            />
+          }
+          stats={
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4" data-tour="billing-stats">
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                    {t('quotes.stats.total')}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{stats.total}</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                    {t('quotes.stats.draft')}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{stats.draft}</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                    {t('quotes.stats.sent')}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-blue-600">{stats.sent}</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                    {t('quotes.stats.accepted')}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-green-600">{stats.accepted}</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                    {t('quotes.stats.converted')}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-purple-600">{stats.converted}</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                    {t('quotes.stats.totalValue')}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-xl font-bold">
+                    {currentOrganization.currency} {stats.totalValue.toLocaleString('fr-FR', { minimumFractionDigits: 2 })}
+                  </div>
+                </CardContent>
+              </Card>
             </div>
-
-            <div className="flex flex-col sm:flex-row gap-3">
-              <div className="relative flex-1">
-                <Search className={cn("absolute top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4", isRTL ? "right-3" : "left-3")} />
-                <Input
-                  placeholder={t('quotes.search', 'Search by quote number or customer...')}
-                  value={tableState.search}
-                  onChange={(e) => tableState.setSearch(e.target.value)}
-                  className={isRTL ? "pr-10" : "pl-10"}
-                />
-                {isFetching && (
-                  <Loader2 className={cn("absolute top-1/2 transform -translate-y-1/2 h-4 w-4 animate-spin text-gray-400", isRTL ? "left-3" : "right-3")} />
-                )}
-              </div>
-              <DateRangeFilter
-                value={tableState.datePreset}
-                onChange={tableState.setDatePreset}
+          }
+          pagination={
+            <div className="hidden md:block">
+              <DataTablePagination
+                page={tableState.page}
+                totalPages={totalPages}
+                pageSize={tableState.pageSize}
+                totalItems={totalItems}
+                onPageChange={tableState.setPage}
+                onPageSizeChange={tableState.setPageSize}
               />
             </div>
-          </div>
-
-          {/* Stats */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 sm:gap-4" data-tour="billing-stats">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                  {t('quotes.stats.total')}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.total}</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                  {t('quotes.stats.draft')}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.draft}</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                  {t('quotes.stats.sent')}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-blue-600">{stats.sent}</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                  {t('quotes.stats.accepted')}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-green-600">{stats.accepted}</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                  {t('quotes.stats.converted')}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-purple-600">{stats.converted}</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                  {t('quotes.stats.totalValue')}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-xl font-bold">
-                  {currentOrganization.currency} {stats.totalValue.toLocaleString('fr-FR', { minimumFractionDigits: 2 })}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Quote List - Desktop Table View */}
+          }
+        >
           <Card className="hidden md:block" data-tour="billing-quotes">
             <CardHeader>
               <CardTitle>{t('quotes.allQuotes')}</CardTitle>
@@ -357,81 +349,81 @@ const AppContent: React.FC = () => {
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-gray-200 dark:border-gray-700">
+                <Table className="w-full">
+                  <TableHeader>
+                    <TableRow className="border-b border-gray-200 dark:border-gray-700">
                       <SortableHeader
                         label={t('quotes.table.quoteNumber')}
                         sortKey="quote_number"
                         currentSort={tableState.sortConfig}
-                        onSort={tableState.handleSort}
+                        onSort={(key) => tableState.handleSort(String(key))}
                       />
                       <SortableHeader
                         label={t('quotes.table.customer')}
                         sortKey="customer_name"
                         currentSort={tableState.sortConfig}
-                        onSort={tableState.handleSort}
+                        onSort={(key) => tableState.handleSort(String(key))}
                       />
                       <SortableHeader
                         label={t('quotes.table.date')}
                         sortKey="quote_date"
                         currentSort={tableState.sortConfig}
-                        onSort={tableState.handleSort}
+                        onSort={(key) => tableState.handleSort(String(key))}
                       />
                       <SortableHeader
                         label={t('quotes.table.validUntil')}
                         sortKey="valid_until"
                         currentSort={tableState.sortConfig}
-                        onSort={tableState.handleSort}
+                        onSort={(key) => tableState.handleSort(String(key))}
                       />
                       <SortableHeader
                         label={t('quotes.table.amount')}
                         sortKey="grand_total"
                         currentSort={tableState.sortConfig}
-                        onSort={tableState.handleSort}
+                        onSort={(key) => tableState.handleSort(String(key))}
                         align="right"
                       />
                       <SortableHeader
                         label={t('quotes.table.status')}
                         sortKey="status"
                         currentSort={tableState.sortConfig}
-                        onSort={tableState.handleSort}
+                        onSort={(key) => tableState.handleSort(String(key))}
                       />
-                      <th className={cn("py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400", isRTL ? "text-left" : "text-right")}>
+                      <TableHead className={cn("py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400", isRTL ? "text-left" : "text-right")}>
                         {t('quotes.table.actions')}
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {quotes.map((quote) => (
-                      <tr key={quote.id} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                        <td className="py-3 px-4">
+                      <TableRow key={quote.id} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                        <TableCell className="py-3 px-4">
                           <div className={cn("flex items-center gap-2", isRTL && "flex-row-reverse")}>
                             <FileText className="h-4 w-4 text-gray-400" />
                             <span className="font-medium text-gray-900 dark:text-white">
                               {quote.quote_number}
                             </span>
                           </div>
-                        </td>
-                        <td className={cn("py-3 px-4 text-sm text-gray-900 dark:text-white", isRTL && "text-right")}>
+                        </TableCell>
+                        <TableCell className={cn("py-3 px-4 text-sm text-gray-900 dark:text-white", isRTL && "text-right")}>
                           {quote.customer_name}
-                        </td>
-                        <td className={cn("py-3 px-4 text-sm text-gray-600 dark:text-gray-400", isRTL && "text-right")}>
+                        </TableCell>
+                        <TableCell className={cn("py-3 px-4 text-sm text-gray-600 dark:text-gray-400", isRTL && "text-right")}>
                           {format(new Date(quote.quote_date), 'P', { locale: getLocale() })}
-                        </td>
-                        <td className={cn("py-3 px-4 text-sm text-gray-600 dark:text-gray-400", isRTL && "text-right")}>
+                        </TableCell>
+                        <TableCell className={cn("py-3 px-4 text-sm text-gray-600 dark:text-gray-400", isRTL && "text-right")}>
                           {format(new Date(quote.valid_until), 'P', { locale: getLocale() })}
-                        </td>
-                        <td className={cn("py-3 px-4 text-sm font-medium", isRTL ? "text-left" : "text-right")}>
+                        </TableCell>
+                        <TableCell className={cn("py-3 px-4 text-sm font-medium", isRTL ? "text-left" : "text-right")}>
                           {quote.currency_code} {Number(quote.grand_total).toLocaleString('fr-FR', { minimumFractionDigits: 2 })}
-                        </td>
-                        <td className="py-3 px-4">
+                        </TableCell>
+                        <TableCell className="py-3 px-4">
                           <Badge className={cn(`${getStatusColor(quote.status)} flex items-center gap-1 w-fit`, isRTL && "flex-row-reverse")}>
                             {getStatusIcon(quote.status)}
                             {getStatusLabel(quote.status)}
                           </Badge>
-                        </td>
-                        <td className="py-3 px-4">
+                        </TableCell>
+                        <TableCell className="py-3 px-4">
                           <div className={cn("flex items-center gap-2", isRTL ? "justify-start flex-row-reverse" : "justify-end")}>
                             <Button
                               variant="ghost"
@@ -521,29 +513,21 @@ const AppContent: React.FC = () => {
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </div>
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     ))}
                     {quotes.length === 0 && (
-                      <tr>
-                        <td colSpan={7} className={cn("py-8 text-center text-gray-500 dark:text-gray-400", isRTL && "text-right")}>
+                      <TableRow>
+                        <TableCell colSpan={7} className={cn("py-8 text-center text-gray-500 dark:text-gray-400", isRTL && "text-right")}>
                           {tableState.search || tableState.datePreset !== 'all'
                             ? t('quotes.empty.filtered', 'No quotes match your filters.')
                             : t('quotes.empty.message')}
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     )}
-                  </tbody>
-                </table>
+                  </TableBody>
+                </Table>
               </div>
-              <DataTablePagination
-                page={tableState.page}
-                totalPages={totalPages}
-                pageSize={tableState.pageSize}
-                totalItems={totalItems}
-                onPageChange={tableState.setPage}
-                onPageSizeChange={tableState.setPageSize}
-              />
             </CardContent>
           </Card>
 
@@ -713,6 +697,8 @@ const AppContent: React.FC = () => {
               />
             )}
           </div>
+
+        </ListPageLayout>
 
         {/* Create Quote Dialog */}
         <QuoteForm

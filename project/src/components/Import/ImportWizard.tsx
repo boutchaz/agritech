@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import {  useState  } from "react";
 import { useTranslation } from 'react-i18next';
 import { Upload, CheckCircle, AlertCircle, Loader2, FileArchive, Lock } from 'lucide-react';
 import { Button } from '../ui/button';
@@ -13,8 +13,8 @@ interface ImportWizardProps {
   onCancel?: () => void;
 }
 
-export const ImportWizard: React.FC<ImportWizardProps> = ({ onComplete, onCancel }) => {
-  const { t } = useTranslation();
+export const ImportWizard = ({ onComplete, onCancel }: ImportWizardProps) => {
+  useTranslation();
   const [step, setStep] = useState<Step>('select');
   const [bundlePath, setBundlePath] = useState('');
   const [passphrase, setPassphrase] = useState('');
@@ -28,7 +28,7 @@ export const ImportWizard: React.FC<ImportWizardProps> = ({ onComplete, onCancel
       const { open } = await import('@tauri-apps/api/dialog');
       const selected = await open({
         multiple: false,
-        filters: [{ name: 'AgriTech Export', extensions: ['agritech', 'zip'] }],
+        filters: [{ name: 'AgroGina Export', extensions: ['agritech', 'zip'] }],
       });
       
       if (selected && typeof selected === 'string') {

@@ -45,3 +45,6 @@ lerna-debug.log*
 *.swp
 *.swo
 *~
+
+# User uploads (local dev)
+/uploads

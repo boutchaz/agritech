@@ -1,0 +1,26 @@
+{
+  "id": "features/real-time",
+  "title": "Real-time Communication",
+  "description": "Overview",
+  "source": "@site/docs/features/real-time.md",
+  "sourceDirName": "features",
+  "slug": "/features/real-time",
+  "permalink": "/features/real-time",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 6,
+  "frontMatter": {
+    "sidebar_position": 6
+  },
+  "sidebar": "docs",
+  "previous": {
+    "title": "AI Chat & LLM Providers",
+    "permalink": "/features/ai-chat"
+  },
+  "next": {
+    "title": "Notifications System",
+    "permalink": "/features/notifications"
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "title": "Notifications",
+  "all": "All",
+  "unread": "Unread",
+  "noUnread": "No unread notifications",
+  "empty": "No notifications",
+  "allCaughtUp": "You're all caught up!",
+  "willAppearHere": "New notifications will appear here",
+  "markAllRead": "Mark all as read",
+  "types": {
+    "task": "Task",
+    "harvest": "Harvest",
+    "alert": "Alert",
+    "system": "System",
+    "approval": "Approval",
+    "calibration": "Calibration",
+    "weather": "Weather",
+    "inventory": "Inventory"
+  },
+  "approvals": {
+    "title": "Approvals",
+    "pending": "Pending",
+    "approved": "Approved",
+    "rejected": "Rejected",
+    "approve": "Approve",
+    "reject": "Reject",
+    "noPending": "No pending approvals",
+    "empty": "No approvals",
+    "allDone": "You're all caught up!",
+    "willAppearHere": "Approvals will appear here",
+    "confirmApprove": "Approve Request",
+    "confirmApproveMessage": "Are you sure you want to approve this request?",
+    "confirmReject": "Reject Request",
+    "confirmRejectMessage": "Are you sure you want to reject this request?",
+    "status": {
+      "pending": "Pending",
+      "approved": "Approved",
+      "rejected": "Rejected"
+    },
+    "types": {
+      "task_completion": "Task Completion",
+      "harvest_validation": "Harvest Validation",
+      "time_log": "Time Log",
+      "expense": "Expense"
+    }
+  }
+}

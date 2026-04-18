@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -12,6 +12,8 @@ import {
   Plus
 } from 'lucide-react';
 import { Can } from '../lib/casl';
+import { SectionLoader } from '@/components/ui/loader';
+import { Button } from '@/components/ui/button';
 
 // Type aliases from generated database types
 type Farm = Database['public']['Tables']['farms']['Row'];
@@ -58,13 +60,13 @@ const createFarmSchema = z.object({
 
 type CreateFarmFormValues = z.infer<typeof createFarmSchema>;
 
-const FarmHierarchyTree: React.FC<FarmHierarchyTreeProps> = ({
+const FarmHierarchyTree = ({
   organizationId,
   onAddParcel,
   onEditParcel,
   onDeleteParcel,
   onManageRoles
-}) => {
+}: FarmHierarchyTreeProps) => {
   const queryClient = useQueryClient();
 
   // React Hook Form
@@ -102,7 +104,17 @@ const FarmHierarchyTree: React.FC<FarmHierarchyTreeProps> = ({
       const rootFarms: FarmNode[] = [];
 
       // First pass: create all nodes
-      (data || []).forEach((farm: any) => {
+      (data || []).forEach((farm: {
+        farm_id: string;
+        farm_name: string;
+        farm_type?: string;
+        parent_farm_id?: string;
+        hierarchy_level?: number;
+        manager_name?: string;
+        sub_farms_count?: number;
+        farm_size?: number;
+        is_active?: boolean;
+      }) => {
         farmMap.set(farm.farm_id, {
           farm_id: farm.farm_id,
           farm_name: farm.farm_name,
@@ -119,7 +131,7 @@ const FarmHierarchyTree: React.FC<FarmHierarchyTreeProps> = ({
       });
 
       // Second pass: build tree structure
-      (data || []).forEach((farm: any) => {
+      (data || []).forEach((farm: { farm_id: string; parent_farm_id?: string }) => {
         const node = farmMap.get(farm.farm_id)!;
 
         if (farm.parent_farm_id) {
@@ -182,7 +194,7 @@ const FarmHierarchyTree: React.FC<FarmHierarchyTreeProps> = ({
       queryClient.invalidateQueries({ queryKey: ['farm-hierarchy', organizationId] });
       reset();
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       console.error('Error creating farm:', error);
     }
   });
@@ -207,12 +219,12 @@ const FarmHierarchyTree: React.FC<FarmHierarchyTreeProps> = ({
                 {farm.farm_name}
               </h3>
             </div>
-            <button
+            <Button variant="blue"
               onClick={() => onManageRoles?.(farm.farm_id)}
-              className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
+              className="px-4 py-2 text-sm rounded-lg transition-colors"
             >
               Gérer Rôles
-            </button>
+            </Button>
           </div>
 
           {/* Parcels */}
@@ -231,20 +243,20 @@ const FarmHierarchyTree: React.FC<FarmHierarchyTreeProps> = ({
                   </div>
                   <div className="flex items-center space-x-2">
                     <Can I="update" a="Parcel">
-                      <button
+                      <Button
                         onClick={() => onEditParcel?.(parcel.id)}
                         className="text-blue-600 hover:text-blue-800 text-sm font-medium"
                       >
                         Modifier
-                      </button>
+                      </Button>
                     </Can>
                     <Can I="delete" a="Parcel">
-                      <button
+                      <Button
                         onClick={() => onDeleteParcel?.(parcel.id)}
                         className="text-red-600 hover:text-red-800 text-sm font-medium"
                       >
                         Supprimer
-                      </button>
+                      </Button>
                     </Can>
                   </div>
                 </div>
@@ -263,13 +275,13 @@ const FarmHierarchyTree: React.FC<FarmHierarchyTreeProps> = ({
                 </div>
               }
             >
-              <button
+              <Button variant="green"
                 onClick={() => onAddParcel?.(farm.farm_id)}
-                className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                className="flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors"
               >
                 <Plus className="w-4 h-4" />
                 <span>Ajouter une parcelle</span>
-              </button>
+              </Button>
             </Can>
           </div>
         </div>
@@ -286,10 +298,7 @@ const FarmHierarchyTree: React.FC<FarmHierarchyTreeProps> = ({
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center p-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-        <span className="ml-2">Loading farm hierarchy...</span>
-      </div>
+      <SectionLoader />
     );
   }
 
@@ -345,20 +354,16 @@ const FarmHierarchyTree: React.FC<FarmHierarchyTreeProps> = ({
                 </p>
               )}
             </div>
-            <button
-              type="submit"
-              disabled={createFarmMutation.isPending}
-              className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
+            <Button variant="green" type="submit" disabled={createFarmMutation.isPending} className="px-6 py-2 rounded-lg transition-colors disabled:cursor-not-allowed" >
               {createFarmMutation.isPending ? 'Création...' : 'Ajouter'}
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
               onClick={() => reset()}
               className="px-6 py-2 bg-white text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
             >
               Annuler
-            </button>
+            </Button>
           </div>
           {createFarmMutation.isError && (
             <p className="text-sm text-red-600" role="alert">

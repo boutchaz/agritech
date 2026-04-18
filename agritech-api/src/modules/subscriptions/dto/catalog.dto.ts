@@ -1,5 +1,11 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { BillingCycle, SubscriptionFormula } from '../subscription-domain';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import {
+  BillingCycle,
+  SubscriptionFormula,
+  type ErpModule,
+  type HaPriceTier,
+  type SizeMultiplierTier,
+} from '../subscription-domain';
 
 export class SubscriptionFormulaCatalogItemDto {
   @ApiProperty({ enum: SubscriptionFormula })
@@ -34,9 +40,60 @@ export class SubscriptionCatalogResponseDto {
   @ApiProperty({ type: SubscriptionFormulaCatalogItemDto, isArray: true })
   formulas: SubscriptionFormulaCatalogItemDto[];
 
+  @ApiPropertyOptional({ type: () => ErpModuleCatalogDto, isArray: true })
+  modules?: ErpModuleCatalogDto[];
+
+  @ApiPropertyOptional({ type: () => HaPriceTierCatalogDto, isArray: true })
+  haTiers?: HaPriceTierCatalogDto[];
+
+  @ApiPropertyOptional({ type: () => SizeMultiplierCatalogDto, isArray: true })
+  sizeMultipliers?: SizeMultiplierCatalogDto[];
+
+  @ApiPropertyOptional()
+  defaultDiscount?: number;
+
   @ApiProperty()
   currency: string;
 
   @ApiProperty()
   vatRate: number;
+}
+
+export class ErpModuleCatalogDto implements ErpModule {
+  @ApiProperty()
+  id: string;
+
+  @ApiProperty()
+  name: string;
+
+  @ApiProperty()
+  desc: string;
+
+  @ApiProperty()
+  isBase: boolean;
+
+  @ApiProperty()
+  pricePerMonth: number;
+}
+
+export class HaPriceTierCatalogDto implements HaPriceTier {
+  @ApiProperty({ nullable: true })
+  maxHa: number | null;
+
+  @ApiProperty()
+  label: string;
+
+  @ApiProperty()
+  pricePerHaYear: number;
+}
+
+export class SizeMultiplierCatalogDto implements SizeMultiplierTier {
+  @ApiProperty()
+  minHa: number;
+
+  @ApiProperty({ nullable: true })
+  maxHa: number | null;
+
+  @ApiProperty()
+  multiplier: number;
 }

@@ -1,23 +1,26 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import {
   Plus,
   Edit2,
-  Calendar,
   Lock,
   Unlock,
   CheckCircle2,
   AlertCircle,
+  CalendarRange,
 } from 'lucide-react';
 
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
+import { TableCell, TableHead, TableRow } from '@/components/ui/table';
+import { FilterBar, ListPageLayout, ResponsiveList } from '@/components/ui/data-table';
+import { EmptyState } from '@/components/ui/empty-state';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -38,7 +41,6 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useTranslation } from 'react-i18next';
-import { toast } from 'sonner';
 import {
   useFiscalYears,
   useCreateFiscalYear,
@@ -56,7 +58,8 @@ const fiscalYearSchema = z.object({
   is_current: z.boolean().default(false),
 });
 
-type FiscalYearFormData = z.infer<typeof fiscalYearSchema>;
+type FiscalYearFormData = z.input<typeof fiscalYearSchema>;
+type FiscalYearFormValues = z.output<typeof fiscalYearSchema>;
 
 export function FiscalYearManagement() {
   const { hasRole } = useAuth();
@@ -65,6 +68,9 @@ export function FiscalYearManagement() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingYear, setEditingYear] = useState<FiscalYear | null>(null);
   const [closingYear, setClosingYear] = useState<FiscalYear | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>('all');
+  const [selectedPeriodType, setSelectedPeriodType] = useState<string>('all');
 
   const isAdmin = hasRole(['organization_admin', 'system_admin']);
 
@@ -73,7 +79,7 @@ export function FiscalYearManagement() {
   const updateMutation = useUpdateFiscalYear();
   const closeMutation = useCloseFiscalYear();
 
-  const form = useForm<FiscalYearFormData>({
+  const form = useForm<FiscalYearFormData, unknown, FiscalYearFormValues>({
     resolver: zodResolver(fiscalYearSchema),
     defaultValues: {
       name: '',
@@ -117,7 +123,7 @@ export function FiscalYearManagement() {
     form.reset();
   };
 
-  const onSubmit = async (data: FiscalYearFormData) => {
+  const onSubmit = async (data: FiscalYearFormValues) => {
     try {
       if (editingYear) {
         await updateMutation.mutateAsync({
@@ -154,6 +160,79 @@ export function FiscalYearManagement() {
     return <Badge variant="outline"><Unlock className="h-3 w-3 mr-1" /> {t('fiscalYears.status.open', 'Open')}</Badge>;
   };
 
+  const filteredFiscalYears = useMemo(() => {
+    const normalizedSearch = searchQuery.trim().toLowerCase();
+
+    return fiscalYears.filter((year) => {
+      const matchesSearch = !normalizedSearch || [year.name, year.code]
+        .some((value) => value.toLowerCase().includes(normalizedSearch));
+      const matchesStatus = selectedStatusFilter === 'all'
+        || (selectedStatusFilter === 'current' ? year.is_current : year.status === selectedStatusFilter);
+      const matchesPeriodType = selectedPeriodType === 'all' || year.period_type === selectedPeriodType;
+
+      return matchesSearch && matchesStatus && matchesPeriodType;
+    });
+  }, [fiscalYears, searchQuery, selectedStatusFilter, selectedPeriodType]);
+
+  const hasActiveFilters = !!searchQuery.trim() || selectedStatusFilter !== 'all' || selectedPeriodType !== 'all';
+
+  const clearFilters = () => {
+    setSearchQuery('');
+    setSelectedStatusFilter('all');
+    setSelectedPeriodType('all');
+  };
+
+  const renderFiscalYearCard = (year: FiscalYear) => (
+    <Card className="border-border/60">
+      <CardHeader className="space-y-3 pb-3">
+        <div className="flex items-start justify-between gap-3">
+          <div className="space-y-2">
+            <CardTitle className="text-base">{year.name}</CardTitle>
+            <CardDescription>
+              <code className="rounded bg-muted px-2 py-1 text-xs">{year.code}</code>
+            </CardDescription>
+          </div>
+          {getStatusBadge(year.status, year.is_current)}
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid gap-2 text-sm">
+          <div className="flex items-center justify-between gap-4">
+            <span className="text-muted-foreground">{t('fiscalYears.table.period', 'Period')}</span>
+            <span className="text-right">
+              {new Date(year.start_date).toLocaleDateString()} - {new Date(year.end_date).toLocaleDateString()}
+            </span>
+          </div>
+          <div className="flex items-center justify-between gap-4">
+            <span className="text-muted-foreground">{t('fiscalYears.table.periodType', 'Type')}</span>
+            <span className="capitalize">{year.period_type}</span>
+          </div>
+        </div>
+
+        {year.status === 'open' && (
+          <div className="flex justify-end gap-2 border-t pt-3">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleOpenDialog(year)}
+            >
+              <Edit2 className="mr-2 h-4 w-4" />
+              {t('fiscalYears.edit', 'Edit')}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setClosingYear(year)}
+            >
+              <Lock className="mr-2 h-4 w-4" />
+              {t('fiscalYears.close', 'Close')}
+            </Button>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+
   if (!isAdmin) {
     return (
       <Card>
@@ -166,114 +245,157 @@ export function FiscalYearManagement() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">
-            {t('fiscalYears.title', 'Fiscal Years')}
-          </h2>
-          <p className="text-muted-foreground">
-            {t('fiscalYears.description', 'Manage fiscal years for financial reporting and period closing.')}
-          </p>
+    <>
+    <ListPageLayout
+      header={
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight">
+              {t('fiscalYears.title', 'Fiscal Years')}
+            </h2>
+            <p className="text-muted-foreground">
+              {t('fiscalYears.description', 'Manage fiscal years for financial reporting and period closing.')}
+            </p>
+          </div>
+          <Button onClick={() => handleOpenDialog()}>
+            <Plus className="h-4 w-4 mr-2" />
+            {t('fiscalYears.addNew', 'Add Fiscal Year')}
+          </Button>
         </div>
-        <Button onClick={() => handleOpenDialog()}>
-          <Plus className="h-4 w-4 mr-2" />
-          {t('fiscalYears.addNew', 'Add Fiscal Year')}
-        </Button>
-      </div>
-
+      }
+      filters={
+        <FilterBar
+          searchValue={searchQuery}
+          onSearchChange={setSearchQuery}
+          searchPlaceholder={t('fiscalYears.filters.searchPlaceholder', 'Search by name or code')}
+          filters={[
+            {
+              key: 'status',
+              value: selectedStatusFilter,
+              onChange: setSelectedStatusFilter,
+              options: [
+                { value: 'all', label: t('fiscalYears.filters.allStatuses', 'All statuses') },
+                { value: 'current', label: t('fiscalYears.status.current', 'Current') },
+                { value: 'open', label: t('fiscalYears.status.open', 'Open') },
+                { value: 'closed', label: t('fiscalYears.status.closed', 'Closed') },
+              ],
+              className: 'w-full sm:w-44',
+            },
+            {
+              key: 'periodType',
+              value: selectedPeriodType,
+              onChange: setSelectedPeriodType,
+              options: [
+                { value: 'all', label: t('fiscalYears.filters.allTypes', 'All types') },
+                { value: 'monthly', label: t('fiscalYears.form.monthly', 'Monthly') },
+                { value: 'quarterly', label: t('fiscalYears.form.quarterly', 'Quarterly') },
+              ],
+              className: 'w-full sm:w-44',
+            },
+          ]}
+          onClear={clearFilters}
+        />
+      }
+    >
       <Card>
         <CardHeader>
           <CardTitle>{t('fiscalYears.listTitle', 'Fiscal Year List')}</CardTitle>
           <CardDescription>
-            {t('fiscalYears.listDescription', 'Total: {{count}} fiscal years', { count: fiscalYears.length })}
+            {t('fiscalYears.listDescription', 'Total: {{count}} fiscal years', { count: filteredFiscalYears.length })}
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="text-center py-8 text-muted-foreground">
-              {t('fiscalYears.loading', 'Loading fiscal years...')}
-            </div>
-          ) : fiscalYears.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              {t('fiscalYears.empty', 'No fiscal years yet. Create your first one to get started.')}
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left py-3 px-4 font-medium">{t('fiscalYears.table.code', 'Code')}</th>
-                    <th className="text-left py-3 px-4 font-medium">{t('fiscalYears.table.name', 'Name')}</th>
-                    <th className="text-left py-3 px-4 font-medium hidden md:table-cell">{t('fiscalYears.table.period', 'Period')}</th>
-                    <th className="text-left py-3 px-4 font-medium hidden lg:table-cell">{t('fiscalYears.table.periodType', 'Type')}</th>
-                    <th className="text-center py-3 px-4 font-medium">{t('fiscalYears.table.status', 'Status')}</th>
-                    <th className="text-right py-3 px-4 font-medium">{t('fiscalYears.table.actions', 'Actions')}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {fiscalYears.map((year) => (
-                    <tr key={year.id} className="border-b hover:bg-muted/50">
-                      <td className="py-3 px-4">
-                        <code className="text-sm bg-muted px-2 py-1 rounded">{year.code}</code>
-                      </td>
-                      <td className="py-3 px-4 font-medium">{year.name}</td>
-                      <td className="py-3 px-4 hidden md:table-cell text-muted-foreground">
-                        {new Date(year.start_date).toLocaleDateString()} - {new Date(year.end_date).toLocaleDateString()}
-                      </td>
-                      <td className="py-3 px-4 hidden lg:table-cell capitalize">
-                        {year.period_type}
-                      </td>
-                      <td className="py-3 px-4 text-center">
-                        {getStatusBadge(year.status, year.is_current)}
-                      </td>
-                      <td className="py-3 px-4 text-right">
-                        <div className="flex justify-end gap-2">
-                          {year.status === 'open' && (
-                            <>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleOpenDialog(year)}
-                                title={t('fiscalYears.edit', 'Edit')}
-                              >
-                                <Edit2 className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => setClosingYear(year)}
-                                title={t('fiscalYears.close', 'Close')}
-                              >
-                                <Lock className="h-4 w-4" />
-                              </Button>
-                            </>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+        <CardContent className="space-y-4">
+          <ResponsiveList
+            items={filteredFiscalYears}
+            isLoading={isLoading}
+            keyExtractor={(year) => year.id}
+            renderCard={renderFiscalYearCard}
+            renderTableHeader={(
+              <TableRow className="border-b">
+                <TableHead className="px-4 py-3 text-left font-medium">{t('fiscalYears.table.code', 'Code')}</TableHead>
+                <TableHead className="px-4 py-3 text-left font-medium">{t('fiscalYears.table.name', 'Name')}</TableHead>
+                <TableHead className="px-4 py-3 text-left font-medium">{t('fiscalYears.table.period', 'Period')}</TableHead>
+                <TableHead className="px-4 py-3 text-left font-medium">{t('fiscalYears.table.periodType', 'Type')}</TableHead>
+                <TableHead className="px-4 py-3 text-center font-medium">{t('fiscalYears.table.status', 'Status')}</TableHead>
+                <TableHead className="px-4 py-3 text-right font-medium">{t('fiscalYears.table.actions', 'Actions')}</TableHead>
+              </TableRow>
+            )}
+            renderTable={(year) => (
+              <>
+                <TableCell className="px-4 py-3">
+                  <code className="rounded bg-muted px-2 py-1 text-sm">{year.code}</code>
+                </TableCell>
+                <TableCell className="px-4 py-3 font-medium">{year.name}</TableCell>
+                <TableCell className="px-4 py-3 text-muted-foreground">
+                  {new Date(year.start_date).toLocaleDateString()} - {new Date(year.end_date).toLocaleDateString()}
+                </TableCell>
+                <TableCell className="px-4 py-3 capitalize">{year.period_type}</TableCell>
+                <TableCell className="px-4 py-3 text-center">
+                  {getStatusBadge(year.status, year.is_current)}
+                </TableCell>
+                <TableCell className="px-4 py-3 text-right">
+                  <div className="flex justify-end gap-2">
+                    {year.status === 'open' && (
+                      <>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleOpenDialog(year)}
+                          title={t('fiscalYears.edit', 'Edit')}
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setClosingYear(year)}
+                          title={t('fiscalYears.close', 'Close')}
+                        >
+                          <Lock className="h-4 w-4" />
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                </TableCell>
+              </>
+            )}
+            emptyIcon={CalendarRange}
+            emptyMessage={hasActiveFilters
+              ? t('fiscalYears.emptyFiltered', 'No fiscal years match your search or filters.')
+              : t('fiscalYears.empty', 'No fiscal years yet. Create your first one to get started.')}
+            emptyAction={hasActiveFilters
+              ? {
+                label: t('common.clearFilters', 'Clear filters'),
+                onClick: clearFilters,
+                variant: 'outline',
+              }
+              : {
+                label: t('fiscalYears.addNew', 'Add Fiscal Year'),
+                onClick: () => handleOpenDialog(),
+              }}
+            emptyExtra={hasActiveFilters ? (
+              <EmptyState
+                variant="inline"
+                icon={CalendarRange}
+                description={t('fiscalYears.emptyFilteredHint', 'Try adjusting or clearing your filters to see more fiscal years.')}
+                showCircularContainer={false}
+              />
+            ) : undefined}
+          />
         </CardContent>
       </Card>
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>
-              {editingYear
-                ? t('fiscalYears.edit.title', 'Edit Fiscal Year')
-                : t('fiscalYears.create.title', 'Create Fiscal Year')}
-            </DialogTitle>
-            <DialogDescription>
-              {editingYear
-                ? t('fiscalYears.edit.description', 'Update the fiscal year details.')
-                : t('fiscalYears.create.description', 'Add a new fiscal year for financial reporting.')}
-            </DialogDescription>
-          </DialogHeader>
+      <ResponsiveDialog
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+        title={editingYear
+          ? t('fiscalYears.edit.title', 'Edit Fiscal Year')
+          : t('fiscalYears.create.title', 'Create Fiscal Year')}
+        description={editingYear
+          ? t('fiscalYears.edit.description', 'Update the fiscal year details.')
+          : t('fiscalYears.create.description', 'Add a new fiscal year for financial reporting.')}
+        size="md"
+      >
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -361,8 +483,7 @@ export function FiscalYearManagement() {
               </Button>
             </div>
           </form>
-        </DialogContent>
-      </Dialog>
+      </ResponsiveDialog>
 
       <AlertDialog open={!!closingYear} onOpenChange={() => setClosingYear(null)}>
         <AlertDialogContent>
@@ -384,6 +505,7 @@ export function FiscalYearManagement() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </ListPageLayout>
+    </>
   );
 }

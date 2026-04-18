@@ -39,7 +39,7 @@ export class OrganizationGuard implements CanActivate {
       throw new ForbiddenException('User not authenticated');
     }
 
-    // Extract organizationId from request (check headers case-insensitively)
+    // Extract organizationId from request (supports path params, headers, query, and body)
     const findHeaderValue = (headers: Record<string, any>, name: string): string | null => {
       const lowerName = name.toLowerCase();
       const key = Object.keys(headers).find(k => k.toLowerCase() === lowerName);
@@ -47,11 +47,18 @@ export class OrganizationGuard implements CanActivate {
     };
 
     const headerOrgId = findHeaderValue(request.headers, 'x-organization-id');
-    
+
+    // Priority: header > already-set requestOrg > params > query
+    // SECURITY: Do NOT accept organizationId from request body to prevent
+    // guard/controller mismatch where the guard validates one org but the
+    // controller reads a different one from the header.
     const organizationId =
       headerOrgId ||
+      request.organizationId ||
+      request.params?.organizationId ||
+      request.params?.organization_id ||
       request.query?.organizationId ||
-      request.body?.organizationId;
+      request.query?.organization_id;
 
     // Validate that organizationId is a valid UUID (not "undefined", "null", empty string, etc.)
     if (!organizationId || 
@@ -111,6 +118,10 @@ export class OrganizationGuard implements CanActivate {
     // Also set userId for convenience (if not already set)
     if (!user.userId && user.id) {
       user.userId = user.id;
+    }
+
+    if (!user.sub && user.id) {
+      user.sub = user.id;
     }
 
     return true;

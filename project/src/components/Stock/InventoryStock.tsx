@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 import { useAuth } from '@/hooks/useAuth';
@@ -6,10 +7,11 @@ import { useCurrency } from '@/hooks/useCurrency';
 import { useItems } from '@/hooks/useItems';
 import { useWarehouses } from '@/hooks/useWarehouses';
 import { itemsApi } from '@/lib/api/items';
+import type { ItemStockLevelsResponse, ItemStockLevelWarehouse } from '@/types/items';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/Input';
-import { Package, Search, ExternalLink, Loader2, AlertTriangle, CheckCircle } from 'lucide-react';
-import { toast } from 'sonner';
+import { FilterBar, ListPageLayout } from '@/components/ui/data-table';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { ExternalLink, Loader2, AlertTriangle, CheckCircle } from 'lucide-react';
 
 interface InventoryStockLevel {
   item_id: string;
@@ -23,7 +25,14 @@ interface InventoryStockLevel {
   total_value: number;
 }
 
+interface InventoryWarehouseStockLevel extends Pick<ItemStockLevelWarehouse, 'warehouse_id' | 'warehouse_name'> {
+  item_id: string;
+  total_quantity: number;
+  total_value: number;
+}
+
 export default function InventoryStock() {
+  const { t } = useTranslation('stock');
   const { currentOrganization } = useAuth();
   const { format: formatCurrency } = useCurrency();
   const navigate = useNavigate();
@@ -34,33 +43,32 @@ export default function InventoryStock() {
   const { data: warehouses = [] } = useWarehouses();
 
   // Fetch stock levels using NestJS API
-  const { data: stockLevelsData = {}, isLoading: stockLoading } = useQuery({
+  const { data: stockLevelsData = {}, isLoading: stockLoading } = useQuery<ItemStockLevelsResponse>({
     queryKey: ['inventory-stock-levels', currentOrganization?.id, selectedWarehouse],
     queryFn: async () => {
       if (!currentOrganization?.id) return {};
 
-      try {
-        // Use the items API stock-levels endpoint which aggregates stock by item and warehouse
-        const filters: any = {};
-        // Note: The API returns data grouped by item_id with warehouse details
-        // We need to transform it to match the expected format
-        const stockData = await itemsApi.getStockLevels(filters, currentOrganization.id);
-        return stockData;
-      } catch (error) {
-        console.warn('Could not fetch stock levels:', error);
-        return {};
-      }
+       try {
+         // Use the items API stock-levels endpoint which aggregates stock by item and warehouse
+          const filters = {} as Record<string, never>;
+         // Note: The API returns data grouped by item_id with warehouse details
+         // We need to transform it to match the expected format
+         const stockData = await itemsApi.getStockLevels(filters, currentOrganization.id);
+         return stockData;
+       } catch (_error) {
+         return {};
+       }
     },
     enabled: !!currentOrganization?.id,
   });
 
   // Transform stock levels data to match the expected format
-  const stockLevels = React.useMemo(() => {
-    const result: any[] = [];
+  const stockLevels = React.useMemo<InventoryWarehouseStockLevel[]>(() => {
+    const result: InventoryWarehouseStockLevel[] = [];
 
-    Object.entries(stockLevelsData).forEach(([itemId, itemStock]: [string, any]) => {
+    Object.entries(stockLevelsData).forEach(([itemId, itemStock]) => {
       if (itemStock.warehouses && Array.isArray(itemStock.warehouses)) {
-        itemStock.warehouses.forEach((wh: any) => {
+        itemStock.warehouses.forEach((wh) => {
           // Filter by selected warehouse if not 'all'
           if (selectedWarehouse !== 'all' && wh.warehouse_id !== selectedWarehouse) {
             return;
@@ -84,21 +92,21 @@ export default function InventoryStock() {
   const inventoryData = React.useMemo(() => {
     const itemMap = new Map(items.map(item => [item.id, item]));
     const stockMap = new Map(
-      (stockLevels as any[]).map(stock => [`${stock.item_id}_${stock.warehouse_id}`, stock])
+      stockLevels.map(stock => [`${stock.item_id}_${stock.warehouse_id}`, stock])
     );
 
     const result: InventoryStockLevel[] = [];
 
     // If we have stock data, show items with stock
     if (stockLevels.length > 0) {
-      (stockLevels as any[]).forEach(stock => {
+      stockLevels.forEach(stock => {
         const item = itemMap.get(stock.item_id);
         if (item) {
           result.push({
             item_id: item.id,
             item_code: item.item_code,
             item_name: item.item_name,
-            item_group: (item.item_group as any)?.name || '-',
+            item_group: item.item_group?.name || '-',
             default_unit: item.default_unit,
             warehouse_id: stock.warehouse_id,
             warehouse_name: stock.warehouse_name,
@@ -116,7 +124,7 @@ export default function InventoryStock() {
             item_id: item.id,
             item_code: item.item_code,
             item_name: item.item_name,
-            item_group: (item.item_group as any)?.name || '-',
+            item_group: item.item_group?.name || '-',
             default_unit: item.default_unit,
             warehouse_id: warehouse.id,
             warehouse_name: warehouse.name,
@@ -153,116 +161,112 @@ export default function InventoryStock() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <ListPageLayout
+      header={
         <div>
-          <h2 className="text-2xl font-bold">Inventory Stock</h2>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-            View stock levels across all warehouses
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{t('inventoryStock.title')}</h2>
+          <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+            {t('inventoryStock.subtitle')}
           </p>
         </div>
-      </div>
-
-      {/* Filters */}
-      <div className="flex items-center gap-4">
-        <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-          <Input
-            placeholder="Search by item code, name, or warehouse..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-        <select
-          value={selectedWarehouse}
-          onChange={(e) => setSelectedWarehouse(e.target.value)}
-          className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-        >
-          <option value="all">All Warehouses</option>
-          {warehouses.map((wh) => (
-            <option key={wh.id} value={wh.id}>
-              {wh.name}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {/* Inventory Table */}
-      <div className="border rounded-lg overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-gray-50 dark:bg-gray-800 border-b">
-            <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400">
-                Item Code
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400">
-                Item Name
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400">
-                Group
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400">
-                Warehouse
-              </th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-gray-600 dark:text-gray-400">
-                Quantity
-              </th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-gray-600 dark:text-gray-400">
-                Value
-              </th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-gray-600 dark:text-gray-400">
-                Status
-              </th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-gray-600 dark:text-gray-400">
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+      }
+      filters={
+        <FilterBar
+          searchValue={searchTerm}
+          onSearchChange={setSearchTerm}
+          searchPlaceholder={t('inventoryStock.searchPlaceholder')}
+          filters={[
+            {
+              key: 'warehouse',
+              value: selectedWarehouse,
+              onChange: setSelectedWarehouse,
+              options: [
+                { value: 'all', label: t('inventoryStock.allWarehouses') },
+                ...warehouses.map((warehouse) => ({
+                  value: warehouse.id,
+                  label: warehouse.name,
+                })),
+              ],
+              className: 'w-full sm:w-52',
+            },
+          ]}
+        />
+      }
+    >
+      <div className="overflow-hidden rounded-lg border">
+        <Table className="w-full">
+          <TableHeader className="bg-gray-50 dark:bg-gray-800 border-b">
+            <TableRow>
+              <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400">
+                {t('inventoryStock.table.itemCode')}
+              </TableHead>
+              <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400">
+                {t('inventoryStock.table.itemName')}
+              </TableHead>
+              <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400">
+                {t('inventoryStock.table.group')}
+              </TableHead>
+              <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400">
+                {t('inventoryStock.table.warehouse')}
+              </TableHead>
+              <TableHead className="px-4 py-3 text-right text-xs font-medium text-gray-600 dark:text-gray-400">
+                {t('inventoryStock.table.quantity')}
+              </TableHead>
+              <TableHead className="px-4 py-3 text-right text-xs font-medium text-gray-600 dark:text-gray-400">
+                {t('inventoryStock.table.value')}
+              </TableHead>
+              <TableHead className="px-4 py-3 text-right text-xs font-medium text-gray-600 dark:text-gray-400">
+                {t('inventoryStock.table.status')}
+              </TableHead>
+              <TableHead className="px-4 py-3 text-right text-xs font-medium text-gray-600 dark:text-gray-400">
+                {t('inventoryStock.table.actions')}
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody className="divide-y divide-gray-200 dark:divide-gray-700">
             {inventoryData.length === 0 ? (
-              <tr>
-                <td colSpan={8} className="px-4 py-8 text-center text-sm text-gray-500">
+              <TableRow>
+                <TableCell colSpan={8} className="px-4 py-8 text-center text-sm text-gray-500">
                   {items.length === 0
-                    ? 'No stock items found. Create items first.'
-                    : 'No stock levels found. Make stock entries to see inventory.'}
-                </td>
-              </tr>
+                    ? t('inventoryStock.noItemsFound')
+                    : t('inventoryStock.noStockLevels')}
+                </TableCell>
+              </TableRow>
             ) : (
               inventoryData.map((row) => (
-                <tr key={`${row.item_id}_${row.warehouse_id}`} className="hover:bg-gray-50 dark:hover:bg-gray-800">
-                  <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">
+                <TableRow key={`${row.item_id}_${row.warehouse_id}`} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                  <TableCell className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">
                     {row.item_code}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-sm text-gray-900 dark:text-white">
                     {row.item_name}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
                     {row.item_group}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
                     {row.warehouse_name}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-right text-gray-900 dark:text-white">
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-sm text-right text-gray-900 dark:text-white">
                     {row.total_quantity.toFixed(3)} {row.default_unit}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-right text-gray-900 dark:text-white">
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-sm text-right text-gray-900 dark:text-white">
                     {formatCurrency(row.total_value)}
-                  </td>
-                  <td className="px-4 py-3 text-right">
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-right">
                     {row.total_quantity === 0 ? (
                       <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400">
                         <AlertTriangle className="w-3 h-3 mr-1" />
-                        Out of Stock
+                        {t('inventoryStock.outOfStock')}
                       </span>
                     ) : (
                       <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400">
                         <CheckCircle className="w-3 h-3 mr-1" />
-                        In Stock
+                        {t('inventoryStock.inStock')}
                       </span>
                     )}
-                  </td>
-                  <td className="px-4 py-3 text-right">
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-right">
                     <Button
                       variant="ghost"
                       size="sm"
@@ -270,16 +274,15 @@ export default function InventoryStock() {
                       className="text-blue-600 hover:text-blue-700"
                     >
                       <ExternalLink className="w-4 h-4 mr-1" />
-                      View Item
+                      {t('inventoryStock.viewItem')}
                     </Button>
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))
             )}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
-    </div>
+    </ListPageLayout>
   );
 }
-

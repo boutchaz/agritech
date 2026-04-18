@@ -1,4 +1,4 @@
-import React from 'react';
+
 import {
   MapPin,
   Package,
@@ -16,11 +16,13 @@ import {
 } from 'lucide-react';
 import { ModuleCard } from '../ui/ModuleCard';
 import { useModuleConfig } from '@/hooks/useModuleConfig';
+import { ButtonLoader, SectionLoader } from '@/components/ui/loader';
 import {
   isModuleAvailableForPlan,
   normalizePlanType,
   type PlanType,
 } from '@/lib/polar';
+import { Button } from '@/components/ui/button';
 
 // Icon mapping from database icon names to Lucide components
 const ICON_MAP: Record<string, LucideIcon> = {
@@ -72,13 +74,13 @@ const getColorFromName = (colorName: string): string => {
   return colorMap[colorName] || 'gray';
 };
 
-export const ModulesStep: React.FC<ModulesStepProps> = ({
+export const ModulesStep = ({
   moduleSelection,
   selectedPlanType,
   onUpdate,
   onNext,
   isLoading: isSubmitting = false,
-}) => {
+}: ModulesStepProps) => {
   const { data: config, isLoading: isLoadingConfig, error } = useModuleConfig();
   const modules = config?.modules || [];
 
@@ -124,17 +126,13 @@ export const ModulesStep: React.FC<ModulesStepProps> = ({
 
   if (isSubmitting) {
     return (
-      <div className="max-w-2xl mx-auto flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
-      </div>
+      <SectionLoader className="h-64" />
     );
   }
 
   if (isLoadingConfig) {
     return (
-      <div className="max-w-2xl mx-auto flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
-      </div>
+      <SectionLoader className="h-64" />
     );
   }
 
@@ -220,7 +218,7 @@ export const ModulesStep: React.FC<ModulesStepProps> = ({
 
       {/* Quick actions */}
       <div className="mt-6 flex gap-3 justify-center">
-        <button
+        <Button
           type="button"
           onClick={() => {
             const allSelected: Partial<ModuleSelection> = {};
@@ -232,8 +230,8 @@ export const ModulesStep: React.FC<ModulesStepProps> = ({
           className="px-4 py-2 text-sm text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors"
         >
           Tout sélectionner
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
           onClick={() => {
             const recommended: Partial<ModuleSelection> = {};
@@ -245,7 +243,7 @@ export const ModulesStep: React.FC<ModulesStepProps> = ({
           className="px-4 py-2 text-sm text-violet-600 hover:text-violet-700 hover:bg-violet-50 rounded-lg transition-colors"
         >
           Sélection recommandée
-        </button>
+        </Button>
       </div>
 
       {/* Info box */}
@@ -255,7 +253,7 @@ export const ModulesStep: React.FC<ModulesStepProps> = ({
         </p>
       </div>
 
-      <button
+      <Button
         type="button"
         onClick={onNext}
         disabled={selectedCount === 0 || isSubmitting}
@@ -267,7 +265,7 @@ export const ModulesStep: React.FC<ModulesStepProps> = ({
       >
         {isSubmitting ? (
           <>
-            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+            <ButtonLoader className="h-5 w-5 text-white" />
             <span>Enregistrement...</span>
           </>
         ) : (
@@ -276,7 +274,7 @@ export const ModulesStep: React.FC<ModulesStepProps> = ({
             <ArrowRight className="w-5 h-5" />
           </>
         )}
-      </button>
+      </Button>
 
       <style>{`
         @keyframes fade-in {

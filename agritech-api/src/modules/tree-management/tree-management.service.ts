@@ -19,10 +19,11 @@ export class TreeManagementService {
   ): Promise<void> {
     const client = this.databaseService.getAdminClient();
     const { data, error } = await client
-      .from('organization_members')
+      .from('organization_users')
       .select('id')
       .eq('user_id', userId)
       .eq('organization_id', organizationId)
+      .eq('is_active', true)
       .single();
 
     if (error || !data) {

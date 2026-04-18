@@ -22,6 +22,201 @@ GEE_INIT_TIMEOUT = 30  # seconds
 logger = logging.getLogger(__name__)
 
 
+def _normalize_service_account_key_data(raw_key_data: Any) -> dict[str, Any] | str:
+    """Normalize service-account key data loaded from env/config.
+
+    Supports already-parsed dicts plus JSON strings with or without wrapping quotes.
+    """
+    if isinstance(raw_key_data, dict):
+        return raw_key_data
+
+    if not isinstance(raw_key_data, str):
+        raise ValueError(
+            f"GEE_PRIVATE_KEY has unexpected type: {type(raw_key_data)}"
+        )
+
+    normalized = raw_key_data.strip()
+    if (
+        len(normalized) >= 2
+        and normalized[0] == normalized[-1]
+        and normalized[0] in {"'", '"'}
+    ):
+        normalized = normalized[1:-1].strip()
+
+    if normalized.startswith("{"):
+        try:
+            parsed = json.loads(normalized)
+        except json.JSONDecodeError:
+            return normalized
+        if isinstance(parsed, dict):
+            return parsed
+
+    return normalized
+
+
+def _resolve_service_account_email(
+    configured_email: str,
+    private_key_data: dict[str, Any] | str,
+) -> str:
+    """Prefer explicit config, then fall back to the key payload's client_email."""
+    service_account_email = configured_email.strip()
+    if service_account_email:
+        return service_account_email
+
+    if isinstance(private_key_data, dict):
+        client_email = str(private_key_data.get("client_email", "")).strip()
+        if client_email:
+            return client_email
+
+    raise ValueError(
+        "GEE service-account email is missing; set GEE_SERVICE_ACCOUNT or include client_email in GEE_PRIVATE_KEY"
+    )
+
+
+def _serialize_ts_dict_for_api(obs: Dict[str, Any]) -> Dict[str, Any]:
+    """Map internal per-observation stats to API / Pydantic TimeSeriesPoint fields.
+
+    GEE chunk observations use ``cloud`` (tile-level %); API expects ``cloud_coverage``.
+    """
+    out: Dict[str, Any] = {
+        "date": obs["date"],
+        "value": obs["value"],
+    }
+    for key in (
+        "min_value",
+        "max_value",
+        "std_value",
+        "median_value",
+        "percentile_10",
+        "percentile_25",
+        "percentile_75",
+        "percentile_90",
+    ):
+        raw = obs.get(key)
+        if raw is not None:
+            try:
+                out[key] = float(raw)
+            except (TypeError, ValueError):
+                pass
+    pc = obs.get("pixel_count")
+    if pc is not None:
+        try:
+            out["pixel_count"] = int(pc)
+        except (TypeError, ValueError):
+            pass
+    cloud = obs.get("cloud_coverage")
+    if cloud is None:
+        cloud = obs.get("cloud")
+    if cloud is not None:
+        try:
+            out["cloud_coverage"] = float(cloud)
+        except (TypeError, ValueError):
+            pass
+    return out
+
+
+_TS_OPTIONAL_OBS_KEYS = (
+    "min_value",
+    "max_value",
+    "std_value",
+    "median_value",
+    "percentile_10",
+    "percentile_25",
+    "percentile_75",
+    "percentile_90",
+    "pixel_count",
+)
+
+
+def _log_per_observation_chunk_debug(
+    index_name: str,
+    chunk_start: str,
+    chunk_end: str,
+    results: Dict[str, Any],
+    observations: List[Dict[str, Any]],
+) -> None:
+    """Log raw GEE feature property keys vs parsed observations (debug null stats)."""
+    raw_features = results.get("features") or []
+    logger.info(
+        "[gee_ts] chunk raw_features=%s observations_kept=%s index=%s range=%s→%s",
+        len(raw_features),
+        len(observations),
+        index_name,
+        chunk_start,
+        chunk_end,
+    )
+    if not raw_features:
+        return
+
+    sample_props: Dict[str, Any] = {}
+    for feat in raw_features[:20]:
+        props = feat.get("properties") or {}
+        if props.get("value") is not None:
+            sample_props = dict(props)
+            break
+    if sample_props:
+        keys_sorted = sorted(sample_props.keys())
+        logger.info("[gee_ts] sample_feature_property_keys=%s", keys_sorted)
+        try:
+            logger.debug(
+                "[gee_ts] sample_feature_properties_json=%s",
+                json.dumps(sample_props, default=str)[:4000],
+            )
+        except (TypeError, ValueError):
+            logger.debug("[gee_ts] sample_feature_properties=%s", sample_props)
+
+    if observations:
+        filled = {
+            k: sum(1 for o in observations if o.get(k) is not None)
+            for k in _TS_OPTIONAL_OBS_KEYS
+        }
+        logger.info(
+            "[gee_ts] chunk optional_fields_nonnull_counts (of %s)=%s",
+            len(observations),
+            filled,
+        )
+
+
+def _log_serialized_time_series_debug(
+    index: str, serialized: List[Dict[str, Any]]
+) -> None:
+    """Log API-shaped points after _serialize_ts_dict_for_api."""
+    if not serialized:
+        logger.info("[gee_ts] serialized_series index=%s points=0", index)
+        return
+    optional = (
+        "min_value",
+        "std_value",
+        "median_value",
+        "percentile_25",
+        "percentile_75",
+        "percentile_90",
+        "pixel_count",
+        "cloud_coverage",
+    )
+    counts = {k: sum(1 for p in serialized if p.get(k) is not None) for k in optional}
+    logger.info(
+        "[gee_ts] serialized_series index=%s points=%s date_range=%s→%s optional_nonnull=%s",
+        index,
+        len(serialized),
+        serialized[0].get("date"),
+        serialized[-1].get("date"),
+        counts,
+    )
+    try:
+        logger.debug(
+            "[gee_ts] serialized_first_point=%s",
+            json.dumps(serialized[0], default=str),
+        )
+        if len(serialized) > 1:
+            logger.debug(
+                "[gee_ts] serialized_last_point=%s",
+                json.dumps(serialized[-1], default=str),
+            )
+    except (TypeError, ValueError):
+        logger.debug("[gee_ts] serialized_first_point=%s", serialized[0])
+
+
 def _find_system_font() -> str:
     _FONT_PATHS = {
         "Darwin": [
@@ -54,8 +249,14 @@ class EarthEngineService:
             return
 
         try:
-            if settings.GEE_SERVICE_ACCOUNT and settings.GEE_PRIVATE_KEY:
-                private_key_data = settings.GEE_PRIVATE_KEY
+            if settings.GEE_PRIVATE_KEY:
+                private_key_data = _normalize_service_account_key_data(
+                    settings.GEE_PRIVATE_KEY
+                )
+                service_account_email = _resolve_service_account_email(
+                    settings.GEE_SERVICE_ACCOUNT,
+                    private_key_data,
+                )
                 temp_path = None
 
                 # Diagnostic logging (without exposing sensitive data)
@@ -82,7 +283,7 @@ class EarthEngineService:
                             json.dump(private_key_data, f)
                             temp_path = f.name
                         credentials = ee.ServiceAccountCredentials(
-                            settings.GEE_SERVICE_ACCOUNT, temp_path
+                            service_account_email, temp_path
                         )
                     elif isinstance(private_key_data, str):
                         # It's a string - try original approach first (key_data parameter)
@@ -92,7 +293,7 @@ class EarthEngineService:
                                 "GEE_PRIVATE_KEY is a string, using key_data parameter (original approach)"
                             )
                             credentials = ee.ServiceAccountCredentials(
-                                settings.GEE_SERVICE_ACCOUNT, key_data=private_key_data
+                                service_account_email, key_data=private_key_data
                             )
                             # Don't initialize here - let it initialize below with the rest
                         except Exception as key_data_error:
@@ -111,15 +312,11 @@ class EarthEngineService:
                                     f.write(private_key_data)
                                     temp_path = f.name
                                 credentials = ee.ServiceAccountCredentials(
-                                    settings.GEE_SERVICE_ACCOUNT, temp_path
+                                    service_account_email, temp_path
                                 )
                             else:
                                 # Re-raise the original error if it's not JSON
                                 raise key_data_error
-                    else:
-                        raise ValueError(
-                            f"GEE_PRIVATE_KEY has unexpected type: {type(private_key_data)}"
-                        )
 
                     with concurrent.futures.ThreadPoolExecutor(
                         max_workers=1
@@ -178,7 +375,6 @@ class EarthEngineService:
         end_date: str,
         max_cloud_coverage: float = None,
         use_aoi_cloud_filter: bool = False,
-        cloud_buffer_meters: float = 300,
     ) -> ee.ImageCollection:
         """
         Get Sentinel-2 image collection for given parameters
@@ -188,9 +384,9 @@ class EarthEngineService:
             start_date: Start date (YYYY-MM-DD)
             end_date: End date (YYYY-MM-DD)
             max_cloud_coverage: Maximum cloud coverage percentage
-            use_aoi_cloud_filter: If True, use SCL-based AOI cloud filter (CloudMaskingService).
-                Default is False. Available-dates can opt-in explicitly.
-            cloud_buffer_meters: Buffer around AOI for cloud calculation (default 300m)
+            use_aoi_cloud_filter: If True, use SCL-based AOI cloud filter at 20m
+                (filter_by_scl_coverage). No tile-level pre-filter applied.
+                Default is False (tile-level CLOUDY_PIXEL_PERCENTAGE).
         """
         self.initialize()
 
@@ -199,7 +395,7 @@ class EarthEngineService:
             start_dt = datetime.fromisoformat(start_date)
             end_dt = datetime.fromisoformat(end_date)
 
-            if start_dt >= end_dt:
+            if start_dt > end_dt:
                 raise ValueError("Start date must be before end date")
 
             # Allow future dates for testing/demo purposes
@@ -226,28 +422,34 @@ class EarthEngineService:
 
         # Earth Engine's filterDate(start, end) is EXCLUSIVE on the end date
         # (includes dates >= start and < end). Add 1 day to end_date to make it inclusive.
-        end_dt_inclusive = (datetime.strptime(end_date, "%Y-%m-%d") + timedelta(days=1)).strftime("%Y-%m-%d")
+        end_dt_inclusive = (
+            datetime.strptime(end_date, "%Y-%m-%d") + timedelta(days=1)
+        ).strftime("%Y-%m-%d")
 
-        # First, get initial collection with loose tile-based filtering
-        collection = (
-            ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED")
-            .filterBounds(aoi)
-            .filterDate(start_date, end_dt_inclusive)
-            .filter(
-                ee.Filter.lte(
-                    "CLOUDY_PIXEL_PERCENTAGE",
-                    max_cloud * 2 if use_aoi_cloud_filter else max_cloud,
-                )
-            )
-        )
-
-        # If AOI-based cloud filtering is requested, apply it
         if use_aoi_cloud_filter:
-            logger.info(
-                f"Applying AOI-based cloud filtering with {cloud_buffer_meters}m buffer"
+            # Two-gate cloud filter:
+            # 1) Tile-level pre-filter at 25% to reject obviously cloudy tiles
+            #    (SCL alone is unreliable for small AOIs — misclassifies cloud pixels)
+            # 2) SCL AOI-level filter at max_cloud for fine-grained check
+            collection = (
+                ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED")
+                .filterBounds(aoi)
+                .filterDate(start_date, end_dt_inclusive)
+                .filter(ee.Filter.lte("CLOUDY_PIXEL_PERCENTAGE", 25))
             )
-            collection = CloudMaskingService.filter_collection_by_aoi_clouds(
-                collection, aoi, max_cloud, cloud_buffer_meters
+            logger.info("Applying tile pre-filter (25%%) + SCL AOI cloud filtering at 20m")
+            collection = CloudMaskingService.filter_by_scl_coverage(
+                collection, aoi, max_cloud
+            )
+        else:
+            # Tile-level: CLOUDY_PIXEL_PERCENTAGE metadata filter
+            collection = (
+                ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED")
+                .filterBounds(aoi)
+                .filterDate(start_date, end_dt_inclusive)
+                .filter(
+                    ee.Filter.lte("CLOUDY_PIXEL_PERCENTAGE", max_cloud)
+                )
             )
 
         # Check if collection has any images
@@ -450,6 +652,95 @@ class EarthEngineService:
 
         return results
 
+    def extract_ndvi_raster(
+        self,
+        geometry: Dict,
+        start_date: str,
+        end_date: str,
+        scale: int = 10,
+    ) -> Dict[str, Any]:
+        self.initialize()
+
+        collection = self.get_sentinel2_collection(geometry, start_date, end_date)
+
+        try:
+            collection_size = collection.size().getInfo()
+            if collection_size == 0:
+                raise ValueError(
+                    "No Sentinel-2 images found for the provided geometry and date range"
+                )
+        except Exception as exc:
+            if "Empty date ranges not supported" in str(exc):
+                raise ValueError(
+                    "No Sentinel-2 images found for the provided geometry and date range"
+                ) from exc
+            raise
+
+        composite = collection.median()
+        ndvi_image = self.calculate_vegetation_indices(composite, ["NDVI"])["NDVI"]
+
+        aoi = ee.Geometry(geometry)
+        clipped = ndvi_image.clip(aoi)
+
+        bounds = aoi.bounds().getInfo()["coordinates"][0]
+        min_lon = min([coord[0] for coord in bounds])
+        max_lon = max([coord[0] for coord in bounds])
+        min_lat = min([coord[1] for coord in bounds])
+        max_lat = max([coord[1] for coord in bounds])
+
+        sampled_pixels = clipped.sample(
+            region=aoi, scale=scale, numPixels=5000, geometries=True
+        )
+        sampled_data = sampled_pixels.getInfo()
+
+        pixel_data: list[dict[str, float]] = []
+        values: list[float] = []
+
+        for feature in sampled_data.get("features", []):
+            value = feature.get("properties", {}).get("NDVI")
+            coords = feature.get("geometry", {}).get("coordinates", [])
+
+            if value is None or len(coords) < 2:
+                continue
+
+            lon = float(coords[0])
+            lat = float(coords[1])
+            ndvi_value = float(value)
+
+            pixel_data.append({"lon": lon, "lat": lat, "value": ndvi_value})
+            values.append(ndvi_value)
+
+        if values:
+            values_array = np.array(values, dtype=np.float64)
+            stats = {
+                "min": float(np.min(values_array)),
+                "max": float(np.max(values_array)),
+                "mean": float(np.mean(values_array)),
+                "median": float(np.median(values_array)),
+                "std": float(np.std(values_array)),
+            }
+        else:
+            stats = {
+                "min": 0.0,
+                "max": 0.0,
+                "mean": 0.0,
+                "median": 0.0,
+                "std": 0.0,
+            }
+
+        return {
+            "pixels": pixel_data,
+            "bounds": {
+                "min_lon": float(min_lon),
+                "max_lon": float(max_lon),
+                "min_lat": float(min_lat),
+                "max_lat": float(max_lat),
+            },
+            "scale": int(scale),
+            "count": len(pixel_data),
+            "stats": stats,
+        }
+
     def get_time_series(
         self,
         geometry: Dict,
@@ -476,6 +767,14 @@ class EarthEngineService:
         scale = 30 if total_days > 365 else settings.DEFAULT_SCALE
 
         try:
+            logger.info(
+                "[gee_ts] get_time_series path=per_observation index=%s scale=%s "
+                "max_cloud=%s days=%s",
+                index,
+                scale,
+                max_cloud,
+                total_days,
+            )
             return self._get_time_series_per_observation(
                 geometry,
                 aoi,
@@ -488,10 +787,18 @@ class EarthEngineService:
             )
         except Exception as e:
             logger.warning(
-                f"Per-observation time series failed ({e}), falling back to composite"
+                "[gee_ts] per_observation failed (%s), falling back to composite",
+                e,
+                exc_info=logger.isEnabledFor(logging.DEBUG),
             )
             interval_days = {"day": 1, "week": 7, "month": 30, "year": 365}
             step = interval_days.get(interval, 30)
+            logger.info(
+                "[gee_ts] get_time_series path=batched_composite index=%s step_days=%s "
+                "(mean-only points, no per-pixel percentiles)",
+                index,
+                step,
+            )
             try:
                 return self._get_time_series_batched(
                     geometry,
@@ -508,10 +815,23 @@ class EarthEngineService:
                 )
             except Exception as e2:
                 logger.warning(
-                    f"Batched time series also failed ({e2}), falling back to sequential"
+                    "[gee_ts] batched_composite failed (%s), falling back to sequential",
+                    e2,
+                    exc_info=logger.isEnabledFor(logging.DEBUG),
+                )
+                logger.info(
+                    "[gee_ts] get_time_series path=sequential_composite index=%s step_days=%s",
+                    index,
+                    step,
                 )
                 return self._get_time_series_sequential(
-                    geometry, aoi, index, step, scale, start_dt, end_dt,
+                    geometry,
+                    aoi,
+                    index,
+                    step,
+                    scale,
+                    start_dt,
+                    end_dt,
                     max_cloud=max_cloud,
                     use_aoi_cloud_filter=use_aoi_cloud_filter,
                 )
@@ -573,7 +893,9 @@ class EarthEngineService:
             f"Per-observation time series: {len(time_series)} real observations "
             f"for {index} ({start_date}→{end_date})"
         )
-        return [{"date": p["date"], "value": p["value"]} for p in time_series]
+        serialized = [_serialize_ts_dict_for_api(p) for p in time_series]
+        _log_serialized_time_series_debug(index, serialized)
+        return serialized
 
     def _per_observation_chunk(
         self,
@@ -603,16 +925,28 @@ class EarthEngineService:
             if idx_image is None:
                 return ee.Feature(None, {"date": None, "value": None, "cloud": None})
 
+            # Combined reducer: same order as automated_processing.py so reduceRegion keys are
+            # {index_name}_p2, _p25, …, _mean, _stdDev, _count (percentile-first chain).
+            combined_reducer = (
+                ee.Reducer.percentile(
+                    [2, 25, 50, 75, 90, 98],
+                    ["p2", "p25", "p50", "p75", "p90", "p98"],
+                )
+                .combine(ee.Reducer.mean(), "", True)
+                .combine(ee.Reducer.stdDev(), "", True)
+                .combine(ee.Reducer.count(), "", True)
+            )
+
             # Use CRS parameter to handle AOI crossing UTM zone boundaries
-            mean_val = idx_image.reduceRegion(
-                reducer=ee.Reducer.mean(),
+            stats = idx_image.reduceRegion(
+                reducer=combined_reducer,
                 geometry=aoi,
                 scale=scale,
-                crs='EPSG:4326',  # Use WGS84 to handle AOI crossing UTM zone boundaries
+                crs="EPSG:4326",  # Use WGS84 to handle AOI crossing UTM zone boundaries
                 maxPixels=settings.MAX_PIXELS,
                 bestEffort=True,
                 tileScale=4,
-            ).get(index_name)
+            )
 
             return ee.Feature(
                 None,
@@ -620,7 +954,15 @@ class EarthEngineService:
                     "date": ee.Date(image.get("system:time_start")).format(
                         "YYYY-MM-dd"
                     ),
-                    "value": mean_val,
+                    "value": stats.get(f"{index_name}_mean"),
+                    "min_value": stats.get(f"{index_name}_p2"),
+                    "max_value": stats.get(f"{index_name}_p98"),
+                    "std_value": stats.get(f"{index_name}_stdDev"),
+                    "median_value": stats.get(f"{index_name}_p50"),
+                    "percentile_25": stats.get(f"{index_name}_p25"),
+                    "percentile_75": stats.get(f"{index_name}_p75"),
+                    "percentile_90": stats.get(f"{index_name}_p90"),
+                    "pixel_count": stats.get(f"{index_name}_count"),
                     "cloud": image.get("CLOUDY_PIXEL_PERCENTAGE"),
                 },
             )
@@ -635,9 +977,25 @@ class EarthEngineService:
             value = props.get("value")
             cloud = props.get("cloud", 100)
             if date_str is not None and value is not None:
-                observations.append({"date": date_str, "value": value, "cloud": cloud})
+                obs = {"date": date_str, "value": value, "cloud": cloud}
+                for key in (
+                    "min_value",
+                    "max_value",
+                    "std_value",
+                    "median_value",
+                    "percentile_25",
+                    "percentile_75",
+                    "percentile_90",
+                    "pixel_count",
+                ):
+                    if props.get(key) is not None:
+                        obs[key] = props[key]
+                observations.append(obs)
 
         logger.info(f"Chunk {start_date}→{end_date}: {len(observations)} observations")
+        _log_per_observation_chunk_debug(
+            index_name, start_date, end_date, results, observations
+        )
         return observations
 
     def _get_time_series_batched(
@@ -732,7 +1090,7 @@ class EarthEngineService:
                 reducer=ee.Reducer.mean(),
                 geometry=aoi,
                 scale=scale,
-                crs='EPSG:4326',  # Use WGS84 to handle AOI crossing UTM zone boundaries
+                crs="EPSG:4326",  # Use WGS84 to handle AOI crossing UTM zone boundaries
                 maxPixels=settings.MAX_PIXELS,
                 bestEffort=True,
                 tileScale=4,
@@ -811,7 +1169,7 @@ class EarthEngineService:
                     reducer=ee.Reducer.mean(),
                     geometry=aoi,
                     scale=scale,
-                    crs='EPSG:4326',  # Use WGS84 to handle AOI crossing UTM zone boundaries
+                    crs="EPSG:4326",  # Use WGS84 to handle AOI crossing UTM zone boundaries
                     maxPixels=settings.MAX_PIXELS,
                     bestEffort=True,
                     tileScale=4,
@@ -898,7 +1256,7 @@ class EarthEngineService:
                 .combine(ee.Reducer.stdDev(), "", True),
                 geometry=aoi,
                 scale=settings.DEFAULT_SCALE,
-                crs='EPSG:4326',  # Use WGS84 to handle AOI crossing UTM zone boundaries
+                crs="EPSG:4326",  # Use WGS84 to handle AOI crossing UTM zone boundaries
                 maxPixels=settings.MAX_PIXELS,
             ).getInfo()
 
@@ -1295,44 +1653,25 @@ class EarthEngineService:
     ) -> Dict[str, Any]:
         """Export real Earth Engine pixel data for heatmap visualization within AOI.
 
-        Searches for the nearest available Sentinel-2 image within ±15 days of the
-        requested date to handle days without satellite passes.
+        Fetches the exact requested date using the same SCL-based AOI cloud filter
+        as available-dates and timeseries. No fallback — the date picker guarantees
+        only available dates are shown.
         """
         self.initialize()
 
-        target_date = datetime.strptime(date, "%Y-%m-%d")
-        image = None
-        actual_date = date
+        # Fetch exact date — same filter as available-dates
+        collection = self.get_sentinel2_collection(
+            geometry,
+            date,
+            date,
+            max_cloud_coverage=settings.MAX_CLOUD_COVERAGE,
+            use_aoi_cloud_filter=True,
+        )
+        collection_size = collection.size().getInfo()
+        if collection_size == 0:
+            raise ValueError(f"No Sentinel-2 images found for {date}")
 
-        # Strategy: try exact date first, then expand window up to ±15 days
-        for delta in range(0, 16):
-            for direction in [0] if delta == 0 else [-1, 1]:
-                search_date = target_date + timedelta(days=delta * direction)
-                search_start = search_date.strftime("%Y-%m-%d")
-                search_end = (search_date + timedelta(days=1)).strftime("%Y-%m-%d")
-
-                try:
-                    # Heatmap uses B2,B3,B4,B8 at 10m - tile-level cloud filter only (no SCL).
-                    # SCL is reserved for available-dates AOI-level cloud filtering.
-                    collection = self.get_sentinel2_collection(
-                        geometry, search_start, search_end,
-                        max_cloud_coverage=settings.MAX_CLOUD_COVERAGE,
-                        use_aoi_cloud_filter=False,
-                    )
-                    collection_size = collection.size().getInfo()
-                    if collection_size > 0:
-                        image = ee.Image(
-                            collection.sort("CLOUDY_PIXEL_PERCENTAGE").first()
-                        )
-                        actual_date = search_start
-                        break
-                except Exception:
-                    continue
-            if image is not None:
-                break
-
-        if image is None:
-            raise ValueError(f"No Sentinel-2 images found within ±15 days of {date}")
+        image = ee.Image(collection.sort("CLOUDY_PIXEL_PERCENTAGE").first())
 
         indices = self.calculate_vegetation_indices(image, [index])
         index_image = indices[index]
@@ -1522,11 +1861,8 @@ class EarthEngineService:
         if geometry.get("type") == "Polygon" and geometry.get("coordinates"):
             aoi_coordinates = geometry["coordinates"][0]
 
-        if actual_date != date:
-            logger.info(f"No image on {date}, using nearest available: {actual_date}")
-
         return {
-            "date": actual_date,
+            "date": date,
             "index": index,
             "bounds": {
                 "min_lon": min_lon,
@@ -1546,7 +1882,6 @@ class EarthEngineService:
                 "max_requested_pixels": max_pixels,
                 "estimated_total_pixels": estimated_pixels,
                 "aoi_area_deg2": area_deg_lat * area_deg_lon,
-                "requested_date": date,
             },
         }
 
@@ -1696,7 +2031,9 @@ class EarthEngineService:
 
         # Statistics use B2,B3,B4,B8 at 10m - tile-level cloud filter only (no SCL).
         collection = self.get_sentinel2_collection(
-            geometry, start_date, end_date,
+            geometry,
+            start_date,
+            end_date,
             max_cloud_coverage=settings.MAX_CLOUD_COVERAGE,
             use_aoi_cloud_filter=False,
         )
@@ -1717,7 +2054,7 @@ class EarthEngineService:
                 .combine(ee.Reducer.stdDev(), "", True),
                 geometry=aoi,
                 scale=settings.DEFAULT_SCALE,
-                crs='EPSG:4326',  # Use WGS84 to handle AOI crossing UTM zone boundaries
+                crs="EPSG:4326",  # Use WGS84 to handle AOI crossing UTM zone boundaries
                 maxPixels=settings.MAX_PIXELS,
             )
 
@@ -1740,7 +2077,9 @@ class EarthEngineService:
 
             # Get all available images (without cloud filter)
             # Earth Engine's filterDate is exclusive on end date, add 1 day to make inclusive
-            end_date_inclusive = (datetime.strptime(end_date, "%Y-%m-%d") + timedelta(days=1)).strftime("%Y-%m-%d")
+            end_date_inclusive = (
+                datetime.strptime(end_date, "%Y-%m-%d") + timedelta(days=1)
+            ).strftime("%Y-%m-%d")
 
             collection = (
                 ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED")

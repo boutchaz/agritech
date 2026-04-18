@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import {  useState, useEffect  } from "react";
 import { Sprout, Globe, User, ArrowRight, Clock } from 'lucide-react';
 import { OnboardingInput } from '../ui/OnboardingInput';
 import { SelectionCard } from '../ui/SelectionCard';
+import { Button } from '@/components/ui/button';
 
 interface ProfileData {
   first_name: string;
@@ -30,11 +31,11 @@ const TIMEZONES = [
   { id: 'UTC', name: 'UTC', offset: 'GMT+0', icon: '🌍' },
 ];
 
-export const WelcomeStep: React.FC<WelcomeStepProps> = ({
+export const WelcomeStep = ({
   profileData,
   onUpdate,
   onNext,
-}) => {
+}: WelcomeStepProps) => {
   const [subStep, setSubStep] = useState(0);
   const [showGreeting, setShowGreeting] = useState(true);
 
@@ -62,7 +63,7 @@ export const WelcomeStep: React.FC<WelcomeStepProps> = ({
         </div>
 
         <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4 animate-slide-up">
-          Bienvenue sur <span className="bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">AgriTech</span>
+          Bienvenue sur <span className="bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">AgroGina</span>
         </h1>
         
         <p className="text-lg md:text-xl text-gray-600 max-w-md animate-slide-up px-4" style={{ animationDelay: '0.2s' }}>
@@ -130,7 +131,7 @@ export const WelcomeStep: React.FC<WelcomeStepProps> = ({
           />
         </div>
 
-        <button
+        <Button
           onClick={() => setSubStep(1)}
           disabled={!profileData.first_name.trim() || !profileData.last_name.trim()}
           data-testid="onboarding-continue-name"
@@ -142,7 +143,7 @@ export const WelcomeStep: React.FC<WelcomeStepProps> = ({
         >
           <span>Continuer</span>
           <ArrowRight className="w-5 h-5" />
-        </button>
+        </Button>
 
         <style>{`
           @keyframes fade-in {
@@ -184,7 +185,7 @@ export const WelcomeStep: React.FC<WelcomeStepProps> = ({
           ))}
         </div>
 
-        <button
+        <Button
           onClick={() => setSubStep(2)}
           data-testid="onboarding-continue-language"
           className="mt-10 w-full py-4 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-2xl font-semibold text-base
@@ -194,7 +195,7 @@ export const WelcomeStep: React.FC<WelcomeStepProps> = ({
         >
           <span>Continuer</span>
           <ArrowRight className="w-5 h-5" />
-        </button>
+        </Button>
 
         <style>{`
           @keyframes fade-in {
@@ -235,7 +236,7 @@ export const WelcomeStep: React.FC<WelcomeStepProps> = ({
         ))}
       </div>
 
-      <button
+      <Button
         onClick={onNext}
         disabled={!isValid}
         data-testid="onboarding-next-step-profile"
@@ -247,7 +248,7 @@ export const WelcomeStep: React.FC<WelcomeStepProps> = ({
       >
         <span>Étape suivante</span>
         <ArrowRight className="w-5 h-5" />
-      </button>
+      </Button>
 
       <style>{`
         @keyframes fade-in {

@@ -6,13 +6,12 @@ import { useAuth } from '../../hooks/useAuth';
 import { useTranslation } from 'react-i18next';
 import i18n from '@/i18n/config';
 import {
-  Dialog,
-  DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { InvoiceTotalsDisplay } from '../Accounting/TaxBreakdown';
@@ -30,7 +29,7 @@ import {
   AlertCircle,
   Pencil,
 } from 'lucide-react';
-import type { Quote, QuoteWithItems } from '@/hooks/useQuotes';
+import type { QuoteResponse as Quote, QuoteWithItems } from '@/types/quotes';
 import { useConvertQuoteToOrder, useQuote } from '@/hooks/useQuotes';
 import { formatCurrency } from '@/lib/taxCalculations';
 import { toast } from 'sonner';
@@ -51,6 +50,8 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import type { Locale } from 'date-fns';
 import { fr, ar, enUS } from 'date-fns/locale';
+import { SectionLoader } from '@/components/ui/loader';
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 
 interface QuoteDetailDialogProps {
   quote: Quote | null;
@@ -82,13 +83,13 @@ const toInputDate = (value: string | null | undefined) => {
   return parsed.toISOString().slice(0, 10);
 };
 
-export const QuoteDetailDialog: React.FC<QuoteDetailDialogProps> = ({
+export const QuoteDetailDialog = ({
   quote,
   open,
   onOpenChange,
   onEdit,
   onDownloadPDF,
-}) => {
+}: QuoteDetailDialogProps) => {
   const { t } = useTranslation();
   const { currentOrganization } = useAuth();
   const queryClient = useQueryClient();
@@ -282,14 +283,12 @@ export const QuoteDetailDialog: React.FC<QuoteDetailDialogProps> = ({
         return;
       }
 
-      const backendUrl =
-        import.meta.env.VITE_BACKEND_SERVICE_URL ||
-        import.meta.env.VITE_SATELLITE_SERVICE_URL ||
-        'http://localhost:8001';
-      const response = await fetch(`${backendUrl}/api/billing/quotes/${resolvedQuote.id}/pdf`, {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+      const response = await fetch(`${apiUrl}/api/v1/satellite-proxy/billing/quotes/${resolvedQuote.id}/pdf`, {
         method: 'GET',
         headers: {
           Authorization: `Bearer ${accessToken}`,
+          'X-Organization-Id': resolvedQuote.organization_id || '',
         },
       });
 
@@ -359,26 +358,35 @@ export const QuoteDetailDialog: React.FC<QuoteDetailDialogProps> = ({
 
   if (isDetailLoading || !resolvedQuote) {
     return (
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className={cn("max-w-md", isRTL && "text-right")} dir={isRTL ? 'rtl' : 'ltr'}>
-          <div className="flex flex-col items-center gap-3 py-10 text-sm text-gray-500 dark:text-gray-400">
-            <div className="size-8 animate-spin rounded-full border-b-2 border-emerald-500" />
-            {t('quotes.detail.loading')}
-          </div>
-        </DialogContent>
-      </Dialog>
+      <ResponsiveDialog
+        open={open}
+        onOpenChange={onOpenChange}
+        size="4xl"
+        className={cn(isRTL && 'text-right')}
+        contentClassName="max-h-[90vh] overflow-y-auto"
+      >
+        <div dir={isRTL ? 'rtl' : 'ltr'}>
+          <SectionLoader className="py-10" />
+        </div>
+      </ResponsiveDialog>
     );
   }
 
   if (detailError) {
     return (
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className={cn("max-w-md", isRTL && "text-right")} dir={isRTL ? 'rtl' : 'ltr'}>
+      <ResponsiveDialog
+        open={open}
+        onOpenChange={onOpenChange}
+        size="4xl"
+        className={cn(isRTL && 'text-right')}
+        contentClassName="max-h-[90vh] overflow-y-auto"
+      >
+        <div dir={isRTL ? 'rtl' : 'ltr'}>
           <div className="flex flex-col items-center gap-3 py-10 text-center text-sm text-red-600 dark:text-red-400">
             {t('quotes.detail.error')}
           </div>
-        </DialogContent>
-      </Dialog>
+        </div>
+      </ResponsiveDialog>
     );
   }
 
@@ -499,8 +507,16 @@ export const QuoteDetailDialog: React.FC<QuoteDetailDialogProps> = ({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={cn("max-w-4xl max-h-[90vh] overflow-y-auto", isRTL && "text-right")} dir={isRTL ? 'rtl' : 'ltr'}>
+    <ResponsiveDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={t('quotes.detail.title', { number: q.quote_number })}
+      description={t('quotes.detail.subtitle')}
+      size="4xl"
+      className={cn(isRTL && 'text-right')}
+      contentClassName="max-h-[90vh] overflow-y-auto"
+    >
+      <div dir={isRTL ? 'rtl' : 'ltr'}>
         <DialogHeader>
           <div className={cn("flex items-center justify-between", isRTL && "flex-row-reverse")}>
             <div>
@@ -515,7 +531,7 @@ export const QuoteDetailDialog: React.FC<QuoteDetailDialogProps> = ({
         </DialogHeader>
 
         <div className="space-y-6">
-          <div className="grid gap-4 lg:grid-cols-[2fr,1fr]">
+          <div className="grid gap-4 sm:grid-cols-[2fr,1fr]">
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400">
@@ -816,72 +832,72 @@ export const QuoteDetailDialog: React.FC<QuoteDetailDialogProps> = ({
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-gray-200 dark:border-gray-700">
-                      <th className={cn("py-2 px-2 text-xs font-medium text-gray-600 dark:text-gray-400", isRTL ? "text-right" : "text-left")}>
+                <Table className="w-full">
+                  <TableHeader>
+                    <TableRow className="border-b border-gray-200 dark:border-gray-700">
+                      <TableHead className={cn("py-2 px-2 text-xs font-medium text-gray-600 dark:text-gray-400", isRTL ? "text-right" : "text-left")}>
                         {t('quotes.form.item')}
-                      </th>
-                      <th className={cn("py-2 px-2 text-xs font-medium text-gray-600 dark:text-gray-400", isRTL ? "text-right" : "text-left")}>
+                      </TableHead>
+                      <TableHead className={cn("py-2 px-2 text-xs font-medium text-gray-600 dark:text-gray-400", isRTL ? "text-right" : "text-left")}>
                         {t('quotes.form.description')}
-                      </th>
-                      <th className={cn("py-2 px-2 text-xs font-medium text-gray-600 dark:text-gray-400", isRTL ? "text-left" : "text-right")}>
+                      </TableHead>
+                      <TableHead className={cn("py-2 px-2 text-xs font-medium text-gray-600 dark:text-gray-400", isRTL ? "text-left" : "text-right")}>
                         {t('quotes.form.quantity')}
-                      </th>
-                      <th className={cn("py-2 px-2 text-xs font-medium text-gray-600 dark:text-gray-400", isRTL ? "text-left" : "text-right")}>
+                      </TableHead>
+                      <TableHead className={cn("py-2 px-2 text-xs font-medium text-gray-600 dark:text-gray-400", isRTL ? "text-left" : "text-right")}>
                         {t('quotes.form.rate')}
-                      </th>
-                      <th className={cn("py-2 px-2 text-xs font-medium text-gray-600 dark:text-gray-400", isRTL ? "text-left" : "text-right")}>
+                      </TableHead>
+                      <TableHead className={cn("py-2 px-2 text-xs font-medium text-gray-600 dark:text-gray-400", isRTL ? "text-left" : "text-right")}>
                         {t('quotes.form.amount')}
-                      </th>
-                      <th className={cn("py-2 px-2 text-xs font-medium text-gray-600 dark:text-gray-400", isRTL ? "text-left" : "text-right")}>
+                      </TableHead>
+                      <TableHead className={cn("py-2 px-2 text-xs font-medium text-gray-600 dark:text-gray-400", isRTL ? "text-left" : "text-right")}>
                         {t('quotes.form.tax')}
-                      </th>
-                      <th className={cn("py-2 px-2 text-xs font-medium text-gray-600 dark:text-gray-400", isRTL ? "text-left" : "text-right")}>
+                      </TableHead>
+                      <TableHead className={cn("py-2 px-2 text-xs font-medium text-gray-600 dark:text-gray-400", isRTL ? "text-left" : "text-right")}>
                         {t('quotes.detail.totals')}
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {q.items && q.items.length > 0 ? (
-                      q.items.map((item: any, index: number) => (
-                        <tr key={index} className="border-b border-gray-100 dark:border-gray-800">
-                          <td className={cn("py-2 px-2 text-sm font-medium text-gray-900 dark:text-white", isRTL && "text-right")}>
+                      q.items.map((item: Record<string, unknown>, index: number) => (
+                        <TableRow key={item.item_name} className="border-b border-gray-100 dark:border-gray-800">
+                          <TableCell className={cn("py-2 px-2 text-sm font-medium text-gray-900 dark:text-white", isRTL && "text-right")}>
                             {item.item_name}
-                          </td>
-                          <td className={cn("py-2 px-2 text-sm text-gray-600 dark:text-gray-400", isRTL && "text-right")}>
+                          </TableCell>
+                          <TableCell className={cn("py-2 px-2 text-sm text-gray-600 dark:text-gray-400", isRTL && "text-right")}>
                             {item.description || '-'}
-                          </td>
-                          <td className={cn("py-2 px-2 text-sm text-gray-900 dark:text-white", isRTL ? "text-left" : "text-right")}>
+                          </TableCell>
+                          <TableCell className={cn("py-2 px-2 text-sm text-gray-900 dark:text-white", isRTL ? "text-left" : "text-right")}>
                             {item.quantity}
-                          </td>
-                          <td className={cn("py-2 px-2 text-sm text-gray-900 dark:text-white", isRTL ? "text-left" : "text-right")}>
+                          </TableCell>
+                          <TableCell className={cn("py-2 px-2 text-sm text-gray-900 dark:text-white", isRTL ? "text-left" : "text-right")}>
                             {formatCurrency(Number(item.unit_price ?? item.rate ?? 0), q.currency_code)}
-                          </td>
-                          <td className={cn("py-2 px-2 text-sm text-gray-900 dark:text-white", isRTL ? "text-left" : "text-right")}>
+                          </TableCell>
+                          <TableCell className={cn("py-2 px-2 text-sm text-gray-900 dark:text-white", isRTL ? "text-left" : "text-right")}>
                             {formatCurrency(Number(item.amount ?? 0), q.currency_code)}
-                          </td>
-                          <td className={cn("py-2 px-2 text-sm text-gray-600 dark:text-gray-400", isRTL ? "text-left" : "text-right")}>
+                          </TableCell>
+                          <TableCell className={cn("py-2 px-2 text-sm text-gray-600 dark:text-gray-400", isRTL ? "text-left" : "text-right")}>
                             {formatCurrency(Number(item.tax_amount ?? 0), q.currency_code)}
-                          </td>
-                          <td className={cn("py-2 px-2 text-sm font-medium text-gray-900 dark:text-white", isRTL ? "text-left" : "text-right")}>
+                          </TableCell>
+                          <TableCell className={cn("py-2 px-2 text-sm font-medium text-gray-900 dark:text-white", isRTL ? "text-left" : "text-right")}>
                             {formatCurrency(
                               Number(item.amount ?? 0) + Number(item.tax_amount ?? 0),
                               q.currency_code
                             )}
-                          </td>
-                        </tr>
+                          </TableCell>
+                        </TableRow>
                       ))
                     ) : (
-                      <tr>
-                        <td colSpan={7} className={cn("py-8 text-center text-sm text-gray-500 dark:text-gray-400", isRTL && "text-right")}>
+                      <TableRow>
+                        <TableCell colSpan={7} className={cn("py-8 text-center text-sm text-gray-500 dark:text-gray-400", isRTL && "text-right")}>
                           {t('quotes.detail.noItems')}
                           {canEditDetails ? t('quotes.detail.noItemsWithEdit') : t('quotes.detail.noItemsWithoutEdit')}
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     )}
-                  </tbody>
-                </table>
+                  </TableBody>
+                </Table>
               </div>
             </CardContent>
           </Card>
@@ -970,8 +986,6 @@ export const QuoteDetailDialog: React.FC<QuoteDetailDialogProps> = ({
             </div>
           </div>
         </div>
-      </DialogContent>
-
       <AlertDialog
         open={pendingStatus !== null}
         onOpenChange={(open) => {
@@ -1010,6 +1024,7 @@ export const QuoteDetailDialog: React.FC<QuoteDetailDialogProps> = ({
           ) : null}
         </AlertDialogContent>
       </AlertDialog>
-    </Dialog>
+      </div>
+    </ResponsiveDialog>
   );
 };

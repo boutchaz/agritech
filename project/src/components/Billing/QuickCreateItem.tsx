@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -7,14 +7,7 @@ import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/label';
 import { NativeSelect } from '@/components/ui/NativeSelect';
 import { Textarea } from '@/components/ui/Textarea';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import { useCreateItem } from '@/hooks/useItems';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
@@ -36,12 +29,12 @@ const itemSchema = z.object({
 
 type ItemFormData = z.infer<typeof itemSchema>;
 
-export const QuickCreateItem: React.FC<QuickCreateItemProps> = ({
+export const QuickCreateItem = ({
   open,
   onOpenChange,
   onSuccess,
   type = 'sales',
-}) => {
+}: QuickCreateItemProps) => {
   const createItem = useCreateItem();
 
   const {
@@ -77,16 +70,32 @@ export const QuickCreateItem: React.FC<QuickCreateItemProps> = ({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>Quick Create Item</DialogTitle>
-          <DialogDescription>
-            Add a new {type === 'sales' ? 'sales' : type === 'purchase' ? 'purchase' : ''} item. You can edit details later.
-          </DialogDescription>
-        </DialogHeader>
-
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+    <ResponsiveDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title="Quick Create Item"
+      description={`Add a new ${type === 'sales' ? 'sales' : type === 'purchase' ? 'purchase' : ''} item. You can edit details later.`}
+      size="md"
+      footer={(
+        <>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              reset();
+              onOpenChange(false);
+            }}
+          >
+            Cancel
+          </Button>
+          <Button type="submit" form="quick-create-item-form" disabled={isSubmitting}>
+            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Create Item
+          </Button>
+        </>
+      )}
+    >
+      <form id="quick-create-item-form" onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div>
             <Label htmlFor="item_name">Item Name *</Label>
             <Input
@@ -152,24 +161,7 @@ export const QuickCreateItem: React.FC<QuickCreateItemProps> = ({
             </div>
           </div>
 
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                reset();
-                onOpenChange(false);
-              }}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Create Item
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+      </form>
+    </ResponsiveDialog>
   );
 };

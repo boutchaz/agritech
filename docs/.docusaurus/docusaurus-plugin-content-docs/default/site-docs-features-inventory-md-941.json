@@ -1,7 +1,7 @@
 {
   "id": "features/inventory",
-  "title": "Inventory Management",
-  "description": "Overview",
+  "title": "Inventory & Stock Management",
+  "description": "The Inventory & Stock Management system handles warehouse management, inventory tracking, and a multi-step reception batch workflow that covers receiving goods, quality control, decision routing, and financial processing. It is built with NestJS and Supabase across two primary modules: WarehousesModule and ReceptionBatchesModule.",
   "source": "@site/docs/features/inventory.md",
   "sourceDirName": "features",
   "slug": "/features/inventory",
@@ -10,14 +10,18 @@
   "unlisted": false,
   "tags": [],
   "version": "current",
-  "frontMatter": {},
+  "sidebarPosition": 13,
+  "frontMatter": {
+    "sidebar_position": 13,
+    "title": "Inventory & Stock Management"
+  },
   "sidebar": "docs",
   "previous": {
-    "title": "Task Management",
-    "permalink": "/features/task-management"
+    "title": "Accounting & Finance",
+    "permalink": "/features/accounting"
   },
   "next": {
-    "title": "Workers Management",
-    "permalink": "/features/workers"
+    "title": "Marketplace",
+    "permalink": "/features/marketplace"
   }
 }

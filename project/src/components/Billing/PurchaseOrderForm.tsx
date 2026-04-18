@@ -2,13 +2,7 @@ import React, { useState } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import {
   Select,
   SelectContent,
@@ -30,6 +24,7 @@ import { useAccounts } from '@/hooks/useAccounts';
 import { usePurchaseTaxes } from '@/hooks/useTaxes';
 import { useItemSelection } from '@/hooks/useItems';
 import { useAuth } from '../../hooks/useAuth';
+import { DEFAULT_CURRENCY } from '../../utils/currencies';
 import { calculateInvoiceTotals, type InvoiceTotals } from '@/lib/taxCalculations';
 import { toast } from 'sonner';
 import { QuickCreateItem } from './QuickCreateItem';
@@ -78,12 +73,12 @@ interface PurchaseOrderFormProps {
   purchaseOrder?: PurchaseOrderWithItems | null;
 }
 
-export const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
+export const PurchaseOrderForm = ({
   open,
   onOpenChange,
   onSuccess,
   purchaseOrder,
-}) => {
+}: PurchaseOrderFormProps) => {
   const { currentOrganization, user } = useAuth();
   const createPurchaseOrder = useCreatePurchaseOrder();
   const updatePurchaseOrder = useUpdatePurchaseOrder();
@@ -270,9 +265,20 @@ export const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
       return;
     }
 
+    // Build items directly from form data (synchronous — no async totals race condition)
+    const buildItems = () => data.items.map((item) => ({
+      inventory_item_id: item.inventory_item_id || undefined,
+      item_name: item.item_name,
+      description: item.description || undefined,
+      quantity: item.quantity,
+      rate: item.rate,
+      unit_of_measure: item.unit_of_measure || undefined,
+      account_id: item.account_id || undefined,
+      tax_id: item.tax_id || undefined,
+    }));
+
     try {
       if (isEditMode && purchaseOrder) {
-        // Update existing purchase order
         const updateData = {
           poId: purchaseOrder.id,
           order_date: data.order_date,
@@ -280,11 +286,7 @@ export const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
           payment_terms: data.payment_terms || null,
           delivery_address: data.shipping_address || null,
           notes: data.notes || null,
-          items: totals.items_with_tax.map((item, index) => ({
-            ...data.items[index],
-            amount: item.amount,
-            tax_amount: item.tax_amount,
-          })),
+          items: buildItems(),
         };
 
         await updatePurchaseOrder.mutateAsync(updateData);
@@ -298,12 +300,7 @@ export const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
           expected_delivery_date: data.expected_delivery_date,
           payment_terms: data.payment_terms || null,
           notes: data.notes || null,
-          items: totals.items_with_tax.map((item, index) => ({
-            ...data.items[index],
-            amount: item.amount,
-            tax_amount: item.tax_amount,
-            tax_rate: item.tax_rate || 0,
-          })),
+          items: buildItems(),
         };
 
         await createPurchaseOrder.mutateAsync(purchaseOrderData);
@@ -325,15 +322,15 @@ export const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
   );
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{isEditMode ? 'Edit Purchase Order' : 'Create Purchase Order'}</DialogTitle>
-          <DialogDescription>
-            {isEditMode ? 'Update purchase order details and line items' : 'Create a new purchase order for supplier'}
-          </DialogDescription>
-        </DialogHeader>
-
+    <>
+      <ResponsiveDialog
+        open={open}
+        onOpenChange={onOpenChange}
+        title={isEditMode ? 'Edit Purchase Order' : 'Create Purchase Order'}
+        description={isEditMode ? 'Update purchase order details and line items' : 'Create a new purchase order for supplier'}
+        size="4xl"
+        contentClassName="max-h-[90vh] overflow-y-auto"
+      >
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           {/* Supplier & Dates */}
           <div className="grid grid-cols-2 gap-4">
@@ -487,6 +484,7 @@ export const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
                       <Input
                         type="number"
                         step="0.01"
+                        className="w-full [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                         {...register(`items.${index}.quantity`, {
                           valueAsNumber: true,
                         })}
@@ -498,6 +496,7 @@ export const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
                       <Input
                         type="number"
                         step="0.01"
+                        className="w-full [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                         {...register(`items.${index}.rate`, { valueAsNumber: true })}
                       />
                     </div>
@@ -512,6 +511,11 @@ export const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
                           </option>
                         ))}
                       </NativeSelect>
+                      {errors.items?.[index]?.account_id && (
+                        <p className="text-xs text-red-600 mt-1">
+                          {errors.items[index]?.account_id?.message}
+                        </p>
+                      )}
                     </div>
 
                     <div className="col-span-2">
@@ -556,7 +560,7 @@ export const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
                 taxTotal={totals.tax_total}
                 grandTotal={totals.grand_total}
                 taxBreakdown={totals.tax_breakdown}
-                currency={currentOrganization?.currency || 'MAD'}
+                currency={currentOrganization?.currency || DEFAULT_CURRENCY}
               />
             </CardContent>
           </Card>
@@ -587,7 +591,7 @@ export const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
             </Button>
           </div>
         </form>
-      </DialogContent>
+      </ResponsiveDialog>
 
       {/* Quick Create Item Modal */}
       <QuickCreateItem
@@ -603,6 +607,6 @@ export const PurchaseOrderForm: React.FC<PurchaseOrderFormProps> = ({
           setCurrentItemIndex(null);
         }}
       />
-    </Dialog>
+    </>
   );
 };

@@ -1,6 +1,9 @@
 import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { SequencesService } from '../sequences/sequences.service';
+import { AccountingAutomationService } from '../journal-entries/accounting-automation.service';
+import { NotificationsService, MANAGEMENT_ROLES } from '../notifications/notifications.service';
+import { NotificationType } from '../notifications/dto/notification.dto';
 import {
     CreatePaymentDto,
     AllocatePaymentDto,
@@ -10,7 +13,6 @@ import {
     PaymentType,
     SortDirection,
 } from './dto';
-import { buildPaymentLedgerLines } from '../journal-entries/helpers/ledger.helper';
 
 @Injectable()
 export class PaymentsService {
@@ -19,6 +21,8 @@ export class PaymentsService {
     constructor(
         private readonly databaseService: DatabaseService,
         private readonly sequencesService: SequencesService,
+        private readonly accountingAutomationService: AccountingAutomationService,
+        private readonly notificationsService: NotificationsService,
     ) { }
 
     /**
@@ -66,6 +70,21 @@ export class PaymentsService {
                 throw new BadRequestException(`Failed to create payment: ${error.message}`);
             }
 
+            // Notify management about new payment
+            try {
+                await this.notificationsService.createNotificationsForRoles(
+                    organizationId,
+                    MANAGEMENT_ROLES,
+                    userId,
+                    NotificationType.PAYMENT_STATUS_CHANGED,
+                    `💳 Payment ${payment.payment_number || ''} created — ${dto.amount} ${dto.currency_code || 'MAD'}`,
+                    `Payment of ${dto.amount} ${dto.currency_code || 'MAD'} created`,
+                    { paymentId: payment.id, amount: dto.amount, currency: dto.currency_code || 'MAD', status: 'draft' },
+                );
+            } catch (notifError) {
+                this.logger.warn(`Failed to send payment notification: ${notifError}`);
+            }
+
             return payment;
         } catch (error) {
             this.logger.error('Error in create payment:', error);
@@ -104,6 +123,9 @@ export class PaymentsService {
                 throw new BadRequestException('Only draft payments can be allocated');
             }
 
+            // Block posting to closed fiscal periods
+            await this.accountingAutomationService.assertPeriodOpen(organizationId, payment.payment_date);
+
             // Validate total allocation equals payment amount
             const totalAllocated = dto.allocations.reduce((sum, alloc) => sum + alloc.amount, 0);
             const paymentAmount = Number(payment.amount);
@@ -118,7 +140,7 @@ export class PaymentsService {
             const invoiceIds = dto.allocations.map(a => a.invoice_id);
             const { data: invoices, error: invoicesError } = await supabaseClient
                 .from('invoices')
-                .select('id, invoice_type, outstanding_amount, status')
+                .select('id, invoice_number, invoice_type, outstanding_amount, status')
                 .in('id', invoiceIds)
                 .eq('organization_id', organizationId);
 
@@ -150,86 +172,31 @@ export class PaymentsService {
                 }
             }
 
-            // Create payment allocations
-            const allocationsToInsert = dto.allocations.map(alloc => ({
-                payment_id: paymentId,
-                invoice_id: alloc.invoice_id,
-                allocated_amount: alloc.amount,
-            }));
+            // Resolve GL accounts via account_mappings BEFORE the transaction
+            const cashAccountId = await this.accountingAutomationService.resolveAccountId(organizationId, 'cash', 'bank');
+            const receivableAccountId = await this.accountingAutomationService.resolveAccountId(organizationId, 'receivable', 'trade');
+            const payableAccountId = await this.accountingAutomationService.resolveAccountId(organizationId, 'payable', 'trade');
 
-            const { error: allocError } = await supabaseClient
-                .from('payment_allocations')
-                .insert(allocationsToInsert);
-
-            if (allocError) {
-                this.logger.error('Error creating payment allocations:', allocError);
-                throw new BadRequestException(`Failed to allocate payment: ${allocError.message}`);
-            }
-
-            // Update invoices outstanding amounts and status
-            const now = new Date().toISOString();
-            for (const allocation of dto.allocations) {
-                const invoice = invoices.find(inv => inv.id === allocation.invoice_id);
-                if (!invoice) continue;
-
-                const remaining = Number(invoice.outstanding_amount) - allocation.amount;
-                const newStatus = remaining <= 0.01 ? 'paid' : 'partially_paid';
-
-                const { error: invoiceUpdateError } = await supabaseClient
-                    .from('invoices')
-                    .update({
-                        outstanding_amount: Math.max(0, remaining),
-                        paid_amount: Number(invoice.outstanding_amount) - remaining,
-                        status: newStatus,
-                        updated_at: now,
-                    })
-                    .eq('id', allocation.invoice_id);
-
-                if (invoiceUpdateError) {
-                    throw new BadRequestException(
-                        `Failed to update invoice ${allocation.invoice_id}: ${invoiceUpdateError.message}`
-                    );
-                }
-            }
-
-            // Get required GL accounts and verify chart of accounts exists
-            const LEDGER_CODES = ['1110', '1200', '2110'];
-            const { data: ledgerAccounts, error: ledgerError } = await supabaseClient
-                .from('accounts')
-                .select('id, code')
-                .eq('organization_id', organizationId)
-                .in('code', LEDGER_CODES);
-
-            if (ledgerError) {
-                throw new BadRequestException(`Failed to load ledger accounts: ${ledgerError.message}`);
-            }
-
-            // Check if chart of accounts exists and has required accounts
-            if (!ledgerAccounts || ledgerAccounts.length === 0) {
+            if (!cashAccountId) {
                 throw new BadRequestException(
-                    'Chart of accounts not configured. Please set up your chart of accounts before processing payments. ' +
-                    'Go to Accounting > Accounts > Apply Template to initialize your chart of accounts.'
+                    'Account mapping missing for cash/bank. Please configure account mappings before processing payments.',
+                );
+            }
+            if (!receivableAccountId) {
+                throw new BadRequestException(
+                    'Account mapping missing for receivable/trade. Please configure account mappings before processing payments.',
+                );
+            }
+            if (!payableAccountId) {
+                throw new BadRequestException(
+                    'Account mapping missing for payable/trade. Please configure account mappings before processing payments.',
                 );
             }
 
-            const foundCodes = new Set(ledgerAccounts.map(acc => acc.code));
-            const missingCodes = LEDGER_CODES.filter(code => !foundCodes.has(code));
-
-            if (missingCodes.length > 0) {
-                throw new BadRequestException(
-                    `Required accounts missing from chart of accounts: ${missingCodes.join(', ')}. ` +
-                    'Please set up your chart of accounts with all required account codes before processing payments.'
-                );
-            }
-
-            const ledgerMap = new Map<string, string>(
-                ledgerAccounts.map((acc) => [acc.code, acc.id])
-            );
-
-            // Determine cash account (use bank account's GL account if specified)
-            let cashLedgerAccountId = ledgerMap.get('1110') ?? '';
+            // Determine cash account (use bank account's GL account if specified, otherwise use mapping)
+            let cashLedgerAccountId = cashAccountId;
             if (payment.bank_account_id) {
-                const { data: bankAccount, error: bankError } = await supabaseClient
+                const { data: bankAccount } = await supabaseClient
                     .from('bank_accounts')
                     .select('gl_account_id')
                     .eq('id', payment.bank_account_id)
@@ -241,130 +208,150 @@ export class PaymentsService {
                 }
             }
 
-             // Generate journal entry number
-             const entryNumber = await this.sequencesService.generateJournalEntryNumber(organizationId);
+            // Generate journal entry number BEFORE the transaction
+            const entryNumber = await this.sequencesService.generateJournalEntryNumber(organizationId);
 
-            // Create journal entry header
-            const { data: journalEntry, error: journalError } = await supabaseClient
-                .from('journal_entries')
-                .insert({
-                    organization_id: organizationId,
-                    entry_number: entryNumber,
-                    entry_date: payment.payment_date,
-                    posting_date: payment.payment_date,
-                    reference_type: 'Payment',
-                    reference_number: payment.payment_number,
-                    remarks: `Payment ${payment.payment_type === 'receive' ? 'received from' : 'made to'} ${payment.party_name}`,
-                    created_by: userId,
-                    status: 'draft',
-                })
-                .select()
-                .single();
+            const now = new Date().toISOString();
 
-            if (journalError || !journalEntry) {
-                throw new BadRequestException(`Failed to create journal entry: ${journalError?.message}`);
-            }
-
-            try {
-                // Build journal lines using ledger helper
-                const journalLines = buildPaymentLedgerLines(
-                    {
-                        id: payment.id,
-                        payment_number: payment.payment_number,
-                        payment_type: payment.payment_type,
-                        payment_method: payment.payment_method,
-                        payment_date: payment.payment_date,
-                        amount: totalAllocated,
-                        party_name: payment.party_name,
-                        bank_account_id: payment.bank_account_id,
-                    },
-                    journalEntry.id,
-                    {
-                        cashAccountId: cashLedgerAccountId,
-                        accountsReceivableId: ledgerMap.get('1200') ?? '',
-                        accountsPayableId: ledgerMap.get('2110') ?? '',
-                    }
-                );
-
-                // Validate double-entry principle
-                const totalDebit = journalLines.reduce((sum, line) => sum + line.debit, 0);
-                const totalCredit = journalLines.reduce((sum, line) => sum + line.credit, 0);
-
-                if (Math.abs(totalDebit - totalCredit) >= 0.01) {
-                    await supabaseClient.from('journal_entries').delete().eq('id', journalEntry.id);
-                    throw new BadRequestException(
-                        `Payment journal entry is not balanced: debits=${totalDebit}, credits=${totalCredit}`
+            // Execute all mutations inside a PostgreSQL transaction for ACID guarantees
+            const result = await this.databaseService.executeInPgTransaction(async (pgClient) => {
+                // 1. Insert payment allocations
+                for (const alloc of dto.allocations) {
+                    await pgClient.query(
+                        `INSERT INTO payment_allocations (payment_id, invoice_id, allocated_amount) VALUES ($1, $2, $3)`,
+                        [paymentId, alloc.invoice_id, alloc.amount],
                     );
                 }
 
-                // Insert journal items
-                const { error: insertLinesError } = await supabaseClient
-                    .from('journal_items')
-                    .insert(journalLines);
+                // 2. Update invoices outstanding amounts and status
+                for (const allocation of dto.allocations) {
+                    const invoice = invoices.find(inv => inv.id === allocation.invoice_id);
+                    if (!invoice) continue;
 
-                if (insertLinesError) {
-                    await supabaseClient.from('journal_entries').delete().eq('id', journalEntry.id);
-                    throw new BadRequestException(`Failed to create payment journal lines: ${insertLinesError.message}`);
+                    const remaining = Number(invoice.outstanding_amount) - allocation.amount;
+                    const newStatus = remaining <= 0.01 ? 'paid' : 'partially_paid';
+
+                    await pgClient.query(
+                        `UPDATE invoices SET outstanding_amount = $1, paid_amount = $2, status = $3, updated_at = $4 WHERE id = $5`,
+                        [Math.max(0, remaining), Number(invoice.outstanding_amount) - remaining, newStatus, now, allocation.invoice_id],
+                    );
                 }
 
-                // Post journal entry
-                const { error: postJournalError } = await supabaseClient
-                    .from('journal_entries')
-                    .update({
-                        status: 'posted',
-                        posted_by: userId,
-                        posted_at: now,
-                    })
-                    .eq('id', journalEntry.id);
+                // 3. Create journal entry header
+                const jeResult = await pgClient.query(
+                    `INSERT INTO journal_entries (organization_id, entry_number, entry_date, posting_date, reference_type, reference_number, remarks, created_by, status)
+                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
+                    [
+                        organizationId, entryNumber, payment.payment_date, payment.payment_date,
+                        'Payment', payment.payment_number,
+                        `Payment ${payment.payment_type === 'receive' ? 'received from' : 'made to'} ${payment.party_name}`,
+                        userId, 'draft',
+                    ],
+                );
+                const journalEntryId = jeResult.rows[0].id;
 
-                if (postJournalError) {
-                    throw new BadRequestException(`Failed to post payment journal entry: ${postJournalError.message}`);
+                // 4. Build journal lines: one cash line (aggregate) + one counter-party line per allocated invoice.
+                // Each counter-party line links to its invoice via reference_type/reference_id for sub-ledger reconciliation.
+                const fx = Number(payment.exchange_rate ?? 1) || 1;
+                const round2 = (x: number) => Math.round((x + Number.EPSILON) * 100) / 100;
+                const isReceive = payment.payment_type === PaymentType.RECEIVE;
+                const counterAccountId = isReceive ? receivableAccountId : payableAccountId;
+
+                const cashAmount = round2(totalAllocated * fx);
+                const cashDescription = `Payment ${isReceive ? 'received' : 'made'} via ${payment.payment_method}`;
+
+                // Insert cash/bank line
+                await pgClient.query(
+                    `INSERT INTO journal_items (journal_entry_id, account_id, description, debit, credit)
+                     VALUES ($1, $2, $3, $4, $5)`,
+                    [
+                        journalEntryId,
+                        cashLedgerAccountId,
+                        cashDescription,
+                        isReceive ? cashAmount : 0,
+                        isReceive ? 0 : cashAmount,
+                    ],
+                );
+
+                let counterTotal = 0;
+                for (const alloc of dto.allocations) {
+                    const inv = invoices.find(i => i.id === alloc.invoice_id);
+                    const lineAmount = round2(alloc.amount * fx);
+                    counterTotal += lineAmount;
+                    const desc = `${isReceive ? 'From' : 'To'} ${payment.party_name} — invoice ${inv?.invoice_number ?? alloc.invoice_id}`;
+
+                    await pgClient.query(
+                        `INSERT INTO journal_items (journal_entry_id, account_id, description, debit, credit, reference_type, reference_id)
+                         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+                        [
+                            journalEntryId,
+                            counterAccountId,
+                            desc,
+                            isReceive ? 0 : lineAmount,
+                            isReceive ? lineAmount : 0,
+                            'invoice',
+                            alloc.invoice_id,
+                        ],
+                    );
                 }
 
-                // Update payment status to submitted and link journal entry
-                const { error: updateError } = await supabaseClient
-                    .from('accounting_payments')
-                    .update({
-                        status: 'submitted',
-                        journal_entry_id: journalEntry.id,
-                        updated_at: now,
-                    })
-                    .eq('id', paymentId);
-
-                if (updateError) {
-                    this.logger.error('Error updating payment status:', updateError);
-                    throw new BadRequestException(`Failed to update payment status: ${updateError.message}`);
+                // Double-entry validation after per-invoice splitting (rounding can accumulate)
+                if (Math.abs(cashAmount - round2(counterTotal)) >= 0.01) {
+                    throw new BadRequestException(
+                        `Payment journal entry not balanced after per-invoice split: cash=${cashAmount}, counter=${counterTotal}`,
+                    );
                 }
 
-                this.logger.log(`Payment ${payment.payment_number} allocated with journal entry ${entryNumber}`);
+                // 6. Post journal entry (set explicit totals — no DB trigger)
+                await pgClient.query(
+                    `UPDATE journal_entries SET status = 'posted', posted_by = $1, posted_at = $2, total_debit = $3, total_credit = $4 WHERE id = $5`,
+                    [userId, now, cashAmount, cashAmount, journalEntryId],
+                );
 
-                // Fetch updated payment with allocations
-                const { data: updatedPayment } = await supabaseClient
-                    .from('accounting_payments')
-                    .select(`
+                // 7. Update payment status to submitted and link journal entry
+                await pgClient.query(
+                    `UPDATE accounting_payments SET status = 'submitted', journal_entry_id = $1, updated_at = $2 WHERE id = $3`,
+                    [journalEntryId, now, paymentId],
+                );
+
+                // 8. Update bank account current_balance (receive adds, pay subtracts)
+                if (payment.bank_account_id) {
+                    const delta = payment.payment_type === PaymentType.RECEIVE ? totalAllocated : -totalAllocated;
+                    await pgClient.query(
+                        `UPDATE bank_accounts
+                         SET current_balance = COALESCE(current_balance, 0) + $1, updated_at = $2
+                         WHERE id = $3 AND organization_id = $4`,
+                        [delta, now, payment.bank_account_id, organizationId],
+                    );
+                }
+
+                return { journalEntryId };
+            });
+
+            this.logger.log(`Payment ${payment.payment_number} allocated with journal entry ${entryNumber}`);
+
+            // Fetch updated payment with allocations (read outside transaction is fine)
+            const { data: updatedPayment } = await supabaseClient
+                .from('accounting_payments')
+                .select(`
+                    *,
+                    allocations:payment_allocations(
                         *,
-                        allocations:payment_allocations(
-                            *,
-                            invoice:invoices(id, invoice_number, grand_total, paid_amount, outstanding_amount, status)
-                        )
-                    `)
-                    .eq('id', paymentId)
-                    .single();
+                        invoice:invoices(id, invoice_number, grand_total, paid_amount, outstanding_amount, status)
+                    )
+                `)
+                .eq('id', paymentId)
+                .single();
 
-                return {
-                    success: true,
-                    message: 'Payment allocated successfully',
-                    data: {
-                        payment: updatedPayment,
-                        journal_entry_id: journalEntry.id,
-                        allocated_amount: totalAllocated,
-                    },
-                };
-            } catch (error) {
-                // Rollback: delete journal entry if anything fails
-                await supabaseClient.from('journal_entries').delete().eq('id', journalEntry.id);
-                throw error;
-            }
+            return {
+                success: true,
+                message: 'Payment allocated successfully',
+                data: {
+                    payment: updatedPayment,
+                    journal_entry_id: result.journalEntryId,
+                    allocated_amount: totalAllocated,
+                },
+            };
         } catch (error) {
             this.logger.error('Error in allocatePayment:', error);
             throw error;
@@ -414,10 +401,14 @@ export class PaymentsService {
                 .eq('organization_id', organizationId);
 
             // Apply search filter (payment_number or party_name)
+            // Strip characters that can inject PostgREST filter operators (commas, dots, parens, quotes)
             if (search) {
-                const searchFilter = `payment_number.ilike.%${search}%,party_name.ilike.%${search}%`;
-                countQuery = countQuery.or(searchFilter);
-                dataQuery = dataQuery.or(searchFilter);
+                const safeSearch = search.replace(/[\\%_,.()'"]/g, '');
+                if (safeSearch.length > 0) {
+                    const searchFilter = `payment_number.ilike.%${safeSearch}%,party_name.ilike.%${safeSearch}%`;
+                    countQuery = countQuery.or(searchFilter);
+                    dataQuery = dataQuery.or(searchFilter);
+                }
             }
 
             // Apply payment_type filter

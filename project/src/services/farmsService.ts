@@ -109,12 +109,12 @@ class FarmsService {
     const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
     const url = `${apiUrl}/api/v1/farms?organization_id=${organizationId}`;
     // Pass organizationId in header as well
-    const result = await apiClient.get<{ success: boolean; farms: Farm[] }>(
+    const result = await apiClient.get<{ data: Farm[]; farms: Farm[] }>(
       url,
       {},
       organizationId
     );
-    return result.farms || [];
+    return result?.data || result?.farms || [];
   }
 
   async getOrganization(organizationId: string): Promise<Organization> {

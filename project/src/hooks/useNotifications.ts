@@ -56,8 +56,8 @@ export interface UseNotificationsReturn {
   toggleImportant: (id: string) => void;
 }
 
-const NOTIFICATIONS_QUERY_KEY = 'notifications';
-const UNREAD_COUNT_QUERY_KEY = 'notifications-unread-count';
+export const NOTIFICATIONS_QUERY_KEY = 'notifications';
+export const UNREAD_COUNT_QUERY_KEY = 'notifications-unread-count';
 const PAGE_SIZE = 20;
 
 export function useNotifications(filters: NotificationFilters = {}): UseNotificationsReturn {
@@ -89,16 +89,7 @@ export function useNotifications(filters: NotificationFilters = {}): UseNotifica
 
   const organizationId = currentOrganization?.id;
 
-  // Connect to WebSocket when organization is available
-  useEffect(() => {
-    if (organizationId && user) {
-      socketManager.connect(organizationId);
-    }
-
-    return () => {
-      // Don't disconnect on unmount - keep connection for other components
-    };
-  }, [organizationId, user]);
+  // WebSocket connect + realtime cache updates live in NotificationRealtimeBridge (single subscriber).
 
   // Subscribe to socket status changes
   useEffect(() => {
@@ -127,97 +118,6 @@ export function useNotifications(filters: NotificationFilters = {}): UseNotifica
     });
   }, []);
 
-  // Subscribe to real-time notifications
-  useEffect(() => {
-    const handleNewNotification = (notification: NotificationData) => {
-      // Play sound if enabled
-      if (isSoundEnabled) {
-        try {
-          const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-          if (AudioContext) {
-            const audioContext = new AudioContext();
-            const oscillator = audioContext.createOscillator();
-            const gainNode = audioContext.createGain();
-
-            oscillator.connect(gainNode);
-            gainNode.connect(audioContext.destination);
-
-            oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
-            oscillator.frequency.exponentialRampToValueAtTime(600, audioContext.currentTime + 0.1);
-
-            gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.15);
-
-            oscillator.start(audioContext.currentTime);
-            oscillator.stop(audioContext.currentTime + 0.15);
-          }
-        } catch (error) {
-          console.warn('Failed to play notification sound:', error);
-        }
-      }
-
-      // Haptic feedback for mobile
-      if ('vibrate' in navigator) {
-        navigator.vibrate(50);
-      }
-
-      // Add to cache
-      queryClient.setQueryData<NotificationData[]>(
-        [NOTIFICATIONS_QUERY_KEY, organizationId, filters],
-        (old = []) => [notification, ...old]
-      );
-
-      // Increment unread count
-      queryClient.setQueryData<number>(
-        [UNREAD_COUNT_QUERY_KEY, organizationId],
-        (old = 0) => old + 1
-      );
-    };
-
-    const handleNotificationRead = (data: { notificationId: string; readAt: string }) => {
-      // Update in cache
-      queryClient.setQueryData<NotificationData[]>(
-        [NOTIFICATIONS_QUERY_KEY, organizationId, filters],
-        (old = []) =>
-          old.map((n) =>
-            n.id === data.notificationId
-              ? { ...n, is_read: true, read_at: data.readAt }
-              : n
-          )
-      );
-
-      // Decrement unread count
-      queryClient.setQueryData<number>(
-        [UNREAD_COUNT_QUERY_KEY, organizationId],
-        (old = 0) => Math.max(0, old - 1)
-      );
-    };
-
-    const handleAllRead = (data: { count: number; readAt: string }) => {
-      // Mark all as read in cache
-      queryClient.setQueryData<NotificationData[]>(
-        [NOTIFICATIONS_QUERY_KEY, organizationId, filters],
-        (old = []) =>
-          old.map((n) =>
-            !n.is_read ? { ...n, is_read: true, read_at: data.readAt } : n
-          )
-      );
-
-      // Reset unread count
-      queryClient.setQueryData<number>([UNREAD_COUNT_QUERY_KEY, organizationId], 0);
-    };
-
-    const unsubNew = socketManager.on('notification:new', handleNewNotification);
-    const unsubRead = socketManager.on('notification:read', handleNotificationRead);
-    const unsubAllRead = socketManager.on('notification:read-all', handleAllRead);
-
-    return () => {
-      unsubNew();
-      unsubRead();
-      unsubAllRead();
-    };
-  }, [organizationId, filters, queryClient, isSoundEnabled]);
-
   // Build query params from filters
   const queryParams = useCallback(() => {
     const params = new URLSearchParams();
@@ -240,16 +140,19 @@ export function useNotifications(filters: NotificationFilters = {}): UseNotifica
   } = useQuery<NotificationData[], Error>({
     queryKey: [NOTIFICATIONS_QUERY_KEY, organizationId, filters, page],
     queryFn: async () => {
-      const { queryString, limit, offset } = queryParams();
+      const { queryString, limit } = queryParams();
 
       const url = `/api/v1/notifications${queryString ? `?${queryString}` : ''}`;
 
-      const result = await apiClient.get(url, {}, organizationId!);
+      const result = await apiClient.get<{ data: NotificationData[] }>(url, {}, organizationId!);
+
+      // Handle paginated response
+      const items = Array.isArray(result) ? result : result?.data || [];
 
       // Check if there's a next page
-      setHasNextPage(result.length === limit);
+      setHasNextPage(items.length === limit);
 
-      return result;
+      return items;
     },
     enabled: !!organizationId && !!user,
     staleTime: 30000, // 30 seconds
@@ -278,15 +181,59 @@ export function useNotifications(filters: NotificationFilters = {}): UseNotifica
   });
 
   // Mark as read mutation
+  // Note: The backend already broadcasts socket events on API completion,
+  // so we don't need to also send socket events from the frontend.
   const markAsReadMutation = useMutation({
     mutationFn: async (notificationId: string) => {
       await apiClient.patch(`/api/v1/notifications/${notificationId}/read`, {}, {}, organizationId!);
-      // Also notify via socket for other connected clients
-      socketManager.sendMarkRead(notificationId);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [NOTIFICATIONS_QUERY_KEY, organizationId] });
-      queryClient.invalidateQueries({ queryKey: [UNREAD_COUNT_QUERY_KEY, organizationId] });
+    onMutate: async (notificationId: string) => {
+      // Cancel in-flight queries to avoid overwriting optimistic update
+      await queryClient.cancelQueries({ queryKey: [NOTIFICATIONS_QUERY_KEY, organizationId] });
+
+      // Save previous state for rollback
+      const previousNotifications: Array<[readonly unknown[], NotificationData[] | undefined]> = [];
+      const queryCache = queryClient.getQueryCache();
+      const queries = queryCache.findAll({ queryKey: [NOTIFICATIONS_QUERY_KEY, organizationId] });
+      for (const query of queries) {
+        previousNotifications.push([
+          query.queryKey,
+          queryClient.getQueryData<NotificationData[]>(query.queryKey),
+        ]);
+        queryClient.setQueryData<NotificationData[]>(
+          query.queryKey,
+          (old = []) =>
+            old.map((n) =>
+              n.id === notificationId
+                ? { ...n, is_read: true, read_at: new Date().toISOString() }
+                : n
+            )
+        );
+      }
+
+      const previousCount = queryClient.getQueryData<number>(
+        [UNREAD_COUNT_QUERY_KEY, organizationId]
+      );
+      queryClient.setQueryData<number>(
+        [UNREAD_COUNT_QUERY_KEY, organizationId],
+        (old = 0) => Math.max(0, old - 1)
+      );
+
+      return { previousNotifications, previousCount };
+    },
+    onError: (_err, _vars, context) => {
+      // Restore previous data on error
+      if (context?.previousNotifications) {
+        for (const [key, data] of context.previousNotifications) {
+          queryClient.setQueryData(key, data);
+        }
+      }
+      if (context?.previousCount !== undefined) {
+        queryClient.setQueryData(
+          [UNREAD_COUNT_QUERY_KEY, organizationId],
+          context.previousCount,
+        );
+      }
     },
   });
 
@@ -294,10 +241,27 @@ export function useNotifications(filters: NotificationFilters = {}): UseNotifica
   const markAllAsReadMutation = useMutation({
     mutationFn: async () => {
       await apiClient.post('/api/v1/notifications/read-all', {}, {}, organizationId!);
-      // Also notify via socket for other connected clients
-      socketManager.sendMarkAllRead();
     },
-    onSuccess: () => {
+    onMutate: async () => {
+      // Optimistic update: mark all as read in cache immediately
+      await queryClient.cancelQueries({ queryKey: [NOTIFICATIONS_QUERY_KEY, organizationId] });
+
+      const queryCache = queryClient.getQueryCache();
+      const queries = queryCache.findAll({ queryKey: [NOTIFICATIONS_QUERY_KEY, organizationId] });
+      for (const query of queries) {
+        queryClient.setQueryData<NotificationData[]>(
+          query.queryKey,
+          (old = []) =>
+            old.map((n) =>
+              !n.is_read ? { ...n, is_read: true, read_at: new Date().toISOString() } : n
+            )
+        );
+      }
+
+      queryClient.setQueryData<number>([UNREAD_COUNT_QUERY_KEY, organizationId], 0);
+    },
+    onError: () => {
+      // Revert on error
       queryClient.invalidateQueries({ queryKey: [NOTIFICATIONS_QUERY_KEY, organizationId] });
       queryClient.invalidateQueries({ queryKey: [UNREAD_COUNT_QUERY_KEY, organizationId] });
     },

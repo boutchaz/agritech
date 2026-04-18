@@ -1,18 +1,24 @@
-import React from 'react';
+import type { ReactNode } from 'react';
 import { Check } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface SelectionCardProps {
   title: string;
   description: string;
-  icon: React.ReactNode;
+  icon: ReactNode;
   selected: boolean;
   onClick: () => void;
   color?: string;
   badge?: string;
   disabled?: boolean;
+  /** Override description typography (default: single-line clamp for compact lists). */
+  descriptionClassName?: string;
+  /** Extra content below the main row (e.g. eligibility note). */
+  footer?: ReactNode;
+  className?: string;
 }
 
-export const SelectionCard: React.FC<SelectionCardProps> = ({
+export const SelectionCard = ({
   title,
   description,
   icon,
@@ -21,7 +27,10 @@ export const SelectionCard: React.FC<SelectionCardProps> = ({
   color = 'emerald',
   badge,
   disabled = false,
-}) => {
+  descriptionClassName,
+  footer,
+  className,
+}: SelectionCardProps) => {
   const colorClasses = {
     emerald: {
       bg: 'bg-emerald-50',
@@ -83,23 +92,34 @@ export const SelectionCard: React.FC<SelectionCardProps> = ({
 
   const colors = colorClasses[color as keyof typeof colorClasses] || colorClasses.emerald;
 
-  const testIdFromTitle = title.replace(/[^\x00-\x7F]/g, '').trim().toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+  const testIdFromTitle =
+    title
+      .trim()
+      .toLowerCase()
+      .replace(/\W+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '') || 'item';
   
+  const descClass =
+    descriptionClassName ??
+    'mt-0.5 text-sm text-gray-500 dark:text-gray-400 line-clamp-2';
+
   return (
-    <button
+    <Button
       type="button"
       onClick={onClick}
       disabled={disabled}
       data-testid={`selection-card-${testIdFromTitle}`}
       className={`
-        relative w-full p-4 md:p-5 rounded-2xl border-2 text-left
+        relative h-auto min-w-0 w-full whitespace-normal p-4 md:p-5 rounded-2xl border-2 text-left
         transition-all duration-200 ease-out
         ${selected 
           ? `${colors.bg} ${colors.border} shadow-lg ${colors.shadow}` 
-          : 'bg-white border-gray-200 hover:border-gray-300 hover:shadow-md hover:bg-gray-50/50'
+          : 'bg-white dark:bg-gray-900/40 border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500 hover:shadow-md hover:bg-gray-50/50 dark:hover:bg-gray-800/50'
         }
         ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
         ${selected ? 'scale-[1.01]' : 'active:scale-[0.99]'}
+        ${className ?? ''}
       `}
     >
       {/* Badge */}
@@ -109,37 +129,35 @@ export const SelectionCard: React.FC<SelectionCardProps> = ({
         </div>
       )}
 
-      <div className="flex items-center gap-4">
+      <div className="flex items-start gap-4">
         {/* Icon */}
         <div className={`
           flex-shrink-0 p-3 rounded-xl transition-all duration-200
-          ${selected ? colors.icon : 'bg-gray-100 text-gray-500'}
+          ${selected ? colors.icon : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400'}
         `}>
-          <div className="w-5 h-5 flex items-center justify-center">
+          <div className="w-5 h-5 flex items-center justify-center [&_svg]:size-5">
             {icon}
           </div>
         </div>
 
         {/* Content */}
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 text-left">
           <h3 className={`
-            font-semibold text-base transition-colors duration-200
-            ${selected ? 'text-gray-900' : 'text-gray-700'}
+            font-semibold text-base transition-colors duration-200 break-words
+            ${selected ? 'text-gray-900 dark:text-gray-100' : 'text-gray-700 dark:text-gray-200'}
           `}>
             {title}
           </h3>
-          <p className="mt-0.5 text-sm text-gray-500 line-clamp-1">
-            {description}
-          </p>
+          <p className={descClass}>{description}</p>
         </div>
 
         {/* Checkbox indicator */}
         <div className={`
-          flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center
+          flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center mt-0.5
           transition-all duration-200
           ${selected 
             ? `${colors.check} border-transparent` 
-            : 'border-gray-300 bg-white'
+            : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900'
           }
         `}>
           {selected && (
@@ -147,6 +165,8 @@ export const SelectionCard: React.FC<SelectionCardProps> = ({
           )}
         </div>
       </div>
+
+      {footer ? <div className="mt-3 text-left">{footer}</div> : null}
 
       <style>{`
         @keyframes scale-in {
@@ -159,7 +179,7 @@ export const SelectionCard: React.FC<SelectionCardProps> = ({
           animation: scale-in 0.25s ease-out forwards;
         }
       `}</style>
-    </button>
+    </Button>
   );
 };
 

@@ -1,7 +1,7 @@
 {
   "id": "getting-started/quick-start",
   "title": "Quick Start",
-  "description": "Get the AgriTech Platform running locally in about 10 minutes.",
+  "description": "Get the AgroGina Platform running locally in about 10 minutes.",
   "source": "@site/docs/getting-started/quick-start.md",
   "sourceDirName": "getting-started",
   "slug": "/getting-started/quick-start",

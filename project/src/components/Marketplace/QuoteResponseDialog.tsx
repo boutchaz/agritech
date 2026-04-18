@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { QuoteRequest } from '../../lib/api/quote-requests';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Button } from '../ui/button';
 import { Input } from '../ui/Input';
 import { Textarea } from '../ui/Textarea';
 import { Label } from '../ui/label';
+import { ResponsiveDialog } from '../ui/responsive-dialog';
 import { DollarSign, Calendar, Send } from 'lucide-react';
+import { DEFAULT_CURRENCY } from '../../utils/currencies';
 
 interface QuoteResponseDialogProps {
   open: boolean;
@@ -31,7 +32,7 @@ export function QuoteResponseDialog({
   const [quotedPrice, setQuotedPrice] = useState<string>(
     quote.item?.standard_rate?.toString() || quote.listing?.price?.toString() || ''
   );
-  const [currency, setCurrency] = useState('MAD');
+  const [currency, setCurrency] = useState(DEFAULT_CURRENCY);
   const [response, setResponse] = useState('');
   const [validUntil, setValidUntil] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -58,15 +59,41 @@ export function QuoteResponseDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px]">
-        <form onSubmit={handleSubmit}>
-          <DialogHeader>
-            <DialogTitle>{t('dialogs.quoteResponse.title')}</DialogTitle>
-            <DialogDescription>
-              {t('dialogs.quoteResponse.description', { product: quote.product_title })}
-            </DialogDescription>
-          </DialogHeader>
+    <ResponsiveDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={t('dialogs.quoteResponse.title')}
+      description={t('dialogs.quoteResponse.description', { product: quote.product_title })}
+      size="lg"
+      footer={(
+        <>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={submitting}
+          >
+            {t('app.cancel')}
+          </Button>
+          <Button
+            variant="green"
+            type="submit"
+            form="quote-response-form"
+            disabled={submitting || !quotedPrice || !response}
+          >
+            {submitting ? (
+              <>{t('dialogs.quoteResponse.sending')}</>
+            ) : (
+              <>
+                <Send className="h-4 w-4 mr-2" />
+                {t('dialogs.quoteResponse.sendQuote')}
+              </>
+            )}
+          </Button>
+        </>
+      )}
+    >
+      <form id="quote-response-form" onSubmit={handleSubmit}>
 
           <div className="space-y-4 py-4">
             {/* Customer Info */}
@@ -186,32 +213,7 @@ export function QuoteResponseDialog({
             </div>
           </div>
 
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={submitting}
-            >
-              {t('app.cancel')}
-            </Button>
-            <Button
-              type="submit"
-              disabled={submitting || !quotedPrice || !response}
-              className="bg-green-600 hover:bg-green-700"
-            >
-              {submitting ? (
-                <>{t('dialogs.quoteResponse.sending')}</>
-              ) : (
-                <>
-                  <Send className="h-4 w-4 mr-2" />
-                  {t('dialogs.quoteResponse.sendQuote')}
-                </>
-              )}
-            </Button>
-          </DialogFooter>
         </form>
-      </DialogContent>
-    </Dialog>
+    </ResponsiveDialog>
   );
 }

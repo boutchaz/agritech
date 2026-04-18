@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import {  useMemo, useState  } from "react";
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -9,6 +9,7 @@ import { FormField } from '../ui/FormField';
 import { Input } from '../ui/Input';
 import { Select } from '../ui/Select';
 import { Checkbox } from '../ui/checkbox';
+import { Button } from '@/components/ui/button';
 
 interface Parcel {
   id: string;
@@ -32,74 +33,78 @@ interface ParameterItem {
 
 const WATER_PARAMETER_GROUPS: Array<{ category: string; parameters: ParameterItem[] }> = [
   {
-    category: 'Proprietes physiques',
+    category: 'Paramètres physico-chimiques',
     parameters: [
-      { key: 'ph_level', label: 'pH' },
-      { key: 'temperature_celsius', label: 'Temperature', unit: 'degC' },
-      { key: 'turbidity_ntu', label: 'Turbidite', unit: 'NTU' },
-      { key: 'ec_ds_per_m', label: 'Conductivite electrique', unit: 'dS/m' },
-      { key: 'tds_ppm', label: 'TDS', unit: 'ppm' },
+      { key: 'ph_level', label: 'pH', unit: 'pH' },
+      { key: 'ec_ds_per_m', label: 'Conductivité électrique', unit: 'µS/cm' },
     ],
   },
   {
-    category: 'Macro elements',
+    category: 'Cations majeurs',
     parameters: [
-      { key: 'calcium_ppm', label: 'Calcium (Ca)', unit: 'ppm' },
-      { key: 'magnesium_ppm', label: 'Magnesium (Mg)', unit: 'ppm' },
-      { key: 'sodium_ppm', label: 'Sodium (Na)', unit: 'ppm' },
-      { key: 'potassium_ppm', label: 'Potassium (K)', unit: 'ppm' },
-      { key: 'ammonium_ppm', label: 'Ammonium (NH4)', unit: 'ppm' },
-      { key: 'bicarbonate_ppm', label: 'Bicarbonate (HCO3)', unit: 'ppm' },
-      { key: 'carbonate_ppm', label: 'Carbonate (CO3)', unit: 'ppm' },
-      { key: 'chloride_ppm', label: 'Chlorure (Cl)', unit: 'ppm' },
-      { key: 'sulfate_ppm', label: 'Sulfate (SO4)', unit: 'ppm' },
-      { key: 'nitrate_ppm', label: 'Nitrate (NO3)', unit: 'ppm' },
-      { key: 'phosphate_ppm', label: 'Phosphate (PO4)', unit: 'ppm' },
-      { key: 'h2po4_ppm', label: 'H2PO4', unit: 'ppm' },
+      { key: 'calcium_ppm', label: 'Calcium (Ca)', unit: 'mg/L' },
+      { key: 'magnesium_ppm', label: 'Magnésium (Mg)', unit: 'mg/L' },
+      { key: 'potassium_ppm', label: 'Potassium (K)', unit: 'mg/L' },
+      { key: 'sodium_ppm', label: 'Sodium (Na)', unit: 'mg/L' },
+      { key: 'ammonium_ppm', label: 'Ammonium (NH4)', unit: 'mg/L' },
     ],
   },
   {
-    category: 'Oligo-elements',
+    category: 'Anions majeurs',
     parameters: [
-      { key: 'iron_ppm', label: 'Fer (Fe)', unit: 'ppm' },
-      { key: 'manganese_ppm', label: 'Manganese (Mn)', unit: 'ppm' },
-      { key: 'zinc_ppm', label: 'Zinc (Zn)', unit: 'ppm' },
-      { key: 'copper_ppm', label: 'Cuivre (Cu)', unit: 'ppm' },
-      { key: 'boron_ppm', label: 'Bore (B)', unit: 'ppm' },
-      { key: 'cobalt_ppm', label: 'Cobalt (Co)', unit: 'ppm' },
-      { key: 'silver_ppm', label: 'Argent (Ag)', unit: 'ppm' },
-      { key: 'barium_ppm', label: 'Barium (Ba)', unit: 'ppm' },
-      { key: 'vanadium_ppm', label: 'Vanadium (V)', unit: 'ppm' },
-      { key: 'nickel_ppm', label: 'Nickel (Ni)', unit: 'ppm' },
-      { key: 'chromium_ppm', label: 'Chrome (Cr)', unit: 'ppm' },
-      { key: 'molybdenum_ppm', label: 'Molybdene (Mo)', unit: 'ppm' },
-      { key: 'silicon_ppm', label: 'Silicium (Si)', unit: 'ppm' },
-      { key: 'selenium_ppm', label: 'Selenium (Se)', unit: 'ppm' },
-      { key: 'gold_ppm', label: 'Or (Au)', unit: 'ppm' },
-      { key: 'lithium_ppm', label: 'Lithium (Li)', unit: 'ppm' },
-      { key: 'aluminum_ppm', label: 'Aluminium (Al)', unit: 'ppm' },
-      { key: 'antimony_ppm', label: 'Antimoine (Sb)', unit: 'ppm' },
-      { key: 'bismuth_ppm', label: 'Bismuth (Bi)', unit: 'ppm' },
+      { key: 'chloride_ppm', label: 'Chlorures (Cl)', unit: 'mg/L' },
+      { key: 'sulfate_ppm', label: 'Sulfates (SO4)', unit: 'mg/L' },
+      { key: 'bicarbonate_ppm', label: 'Bicarbonates (HCO3)', unit: 'mg/L' },
+      { key: 'nitrate_ppm', label: 'Nitrates (NO3)', unit: 'mg/L' },
+      { key: 'h2po4_ppm', label: 'Phosphates (H2PO4)', unit: 'mg/L' },
     ],
   },
   {
-    category: 'Metaux lourds',
+    category: 'Oligo-éléments',
     parameters: [
-      { key: 'lead_ppb', label: 'Plomb (Pb)', unit: 'ppb' },
-      { key: 'cadmium_ppb', label: 'Cadmium (Cd)', unit: 'ppb' },
-      { key: 'arsenic_ppb', label: 'Arsenic (As)', unit: 'ppb' },
-      { key: 'mercury_ppb', label: 'Mercure (Hg)', unit: 'ppb' },
-      { key: 'cadmium_ppm', label: 'Cadmium (Cd)', unit: 'ppm' },
-      { key: 'mercury_ppm', label: 'Mercure (Hg)', unit: 'ppm' },
+      { key: 'boron_ppm', label: 'Bore (B)', unit: 'mg/L' },
+      { key: 'copper_ppm', label: 'Cuivre (Cu)', unit: 'mg/L' },
+      { key: 'iron_ppm', label: 'Fer (Fe)', unit: 'mg/L' },
+      { key: 'manganese_ppm', label: 'Manganèse (Mn)', unit: 'mg/L' },
+      { key: 'zinc_ppm', label: 'Zinc (Zn)', unit: 'mg/L' },
     ],
   },
   {
-    category: 'Indicateurs de qualite',
+    category: 'Métaux lourds',
     parameters: [
-      { key: 'sar', label: 'SAR' },
-      { key: 'hardness_ppm', label: 'Durete (CaCO3)', unit: 'ppm' },
-      { key: 'alkalinity_ppm', label: 'Alcalinite (CaCO3)', unit: 'ppm' },
-      { key: 'irrigation_suitability', label: 'Convenance irrigation', fieldType: 'select' },
+      { key: 'cadmium_ppb', label: 'Cadmium (Cd)', unit: 'µg/L' },
+      { key: 'lead_ppb', label: 'Plomb (Pb)', unit: 'µg/L' },
+      { key: 'arsenic_ppb', label: 'Arsenic (As)', unit: 'µg/L' },
+      { key: 'nickel_ppb', label: 'Nickel (Ni)', unit: 'µg/L' },
+      { key: 'chromium_ppb', label: 'Chrome (Cr)', unit: 'µg/L' },
+      { key: 'mercury_ppb', label: 'Mercure (Hg)', unit: 'µg/L' },
+    ],
+  },
+  {
+    category: 'Éléments traces',
+    parameters: [
+      { key: 'cobalt_ppb', label: 'Cobalt (Co)', unit: 'µg/L' },
+      { key: 'silver_ppb', label: 'Argent (Ag)', unit: 'µg/L' },
+      { key: 'barium_ppb', label: 'Baryum (Ba)', unit: 'µg/L' },
+      { key: 'vanadium_ppb', label: 'Vanadium (V)', unit: 'µg/L' },
+      { key: 'molybdenum_ppb', label: 'Molybdène (Mo)', unit: 'µg/L' },
+    ],
+  },
+  {
+    category: 'Éléments secondaires',
+    parameters: [
+      { key: 'silicon_ppm', label: 'Silicium (Si)', unit: 'mg/L' },
+      { key: 'selenium_ppb', label: 'Sélénium (Se)', unit: 'µg/L' },
+      { key: 'lithium_ppb', label: 'Lithium (Li)', unit: 'µg/L' },
+      { key: 'aluminum_ppb', label: 'Aluminium (Al)', unit: 'µg/L' },
+    ],
+  },
+  {
+    category: 'Éléments rares',
+    parameters: [
+      { key: 'gold_ppb', label: 'Or (Au)', unit: 'µg/L' },
+      { key: 'antimony_ppb', label: 'Antimoine (Sb)', unit: 'µg/L' },
+      { key: 'bismuth_ppb', label: 'Bismuth (Bi)', unit: 'µg/L' },
     ],
   },
 ];
@@ -107,15 +112,14 @@ const WATER_PARAMETER_GROUPS: Array<{ category: string; parameters: ParameterIte
 const DEFAULT_WATER_PARAMS: WaterParamKey[] = [
   'ph_level',
   'ec_ds_per_m',
-  'tds_ppm',
   'calcium_ppm',
   'magnesium_ppm',
+  'potassium_ppm',
   'sodium_ppm',
   'chloride_ppm',
   'sulfate_ppm',
+  'bicarbonate_ppm',
   'nitrate_ppm',
-  'sar',
-  'hardness_ppm',
 ];
 
 const waterAnalysisSchema = z.object({
@@ -163,8 +167,19 @@ const waterAnalysisSchema = z.object({
   cadmium_ppb: z.string().optional(),
   arsenic_ppb: z.string().optional(),
   mercury_ppb: z.string().optional(),
-  cadmium_ppm: z.string().optional(),
-  mercury_ppm: z.string().optional(),
+  nickel_ppb: z.string().optional(),
+  chromium_ppb: z.string().optional(),
+  cobalt_ppb: z.string().optional(),
+  silver_ppb: z.string().optional(),
+  barium_ppb: z.string().optional(),
+  vanadium_ppb: z.string().optional(),
+  molybdenum_ppb: z.string().optional(),
+  selenium_ppb: z.string().optional(),
+  lithium_ppb: z.string().optional(),
+  aluminum_ppb: z.string().optional(),
+  gold_ppb: z.string().optional(),
+  antimony_ppb: z.string().optional(),
+  bismuth_ppb: z.string().optional(),
   sar: z.string().optional(),
   hardness_ppm: z.string().optional(),
   alkalinity_ppm: z.string().optional(),
@@ -173,7 +188,7 @@ const waterAnalysisSchema = z.object({
 
 type WaterAnalysisFormData = z.infer<typeof waterAnalysisSchema>;
 
-const WaterAnalysisForm: React.FC<WaterAnalysisFormProps> = ({ onSave, onCancel, selectedParcel }) => {
+const WaterAnalysisForm = ({ onSave, onCancel, selectedParcel }: WaterAnalysisFormProps) => {
   const { handleFormError } = useFormErrors<WaterAnalysisFormData>();
   const [selectedParams, setSelectedParams] = useState<WaterParamKey[]>(DEFAULT_WATER_PARAMS);
   const selectedParamSet = useMemo(() => new Set(selectedParams), [selectedParams]);
@@ -250,12 +265,12 @@ const WaterAnalysisForm: React.FC<WaterAnalysisFormProps> = ({ onSave, onCancel,
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
       <div className="flex items-center justify-between mb-6">
         <h3 className="text-lg font-semibold">Nouvelle Analyse d'Eau</h3>
-        <button
+        <Button
           onClick={onCancel}
           className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
         >
           <X className="h-5 w-5" />
-        </button>
+        </Button>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -405,20 +420,17 @@ const WaterAnalysisForm: React.FC<WaterAnalysisFormProps> = ({ onSave, onCancel,
         </FormField>
 
         <div className="flex justify-end space-x-3">
-          <button
+          <Button
             type="button"
             onClick={onCancel}
             className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
           >
             Annuler
-          </button>
-          <button
-            type="submit"
-            className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 flex items-center space-x-2"
-          >
+          </Button>
+          <Button variant="green" type="submit" className="px-4 py-2 rounded-md flex items-center space-x-2" >
             <Save className="h-4 w-4" />
             <span>Enregistrer</span>
-          </button>
+          </Button>
         </div>
       </form>
     </div>

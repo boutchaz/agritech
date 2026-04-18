@@ -1,18 +1,24 @@
 import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
+import { NotificationsService, MANAGEMENT_ROLES } from '../notifications/notifications.service';
+import { NotificationType } from '../notifications/dto/notification.dto';
+import { paginatedResponse, type PaginatedResponse } from '../../common/dto/paginated-query.dto';
 import { SoilAnalysisFiltersDto, CreateSoilAnalysisDto, UpdateSoilAnalysisDto } from './dto';
 
 @Injectable()
 export class SoilAnalysesService {
   private readonly logger = new Logger(SoilAnalysesService.name);
 
-  constructor(private readonly databaseService: DatabaseService) {}
+  constructor(
+    private readonly databaseService: DatabaseService,
+    private readonly notificationsService: NotificationsService,
+  ) {}
 
   /**
    * Get all soil analyses with optional filters
    * Note: soil_analyses table doesn't have organization_id, so we validate via parcel ownership
    */
-  async findAll(organizationId: string, filters?: SoilAnalysisFiltersDto): Promise<any> {
+  async findAll(organizationId: string, filters?: SoilAnalysisFiltersDto): Promise<PaginatedResponse<any>> {
     const client = this.databaseService.getAdminClient();
 
     try {
@@ -86,13 +92,18 @@ export class SoilAnalysesService {
                   .map(p => p.id)
               );
 
-              return data.filter((sa: any) => ownedParcelIds.has(sa.parcel_id));
+              const filtered = data.filter((sa: any) => ownedParcelIds.has(sa.parcel_id));
+              const page = filters?.page || 1;
+              const limit = filters?.limit || 50;
+              return paginatedResponse(filtered, filtered.length, page, limit);
             }
           }
         }
       }
 
-      return data;
+      const page = filters?.page || 1;
+      const limit = filters?.limit || 50;
+      return paginatedResponse(data || [], (data || []).length, page, limit);
     } catch (error) {
       this.logger.error('Error fetching soil analyses:', error);
       throw error;
@@ -155,6 +166,21 @@ export class SoilAnalysesService {
       if (error) {
         this.logger.error(`Failed to create soil analysis: ${error.message}`);
         throw new BadRequestException(`Failed to create soil analysis: ${error.message}`);
+      }
+
+      // Notify management about completed soil analysis
+      try {
+        await this.notificationsService.createNotificationsForRoles(
+          organizationId,
+          MANAGEMENT_ROLES,
+          null,
+          NotificationType.SOIL_ANALYSIS_COMPLETED,
+          `🌍 Soil analysis completed`,
+          dto.notes || undefined,
+          { analysisId: data.id, parcelId: dto.parcel_id, analysisType: dto.test_type_id },
+        );
+      } catch (notifError) {
+        this.logger.warn(`Failed to send soil analysis notification: ${notifError}`);
       }
 
       return data;

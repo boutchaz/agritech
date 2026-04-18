@@ -10,16 +10,30 @@ export interface FieldError {
   message: string;
 }
 
+interface ValidationErrorLike {
+  property?: string;
+  field?: string;
+  constraints?: Record<string, unknown>;
+  messages?: unknown[];
+  children?: ValidationErrorLike[];
+}
+
+interface ErrorDetailsShape {
+  errors?: ValidationErrorLike[];
+  message?: string[];
+  details?: Record<string, unknown>;
+}
+
 /**
  * Custom API error that preserves the original response data
  * and parses NestJS validation errors into field-level errors
  */
 export class ApiError extends Error {
   public statusCode: number;
-  public responseData: any;
+  public responseData: unknown;
   public fieldErrors: FieldError[];
 
-  constructor(message: string, statusCode: number, responseData?: any) {
+  constructor(message: string, statusCode: number, responseData?: unknown) {
     super(message);
     this.name = 'ApiError';
     this.statusCode = statusCode;
@@ -38,22 +52,24 @@ export class ApiError extends Error {
    * This is a generic solution that works for ALL NestJS modules when using
    * the custom exceptionFactory format. No string matching required.
    */
-  private static parseFieldErrors(data: any): FieldError[] {
+  private static parseFieldErrors(data: unknown): FieldError[] {
     const fieldErrors: FieldError[] = [];
 
-    if (!data) return fieldErrors;
+    if (!data || typeof data !== 'object') return fieldErrors;
+
+    const errorData = data as ErrorDetailsShape;
 
     // PRIORITY 1: Custom exception factory format (most reliable)
     // { errors: [{ property: "field_name", constraints: {}, messages: [...] }] }
-    if (Array.isArray(data.errors)) {
-      data.errors.forEach((errorObj: any) => {
+    if (Array.isArray(errorData.errors)) {
+      errorData.errors.forEach((errorObj) => {
         const field = errorObj.property || errorObj.field;
         if (field) {
           // Use messages array if available, otherwise format from constraints
           const messages = errorObj.messages || (errorObj.constraints ? Object.values(errorObj.constraints) : []);
           const messageList = Array.isArray(messages) ? messages : [messages];
 
-          messageList.forEach((msg: any) => {
+          messageList.forEach((msg: unknown) => {
             fieldErrors.push({
               field,
               message: typeof msg === 'string' ? msg : String(msg),
@@ -62,12 +78,12 @@ export class ApiError extends Error {
 
           // Handle nested children (for nested objects/arrays)
           if (errorObj.children && Array.isArray(errorObj.children)) {
-            errorObj.children.forEach((child: any) => {
+            errorObj.children.forEach((child) => {
               const childField = child.property;
               if (childField) {
                 const childMessages = child.messages || (child.constraints ? Object.values(child.constraints) : []);
                 const childList = Array.isArray(childMessages) ? childMessages : [childMessages];
-                childList.forEach((msg: any) => {
+                childList.forEach((msg: unknown) => {
                   fieldErrors.push({
                     field: `${field}.${childField}`,
                     message: typeof msg === 'string' ? msg : String(msg),
@@ -85,8 +101,8 @@ export class ApiError extends Error {
 
     // PRIORITY 2: Standard NestJS ValidationPipe array format
     // { message: ["email should not be empty", "first_name must be longer...", ...] }
-    if (Array.isArray(data.message)) {
-      data.message.forEach((errorMsg: string) => {
+    if (Array.isArray(errorData.message)) {
+      errorData.message.forEach((errorMsg: string) => {
         const match = errorMsg.match(/^([a-zA-Z_][a-zA-Z0-9_.]*)\s+(.+)$/);
         if (match) {
           fieldErrors.push({
@@ -101,9 +117,13 @@ export class ApiError extends Error {
 
     // PRIORITY 3: Custom details format
     // { details: { email: "Email is required", ... } }
-    if (data.details && typeof data.details === 'object') {
-      Object.entries(data.details).forEach(([field, message]: [string, any]) => {
-        const msg = typeof message === 'string' ? message : message?.message || String(message);
+    if (errorData.details && typeof errorData.details === 'object') {
+      Object.entries(errorData.details).forEach(([field, message]) => {
+        const nestedMessage =
+          typeof message === 'object' && message !== null && 'message' in message
+            ? (message as { message?: unknown }).message
+            : undefined;
+        const msg = typeof message === 'string' ? message : typeof nestedMessage === 'string' ? nestedMessage : String(message);
         fieldErrors.push({ field, message: msg });
       });
     }
@@ -226,4 +246,3 @@ export const apiClient = createApiClient();
 
 // Export types for convenience
 export type { AxiosError, AxiosResponse } from 'axios';
-

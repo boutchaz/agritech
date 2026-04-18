@@ -41,7 +41,8 @@ from datetime import datetime, timedelta
 # Add the app directory to the Python path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from app.services import supabase_service, automated_processing_service
+from app.services.automated_processing import automated_processing_service
+from app.services.supabase_service import supabase_service
 from app.core.config import settings
 
 # Configure logging

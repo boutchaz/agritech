@@ -17,6 +17,9 @@ import {
   useAssignFarmRole,
   useRemoveFarmRole,
 } from '../hooks/useFarmRoles';
+import { SectionLoader } from '@/components/ui/loader';
+import { Button } from '@/components/ui/button';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 
 interface FarmRoleManagerProps {
   farmId: string;
@@ -24,11 +27,18 @@ interface FarmRoleManagerProps {
   onClose: () => void;
 }
 
-const FarmRoleManager: React.FC<FarmRoleManagerProps> = ({ 
+const FarmRoleManager = ({ 
   farmId, 
   farmName, 
   onClose 
-}) => {
+}: FarmRoleManagerProps) => {
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<{title:string;description?:string;variant?:"destructive"|"default";onConfirm:()=>void}>({title:"",onConfirm:()=>{}});
+  const showConfirm = (title: string, onConfirm: () => void, opts?: {description?: string; variant?: "destructive" | "default"}) => {
+    setConfirmAction({title, onConfirm, ...opts});
+    setConfirmOpen(true);
+  };
+
   const [showAssignRole, setShowAssignRole] = useState(false);
   const [newRole, setNewRole] = useState({
     user_id: '',
@@ -66,8 +76,9 @@ const FarmRoleManager: React.FC<FarmRoleManagerProps> = ({
   };
 
   const handleRemoveRole = async (roleId: string) => {
-    if (!confirm('Are you sure you want to remove this role assignment?')) return;
-    removeRole.mutate({ roleId, farmId });
+    showConfirm('Are you sure you want to remove this role assignment?', () => {
+      removeRole.mutate({ roleId, farmId });
+    }, {variant: "destructive"});
   };
 
   const getRoleIcon = (role: string) => {
@@ -100,7 +111,7 @@ const FarmRoleManager: React.FC<FarmRoleManagerProps> = ({
     }
   };
 
-  const formatPermissions = (permissions: any) => {
+  const formatPermissions = (permissions: Record<string, unknown>) => {
     if (!permissions || typeof permissions !== 'object') return 'No specific permissions';
     
     const permissionList = Object.entries(permissions)
@@ -119,12 +130,7 @@ const FarmRoleManager: React.FC<FarmRoleManagerProps> = ({
   );
 
   if (loading && roles.length === 0) {
-    return (
-      <div className="flex items-center justify-center p-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-        <span className="ml-2">Loading roles...</span>
-      </div>
-    );
+    return <SectionLoader />;
   }
 
   return (
@@ -139,12 +145,12 @@ const FarmRoleManager: React.FC<FarmRoleManagerProps> = ({
             Assign and manage roles for farm management
           </p>
         </div>
-        <button
+        <Button
           onClick={onClose}
           className="p-2 hover:bg-gray-100 rounded-lg"
         >
           <X className="w-5 h-5" />
-        </button>
+        </Button>
       </div>
 
       {/* Error Display */}
@@ -159,13 +165,13 @@ const FarmRoleManager: React.FC<FarmRoleManagerProps> = ({
       <div className="bg-white rounded-lg border border-gray-200 p-6">
         <div className="flex items-center justify-between mb-4">
           <h4 className="font-semibold text-gray-900">Current Role Assignments</h4>
-          <button
+          <Button variant="blue"
             onClick={() => setShowAssignRole(true)}
-            className="flex items-center px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm"
+            className="flex items-center px-3 py-2 rounded-md text-sm"
           >
             <UserPlus className="w-4 h-4 mr-1" />
             Assign Role
-          </button>
+          </Button>
         </div>
 
         {roles.length === 0 ? (
@@ -199,19 +205,19 @@ const FarmRoleManager: React.FC<FarmRoleManagerProps> = ({
                 </div>
                 
                 <div className="flex items-center space-x-2">
-                  <button
+                  <Button
                     className="p-1 hover:bg-gray-200 rounded"
                     title="Edit Role"
                   >
                     <Edit className="w-4 h-4" />
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     onClick={() => handleRemoveRole(role.id)}
                     className="p-1 hover:bg-red-200 rounded text-red-600"
                     title="Remove Role"
                   >
                     <X className="w-4 h-4" />
-                  </button>
+                  </Button>
                 </div>
               </div>
             ))}
@@ -227,10 +233,11 @@ const FarmRoleManager: React.FC<FarmRoleManagerProps> = ({
             
             <form onSubmit={handleAssignRole} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="farm-role-user" className="block text-sm font-medium text-gray-700 mb-1">
                   User *
                 </label>
                 <select
+                  id="farm-role-user"
                   value={newRole.user_id}
                   onChange={(e) => setNewRole(prev => ({ ...prev, user_id: e.target.value }))}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -252,10 +259,11 @@ const FarmRoleManager: React.FC<FarmRoleManagerProps> = ({
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="farm-role-role" className="block text-sm font-medium text-gray-700 mb-1">
                   Role *
                 </label>
                 <select
+                  id="farm-role-role"
                   value={newRole.role}
                   onChange={(e) => setNewRole(prev => ({ ...prev, role: e.target.value }))}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -280,25 +288,29 @@ const FarmRoleManager: React.FC<FarmRoleManagerProps> = ({
               )}
 
               <div className="flex justify-end space-x-3 pt-4">
-                <button
+                <Button
                   type="button"
                   onClick={() => setShowAssignRole(false)}
                   className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50"
                 >
                   Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={loading || availableUsers.length === 0}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
-                >
+                </Button>
+                <Button variant="blue" type="submit" disabled={loading || availableUsers.length === 0} className="px-4 py-2 rounded-md" >
                   {loading ? 'Assigning...' : 'Assign Role'}
-                </button>
+                </Button>
               </div>
             </form>
           </div>
         </div>
       )}
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title={confirmAction.title}
+        description={confirmAction.description}
+        variant={confirmAction.variant}
+        onConfirm={confirmAction.onConfirm}
+      />
     </div>
   );
 };
