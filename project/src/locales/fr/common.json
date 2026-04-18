@@ -1568,7 +1568,20 @@
       "formSize4": "Plus de 500 ha",
       "formMsg": "Message (optionnel)",
       "formSizePlaceholder": "Choisir la taille",
+      "formSlot": "Créneau de démo préféré",
       "validationRequired": "Veuillez remplir tous les champs obligatoires.",
+      "success": "Demande envoyée. Nous revenons vers vous très vite.",
+      "validation": {
+        "name": "Saisissez votre nom complet",
+        "emailRequired": "Email requis",
+        "emailInvalid": "Email invalide",
+        "phoneRequired": "Téléphone requis",
+        "phoneInvalid": "Numéro de téléphone invalide",
+        "sizeRequired": "Sélectionnez la taille",
+        "slotRequired": "Choisissez un créneau"
+      },
+      "slotPickDay": "Choisir un jour",
+      "slotPickTime": "Choisir une heure",
       "submit": "Envoyer la demande"
     },
     "footer": {

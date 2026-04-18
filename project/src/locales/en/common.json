@@ -1568,7 +1568,20 @@
       "formSize4": "Over 500 ha",
       "formMsg": "Message (optional)",
       "formSizePlaceholder": "Select farm size",
+      "formSlot": "Preferred demo slot",
       "validationRequired": "Please fill in all required fields.",
+      "success": "Demo request sent. We'll be in touch shortly.",
+      "validation": {
+        "name": "Enter your full name",
+        "emailRequired": "Email required",
+        "emailInvalid": "Invalid email",
+        "phoneRequired": "Phone required",
+        "phoneInvalid": "Invalid phone number",
+        "sizeRequired": "Select farm size",
+        "slotRequired": "Pick a time slot"
+      },
+      "slotPickDay": "Pick a day",
+      "slotPickTime": "Pick a time",
       "submit": "Submit Request"
     },
     "footer": {
