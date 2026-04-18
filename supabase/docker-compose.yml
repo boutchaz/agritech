@@ -32,7 +32,7 @@ services:
       NEXT_PUBLIC_ENABLE_LOGS: true
       NEXT_ANALYTICS_BACKEND_PROVIDER: postgres
     networks:
-      - agritech-supabase-8pqkna
+      - supabase
   kong:
     container_name: ${CONTAINER_PREFIX}-kong
     image: kong/kong:3.9.1
@@ -59,19 +59,8 @@ services:
       CONTAINER_PREFIX: ${CONTAINER_PREFIX}
     entrypoint: bash -c 'eval "echo \"$$(cat ~/temp.yml)\"" > ~/kong.yml && /docker-entrypoint.sh kong docker-start'
     networks:
-      - agritech-supabase-8pqkna
-    labels:
-      - traefik.http.routers.agritech-supabase-8pqkna-12-web.rule=Host(`agrogina-supabase.wearecodelovers.com`)
-      - traefik.http.routers.agritech-supabase-8pqkna-12-web.entrypoints=web
-      - traefik.http.services.agritech-supabase-8pqkna-12-web.loadbalancer.server.port=8000
-      - traefik.http.routers.agritech-supabase-8pqkna-12-web.service=agritech-supabase-8pqkna-12-web
-      - traefik.http.routers.agritech-supabase-8pqkna-12-web.middlewares=redirect-to-https@file
-      - traefik.http.routers.agritech-supabase-8pqkna-12-websecure.rule=Host(`agrogina-supabase.wearecodelovers.com`)
-      - traefik.http.routers.agritech-supabase-8pqkna-12-websecure.entrypoints=websecure
-      - traefik.http.services.agritech-supabase-8pqkna-12-websecure.loadbalancer.server.port=8000
-      - traefik.http.routers.agritech-supabase-8pqkna-12-websecure.service=agritech-supabase-8pqkna-12-websecure
-      - traefik.http.routers.agritech-supabase-8pqkna-12-websecure.tls.certresolver=letsencrypt
-      - traefik.enable=true
+      - supabase
+      - dokploy-network
   auth:
     container_name: ${CONTAINER_PREFIX}-auth
     image: supabase/gotrue:v2.186.0
@@ -123,7 +112,7 @@ services:
       GOTRUE_EXTERNAL_PHONE_ENABLED: ${ENABLE_PHONE_SIGNUP}
       GOTRUE_SMS_AUTOCONFIRM: ${ENABLE_PHONE_AUTOCONFIRM}
     networks:
-      - agritech-supabase-8pqkna
+      - supabase
   rest:
     container_name: ${CONTAINER_PREFIX}-rest
     image: postgrest/postgrest:v14.8
@@ -144,7 +133,7 @@ services:
     command:
       - postgrest
     networks:
-      - agritech-supabase-8pqkna
+      - supabase
   realtime:
     container_name: realtime-dev.${CONTAINER_PREFIX}-realtime
     image: supabase/realtime:v2.76.5
@@ -186,7 +175,7 @@ services:
       SEED_SELF_HOST: true
       RUN_JANITOR: true
     networks:
-      - agritech-supabase-8pqkna
+      - supabase
   storage:
     container_name: ${CONTAINER_PREFIX}-storage
     image: supabase/storage-api:v1.48.26
@@ -226,7 +215,7 @@ services:
       ENABLE_IMAGE_TRANSFORMATION: "true"
       IMGPROXY_URL: http://imgproxy:5001
     networks:
-      - agritech-supabase-8pqkna
+      - supabase
   imgproxy:
     container_name: ${CONTAINER_PREFIX}-imgproxy
     image: darthsim/imgproxy:v3.30.1
@@ -247,7 +236,7 @@ services:
       IMGPROXY_USE_ETAG: "true"
       IMGPROXY_ENABLE_WEBP_DETECTION: ${IMGPROXY_ENABLE_WEBP_DETECTION}
     networks:
-      - agritech-supabase-8pqkna
+      - supabase
   meta:
     container_name: ${CONTAINER_PREFIX}-meta
     image: supabase/postgres-meta:v0.96.3
@@ -265,7 +254,7 @@ services:
       PG_META_DB_USER: supabase_admin
       PG_META_DB_PASSWORD: ${POSTGRES_PASSWORD}
     networks:
-      - agritech-supabase-8pqkna
+      - supabase
   functions:
     container_name: ${CONTAINER_PREFIX}-edge-functions
     image: supabase/edge-runtime:v1.71.2
@@ -287,7 +276,7 @@ services:
       - --main-service
       - /home/deno/functions/main
     networks:
-      - agritech-supabase-8pqkna
+      - supabase
   analytics:
     container_name: ${CONTAINER_PREFIX}-analytics
     image: supabase/logflare:1.36.1
@@ -321,7 +310,7 @@ services:
       POSTGRES_BACKEND_SCHEMA: _analytics
       LOGFLARE_FEATURE_FLAG_OVERRIDE: multibackend=true
     networks:
-      - agritech-supabase-8pqkna
+      - supabase
   db:
     container_name: ${CONTAINER_PREFIX}-db
     image: supabase/postgres:17.6.1.108
@@ -367,7 +356,7 @@ services:
       - -c
       - log_min_messages=fatal
     networks:
-      - agritech-supabase-8pqkna
+      - supabase
   vector:
     container_name: ${CONTAINER_PREFIX}-vector
     image: timberio/vector:0.53.0-alpine
@@ -394,7 +383,7 @@ services:
     security_opt:
       - label=disable
     networks:
-      - agritech-supabase-8pqkna
+      - supabase
   supavisor:
     container_name: ${CONTAINER_PREFIX}-pooler
     image: supabase/supavisor:2.7.4
@@ -443,10 +432,11 @@ services:
       - -c
       - /app/bin/migrate && /app/bin/supavisor eval "$$(cat /etc/pooler/pooler.exs)" && /app/bin/server
     networks:
-      - agritech-supabase-8pqkna
+      - supabase
 volumes:
   db-config: null
 networks:
-  agritech-supabase-8pqkna:
-    name: agritech-supabase-8pqkna
+  supabase:
+    driver: bridge
+  dokploy-network:
     external: true
