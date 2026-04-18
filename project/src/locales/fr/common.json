@@ -1569,6 +1569,9 @@
       "formMsg": "Message (optionnel)",
       "formSizePlaceholder": "Choisir la taille",
       "formSlot": "Créneau de démo préféré",
+      "formSlotHelper": "Facultatif — ou réservez directement via /rdv",
+      "bookRdv": "Réserver directement sur /rdv",
+      "slotNotChosen": "Sans préférence",
       "validationRequired": "Veuillez remplir tous les champs obligatoires.",
       "success": "Demande envoyée. Nous revenons vers vous très vite.",
       "validation": {
@@ -1577,8 +1580,7 @@
         "emailInvalid": "Email invalide",
         "phoneRequired": "Téléphone requis",
         "phoneInvalid": "Numéro de téléphone invalide",
-        "sizeRequired": "Sélectionnez la taille",
-        "slotRequired": "Choisissez un créneau"
+        "sizeRequired": "Sélectionnez la taille"
       },
       "slotPickDay": "Choisir un jour",
       "slotPickTime": "Choisir une heure",

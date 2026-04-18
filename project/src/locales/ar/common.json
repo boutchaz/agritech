@@ -1558,6 +1558,9 @@
       "formMsg": "رسالة (اختياري)",
       "formSizePlaceholder": "اختر المساحة",
       "formSlot": "الموعد المفضل للعرض",
+      "formSlotHelper": "اختياري — أو احجز مباشرة عبر /rdv",
+      "bookRdv": "احجز مباشرة عبر /rdv",
+      "slotNotChosen": "بدون تفضيل",
       "validationRequired": "يرجى تعبئة جميع الحقول المطلوبة.",
       "success": "تم إرسال الطلب. سنتواصل معك قريباً.",
       "validation": {
@@ -1566,8 +1569,7 @@
         "emailInvalid": "بريد إلكتروني غير صالح",
         "phoneRequired": "رقم الهاتف مطلوب",
         "phoneInvalid": "رقم هاتف غير صالح",
-        "sizeRequired": "اختر المساحة",
-        "slotRequired": "اختر موعداً"
+        "sizeRequired": "اختر المساحة"
       },
       "slotPickDay": "اختر يوماً",
       "slotPickTime": "اختر وقتاً",

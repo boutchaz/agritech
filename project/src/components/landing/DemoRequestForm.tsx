@@ -34,10 +34,11 @@ const createSchema = (tr: TFunction) => {
       ),
     size: z.string().min(1, m('landing.contact.validation.sizeRequired', 'Select farm size')),
     message: z.string().optional(),
-    slot: z.custom<Slot>(
-      (v) => !!v && v instanceof Object && 'date' in v && 'time' in v,
-      { message: m('landing.contact.validation.slotRequired', 'Pick a time slot') },
-    ),
+    slot: z
+      .custom<Slot>(
+        (v) => v === undefined || (!!v && typeof v === 'object' && 'date' in v && 'time' in v),
+      )
+      .optional(),
   })
 }
 
@@ -68,13 +69,15 @@ export function DemoRequestForm() {
   })
 
   const onSubmit = async (data: FormData) => {
-    const slot = data.slot
+    const slotLine = data.slot
+      ? `${format(data.slot.date, 'PPP', { locale })} ${data.slot.time}`
+      : t('landing.contact.slotNotChosen', 'No preference')
     const body =
       `Name: ${data.name}%0A` +
       `Email: ${data.email}%0A` +
       `Phone: ${data.phone}%0A` +
       `Farm Size: ${data.size}%0A` +
-      `Slot: ${format(slot.date, 'PPP', { locale })} ${slot.time}%0A` +
+      `Slot: ${slotLine}%0A` +
       `Message: ${data.message ?? ''}`
     window.location.assign(`mailto:contact@agrogina.com?subject=Demo Request&body=${body}`)
     toast.success(t('landing.contact.success', 'Demo request sent'))
@@ -158,7 +161,10 @@ export function DemoRequestForm() {
 
       <FormField
         label={t('landing.contact.formSlot', 'Preferred demo slot')}
-        required
+        helper={t(
+          'landing.contact.formSlotHelper',
+          'Optional — or book directly via /rdv',
+        )}
         error={errors.slot?.message as string | undefined}
       >
         <Controller

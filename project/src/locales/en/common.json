@@ -1569,6 +1569,9 @@
       "formMsg": "Message (optional)",
       "formSizePlaceholder": "Select farm size",
       "formSlot": "Preferred demo slot",
+      "formSlotHelper": "Optional — skip or book directly via /rdv",
+      "bookRdv": "Book directly on /rdv",
+      "slotNotChosen": "No preference",
       "validationRequired": "Please fill in all required fields.",
       "success": "Demo request sent. We'll be in touch shortly.",
       "validation": {
@@ -1577,8 +1580,7 @@
         "emailInvalid": "Invalid email",
         "phoneRequired": "Phone required",
         "phoneInvalid": "Invalid phone number",
-        "sizeRequired": "Select farm size",
-        "slotRequired": "Pick a time slot"
+        "sizeRequired": "Select farm size"
       },
       "slotPickDay": "Pick a day",
       "slotPickTime": "Pick a time",

@@ -636,6 +636,12 @@ const LandingPage = () => {
                 <p className="text-base md:text-lg opacity-90 leading-relaxed max-w-[50ch]">
                   {t('landing.contact.subtitle')}
                 </p>
+                <a
+                  href="/rdv?source=siam-2026"
+                  className="mt-6 inline-flex items-center gap-2 rounded-xl border border-primary-foreground/30 bg-primary-foreground/10 px-4 py-2.5 text-sm font-semibold text-primary-foreground backdrop-blur transition-colors hover:bg-primary-foreground/20"
+                >
+                  {t('landing.contact.bookRdv', 'Book directly on /rdv')} →
+                </a>
               </div>
 
               <div className="w-full min-w-0 rounded-3xl bg-background p-6 text-foreground shadow-2xl reveal-on-scroll translate-y-[30px] opacity-0 transition-all duration-[1000ms] ease-[cubic-bezier(0.2,0.8,0.2,1)] delay-200 md:p-10">
