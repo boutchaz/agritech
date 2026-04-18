@@ -59,6 +59,7 @@ Thumbs.db
 # Logs
 *.log
 logs/
+!files/volumes/logs/
 
 # Test outputs
 coverage/
