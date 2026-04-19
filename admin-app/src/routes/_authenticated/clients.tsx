@@ -351,14 +351,9 @@ function OrgRow({ org, sub, isExpanded, onToggle, onRefresh }: {
         </td>
         <td className="px-4 py-3">
           {sub ? (
-            <div>
-              <SubStatusBadge status={sub.status} />
-              {sub.formula && (
-                <p className="text-xs text-gray-500 mt-0.5 capitalize">{sub.formula} · {sub.billing_cycle}</p>
-              )}
-            </div>
+            <SubStatusBadge status={sub.status} />
           ) : (
-            <span className="text-xs text-gray-400">No subscription</span>
+            <span className="text-xs text-gray-400">No contract</span>
           )}
         </td>
         <td className="px-4 py-3 text-sm">
@@ -394,9 +389,9 @@ function OrgRow({ org, sub, isExpanded, onToggle, onRefresh }: {
         <tr>
           <td colSpan={8} className="px-4 py-4 bg-gray-50 border-b border-gray-200">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* Subscription details */}
+              {/* Contract details */}
               <div className="bg-white rounded-lg border border-gray-200 p-4">
-                <h4 className="text-sm font-semibold text-gray-700 mb-3">Subscription Details</h4>
+                <h4 className="text-sm font-semibold text-gray-700 mb-3">Contract</h4>
                 {sub ? (
                   <dl className="space-y-2 text-sm">
                     <div className="flex justify-between">
@@ -404,29 +399,26 @@ function OrgRow({ org, sub, isExpanded, onToggle, onRefresh }: {
                       <dd><SubStatusBadge status={sub.status} /></dd>
                     </div>
                     <div className="flex justify-between">
-                      <dt className="text-gray-500">Formula</dt>
-                      <dd className="capitalize font-medium">{sub.formula ?? '—'}</dd>
-                    </div>
-                    <div className="flex justify-between">
-                      <dt className="text-gray-500">Billing</dt>
-                      <dd className="capitalize">{sub.billing_cycle ?? '—'}</dd>
-                    </div>
-                    <div className="flex justify-between">
                       <dt className="text-gray-500">Hectares</dt>
                       <dd>{sub.contracted_hectares ?? '—'} ha</dd>
-                    </div>
-                    <div className="flex justify-between">
-                      <dt className="text-gray-500">Amount TTC</dt>
-                      <dd className="font-mono">{sub.amount_ttc ? `${sub.amount_ttc} ${sub.currency}` : '—'}</dd>
-                    </div>
-                    <div className="flex justify-between">
-                      <dt className="text-gray-500">Period end</dt>
-                      <dd>{sub.current_period_end ? new Date(sub.current_period_end).toLocaleDateString('fr-FR') : '—'}</dd>
                     </div>
                     <div className="flex justify-between">
                       <dt className="text-gray-500">Limits</dt>
                       <dd className="text-xs">{sub.max_farms} farms · {sub.max_users} users</dd>
                     </div>
+                    <div className="flex justify-between">
+                      <dt className="text-gray-500">Modules</dt>
+                      <dd className="text-xs">
+                        {Array.isArray(sub.selected_modules) ? sub.selected_modules.length : 0} selected
+                      </dd>
+                    </div>
+                    <div className="flex justify-between">
+                      <dt className="text-gray-500">Period end</dt>
+                      <dd>{sub.current_period_end ? new Date(sub.current_period_end).toLocaleDateString('fr-FR') : '—'}</dd>
+                    </div>
+                    <p className="pt-2 text-[11px] text-gray-400 border-t border-gray-100">
+                      Pricing is negotiated per customer — edit limits and modules on the detail page.
+                    </p>
                   </dl>
                 ) : (
                   <p className="text-sm text-gray-400">No subscription</p>

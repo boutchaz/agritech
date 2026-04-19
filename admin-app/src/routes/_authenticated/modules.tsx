@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useForm, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Package, Plus, Pencil, Trash2, X, Loader2 } from 'lucide-react';
+import { Package, Plus, Pencil, Trash2, X, Loader2, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { apiRequest } from '@/lib/api-client';
 import { toast } from 'sonner';
 import clsx from 'clsx';
@@ -131,8 +131,6 @@ const moduleSchema = z.object({
   color: z.string().optional(),
   category: z.string().optional(),
   display_order: z.coerce.number().min(0, 'Doit être ≥ 0'),
-  price_monthly: z.coerce.number().min(0, 'Doit être ≥ 0'),
-  required_plan: z.string().optional(),
   is_required: z.boolean(),
   is_recommended: z.boolean(),
   is_addon_eligible: z.boolean(),
@@ -215,9 +213,9 @@ function ModulesPage() {
                 <th className="text-left px-4 py-3 font-medium text-gray-600">Slug</th>
                 <th className="text-left px-4 py-3 font-medium text-gray-600">Nom</th>
                 <th className="text-left px-4 py-3 font-medium text-gray-600">Catégorie</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-600">Prix/mois</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-600">Plan requis</th>
                 <th className="text-left px-4 py-3 font-medium text-gray-600">Routes</th>
+                <th className="text-left px-4 py-3 font-medium text-gray-600">Traductions</th>
+                <th className="text-left px-4 py-3 font-medium text-gray-600">État</th>
                 <th className="text-left px-4 py-3 font-medium text-gray-600">Actif</th>
                 <th className="text-right px-4 py-3 font-medium text-gray-600">Actions</th>
               </tr>
@@ -225,11 +223,18 @@ function ModulesPage() {
             <tbody>
               {modules.map((mod) => {
                 const frTranslation = mod.module_translations?.find(t => t.locale === 'fr');
+                const filledLocales = (mod.module_translations ?? [])
+                  .filter((t) => (t.name ?? '').trim().length > 0)
+                  .map((t) => t.locale);
                 const navCount = Array.isArray(mod.navigation_items) ? mod.navigation_items.length : 0;
+                const missing: string[] = [];
+                if (!mod.slug) missing.push('slug');
+                if (filledLocales.length < LOCALES.length) missing.push('traductions');
+                if (navCount === 0) missing.push('routes');
                 return (
                   <tr key={mod.id} className="border-b last:border-b-0 hover:bg-gray-50">
                     <td className="px-4 py-3 tabular-nums text-gray-500">{mod.display_order}</td>
-                    <td className="px-4 py-3 font-mono text-xs">{mod.slug || '—'}</td>
+                    <td className="px-4 py-3 font-mono text-xs">{mod.slug || <span className="text-red-500">—</span>}</td>
                     <td className="px-4 py-3 font-medium">{frTranslation?.name || mod.name}</td>
                     <td className="px-4 py-3">
                       <span className={clsx(
@@ -242,9 +247,45 @@ function ModulesPage() {
                         {mod.category || 'other'}
                       </span>
                     </td>
-                    <td className="px-4 py-3">{mod.price_monthly > 0 ? `${mod.price_monthly} MAD` : '—'}</td>
-                    <td className="px-4 py-3 text-xs">{mod.required_plan || 'Aucun'}</td>
                     <td className="px-4 py-3 text-xs text-gray-500">{navCount} route{navCount !== 1 ? 's' : ''}</td>
+                    <td className="px-4 py-3">
+                      <div className="flex gap-1">
+                        {LOCALES.map((l) => {
+                          const on = filledLocales.includes(l);
+                          return (
+                            <span
+                              key={l}
+                              className={clsx(
+                                'text-[10px] font-mono px-1.5 py-0.5 rounded',
+                                on
+                                  ? 'bg-emerald-100 text-emerald-700'
+                                  : 'bg-gray-100 text-gray-400',
+                              )}
+                              title={on ? `Traduction ${l} remplie` : `Traduction ${l} manquante`}
+                            >
+                              {l}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      {missing.length === 0 ? (
+                        <span
+                          className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700"
+                          title="Configuration complète"
+                        >
+                          <CheckCircle2 className="h-3 w-3" /> complet
+                        </span>
+                      ) : (
+                        <span
+                          className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700"
+                          title={`Manque: ${missing.join(', ')}`}
+                        >
+                          <AlertTriangle className="h-3 w-3" /> {missing.length} manquant{missing.length > 1 ? 's' : ''}
+                        </span>
+                      )}
+                    </td>
                     <td className="px-4 py-3">
                       <Switch.Root
                         checked={mod.is_available}
@@ -353,8 +394,6 @@ function ModuleDialog({ module, onClose }: { module: AdminModule | null; onClose
       color: module?.color ?? '',
       category: module?.category ?? '',
       display_order: module?.display_order ?? 0,
-      price_monthly: module?.price_monthly ?? 0,
-      required_plan: module?.required_plan ?? '',
       is_required: module?.is_required ?? false,
       is_recommended: module?.is_recommended ?? false,
       is_addon_eligible: module?.is_addon_eligible ?? false,
@@ -402,7 +441,6 @@ function ModuleDialog({ module, onClose }: { module: AdminModule | null; onClose
 
       const payload = {
         ...data,
-        required_plan: data.required_plan || null,
         category: data.category || null,
         navigation_items: cleanedNavItems,
         dashboard_widgets: widgets,
@@ -561,25 +599,12 @@ function ModuleDialog({ module, onClose }: { module: AdminModule | null; onClose
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className={labelClass}>Ordre d'affichage</label>
                     <input {...form.register('display_order')} type="number" className={inputClass} />
                     {errors.display_order && <p className={errorClass}>{errors.display_order.message}</p>}
-                  </div>
-                  <div>
-                    <label className={labelClass}>Prix / mois (MAD)</label>
-                    <input {...form.register('price_monthly')} type="number" step="0.01" className={inputClass} />
-                    {errors.price_monthly && <p className={errorClass}>{errors.price_monthly.message}</p>}
-                  </div>
-                  <div>
-                    <label className={labelClass}>Plan requis</label>
-                    <select {...form.register('required_plan')} className={inputClass}>
-                      <option value="">Aucun</option>
-                      <option value="essential">Essential</option>
-                      <option value="professional">Professional</option>
-                      <option value="enterprise">Enterprise</option>
-                    </select>
+                    <p className="text-xs text-gray-400 mt-1">Ordre de tri dans la liste (plus petit = plus haut).</p>
                   </div>
                 </div>
 

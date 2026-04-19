@@ -354,28 +354,17 @@ function OrgDetailPage() {
         </div>
       ) : activeTab === 'overview' ? (
         <div className="grid gap-6 lg:grid-cols-2">
-          {/* Subscription Card */}
+          {/* Contract Card */}
           <div className="rounded-lg border border-gray-200 bg-white p-5">
             <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-4">
-              <CreditCard className="h-4 w-4" /> Subscription
+              <CreditCard className="h-4 w-4" /> Contract
             </h3>
             {subscription ? (
               <dl className="space-y-2.5 text-sm">
                 <Row label="Status">
                   <SubBadge status={subscription.status} />
                 </Row>
-                <Row label="Formula">
-                  <span className="capitalize font-medium">{subscription.formula ?? '—'}</span>
-                </Row>
-                <Row label="Billing">
-                  <span className="capitalize">{subscription.billing_cycle ?? '—'}</span>
-                </Row>
                 <Row label="Hectares">{subscription.contracted_hectares ?? '—'} ha</Row>
-                <Row label="Amount TTC">
-                  {subscription.amount_ttc
-                    ? `${subscription.amount_ttc} ${subscription.currency}`
-                    : '—'}
-                </Row>
                 <Row label="Period Start">
                   {subscription.current_period_start
                     ? new Date(subscription.current_period_start).toLocaleDateString('fr-FR')
@@ -400,6 +389,9 @@ function OrgDetailPage() {
                     </div>
                   </Row>
                 )}
+                <p className="pt-2 text-[11px] text-gray-400 border-t border-gray-100 mt-3">
+                  Pricing is negotiated per customer. Limits and modules are edited below.
+                </p>
               </dl>
             ) : (
               <p className="text-sm text-gray-400">No subscription</p>
