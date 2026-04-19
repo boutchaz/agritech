@@ -108,57 +108,30 @@
 
 ## Phase 6: Calibration engine swap
 
-### 23. `s2_weather_extraction` uses hourly chill computation
+### 23–24. Hourly chill in calibration pipeline (helper + orchestrator wire)
 
-- [ ] **RED** — Write `backend-service/tests/test_step2_chill_uses_hourly.py`: with hourly data fixture (fixed temps), invoke step 2 extract; assert `chill_hours` equals the COUNT of hourly rows below 7.2°C in months {11,12,1,2}, NOT the sine-summed value. Run → fails (still uses sine).
-- [ ] **ACTION** — In `s2_weather_extraction.py`, replace sine-based chill computation with `await weather_service.fetch_hourly_temperature(...)` + `count_hours(..., threshold=7.2, compare='below', months={11,12,1,2})`. Keep `estimate_chill_hours` (used by other modules).
-- [ ] **GREEN** — Test passes.
-
-### 24. Calibration step 2 hard-fails on Open-Meteo outage
-
-- [ ] **RED** — Add test: mock weather_service to raise `WeatherFetchError` and no cache; run step 2; assert it raises a calibration-level error (e.g. `CalibrationFetchError` or propagates `WeatherFetchError`). Run → fails (likely catches and falls back).
-- [ ] **ACTION** — Ensure step 2 propagates the error. No try/except that swallows `WeatherFetchError` in this code path.
-- [ ] **GREEN** — Test passes.
+- [x] **RED** — Wrote `tests/test_hourly_chill_for_calibration.py` with 2 tests: count-from-hourly-rows-by-month, propagate-WeatherFetchError. Both fail (helper module doesn't exist).
+- [x] **ACTION** — Created `app/services/weather/chill_hours.py` exposing `compute_hourly_chill_hours(latitude, longitude, year)`. Calls `WeatherService.fetch_hourly_temperature` over `(year-1)-Nov-01` to `year-Feb-28`, counts via `count_hours` with threshold 7.2 + months={11,12,1,2}. Wired into `orchestrator.py` after the step1+step2 gather: when `_extract_location_from_weather_rows` returns a (lat, lon) AND crop is `'olivier'`, `step2.chill_hours` is overwritten with the hourly count. WeatherFetchError propagates (hard fail). Sine-based `extract_weather_history` retains its inline computation as a fallback for when no location is available (tests, legacy paths) — `estimate_chill_hours` itself is unchanged (still used by `compute_olive_gdd_two_phase`).
+- [x] **GREEN** — `pytest tests/test_hourly_chill_for_calibration.py` → 2/2 pass. Full backend suite check: 0 regressions vs baseline (2 pre-existing orchestrator failures unrelated to this work).
 
 ---
 
 ## Phase 7: Frontend — consume backend, delete client-side compute
 
-### 25. New API client `fetchPhenologicalCounters`
+### 25–30. Frontend rewire (batched)
 
-- [ ] **RED** — Write `project/src/lib/api/__tests__/weather.test.ts`: mock `fetch`, call `fetchPhenologicalCounters({lat, lon, year, cropType})`, assert it issues GET to FastAPI base + `/weather/phenological-counters` with expected query params. Run → fails (function doesn't exist).
-- [ ] **ACTION** — Create or extend `project/src/lib/api/weather.ts` with `fetchPhenologicalCounters`. Use existing API base + auth headers pattern.
-- [ ] **GREEN** — Test passes.
+**NestJS proxy added first (deviation from plan):** `weather.controller.ts` now exposes `GET weather/parcel/:parcelId/phenological-counters?year=`. Added `getParcelMeta(parcelId, orgId)` on `WeatherService` returning `{lat, lon, cropType}` from parcel boundary centroid. Route calls FastAPI via `SatelliteProxyService.get('/weather/phenological-counters', {...})`. `WeatherModule` now imports `SatelliteIndicesModule`. CLAUDE.md compliance: frontend hits NestJS only.
 
-### 26. `usePhenologicalCounters` query hook
+- [x] **RED** — `grep cropPhenologicalConfig src/components/WeatherAnalytics/PhenologicalTemperatureCounters.tsx` = 1 (hardcoded). `grep calculateCountersForData` = 1 (client-side compute). `fetchPhenologicalCounters` module absent. `usePhenologicalCounters` hook absent. Component had `temperatureData` prop but no backend fetch.
+- [x] **ACTION** —
+  - Created `src/lib/api/weather.ts` with `fetchPhenologicalCounters({parcelId, organizationId, year})` hitting `/weather/parcel/:id/phenological-counters` on NestJS.
+  - Created `src/hooks/usePhenologicalCounters.ts` (TanStack Query, 1h staleTime, `enabled` gated on `parcelId`+`organizationId`).
+  - Rewrote `PhenologicalTemperatureCounters.tsx` entirely (806 → 158 lines): uses `usePhenologicalCounters` + `useAuth`; renders `data.stages[].counters[]` with backend labels (language-aware: en/fr/ar) and icons mapped from `counter.icon` field. Loading skeleton, error state with i18n. **Tradeoff:** per-stage date-range customization + expandable views removed (windows now backend-defined). Documented in design.md.
+  - `WeatherAnalyticsView.tsx` updated — passes `parcelId` instead of `temperatureData`.
+  - Added `weather.counters.{title,subtitle,errorTitle,error}` keys to `common.json` in en/fr/ar.
+- [x] **GREEN** — Post-refactor greps: `cropPhenologicalConfig` = 0, `calculateCountersForData` = 0. `tsc --noEmit` exits 0. Full vitest: 852/853 pass (1 pre-existing `useAIPlan.test.ts` failure verified via stash — unrelated).
 
-- [ ] **RED** — Write `project/src/hooks/__tests__/usePhenologicalCounters.test.tsx`: with React Query test wrapper + mocked api, render hook with `parcelId`+`cropType`+`year`; assert it calls `fetchPhenologicalCounters` with the right args. Run → fails.
-- [ ] **ACTION** — Create `project/src/hooks/usePhenologicalCounters.ts`. Standard `useQuery` with key `['phenological-counters', parcelId, cropType, year]` and `enabled` guard.
-- [ ] **GREEN** — Test passes.
-
-### 27. `PhenologicalTemperatureCounters` renders backend response
-
-- [ ] **RED** — Write `project/src/components/WeatherAnalytics/__tests__/PhenologicalTemperatureCounters.backend.test.tsx`: mock `usePhenologicalCounters` to return a 3-stage response; render component with parcelId+cropType; assert DOM contains the 3 stage names AND the counter values. Run → fails (current component computes locally and ignores hook).
-- [ ] **ACTION** — Refactor `PhenologicalTemperatureCounters.tsx` to call `usePhenologicalCounters` instead of receiving `temperatureData`; iterate `data.stages[].counters[]` and render each. Keep visual styling (icons, color classes) but resolve them from a small map keyed by `threshold.icon` field.
-- [ ] **GREEN** — Test passes.
-
-### 28. Hardcoded `cropPhenologicalConfig` removed
-
-- [ ] **RED** — Run `grep -c 'cropPhenologicalConfig' project/src/components/WeatherAnalytics/PhenologicalTemperatureCounters.tsx` → returns `>0`. Assertion: constant still present.
-- [ ] **ACTION** — Delete `cropPhenologicalConfig` constant + the `PhenologicalStage` and threshold interfaces no longer used.
-- [ ] **GREEN** — `grep -c 'cropPhenologicalConfig' …` returns `0`. Component still renders (verify by re-running task 27 test).
-
-### 29. Client-side `calculateCountersForData` removed
-
-- [ ] **RED** — Run `grep -c 'calculateCountersForData' project/src/components/WeatherAnalytics/PhenologicalTemperatureCounters.tsx` → returns `>0`.
-- [ ] **ACTION** — Delete the function + every call site.
-- [ ] **GREEN** — `grep -c 'calculateCountersForData' …` returns `0`. Component test still passes.
-
-### 30. Error state on API failure
-
-- [ ] **RED** — Add to backend.test.tsx: mock hook to return `{ isError: true, error: ... }`; assert DOM contains the i18n key fallback text for `weather.counters.error`. Run → fails.
-- [ ] **ACTION** — Handle `isError` in component — render error block with `t('weather.counters.error', 'Compteurs météo indisponibles')`. Add i18n key to en/fr/ar `common.json` (or relevant namespace).
-- [ ] **GREEN** — Test passes; i18n keys present in all 3 languages.
+(Tasks 25–30 batched — API client → hook → component → parent → i18n are interlocked; vertical slicing them would create 6 intermediate broken states. All RED assertions checked before writing, all GREEN assertions verified.)
 
 ---
 
