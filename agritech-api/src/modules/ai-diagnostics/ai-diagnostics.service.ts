@@ -370,6 +370,7 @@ export class AiDiagnosticsService {
       .select('p50_ndvi, p50_ndre, p50_ndmi, baseline_data')
       .eq('parcel_id', parcelId)
       .eq('organization_id', organizationId)
+      .eq('status', 'validated')
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle();
