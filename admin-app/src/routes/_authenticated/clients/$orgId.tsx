@@ -162,6 +162,14 @@ function OrgDetailPage() {
     queryFn: () => apiRequest<Array<{ id: string; slug: string; name: string; category: string | null }>>('/api/v1/admin/modules'),
   });
 
+  // Enabled modules for this org (organization_modules table — source of truth)
+  const { data: enabledModulesResp } = useQuery({
+    queryKey: ['admin-org-modules', orgId],
+    queryFn: () =>
+      apiRequest<{ enabled: string[] }>(`/api/v1/admin/orgs/${orgId}/modules`),
+  });
+  const enabledModuleSlugs = enabledModulesResp?.enabled ?? [];
+
   // Demo data mutations
   const seedMutation = useMutation({
     mutationFn: () =>
@@ -378,17 +386,19 @@ function OrgDetailPage() {
                 <Row label="Limits">
                   {subscription.max_farms} farms / {subscription.max_users} users
                 </Row>
-                {subscription.selected_modules && (
-                  <Row label="Modules">
-                    <div className="flex flex-wrap gap-1">
-                      {(subscription.selected_modules as string[]).map((m: string) => (
+                <Row label={`Modules (${enabledModuleSlugs.length})`}>
+                  {enabledModuleSlugs.length > 0 ? (
+                    <div className="flex flex-wrap gap-1 justify-end">
+                      {enabledModuleSlugs.map((m) => (
                         <span key={m} className="rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-600">
                           {m}
                         </span>
                       ))}
                     </div>
-                  </Row>
-                )}
+                  ) : (
+                    <span className="text-xs text-gray-400">none enabled yet</span>
+                  )}
+                </Row>
                 <p className="pt-2 text-[11px] text-gray-400 border-t border-gray-100 mt-3">
                   Pricing is negotiated per customer. Limits and modules are edited below.
                 </p>
@@ -704,14 +714,20 @@ function HardLimitsCard({
 }) {
   const queryClient = useQueryClient();
 
+  // Source of truth for enabled modules: organization_modules (populated at onboarding)
+  const { data: enabledModulesResp } = useQuery({
+    queryKey: ['admin-org-modules', orgId],
+    queryFn: () =>
+      apiRequest<{ enabled: string[] }>(`/api/v1/admin/orgs/${orgId}/modules`),
+  });
+  const enabledModules = enabledModulesResp?.enabled ?? [];
+
   const defaultValues: LimitsFormData = {
     max_farms: subscription?.max_farms ?? 0,
     max_users: subscription?.max_users ?? 0,
     max_parcels: subscription?.max_parcels ?? 0,
     contracted_hectares: Number(subscription?.contracted_hectares ?? 0),
-    selected_modules: Array.isArray(subscription?.selected_modules)
-      ? (subscription.selected_modules as string[])
-      : [],
+    selected_modules: enabledModules,
   };
 
   const form = useForm<LimitsFormData>({
@@ -719,41 +735,50 @@ function HardLimitsCard({
     defaultValues,
   });
 
-  // Re-sync defaults when subscription row arrives / changes
+  // Re-sync defaults when subscription row / enabled modules arrive
   useEffect(() => {
     form.reset({
       max_farms: subscription?.max_farms ?? 0,
       max_users: subscription?.max_users ?? 0,
       max_parcels: subscription?.max_parcels ?? 0,
       contracted_hectares: Number(subscription?.contracted_hectares ?? 0),
-      selected_modules: Array.isArray(subscription?.selected_modules)
-        ? (subscription.selected_modules as string[])
-        : [],
+      selected_modules: enabledModules,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [subscription?.id]);
+  }, [subscription?.id, enabledModulesResp]);
 
   const mutation = useMutation({
     mutationFn: async (data: LimitsFormData) => {
+      const { selected_modules, ...limits } = data;
+
+      // Limits → subscriptions row
       const url = subscription
         ? `/api/v1/admin/subscriptions/${orgId}`
         : `/api/v1/admin/subscriptions/${orgId}/create`;
       const method = subscription ? 'PUT' : 'POST';
       const body = subscription
-        ? data
+        ? limits
         : {
-            ...data,
+            ...limits,
             formula: 'starter',
             billing_cycle: 'monthly',
             status: 'trialing',
             days: 14,
           };
-      return apiRequest(url, { method, body: JSON.stringify(body) });
+
+      await Promise.all([
+        apiRequest(url, { method, body: JSON.stringify(body) }),
+        apiRequest(`/api/v1/admin/orgs/${orgId}/modules`, {
+          method: 'PUT',
+          body: JSON.stringify({ enabled: selected_modules }),
+        }),
+      ]);
     },
     onSuccess: () => {
       toast.success('Hard limits saved');
       queryClient.invalidateQueries({ queryKey: ['admin-org-subscription', orgId] });
       queryClient.invalidateQueries({ queryKey: ['admin-org-usage', orgId] });
+      queryClient.invalidateQueries({ queryKey: ['admin-org-modules', orgId] });
     },
     onError: (err: Error) => toast.error(err.message || 'Failed to save'),
   });

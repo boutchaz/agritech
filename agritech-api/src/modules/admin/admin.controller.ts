@@ -146,6 +146,25 @@ export class AdminController {
   }
 
   /**
+   * List enabled modules for an org (source: organization_modules).
+   */
+  @Get('orgs/:id/modules')
+  async getOrgEnabledModules(@Param('id') orgId: string) {
+    return { enabled: await this.adminService.getOrgEnabledModules(orgId) };
+  }
+
+  /**
+   * Replace enabled modules for an org.
+   */
+  @Put('orgs/:id/modules')
+  async setOrgEnabledModules(
+    @Param('id') orgId: string,
+    @Body() body: { enabled?: string[] },
+  ) {
+    return this.adminService.setOrgEnabledModules(orgId, body.enabled ?? []);
+  }
+
+  /**
    * Get admin job logs
    */
   @Get('jobs')

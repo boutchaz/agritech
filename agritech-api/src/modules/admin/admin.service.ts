@@ -626,6 +626,98 @@ export class AdminService {
   }
 
   /**
+   * List enabled modules for an organization (source of truth: organization_modules)
+   */
+  async getOrgEnabledModules(orgId: string): Promise<string[]> {
+    const client = this.databaseService.getAdminClient();
+    const { data, error } = await client
+      .from('organization_modules')
+      .select('modules!inner(slug)')
+      .eq('organization_id', orgId)
+      .eq('is_active', true);
+
+    if (error) {
+      throw new InternalServerErrorException(
+        `Failed to load enabled modules: ${error.message}`,
+      );
+    }
+
+    return (data || [])
+      .map((row: any) => row.modules?.slug as string | undefined)
+      .filter((slug): slug is string => !!slug);
+  }
+
+  /**
+   * Replace the set of enabled modules for an organization.
+   * Missing rows are inserted active; extra rows are deactivated.
+   */
+  async setOrgEnabledModules(orgId: string, slugs: string[]): Promise<{ enabled: string[] }> {
+    const client = this.databaseService.getAdminClient();
+    const normalized = Array.from(new Set(slugs.map((s) => s.trim()).filter(Boolean)));
+
+    const { data: catalog, error: catalogError } = await client
+      .from('modules')
+      .select('id, slug');
+    if (catalogError) {
+      throw new InternalServerErrorException(
+        `Failed to load module catalog: ${catalogError.message}`,
+      );
+    }
+
+    const bySlug = new Map<string, string>();
+    for (const row of (catalog || []) as any[]) {
+      if (row.slug) bySlug.set(row.slug, row.id);
+    }
+
+    const rows = normalized
+      .map((slug) => {
+        const moduleId = bySlug.get(slug);
+        if (!moduleId) return null;
+        return {
+          organization_id: orgId,
+          module_id: moduleId,
+          is_active: true,
+        };
+      })
+      .filter((r): r is { organization_id: string; module_id: string; is_active: boolean } => !!r);
+
+    const activeModuleIds = rows.map((r) => r.module_id);
+
+    // Upsert active rows
+    if (rows.length > 0) {
+      const { error: upsertError } = await client
+        .from('organization_modules')
+        .upsert(rows, { onConflict: 'organization_id,module_id' });
+      if (upsertError) {
+        throw new InternalServerErrorException(
+          `Failed to enable modules: ${upsertError.message}`,
+        );
+      }
+    }
+
+    // Deactivate everything else for this org
+    let deactivateQuery = client
+      .from('organization_modules')
+      .update({ is_active: false })
+      .eq('organization_id', orgId);
+    if (activeModuleIds.length > 0) {
+      deactivateQuery = deactivateQuery.not(
+        'module_id',
+        'in',
+        `(${activeModuleIds.map((id) => `"${id}"`).join(',')})`,
+      );
+    }
+    const { error: deactivateError } = await deactivateQuery;
+    if (deactivateError) {
+      throw new InternalServerErrorException(
+        `Failed to deactivate modules: ${deactivateError.message}`,
+      );
+    }
+
+    return { enabled: await this.getOrgEnabledModules(orgId) };
+  }
+
+  /**
    * Get single organization usage details
    */
   async getOrgUsageById(orgId: string): Promise<OrgUsageDto> {

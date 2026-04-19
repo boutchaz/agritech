@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { apiRequest } from '@/lib/api-client';
 import {
   RefreshCw,
   Search,
@@ -297,6 +298,15 @@ function OrgRow({ org, sub, isExpanded, onToggle, onRefresh }: {
   const [extendDays, setExtendDays] = useState(30);
   const [isExtending, setIsExtending] = useState(false);
 
+  // Enabled modules from organization_modules (source of truth, populated at onboarding)
+  const { data: enabledModulesResp } = useQuery({
+    queryKey: ['admin-org-modules', org.id],
+    queryFn: () =>
+      apiRequest<{ enabled: string[] }>(`/api/v1/admin/orgs/${org.id}/modules`),
+    staleTime: 60_000,
+  });
+  const enabledModules = enabledModulesResp?.enabled ?? [];
+
   const handleExtend = async () => {
     setIsExtending(true);
     try {
@@ -363,9 +373,9 @@ function OrgRow({ org, sub, isExpanded, onToggle, onRefresh }: {
               {sub.contracted_hectares} ha
             </span>
           ) : <span className="text-gray-300">—</span>}
-          {Array.isArray(sub?.selected_modules) && sub.selected_modules.length > 0 && (
+          {enabledModules.length > 0 && (
             <div className="mt-0.5 text-[11px] text-gray-500">
-              {sub.selected_modules.length} module{sub.selected_modules.length > 1 ? 's' : ''}
+              {enabledModules.length} module{enabledModules.length > 1 ? 's' : ''}
             </div>
           )}
         </td>
@@ -409,7 +419,7 @@ function OrgRow({ org, sub, isExpanded, onToggle, onRefresh }: {
                     <div className="flex justify-between">
                       <dt className="text-gray-500">Modules</dt>
                       <dd className="text-xs">
-                        {Array.isArray(sub.selected_modules) ? sub.selected_modules.length : 0} selected
+                        {enabledModules.length} enabled
                       </dd>
                     </div>
                     <div className="flex justify-between">
@@ -519,10 +529,131 @@ function OrgRow({ org, sub, isExpanded, onToggle, onRefresh }: {
                 </div>
               </div>
             </div>
+
+            {/* Inline hard-limits editor — set per-customer limits without leaving the list */}
+            <div className="mt-4">
+              <InlineLimitsEditor orgId={org.id} sub={sub} onDone={onRefresh} />
+            </div>
           </td>
         </tr>
       )}
     </>
+  );
+}
+
+function InlineLimitsEditor({ orgId, sub, onDone }: {
+  orgId: string;
+  sub: Subscription | undefined;
+  onDone: () => void;
+}) {
+  const [values, setValues] = useState({
+    max_farms: sub?.max_farms ?? 0,
+    max_users: sub?.max_users ?? 0,
+    max_parcels: 0,
+    contracted_hectares: Number(sub?.contracted_hectares ?? 0),
+  });
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    setValues({
+      max_farms: sub?.max_farms ?? 0,
+      max_users: sub?.max_users ?? 0,
+      max_parcels: (sub as any)?.max_parcels ?? 0,
+      contracted_hectares: Number(sub?.contracted_hectares ?? 0),
+    });
+  }, [sub?.id]);
+
+  const save = async () => {
+    setLoading(true);
+    try {
+      const { apiRequest } = await import('@/lib/api-client');
+      const url = sub
+        ? `/api/v1/admin/subscriptions/${orgId}`
+        : `/api/v1/admin/subscriptions/${orgId}/create`;
+      const method = sub ? 'PUT' : 'POST';
+      const body = sub
+        ? values
+        : {
+            ...values,
+            formula: 'starter',
+            billing_cycle: 'monthly',
+            status: 'trialing',
+            days: 14,
+          };
+      await apiRequest(url, { method, body: JSON.stringify(body) });
+      toast.success('Hard limits saved');
+      onDone();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to save');
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div className="bg-white rounded-lg border border-gray-200 p-4">
+      <h4 className="text-sm font-semibold text-gray-700 mb-3">Hard limits (case-by-case)</h4>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+        <NumField
+          label="Max farms"
+          value={values.max_farms}
+          onChange={(v) => setValues((s) => ({ ...s, max_farms: v }))}
+        />
+        <NumField
+          label="Max users"
+          value={values.max_users}
+          onChange={(v) => setValues((s) => ({ ...s, max_users: v }))}
+        />
+        <NumField
+          label="Max parcels"
+          value={values.max_parcels}
+          onChange={(v) => setValues((s) => ({ ...s, max_parcels: v }))}
+        />
+        <NumField
+          label="Contracted ha"
+          value={values.contracted_hectares}
+          onChange={(v) => setValues((s) => ({ ...s, contracted_hectares: v }))}
+          step="0.01"
+        />
+        <div className="flex items-end">
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); save(); }}
+            disabled={loading}
+            className="w-full inline-flex items-center justify-center gap-1.5 rounded-md bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
+          >
+            {loading ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : null}
+            Save
+          </button>
+        </div>
+      </div>
+      {!sub && (
+        <p className="mt-2 text-[11px] text-gray-500">
+          No subscription yet — saving creates one (14-day trial) with these limits.
+        </p>
+      )}
+    </div>
+  );
+}
+
+function NumField({ label, value, onChange, step }: {
+  label: string;
+  value: number;
+  onChange: (v: number) => void;
+  step?: string;
+}) {
+  return (
+    <div>
+      <label className="block text-xs text-gray-500 mb-1">{label}</label>
+      <input
+        type="number"
+        min={0}
+        step={step ?? '1'}
+        value={Number.isFinite(value) ? value : 0}
+        onChange={(e) => onChange(Number(e.target.value) || 0)}
+        onClick={(e) => e.stopPropagation()}
+        className="w-full rounded-md border border-gray-300 px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+      />
+    </div>
   );
 }
 
