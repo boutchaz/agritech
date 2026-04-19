@@ -15,6 +15,12 @@ import {
 @Injectable()
 export class OrganizationAISettingsService {
   private readonly logger = new Logger(OrganizationAISettingsService.name);
+  private readonly providerPriority: AIProviderType[] = [
+    AIProviderType.GROQ,
+    AIProviderType.OPENAI,
+    AIProviderType.GEMINI,
+    AIProviderType.ZAI,
+  ];
 
   constructor(
     private readonly databaseService: DatabaseService,
@@ -202,6 +208,49 @@ export class OrganizationAISettingsService {
       this.logger.error(`Failed to decrypt API key for ${provider}`);
       return null;
     }
+  }
+
+  async getEnabledProvider(
+    organizationId: string,
+  ): Promise<{ provider: AIProviderType; apiKey: string } | null> {
+    const supabase = this.databaseService.getAdminClient();
+
+    const { data, error } = await supabase
+      .from('organization_ai_settings')
+      .select('provider, encrypted_api_key, enabled')
+      .eq('organization_id', organizationId)
+      .eq('enabled', true);
+
+    if (error) {
+      this.logger.error(`Failed to fetch enabled AI provider: ${error.message}`);
+      throw new BadRequestException('Failed to fetch AI provider settings');
+    }
+
+    if (!data?.length) {
+      return null;
+    }
+
+    const settingsByProvider = new Map(
+      data.map((setting) => [setting.provider as AIProviderType, setting]),
+    );
+
+    for (const provider of this.providerPriority) {
+      const setting = settingsByProvider.get(provider);
+      if (!setting?.encrypted_api_key) {
+        continue;
+      }
+
+      try {
+        const apiKey = this.encryptionService.decrypt(setting.encrypted_api_key);
+        if (apiKey) {
+          return { provider, apiKey };
+        }
+      } catch {
+        this.logger.error(`Failed to decrypt API key for ${provider}`);
+      }
+    }
+
+    return null;
   }
 
   /**

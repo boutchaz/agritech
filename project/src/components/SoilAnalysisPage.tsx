@@ -1,6 +1,7 @@
 import {  useState, useEffect, useMemo  } from "react";
 import { Plus, FileText, Trash2, Loader2, Grid, List, MapPin } from 'lucide-react';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 import SoilAnalysisForm from './SoilAnalysisForm';
 import CSVBulkUpload from './SoilAnalysis/CSVBulkUpload';
 import { useSoilAnalyses } from '../hooks/useSoilAnalyses';
@@ -22,6 +23,7 @@ interface Parcel {
 
 const SoilAnalysisPage = () => {
   const { currentFarm } = useAuth();
+  const { t } = useTranslation();
   const [showForm, setShowForm] = useState(false);
   const [viewMode, setViewMode] = useState<'card' | 'list'>('card');
   const [currentPage, setCurrentPage] = useState(1);
@@ -30,7 +32,7 @@ const SoilAnalysisPage = () => {
   const [parcels, setParcels] = useState<Parcel[]>([]);
   const [loadingParcels, setLoadingParcels] = useState(true);
 
-  const { analyses, loading, error, addAnalysis, deleteAnalysis } = useSoilAnalyses(currentFarm?.id || null);
+  const { analyses, loading, error, addAnalysis, deleteAnalysis } = useSoilAnalyses(currentFarm?.id ?? '');
 
   // Filter analyses by selected parcel if one is selected
   const filteredAnalyses = useMemo(() => {
@@ -75,7 +77,7 @@ const SoilAnalysisPage = () => {
 
   const handleSave = async (data: SoilAnalysis) => {
     if (!selectedParcelId) {
-      toast.error('Veuillez sélectionner une parcelle avant d\'ajouter une analyse de sol.');
+      toast.error(t('soilAnalysisPage.selectParcelFirst', 'Please select a parcel before adding a soil analysis.'));
       return;
     }
 
@@ -84,7 +86,7 @@ const SoilAnalysisPage = () => {
       setShowForm(false);
     } catch (err) {
       console.error('Error saving soil analysis:', err);
-      toast.error('Erreur lors de l\'enregistrement de l\'analyse de sol.');
+      toast.error(t('soilAnalysisPage.saveError', 'Failed to save soil analysis.'));
     }
   };
 
@@ -136,13 +138,13 @@ const SoilAnalysisPage = () => {
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
           <div className="flex items-center space-x-2 text-gray-700 dark:text-gray-300">
             <MapPin className="h-4 w-4 sm:h-5 sm:w-5" />
-            <span className="font-medium text-sm sm:text-base">Parcelle :</span>
+            <span className="font-medium text-sm sm:text-base">{t('soilAnalysisPage.parcelLabel', 'Parcel')}:</span>
           </div>
           <div className="flex-1 w-full sm:w-auto">
             {loadingParcels ? (
               <div className="flex items-center space-x-2">
                 <Loader2 className="h-4 w-4 animate-spin" />
-                <span className="text-gray-500 text-sm">Chargement des parcelles...</span>
+                <span className="text-gray-500 text-sm">{t('soilAnalysisPage.loadingParcels', 'Loading parcels...')}</span>
               </div>
             ) : (
               <Select
@@ -150,7 +152,7 @@ const SoilAnalysisPage = () => {
                 onChange={(e) => setSelectedParcelId((e.target as HTMLSelectElement).value || null)}
                 className="w-full sm:max-w-md text-sm"
               >
-                <option value="">Toutes les parcelles</option>
+                <option value="">{t('soilAnalysisPage.allParcels', 'All parcels')}</option>
                 {parcels.map(parcel => (
                   <option key={parcel.id} value={parcel.id}>
                     {parcel.name} {parcel.area && `(${parcel.area} ${parcel.area_unit})`}
@@ -161,7 +163,7 @@ const SoilAnalysisPage = () => {
           </div>
           {selectedParcelId && (
             <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 w-full sm:w-auto">
-              {filteredAnalyses.length} analyse(s) pour cette parcelle
+              {t('soilAnalysisPage.analysesCount', '{{count}} analysis(es) for this parcel', { count: filteredAnalyses.length })}
             </div>
           )}
         </div>
@@ -169,21 +171,21 @@ const SoilAnalysisPage = () => {
 
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
         <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
-          Analyses de Sol
+          {t('soilAnalysisPage.title', 'Soil analyses')}
         </h2>
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4 w-full sm:w-auto">
           <div className="flex items-center space-x-2 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
             <Button
               onClick={() => setViewMode('card')}
               className={`p-2 rounded ${viewMode === 'card' ? 'bg-white dark:bg-gray-700 shadow-sm' : ''}`}
-              title="Vue carte"
+              title={t('soilAnalysisPage.cardViewTitle', 'Card view')}
             >
               <Grid className="h-4 w-4 text-gray-600 dark:text-gray-400" />
             </Button>
             <Button
               onClick={() => setViewMode('list')}
               className={`p-2 rounded ${viewMode === 'list' ? 'bg-white dark:bg-gray-700 shadow-sm' : ''}`}
-              title="Vue liste"
+              title={t('soilAnalysisPage.listViewTitle', 'List view')}
             >
               <List className="h-4 w-4 text-gray-600 dark:text-gray-400" />
             </Button>
@@ -193,10 +195,10 @@ const SoilAnalysisPage = () => {
             onClick={() => setShowForm(true)}
             disabled={!selectedParcelId}
             className="px-3 sm:px-4 py-2 rounded-md flex items-center justify-center space-x-2 disabled:cursor-not-allowed text-sm"
-            title={!selectedParcelId ? 'Sélectionnez une parcelle pour ajouter une analyse' : 'Ajouter une nouvelle analyse'}
+            title={!selectedParcelId ? t('soilAnalysisPage.addAnalysisDisabledTitle', 'Select a parcel to add an analysis') : t('soilAnalysisPage.addAnalysisTitle', 'Add a new analysis')}
           >
             <Plus className="h-4 w-4 sm:h-5 sm:w-5" />
-            <span>Nouvelle Analyse</span>
+            <span>{t('soilAnalysisPage.addAnalysis', 'New analysis')}</span>
           </Button>
         </div>
       </div>
@@ -205,10 +207,10 @@ const SoilAnalysisPage = () => {
         <div className="text-center py-12">
           <FileText className="h-10 w-10 sm:h-12 sm:w-12 text-gray-400 mx-auto mb-4" />
           <h3 className="text-base sm:text-lg font-medium text-gray-900 dark:text-white mb-2">
-            Aucune analyse enregistrée
+            {t('soilAnalysisPage.noAnalysesTitle', 'No analyses recorded')}
           </h3>
           <p className="text-sm sm:text-base text-gray-500 dark:text-gray-400">
-            Commencez par ajouter une nouvelle analyse de sol
+            {t('soilAnalysisPage.noAnalysesSubtitle', 'Start by adding a new soil analysis')}
           </p>
         </div>
       ) : (
@@ -223,17 +225,17 @@ const SoilAnalysisPage = () => {
               <div className="flex items-center justify-between mb-3 sm:mb-4">
                 <div className="flex-1 min-w-0">
                   <h3 className="font-semibold text-gray-900 dark:text-white text-sm sm:text-base truncate">
-                    Analyse du {new Date(analysis.analysis_date).toLocaleDateString()}
+                    {t('soilAnalysisPage.analysisDate', 'Analysis for {{date}}', { date: new Date(analysis.analysis_date).toLocaleDateString() })}
                   </h3>
                   <div className="space-y-1 mt-1">
                     {!selectedParcelId && (
                       <div className="flex items-center space-x-1 text-xs sm:text-sm text-blue-600 dark:text-blue-400">
                         <MapPin className="h-3 w-3 flex-shrink-0" />
-                        <span className="truncate">{parcels.find(p => p.id === analysis.parcel_id)?.name || 'Parcelle inconnue'}</span>
+                        <span className="truncate">{parcels.find(p => p.id === analysis.parcel_id)?.name || t('soilAnalysisPage.unknownParcel', 'Unknown parcel')}</span>
                       </div>
                     )}
                     <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
-                      {analysis.physical?.texture || 'N/A'}
+                      {analysis.physical?.texture || t('soilAnalysisPage.na', 'N/A')}
                     </p>
                   </div>
                 </div>
@@ -248,19 +250,19 @@ const SoilAnalysisPage = () => {
               <div className="space-y-4">
                 <div>
                   <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
-                    Propriétés Physiques
+                    {t('soilAnalysisPage.physicalProperties', 'Physical properties')}
                   </h4>
                   <div className="space-y-1">
                     <div className="flex justify-between">
-                      <span>Texture</span>
+                      <span>{t('soilAnalysisPage.texture', 'Texture')}</span>
                       <span>{analysis.physical.texture}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span>pH</span>
+                      <span>{t('soilAnalysisPage.ph', 'pH')}</span>
                       <span>{analysis.physical.ph}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span>Humidité</span>
+                      <span>{t('soilAnalysisPage.moisture', 'Moisture')}</span>
                       <span>{analysis.physical.moisture}%</span>
                     </div>
                   </div>
@@ -268,20 +270,20 @@ const SoilAnalysisPage = () => {
 
                 <div>
                   <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
-                    Propriétés Chimiques
+                    {t('soilAnalysisPage.chemicalProperties', 'Chemical properties')}
                   </h4>
                   <div className="space-y-1">
                     <div className="flex justify-between">
-                      <span>Phosphore</span>
+                      <span>{t('soilAnalysisPage.phosphorus', 'Phosphorus')}</span>
                       <span>{analysis.chemical.phosphorus} mg/kg P2O5</span>
                     </div>
                     <div className="flex justify-between">
-                      <span>Potassium</span>
+                      <span>{t('soilAnalysisPage.potassium', 'Potassium')}</span>
                       <span>{analysis.chemical.potassium} mg/kg K2O</span>
                     </div>
                     {analysis.chemical.nitrogen > 0 && (
                       <div className="flex justify-between">
-                        <span>Azote</span>
+                        <span>{t('soilAnalysisPage.nitrogen', 'Nitrogen')}</span>
                         <span>{analysis.chemical.nitrogen} g/kg N</span>
                       </div>
                     )}
@@ -290,15 +292,15 @@ const SoilAnalysisPage = () => {
 
                 <div>
                   <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
-                    Propriétés Biologiques
+                    {t('soilAnalysisPage.biologicalProperties', 'Biological properties')}
                   </h4>
                   <div className="space-y-1">
                     <div className="flex justify-between">
-                      <span>Activité microbienne</span>
+                      <span>{t('soilAnalysisPage.microbialActivity', 'Microbial activity')}</span>
                       <span>{analysis.biological.microbial_activity}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span>Vers de terre</span>
+                      <span>{t('soilAnalysisPage.earthworms', 'Earthworms')}</span>
                       <span>{analysis.biological.earthworm_count}/m²</span>
                     </div>
                   </div>
@@ -307,7 +309,7 @@ const SoilAnalysisPage = () => {
                 {analysis.notes && (
                   <div>
                     <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
-                      Notes
+                      {t('soilAnalysisPage.notes', 'Notes')}
                     </h4>
                     <p className="text-sm text-gray-600 dark:text-gray-300">
                       {analysis.notes}
@@ -330,17 +332,17 @@ const SoilAnalysisPage = () => {
                       <div className="flex items-center justify-between mb-4">
                         <div>
                           <h3 className="font-semibold text-gray-900 dark:text-white">
-                            Analyse du {new Date(analysis.analysis_date).toLocaleDateString()}
+                            {t('soilAnalysisPage.analysisDate', 'Analysis for {{date}}', { date: new Date(analysis.analysis_date).toLocaleDateString() })}
                           </h3>
                           <div className="space-y-1">
                             {!selectedParcelId && (
                               <div className="flex items-center space-x-1 text-sm text-blue-600 dark:text-blue-400">
                                 <MapPin className="h-3 w-3" />
-                                <span>{parcels.find(p => p.id === analysis.parcel_id)?.name || 'Parcelle inconnue'}</span>
+                                <span>{parcels.find(p => p.id === analysis.parcel_id)?.name || t('soilAnalysisPage.unknownParcel', 'Unknown parcel')}</span>
                               </div>
                             )}
                             <p className="text-sm text-gray-500 dark:text-gray-400">
-                              Texture: {analysis.physical?.texture || 'N/A'}
+                              {t('soilAnalysisPage.texturePrefix', 'Texture')}: {analysis.physical?.texture || t('soilAnalysisPage.na', 'N/A')}
                             </p>
                           </div>
                         </div>
@@ -355,19 +357,19 @@ const SoilAnalysisPage = () => {
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div>
                           <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
-                            Propriétés Physiques
+                            {t('soilAnalysisPage.physicalProperties', 'Physical properties')}
                           </h4>
                           <div className="space-y-1 text-sm">
                             <div className="flex justify-between">
-                              <span className="text-gray-600 dark:text-gray-400">Texture</span>
+                              <span className="text-gray-600 dark:text-gray-400">{t('soilAnalysisPage.texture', 'Texture')}</span>
                               <span className="font-medium">{analysis.physical.texture}</span>
                             </div>
                             <div className="flex justify-between">
-                              <span className="text-gray-600 dark:text-gray-400">pH</span>
+                              <span className="text-gray-600 dark:text-gray-400">{t('soilAnalysisPage.ph', 'pH')}</span>
                               <span className="font-medium">{analysis.physical.ph}</span>
                             </div>
                             <div className="flex justify-between">
-                              <span className="text-gray-600 dark:text-gray-400">Humidité</span>
+                              <span className="text-gray-600 dark:text-gray-400">{t('soilAnalysisPage.moisture', 'Moisture')}</span>
                               <span className="font-medium">{analysis.physical.moisture}%</span>
                             </div>
                           </div>
@@ -375,20 +377,20 @@ const SoilAnalysisPage = () => {
 
                         <div>
                           <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
-                            Propriétés Chimiques
+                            {t('soilAnalysisPage.chemicalProperties', 'Chemical properties')}
                           </h4>
                           <div className="space-y-1 text-sm">
                             <div className="flex justify-between">
-                              <span className="text-gray-600 dark:text-gray-400">Phosphore</span>
+                              <span className="text-gray-600 dark:text-gray-400">{t('soilAnalysisPage.phosphorus', 'Phosphorus')}</span>
                               <span className="font-medium">{analysis.chemical.phosphorus} mg/kg</span>
                             </div>
                             <div className="flex justify-between">
-                              <span className="text-gray-600 dark:text-gray-400">Potassium</span>
+                              <span className="text-gray-600 dark:text-gray-400">{t('soilAnalysisPage.potassium', 'Potassium')}</span>
                               <span className="font-medium">{analysis.chemical.potassium} mg/kg</span>
                             </div>
                             {analysis.chemical.nitrogen > 0 && (
                               <div className="flex justify-between">
-                                <span className="text-gray-600 dark:text-gray-400">Azote</span>
+                                <span className="text-gray-600 dark:text-gray-400">{t('soilAnalysisPage.nitrogen', 'Nitrogen')}</span>
                                 <span className="font-medium">{analysis.chemical.nitrogen} g/kg</span>
                               </div>
                             )}
@@ -397,15 +399,15 @@ const SoilAnalysisPage = () => {
 
                         <div>
                           <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
-                            Propriétés Biologiques
+                            {t('soilAnalysisPage.biologicalProperties', 'Biological properties')}
                           </h4>
                           <div className="space-y-1 text-sm">
                             <div className="flex justify-between">
-                              <span className="text-gray-600 dark:text-gray-400">Activité microbienne</span>
+                              <span className="text-gray-600 dark:text-gray-400">{t('soilAnalysisPage.microbialActivity', 'Microbial activity')}</span>
                               <span className="font-medium">{analysis.biological.microbial_activity}</span>
                             </div>
                             <div className="flex justify-between">
-                              <span className="text-gray-600 dark:text-gray-400">Vers de terre</span>
+                              <span className="text-gray-600 dark:text-gray-400">{t('soilAnalysisPage.earthworms', 'Earthworms')}</span>
                               <span className="font-medium">{analysis.biological.earthworm_count}/m²</span>
                             </div>
                           </div>
@@ -414,7 +416,7 @@ const SoilAnalysisPage = () => {
 
                       {analysis.notes && (
                         <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                          <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Notes</h4>
+                            <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">{t('soilAnalysisPage.notes', 'Notes')}</h4>
                           <p className="text-sm text-gray-600 dark:text-gray-300">{analysis.notes}</p>
                         </div>
                       )}

@@ -45,6 +45,51 @@ import {
 } from '../calibration/calibration-jsonb.schemas';
 import { AgronomyRagService } from '../agronomy-rag/agronomy-rag.service';
 import type { RetrievedChunk } from '../agronomy-rag/agronomy-rag.schemas';
+import { z } from 'zod';
+import type { PhenologyAiEnrichment } from '../calibration/dto/calibration-review.dto';
+
+const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+const PhenologyAiConfidenceSchema = z.enum(['ELEVEE', 'MODEREE', 'FAIBLE', 'TRES_FAIBLE']);
+
+const ImputedStageSchema = z.object({
+  stage: z.string().min(1),
+  date: z.union([z.string().regex(ISO_DATE_RE, 'date must be YYYY-MM-DD'), z.null()]),
+  confidence: PhenologyAiConfidenceSchema,
+  method: z.string().min(1),
+  rationale: z.string().min(1),
+});
+
+const PhaseNarrativeSchema = z.object({
+  phase: z.string().min(1),
+  year: z.number().int().nullable(),
+  summary: z.string().min(1),
+  referential_deviation_days: z.number().nullable(),
+});
+
+const PhenologyAiEnrichmentResponseSchema = z.object({
+  version: z.string().default('v1'),
+  degradation_reasons: z.array(z.string()).default([]),
+  imputed_stages: z.array(ImputedStageSchema).default([]),
+  phase_narratives: z.array(PhaseNarrativeSchema).default([]),
+  recommendations: z.array(z.string()).default([]),
+  summary: z.string().nullable().default(null),
+});
+
+/**
+ * Collapse multi-line LLM output to at most 2 lines and ~220 chars, targeting
+ * a small-farm-owner audience (Ahmed persona). Safety net — the prompt is the
+ * first line of defence, but providers drift.
+ */
+function clampTwoLines(raw: string): string {
+  const cleaned = raw
+    .replace(/\r\n?/g, '\n')
+    .replace(/[•·*]\s+/g, '') // strip bullet markers the model may inject
+    .trim();
+  const lines = cleaned.split('\n').map((l) => l.trim()).filter(Boolean);
+  const joined = lines.slice(0, 2).join(' ');
+  return joined.length > 220 ? `${joined.slice(0, 217).trimEnd()}…` : joined;
+}
 
 @Injectable()
 export class AIReportsService {
@@ -498,6 +543,183 @@ export class AIReportsService {
       this.logger.warn(`Failed to generate calibration summary: ${error.message}`);
       return null;
     }
+  }
+
+  /**
+   * Generate structured AI enrichment for step4 phenology output.
+   *
+   * Never overwrites deterministic fields — the returned object is meant to be
+   * attached at `phenology_dashboard.ai_enrichment`. Fails silently → null so
+   * that a provider/quota outage never blocks the calibration review screen.
+   *
+   * Counts against the 'calibration' AI quota.
+   */
+  async generatePhenologyEnrichment(
+    organizationId: string,
+    userId: string,
+    context: unknown,
+  ): Promise<PhenologyAiEnrichment | null> {
+    try {
+      const quotaResult = await this.aiQuotaService.checkQuota(organizationId);
+      if (!quotaResult.allowed) {
+        this.logger.warn(`Phenology enrichment skipped — quota exceeded for org ${organizationId}`);
+        return null;
+      }
+
+      const { provider: providerType, model } = await this.resolveProvider(organizationId);
+      const provider = this.providers.get(providerType);
+      if (!provider) return null;
+
+      const providerTypeForSettings = providerType as unknown as AIProviderType;
+      const apiKey = await this.aiSettingsService.getDecryptedApiKey(
+        organizationId,
+        providerTypeForSettings,
+      );
+      const envKeyMap: Record<string, string | undefined> = {
+        [AIProvider.OPENAI]: this.configService.get<string>('OPENAI_API_KEY'),
+        [AIProvider.GEMINI]: this.configService.get<string>('GOOGLE_AI_API_KEY'),
+        [AIProvider.GROQ]: this.configService.get<string>('GROQ_API_KEY'),
+        [AIProvider.ZAI]: this.configService.get<string>('ZAI_API_KEY'),
+      };
+      const effectiveApiKey = apiKey || envKeyMap[providerType];
+      if (!effectiveApiKey) {
+        this.logger.warn(`No API key available for ${providerType} — phenology enrichment skipped`);
+        return null;
+      }
+      provider.setApiKey(effectiveApiKey);
+
+      const systemPrompt = `Tu écris pour un petit agriculteur marocain sans formation technique (profil Ahmed : parle darija, zéro jargon).
+Tu reçois la sortie du calibrage phénologique (step4) + une coupe du référentiel de la culture. Tu produis un enrichissement qui EXPLIQUE simplement, sans rien contredire.
+
+Règles du calibrage à respecter (ne jamais contredire) :
+1. Les dates de "mean_dates", "yearly_stages" et les transitions de "phase_timeline" sont la vérité — tu ne les modifies jamais.
+2. Ordre obligatoire des stades : dormancy_exit → plateau_start → peak → decline_start → dormancy_entry.
+3. Pour chaque stade dans "missing_stages" (date null), tu peux proposer une date estimée à partir du "phase_timeline" et des mois/GDD du référentiel. Cette date est une estimation, pas une vérité — confiance = FAIBLE ou TRES_FAIBLE.
+4. Ne suggère jamais une date qui casse l'ordre ni qui sort de la fenêtre du référentiel.
+5. "status: degraded" signifie que le moteur manque de cycles ou de stades — tu l'expliques, tu ne le contestes pas.
+
+Règles d'écriture (TRÈS IMPORTANT) :
+- Langue : français simple, court, concret. Zéro jargon : pas de "GDD", "BBCH", "percentiles", "phénologie", "inter-annuelle". Dis plutôt "chaleur cumulée", "sortie des feuilles", "fleurs", "récolte", "année passée".
+- Chaque phrase : MAXIMUM 2 lignes (≈ 200 caractères). Une idée par phrase.
+- Parle comme à un voisin agriculteur : "Ta parcelle…", "On n'a qu'une seule saison de données, donc…", "Note la date à laquelle tu vois les premières fleurs l'an prochain."
+- Pas de listes dans une phrase, pas de tirets, pas de markdown.
+
+Champs :
+- degradation_reasons : 1 à 3 phrases, chacune ≤ 2 lignes, explique POURQUOI le résultat est fragile, en termes simples.
+- imputed_stages : uniquement pour les stades de "missing_stages". method = mot court en français simple ("estimé d'après le référentiel", "estimé par symétrie avec le pic", "estimé par l'année passée"). rationale = 1 phrase ≤ 2 lignes.
+- phase_narratives : 1 phrase par phase observée, ≤ 2 lignes, dit ce que ça veut dire pour l'agriculteur (ex : "La floraison est arrivée plus tard que d'habitude — garde un œil sur l'irrigation.").
+- recommendations : 2 à 4 actions concrètes, ≤ 2 lignes chacune, à la 2e personne ("Note sur papier…", "Vérifie…").
+- summary : 1 à 2 phrases courtes, résume la situation et l'action la plus importante.
+
+Réponds STRICTEMENT en JSON valide respectant le schéma — aucun texte hors JSON.`;
+
+      const schemaHint = `{
+  "version": "v1",
+  "degradation_reasons": ["phrase courte ≤ 2 lignes"],
+  "imputed_stages": [
+    { "stage": "decline_start", "date": "YYYY-MM-DD ou null si impossible", "confidence": "FAIBLE|TRES_FAIBLE", "method": "mot simple français", "rationale": "1 phrase ≤ 2 lignes" }
+  ],
+  "phase_narratives": [
+    { "phase": "FLORAISON", "year": 2026, "summary": "1 phrase ≤ 2 lignes, vocabulaire agriculteur", "referential_deviation_days": -3 }
+  ],
+  "recommendations": ["action concrète ≤ 2 lignes"],
+  "summary": "1 à 2 phrases, langage simple"
+}`;
+
+      const userPrompt = `Contexte step4 + référentiel :
+\`\`\`json
+${JSON.stringify(context, null, 2)}
+\`\`\`
+
+Schéma de sortie attendu :
+\`\`\`json
+${schemaHint}
+\`\`\`
+
+Produis le JSON d'enrichissement.`;
+
+      const response = await provider.generate({
+        systemPrompt,
+        userPrompt,
+        config: {
+          provider: providerType,
+          model,
+          temperature: 0.2,
+          maxTokens: 2048,
+        },
+      });
+
+      this.aiQuotaService.consumeOne(organizationId).catch(() => {});
+      this.aiQuotaService.logUsage(
+        organizationId,
+        userId,
+        'calibration',
+        providerType,
+        response.model,
+        response.tokensUsed,
+        quotaResult.isByok,
+      ).catch(() => {});
+
+      const parsed = this.parsePhenologyEnrichmentResponse(response.content);
+      if (!parsed) {
+        this.logger.warn(`Phenology enrichment response failed schema validation for org ${organizationId}`);
+        return null;
+      }
+
+      const enrichment: PhenologyAiEnrichment = {
+        version: parsed.version,
+        degradation_reasons: parsed.degradation_reasons.map(clampTwoLines),
+        imputed_stages: parsed.imputed_stages.map((s) => ({
+          stage: s.stage,
+          date: s.date ?? null,
+          confidence: s.confidence,
+          method: clampTwoLines(s.method),
+          rationale: clampTwoLines(s.rationale),
+        })),
+        phase_narratives: parsed.phase_narratives.map((p) => ({
+          phase: p.phase,
+          year: p.year,
+          summary: clampTwoLines(p.summary),
+          referential_deviation_days: p.referential_deviation_days,
+        })),
+        recommendations: parsed.recommendations.map(clampTwoLines),
+        summary: parsed.summary ? clampTwoLines(parsed.summary) : null,
+        provider: providerType,
+        model: response.model,
+        generated_at: new Date().toISOString(),
+      };
+      return enrichment;
+    } catch (error) {
+      if (error instanceof BadRequestException) throw error;
+      this.logger.warn(`Failed to generate phenology enrichment: ${(error as Error).message}`);
+      return null;
+    }
+  }
+
+  private parsePhenologyEnrichmentResponse(raw: string):
+    | z.infer<typeof PhenologyAiEnrichmentResponseSchema>
+    | null {
+    if (!raw) return null;
+    let json: unknown;
+    try {
+      json = JSON.parse(raw);
+    } catch {
+      // Some providers wrap JSON in ```json fences even in json_object mode.
+      const fenced = /```(?:json)?\s*([\s\S]+?)```/i.exec(raw);
+      if (!fenced) return null;
+      try {
+        json = JSON.parse(fenced[1]);
+      } catch {
+        return null;
+      }
+    }
+
+    const result = PhenologyAiEnrichmentResponseSchema.safeParse(json);
+    if (!result.success) {
+      this.logger.debug(`Enrichment schema errors: ${result.error.message}`);
+      return null;
+    }
+    return result.data;
   }
 
   /**

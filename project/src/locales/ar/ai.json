@@ -330,6 +330,18 @@
       "notes": "ملاحظات",
       "excludedCycles": "الدورات المستبعدة"
     },
+    "phenology": {
+      "aiEnrichment": {
+        "title": "شرح مبسّط",
+        "fragileStatus": "نتيجة تحتاج حذر",
+        "degradationReasons": "لماذا يجب الحذر",
+        "imputedStages": "تواريخ تقديرية",
+        "missing": "للتأكد",
+        "phaseNarratives": "ما معنى ذلك",
+        "recommendations": "ما العمل الآن",
+        "disclaimer": "ملخّص بمساعدة الذكاء الاصطناعي — تأكد دائمًا في الحقل."
+      }
+    },
     "spectral": {
       "title": "العتبات الطيفية",
       "noData": "لا تتوفر بيانات طيفية",

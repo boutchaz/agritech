@@ -23,17 +23,17 @@ export type AiIndexStatus = 'high' | 'normal' | 'low';
 
 export interface AiDiagnosticsIndicators {
   reading_date: string;
-  baseline_ndvi: number;
+  p50_ndvi: number;
   current_ndvi: number;
   ndvi_delta: number;
   ndvi_band: AiNdviBand;
   ndvi_trend: AiTrendClassification;
-  baseline_ndre: number | null;
+  p50_ndre: number | null;
   current_ndre: number | null;
   ndre_delta: number | null;
   ndre_status: AiIndexStatus;
   ndre_trend: AiTrendClassification;
-  baseline_ndmi: number | null;
+  p50_ndmi: number | null;
   current_ndmi: number | null;
   ndmi_delta: number | null;
   ndmi_trend: AiTrendClassification;
@@ -73,10 +73,10 @@ export interface AiTrendsResponse {
 }
 
 interface CalibrationRow {
-  baseline_ndvi: number | string | null;
-  baseline_ndre: number | string | null;
-  baseline_ndmi: number | string | null;
-  calibration_data: unknown;
+  p50_ndvi: number | string | null;
+  p50_ndre: number | string | null;
+  p50_ndmi: number | string | null;
+  baseline_data: unknown;
 }
 
 interface AiParcelContext {
@@ -164,12 +164,12 @@ export class AiDiagnosticsService {
     const currentReading = satelliteReadings[satelliteReadings.length - 1];
     const firstReading = satelliteReadings[0];
     const thresholds = this.extractThresholds(
-      calibration?.calibration_data ?? null,
-      (calibration ? this.toNumber(calibration.baseline_ndvi) : null) ?? firstReading.ndvi,
+      calibration?.baseline_data ?? null,
+      (calibration ? this.toNumber(calibration.p50_ndvi) : null) ?? firstReading.ndvi,
     );
-    const baselineNdvi = (calibration ? this.toNumber(calibration.baseline_ndvi) : null) ?? firstReading.ndvi;
-    const baselineNdre = calibration ? this.toNumber(calibration.baseline_ndre) : (firstReading.ndre ?? null);
-    const baselineNdmi = calibration ? this.toNumber(calibration.baseline_ndmi) : (firstReading.ndmi ?? null);
+    const baselineNdvi = (calibration ? this.toNumber(calibration.p50_ndvi) : null) ?? firstReading.ndvi;
+    const baselineNdre = calibration ? this.toNumber(calibration.p50_ndre) : (firstReading.ndre ?? null);
+    const baselineNdmi = calibration ? this.toNumber(calibration.p50_ndmi) : (firstReading.ndmi ?? null);
     const ndviRegression = this.calculateRegression(satelliteReadings.map((reading) => reading.ndvi));
     const ndreRegression = this.calculateRegression(
       satelliteReadings
@@ -235,17 +235,17 @@ export class AiDiagnosticsService {
       description: scenario.description,
       indicators: {
         reading_date: currentReading.date,
-        baseline_ndvi: this.round(baselineNdvi),
+        p50_ndvi: this.round(baselineNdvi),
         current_ndvi: this.round(currentReading.ndvi),
         ndvi_delta: ndviDelta,
         ndvi_band: ndviBand,
         ndvi_trend: ndviTrend,
-        baseline_ndre: baselineNdre === null ? null : this.round(baselineNdre),
+        p50_ndre: baselineNdre === null ? null : this.round(baselineNdre),
         current_ndre: currentNdre === null ? null : this.round(currentNdre),
         ndre_delta: ndreDelta,
         ndre_status: ndreStatus,
         ndre_trend: ndreTrend,
-        baseline_ndmi: baselineNdmi === null ? null : this.round(baselineNdmi),
+        p50_ndmi: baselineNdmi === null ? null : this.round(baselineNdmi),
         current_ndmi: currentNdmi === null ? null : this.round(currentNdmi),
         ndmi_delta: ndmiDelta,
         ndmi_trend: ndmiTrend,
@@ -367,7 +367,7 @@ export class AiDiagnosticsService {
     const supabase = this.databaseService.getAdminClient();
     const { data, error } = await supabase
       .from('calibrations')
-      .select('baseline_ndvi, baseline_ndre, baseline_ndmi, calibration_data')
+      .select('p50_ndvi, p50_ndre, p50_ndmi, baseline_data')
       .eq('parcel_id', parcelId)
       .eq('organization_id', organizationId)
       .order('created_at', { ascending: false })

@@ -10,7 +10,7 @@ The single source of truth used by both:
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
 from app.services.calibration.referential_utils import (
@@ -100,12 +100,14 @@ async def compute_phenological_counters(
     hourly_rows: List[Dict[str, Any]] = []
     if not full_cache_hit:
         ws = WeatherService()
-        # One global fetch over the full union window — let count_hours filter by months
+        # One global fetch over the full union window — let count_hours filter by months.
+        # Clamp end_date to yesterday — Open-Meteo Archive rejects future dates.
+        archive_end = min(date(year, 12, 31), date.today() - timedelta(days=1))
         hourly_rows = await ws.fetch_hourly_temperature(
             latitude=latitude,
             longitude=longitude,
             start_date=f"{year - 1}-11-01",
-            end_date=f"{year}-12-31",
+            end_date=archive_end.isoformat(),
         )
 
     persisted: List[Dict[str, Any]] = []

@@ -742,6 +742,142 @@ class SupabaseService:
 
         return True
 
+    # ------------------------------------------------------------------ #
+    # Threshold cache (weather_threshold_cache) — phenological counters  #
+    # ------------------------------------------------------------------ #
+
+    async def get_cached_threshold_counts(
+        self,
+        latitude: float,
+        longitude: float,
+        year: int,
+        crop_type: str,
+    ) -> List[Dict[str, Any]]:
+        """Return precomputed (stage_key, threshold_key, count) rows for a (lat, lon, year, crop)."""
+        if not self.supabase_url or not self.supabase_key:
+            return []
+        lat = self._round_weather_coordinate(latitude)
+        lon = self._round_weather_coordinate(longitude)
+        try:
+            client = await self._get_sdk_client()
+            result = (
+                await client.table("weather_threshold_cache")
+                .select("stage_key, threshold_key, count")
+                .eq("latitude", f"{lat:.2f}")
+                .eq("longitude", f"{lon:.2f}")
+                .eq("year", year)
+                .eq("crop_type", crop_type)
+                .execute()
+            )
+            return result.data or []
+        except Exception as e:
+            logger.error(f"Error fetching cached threshold counts: {e}")
+            return []
+
+    async def persist_threshold_counts(self, rows: List[Dict[str, Any]]) -> bool:
+        """Upsert (lat, lon, year, crop, stage, threshold) → count rows."""
+        if not self.supabase_url or not self.supabase_key or not rows:
+            return False
+        records = []
+        for r in rows:
+            lat = self._round_weather_coordinate(r["latitude"])
+            lon = self._round_weather_coordinate(r["longitude"])
+            records.append({
+                "latitude": f"{lat:.2f}",
+                "longitude": f"{lon:.2f}",
+                "year": r["year"],
+                "crop_type": r["crop_type"],
+                "stage_key": r["stage_key"],
+                "threshold_key": r["threshold_key"],
+                "count": int(r["count"]),
+            })
+        try:
+            client = await self._get_sdk_client()
+            await (
+                client.table("weather_threshold_cache")
+                .upsert(records, on_conflict="latitude,longitude,year,crop_type,stage_key,threshold_key")
+                .execute()
+            )
+            return True
+        except Exception as e:
+            logger.error(f"Error persisting threshold counts: {e}")
+            return False
+
+    # ------------------------------------------------------------------ #
+    # Hourly weather cache (weather_hourly_data) — chill_hours source    #
+    # ------------------------------------------------------------------ #
+
+    async def get_cached_hourly_weather(
+        self,
+        latitude: float,
+        longitude: float,
+        start_at: str,
+        end_at: str,
+    ) -> List[Dict[str, Any]]:
+        """Return hourly temperature rows already cached for a rounded location.
+
+        ``start_at`` / ``end_at`` are ISO datetime strings (inclusive on start, inclusive on end).
+        """
+        if not self.supabase_url or not self.supabase_key:
+            return []
+        lat = self._round_weather_coordinate(latitude)
+        lon = self._round_weather_coordinate(longitude)
+        try:
+            client = await self._get_sdk_client()
+            result = (
+                await client.table("weather_hourly_data")
+                .select("recorded_at, temperature_2m")
+                .eq("latitude", f"{lat:.2f}")
+                .eq("longitude", f"{lon:.2f}")
+                .gte("recorded_at", start_at)
+                .lte("recorded_at", end_at)
+                .order("recorded_at")
+                .execute()
+            )
+            return result.data or []
+        except Exception as e:
+            logger.error(f"Error fetching cached hourly weather: {e}")
+            return []
+
+    async def persist_hourly_weather(
+        self,
+        rows: List[Dict[str, Any]],
+        latitude: float,
+        longitude: float,
+        source: str = "open-meteo-archive",
+    ) -> bool:
+        """Upsert hourly temperature rows. Each row: {recorded_at: str, temperature_2m: float}."""
+        if not self.supabase_url or not self.supabase_key or not rows:
+            return False
+        lat = self._round_weather_coordinate(latitude)
+        lon = self._round_weather_coordinate(longitude)
+        records = []
+        for r in rows:
+            recorded_at = r.get("recorded_at")
+            temp = self._to_finite_float(r.get("temperature_2m"), None) if hasattr(self, "_to_finite_float") else r.get("temperature_2m")
+            if not recorded_at:
+                continue
+            records.append({
+                "latitude": f"{lat:.2f}",
+                "longitude": f"{lon:.2f}",
+                "recorded_at": recorded_at,
+                "temperature_2m": temp,
+                "source": source,
+            })
+        if not records:
+            return False
+        try:
+            client = await self._get_sdk_client()
+            await (
+                client.table("weather_hourly_data")
+                .upsert(records, on_conflict="latitude,longitude,recorded_at,source")
+                .execute()
+            )
+            return True
+        except Exception as e:
+            logger.error(f"Error persisting hourly weather: {e}")
+            return False
+
     async def upsert_gdd_rows(
         self,
         latitude: float,

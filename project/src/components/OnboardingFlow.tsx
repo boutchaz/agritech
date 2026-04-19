@@ -4,6 +4,7 @@ import { onboardingApi } from '@/lib/api/onboarding';
 import { farmsApi } from '@/lib/api/farms';
 import { farmRolesApi } from '@/lib/api/farm-roles';
 import { demoDataApi } from '@/lib/api/demo-data';
+import { useTranslation } from 'react-i18next';
 import { Building, Users, MapPin, Check, Database } from 'lucide-react';
 import { FormField } from './ui/FormField';
 import { Input } from './ui/Input';
@@ -47,6 +48,7 @@ interface FarmData {
 
 const OnboardingFlow = ({ user, onComplete }: OnboardingFlowProps) => {
   const roundToTwoDecimals = (value: number): number => Number(value.toFixed(2));
+  const { t } = useTranslation();
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [seedingData, setSeedingData] = useState(false);
@@ -216,7 +218,7 @@ const OnboardingFlow = ({ user, onComplete }: OnboardingFlowProps) => {
       setCurrentStep(prev => prev + 1);
       setError(null);
     } else {
-      setError('Veuillez remplir tous les champs obligatoires');
+      setError(t('onboardingFlow.requiredFields'));
     }
   };
 
@@ -233,7 +235,7 @@ const OnboardingFlow = ({ user, onComplete }: OnboardingFlowProps) => {
 
   const handleComplete = async () => {
     if (!validateStep(3)) {
-      setError('Veuillez remplir tous les champs obligatoires');
+      setError(t('onboardingFlow.requiredFields'));
       return;
     }
 

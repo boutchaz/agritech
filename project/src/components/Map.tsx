@@ -1246,7 +1246,7 @@ const MapComponent = ({
       }
     } catch (error) {
       console.error('Error saving parcel:', error);
-      toast.error(`Erreur lors de ${editingParcelId ? 'la mise à jour' : 'la création'} de la parcelle: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
+      toast.error(t('common.error'));
     }
   };
 

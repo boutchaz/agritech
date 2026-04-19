@@ -627,6 +627,136 @@ describe('CalibrationReviewAdapter', () => {
       const result = adapter.transform(input);
       expect(result.block_b.phenology_dashboard!.chill).toBeNull();
     });
+
+    it('S2.9 — variety fuzzy match: Arbequine resolves to Arbequina (dist 1)', () => {
+      const input = buildOlive(409, 'Arbequine');
+      (input as any).crop_type = 'Olivier';
+      const r = adapter.transform(input);
+      const chill = r.block_b.phenology_dashboard!.chill!;
+      expect(chill.reference.source).toBe('variety');
+      expect(chill.reference.variety_label).toBe('Arbequina');
+      expect(chill.reference.min).toBe(200);
+      expect(chill.reference.max).toBe(400);
+      expect(chill.band).toBe('green'); // 409 ≥ 400
+    });
+
+    it('S2.10 — variety fuzzy match: case + accent insensitive', () => {
+      const input = buildOlive(150, 'PICHOLINE MAROCAINE');
+      (input as any).crop_type = 'Olivier';
+      const r = adapter.transform(input);
+      const chill = r.block_b.phenology_dashboard!.chill!;
+      expect(chill.reference.source).toBe('variety');
+      expect(chill.reference.variety_label).toBe('Picholine Marocaine');
+    });
+
+    it('S2.11 — variety completely unrelated → fallback', () => {
+      const input = buildOlive(409, 'TotallyMadeUpVariety');
+      (input as any).crop_type = 'Olivier';
+      const r = adapter.transform(input);
+      const chill = r.block_b.phenology_dashboard!.chill!;
+      expect(chill.reference.source).toBe('fallback');
+      expect(chill.reference.variety_label).toBeNull();
+    });
+
+    it('S2.8 — crop_type matches case-insensitively (Olivier, OLIVIER, " olivier ")', () => {
+      for (const variant of ['Olivier', 'OLIVIER', ' olivier ', 'olivier']) {
+        const input = buildOlive(409, 'Arbequine');
+        (input as any).crop_type = variant;
+        const r = adapter.transform(input);
+        if (r.block_b.phenology_dashboard!.chill === null) {
+          throw new Error(`Expected chill non-null for crop_type variant: "${variant}"`);
+        }
+        expect(r.block_b.phenology_dashboard!.chill!.value).toBe(409);
+      }
+    });
+  });
+
+  // ── Phenology AI enrichment context + DTO fields ──
+
+  describe('phenology enrichment', () => {
+    const buildDegradedStep4 = () => ({
+      status: 'degraded',
+      mean_dates: {
+        peak: '2026-04-19',
+        decline_start: null,
+        dormancy_exit: '2026-01-21',
+        plateau_start: '2026-04-19',
+        dormancy_entry: null,
+      },
+      yearly_stages: {
+        '2026': {
+          peak: '2026-04-19',
+          decline_start: null,
+          dormancy_exit: '2026-01-21',
+          plateau_start: '2026-04-19',
+          dormancy_entry: null,
+        },
+      },
+      missing_stages: ['decline_start', 'dormancy_entry'],
+      phase_timeline: [
+        {
+          year: 2026,
+          mode: 'AMORCAGE',
+          transitions: [
+            {
+              phase: 'DORMANCE',
+              start_date: '2025-12-01',
+              end_date: '2026-01-21',
+              gdd_at_entry: 0,
+              confidence: 'ELEVEE',
+            },
+            {
+              phase: 'FLORAISON',
+              start_date: '2026-04-19',
+              end_date: '2026-04-19',
+              gdd_at_entry: 501.95,
+              confidence: 'MODEREE',
+            },
+          ],
+        },
+      ],
+      inter_annual_variability_days: { peak: 0 },
+      gdd_correlation: { peak: 0 },
+      referential_cycle_used: true,
+    });
+
+    it('echoes status + missing_stages + ai_enrichment null on dashboard', () => {
+      const input = buildSnapshotInput({ crop_type: 'olivier', variety: 'Picual' });
+      (input.output as any).step4 = buildDegradedStep4();
+      const result = adapter.transform(input);
+      const dash = result.block_b.phenology_dashboard!;
+      expect(dash.status).toBe('degraded');
+      expect(dash.missing_stages).toEqual(['decline_start', 'dormancy_entry']);
+      expect(dash.ai_enrichment).toBeNull();
+    });
+
+    it('builds AI enrichment context with referential slice when crop_type known', () => {
+      const step4 = buildDegradedStep4();
+      const context = adapter.buildPhenologyEnrichmentContext(step4, 'olivier');
+      expect(context).not.toBeNull();
+      expect(context!.status).toBe('degraded');
+      expect(context!.missing_stages).toEqual(['decline_start', 'dormancy_entry']);
+      expect(context!.phase_timeline).toHaveLength(1);
+      expect(context!.phase_timeline[0].transitions).toHaveLength(2);
+      expect(context!.referential).not.toBeNull();
+      expect(context!.referential!.stades_bbch.length).toBeGreaterThan(0);
+      // Sanity: first BBCH entry is well-formed
+      const firstStade = context!.referential!.stades_bbch[0];
+      expect(firstStade.code).toBeTruthy();
+      expect(Array.isArray(firstStade.gdd_cumul)).toBe(true);
+    });
+
+    it('returns null context when no phase_timeline and no yearly_stages', () => {
+      const context = adapter.buildPhenologyEnrichmentContext({}, 'olivier');
+      expect(context).toBeNull();
+    });
+
+    it('returns context with referential null when crop_type unknown', () => {
+      const step4 = buildDegradedStep4();
+      const context = adapter.buildPhenologyEnrichmentContext(step4, null);
+      expect(context).not.toBeNull();
+      expect(context!.referential).toBeNull();
+    });
   });
 
   // ── Edge cases ──

@@ -381,15 +381,15 @@ function TaskDetailPage() {
   const handleCompletePerUnit = async () => {
     const taskOrganizationId = getTaskOrganizationId();
     if (perUnitData.rate_per_unit <= 0) {
-      setError('Veuillez entrer le tarif par unité');
+      setError(t('tasks.detail.errors.rateRequired', 'Please enter the rate per unit'));
       return;
     }
     if (!hasMultipleWorkers && perUnitData.units_completed <= 0) {
-      setError('Veuillez entrer le nombre d\'unités complétées');
+      setError(t('tasks.detail.errors.unitsRequired', 'Please enter the number of completed units'));
       return;
     }
     if (hasMultipleWorkers && Object.values(workerUnits).every(v => v <= 0)) {
-      setError('Veuillez entrer le nombre d\'unités pour au moins un travailleur');
+      setError(t('tasks.detail.errors.workerUnitsRequired', 'Please enter units for at least one worker'));
       return;
     }
     try {
@@ -420,7 +420,7 @@ function TaskDetailPage() {
       queryClient.invalidateQueries({ queryKey: ['work-records'] });
       navigate({ to: '/tasks', search: { editTaskId: undefined } });
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Erreur lors de la complétion de la tâche');
+      setError(err instanceof Error ? err.message : t('tasks.detail.errors.completeFailed', 'Failed to complete task'));
     } finally {
       setIsActionLoading(false);
     }
@@ -434,15 +434,15 @@ function TaskDetailPage() {
     }
 
     if (!harvestData.crop_id) {
-      setError('Veuillez sélectionner une culture');
+      setError(t('tasks.detail.errors.cropRequired', 'Please select a crop'));
       return;
     }
     if (!harvestData.quantity || harvestData.quantity <= 0) {
-      setError('Veuillez entrer une quantité valide');
+      setError(t('tasks.detail.errors.quantityRequired', 'Please enter a valid quantity'));
       return;
     }
     if (!lotNumber) {
-      setError('Veuillez entrer un numéro de lot');
+      setError(t('tasks.detail.errors.lotNumberRequired', 'Please enter a lot number'));
       return;
     }
 
@@ -450,7 +450,7 @@ function TaskDetailPage() {
     if (isPerUnitTask && hasMultipleWorkers) {
       const totalUnits = Object.values(harvestWorkerUnits).reduce((s, v) => s + v, 0);
       if (totalUnits <= 0) {
-        setError('Veuillez entrer le nombre d\'unités pour au moins un travailleur');
+        setError(t('tasks.detail.errors.workerUnitsRequired', 'Please enter units for at least one worker'));
         return;
       }
     }
@@ -519,7 +519,7 @@ function TaskDetailPage() {
         navigate({ to: '/tasks', search: { editTaskId: undefined } });
       }
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Erreur lors de la complétion de la récolte');
+      setError(err instanceof Error ? err.message : t('tasks.detail.errors.harvestCompleteFailed', 'Failed to complete harvest'));
     } finally {
       setIsActionLoading(false);
     }
@@ -945,9 +945,9 @@ function TaskDetailPage() {
                 <div>
                   <p className="text-gray-500 dark:text-gray-400">{t('tasks.detail.paymentType', 'Payment type')}</p>
                   <p className="font-medium text-gray-900 dark:text-white">
-                    {task.payment_type === 'per_unit' ? "A l'unité" :
-                     task.payment_type === 'daily' ? 'Journalier' :
-                     task.payment_type === 'monthly' ? 'Mensuel' : 'Métayage'}
+                    {task.payment_type === 'per_unit' ? t('tasks.paymentTypes.perUnit', 'Per unit') :
+                     task.payment_type === 'daily' ? t('tasks.paymentTypes.daily', 'Daily') :
+                     task.payment_type === 'monthly' ? t('tasks.paymentTypes.monthly', 'Monthly') : t('tasks.paymentTypes.metayage', 'Sharecropping')}
                   </p>
                 </div>
                 {task.units_required && (
@@ -971,12 +971,12 @@ function TaskDetailPage() {
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 space-y-4">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                 <Wheat className="w-5 h-5 text-amber-600" />
-                Enregistrer la récolte
+                {t('tasks.harvestForm.title', 'Record harvest')}
               </h3>
 
               {/* Completion Type Selector */}
               <div className="space-y-2">
-                <Label>Type de complétion</Label>
+                <Label>{t('tasks.harvestForm.completionType', 'Completion type')}</Label>
                 <div className="flex gap-4">
                   <label className={`flex items-center gap-2 p-3 rounded-lg border cursor-pointer transition-colors ${
                     completionType === 'complete'
@@ -986,8 +986,8 @@ function TaskDetailPage() {
                     <input type="radio" name="completionType" value="complete" checked={completionType === 'complete'} onChange={() => setCompletionType('complete')} className="sr-only" />
                     <CheckCircle className={`w-5 h-5 ${completionType === 'complete' ? 'text-green-600' : 'text-gray-400'}`} />
                     <div>
-                      <p className="font-medium text-sm">Terminer complètement</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">Marquer la tâche comme terminée</p>
+                      <p className="font-medium text-sm">{t('tasks.harvestForm.completeFull', 'Complete fully')}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{t('tasks.harvestForm.completeFullDesc', 'Mark the task as completed')}</p>
                     </div>
                   </label>
                   <label className={`flex items-center gap-2 p-3 rounded-lg border cursor-pointer transition-colors ${
@@ -998,8 +998,8 @@ function TaskDetailPage() {
                     <input type="radio" name="completionType" value="partial" checked={completionType === 'partial'} onChange={() => setCompletionType('partial')} className="sr-only" />
                     <PackageCheck className={`w-5 h-5 ${completionType === 'partial' ? 'text-amber-600' : 'text-gray-400'}`} />
                     <div>
-                      <p className="font-medium text-sm">Récolte partielle</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">Continuer la tâche après</p>
+                      <p className="font-medium text-sm">{t('tasks.harvestForm.partial', 'Partial harvest')}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{t('tasks.harvestForm.partialDesc', 'Continue the task after')}</p>
                     </div>
                   </label>
                 </div>
@@ -1009,29 +1009,29 @@ function TaskDetailPage() {
               <div className="space-y-2">
                 <Label htmlFor="lot_number" className="flex items-center gap-2">
                   <Hash className="w-4 h-4" />
-                  Numéro de lot *
+                  {t('tasks.harvestForm.lotNumber', 'Lot number *')}
                 </Label>
                 <Input
                   id="lot_number"
                   type="text"
                   value={lotNumber}
                   onChange={(e) => setLotNumber(e.target.value)}
-                  placeholder="Ex: P1FM1-0012025"
+                  placeholder={t('tasks.harvestForm.lotPlaceholder', 'e.g. P1FM1-0012025')}
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2 col-span-2">
-                  <Label htmlFor="crop_id">Culture récoltée *</Label>
+                  <Label htmlFor="crop_id">{t('tasks.harvestForm.cropHarvested', 'Harvested crop *')}</Label>
                   <Select
                     value={harvestData.crop_id || '__none__'}
                     onValueChange={(value) => setHarvestData({ ...harvestData, crop_id: value === '__none__' ? '' : value })}
                   >
                     <SelectTrigger id="crop_id">
-                      <SelectValue placeholder="Sélectionner une culture" />
+                      <SelectValue placeholder={t('tasks.harvestForm.selectCrop', 'Select a crop')} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="__none__">Sélectionner une culture...</SelectItem>
+                      <SelectItem value="__none__">{t('tasks.harvestForm.selectCropPlaceholder', 'Select a crop...')}</SelectItem>
                       {availableCrops.map((crop: CropOption) => (
                         <SelectItem key={crop.id} value={crop.id}>
                           {crop.name} {crop.parcel_name ? `(${crop.parcel_name})` : ''}
@@ -1042,7 +1042,7 @@ function TaskDetailPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="harvest_date">Date de récolte *</Label>
+                  <Label htmlFor="harvest_date">{t('tasks.harvestForm.harvestDate', 'Harvest date *')}</Label>
                   <Input
                     id="harvest_date"
                     type="date"
@@ -1052,7 +1052,7 @@ function TaskDetailPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="quantity">Quantité récoltée *</Label>
+                  <Label htmlFor="quantity">{t('tasks.harvestForm.quantityHarvested', 'Quantity harvested *')}</Label>
                   <Input
                     id="quantity"
                     type="number"
@@ -1060,41 +1060,41 @@ function TaskDetailPage() {
                     step="0.1"
                     value={harvestData.quantity || ''}
                     onChange={(e) => setHarvestData({ ...harvestData, quantity: parseFloat(e.target.value) || 0 })}
-                    placeholder="Ex: 500"
+                    placeholder={t('tasks.harvestForm.quantityPlaceholder', 'e.g. 500')}
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="unit">Unité</Label>
+                  <Label htmlFor="unit">{t('tasks.harvestForm.unit', 'Unit')}</Label>
                   <Select value={harvestData.unit} onValueChange={(value) => setHarvestData({ ...harvestData, unit: value as HarvestUnit })}>
                     <SelectTrigger id="unit">
-                      <SelectValue placeholder="Sélectionner" />
+                      <SelectValue placeholder={t('tasks.harvestForm.select', 'Select')} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="kg">Kilogrammes (kg)</SelectItem>
-                      <SelectItem value="tons">Tonnes</SelectItem>
-                      <SelectItem value="units">Unités</SelectItem>
-                      <SelectItem value="boxes">Caisses</SelectItem>
-                      <SelectItem value="crates">Cagettes</SelectItem>
-                      <SelectItem value="liters">Litres</SelectItem>
+                      <SelectItem value="kg">{t('tasks.harvestForm.units.kg', 'Kilograms (kg)')}</SelectItem>
+                      <SelectItem value="tons">{t('tasks.harvestForm.units.tons', 'Tons')}</SelectItem>
+                      <SelectItem value="units">{t('tasks.harvestForm.units.units', 'Units')}</SelectItem>
+                      <SelectItem value="boxes">{t('tasks.harvestForm.units.boxes', 'Boxes')}</SelectItem>
+                      <SelectItem value="crates">{t('tasks.harvestForm.units.crates', 'Crates')}</SelectItem>
+                      <SelectItem value="liters">{t('tasks.harvestForm.units.liters', 'Liters')}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="quality_grade">Grade de qualité</Label>
+                  <Label htmlFor="quality_grade">{t('tasks.harvestForm.qualityGrade', 'Quality grade')}</Label>
                   <Select value={harvestData.quality_grade} onValueChange={(value) => setHarvestData({ ...harvestData, quality_grade: value as HarvestQualityGrade })}>
                     <SelectTrigger id="quality_grade">
-                      <SelectValue placeholder="Sélectionner" />
+                      <SelectValue placeholder={t('tasks.harvestForm.select', 'Select')} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Extra">Extra</SelectItem>
-                      <SelectItem value="A">Grade A</SelectItem>
-                      <SelectItem value="First">Première qualité</SelectItem>
-                      <SelectItem value="B">Grade B</SelectItem>
-                      <SelectItem value="Second">Deuxième qualité</SelectItem>
-                      <SelectItem value="C">Grade C</SelectItem>
-                      <SelectItem value="Third">Troisième qualité</SelectItem>
+                      <SelectItem value="Extra">{t('tasks.harvestForm.grades.extra', 'Extra')}</SelectItem>
+                      <SelectItem value="A">{t('tasks.harvestForm.grades.a', 'Grade A')}</SelectItem>
+                      <SelectItem value="First">{t('tasks.harvestForm.grades.first', 'First quality')}</SelectItem>
+                      <SelectItem value="B">{t('tasks.harvestForm.grades.b', 'Grade B')}</SelectItem>
+                      <SelectItem value="Second">{t('tasks.harvestForm.grades.second', 'Second quality')}</SelectItem>
+                      <SelectItem value="C">{t('tasks.harvestForm.grades.c', 'Grade C')}</SelectItem>
+                      <SelectItem value="Third">{t('tasks.harvestForm.grades.third', 'Third quality')}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -1104,12 +1104,12 @@ function TaskDetailPage() {
               {isPerUnitTask && hasMultipleWorkers && (
                 <div className="space-y-3 border border-blue-200 dark:border-blue-800 rounded-lg p-4 bg-blue-50 dark:bg-blue-900/20">
                   <p className="text-sm font-medium text-blue-800 dark:text-blue-200">
-                    Paiement à l'unité ({harvestData.unit || 'unités'})
+                    {t('tasks.harvestForm.perUnitPayment', 'Per-unit payment')} ({harvestData.unit || 'unités'})
                   </p>
 
                   {/* Rate per unit input */}
                   <div className="flex items-center gap-3">
-                    <Label htmlFor="harvest-rate-per-unit" className="text-sm text-blue-800 dark:text-blue-200 whitespace-nowrap">Tarif par unité (MAD) :</Label>
+                    <Label htmlFor="harvest-rate-per-unit" className="text-sm text-blue-800 dark:text-blue-200 whitespace-nowrap">{t('tasks.harvestForm.ratePerUnit', 'Rate per unit (MAD):')}</Label>
                     <Input
                       id="harvest-rate-per-unit"
                       type="number"
@@ -1117,13 +1117,13 @@ function TaskDetailPage() {
                       step="0.01"
                       value={harvestRatePerUnit || ''}
                       onChange={(e) => setHarvestRatePerUnit(parseFloat(e.target.value) || 0)}
-                      placeholder="Ex: 30"
+                      placeholder={t('tasks.harvestForm.ratePlaceholder', 'e.g. 30')}
                       className="w-28 bg-white dark:bg-gray-800"
                     />
                   </div>
 
                   <p className="text-xs text-blue-600 dark:text-blue-400">
-                    Indiquez le nombre d'unités accomplies par chaque travailleur.
+                    {t('tasks.harvestForm.enterWorkerUnits', 'Enter the number of units completed by each worker.')}
                   </p>
                   {allWorkers.map(a => {
                     const units = harvestWorkerUnits[a.worker_id] ?? 0;
@@ -1155,7 +1155,7 @@ function TaskDetailPage() {
                   })}
                   {harvestRatePerUnit > 0 && Object.values(harvestWorkerUnits).some(v => v > 0) && (
                     <div className="flex justify-between items-center pt-2 border-t border-blue-200 dark:border-blue-700">
-                      <span className="text-sm font-medium text-blue-800 dark:text-blue-200">Total paiements :</span>
+                      <span className="text-sm font-medium text-blue-800 dark:text-blue-200">{t('tasks.harvestForm.totalPayments', 'Total payments:')}</span>
                       <span className="font-bold text-green-600">
                         {(Object.values(harvestWorkerUnits).reduce((s, v) => s + v, 0) * harvestRatePerUnit).toFixed(2)} MAD
                       </span>
@@ -1165,19 +1165,19 @@ function TaskDetailPage() {
               )}
 
               <div className="space-y-2">
-                <Label htmlFor="harvest_notes">Notes</Label>
+                <Label htmlFor="harvest_notes">{t('tasks.harvestForm.notes', 'Notes')}</Label>
                 <Textarea
                   id="harvest_notes"
                   value={harvestData.harvest_notes || ''}
                   onChange={(e) => setHarvestData({ ...harvestData, harvest_notes: e.target.value })}
                   rows={2}
-                  placeholder="Notes sur la récolte..."
+                  placeholder={t('tasks.harvestForm.notesPlaceholder', 'Harvest notes...')}
                 />
               </div>
 
               <div className="flex justify-end gap-3 pt-4 border-t dark:border-gray-700">
                 <Button variant="outline" onClick={() => { setShowHarvestForm(false); setCompletionType('complete'); setLotNumber(''); setHarvestWorkerUnits({}); setHarvestRatePerUnit(0); }}>
-                  Annuler
+                  {t('common.cancel', 'Cancel')}
                 </Button>
                 <Button
                   variant={completionType === 'partial' ? 'amber' : 'green'}
@@ -1185,7 +1185,11 @@ function TaskDetailPage() {
                   disabled={isActionLoading}
                 >
                   {completionType === 'partial' ? <PackageCheck className="w-4 h-4 mr-2" /> : <CheckCircle className="w-4 h-4 mr-2" />}
-                  {isActionLoading ? 'Enregistrement...' : completionType === 'partial' ? 'Enregistrer récolte partielle' : 'Terminer et enregistrer'}
+                  {isActionLoading
+                    ? t('common.saving', 'Saving...')
+                    : completionType === 'partial'
+                      ? t('tasks.harvestForm.savePartial', 'Save partial harvest')
+                      : t('tasks.harvestForm.completeAndSave', 'Complete and save')}
                 </Button>
               </div>
             </div>
@@ -1496,22 +1500,22 @@ function TaskDetailPage() {
                 <div className="border-t dark:border-gray-700 pt-4 space-y-4">
                   <h3 className="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                     <Banknote className="w-4 h-4 text-green-600" />
-                    Paiement à l'unité
+                    {t('tasks.harvestForm.perUnitPayment', 'Per-unit payment')}
                   </h3>
                   <div className="space-y-2">
-                    <Label>Tarif par unité (MAD) *</Label>
+                    <Label>{t('tasks.perUnitForm.ratePerUnit', 'Rate per unit (MAD) *')}</Label>
                     <Input
                       type="number"
                       min="0"
                       step="0.01"
                       value={perUnitData.rate_per_unit || ''}
                       onChange={(e) => setPerUnitData({ ...perUnitData, rate_per_unit: parseFloat(e.target.value) || 0 })}
-                      placeholder="Ex: 5.00"
+                      placeholder={t('tasks.perUnitForm.ratePlaceholder', 'e.g. 5.00')}
                     />
                   </div>
                   {hasMultipleWorkers ? (
                     <div className="space-y-2">
-                      <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Unités par travailleur</p>
+                      <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('tasks.perUnitForm.unitsPerWorker', 'Units per worker')}</p>
                       {allWorkers.map(a => (
                         <div key={a.worker_id} className="flex items-center gap-2">
                           <span className="text-sm text-gray-700 dark:text-gray-300 w-32 truncate">
@@ -1539,21 +1543,21 @@ function TaskDetailPage() {
                     </div>
                   ) : (
                     <div className="space-y-2">
-                      <Label>Unités complétées *</Label>
+                      <Label>{t('tasks.perUnitForm.unitsCompleted', 'Units completed *')}</Label>
                       <Input
                         type="number"
                         min="0"
                         step="0.01"
                         value={perUnitData.units_completed || ''}
                         onChange={(e) => setPerUnitData({ ...perUnitData, units_completed: parseFloat(e.target.value) || 0 })}
-                        placeholder="Ex: 100"
+                        placeholder={t('tasks.perUnitForm.unitsPlaceholder', 'e.g. 100')}
                       />
                     </div>
                   )}
                   {perUnitData.rate_per_unit > 0 && (
                     <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3">
                       <div className="flex justify-between items-center">
-                        <span className="text-sm font-medium text-green-800 dark:text-green-200">Total</span>
+                        <span className="text-sm font-medium text-green-800 dark:text-green-200">{t('tasks.perUnitForm.total', 'Total')}</span>
                         <span className="font-bold text-green-600">
                           {hasMultipleWorkers
                             ? (Object.values(workerUnits).reduce((s, v) => s + v, 0) * perUnitData.rate_per_unit).toFixed(2)
@@ -1563,21 +1567,21 @@ function TaskDetailPage() {
                     </div>
                   )}
                   <div className="space-y-2">
-                    <Label>Notes</Label>
+                    <Label>{t('tasks.perUnitForm.notes', 'Notes')}</Label>
                     <Textarea
                       value={perUnitData.notes}
                       onChange={(e) => setPerUnitData({ ...perUnitData, notes: e.target.value })}
                       rows={2}
-                      placeholder="Notes sur le travail effectué..."
+                      placeholder={t('tasks.perUnitForm.notesPlaceholder', 'Notes on the work done...')}
                     />
                   </div>
                   <div className="flex gap-2">
                     <Button variant="outline" onClick={() => setShowPerUnitForm(false)} className="flex-1">
-                      Annuler
+                      {t('common.cancel', 'Cancel')}
                     </Button>
                     <Button onClick={handleCompletePerUnit} disabled={isActionLoading} className="flex-1">
                       <CheckCircle className="w-4 h-4 mr-2" />
-                      {isActionLoading ? 'En cours...' : 'Confirmer'}
+                      {isActionLoading ? t('common.processing', 'Processing...') : t('common.confirm', 'Confirm')}
                     </Button>
                   </div>
                 </div>

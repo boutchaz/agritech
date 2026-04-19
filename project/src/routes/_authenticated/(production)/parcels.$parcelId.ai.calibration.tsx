@@ -203,6 +203,12 @@ const PhaseBanner = ({ phase }: { phase: CalibrationPhase }) => {
   return null;
 };
 
+const CALIBRATION_TYPE_LABELS: Record<string, string> = {
+  initial: 'Initial',
+  F2_partial: 'Partial',
+  F3_complete: 'Annual',
+};
+
 const CalibrationHistoryList = ({ records }: { records: CalibrationHistoryRecord[] }) => {
   const { i18n } = useTranslation();
 
@@ -222,32 +228,49 @@ const CalibrationHistoryList = ({ records }: { records: CalibrationHistoryRecord
     pending: { bg: 'bg-gray-100 dark:bg-gray-700', text: 'text-gray-600 dark:text-gray-300' },
   };
 
+  // "Active baseline" = most-recent validated run; it's what AI diagnostics
+  // and the annual plan actually read. Without this marker, users confuse
+  // the latest (possibly failed) run with the live reference.
+  const activeBaselineId = records.find((r) => r.status === 'validated')?.id ?? null;
+
   return (
     <div className="space-y-2">
       {records.map((record, index) => {
         const style = statusStyles[record.status] ?? statusStyles.pending;
         const isLatest = index === 0;
+        const isActiveBaseline = record.id === activeBaselineId;
+        const typeLabel = CALIBRATION_TYPE_LABELS[record.type] ?? record.type;
 
         return (
           <div
             key={record.id}
             className={`flex items-center justify-between p-3 rounded-lg border ${
-              isLatest
-                ? 'border-green-200 dark:border-green-800/40 bg-green-50/50 dark:bg-green-900/10'
+              isActiveBaseline
+                ? 'border-green-300 dark:border-green-700/60 bg-green-50 dark:bg-green-900/15 ring-1 ring-green-200 dark:ring-green-800/40'
+                : isLatest
+                ? 'border-blue-200 dark:border-blue-800/40 bg-blue-50/40 dark:bg-blue-900/10'
                 : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/30'
             }`}
           >
             <div className="flex items-center space-x-3 min-w-0">
               <div className="flex flex-col">
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-2 flex-wrap gap-y-1">
                   <span className="text-sm font-medium text-gray-900 dark:text-white">
                     {formatCalibrationHistoryRunAt(record.created_at, i18n.language)}
                   </span>
-                  {isLatest && (
-                    <span className="text-xs px-1.5 py-0.5 rounded bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 font-medium">
-                      Current
+                  {isActiveBaseline && (
+                    <span className="text-xs px-1.5 py-0.5 rounded bg-green-600 text-white font-medium">
+                      Active baseline
                     </span>
                   )}
+                  {isLatest && !isActiveBaseline && (
+                    <span className="text-xs px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 font-medium">
+                      Latest run
+                    </span>
+                  )}
+                  <span className="text-xs px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 font-medium">
+                    {typeLabel}
+                  </span>
                   <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${style.bg} ${style.text}`}>
                     {record.status}
                   </span>
@@ -841,6 +864,54 @@ const AICalibrationPage = () => {
 
       {phase && <PhaseBanner phase={phase} />}
 
+      {(() => {
+        // F2/F3 auto-validate without a user confirm step. Surface a soft
+        // "just recalibrated" banner on `active` with a link to review the
+        // diff — so users aren't surprised the parcel snapped back to
+        // active without any intermediate screen.
+        const latest = historyRecords?.[0];
+        if (!latest || phase !== 'active' || latest.status !== 'validated') return null;
+        if (latest.type !== 'F2_partial' && latest.type !== 'F3_complete') return null;
+        const completedAt = latest.completed_at ? Date.parse(latest.completed_at) : NaN;
+        const ageMinutes = Number.isFinite(completedAt) ? (Date.now() - completedAt) / 60000 : Infinity;
+        if (ageMinutes > 30) return null;
+        const kind = latest.type === 'F2_partial' ? 'Partial' : 'Annual';
+        return (
+          <div
+            className="bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800/30 p-4"
+            data-testid="recalibration-review-banner"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-start space-x-3">
+                <Sparkles className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+                <div>
+                  <h3 className="text-sm font-semibold text-blue-900 dark:text-blue-100">
+                    {kind} recalibration applied
+                  </h3>
+                  <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
+                    Baselines were automatically updated. Review the changes to confirm they match your expectations.
+                  </p>
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                type="button"
+                onClick={() => {
+                  document
+                    .querySelector('[data-testid="calibration-review-section"]')
+                    ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }}
+                className="shrink-0"
+              >
+                <Eye className="w-4 h-4 mr-1.5" />
+                Review changes
+              </Button>
+            </div>
+          </div>
+        );
+      })()}
+
       {!isCalibrating && hasV2Report && (phase === 'calibrated' || phase === 'awaiting_nutrition_option' || phase === 'active' || calibrationCompletedButPhaseStuck) && (
         <CalibrationSyntheseBanner
           parcelId={parcelId}
@@ -1033,14 +1104,36 @@ const AICalibrationPage = () => {
 
       {isObservationOnly && (
         <div className="bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-800/30 p-4">
-          <div className="flex items-start space-x-3">
-            <Eye className="w-5 h-5 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
-            <div>
-              <h3 className="text-sm font-semibold text-amber-900 dark:text-amber-100">{tAi('calibration.observationMode.title')}</h3>
-              <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
-                {tAi('calibration.observationMode.body')}
-              </p>
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-start space-x-3">
+              <Eye className="w-5 h-5 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="text-sm font-semibold text-amber-900 dark:text-amber-100">
+                    {tAi('calibration.observationMode.title')}
+                  </h3>
+                  {typeof calibration?.confidence_score === 'number' && (
+                    <span className="text-xs px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-200 font-medium">
+                      Confidence {formatConfidencePercent(calibration.confidence_score)}
+                    </span>
+                  )}
+                </div>
+                <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
+                  {tAi('calibration.observationMode.body')}
+                </p>
+              </div>
             </div>
+            <Button
+              variant="outline"
+              size="sm"
+              type="button"
+              onClick={handleOpenFullRecalibrationWizard}
+              disabled={isBusy || missingPlantingYear}
+              className="shrink-0"
+            >
+              <Play className="w-4 h-4 mr-1.5" />
+              {tAi('calibration.page.fullRecalibration')}
+            </Button>
           </div>
         </div>
       )}

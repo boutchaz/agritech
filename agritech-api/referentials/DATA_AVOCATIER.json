@@ -6,6 +6,41 @@
     "nom_scientifique": "Persea americana Mill.",
     "pays": "Maroc"
   },
+  "phenological_stages": [
+    {
+      "key": "winter",
+      "name_fr": "Hiver",
+      "name_en": "Winter",
+      "name_ar": "الشتاء",
+      "months": [12, 1, 2],
+      "thresholds": [
+        { "key": "frost_risk", "label_fr": "Risque de gel", "label_en": "Frost risk", "compare": "below", "value": 0, "unit": "h", "icon": "snowflake" },
+        { "key": "cold_stress", "label_fr": "Stress froid", "label_en": "Cold stress", "compare": "below", "value": 5, "unit": "h", "icon": "snowflake" }
+      ]
+    },
+    {
+      "key": "flowering",
+      "name_fr": "Floraison",
+      "name_en": "Flowering",
+      "name_ar": "الإزهار",
+      "months": [3, 4, 5],
+      "thresholds": [
+        { "key": "optimal_flowering", "label_fr": "Conditions optimales", "label_en": "Optimal conditions", "compare": "between", "value": 18, "upper": 26, "unit": "h", "icon": "leaf" },
+        { "key": "heat_stress", "label_fr": "Stress thermique", "label_en": "Heat stress", "compare": "above", "value": 33, "unit": "h", "icon": "flame" }
+      ]
+    },
+    {
+      "key": "fruit_growth",
+      "name_fr": "Grossissement des fruits",
+      "name_en": "Fruit growth",
+      "name_ar": "نمو الثمار",
+      "months": [6, 7, 8, 9, 10],
+      "thresholds": [
+        { "key": "growing_hours", "label_fr": "Heures de croissance", "label_en": "Growing hours", "compare": "above", "value": 12, "unit": "h", "icon": "sun" },
+        { "key": "extreme_heat", "label_fr": "Chaleur extrême", "label_en": "Extreme heat", "compare": "above", "value": 36, "unit": "h", "icon": "flame" }
+      ]
+    }
+  ],
   "phases_maturite_ans": {
     "juvenile": [
       0,

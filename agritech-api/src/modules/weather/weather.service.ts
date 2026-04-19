@@ -212,6 +212,31 @@ export class WeatherService {
     }
   }
 
+  /** Lat/lon centroid + crop_type for a parcel — used by phenological-counters proxy. */
+  async getParcelMeta(
+    parcelId: string,
+    organizationId: string,
+  ): Promise<{ lat: number; lon: number; cropType: string } | null> {
+    try {
+      const client = this.db.getAdminClient();
+      const { data } = await client
+        .from('parcels')
+        .select('boundary, crop_type, farms!inner(organization_id)')
+        .eq('id', parcelId)
+        .eq('farms.organization_id', organizationId)
+        .maybeSingle();
+      if (!data?.boundary) return null;
+      const boundary = data.boundary as number[][];
+      if (!Array.isArray(boundary) || boundary.length < 3) return null;
+      const { lat, lon } = calculateCentroid(boundary);
+      const cropType = (data as { crop_type?: string }).crop_type ?? '';
+      return { lat, lon, cropType: cropType.trim().toLowerCase() };
+    } catch (err) {
+      this.logger.error(`Failed to get parcel meta for ${parcelId}`, err);
+      return null;
+    }
+  }
+
   private async fetchArchiveData(
     lat: number,
     lon: number,

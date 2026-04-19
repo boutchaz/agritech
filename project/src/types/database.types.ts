@@ -1040,6 +1040,199 @@ export type Database = {
           },
         ]
       }
+      agronomy_chunks: {
+        Row: {
+          chunk_index: number
+          embedding: string | null
+          id: string
+          page: number | null
+          source_id: string
+          text: string
+          tsv: unknown
+        }
+        Insert: {
+          chunk_index: number
+          embedding?: string | null
+          id?: string
+          page?: number | null
+          source_id: string
+          text: string
+          tsv?: unknown
+        }
+        Update: {
+          chunk_index?: number
+          embedding?: string | null
+          id?: string
+          page?: number | null
+          source_id?: string
+          text?: string
+          tsv?: unknown
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agronomy_chunks_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "agronomy_sources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agronomy_sources: {
+        Row: {
+          author: string | null
+          chunk_count: number
+          crop_type: string[] | null
+          doc_type: string | null
+          id: string
+          ingested_at: string | null
+          ingested_by: string | null
+          ingestion_error: string | null
+          ingestion_status: string
+          language: string | null
+          organization_id: string | null
+          published_at: string | null
+          publisher: string | null
+          region: string[] | null
+          season: string[] | null
+          source_url: string | null
+          storage_path: string | null
+          title: string
+        }
+        Insert: {
+          author?: string | null
+          chunk_count?: number
+          crop_type?: string[] | null
+          doc_type?: string | null
+          id?: string
+          ingested_at?: string | null
+          ingested_by?: string | null
+          ingestion_error?: string | null
+          ingestion_status?: string
+          language?: string | null
+          organization_id?: string | null
+          published_at?: string | null
+          publisher?: string | null
+          region?: string[] | null
+          season?: string[] | null
+          source_url?: string | null
+          storage_path?: string | null
+          title: string
+        }
+        Update: {
+          author?: string | null
+          chunk_count?: number
+          crop_type?: string[] | null
+          doc_type?: string | null
+          id?: string
+          ingested_at?: string | null
+          ingested_by?: string | null
+          ingestion_error?: string | null
+          ingestion_status?: string
+          language?: string | null
+          organization_id?: string | null
+          published_at?: string | null
+          publisher?: string | null
+          region?: string[] | null
+          season?: string[] | null
+          source_url?: string | null
+          storage_path?: string | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agronomy_sources_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "accounting_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "agronomy_sources_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_churn_risk"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agronomy_sources_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_org_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agronomy_sources_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_top_orgs_by_activity"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agronomy_sources_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "dashboard_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "agronomy_sources_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "financial_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "agronomy_sources_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agronomy_sources_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "production_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "agronomy_sources_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "sales_analytics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "agronomy_sources_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "task_completion"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "agronomy_sources_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_organization_financial_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "agronomy_sources_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_production_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "agronomy_sources_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "workforce_summary"
+            referencedColumns: ["organization_id"]
+          },
+        ]
+      }
       ai_diagnostic_sessions: {
         Row: {
           calibration_id: string | null
@@ -1304,6 +1497,45 @@ export type Database = {
             isOneToOne: true
             referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
+          },
+        ]
+      }
+      ai_recommendation_citations: {
+        Row: {
+          chunk_id: string
+          excerpt: string
+          id: string
+          recommendation_id: string
+          source_ordinal: number
+        }
+        Insert: {
+          chunk_id: string
+          excerpt: string
+          id?: string
+          recommendation_id: string
+          source_ordinal: number
+        }
+        Update: {
+          chunk_id?: string
+          excerpt?: string
+          id?: string
+          recommendation_id?: string
+          source_ordinal?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_recommendation_citations_chunk_id_fkey"
+            columns: ["chunk_id"]
+            isOneToOne: false
+            referencedRelation: "agronomy_chunks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_recommendation_citations_recommendation_id_fkey"
+            columns: ["recommendation_id"]
+            isOneToOne: false
+            referencedRelation: "ai_recommendations"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -2021,6 +2253,7 @@ export type Database = {
           nutrition_option_reason: string | null
           organization_id: string
           parcel_id: string
+          plan_data: Json | null
           plan_summary: string | null
           production_target: string | null
           season: string
@@ -2050,6 +2283,7 @@ export type Database = {
           nutrition_option_reason?: string | null
           organization_id: string
           parcel_id: string
+          plan_data?: Json | null
           plan_summary?: string | null
           production_target?: string | null
           season: string
@@ -2079,6 +2313,7 @@ export type Database = {
           nutrition_option_reason?: string | null
           organization_id?: string
           parcel_id?: string
+          plan_data?: Json | null
           plan_summary?: string | null
           production_target?: string | null
           season?: string
@@ -3498,6 +3733,12 @@ export type Database = {
           phase_age: string | null
           previous_baseline: Json | null
           profile_snapshot: Json | null
+          progress_message: string | null
+          progress_percent: number | null
+          progress_step: number | null
+          progress_step_key: string | null
+          progress_total_steps: number | null
+          progress_updated_at: string | null
           rapport_ar: string | null
           rapport_fr: string | null
           recalibration_motif: string | null
@@ -3537,6 +3778,12 @@ export type Database = {
           phase_age?: string | null
           previous_baseline?: Json | null
           profile_snapshot?: Json | null
+          progress_message?: string | null
+          progress_percent?: number | null
+          progress_step?: number | null
+          progress_step_key?: string | null
+          progress_total_steps?: number | null
+          progress_updated_at?: string | null
           rapport_ar?: string | null
           rapport_fr?: string | null
           recalibration_motif?: string | null
@@ -3576,6 +3823,12 @@ export type Database = {
           phase_age?: string | null
           previous_baseline?: Json | null
           profile_snapshot?: Json | null
+          progress_message?: string | null
+          progress_percent?: number | null
+          progress_step?: number | null
+          progress_step_key?: string | null
+          progress_total_steps?: number | null
+          progress_updated_at?: string | null
           rapport_ar?: string | null
           rapport_fr?: string | null
           recalibration_motif?: string | null
@@ -24915,7 +25168,10 @@ export type Database = {
           attachments: Json | null
           comment: string
           created_at: string | null
+          edited_at: string | null
           id: string
+          resolved_at: string | null
+          resolved_by: string | null
           task_id: string
           type: string | null
           updated_at: string | null
@@ -24926,7 +25182,10 @@ export type Database = {
           attachments?: Json | null
           comment: string
           created_at?: string | null
+          edited_at?: string | null
           id?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
           task_id: string
           type?: string | null
           updated_at?: string | null
@@ -24937,7 +25196,10 @@ export type Database = {
           attachments?: Json | null
           comment?: string
           created_at?: string | null
+          edited_at?: string | null
           id?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
           task_id?: string
           type?: string | null
           updated_at?: string | null
@@ -25112,6 +25374,83 @@ export type Database = {
           },
         ]
       }
+      task_mentions: {
+        Row: {
+          comment_id: string
+          created_at: string | null
+          id: string
+          mentioned_user_id: string | null
+          mentioned_worker_id: string | null
+          task_id: string
+        }
+        Insert: {
+          comment_id: string
+          created_at?: string | null
+          id?: string
+          mentioned_user_id?: string | null
+          mentioned_worker_id?: string | null
+          task_id: string
+        }
+        Update: {
+          comment_id?: string
+          created_at?: string | null
+          id?: string
+          mentioned_user_id?: string | null
+          mentioned_worker_id?: string | null
+          task_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_mentions_comment_id_fkey"
+            columns: ["comment_id"]
+            isOneToOne: false
+            referencedRelation: "task_comments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_mentions_mentioned_worker_id_fkey"
+            columns: ["mentioned_worker_id"]
+            isOneToOne: false
+            referencedRelation: "assignable_users"
+            referencedColumns: ["worker_id"]
+          },
+          {
+            foreignKeyName: "task_mentions_mentioned_worker_id_fkey"
+            columns: ["mentioned_worker_id"]
+            isOneToOne: false
+            referencedRelation: "v_active_workers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_mentions_mentioned_worker_id_fkey"
+            columns: ["mentioned_worker_id"]
+            isOneToOne: false
+            referencedRelation: "worker_assignments"
+            referencedColumns: ["worker_id"]
+          },
+          {
+            foreignKeyName: "task_mentions_mentioned_worker_id_fkey"
+            columns: ["mentioned_worker_id"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_mentions_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "pending_tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_mentions_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       task_templates: {
         Row: {
           category_id: string
@@ -25160,9 +25499,11 @@ export type Database = {
           location_lat: number | null
           location_lng: number | null
           notes: string | null
+          photo_url: string | null
           start_time: string
           task_id: string
           total_hours: number | null
+          units_completed: number | null
           updated_at: string | null
           worker_id: string
         }
@@ -25174,9 +25515,11 @@ export type Database = {
           location_lat?: number | null
           location_lng?: number | null
           notes?: string | null
+          photo_url?: string | null
           start_time: string
           task_id: string
           total_hours?: number | null
+          units_completed?: number | null
           updated_at?: string | null
           worker_id: string
         }
@@ -25188,9 +25531,11 @@ export type Database = {
           location_lat?: number | null
           location_lng?: number | null
           notes?: string | null
+          photo_url?: string | null
           start_time?: string
           task_id?: string
           total_hours?: number | null
+          units_completed?: number | null
           updated_at?: string | null
           worker_id?: string
         }
@@ -25235,6 +25580,136 @@ export type Database = {
             columns: ["worker_id"]
             isOneToOne: false
             referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      task_watchers: {
+        Row: {
+          created_at: string | null
+          id: string
+          organization_id: string
+          task_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          organization_id: string
+          task_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          organization_id?: string
+          task_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_watchers_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "accounting_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "task_watchers_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_churn_risk"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_watchers_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_org_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_watchers_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_top_orgs_by_activity"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_watchers_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "dashboard_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "task_watchers_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "financial_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "task_watchers_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_watchers_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "production_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "task_watchers_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "sales_analytics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "task_watchers_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "task_completion"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "task_watchers_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_organization_financial_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "task_watchers_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_production_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "task_watchers_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "workforce_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "task_watchers_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "pending_tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_watchers_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
             referencedColumns: ["id"]
           },
         ]
@@ -27407,6 +27882,72 @@ export type Database = {
           latitude?: number
           longitude?: number
           model_version?: string
+        }
+        Relationships: []
+      }
+      weather_hourly_data: {
+        Row: {
+          fetched_at: string
+          id: string
+          latitude: number
+          longitude: number
+          recorded_at: string
+          source: string
+          temperature_2m: number | null
+        }
+        Insert: {
+          fetched_at?: string
+          id?: string
+          latitude: number
+          longitude: number
+          recorded_at: string
+          source?: string
+          temperature_2m?: number | null
+        }
+        Update: {
+          fetched_at?: string
+          id?: string
+          latitude?: number
+          longitude?: number
+          recorded_at?: string
+          source?: string
+          temperature_2m?: number | null
+        }
+        Relationships: []
+      }
+      weather_threshold_cache: {
+        Row: {
+          computed_at: string
+          count: number
+          crop_type: string
+          id: string
+          latitude: number
+          longitude: number
+          stage_key: string
+          threshold_key: string
+          year: number
+        }
+        Insert: {
+          computed_at?: string
+          count: number
+          crop_type: string
+          id?: string
+          latitude: number
+          longitude: number
+          stage_key: string
+          threshold_key: string
+          year: number
+        }
+        Update: {
+          computed_at?: string
+          count?: number
+          crop_type?: string
+          id?: string
+          latitude?: number
+          longitude?: number
+          stage_key?: string
+          threshold_key?: string
+          year?: number
         }
         Relationships: []
       }

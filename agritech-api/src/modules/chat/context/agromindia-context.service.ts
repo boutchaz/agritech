@@ -261,15 +261,13 @@ export class AgromindiaContextService {
       const cal = await this.calibrationService.getLatestCalibration(parcelId, organizationId);
       if (!cal) return null;
 
-      const calData = (cal as any).calibration_data || {};
-
       return {
         status: cal.status,
         confidence_score: (cal as any).confidence_score || 0,
         zone_classification: (cal as any).zone_classification || null,
-        baseline_ndvi: calData.baseline_ndvi || null,
-        baseline_ndre: calData.baseline_ndre || null,
-        baseline_ndmi: calData.baseline_ndmi || null,
+        baseline_ndvi: (cal as any).p50_ndvi ?? null,
+        baseline_ndre: (cal as any).p50_ndre ?? null,
+        baseline_ndmi: (cal as any).p50_ndmi ?? null,
       };
     } catch (error) {
       this.logger.debug(`No calibration for parcel ${parcelId}: ${error.message}`);

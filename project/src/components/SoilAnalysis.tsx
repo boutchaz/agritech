@@ -1,8 +1,9 @@
-import {  useEffect  } from "react";
+import {  useEffect, useMemo  } from "react";
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Save, X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { FormField } from './ui/FormField';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
@@ -43,9 +44,9 @@ interface SoilAnalysisData {
   };
 }
 
-const soilAnalysisSchema = z.object({
+const createSoilAnalysisSchema = (t: (key: string, fallback: string) => string) => z.object({
   physical: z.object({
-    texture: z.string().min(1, 'Texture is required'),
+    texture: z.string().min(1, t('soilAnalysis.validation.textureRequired', 'Texture is required')),
     ph: z.number().min(0).max(14),
     organicMatter: z.number().min(0).max(100),
     density: z.number().min(0),
@@ -71,10 +72,12 @@ const soilAnalysisSchema = z.object({
   }),
 });
 
-type SoilAnalysisFormData = z.infer<typeof soilAnalysisSchema>;
+type SoilAnalysisFormData = z.infer<ReturnType<typeof createSoilAnalysisSchema>>;
 
 const SoilAnalysis = ({ onSave, onCancel, initialData }: SoilAnalysisProps) => {
+  const { t } = useTranslation();
   const { handleFormError } = useFormErrors<SoilAnalysisFormData>();
+  const soilAnalysisSchema = useMemo(() => createSoilAnalysisSchema(t), [t]);
   const {
     register,
     handleSubmit,
@@ -123,7 +126,7 @@ const SoilAnalysis = ({ onSave, onCancel, initialData }: SoilAnalysisProps) => {
       await onSave(formData);
     } catch (error: unknown) {
       handleFormError(error, setError, {
-        toastMessage: 'Failed to save soil analysis',
+        toastMessage: t('soilAnalysis.validation.saveError', 'Failed to save soil analysis'),
       });
     }
   };
@@ -131,7 +134,7 @@ const SoilAnalysis = ({ onSave, onCancel, initialData }: SoilAnalysisProps) => {
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
       <div className="flex items-center justify-between mb-6">
-        <h3 className="text-lg font-semibold">Analyse du Sol</h3>
+        <h3 className="text-lg font-semibold">{t('soilAnalysis.title', 'Soil Analysis')}</h3>
         <Button
           onClick={onCancel}
           className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
@@ -143,27 +146,27 @@ const SoilAnalysis = ({ onSave, onCancel, initialData }: SoilAnalysisProps) => {
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
          {/* Physical Properties */}
          <div>
-           <h4 className="font-medium mb-4">Propriétés Physiques</h4>
-           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-             <FormField label="Texture du Sol" htmlFor="physical.texture" required>
-               <Select
-                 id="physical.texture"
-                 {...register('physical.texture')}
-                 invalid={!!errors.physical?.texture}
-               >
-                 <option value="">Sélectionner...</option>
-                 <option value="Sableuse">Sableuse</option>
-                 <option value="Limoneuse">Limoneuse</option>
-                 <option value="Argileuse">Argileuse</option>
-                 <option value="Limono-sableuse">Limono-sableuse</option>
-                 <option value="Argilo-limoneuse">Argilo-limoneuse</option>
-               </Select>
+            <h4 className="font-medium mb-4">{t('soilAnalysis.physicalProperties', 'Physical properties')}</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField label={t('soilAnalysis.textureLabel', 'Soil texture')} htmlFor="physical.texture" required>
+                <Select
+                  id="physical.texture"
+                  {...register('physical.texture')}
+                  invalid={!!errors.physical?.texture}
+                >
+                  <option value="">{t('soilAnalysis.selectPlaceholder', 'Select...')}</option>
+                  <option value="Sableuse">{t('soilAnalysis.textureOptions.sandy', 'Sandy')}</option>
+                  <option value="Limoneuse">{t('soilAnalysis.textureOptions.silty', 'Silty')}</option>
+                  <option value="Argileuse">{t('soilAnalysis.textureOptions.clayey', 'Clayey')}</option>
+                  <option value="Limono-sableuse">{t('soilAnalysis.textureOptions.sandySilty', 'Sandy silty')}</option>
+                  <option value="Argilo-limoneuse">{t('soilAnalysis.textureOptions.siltyClay', 'Silty clay')}</option>
+                </Select>
                {errors.physical?.texture && (
                  <p className="text-red-600 text-sm mt-1">{errors.physical.texture.message}</p>
                )}
              </FormField>
 
-             <FormField label="pH" htmlFor="physical.ph" required>
+              <FormField label={t('soilAnalysis.phLabel', 'pH')} htmlFor="physical.ph" required>
                <Input
                  id="physical.ph"
                  type="number"
@@ -178,7 +181,7 @@ const SoilAnalysis = ({ onSave, onCancel, initialData }: SoilAnalysisProps) => {
                )}
              </FormField>
 
-             <FormField label="Matière Organique (%)" htmlFor="physical.organicMatter" required>
+              <FormField label={t('soilAnalysis.organicMatterLabel', 'Organic matter (%)')} htmlFor="physical.organicMatter" required>
                <Input
                  id="physical.organicMatter"
                  type="number"
@@ -193,7 +196,7 @@ const SoilAnalysis = ({ onSave, onCancel, initialData }: SoilAnalysisProps) => {
                )}
              </FormField>
 
-             <FormField label="Densité Apparente (g/cm³)" htmlFor="physical.density" required>
+              <FormField label={t('soilAnalysis.densityLabel', 'Bulk density (g/cm³)')} htmlFor="physical.density" required>
                <Input
                  id="physical.density"
                  type="number"
@@ -207,7 +210,7 @@ const SoilAnalysis = ({ onSave, onCancel, initialData }: SoilAnalysisProps) => {
                )}
              </FormField>
 
-             <FormField label="Rétention d'eau (%)" htmlFor="physical.waterRetention" required>
+              <FormField label={t('soilAnalysis.waterRetentionLabel', 'Water retention (%)')} htmlFor="physical.waterRetention" required>
                <Input
                  id="physical.waterRetention"
                  type="number"
@@ -226,9 +229,9 @@ const SoilAnalysis = ({ onSave, onCancel, initialData }: SoilAnalysisProps) => {
 
          {/* Chemical Properties */}
          <div>
-           <h4 className="font-medium mb-4">Propriétés Chimiques (mg/kg)</h4>
-           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-             <FormField label="Azote (N)" htmlFor="chemical.nitrogen" required>
+            <h4 className="font-medium mb-4">{t('soilAnalysis.chemicalProperties', 'Chemical properties (mg/kg)')}</h4>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <FormField label={t('soilAnalysis.nitrogenLabel', 'Nitrogen (N)')} htmlFor="chemical.nitrogen" required>
                <Input
                  id="chemical.nitrogen"
                  type="number"
@@ -242,7 +245,7 @@ const SoilAnalysis = ({ onSave, onCancel, initialData }: SoilAnalysisProps) => {
                )}
              </FormField>
 
-             <FormField label="Phosphore (P)" htmlFor="chemical.phosphorus" required>
+              <FormField label={t('soilAnalysis.phosphorusLabel', 'Phosphorus (P)')} htmlFor="chemical.phosphorus" required>
                <Input
                  id="chemical.phosphorus"
                  type="number"
@@ -256,7 +259,7 @@ const SoilAnalysis = ({ onSave, onCancel, initialData }: SoilAnalysisProps) => {
                )}
              </FormField>
 
-             <FormField label="Potassium (K)" htmlFor="chemical.potassium" required>
+              <FormField label={t('soilAnalysis.potassiumLabel', 'Potassium (K)')} htmlFor="chemical.potassium" required>
                <Input
                  id="chemical.potassium"
                  type="number"
@@ -270,7 +273,7 @@ const SoilAnalysis = ({ onSave, onCancel, initialData }: SoilAnalysisProps) => {
                )}
              </FormField>
 
-             <FormField label="Calcium (Ca)" htmlFor="chemical.calcium" required>
+              <FormField label={t('soilAnalysis.calciumLabel', 'Calcium (Ca)')} htmlFor="chemical.calcium" required>
                <Input
                  id="chemical.calcium"
                  type="number"
@@ -284,7 +287,7 @@ const SoilAnalysis = ({ onSave, onCancel, initialData }: SoilAnalysisProps) => {
                )}
              </FormField>
 
-             <FormField label="Magnésium (Mg)" htmlFor="chemical.magnesium" required>
+              <FormField label={t('soilAnalysis.magnesiumLabel', 'Magnesium (Mg)')} htmlFor="chemical.magnesium" required>
                <Input
                  id="chemical.magnesium"
                  type="number"
@@ -298,7 +301,7 @@ const SoilAnalysis = ({ onSave, onCancel, initialData }: SoilAnalysisProps) => {
                )}
              </FormField>
 
-             <FormField label="Soufre (S)" htmlFor="chemical.sulfur" required>
+              <FormField label={t('soilAnalysis.sulfurLabel', 'Sulfur (S)')} htmlFor="chemical.sulfur" required>
                <Input
                  id="chemical.sulfur"
                  type="number"
@@ -312,7 +315,7 @@ const SoilAnalysis = ({ onSave, onCancel, initialData }: SoilAnalysisProps) => {
                )}
              </FormField>
 
-             <FormField label="Fer (Fe)" htmlFor="chemical.iron" required>
+              <FormField label={t('soilAnalysis.ironLabel', 'Iron (Fe)')} htmlFor="chemical.iron" required>
                <Input
                  id="chemical.iron"
                  type="number"
@@ -326,7 +329,7 @@ const SoilAnalysis = ({ onSave, onCancel, initialData }: SoilAnalysisProps) => {
                )}
              </FormField>
 
-             <FormField label="Manganèse (Mn)" htmlFor="chemical.manganese" required>
+              <FormField label={t('soilAnalysis.manganeseLabel', 'Manganese (Mn)')} htmlFor="chemical.manganese" required>
                <Input
                  id="chemical.manganese"
                  type="number"
@@ -340,7 +343,7 @@ const SoilAnalysis = ({ onSave, onCancel, initialData }: SoilAnalysisProps) => {
                )}
              </FormField>
 
-             <FormField label="Zinc (Zn)" htmlFor="chemical.zinc" required>
+              <FormField label={t('soilAnalysis.zincLabel', 'Zinc (Zn)')} htmlFor="chemical.zinc" required>
                <Input
                  id="chemical.zinc"
                  type="number"
@@ -354,7 +357,7 @@ const SoilAnalysis = ({ onSave, onCancel, initialData }: SoilAnalysisProps) => {
                )}
              </FormField>
 
-             <FormField label="Cuivre (Cu)" htmlFor="chemical.copper" required>
+              <FormField label={t('soilAnalysis.copperLabel', 'Copper (Cu)')} htmlFor="chemical.copper" required>
                <Input
                  id="chemical.copper"
                  type="number"
@@ -368,7 +371,7 @@ const SoilAnalysis = ({ onSave, onCancel, initialData }: SoilAnalysisProps) => {
                )}
              </FormField>
 
-             <FormField label="Bore (B)" htmlFor="chemical.boron" required>
+              <FormField label={t('soilAnalysis.boronLabel', 'Boron (B)')} htmlFor="chemical.boron" required>
                <Input
                  id="chemical.boron"
                  type="number"
@@ -386,9 +389,9 @@ const SoilAnalysis = ({ onSave, onCancel, initialData }: SoilAnalysisProps) => {
 
          {/* Biological Properties */}
          <div>
-           <h4 className="font-medium mb-4">Propriétés Biologiques</h4>
-           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-             <FormField label="Microorganismes (UFC/g)" htmlFor="biological.microorganisms" required>
+            <h4 className="font-medium mb-4">{t('soilAnalysis.biologicalProperties', 'Biological properties')}</h4>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <FormField label={t('soilAnalysis.microorganismsLabel', 'Microorganisms (CFU/g)')} htmlFor="biological.microorganisms" required>
                <Input
                  id="biological.microorganisms"
                  type="number"
@@ -402,7 +405,7 @@ const SoilAnalysis = ({ onSave, onCancel, initialData }: SoilAnalysisProps) => {
                )}
              </FormField>
 
-             <FormField label="Vers de terre (nb/m²)" htmlFor="biological.earthworms" required>
+              <FormField label={t('soilAnalysis.earthwormsLabel', 'Earthworms (count/m²)')} htmlFor="biological.earthworms" required>
                <Input
                  id="biological.earthworms"
                  type="number"
@@ -416,7 +419,7 @@ const SoilAnalysis = ({ onSave, onCancel, initialData }: SoilAnalysisProps) => {
                )}
              </FormField>
 
-             <FormField label="Activité Organique (%)" htmlFor="biological.organicActivity" required>
+              <FormField label={t('soilAnalysis.organicActivityLabel', 'Organic activity (%)')} htmlFor="biological.organicActivity" required>
                <Input
                  id="biological.organicActivity"
                  type="number"
@@ -439,11 +442,11 @@ const SoilAnalysis = ({ onSave, onCancel, initialData }: SoilAnalysisProps) => {
             onClick={onCancel}
             className="px-4 py-2 text-gray-600 hover:text-gray-800"
           >
-            Annuler
+            {t('soilAnalysis.cancel', 'Cancel')}
           </Button>
           <Button variant="green" type="submit" className="px-4 py-2 rounded-md flex items-center space-x-2" >
             <Save className="h-4 w-4" />
-            <span>Enregistrer</span>
+            <span>{t('soilAnalysis.save', 'Save')}</span>
           </Button>
         </div>
       </form>

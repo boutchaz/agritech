@@ -330,6 +330,18 @@
       "notes": "Notes",
       "excludedCycles": "Excluded Cycles"
     },
+    "phenology": {
+      "aiEnrichment": {
+        "title": "Plain-language summary",
+        "fragileStatus": "Use with caution",
+        "degradationReasons": "Why to stay cautious",
+        "imputedStages": "Estimated dates",
+        "missing": "to confirm",
+        "phaseNarratives": "What it means",
+        "recommendations": "What to do now",
+        "disclaimer": "AI-assisted summary — always verify in the field."
+      }
+    },
     "spectral": {
       "title": "Spectral thresholds",
       "noData": "No spectral data available",

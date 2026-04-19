@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { apiClient } from '../../lib/api-client';
 import { Upload, FileJson, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -17,6 +18,7 @@ const FarmImportDialog = ({
   organizationId,
   onSuccess,
 }: FarmImportDialogProps) => {
+  const { t } = useTranslation();
   const [file, setFile] = useState<File | null>(null);
   const [isImporting, setIsImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -31,7 +33,7 @@ const FarmImportDialog = ({
         setError(null);
         setSuccess(null);
       } else {
-        setError('Veuillez sélectionner un fichier JSON');
+        setError(t('farmImport.selectJsonFile', 'Please select a JSON file'));
         setFile(null);
       }
     }
@@ -39,7 +41,7 @@ const FarmImportDialog = ({
 
   const handleImport = async () => {
     if (!file) {
-      setError('Veuillez sélectionner un fichier JSON');
+      setError(t('farmImport.selectJsonFile', 'Please select a JSON file'));
       return;
     }
 
@@ -54,7 +56,7 @@ const FarmImportDialog = ({
 
       // Validate export data structure
       if (!exportData.farms || !Array.isArray(exportData.farms)) {
-        throw new Error('Format de fichier invalide: array "farms" manquant');
+        throw new Error(t('farmImport.invalidFormat', 'Invalid file format: missing "farms" array'));
       }
 
       if (!exportData.version) {
@@ -79,13 +81,13 @@ const FarmImportDialog = ({
 
       if (data?.success) {
         const imported = data.imported;
-        let message = `Import réussi!\n`;
-        message += `- ${imported?.farms || 0} ferme(s) importée(s)\n`;
-        message += `- ${imported?.parcels || 0} parcelle(s) importée(s)\n`;
-        message += `- ${imported?.satellite_aois || 0} AOI(s) importée(s)`;
+        let message = `${t('farmImport.importSuccess', 'Import successful!')}\n`;
+        message += `- ${t('farmImport.farmsImported', '{{count}} farm(s) imported', { count: imported?.farms || 0 })}\n`;
+        message += `- ${t('farmImport.parcelsImported', '{{count}} parcel(s) imported', { count: imported?.parcels || 0 })}\n`;
+        message += `- ${t('farmImport.aoisImported', '{{count}} AOI(s) imported', { count: imported?.satellite_aois || 0 })}`;
 
         if (data.warnings && data.warnings.length > 0) {
-          message += `\n\nAvertissements:\n${data.warnings.join('\n')}`;
+          message += `\n\n${t('farmImport.warnings', 'Warnings')}:\n${data.warnings.join('\n')}`;
         }
 
         setSuccess(message);
@@ -98,11 +100,11 @@ const FarmImportDialog = ({
           setSuccess(null);
         }, 2000);
       } else {
-        const errorMessages = data?.errors || ['Erreur lors de l\'import'];
+        const errorMessages = data?.errors || [t('farmImport.importError', 'Error during import')];
         throw new Error(errorMessages.join('\n'));
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Erreur lors de l\'import';
+      const errorMessage = error instanceof Error ? error.message : t('farmImport.importError', 'Error during import');
       setError(errorMessage);
     } finally {
       setIsImporting(false);
@@ -125,10 +127,10 @@ const FarmImportDialog = ({
       title={
         <div className="flex items-center gap-2">
           <Upload className="w-5 h-5" />
-          Importer des fermes
+          {t('farmImport.title', 'Import farms')}
         </div>
       }
-      description="Sélectionnez un fichier JSON d'export pour restaurer des fermes avec leurs parcelles et AOI."
+      description={t('farmImport.description', 'Select an export JSON file to restore farms with their parcels and AOIs.')}
       size="2xl"
       contentClassName="max-h-[90vh] overflow-y-auto"
     >
@@ -136,7 +138,7 @@ const FarmImportDialog = ({
           {/* File Selection */}
           <div className="space-y-2">
             <label htmlFor="farm-import-file" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-              Fichier JSON d'export
+              {t('farmImport.fileLabel', 'Export JSON file')}
             </label>
             <div className="flex items-center gap-4">
               <label className="flex-1 cursor-pointer">
@@ -154,7 +156,7 @@ const FarmImportDialog = ({
                     {file ? (
                       <p className="text-sm font-medium text-gray-900 dark:text-white">{file.name}</p>
                     ) : (
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Cliquez pour sélectionner un fichier JSON</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">{t('farmImport.filePlaceholder', 'Click to select a JSON file')}</p>
                     )}
                   </div>
                 </div>
@@ -178,7 +180,7 @@ const FarmImportDialog = ({
               className="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
             />
             <label htmlFor="skip-duplicates" className="text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
-              Ignorer les doublons (par nom)
+              {t('farmImport.skipDuplicates', 'Skip duplicates (by name)')}
             </label>
           </div>
 
@@ -187,7 +189,7 @@ const FarmImportDialog = ({
             <div className="flex items-start gap-3 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
               <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
               <div className="flex-1">
-                <p className="text-sm font-medium text-red-900 dark:text-red-300">Erreur</p>
+                <p className="text-sm font-medium text-red-900 dark:text-red-300">{t('farmImport.errorTitle', 'Error')}</p>
                 <p className="text-sm text-red-700 dark:text-red-400 whitespace-pre-line">{error}</p>
               </div>
             </div>
@@ -198,7 +200,7 @@ const FarmImportDialog = ({
             <div className="flex items-start gap-3 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
               <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
               <div className="flex-1">
-                <p className="text-sm font-medium text-green-900 dark:text-green-300">Succès</p>
+                <p className="text-sm font-medium text-green-900 dark:text-green-300">{t('farmImport.successTitle', 'Success')}</p>
                 <p className="text-sm text-green-700 dark:text-green-400 whitespace-pre-line">{success}</p>
               </div>
             </div>
@@ -211,10 +213,10 @@ const FarmImportDialog = ({
               disabled={isImporting}
               className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
             >
-              Annuler
+              {t('farmImport.cancel', 'Cancel')}
             </Button>
             <Button variant="green" onClick={handleImport} disabled={!file || isImporting} className="px-4 py-2 text-sm font-medium rounded-lg transition-colors" >
-              {isImporting ? 'Import en cours...' : 'Importer'}
+              {isImporting ? t('farmImport.importing', 'Importing...') : t('farmImport.import', 'Import')}
             </Button>
           </div>
         </div>

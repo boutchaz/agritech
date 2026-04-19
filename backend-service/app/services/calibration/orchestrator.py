@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from collections import defaultdict
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from typing import Any
 
 import numpy as np
@@ -309,6 +309,20 @@ async def run_calibration_pipeline(
             reference_data=calibration_input.reference_data,
         ),
     )
+
+    # Override step2.chill_hours with real-hourly count when location is known.
+    # Hard-fail per chill-hours-hourly-fetch design — no sine fallback in production.
+    # Tests without lat/lon in weather_rows skip this branch (preserves fixtures).
+    location = _extract_location_from_weather_rows(weather_rows)
+    if location is not None and calibration_input.crop_type == "olivier":
+        from app.services.weather.chill_hours import compute_hourly_chill_hours
+        lat, lon = location
+        # Use the latest weather year as reference (calibration runs Apr–Jun typically)
+        chill_year = max((d.year for d in (date.fromisoformat(str(r.get("date", ""))[:10])
+                                            for r in weather_rows if r.get("date"))), default=date.today().year)
+        step2.chill_hours = await compute_hourly_chill_hours(
+            latitude=lat, longitude=lon, year=chill_year
+        )
 
     # Capability & data guard (sequential — depends on step1)
     capabilities = get_calibration_capabilities(

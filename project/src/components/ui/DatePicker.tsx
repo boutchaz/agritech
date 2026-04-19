@@ -4,6 +4,7 @@ import { format, parseISO } from 'date-fns';
 import { Calendar as CalendarIcon } from 'lucide-react';
 import { DayPicker } from 'react-day-picker';
 import 'react-day-picker/style.css';
+import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 
 interface DatePickerProps {
@@ -23,8 +24,9 @@ export function DatePicker({
   isLoading = false,
   disabled = false,
   className,
-  placeholder = 'Select date',
+  placeholder,
 }: DatePickerProps) {
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = React.useState(false);
   const [selectedDate, setSelectedDate] = React.useState<Date | undefined>(
     value ? parseISO(value) : undefined
@@ -104,7 +106,7 @@ export function DatePicker({
 
   const displayValue = selectedDate
     ? format(selectedDate, 'PPP')
-    : placeholder;
+    : placeholder || t('datePicker.placeholder', 'Select date');
 
   return (
     <div className={cn('relative', className)}>
@@ -121,7 +123,7 @@ export function DatePicker({
           !selectedDate && 'text-gray-500'
         )}
       >
-        <span>{isLoading ? 'Loading dates...' : displayValue}</span>
+        <span>{isLoading ? t('datePicker.loadingDates', 'Loading dates...') : displayValue}</span>
         <CalendarIcon className="h-4 w-4 opacity-50" />
       </button>
 
@@ -129,9 +131,11 @@ export function DatePicker({
       {isOpen && (
         <>
           {/* Backdrop */}
-          <div
+          <button
+            type="button"
             className="fixed inset-0 z-[9998]"
             onClick={() => setIsOpen(false)}
+            aria-label={t('datePicker.close', 'Close calendar')}
           />
 
           {/* Calendar Popover */}
@@ -156,7 +160,7 @@ export function DatePicker({
               <div className="mt-3 border-t border-gray-200 pt-3 text-xs text-gray-600">
                 <div className="flex items-center gap-2">
                   <StatusDot color="green" size="sm" />
-                  <span>Available satellite imagery</span>
+                  <span>{t('datePicker.availableSatelliteImagery', 'Available satellite imagery')}</span>
                 </div>
               </div>
             )}

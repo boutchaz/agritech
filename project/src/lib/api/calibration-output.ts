@@ -25,12 +25,12 @@ export interface AiDiagnosticsIndicators {
   ndvi_delta: number;
   ndvi_band: 'above_optimal' | 'optimal' | 'vigilance' | 'alert';
   ndvi_trend: 'improving' | 'stable' | 'declining';
-  baseline_ndre: number | null;
+  p50_ndre: number | null;
   current_ndre: number | null;
   ndre_delta: number | null;
   ndre_status: 'high' | 'normal' | 'low';
   ndre_trend: 'improving' | 'stable' | 'declining';
-  baseline_ndmi: number | null;
+  p50_ndmi: number | null;
   current_ndmi: number | null;
   ndmi_delta: number | null;
   ndmi_trend: 'improving' | 'stable' | 'declining';

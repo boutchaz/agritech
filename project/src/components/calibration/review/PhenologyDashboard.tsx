@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Info } from 'lucide-react';
 import type { PhenologyDashboardData, SeasonTimelineEntry } from '@/types/calibration-review';
 import { ChillHoursGauge } from './ChillHoursGauge';
+import { PhenologyAiEnrichmentPanel } from './PhenologyAiEnrichmentPanel';
 
 interface PhenologyDashboardProps {
   data: PhenologyDashboardData;
@@ -419,6 +420,15 @@ export function PhenologyDashboard({ data }: PhenologyDashboardProps) {
           <Info className="h-3 w-3" />
           {t('calibrationReview.phenology.amorcageNote', 'Mode AMORCAGE: fewer than 3 complete cycles available — confidence levels are downgraded.')}
         </p>
+      )}
+
+      {/* AI enrichment — imputed stages, narratives, recommendations */}
+      {data.ai_enrichment && (
+        <PhenologyAiEnrichmentPanel
+          enrichment={data.ai_enrichment}
+          status={data.status}
+          missingStages={data.missing_stages}
+        />
       )}
     </div>
   );

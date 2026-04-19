@@ -14,6 +14,41 @@
       "phases_maturite": "phases_maturite_ans maps phase id -> [min_age, max_age) in years. rendement_kg_arbre uses the same phase ids as keys (juvenile, entree_production, pleine_production, maturite_avancee, senescence) with [min_kg, max_kg] per tree."
     }
   },
+  "phenological_stages": [
+    {
+      "key": "dormancy",
+      "name_fr": "Dormance",
+      "name_en": "Dormancy",
+      "name_ar": "السكون",
+      "months": [11, 12, 1, 2],
+      "thresholds": [
+        { "key": "chill_hours", "label_fr": "Heures de froid", "label_en": "Chill hours", "compare": "below", "value": 7.2, "unit": "h", "icon": "snowflake" },
+        { "key": "frost_risk", "label_fr": "Risque de gel", "label_en": "Frost risk", "compare": "below", "value": 0, "unit": "h", "icon": "snowflake" }
+      ]
+    },
+    {
+      "key": "flowering",
+      "name_fr": "Floraison",
+      "name_en": "Flowering",
+      "name_ar": "الإزهار",
+      "months": [3, 4, 5],
+      "thresholds": [
+        { "key": "optimal_flowering", "label_fr": "Conditions optimales", "label_en": "Optimal conditions", "compare": "between", "value": 15, "upper": 25, "unit": "h", "icon": "leaf" },
+        { "key": "heat_stress", "label_fr": "Stress thermique", "label_en": "Heat stress", "compare": "above", "value": 35, "unit": "h", "icon": "flame" }
+      ]
+    },
+    {
+      "key": "fruit_development",
+      "name_fr": "Développement des fruits",
+      "name_en": "Fruit development",
+      "name_ar": "نمو الثمار",
+      "months": [6, 7, 8, 9],
+      "thresholds": [
+        { "key": "growing_hours", "label_fr": "Heures de croissance", "label_en": "Growing hours", "compare": "above", "value": 10, "unit": "h", "icon": "sun" },
+        { "key": "extreme_heat", "label_fr": "Chaleur extrême", "label_en": "Extreme heat", "compare": "above", "value": 40, "unit": "h", "icon": "flame" }
+      ]
+    }
+  ],
   "phases_maturite_ans": {
     "juvenile": [
       0,

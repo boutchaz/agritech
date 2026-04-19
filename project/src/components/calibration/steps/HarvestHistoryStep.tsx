@@ -1,5 +1,6 @@
 import { Plus, Trash2 } from 'lucide-react';
 import { useFieldArray, type UseFormReturn } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { FormField } from '@/components/ui/FormField';
@@ -16,6 +17,7 @@ interface HarvestHistoryStepProps {
 }
 
 export function HarvestHistoryStep({ form }: HarvestHistoryStepProps) {
+  const { t } = useTranslation();
   const {
     register,
     control,
@@ -43,7 +45,7 @@ export function HarvestHistoryStep({ form }: HarvestHistoryStepProps) {
           className="self-start"
         >
           <Plus className="w-4 h-4" />
-          Ajouter
+          {t('harvestHistoryStep.add')}
         </Button>
       </div>
 

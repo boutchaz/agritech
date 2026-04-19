@@ -125,7 +125,8 @@
       "Bash(npx tsr *)",
       "Bash(/Users/boutchaz/Documents/CodeLovers/agritech/.claude/skills/gstack/browse/dist/browse console *)",
       "Bash(/Users/boutchaz/Documents/CodeLovers/agritech/.claude/skills/gstack/browse/dist/browse restart *)",
-      "Bash(git diff *)"
+      "Bash(git diff *)",
+      "Bash(npx jest *)"
     ],
     "deny": [],
     "ask": []

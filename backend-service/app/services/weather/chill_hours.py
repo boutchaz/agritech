@@ -8,6 +8,8 @@ Hard-fails on Open-Meteo unavailability — no sine fallback per design decision
 """
 from __future__ import annotations
 
+from datetime import date, timedelta
+
 from app.services.weather.hour_counter import count_hours
 from app.services.weather_service import WeatherService
 
@@ -27,11 +29,13 @@ async def compute_hourly_chill_hours(
         WeatherFetchError when Open-Meteo is unavailable (no fallback).
     """
     ws = WeatherService()
+    # Clamp end_date to yesterday — Open-Meteo Archive rejects future dates.
+    archive_end = min(date(year, 2, 28), date.today() - timedelta(days=1))
     rows = await ws.fetch_hourly_temperature(
         latitude=latitude,
         longitude=longitude,
         start_date=f"{year - 1}-11-01",
-        end_date=f"{year}-02-28",
+        end_date=archive_end.isoformat(),
     )
     return count_hours(
         rows,

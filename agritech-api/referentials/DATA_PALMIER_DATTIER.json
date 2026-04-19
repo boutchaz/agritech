@@ -7,6 +7,40 @@
     "famille": "Arecaceae",
     "pays": "Maroc"
   },
+  "phenological_stages": [
+    {
+      "key": "winter_rest",
+      "name_fr": "Repos hivernal",
+      "name_en": "Winter rest",
+      "name_ar": "الراحة الشتوية",
+      "months": [12, 1, 2],
+      "thresholds": [
+        { "key": "frost_risk", "label_fr": "Risque de gel", "label_en": "Frost risk", "compare": "below", "value": 0, "unit": "h", "icon": "snowflake" }
+      ]
+    },
+    {
+      "key": "pollination",
+      "name_fr": "Pollinisation",
+      "name_en": "Pollination",
+      "name_ar": "التلقيح",
+      "months": [3, 4, 5],
+      "thresholds": [
+        { "key": "optimal_pollination", "label_fr": "Conditions optimales", "label_en": "Optimal conditions", "compare": "between", "value": 25, "upper": 35, "unit": "h", "icon": "leaf" },
+        { "key": "cool_pollination", "label_fr": "Trop frais", "label_en": "Too cool", "compare": "below", "value": 18, "unit": "h", "icon": "snowflake" }
+      ]
+    },
+    {
+      "key": "fruit_development",
+      "name_fr": "Développement des fruits",
+      "name_en": "Fruit development",
+      "name_ar": "نمو الثمار",
+      "months": [6, 7, 8, 9, 10],
+      "thresholds": [
+        { "key": "growing_hours", "label_fr": "Heures de croissance", "label_en": "Growing hours", "compare": "above", "value": 18, "unit": "h", "icon": "sun" },
+        { "key": "extreme_heat", "label_fr": "Chaleur extrême", "label_en": "Extreme heat", "compare": "above", "value": 45, "unit": "h", "icon": "flame" }
+      ]
+    }
+  ],
   "phases_maturite_ans": {
     "juvenile": [
       0,

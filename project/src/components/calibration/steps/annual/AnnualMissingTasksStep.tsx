@@ -1,5 +1,6 @@
 import { CheckCircle2, ClipboardList, Droplets, Leaf, Loader2, Scissors, ShieldAlert } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/Input';
 import { useAnnualMissingTasks, useResolveAnnualMissingTasks } from '@/hooks/useAnnualRecalibration';
@@ -38,6 +39,7 @@ function statusLabel(resolution: TaskResolution): string {
 }
 
 export function AnnualMissingTasksStep({ parcelId, onContinue }: AnnualMissingTasksStepProps) {
+  const { t } = useTranslation();
   const { data: missingTasks, isLoading } = useAnnualMissingTasks(parcelId);
   const resolveMissingTasks = useResolveAnnualMissingTasks(parcelId);
   const [taskStates, setTaskStates] = useState<Record<string, TaskResolution>>({});
@@ -112,12 +114,13 @@ export function AnnualMissingTasksStep({ parcelId, onContinue }: AnnualMissingTa
       return [
         {
           task_id: task.task_id,
-          resolution:
+          resolution: (
             state === 'completed'
               ? 'completed'
               : state === 'not-done'
                 ? 'not_done'
-                : 'unconfirmed',
+                : 'unconfirmed'
+          ) as 'completed' | 'not_done' | 'unconfirmed',
           execution_date: quickEntryDates[task.task_id] || undefined,
           notes: quickEntryNotes[task.task_id] || undefined,
         },
@@ -245,7 +248,7 @@ export function AnnualMissingTasksStep({ parcelId, onContinue }: AnnualMissingTa
                       type="button"
                       onClick={() => setTaskStates((previous) => ({ ...previous, [taskKey]: 'completed' }))}
                     >
-                      Enregistrer cette saisie
+                      {t('annualMissingTasksStep.saveEntry')}
                     </Button>
                   </div>
                 </div>

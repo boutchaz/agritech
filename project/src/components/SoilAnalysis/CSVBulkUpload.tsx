@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Upload, Download, FileText, AlertCircle, CheckCircle, X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { parcelsApi } from '../../lib/api/parcels';
 import { soilAnalysesApi } from '../../lib/api/soil-analyses';
 import { Button } from '@/components/ui/button';
@@ -26,6 +27,7 @@ interface ParsedAnalysis {
 }
 
 const CSVBulkUpload = ({ onImportComplete }: CSVBulkUploadProps) => {
+  const { t } = useTranslation();
   const [showModal, setShowModal] = useState(false);
   const [parsedData, setParsedData] = useState<ParsedAnalysis[]>([]);
   const [errors, setErrors] = useState<string[]>([]);
@@ -352,7 +354,7 @@ Parcelle C,2025-01-22,5.9,3.5,2.4,0.052,2.6,Sableux,30,Lab AgriTest,Nécessite c
                 onClick={() => setShowModal(false)}
                 className="px-4 py-2 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
               >
-                Annuler
+                {t('common.cancel')}
               </Button>
               <Button variant="green"
                 onClick={handleImport}

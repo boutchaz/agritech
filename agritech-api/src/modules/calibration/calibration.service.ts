@@ -2190,7 +2190,41 @@ export class CalibrationService {
           review.block_a.summary_narrative = aiNarrative;
         }
       } catch (err) {
-        this.logger.warn(`AI summary enrichment failed, using fallback: ${err.message}`);
+        this.logger.warn(`AI summary enrichment failed, using fallback: ${(err as Error).message}`);
+      }
+    }
+
+    // Enrich phenology dashboard with AI (imputed stages, narratives, reasons).
+    // Gated on degraded status OR missing stages — don't burn quota on clean outputs.
+    if (userId && review.block_b.phenology_dashboard) {
+      const dashboard = review.block_b.phenology_dashboard;
+      const needsEnrichment =
+        dashboard.status === 'degraded' || dashboard.missing_stages.length > 0;
+      if (needsEnrichment) {
+        try {
+          const step4Raw =
+            outputAny.step4 && typeof outputAny.step4 === 'object' && !Array.isArray(outputAny.step4)
+              ? (outputAny.step4 as Record<string, unknown>)
+              : {};
+          const context = this.calibrationReviewAdapter.buildPhenologyEnrichmentContext(
+            step4Raw,
+            cropType,
+          );
+          if (context) {
+            const enrichment = await this.aiReportsService.generatePhenologyEnrichment(
+              organizationId,
+              userId,
+              context,
+            );
+            if (enrichment) {
+              dashboard.ai_enrichment = enrichment;
+            }
+          }
+        } catch (err) {
+          this.logger.warn(
+            `Phenology AI enrichment failed: ${(err as Error).message}`,
+          );
+        }
       }
     }
 

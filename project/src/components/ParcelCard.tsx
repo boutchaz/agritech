@@ -12,6 +12,7 @@ import { useLatestSatelliteIndices, calculateHealthStatus, calculateIrrigationIn
 import { AIStatusBadge } from './ai/AIStatusBadge';
 import { Button } from '@/components/ui/button';
 import { StatusDot } from '@/components/ui/status-dot';
+import { useTranslation } from 'react-i18next';
 
 const IndicesCalculator = lazy(() => import('./SatelliteAnalysisView/IndicesCalculator'));
 const TimeSeriesChart = lazy(() => import('./SatelliteAnalysisView/TimeSeriesChart'));
@@ -47,6 +48,7 @@ interface ParcelCardProps {
 
 const ParcelCard = ({ parcel, activeTab, onTabChange, sensorData, isAssigned = false, disableInnerScroll = false }: ParcelCardProps) => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   // Fetch latest satellite indices for this parcel
   const { data: satelliteData, isLoading: satelliteLoading } = useLatestSatelliteIndices(parcel.id);
@@ -396,7 +398,10 @@ const ParcelCard = ({ parcel, activeTab, onTabChange, sensorData, isAssigned = f
               <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-8 text-center">
                 <Flask className="h-12 w-12 text-gray-400 mx-auto mb-3" />
                 <p className="text-gray-600 dark:text-gray-400 mb-4">
-                  Aucune analyse de {analysisTab === 'soil' ? 'sol' : analysisTab === 'plant' ? 'plante' : 'eau'} enregistrée
+                  {t('parcelCard.noAnalysisRecorded', {
+                    analysisType: analysisTab === 'soil' ? t('parcelCard.soil', 'sol') : analysisTab === 'plant' ? t('parcelCard.plant', 'plante') : t('parcelCard.water', 'eau'),
+                    defaultValue: `Aucune analyse de ${analysisTab === 'soil' ? 'sol' : analysisTab === 'plant' ? 'plante' : 'eau'} enregistrée`,
+                  })}
                 </p>
                 <Button variant="green"
                   onClick={() =>
@@ -409,7 +414,7 @@ const ParcelCard = ({ parcel, activeTab, onTabChange, sensorData, isAssigned = f
                   className="inline-flex items-center space-x-2 px-4 py-2 rounded-md"
                 >
                   <Plus className="h-4 w-4" />
-                  <span>Ajouter une première analyse</span>
+                  <span>{t('parcelCard.addFirstAnalysis', 'Ajouter une première analyse')}</span>
                 </Button>
               </div>
             )}
@@ -507,7 +512,7 @@ const ParcelCard = ({ parcel, activeTab, onTabChange, sensorData, isAssigned = f
                   Les données de délimitation de la parcelle sont requises pour l'analyse satellite.
                 </p>
                 <p className="text-sm text-gray-500 dark:text-gray-500 mt-2">
-                  Veuillez définir les limites de la parcelle pour accéder aux fonctionnalités d'imagerie satellite.
+                  {t('parcelCard.defineBoundarySatellite', "Veuillez définir les limites de la parcelle pour accéder aux fonctionnalités d'imagerie satellite.")}
                 </p>
               </div>
             )}
@@ -769,7 +774,7 @@ const ParcelCard = ({ parcel, activeTab, onTabChange, sensorData, isAssigned = f
           <Suspense fallback={
             <div className="flex items-center justify-center p-12">
               <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-              <span className="ml-3 text-gray-600">Chargement des analyses météo...</span>
+               <span className="ml-3 text-gray-600">{t('parcelCard.loadingWeatherAnalysis', 'Chargement des analyses météo...')}</span>
             </div>
           }>
             <WeatherAnalyticsView
@@ -784,7 +789,7 @@ const ParcelCard = ({ parcel, activeTab, onTabChange, sensorData, isAssigned = f
               Les données de localisation de la parcelle sont requises pour l'analyse météorologique.
             </p>
             <p className="text-sm text-gray-500 dark:text-gray-500 mt-2">
-              Veuillez définir les limites de la parcelle pour accéder aux analyses météo & climatiques.
+              {t('parcelCard.defineBoundaryWeather', 'Veuillez définir les limites de la parcelle pour accéder aux analyses météo & climatiques.')}
             </p>
           </div>
         );

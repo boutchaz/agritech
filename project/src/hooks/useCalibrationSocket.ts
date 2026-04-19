@@ -45,6 +45,9 @@ export function useCalibrationSocket(parcelId: string): void {
         queryKey: queryKeys.calibration.report(parcelId, organizationId),
       });
       queryClient.invalidateQueries({
+        queryKey: queryKeys.calibration.review(parcelId, organizationId),
+      });
+      queryClient.invalidateQueries({
         queryKey: queryKeys.calibration.phase(parcelId, organizationId),
       });
       queryClient.invalidateQueries({

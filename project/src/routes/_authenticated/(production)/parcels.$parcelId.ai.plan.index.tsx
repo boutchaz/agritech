@@ -8,6 +8,7 @@ import {
   useGenerateAIPlanReport,
 } from '@/hooks/useAIPlan';
 import { PlanInterventionCard } from '@/components/ai/PlanInterventionCard';
+import { PlanDataOverview, type PlanData } from '@/components/ai/PlanDataOverview';
 import { annualPlanStatusLabel } from '@/lib/farmerFriendlyLabels';
 import { Calendar, RefreshCw, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -30,6 +31,14 @@ const AIPlanCalendarPage = () => {
   }
 
   const statusLabel = plan?.status ? annualPlanStatusLabel(plan.status) : t('plan.calendar.statusNone');
+  const planData = (plan?.plan_data ?? null) as PlanData | null;
+  const planHasData = !!planData && Object.keys(planData).length > 0;
+  const planMeta = plan as unknown as {
+    crop_type?: string | null;
+    variety?: string | null;
+    season?: string | null;
+    year?: number | null;
+  } | null;
 
   return (
     <div className="space-y-6">
@@ -92,24 +101,39 @@ const AIPlanCalendarPage = () => {
         </div>
       )}
 
-      {!interventions || interventions.length === 0 ? (
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-12 text-center">
-          <Calendar className="w-16 h-16 text-gray-400 mx-auto mb-4" aria-hidden />
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">{t('plan.calendar.emptyTitle')}</h3>
-          <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto">{t('plan.calendar.emptyBody')}</p>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {interventions.map((intervention) => (
-            <PlanInterventionCard
-              key={intervention.id}
-              intervention={intervention}
-              onExecute={(id) => executeIntervention(id)}
-              isExecuting={isExecuting}
-            />
-          ))}
-        </div>
+      {planHasData && planData && (
+        <PlanDataOverview
+          plan={planData}
+          cropType={planMeta?.crop_type ?? null}
+          variety={planMeta?.variety ?? null}
+          season={planMeta?.season ?? planMeta?.year ?? null}
+        />
       )}
+
+      <section>
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+          <Calendar className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+          {t('plan.calendar.interventionsTitle', 'Interventions planifiées')}
+        </h3>
+        {!interventions || interventions.length === 0 ? (
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-12 text-center">
+            <Calendar className="w-16 h-16 text-gray-400 mx-auto mb-4" aria-hidden />
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">{t('plan.calendar.emptyTitle')}</h3>
+            <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto">{t('plan.calendar.emptyBody')}</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {interventions.map((intervention) => (
+              <PlanInterventionCard
+                key={intervention.id}
+                intervention={intervention}
+                onExecute={(id) => executeIntervention(id)}
+                isExecuting={isExecuting}
+              />
+            ))}
+          </div>
+        )}
+      </section>
     </div>
   );
 };

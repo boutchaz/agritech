@@ -198,6 +198,41 @@ export interface PhenologyDashboardData {
   referentiel_gdd?: Record<string, number> | null;
   /** Chill-hours summary (olive-only for v1; null when crop_type !== 'olivier' or chill_hours missing) */
   chill: ChillHoursDisplay | null;
+  /** Status echoed from step4 (e.g. "degraded", "ok"). */
+  status?: string | null;
+  /** Missing stages echoed from step4.missing_stages. */
+  missing_stages?: string[];
+  /** AI enrichment attached post-hoc. Null when unavailable/failed/skipped. */
+  ai_enrichment?: PhenologyAiEnrichment | null;
+}
+
+export type PhenologyAiConfidence = 'ELEVEE' | 'MODEREE' | 'FAIBLE' | 'TRES_FAIBLE';
+
+export interface ImputedStage {
+  stage: string;
+  date: string | null;
+  confidence: PhenologyAiConfidence;
+  method: string;
+  rationale: string;
+}
+
+export interface PhaseNarrative {
+  phase: string;
+  year: number | null;
+  summary: string;
+  referential_deviation_days: number | null;
+}
+
+export interface PhenologyAiEnrichment {
+  version: string;
+  generated_at: string;
+  provider: string;
+  model: string;
+  degradation_reasons: string[];
+  imputed_stages: ImputedStage[];
+  phase_narratives: PhaseNarrative[];
+  recommendations: string[];
+  summary: string | null;
 }
 
 // ── Block C — Anomalies (Phase 2) ──

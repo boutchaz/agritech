@@ -1,4 +1,5 @@
 import { CheckCircle2, RotateCcw, XCircle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 
 interface RecalibrationValidationStepProps {
@@ -16,6 +17,7 @@ export function RecalibrationValidationStep({
   onCancel,
   onFullRecalibration,
 }: RecalibrationValidationStepProps) {
+  const { t } = useTranslation();
   return (
     <div className="space-y-6">
       <div>
@@ -40,7 +42,7 @@ export function RecalibrationValidationStep({
 
         <Button type="button" variant="outline" onClick={onCancel} className="w-full">
           <XCircle className="h-4 w-4" />
-          <span>Annuler</span>
+          <span>{t('recalibrationValidationStep.cancel')}</span>
         </Button>
 
         <Button type="button" variant="outline" onClick={onFullRecalibration} className="w-full border-amber-300 text-amber-700 hover:bg-amber-50 dark:border-amber-700 dark:text-amber-300 dark:hover:bg-amber-900/20">

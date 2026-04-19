@@ -36,6 +36,29 @@ function normalizeVariety(s: string): string {
     .trim();
 }
 
+/** Damerau-Levenshtein distance (used to match variety spelling variants like Arbequine ↔ Arbequina). */
+function editDistance(a: string, b: string): number {
+  if (a === b) return 0;
+  if (!a.length) return b.length;
+  if (!b.length) return a.length;
+  const dp: number[][] = Array.from({ length: a.length + 1 }, () => new Array(b.length + 1).fill(0));
+  for (let i = 0; i <= a.length; i++) dp[i][0] = i;
+  for (let j = 0; j <= b.length; j++) dp[0][j] = j;
+  for (let i = 1; i <= a.length; i++) {
+    for (let j = 1; j <= b.length; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      dp[i][j] = Math.min(
+        dp[i - 1][j] + 1,
+        dp[i][j - 1] + 1,
+        dp[i - 1][j - 1] + cost,
+      );
+    }
+  }
+  return dp[a.length][b.length];
+}
+
+const VARIETY_FUZZY_MAX_DISTANCE = 2;
+
 type JsonRecord = Record<string, unknown>;
 
 // Spec §7.2 — health score label thresholds
@@ -392,7 +415,7 @@ export class CalibrationReviewAdapter {
     cropType?: string | null,
     variety?: string | null,
   ): ChillHoursDisplay | null {
-    if (cropType !== "olivier") return null;
+    if (typeof cropType !== "string" || cropType.trim().toLowerCase() !== "olivier") return null;
     const rawValue = step2?.chill_hours;
     if (rawValue == null || typeof rawValue !== "number") return null;
     const value = Math.round(rawValue);
@@ -400,13 +423,7 @@ export class CalibrationReviewAdapter {
     const referentiel = getLocalCropReference("olivier");
     const varietes = this.asArray(referentiel?.varietes ?? []);
     const target = variety ? normalizeVariety(variety) : null;
-    const matched = target
-      ? varietes.find((v) => {
-          const rec = this.asRecord(v);
-          const nom = this.asString(rec.nom);
-          return nom != null && normalizeVariety(nom) === target;
-        })
-      : undefined;
+    const matched = target ? this.findVarietyMatch(varietes, target) : undefined;
 
     const matchedRec = matched ? this.asRecord(matched) : null;
     const bracketRaw = matchedRec ? this.asArray(matchedRec.heures_froid_requises) : [];
@@ -431,6 +448,39 @@ export class CalibrationReviewAdapter {
       band,
       phrase,
     };
+  }
+
+  /**
+   * Find a variety entry by name with tolerance for case, accents, and minor spelling differences.
+   * Strategy: exact normalized match first, then substring containment, then Damerau-Levenshtein ≤ 2.
+   * Picks the closest match if multiple candidates fall within the fuzzy threshold.
+   */
+  private findVarietyMatch(varietes: unknown[], target: string): unknown | undefined {
+    let exact: unknown | undefined;
+    let substr: unknown | undefined;
+    let fuzzyBest: { entry: unknown; distance: number } | undefined;
+
+    for (const v of varietes) {
+      const rec = this.asRecord(v);
+      const nom = this.asString(rec.nom);
+      if (!nom) continue;
+      const normNom = normalizeVariety(nom);
+      if (normNom === target) {
+        exact = v;
+        break;
+      }
+      if (!substr && (normNom.includes(target) || target.includes(normNom))) {
+        substr = v;
+      }
+      const dist = editDistance(normNom, target);
+      if (dist <= VARIETY_FUZZY_MAX_DISTANCE) {
+        if (!fuzzyBest || dist < fuzzyBest.distance) {
+          fuzzyBest = { entry: v, distance: dist };
+        }
+      }
+    }
+
+    return exact ?? substr ?? fuzzyBest?.entry;
   }
 
   private buildChillPhrase(
@@ -829,6 +879,11 @@ export class CalibrationReviewAdapter {
       ? `${Math.min(...years)}–${Math.max(...years)}`
       : null;
 
+    const status = this.asString(step4.status);
+    const missingStages = this.asArray(step4.missing_stages)
+      .map((s) => this.asString(s))
+      .filter((s): s is string => !!s);
+
     return {
       available: true,
       mode,
@@ -839,6 +894,153 @@ export class CalibrationReviewAdapter {
       yearly_stages: yearlyStagesOut,
       referentiel_gdd: this.extractReferentielGdd(cropType),
       chill,
+      status,
+      missing_stages: missingStages,
+      ai_enrichment: null,
+    };
+  }
+
+  /**
+   * Build a compact JSON context for the phenology AI-enrichment prompt.
+   *
+   * Returns `null` when there is nothing meaningful to enrich (no phase timeline
+   * and no yearly stages) so callers can skip the LLM call.
+   *
+   * The context is intentionally minimal to keep prompt cost low:
+   * - Echoes raw step4 signals the model needs (mean_dates, phase_timeline,
+   *   yearly_stages, missing_stages, status, gdd_correlation, variability).
+   * - Includes a pruned slice of the referential (`stades_bbch` GDD ranges
+   *   keyed by phase_kc, plus cycle months) so the LLM can reason about
+   *   referential deviation without the full 3000-line JSON.
+   */
+  buildPhenologyEnrichmentContext(
+    step4: JsonRecord,
+    cropType?: string | null,
+  ): {
+    crop_type: string | null;
+    status: string | null;
+    missing_stages: string[];
+    mean_dates: Record<string, string | null>;
+    inter_annual_variability_days: Record<string, number>;
+    gdd_correlation: Record<string, number>;
+    yearly_stages: Record<string, Record<string, string | null>>;
+    phase_timeline: Array<{
+      year: number;
+      mode: string;
+      transitions: Array<{
+        phase: string;
+        start_date: string;
+        end_date: string | null;
+        gdd_at_entry: number;
+        confidence: string;
+      }>;
+    }>;
+    referential: {
+      crop_type: string | null;
+      stades_bbch: Array<{
+        code: string;
+        nom: string;
+        mois: string[];
+        gdd_cumul: [number, number];
+        phase_kc: string;
+      }>;
+    } | null;
+  } | null {
+    const phaseTimeline = this.asArray(step4.phase_timeline);
+    const yearlyStages = this.asRecord(step4.yearly_stages);
+    if (phaseTimeline.length === 0 && Object.keys(yearlyStages).length === 0) {
+      return null;
+    }
+
+    const meanDates = this.asRecord(step4.mean_dates);
+    const variability = this.asRecord(step4.inter_annual_variability_days ?? step4.inter_annual_variability);
+    const gddCorrelation = this.asRecord(step4.gdd_correlation);
+    const status = this.asString(step4.status);
+    const missingStages = this.asArray(step4.missing_stages)
+      .map((s) => this.asString(s))
+      .filter((s): s is string => !!s);
+
+    const meanDatesOut: Record<string, string | null> = {};
+    for (const key of Object.keys(meanDates)) {
+      meanDatesOut[key] = this.asString(meanDates[key]);
+    }
+
+    const variabilityOut: Record<string, number> = {};
+    for (const [key, raw] of Object.entries(variability)) {
+      variabilityOut[key] = this.asNumber(raw, 0);
+    }
+
+    const gddCorrelationOut: Record<string, number> = {};
+    for (const [key, raw] of Object.entries(gddCorrelation)) {
+      gddCorrelationOut[key] = this.asNumber(raw, 0);
+    }
+
+    const yearlyStagesOut: Record<string, Record<string, string | null>> = {};
+    for (const [year, stagesRaw] of Object.entries(yearlyStages)) {
+      const stages = this.asRecord(stagesRaw);
+      yearlyStagesOut[year] = {
+        dormancy_exit: this.asString(stages.dormancy_exit),
+        plateau_start: this.asString(stages.plateau_start),
+        peak: this.asString(stages.peak),
+        decline_start: this.asString(stages.decline_start),
+        dormancy_entry: this.asString(stages.dormancy_entry),
+      };
+    }
+
+    const phaseTimelineOut = phaseTimeline.map((tl) => {
+      const rec = this.asRecord(tl);
+      return {
+        year: this.asNumber(rec.year, 0),
+        mode: this.asString(rec.mode) ?? "NORMAL",
+        transitions: this.asArray(rec.transitions).map((t) => {
+          const tr = this.asRecord(t);
+          return {
+            phase: this.asString(tr.phase) ?? "",
+            start_date: this.asString(tr.start_date) ?? "",
+            end_date: this.asString(tr.end_date),
+            gdd_at_entry: this.asNumber(tr.gdd_at_entry, 0),
+            confidence: this.asString(tr.confidence) ?? "MODEREE",
+          };
+        }),
+      };
+    });
+
+    let referential: { crop_type: string | null; stades_bbch: Array<{ code: string; nom: string; mois: string[]; gdd_cumul: [number, number]; phase_kc: string }> } | null = null;
+    if (typeof cropType === "string" && cropType.trim()) {
+      const ref = getLocalCropReference(cropType.trim());
+      const stades = ref ? this.asArray((ref as JsonRecord).stades_bbch) : [];
+      if (stades.length > 0) {
+        referential = {
+          crop_type: cropType,
+          stades_bbch: stades.map((s) => {
+            const rec = this.asRecord(s);
+            const gddRaw = this.asArray(rec.gdd_cumul);
+            const lo = this.asNumber(gddRaw[0], 0);
+            const hi = this.asNumber(gddRaw[1], 0);
+            return {
+              code: this.asString(rec.code) ?? "",
+              nom: this.asString(rec.nom) ?? "",
+              mois: this.asArray(rec.mois)
+                .map((m) => this.asString(m))
+                .filter((m): m is string => !!m),
+              gdd_cumul: [lo, hi] as [number, number],
+              phase_kc: this.asString(rec.phase_kc) ?? "",
+            };
+          }),
+        };
+      }
+    }
+
+    return {
+      crop_type: typeof cropType === "string" ? cropType : null,
+      status,
+      missing_stages: missingStages,
+      mean_dates: meanDatesOut,
+      inter_annual_variability_days: variabilityOut,
+      gdd_correlation: gddCorrelationOut,
+      yearly_stages: yearlyStagesOut,
+      phase_timeline: phaseTimelineOut,
+      referential,
     };
   }
 

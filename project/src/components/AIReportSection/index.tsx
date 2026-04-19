@@ -11,6 +11,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { satelliteIndicesApi } from '../../lib/api/satellite-indices';
 import { productionIntelligenceApi } from '../../lib/api/production-intelligence';
 import { Button } from '../ui/button';
+import { useTranslation } from 'react-i18next';
 
 interface AIReportSectionProps {
   parcelId: string;
@@ -20,7 +21,8 @@ interface AIReportSectionProps {
 export const AIReportSection = ({
   parcelId,
   parcelName,
-}: AIReportSectionProps) => {
+  }: AIReportSectionProps) => {
+  const { t } = useTranslation();
   const [selectedProvider, setSelectedProvider] = useState<AIProvider | null>(null);
   const [dateRange, setDateRange] = useState({
     start: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
@@ -182,7 +184,7 @@ export const AIReportSection = ({
           <div className="flex items-center justify-center py-8">
             <Loader className="w-6 h-6 animate-spin text-purple-600" />
             <span className="ml-2 text-gray-600 dark:text-gray-400">
-              Chargement des fournisseurs IA...
+              {t('aiReport.loadingProviders', 'Chargement des fournisseurs IA...')}
             </span>
           </div>
         )}
@@ -192,7 +194,7 @@ export const AIReportSection = ({
           <div className="flex items-center p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
             <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 mr-3" />
             <p className="text-red-600 dark:text-red-400">
-              Erreur lors du chargement des fournisseurs IA
+              {t('aiReport.providersLoadError', 'Erreur lors du chargement des fournisseurs IA')}
             </p>
           </div>
         )}
@@ -202,10 +204,10 @@ export const AIReportSection = ({
           <div className="text-center py-8">
             <Bot className="w-12 h-12 text-gray-400 mx-auto mb-4" />
             <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-              Aucun fournisseur IA disponible
+              {t('aiReport.noProvidersAvailable', 'Aucun fournisseur IA disponible')}
             </h4>
             <p className="text-sm text-gray-600 dark:text-gray-400">
-              Veuillez configurer les clés API OpenAI ou Gemini dans les paramètres du serveur.
+              {t('aiReport.configureApiKeys', 'Veuillez configurer les clés API OpenAI ou Gemini dans les paramètres du serveur.')}
             </p>
           </div>
         )}
@@ -224,12 +226,12 @@ export const AIReportSection = ({
             {/* Date Range */}
             <div className="space-y-3">
               <div className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Période d'analyse
+                {t('aiReport.analysisPeriod', "Période d'analyse")}
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label htmlFor="ai-report-start-date" className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
-                    Date de début
+                    {t('aiReport.startDate', 'Date de début')}
                   </label>
                   <div className="relative">
                     <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -246,7 +248,7 @@ export const AIReportSection = ({
                 </div>
                 <div>
                   <label htmlFor="ai-report-end-date" className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
-                    Date de fin
+                    {t('aiReport.endDate', 'Date de fin')}
                   </label>
                   <div className="relative">
                     <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -310,19 +312,19 @@ export const AIReportSection = ({
               {generateMutation.isPending ? (
                 <>
                   <Loader className="w-5 h-5 animate-spin" />
-                  <span>Génération en cours...</span>
+                  <span>{t('aiReport.generating', 'Génération en cours...')}</span>
                 </>
               ) : (
                 <>
                   <Sparkles className="w-5 h-5" />
-                  <span>Générer le Rapport IA</span>
+                  <span>{t('aiReport.generateReport', 'Générer le Rapport IA')}</span>
                 </>
               )}
             </Button>
 
             {calibrationStatus?.status === 'blocked' && (
               <p className="text-sm text-red-600 dark:text-red-400 text-center mt-2">
-                Analysis blocked: Missing critical data. Please recalibrate and fetch missing data.
+                {t('aiReport.analysisBlocked', 'Analysis blocked: Missing critical data. Please recalibrate and fetch missing data.')}
               </p>
             )}
 
@@ -332,7 +334,7 @@ export const AIReportSection = ({
                 <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 mr-3 flex-shrink-0" />
                 <p className="text-red-600 dark:text-red-400 text-sm">
                   {(generateMutation.error as Error)?.message ||
-                    'Erreur lors de la génération du rapport'}
+                    t('aiReport.generationErrorFallback', 'Erreur lors de la génération du rapport')}
                 </p>
               </div>
             )}
@@ -348,7 +350,7 @@ export const AIReportSection = ({
                 onClick={() => setGeneratedReport(null)}
                 className="text-sm text-purple-600 dark:text-purple-400 hover:underline"
               >
-                ← Générer un nouveau rapport
+                {t('aiReport.generateNewReport', '← Générer un nouveau rapport')}
               </Button>
               <AIReportExport
                 sections={generatedReport.sections}

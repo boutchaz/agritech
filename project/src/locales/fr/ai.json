@@ -330,6 +330,18 @@
       "notes": "Notes",
       "excludedCycles": "Cycles exclus"
     },
+    "phenology": {
+      "aiEnrichment": {
+        "title": "Explication simple",
+        "fragileStatus": "Résultat à prendre avec prudence",
+        "degradationReasons": "Pourquoi il faut rester prudent",
+        "imputedStages": "Dates estimées",
+        "missing": "à confirmer",
+        "phaseNarratives": "Ce que ça veut dire",
+        "recommendations": "Que faire maintenant",
+        "disclaimer": "Résumé assisté par IA — vérifie toujours sur le terrain."
+      }
+    },
     "spectral": {
       "title": "SEUILS SPECTRAUX",
       "noData": "Pas de données spectrales disponibles",
