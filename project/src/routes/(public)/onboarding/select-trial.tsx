@@ -2,7 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/hooks/useAuth'
-import { BASE_MODULE_IDS, computeModularQuote } from '@/lib/polar'
+import { BASE_MODULE_IDS } from '@/lib/polar'
 import { Check, Loader2 } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useOrganizationStore } from '@/stores/organizationStore'
@@ -66,15 +66,6 @@ function SelectTrialPage() {
   const [modularHectares, setModularHectares] = useState<number>(50)
 
   const SETUP_STEPS = useSetupStepLabels();
-
-  const modularQuote = useMemo(
-    () => computeModularQuote({
-      selectedModules,
-      hectares: modularHectares,
-      billingCycle: 'monthly',
-    }),
-    [selectedModules, modularHectares],
-  )
 
   useEffect(() => {
     trackPageView({ title: t('onboarding.selectTrial.pageTitle', 'Start Your Free Trial') })
@@ -448,11 +439,8 @@ function SelectTrialPage() {
                   <span className="text-gray-600 dark:text-gray-400">{t('onboarding.selectTrial.hectaresLabel', 'Hectares')}</span>
                   <span className="font-semibold text-gray-900 dark:text-white">{modularHectares} ha</span>
                 </div>
-                <div className="border-t border-gray-100 dark:border-gray-700 pt-3">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600 dark:text-gray-400">{t('onboarding.selectTrial.afterTrialMonthly', 'After trial (monthly)')}</span>
-                    <span className="font-semibold text-gray-900 dark:text-white">${modularQuote.cycleTtc.toLocaleString()} TTC</span>
-                  </div>
+                <div className="border-t border-gray-100 dark:border-gray-700 pt-3 text-xs text-gray-500 dark:text-gray-400">
+                  {t('onboarding.selectTrial.tailoredQuote', 'Pricing is tailored to your farm size and modules — our team will contact you with a personalized quote.')}
                 </div>
               </div>
               <div className="mt-4 rounded-lg bg-green-50 dark:bg-green-900/20 p-3 text-center">
