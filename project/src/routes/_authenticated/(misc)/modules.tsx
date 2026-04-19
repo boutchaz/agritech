@@ -609,7 +609,8 @@ function ModulesHub() {
   );
 
   return (
-    <div className="min-w-0 max-w-full space-y-6 animate-in fade-in duration-300">
+    <div className="mx-auto w-full min-w-0 max-w-[1920px] px-2 py-3 sm:px-3 md:px-3 md:py-4 lg:px-4 lg:py-6">
+      <div className="min-w-0 max-w-full space-y-6 animate-in fade-in duration-300">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pb-6 border-b border-slate-100 dark:border-slate-800">
         <div className="space-y-1">
@@ -657,16 +658,17 @@ function ModulesHub() {
         ))}
       </div>
 
-      {/* Module sections */}
-      <div className="space-y-6">
-        {MODULE_SECTIONS.map(section => (
-          <SectionCard
-            key={section.id}
-            section={section}
-            userRole={roleName}
-            canFn={can}
-          />
-        ))}
+        {/* Module sections */}
+        <div className="space-y-6">
+          {MODULE_SECTIONS.map(section => (
+            <SectionCard
+              key={section.id}
+              section={section}
+              userRole={roleName}
+              canFn={can}
+            />
+          ))}
+        </div>
       </div>
     </div>
   );
