@@ -16,7 +16,13 @@ import { FollowUpService } from './prompt/follow-up.service';
 import { StructuredResponseService } from './prompt/structured-response.service';
 import { AiQuotaService } from '../ai-quota/ai-quota.service';
 import { ChatToolsService } from './tools/chat-tools.service';
+import { OrganizationAISettingsService } from '../organization-ai-settings/organization-ai-settings.service';
+import { AIProviderType } from '../organization-ai-settings/dto';
 import { safeJsonStringifyForError } from '../../common/utils/safe-json-stringify';
+import { AIProvider, AIGenerationResponse } from '../ai-reports/interfaces';
+import { GroqProvider } from '../ai-reports/providers/groq.provider';
+import { OpenAIProvider } from '../ai-reports/providers/openai.provider';
+import { GeminiProvider } from '../ai-reports/providers/gemini.provider';
 import {
   ZaiChatMessage,
   ZaiToolCall,
@@ -27,16 +33,47 @@ type VisionContentPart =
   | { type: 'text'; text: string }
   | { type: 'image_url'; image_url: { url: string } };
 
+type RoutedProviderInstance = ZaiProvider | GroqProvider | OpenAIProvider | GeminiProvider;
+
+type StreamCapableProvider = RoutedProviderInstance & {
+  generateStream: (request: {
+    systemPrompt: string;
+    userPrompt: string;
+    config: {
+      provider: AIProvider;
+      model?: string;
+      temperature?: number;
+      maxTokens?: number;
+    };
+    onToken: (token: string) => void;
+    onComplete: (meta?: { tokensUsed?: number }) => void;
+    onError: (error: Error) => void;
+  }) => Promise<void>;
+};
+
+type ResolvedProvider = {
+  type: AIProviderType;
+  instance: RoutedProviderInstance;
+  defaultModel: string;
+  supportsStreaming: boolean;
+  supportsTools: boolean;
+  supportsVision: boolean;
+  isByok: boolean;
+};
+
 @Injectable()
 export class ChatService implements OnModuleInit {
   private readonly logger = new Logger(ChatService.name);
-  private readonly zaiProvider: ZaiProvider;
   private readonly defaultTextModel = 'GLM-4.7-Flash';
   private readonly visionModel = 'glm-4.6v';
   private readonly maxToolIterations = 3;
 
   constructor(
     private readonly configService: ConfigService,
+    private readonly zaiProvider: ZaiProvider,
+    private readonly groqProvider: GroqProvider,
+    private readonly openAiProvider: OpenAIProvider,
+    private readonly geminiProvider: GeminiProvider,
     private readonly ttsProvider: ZaiTTSProvider,
     private readonly contextBuilder: ContextBuilderService,
     private readonly promptBuilder: PromptBuilderService,
@@ -46,14 +83,100 @@ export class ChatService implements OnModuleInit {
     private readonly structuredResponseService: StructuredResponseService,
     private readonly aiQuotaService: AiQuotaService,
     private readonly chatToolsService: ChatToolsService,
-  ) {
-    this.zaiProvider = new ZaiProvider(configService);
-  }
+    private readonly aiSettingsService: OrganizationAISettingsService,
+  ) {}
 
   onModuleInit() {
-    // Wire AgromindIA context into ContextBuilder
     this.contextBuilder.setAgromindiaContextService(this.agromindiaContextService);
     this.logger.log('AgromindIA context service wired into ContextBuilder');
+  }
+
+  private toAIProvider(provider: AIProviderType): AIProvider {
+    switch (provider) {
+      case AIProviderType.GROQ:
+        return AIProvider.GROQ;
+      case AIProviderType.OPENAI:
+        return AIProvider.OPENAI;
+      case AIProviderType.GEMINI:
+        return AIProvider.GEMINI;
+      case AIProviderType.ZAI:
+      default:
+        return AIProvider.ZAI;
+    }
+  }
+
+  private async resolveZaiApiKey(organizationId: string): Promise<string> {
+    const orgKey = await this.aiSettingsService.getDecryptedApiKey(organizationId, AIProviderType.ZAI);
+    return orgKey || this.configService.get<string>('ZAI_API_KEY', '');
+  }
+
+  private async resolveProvider(organizationId: string): Promise<ResolvedProvider> {
+    const enabledProvider = await this.aiSettingsService.getEnabledProvider(organizationId);
+
+    if (enabledProvider) {
+      return this.buildResolvedProvider(enabledProvider.provider, enabledProvider.apiKey, true);
+    }
+
+    const zaiApiKey = this.configService.get<string>('ZAI_API_KEY', '');
+    if (zaiApiKey) {
+      return this.buildResolvedProvider(AIProviderType.ZAI, zaiApiKey, false);
+    }
+
+    throw new Error('No enabled AI provider is configured for this organization');
+  }
+
+  private buildResolvedProvider(
+    provider: AIProviderType,
+    apiKey: string,
+    isByok: boolean,
+  ): ResolvedProvider {
+    switch (provider) {
+      case AIProviderType.GROQ:
+        this.groqProvider.setApiKey(apiKey);
+        return {
+          type: provider,
+          instance: this.groqProvider,
+          defaultModel: 'meta-llama/llama-4-scout-17b-16e-instruct',
+          supportsStreaming: true,
+          supportsTools: false,
+          supportsVision: false,
+          isByok,
+        };
+      case AIProviderType.OPENAI:
+        this.openAiProvider.setApiKey(apiKey);
+        return {
+          type: provider,
+          instance: this.openAiProvider,
+          defaultModel: 'gpt-4o',
+          supportsStreaming: true,
+          supportsTools: false,
+          supportsVision: false,
+          isByok,
+        };
+      case AIProviderType.GEMINI:
+        this.geminiProvider.setApiKey(apiKey);
+        return {
+          type: provider,
+          instance: this.geminiProvider,
+          defaultModel: 'gemini-1.5-pro',
+          supportsStreaming: false,
+          supportsTools: false,
+          supportsVision: false,
+          isByok,
+        };
+      case AIProviderType.ZAI:
+      default:
+        this.zaiProvider.setApiKey(apiKey);
+        return {
+          type: AIProviderType.ZAI,
+          instance: this.zaiProvider,
+          defaultModel: this.defaultTextModel,
+          supportsStreaming: true,
+          supportsTools: true,
+          supportsVision: true,
+          isByok,
+        };
+    }
   }
 
   private isVisionRequest(dto: SendMessageDto): boolean {
@@ -80,6 +203,10 @@ export class ChatService implements OnModuleInit {
 
   private shouldEnableTools(dto: SendMessageDto, isVisionRequest: boolean): boolean {
     return dto.enableTools === true && !isVisionRequest;
+  }
+
+  private getErrorMessage(error: unknown): string {
+    return error instanceof Error ? error.message : String(error);
   }
 
   /** Normalize model output: JSON { text, suggestions, data_cards } or legacy ---SUGGESTIONS--- block */
@@ -123,12 +250,13 @@ export class ChatService implements OnModuleInit {
   }
 
   private async runToolLoop(
+    provider: ZaiProvider,
     messages: ZaiChatMessage[],
     userId: string,
     organizationId: string,
   ): Promise<ZaiToolGenerationResponse> {
     const tools = this.chatToolsService.getToolDefinitions();
-    let response = await this.zaiProvider.generateWithTools({
+    let response = await provider.generateWithTools({
       messages,
       tools,
       toolChoice: 'auto',
@@ -178,7 +306,7 @@ export class ChatService implements OnModuleInit {
         });
       }
 
-      response = await this.zaiProvider.generateWithTools({
+      response = await provider.generateWithTools({
         messages,
         tools,
         toolChoice: 'auto',
@@ -212,6 +340,7 @@ export class ChatService implements OnModuleInit {
     const language = dto.language || 'en';
     const isVisionRequest = this.isVisionRequest(dto);
     const enableTools = this.shouldEnableTools(dto, isVisionRequest);
+    const resolvedProvider = await this.resolveProvider(organizationId);
     const systemPrompt = isVisionRequest
       ? this.buildVisionSystemPrompt(language)
       : this.promptBuilder.buildSystemPrompt({ enableTools });
@@ -221,9 +350,6 @@ export class ChatService implements OnModuleInit {
       language,
       recentMessages,
     );
-
-    const apiKey = this.configService.get<string>('ZAI_API_KEY', '');
-    this.zaiProvider.setApiKey(apiKey);
 
     // Check AI quota before generating (consume after success)
     try {
@@ -240,7 +366,7 @@ export class ChatService implements OnModuleInit {
       }
     } catch (error) {
       if (error instanceof BadRequestException) throw error;
-      this.logger.warn(`Quota check failed, proceeding: ${error.message}`);
+      this.logger.warn(`Quota check failed, proceeding: ${this.getErrorMessage(error)}`);
     }
 
     if (shouldSaveHistory) {
@@ -248,32 +374,41 @@ export class ChatService implements OnModuleInit {
     }
 
     try {
+      if (isVisionRequest && !resolvedProvider.supportsVision) {
+        throw new Error(
+          `${resolvedProvider.type.toUpperCase()} does not support vision chat. Configure ZAI for image-based requests.`,
+        );
+      }
+
+      const providerConfig = {
+        provider: this.toAIProvider(resolvedProvider.type),
+        model: resolvedProvider.type === AIProviderType.ZAI ? this.defaultTextModel : undefined,
+        temperature: 0.7,
+        maxTokens: 8192,
+      };
+
       const response = isVisionRequest
         ? await this.zaiProvider.generateVision({
             systemPrompt,
             content: this.buildVisionContent(userPrompt, dto.image!.trim()),
             config: {
-              provider: 'zai' as any,
+              provider: AIProvider.ZAI,
               temperature: 0.7,
               maxTokens: 8192,
             },
           })
-        : enableTools
+        : enableTools && resolvedProvider.supportsTools
           ? await this.runToolLoop(
+              this.zaiProvider,
               this.buildToolMessages(systemPrompt, userPrompt),
               userId,
               organizationId,
             )
-          : await this.zaiProvider.generate({
-              systemPrompt,
-              userPrompt,
-              config: {
-                provider: 'zai' as any,
-                model: this.defaultTextModel,
-                temperature: 0.7,
-                maxTokens: 8192,
-              },
-            });
+          : await resolvedProvider.instance.generate({
+               systemPrompt,
+               userPrompt,
+               config: providerConfig,
+             });
 
       const tokensUsed = response.tokensUsed || 0;
       const costPerToken = 0.00001;
@@ -286,13 +421,21 @@ export class ChatService implements OnModuleInit {
 
       // Consume quota + log usage only after successful response
       this.aiQuotaService.consumeOne(organizationId).catch(() => {});
-      this.aiQuotaService.logUsage(organizationId, userId, 'chat', 'zai', response.model, response.tokensUsed, false).catch(() => {});
+      this.aiQuotaService.logUsage(
+        organizationId,
+        userId,
+        'chat',
+        resolvedProvider.type,
+        response.model,
+        response.tokensUsed ?? null,
+        resolvedProvider.isByok,
+      ).catch(() => {});
 
       const { cleanText, suggestions } = this.finalizeAssistantContent(response.content);
 
       if (shouldSaveHistory) {
         await this.conversationService.saveMessage(userId, organizationId, 'assistant', cleanText, dto.language, {
-          provider: 'zai',
+          provider: resolvedProvider.type,
           model: response.model,
           tokensUsed: response.tokensUsed,
         });
@@ -302,7 +445,7 @@ export class ChatService implements OnModuleInit {
         response: cleanText,
         context_summary: this.contextBuilder.summarizeContext(context),
         metadata: {
-          provider: 'zai',
+          provider: resolvedProvider.type,
           model: response.model,
           tokensUsed: response.tokensUsed,
           timestamp: response.generatedAt,
@@ -310,18 +453,22 @@ export class ChatService implements OnModuleInit {
         suggestions,
       };
     } catch (error) {
-      this.logger.error(`Chat generation failed: ${error.message}`, error.stack);
+      const errorMessage = this.getErrorMessage(error);
+      this.logger.error(
+        `Chat generation failed: ${errorMessage}`,
+        error instanceof Error ? error.stack : undefined,
+      );
 
-      let errorMessage = error.message || 'Failed to generate response';
-      if (error.message?.includes('Z.ai API key') || error.message?.includes('not configured')) {
-        errorMessage = 'AI service is not properly configured. Please contact support.';
-      } else if (error.message?.includes('timeout') || error.message?.includes('ETIMEDOUT')) {
-        errorMessage = 'The AI service took too long to respond. Please try again.';
-      } else if (error.message?.includes('ECONNREFUSED') || error.message?.includes('ENOTFOUND')) {
-        errorMessage = 'Unable to connect to the AI service. Please check your network connection.';
+      let userFacingMessage = errorMessage || 'Failed to generate response';
+      if (errorMessage.includes('Z.ai API key') || errorMessage.includes('not configured')) {
+        userFacingMessage = 'AI service is not properly configured. Please contact support.';
+      } else if (errorMessage.includes('timeout') || errorMessage.includes('ETIMEDOUT')) {
+        userFacingMessage = 'The AI service took too long to respond. Please try again.';
+      } else if (errorMessage.includes('ECONNREFUSED') || errorMessage.includes('ENOTFOUND')) {
+        userFacingMessage = 'Unable to connect to the AI service. Please check your network connection.';
       }
 
-      throw new BadRequestException(errorMessage);
+      throw new BadRequestException(userFacingMessage);
     }
   }
 
@@ -347,6 +494,7 @@ export class ChatService implements OnModuleInit {
     const context = await this.contextBuilder.build(organizationId, dto.query);
     const language = dto.language || 'en';
     const isVisionRequest = this.isVisionRequest(dto);
+    const resolvedProvider = await this.resolveProvider(organizationId);
     const systemPrompt = isVisionRequest
       ? this.buildVisionSystemPrompt(language)
       : this.promptBuilder.buildSystemPrompt({ enableTools: false });
@@ -356,9 +504,6 @@ export class ChatService implements OnModuleInit {
       language,
       recentMessages,
     );
-
-    const apiKey = this.configService.get<string>('ZAI_API_KEY', '');
-    this.zaiProvider.setApiKey(apiKey);
 
     // Check AI quota before streaming (consume after success in onComplete)
     try {
@@ -380,7 +525,7 @@ export class ChatService implements OnModuleInit {
         callbacks.onError(error);
         return;
       }
-      this.logger.warn(`Quota check failed, proceeding: ${error.message}`);
+      this.logger.warn(`Quota check failed, proceeding: ${this.getErrorMessage(error)}`);
     }
 
     if (shouldSaveHistory) {
@@ -392,7 +537,11 @@ export class ChatService implements OnModuleInit {
     // Tool calling is intentionally disabled for streaming in this first rollout.
     // Future enhancement: support tool-aware SSE orchestration with multi-step agent loops.
 
-    const model = isVisionRequest ? this.visionModel : this.defaultTextModel;
+    const model = isVisionRequest
+      ? this.visionModel
+      : resolvedProvider.type === AIProviderType.ZAI
+        ? this.defaultTextModel
+        : resolvedProvider.defaultModel;
     const streamCallbacks = {
       onToken: (token: string) => {
         fullResponse += token;
@@ -403,18 +552,26 @@ export class ChatService implements OnModuleInit {
 
         // Consume quota + log only on successful completion
         this.aiQuotaService.consumeOne(organizationId).catch(() => {});
-        this.aiQuotaService.logUsage(organizationId, userId, 'chat', 'zai', model, meta?.tokensUsed ?? null, false).catch(() => {});
+        this.aiQuotaService.logUsage(
+          organizationId,
+          userId,
+          'chat',
+          resolvedProvider.type,
+          model,
+          meta?.tokensUsed ?? null,
+          resolvedProvider.isByok,
+        ).catch(() => {});
 
         if (shouldSaveHistory) {
           await this.conversationService.saveMessage(userId, organizationId, 'assistant', cleanText, dto.language, {
-            provider: 'zai',
+            provider: resolvedProvider.type,
             model,
             tokensUsed: meta?.tokensUsed,
             streamed: true,
           });
         }
         callbacks.onComplete({
-          provider: 'zai',
+          provider: resolvedProvider.type,
           model,
           timestamp: new Date(),
           suggestions,
@@ -428,11 +585,20 @@ export class ChatService implements OnModuleInit {
     };
 
     if (isVisionRequest) {
+      if (!resolvedProvider.supportsVision) {
+        callbacks.onError(
+          new Error(
+            `${resolvedProvider.type.toUpperCase()} does not support vision chat. Configure ZAI for image-based requests.`,
+          ),
+        );
+        return;
+      }
+
       await this.zaiProvider.generateVisionStream({
         systemPrompt,
         content: this.buildVisionContent(userPrompt, dto.image!.trim()),
         config: {
-          provider: 'zai' as any,
+          provider: AIProvider.ZAI,
           temperature: 0.7,
           maxTokens: 8192,
         },
@@ -441,17 +607,34 @@ export class ChatService implements OnModuleInit {
       return;
     }
 
-    await this.zaiProvider.generateStream({
-      systemPrompt,
-      userPrompt,
-      config: {
-        provider: 'zai' as any,
-        model: this.defaultTextModel,
-        temperature: 0.7,
-        maxTokens: 8192,
-      },
-      ...streamCallbacks,
-    });
+    const providerConfig = {
+      provider: this.toAIProvider(resolvedProvider.type),
+      model: resolvedProvider.type === AIProviderType.ZAI ? this.defaultTextModel : undefined,
+      temperature: 0.7,
+      maxTokens: 8192,
+    };
+
+    if (resolvedProvider.supportsStreaming) {
+      await (resolvedProvider.instance as StreamCapableProvider).generateStream({
+        systemPrompt,
+        userPrompt,
+        config: providerConfig,
+        ...streamCallbacks,
+      });
+      return;
+    }
+
+    try {
+      const response: AIGenerationResponse = await resolvedProvider.instance.generate({
+        systemPrompt,
+        userPrompt,
+        config: providerConfig,
+      });
+      streamCallbacks.onToken(response.content);
+      await streamCallbacks.onComplete({ tokensUsed: response.tokensUsed });
+    } catch (error) {
+      streamCallbacks.onError(error instanceof Error ? error : new Error(String(error)));
+    }
   }
 
   async getConversationHistory(userId: string, organizationId: string, limit?: number, before?: string) {
@@ -465,10 +648,10 @@ export class ChatService implements OnModuleInit {
   }
 
   async textToSpeech(
-    _organizationId: string,
+    organizationId: string,
     request: TTSRequest,
   ): Promise<{ audio: Buffer; contentType: string }> {
-    const apiKey = this.configService.get<string>('ZAI_API_KEY', '');
+    const apiKey = await this.resolveZaiApiKey(organizationId);
     this.ttsProvider.setApiKey(apiKey);
 
     const ttsResponse = await this.ttsProvider.textToSpeech(request);

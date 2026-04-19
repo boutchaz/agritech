@@ -1,11 +1,11 @@
-
+import { useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { useTranslation } from 'react-i18next';
 import { farmsService } from '../services/farmsService';
 import { parcelsApi } from '../lib/api/parcels';
-import type { Database } from '../types/database.types';
 import {
   Building2,
   GripVertical,
@@ -15,9 +15,9 @@ import { Can } from '../lib/casl';
 import { SectionLoader } from '@/components/ui/loader';
 import { Button } from '@/components/ui/button';
 
+const CanWithFallback: any = Can;
+
 // Type aliases from generated database types
-type Farm = Database['public']['Tables']['farms']['Row'];
-type _FarmInsert = Database['public']['Tables']['farms']['Insert'];
 // type ParcelRow = Database['public']['Tables']['parcels']['Row'];
 // type Organization = Database['public']['Tables']['organizations']['Row'];
 
@@ -53,12 +53,9 @@ interface FarmHierarchyTreeProps {
   onManageRoles?: (farmId: string) => void;
 }
 
-// Zod schema for farm creation
-const createFarmSchema = z.object({
-  name: z.string().min(2, 'Farm name must be at least 2 characters'),
-});
-
-type CreateFarmFormValues = z.infer<typeof createFarmSchema>;
+type CreateFarmFormValues = {
+  name: string;
+};
 
 const FarmHierarchyTree = ({
   organizationId,
@@ -68,6 +65,15 @@ const FarmHierarchyTree = ({
   onManageRoles
 }: FarmHierarchyTreeProps) => {
   const queryClient = useQueryClient();
+  const { t } = useTranslation();
+
+  const createFarmSchema = useMemo(
+    () =>
+      z.object({
+        name: z.string().min(2, t('farmHierarchyTree.validation.nameTooShort', 'Farm name must be at least 2 characters')),
+      }),
+    [t],
+  );
 
   // React Hook Form
   const {
@@ -104,24 +110,14 @@ const FarmHierarchyTree = ({
       const rootFarms: FarmNode[] = [];
 
       // First pass: create all nodes
-      (data || []).forEach((farm: {
-        farm_id: string;
-        farm_name: string;
-        farm_type?: string;
-        parent_farm_id?: string;
-        hierarchy_level?: number;
-        manager_name?: string;
-        sub_farms_count?: number;
-        farm_size?: number;
-        is_active?: boolean;
-      }) => {
+      (data || []).forEach((farm: any) => {
         farmMap.set(farm.farm_id, {
           farm_id: farm.farm_id,
           farm_name: farm.farm_name,
-          farm_type: farm.farm_type || 'main',
+          farm_type: (farm.farm_type || 'main') as 'main' | 'sub',
           parent_farm_id: farm.parent_farm_id,
           hierarchy_level: farm.hierarchy_level || 1,
-          manager_name: farm.manager_name,
+          manager_name: farm.manager_name || '',
           sub_farms_count: farm.sub_farms_count || 0,
           farm_size: farm.farm_size || 0,
           is_active: farm.is_active !== false,
@@ -131,7 +127,7 @@ const FarmHierarchyTree = ({
       });
 
       // Second pass: build tree structure
-      (data || []).forEach((farm: { farm_id: string; parent_farm_id?: string }) => {
+      (data || []).forEach((farm: any) => {
         const node = farmMap.get(farm.farm_id)!;
 
         if (farm.parent_farm_id) {
@@ -157,7 +153,7 @@ const FarmHierarchyTree = ({
               acc[parcel.farm_id].push({
                 id: parcel.id,
                 name: parcel.name,
-                crop_type: parcel.description || 'No description',
+                crop_type: parcel.description || t('farmHierarchyTree.noDescription', 'No description'),
                 area: parcel.area || 0,
                 farm_id: parcel.farm_id
               });
@@ -179,15 +175,15 @@ const FarmHierarchyTree = ({
 
   // Create farm mutation with typed insert
   const createFarmMutation = useMutation({
-    mutationFn: async (formData: CreateFarmFormValues): Promise<Farm> => {
+    mutationFn: async (formData: CreateFarmFormValues): Promise<any> => {
       const farmData = {
         name: formData.name,
         organization_id: organizationId,
         status: 'active',
       };
 
-      const newFarm = await farmsService.createFarm(organizationId, farmData);
-      return newFarm;
+      const newFarm = await farmsService.createFarm(farmData as any);
+      return newFarm as any;
     },
     onSuccess: () => {
       // Invalidate and refetch farm hierarchy
@@ -223,7 +219,7 @@ const FarmHierarchyTree = ({
               onClick={() => onManageRoles?.(farm.farm_id)}
               className="px-4 py-2 text-sm rounded-lg transition-colors"
             >
-              Gérer Rôles
+              {t('farmHierarchyTree.actions.manageRoles', 'Manage Roles')}
             </Button>
           </div>
 
@@ -247,7 +243,7 @@ const FarmHierarchyTree = ({
                         onClick={() => onEditParcel?.(parcel.id)}
                         className="text-blue-600 hover:text-blue-800 text-sm font-medium"
                       >
-                        Modifier
+                        {t('farmHierarchyTree.actions.editParcel', 'Edit')}
                       </Button>
                     </Can>
                     <Can I="delete" a="Parcel">
@@ -255,7 +251,7 @@ const FarmHierarchyTree = ({
                         onClick={() => onDeleteParcel?.(parcel.id)}
                         className="text-red-600 hover:text-red-800 text-sm font-medium"
                       >
-                        Supprimer
+                        {t('farmHierarchyTree.actions.deleteParcel', 'Delete')}
                       </Button>
                     </Can>
                   </div>
@@ -266,12 +262,12 @@ const FarmHierarchyTree = ({
 
           {/* Add Parcel Button */}
           <div className="mt-3">
-            <Can
+            <CanWithFallback
               I="create"
               a="Parcel"
               fallback={
                 <div className="text-sm text-gray-500 italic">
-                  Upgrade your plan to add more parcels
+                  {t('farmHierarchyTree.fallback.upgradePlan', 'Upgrade your plan to add more parcels')}
                 </div>
               }
             >
@@ -280,9 +276,9 @@ const FarmHierarchyTree = ({
                 className="flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors"
               >
                 <Plus className="w-4 h-4" />
-                <span>Ajouter une parcelle</span>
+                <span>{t('farmHierarchyTree.actions.addParcel', 'Add parcel')}</span>
               </Button>
-            </Can>
+            </CanWithFallback>
           </div>
         </div>
 
@@ -307,7 +303,7 @@ const FarmHierarchyTree = ({
       <div className="flex items-center justify-center p-8">
         <div className="text-center">
           <div className="text-red-600 mb-2">⚠️</div>
-          <p className="text-red-600">{queryError instanceof Error ? queryError.message : 'Failed to load farm hierarchy'}</p>
+          <p className="text-red-600">{queryError instanceof Error ? queryError.message : t('farmHierarchyTree.errors.loadHierarchy', 'Failed to load farm hierarchy')}</p>
         </div>
       </div>
     );
@@ -318,16 +314,16 @@ const FarmHierarchyTree = ({
       {/* Organization Header */}
       <div className="bg-gray-100 border-2 border-dashed border-gray-400 rounded-lg p-6 text-center">
         <h2 className="text-2xl font-bold text-gray-900 mb-2">
-          {organizationName || 'Organisation'}
+          {organizationName || t('farmHierarchyTree.organizationFallback', 'Organization')}
         </h2>
-        <p className="text-sm text-gray-600">Racine de l'organisation</p>
+        <p className="text-sm text-gray-600">{t('farmHierarchyTree.organizationRoot', 'Organization root')}</p>
       </div>
 
       {/* Farms */}
       {farms.length === 0 ? (
         <div className="text-center py-8 text-gray-500">
           <Building2 className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-          <p>No farms found. Create your first farm to get started.</p>
+          <p>{t('farmHierarchyTree.empty.noFarms', 'No farms found. Create your first farm to get started.')}</p>
         </div>
       ) : (
         <div className="space-y-4">
@@ -342,7 +338,7 @@ const FarmHierarchyTree = ({
             <div className="flex-1">
               <input
                 type="text"
-                placeholder="Nom de la nouvelle ferme"
+                placeholder={t('farmHierarchyTree.placeholders.newFarmName', 'New farm name')}
                 {...register('name')}
                 className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent ${errors.name ? 'border-red-500' : 'border-gray-300'
                   }`}
@@ -355,21 +351,21 @@ const FarmHierarchyTree = ({
               )}
             </div>
             <Button variant="green" type="submit" disabled={createFarmMutation.isPending} className="px-6 py-2 rounded-lg transition-colors disabled:cursor-not-allowed" >
-              {createFarmMutation.isPending ? 'Création...' : 'Ajouter'}
+              {createFarmMutation.isPending ? t('farmHierarchyTree.actions.creating', 'Creating...') : t('farmHierarchyTree.actions.add', 'Add')}
             </Button>
             <Button
               type="button"
               onClick={() => reset()}
               className="px-6 py-2 bg-white text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
             >
-              Annuler
+              {t('farmHierarchyTree.actions.cancel', 'Cancel')}
             </Button>
           </div>
           {createFarmMutation.isError && (
             <p className="text-sm text-red-600" role="alert">
               {createFarmMutation.error instanceof Error
                 ? createFarmMutation.error.message
-                : 'Failed to create farm'}
+                : t('farmHierarchyTree.errors.createFarm', 'Failed to create farm')}
             </p>
           )}
         </div>

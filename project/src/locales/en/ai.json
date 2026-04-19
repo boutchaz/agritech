@@ -330,6 +330,18 @@
       "notes": "Notes",
       "excludedCycles": "Excluded Cycles"
     },
+    "phenology": {
+      "aiEnrichment": {
+        "title": "Plain-language summary",
+        "fragileStatus": "Use with caution",
+        "degradationReasons": "Why to stay cautious",
+        "imputedStages": "Estimated dates",
+        "missing": "to confirm",
+        "phaseNarratives": "What it means",
+        "recommendations": "What to do now",
+        "disclaimer": "AI-assisted summary — always verify in the field."
+      }
+    },
     "spectral": {
       "title": "Spectral thresholds",
       "noData": "No spectral data available",
@@ -385,6 +397,18 @@
       "downloading": "Preparing export...",
       "error": "Export failed",
       "success": "Exported successfully as {{format}}"
+    },
+    "chill": {
+      "title": "Chill hours",
+      "unit": "h",
+      "referenceLabel": "Reference",
+      "fallbackBadge": "Default ref.",
+      "bands": {
+        "green": "Sufficient",
+        "yellow": "Acceptable",
+        "red": "Insufficient",
+        "critique": "Critical deficit"
+      }
     },
     "blockA": {
       "healthScore": "Health Score",
@@ -647,5 +671,45 @@
     "exceededDescription": "You've used all {{used}} of your {{limit}} AI requests this month. Your quota resets on {{resetDate}}.",
     "upgradeAction": "Upgrade Plan",
     "byokAction": "Add Your Own Key"
+  },
+  "weather": {
+    "pageTitle": "AI Weather Analysis",
+    "pageSubtitle": "Weather analytics, forecast trends, and crop risk signals for this parcel.",
+    "riskUnavailable": "Risk analysis unavailable",
+    "riskUnavailableDescription": "Weather analytics remain available, but the crop disease risk model could not be loaded for this parcel.",
+    "riskBriefTitle": "AI Weather Risk Brief",
+    "riskBriefDescription": "Crop-specific disease exposure inferred from the latest parcel weather conditions.",
+    "crop": "Crop: {{crop}}",
+    "unknown": "Unknown",
+    "activeRisks": "Active Risks",
+    "activeRisksDescription": "Conditions currently match one or more disease profiles.",
+    "noActiveRisks": "No active disease signals from the latest weather sample.",
+    "latestTemperature": "Latest Temperature",
+    "measuredOn": "Measured on {{date}}",
+    "noRecentReading": "No recent parcel weather reading.",
+    "latestHumidity": "Latest Humidity",
+    "humidityDescription": "Used to evaluate crop-specific humidity thresholds.",
+    "noDiseaseModels": "No disease models are configured yet for this crop, so only weather analytics are shown below.",
+    "noActiveProfiles": "Current temperature and humidity do not activate any configured disease risk profile for this crop.",
+    "temperatureWindow": "Temperature window: {{min}}°C to {{max}}°C",
+    "humidityThreshold": "Humidity threshold: {{value}}%",
+    "suggestedTreatment": "Suggested treatment: {{treatment}}",
+    "timing": "Timing: {{timing}}",
+    "notAvailable": "N/A",
+    "noBoundary": "Parcel location data is required for weather analysis.",
+    "noBoundaryHint": "Add or correct the parcel boundary to enable forecast, climate, and risk analysis.",
+    "severity": {
+      "critical": "Critical",
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low",
+      "unknown": "Unknown"
+    }
+  },
+  "alerts": {
+    "title": "AI Alerts",
+    "subtitle": "Review and manage risks detected by the AI model.",
+    "noAlerts": "No Active Alerts",
+    "noAlertsMessage": "The AI model has not detected any significant risks for this parcel."
   }
 }

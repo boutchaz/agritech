@@ -162,7 +162,7 @@ interface StockManagementProps {
 }
 
 const StockManagement = ({ activeTab }: StockManagementProps) => {
-  const { t } = useTranslation('stock');
+  const { t } = useTranslation(['stock', 'common']);
   const { currentOrganization, currentFarm } = useAuth();
   const { symbol: _currencySymbol } = useCurrency();
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -182,10 +182,20 @@ void _showConfirm;
   const [showAddSupplier, setShowAddSupplier] = useState(false);
   const [showAddWarehouse, setShowAddWarehouse] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const defaultCountry = t('common:stockManagement.defaults.country', 'Morocco');
+
+  const getSecurityLevelLabel = (level: string | null | undefined) => {
+    if (!level) return '-';
+
+    return t(`common:stockManagement.securityLevels.${level}`, level);
+  };
 
   // newPurchase state removed - purchases now handled via Stock Entries
 
-  const [newSupplier, setNewSupplier] = useState(createDefaultSupplierState());
+  const [newSupplier, setNewSupplier] = useState({
+    ...createDefaultSupplierState(),
+    country: defaultCountry,
+  });
 
   const [newWarehouse, setNewWarehouse] = useState(
     createDefaultWarehouseState(),
@@ -213,7 +223,10 @@ void _showConfirm;
 
   // resetPurchaseForm removed - purchases now handled via Stock Entries
   const resetSupplierForm = () => {
-    setNewSupplier(createDefaultSupplierState());
+    setNewSupplier({
+      ...createDefaultSupplierState(),
+      country: defaultCountry,
+    });
     setEditingSupplierId(null);
   };
   const resetWarehouseForm = () => {
@@ -281,7 +294,7 @@ void _showConfirm;
       address: supplier.address || "",
       city: supplier.city || "",
       postal_code: supplier.postal_code || "",
-      country: supplier.country || "Morocco",
+      country: supplier.country || defaultCountry,
       website: supplier.website || "",
       tax_id: supplier.tax_id || "",
       payment_terms: supplier.payment_terms || "",
@@ -805,7 +818,7 @@ void _showConfirm;
                     </span>
                   )}
                   <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-1 font-medium capitalize text-gray-600 dark:bg-gray-700 dark:text-gray-300">
-                    {t('stockManagement.security')}{warehouse.security_level}
+                     {t('stockManagement.security')}{getSecurityLevelLabel(warehouse.security_level)}
                   </span>
                 </div>
               </div>
@@ -877,7 +890,7 @@ void _showConfirm;
                       </span>
                     )}
                     <div className="text-xs capitalize text-gray-500 dark:text-gray-400">
-                      {t('stockManagement.security')}{warehouse.security_level}
+                      {t('stockManagement.security')}{getSecurityLevelLabel(warehouse.security_level)}
                     </div>
                   </div>
                 </TableCell>
@@ -950,9 +963,9 @@ void _showConfirm;
                       onChange={(e) => setNewProduct({ ...newProduct, category: (e.target as HTMLSelectElement).value })}
                       required
                     >
-                    <option value="">Sélectionner...</option>
-                    <option value="seeds">Semences</option>
-                    <option value="fertilizers">Engrais</option>
+                    <option value="">{t('common.select', 'Select...')}</option>
+                    <option value="seeds">{t('stockManagement.categories.seeds', 'Seeds')}</option>
+                    <option value="fertilizers">{t('stockManagement.categories.fertilizers', 'Fertilizers')}</option>
                     <option value="pesticides">Pesticides</option>
                     <option value="equipment">Équipement</option>
                     <option value="tools">Outils</option>
@@ -987,7 +1000,7 @@ void _showConfirm;
                         });
                       }}
                     >
-                    <option value="">Sélectionner un fournisseur</option>
+                    <option value="">{t('stockManagement.selectSupplier', 'Select a supplier')}</option>
                     {suppliers.map(supplier => (
                       <option key={supplier.id} value={supplier.name}>
                         {supplier.name}
@@ -1089,7 +1102,7 @@ void _showConfirm;
                         });
                       }}
                     >
-                      <option value="">Sélectionner un entrepôt</option>
+                      <option value="">{t('stockManagement.selectWarehouse', 'Select a warehouse')}</option>
                       {warehouses.map(warehouse => (
                         <option key={warehouse.id} value={warehouse.name}>
                           {warehouse.name}
@@ -1106,10 +1119,10 @@ void _showConfirm;
                 onClick={() => setShowAddProduct(false)}
                 className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-500 order-2 sm:order-1"
               >
-                Annuler
+                {t('common.cancel', 'Cancel')}
               </Button>
               <Button variant="green" onClick={handleAddProduct} disabled={!newProduct.item_name || !newProduct.category || newProduct.quantity === undefined || newProduct.quantity < 0 || !newProduct.unit} className="px-4 py-2 text-sm font-medium rounded-md disabled:cursor-not-allowed order-1 sm:order-2" >
-                Ajouter
+                {t('common.add', 'Add')}
               </Button>
             </div>
           </div>

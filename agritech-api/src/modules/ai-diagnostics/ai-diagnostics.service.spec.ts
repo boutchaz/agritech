@@ -51,10 +51,10 @@ describe('AiDiagnosticsService', () => {
     calibrationQuery.limit.mockReturnValue(calibrationQuery);
     calibrationQuery.maybeSingle.mockResolvedValue(
       mockQueryResult({
-        baseline_ndvi: agromindCalibrationFixture.expected_output.baseline_ndvi,
-        baseline_ndre: 0.21,
-        baseline_ndmi: 0.17,
-        calibration_data: {
+        p50_ndvi: agromindCalibrationFixture.expected_output.baseline_ndvi,
+        p50_ndre: 0.21,
+        p50_ndmi: 0.17,
+        baseline_data: {
           thresholds: {
             optimal: [...agromindCalibrationFixture.ndvi_thresholds.optimal],
             vigilance: agromindCalibrationFixture.ndvi_thresholds.vigilance,

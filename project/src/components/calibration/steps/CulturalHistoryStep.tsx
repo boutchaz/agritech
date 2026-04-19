@@ -1,5 +1,6 @@
 import { Plus, Trash2 } from 'lucide-react';
 import { useFieldArray, type UseFormReturn } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { FormField } from '@/components/ui/FormField';
 import { Input } from '@/components/ui/Input';
@@ -17,6 +18,7 @@ interface CulturalHistoryStepProps {
 }
 
 export function CulturalHistoryStep({ form }: CulturalHistoryStepProps) {
+  const { t } = useTranslation();
   const {
     register,
     control,
@@ -111,7 +113,7 @@ export function CulturalHistoryStep({ form }: CulturalHistoryStepProps) {
             onClick={() => append({ type: 'drought', year: new Date().getFullYear(), description: '' })}
           >
             <Plus className="w-4 h-4" />
-            Ajouter un stress
+            {t('culturalHistoryStep.addStress')}
           </Button>
         </div>
 

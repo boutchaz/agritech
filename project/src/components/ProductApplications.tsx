@@ -1,4 +1,5 @@
-import {  useState, useEffect  } from "react";
+import {  useState, useEffect, useCallback  } from "react";
+import { useTranslation } from 'react-i18next';
 import { Plus, X, FileText, Calendar } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { DEFAULT_CURRENCY } from '../utils/currencies';
@@ -13,6 +14,7 @@ import { SectionLoader } from '@/components/ui/loader';
 type Application = ProductApplication;
 
 const ProductApplications = () => {
+  const { t } = useTranslation();
   const { currentOrganization } = useAuth();
   const [applications, setApplications] = useState<Application[]>([]);
   const [products, setProducts] = useState<InventoryProduct[]>([]);
@@ -34,17 +36,7 @@ const ProductApplications = () => {
     cost: 0
   });
 
-  useEffect(() => {
-    if (currentOrganization?.id) {
-      fetchApplications();
-      fetchProducts();
-      fetchParcels();
-      fetchUserFarm();
-    }
-     
-  }, [currentOrganization?.id]);
-
-  const fetchParcels = async () => {
+  const fetchParcels = useCallback(async () => {
     try {
       if (!currentOrganization?.id) return;
 
@@ -56,9 +48,9 @@ const ProductApplications = () => {
     } catch (error) {
       console.error('Error fetching parcels:', error);
     }
-  };
+  }, [currentOrganization?.id]);
 
-  const fetchUserFarm = async () => {
+  const fetchUserFarm = useCallback(async () => {
     try {
       if (!currentOrganization?.id) return;
 
@@ -73,14 +65,14 @@ const ProductApplications = () => {
       }));
 
       if (farms && farms.length > 0) {
-        setFarmId(farms[0].id);
+        setFarmId(farms[0].id || null);
       }
     } catch (error) {
       console.error('Error fetching user farm:', error);
     }
-  };
+  }, [currentOrganization?.id]);
 
-  const fetchApplications = async () => {
+  const fetchApplications = useCallback(async () => {
     try {
       if (!currentOrganization?.id) {
         setLoading(false);
@@ -94,9 +86,9 @@ const ProductApplications = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentOrganization?.id]);
 
-  const fetchProducts = async () => {
+  const fetchProducts = useCallback(async () => {
     try {
       if (!currentOrganization?.id) return;
 
@@ -105,7 +97,17 @@ const ProductApplications = () => {
     } catch (error) {
       console.error('Error fetching products:', error);
     }
-  };
+  }, [currentOrganization?.id]);
+
+  useEffect(() => {
+    if (currentOrganization?.id) {
+      fetchApplications();
+      fetchProducts();
+      fetchParcels();
+      fetchUserFarm();
+    }
+      
+  }, [currentOrganization?.id, fetchApplications, fetchProducts, fetchParcels, fetchUserFarm]);
 
   const handleAddApplication = async () => {
     if (!farmId) {
@@ -156,37 +158,37 @@ const ProductApplications = () => {
       {/* Header */}
       <div className="flex justify-between items-center">
         <h2 className="text-lg font-medium text-gray-900 dark:text-white">
-          Applications de Produits
+          {t('productApplications.title', 'Product Applications')}
         </h2>
         <Button variant="green"
           onClick={() => setShowAddModal(true)}
           className="flex items-center space-x-2 px-4 py-2 rounded-md"
         >
           <Plus className="h-5 w-5" />
-          <span>Nouvelle Application</span>
+          <span>{t('productApplications.addNew', 'New Application')}</span>
         </Button>
       </div>
 
       {/* Applications List */}
       {applications.length === 0 ? (
-        <div className="text-center py-12">
-          <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-            Aucune application enregistrée
-          </h3>
-          <p className="text-gray-500 dark:text-gray-400">
-            Commencez par enregistrer une nouvelle application
-          </p>
-        </div>
+          <div className="text-center py-12">
+            <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+              {t('productApplications.emptyTitle', 'No applications recorded')}
+            </h3>
+            <p className="text-gray-500 dark:text-gray-400">
+              {t('productApplications.emptyDescription', 'Start by recording a new application')}
+            </p>
+          </div>
       ) : (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
           <div className="divide-y divide-gray-200 dark:divide-gray-700">
-            {applications.map((app: { id: string; inventory: { name: string }; application_date: string; quantity_used: number; area_treated: number; notes?: string; cost?: number }) => (
+            {applications.map((app) => (
               <div key={app.id} className="p-6">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
-                    <Calendar className="h-5 w-5 text-gray-400" />
-                    <div>
+                <Calendar className="h-5 w-5 text-gray-400" />
+                <div>
                       <h3 className="text-lg font-medium text-gray-900 dark:text-white">
                         {app.inventory.name}
                       </h3>
@@ -197,10 +199,10 @@ const ProductApplications = () => {
                   </div>
                   <div className="text-right">
                     <p className="text-sm font-medium text-gray-900 dark:text-white">
-                      {app.quantity_used} {app.inventory.unit}
+                      {app.quantity_used} {('unit' in app.inventory ? app.inventory.unit : '')}
                     </p>
                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                      Surface traitée: {app.area_treated} ha
+                      {t('productApplications.areaTreatedValue', 'Area treated: {{count}} ha', { count: app.area_treated })}
                     </p>
                   </div>
                 </div>
@@ -221,7 +223,7 @@ const ProductApplications = () => {
           <div className="bg-white dark:bg-gray-800 rounded-lg max-w-lg w-full p-6">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-                Nouvelle Application
+                {t('productApplications.modalTitle', 'New Application')}
               </h3>
               <Button
                 onClick={() => setShowAddModal(false)}
@@ -232,10 +234,11 @@ const ProductApplications = () => {
             </div>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Produit
+                <label htmlFor="product-application-product" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  {t('productApplications.product', 'Product')}
                 </label>
                 <select
+                  id="product-application-product"
                   value={newApplication.product_id}
                   onChange={(e) => {
                     setNewApplication({
@@ -246,19 +249,20 @@ const ProductApplications = () => {
                   }}
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
                 >
-                  <option value="">Sélectionner un produit</option>
+                  <option value="">{t('productApplications.selectProduct', 'Select a product')}</option>
                   {products.map(product => (
                     <option key={product.id} value={product.id}>
-                      {product.name} ({product.quantity} {product.unit} disponible)
+                      {product.name} ({product.quantity} {product.unit} {t('productApplications.available', 'available')})
                     </option>
                   ))}
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Date d'application
+                <label htmlFor="product-application-date" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  {t('productApplications.applicationDate', 'Application date')}
                 </label>
                 <input
+                  id="product-application-date"
                   type="date"
                   value={newApplication.application_date}
                   onChange={(e) => setNewApplication({
@@ -270,10 +274,11 @@ const ProductApplications = () => {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Quantité utilisée
+                  <label htmlFor="product-application-quantity" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    {t('productApplications.quantityUsed', 'Quantity used')}
                   </label>
                   <input
+                    id="product-application-quantity"
                     type="number"
                     step="1"
                     value={newApplication.quantity_used}
@@ -285,10 +290,11 @@ const ProductApplications = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Surface traitée (ha)
+                  <label htmlFor="product-application-area" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    {t('productApplications.treatedArea', 'Treated area (ha)')}
                   </label>
                   <input
+                    id="product-application-area"
                     type="number"
                     step="1"
                     value={newApplication.area_treated}
@@ -301,10 +307,11 @@ const ProductApplications = () => {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Parcelle
+                <label htmlFor="product-application-parcel" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  {t('productApplications.parcel', 'Parcel')}
                 </label>
                 <select
+                  id="product-application-parcel"
                   value={newApplication.parcel_id}
                   onChange={(e) => setNewApplication({
                     ...newApplication,
@@ -312,7 +319,7 @@ const ProductApplications = () => {
                   })}
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
                 >
-                  <option value="">Sélectionner une parcelle</option>
+                  <option value="">{t('productApplications.selectParcel', 'Select a parcel')}</option>
                   {parcels.map(parcel => (
                     <option key={parcel.id} value={parcel.id}>
                       {parcel.name}
@@ -321,10 +328,11 @@ const ProductApplications = () => {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Coût ({currency})
+                <label htmlFor="product-application-cost" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  {t('productApplications.costLabel', 'Cost ({{currency}})', { currency })}
                 </label>
                 <input
+                  id="product-application-cost"
                   type="number"
                   step="0.01"
                   value={newApplication.cost}
@@ -333,14 +341,15 @@ const ProductApplications = () => {
                     cost: Number(e.target.value)
                   })}
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
-                  placeholder={`Coût total de l'application en ${currency}`}
+                  placeholder={t('productApplications.costPlaceholder', 'Total application cost in {{currency}}', { currency })}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Notes
+                <label htmlFor="product-application-notes" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  {t('productApplications.notes', 'Notes')}
                 </label>
                 <textarea
+                  id="product-application-notes"
                   value={newApplication.notes}
                   onChange={(e) => setNewApplication({
                     ...newApplication,
@@ -348,7 +357,7 @@ const ProductApplications = () => {
                   })}
                   rows={3}
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500"
-                  placeholder="Conditions d'application, observations..."
+                  placeholder={t('productApplications.notesPlaceholder', 'Application conditions, observations...')}
                 ></textarea>
               </div>
             </div>
@@ -357,10 +366,10 @@ const ProductApplications = () => {
                 onClick={() => setShowAddModal(false)}
                 className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-500"
               >
-                Annuler
+                {t('productApplications.cancel', 'Cancel')}
               </Button>
               <Button variant="green" onClick={handleAddApplication} disabled={!newApplication.product_id || !newApplication.quantity_used} className="px-4 py-2 text-sm font-medium rounded-md disabled:cursor-not-allowed" >
-                Enregistrer
+                {t('productApplications.save', 'Save')}
               </Button>
             </div>
           </div>

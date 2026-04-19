@@ -28,6 +28,8 @@ export interface CalibrationSnapshotInput {
   crop_type?: string | null;
   /** From parcels.planting_year — phenology year list filter */
   planting_year?: number | null;
+  /** From parcels.variety — used to look up chill-hour reference bracket */
+  variety?: string | null;
   /** Calibration history for this parcel */
   calibration_history: Array<{
     id: string;
@@ -166,6 +168,21 @@ export interface HistoryDepth {
   date_end: string;
 }
 
+export interface ChillHoursDisplay {
+  /** Cumulative season hours T<7.2°C from step2.chill_hours */
+  value: number;
+  reference: {
+    min: number;
+    max: number;
+    /** 'variety' = matched referentiel; 'fallback' = default bracket used */
+    source: 'variety' | 'fallback';
+    variety_label: string | null;
+  };
+  band: 'green' | 'yellow' | 'red' | 'critique';
+  /** Pre-localized French narrative (Hassan-grade) */
+  phrase: string;
+}
+
 export interface PhenologyDashboardData {
   available: boolean;
   mode: string | null;
@@ -192,6 +209,48 @@ export interface PhenologyDashboardData {
   yearly_stages: Record<string, Record<string, string>>;
   /** GDD entry thresholds from referentiel stades_bbch, keyed by phase_kc */
   referentiel_gdd: Record<string, number> | null;
+  /** Chill-hours summary (olive-only for v1; null when crop_type !== 'olivier' or chill_hours missing) */
+  chill: ChillHoursDisplay | null;
+  /** Status echoed from step4 (e.g. "degraded", "ok"). Drives enrichment decisions. */
+  status: string | null;
+  /** Missing stages echoed from step4.missing_stages. */
+  missing_stages: string[];
+  /** AI enrichment attached post-hoc in calibration.service. Null when unavailable/failed/skipped. */
+  ai_enrichment: PhenologyAiEnrichment | null;
+}
+
+/** Confidence used for AI-imputed data. Mirrors state-machine confidence vocabulary + a dedicated AI level. */
+export type PhenologyAiConfidence = "ELEVEE" | "MODEREE" | "FAIBLE" | "TRES_FAIBLE";
+
+export interface ImputedStage {
+  stage: string;
+  date: string | null;
+  confidence: PhenologyAiConfidence;
+  method: string;
+  rationale: string;
+}
+
+export interface PhaseNarrative {
+  phase: string;
+  year: number | null;
+  summary: string;
+  referential_deviation_days: number | null;
+}
+
+export interface PhenologyAiEnrichment {
+  version: string;
+  generated_at: string;
+  provider: string;
+  model: string;
+  /** Short explanation of why step4.status is degraded (or "ok" rationale). */
+  degradation_reasons: string[];
+  /** Stages inferred by the AI for keys that were null/missing. Never overwrite deterministic values. */
+  imputed_stages: ImputedStage[];
+  phase_narratives: PhaseNarrative[];
+  /** Plain, actionable recommendations (what data to collect, verifications to run). */
+  recommendations: string[];
+  /** Optional high-level summary. */
+  summary: string | null;
 }
 
 export interface BlockBAnalyse {

@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 import { generateParcelReport } from '../lib/edge-functions-api';
 import { storageApi } from '../lib/api/storage';
 import type { ReportTemplate, GeneratedReport } from '../types/reports';
@@ -34,6 +35,7 @@ const ParcelReportGenerator = ({
   searchParams
 }: ParcelReportGeneratorProps) => {
   const _queryClient = useQueryClient();
+  const { t } = useTranslation();
   const [reports, setReports] = useState<GeneratedReport[]>([]);
   const [templates, setTemplates] = useState<ReportTemplate[]>([]);
   const [showTemplateSelector, setShowTemplateSelector] = useState(false);
@@ -172,7 +174,7 @@ const ParcelReportGenerator = ({
       throw new Error('Aucun contenu de rapport disponible');
     } catch (err: unknown) {
       console.error('Error downloading report:', err);
-      toast.error(err instanceof Error ? err.message : 'Erreur lors du téléchargement du rapport');
+      toast.error(err instanceof Error ? err.message : t('common.error'));
     }
   };
 

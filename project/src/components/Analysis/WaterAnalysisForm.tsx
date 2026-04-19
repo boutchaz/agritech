@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Save, X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import type { WaterAnalysisData } from '../../types/analysis';
 import { useFormErrors } from '@/hooks/useFormErrors';
 import { FormField } from '../ui/FormField';
@@ -190,6 +191,7 @@ type WaterAnalysisFormData = z.infer<typeof waterAnalysisSchema>;
 
 const WaterAnalysisForm = ({ onSave, onCancel, selectedParcel }: WaterAnalysisFormProps) => {
   const { handleFormError } = useFormErrors<WaterAnalysisFormData>();
+  const { t } = useTranslation();
   const [selectedParams, setSelectedParams] = useState<WaterParamKey[]>(DEFAULT_WATER_PARAMS);
   const selectedParamSet = useMemo(() => new Set(selectedParams), [selectedParams]);
 
@@ -425,11 +427,11 @@ const WaterAnalysisForm = ({ onSave, onCancel, selectedParcel }: WaterAnalysisFo
             onClick={onCancel}
             className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
           >
-            Annuler
+            {t('waterAnalysisForm.cancel')}
           </Button>
           <Button variant="green" type="submit" className="px-4 py-2 rounded-md flex items-center space-x-2" >
             <Save className="h-4 w-4" />
-            <span>Enregistrer</span>
+            <span>{t('waterAnalysisForm.save')}</span>
           </Button>
         </div>
       </form>

@@ -23,6 +23,7 @@ import { FilterBar, ListPageLayout, ResponsiveList } from '@/components/ui/data-
 import { TableCell, TableHead, TableRow } from '@/components/ui/table';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { SectionLoader, ButtonLoader } from '@/components/ui/loader';
+import { useTranslation } from 'react-i18next';
 
 
 interface Utility {
@@ -70,6 +71,7 @@ const CONSUMPTION_UNITS: Record<string, string[]> = {
 // No more hardcoded account codes - will be dynamically looked up by account type/subtype
 
 const UtilitiesManagement = () => {
+  const { t } = useTranslation();
   const { currentOrganization, currentFarm, user } = useAuth();
   const { hasPermission } = useRoleBasedAccess();
   const { format: formatCurrency, symbol: currency } = useCurrency();
@@ -164,11 +166,13 @@ const UtilitiesManagement = () => {
     } catch (_error) {
       const subtypeMsg = accountSubtype ? ` (${accountSubtype})` : '';
       throw new Error(
-        `Compte comptable de type "${accountType}"${subtypeMsg} introuvable. ` +
-        `Veuillez créer ce compte dans le plan comptable.`
+        t('utilities.accountNotFoundError', {
+          accountType,
+          subtypeMsg,
+        })
       );
     }
-  }, [currentOrganization?.id, currentFarm?.id]);
+  }, [currentOrganization?.id, currentFarm?.id, t]);
 
   // Helper function to calculate unit cost
   const calculateUnitCost = useCallback((amount: number, consumptionValue?: number): string => {
@@ -182,8 +186,8 @@ const UtilitiesManagement = () => {
   };
 
   const getUtilityLabel = useCallback((type: string) => {
-    return UTILITY_TYPES.find((ut) => ut.value === type)?.label || type;
-  }, []);
+    return t(`utilities.utilityTypes.${type}`, UTILITY_TYPES.find((ut) => ut.value === type)?.label || type);
+  }, [t]);
 
    // Helper function to upload invoice file
    const uploadInvoiceFile = async (file: File): Promise<{ url: string; path: string } | null> => {
@@ -520,7 +524,7 @@ const UtilitiesManagement = () => {
   const handleAddUtility = async () => {
     try {
       if (!currentFarm?.id || !currentOrganization?.id) {
-        setError('Sélectionnez une ferme pour ajouter une charge.');
+        setError(t('utilities.selectFarmToAddCharge', 'Sélectionnez une ferme pour ajouter une charge.'));
         return;
       }
 
@@ -533,7 +537,7 @@ const UtilitiesManagement = () => {
       if (selectedFile) {
         const uploadResult = await uploadInvoiceFile(selectedFile);
         if (!uploadResult) {
-          setError('Erreur lors du téléchargement du fichier');
+          setError(t('utilities.fileUploadError', 'Erreur lors du téléchargement du fichier'));
           setUploading(false);
           return;
         }
@@ -592,14 +596,16 @@ const UtilitiesManagement = () => {
         // Check if it's a missing account error
         if (errorMessage.includes('introuvable') || errorMessage.includes('not found')) {
           setError(
-            `✓ Charge enregistrée avec succès.\n\n` +
-            `⚠️ L'écriture comptable n'a pas pu être créée automatiquement.\n\n` +
-            `Raison: ${errorMessage}\n\n` +
-            `→ Veuillez configurer le plan comptable dans la section Comptabilité > Plan Comptable.\n` +
-            `→ Comptes requis: Charges d'exploitation, Trésorerie, Dettes fournisseurs.`
+          t('utilities.journalEntryMissingAccountHelp', {
+            errorMessage,
+          })
           );
         } else {
-          setError(`Charge enregistrée, mais l'écriture comptable n'a pas été créée: ${errorMessage}`);
+          setError(
+            t('utilities.journalEntryCreatedWithError', {
+              errorMessage,
+            })
+          );
         }
       }
 
@@ -630,7 +636,7 @@ const UtilitiesManagement = () => {
 
     try {
       if (!currentFarm?.id || !currentOrganization?.id) {
-        setError('Sélectionnez une ferme pour modifier une charge.');
+        setError(t('utilities.selectFarmToEditCharge', 'Sélectionnez une ferme pour modifier une charge.'));
         return;
       }
       setError(null);
@@ -715,7 +721,11 @@ const UtilitiesManagement = () => {
   );
 
   const getPaymentStatusLabel = (status: Utility['payment_status']) => (
-    status === 'paid' ? 'Payé' : status === 'pending' ? 'En attente' : 'En retard'
+    status === 'paid'
+      ? t('utilitiesManagement.paymentStatus.paid', 'Paid')
+      : status === 'pending'
+        ? t('utilitiesManagement.paymentStatus.pending', 'Pending')
+        : t('utilitiesManagement.paymentStatus.overdue', 'Overdue')
   );
 
   const getPaymentStatusClasses = (status: Utility['payment_status']) => (
@@ -727,15 +737,15 @@ const UtilitiesManagement = () => {
   const emptyAction = !currentFarm?.id
     ? undefined
     : hasActiveFilters
-      ? { label: 'Réinitialiser les filtres', onClick: resetFilters, variant: 'outline' as const }
+      ? { label: t('utilitiesManagement.actions.resetFilters', 'Reset filters'), onClick: resetFilters, variant: 'outline' as const }
       : canCreateUtility
-        ? { label: 'Ajouter une charge', onClick: () => setShowAddModal(true) }
+        ? { label: t('utilitiesManagement.actions.addUtility', 'Add utility expense'), onClick: () => setShowAddModal(true) }
         : undefined;
 
-  const emptyTitle = hasActiveFilters ? 'Aucun résultat trouvé' : 'Aucune charge fixe';
+  const emptyTitle = hasActiveFilters ? t('utilitiesManagement.empty.noResultsTitle', 'No results found') : t('utilitiesManagement.empty.noUtilitiesTitle', 'No utility expenses');
   const emptyMessage = hasActiveFilters
-    ? 'Aucune charge ne correspond aux filtres sélectionnés. Essayez de modifier vos critères de recherche.'
-    : 'Commencez par ajouter vos premières charges fixes (électricité, eau, etc.).';
+    ? t('utilitiesManagement.empty.noResultsMessage', 'No expense matches the selected filters. Try changing your search criteria.')
+    : t('utilitiesManagement.empty.noUtilitiesMessage', 'Start by adding your first utility expenses (electricity, water, etc.).');
 
   const renderUtilityActions = (utility: Utility) => (
     <div className="flex items-center justify-end gap-2">
@@ -743,7 +753,7 @@ const UtilitiesManagement = () => {
         <Button
           onClick={() => downloadInvoice(utility.invoice_url!, `facture-${utility.type}-${utility.billing_date}.pdf`)}
           className="text-blue-400 hover:text-blue-500"
-          title="Télécharger la facture"
+          title={t('utilitiesManagement.actions.downloadInvoice', 'Download invoice')}
         >
           <Download className="h-4 w-4" />
         </Button>
@@ -768,9 +778,9 @@ const UtilitiesManagement = () => {
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Gestion des Charges Fixes</h2>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{t('utilitiesManagement.title', 'Fixed utility expenses')}</h2>
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                Suivez les charges fixes, la consommation et les écritures comptables liées.
+                {t('utilitiesManagement.subtitle', 'Track utility expenses, consumption, and related accounting entries.')}
               </p>
             </div>
 
@@ -781,7 +791,7 @@ const UtilitiesManagement = () => {
                   className="flex items-center space-x-2 border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
                 >
                   <BookOpen className="h-4 w-4" />
-                  <span>Journal Comptable</span>
+                  <span>{t('utilitiesManagement.actions.accountingJournal', 'Accounting journal')}</span>
                 </Button>
 
                 <Button
@@ -789,28 +799,28 @@ const UtilitiesManagement = () => {
                   disabled={!currentFarm?.id}
                   variant={currentFarm?.id ? 'green' : undefined}
                   className={!currentFarm?.id ? 'bg-gray-300 text-gray-600 cursor-not-allowed' : ''}
-                  title={!currentFarm?.id ? 'Sélectionnez une ferme pour ajouter une charge' : undefined}
+                  title={!currentFarm?.id ? t('utilitiesManagement.actions.selectFarmToAdd', 'Select a farm to add an expense') : undefined}
                 >
                   <Plus className="h-4 w-4 mr-2" />
-                  Nouvelle Charge
+                  {t('utilitiesManagement.actions.newUtility', 'New expense')}
                 </Button>
               </div>
 
               <div className="flex items-center gap-2">
                 <div className="flex items-center rounded-lg bg-gray-100 p-1 dark:bg-gray-700">
-                  <Button onClick={() => setViewMode('grouped')} className={`p-2 ${viewMode === 'grouped' ? 'bg-white shadow-sm dark:bg-gray-600' : ''}`} title="Vue groupée"><Grid className="h-4 w-4" /></Button>
-                  <Button onClick={() => setViewMode('cards')} className={`p-2 ${viewMode === 'cards' ? 'bg-white shadow-sm dark:bg-gray-600' : ''}`} title="Vue cartes"><List className="h-4 w-4" /></Button>
-                  <Button onClick={() => setViewMode('list')} className={`p-2 ${viewMode === 'list' ? 'bg-white shadow-sm dark:bg-gray-600' : ''}`} title="Vue liste"><Calendar className="h-4 w-4" /></Button>
-                  <Button onClick={() => setViewMode('dashboard')} className={`p-2 ${viewMode === 'dashboard' ? 'bg-white shadow-sm dark:bg-gray-600' : ''}`} title="Vue tableau de bord"><BarChart3 className="h-4 w-4" /></Button>
+                  <Button onClick={() => setViewMode('grouped')} className={`p-2 ${viewMode === 'grouped' ? 'bg-white shadow-sm dark:bg-gray-600' : ''}`} title={t('utilitiesManagement.views.grouped', 'Grouped view')}><Grid className="h-4 w-4" /></Button>
+                  <Button onClick={() => setViewMode('cards')} className={`p-2 ${viewMode === 'cards' ? 'bg-white shadow-sm dark:bg-gray-600' : ''}`} title={t('utilitiesManagement.views.cards', 'Card view')}><List className="h-4 w-4" /></Button>
+                  <Button onClick={() => setViewMode('list')} className={`p-2 ${viewMode === 'list' ? 'bg-white shadow-sm dark:bg-gray-600' : ''}`} title={t('utilitiesManagement.views.list', 'List view')}><Calendar className="h-4 w-4" /></Button>
+                  <Button onClick={() => setViewMode('dashboard')} className={`p-2 ${viewMode === 'dashboard' ? 'bg-white shadow-sm dark:bg-gray-600' : ''}`} title={t('utilitiesManagement.views.dashboard', 'Dashboard view')}><BarChart3 className="h-4 w-4" /></Button>
                 </div>
 
                 <Button
                   onClick={() => setFilters((prev) => ({ ...prev, showFilters: !prev.showFilters }))}
                   className={`flex items-center gap-2 border px-3 py-2 ${filters.showFilters ? 'border-blue-300 bg-blue-50 text-blue-700 dark:border-blue-700 dark:bg-blue-900/20 dark:text-blue-400' : 'border-gray-300 bg-white text-gray-700 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300'}`}
-                  title="Filtres avancés"
+                  title={t('utilitiesManagement.actions.advancedFilters', 'Advanced filters')}
                 >
                   <Filter className="h-4 w-4" />
-                  <span className="text-sm">Filtres</span>
+                  <span className="text-sm">{t('utilitiesManagement.actions.filters', 'Filters')}</span>
                   {filters.showFilters ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
                 </Button>
               </div>
@@ -823,17 +833,17 @@ const UtilitiesManagement = () => {
           <FilterBar
             searchValue={searchTerm}
             onSearchChange={setSearchTerm}
-            searchPlaceholder="Rechercher par type, montant, note ou date..."
+            searchPlaceholder={t('utilitiesManagement.placeholders.search', 'Search by type, amount, note, or date...')}
             filters={[
               {
                 key: 'paymentStatus',
                 value: filters.paymentStatus,
                 onChange: (value) => setFilters((prev) => ({ ...prev, paymentStatus: value as typeof prev.paymentStatus })),
                 options: [
-                  { value: 'all', label: 'Tous les statuts' },
-                  { value: 'pending', label: 'En attente' },
-                  { value: 'paid', label: 'Payé' },
-                  { value: 'overdue', label: 'En retard' },
+                  { value: 'all', label: t('utilitiesManagement.filters.allStatuses', 'All statuses') },
+                  { value: 'pending', label: t('utilitiesManagement.paymentStatus.pending', 'Pending') },
+                  { value: 'paid', label: t('utilitiesManagement.paymentStatus.paid', 'Paid') },
+                  { value: 'overdue', label: t('utilitiesManagement.paymentStatus.overdue', 'Overdue') },
                 ],
               },
               {
@@ -841,7 +851,7 @@ const UtilitiesManagement = () => {
                 value: filters.utilityType,
                 onChange: (value) => setFilters((prev) => ({ ...prev, utilityType: value })),
                 options: [
-                  { value: 'all', label: 'Tous les types' },
+                  { value: 'all', label: t('utilitiesManagement.filters.allTypes', 'All types') },
                   ...UTILITY_TYPES.map((type) => ({ value: type.value, label: type.label })),
                 ],
               },
@@ -850,9 +860,9 @@ const UtilitiesManagement = () => {
                 value: filters.isRecurring,
                 onChange: (value) => setFilters((prev) => ({ ...prev, isRecurring: value as typeof prev.isRecurring })),
                 options: [
-                  { value: 'all', label: 'Toutes' },
-                  { value: 'recurring', label: 'Récurrentes' },
-                  { value: 'non-recurring', label: 'Non récurrentes' },
+                  { value: 'all', label: t('utilitiesManagement.filters.allRecurring', 'All') },
+                  { value: 'recurring', label: t('utilitiesManagement.filters.recurring', 'Recurring') },
+                  { value: 'non-recurring', label: t('utilitiesManagement.filters.nonRecurring', 'Non-recurring') },
                 ],
               },
             ]}
@@ -863,7 +873,7 @@ const UtilitiesManagement = () => {
             <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
                 <div>
-                  <label htmlFor="utility-start-date" className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Date début</label>
+                  <label htmlFor="utility-start-date" className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">{t('utilitiesManagement.filters.startDate', 'Start date')}</label>
                   <Input
                     id="utility-start-date"
                     type="date"
@@ -872,7 +882,7 @@ const UtilitiesManagement = () => {
                   />
                 </div>
                 <div>
-                  <label htmlFor="utility-end-date" className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Date fin</label>
+                  <label htmlFor="utility-end-date" className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">{t('utilitiesManagement.filters.endDate', 'End date')}</label>
                   <Input
                     id="utility-end-date"
                     type="date"
@@ -881,18 +891,18 @@ const UtilitiesManagement = () => {
                   />
                 </div>
                 <div>
-                  <label htmlFor="utility-sort-by" className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Trier par</label>
+                  <label htmlFor="utility-sort-by" className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">{t('utilitiesManagement.filters.sortBy', 'Sort by')}</label>
                   <Select id="utility-sort-by" value={sortBy} onChange={(e) => setSortBy(e.target.value as typeof sortBy)}>
-                    <option value="billing_date">Date</option>
-                    <option value="amount">Montant</option>
-                    <option value="type">Type</option>
+                    <option value="billing_date">{t('utilitiesManagement.columns.date', 'Date')}</option>
+                    <option value="amount">{t('utilitiesManagement.columns.amount', 'Amount')}</option>
+                    <option value="type">{t('utilitiesManagement.columns.type', 'Type')}</option>
                   </Select>
                 </div>
                 <div>
-                  <label htmlFor="utility-sort-order" className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Ordre</label>
+                  <label htmlFor="utility-sort-order" className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">{t('utilitiesManagement.filters.order', 'Order')}</label>
                   <Select id="utility-sort-order" value={sortOrder} onChange={(e) => setSortOrder(e.target.value as typeof sortOrder)}>
-                    <option value="desc">Décroissant</option>
-                    <option value="asc">Croissant</option>
+                    <option value="desc">{t('utilitiesManagement.filters.descending', 'Descending')}</option>
+                    <option value="asc">{t('utilitiesManagement.filters.ascending', 'Ascending')}</option>
                   </Select>
                 </div>
               </div>
@@ -903,15 +913,15 @@ const UtilitiesManagement = () => {
       stats={
         !loading && utilities.length > 0 ? (
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
-            <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-gray-800"><div className="flex items-center"><div className="rounded-lg bg-blue-100 p-2 dark:bg-blue-900/20"><Zap className="h-6 w-6 text-blue-600 dark:text-blue-400" /></div><div className="ml-3"><p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total des charges</p><p className="text-lg font-semibold text-gray-900 dark:text-white">{formatCurrency(totals.total)}</p></div></div></div>
-            <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-gray-800"><div className="flex items-center"><div className="rounded-lg bg-green-100 p-2 dark:bg-green-900/20"><Calendar className="h-6 w-6 text-green-600 dark:text-green-400" /></div><div className="ml-3"><p className="text-sm font-medium text-gray-500 dark:text-gray-400">Charges récurrentes</p><p className="text-lg font-semibold text-gray-900 dark:text-white">{formatCurrency(totals.recurring)}</p></div></div></div>
-            <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-gray-800"><div className="flex items-center"><div className="rounded-lg bg-yellow-100 p-2 dark:bg-yellow-900/20"><Edit2 className="h-6 w-6 text-yellow-600 dark:text-yellow-400" /></div><div className="ml-3"><p className="text-sm font-medium text-gray-500 dark:text-gray-400">En attente</p><p className="text-lg font-semibold text-gray-900 dark:text-white">{formatCurrency(totals.pending)}</p></div></div></div>
-            <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-gray-800"><div className="flex items-center"><div className="rounded-lg bg-purple-100 p-2 dark:bg-purple-900/20"><List className="h-6 w-6 text-purple-600 dark:text-purple-400" /></div><div className="ml-3"><p className="text-sm font-medium text-gray-500 dark:text-gray-400">Nombre total</p><p className="text-lg font-semibold text-gray-900 dark:text-white">{totals.count}</p></div></div></div>
+            <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-gray-800"><div className="flex items-center"><div className="rounded-lg bg-blue-100 p-2 dark:bg-blue-900/20"><Zap className="h-6 w-6 text-blue-600 dark:text-blue-400" /></div><div className="ml-3"><p className="text-sm font-medium text-gray-500 dark:text-gray-400">{t('utilitiesManagement.stats.totalExpenses', 'Total expenses')}</p><p className="text-lg font-semibold text-gray-900 dark:text-white">{formatCurrency(totals.total)}</p></div></div></div>
+            <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-gray-800"><div className="flex items-center"><div className="rounded-lg bg-green-100 p-2 dark:bg-green-900/20"><Calendar className="h-6 w-6 text-green-600 dark:text-green-400" /></div><div className="ml-3"><p className="text-sm font-medium text-gray-500 dark:text-gray-400">{t('utilitiesManagement.stats.recurringExpenses', 'Recurring expenses')}</p><p className="text-lg font-semibold text-gray-900 dark:text-white">{formatCurrency(totals.recurring)}</p></div></div></div>
+            <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-gray-800"><div className="flex items-center"><div className="rounded-lg bg-yellow-100 p-2 dark:bg-yellow-900/20"><Edit2 className="h-6 w-6 text-yellow-600 dark:text-yellow-400" /></div><div className="ml-3"><p className="text-sm font-medium text-gray-500 dark:text-gray-400">{t('utilitiesManagement.stats.pending', 'Pending')}</p><p className="text-lg font-semibold text-gray-900 dark:text-white">{formatCurrency(totals.pending)}</p></div></div></div>
+            <div className="rounded-lg bg-white p-4 shadow-sm dark:bg-gray-800"><div className="flex items-center"><div className="rounded-lg bg-purple-100 p-2 dark:bg-purple-900/20"><List className="h-6 w-6 text-purple-600 dark:text-purple-400" /></div><div className="ml-3"><p className="text-sm font-medium text-gray-500 dark:text-gray-400">{t('utilitiesManagement.stats.totalCount', 'Total count')}</p><p className="text-lg font-semibold text-gray-900 dark:text-white">{totals.count}</p></div></div></div>
           </div>
         ) : undefined
       }
     >
-      <InlineFarmSelector message="Sélectionnez une ferme pour gérer les charges fixes." />
+      <InlineFarmSelector message={t('utilitiesManagement.selectFarmMessage', 'Select a farm to manage utility expenses.')} />
 
       {error && (
         <div className={`rounded-lg border p-4 ${error.includes('✓') ? 'border-yellow-200 bg-yellow-50 dark:border-yellow-700 dark:bg-yellow-900/20' : 'border-red-200 bg-red-50 dark:border-red-700 dark:bg-red-900/20'}`}>
@@ -922,7 +932,7 @@ const UtilitiesManagement = () => {
                 <div className="mt-3">
                   <Button size="sm" variant="outline" onClick={() => navigate({ to: '/accounting/accounts' })} className="border-yellow-600 text-yellow-700 hover:bg-yellow-100 dark:border-yellow-500 dark:text-yellow-400">
                     <BookOpen className="mr-2 h-4 w-4" />
-                    Ouvrir le Plan Comptable
+                    {t('utilitiesManagement.actions.openChartOfAccounts', 'Open chart of accounts')}
                   </Button>
                 </div>
               )}
@@ -1106,8 +1116,8 @@ const UtilitiesManagement = () => {
             fallback={
               <div className="py-12 text-center">
                 <div className="mx-auto mb-4 flex h-24 w-24 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700"><BarChart3 className="h-12 w-12 text-gray-400 dark:text-gray-500" /></div>
-                <h3 className="mb-2 text-lg font-semibold text-gray-900 dark:text-white">Accès limité au tableau de bord</h3>
-                <p className="text-gray-500 dark:text-gray-400">Votre rôle ne permet pas d'accéder aux analyses financières détaillées.</p>
+                <h3 className="mb-2 text-lg font-semibold text-gray-900 dark:text-white">{t('utilitiesManagement.dashboardAccess.title', 'Limited dashboard access')}</h3>
+                <p className="text-gray-500 dark:text-gray-400">{t('utilitiesManagement.dashboardAccess.description', 'Your role does not allow access to detailed financial analytics.')}</p>
               </div>
             }
           >
@@ -1126,10 +1136,10 @@ const UtilitiesManagement = () => {
             setEditingUtility(null);
           }
         }}
-        title={editingUtility ? 'Modifier la Charge' : 'Nouvelle Charge'}
+        title={editingUtility ? t('utilitiesManagement.dialog.editTitle', 'Edit expense') : t('utilitiesManagement.dialog.newTitle', 'New expense')}
         description={editingUtility
-          ? 'Modifiez les détails de cette charge. Les modifications seront automatiquement synchronisées avec le livre comptable.'
-          : 'Ajoutez une nouvelle charge. Une écriture comptable sera automatiquement créée dans le livre.'}
+          ? t('utilitiesManagement.dialog.editDescription', 'Edit this expense. Changes will be automatically synced with the accounting ledger.')
+          : t('utilitiesManagement.dialog.newDescription', 'Add a new expense. An accounting entry will be created automatically in the ledger.')}
         size="2xl"
         contentClassName="max-h-[90vh] overflow-y-auto"
         footer={
@@ -1142,19 +1152,19 @@ const UtilitiesManagement = () => {
                 setEditingUtility(null);
               }}
             >
-              Annuler
+              {t('utilitiesManagement.actions.cancel', 'Cancel')}
             </Button>
             <Button variant="green" type="button" onClick={editingUtility ? handleUpdateUtility : handleAddUtility} disabled={uploading} >
               {uploading && (
                 <ButtonLoader />
               )}
-              {uploading ? 'Téléchargement...' : (editingUtility ? 'Mettre à jour' : 'Ajouter')}
+              {uploading ? t('utilitiesManagement.actions.uploading', 'Uploading...') : (editingUtility ? t('utilitiesManagement.actions.update', 'Update') : t('utilitiesManagement.actions.add', 'Add'))}
             </Button>
           </DialogFooter>
         }
       >
             <div className="space-y-4">
-              <FormField label="Type de charge" htmlFor="util_type">
+              <FormField label={t('utilitiesManagement.fields.utilityType', 'Expense type')} htmlFor="util_type">
                 <Select
                   id="util_type"
                   value={editingUtility?.type || newUtility.type}
@@ -1210,14 +1220,14 @@ const UtilitiesManagement = () => {
               <div className="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
                 <div className="flex items-center justify-between mb-3">
                   <div className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Détails de consommation (optionnel)
+                    {t('utilitiesManagement.fields.consumptionDetails', 'Consumption details (optional)')}
                   </div>
                   <span className="text-xs text-gray-500 dark:text-gray-400">
-                    Laissez vide si non disponible
+                    {t('utilitiesManagement.fields.leaveBlankIfUnavailable', 'Leave blank if unavailable')}
                   </span>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField label="Consommation" htmlFor="util_consumption">
+                  <FormField label={t('utilitiesManagement.fields.consumption', 'Consumption')} htmlFor="util_consumption">
                     <Input
                       id="util_consumption"
                       type="number"
@@ -1237,10 +1247,10 @@ const UtilitiesManagement = () => {
                           });
                         }
                       }}
-                      placeholder="ex: 500"
+                      placeholder={t('utilitiesManagement.placeholders.consumption', 'e.g. 500')}
                     />
                   </FormField>
-                  <FormField label="Unité" htmlFor="util_unit">
+                  <FormField label={t('utilitiesManagement.fields.unit', 'Unit')} htmlFor="util_unit">
                     <Select
                       id="util_unit"
                       value={editingUtility?.consumption_unit || newUtility.consumption_unit || ''}
@@ -1259,7 +1269,7 @@ const UtilitiesManagement = () => {
                         }
                       }}
                     >
-                      <option value="">Sélectionner une unité</option>
+                      <option value="">{t('utilitiesManagement.placeholders.selectUnit', 'Select a unit')}</option>
                       {getAvailableUnits((editingUtility?.type || newUtility.type) as string).map(unit => (
                         <option key={unit} value={unit}>
                           {unit}
@@ -1276,7 +1286,7 @@ const UtilitiesManagement = () => {
                 <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg">
                   <div className="flex items-center space-x-2">
                     <span className="text-sm font-medium text-blue-800 dark:text-blue-300">
-                      Coût unitaire:
+                      {t('utilitiesManagement.fields.unitCost', 'Unit cost:')}
                     </span>
                     <span className="text-lg font-semibold text-blue-900 dark:text-blue-200">
                       {calculateUnitCost(
@@ -1288,7 +1298,7 @@ const UtilitiesManagement = () => {
                 </div>
               )}
 
-              <FormField label="Date" htmlFor="util_date" required>
+              <FormField label={t('utilitiesManagement.fields.date', 'Date')} htmlFor="util_date" required>
                 <Input
                   id="util_date"
                   type="date"
@@ -1332,13 +1342,13 @@ const UtilitiesManagement = () => {
                     className="rounded border-gray-300 text-green-600 shadow-sm focus:border-green-500 focus:ring-green-500"
                   />
                   <span className="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Charge récurrente
+                    {t('utilitiesManagement.fields.recurringExpense', 'Recurring expense')}
                   </span>
                 </label>
               </div>
 
               {(editingUtility?.is_recurring || newUtility.is_recurring) && (
-                <FormField label="Fréquence" htmlFor="util_recurring_freq">
+                <FormField label={t('utilitiesManagement.fields.frequency', 'Frequency')} htmlFor="util_recurring_freq">
                   <Select
                     id="util_recurring_freq"
                     value={editingUtility?.recurring_frequency || newUtility.recurring_frequency}
@@ -1357,14 +1367,14 @@ const UtilitiesManagement = () => {
                       }
                     }}
                   >
-                    <option value="monthly">Mensuelle</option>
-                    <option value="quarterly">Trimestrielle</option>
-                    <option value="yearly">Annuelle</option>
+                    <option value="monthly">{t('utilitiesManagement.frequency.monthly', 'Monthly')}</option>
+                    <option value="quarterly">{t('utilitiesManagement.frequency.quarterly', 'Quarterly')}</option>
+                    <option value="yearly">{t('utilitiesManagement.frequency.yearly', 'Yearly')}</option>
                   </Select>
                 </FormField>
               )}
 
-              <FormField label="Notes" htmlFor="util_notes">
+              <FormField label={t('utilitiesManagement.fields.notes', 'Notes')} htmlFor="util_notes">
                 <Textarea
                   id="util_notes"
                   value={editingUtility?.notes || newUtility.notes}
@@ -1389,7 +1399,7 @@ const UtilitiesManagement = () => {
               {/* Invoice File Upload */}
               <div>
                  <div className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                   Facture (PDF, Image)
+                   {t('utilitiesManagement.fields.invoice', 'Invoice (PDF, Image)')}
                  </div>
                 {!editingUtility && (
                   <div className="mt-1 flex items-center space-x-4">
@@ -1410,7 +1420,7 @@ const UtilitiesManagement = () => {
                       className="cursor-pointer flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus-within:ring-2 focus-within:ring-green-500"
                     >
                       <Upload className="h-4 w-4" />
-                      <span>Choisir un fichier</span>
+                      <span>{t('utilitiesManagement.actions.chooseFile', 'Choose file')}</span>
                     </label>
                     {selectedFile && (
                       <div className="flex items-center space-x-2">
@@ -1430,7 +1440,7 @@ const UtilitiesManagement = () => {
                 {editingUtility?.invoice_url && (
                   <div className="flex items-center space-x-2">
                     <FileText className="h-4 w-4 text-green-600" />
-                    <span className="text-sm text-gray-600">Facture attachée</span>
+                    <span className="text-sm text-gray-600">{t('utilitiesManagement.fields.invoiceAttached', 'Invoice attached')}</span>
                     <Button
                       type="button"
                        onClick={() => {

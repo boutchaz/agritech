@@ -25,6 +25,14 @@ CROP_THRESHOLDS = {
 }
 
 
+class WeatherFetchError(RuntimeError):
+    """Raised when an upstream weather provider (Open-Meteo) is unavailable.
+
+    Used by hourly chill-hours computation — we fail loudly rather than fall back
+    to a sine-modeled estimate, per chill-hours-hourly-fetch design decision.
+    """
+
+
 class WeatherService:
     HISTORICAL_URL = "https://archive-api.open-meteo.com/v1/archive"
     FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
@@ -177,6 +185,99 @@ class WeatherService:
         except httpx.RequestError as e:
             logger.error(f"Open-Meteo historical API request failed: {e}")
             raise
+
+    @staticmethod
+    def _expected_hour_count(start_date: str, end_date: str) -> int:
+        """Number of hours in [start_date 00h, end_date 23h] inclusive (24h per calendar day)."""
+        d_start = date.fromisoformat(start_date)
+        d_end = date.fromisoformat(end_date)
+        return ((d_end - d_start).days + 1) * 24
+
+    async def fetch_hourly_temperature(
+        self,
+        latitude: float,
+        longitude: float,
+        start_date: str,
+        end_date: str,
+    ) -> List[Dict]:
+        """Fetch hourly temperature_2m for a (lat, lon, [start_date, end_date]) range.
+
+        Returns list of dicts: [{ "recorded_at": str ISO, "temperature_2m": float }, ...].
+        Used as the source of truth for chill_hours and other phenological hour-counters.
+        Open-Meteo failure raises (no sine fallback) — caller must handle.
+        Caching is added in a later step.
+        """
+        lat = round(latitude, 2)
+        lon = round(longitude, 2)
+
+        # Cache-aside with gap-fill
+        from app.services.supabase_service import supabase_service
+        start_at_iso = f"{start_date}T00:00:00+00:00"
+        end_at_iso = f"{end_date}T23:00:00+00:00"
+        cached = await supabase_service.get_cached_hourly_weather(lat, lon, start_at_iso, end_at_iso)
+        cached_rows = [
+            {"recorded_at": str(r.get("recorded_at")), "temperature_2m": r.get("temperature_2m")}
+            for r in (cached or [])
+        ]
+
+        # Identify which calendar dates are missing from cache
+        d_start = date.fromisoformat(start_date)
+        d_end = date.fromisoformat(end_date)
+        all_dates: set[str] = set()
+        cur = d_start
+        while cur <= d_end:
+            all_dates.add(cur.isoformat())
+            cur += timedelta(days=1)
+        cached_dates: set[str] = set()
+        for r in cached_rows:
+            ra = r.get("recorded_at")
+            if ra:
+                cached_dates.add(str(ra)[:10])
+        # A day is "fully cached" only if it has 24 rows
+        fully_cached: set[str] = set()
+        for d in cached_dates:
+            day_count = sum(1 for r in cached_rows if str(r.get("recorded_at"))[:10] == d)
+            if day_count >= 24:
+                fully_cached.add(d)
+        missing_dates = sorted(all_dates - fully_cached)
+
+        if not missing_dates:
+            return cached_rows
+
+        fetched_rows: List[Dict] = []
+        for sub_start, sub_end in self._contiguous_ranges(missing_dates):
+            params = {
+                "latitude": lat,
+                "longitude": lon,
+                "start_date": sub_start,
+                "end_date": sub_end,
+                "hourly": "temperature_2m",
+                "timezone": "UTC",
+            }
+            try:
+                async with httpx.AsyncClient() as client:
+                    response = await client.get(self.HISTORICAL_URL, params=params, timeout=30)
+                    response.raise_for_status()
+                    payload = response.json()
+            except (httpx.HTTPStatusError, httpx.RequestError) as e:
+                raise WeatherFetchError(
+                    f"Open-Meteo hourly fetch failed for ({lat},{lon}) {sub_start}–{sub_end}: {e}"
+                ) from e
+            hourly = payload.get("hourly") or {}
+            times = hourly.get("time") or []
+            temps = hourly.get("temperature_2m") or []
+            for t, v in zip(times, temps):
+                fetched_rows.append({"recorded_at": t, "temperature_2m": v})
+
+        if fetched_rows:
+            try:
+                await supabase_service.persist_hourly_weather(fetched_rows, lat, lon)
+            except Exception as e:
+                logger.warning(f"persist_hourly_weather failed (non-fatal): {e}")
+
+        # Drop cached rows for missing-day partial coverage to avoid double-counting
+        cached_filtered = [r for r in cached_rows if str(r.get("recorded_at"))[:10] not in set(missing_dates)]
+        return cached_filtered + fetched_rows
 
     async def fetch_forecast(
         self,

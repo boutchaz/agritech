@@ -1,6 +1,7 @@
 import {  useState  } from "react";
 import { Droplets, AlertCircle, CheckCircle, Loader, TrendingUp } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { getIrrigationSchedule, type IrrigationRequest } from '../lib/edge-functions-api';
 import { useParcelById } from '../hooks/useParcelsQuery';
 import { Button } from '@/components/ui/button';
@@ -14,6 +15,7 @@ const IrrigationScheduling = ({
   parcelId,
   parcelName
 }: IrrigationSchedulingProps) => {
+  const { t } = useTranslation();
   const [soilMoisture, setSoilMoisture] = useState<number>(50);
   const [growthStage, setGrowthStage] = useState<string>('vegetative');
 
@@ -134,7 +136,7 @@ const IrrigationScheduling = ({
           <div>
             <h4 className="font-medium text-red-900 dark:text-red-300">Erreur</h4>
             <p className="text-sm text-red-700 dark:text-red-400 mt-1">
-              {scheduleMutation.error instanceof Error ? scheduleMutation.error.message : 'Erreur lors de la génération du planning'}
+              {scheduleMutation.error instanceof Error ? scheduleMutation.error.message : t('common.error')}
             </p>
           </div>
         </div>

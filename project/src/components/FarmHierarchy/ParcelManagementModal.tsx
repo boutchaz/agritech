@@ -297,7 +297,7 @@ const ParcelManagementModal = ({
       toast.success(t('parcels.archiveSuccess', 'Parcelle archivée avec succès'));
     },
     onError: (error: Error) => {
-      let errorMessage = t('parcels.archiveError', "Erreur lors de l'archivage de la parcelle");
+      let errorMessage = t('parcels.archiveError', t('common.error'));
 
       if (error?.message) {
         errorMessage += `: ${error.message}`;
@@ -813,7 +813,7 @@ const ParcelManagementModal = ({
                           >
                             <SelectTrigger id="irrigation_frequency">
                               <SelectValue
-                                placeholder={t("common.select", "Sélectionner")}
+                                placeholder={t("common.select")}
                               />
                             </SelectTrigger>
                             <SelectContent>

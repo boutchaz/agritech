@@ -205,14 +205,14 @@ const WeatherAnalyticsView = ({
         <WeatherForecast forecast={data?.forecast} loading={loading} error={error} />
       </div>
 
-      {data && (
+      {parcelId && (
         <PhenologicalTemperatureCounters
-          temperatureData={data.temperature_series}
+          parcelId={parcelId}
           cropType={cropType}
           treeType={treeType}
           variety={variety}
-          startDate={data.start_date}
-          endDate={data.end_date}
+          startDate={data?.start_date}
+          endDate={data?.end_date}
         />
       )}
 

@@ -21,8 +21,8 @@ import {
 import LanguageSwitcher from './LanguageSwitcher';
 import heroBg from '../assets/bg-360-day.webp';
 import { appConfig } from '@/config/app';
-import { toast } from 'sonner';
 import SupportedRegionsSection from './SupportedRegionsSection';
+import DemoRequestForm from './landing/DemoRequestForm';
 
 const LandingPage = () => {
   const { t } = useTranslation();
@@ -636,100 +636,16 @@ const LandingPage = () => {
                 <p className="text-base md:text-lg opacity-90 leading-relaxed max-w-[50ch]">
                   {t('landing.contact.subtitle')}
                 </p>
+                <a
+                  href="/rdv?source=siam-2026"
+                  className="mt-6 inline-flex items-center gap-2 rounded-xl border border-primary-foreground/30 bg-primary-foreground/10 px-4 py-2.5 text-sm font-semibold text-primary-foreground backdrop-blur transition-colors hover:bg-primary-foreground/20"
+                >
+                  {t('landing.contact.bookRdv', 'Book directly on /rdv')} →
+                </a>
               </div>
 
-              <div className="w-full min-w-0 rounded-3xl bg-background p-8 text-foreground shadow-2xl reveal-on-scroll translate-y-[30px] opacity-0 transition-all duration-[1000ms] ease-[cubic-bezier(0.2,0.8,0.2,1)] delay-200 md:p-12">
-                <form
-                  noValidate
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    const form = e.currentTarget;
-                    const formData = new FormData(form);
-                    const name = String(formData.get('name') ?? '').trim();
-                    const email = String(formData.get('email') ?? '').trim();
-                    const phone = String(formData.get('phone') ?? '').trim();
-                    const size = String(formData.get('size') ?? '');
-                    if (!name || !email || !phone || !size) {
-                      toast.error(t('landing.contact.validationRequired'));
-                      return;
-                    }
-                    const mailtoBody = `Name: ${name}%0AEmail: ${email}%0APhone: ${phone}%0AFarm Size: ${size}%0AMessage: ${formData.get('message')}`;
-                    window.location.href = `mailto:contact@agrogina.com?subject=Demo Request&body=${mailtoBody}`;
-                  }}
-                  className="space-y-6"
-                >
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                    <div>
-                      <label className="mb-2 block text-sm font-medium text-foreground" htmlFor="landing-contact-name">
-                        {t('landing.contact.formName')}
-                      </label>
-                      <input
-                        id="landing-contact-name"
-                        name="name"
-                        type="text"
-                        autoComplete="name"
-                        className="min-h-[50px] w-full rounded-xl border border-border bg-secondary/20 px-4 py-3 text-base text-foreground transition-all duration-300 focus:bg-background focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10"
-                      />
-                    </div>
-                    <div>
-                      <label className="mb-2 block text-sm font-medium text-foreground" htmlFor="landing-contact-email">
-                        {t('landing.contact.formEmail')}
-                      </label>
-                      <input
-                        id="landing-contact-email"
-                        name="email"
-                        type="email"
-                        className="min-h-[50px] w-full rounded-xl border border-border bg-secondary/20 px-4 py-3 text-base text-foreground transition-all duration-300 focus:bg-background focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10"
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                    <div>
-                      <label className="mb-2 block text-sm font-medium text-foreground" htmlFor="landing-contact-phone">
-                        {t('landing.contact.formPhone')}
-                      </label>
-                      <input
-                        id="landing-contact-phone"
-                        name="phone"
-                        type="tel"
-                        className="min-h-[50px] w-full rounded-xl border border-border bg-secondary/20 px-4 py-3 text-base text-foreground transition-all duration-300 focus:bg-background focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10"
-                      />
-                    </div>
-                    <div>
-                      <label className="mb-2 block text-sm font-medium text-foreground" htmlFor="landing-contact-size">
-                        {t('landing.contact.formSize')}
-                      </label>
-                      <select
-                        id="landing-contact-size"
-                        name="size"
-                        className="min-h-[50px] w-full rounded-xl border border-border bg-secondary/20 px-4 py-3 text-base text-foreground transition-all duration-300 focus:bg-background focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10 appearance-none"
-                      >
-                        <option value="">{t('landing.contact.formSizePlaceholder')}</option>
-                        <option value="1">{t('landing.contact.formSize1')}</option>
-                        <option value="2">{t('landing.contact.formSize2')}</option>
-                        <option value="3">{t('landing.contact.formSize3')}</option>
-                        <option value="4">{t('landing.contact.formSize4')}</option>
-                      </select>
-                    </div>
-                  </div>
-                  <div>
-                    <label className="mb-2 block text-sm font-medium text-foreground" htmlFor="landing-contact-message">
-                      {t('landing.contact.formMsg')}
-                    </label>
-                    <textarea
-                      id="landing-contact-message"
-                      name="message"
-                      rows={3}
-                      className="min-h-[120px] w-full resize-y rounded-xl border border-border bg-secondary/20 px-4 py-3 text-base text-foreground transition-all duration-300 focus:bg-background focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10"
-                    />
-                  </div>
-                  <button
-                    type="submit"
-                    className="min-h-[56px] w-full cursor-pointer rounded-2xl bg-primary text-primary-foreground py-4 text-lg font-bold shadow-lg shadow-primary/20 transition-all duration-300 hover:bg-primary/90 hover:scale-[1.02] active:scale-[0.98]"
-                  >
-                    {t('landing.contact.submit')}
-                  </button>
-                </form>
+              <div className="w-full min-w-0 rounded-3xl bg-background p-6 text-foreground shadow-2xl reveal-on-scroll translate-y-[30px] opacity-0 transition-all duration-[1000ms] ease-[cubic-bezier(0.2,0.8,0.2,1)] delay-200 md:p-10">
+                <DemoRequestForm />
               </div>
             </div>
           </div>

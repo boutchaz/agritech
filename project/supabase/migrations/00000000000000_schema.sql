@@ -5878,6 +5878,42 @@ CREATE OR REPLACE FUNCTION sum_gdd_between(
     AND crop_type = p_crop AND date >= p_start AND date < p_end;
 $$ LANGUAGE sql STABLE;
 
+-- Weather hourly data: location-based hourly temperature cache (NOT org-scoped, shared geographically).
+-- Used as the source of truth for chill_hours and other phenological hour-counters.
+-- Quantization matches weather_daily_data convention (NUMERIC(7,2) ~ 1km grid).
+CREATE TABLE IF NOT EXISTS public.weather_hourly_data (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  latitude NUMERIC(7, 2) NOT NULL,
+  longitude NUMERIC(7, 2) NOT NULL,
+  recorded_at TIMESTAMPTZ NOT NULL,             -- 1h-resolution UTC datetime
+  temperature_2m NUMERIC(5, 2),                 -- °C
+  source TEXT NOT NULL DEFAULT 'open-meteo-archive',
+  fetched_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (latitude, longitude, recorded_at, source)
+);
+CREATE INDEX IF NOT EXISTS idx_whd_geo_time
+  ON public.weather_hourly_data (latitude, longitude, recorded_at);
+CREATE INDEX IF NOT EXISTS idx_whd_recorded_at
+  ON public.weather_hourly_data (recorded_at DESC);
+
+-- Weather threshold cache: precomputed hour-counters per (location, year, crop, stage, threshold).
+-- Hot-path layer on top of weather_hourly_data — avoids repeated counting of the same series.
+-- Cache invalidation: app-level — purge rows when underlying weather_hourly_data is updated.
+CREATE TABLE IF NOT EXISTS public.weather_threshold_cache (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  latitude NUMERIC(7, 2) NOT NULL,
+  longitude NUMERIC(7, 2) NOT NULL,
+  year INTEGER NOT NULL,
+  crop_type TEXT NOT NULL,
+  stage_key TEXT NOT NULL,
+  threshold_key TEXT NOT NULL,
+  count INTEGER NOT NULL,
+  computed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (latitude, longitude, year, crop_type, stage_key, threshold_key)
+);
+CREATE INDEX IF NOT EXISTS idx_wtc_lookup
+  ON public.weather_threshold_cache (latitude, longitude, year, crop_type);
+
 -- Weather derived data: per-parcel derived meteorological variables (ORG-scoped via parcel -> farm -> org)
 CREATE TABLE IF NOT EXISTS weather_derived_data (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -24810,4 +24846,530 @@ CREATE POLICY "Service role full access for agronomy-corpus"
   USING (bucket_id = 'agronomy-corpus')
   WITH CHECK (bucket_id = 'agronomy-corpus');
 
+-- ============================================================================
+-- Migration: 20260419000000_fix_db_linter_errors.sql
+-- ============================================================================
+-- Addresses Supabase db-linter ERROR-level findings:
+--   - 0010_security_definer_view: subscription_legacy_compat
+--   - 0013_rls_disabled_in_public: 12 public tables
+-- ============================================================================
+
+-- Fix SECURITY DEFINER view -> SECURITY INVOKER
+DROP VIEW IF EXISTS public.subscription_legacy_compat;
+CREATE VIEW public.subscription_legacy_compat WITH (security_invoker = true) AS
+SELECT
+  s.id,
+  s.organization_id,
+  s.formula,
+  CASE
+    WHEN s.formula = 'starter' THEN 'essential'
+    WHEN s.formula = 'standard' THEN 'professional'
+    WHEN s.formula = 'premium' THEN 'enterprise'
+    WHEN s.formula = 'enterprise' THEN 'enterprise'
+    ELSE s.plan_type
+  END AS legacy_plan_type,
+  s.billing_cycle,
+  s.billing_interval,
+  s.status,
+  s.current_period_start,
+  s.current_period_end,
+  s.migration_effective_at,
+  s.pending_formula,
+  s.pending_billing_cycle
+FROM public.subscriptions s;
+
+-- ---------------------------------------------------------------------------
+-- Org-scoped table: warehouse_stock_levels
+-- ---------------------------------------------------------------------------
+ALTER TABLE public.warehouse_stock_levels ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "org_access" ON public.warehouse_stock_levels;
+CREATE POLICY "org_access" ON public.warehouse_stock_levels
+  FOR ALL USING (public.is_organization_member(organization_id))
+  WITH CHECK (public.is_organization_member(organization_id));
+
+-- ---------------------------------------------------------------------------
+-- Shared location caches (weather): RLS on, read for authenticated,
+-- writes restricted to service_role (FastAPI sidecar uses service_role).
+-- ---------------------------------------------------------------------------
+ALTER TABLE public.weather_daily_data ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "authenticated_read" ON public.weather_daily_data;
+CREATE POLICY "authenticated_read" ON public.weather_daily_data
+  FOR SELECT TO authenticated USING (true);
+DROP POLICY IF EXISTS "service_role_write" ON public.weather_daily_data;
+CREATE POLICY "service_role_write" ON public.weather_daily_data
+  FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+ALTER TABLE public.weather_gdd_daily ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "authenticated_read" ON public.weather_gdd_daily;
+CREATE POLICY "authenticated_read" ON public.weather_gdd_daily
+  FOR SELECT TO authenticated USING (true);
+DROP POLICY IF EXISTS "service_role_write" ON public.weather_gdd_daily;
+CREATE POLICY "service_role_write" ON public.weather_gdd_daily
+  FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+ALTER TABLE public.weather_forecasts ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "authenticated_read" ON public.weather_forecasts;
+CREATE POLICY "authenticated_read" ON public.weather_forecasts
+  FOR SELECT TO authenticated USING (true);
+DROP POLICY IF EXISTS "service_role_write" ON public.weather_forecasts;
+CREATE POLICY "service_role_write" ON public.weather_forecasts
+  FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+-- ---------------------------------------------------------------------------
+-- Global agronomic reference tables: read-only for authenticated,
+-- writes restricted to service_role.
+-- ---------------------------------------------------------------------------
+ALTER TABLE public.phenological_stages ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "authenticated_read" ON public.phenological_stages;
+CREATE POLICY "authenticated_read" ON public.phenological_stages
+  FOR SELECT TO authenticated USING (true);
+DROP POLICY IF EXISTS "service_role_write" ON public.phenological_stages;
+CREATE POLICY "service_role_write" ON public.phenological_stages
+  FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+ALTER TABLE public.crop_kc_coefficients ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "authenticated_read" ON public.crop_kc_coefficients;
+CREATE POLICY "authenticated_read" ON public.crop_kc_coefficients
+  FOR SELECT TO authenticated USING (true);
+DROP POLICY IF EXISTS "service_role_write" ON public.crop_kc_coefficients;
+CREATE POLICY "service_role_write" ON public.crop_kc_coefficients
+  FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+ALTER TABLE public.crop_mineral_exports ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "authenticated_read" ON public.crop_mineral_exports;
+CREATE POLICY "authenticated_read" ON public.crop_mineral_exports
+  FOR SELECT TO authenticated USING (true);
+DROP POLICY IF EXISTS "service_role_write" ON public.crop_mineral_exports;
+CREATE POLICY "service_role_write" ON public.crop_mineral_exports
+  FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+ALTER TABLE public.crop_diseases ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "authenticated_read" ON public.crop_diseases;
+CREATE POLICY "authenticated_read" ON public.crop_diseases
+  FOR SELECT TO authenticated USING (true);
+DROP POLICY IF EXISTS "service_role_write" ON public.crop_diseases;
+CREATE POLICY "service_role_write" ON public.crop_diseases
+  FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+ALTER TABLE public.crop_index_thresholds ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "authenticated_read" ON public.crop_index_thresholds;
+CREATE POLICY "authenticated_read" ON public.crop_index_thresholds
+  FOR SELECT TO authenticated USING (true);
+DROP POLICY IF EXISTS "service_role_write" ON public.crop_index_thresholds;
+CREATE POLICY "service_role_write" ON public.crop_index_thresholds
+  FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+-- ---------------------------------------------------------------------------
+-- newsletter_subscribers: service_role-only (NestJS newsletter.service.ts
+-- uses the admin client; anon/authenticated clients never touch this table).
+-- Matches siam_rdv_leads policy pattern.
+-- ---------------------------------------------------------------------------
+ALTER TABLE public.newsletter_subscribers ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "service_role_only" ON public.newsletter_subscribers;
+CREATE POLICY "service_role_only" ON public.newsletter_subscribers
+  FOR ALL USING (auth.role() = 'service_role');
+
+-- ---------------------------------------------------------------------------
+-- PostGIS system table: read-only for everyone. Owned by supabase_admin on
+-- hosted Supabase; wrap in DO block so missing privileges do not abort.
+-- ---------------------------------------------------------------------------
+DO $$
+BEGIN
+  EXECUTE 'ALTER TABLE public.spatial_ref_sys ENABLE ROW LEVEL SECURITY';
+  EXECUTE 'DROP POLICY IF EXISTS "public_read" ON public.spatial_ref_sys';
+  EXECUTE 'CREATE POLICY "public_read" ON public.spatial_ref_sys FOR SELECT USING (true)';
+EXCEPTION WHEN insufficient_privilege THEN
+  RAISE NOTICE 'Skipped RLS on spatial_ref_sys (insufficient privilege - expected on hosted Supabase)';
+END $$;
+
+-- ============================================================================
+-- Migration: 20260419010000_fix_db_linter_warnings.sql
+-- ============================================================================
+-- Addresses Supabase db-linter WARN-level findings:
+--   - 0011_function_search_path_mutable: 18 functions missing search_path
+--   - 0016_materialized_view_in_api: 2 MVs exposed via PostgREST
+--   - 0024_permissive_rls_policy: 8 RLS policies with USING/WITH CHECK true
+-- NOT addressed here (deferred — too risky pre-/during-SIAM):
+--   - 0014_extension_in_public: postgis + vector live in public schema.
+--     Moving them via ALTER EXTENSION ... SET SCHEMA requires auditing every
+--     geometry / vector column reference and touching generated types.
+--     Schedule post-SIAM (after 2026-04-26).
+-- ============================================================================
+
+-- ---------------------------------------------------------------------------
+-- Pin search_path on all flagged functions (prevents search_path injection).
+-- ---------------------------------------------------------------------------
+ALTER FUNCTION public.update_updated_at_column()                  SET search_path = public, pg_catalog;
+ALTER FUNCTION public.capture_base_quantity_at_movement()         SET search_path = public, pg_catalog;
+ALTER FUNCTION public.update_document_templates_timestamp()       SET search_path = public, pg_catalog;
+ALTER FUNCTION public.audit_trigger_func()                        SET search_path = public, pg_catalog;
+ALTER FUNCTION public.sync_farm_geometry()                        SET search_path = public, pg_catalog;
+ALTER FUNCTION public.update_product_variants_updated_at()        SET search_path = public, pg_catalog;
+ALTER FUNCTION public.ensure_single_default_template()            SET search_path = public, pg_catalog;
+ALTER FUNCTION public.validate_stock_movement_unit()              SET search_path = public, pg_catalog;
+ALTER FUNCTION public.sum_gdd_between(numeric, numeric, text, date, date)
+                                                                  SET search_path = public, pg_catalog;
+ALTER FUNCTION public.update_warehouse_stock_reserved()           SET search_path = public, pg_catalog;
+ALTER FUNCTION public.sync_variant_quantity_from_movements()      SET search_path = public, pg_catalog;
+ALTER FUNCTION public.update_quote_request_updated_at()           SET search_path = public, pg_catalog;
+ALTER FUNCTION public.update_quality_inspections_updated_at()     SET search_path = public, pg_catalog;
+ALTER FUNCTION public.sync_parcel_geometry()                      SET search_path = public, pg_catalog;
+ALTER FUNCTION public.update_warehouse_stock_levels()             SET search_path = public, pg_catalog;
+ALTER FUNCTION public.update_campaigns_updated_at()               SET search_path = public, pg_catalog;
+ALTER FUNCTION public.ensure_single_current_fiscal_year()         SET search_path = public, pg_catalog;
+ALTER FUNCTION public.update_account_mappings_updated_at()        SET search_path = public, pg_catalog;
+
+-- ---------------------------------------------------------------------------
+-- Remove materialized views from the PostgREST API surface.
+-- Refresh + admin reads still work via service_role (which bypasses grants).
+-- ---------------------------------------------------------------------------
+REVOKE SELECT ON public.admin_org_summary FROM anon, authenticated;
+REVOKE SELECT ON public.mv_stock_levels   FROM anon, authenticated;
+
+-- ---------------------------------------------------------------------------
+-- Tighten permissive RLS policies (USING (true) / WITH CHECK (true))
+-- on UPDATE / DELETE / INSERT / ALL commands.
+-- ---------------------------------------------------------------------------
+
+-- notifications: INSERT is a server-side operation (NestJS admin client).
+-- Restrict to service_role to remove WITH CHECK (true).
+DROP POLICY IF EXISTS "Service role can insert notifications" ON public.notifications;
+CREATE POLICY "Service role can insert notifications"
+  ON public.notifications
+  FOR INSERT
+  TO service_role
+  WITH CHECK (true);
+
+-- ai_report_jobs: backend updates job status. Restrict to service_role.
+DROP POLICY IF EXISTS "Service role can update ai report jobs" ON public.ai_report_jobs;
+CREATE POLICY "Service role can update ai report jobs"
+  ON public.ai_report_jobs
+  FOR UPDATE
+  TO service_role
+  USING (true)
+  WITH CHECK (true);
+
+-- abstract_entities: FOR ALL needs matching USING clause.
+DROP POLICY IF EXISTS "org_write_abstract_entities" ON public.abstract_entities;
+CREATE POLICY "org_write_abstract_entities"
+  ON public.abstract_entities
+  FOR ALL
+  USING (
+    organization_id IN (
+      SELECT organization_id FROM public.organization_users
+      WHERE user_id = auth.uid() AND is_active = true
+    )
+  )
+  WITH CHECK (
+    organization_id IN (
+      SELECT organization_id FROM public.organization_users
+      WHERE user_id = auth.uid() AND is_active = true
+    )
+  );
+
+-- entity_relationships: FOR ALL needs matching USING clause.
+DROP POLICY IF EXISTS "org_write_entity_relationships" ON public.entity_relationships;
+CREATE POLICY "org_write_entity_relationships"
+  ON public.entity_relationships
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.abstract_entities ae
+      WHERE ae.entity_type = entity_relationships.parent_entity_type
+        AND ae.entity_id = entity_relationships.parent_entity_id
+        AND ae.organization_id IN (
+          SELECT organization_id FROM public.organization_users
+          WHERE user_id = auth.uid() AND is_active = true
+        )
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.abstract_entities ae
+      WHERE ae.entity_type = entity_relationships.parent_entity_type
+        AND ae.entity_id = entity_relationships.parent_entity_id
+        AND ae.organization_id IN (
+          SELECT organization_id FROM public.organization_users
+          WHERE user_id = auth.uid() AND is_active = true
+        )
+    )
+  );
+
+-- module_translations / modules / polar_subscriptions / polar_webhooks:
+-- FOR ALL system_admin write. USING must also enforce the admin check.
+DROP POLICY IF EXISTS "admin_write_module_translations" ON public.module_translations;
+CREATE POLICY "admin_write_module_translations"
+  ON public.module_translations
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.organization_users ou
+      JOIN public.roles r ON ou.role_id = r.id
+      WHERE ou.user_id = auth.uid()
+        AND ou.is_active = true
+        AND r.name = 'system_admin'
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.organization_users ou
+      JOIN public.roles r ON ou.role_id = r.id
+      WHERE ou.user_id = auth.uid()
+        AND ou.is_active = true
+        AND r.name = 'system_admin'
+    )
+  );
+
+DROP POLICY IF EXISTS "admin_write_modules" ON public.modules;
+CREATE POLICY "admin_write_modules"
+  ON public.modules
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.organization_users ou
+      JOIN public.roles r ON ou.role_id = r.id
+      WHERE ou.user_id = auth.uid()
+        AND ou.is_active = true
+        AND r.name = 'system_admin'
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.organization_users ou
+      JOIN public.roles r ON ou.role_id = r.id
+      WHERE ou.user_id = auth.uid()
+        AND ou.is_active = true
+        AND r.name = 'system_admin'
+    )
+  );
+
+DROP POLICY IF EXISTS "admin_write_polar_subscriptions" ON public.polar_subscriptions;
+CREATE POLICY "admin_write_polar_subscriptions"
+  ON public.polar_subscriptions
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.organization_users ou
+      JOIN public.roles r ON ou.role_id = r.id
+      WHERE ou.user_id = auth.uid()
+        AND ou.is_active = true
+        AND r.name = 'system_admin'
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.organization_users ou
+      JOIN public.roles r ON ou.role_id = r.id
+      WHERE ou.user_id = auth.uid()
+        AND ou.is_active = true
+        AND r.name = 'system_admin'
+    )
+  );
+
+DROP POLICY IF EXISTS "admin_write_polar_webhooks" ON public.polar_webhooks;
+CREATE POLICY "admin_write_polar_webhooks"
+  ON public.polar_webhooks
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.organization_users ou
+      JOIN public.roles r ON ou.role_id = r.id
+      WHERE ou.user_id = auth.uid()
+        AND ou.is_active = true
+        AND r.name = 'system_admin'
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.organization_users ou
+      JOIN public.roles r ON ou.role_id = r.id
+      WHERE ou.user_id = auth.uid()
+        AND ou.is_active = true
+        AND r.name = 'system_admin'
+    )
+  );
+
+-- ============================================================================
+-- Migration: 20260419020000_fix_weather_cache_rls.sql
+-- ============================================================================
+-- Follow-up to 20260419000000: two additional weather location caches
+-- flagged by db-linter (0013_rls_disabled_in_public). Same pattern as
+-- weather_daily_data / weather_gdd_daily / weather_forecasts:
+-- shared geographic cache, authenticated read, service_role write.
+-- ============================================================================
+
+ALTER TABLE public.weather_hourly_data ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "authenticated_read" ON public.weather_hourly_data;
+CREATE POLICY "authenticated_read" ON public.weather_hourly_data
+  FOR SELECT TO authenticated USING (true);
+DROP POLICY IF EXISTS "service_role_write" ON public.weather_hourly_data;
+CREATE POLICY "service_role_write" ON public.weather_hourly_data
+  FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+ALTER TABLE public.weather_threshold_cache ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "authenticated_read" ON public.weather_threshold_cache;
+CREATE POLICY "authenticated_read" ON public.weather_threshold_cache
+  FOR SELECT TO authenticated USING (true);
+DROP POLICY IF EXISTS "service_role_write" ON public.weather_threshold_cache;
+CREATE POLICY "service_role_write" ON public.weather_threshold_cache
+  FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+-- ============================================================================
+-- Migration: 20260419030000_fix_rls_enabled_no_policy.sql
+-- ============================================================================
+-- Addresses db-linter 0008_rls_enabled_no_policy: 8 tables had RLS enabled
+-- but no policies, making them unreadable via PostgREST for all users except
+-- service_role. Adds appropriate org-scoped policies per table shape.
+-- ============================================================================
+
+-- ---------------------------------------------------------------------------
+-- product_variants: org-scoped (organization_id NOT NULL).
+-- ---------------------------------------------------------------------------
+DROP POLICY IF EXISTS "org_access" ON public.product_variants;
+CREATE POLICY "org_access" ON public.product_variants
+  FOR ALL
+  USING (public.is_organization_member(organization_id))
+  WITH CHECK (public.is_organization_member(organization_id));
+
+-- ---------------------------------------------------------------------------
+-- Reference tables with org-overridable rows (organization_id NULLable):
+-- read = own org OR global (NULL), write = own org only.
+-- ---------------------------------------------------------------------------
+DROP POLICY IF EXISTS "read_org_or_global" ON public.soil_types;
+CREATE POLICY "read_org_or_global" ON public.soil_types
+  FOR SELECT TO authenticated
+  USING (organization_id IS NULL OR public.is_organization_member(organization_id));
+DROP POLICY IF EXISTS "write_org" ON public.soil_types;
+CREATE POLICY "write_org" ON public.soil_types
+  FOR INSERT TO authenticated
+  WITH CHECK (public.is_organization_member(organization_id));
+DROP POLICY IF EXISTS "update_org" ON public.soil_types;
+CREATE POLICY "update_org" ON public.soil_types
+  FOR UPDATE TO authenticated
+  USING (public.is_organization_member(organization_id))
+  WITH CHECK (public.is_organization_member(organization_id));
+DROP POLICY IF EXISTS "delete_org" ON public.soil_types;
+CREATE POLICY "delete_org" ON public.soil_types
+  FOR DELETE TO authenticated
+  USING (public.is_organization_member(organization_id));
+
+DROP POLICY IF EXISTS "read_org_or_global" ON public.irrigation_types;
+CREATE POLICY "read_org_or_global" ON public.irrigation_types
+  FOR SELECT TO authenticated
+  USING (organization_id IS NULL OR public.is_organization_member(organization_id));
+DROP POLICY IF EXISTS "write_org" ON public.irrigation_types;
+CREATE POLICY "write_org" ON public.irrigation_types
+  FOR INSERT TO authenticated
+  WITH CHECK (public.is_organization_member(organization_id));
+DROP POLICY IF EXISTS "update_org" ON public.irrigation_types;
+CREATE POLICY "update_org" ON public.irrigation_types
+  FOR UPDATE TO authenticated
+  USING (public.is_organization_member(organization_id))
+  WITH CHECK (public.is_organization_member(organization_id));
+DROP POLICY IF EXISTS "delete_org" ON public.irrigation_types;
+CREATE POLICY "delete_org" ON public.irrigation_types
+  FOR DELETE TO authenticated
+  USING (public.is_organization_member(organization_id));
+
+DROP POLICY IF EXISTS "read_org_or_global" ON public.rootstocks;
+CREATE POLICY "read_org_or_global" ON public.rootstocks
+  FOR SELECT TO authenticated
+  USING (organization_id IS NULL OR public.is_organization_member(organization_id));
+DROP POLICY IF EXISTS "write_org" ON public.rootstocks;
+CREATE POLICY "write_org" ON public.rootstocks
+  FOR INSERT TO authenticated
+  WITH CHECK (public.is_organization_member(organization_id));
+DROP POLICY IF EXISTS "update_org" ON public.rootstocks;
+CREATE POLICY "update_org" ON public.rootstocks
+  FOR UPDATE TO authenticated
+  USING (public.is_organization_member(organization_id))
+  WITH CHECK (public.is_organization_member(organization_id));
+DROP POLICY IF EXISTS "delete_org" ON public.rootstocks;
+CREATE POLICY "delete_org" ON public.rootstocks
+  FOR DELETE TO authenticated
+  USING (public.is_organization_member(organization_id));
+
+DROP POLICY IF EXISTS "read_org_or_global" ON public.plantation_systems;
+CREATE POLICY "read_org_or_global" ON public.plantation_systems
+  FOR SELECT TO authenticated
+  USING (organization_id IS NULL OR public.is_organization_member(organization_id));
+DROP POLICY IF EXISTS "write_org" ON public.plantation_systems;
+CREATE POLICY "write_org" ON public.plantation_systems
+  FOR INSERT TO authenticated
+  WITH CHECK (public.is_organization_member(organization_id));
+DROP POLICY IF EXISTS "update_org" ON public.plantation_systems;
+CREATE POLICY "update_org" ON public.plantation_systems
+  FOR UPDATE TO authenticated
+  USING (public.is_organization_member(organization_id))
+  WITH CHECK (public.is_organization_member(organization_id));
+DROP POLICY IF EXISTS "delete_org" ON public.plantation_systems;
+CREATE POLICY "delete_org" ON public.plantation_systems
+  FOR DELETE TO authenticated
+  USING (public.is_organization_member(organization_id));
+
+-- ---------------------------------------------------------------------------
+-- tax_configurations: country-default (org_id NULL, country_code set) OR
+-- org-override. Readable by anyone authenticated, writable only by org owner.
+-- ---------------------------------------------------------------------------
+DROP POLICY IF EXISTS "read_global_or_org" ON public.tax_configurations;
+CREATE POLICY "read_global_or_org" ON public.tax_configurations
+  FOR SELECT TO authenticated
+  USING (organization_id IS NULL OR public.is_organization_member(organization_id));
+DROP POLICY IF EXISTS "write_org" ON public.tax_configurations;
+CREATE POLICY "write_org" ON public.tax_configurations
+  FOR INSERT TO authenticated
+  WITH CHECK (public.is_organization_member(organization_id));
+DROP POLICY IF EXISTS "update_org" ON public.tax_configurations;
+CREATE POLICY "update_org" ON public.tax_configurations
+  FOR UPDATE TO authenticated
+  USING (public.is_organization_member(organization_id))
+  WITH CHECK (public.is_organization_member(organization_id));
+DROP POLICY IF EXISTS "delete_org" ON public.tax_configurations;
+CREATE POLICY "delete_org" ON public.tax_configurations
+  FOR DELETE TO authenticated
+  USING (public.is_organization_member(organization_id));
+
+-- ---------------------------------------------------------------------------
+-- cost_center_budgets: no direct organization_id; scope via cost_centers.
+-- ---------------------------------------------------------------------------
+DROP POLICY IF EXISTS "org_access" ON public.cost_center_budgets;
+CREATE POLICY "org_access" ON public.cost_center_budgets
+  FOR ALL TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.cost_centers cc
+      WHERE cc.id = cost_center_budgets.cost_center_id
+        AND public.is_organization_member(cc.organization_id)
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.cost_centers cc
+      WHERE cc.id = cost_center_budgets.cost_center_id
+        AND public.is_organization_member(cc.organization_id)
+    )
+  );
+
+-- ---------------------------------------------------------------------------
+-- account_translations: no direct organization_id; scope via accounts.
+-- ---------------------------------------------------------------------------
+DROP POLICY IF EXISTS "org_access" ON public.account_translations;
+CREATE POLICY "org_access" ON public.account_translations
+  FOR ALL TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.accounts a
+      WHERE a.id = account_translations.account_id
+        AND public.is_organization_member(a.organization_id)
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.accounts a
+      WHERE a.id = account_translations.account_id
+        AND public.is_organization_member(a.organization_id)
+    )
+  );
 

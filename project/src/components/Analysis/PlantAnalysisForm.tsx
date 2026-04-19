@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Save, X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useFormErrors } from '@/hooks/useFormErrors';
 import type { PlantAnalysisData } from '../../types/analysis';
 import { FormField } from '../ui/FormField';
@@ -150,6 +151,7 @@ type PlantAnalysisFormData = z.infer<typeof plantAnalysisSchema>;
 
 const PlantAnalysisForm = ({ onSave, onCancel, selectedParcel }: PlantAnalysisFormProps) => {
   const { handleFormError } = useFormErrors<PlantAnalysisFormData>();
+  const { t } = useTranslation();
   const [selectedParams, setSelectedParams] = useState<PlantParamKey[]>(DEFAULT_PLANT_PARAMS);
   const selectedParamSet = useMemo(() => new Set(selectedParams), [selectedParams]);
 
@@ -208,7 +210,7 @@ const PlantAnalysisForm = ({ onSave, onCancel, selectedParcel }: PlantAnalysisFo
       onSave(cleanData, formData.analysisDate, formData.laboratory?.trim() || undefined, formData.notes?.trim() || undefined);
     } catch (error: unknown) {
       handleFormError(error, setError, {
-        toastMessage: 'Failed to save plant analysis',
+        toastMessage: t('plantAnalysisForm.saveError'),
       });
     }
   };
@@ -377,11 +379,11 @@ const PlantAnalysisForm = ({ onSave, onCancel, selectedParcel }: PlantAnalysisFo
             disabled={isSubmitting}
             className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50"
           >
-            Annuler
+            {t('plantAnalysisForm.cancel')}
           </Button>
           <Button variant="green" type="submit" disabled={isSubmitting} className="px-4 py-2 rounded-md flex items-center space-x-2" >
             <Save className="h-4 w-4" />
-            <span>{isSubmitting ? 'Enregistrement...' : 'Enregistrer'}</span>
+            <span>{isSubmitting ? t('plantAnalysisForm.saving') : t('plantAnalysisForm.save')}</span>
           </Button>
         </div>
       </form>

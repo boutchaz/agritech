@@ -1,6 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { CalibrationReviewAdapter } from './calibration-review.adapter';
-import type { CalibrationSnapshotInput } from './dto/calibration-review.dto';
+import type {
+  CalibrationSnapshotInput,
+  ChillHoursDisplay,
+} from './dto/calibration-review.dto';
 
 const buildSnapshotInput = (
   overrides: Partial<CalibrationSnapshotInput> = {},
@@ -160,6 +163,34 @@ const buildSnapshotInput = (
     },
   },
   ...overrides,
+});
+
+describe('ChillHoursDisplay shape', () => {
+  it('exposes value, reference, band, phrase fields', () => {
+    const sample: ChillHoursDisplay = {
+      value: 342,
+      reference: {
+        min: 200,
+        max: 400,
+        source: 'variety',
+        variety_label: 'Picholine Marocaine',
+      },
+      band: 'yellow',
+      phrase: 'Heures de froid suffisantes',
+    };
+    expect(sample.value).toBe(342);
+    expect(sample.reference.source).toBe('variety');
+  });
+});
+
+describe('CalibrationSnapshotInput', () => {
+  it('accepts variety field on snapshot input', () => {
+    const input: CalibrationSnapshotInput = {
+      ...buildSnapshotInput(),
+      variety: 'Picual',
+    };
+    expect(input.variety).toBe('Picual');
+  });
 });
 
 describe('CalibrationReviewAdapter', () => {
@@ -472,6 +503,259 @@ describe('CalibrationReviewAdapter', () => {
       (input.output as any).step5.anomalies = [];
       const result = adapter.transform(input);
       expect(result.block_c).toBeNull();
+    });
+  });
+
+  // ── Block A chill concern/strength injection ──
+
+  describe('block_a chill concern injection', () => {
+    const buildOlive = (chillValue: number, variety: string | null) => {
+      const input = buildSnapshotInput({ crop_type: 'olivier', variety });
+      (input.output as any).step2.chill_hours = chillValue;
+      return input;
+    };
+
+    it('S3.1 — critique band → critique concern in block_a', () => {
+      const result = adapter.transform(buildOlive(80, 'Picual'));
+      const entry = result.block_a.concerns.find((c) => c.component === 'Heures de froid');
+      expect(entry).toBeDefined();
+      expect(entry!.severity).toBe('critique');
+      expect(entry!.target_block).toBe('B');
+      expect(entry!.phrase.toLowerCase()).toContain('dormance');
+    });
+
+    it('S3.2 — red band → vigilance concern in block_a', () => {
+      const result = adapter.transform(buildOlive(250, 'Picual')); // bracket [400, 600]
+      const entry = result.block_a.concerns.find((c) => c.component === 'Heures de froid');
+      expect(entry).toBeDefined();
+      expect(entry!.severity).toBe('vigilance');
+      expect(entry!.phrase).toContain('400');
+      expect(entry!.phrase).toContain('250');
+    });
+
+    it('S3.3 — green band → strength entry in block_a', () => {
+      const result = adapter.transform(buildOlive(650, 'Picual'));
+      const entry = result.block_a.strengths.find((s) => s.component === 'Heures de froid');
+      expect(entry).toBeDefined();
+      expect(entry!.phrase).toBeTruthy();
+    });
+
+    it('S3.4 — yellow band → no concern and no strength', () => {
+      const result = adapter.transform(buildOlive(450, 'Picual'));
+      expect(result.block_a.concerns.find((c) => c.component === 'Heures de froid')).toBeUndefined();
+      expect(result.block_a.strengths.find((s) => s.component === 'Heures de froid')).toBeUndefined();
+    });
+
+    it('S3.5 — null chill display → no entry', () => {
+      // Default fixture: no crop_type → chill is null
+      const result = adapter.transform(buildSnapshotInput());
+      expect(result.block_a.concerns.find((c) => c.component === 'Heures de froid')).toBeUndefined();
+      expect(result.block_a.strengths.find((s) => s.component === 'Heures de froid')).toBeUndefined();
+    });
+  });
+
+  // ── Block B chill_hours ──
+
+  describe('block_b.phenology_dashboard.chill', () => {
+    const buildOlive = (chillValue: number | undefined, variety: string | null) => {
+      const input = buildSnapshotInput({ crop_type: 'olivier', variety });
+      const step2 = (input.output as any).step2 as Record<string, unknown>;
+      if (chillValue === undefined) {
+        delete step2.chill_hours;
+      } else {
+        step2.chill_hours = chillValue;
+      }
+      return input;
+    };
+
+    it('S2.1 — variety found, value above max → green band (Picual 650h, bracket 400-600)', () => {
+      const result = adapter.transform(buildOlive(650, 'Picual'));
+      const chill = result.block_b.phenology_dashboard?.chill;
+      expect(chill).not.toBeNull();
+      expect(chill!.value).toBe(650);
+      expect(chill!.reference.min).toBe(400);
+      expect(chill!.reference.max).toBe(600);
+      expect(chill!.reference.source).toBe('variety');
+      expect(chill!.reference.variety_label).toBe('Picual');
+      expect(chill!.band).toBe('green');
+      expect(chill!.phrase).toBeTruthy();
+    });
+
+    it('S2.1b — variety found, value between min and max → yellow band (Picual 450h)', () => {
+      const result = adapter.transform(buildOlive(450, 'Picual'));
+      expect(result.block_b.phenology_dashboard!.chill!.band).toBe('yellow');
+    });
+
+    it('S2.2 — value below min, above 100 → red band (Picual 250h)', () => {
+      const result = adapter.transform(buildOlive(250, 'Picual'));
+      const chill = result.block_b.phenology_dashboard!.chill!;
+      expect(chill.band).toBe('red');
+      expect(chill.value).toBe(250);
+      expect(chill.reference.source).toBe('variety');
+    });
+
+    it('S2.3 — value below 100 → critique band always', () => {
+      const result = adapter.transform(buildOlive(80, 'Picual'));
+      expect(result.block_b.phenology_dashboard!.chill!.band).toBe('critique');
+    });
+
+    it('S2.4 — variety not in referentiel → fallback bracket [200, 400] yellow', () => {
+      const result = adapter.transform(buildOlive(300, 'Unknown Variety'));
+      const chill = result.block_b.phenology_dashboard!.chill!;
+      expect(chill.reference.min).toBe(200);
+      expect(chill.reference.max).toBe(400);
+      expect(chill.reference.source).toBe('fallback');
+      expect(chill.reference.variety_label).toBeNull();
+      expect(chill.band).toBe('yellow');
+    });
+
+    it('S2.5 — variety null → fallback bracket, 500h green', () => {
+      const result = adapter.transform(buildOlive(500, null));
+      const chill = result.block_b.phenology_dashboard!.chill!;
+      expect(chill.reference.source).toBe('fallback');
+      expect(chill.band).toBe('green');
+    });
+
+    it('S2.6 — chill_hours missing from step2 → null', () => {
+      const result = adapter.transform(buildOlive(undefined, 'Picual'));
+      expect(result.block_b.phenology_dashboard!.chill).toBeNull();
+    });
+
+    it('S2.7 — non-olive crop → null', () => {
+      const input = buildSnapshotInput({ crop_type: 'agrumes', variety: 'Maltaise' });
+      (input.output as any).step2.chill_hours = 200;
+      const result = adapter.transform(input);
+      expect(result.block_b.phenology_dashboard!.chill).toBeNull();
+    });
+
+    it('S2.9 — variety fuzzy match: Arbequine resolves to Arbequina (dist 1)', () => {
+      const input = buildOlive(409, 'Arbequine');
+      (input as any).crop_type = 'Olivier';
+      const r = adapter.transform(input);
+      const chill = r.block_b.phenology_dashboard!.chill!;
+      expect(chill.reference.source).toBe('variety');
+      expect(chill.reference.variety_label).toBe('Arbequina');
+      expect(chill.reference.min).toBe(200);
+      expect(chill.reference.max).toBe(400);
+      expect(chill.band).toBe('green'); // 409 ≥ 400
+    });
+
+    it('S2.10 — variety fuzzy match: case + accent insensitive', () => {
+      const input = buildOlive(150, 'PICHOLINE MAROCAINE');
+      (input as any).crop_type = 'Olivier';
+      const r = adapter.transform(input);
+      const chill = r.block_b.phenology_dashboard!.chill!;
+      expect(chill.reference.source).toBe('variety');
+      expect(chill.reference.variety_label).toBe('Picholine Marocaine');
+    });
+
+    it('S2.11 — variety completely unrelated → fallback', () => {
+      const input = buildOlive(409, 'TotallyMadeUpVariety');
+      (input as any).crop_type = 'Olivier';
+      const r = adapter.transform(input);
+      const chill = r.block_b.phenology_dashboard!.chill!;
+      expect(chill.reference.source).toBe('fallback');
+      expect(chill.reference.variety_label).toBeNull();
+    });
+
+    it('S2.8 — crop_type matches case-insensitively (Olivier, OLIVIER, " olivier ")', () => {
+      for (const variant of ['Olivier', 'OLIVIER', ' olivier ', 'olivier']) {
+        const input = buildOlive(409, 'Arbequine');
+        (input as any).crop_type = variant;
+        const r = adapter.transform(input);
+        if (r.block_b.phenology_dashboard!.chill === null) {
+          throw new Error(`Expected chill non-null for crop_type variant: "${variant}"`);
+        }
+        expect(r.block_b.phenology_dashboard!.chill!.value).toBe(409);
+      }
+    });
+  });
+
+  // ── Phenology AI enrichment context + DTO fields ──
+
+  describe('phenology enrichment', () => {
+    const buildDegradedStep4 = () => ({
+      status: 'degraded',
+      mean_dates: {
+        peak: '2026-04-19',
+        decline_start: null,
+        dormancy_exit: '2026-01-21',
+        plateau_start: '2026-04-19',
+        dormancy_entry: null,
+      },
+      yearly_stages: {
+        '2026': {
+          peak: '2026-04-19',
+          decline_start: null,
+          dormancy_exit: '2026-01-21',
+          plateau_start: '2026-04-19',
+          dormancy_entry: null,
+        },
+      },
+      missing_stages: ['decline_start', 'dormancy_entry'],
+      phase_timeline: [
+        {
+          year: 2026,
+          mode: 'AMORCAGE',
+          transitions: [
+            {
+              phase: 'DORMANCE',
+              start_date: '2025-12-01',
+              end_date: '2026-01-21',
+              gdd_at_entry: 0,
+              confidence: 'ELEVEE',
+            },
+            {
+              phase: 'FLORAISON',
+              start_date: '2026-04-19',
+              end_date: '2026-04-19',
+              gdd_at_entry: 501.95,
+              confidence: 'MODEREE',
+            },
+          ],
+        },
+      ],
+      inter_annual_variability_days: { peak: 0 },
+      gdd_correlation: { peak: 0 },
+      referential_cycle_used: true,
+    });
+
+    it('echoes status + missing_stages + ai_enrichment null on dashboard', () => {
+      const input = buildSnapshotInput({ crop_type: 'olivier', variety: 'Picual' });
+      (input.output as any).step4 = buildDegradedStep4();
+      const result = adapter.transform(input);
+      const dash = result.block_b.phenology_dashboard!;
+      expect(dash.status).toBe('degraded');
+      expect(dash.missing_stages).toEqual(['decline_start', 'dormancy_entry']);
+      expect(dash.ai_enrichment).toBeNull();
+    });
+
+    it('builds AI enrichment context with referential slice when crop_type known', () => {
+      const step4 = buildDegradedStep4();
+      const context = adapter.buildPhenologyEnrichmentContext(step4, 'olivier');
+      expect(context).not.toBeNull();
+      expect(context!.status).toBe('degraded');
+      expect(context!.missing_stages).toEqual(['decline_start', 'dormancy_entry']);
+      expect(context!.phase_timeline).toHaveLength(1);
+      expect(context!.phase_timeline[0].transitions).toHaveLength(2);
+      expect(context!.referential).not.toBeNull();
+      expect(context!.referential!.stades_bbch.length).toBeGreaterThan(0);
+      // Sanity: first BBCH entry is well-formed
+      const firstStade = context!.referential!.stades_bbch[0];
+      expect(firstStade.code).toBeTruthy();
+      expect(Array.isArray(firstStade.gdd_cumul)).toBe(true);
+    });
+
+    it('returns null context when no phase_timeline and no yearly_stages', () => {
+      const context = adapter.buildPhenologyEnrichmentContext({}, 'olivier');
+      expect(context).toBeNull();
+    });
+
+    it('returns context with referential null when crop_type unknown', () => {
+      const step4 = buildDegradedStep4();
+      const context = adapter.buildPhenologyEnrichmentContext(step4, null);
+      expect(context).not.toBeNull();
+      expect(context!.referential).toBeNull();
     });
   });
 

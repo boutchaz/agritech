@@ -65,17 +65,17 @@ function SetPasswordPage() {
 
     // Validation
     if (password.length < 8) {
-      setError(t('auth.setPasswordPage.errorMinLength', 'Password must be at least 8 characters'));
+      setError(t('auth.setPasswordPage.errorMinLength'));
       return;
     }
 
     if (password !== confirmPassword) {
-      setError(t('auth.setPasswordPage.errorMismatch', 'Passwords do not match'));
+      setError(t('auth.setPasswordPage.errorMismatch'));
       return;
     }
 
     if (passwordStrength === 'weak') {
-      setError(t('auth.setPasswordPage.errorWeak', 'Please choose a stronger password'));
+      setError(t('auth.setPasswordPage.errorWeak'));
       return;
     }
 
@@ -95,8 +95,8 @@ function SetPasswordPage() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: 'Password update failed' }));
-        throw new Error(errorData.message || 'Password update failed');
+        const errorData = await response.json().catch(() => ({ message: t('auth.setPasswordPage.errorUpdateFailed') }));
+        throw new Error(errorData.message || t('auth.setPasswordPage.errorUpdateFailed'));
       }
 
       await usersApi.updateMe({ password_set: true });
@@ -107,7 +107,7 @@ function SetPasswordPage() {
       navigate({ to: '/dashboard' });
     } catch (err: unknown) {
       console.error('Error setting password:', err);
-      setError(err instanceof Error ? err.message : t('auth.setPasswordPage.errorGeneric', 'An error occurred while setting your password'));
+      setError(err instanceof Error ? err.message : t('auth.setPasswordPage.errorGeneric'));
     } finally {
       setLoading(false);
     }
@@ -134,10 +134,10 @@ function SetPasswordPage() {
               <Shield className="w-8 h-8 text-green-600 dark:text-green-400" />
             </div>
             <CardTitle className="text-2xl font-bold text-center">
-              {t('auth.setPasswordPage.title', 'Set your password')}
+              {t('auth.setPasswordPage.title')}
             </CardTitle>
             <CardDescription className="text-center">
-              {t('auth.setPasswordPage.description', 'Create a secure password to protect your account')}
+              {t('auth.setPasswordPage.description')}
             </CardDescription>
           </CardHeader>
 
@@ -156,7 +156,7 @@ function SetPasswordPage() {
               {/* Password Field */}
               <div className="space-y-2">
                 <Label htmlFor="password" className="text-sm font-medium">
-                  {t('auth.setPasswordPage.newPasswordLabel', 'New password')}
+                  {t('auth.setPasswordPage.newPasswordLabel')}
                 </Label>
                 <div className="relative">
                   <Input
@@ -164,7 +164,7 @@ function SetPasswordPage() {
                     type={showPassword ? 'text' : 'password'}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder={t('auth.setPasswordPage.newPasswordPlaceholder', 'Enter your password')}
+                    placeholder={t('auth.setPasswordPage.newPasswordPlaceholder')}
                     className="pr-12 h-11"
                     required
                   />
@@ -206,32 +206,32 @@ function SetPasswordPage() {
                         }`}
                       >
                         {passwordStrength === 'weak'
-                          ? t('auth.setPasswordPage.strengthWeak', 'Weak')
+                          ? t('auth.setPasswordPage.strengthWeak')
                           : passwordStrength === 'medium'
-                          ? t('auth.setPasswordPage.strengthMedium', 'Medium')
-                          : t('auth.setPasswordPage.strengthStrong', 'Strong')}
+                          ? t('auth.setPasswordPage.strengthMedium')
+                          : t('auth.setPasswordPage.strengthStrong')}
                       </span>
                     </div>
 
                     {/* Password Requirements */}
                     <div className="bg-muted/50 rounded-lg p-3 space-y-1.5">
-                      <p className="text-xs font-medium text-muted-foreground mb-2">{t('auth.setPasswordPage.requirements', 'Requirements:')}</p>
+                      <p className="text-xs font-medium text-muted-foreground mb-2">{t('auth.setPasswordPage.requirements')}</p>
                       <div className="grid gap-1.5">
                         <div className={`flex items-center gap-2 text-xs ${password.length >= 8 ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground'}`}>
                           <CheckCircle className="w-3.5 h-3.5" />
-                          <span>{t('auth.setPasswordPage.reqMinLength', 'At least 8 characters')}</span>
+                          <span>{t('auth.setPasswordPage.reqMinLength')}</span>
                         </div>
                         <div className={`flex items-center gap-2 text-xs ${/[A-Z]/.test(password) && /[a-z]/.test(password) ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground'}`}>
                           <CheckCircle className="w-3.5 h-3.5" />
-                          <span>{t('auth.setPasswordPage.reqUpperLower', 'Upper and lower case letters')}</span>
+                          <span>{t('auth.setPasswordPage.reqUpperLower')}</span>
                         </div>
                         <div className={`flex items-center gap-2 text-xs ${/\d/.test(password) ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground'}`}>
                           <CheckCircle className="w-3.5 h-3.5" />
-                          <span>{t('auth.setPasswordPage.reqNumber', 'At least one number')}</span>
+                          <span>{t('auth.setPasswordPage.reqNumber')}</span>
                         </div>
                         <div className={`flex items-center gap-2 text-xs ${/[!@#$%^&*(),.?":{}|<>]/.test(password) ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground'}`}>
                           <CheckCircle className="w-3.5 h-3.5" />
-                          <span>{t('auth.setPasswordPage.reqSpecial', 'Special character (optional, strengthens security)')}</span>
+                          <span>{t('auth.setPasswordPage.reqSpecial')}</span>
                         </div>
                       </div>
                     </div>
@@ -242,7 +242,7 @@ function SetPasswordPage() {
               {/* Confirm Password Field */}
               <div className="space-y-2">
                 <Label htmlFor="confirmPassword" className="text-sm font-medium">
-                  {t('auth.setPasswordPage.confirmPasswordLabel', 'Confirm password')}
+                  {t('auth.setPasswordPage.confirmPasswordLabel')}
                 </Label>
                 <div className="relative">
                   <Input
@@ -250,7 +250,7 @@ function SetPasswordPage() {
                     type={showConfirmPassword ? 'text' : 'password'}
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder={t('auth.setPasswordPage.confirmPasswordPlaceholder', 'Confirm your password')}
+                    placeholder={t('auth.setPasswordPage.confirmPasswordPlaceholder')}
                     className="pr-12 h-11"
                     required
                   />
@@ -269,7 +269,7 @@ function SetPasswordPage() {
                 {confirmPassword && password !== confirmPassword && (
                   <p className="text-xs text-red-600 dark:text-red-400 font-medium flex items-center gap-1">
                     <AlertCircle className="w-3 h-3" />
-                    {t('auth.setPasswordPage.mismatchInline', 'Passwords do not match')}
+                    {t('auth.setPasswordPage.mismatchInline')}
                   </p>
                 )}
               </div>
@@ -279,12 +279,12 @@ function SetPasswordPage() {
                 {loading ? (
                   <>
                     <Loader2 className="w-5 h-5 animate-spin" />
-                    {t('auth.setPasswordPage.submitting', 'Setting up...')}
+                    {t('auth.setPasswordPage.submitting')}
                   </>
                 ) : (
                   <>
                     <Lock className="w-5 h-5" />
-                    {t('auth.setPasswordPage.submitButton', 'Set password')}
+                    {t('auth.setPasswordPage.submitButton')}
                   </>
                 )}
               </Button>
@@ -293,14 +293,14 @@ function SetPasswordPage() {
 
           <CardFooter className="flex justify-center border-t pt-6">
             <p className="text-xs text-muted-foreground text-center">
-              {t('auth.setPasswordPage.footer', 'You will be redirected to the dashboard after setting your password')}
+              {t('auth.setPasswordPage.footer')}
             </p>
           </CardFooter>
         </Card>
 
         {/* Footer */}
         <p className="text-center text-xs text-muted-foreground mt-6">
-          {t('auth.setPasswordPage.copyright', '© 2024 AgroGina Platform. All rights reserved.')}
+          {t('auth.setPasswordPage.copyright')}
         </p>
       </div>
     </div>

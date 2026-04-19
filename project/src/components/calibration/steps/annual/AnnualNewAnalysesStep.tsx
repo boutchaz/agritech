@@ -1,5 +1,6 @@
 import { Droplets, FlaskRound, Leaf, TriangleAlert } from 'lucide-react';
 import type { ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { useAnnualNewAnalyses } from '@/hooks/useAnnualRecalibration';
 
@@ -52,6 +53,7 @@ function analysisFormLink(parcelId: string, type: AnalysisKind): string {
 }
 
 export function AnnualNewAnalysesStep({ parcelId, onContinueIfNone }: AnnualNewAnalysesStepProps) {
+  const { t } = useTranslation();
   const { data: analyses, isLoading } = useAnnualNewAnalyses(parcelId);
 
   const metadata = (analyses ?? {}) as NewAnalysesWithMetadata;
@@ -123,7 +125,7 @@ export function AnnualNewAnalysesStep({ parcelId, onContinueIfNone }: AnnualNewA
                   <p className="text-sm text-gray-600 dark:text-gray-300">Aucune nouvelle analyse detectee.</p>
                   <Button type="button" variant="outline" asChild>
                     <a href={analysisFormLink(parcelId, analysis.key)} target="_blank" rel="noreferrer">
-                      Ajouter maintenant
+                      {t('annualNewAnalysesStep.addNow')}
                     </a>
                   </Button>
                 </div>

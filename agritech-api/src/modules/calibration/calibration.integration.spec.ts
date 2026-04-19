@@ -137,7 +137,7 @@ const toIsoDate = (d: Date): string => d.toISOString().split('T')[0];
 
     expect(result.scenario_code).toBe('H');
     expect(result.scenario).toBe('Normal state');
-    expect(result.indicators.baseline_ndvi).toBe(0.55);
+    expect(result.indicators.p50_ndvi).toBe(0.55);
     expect(result.indicators.current_ndvi).toBe(0.58);
   });
 
@@ -244,10 +244,10 @@ const toIsoDate = (d: Date): string => d.toISOString().split('T')[0];
     query.limit.mockReturnValue(query);
     query.maybeSingle.mockResolvedValue(
       mockQueryResult({
-        baseline_ndvi: agromindCalibrationFixture.expected_output.baseline_ndvi,
-        baseline_ndre: 0.21,
-        baseline_ndmi: 0.17,
-        calibration_data: {
+        p50_ndvi: agromindCalibrationFixture.expected_output.baseline_ndvi,
+        p50_ndre: 0.21,
+        p50_ndmi: 0.17,
+        baseline_data: {
           thresholds: {
             optimal: [...agromindCalibrationFixture.ndvi_thresholds.optimal],
             vigilance: agromindCalibrationFixture.ndvi_thresholds.vigilance,

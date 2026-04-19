@@ -18,7 +18,7 @@ import { toast } from 'sonner';
 import {
   buildReferentialSchema,
   formatZodErrors,
-} from '../../../../../shared/referential-schema';
+} from '@/lib/referentiel-schema';
 
 type JsonPath = (string | number)[];
 

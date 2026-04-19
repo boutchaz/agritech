@@ -22,6 +22,10 @@ import { AnnualPlanModule } from '../annual-plan/annual-plan.module';
 import { AiReferencesModule } from '../ai-references/ai-references.module';
 import { CalibrationModule } from '../calibration/calibration.module';
 import { ChatToolsModule } from './tools/chat-tools.module';
+import { OrganizationAISettingsModule } from '../organization-ai-settings/organization-ai-settings.module';
+import { GroqProvider } from '../ai-reports/providers/groq.provider';
+import { OpenAIProvider } from '../ai-reports/providers/openai.provider';
+import { GeminiProvider } from '../ai-reports/providers/gemini.provider';
 
 @Module({
   imports: [
@@ -34,6 +38,7 @@ import { ChatToolsModule } from './tools/chat-tools.module';
     ChatToolsModule,
     forwardRef(() => CalibrationModule),
     AiQuotaModule,
+    OrganizationAISettingsModule,
   ],
   controllers: [ChatController],
   providers: [
@@ -47,6 +52,9 @@ import { ChatToolsModule } from './tools/chat-tools.module';
     FollowUpService,
     StructuredResponseService,
     ZaiProvider,
+    GroqProvider,
+    OpenAIProvider,
+    GeminiProvider,
     ZaiTTSProvider,
     WeatherProvider,
     Reflector,
