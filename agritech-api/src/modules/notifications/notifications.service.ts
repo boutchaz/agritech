@@ -1,4 +1,5 @@
 import { Injectable, Logger, Inject, forwardRef, Optional } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
 import { DatabaseService } from '../database/database.service';
 import { paginatedResponse, type PaginatedResponse } from '../../common/dto/paginated-query.dto';
@@ -96,11 +97,23 @@ export class NotificationsService {
 
   constructor(
     private readonly databaseService: DatabaseService,
+    private readonly configService: ConfigService,
     @Inject(forwardRef(() => NotificationsGateway))
     private readonly gateway: NotificationsGateway,
     @Optional() @Inject(EmailService) private readonly emailServiceDb?: EmailService,
   ) {
     this.initializeTransporter();
+  }
+
+  private getMarketplaceUrl(): string {
+    return (
+      this.configService.get<string>('MARKETPLACE_URL') ||
+      'https://marketplace.thebzlab.online'
+    );
+  }
+
+  private getMarketplaceHost(): string {
+    return this.getMarketplaceUrl().replace(/^https?:\/\//, '').replace(/\/$/, '');
   }
 
   // ============================================
@@ -1000,7 +1013,7 @@ export class NotificationsService {
   <div class="footer">
     <p>
       © 2025 AgroGina Marketplace. Tous droits réservés.<br>
-      <a href="https://marketplace.thebzlab.online" style="color: #10b981; text-decoration: none;">marketplace.thebzlab.online</a>
+      <a href="${this.getMarketplaceUrl()}" style="color: #10b981; text-decoration: none;">${this.getMarketplaceHost()}</a>
     </p>
   </div>
 </body>
@@ -1034,7 +1047,7 @@ export class NotificationsService {
     text += `\nRépondre à la demande: ${data.quoteRequestUrl}\n`;
     text += `\nConnectez-vous à votre tableau de bord pour consulter tous les détails et envoyer votre devis.\n`;
     text += `\n© 2025 AgroGina Marketplace\n`;
-    text += `https://marketplace.thebzlab.online\n`;
+    text += `${this.getMarketplaceUrl()}\n`;
 
     return text;
   }
@@ -1220,7 +1233,7 @@ export class NotificationsService {
   <div class="footer">
     <p>
       © 2025 AgroGina Marketplace. Tous droits réservés.<br>
-      <a href="https://marketplace.thebzlab.online" style="color: #10b981; text-decoration: none;">marketplace.thebzlab.online</a>
+      <a href="${this.getMarketplaceUrl()}" style="color: #10b981; text-decoration: none;">${this.getMarketplaceHost()}</a>
     </p>
   </div>
 </body>
@@ -1259,7 +1272,7 @@ export class NotificationsService {
     text += `\nConsulter le devis: ${data.quoteRequestUrl}\n`;
     text += `\nConnectez-vous à votre tableau de bord pour consulter tous les détails, accepter ou décliner ce devis.\n`;
     text += `\n© 2025 AgroGina Marketplace\n`;
-    text += `https://marketplace.thebzlab.online\n`;
+    text += `${this.getMarketplaceUrl()}\n`;
 
     return text;
   }
@@ -1470,7 +1483,7 @@ export class NotificationsService {
   <div style="text-align: center; color: #6b7280; font-size: 14px; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
     <p>
       © 2025 AgroGina Marketplace. Tous droits réservés.<br>
-      <a href="https://marketplace.thebzlab.online" style="color: #10b981; text-decoration: none;">marketplace.thebzlab.online</a>
+      <a href="${this.getMarketplaceUrl()}" style="color: #10b981; text-decoration: none;">${this.getMarketplaceHost()}</a>
     </p>
   </div>
 </body>
@@ -1503,7 +1516,7 @@ export class NotificationsService {
     text += `Voir ma commande: ${data.orderUrl}\n\n`;
     text += `Vous recevrez un email dès que le vendeur confirmera votre commande.\n\n`;
     text += `© 2025 AgroGina Marketplace\n`;
-    text += `https://marketplace.thebzlab.online\n`;
+    text += `${this.getMarketplaceUrl()}\n`;
 
     return text;
   }

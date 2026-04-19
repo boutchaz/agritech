@@ -10,6 +10,7 @@ import { AuthModule } from '../auth/auth.module';
 
 @Module({
   imports: [
+    ConfigModule,
     DatabaseModule,
     EmailModule,
     JwtModule.registerAsync({
