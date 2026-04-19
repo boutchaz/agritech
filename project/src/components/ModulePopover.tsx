@@ -1,9 +1,7 @@
 import React, { useState } from 'react';
-import { useTranslation } from 'react-i18next';
 import {
   Settings,
   Boxes,
-  X,
   Check,
   Lock,
   Loader2,
@@ -16,20 +14,13 @@ import {
 } from 'lucide-react';
 import { useModules, useUpdateModule } from '../hooks/useModules';
 import { useAddonsOverview } from '../hooks/useAddons';
-import { useModuleBasedDashboard } from '../hooks/useModuleBasedDashboard';
 import { useSubscription } from '../hooks/useSubscription';
 import { getPlanDetails, isModuleAvailableForPlan, CATEGORY_LABELS } from '../lib/polar';
 import { useNavigate } from '@tanstack/react-router';
 import type { OrganizationModule } from '../lib/api/modules';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from './ui/popover';
-import { Button } from './ui/button';
+import { Button } from '@/components/ui/button';
 import { ScrollArea } from './ui/scroll-area';
 import { cn } from '../lib/utils';
-import { Button } from '@/components/ui/button';
 
 const CATEGORY_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   core: Boxes,
@@ -49,11 +40,10 @@ interface ModulePopoverProps {
   isCollapsed: boolean;
 }
 
-export const ModulePopover = ({ isCollapsed }: ModulePopoverProps) => {
-  const { t } = useTranslation();
+export const ModulePopover = ({ isCollapsed: _isCollapsed }: ModulePopoverProps) => {
   const { data: modules = [], isLoading } = useModules();
   const { data: subscription } = useSubscription();
-  const { data: addonsOverview, refetch: refetchAddons } = useAddonsOverview();
+  const { data: addonsOverview } = useAddonsOverview();
   const updateModule = useUpdateModule();
   const navigate = useNavigate();
   const [showAddons, setShowAddons] = useState(false);
@@ -166,7 +156,6 @@ export const ModulePopover = ({ isCollapsed }: ModulePopoverProps) => {
                   {addonsOverview.available_addons.map((addon) => (
                     <div key={addon.id} className="text-sm p-2 bg-gray-50 dark:bg-gray-800 rounded">
                       <span className="text-gray-700 dark:text-gray-300">{addon.name}</span>
-                      <span className="text-xs text-gray-500 dark:text-gray-400 ml-auto">{addon.priceMonthly}€/mo</span>
                     </div>
                   ))}
                 </div>

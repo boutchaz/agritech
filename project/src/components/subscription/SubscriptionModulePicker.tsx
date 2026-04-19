@@ -1,5 +1,5 @@
 import { Check } from 'lucide-react';
-import { ERP_MODULES, BASE_MODULE_IDS, computeErpMonthly } from '@/lib/polar';
+import { ERP_MODULES, BASE_MODULE_IDS } from '@/lib/polar';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 
@@ -9,8 +9,6 @@ interface SubscriptionModulePickerProps {
 }
 
 export default function SubscriptionModulePicker({ selectedModules, onChange }: SubscriptionModulePickerProps) {
-  const erpTotal = computeErpMonthly(selectedModules);
-
   const toggleModule = (moduleId: string) => {
     if (BASE_MODULE_IDS.includes(moduleId)) return;
     if (selectedModules.includes(moduleId)) {
@@ -56,9 +54,6 @@ export default function SubscriptionModulePicker({ selectedModules, onChange }: 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
                     <span className="font-medium text-sm text-foreground truncate">{mod.name}</span>
-                    <span className="text-sm font-semibold text-foreground whitespace-nowrap">
-                      {mod.pricePerMonth} DH<span className="text-muted-foreground text-xs">/mo</span>
-                    </span>
                   </div>
                   <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{mod.desc}</p>
                   {isBase && (
@@ -73,8 +68,7 @@ export default function SubscriptionModulePicker({ selectedModules, onChange }: 
         })}
       </div>
       <div className="flex items-center justify-end gap-2 pt-2 border-t">
-        <span className="text-sm text-muted-foreground">ERP Total:</span>
-        <span className="text-lg font-bold text-foreground">{erpTotal.toLocaleString()} DH<span className="text-xs text-muted-foreground font-normal">/mo</span></span>
+        <span className="text-sm text-muted-foreground">Pricing tailored to your needs — we will contact you.</span>
       </div>
     </div>
   );
