@@ -214,15 +214,6 @@ async function bootstrap() {
 
   logger.log(`CORS Origins configured: ${allowedOrigins.join(', ')}`);
 
-  const alwaysAllowedOrigins = [
-    'https://marketplace.thebzlab.online',
-    'https://dashboard.thebzlab.online',
-    'https://agritech.thebzlab.online',
-    'https://agritech-dashboard.thebzlab.online',
-    'https://agritech-api.thebzlab.online',
-    'https://agritech-marketplace.thebzlab.online',
-  ];
-
   app.enableCors({
     origin: (origin, callback) => {
       // Allow requests with no origin (like mobile apps, Postman, or curl)
@@ -233,12 +224,6 @@ async function bootstrap() {
 
       logger.debug(`CORS: Checking origin: ${origin}`);
 
-      // Check if origin is in always-allowed list
-      if (alwaysAllowedOrigins.includes(origin)) {
-        logger.debug(`CORS: Origin ${origin} is in always-allowed list`);
-        return callback(null, true);
-      }
-
       // Check if origin is in configured allowed list
       if (allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
         logger.debug(`CORS: Origin ${origin} is allowed`);
@@ -248,18 +233,6 @@ async function bootstrap() {
       // For development, allow localhost with any port
       if (process.env.NODE_ENV !== 'production' && origin.includes('localhost')) {
         logger.debug(`CORS: Allowing localhost origin in development: ${origin}`);
-        return callback(null, true);
-      }
-
-      // For thebzlab.online subdomains, only allow known app prefixes
-      // to prevent abuse via attacker-controlled subdomains
-      const ALLOWED_THEBZLAB_SUBDOMAINS = [
-        'marketplace', 'dashboard', 'agritech', 'agritech-dashboard',
-        'agritech-api', 'agritech-marketplace', 'agritech-satellite',
-      ];
-      const thebzlabMatch = origin.match(/^https:\/\/([a-z0-9-]+)\.thebzlab\.online$/);
-      if (thebzlabMatch && ALLOWED_THEBZLAB_SUBDOMAINS.includes(thebzlabMatch[1])) {
-        logger.debug(`CORS: Allowing thebzlab.online subdomain: ${origin}`);
         return callback(null, true);
       }
 
