@@ -1,6 +1,9 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import {
   ArrowLeft,
   RefreshCw,
@@ -22,6 +25,8 @@ import {
   Upload,
   Trash2,
   Loader2,
+  Save,
+  Sliders,
 } from 'lucide-react';
 import { apiRequest } from '@/lib/api-client';
 import { supabase } from '@/lib/supabase';
@@ -149,6 +154,12 @@ function OrgDetailPage() {
       refetch();
     },
     onError: (err: Error) => toast.error(err.message),
+  });
+
+  // Canonical modules list for the picker
+  const { data: modulesCatalog } = useQuery({
+    queryKey: ['admin-modules'],
+    queryFn: () => apiRequest<Array<{ id: string; slug: string; name: string; category: string | null }>>('/api/v1/admin/modules'),
   });
 
   // Demo data mutations
@@ -442,6 +453,15 @@ function OrgDetailPage() {
             )}
           </div>
 
+          {/* Hard Limits & Modules (case-by-case) */}
+          <div className="lg:col-span-2">
+            <HardLimitsCard
+              orgId={orgId}
+              subscription={subscription}
+              modulesCatalog={modulesCatalog ?? []}
+            />
+          </div>
+
           {/* Revenue Card */}
           {usage && (
             <div className="rounded-lg border border-gray-200 bg-white p-5">
@@ -668,6 +688,219 @@ function SubBadge({ status }: { status: string }) {
     >
       {status}
     </span>
+  );
+}
+
+const limitsSchema = z.object({
+  max_farms: z.number().int().min(0).max(10000),
+  max_users: z.number().int().min(0).max(10000),
+  max_parcels: z.number().int().min(0).max(100000),
+  contracted_hectares: z.number().min(0).max(1_000_000),
+  selected_modules: z.array(z.string()),
+});
+
+type LimitsFormData = z.infer<typeof limitsSchema>;
+
+function HardLimitsCard({
+  orgId,
+  subscription,
+  modulesCatalog,
+}: {
+  orgId: string;
+  subscription: any;
+  modulesCatalog: Array<{ id: string; slug: string; name: string; category: string | null }>;
+}) {
+  const queryClient = useQueryClient();
+
+  const defaultValues: LimitsFormData = {
+    max_farms: subscription?.max_farms ?? 0,
+    max_users: subscription?.max_users ?? 0,
+    max_parcels: subscription?.max_parcels ?? 0,
+    contracted_hectares: Number(subscription?.contracted_hectares ?? 0),
+    selected_modules: Array.isArray(subscription?.selected_modules)
+      ? (subscription.selected_modules as string[])
+      : [],
+  };
+
+  const form = useForm<LimitsFormData>({
+    resolver: zodResolver(limitsSchema),
+    defaultValues,
+  });
+
+  // Re-sync defaults when subscription row arrives / changes
+  useEffect(() => {
+    form.reset({
+      max_farms: subscription?.max_farms ?? 0,
+      max_users: subscription?.max_users ?? 0,
+      max_parcels: subscription?.max_parcels ?? 0,
+      contracted_hectares: Number(subscription?.contracted_hectares ?? 0),
+      selected_modules: Array.isArray(subscription?.selected_modules)
+        ? (subscription.selected_modules as string[])
+        : [],
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [subscription?.id]);
+
+  const mutation = useMutation({
+    mutationFn: async (data: LimitsFormData) => {
+      const url = subscription
+        ? `/api/v1/admin/subscriptions/${orgId}`
+        : `/api/v1/admin/subscriptions/${orgId}/create`;
+      const method = subscription ? 'PUT' : 'POST';
+      const body = subscription
+        ? data
+        : {
+            ...data,
+            formula: 'starter',
+            billing_cycle: 'monthly',
+            status: 'trialing',
+            days: 14,
+          };
+      return apiRequest(url, { method, body: JSON.stringify(body) });
+    },
+    onSuccess: () => {
+      toast.success('Hard limits saved');
+      queryClient.invalidateQueries({ queryKey: ['admin-org-subscription', orgId] });
+      queryClient.invalidateQueries({ queryKey: ['admin-org-usage', orgId] });
+    },
+    onError: (err: Error) => toast.error(err.message || 'Failed to save'),
+  });
+
+  const selected = form.watch('selected_modules');
+
+  const toggleModule = (slug: string) => {
+    const next = selected.includes(slug)
+      ? selected.filter((s) => s !== slug)
+      : [...selected, slug];
+    form.setValue('selected_modules', next, { shouldDirty: true });
+  };
+
+  // Group modules by category for readability
+  const byCategory = (modulesCatalog ?? []).reduce<Record<string, typeof modulesCatalog>>(
+    (acc, mod) => {
+      const key = mod.category || 'general';
+      if (!acc[key]) acc[key] = [];
+      acc[key].push(mod);
+      return acc;
+    },
+    {},
+  );
+
+  return (
+    <div className="rounded-lg border border-gray-200 bg-white p-5">
+      <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-4">
+        <Sliders className="h-4 w-4" /> Hard Limits & Modules (case-by-case)
+      </h3>
+
+      <form
+        onSubmit={form.handleSubmit((data) => mutation.mutate(data))}
+        className="space-y-5"
+      >
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Max farms</label>
+            <input
+              type="number"
+              min={0}
+              {...form.register('max_farms', { valueAsNumber: true })}
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Max users</label>
+            <input
+              type="number"
+              min={0}
+              {...form.register('max_users', { valueAsNumber: true })}
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Max parcels</label>
+            <input
+              type="number"
+              min={0}
+              {...form.register('max_parcels', { valueAsNumber: true })}
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Contracted hectares</label>
+            <input
+              type="number"
+              min={0}
+              step="0.01"
+              {...form.register('contracted_hectares', { valueAsNumber: true })}
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            />
+          </div>
+        </div>
+
+        <div>
+          <p className="text-xs font-medium uppercase tracking-wide text-gray-500 mb-2">
+            Enabled modules ({selected.length})
+          </p>
+          {modulesCatalog.length === 0 ? (
+            <p className="text-sm text-gray-400">No module catalog loaded.</p>
+          ) : (
+            <div className="space-y-3">
+              {Object.entries(byCategory).map(([category, mods]) => (
+                <div key={category}>
+                  <p className="text-[11px] font-medium uppercase tracking-wide text-gray-400 mb-1.5">
+                    {category}
+                  </p>
+                  <div className="grid grid-cols-2 gap-1.5 md:grid-cols-3">
+                    {mods.map((mod) => {
+                      const key = mod.slug || mod.id;
+                      const isOn = selected.includes(key);
+                      return (
+                        <label
+                          key={mod.id}
+                          className={clsx(
+                            'flex items-center gap-2 rounded-md border px-2.5 py-1.5 text-sm cursor-pointer select-none',
+                            isOn
+                              ? 'border-emerald-500 bg-emerald-50'
+                              : 'border-gray-200 bg-white hover:bg-gray-50',
+                          )}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isOn}
+                            onChange={() => toggleModule(key)}
+                            className="h-4 w-4 text-emerald-600"
+                          />
+                          <span className="truncate">{mod.name}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center justify-between border-t border-gray-100 pt-3">
+          <p className="text-xs text-gray-500">
+            {subscription
+              ? 'Updates the existing subscription row.'
+              : 'No subscription yet — saving creates one (14-day trial).'}
+          </p>
+          <button
+            type="submit"
+            disabled={mutation.isPending || !form.formState.isDirty}
+            className="inline-flex items-center gap-2 rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
+          >
+            {mutation.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Save className="h-4 w-4" />
+            )}
+            Save limits
+          </button>
+        </div>
+      </form>
+    </div>
   );
 }
 

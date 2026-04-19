@@ -368,6 +368,11 @@ function OrgRow({ org, sub, isExpanded, onToggle, onRefresh }: {
               {sub.contracted_hectares} ha
             </span>
           ) : <span className="text-gray-300">—</span>}
+          {Array.isArray(sub?.selected_modules) && sub.selected_modules.length > 0 && (
+            <div className="mt-0.5 text-[11px] text-gray-500">
+              {sub.selected_modules.length} module{sub.selected_modules.length > 1 ? 's' : ''}
+            </div>
+          )}
         </td>
         <td className="px-4 py-3 text-center">
           <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${
