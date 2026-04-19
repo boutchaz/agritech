@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { cn } from '@/lib/utils'
 import { useTranslation } from 'react-i18next'
 import Sidebar from '../components/Sidebar'
+import PendingApproval from '../components/PendingApproval'
 import SubscriptionRequired from '../components/SubscriptionRequired'
 import SubscriptionBanner from '../components/SubscriptionBanner'
 import LegacyUserBanner from '../components/LegacyUserBanner'
@@ -122,6 +123,12 @@ function AuthenticatedLayout() {
   const isSubscriptionPending = !subscriptionFetched && (subscriptionLoading || !!currentOrganization)
   if (isSubscriptionPending) {
     return <AuthenticatedLayoutSkeleton />
+  }
+
+  // Gate: new organizations awaiting internal-admin approval cannot access the app
+  const approvalStatus = currentOrganization?.approval_status ?? 'approved'
+  if (currentOrganization && approvalStatus !== 'approved') {
+    return <PendingApproval status={approvalStatus} />
   }
 
   // Check if subscription is valid

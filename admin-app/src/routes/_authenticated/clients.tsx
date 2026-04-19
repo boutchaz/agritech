@@ -10,9 +10,12 @@ import {
   MapPin,
   ChevronLeft,
   ChevronRight,
+  CheckCircle2,
+  XCircle,
   Download,
   Users,
   Sprout,
+  Clock,
   CreditCard,
   ExternalLink,
 } from 'lucide-react';
@@ -20,6 +23,8 @@ import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 
 const PAGE_SIZE = 20;
+
+type ApprovalStatus = 'pending' | 'approved' | 'rejected';
 
 interface Organization {
   id: string;
@@ -32,6 +37,8 @@ interface Organization {
   is_active: boolean;
   account_type: string;
   created_at: string;
+  approval_status: ApprovalStatus;
+  approved_at: string | null;
 }
 
 interface Subscription {
@@ -54,11 +61,12 @@ function ClientsPage() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [approvalFilter, setApprovalFilter] = useState<ApprovalStatus | ''>('pending');
   const [expandedOrg, setExpandedOrg] = useState<string | null>(null);
 
   // Fetch organizations
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ['admin-clients', page, search, statusFilter],
+    queryKey: ['admin-clients', page, search, statusFilter, approvalFilter],
     queryFn: async () => {
       let query = supabase
         .from('organizations')
@@ -73,6 +81,7 @@ function ClientsPage() {
 
       if (statusFilter === 'active') query = query.eq('is_active', true);
       if (statusFilter === 'inactive') query = query.eq('is_active', false);
+      if (approvalFilter) query = query.eq('approval_status', approvalFilter);
 
       query = query.range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
 
@@ -197,6 +206,16 @@ function ClientsPage() {
           <option value="active">Active</option>
           <option value="inactive">Inactive</option>
         </select>
+        <select
+          value={approvalFilter}
+          onChange={(e) => { setApprovalFilter(e.target.value as ApprovalStatus | ''); setPage(1); }}
+          className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 sm:w-auto"
+        >
+          <option value="">All approvals</option>
+          <option value="pending">Pending approval</option>
+          <option value="approved">Approved</option>
+          <option value="rejected">Rejected</option>
+        </select>
       </div>
 
       {/* Table */}
@@ -211,14 +230,15 @@ function ClientsPage() {
                 <th className="px-3 py-2.5 text-left text-[10px] font-medium uppercase text-gray-500 sm:px-4 sm:py-3 sm:text-xs">Subscription</th>
                 <th className="px-3 py-2.5 text-left text-[10px] font-medium uppercase text-gray-500 sm:px-4 sm:py-3 sm:text-xs">Hectares</th>
                 <th className="px-3 py-2.5 text-center text-[10px] font-medium uppercase text-gray-500 sm:px-4 sm:py-3 sm:text-xs">Status</th>
+                <th className="px-3 py-2.5 text-center text-[10px] font-medium uppercase text-gray-500 sm:px-4 sm:py-3 sm:text-xs">Approval</th>
                 <th className="px-3 py-2.5 text-left text-[10px] font-medium uppercase text-gray-500 sm:px-4 sm:py-3 sm:text-xs">Created</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
               {isLoading ? (
-                <tr><td colSpan={7} className="px-4 py-12 text-center"><RefreshCw className="h-6 w-6 animate-spin text-gray-400 mx-auto" /></td></tr>
+                <tr><td colSpan={8} className="px-4 py-12 text-center"><RefreshCw className="h-6 w-6 animate-spin text-gray-400 mx-auto" /></td></tr>
               ) : rows.length === 0 ? (
-                <tr><td colSpan={7} className="px-4 py-12 text-center text-gray-500">No organizations found</td></tr>
+                <tr><td colSpan={8} className="px-4 py-12 text-center text-gray-500">No organizations found</td></tr>
               ) : (
                 rows.map((org) => {
                   const sub = subscriptions?.[org.id];
@@ -356,6 +376,9 @@ function OrgRow({ org, sub, isExpanded, onToggle, onRefresh }: {
             {org.is_active ? 'Active' : 'Inactive'}
           </span>
         </td>
+        <td className="px-4 py-3 text-center">
+          <ApprovalBadge status={org.approval_status} />
+        </td>
         <td className="px-4 py-3 text-xs text-gray-500">
           {new Date(org.created_at).toLocaleDateString('fr-FR')}
         </td>
@@ -364,7 +387,7 @@ function OrgRow({ org, sub, isExpanded, onToggle, onRefresh }: {
       {/* Expanded subscription panel */}
       {isExpanded && (
         <tr>
-          <td colSpan={7} className="px-4 py-4 bg-gray-50 border-b border-gray-200">
+          <td colSpan={8} className="px-4 py-4 bg-gray-50 border-b border-gray-200">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {/* Subscription details */}
               <div className="bg-white rounded-lg border border-gray-200 p-4">
@@ -452,6 +475,22 @@ function OrgRow({ org, sub, isExpanded, onToggle, onRefresh }: {
               <div className="bg-white rounded-lg border border-gray-200 p-4">
                 <h4 className="text-sm font-semibold text-gray-700 mb-3">Quick Actions</h4>
                 <div className="space-y-2">
+                  {org.approval_status !== 'approved' && (
+                    <ApprovalActionButton
+                      orgId={org.id}
+                      action="approve"
+                      label="Approve organization"
+                      onDone={onRefresh}
+                    />
+                  )}
+                  {org.approval_status !== 'rejected' && (
+                    <ApprovalActionButton
+                      orgId={org.id}
+                      action="reject"
+                      label="Reject organization"
+                      onDone={onRefresh}
+                    />
+                  )}
                   {sub && sub.status !== 'active' && (
                     <ActionButton
                       orgId={org.id}
@@ -529,6 +568,69 @@ function ActionButton({ orgId, label, payload, color, onDone, action = 'update' 
       onClick={(e) => { e.stopPropagation(); handle(); }}
       disabled={loading}
       className={`w-full px-3 py-2 rounded text-sm disabled:opacity-50 ${colors[color] ?? colors.emerald}`}
+    >
+      {loading ? '...' : label}
+    </button>
+  );
+}
+
+function ApprovalBadge({ status }: { status: ApprovalStatus }) {
+  const config: Record<ApprovalStatus, { label: string; className: string; Icon: any }> = {
+    pending: {
+      label: 'Pending',
+      className: 'bg-amber-50 text-amber-700 border border-amber-200',
+      Icon: Clock,
+    },
+    approved: {
+      label: 'Approved',
+      className: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
+      Icon: CheckCircle2,
+    },
+    rejected: {
+      label: 'Rejected',
+      className: 'bg-red-50 text-red-700 border border-red-200',
+      Icon: XCircle,
+    },
+  };
+  const c = config[status] ?? config.pending;
+  return (
+    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${c.className}`}>
+      <c.Icon className="h-3 w-3" />
+      {c.label}
+    </span>
+  );
+}
+
+function ApprovalActionButton({ orgId, action, label, onDone }: {
+  orgId: string;
+  action: 'approve' | 'reject';
+  label: string;
+  onDone: () => void;
+}) {
+  const [loading, setLoading] = useState(false);
+
+  const handle = async () => {
+    setLoading(true);
+    try {
+      const { apiRequest } = await import('@/lib/api-client');
+      await apiRequest(`/api/v1/admin/orgs/${orgId}/${action}`, { method: 'POST' });
+      toast.success(`${label} — done`);
+      onDone();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed');
+    }
+    setLoading(false);
+  };
+
+  const color = action === 'approve'
+    ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+    : 'bg-red-600 hover:bg-red-700 text-white';
+
+  return (
+    <button
+      onClick={(e) => { e.stopPropagation(); handle(); }}
+      disabled={loading}
+      className={`w-full px-3 py-2 rounded text-sm disabled:opacity-50 ${color}`}
     >
       {loading ? '...' : label}
     </button>

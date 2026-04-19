@@ -124,6 +124,28 @@ export class AdminController {
   }
 
   /**
+   * Approve a pending organization. Internal admin only.
+   */
+  @Post('orgs/:id/approve')
+  async approveOrganization(
+    @Param('id') orgId: string,
+    @Request() req: any,
+  ) {
+    return this.adminService.approveOrganization(orgId, req.user.id);
+  }
+
+  /**
+   * Reject a pending organization. Internal admin only.
+   */
+  @Post('orgs/:id/reject')
+  async rejectOrganization(
+    @Param('id') orgId: string,
+    @Request() req: any,
+  ) {
+    return this.adminService.rejectOrganization(orgId, req.user.id);
+  }
+
+  /**
    * Get admin job logs
    */
   @Get('jobs')

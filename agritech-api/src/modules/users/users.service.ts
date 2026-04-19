@@ -220,7 +220,8 @@ export class UsersService {
                     currency_code,
                     timezone,
                     logo_url,
-                    is_active
+                    is_active,
+                    approval_status
                 )
             `)
             .eq('user_id', userId)
@@ -254,6 +255,7 @@ export class UsersService {
                 currency_code: org?.currency_code || 'MAD',
                 timezone: org?.timezone || 'Africa/Casablanca',
                 is_active: org?.is_active ?? ou.is_active,
+                approval_status: org?.approval_status ?? 'pending',
                 role: roleData?.name || 'viewer',
                 role_display_name: roleData?.display_name || 'Viewer',
                 role_level: roleData?.level || 6,

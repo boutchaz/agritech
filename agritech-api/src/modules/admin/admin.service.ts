@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException, InternalServerErrorException } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { sanitizeSearch } from '../../common/utils/sanitize-search';
 import {
@@ -403,43 +403,90 @@ export class AdminService {
     const limit = parseInt(query.limit || '50', 10);
     const offset = parseInt(query.offset || '0', 10);
 
-    // Try to use materialized view first, fall back to direct query
-    let queryBuilder = client
-      .from('admin_org_summary')
-      .select('*', { count: 'exact' });
+    // Try materialized view first; bail to direct query when approvalStatus filter is used
+    // or when the view is missing/stale relative to new columns.
+    let mvRows: any[] | null = null;
+    let mvCount: number | null = null;
 
-    if (query.planType) {
-      queryBuilder = queryBuilder.eq('plan_type', query.planType);
+    if (!query.approvalStatus) {
+      let queryBuilder = client
+        .from('admin_org_summary')
+        .select('*', { count: 'exact' });
+
+      if (query.planType) {
+        queryBuilder = queryBuilder.eq('plan_type', query.planType);
+      }
+      if (query.status) {
+        queryBuilder = queryBuilder.eq('subscription_status', query.status);
+      }
+      if (query.search) {
+        const s = sanitizeSearch(query.search);
+        if (s) queryBuilder = queryBuilder.ilike('name', `%${s}%`);
+      }
+
+      const sortBy = query.sortBy || 'created_at';
+      const sortOrder = query.sortOrder === 'asc';
+      queryBuilder = queryBuilder.order(sortBy, { ascending: sortOrder });
+      queryBuilder = queryBuilder.range(offset, offset + limit - 1);
+
+      const { data, error, count } = await queryBuilder;
+      if (!error) {
+        mvRows = data || [];
+        mvCount = count || 0;
+      }
     }
-    if (query.status) {
-      queryBuilder = queryBuilder.eq('subscription_status', query.status);
-    }
-    if (query.search) {
-      const s = sanitizeSearch(query.search);
-      if (s) queryBuilder = queryBuilder.ilike('name', `%${s}%`);
-    }
 
-    const sortBy = query.sortBy || 'created_at';
-    const sortOrder = query.sortOrder === 'asc';
-    queryBuilder = queryBuilder.order(sortBy, { ascending: sortOrder });
-    queryBuilder = queryBuilder.range(offset, offset + limit - 1);
+    let baseRows: any[];
+    let baseCount: number;
 
-    const { data, error, count } = await queryBuilder;
-
-    if (error) {
-      // Materialized view might not exist yet, fall back to direct query
-      console.warn('Falling back to direct query:', error.message);
-
-      const { data: orgs, count: orgCount } = await client
+    if (mvRows) {
+      baseRows = mvRows.map((row: any) => ({
+        id: row.id,
+        name: row.name,
+        countryCode: row.country_code,
+        createdAt: row.created_at,
+        isActive: row.is_active,
+        planType: row.plan_type,
+        subscriptionStatus: row.subscription_status,
+        mrr: row.mrr || 0,
+        arr: row.arr || 0,
+        farmsCount: row.farms_count || 0,
+        parcelsCount: row.parcels_count || 0,
+        usersCount: row.users_count || 0,
+        storageUsedMb: row.storage_used_mb || 0,
+        lastActivityAt: row.last_activity_at,
+        events7d: row.events_7d || 0,
+        events30d: row.events_30d || 0,
+      }));
+      baseCount = mvCount || 0;
+    } else {
+      let directQuery = client
         .from('organizations')
-        .select(`
+        .select(
+          `
           id, name, country_code, created_at, is_active,
           subscriptions(plan_type, status),
           subscription_usage(mrr, arr, farms_count, parcels_count, users_count, storage_used_mb, last_activity_at)
-        `, { count: 'exact' })
-        .range(offset, offset + limit - 1);
+        `,
+          { count: 'exact' },
+        );
 
-      const mappedData = (orgs || []).map((org: any) => ({
+      if (query.approvalStatus) {
+        directQuery = directQuery.eq('approval_status', query.approvalStatus);
+      }
+      if (query.search) {
+        const s = sanitizeSearch(query.search);
+        if (s) directQuery = directQuery.ilike('name', `%${s}%`);
+      }
+
+      const sortBy = query.sortBy || 'created_at';
+      const sortOrder = query.sortOrder === 'asc';
+      directQuery = directQuery.order(sortBy, { ascending: sortOrder });
+      directQuery = directQuery.range(offset, offset + limit - 1);
+
+      const { data: orgs, count: orgCount } = await directQuery;
+
+      baseRows = (orgs || []).map((org: any) => ({
         id: org.id,
         name: org.name,
         countryCode: org.country_code,
@@ -457,30 +504,125 @@ export class AdminService {
         events7d: 0,
         events30d: 0,
       }));
-
-      return { data: mappedData, total: orgCount || 0 };
+      baseCount = orgCount || 0;
     }
 
-    const mappedData = (data || []).map((row: any) => ({
-      id: row.id,
-      name: row.name,
-      countryCode: row.country_code,
-      createdAt: row.created_at,
-      isActive: row.is_active,
-      planType: row.plan_type,
-      subscriptionStatus: row.subscription_status,
-      mrr: row.mrr || 0,
-      arr: row.arr || 0,
-      farmsCount: row.farms_count || 0,
-      parcelsCount: row.parcels_count || 0,
-      usersCount: row.users_count || 0,
-      storageUsedMb: row.storage_used_mb || 0,
-      lastActivityAt: row.last_activity_at,
-      events7d: row.events_7d || 0,
-      events30d: row.events_30d || 0,
-    }));
+    if (baseRows.length === 0) {
+      return { data: baseRows as OrgUsageDto[], total: baseCount };
+    }
 
-    return { data: mappedData, total: count || 0 };
+    const orgIds = baseRows.map((r) => r.id);
+
+    // Contact + approval info
+    const { data: contactRows } = await client
+      .from('organizations')
+      .select('id, email, phone, city, country, approval_status, approved_at')
+      .in('id', orgIds);
+    const contactMap = new Map(
+      (contactRows || []).map((row: any) => [row.id, row]),
+    );
+
+    // Owner (organization_admin) info — one row per org (first admin found)
+    const { data: adminRows } = await client
+      .from('organization_users')
+      .select(
+        `
+        organization_id,
+        user_id,
+        role:roles!inner(name)
+      `,
+      )
+      .in('organization_id', orgIds)
+      .eq('is_active', true)
+      .eq('role.name', 'organization_admin');
+
+    const ownerByOrg = new Map<string, string>();
+    for (const row of (adminRows || []) as any[]) {
+      if (!ownerByOrg.has(row.organization_id)) {
+        ownerByOrg.set(row.organization_id, row.user_id);
+      }
+    }
+
+    const ownerUserIds = Array.from(new Set(ownerByOrg.values()));
+    const ownerById = new Map<string, any>();
+    if (ownerUserIds.length > 0) {
+      const { data: profiles } = await client
+        .from('user_profiles')
+        .select('id, first_name, last_name, email, phone')
+        .in('id', ownerUserIds);
+      for (const p of (profiles || []) as any[]) {
+        ownerById.set(p.id, p);
+      }
+    }
+
+    const data: OrgUsageDto[] = baseRows.map((row) => {
+      const contact = contactMap.get(row.id) as any;
+      const ownerId = ownerByOrg.get(row.id);
+      const owner = ownerId ? ownerById.get(ownerId) : null;
+      const ownerName = owner
+        ? [owner.first_name, owner.last_name].filter(Boolean).join(' ').trim() || null
+        : null;
+      return {
+        ...row,
+        email: contact?.email ?? null,
+        phone: contact?.phone ?? null,
+        city: contact?.city ?? null,
+        country: contact?.country ?? null,
+        approvalStatus: contact?.approval_status ?? 'pending',
+        approvedAt: contact?.approved_at ?? null,
+        ownerName: ownerName || null,
+        ownerEmail: owner?.email ?? null,
+        ownerPhone: owner?.phone ?? null,
+      };
+    });
+
+    return { data, total: baseCount };
+  }
+
+  /**
+   * Mark an organization as approved. Internal admin only.
+   */
+  async approveOrganization(orgId: string, approverUserId: string): Promise<OrgUsageDto> {
+    const client = this.databaseService.getAdminClient();
+    const { error } = await client
+      .from('organizations')
+      .update({
+        approval_status: 'approved',
+        approved_at: new Date().toISOString(),
+        approved_by: approverUserId,
+      })
+      .eq('id', orgId);
+
+    if (error) {
+      throw new InternalServerErrorException(
+        `Failed to approve organization: ${error.message}`,
+      );
+    }
+
+    return this.getOrgUsageById(orgId);
+  }
+
+  /**
+   * Mark an organization as rejected. Internal admin only.
+   */
+  async rejectOrganization(orgId: string, approverUserId: string): Promise<OrgUsageDto> {
+    const client = this.databaseService.getAdminClient();
+    const { error } = await client
+      .from('organizations')
+      .update({
+        approval_status: 'rejected',
+        approved_at: new Date().toISOString(),
+        approved_by: approverUserId,
+      })
+      .eq('id', orgId);
+
+    if (error) {
+      throw new InternalServerErrorException(
+        `Failed to reject organization: ${error.message}`,
+      );
+    }
+
+    return this.getOrgUsageById(orgId);
   }
 
   /**
@@ -493,6 +635,7 @@ export class AdminService {
       .from('organizations')
       .select(`
         id, name, country_code, created_at, is_active,
+        email, phone, city, country, approval_status, approved_at,
         subscriptions(plan_type, status, current_period_start, current_period_end),
         subscription_usage(mrr, arr, farms_count, parcels_count, users_count, storage_used_mb, last_activity_at)
       `)
@@ -502,6 +645,29 @@ export class AdminService {
     if (error || !org) {
       throw new NotFoundException(`Organization ${orgId} not found`);
     }
+
+    // Fetch owner (first organization_admin) contact
+    const { data: adminRow } = await client
+      .from('organization_users')
+      .select('user_id, role:roles!inner(name)')
+      .eq('organization_id', orgId)
+      .eq('is_active', true)
+      .eq('role.name', 'organization_admin')
+      .limit(1)
+      .maybeSingle();
+
+    let owner: any = null;
+    if (adminRow?.user_id) {
+      const { data: profile } = await client
+        .from('user_profiles')
+        .select('first_name, last_name, email, phone')
+        .eq('id', adminRow.user_id)
+        .maybeSingle();
+      owner = profile || null;
+    }
+    const ownerName = owner
+      ? [owner.first_name, owner.last_name].filter(Boolean).join(' ').trim() || null
+      : null;
 
     // Get event counts
     const sevenDaysAgo = new Date();
@@ -522,11 +688,11 @@ export class AdminService {
       .gte('occurred_at', thirtyDaysAgo.toISOString());
 
     return {
-      id: org.id,
-      name: org.name,
-      countryCode: org.country_code,
-      createdAt: org.created_at,
-      isActive: org.is_active,
+      id: (org as any).id,
+      name: (org as any).name,
+      countryCode: (org as any).country_code,
+      createdAt: (org as any).created_at,
+      isActive: (org as any).is_active,
       planType: (org.subscriptions as any)?.[0]?.plan_type,
       subscriptionStatus: (org.subscriptions as any)?.[0]?.status,
       mrr: (org.subscription_usage as any)?.[0]?.mrr || 0,
@@ -538,6 +704,15 @@ export class AdminService {
       lastActivityAt: (org.subscription_usage as any)?.[0]?.last_activity_at,
       events7d: events7d || 0,
       events30d: events30d || 0,
+      email: (org as any).email ?? null,
+      phone: (org as any).phone ?? null,
+      city: (org as any).city ?? null,
+      country: (org as any).country ?? null,
+      approvalStatus: (org as any).approval_status ?? 'pending',
+      approvedAt: (org as any).approved_at ?? null,
+      ownerName,
+      ownerEmail: owner?.email ?? null,
+      ownerPhone: owner?.phone ?? null,
     };
   }
 

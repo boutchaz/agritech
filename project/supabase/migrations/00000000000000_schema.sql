@@ -258,13 +258,38 @@ CREATE TABLE IF NOT EXISTS organizations (
   accounting_settings JSONB DEFAULT '{}'::jsonb, -- Country-specific accounting configurations stored as JSONB
   fiscal_year_start_month INTEGER DEFAULT 1, -- Month when fiscal year starts (1=January, 4=April for UK, etc.)
   map_provider TEXT DEFAULT NULL, -- Map provider preference (e.g., 'google', 'mapbox', 'openstreetmap')
+  approval_status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (approval_status IN ('pending', 'approved', 'rejected')),
+  approved_at TIMESTAMPTZ,
+  approved_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Idempotent add for existing installations
+ALTER TABLE organizations
+  ADD COLUMN IF NOT EXISTS approval_status VARCHAR(20) NOT NULL DEFAULT 'pending',
+  ADD COLUMN IF NOT EXISTS approved_at TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS approved_by UUID REFERENCES auth.users(id) ON DELETE SET NULL;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.table_constraints
+    WHERE table_name = 'organizations' AND constraint_name = 'organizations_approval_status_check'
+  ) THEN
+    ALTER TABLE organizations
+      ADD CONSTRAINT organizations_approval_status_check
+      CHECK (approval_status IN ('pending', 'approved', 'rejected'));
+  END IF;
+END $$;
+
+-- Backfill: all pre-existing organizations are considered approved
+UPDATE organizations SET approval_status = 'approved' WHERE approval_status = 'pending' AND created_at < NOW() - INTERVAL '1 minute';
+
 CREATE INDEX IF NOT EXISTS idx_organizations_slug ON organizations(slug);
 CREATE INDEX IF NOT EXISTS idx_organizations_country_code ON organizations(country_code);
 CREATE INDEX IF NOT EXISTS idx_organizations_accounting_standard ON organizations(accounting_standard);
+CREATE INDEX IF NOT EXISTS idx_organizations_approval_status ON organizations(approval_status);
 
 -- Organization Users
 CREATE TABLE IF NOT EXISTS organization_users (
@@ -24789,12 +24814,19 @@ CREATE POLICY "System admin upload for agronomy-corpus"
   TO authenticated
   WITH CHECK (
     bucket_id = 'agronomy-corpus'
-    AND EXISTS (
-      SELECT 1 FROM public.organization_users ou
-      JOIN public.roles r ON r.id = ou.role_id
-      WHERE ou.user_id = auth.uid()
-        AND ou.is_active = true
-        AND r.name = 'system_admin'
+    AND (
+      EXISTS (
+        SELECT 1 FROM public.organization_users ou
+        JOIN public.roles r ON r.id = ou.role_id
+        WHERE ou.user_id = auth.uid()
+          AND ou.is_active = true
+          AND r.name = 'system_admin'
+      )
+      OR EXISTS (
+        SELECT 1 FROM public.internal_admins ia
+        WHERE ia.user_id = auth.uid()
+          AND ia.is_active = true
+      )
     )
   );
 
@@ -24804,22 +24836,36 @@ CREATE POLICY "System admin update for agronomy-corpus"
   TO authenticated
   USING (
     bucket_id = 'agronomy-corpus'
-    AND EXISTS (
-      SELECT 1 FROM public.organization_users ou
-      JOIN public.roles r ON r.id = ou.role_id
-      WHERE ou.user_id = auth.uid()
-        AND ou.is_active = true
-        AND r.name = 'system_admin'
+    AND (
+      EXISTS (
+        SELECT 1 FROM public.organization_users ou
+        JOIN public.roles r ON r.id = ou.role_id
+        WHERE ou.user_id = auth.uid()
+          AND ou.is_active = true
+          AND r.name = 'system_admin'
+      )
+      OR EXISTS (
+        SELECT 1 FROM public.internal_admins ia
+        WHERE ia.user_id = auth.uid()
+          AND ia.is_active = true
+      )
     )
   )
   WITH CHECK (
     bucket_id = 'agronomy-corpus'
-    AND EXISTS (
-      SELECT 1 FROM public.organization_users ou
-      JOIN public.roles r ON r.id = ou.role_id
-      WHERE ou.user_id = auth.uid()
-        AND ou.is_active = true
-        AND r.name = 'system_admin'
+    AND (
+      EXISTS (
+        SELECT 1 FROM public.organization_users ou
+        JOIN public.roles r ON r.id = ou.role_id
+        WHERE ou.user_id = auth.uid()
+          AND ou.is_active = true
+          AND r.name = 'system_admin'
+      )
+      OR EXISTS (
+        SELECT 1 FROM public.internal_admins ia
+        WHERE ia.user_id = auth.uid()
+          AND ia.is_active = true
+      )
     )
   );
 
@@ -24829,12 +24875,19 @@ CREATE POLICY "System admin delete for agronomy-corpus"
   TO authenticated
   USING (
     bucket_id = 'agronomy-corpus'
-    AND EXISTS (
-      SELECT 1 FROM public.organization_users ou
-      JOIN public.roles r ON r.id = ou.role_id
-      WHERE ou.user_id = auth.uid()
-        AND ou.is_active = true
-        AND r.name = 'system_admin'
+    AND (
+      EXISTS (
+        SELECT 1 FROM public.organization_users ou
+        JOIN public.roles r ON r.id = ou.role_id
+        WHERE ou.user_id = auth.uid()
+          AND ou.is_active = true
+          AND r.name = 'system_admin'
+      )
+      OR EXISTS (
+        SELECT 1 FROM public.internal_admins ia
+        WHERE ia.user_id = auth.uid()
+          AND ia.is_active = true
+      )
     )
   );
 

@@ -8109,5 +8109,14 @@
   },
   "culturalHistoryStep": {
     "addStress": "Add stress"
+  },
+  "pendingApproval": {
+    "pendingTitle": "Account under review",
+    "pendingMessage": "Thanks for signing up. Our team will contact you shortly with a solution tailored to your needs and activate your account.",
+    "rejectedTitle": "Account not approved",
+    "rejectedMessage": "Our team reviewed your application and is unable to activate your account at this time. Please contact us to discuss next steps.",
+    "organizationLabel": "Organization",
+    "needHelp": "Need help?",
+    "signOut": "Sign out"
   }
 }

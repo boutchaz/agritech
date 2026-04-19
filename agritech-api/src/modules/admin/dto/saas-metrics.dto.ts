@@ -49,6 +49,15 @@ export class OrgUsageDto {
   lastActivityAt: string;
   events7d: number;
   events30d: number;
+  approvalStatus?: 'pending' | 'approved' | 'rejected';
+  approvedAt?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  city?: string | null;
+  country?: string | null;
+  ownerName?: string | null;
+  ownerEmail?: string | null;
+  ownerPhone?: string | null;
 }
 
 export class OrgUsageQueryDto {
@@ -59,6 +68,10 @@ export class OrgUsageQueryDto {
   @IsString()
   @IsOptional()
   status?: string;
+
+  @IsString()
+  @IsOptional()
+  approvalStatus?: 'pending' | 'approved' | 'rejected';
 
   @IsString()
   @IsOptional()

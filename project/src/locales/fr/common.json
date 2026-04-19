@@ -7713,5 +7713,14 @@
   },
   "culturalHistoryStep": {
     "addStress": "Ajouter un stress"
+  },
+  "pendingApproval": {
+    "pendingTitle": "Compte en cours de validation",
+    "pendingMessage": "Merci pour votre inscription. Notre équipe vous contactera prochainement avec une solution adaptée à vos besoins et activera votre compte.",
+    "rejectedTitle": "Compte non approuvé",
+    "rejectedMessage": "Notre équipe a examiné votre demande et ne peut pas activer votre compte pour le moment. Merci de nous contacter pour discuter de la suite.",
+    "organizationLabel": "Organisation",
+    "needHelp": "Besoin d'aide ?",
+    "signOut": "Se déconnecter"
   }
 }
