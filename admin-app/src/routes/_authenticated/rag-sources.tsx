@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import * as Dialog from '@radix-ui/react-dialog';
-import { BookOpen, Link2, Loader2, Plus, Trash2, Upload } from 'lucide-react';
+import { BookOpen, Link2, Loader2, Plus, Search, Trash2, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import clsx from 'clsx';
 import { apiRequest } from '@/lib/api-client';
@@ -31,6 +31,25 @@ interface AgronomySource {
   ingestion_status: IngestionStatus;
   ingestion_error: string | null;
   chunk_count: number;
+}
+
+interface RetrievedChunk {
+  id: string;
+  source_id: string;
+  text: string;
+  page: number | null;
+  rrf_score: number;
+  rerank_score: number | null;
+  source: {
+    id: string;
+    title: string;
+    publisher: string | null;
+    source_url: string | null;
+  };
+}
+
+interface TestChatResponse {
+  chunks: RetrievedChunk[];
 }
 
 const DOC_TYPES = [
@@ -60,6 +79,15 @@ const schema = z.object({
 });
 
 type FormData = z.infer<typeof schema>;
+
+const chatSchema = z.object({
+  query: z.string().min(1, 'Ask something'),
+  crop_type: z.string().optional(),
+  region: z.string().optional(),
+  limit: z.number().int().min(1).max(20),
+});
+
+type ChatFormData = z.infer<typeof chatSchema>;
 
 const defaultValues: FormData = {
   title: '',
@@ -101,7 +129,7 @@ function RagSourcesPage() {
 
   const { data: sources, isLoading } = useQuery({
     queryKey: ['admin', 'rag-sources'],
-    queryFn: () => apiRequest<AgronomySource[]>('/api/v1/agronomy/sources'),
+    queryFn: () => apiRequest<AgronomySource[]>('/api/v1/admin/agronomy/sources'),
     refetchInterval: (q) => {
       const rows = q.state.data as AgronomySource[] | undefined;
       return rows?.some((s) => s.ingestion_status === 'running' || s.ingestion_status === 'pending')
@@ -113,6 +141,34 @@ function RagSourcesPage() {
   const form = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues,
+  });
+
+  const chatForm = useForm<ChatFormData>({
+    resolver: zodResolver(chatSchema),
+    defaultValues: { query: '', crop_type: '', region: '', limit: 8 },
+  });
+  const [chunks, setChunks] = useState<RetrievedChunk[]>([]);
+
+  const testChatMutation = useMutation({
+    mutationFn: async (data: ChatFormData) => {
+      const payload = {
+        query: data.query.trim(),
+        crop_type: data.crop_type?.trim() || undefined,
+        region: data.region?.trim() || undefined,
+        limit: data.limit,
+      };
+      return apiRequest<TestChatResponse>('/api/v1/admin/agronomy/test-chat', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+    },
+    onSuccess: (res) => {
+      setChunks(res.chunks);
+      if (res.chunks.length === 0) {
+        toast.info('No chunks retrieved for this query');
+      }
+    },
+    onError: (e: Error) => toast.error(e.message),
   });
 
   const createMutation = useMutation({
@@ -130,7 +186,7 @@ function RagSourcesPage() {
         source_url: data.mode === 'link' ? data.source_url || undefined : undefined,
         storage_path: data.mode === 'file' ? data.storage_path || undefined : undefined,
       };
-      return apiRequest<AgronomySource>('/api/v1/agronomy/sources', {
+      return apiRequest<AgronomySource>('/api/v1/admin/agronomy/sources', {
         method: 'POST',
         body: JSON.stringify(payload),
       });
@@ -145,7 +201,7 @@ function RagSourcesPage() {
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) =>
-      apiRequest<void>(`/api/v1/agronomy/sources/${id}`, { method: 'DELETE' }),
+      apiRequest<void>(`/api/v1/admin/agronomy/sources/${id}`, { method: 'DELETE' }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'rag-sources'] });
       toast.success('Source deleted');
@@ -293,6 +349,126 @@ function RagSourcesPage() {
           </tbody>
         </table>
       </div>
+
+      {/* Test chat — validate RAG retrieval against the public corpus */}
+      <section className="rounded-xl border border-slate-200 bg-white p-5">
+        <header className="flex items-center gap-2">
+          <Search className="h-5 w-5 text-emerald-600" />
+          <h2 className="text-base font-semibold text-slate-900">Test RAG retrieval</h2>
+        </header>
+        <p className="mt-1 text-sm text-slate-500">
+          Run a query against the ingested corpus and inspect the ranked chunks. Useful to verify
+          that an ingestion worked and that filters behave as expected.
+        </p>
+
+        <form
+          onSubmit={chatForm.handleSubmit((data) => testChatMutation.mutate(data))}
+          className="mt-4 space-y-3"
+        >
+          <div>
+            <label className="block text-xs font-medium text-slate-600">Question</label>
+            <textarea
+              {...chatForm.register('query')}
+              rows={2}
+              placeholder="Ex: Quand fertiliser un verger d'oliviers à Meknès ?"
+              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+            />
+            {chatForm.formState.errors.query && (
+              <p className="mt-1 text-xs text-red-600">{chatForm.formState.errors.query.message}</p>
+            )}
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-slate-600">Crop type</label>
+              <input
+                {...chatForm.register('crop_type')}
+                placeholder="olivier"
+                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-600">Region (CSV)</label>
+              <input
+                {...chatForm.register('region')}
+                placeholder="Meknes, Fes"
+                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-600">Limit</label>
+              <input
+                type="number"
+                min={1}
+                max={20}
+                {...chatForm.register('limit', { valueAsNumber: true })}
+                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+              />
+            </div>
+          </div>
+          <div className="flex justify-end">
+            <button
+              type="submit"
+              disabled={testChatMutation.isPending}
+              className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
+            >
+              {testChatMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Search className="h-4 w-4" />
+              )}
+              Run query
+            </button>
+          </div>
+        </form>
+
+        {chunks.length > 0 && (
+          <div className="mt-5 space-y-3">
+            <div className="text-xs font-medium uppercase tracking-wide text-slate-500">
+              {chunks.length} chunk{chunks.length > 1 ? 's' : ''} retrieved
+            </div>
+            <ol className="space-y-3">
+              {chunks.map((chunk, idx) => (
+                <li
+                  key={chunk.id}
+                  className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="font-medium text-slate-900">
+                      [{idx + 1}] {chunk.source.title}
+                      {chunk.page != null && (
+                        <span className="ml-2 text-xs text-slate-500">p. {chunk.page}</span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-slate-500">
+                      <span>rrf {chunk.rrf_score.toFixed(3)}</span>
+                      {chunk.rerank_score != null && (
+                        <span>· rerank {chunk.rerank_score.toFixed(3)}</span>
+                      )}
+                    </div>
+                  </div>
+                  {(chunk.source.publisher || chunk.source.source_url) && (
+                    <div className="mt-1 text-xs text-slate-500">
+                      {chunk.source.publisher && <span>{chunk.source.publisher}</span>}
+                      {chunk.source.publisher && chunk.source.source_url && <span> · </span>}
+                      {chunk.source.source_url && (
+                        <a
+                          href={chunk.source.source_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-emerald-600 hover:underline"
+                        >
+                          source
+                        </a>
+                      )}
+                    </div>
+                  )}
+                  <p className="mt-2 whitespace-pre-wrap text-slate-700">{chunk.text}</p>
+                </li>
+              ))}
+            </ol>
+          </div>
+        )}
+      </section>
 
       {/* Add dialog */}
       <Dialog.Root open={dialogOpen} onOpenChange={setDialogOpen}>
