@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { useAICalibration } from '@/hooks/useAICalibration';
@@ -71,6 +71,7 @@ import {
   confidenceToFraction,
   formatConfidencePercent,
 } from '@/lib/calibration-confidence';
+import { cn } from '@/lib/utils';
 
 interface CollapsibleSectionProps {
   title: string;
@@ -138,70 +139,6 @@ function formatCalibrationHistoryRunAt(iso: string, locale: string): string {
     minute: '2-digit',
   });
 }
-
-const PhaseBanner = ({ phase }: { phase: CalibrationPhase }) => {
-  if (phase === 'calibrated') {
-    return (
-      <div
-        className="bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-800/30 p-4"
-        data-testid="calibration-phase-banner"
-        data-phase="calibrated"
-      >
-        <div className="flex items-center space-x-3">
-          <Shield className="w-5 h-5 text-amber-600 dark:text-amber-400" />
-          <div>
-            <h3 className="font-semibold text-amber-900 dark:text-amber-100">Awaiting Validation</h3>
-            <p className="text-sm text-amber-700 dark:text-amber-300">
-              Review the calibration status below and validate to activate AI diagnostics.
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (phase === 'awaiting_nutrition_option') {
-    return (
-      <div
-        className="bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800/30 p-4"
-        data-testid="calibration-phase-banner"
-        data-phase="awaiting_nutrition_option"
-      >
-        <div className="flex items-center space-x-3">
-          <Leaf className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-          <div>
-            <h3 className="font-semibold text-blue-900 dark:text-blue-100">Select Nutrition Option</h3>
-            <p className="text-sm text-blue-700 dark:text-blue-300">
-              Choose a nutrition management option to complete calibration setup.
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (phase === 'active') {
-    return (
-      <div
-        className="bg-green-50 dark:bg-green-900/20 rounded-xl border border-green-200 dark:border-green-800/30 p-4"
-        data-testid="calibration-phase-banner"
-        data-phase="active"
-      >
-        <div className="flex items-center space-x-3">
-          <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400" />
-          <div>
-            <h3 className="font-semibold text-green-900 dark:text-green-100">Calibration Active</h3>
-            <p className="text-sm text-green-700 dark:text-green-300">
-              AI diagnostics and monitoring are fully operational for this parcel.
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  return null;
-};
 
 const CALIBRATION_TYPE_LABELS: Record<string, string> = {
   initial: 'Initial',
@@ -606,19 +543,364 @@ const PlantingYearPrompt = ({ parcelId, onSaved }: { parcelId: string;
   );
 };
 
-const CALIBRATION_STEPS: Record<string, { icon: React.ReactNode; label: string }> = {
-  data_collection: { icon: <Satellite className="w-4 h-4" />, label: 'Collecte des données' },
-  satellite_sync: { icon: <Satellite className="w-4 h-4" />, label: 'Synchronisation satellite' },
-  weather_sync: { icon: <CloudRain className="w-4 h-4" />, label: 'Synchronisation météo' },
-  raster_extraction: { icon: <Target className="w-4 h-4" />, label: 'Extraction pixels NDVI' },
-  gdd_precompute: { icon: <Thermometer className="w-4 h-4" />, label: 'Calcul degrés-jours' },
-  calibration_engine: { icon: <BrainCircuit className="w-4 h-4" />, label: 'Moteur de calibration' },
-  saving_results: { icon: <Save className="w-4 h-4" />, label: 'Sauvegarde résultats' },
-  ai_reports: { icon: <Activity className="w-4 h-4" />, label: 'Rapports IA' },
-  finalizing: { icon: <CheckCircle2 className="w-4 h-4" />, label: 'Finalisation' },
+const CALIBRATION_STEP_ICONS: Record<string, React.ReactNode> = {
+  data_collection: <Satellite className="w-4 h-4" />,
+  satellite_sync: <Satellite className="w-4 h-4" />,
+  weather_sync: <CloudRain className="w-4 h-4" />,
+  raster_extraction: <Target className="w-4 h-4" />,
+  gdd_precompute: <Thermometer className="w-4 h-4" />,
+  calibration_engine: <BrainCircuit className="w-4 h-4" />,
+  saving_results: <Save className="w-4 h-4" />,
+  ai_reports: <Activity className="w-4 h-4" />,
+  finalizing: <CheckCircle2 className="w-4 h-4" />,
 };
 
+const CALIBRATION_STEP_LABELS: Record<string, { fr: string; en: string }> = {
+  data_collection: { fr: 'Collecte des données', en: 'Data collection' },
+  satellite_sync: { fr: 'Synchronisation satellite', en: 'Satellite sync' },
+  weather_sync: { fr: 'Synchronisation météo', en: 'Weather sync' },
+  raster_extraction: { fr: 'Extraction pixels NDVI', en: 'NDVI pixel extraction' },
+  gdd_precompute: { fr: 'Calcul degrés-jours', en: 'Growing degree days' },
+  calibration_engine: { fr: 'Moteur de calibration', en: 'Calibration engine' },
+  saving_results: { fr: 'Sauvegarde résultats', en: 'Saving results' },
+  ai_reports: { fr: 'Rapports IA', en: 'AI reports' },
+  finalizing: { fr: 'Finalisation', en: 'Finalizing' },
+};
+
+function resolveStepLabel(key: string, locale: string): string {
+  const entry = CALIBRATION_STEP_LABELS[key];
+  if (!entry) return key;
+  const lang = (locale || '').toLowerCase().split('-')[0];
+  return lang === 'fr' ? entry.fr : entry.en;
+}
+
+// ─── Journey timeline (always visible)  ─────────────────────────────
+type JourneyStepKey = 'data' | 'calibration' | 'baseline' | 'monitoring';
+
+function deriveJourneyStep(
+  phase: CalibrationPhase | null | undefined,
+  hasV2Report: boolean,
+): JourneyStepKey {
+  if (phase === 'active') return 'monitoring';
+  if (phase === 'calibrated' || phase === 'awaiting_nutrition_option') return 'baseline';
+  if (phase === 'calibrating') return 'calibration';
+  if (hasV2Report) return 'baseline';
+  return 'data';
+}
+
+const PhaseTimeline = ({ current }: { current: JourneyStepKey }) => {
+  const steps: Array<{ key: JourneyStepKey; label: string; hint: string; Icon: React.ComponentType<{ className?: string }> }> = [
+    { key: 'data', label: 'Data', hint: 'Year, satellite, weather', Icon: Satellite },
+    { key: 'calibration', label: 'Calibration', hint: 'Running models', Icon: BrainCircuit },
+    { key: 'baseline', label: 'Baseline', hint: 'Validate + nutrition', Icon: Shield },
+    { key: 'monitoring', label: 'Monitoring', hint: 'AI diagnostics live', Icon: Activity },
+  ];
+  const currentIndex = steps.findIndex((s) => s.key === current);
+
+  return (
+    <ol className="grid grid-cols-2 sm:grid-cols-4 gap-2" aria-label="Calibration journey">
+      {steps.map((step, idx) => {
+        const isDone = idx < currentIndex;
+        const isActive = idx === currentIndex;
+        const tone = isDone
+          ? 'border-green-300 bg-green-50 text-green-800 dark:border-green-800/60 dark:bg-green-900/20 dark:text-green-100'
+          : isActive
+          ? 'border-emerald-400 bg-white ring-2 ring-emerald-400/40 text-gray-900 dark:border-emerald-500 dark:bg-gray-900 dark:text-white shadow-sm'
+          : 'border-gray-200 bg-gray-50 text-gray-500 dark:border-gray-800 dark:bg-gray-900/40 dark:text-gray-500';
+
+        return (
+          <li
+            key={step.key}
+            className={cn(
+              'flex items-start gap-2.5 rounded-lg border px-3 py-2.5 transition-colors',
+              tone,
+            )}
+          >
+            <div
+              className={cn(
+                'mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold',
+                isDone
+                  ? 'bg-green-600 text-white'
+                  : isActive
+                  ? 'bg-emerald-600 text-white'
+                  : 'bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400',
+              )}
+            >
+              {isDone ? <CheckCircle2 className="h-4 w-4" /> : idx + 1}
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 text-sm font-semibold">
+                <step.Icon className="h-3.5 w-3.5 opacity-70" />
+                {step.label}
+              </div>
+              <p className="text-[11px] leading-tight opacity-80 mt-0.5">{step.hint}</p>
+            </div>
+          </li>
+        );
+      })}
+    </ol>
+  );
+};
+
+// ─── Hero status card  ─────────────────────────────────────────────
+type HeroTone = 'neutral' | 'info' | 'warning' | 'success' | 'danger';
+
+const HERO_TONE_CLASSES: Record<HeroTone, { card: string; pill: string; icon: string }> = {
+  neutral: {
+    card: 'border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900',
+    pill: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-200',
+    icon: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-200',
+  },
+  info: {
+    card: 'border-blue-200 bg-gradient-to-br from-blue-50 to-white dark:border-blue-900/50 dark:from-blue-950/30 dark:to-gray-900',
+    pill: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-200',
+    icon: 'bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-300',
+  },
+  warning: {
+    card: 'border-amber-200 bg-gradient-to-br from-amber-50 to-white dark:border-amber-900/50 dark:from-amber-950/30 dark:to-gray-900',
+    pill: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200',
+    icon: 'bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-300',
+  },
+  success: {
+    card: 'border-emerald-200 bg-gradient-to-br from-emerald-50 to-white dark:border-emerald-900/50 dark:from-emerald-950/30 dark:to-gray-900',
+    pill: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200',
+    icon: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-300',
+  },
+  danger: {
+    card: 'border-red-200 bg-gradient-to-br from-red-50 to-white dark:border-red-900/50 dark:from-red-950/30 dark:to-gray-900',
+    pill: 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-200',
+    icon: 'bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-300',
+  },
+};
+
+interface HeroStatus {
+  tone: HeroTone;
+  statusLabel: string;
+  title: string;
+  description: string;
+  Icon: React.ComponentType<{ className?: string }>;
+}
+
+function deriveHeroStatus({
+  phase,
+  isFailed,
+  isCalibrating,
+  missingPlantingYear,
+  isObservationOnly,
+}: {
+  phase: CalibrationPhase | null | undefined;
+  isFailed: boolean;
+  isCalibrating: boolean;
+  missingPlantingYear: boolean;
+  isObservationOnly: boolean;
+}): HeroStatus {
+  if (missingPlantingYear) {
+    return {
+      tone: 'warning',
+      statusLabel: 'Needs input',
+      title: 'Planting year required',
+      description: 'Tell us when this parcel was planted so we can tune age-aware thresholds.',
+      Icon: TreePine,
+    };
+  }
+  if (isFailed) {
+    return {
+      tone: 'danger',
+      statusLabel: 'Failed',
+      title: 'Calibration failed',
+      description: 'Something went wrong during the last run — retry calibration to continue.',
+      Icon: AlertCircle,
+    };
+  }
+  if (isCalibrating) {
+    return {
+      tone: 'info',
+      statusLabel: 'In progress',
+      title: 'Calibration running',
+      description: 'We’re analyzing satellite imagery, weather and parcel data.',
+      Icon: BrainCircuit,
+    };
+  }
+  if (phase === 'active') {
+    return {
+      tone: isObservationOnly ? 'warning' : 'success',
+      statusLabel: isObservationOnly ? 'Observation mode' : 'Active',
+      title: isObservationOnly ? 'Observation mode active' : 'AI diagnostics live',
+      description: isObservationOnly
+        ? 'Low confidence — AI suggestions are shown but treated as observations only.'
+        : 'Baseline validated. The AI is monitoring this parcel in real time.',
+      Icon: isObservationOnly ? Eye : CheckCircle2,
+    };
+  }
+  if (phase === 'awaiting_nutrition_option') {
+    return {
+      tone: 'info',
+      statusLabel: 'Awaiting nutrition choice',
+      title: 'Choose a nutrition program',
+      description: 'Pick a nutrition program to finish activating AI diagnostics.',
+      Icon: Leaf,
+    };
+  }
+  if (phase === 'calibrated') {
+    return {
+      tone: 'warning',
+      statusLabel: 'Awaiting validation',
+      title: 'Validate the calibration baseline',
+      description: 'Review the report below and validate to lock in the reference state.',
+      Icon: Shield,
+    };
+  }
+  // ready_calibration | awaiting_data | unknown
+  return {
+    tone: 'neutral',
+    statusLabel: 'Not calibrated',
+    title: 'Start calibration',
+    description: 'Run the calibration wizard to build the parcel’s baseline.',
+    Icon: BrainCircuit,
+  };
+}
+
+interface HeroStatusCardProps {
+  status: HeroStatus;
+  healthScore: number | null;
+  confidenceFraction: number | null;
+  baselineDate: string | null;
+  locale: string;
+  primaryCta?: { label: string; onClick: () => void; disabled?: boolean; Icon?: React.ComponentType<{ className?: string }> };
+  secondaryCta?: { label: string; onClick: () => void; disabled?: boolean; Icon?: React.ComponentType<{ className?: string }> };
+}
+
+const HeroStatusCard = ({
+  status,
+  healthScore,
+  confidenceFraction,
+  baselineDate,
+  locale,
+  primaryCta,
+  secondaryCta,
+}: HeroStatusCardProps) => {
+  const tone = HERO_TONE_CLASSES[status.tone];
+  const StatusIcon = status.Icon;
+
+  return (
+    <div
+      className={cn(
+        'rounded-2xl border p-5 sm:p-6 shadow-sm',
+        tone.card,
+      )}
+      data-testid="calibration-hero-status"
+    >
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex gap-4 min-w-0 flex-1">
+          <div className={cn('h-11 w-11 rounded-xl flex items-center justify-center shrink-0', tone.icon)}>
+            <StatusIcon className="h-5 w-5" />
+          </div>
+          <div className="min-w-0">
+            <span className={cn('inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold', tone.pill)}>
+              {status.statusLabel}
+            </span>
+            <h2 className="mt-2 text-xl sm:text-2xl font-bold text-gray-900 dark:text-white leading-tight">
+              {status.title}
+            </h2>
+            <p className="mt-1 text-sm text-gray-600 dark:text-gray-300 max-w-prose">
+              {status.description}
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-3 gap-3 sm:w-72 sm:shrink-0">
+          <HeroMetric
+            label="Health"
+            value={healthScore != null ? `${healthScore}` : '—'}
+            suffix={healthScore != null ? '/100' : undefined}
+            valueClassName={healthScore != null ? healthScoreColor(healthScore) : undefined}
+          />
+          <HeroMetric
+            label="Confidence"
+            value={
+              confidenceFraction != null
+                ? `${Math.round(confidenceFraction * 100)}`
+                : '—'
+            }
+            suffix={confidenceFraction != null ? '%' : undefined}
+          />
+          <HeroMetric
+            label="Baseline"
+            value={
+              baselineDate
+                ? new Date(baselineDate).toLocaleDateString(locale || undefined, {
+                    month: 'short',
+                    day: 'numeric',
+                  })
+                : '—'
+            }
+            valueClassName="text-sm sm:text-base"
+          />
+        </div>
+      </div>
+
+      {(primaryCta || secondaryCta) && (
+        <div className="mt-5 flex flex-wrap items-center gap-2 pt-4 border-t border-black/5 dark:border-white/5">
+          {primaryCta && (
+            <Button
+              variant={status.tone === 'danger' ? 'red' : status.tone === 'warning' ? 'amber' : status.tone === 'success' ? 'green' : 'blue'}
+              type="button"
+              onClick={primaryCta.onClick}
+              disabled={primaryCta.disabled}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold"
+              data-testid="calibration-hero-primary-cta"
+            >
+              {primaryCta.Icon ? <primaryCta.Icon className="w-4 h-4" /> : null}
+              {primaryCta.label}
+            </Button>
+          )}
+          {secondaryCta && (
+            <Button
+              variant="outline"
+              type="button"
+              onClick={secondaryCta.onClick}
+              disabled={secondaryCta.disabled}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium"
+              data-testid="calibration-hero-secondary-cta"
+            >
+              {secondaryCta.Icon ? <secondaryCta.Icon className="w-4 h-4" /> : null}
+              {secondaryCta.label}
+            </Button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const HeroMetric = ({
+  label,
+  value,
+  suffix,
+  valueClassName,
+}: {
+  label: string;
+  value: string;
+  suffix?: string;
+  valueClassName?: string;
+}) => (
+  <div className="rounded-lg bg-white/70 dark:bg-gray-950/40 border border-black/5 dark:border-white/5 p-2.5">
+    <div className="text-[10px] font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
+      {label}
+    </div>
+    <div className={cn('mt-0.5 text-lg font-bold text-gray-900 dark:text-white', valueClassName)}>
+      {value}
+      {suffix && (
+        <span className="ml-0.5 text-xs font-medium text-gray-500 dark:text-gray-400">
+          {suffix}
+        </span>
+      )}
+    </div>
+  </div>
+);
+
 const CalibrationProgressStepper = ({ progress }: { progress: CalibrationProgressEvent | null }) => {
+  const { i18n } = useTranslation();
   const currentStep = progress?.step ?? 0;
   const totalSteps = progress?.total_steps ?? 7;
   const percent = progress?.percent ?? 0;
@@ -657,7 +939,8 @@ const CalibrationProgressStepper = ({ progress }: { progress: CalibrationProgres
       <div className="space-y-2">
         {stepKeys.map((key, index) => {
           const stepNum = index + 1;
-          const stepDef = CALIBRATION_STEPS[key];
+          const stepIcon = CALIBRATION_STEP_ICONS[key];
+          const stepLabel = resolveStepLabel(key, i18n.language);
           const isActive = key === stepKey;
           const isCompleted = currentStep > stepNum;
 
@@ -695,9 +978,9 @@ const CalibrationProgressStepper = ({ progress }: { progress: CalibrationProgres
                     ? 'text-green-700 dark:text-green-300'
                     : 'text-gray-400 dark:text-gray-500'
               }`}>
-                {stepDef?.icon}
+                {stepIcon}
                 <span className={`text-sm ${isActive ? 'font-medium' : ''}`}>
-                  {stepDef?.label ?? key}
+                  {stepLabel}
                 </span>
               </div>
 
@@ -716,7 +999,7 @@ const CalibrationProgressStepper = ({ progress }: { progress: CalibrationProgres
 
 const AICalibrationPage = () => {
   const { parcelId } = Route.useParams();
-  const { t: tAi } = useTranslation('ai');
+  const { t: tAi, i18n } = useTranslation('ai');
   const navigate = useNavigate();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmAction] = useState<{title:string;description?:string;variant?:"destructive"|"default";onConfirm:()=>void}>({title:"",onConfirm:()=>{}});
@@ -817,6 +1100,22 @@ const AICalibrationPage = () => {
     refetchReport,
   ]);
 
+  // "Soft" F2/F3 recalibration banner — freshness check on the latest run.
+  // Hoisted above the early `isResolving` return so hooks fire in a stable order.
+  const latestHistoryHeadForSoftBanner = historyRecords?.[0] ?? null;
+  const softRecalibrationKind: 'Partial' | 'Annual' | null = useMemo(() => {
+    const h = latestHistoryHeadForSoftBanner;
+    if (!h || phase !== 'active' || h.status !== 'validated') return null;
+    if (h.type !== 'F2_partial' && h.type !== 'F3_complete') return null;
+    const completedAt = h.completed_at ? Date.parse(h.completed_at) : NaN;
+    if (!Number.isFinite(completedAt)) return null;
+    // eslint-disable-next-line react-hooks/purity -- freshness check: stale after 30 min
+    const ageMinutes = (Date.now() - completedAt) / 60000;
+    if (ageMinutes > 30) return null;
+    return h.type === 'F2_partial' ? 'Partial' : 'Annual';
+  }, [latestHistoryHeadForSoftBanner, phase]);
+  const shouldShowSoftRecalibration = softRecalibrationKind !== null;
+
   // Show loader during initial load OR during background refetch when the
   // current (possibly stale) data would produce an empty page.
   const wouldBeEmptyPage = !hasV2Report && !isCalibrating && !isFailed &&
@@ -828,89 +1127,149 @@ const AICalibrationPage = () => {
     return <SectionLoader className="h-64 py-0" />;
   }
 
+  // Hero status — derived from phase/flags to surface the most relevant CTA
+  const heroStatus = deriveHeroStatus({
+    phase,
+    isFailed,
+    isCalibrating,
+    missingPlantingYear,
+    isObservationOnly,
+  });
+
+  const latestHistory = historyRecords?.[0] ?? null;
+  const baselineDate = latestHistory?.completed_at ?? latestHistory?.created_at ?? null;
+  const heroHealthScore = v2Output?.step8?.health_score?.total ?? latestHistory?.health_score ?? null;
+  const heroConfidence =
+    (v2Output ? confidenceToFraction(v2Output.confidence.normalized_score) : null) ??
+    (latestHistory?.confidence_score != null
+      ? confidenceToFraction(latestHistory.confidence_score)
+      : null);
+
+  let heroPrimary: HeroStatusCardProps['primaryCta'] | undefined;
+  let heroSecondary: HeroStatusCardProps['secondaryCta'] | undefined;
+
+  if (missingPlantingYear) {
+    heroPrimary = {
+      label: 'Add planting year',
+      onClick: () => {
+        document.getElementById('planting-year-input')?.focus();
+      },
+      Icon: TreePine,
+    };
+  } else if (isFailed) {
+    heroPrimary = {
+      label: 'Retry calibration',
+      onClick: handleOpenFullRecalibrationWizard,
+      Icon: Play,
+      disabled: missingPlantingYear,
+    };
+  } else if (isCalibrating) {
+    heroPrimary = {
+      label: 'Calibrating…',
+      onClick: () => {},
+      disabled: true,
+      Icon: BrainCircuit,
+    };
+  } else if (phase === 'calibrated') {
+    heroPrimary = {
+      label: 'Review & validate',
+      onClick: () =>
+        document
+          .querySelector('[data-testid="calibration-action-panels"]')
+          ?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
+      Icon: Shield,
+    };
+    heroSecondary = {
+      label: 'Re-run calibration',
+      onClick: handleOpenFullRecalibrationWizard,
+      Icon: Play,
+      disabled: isBusy,
+    };
+  } else if (phase === 'awaiting_nutrition_option') {
+    heroPrimary = {
+      label: 'Choose nutrition option',
+      onClick: () =>
+        document
+          .querySelector('[data-testid="calibration-action-panels"]')
+          ?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
+      Icon: Leaf,
+    };
+  } else if (phase === 'active') {
+    heroPrimary = {
+      label: tAi('calibration.nextStep.openSaison', 'Open the season'),
+      onClick: () =>
+        navigate({
+          to: '/parcels/$parcelId/ai/plan/summary',
+          params: { parcelId },
+          search: { farmId: undefined },
+        }),
+      Icon: ArrowRight,
+    };
+    heroSecondary = {
+      label: tAi('calibration.page.partialUpdate'),
+      onClick: handleOpenPartialRecalibration,
+      Icon: GitCompareArrows,
+      disabled: isBusy,
+    };
+  } else if (phase !== 'calibrating' && !isWizardPhase) {
+    heroPrimary = {
+      label: isCalibrating ? tAi('calibration.page.calculating') : tAi('calibration.page.fullRecalibration'),
+      onClick: handleOpenFullRecalibrationWizard,
+      Icon: Play,
+      disabled: isBusy || missingPlantingYear,
+    };
+  }
+
+  const journeyStep = deriveJourneyStep(phase, hasV2Report);
+
   return (
     <div className="space-y-6" data-testid="calibration-page">
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white" data-testid="calibration-page-title">
-            {tAi('calibration.page.title')}
-          </h2>
-          <p className="text-sm text-gray-600 dark:text-gray-400">
-            {tAi('calibration.page.subtitle')}
-          </p>
-        </div>
-        {(calibration || hasV2Report) && (
-          <div className="flex items-center gap-2">
-            {phase === 'active' && (
-              <Button variant="blue" type="button" onClick={handleOpenPartialRecalibration} className="flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors" data-testid="calibration-open-partial-recalibration" >
-                <GitCompareArrows className="w-4 h-4" />
-                <span>{tAi('calibration.page.partialUpdate')}</span>
-              </Button>
-            )}
+      <HeroStatusCard
+        status={heroStatus}
+        healthScore={heroHealthScore}
+        confidenceFraction={heroConfidence}
+        baselineDate={baselineDate}
+        locale={i18n.language}
+        primaryCta={heroPrimary}
+        secondaryCta={heroSecondary}
+      />
 
-            <Button variant="green" type="button" onClick={handleOpenFullRecalibrationWizard} disabled={isBusy || missingPlantingYear} className="flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors" title={missingPlantingYear ? tAi('calibration.page.plantingYearTitle') : undefined} data-testid="calibration-open-full-recalibration" >
-              {isBusy ? (
-                <BrainCircuit className="w-4 h-4 animate-pulse" />
-              ) : (
-                <Play className="w-4 h-4" />
-              )}
-              <span>
-                {isCalibrating ? tAi('calibration.page.calculating') : tAi('calibration.page.fullRecalibration')}
-              </span>
+      <PhaseTimeline current={journeyStep} />
+
+      {shouldShowSoftRecalibration && softRecalibrationKind && (
+        <div
+          className="bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800/30 p-4"
+          data-testid="recalibration-review-banner"
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-start space-x-3">
+              <Sparkles className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+              <div>
+                <h3 className="text-sm font-semibold text-blue-900 dark:text-blue-100">
+                  {softRecalibrationKind} recalibration applied
+                </h3>
+                <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
+                  Baselines were automatically updated. Review the changes to confirm they match your expectations.
+                </p>
+              </div>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              type="button"
+              onClick={() => {
+                document
+                  .querySelector('[data-testid="calibration-review-section"]')
+                  ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              }}
+              className="shrink-0"
+            >
+              <Eye className="w-4 h-4 mr-1.5" />
+              Review changes
             </Button>
           </div>
-        )}
-      </div>
-
-      {phase && <PhaseBanner phase={phase} />}
-
-      {(() => {
-        // F2/F3 auto-validate without a user confirm step. Surface a soft
-        // "just recalibrated" banner on `active` with a link to review the
-        // diff — so users aren't surprised the parcel snapped back to
-        // active without any intermediate screen.
-        const latest = historyRecords?.[0];
-        if (!latest || phase !== 'active' || latest.status !== 'validated') return null;
-        if (latest.type !== 'F2_partial' && latest.type !== 'F3_complete') return null;
-        const completedAt = latest.completed_at ? Date.parse(latest.completed_at) : NaN;
-        const ageMinutes = Number.isFinite(completedAt) ? (Date.now() - completedAt) / 60000 : Infinity;
-        if (ageMinutes > 30) return null;
-        const kind = latest.type === 'F2_partial' ? 'Partial' : 'Annual';
-        return (
-          <div
-            className="bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800/30 p-4"
-            data-testid="recalibration-review-banner"
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex items-start space-x-3">
-                <Sparkles className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
-                <div>
-                  <h3 className="text-sm font-semibold text-blue-900 dark:text-blue-100">
-                    {kind} recalibration applied
-                  </h3>
-                  <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
-                    Baselines were automatically updated. Review the changes to confirm they match your expectations.
-                  </p>
-                </div>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                type="button"
-                onClick={() => {
-                  document
-                    .querySelector('[data-testid="calibration-review-section"]')
-                    ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }}
-                className="shrink-0"
-              >
-                <Eye className="w-4 h-4 mr-1.5" />
-                Review changes
-              </Button>
-            </div>
-          </div>
-        );
-      })()}
+        </div>
+      )}
 
       {!isCalibrating && hasV2Report && (phase === 'calibrated' || phase === 'awaiting_nutrition_option' || phase === 'active' || calibrationCompletedButPhaseStuck) && (
         <CalibrationSyntheseBanner
@@ -1102,41 +1461,7 @@ const AICalibrationPage = () => {
         <CalibrationProgressStepper progress={calibrationProgress} />
       )}
 
-      {isObservationOnly && (
-        <div className="bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-800/30 p-4">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex items-start space-x-3">
-              <Eye className="w-5 h-5 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
-              <div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h3 className="text-sm font-semibold text-amber-900 dark:text-amber-100">
-                    {tAi('calibration.observationMode.title')}
-                  </h3>
-                  {typeof calibration?.confidence_score === 'number' && (
-                    <span className="text-xs px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-200 font-medium">
-                      Confidence {formatConfidencePercent(calibration.confidence_score)}
-                    </span>
-                  )}
-                </div>
-                <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
-                  {tAi('calibration.observationMode.body')}
-                </p>
-              </div>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              type="button"
-              onClick={handleOpenFullRecalibrationWizard}
-              disabled={isBusy || missingPlantingYear}
-              className="shrink-0"
-            >
-              <Play className="w-4 h-4 mr-1.5" />
-              {tAi('calibration.page.fullRecalibration')}
-            </Button>
-          </div>
-        </div>
-      )}
+      {/* Observation mode is surfaced in the hero status card above */}
 
       {hasV2Report &&
         !isCalibrating &&
