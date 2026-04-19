@@ -220,6 +220,33 @@ const ActivityHeatMap = ({
     };
   }, [isFullscreen]);
 
+  // Lock body scroll when fullscreen so mobile browsers don't rubber-band
+  // the page behind the overlay and we steal the viewport cleanly.
+  useEffect(() => {
+    if (!isFullscreen) return;
+    const { body, documentElement: html } = document;
+    const prevBodyOverflow = body.style.overflow;
+    const prevHtmlOverflow = html.style.overflow;
+    body.style.overflow = 'hidden';
+    html.style.overflow = 'hidden';
+    return () => {
+      body.style.overflow = prevBodyOverflow;
+      html.style.overflow = prevHtmlOverflow;
+    };
+  }, [isFullscreen]);
+
+  // iOS Safari sometimes doesn't exit fullscreen on a hardware/OS back swipe
+  // if we're inside a transformed ancestor. Listening to Escape is a cheap
+  // desktop escape hatch that also helps keyboard-only users.
+  useEffect(() => {
+    if (!isFullscreen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsFullscreen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isFullscreen]);
+
   // Stats
   const activeFarmsCount = useMemo(() => new Set(data.filter(p => !p.isIdle && p.farmId).map(p => p.farmId)).size, [data]);
   const totalFarmsCount = useMemo(() => new Set(data.filter(p => p.farmId).map(p => p.farmId)).size, [data]);
@@ -236,16 +263,23 @@ const ActivityHeatMap = ({
   }
 
   return (
-    <div className={cn(
-      "transition-all duration-500",
-      isFullscreen
-        // Use viewport units so `fixed` behaves as expected even if an ancestor
-        // creates a new containing block (e.g. via transforms/animations).
-        ? 'fixed inset-0 z-[2000] bg-white dark:bg-slate-900 flex flex-col w-screen h-screen min-h-0'
-        : 'group bg-white dark:bg-slate-800 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden hover:shadow-xl hover:shadow-emerald-500/5'
-    )}>
+    <div
+      className={cn(
+        'transition-all duration-500',
+        isFullscreen
+          // `100dvh` follows the mobile visible viewport (shrinks with the URL bar),
+          // which `100vh` / `h-screen` does NOT on iOS Safari + Android Chrome — the
+          // old setup let the bottom of the fullscreen view disappear under the
+          // browser chrome. `w-screen` is fine because viewport-width is stable.
+          ? 'fixed inset-0 z-[2000] bg-white dark:bg-slate-900 flex flex-col w-screen min-h-0 h-[100dvh] max-h-[100dvh] pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]'
+          : 'group bg-white dark:bg-slate-800 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden hover:shadow-xl hover:shadow-emerald-500/5',
+      )}
+    >
       {/* Header */}
-      <div className="p-6 border-b border-slate-50 dark:border-slate-700/50">
+      <div className={cn(
+        isFullscreen ? 'p-4 sm:p-6' : 'p-6',
+        'border-b border-slate-50 dark:border-slate-700/50'
+      )}>
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <div className="p-2.5 bg-emerald-50 dark:bg-emerald-900/30 rounded-2xl group-hover:scale-110 transition-transform duration-500">
