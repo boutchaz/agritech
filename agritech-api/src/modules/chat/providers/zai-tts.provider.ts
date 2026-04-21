@@ -116,7 +116,9 @@ export class ZaiTTSProvider {
 
       const audioBuffer = Buffer.from(response.data);
       // Z.ai returns WAV format by default
-      const contentType = response.headers['content-type'] || 'audio/wav';
+      const rawContentType = response.headers['content-type'];
+      const contentType =
+        typeof rawContentType === 'string' ? rawContentType : 'audio/wav';
 
       this.logger.log(`TTS generation complete. Audio size: ${audioBuffer.length} bytes`);
 
