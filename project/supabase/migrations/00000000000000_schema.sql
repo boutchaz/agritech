@@ -6377,6 +6377,12 @@ CREATE TABLE IF NOT EXISTS public.calibrations (
   yield_potential_max DECIMAL(6,2),
   coefficient_etat_parcelle DECIMAL(4,2),
 
+  -- User-confirmed target yield (farmer override of LLM-computed rendement_cible)
+  target_yield_t_ha DECIMAL(6,2),
+  target_yield_source TEXT CHECK (target_yield_source IN ('suggested', 'user_override')),
+  target_yield_confirmed_at TIMESTAMPTZ,
+  target_yield_confirmed_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+
   -- Anomaly count
   anomaly_count INTEGER DEFAULT 0,
 
@@ -6422,6 +6428,27 @@ COMMENT ON COLUMN calibrations.profile_snapshot IS 'Snapshot of parcel agronomic
 COMMENT ON COLUMN calibrations.recalibration_motif IS 'Recalibration motif for F2_partial recalibrations';
 COMMENT ON COLUMN calibrations.previous_baseline IS 'Snapshot of validated baseline prior to recalibration';
 COMMENT ON COLUMN calibrations.campaign_bilan IS 'Computed post-campaign comparison payload used by F3_complete recalibration flow';
+
+-- Idempotent add for existing installations
+ALTER TABLE public.calibrations
+  ADD COLUMN IF NOT EXISTS target_yield_t_ha DECIMAL(6,2),
+  ADD COLUMN IF NOT EXISTS target_yield_source TEXT,
+  ADD COLUMN IF NOT EXISTS target_yield_confirmed_at TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS target_yield_confirmed_by UUID REFERENCES auth.users(id) ON DELETE SET NULL;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.table_constraints
+    WHERE table_name = 'calibrations' AND constraint_name = 'calibrations_target_yield_source_check'
+  ) THEN
+    ALTER TABLE public.calibrations ADD CONSTRAINT calibrations_target_yield_source_check
+      CHECK (target_yield_source IS NULL OR target_yield_source IN ('suggested', 'user_override'));
+  END IF;
+END $$;
+
+COMMENT ON COLUMN calibrations.target_yield_t_ha IS 'Farmer-confirmed target yield (t/ha). Overrides LLM-computed rendement_cible when set; NULL means LLM falls back to its ÉTAPE 2 computation.';
+COMMENT ON COLUMN calibrations.target_yield_source IS 'suggested = farmer accepted deterministic suggestion; user_override = farmer entered a custom value';
 
 CREATE INDEX IF NOT EXISTS idx_calibrations_parcel_id ON public.calibrations(parcel_id);
 CREATE INDEX IF NOT EXISTS idx_calibrations_organization_id ON public.calibrations(organization_id);
@@ -17954,113 +17981,49 @@ COMMENT ON TABLE marketplace_reviews IS 'Reviews between buyers and sellers afte
 -- STORAGE BUCKETS
 -- =====================================================
 
--- Ensure storage.buckets has the "public" column (required for older Supabase setups)
-DO $$
+-- Guarded: skip entire storage setup if storage schema is absent (non-Supabase Postgres)
+DO $storage_setup$
 BEGIN
+  IF to_regclass('storage.buckets') IS NULL OR to_regclass('storage.objects') IS NULL THEN
+    RAISE NOTICE 'Skipping storage setup — storage schema not found';
+    RETURN;
+  END IF;
+
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.columns
     WHERE table_schema = 'storage' AND table_name = 'buckets' AND column_name = 'public'
   ) THEN
-    ALTER TABLE storage.buckets ADD COLUMN "public" boolean DEFAULT false;
+    EXECUTE 'ALTER TABLE storage.buckets ADD COLUMN "public" boolean DEFAULT false';
   END IF;
-END $$;
 
--- Create products storage bucket for marketplace images
-INSERT INTO storage.buckets (id, name, "public")
-VALUES ('products', 'products', true)
-ON CONFLICT (id) DO UPDATE SET "public" = true;
+  EXECUTE $q$ INSERT INTO storage.buckets (id, name, "public") VALUES ('products', 'products', true) ON CONFLICT (id) DO UPDATE SET "public" = true $q$;
 
--- Drop existing policies if they exist (cleanup for idempotency)
-DROP POLICY IF EXISTS "Public read access for products" ON storage.objects;
-DROP POLICY IF EXISTS "Authenticated upload for products" ON storage.objects;
-DROP POLICY IF EXISTS "Users can update own product images" ON storage.objects;
-DROP POLICY IF EXISTS "Users can delete own product images" ON storage.objects;
+  EXECUTE 'DROP POLICY IF EXISTS "Public read access for products" ON storage.objects';
+  EXECUTE 'DROP POLICY IF EXISTS "Authenticated upload for products" ON storage.objects';
+  EXECUTE 'DROP POLICY IF EXISTS "Users can update own product images" ON storage.objects';
+  EXECUTE 'DROP POLICY IF EXISTS "Users can delete own product images" ON storage.objects';
 
--- Policy: Public read access for products bucket
-CREATE POLICY "Public read access for products"
-ON storage.objects FOR SELECT
-USING (bucket_id = 'products');
+  EXECUTE $q$ CREATE POLICY "Public read access for products" ON storage.objects FOR SELECT USING (bucket_id = 'products') $q$;
+  EXECUTE $q$ CREATE POLICY "Authenticated upload for products" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'products' AND auth.role() = 'authenticated') $q$;
+  EXECUTE $q$ CREATE POLICY "Users can update own product images" ON storage.objects FOR UPDATE USING (bucket_id = 'products' AND auth.uid()::text = (storage.foldername(name))[1]) WITH CHECK (bucket_id = 'products' AND auth.uid()::text = (storage.foldername(name))[1]) $q$;
+  EXECUTE $q$ CREATE POLICY "Users can delete own product images" ON storage.objects FOR DELETE USING (bucket_id = 'products' AND auth.uid()::text = (storage.foldername(name))[1]) $q$;
 
--- Policy: Authenticated users can upload to products bucket
-CREATE POLICY "Authenticated upload for products"
-ON storage.objects FOR INSERT
-WITH CHECK (bucket_id = 'products' AND auth.role() = 'authenticated');
+  EXECUTE $q$ INSERT INTO storage.buckets (id, name, "public") VALUES ('avatars', 'avatars', true) ON CONFLICT (id) DO UPDATE SET "public" = true $q$;
 
--- Policy: Users can update their own product images
-CREATE POLICY "Users can update own product images"
-ON storage.objects FOR UPDATE
-USING (
-  bucket_id = 'products'
-  AND auth.uid()::text = (storage.foldername(name))[1]
-)
-WITH CHECK (
-  bucket_id = 'products'
-  AND auth.uid()::text = (storage.foldername(name))[1]
-);
+  EXECUTE 'DROP POLICY IF EXISTS "Public read access for avatars" ON storage.objects';
+  EXECUTE 'DROP POLICY IF EXISTS "Authenticated upload for avatars" ON storage.objects';
+  EXECUTE 'DROP POLICY IF EXISTS "Users can update own avatars" ON storage.objects';
+  EXECUTE 'DROP POLICY IF EXISTS "Users can delete own avatars" ON storage.objects';
 
--- Policy: Users can delete their own product images
-CREATE POLICY "Users can delete own product images"
-ON storage.objects FOR DELETE
-USING (
-  bucket_id = 'products'
-  AND auth.uid()::text = (storage.foldername(name))[1]
-);
+  EXECUTE $q$ CREATE POLICY "Public read access for avatars" ON storage.objects FOR SELECT TO public USING (bucket_id = 'avatars') $q$;
+  EXECUTE $q$ CREATE POLICY "Authenticated upload for avatars" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'avatars' AND auth.uid()::text = (storage.foldername(name))[1]) $q$;
+  EXECUTE $q$ CREATE POLICY "Users can update own avatars" ON storage.objects FOR UPDATE TO authenticated USING (bucket_id = 'avatars' AND auth.uid()::text = (storage.foldername(name))[1]) WITH CHECK (bucket_id = 'avatars' AND auth.uid()::text = (storage.foldername(name))[1]) $q$;
+  EXECUTE $q$ CREATE POLICY "Users can delete own avatars" ON storage.objects FOR DELETE TO authenticated USING (bucket_id = 'avatars' AND auth.uid()::text = (storage.foldername(name))[1]) $q$;
 
--- =====================================================
--- AVATARS STORAGE BUCKET
--- =====================================================
-
--- Create avatars storage bucket for user profile images
-INSERT INTO storage.buckets (id, name, "public")
-VALUES ('avatars', 'avatars', true)
-ON CONFLICT (id) DO UPDATE SET "public" = true;
-
--- Drop existing policies if they exist (cleanup for idempotency)
-DROP POLICY IF EXISTS "Public read access for avatars" ON storage.objects;
-DROP POLICY IF EXISTS "Authenticated upload for avatars" ON storage.objects;
-DROP POLICY IF EXISTS "Users can update own avatars" ON storage.objects;
-DROP POLICY IF EXISTS "Users can delete own avatars" ON storage.objects;
-
--- Policy: Public read access for avatars bucket
-CREATE POLICY "Public read access for avatars"
-ON storage.objects FOR SELECT
-TO public
-USING (bucket_id = 'avatars');
-
--- Policy: Authenticated users can upload to avatars bucket
-CREATE POLICY "Authenticated upload for avatars"
-ON storage.objects FOR INSERT
-TO authenticated
-WITH CHECK (
-  bucket_id = 'avatars'
-  AND auth.uid()::text = (storage.foldername(name))[1]
-);
-
--- Policy: Users can update their own avatars
-CREATE POLICY "Users can update own avatars"
-ON storage.objects FOR UPDATE
-TO authenticated
-USING (
-  bucket_id = 'avatars'
-  AND auth.uid()::text = (storage.foldername(name))[1]
-)
-WITH CHECK (
-  bucket_id = 'avatars'
-  AND auth.uid()::text = (storage.foldername(name))[1]
-);
-
--- Policy: Users can delete their own avatars
-CREATE POLICY "Users can delete own avatars"
-ON storage.objects FOR DELETE
-TO authenticated
-USING (
-  bucket_id = 'avatars'
-  AND auth.uid()::text = (storage.foldername(name))[1]
-);
-
--- Grant necessary permissions for storage
-GRANT ALL ON storage.objects TO authenticated;
-GRANT SELECT ON storage.objects TO anon;
+  EXECUTE 'GRANT ALL ON storage.objects TO authenticated';
+  EXECUTE 'GRANT SELECT ON storage.objects TO anon';
+END
+$storage_setup$;
 
 -- =====================================================
 -- FILE TRACKING SYSTEM
@@ -21315,66 +21278,33 @@ USING (
 -- Note: This migration assumes the storage.products table exists
 -- If using Supabase storage, the bucket configuration should be done via dashboard or API
 
--- Create storage bucket if it doesn't exist (for local development)
--- In production, this should be configured via Supabase dashboard
-INSERT INTO storage.buckets (id, name, "public")
-VALUES ('products', 'products', false)
-ON CONFLICT (id) DO UPDATE SET "public" = false;
+-- Guarded: skip if storage schema absent
+DO $storage_products$
+BEGIN
+  IF to_regclass('storage.buckets') IS NULL OR to_regclass('storage.objects') IS NULL THEN
+    RAISE NOTICE 'Skipping products bucket setup — storage schema not found';
+    RETURN;
+  END IF;
 
--- Policy: Allow anyone to view products (images) but not list the bucket
-DROP POLICY IF EXISTS "Public read access for products" ON storage.objects;
-DROP POLICY IF EXISTS "Authenticated upload for products" ON storage.objects;
-DROP POLICY IF EXISTS "Users can update own product images" ON storage.objects;
-DROP POLICY IF EXISTS "Users can delete own product images" ON storage.objects;
-DROP POLICY IF EXISTS "allow_public_view_products" ON storage.objects;
-CREATE POLICY "allow_public_view_products"
-ON storage.objects FOR SELECT
-USING (bucket_id = 'products');
+  EXECUTE $q$ INSERT INTO storage.buckets (id, name, "public") VALUES ('products', 'products', false) ON CONFLICT (id) DO UPDATE SET "public" = false $q$;
 
--- Policy: Only authenticated users can upload products
-DROP POLICY IF EXISTS "allow_auth_upload_products" ON storage.objects;
-CREATE POLICY "allow_auth_upload_products"
-ON storage.objects FOR INSERT
-WITH CHECK (
-  bucket_id = 'products'
-  AND auth.role() = 'authenticated'
-);
+  EXECUTE 'DROP POLICY IF EXISTS "Public read access for products" ON storage.objects';
+  EXECUTE 'DROP POLICY IF EXISTS "Authenticated upload for products" ON storage.objects';
+  EXECUTE 'DROP POLICY IF EXISTS "Users can update own product images" ON storage.objects';
+  EXECUTE 'DROP POLICY IF EXISTS "Users can delete own product images" ON storage.objects';
+  EXECUTE 'DROP POLICY IF EXISTS "allow_public_view_products" ON storage.objects';
+  EXECUTE $q$ CREATE POLICY "allow_public_view_products" ON storage.objects FOR SELECT USING (bucket_id = 'products') $q$;
 
--- Policy: Only the uploader or admin can update product files
-DROP POLICY IF EXISTS "allow_owner_update_products" ON storage.objects;
-CREATE POLICY "allow_owner_update_products"
-ON storage.objects FOR UPDATE
-USING (
-  bucket_id = 'products'
-  AND (
-    auth.uid()::text = (storage.foldername(name))[1]
-    OR EXISTS (
-      SELECT 1 FROM organization_users ou
-      JOIN roles r ON ou.role_id = r.id
-      WHERE ou.user_id = auth.uid()
-        AND ou.is_active = true
-        AND r.name IN ('system_admin')
-    )
-  )
-);
+  EXECUTE 'DROP POLICY IF EXISTS "allow_auth_upload_products" ON storage.objects';
+  EXECUTE $q$ CREATE POLICY "allow_auth_upload_products" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'products' AND auth.role() = 'authenticated') $q$;
 
--- Policy: Only the uploader or admin can delete product files
-DROP POLICY IF EXISTS "allow_owner_delete_products" ON storage.objects;
-CREATE POLICY "allow_owner_delete_products"
-ON storage.objects FOR DELETE
-USING (
-  bucket_id = 'products'
-  AND (
-    auth.uid()::text = (storage.foldername(name))[1]
-    OR EXISTS (
-      SELECT 1 FROM organization_users ou
-      JOIN roles r ON ou.role_id = r.id
-      WHERE ou.user_id = auth.uid()
-        AND ou.is_active = true
-        AND r.name IN ('system_admin')
-    )
-  )
-);
+  EXECUTE 'DROP POLICY IF EXISTS "allow_owner_update_products" ON storage.objects';
+  EXECUTE $q$ CREATE POLICY "allow_owner_update_products" ON storage.objects FOR UPDATE USING (bucket_id = 'products' AND (auth.uid()::text = (storage.foldername(name))[1] OR EXISTS (SELECT 1 FROM organization_users ou JOIN roles r ON ou.role_id = r.id WHERE ou.user_id = auth.uid() AND ou.is_active = true AND r.name IN ('system_admin')))) $q$;
+
+  EXECUTE 'DROP POLICY IF EXISTS "allow_owner_delete_products" ON storage.objects';
+  EXECUTE $q$ CREATE POLICY "allow_owner_delete_products" ON storage.objects FOR DELETE USING (bucket_id = 'products' AND (auth.uid()::text = (storage.foldername(name))[1] OR EXISTS (SELECT 1 FROM organization_users ou JOIN roles r ON ou.role_id = r.id WHERE ou.user_id = auth.uid() AND ou.is_active = true AND r.name IN ('system_admin')))) $q$;
+END
+$storage_products$;
 
 -- =====================================================
 -- Migration: 20260129110000_add_crop_types_for_modules.sql
@@ -23255,71 +23185,28 @@ COMMENT ON TABLE corrective_actions IS 'Corrective action plans linked to certif
 -- COMPLIANCE DOCUMENTS STORAGE BUCKET
 -- ============================================================================
 
-INSERT INTO storage.buckets (id, name, "public")
-VALUES ('compliance-documents', 'compliance-documents', false)
-ON CONFLICT (id) DO UPDATE SET "public" = false;
+DO $storage_compliance$
+BEGIN
+  IF to_regclass('storage.buckets') IS NULL OR to_regclass('storage.objects') IS NULL THEN
+    RAISE NOTICE 'Skipping compliance bucket setup — storage schema not found';
+    RETURN;
+  END IF;
 
-DROP POLICY IF EXISTS "Org members can read compliance documents" ON storage.objects;
-CREATE POLICY "Org members can read compliance documents"
-ON storage.objects FOR SELECT
-TO authenticated
-USING (
-  bucket_id = 'compliance-documents'
-  AND (storage.foldername(name))[1] IN (
-    SELECT organization_id::text
-    FROM organization_users
-    WHERE user_id = auth.uid()
-  )
-);
+  EXECUTE $q$ INSERT INTO storage.buckets (id, name, "public") VALUES ('compliance-documents', 'compliance-documents', false) ON CONFLICT (id) DO UPDATE SET "public" = false $q$;
 
-DROP POLICY IF EXISTS "Org members can upload compliance documents" ON storage.objects;
-CREATE POLICY "Org members can upload compliance documents"
-ON storage.objects FOR INSERT
-TO authenticated
-WITH CHECK (
-  bucket_id = 'compliance-documents'
-  AND (storage.foldername(name))[1] IN (
-    SELECT organization_id::text
-    FROM organization_users
-    WHERE user_id = auth.uid()
-  )
-);
+  EXECUTE 'DROP POLICY IF EXISTS "Org members can read compliance documents" ON storage.objects';
+  EXECUTE $q$ CREATE POLICY "Org members can read compliance documents" ON storage.objects FOR SELECT TO authenticated USING (bucket_id = 'compliance-documents' AND (storage.foldername(name))[1] IN (SELECT organization_id::text FROM organization_users WHERE user_id = auth.uid())) $q$;
 
-DROP POLICY IF EXISTS "Org members can update compliance documents" ON storage.objects;
-CREATE POLICY "Org members can update compliance documents"
-ON storage.objects FOR UPDATE
-TO authenticated
-USING (
-  bucket_id = 'compliance-documents'
-  AND (storage.foldername(name))[1] IN (
-    SELECT organization_id::text
-    FROM organization_users
-    WHERE user_id = auth.uid()
-  )
-)
-WITH CHECK (
-  bucket_id = 'compliance-documents'
-  AND (storage.foldername(name))[1] IN (
-    SELECT organization_id::text
-    FROM organization_users
-    WHERE user_id = auth.uid()
-  )
-);
+  EXECUTE 'DROP POLICY IF EXISTS "Org members can upload compliance documents" ON storage.objects';
+  EXECUTE $q$ CREATE POLICY "Org members can upload compliance documents" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'compliance-documents' AND (storage.foldername(name))[1] IN (SELECT organization_id::text FROM organization_users WHERE user_id = auth.uid())) $q$;
 
-DROP POLICY IF EXISTS "Org admins can delete compliance documents" ON storage.objects;
-CREATE POLICY "Org admins can delete compliance documents"
-ON storage.objects FOR DELETE
-TO authenticated
-USING (
-  bucket_id = 'compliance-documents'
-  AND (storage.foldername(name))[1] IN (
-    SELECT ou.organization_id::text
-    FROM organization_users ou
-    JOIN roles r ON r.id = ou.role_id
-    WHERE ou.user_id = auth.uid()
-    AND r.name IN ('organization_admin', 'farm_manager', 'system_admin')
-  )
-);
+  EXECUTE 'DROP POLICY IF EXISTS "Org members can update compliance documents" ON storage.objects';
+  EXECUTE $q$ CREATE POLICY "Org members can update compliance documents" ON storage.objects FOR UPDATE TO authenticated USING (bucket_id = 'compliance-documents' AND (storage.foldername(name))[1] IN (SELECT organization_id::text FROM organization_users WHERE user_id = auth.uid())) WITH CHECK (bucket_id = 'compliance-documents' AND (storage.foldername(name))[1] IN (SELECT organization_id::text FROM organization_users WHERE user_id = auth.uid())) $q$;
+
+  EXECUTE 'DROP POLICY IF EXISTS "Org admins can delete compliance documents" ON storage.objects';
+  EXECUTE $q$ CREATE POLICY "Org admins can delete compliance documents" ON storage.objects FOR DELETE TO authenticated USING (bucket_id = 'compliance-documents' AND (storage.foldername(name))[1] IN (SELECT ou.organization_id::text FROM organization_users ou JOIN roles r ON r.id = ou.role_id WHERE ou.user_id = auth.uid() AND r.name IN ('organization_admin', 'farm_manager', 'system_admin'))) $q$;
+END
+$storage_compliance$;
 
 -- ============================================================================
 -- COMPLIANCE REALTIME PUBLICATION
@@ -24037,69 +23924,42 @@ WHERE updated_at IS NULL;
 --          web TaskAttachments.tsx (task file attachments)
 -- =====================================================
 
-INSERT INTO storage.buckets (id, name, "public")
-VALUES ('files', 'files', false)
-ON CONFLICT (id) DO NOTHING;
+DO $storage_files_invoices$
+BEGIN
+  IF to_regclass('storage.buckets') IS NULL OR to_regclass('storage.objects') IS NULL THEN
+    RAISE NOTICE 'Skipping files/invoices bucket setup — storage schema not found';
+    RETURN;
+  END IF;
 
-DROP POLICY IF EXISTS "Authenticated read access for files" ON storage.objects;
-CREATE POLICY "Authenticated read access for files"
-ON storage.objects FOR SELECT
-TO authenticated
-USING (bucket_id = 'files');
+  EXECUTE $q$ INSERT INTO storage.buckets (id, name, "public") VALUES ('files', 'files', false) ON CONFLICT (id) DO NOTHING $q$;
 
-DROP POLICY IF EXISTS "Authenticated upload for files" ON storage.objects;
-CREATE POLICY "Authenticated upload for files"
-ON storage.objects FOR INSERT
-TO authenticated
-WITH CHECK (bucket_id = 'files');
+  EXECUTE 'DROP POLICY IF EXISTS "Authenticated read access for files" ON storage.objects';
+  EXECUTE $q$ CREATE POLICY "Authenticated read access for files" ON storage.objects FOR SELECT TO authenticated USING (bucket_id = 'files') $q$;
 
-DROP POLICY IF EXISTS "Authenticated update for files" ON storage.objects;
-CREATE POLICY "Authenticated update for files"
-ON storage.objects FOR UPDATE
-TO authenticated
-USING (bucket_id = 'files')
-WITH CHECK (bucket_id = 'files');
+  EXECUTE 'DROP POLICY IF EXISTS "Authenticated upload for files" ON storage.objects';
+  EXECUTE $q$ CREATE POLICY "Authenticated upload for files" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'files') $q$;
 
-DROP POLICY IF EXISTS "Authenticated delete for files" ON storage.objects;
-CREATE POLICY "Authenticated delete for files"
-ON storage.objects FOR DELETE
-TO authenticated
-USING (bucket_id = 'files');
+  EXECUTE 'DROP POLICY IF EXISTS "Authenticated update for files" ON storage.objects';
+  EXECUTE $q$ CREATE POLICY "Authenticated update for files" ON storage.objects FOR UPDATE TO authenticated USING (bucket_id = 'files') WITH CHECK (bucket_id = 'files') $q$;
 
--- =====================================================
--- INVOICES STORAGE BUCKET
--- Used by: web UtilitiesManagement.tsx (utility invoice uploads)
--- Private bucket, org-scoped via farm_id folder prefix
--- =====================================================
+  EXECUTE 'DROP POLICY IF EXISTS "Authenticated delete for files" ON storage.objects';
+  EXECUTE $q$ CREATE POLICY "Authenticated delete for files" ON storage.objects FOR DELETE TO authenticated USING (bucket_id = 'files') $q$;
 
-INSERT INTO storage.buckets (id, name, "public")
-VALUES ('invoices', 'invoices', false)
-ON CONFLICT (id) DO NOTHING;
+  EXECUTE $q$ INSERT INTO storage.buckets (id, name, "public") VALUES ('invoices', 'invoices', false) ON CONFLICT (id) DO NOTHING $q$;
 
-DROP POLICY IF EXISTS "Authenticated read access for invoices" ON storage.objects;
-CREATE POLICY "Authenticated read access for invoices"
-ON storage.objects FOR SELECT
-TO authenticated
-USING (bucket_id = 'invoices');
+  EXECUTE 'DROP POLICY IF EXISTS "Authenticated read access for invoices" ON storage.objects';
+  EXECUTE $q$ CREATE POLICY "Authenticated read access for invoices" ON storage.objects FOR SELECT TO authenticated USING (bucket_id = 'invoices') $q$;
 
-DROP POLICY IF EXISTS "Authenticated upload for invoices" ON storage.objects;
-CREATE POLICY "Authenticated upload for invoices"
-ON storage.objects FOR INSERT
-TO authenticated
-WITH CHECK (bucket_id = 'invoices');
+  EXECUTE 'DROP POLICY IF EXISTS "Authenticated upload for invoices" ON storage.objects';
+  EXECUTE $q$ CREATE POLICY "Authenticated upload for invoices" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'invoices') $q$;
 
-DROP POLICY IF EXISTS "Authenticated update for invoices" ON storage.objects;
-CREATE POLICY "Authenticated update for invoices"
-ON storage.objects FOR UPDATE
-TO authenticated
-USING (bucket_id = 'invoices')
-WITH CHECK (bucket_id = 'invoices');
+  EXECUTE 'DROP POLICY IF EXISTS "Authenticated update for invoices" ON storage.objects';
+  EXECUTE $q$ CREATE POLICY "Authenticated update for invoices" ON storage.objects FOR UPDATE TO authenticated USING (bucket_id = 'invoices') WITH CHECK (bucket_id = 'invoices') $q$;
 
-DROP POLICY IF EXISTS "Authenticated delete for invoices" ON storage.objects;
-CREATE POLICY "Authenticated delete for invoices"
-ON storage.objects FOR DELETE
-TO authenticated
-USING (bucket_id = 'invoices');
+  EXECUTE 'DROP POLICY IF EXISTS "Authenticated delete for invoices" ON storage.objects';
+  EXECUTE $q$ CREATE POLICY "Authenticated delete for invoices" ON storage.objects FOR DELETE TO authenticated USING (bucket_id = 'invoices') $q$;
+END
+$storage_files_invoices$;
 
 -- =====================================================
 -- AGRITECH-DOCUMENTS STORAGE BUCKET
@@ -24147,34 +24007,28 @@ CREATE POLICY "ai_quotas_org_access" ON ai_quotas
 
 -- =====================================================
 
-INSERT INTO storage.buckets (id, name, "public")
-VALUES ('agritech-documents', 'agritech-documents', false)
-ON CONFLICT (id) DO NOTHING;
+DO $storage_agritech_docs$
+BEGIN
+  IF to_regclass('storage.buckets') IS NULL OR to_regclass('storage.objects') IS NULL THEN
+    RAISE NOTICE 'Skipping agritech-documents bucket setup — storage schema not found';
+    RETURN;
+  END IF;
 
-DROP POLICY IF EXISTS "Authenticated read access for agritech-documents" ON storage.objects;
-CREATE POLICY "Authenticated read access for agritech-documents"
-ON storage.objects FOR SELECT
-TO authenticated
-USING (bucket_id = 'agritech-documents');
+  EXECUTE $q$ INSERT INTO storage.buckets (id, name, "public") VALUES ('agritech-documents', 'agritech-documents', false) ON CONFLICT (id) DO NOTHING $q$;
 
-DROP POLICY IF EXISTS "Authenticated upload for agritech-documents" ON storage.objects;
-CREATE POLICY "Authenticated upload for agritech-documents"
-ON storage.objects FOR INSERT
-TO authenticated
-WITH CHECK (bucket_id = 'agritech-documents');
+  EXECUTE 'DROP POLICY IF EXISTS "Authenticated read access for agritech-documents" ON storage.objects';
+  EXECUTE $q$ CREATE POLICY "Authenticated read access for agritech-documents" ON storage.objects FOR SELECT TO authenticated USING (bucket_id = 'agritech-documents') $q$;
 
-DROP POLICY IF EXISTS "Authenticated update for agritech-documents" ON storage.objects;
-CREATE POLICY "Authenticated update for agritech-documents"
-ON storage.objects FOR UPDATE
-TO authenticated
-USING (bucket_id = 'agritech-documents')
-WITH CHECK (bucket_id = 'agritech-documents');
+  EXECUTE 'DROP POLICY IF EXISTS "Authenticated upload for agritech-documents" ON storage.objects';
+  EXECUTE $q$ CREATE POLICY "Authenticated upload for agritech-documents" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'agritech-documents') $q$;
 
-DROP POLICY IF EXISTS "Authenticated delete for agritech-documents" ON storage.objects;
-CREATE POLICY "Authenticated delete for agritech-documents"
-ON storage.objects FOR DELETE
-TO authenticated
-USING (bucket_id = 'agritech-documents');
+  EXECUTE 'DROP POLICY IF EXISTS "Authenticated update for agritech-documents" ON storage.objects';
+  EXECUTE $q$ CREATE POLICY "Authenticated update for agritech-documents" ON storage.objects FOR UPDATE TO authenticated USING (bucket_id = 'agritech-documents') WITH CHECK (bucket_id = 'agritech-documents') $q$;
+
+  EXECUTE 'DROP POLICY IF EXISTS "Authenticated delete for agritech-documents" ON storage.objects';
+  EXECUTE $q$ CREATE POLICY "Authenticated delete for agritech-documents" ON storage.objects FOR DELETE TO authenticated USING (bucket_id = 'agritech-documents') $q$;
+END
+$storage_agritech_docs$;
 
 -- ==========================================
 -- Newsletter subscribers (public, no org scope)
@@ -24796,108 +24650,31 @@ CREATE POLICY "agronomy_citations_manage" ON ai_recommendation_citations
 -- The FastAPI ML sidecar writes here via the service_role key.
 -- -----------------------------------------------------
 
-INSERT INTO storage.buckets (id, name, "public")
-VALUES ('agronomy-corpus', 'agronomy-corpus', false)
-ON CONFLICT (id) DO NOTHING;
+DO $storage_agronomy_corpus$
+BEGIN
+  IF to_regclass('storage.buckets') IS NULL OR to_regclass('storage.objects') IS NULL THEN
+    RAISE NOTICE 'Skipping agronomy-corpus bucket setup — storage schema not found';
+    RETURN;
+  END IF;
 
--- Any authenticated user can read (org scoping is enforced at the agronomy_sources RLS level,
--- not at the storage level — the service reads files during ingest/embedding, not end-users directly)
-DROP POLICY IF EXISTS "Authenticated read access for agronomy-corpus" ON storage.objects;
-CREATE POLICY "Authenticated read access for agronomy-corpus"
-  ON storage.objects FOR SELECT
-  TO authenticated
-  USING (bucket_id = 'agronomy-corpus');
+  EXECUTE $q$ INSERT INTO storage.buckets (id, name, "public") VALUES ('agronomy-corpus', 'agronomy-corpus', false) ON CONFLICT (id) DO NOTHING $q$;
 
-DROP POLICY IF EXISTS "System admin upload for agronomy-corpus" ON storage.objects;
-CREATE POLICY "System admin upload for agronomy-corpus"
-  ON storage.objects FOR INSERT
-  TO authenticated
-  WITH CHECK (
-    bucket_id = 'agronomy-corpus'
-    AND (
-      EXISTS (
-        SELECT 1 FROM public.organization_users ou
-        JOIN public.roles r ON r.id = ou.role_id
-        WHERE ou.user_id = auth.uid()
-          AND ou.is_active = true
-          AND r.name = 'system_admin'
-      )
-      OR EXISTS (
-        SELECT 1 FROM public.internal_admins ia
-        WHERE ia.user_id = auth.uid()
-          AND ia.is_active = true
-      )
-    )
-  );
+  EXECUTE 'DROP POLICY IF EXISTS "Authenticated read access for agronomy-corpus" ON storage.objects';
+  EXECUTE $q$ CREATE POLICY "Authenticated read access for agronomy-corpus" ON storage.objects FOR SELECT TO authenticated USING (bucket_id = 'agronomy-corpus') $q$;
 
-DROP POLICY IF EXISTS "System admin update for agronomy-corpus" ON storage.objects;
-CREATE POLICY "System admin update for agronomy-corpus"
-  ON storage.objects FOR UPDATE
-  TO authenticated
-  USING (
-    bucket_id = 'agronomy-corpus'
-    AND (
-      EXISTS (
-        SELECT 1 FROM public.organization_users ou
-        JOIN public.roles r ON r.id = ou.role_id
-        WHERE ou.user_id = auth.uid()
-          AND ou.is_active = true
-          AND r.name = 'system_admin'
-      )
-      OR EXISTS (
-        SELECT 1 FROM public.internal_admins ia
-        WHERE ia.user_id = auth.uid()
-          AND ia.is_active = true
-      )
-    )
-  )
-  WITH CHECK (
-    bucket_id = 'agronomy-corpus'
-    AND (
-      EXISTS (
-        SELECT 1 FROM public.organization_users ou
-        JOIN public.roles r ON r.id = ou.role_id
-        WHERE ou.user_id = auth.uid()
-          AND ou.is_active = true
-          AND r.name = 'system_admin'
-      )
-      OR EXISTS (
-        SELECT 1 FROM public.internal_admins ia
-        WHERE ia.user_id = auth.uid()
-          AND ia.is_active = true
-      )
-    )
-  );
+  EXECUTE 'DROP POLICY IF EXISTS "System admin upload for agronomy-corpus" ON storage.objects';
+  EXECUTE $q$ CREATE POLICY "System admin upload for agronomy-corpus" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'agronomy-corpus' AND (EXISTS (SELECT 1 FROM public.organization_users ou JOIN public.roles r ON r.id = ou.role_id WHERE ou.user_id = auth.uid() AND ou.is_active = true AND r.name = 'system_admin') OR EXISTS (SELECT 1 FROM public.internal_admins ia WHERE ia.user_id = auth.uid() AND ia.is_active = true))) $q$;
 
-DROP POLICY IF EXISTS "System admin delete for agronomy-corpus" ON storage.objects;
-CREATE POLICY "System admin delete for agronomy-corpus"
-  ON storage.objects FOR DELETE
-  TO authenticated
-  USING (
-    bucket_id = 'agronomy-corpus'
-    AND (
-      EXISTS (
-        SELECT 1 FROM public.organization_users ou
-        JOIN public.roles r ON r.id = ou.role_id
-        WHERE ou.user_id = auth.uid()
-          AND ou.is_active = true
-          AND r.name = 'system_admin'
-      )
-      OR EXISTS (
-        SELECT 1 FROM public.internal_admins ia
-        WHERE ia.user_id = auth.uid()
-          AND ia.is_active = true
-      )
-    )
-  );
+  EXECUTE 'DROP POLICY IF EXISTS "System admin update for agronomy-corpus" ON storage.objects';
+  EXECUTE $q$ CREATE POLICY "System admin update for agronomy-corpus" ON storage.objects FOR UPDATE TO authenticated USING (bucket_id = 'agronomy-corpus' AND (EXISTS (SELECT 1 FROM public.organization_users ou JOIN public.roles r ON r.id = ou.role_id WHERE ou.user_id = auth.uid() AND ou.is_active = true AND r.name = 'system_admin') OR EXISTS (SELECT 1 FROM public.internal_admins ia WHERE ia.user_id = auth.uid() AND ia.is_active = true))) WITH CHECK (bucket_id = 'agronomy-corpus' AND (EXISTS (SELECT 1 FROM public.organization_users ou JOIN public.roles r ON r.id = ou.role_id WHERE ou.user_id = auth.uid() AND ou.is_active = true AND r.name = 'system_admin') OR EXISTS (SELECT 1 FROM public.internal_admins ia WHERE ia.user_id = auth.uid() AND ia.is_active = true))) $q$;
 
--- Service role has full access (used by FastAPI ML sidecar for ingest)
-DROP POLICY IF EXISTS "Service role full access for agronomy-corpus" ON storage.objects;
-CREATE POLICY "Service role full access for agronomy-corpus"
-  ON storage.objects FOR ALL
-  TO service_role
-  USING (bucket_id = 'agronomy-corpus')
-  WITH CHECK (bucket_id = 'agronomy-corpus');
+  EXECUTE 'DROP POLICY IF EXISTS "System admin delete for agronomy-corpus" ON storage.objects';
+  EXECUTE $q$ CREATE POLICY "System admin delete for agronomy-corpus" ON storage.objects FOR DELETE TO authenticated USING (bucket_id = 'agronomy-corpus' AND (EXISTS (SELECT 1 FROM public.organization_users ou JOIN public.roles r ON r.id = ou.role_id WHERE ou.user_id = auth.uid() AND ou.is_active = true AND r.name = 'system_admin') OR EXISTS (SELECT 1 FROM public.internal_admins ia WHERE ia.user_id = auth.uid() AND ia.is_active = true))) $q$;
+
+  EXECUTE 'DROP POLICY IF EXISTS "Service role full access for agronomy-corpus" ON storage.objects';
+  EXECUTE $q$ CREATE POLICY "Service role full access for agronomy-corpus" ON storage.objects FOR ALL TO service_role USING (bucket_id = 'agronomy-corpus') WITH CHECK (bucket_id = 'agronomy-corpus') $q$;
+END
+$storage_agronomy_corpus$;
 
 -- ============================================================================
 -- Migration: 20260419000000_fix_db_linter_errors.sql
