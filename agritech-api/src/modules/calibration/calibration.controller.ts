@@ -25,8 +25,10 @@ import { OrganizationGuard } from "../../common/guards/organization.guard";
 import { PoliciesGuard } from "../casl/policies.guard";
 import { CanManageParcels } from "../casl/permissions.decorator";
 import { CalibrationService } from "./calibration.service";
+import { TargetYieldService } from "./target-yield.service";
 import { StartCalibrationDto } from "./dto/start-calibration.dto";
 import { ConfirmNutritionOptionDto } from "./dto/confirm-nutrition-option.dto";
+import { ConfirmTargetYieldDto } from "./dto/confirm-target-yield.dto";
 import { AnnualRecalibrationService } from "./annual-recalibration.service";
 import { AnnualSnoozeDto } from "./dto/annual-snooze.dto";
 import { ResolveAnnualMissingTasksDto } from "./dto/resolve-annual-missing-tasks.dto";
@@ -45,6 +47,7 @@ export class CalibrationController {
   constructor(
     private readonly calibrationService: CalibrationService,
     private readonly annualRecalibrationService: AnnualRecalibrationService,
+    private readonly targetYieldService: TargetYieldService,
   ) {}
 
   @Post("start")
@@ -307,6 +310,46 @@ export class CalibrationController {
       calibrationId,
       organizationId,
       dto.option,
+    );
+  }
+
+  @Get(":calibrationId/target-yield-suggestion")
+  @ApiOperation({
+    summary: "Get deterministic target yield suggestion + validation envelope",
+  })
+  @ApiResponse({ status: 200 })
+  async getTargetYieldSuggestion(
+    @Param("parcelId") parcelId: string,
+    @Param("calibrationId") calibrationId: string,
+    @Req() req: Request,
+  ) {
+    const organizationId = this.getOrganizationId(req);
+    return this.targetYieldService.getSuggestion(
+      parcelId,
+      calibrationId,
+      organizationId,
+    );
+  }
+
+  @Post(":calibrationId/target-yield")
+  @ApiOperation({
+    summary: "Confirm or override farmer target yield for a calibration",
+  })
+  @ApiResponse({ status: 200 })
+  async confirmTargetYield(
+    @Param("parcelId") parcelId: string,
+    @Param("calibrationId") calibrationId: string,
+    @Body() dto: ConfirmTargetYieldDto,
+    @Req() req: Request,
+  ) {
+    const organizationId = this.getOrganizationId(req);
+    const userId = (req as any).user?.id;
+    return this.targetYieldService.confirm(
+      parcelId,
+      calibrationId,
+      organizationId,
+      userId,
+      { target_yield_t_ha: dto.target_yield_t_ha, source: dto.source },
     );
   }
 

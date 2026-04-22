@@ -61,6 +61,7 @@ import { CalibrationWizard } from '@/components/calibration/CalibrationWizard';
 import { RecalibrationWizard } from '@/components/calibration/RecalibrationWizard';
 import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import { AnnualRecalibrationWizard } from '@/components/calibration/AnnualRecalibrationWizard';
+import { TargetYieldStep } from '@/components/calibration/TargetYieldStep';
 import { CalibrationRunInputsPanel } from '@/components/calibration/CalibrationRunInputsPanel';
 import { CalibrationReviewSection } from '@/components/calibration/review/CalibrationReviewSection';
 import { CalibrationSyntheseBanner } from '@/components/calibration/CalibrationSyntheseBanner';
@@ -1299,11 +1300,17 @@ const AICalibrationPage = () => {
             calibration?.status === 'validated' ||
             calibrationCompletedButPhaseStuck) &&
             parcelData?.ai_phase !== 'active' && (
-          <NutritionOptionSelector
-            parcelId={parcelId}
-            calibrationId={reportData.calibration.id}
-            disabled={calibrationActuallyRunning}
-          />
+            <>
+              <TargetYieldStep
+                parcelId={parcelId}
+                calibrationId={reportData.calibration.id}
+              />
+              <NutritionOptionSelector
+                parcelId={parcelId}
+                calibrationId={reportData.calibration.id}
+                disabled={calibrationActuallyRunning}
+              />
+            </>
           )}
         </div>
       )}

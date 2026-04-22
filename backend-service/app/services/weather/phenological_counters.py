@@ -8,6 +8,7 @@ The single source of truth used by both:
   - calibration step 2 (chill_hours via direct `count_hours` call)
   - the weather tab UI (via `GET /weather/phenological-counters`)
 """
+
 from __future__ import annotations
 
 from datetime import date, datetime, timedelta, timezone
@@ -19,6 +20,28 @@ from app.services.calibration.referential_utils import (
 )
 from app.services.weather.hour_counter import count_hours
 from app.services.weather_service import WeatherService
+
+_CROP_ALIASES: dict[str, str] = {
+    "olive": "olivier",
+    "olives": "olivier",
+    "citrus": "agrumes",
+    "orange": "agrumes",
+    "mandarine": "agrumes",
+    "citron": "agrumes",
+    "pomelo": "agrumes",
+    "avocado": "avocatier",
+    "date_palm": "palmier_dattier",
+    "palmier": "palmier_dattier",
+    "dattier": "palmier_dattier",
+}
+
+
+def _resolve_crop_type(crop_type: str) -> str:
+    """Normalize crop_type to a known referential key."""
+    normalized = crop_type.strip().lower()
+    if normalized in CROP_TYPE_TO_REFERENTIAL_JSON:
+        return normalized
+    return _CROP_ALIASES.get(normalized, normalized)
 
 
 class UnsupportedCropError(ValueError):
@@ -56,7 +79,10 @@ def _stage_window_dates(year: int, months: List[int]) -> tuple[str, str]:
         last_day = 30
     else:
         last_day = 28
-    return f"{start_year}-{start_month:02d}-01", f"{end_year}-{end_month:02d}-{last_day:02d}"
+    return (
+        f"{start_year}-{start_month:02d}-01",
+        f"{end_year}-{end_month:02d}-{last_day:02d}",
+    )
 
 
 async def compute_phenological_counters(
@@ -67,16 +93,21 @@ async def compute_phenological_counters(
     crop_type: str,
 ) -> Dict[str, Any]:
     """Compute hour counts for every (stage, threshold) defined in the crop's referentiel."""
+    crop_type = _resolve_crop_type(crop_type)
     if crop_type not in CROP_TYPE_TO_REFERENTIAL_JSON:
         raise UnsupportedCropError(f"crop_type '{crop_type}' has no referentiel")
 
     ref = _load_referential_data_from_file(crop_type)
     if not isinstance(ref, dict) or "phenological_stages" not in ref:
-        raise UnsupportedCropError(f"crop_type '{crop_type}' missing phenological_stages")
+        raise UnsupportedCropError(
+            f"crop_type '{crop_type}' missing phenological_stages"
+        )
 
     stages_def = ref.get("phenological_stages") or []
     if not isinstance(stages_def, list) or not stages_def:
-        raise UnsupportedCropError(f"crop_type '{crop_type}' has empty phenological_stages")
+        raise UnsupportedCropError(
+            f"crop_type '{crop_type}' has empty phenological_stages"
+        )
 
     # Lazy supabase import to allow patching at module boundary in tests
     from app.services.supabase_service import supabase_service
@@ -93,7 +124,9 @@ async def compute_phenological_counters(
             cached_lookup[(sk, tk)] = int(c)
 
     # Determine if all (stage, threshold) entries are cached → skip hourly fetch
-    expected_keys = {(s["key"], t["key"]) for s in stages_def for t in (s.get("thresholds") or [])}
+    expected_keys = {
+        (s["key"], t["key"]) for s in stages_def for t in (s.get("thresholds") or [])
+    }
     full_cache_hit = expected_keys.issubset(set(cached_lookup.keys()))
 
     # Fetch hourly only if we need to compute something
@@ -129,34 +162,40 @@ async def compute_phenological_counters(
                     upper=float(th["upper"]) if th.get("upper") is not None else None,
                     months=set(months) if months else None,
                 )
-                persisted.append({
-                    "latitude": latitude,
-                    "longitude": longitude,
-                    "year": year,
-                    "crop_type": crop_type,
-                    "stage_key": stage_key,
-                    "threshold_key": th_key,
-                    "count": int(value),
-                })
-            counters_out.append({
-                "key": th_key,
-                "label_fr": th.get("label_fr"),
-                "label_en": th.get("label_en"),
-                "value": int(value),
-                "threshold": th.get("value"),
-                "upper": th.get("upper"),
-                "compare": th.get("compare"),
-                "unit": th.get("unit"),
-                "icon": th.get("icon"),
-            })
-        stages_out.append({
-            "key": stage_key,
-            "name_fr": stage.get("name_fr"),
-            "name_en": stage.get("name_en"),
-            "name_ar": stage.get("name_ar"),
-            "months": months,
-            "counters": counters_out,
-        })
+                persisted.append(
+                    {
+                        "latitude": latitude,
+                        "longitude": longitude,
+                        "year": year,
+                        "crop_type": crop_type,
+                        "stage_key": stage_key,
+                        "threshold_key": th_key,
+                        "count": int(value),
+                    }
+                )
+            counters_out.append(
+                {
+                    "key": th_key,
+                    "label_fr": th.get("label_fr"),
+                    "label_en": th.get("label_en"),
+                    "value": int(value),
+                    "threshold": th.get("value"),
+                    "upper": th.get("upper"),
+                    "compare": th.get("compare"),
+                    "unit": th.get("unit"),
+                    "icon": th.get("icon"),
+                }
+            )
+        stages_out.append(
+            {
+                "key": stage_key,
+                "name_fr": stage.get("name_fr"),
+                "name_en": stage.get("name_en"),
+                "name_ar": stage.get("name_ar"),
+                "months": months,
+                "counters": counters_out,
+            }
+        )
 
     if persisted:
         try:

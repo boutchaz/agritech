@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from statistics import median
+from typing import Any
 
 from ..types import (
     HealthScore,
@@ -12,6 +13,8 @@ from ..types import (
 
 
 _ROLLING_WINDOW = 5
+_ADJUSTMENT_FLOOR = 0.8
+_ADJUSTMENT_CEIL = 1.2
 
 
 def _clamp(value: float) -> float:
@@ -20,6 +23,91 @@ def _clamp(value: float) -> float:
     if value > 100:
         return 100.0
     return value
+
+
+def _bounded_adjust(base: float, factor: float) -> float:
+    adjusted = base * factor
+    return max(base * _ADJUSTMENT_FLOOR, min(base * _ADJUSTMENT_CEIL, adjusted))
+
+
+def _to_float(data: dict[str, Any] | None, key: str) -> float | None:
+    if not data:
+        return None
+    val = data.get(key)
+    if isinstance(val, (int, float)):
+        return float(val)
+    return None
+
+
+def _soil_nutritional_factor(soil: dict[str, Any] | None) -> float:
+    if not soil:
+        return 1.0
+    ph = _to_float(soil, "ph_level")
+    om = _to_float(soil, "organic_matter_percentage")
+    ec = _to_float(soil, "electrical_conductivity")
+    points = 0.0
+    if ph is not None:
+        if 6.5 <= ph <= 7.5:
+            points += 0.1
+        elif ph > 8.2 or ph < 5.5:
+            points -= 0.15
+    if om is not None:
+        if om > 2.0:
+            points += 0.1
+        elif om < 1.0:
+            points -= 0.1
+    if ec is not None:
+        if ec > 4.0:
+            points -= 0.15
+        elif ec < 2.0:
+            points += 0.05
+    return 1.0 + points
+
+
+def _water_hydric_factor(water: dict[str, Any] | None) -> float:
+    if not water:
+        return 1.0
+    sar = _to_float(water, "sar")
+    chloride = _to_float(water, "chloride_ppm")
+    ec = _to_float(water, "ec_ds_per_m")
+    points = 0.0
+    if sar is not None:
+        if sar > 9.0:
+            points -= 0.2
+        elif sar > 6.0:
+            points -= 0.15
+        elif sar < 3.0:
+            points += 0.05
+    if chloride is not None and chloride > 10.0:
+        points -= 0.1
+    if ec is not None and ec > 3.0:
+        points -= 0.1
+    return 1.0 + points
+
+
+def _foliar_nutritional_factor(foliar: dict[str, Any] | None) -> float:
+    if not foliar:
+        return 1.0
+    n = _to_float(foliar, "nitrogen_percentage")
+    p = _to_float(foliar, "phosphorus_percentage")
+    k = _to_float(foliar, "potassium_percentage")
+    points = 0.0
+    if n is not None:
+        if n > 2.0:
+            points += 0.05
+        elif n < 1.5:
+            points -= 0.1
+    if k is not None:
+        if k > 0.8:
+            points += 0.05
+        elif k < 0.5:
+            points -= 0.1
+    if p is not None:
+        if p > 0.2:
+            points += 0.03
+        elif p < 0.1:
+            points -= 0.05
+    return 1.0 + points
 
 
 def _rolling_median(
@@ -72,8 +160,10 @@ def calculate_health_score(
     step1: Step1Output,
     step3: Step3Output,
     step7: Step7Output,
+    soil_analysis: dict[str, Any] | None = None,
+    water_analysis: dict[str, Any] | None = None,
+    foliar_analysis: dict[str, Any] | None = None,
 ) -> Step8Output:
-    # Spec §3.8: vigor uses NIRv median vs referential
     nirv_value = _rolling_median(step1, "NIRv")
     ndmi_value = _rolling_median(step1, "NDMI")
     ndre_value = _rolling_median(step1, "NDRE")
@@ -87,7 +177,6 @@ def calculate_health_score(
         vigor = ((nirv_value - nirv_ref.p10) / (nirv_ref.p90 - nirv_ref.p10)) * 100
     vigor = _clamp(vigor)
 
-    # Spec §3.8: spatial homogeneity 20%, temporal stability 15%
     spatial = _spatial_homogeneity(step7)
     temporal = _temporal_homogeneity(step3)
 
@@ -103,7 +192,11 @@ def calculate_health_score(
         ) * 100
     nutritional = _clamp(nutritional)
 
-    # Spec §3.8 weights: vigor 30%, spatial 20%, temporal 15%, hydric 20%, nutritional 15%
+    hydric = _bounded_adjust(hydric, _water_hydric_factor(water_analysis))
+    soil_factor = _soil_nutritional_factor(soil_analysis)
+    foliar_factor = _foliar_nutritional_factor(foliar_analysis)
+    nutritional = _bounded_adjust(nutritional, soil_factor * foliar_factor)
+
     total = (
         vigor * 0.30
         + spatial * 0.20

@@ -102,6 +102,13 @@ Note : Option C est CUMULATIVE avec A ou B (lire referentiel.options_nutrition.C
 
 ÉTAPE 2 — RENDEMENT CIBLE
 ──────────────────────────
+PRIORITÉ ABSOLUE : SI l'input contient un champ \`confirmedTargetYieldTHa\` non-nul
+→ rendement_cible = confirmedTargetYieldTHa (VERBATIM, ne PAS recalculer).
+→ parameters.targetYieldTHa = confirmedTargetYieldTHa
+→ parameters.yieldMethod = (confirmedTargetYieldSource === 'user_override' ? 'user_override' : 'user_confirmed_suggestion')
+→ Sauter le reste de l'étape 2, passer à l'étape 3.
+
+SINON (pas de confirmation utilisateur) :
 • SI historique rendements ≥ 3 ans disponibles :
   rendement_cible = moyenne(3_meilleures_années) × 0.95 (coefficient sécurité)
 • SINON :
@@ -235,7 +242,7 @@ Le CONTENU des strings reste en français (produits, notes, résumé).
 
   "parameters": {
     "targetYieldTHa": 0.0,
-    "yieldMethod": "historique | satellite_model",
+    "yieldMethod": "historique | satellite_model | user_override | user_confirmed_suggestion",
     "nutritionOption": "A | B | C",
     "nutritionOptionReason": "string — pourquoi cette option a été déterminée automatiquement",
     "cycleYear": "ON | OFF | indefini | NA",

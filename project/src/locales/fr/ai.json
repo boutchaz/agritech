@@ -624,7 +624,10 @@
     "calibrationValidated": "Calibrage validé",
     "calibrationValidateError": "Impossible de valider le calibrage",
     "nutritionConfirmed": "Option nutrition confirmée",
-    "nutritionConfirmError": "Impossible de confirmer l'option nutrition"
+    "nutritionConfirmError": "Impossible de confirmer l'option nutrition",
+    "targetYieldConfirmed": "Objectif rendement confirmé",
+    "targetYieldConfirmedWithDrift": "Objectif rendement mis à jour — pensez à régénérer le plan",
+    "targetYieldConfirmError": "Impossible de confirmer l'objectif rendement"
   },
   "errors": {
     "invalidPlanPayload": "Le serveur a renvoyé un plan annuel invalide."

@@ -15,6 +15,7 @@ import { CalibrationStateMachine } from "./calibration-state-machine";
 import { NutritionOptionService } from "./nutrition-option.service";
 import { AnnualRecalibrationService } from "./annual-recalibration.service";
 import { CalibrationReviewAdapter } from "./calibration-review.adapter";
+import { TargetYieldService } from "./target-yield.service";
 
 @Module({
   imports: [
@@ -35,12 +36,14 @@ import { CalibrationReviewAdapter } from "./calibration-review.adapter";
     NutritionOptionService,
     AnnualRecalibrationService,
     CalibrationReviewAdapter,
+    TargetYieldService,
   ],
   exports: [
     CalibrationService,
     CalibrationStateMachine,
     NutritionOptionService,
     AnnualRecalibrationService,
+    TargetYieldService,
   ],
 })
 export class CalibrationModule {}

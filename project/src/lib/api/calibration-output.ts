@@ -84,6 +84,45 @@ export interface NutritionConfirmationResponse {
   ai_phase: "active";
 }
 
+export interface TargetYieldEnvelope {
+  hard_min: number;
+  hard_max: number;
+  binding_upper_bound: 'calibration' | 'varietal_phase';
+}
+
+export interface TargetYieldSuggestionResponse {
+  current_target_yield_t_ha: number | null;
+  current_source: 'suggested' | 'user_override' | null;
+  current_confirmed_at: string | null;
+  suggested_t_ha: number;
+  suggestion_method: 'history_best3_x_0_95' | 'potential_central_x_coef' | 'fallback';
+  envelope: TargetYieldEnvelope;
+  history_best3_avg: number | null;
+  warnings: {
+    wide_range: boolean;
+    young_no_history: boolean;
+    low_confidence: boolean;
+  };
+  should_auto_show: boolean;
+  inputs: {
+    yield_potential_min: number;
+    yield_potential_max: number;
+    phase_age: string | null;
+    variety: string | null;
+    planting_density: number | null;
+    varietal_cap_t_ha: number | null;
+    confidence_score: number | null;
+  };
+}
+
+export interface TargetYieldConfirmationResponse {
+  target_yield_t_ha: number;
+  source: 'suggested' | 'user_override';
+  envelope: TargetYieldEnvelope;
+  drift_marked: boolean;
+  previous_target_yield_t_ha: number | null;
+}
+
 export interface CalibrationHistoryRecord {
   id: string;
   status: string;
@@ -278,6 +317,32 @@ export const calibrationApi = {
     return apiClient.post<NutritionConfirmationResponse>(
       `${BASE_URL}/${parcelId}/calibration/${calibrationId}/nutrition-option`,
       { option },
+      {},
+      organizationId,
+    );
+  },
+
+  async getTargetYieldSuggestion(
+    parcelId: string,
+    calibrationId: string,
+    organizationId?: string,
+  ): Promise<TargetYieldSuggestionResponse> {
+    return apiClient.get<TargetYieldSuggestionResponse>(
+      `${BASE_URL}/${parcelId}/calibration/${calibrationId}/target-yield-suggestion`,
+      {},
+      organizationId,
+    );
+  },
+
+  async confirmTargetYield(
+    parcelId: string,
+    calibrationId: string,
+    body: { target_yield_t_ha: number; source: 'suggested' | 'user_override' },
+    organizationId?: string,
+  ): Promise<TargetYieldConfirmationResponse> {
+    return apiClient.post<TargetYieldConfirmationResponse>(
+      `${BASE_URL}/${parcelId}/calibration/${calibrationId}/target-yield`,
+      body,
       {},
       organizationId,
     );

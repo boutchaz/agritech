@@ -363,15 +363,15 @@ export default function StockEntryForm({
                   key={type.type}
                   type="button"
                   onClick={() => setSelectedType(type.type)}
-                  className={`p-2 md:p-4 border-2 rounded-lg text-left transition-all ${
+                  className={`flex flex-col items-start justify-start gap-1 h-auto min-h-[64px] md:min-h-[100px] w-full p-2 md:p-4 border-2 rounded-lg text-left whitespace-normal transition-all ${
                     selectedType === type.type
                       ? style.active
                       : 'border-gray-200 hover:border-gray-300'
                   }`}
                 >
-                  <Icon className={`w-5 h-5 md:w-6 md:h-6 mb-1 md:mb-2 ${style.icon}`} />
-                  <div className="font-medium text-xs md:text-sm">{type.label}</div>
-                  <div className="text-xs text-gray-500 mt-1 hidden md:block">{type.description}</div>
+                  <Icon className={`w-5 h-5 md:w-6 md:h-6 ${style.icon}`} />
+                  <div className="font-medium text-xs md:text-sm leading-tight">{type.label}</div>
+                  <div className="text-xs text-gray-500 leading-tight hidden md:block">{type.description}</div>
                 </Button>
               );
             })}

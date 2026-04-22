@@ -277,74 +277,86 @@ const ActivityHeatMap = ({
     >
       {/* Header */}
       <div className={cn(
-        isFullscreen ? 'p-4 sm:p-6' : 'p-6',
+        isFullscreen ? 'p-4 sm:p-6' : 'p-4 sm:p-6',
         'border-b border-slate-50 dark:border-slate-700/50'
       )}>
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className="p-2.5 bg-emerald-50 dark:bg-emerald-900/30 rounded-2xl group-hover:scale-110 transition-transform duration-500">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+          <div className="flex min-w-0 items-center gap-3 sm:gap-4">
+            <div className="shrink-0 p-2.5 bg-emerald-50 dark:bg-emerald-900/30 rounded-2xl group-hover:scale-110 transition-transform duration-500">
               <MapIcon className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
             </div>
-            <div>
-              <h3 className="text-lg font-semibold text-slate-900 dark:text-white tracking-tight uppercase">
+            <div className="min-w-0">
+              <h3 className="text-base font-semibold text-slate-900 dark:text-white tracking-tight uppercase sm:text-lg truncate">
                 {t('liveDashboard.heatmap.title')}
               </h3>
-              <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-0.5">
+              <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-0.5 line-clamp-2 sm:line-clamp-none">
                 {t('liveDashboard.heatmap.subtitle')}
               </p>
             </div>
           </div>
-          
-          <div className="flex flex-wrap items-center gap-3">
+
+          <div className="flex w-full min-w-0 flex-wrap items-center gap-2 sm:w-auto sm:flex-nowrap sm:justify-end sm:gap-3 sm:shrink-0">
             {lastUpdated && (
               <span className="hidden sm:flex text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-widest items-center gap-1.5 bg-slate-50 dark:bg-slate-900/50 px-3 py-1.5 rounded-full border border-slate-100 dark:border-slate-800">
                 <RefreshCw className={cn("h-3 w-3", isLoading && "animate-spin")} />
                 {new Date(lastUpdated).toLocaleTimeString()}
               </span>
             )}
-            
-            <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-700">
+
+            <div className="flex min-w-0 flex-1 items-center gap-0.5 rounded-xl border border-slate-200 bg-slate-100 p-0.5 dark:border-slate-700 dark:bg-slate-900/50 sm:flex-none sm:gap-1.5 sm:p-1">
               <Button
+                type="button"
                 size="sm"
                 variant={isSatellite ? 'default' : 'ghost'}
+                aria-pressed={isSatellite}
+                aria-label={t('liveDashboard.heatmap.satellite', 'Satellite')}
+                title={t('liveDashboard.heatmap.satellite', 'Satellite')}
                 onClick={() => setIsSatellite(true)}
                 className={cn(
-                  "h-8 text-[10px] font-medium uppercase tracking-widest rounded-lg px-3",
-                  isSatellite ? "bg-white dark:bg-slate-800 text-emerald-600 shadow-sm" : "text-slate-400 hover:text-slate-600"
+                  'h-8 min-w-8 shrink-0 rounded-lg px-2 text-[10px] font-medium uppercase tracking-widest sm:min-w-0 sm:px-3',
+                  isSatellite ? 'bg-white text-emerald-600 shadow-sm dark:bg-slate-800' : 'text-slate-400 hover:text-slate-600',
                 )}
               >
-                <Layers className="h-3 w-3 mr-1.5" />
-                Satellite
+                <Layers className="h-3 w-3 sm:mr-1.5" />
+                <span className="hidden sm:inline">{t('liveDashboard.heatmap.satellite', 'Satellite')}</span>
               </Button>
               <Button
+                type="button"
                 size="sm"
                 variant={!isSatellite ? 'default' : 'ghost'}
+                aria-pressed={!isSatellite}
+                aria-label={t('liveDashboard.heatmap.street', 'Street map')}
+                title={t('liveDashboard.heatmap.street', 'Street map')}
                 onClick={() => setIsSatellite(false)}
                 className={cn(
-                  "h-8 text-[10px] font-medium uppercase tracking-widest rounded-lg px-3",
-                  !isSatellite ? "bg-white dark:bg-slate-800 text-emerald-600 shadow-sm" : "text-slate-400 hover:text-slate-600"
+                  'h-8 min-w-8 shrink-0 rounded-lg px-2 text-[10px] font-medium uppercase tracking-widest sm:min-w-0 sm:px-3',
+                  !isSatellite ? 'bg-white text-emerald-600 shadow-sm dark:bg-slate-800' : 'text-slate-400 hover:text-slate-600',
                 )}
               >
-                <MapIcon className="h-3 w-3 mr-1.5" />
-                Plan
+                <MapIcon className="h-3 w-3 sm:mr-1.5" />
+                <span className="hidden sm:inline">Plan</span>
               </Button>
             </div>
 
             <Button
+              type="button"
               size="icon"
               variant="outline"
               onClick={() => setIsFullscreen(!isFullscreen)}
-              className="h-10 w-10 rounded-xl border-slate-200 dark:border-slate-700 hover:border-emerald-500 hover:text-emerald-600 transition-all shadow-sm"
+              aria-label={isFullscreen ? t('exitFullscreen') : t('fullscreen')}
+              className="h-9 w-9 shrink-0 rounded-xl border-slate-200 shadow-sm transition-all hover:border-emerald-500 hover:text-emerald-600 dark:border-slate-700 sm:h-10 sm:w-10"
             >
               {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
             </Button>
 
-            <div className="flex items-center gap-2 bg-emerald-50 dark:bg-emerald-900/30 px-3 py-1 rounded-full border border-emerald-100 dark:border-emerald-800 h-10">
+            <div className="ml-auto flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-emerald-100 bg-emerald-50 px-2.5 dark:border-emerald-800 dark:bg-emerald-900/30 sm:ml-0 sm:h-10 sm:gap-2 sm:px-3">
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
               </span>
-              <span className="text-[10px] font-medium text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">Live</span>
+              <span className="text-[10px] font-medium uppercase tracking-widest text-emerald-600 dark:text-emerald-400">
+                {t('liveDashboard.live', 'Live')}
+              </span>
             </div>
           </div>
         </div>

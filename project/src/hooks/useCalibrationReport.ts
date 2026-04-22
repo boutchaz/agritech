@@ -301,6 +301,84 @@ export function useConfirmNutritionOption(parcelId: string) {
   });
 }
 
+export function useTargetYieldSuggestion(parcelId: string, calibrationId: string | null | undefined) {
+  const { currentOrganization } = useAuth();
+
+  return useQuery({
+    queryKey: [
+      'target-yield-suggestion',
+      parcelId,
+      calibrationId,
+      currentOrganization?.id,
+    ],
+    queryFn: async () => {
+      if (!currentOrganization?.id || !calibrationId) {
+        throw new Error('No organization or calibration selected');
+      }
+      return calibrationApi.getTargetYieldSuggestion(
+        parcelId,
+        calibrationId,
+        currentOrganization.id,
+      );
+    },
+    enabled: !!parcelId && !!calibrationId && !!currentOrganization?.id,
+    staleTime: 2 * 60 * 1000,
+  });
+}
+
+export function useConfirmTargetYield(parcelId: string) {
+  const { currentOrganization } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      calibrationId,
+      target_yield_t_ha,
+      source,
+    }: {
+      calibrationId: string;
+      target_yield_t_ha: number;
+      source: 'suggested' | 'user_override';
+    }) => {
+      if (!currentOrganization?.id) {
+        throw new Error('No organization selected');
+      }
+      return calibrationApi.confirmTargetYield(
+        parcelId,
+        calibrationId,
+        { target_yield_t_ha, source },
+        currentOrganization.id,
+      );
+    },
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({
+        queryKey: ['target-yield-suggestion', parcelId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['ai-plan', parcelId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.calibration.report(
+          parcelId,
+          currentOrganization?.id,
+        ),
+      });
+      toast.success(
+        result.drift_marked
+          ? i18n.t('toasts.targetYieldConfirmedWithDrift', { ns: 'ai' })
+          : i18n.t('toasts.targetYieldConfirmed', { ns: 'ai' }),
+      );
+    },
+    onError: (error) => {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : i18n.t('toasts.targetYieldConfirmError', { ns: 'ai' }),
+      );
+    },
+  });
+}
+
 export function useCalibrationHistory(parcelId: string) {
   const { currentOrganization } = useAuth();
 

@@ -3745,6 +3745,10 @@ export type Database = {
           scores_detail: Json | null
           started_at: string | null
           status: string
+          target_yield_confirmed_at: string | null
+          target_yield_confirmed_by: string | null
+          target_yield_source: string | null
+          target_yield_t_ha: number | null
           type: string
           updated_at: string | null
           validated_at: string | null
@@ -3790,6 +3794,10 @@ export type Database = {
           scores_detail?: Json | null
           started_at?: string | null
           status?: string
+          target_yield_confirmed_at?: string | null
+          target_yield_confirmed_by?: string | null
+          target_yield_source?: string | null
+          target_yield_t_ha?: number | null
           type?: string
           updated_at?: string | null
           validated_at?: string | null
@@ -3835,6 +3843,10 @@ export type Database = {
           scores_detail?: Json | null
           started_at?: string | null
           status?: string
+          target_yield_confirmed_at?: string | null
+          target_yield_confirmed_by?: string | null
+          target_yield_source?: string | null
+          target_yield_t_ha?: number | null
           type?: string
           updated_at?: string | null
           validated_at?: string | null
@@ -15337,6 +15349,9 @@ export type Database = {
           accounting_settings: Json | null
           accounting_standard: string | null
           address: string | null
+          approval_status: string
+          approved_at: string | null
+          approved_by: string | null
           city: string | null
           country: string | null
           country_code: string | null
@@ -15364,6 +15379,9 @@ export type Database = {
           accounting_settings?: Json | null
           accounting_standard?: string | null
           address?: string | null
+          approval_status?: string
+          approved_at?: string | null
+          approved_by?: string | null
           city?: string | null
           country?: string | null
           country_code?: string | null
@@ -15391,6 +15409,9 @@ export type Database = {
           accounting_settings?: Json | null
           accounting_standard?: string | null
           address?: string | null
+          approval_status?: string
+          approved_at?: string | null
+          approved_by?: string | null
           city?: string | null
           country?: string | null
           country_code?: string | null

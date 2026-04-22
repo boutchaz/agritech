@@ -624,7 +624,10 @@
     "calibrationValidated": "Calibration baseline validated",
     "calibrationValidateError": "Could not validate calibration",
     "nutritionConfirmed": "Nutrition option confirmed",
-    "nutritionConfirmError": "Could not confirm nutrition option"
+    "nutritionConfirmError": "Could not confirm nutrition option",
+    "targetYieldConfirmed": "Target yield confirmed",
+    "targetYieldConfirmedWithDrift": "Target yield updated — remember to regenerate the plan",
+    "targetYieldConfirmError": "Could not confirm target yield"
   },
   "errors": {
     "invalidPlanPayload": "The server returned an invalid season plan."

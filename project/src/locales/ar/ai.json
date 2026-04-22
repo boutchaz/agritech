@@ -624,7 +624,10 @@
     "calibrationValidated": "تم التحقق من خط الأساس للمعايرة",
     "calibrationValidateError": "تعذر التحقق من المعايرة",
     "nutritionConfirmed": "تم تأكيد خيار التغذية",
-    "nutritionConfirmError": "تعذر تأكيد خيار التغذية"
+    "nutritionConfirmError": "تعذر تأكيد خيار التغذية",
+    "targetYieldConfirmed": "تم تأكيد المردود المستهدف",
+    "targetYieldConfirmedWithDrift": "تم تحديث المردود المستهدف — فكر في إعادة إنشاء الخطة",
+    "targetYieldConfirmError": "تعذر تأكيد المردود المستهدف"
   },
   "errors": {
     "invalidPlanPayload": "أعاد الخادم خطة موسم غير صالحة."

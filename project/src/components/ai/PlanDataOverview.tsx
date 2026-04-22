@@ -71,6 +71,12 @@ interface PlanParameters {
   nutritionOptionReason?: string;
 }
 
+export interface TargetYieldDrift {
+  previous: number;
+  current: number;
+  changed_at: string;
+}
+
 export interface PlanData {
   source?: string;
   ai_version?: string;
@@ -82,6 +88,7 @@ export interface PlanData {
   harvestForecast?: HarvestForecast;
   economicEstimate?: EconomicEstimate;
   pruning?: PruningPlan;
+  target_yield_drift?: TargetYieldDrift | null;
 }
 
 interface PlanDataOverviewProps {

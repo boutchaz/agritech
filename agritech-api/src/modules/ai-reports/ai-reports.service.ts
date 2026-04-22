@@ -1553,7 +1553,51 @@ Produis le JSON d'enrichissement.`;
             couverture_nuageuse_pct: 10,
           })),
           meteo_history: [],
-          analyses: {},
+          analyses: {
+            ...(calibrationData.soilAnalysis ? {
+              sol: {
+                pH: calibrationData.soilAnalysis.phLevel ?? undefined,
+                EC: calibrationData.soilAnalysis.ec ?? undefined,
+                MO_pct: calibrationData.soilAnalysis.organicMatter ?? undefined,
+                N_ppm: calibrationData.soilAnalysis.nitrogenPpm ?? undefined,
+                P_ppm: calibrationData.soilAnalysis.phosphorusPpm ?? undefined,
+                K_ppm: calibrationData.soilAnalysis.potassiumPpm ?? undefined,
+                Ca_ppm: calibrationData.soilAnalysis.calcium ?? undefined,
+                Mg_ppm: calibrationData.soilAnalysis.magnesium ?? undefined,
+                CEC: calibrationData.soilAnalysis.cec ?? undefined,
+                calcaire_total_pct: calibrationData.soilAnalysis.totalLimestone ?? undefined,
+                calcaire_actif_pct: calibrationData.soilAnalysis.activeLimestone ?? undefined,
+                texture: calibrationData.soilAnalysis.texture ?? undefined,
+              },
+            } : {}),
+            ...(calibrationData.waterAnalysis ? {
+              eau: {
+                pH: calibrationData.waterAnalysis.ph ?? undefined,
+                EC: calibrationData.waterAnalysis.ec ?? undefined,
+                SAR: calibrationData.waterAnalysis.sar ?? undefined,
+                Na_ppm: calibrationData.waterAnalysis.sodium ?? undefined,
+                Cl_ppm: calibrationData.waterAnalysis.chlorides ?? undefined,
+                HCO3_ppm: calibrationData.waterAnalysis.bicarbonates ?? undefined,
+                NO3_ppm: calibrationData.waterAnalysis.nitrates ?? undefined,
+                B_ppm: calibrationData.waterAnalysis.boron ?? undefined,
+                TDS_ppm: calibrationData.waterAnalysis.tds ?? undefined,
+              },
+            } : {}),
+            ...(calibrationData.plantAnalysis ? {
+              foliaire: {
+                N_pct: calibrationData.plantAnalysis.nitrogenPercent ?? undefined,
+                P_pct: calibrationData.plantAnalysis.phosphorusPercent ?? undefined,
+                K_pct: calibrationData.plantAnalysis.potassiumPercent ?? undefined,
+                Ca_pct: calibrationData.plantAnalysis.calcium ?? undefined,
+                Mg_pct: calibrationData.plantAnalysis.magnesium ?? undefined,
+                Fe_ppm: calibrationData.plantAnalysis.iron ?? undefined,
+                Zn_ppm: calibrationData.plantAnalysis.zinc ?? undefined,
+                Mn_ppm: calibrationData.plantAnalysis.manganese ?? undefined,
+                B_ppm: calibrationData.plantAnalysis.boron ?? undefined,
+                Cu_ppm: calibrationData.plantAnalysis.copper ?? undefined,
+              },
+            } : {}),
+          },
           historique_rendements: (calibrationData.yieldHistory ?? []).map((y: any) => ({
             annee: y.year,
             rendement_t_ha: y.yieldPerHa ?? 0,
@@ -2192,7 +2236,7 @@ Produis le JSON d'enrichissement.`;
     const { data: calibration } = await supabase
       .from('calibrations')
       .select(
-        'baseline_data, diagnostic_data, health_score, confidence_score, yield_potential_min, yield_potential_max, phase_age',
+        'baseline_data, diagnostic_data, health_score, confidence_score, yield_potential_min, yield_potential_max, phase_age, target_yield_t_ha, target_yield_source',
       )
       .eq('parcel_id', parcelId)
       .eq('organization_id', organizationId)
@@ -2420,6 +2464,17 @@ Produis le JSON d'enrichissement.`;
         }),
       ),
       calibrationFollowUp,
+      confirmedTargetYieldTHa:
+        typeof calibration.target_yield_t_ha === 'number'
+          ? calibration.target_yield_t_ha
+          : typeof calibration.target_yield_t_ha === 'string'
+            ? parseFloat(calibration.target_yield_t_ha) || null
+            : null,
+      confirmedTargetYieldSource:
+        calibration.target_yield_source === 'suggested' ||
+        calibration.target_yield_source === 'user_override'
+          ? calibration.target_yield_source
+          : null,
     };
   }
 

@@ -68,10 +68,12 @@ def _is_evergreen(
         return True
     return False
 
+
 _COMPONENT_MAX_SCORES: dict[str, float] = {
     "satellite": 30.0,
     "soil": 20.0,
     "water": 15.0,
+    "foliar": 5.0,
     "yield": 20.0,
     "profile": 10.0,
     "irrigation": 10.0,
@@ -160,9 +162,7 @@ def _latest_analysis_fields(
 
 
 def _observed_points(points: list[Any]) -> list[Any]:
-    return [
-        point for point in points if point.is_observed
-    ]
+    return [point for point in points if point.is_observed]
 
 
 def _observed_month_span(points: list[Any]) -> int:
@@ -207,11 +207,13 @@ def _compute_gdd_from_weather_rows(
         if not w.date_str:
             continue
         gdd = compute_daily_gdd(w.temp_max, w.temp_min, tbase, tupper)
-        result.append({
-            "date": w.date_str,
-            "gdd_daily": round(gdd, 4),
-            "chill_hours": 1.0 if w.temp_min < 7.2 else 0.0,
-        })
+        result.append(
+            {
+                "date": w.date_str,
+                "gdd_daily": round(gdd, 4),
+                "chill_hours": 1.0 if w.temp_min < 7.2 else 0.0,
+            }
+        )
     return result
 
 
@@ -248,9 +250,7 @@ async def _enrich_step2_with_gdd(
         if not rows:
             return
         # Fire-and-forget: persist to weather_gdd_daily for future calibrations
-        asyncio.ensure_future(
-            supabase_svc.upsert_gdd_rows(lat, lon, crop_type, rows)
-        )
+        asyncio.ensure_future(supabase_svc.upsert_gdd_rows(lat, lon, crop_type, rows))
 
     monthly_totals: dict[str, float] = defaultdict(float)
     cumulative = 0.0
@@ -316,10 +316,20 @@ async def run_calibration_pipeline(
     location = _extract_location_from_weather_rows(weather_rows)
     if location is not None and calibration_input.crop_type == "olivier":
         from app.services.weather.chill_hours import compute_hourly_chill_hours
+
         lat, lon = location
         # Use the latest weather year as reference (calibration runs Apr–Jun typically)
-        chill_year = max((d.year for d in (date.fromisoformat(str(r.get("date", ""))[:10])
-                                            for r in weather_rows if r.get("date"))), default=date.today().year)
+        chill_year = max(
+            (
+                d.year
+                for d in (
+                    date.fromisoformat(str(r.get("date", ""))[:10])
+                    for r in weather_rows
+                    if r.get("date")
+                )
+            ),
+            default=date.today().year,
+        )
         step2.chill_hours = await compute_hourly_chill_hours(
             latitude=lat, longitude=lon, year=chill_year
         )
@@ -359,7 +369,9 @@ async def run_calibration_pipeline(
     signal_classification, step3, step4, step6 = await asyncio.gather(
         asyncio.to_thread(
             classify_signal,
-            step1, step2, calibration_input.crop_type,
+            step1,
+            step2,
+            calibration_input.crop_type,
         ),
         asyncio.to_thread(
             calculate_percentiles,
@@ -376,7 +388,9 @@ async def run_calibration_pipeline(
             variety=calibration_input.variety,
             planting_system=calibration_input.planting_system,
             reference_data=calibration_input.reference_data,
-            maturity_phase=maturity_phase.value if isinstance(maturity_phase, MaturityPhase) else None,
+            maturity_phase=maturity_phase.value
+            if isinstance(maturity_phase, MaturityPhase)
+            else None,
         ),
         asyncio.to_thread(
             calculate_yield_potential,
@@ -390,6 +404,7 @@ async def run_calibration_pipeline(
             plant_count=calibration_input.plant_count,
             area_hectares=calibration_input.area_hectares,
             density_per_hectare=calibration_input.density_per_hectare,
+            harvest_regularity=calibration_input.harvest_regularity,
         ),
     )
 
@@ -424,7 +439,10 @@ async def run_calibration_pipeline(
     step5, step7 = await asyncio.gather(
         asyncio.to_thread(
             detect_anomalies,
-            step1, step2, step4, adjustment,
+            step1,
+            step2,
+            step4,
+            adjustment,
             reference_data=calibration_input.reference_data,
             planting_system=calibration_input.planting_system,
             crop_type=calibration_input.crop_type,
@@ -435,29 +453,43 @@ async def run_calibration_pipeline(
             ndvi_raster_pixels=ndvi_raster_pixels,
             observed_ndvi_points=observed_ndvi_points,
             gci_percentiles=step3.global_percentiles.get("GCI"),
-            observed_gci_points=_observed_points(step1.index_time_series.get("GCI", [])),
+            observed_gci_points=_observed_points(
+                step1.index_time_series.get("GCI", [])
+            ),
         ),
     )
 
     # --- Phase 4: S8(health_score) — needs S1 + S3 + S7 ---
+    soil_date, soil_fields = _latest_analysis_fields(calibration_input.analyses, "soil")
+    water_date, water_fields = _latest_analysis_fields(
+        calibration_input.analyses, "water"
+    )
+    foliar_date, foliar_fields = _latest_analysis_fields(
+        calibration_input.analyses, "plant"
+    )
+
     step8 = await asyncio.to_thread(
         calculate_health_score,
         step1=step1,
         step3=step3,
         step7=step7,
+        soil_analysis=soil_fields if soil_fields else None,
+        water_analysis=water_fields if water_fields else None,
+        foliar_analysis=foliar_fields if foliar_fields else None,
     )
 
-    # Analysis fields for confidence scoring and recommendations
-    soil_date, soil_fields = _latest_analysis_fields(calibration_input.analyses, "soil")
-    water_date, water_fields = _latest_analysis_fields(calibration_input.analyses, "water")
-
-    # Recommendations
     recommendations = generate_recommendations(
         step8=step8,
         step5=step5,
         step2=step2,
         crop_type=calibration_input.crop_type,
-        maturity_phase=maturity_phase if isinstance(maturity_phase, MaturityPhase) else MaturityPhase.UNKNOWN,
+        maturity_phase=maturity_phase
+        if isinstance(maturity_phase, MaturityPhase)
+        else MaturityPhase.UNKNOWN,
+        soil_analysis=soil_fields if soil_fields else None,
+        water_analysis=water_fields if water_fields else None,
+        foliar_analysis=foliar_fields if foliar_fields else None,
+        cultural_history=calibration_input.cultural_history,
     )
 
     confidence = calculate_confidence_score(
@@ -467,6 +499,8 @@ async def run_calibration_pipeline(
             soil_fields=soil_fields,
             water_analysis_date=None if water_date is None else water_date.date(),
             water_fields=water_fields,
+            foliar_analysis_date=None if foliar_date is None else foliar_date.date(),
+            foliar_fields=foliar_fields,
             yield_years=len(calibration_input.harvest_records),
             crop_type=calibration_input.crop_type,
             variety=calibration_input.variety,
@@ -477,6 +511,7 @@ async def run_calibration_pipeline(
             water_source=calibration_input.water_source,
             has_boundary=True,
             coherence_level="none",
+            cultural_history=calibration_input.cultural_history,
         )
     )
 
@@ -487,11 +522,14 @@ async def run_calibration_pipeline(
         data_quality_flags.append("insufficient_satellite_data")
     if not has_real_zones:
         data_quality_flags.append("single_pixel_zones")
-    if _is_evergreen(
-        calibration_input.crop_type,
-        calibration_input.reference_data,
-        calibration_input.planting_system,
-    ) and not step4.referential_cycle_used:
+    if (
+        _is_evergreen(
+            calibration_input.crop_type,
+            calibration_input.reference_data,
+            calibration_input.planting_system,
+        )
+        and not step4.referential_cycle_used
+    ):
         data_quality_flags.append("evergreen_phenology_approximate")
     if step4.status != "ok":
         data_quality_flags.append(f"phenology_{step4.status}")

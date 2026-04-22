@@ -78,7 +78,7 @@ def _round_yearly_means(yearly_means: dict[int, float]) -> dict[int, float]:
     return {year: round(value, 4) for year, value in yearly_means.items()}
 
 
-def _detect_olive_alternance(
+def _detect_alternance(
     *, satellite_data: Step1Output, current_year: int
 ) -> AlternanceInfo:
     ndvi_points = satellite_data.index_time_series.get("NDVI", [])
@@ -189,6 +189,7 @@ def calculate_yield_potential(
     plant_count: int | None = None,
     area_hectares: float | None = None,
     density_per_hectare: int | None = None,
+    harvest_regularity: str | None = None,
 ) -> Step6Output:
     _ = (crop_type, maturity_phase)
 
@@ -228,8 +229,8 @@ def calculate_yield_potential(
         max_value = max(max_value, convert(historical_avg))
 
     alternance: AlternanceInfo | None = None
-    if crop_type == "olivier" and satellite_data is not None:
-        alternance = _detect_olive_alternance(
+    if satellite_data is not None:
+        alternance = _detect_alternance(
             satellite_data=satellite_data,
             current_year=year,
         )
@@ -237,6 +238,25 @@ def calculate_yield_potential(
             max_value = max_value * 1.3
         elif alternance.detected and alternance.current_year_type == "off":
             min_value = min_value * 0.7
+
+    if harvest_regularity == "marked_alternance":
+        center = (min_value + max_value) / 2
+        half_range = (max_value - min_value) / 2
+        half_range *= 1.20
+        min_value = center - half_range
+        max_value = center + half_range
+    elif harvest_regularity == "very_irregular":
+        center = (min_value + max_value) / 2
+        half_range = (max_value - min_value) / 2
+        half_range *= 1.30
+        min_value = center - half_range
+        max_value = center + half_range
+    elif harvest_regularity == "stable":
+        center = (min_value + max_value) / 2
+        half_range = (max_value - min_value) / 2
+        half_range *= 0.90
+        min_value = center - half_range
+        max_value = center + half_range
 
     yield_potential = YieldPotential(
         minimum=round(min_value, 4),

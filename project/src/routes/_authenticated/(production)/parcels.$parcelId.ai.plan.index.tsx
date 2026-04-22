@@ -10,7 +10,7 @@ import {
 import { PlanInterventionCard } from '@/components/ai/PlanInterventionCard';
 import { PlanDataOverview, type PlanData } from '@/components/ai/PlanDataOverview';
 import { annualPlanStatusLabel } from '@/lib/farmerFriendlyLabels';
-import { Calendar, RefreshCw, Sparkles } from 'lucide-react';
+import { AlertTriangle, Calendar, RefreshCw, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SectionLoader } from '@/components/ui/loader';
 
@@ -98,6 +98,35 @@ const AIPlanCalendarPage = () => {
               style={{ width: `${progress}%` }}
             />
           </div>
+        </div>
+      )}
+
+      {planData?.target_yield_drift && (
+        <div className="flex flex-col gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-800/40 dark:bg-amber-900/20 dark:text-amber-100 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" aria-hidden />
+            <div>
+              <p className="font-semibold">
+                {t('plan.drift.title', "Objectif rendement modifié")}
+              </p>
+              <p className="mt-1">
+                {t('plan.drift.body', "Objectif passé de {{previous}} à {{current}} t/ha. Le plan actuel reflète encore l'ancien objectif.", {
+                  previous: planData.target_yield_drift.previous,
+                  current: planData.target_yield_drift.current,
+                })}
+              </p>
+            </div>
+          </div>
+          <Button
+            type="button"
+            variant="green"
+            onClick={() => regeneratePlan(parcelId)}
+            disabled={isRegenerating || isGenerating}
+            className="shrink-0"
+          >
+            <RefreshCw className={`mr-2 h-4 w-4 ${isRegenerating ? 'animate-spin' : ''}`} aria-hidden />
+            {t('plan.drift.regenerate', 'Régénérer le plan')}
+          </Button>
         </div>
       )}
 
