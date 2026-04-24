@@ -25203,3 +25203,229 @@ CREATE POLICY "org_access" ON public.account_translations
     )
   );
 
+
+
+-- =====================================================================
+-- Migration: 20260424000000_align_modules_catalog.sql
+-- =====================================================================
+-- Reconciles the modules catalog to the 12-SKU coarse licensing model
+-- agreed on 2026-04-24 (see reespec/decisions.md). This migration is
+-- idempotent and safe to re-run.
+--
+-- What it does:
+--   1. Upserts 12 canonical modules by slug (core + 11 sellable SKUs).
+--   2. Seeds module_translations for fr / en / ar per module.
+--   3. Marks all non-canonical modules is_available = false.
+--   4. Remaps organization_modules rows from legacy slugs to canonical
+--      slugs (OR-ing is_active when multiple legacy rows collapse to
+--      one canonical row).
+--   5. Guarantees every organization has `core` is_active = true.
+--   6. Cleans up organization_modules rows pointing to unavailable
+--      (legacy) modules.
+
+BEGIN;
+
+-- 1. Upsert 12 canonical modules ------------------------------------
+INSERT INTO modules (
+  slug, name, icon, color, category, description,
+  display_order, price_monthly, is_required, is_recommended,
+  is_available, navigation_items, dashboard_widgets
+) VALUES
+  ('core',             'core',             'Home',          '#10b981', 'core',       'Core features available to every organization', 1,  0,   true,  true,  true,
+    '["/dashboard","/settings","/farm-hierarchy","/parcels","/notifications"]'::jsonb, '[]'::jsonb),
+  ('chat_advisor',     'chat_advisor',     'Bot',           '#10b981', 'analytics',  'Conversational AgromindIA assistant',             2,  0,   false, true,  true,
+    '["/chat"]'::jsonb, '[]'::jsonb),
+  ('agromind_advisor', 'agromind_advisor', 'Sparkles',      '#7c3aed', 'analytics',  'AI advisor per parcel: calibration, diagnostics, recommendations, annual plan', 3, 0, false, false, true,
+    '["/parcels/$parcelId/ai"]'::jsonb, '[]'::jsonb),
+  ('satellite',        'satellite',        'Satellite',     '#06b6d4', 'analytics',  'Satellite imagery, vegetation indices, weather',  4,  0,   false, false, true,
+    '["/satellite-analysis","/parcels/$parcelId/satellite","/parcels/$parcelId/weather"]'::jsonb, '[]'::jsonb),
+  ('personnel',        'personnel',        'Users',         '#3b82f6', 'hr',         'Workers and tasks',                               5,  0,   false, false, true,
+    '["/workers","/tasks"]'::jsonb, '[]'::jsonb),
+  ('stock',            'stock',            'Package',       '#10b981', 'inventory',  'Inventory and infrastructure',                    6,  0,   false, false, true,
+    '["/stock","/infrastructure"]'::jsonb, '[]'::jsonb),
+  ('production',       'production',       'Wheat',         '#f59e0b', 'production', 'Campaigns, crop cycles, harvests, quality',       7,  0,   false, false, true,
+    '["/campaigns","/crop-cycles","/harvests","/reception-batches","/quality-control"]'::jsonb, '[]'::jsonb),
+  ('fruit_trees',      'fruit_trees',      'TreeDeciduous', '#10b981', 'agriculture','Trees, orchards, pruning',                        8,  0,   false, false, true,
+    '["/trees","/orchards","/pruning"]'::jsonb, '[]'::jsonb),
+  ('compliance',       'compliance',       'ShieldCheck',   '#a855f7', 'operations', 'Compliance and certifications',                   9,  0,   false, false, true,
+    '["/compliance"]'::jsonb, '[]'::jsonb),
+  ('sales_purchasing', 'sales_purchasing', 'ShoppingCart',  '#f43f5e', 'sales',      'Quotes, sales orders, purchase orders',           10, 0,   false, false, true,
+    '["/accounting/quotes","/accounting/sales-orders","/accounting/purchase-orders","/accounting/customers","/stock/suppliers"]'::jsonb, '[]'::jsonb),
+  ('accounting',       'accounting',       'BookOpen',      '#6366f1', 'accounting', 'Invoices, payments, journal, reports',            11, 0,   false, false, true,
+    '["/accounting"]'::jsonb, '[]'::jsonb),
+  ('marketplace',      'marketplace',      'ShoppingBag',   '#f97316', 'sales',      'B2B quote marketplace',                           12, 0,   false, false, true,
+    '["/marketplace"]'::jsonb, '[]'::jsonb)
+ON CONFLICT (slug) DO UPDATE SET
+  icon              = EXCLUDED.icon,
+  color             = EXCLUDED.color,
+  category          = EXCLUDED.category,
+  description       = EXCLUDED.description,
+  display_order     = EXCLUDED.display_order,
+  price_monthly     = EXCLUDED.price_monthly,
+  is_required       = EXCLUDED.is_required,
+  is_recommended    = EXCLUDED.is_recommended,
+  is_available      = EXCLUDED.is_available,
+  navigation_items  = EXCLUDED.navigation_items,
+  dashboard_widgets = EXCLUDED.dashboard_widgets,
+  updated_at        = NOW();
+
+-- 2. Seed module_translations (fr / en / ar) ------------------------
+INSERT INTO module_translations (module_id, locale, name, description)
+SELECT m.id, v.locale, v.name, v.description
+FROM modules m
+JOIN (VALUES
+  ('core',             'fr', 'Cœur',                'Fonctionnalités de base pour toute organisation'),
+  ('core',             'en', 'Core',                'Core features available to every organization'),
+  ('core',             'ar', 'الأساس',              'الميزات الأساسية المتاحة لكل مؤسسة'),
+  ('chat_advisor',     'fr', 'Conseiller Chat',     'Assistant conversationnel AgromindIA'),
+  ('chat_advisor',     'en', 'Chat Advisor',        'Conversational AgromindIA assistant'),
+  ('chat_advisor',     'ar', 'المستشار الحواري',   'مساعد AgromindIA التفاعلي'),
+  ('agromind_advisor', 'fr', 'Conseiller AgroMind', 'Conseiller IA par parcelle: calibrage, diagnostics, recommandations, plan annuel'),
+  ('agromind_advisor', 'en', 'AgroMind Advisor',    'AI advisor per parcel: calibration, diagnostics, recommendations, annual plan'),
+  ('agromind_advisor', 'ar', 'مستشار أغرومايند',    'مستشار ذكاء اصطناعي لكل قطعة: المعايرة، التشخيص، التوصيات، الخطة السنوية'),
+  ('satellite',        'fr', 'Satellite',           'Imagerie satellite, indices de végétation, météo'),
+  ('satellite',        'en', 'Satellite',           'Satellite imagery, vegetation indices, weather'),
+  ('satellite',        'ar', 'الأقمار الصناعية',   'صور الأقمار الصناعية ومؤشرات الغطاء النباتي والطقس'),
+  ('personnel',        'fr', 'Personnel',           'Ouvriers et tâches'),
+  ('personnel',        'en', 'Personnel',           'Workers and tasks'),
+  ('personnel',        'ar', 'الموظفون',            'العمال والمهام'),
+  ('stock',            'fr', 'Stock',               'Inventaire et infrastructure'),
+  ('stock',            'en', 'Stock',               'Inventory and infrastructure'),
+  ('stock',            'ar', 'المخزون',            'المخزون والبنية التحتية'),
+  ('production',       'fr', 'Production',          'Campagnes, cycles culturaux, récoltes, qualité'),
+  ('production',       'en', 'Production',          'Campaigns, crop cycles, harvests, quality'),
+  ('production',       'ar', 'الإنتاج',             'الحملات ودورات المحاصيل والحصاد والجودة'),
+  ('fruit_trees',      'fr', 'Arbres Fruitiers',    'Arbres, vergers, taille'),
+  ('fruit_trees',      'en', 'Fruit Trees',         'Trees, orchards, pruning'),
+  ('fruit_trees',      'ar', 'الأشجار المثمرة',    'الأشجار والبساتين والتقليم'),
+  ('compliance',       'fr', 'Conformité',          'Conformité et certifications'),
+  ('compliance',       'en', 'Compliance',          'Compliance and certifications'),
+  ('compliance',       'ar', 'الامتثال',            'الامتثال والشهادات'),
+  ('sales_purchasing', 'fr', 'Ventes & Achats',     'Devis, commandes clients, commandes fournisseurs'),
+  ('sales_purchasing', 'en', 'Sales & Purchasing',  'Quotes, sales orders, purchase orders'),
+  ('sales_purchasing', 'ar', 'المبيعات والمشتريات', 'العروض وطلبات البيع وطلبات الشراء'),
+  ('accounting',       'fr', 'Comptabilité',        'Factures, paiements, journal, rapports'),
+  ('accounting',       'en', 'Accounting',          'Invoices, payments, journal, reports'),
+  ('accounting',       'ar', 'المحاسبة',            'الفواتير والمدفوعات والدفتر والتقارير'),
+  ('marketplace',      'fr', 'Place de Marché',     'Marketplace B2B de demandes de devis'),
+  ('marketplace',      'en', 'Marketplace',         'B2B quote marketplace'),
+  ('marketplace',      'ar', 'السوق',               'سوق عروض B2B')
+) AS v(slug, locale, name, description) ON v.slug = m.slug
+ON CONFLICT (module_id, locale) DO UPDATE SET
+  name        = EXCLUDED.name,
+  description = EXCLUDED.description,
+  updated_at  = NOW();
+
+-- 3. Mark all non-canonical modules as unavailable -------------------
+UPDATE modules
+SET is_available = false,
+    updated_at   = NOW()
+WHERE slug NOT IN (
+  'core','chat_advisor','agromind_advisor','satellite','personnel','stock',
+  'production','fruit_trees','compliance','sales_purchasing','accounting','marketplace'
+);
+
+-- 4. Remap organization_modules rows from legacy slugs to canonical --
+WITH legacy_map(legacy_slug, canonical_slug) AS (
+  VALUES
+    ('dashboard',       'core'),
+    ('farms',           'core'),
+    ('farm_management', 'core'),
+    ('harvests',        'production'),
+    ('tasks',           'personnel'),
+    ('workers',         'personnel'),
+    ('hr',              'personnel'),
+    ('stock',           'stock'),
+    ('inventory',       'stock'),
+    ('customers',       'sales_purchasing'),
+    ('suppliers',       'sales_purchasing'),
+    ('quotes',          'sales_purchasing'),
+    ('sales_orders',    'sales_purchasing'),
+    ('sales',           'sales_purchasing'),
+    ('purchase_orders', 'sales_purchasing'),
+    ('procurement',     'sales_purchasing'),
+    ('invoices',        'accounting'),
+    ('reports',         'accounting'),
+    ('analytics',       'satellite'),
+    ('chat',            'chat_advisor'),
+    ('certifications',  'compliance'),
+    ('arbres_fruitiers','fruit_trees')
+),
+id_map AS (
+  SELECT
+    old_m.id  AS old_module_id,
+    new_m.id  AS new_module_id
+  FROM legacy_map
+  JOIN modules old_m ON old_m.slug = legacy_map.legacy_slug
+  JOIN modules new_m ON new_m.slug = legacy_map.canonical_slug
+  WHERE old_m.id <> new_m.id
+),
+collapsed AS (
+  SELECT
+    om.organization_id,
+    id_map.new_module_id,
+    bool_or(om.is_active) AS is_active
+  FROM organization_modules om
+  JOIN id_map ON om.module_id = id_map.old_module_id
+  GROUP BY om.organization_id, id_map.new_module_id
+)
+INSERT INTO organization_modules (organization_id, module_id, is_active)
+SELECT organization_id, new_module_id, is_active
+FROM collapsed
+ON CONFLICT (organization_id, module_id) DO UPDATE SET
+  is_active  = organization_modules.is_active OR EXCLUDED.is_active,
+  updated_at = NOW();
+
+-- 5. Delete organization_modules rows pointing to unavailable modules -
+DELETE FROM organization_modules om
+USING modules m
+WHERE om.module_id = m.id
+  AND m.is_available = false;
+
+-- 6. Guarantee every organization has core active --------------------
+INSERT INTO organization_modules (organization_id, module_id, is_active)
+SELECT o.id, m.id, true
+FROM organizations o
+CROSS JOIN modules m
+WHERE m.slug = 'core'
+ON CONFLICT (organization_id, module_id) DO UPDATE SET
+  is_active  = true,
+  updated_at = NOW();
+
+COMMIT;
+
+-- Audit helper (commented; run manually for verification) ------------
+-- SELECT m.slug, COUNT(om.*) FILTER (WHERE om.is_active) AS active_orgs
+-- FROM modules m LEFT JOIN organization_modules om ON om.module_id = m.id
+-- WHERE m.is_available = true
+-- GROUP BY m.slug ORDER BY m.slug;
+
+
+-- =====================================================================
+-- Migration: 20260424000001_seed_required_modules_trigger.sql
+-- =====================================================================
+-- When a new organization is created, automatically activate all
+-- modules marked is_required = true. Companion to the preceding
+-- catalog alignment migration.
+
+CREATE OR REPLACE FUNCTION seed_required_modules_for_new_org()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO organization_modules (organization_id, module_id, is_active)
+  SELECT NEW.id, m.id, true
+  FROM modules m
+  WHERE m.is_required = true
+  ON CONFLICT (organization_id, module_id) DO UPDATE SET
+    is_active  = true,
+    updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_seed_required_modules ON organizations;
+CREATE TRIGGER trg_seed_required_modules
+AFTER INSERT ON organizations
+FOR EACH ROW EXECUTE FUNCTION seed_required_modules_for_new_org();
+
+COMMENT ON FUNCTION seed_required_modules_for_new_org IS
+  'Auto-activates all modules.is_required=true for newly created organizations.';

@@ -657,7 +657,7 @@ export class AdminService {
 
     const { data: catalog, error: catalogError } = await client
       .from('modules')
-      .select('id, slug');
+      .select('id, slug, is_required');
     if (catalogError) {
       throw new InternalServerErrorException(
         `Failed to load module catalog: ${catalogError.message}`,
@@ -665,8 +665,20 @@ export class AdminService {
     }
 
     const bySlug = new Map<string, string>();
+    const requiredSlugs: string[] = [];
     for (const row of (catalog || []) as any[]) {
       if (row.slug) bySlug.set(row.slug, row.id);
+      if (row.is_required && row.slug) requiredSlugs.push(row.slug);
+    }
+
+    // Required modules must always be in the enabled set. Reject attempts
+    // to save an enabled array that omits any required slug.
+    const requestedSet = new Set(normalized);
+    const missingRequired = requiredSlugs.filter((s) => !requestedSet.has(s));
+    if (missingRequired.length > 0) {
+      throw new BadRequestException(
+        `Cannot deactivate required modules: ${missingRequired.join(', ')}`,
+      );
     }
 
     const rows = normalized
@@ -1260,6 +1272,17 @@ export class AdminService {
   async createModule(input: Record<string, unknown>) {
     const client = this.databaseService.getAdminClient();
 
+    // Validate nav_items against route manifest (if available)
+    if ('navigation_items' in input) {
+      const { routes: manifest } = this.readManifest();
+      const unknown = this.validateNavItemsAgainstManifest(input.navigation_items, manifest);
+      if (unknown.length > 0) {
+        throw new BadRequestException(
+          `Unknown routes in navigation_items: ${unknown.join(', ')}. Run 'npm run gen:manifest' after adding new routes.`,
+        );
+      }
+    }
+
     // Check slug uniqueness
     if (input.slug) {
       const { data: existing } = await client
@@ -1302,6 +1325,17 @@ export class AdminService {
 
   async updateModule(id: string, input: Record<string, unknown>) {
     const client = this.databaseService.getAdminClient();
+
+    // Validate nav_items against route manifest (if available)
+    if ('navigation_items' in input) {
+      const { routes: manifest } = this.readManifest();
+      const unknown = this.validateNavItemsAgainstManifest(input.navigation_items, manifest);
+      if (unknown.length > 0) {
+        throw new BadRequestException(
+          `Unknown routes in navigation_items: ${unknown.join(', ')}. Run 'npm run gen:manifest' after adding new routes.`,
+        );
+      }
+    }
 
     // Check module exists
     const { data: existing } = await client
@@ -1377,5 +1411,124 @@ export class AdminService {
 
     if (error) throw error;
     return data;
+  }
+
+  // ============================================
+  // Route Manifest
+  // ============================================
+
+  private cachedManifest: { mtimeMs: number; routes: string[] } | null = null;
+
+  private readManifest(): { routes: string[]; generated_at: string | null } {
+    // Try a few likely locations — resolves whether backend runs from
+    // agritech-api/ or a deployed monorepo layout.
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const fs = require('node:fs');
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const path = require('node:path');
+    const candidates = [
+      path.resolve(process.cwd(), '../project/src/generated/route-manifest.json'),
+      path.resolve(process.cwd(), 'project/src/generated/route-manifest.json'),
+      path.resolve(process.cwd(), '../../project/src/generated/route-manifest.json'),
+    ];
+    for (const p of candidates) {
+      if (fs.existsSync(p)) {
+        const stat = fs.statSync(p);
+        if (this.cachedManifest && this.cachedManifest.mtimeMs === stat.mtimeMs) {
+          return { routes: this.cachedManifest.routes, generated_at: null };
+        }
+        const raw = fs.readFileSync(p, 'utf8');
+        const parsed = JSON.parse(raw) as { routes?: string[]; generated_at?: string };
+        const routes = Array.isArray(parsed.routes) ? parsed.routes : [];
+        this.cachedManifest = { mtimeMs: stat.mtimeMs, routes };
+        return { routes, generated_at: parsed.generated_at ?? null };
+      }
+    }
+    // No manifest found — fail soft with empty array. Frontend / validation
+    // treats this as "no manifest available" and skips validation rather
+    // than blocking module saves.
+    this.cachedManifest = null;
+    return { routes: [], generated_at: null };
+  }
+
+  async getRouteManifest(): Promise<{ routes: string[]; generated_at: string | null; count: number }> {
+    const { routes, generated_at } = this.readManifest();
+    return { routes, generated_at, count: routes.length };
+  }
+
+  /**
+   * Validate that each nav_item is either in the manifest or a literal
+   * prefix of something in the manifest. Returns the list of offending
+   * entries. Empty array = all valid.
+   */
+  private validateNavItemsAgainstManifest(
+    navItems: unknown,
+    manifest: string[],
+  ): string[] {
+    if (!Array.isArray(navItems) || manifest.length === 0) return [];
+    const manifestSet = new Set(manifest);
+
+    const unknown: string[] = [];
+    for (const item of navItems) {
+      const to = typeof item === 'string'
+        ? item
+        : item && typeof item === 'object' && typeof (item as { to?: unknown }).to === 'string'
+          ? (item as { to: string }).to
+          : null;
+      if (!to) continue;
+      // Accept an exact match, or accept the entry as a prefix of a real
+      // route (so `/parcels/$parcelId/ai` matches a module that wants to
+      // claim the whole subtree).
+      if (manifestSet.has(to)) continue;
+      if (manifest.some((m) => m === to || m.startsWith(`${to}/`))) continue;
+      unknown.push(to);
+    }
+    return unknown;
+  }
+
+  async getOrphanRoutes(): Promise<{ orphans: string[]; count: number }> {
+    const client = this.databaseService.getAdminClient();
+    const { routes } = this.readManifest();
+    if (routes.length === 0) return { orphans: [], count: 0 };
+
+    const { data: modules } = await client
+      .from('modules')
+      .select('slug, navigation_items, is_available')
+      .eq('is_available', true);
+
+    const claimed = new Set<string>();
+    for (const m of (modules || []) as any[]) {
+      const items = Array.isArray(m.navigation_items) ? m.navigation_items : [];
+      for (const item of items) {
+        const to = typeof item === 'string' ? item : item?.to;
+        if (typeof to !== 'string') continue;
+        // Mark the nav entry as "covering" any manifest route that starts
+        // with it. This is the longest-prefix model from module-gating.ts
+        // — if /parcels covers /parcels/abc, /parcels/abc is not orphan.
+        for (const route of routes) {
+          if (route === to || route.startsWith(`${to}/`)) claimed.add(route);
+        }
+      }
+    }
+    // Exclude meta routes that should never need a module
+    // (authentication, onboarding, public marketing, etc.).
+    const nonGated = (r: string) =>
+      r.startsWith('/login') ||
+      r.startsWith('/register') ||
+      r.startsWith('/forgot-password') ||
+      r.startsWith('/set-password') ||
+      r.startsWith('/auth/') ||
+      r.startsWith('/onboarding') ||
+      r.startsWith('/checkout-success') ||
+      r.startsWith('/privacy-policy') ||
+      r.startsWith('/terms-of-service') ||
+      r.startsWith('/pitch-deck') ||
+      r.startsWith('/rdv') ||
+      r.startsWith('/import-data') ||
+      r.startsWith('/setup') ||
+      r === '/';
+
+    const orphans = routes.filter((r) => !claimed.has(r) && !nonGated(r));
+    return { orphans, count: orphans.length };
   }
 }

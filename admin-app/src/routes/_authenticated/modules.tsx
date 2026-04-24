@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useForm, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -86,6 +86,28 @@ function useAdminModules() {
   });
 }
 
+function useRouteManifest() {
+  return useQuery({
+    queryKey: ['admin-route-manifest'],
+    queryFn: () =>
+      apiRequest<{ routes: string[]; generated_at: string | null; count: number }>(
+        '/api/v1/admin/route-manifest',
+      ),
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+function useOrphanRoutes() {
+  return useQuery({
+    queryKey: ['admin-orphan-routes'],
+    queryFn: () =>
+      apiRequest<{ orphans: string[]; count: number }>(
+        '/api/v1/admin/modules/orphan-routes',
+      ),
+    staleTime: 60 * 1000,
+  });
+}
+
 function useCreateModule() {
   const qc = useQueryClient();
   return useMutation({
@@ -147,11 +169,14 @@ type Locale = (typeof LOCALES)[number];
 
 function ModulesPage() {
   const { data: modules = [], isLoading } = useAdminModules();
+  const { data: orphans } = useOrphanRoutes();
+  const { data: manifest } = useRouteManifest();
   const updateModule = useUpdateModule();
   const deleteModule = useDeleteModule();
   const [editModule, setEditModule] = useState<AdminModule | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<AdminModule | null>(null);
+  const [orphansExpanded, setOrphansExpanded] = useState(false);
 
   const handleToggle = async (mod: AdminModule) => {
     try {
@@ -191,6 +216,51 @@ function ModulesPage() {
           Nouveau Module
         </button>
       </div>
+
+      {/* Manifest + orphan routes audit strip */}
+      {manifest && (
+        <div className="flex items-center gap-3 rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm">
+          <span className="text-gray-500">
+            Manifest: <span className="font-mono font-semibold text-gray-800">{manifest.count}</span> routes
+            {manifest.generated_at && (
+              <span className="ml-2 text-[11px] text-gray-400">
+                généré {new Date(manifest.generated_at).toLocaleString('fr-FR')}
+              </span>
+            )}
+          </span>
+          {orphans && orphans.count > 0 && (
+            <>
+              <span className="text-gray-300">·</span>
+              <button
+                type="button"
+                onClick={() => setOrphansExpanded((v) => !v)}
+                className="flex items-center gap-1.5 text-amber-700 hover:text-amber-800 font-medium"
+              >
+                <AlertTriangle className="h-4 w-4" />
+                {orphans.count} route{orphans.count > 1 ? 's' : ''} orphelin{orphans.count > 1 ? 'es' : 'e'}
+              </button>
+            </>
+          )}
+        </div>
+      )}
+      {orphans && orphans.count > 0 && orphansExpanded && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+          <p className="text-sm font-medium text-amber-900 mb-2">
+            Routes définies dans le code mais non assignées à un module
+          </p>
+          <p className="text-xs text-amber-800 mb-3">
+            Ces routes passent actuellement à travers le ModuleGate comme non-gated.
+            Assignez-les à un module ci-dessous, ou retirez-les du code si obsolètes.
+          </p>
+          <ul className="grid grid-cols-1 md:grid-cols-2 gap-1 text-xs font-mono text-amber-900">
+            {orphans.orphans.map((r) => (
+              <li key={r} className="bg-white/70 rounded px-2 py-1 border border-amber-200">
+                {r}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {isLoading ? (
         <div className="animate-pulse space-y-3">
@@ -384,6 +454,17 @@ function ModuleDialog({ module, onClose }: { module: AdminModule | null; onClose
   const createModule = useCreateModule();
   const updateModule = useUpdateModule();
   const upsertTranslation = useUpsertTranslation();
+  const { data: manifest } = useRouteManifest();
+  const manifestRoutes = manifest?.routes ?? [];
+  const manifestSet = useMemo(() => new Set(manifestRoutes), [manifestRoutes]);
+
+  const isValidRoute = (path: string): boolean => {
+    if (!path) return false;
+    if (manifestRoutes.length === 0) return true; // no manifest → skip validation
+    if (manifestSet.has(path)) return true;
+    // accept as prefix covering a subtree
+    return manifestRoutes.some((r) => r.startsWith(`${path}/`));
+  };
 
   const form = useForm<ModuleFormData>({
     resolver,
@@ -643,29 +724,53 @@ function ModuleDialog({ module, onClose }: { module: AdminModule | null; onClose
             {/* ── Routes & Widgets Tab ── */}
             {isEdit && (
               <Tabs.Content value="routes">
+                {/* Shared datalist fed by the manifest endpoint — all <input list="route-manifest">
+                    inputs render this as autocomplete. */}
+                <datalist id="route-manifest">
+                  {manifestRoutes.map((r) => (
+                    <option key={r} value={r} />
+                  ))}
+                </datalist>
                 <div className="space-y-6">
                   {/* Navigation Items */}
                   <div>
-                    <h3 className="text-sm font-semibold text-gray-700 mb-2">Routes de navigation</h3>
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="text-sm font-semibold text-gray-700">Routes de navigation</h3>
+                      <span className="text-[11px] text-gray-400">
+                        {manifestRoutes.length > 0
+                          ? `${manifestRoutes.length} routes disponibles`
+                          : 'Manifest indisponible — validation désactivée'}
+                      </span>
+                    </div>
                     <p className="text-xs text-gray-500 mb-3">
-                      Les routes accessibles quand ce module est activé. Le chemin est requis, label et icône sont optionnels.
+                      Les routes accessibles quand ce module est activé. Autocomplétion depuis le manifest. Le chemin est requis, label et icône sont optionnels.
                     </p>
                     <div className="space-y-2">
                       {navItems.length === 0 && (
                         <p className="text-xs text-gray-400 italic">Aucune route configurée.</p>
                       )}
-                      {navItems.map((item, idx) => (
-                        <div key={idx} className="flex items-start gap-2 rounded-lg border bg-gray-50 p-2">
+                      {navItems.map((item, idx) => {
+                        const valid = isValidRoute(item.to);
+                        return (
+                        <div key={idx} className={clsx(
+                          "flex items-start gap-2 rounded-lg border p-2",
+                          !valid && item.to ? "border-amber-300 bg-amber-50" : "bg-gray-50"
+                        )}>
                           <div className="flex-1 grid grid-cols-3 gap-2">
                             <input
+                              list="route-manifest"
                               value={item.to}
                               onChange={(e) => {
                                 const next = [...navItems];
                                 next[idx] = { ...next[idx], to: e.target.value };
                                 setNavItems(next);
                               }}
-                              className="rounded border border-gray-300 px-2 py-1 text-sm font-mono"
+                              className={clsx(
+                                "rounded border px-2 py-1 text-sm font-mono",
+                                !valid && item.to ? "border-amber-400" : "border-gray-300",
+                              )}
                               placeholder="/path"
+                              title={!valid && item.to ? `Route inconnue dans le manifest. Lancez 'npm run gen:manifest' ou vérifiez l'orthographe.` : undefined}
                             />
                             <input
                               value={item.label ?? ''}
@@ -696,13 +801,20 @@ function ModuleDialog({ module, onClose }: { module: AdminModule | null; onClose
                             <X className="h-4 w-4" />
                           </button>
                         </div>
-                      ))}
+                        );
+                      })}
                       <div className="flex items-start gap-2 rounded-lg border border-dashed border-gray-300 p-2">
                         <div className="flex-1 grid grid-cols-3 gap-2">
                           <input
+                            list="route-manifest"
                             value={newNav.to}
                             onChange={(e) => setNewNav({ ...newNav, to: e.target.value })}
-                            className="rounded border border-gray-300 px-2 py-1 text-sm font-mono"
+                            className={clsx(
+                              "rounded border px-2 py-1 text-sm font-mono",
+                              newNav.to && !isValidRoute(newNav.to)
+                                ? "border-amber-400 bg-amber-50"
+                                : "border-gray-300",
+                            )}
                             placeholder="/path"
                             onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addNavItem(); } }}
                           />

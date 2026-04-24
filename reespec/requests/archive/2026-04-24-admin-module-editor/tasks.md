@@ -1,5 +1,10 @@
 # Tasks — Admin Module Editor
 
+> **Archived 2026-04-24**: the admin-app CMS (`/modules` CRUD page, module edit
+> dialog, translations editor) and backend endpoints (`/admin/modules/*`,
+> `/admin/orgs/:id/modules`) were delivered. Remaining project/ cleanup and
+> catalog migration moved to request `modules-catalog-alignment`.
+
 ## Backend
 
 ### 1. Admin module CRUD endpoints

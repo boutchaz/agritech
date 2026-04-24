@@ -38,10 +38,6 @@ export function ModuleGate({ children }: { children: React.ReactNode }) {
 
   if (isAllowed) return <>{children}</>;
 
-  // Core routes always allowed (dashboard, settings, etc.)
-  const alwaysAllowed = ['/dashboard', '/settings', '/farm-hierarchy', '/notifications'];
-  if (alwaysAllowed.some(p => currentPath.startsWith(p))) return <>{children}</>;
-
   const isAdmin = userRole?.role_name === 'organization_admin' || userRole?.role_name === 'system_admin';
 
   return (
@@ -58,7 +54,7 @@ export function ModuleGate({ children }: { children: React.ReactNode }) {
         </p>
         <p className="text-sm text-gray-500 dark:text-gray-500 mb-6">
           {isAdmin
-            ? t('modules.disabled.adminHint', 'Activez-le dans les paramètres pour y accéder.')
+            ? t('modules.disabled.adminHint', 'Contactez le service commercial pour activer ce module pour votre organisation.')
             : t('modules.disabled.userHint', 'Contactez votre administrateur pour activer ce module.')}
         </p>
         <div className="flex gap-3 justify-center">
@@ -69,7 +65,7 @@ export function ModuleGate({ children }: { children: React.ReactNode }) {
           {isAdmin && (
             <Button variant="green" onClick={() => navigate({ to: '/settings/modules' })}>
               <Settings className="w-4 h-4 mr-2" />
-              {t('modules.disabled.goToSettings', 'Paramètres des modules')}
+              {t('modules.disabled.viewModules', 'Voir mes modules')}
             </Button>
           )}
         </div>

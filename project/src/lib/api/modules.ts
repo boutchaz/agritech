@@ -10,11 +10,13 @@ export interface ModuleMetric {
 
 export interface OrganizationModule {
   id: string;
+  slug: string;
   name: string;
   icon: string;
   category: 'core' | 'production' | 'operations' | 'hr' | 'inventory' | 'sales' | 'purchasing' | 'accounting' | 'analytics' | 'agriculture' | 'elevage';
   description: string;
   required_plan: 'essential' | 'professional' | 'enterprise' | null;
+  is_required: boolean;
   is_active: boolean;
   settings: Record<string, unknown>;
 }

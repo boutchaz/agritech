@@ -376,4 +376,18 @@ export class AdminController {
   ) {
     return this.adminService.upsertModuleTranslation(moduleId, locale, body);
   }
+
+  // ============================================
+  // Route Manifest (parsed from project/src/routeTree.gen.ts at build time)
+  // ============================================
+
+  @Get('route-manifest')
+  async getRouteManifest() {
+    return this.adminService.getRouteManifest();
+  }
+
+  @Get('modules/orphan-routes')
+  async getOrphanRoutes() {
+    return this.adminService.getOrphanRoutes();
+  }
 }

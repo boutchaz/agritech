@@ -34,10 +34,10 @@ export class OrganizationModulesService {
     // Get all available modules
     const { data: allModules, error: modulesError } = await client
       .from('modules')
-      .select('id, name, icon, category, description, required_plan')
+      .select('id, slug, name, icon, category, description, required_plan, is_required')
       .eq('is_available', true)
-      .order('category')
-      .order('name');
+      .order('display_order', { ascending: true })
+      .order('slug', { ascending: true });
 
     if (modulesError) {
       this.logger.error(`Failed to fetch modules: ${modulesError.message}`);
@@ -65,12 +65,14 @@ export class OrganizationModulesService {
       const activation = activationMap.get(module.id);
       return {
         id: module.id,
+        slug: module.slug,
         name: module.name,
         icon: module.icon,
         category: module.category,
         description: module.description,
         required_plan: module.required_plan,
-        is_active: activation?.is_active || false,
+        is_required: module.is_required || false,
+        is_active: activation?.is_active || module.is_required || false,
         settings: activation?.settings || {},
       };
     });
@@ -108,20 +110,29 @@ export class OrganizationModulesService {
     // Role is returned as array by Supabase foreign key join
     const role = Array.isArray(orgUser.role) ? orgUser.role[0] : orgUser.role;
     const roleName = role?.name;
-    if (roleName !== 'system_admin' && roleName !== 'organization_admin') {
-      throw new ForbiddenException('You do not have permission to update modules');
+    if (roleName !== 'system_admin') {
+      throw new ForbiddenException(
+        'Module activation is managed by system administrators. Please contact sales to enable additional modules.',
+      );
     }
 
     // Verify module exists and get full details
     const { data: module, error: moduleError } = await client
       .from('modules')
-      .select('id, name, icon, category, description, required_plan')
+      .select('id, slug, name, icon, category, description, required_plan, is_required')
       .eq('id', moduleId)
       .eq('is_available', true)
       .maybeSingle();
 
     if (moduleError || !module) {
       throw new NotFoundException('Module not found');
+    }
+
+    // Block deactivation of required modules (e.g. core)
+    if (updateDto.is_active === false && module.is_required) {
+      throw new ForbiddenException(
+        `Module '${module.slug}' is required and cannot be deactivated.`,
+      );
     }
 
     // If trying to activate a premium module, check subscription
@@ -171,11 +182,13 @@ export class OrganizationModulesService {
 
     return {
       id: module.id,
+      slug: module.slug,
       name: module.name || '',
       icon: module.icon || '',
       category: module.category || '',
       description: module.description || '',
       required_plan: module.required_plan,
+      is_required: module.is_required || false,
       is_active: upsertedModule.is_active,
       settings: upsertedModule.settings,
     };

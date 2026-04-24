@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -159,7 +159,7 @@ function OrgDetailPage() {
   // Canonical modules list for the picker
   const { data: modulesCatalog } = useQuery({
     queryKey: ['admin-modules'],
-    queryFn: () => apiRequest<Array<{ id: string; slug: string; name: string; category: string | null }>>('/api/v1/admin/modules'),
+    queryFn: () => apiRequest<Array<{ id: string; slug: string; name: string; category: string | null; is_required?: boolean }>>('/api/v1/admin/modules'),
   });
 
   // Enabled modules for this org (organization_modules table — source of truth)
@@ -710,7 +710,7 @@ function HardLimitsCard({
 }: {
   orgId: string;
   subscription: any;
-  modulesCatalog: Array<{ id: string; slug: string; name: string; category: string | null }>;
+  modulesCatalog: Array<{ id: string; slug: string; name: string; category: string | null; is_required?: boolean }>;
 }) {
   const queryClient = useQueryClient();
 
@@ -766,11 +766,15 @@ function HardLimitsCard({
             days: 14,
           };
 
+      // Always include required slugs — the backend rejects payloads that
+      // omit them, and the UI disables the checkbox anyway.
+      const enabled = Array.from(new Set([...selected_modules, ...Array.from(requiredSlugs)]));
+
       await Promise.all([
         apiRequest(url, { method, body: JSON.stringify(body) }),
         apiRequest(`/api/v1/admin/orgs/${orgId}/modules`, {
           method: 'PUT',
-          body: JSON.stringify({ enabled: selected_modules }),
+          body: JSON.stringify({ enabled }),
         }),
       ]);
     },
@@ -785,7 +789,15 @@ function HardLimitsCard({
 
   const selected = form.watch('selected_modules');
 
+  const requiredSlugs = useMemo(
+    () => new Set((modulesCatalog ?? []).filter((m) => m.is_required).map((m) => m.slug)),
+    [modulesCatalog],
+  );
+
   const toggleModule = (slug: string) => {
+    // Required modules cannot be unchecked — back-end rejects this anyway,
+    // and the UI disables the input (defense in depth).
+    if (requiredSlugs.has(slug)) return;
     const next = selected.includes(slug)
       ? selected.filter((s) => s !== slug)
       : [...selected, slug];
@@ -870,11 +882,14 @@ function HardLimitsCard({
                     {mods.map((mod) => {
                       const key = mod.slug || mod.id;
                       const isOn = selected.includes(key);
+                      const isRequired = !!mod.is_required;
                       return (
                         <label
                           key={mod.id}
+                          title={isRequired ? 'Module requis — ne peut pas être désactivé' : undefined}
                           className={clsx(
-                            'flex items-center gap-2 rounded-md border px-2.5 py-1.5 text-sm cursor-pointer select-none',
+                            'flex items-center gap-2 rounded-md border px-2.5 py-1.5 text-sm select-none',
+                            isRequired ? 'cursor-not-allowed' : 'cursor-pointer',
                             isOn
                               ? 'border-emerald-500 bg-emerald-50'
                               : 'border-gray-200 bg-white hover:bg-gray-50',
@@ -883,10 +898,14 @@ function HardLimitsCard({
                           <input
                             type="checkbox"
                             checked={isOn}
+                            disabled={isRequired}
                             onChange={() => toggleModule(key)}
-                            className="h-4 w-4 text-emerald-600"
+                            className="h-4 w-4 text-emerald-600 disabled:opacity-60"
                           />
-                          <span className="truncate">{mod.name}</span>
+                          <span className="truncate">
+                            {mod.name}
+                            {isRequired && <span className="ml-1 text-[10px] text-gray-400">(requis)</span>}
+                          </span>
                         </label>
                       );
                     })}

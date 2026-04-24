@@ -7,6 +7,7 @@ import { useAIDiagnostics } from '@/hooks/useAIDiagnostics'
 import { useActiveAIAlerts } from '@/hooks/useAIAlerts'
 import { useAIRecommendations } from '@/hooks/useAIRecommendations'
 import { useAuth } from '@/hooks/useAuth'
+import { useIsModuleActive } from '@/hooks/useIsModuleActive'
 import { createFileRoute, Link } from '@tanstack/react-router'
 import {
   AlertCircle,
@@ -43,6 +44,7 @@ const ParcelOverview = () => {
   const { parcelId } = Route.useParams();
   const { currentOrganization } = useAuth();
   const organizationId = currentOrganization?.id;
+  const isAgromindActive = useIsModuleActive('agromind_advisor');
   const { data: parcel, isLoading: isLoadingParcel } = useParcelById(parcelId);
   const { data: indices, isLoading: _isLoadingIndices, refetch: refetchIndices } = useLatestSatelliteIndices(parcelId);
 
@@ -249,7 +251,7 @@ const ParcelOverview = () => {
               <span className="h-2 w-2 rounded-full bg-current opacity-75" />
               {healthStatus.status}
             </span>
-            {parcel.ai_phase && parcel.ai_phase !== 'awaiting_data' && (
+            {isAgromindActive && parcel.ai_phase && parcel.ai_phase !== 'awaiting_data' && (
               <Link
                 to="/parcels/$parcelId/ai"
                 params={{ parcelId }}
@@ -266,7 +268,7 @@ const ParcelOverview = () => {
       </section>
 
       {/* AI Compass teaser — scenario + confidence + CTA to the hub */}
-      {(calibration || diagnostics) && (
+      {isAgromindActive && (calibration || diagnostics) && (
         <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800/60">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-start gap-3">
@@ -318,48 +320,52 @@ const ParcelOverview = () => {
 
       {/* Stats row — 4 counts (alerts, pending recs, open tasks, latest harvest) */}
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-        <Link
-          to="/parcels/$parcelId/ai/alerts"
-          params={{ parcelId }}
-          search={{ farmId: undefined }}
-          className="group rounded-xl border border-slate-200 bg-white p-4 transition hover:border-orange-400/60 hover:shadow-sm dark:border-slate-700 dark:bg-slate-800/60"
-        >
-          <div className="mb-2 flex items-center justify-between">
-            <AlertTriangle className="h-5 w-5 text-orange-500" />
-            {activeAlertsCount > 0 && (
-              <span className="rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-bold text-orange-800 dark:bg-orange-950 dark:text-orange-200">
-                {activeAlertsCount}
-              </span>
-            )}
-          </div>
-          <p className="text-2xl font-bold tabular-nums text-slate-900 dark:text-white">
-            {activeAlertsCount}
-          </p>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
-            {t('parcels.index.stats.alerts', 'Alertes actives')}
-          </p>
-        </Link>
-        <Link
-          to="/parcels/$parcelId/ai/recommendations"
-          params={{ parcelId }}
-          search={{ farmId: undefined }}
-          className="group rounded-xl border border-slate-200 bg-white p-4 transition hover:border-amber-400/60 hover:shadow-sm dark:border-slate-700 dark:bg-slate-800/60"
-        >
-          <div className="mb-2 flex items-center justify-between">
-            <Lightbulb className="h-5 w-5 text-amber-500" />
-            {pendingRecsCount > 0 && (
-              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-900 dark:bg-amber-950 dark:text-amber-200">
-                {pendingRecsCount}
-              </span>
-            )}
-          </div>
-          <p className="text-2xl font-bold tabular-nums text-slate-900 dark:text-white">
-            {pendingRecsCount}
-          </p>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
-            {t('parcels.index.stats.recs', 'Recommandations')}
-          </p>
-        </Link>
+        {isAgromindActive ? (
+          <Link
+            to="/parcels/$parcelId/ai/alerts"
+            params={{ parcelId }}
+            search={{ farmId: undefined }}
+            className="group rounded-xl border border-slate-200 bg-white p-4 transition hover:border-orange-400/60 hover:shadow-sm dark:border-slate-700 dark:bg-slate-800/60"
+          >
+            <div className="mb-2 flex items-center justify-between">
+              <AlertTriangle className="h-5 w-5 text-orange-500" />
+              {activeAlertsCount > 0 && (
+                <span className="rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-bold text-orange-800 dark:bg-orange-950 dark:text-orange-200">
+                  {activeAlertsCount}
+                </span>
+              )}
+            </div>
+            <p className="text-2xl font-bold tabular-nums text-slate-900 dark:text-white">
+              {activeAlertsCount}
+            </p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              {t('parcels.index.stats.alerts', 'Alertes actives')}
+            </p>
+          </Link>
+        ) : null}
+        {isAgromindActive ? (
+          <Link
+            to="/parcels/$parcelId/ai/recommendations"
+            params={{ parcelId }}
+            search={{ farmId: undefined }}
+            className="group rounded-xl border border-slate-200 bg-white p-4 transition hover:border-amber-400/60 hover:shadow-sm dark:border-slate-700 dark:bg-slate-800/60"
+          >
+            <div className="mb-2 flex items-center justify-between">
+              <Lightbulb className="h-5 w-5 text-amber-500" />
+              {pendingRecsCount > 0 && (
+                <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-900 dark:bg-amber-950 dark:text-amber-200">
+                  {pendingRecsCount}
+                </span>
+              )}
+            </div>
+            <p className="text-2xl font-bold tabular-nums text-slate-900 dark:text-white">
+              {pendingRecsCount}
+            </p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              {t('parcels.index.stats.recs', 'Recommandations')}
+            </p>
+          </Link>
+        ) : null}
         <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800/60">
           <div className="mb-2 flex items-center justify-between">
             <Clock className="h-5 w-5 text-blue-500" />
