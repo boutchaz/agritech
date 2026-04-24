@@ -14,8 +14,19 @@ import url from 'node:url';
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
+const REPO_ROOT = path.resolve(ROOT, '..');
 const INPUT = path.join(ROOT, 'src/routeTree.gen.ts');
-const OUTPUT = path.join(ROOT, 'src/generated/route-manifest.json');
+// The manifest is consumed by two places:
+//   1. project/ frontend (kept as the canonical source for the monorepo
+//      build)
+//   2. agritech-api backend (validates POST/PATCH /admin/modules
+//      navigation_items and serves GET /admin/route-manifest for the
+//      admin-app picker). Its Docker image ships agritech-api/ only,
+//      so a copy must live under src/data/ to be bundled by nest-cli.
+const OUTPUTS = [
+  path.join(ROOT, 'src/generated/route-manifest.json'),
+  path.join(REPO_ROOT, 'agritech-api/src/data/route-manifest.json'),
+];
 
 function main() {
   if (!fs.existsSync(INPUT)) {
@@ -51,11 +62,13 @@ function main() {
     count: normalized.length,
     routes: normalized,
   };
+  const json = JSON.stringify(payload, null, 2) + '\n';
 
-  fs.mkdirSync(path.dirname(OUTPUT), { recursive: true });
-  fs.writeFileSync(OUTPUT, JSON.stringify(payload, null, 2) + '\n');
-
-  console.log(`[gen-route-manifest] wrote ${normalized.length} routes → ${path.relative(ROOT, OUTPUT)}`);
+  for (const out of OUTPUTS) {
+    fs.mkdirSync(path.dirname(out), { recursive: true });
+    fs.writeFileSync(out, json);
+    console.log(`[gen-route-manifest] wrote ${normalized.length} routes → ${path.relative(REPO_ROOT, out)}`);
+  }
 }
 
 try {

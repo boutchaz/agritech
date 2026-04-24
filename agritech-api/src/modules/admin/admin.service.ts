@@ -1420,13 +1420,21 @@ export class AdminService {
   private cachedManifest: { mtimeMs: number; routes: string[] } | null = null;
 
   private readManifest(): { routes: string[]; generated_at: string | null } {
-    // Try a few likely locations — resolves whether backend runs from
-    // agritech-api/ or a deployed monorepo layout.
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const fs = require('node:fs');
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const path = require('node:path');
+    // Preferred location: bundled inside agritech-api (copied to dist/data/
+    // by nest-cli.json assets config). Falls back to monorepo-local paths
+    // in dev and to project/ sources if someone runs the compiled code
+    // straight from the repo.
     const candidates = [
+      // dist/data/route-manifest.json (production in container)
+      path.resolve(__dirname, '../../data/route-manifest.json'),
+      // src/data/route-manifest.json (running ts-node in dev)
+      path.resolve(__dirname, '../../../src/data/route-manifest.json'),
+      path.resolve(process.cwd(), 'src/data/route-manifest.json'),
+      // monorepo fallbacks
       path.resolve(process.cwd(), '../project/src/generated/route-manifest.json'),
       path.resolve(process.cwd(), 'project/src/generated/route-manifest.json'),
       path.resolve(process.cwd(), '../../project/src/generated/route-manifest.json'),

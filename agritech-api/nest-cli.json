@@ -14,6 +14,10 @@
       {
         "include": "modules/email/templates/**/*.hbs",
         "watchAssets": true
+      },
+      {
+        "include": "data/*.json",
+        "watchAssets": true
       }
     ]
   }
