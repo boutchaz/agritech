@@ -17,8 +17,10 @@ services:
       - SUPABASE_SERVICE_KEY=${SUPABASE_SERVICE_KEY}
       - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY:-${SUPABASE_SERVICE_KEY}}
       - INTERNAL_SERVICE_TOKEN=${INTERNAL_SERVICE_TOKEN:-}
+      - AGRITECH_REFERENTIALS_DIR=/app/referentials
     volumes:
       - ./temp-data:/tmp/satellite-data
+      - ../agritech-api/referentials:/app/referentials:ro
     restart: unless-stopped
     networks:
       - agritech-network
