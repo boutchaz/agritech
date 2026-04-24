@@ -16,6 +16,18 @@ import { StockAccountingService } from './stock-accounting.service';
 import { StockReservationsService } from './stock-reservations.service';
 import { StockEntryApprovalsService } from './stock-entry-approvals.service';
 
+export interface StockEntryFilters {
+  entry_type?: string;
+  status?: string;
+  from_date?: string;
+  to_date?: string;
+  warehouse_id?: string;
+  reference_type?: string;
+  search?: string;
+  page?: number;
+  pageSize?: number;
+}
+
 @Injectable()
 export class StockEntriesService {
   private readonly logger = new Logger(StockEntriesService.name);
@@ -32,7 +44,7 @@ export class StockEntriesService {
   /**
    * Get all stock entries with optional filters
    */
-  async findAll(organizationId: string, filters?: any): Promise<PaginatedResponse<any>> {
+  async findAll(organizationId: string, filters?: StockEntryFilters): Promise<PaginatedResponse<any>> {
     const client = this.databaseService.getAdminClient();
 
     return paginate(client, 'stock_entries', {
@@ -399,8 +411,8 @@ export class StockEntriesService {
       await client.query(
         `UPDATE stock_entries
          SET status = $1, posted_at = $2
-         WHERE id = $3`,
-        [StockEntryStatus.POSTED, new Date(), stockEntryId],
+         WHERE id = $3 AND organization_id = $4`,
+        [StockEntryStatus.POSTED, new Date(), stockEntryId, organizationId],
       );
 
       // 4. Process stock movements
@@ -2753,6 +2765,7 @@ export class StockEntriesService {
           movement_type,
           movement_date,
           item_id,
+          variant_id,
           warehouse_id,
           quantity,
           unit,
@@ -2762,12 +2775,13 @@ export class StockEntriesService {
           batch_number,
           serial_number,
           created_by
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
         [
           organizationId,
           'IN',
           openingStock.opening_date,
           openingStock.item_id,
+          openingStock.variant_id || null,
           openingStock.warehouse_id,
           openingStock.quantity,
           unit,
@@ -2817,11 +2831,27 @@ export class StockEntriesService {
   async cancelOpeningStockBalance(id: string, organizationId: string): Promise<any> {
     const supabase = this.databaseService.getAdminClient();
 
+    const { data: existing, error: fetchError } = await supabase
+      .from('opening_stock_balances')
+      .select('id, status')
+      .eq('id', id)
+      .eq('organization_id', organizationId)
+      .single();
+
+    if (fetchError || !existing) {
+      throw new NotFoundException('Opening stock balance not found');
+    }
+
+    if (existing.status !== 'Draft') {
+      throw new BadRequestException('Only draft opening stock balances can be cancelled');
+    }
+
     const { data, error } = await supabase
       .from('opening_stock_balances')
       .update({ status: 'Cancelled' })
       .eq('id', id)
       .eq('organization_id', organizationId)
+      .eq('status', 'Draft')
       .select()
       .single();
 
@@ -2873,11 +2903,17 @@ export class StockEntriesService {
   ): Promise<any> {
     const supabase = this.databaseService.getAdminClient();
 
+    // Defensively strip organization_id in case a caller injects it in the
+    // body — the header-derived value is the only source of truth.
+    const { organization_id: _dtoOrgId, ...safeDto } = dto as CreateStockAccountMappingDto & {
+      organization_id?: string;
+    };
+
     const { data, error } = await supabase
       .from('stock_account_mappings')
       .insert({
         organization_id: organizationId,
-        ...dto,
+        ...safeDto,
       })
       .select(`
         *,

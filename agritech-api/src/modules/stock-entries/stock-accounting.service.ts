@@ -264,6 +264,26 @@ export class StockAccountingService {
     return Number(result.rows[0]?.total || 0);
   }
 
+  private async getComputedOutboundValueForReversal(
+    client: PoolClient,
+    reversalStockEntryId: string,
+  ): Promise<number> {
+    const result = await client.query(
+      `SELECT COALESCE(SUM(ABS(total_cost)), 0) AS total FROM stock_movements WHERE stock_entry_id = $1`,
+      [reversalStockEntryId],
+    );
+    const value = Number(result.rows[0]?.total || 0);
+    if (value > 0) return value;
+    const fallback = await client.query(
+      `SELECT se.reference_id FROM stock_entries se WHERE se.id = $1`,
+      [reversalStockEntryId],
+    );
+    if (fallback.rows[0]?.reference_id) {
+      return this.getComputedOutboundValue(client, fallback.rows[0].reference_id);
+    }
+    return 0;
+  }
+
   /**
    * Get item categories for a list of items
    */
@@ -446,7 +466,9 @@ export class StockAccountingService {
         return { journal_entry_id: null, success: true };
       }
 
-      const totalValue = this.calculateTotalValue(items);
+      const totalValue = reversalStockEntry.entry_type === StockEntryType.MATERIAL_ISSUE
+        ? await this.getComputedOutboundValueForReversal(client, reversalStockEntry.id)
+        : this.calculateTotalValue(items);
 
       if (totalValue === 0) {
         return { journal_entry_id: null, success: true };

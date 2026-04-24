@@ -18,8 +18,9 @@ export const stockEntriesApi = {
     if (filters?.to_date) params.append('to_date', filters.to_date);
     if (filters?.movement_type) params.append('movement_type', filters.movement_type);
 
-    return apiClient.get<StockMovementWithDetails[]>(
-      `/api/v1/stock-entries/movements/list?${params.toString()}`,
-    );
+    const response = await apiClient.get<
+      StockMovementWithDetails[] | { data: StockMovementWithDetails[]; total?: number }
+    >(`/api/v1/stock-entries/movements/list?${params.toString()}`);
+    return Array.isArray(response) ? response : response?.data ?? [];
   },
 };

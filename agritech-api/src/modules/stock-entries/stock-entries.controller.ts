@@ -28,12 +28,19 @@ import { UpdateOpeningStockDto } from './dto/update-opening-stock.dto';
 import { CreateStockAccountMappingDto, UpdateStockAccountMappingDto } from './dto/stock-account-mapping.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { OrganizationGuard } from '../../common/guards/organization.guard';
+import { PoliciesGuard } from '../casl/policies.guard';
+import {
+  CanCreateStockEntry,
+  CanReadStockEntries,
+  CanUpdateStockEntry,
+  CanDeleteStockEntry,
+} from '../casl/permissions.decorator';
 import { StockReservationsService } from './stock-reservations.service';
 import { StockEntryApprovalsService } from './stock-entry-approvals.service';
 
 @ApiTags('stock-entries')
 @Controller('stock-entries')
-@UseGuards(JwtAuthGuard, OrganizationGuard)
+@UseGuards(JwtAuthGuard, OrganizationGuard, PoliciesGuard)
 @ApiBearerAuth()
 export class StockEntriesController {
   constructor(
@@ -43,6 +50,7 @@ export class StockEntriesController {
   ) {}
 
   @Get()
+  @CanReadStockEntries()
   @ApiOperation({ summary: 'Get all stock entries with optional filters' })
   @ApiQuery({ name: 'entry_type', required: false })
   @ApiQuery({ name: 'status', required: false })
@@ -82,6 +90,7 @@ export class StockEntriesController {
   }
 
   @Get('movements/list')
+  @CanReadStockEntries()
   @ApiOperation({ summary: 'Get stock movements with filters' })
   @ApiQuery({ name: 'item_id', required: false })
   @ApiQuery({ name: 'warehouse_id', required: false })
@@ -399,6 +408,7 @@ export class StockEntriesController {
   }
 
   @Post()
+  @CanCreateStockEntry()
   @ApiOperation({ summary: 'Create a new stock entry' })
   @ApiResponse({ status: 201, description: 'Stock entry created successfully' })
   @ApiResponse({ status: 400, description: 'Bad request' })
@@ -406,10 +416,27 @@ export class StockEntriesController {
     const organizationId = req.headers['x-organization-id'];
     createStockEntryDto.organization_id = organizationId;
     createStockEntryDto.created_by = req.user.sub;
-    return this.stockEntriesService.createStockEntry(createStockEntryDto);
+
+    const stockEntry = await this.stockEntriesService.createStockEntry(createStockEntryDto);
+
+    const totalValue = (stockEntry.items || []).reduce(
+      (sum: number, item: any) => sum + (item.quantity || 0) * (item.cost_per_unit || 0),
+      0,
+    );
+
+    const approvalResult = await this.stockEntryApprovalsService.autoRequestApprovalIfNeeded(
+      stockEntry.id,
+      organizationId,
+      req.user.sub,
+      createStockEntryDto.entry_type,
+      totalValue,
+    );
+
+    return { ...stockEntry, approval: approvalResult };
   }
 
   @Patch(':id')
+  @CanUpdateStockEntry()
   @ApiOperation({ summary: 'Update a draft stock entry' })
   @ApiParam({ name: 'id', description: 'Stock entry ID' })
   @ApiResponse({ status: 200, description: 'Stock entry updated successfully' })
@@ -426,6 +453,7 @@ export class StockEntriesController {
   }
 
   @Patch(':id/post')
+  @CanUpdateStockEntry()
   @ApiOperation({ summary: 'Post/finalize a stock entry' })
   @ApiParam({ name: 'id', description: 'Stock entry ID' })
   @ApiResponse({ status: 200, description: 'Stock entry posted successfully' })
@@ -436,6 +464,7 @@ export class StockEntriesController {
   }
 
   @Patch(':id/cancel')
+  @CanUpdateStockEntry()
   @ApiOperation({ summary: 'Cancel a stock entry' })
   @ApiParam({ name: 'id', description: 'Stock entry ID' })
   @ApiResponse({ status: 200, description: 'Stock entry cancelled successfully' })
@@ -447,6 +476,7 @@ export class StockEntriesController {
   }
 
   @Post(':id/reverse')
+  @CanUpdateStockEntry()
   @ApiOperation({ summary: 'Reverse a posted stock entry' })
   @ApiParam({ name: 'id', description: 'Stock entry ID' })
   @ApiResponse({ status: 200, description: 'Stock entry reversed successfully' })
@@ -459,6 +489,7 @@ export class StockEntriesController {
   }
 
   @Delete(':id')
+  @CanDeleteStockEntry()
   @ApiOperation({ summary: 'Delete a draft stock entry' })
   @ApiParam({ name: 'id', description: 'Stock entry ID' })
   @ApiResponse({ status: 200, description: 'Stock entry deleted successfully' })

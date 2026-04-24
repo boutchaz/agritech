@@ -65,6 +65,7 @@ export class BankAccountsController {
     const organizationId = req.headers['x-organization-id'];
     dto.organization_id = organizationId;
     dto.created_by = req.user.sub;
+    delete (dto as any).current_balance;
     return this.bankAccountsService.create(dto);
   }
 

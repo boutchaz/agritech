@@ -88,7 +88,7 @@ export class BankAccountsService {
           iban: dto.iban,
           currency_code: dto.currency_code || 'MAD',
           opening_balance: dto.opening_balance || 0,
-          current_balance: dto.current_balance || dto.opening_balance || 0,
+          current_balance: dto.opening_balance || 0,
           gl_account_id: dto.gl_account_id,
           is_active: dto.is_active ?? true,
           organization_id: dto.organization_id,
@@ -130,8 +130,6 @@ export class BankAccountsService {
       if (dto.swift_code !== undefined) updateData.swift_code = dto.swift_code;
       if (dto.iban !== undefined) updateData.iban = dto.iban;
       if (dto.currency_code !== undefined) updateData.currency_code = dto.currency_code;
-      if (dto.opening_balance !== undefined) updateData.opening_balance = dto.opening_balance;
-      if (dto.current_balance !== undefined) updateData.current_balance = dto.current_balance;
       if (dto.gl_account_id !== undefined) updateData.gl_account_id = dto.gl_account_id;
       if (dto.is_active !== undefined) updateData.is_active = dto.is_active;
 

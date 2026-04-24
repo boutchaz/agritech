@@ -85,7 +85,7 @@ export class AccountsService {
     }
 
     if (!data) {
-      throw new BadRequestException('Account not found');
+      throw new NotFoundException('Account not found');
     }
 
     return data;
@@ -146,6 +146,29 @@ export class AccountsService {
    */
   async delete(accountId: string, organizationId: string): Promise<void> {
     const supabase = this.databaseService.getAdminClient();
+
+    const referencingTables = [
+      { table: 'journal_items', column: 'account_id', label: 'journal entries' },
+      { table: 'account_mappings', column: 'account_id', label: 'account mappings' },
+      { table: 'bank_accounts', column: 'gl_account_id', label: 'bank accounts' },
+      { table: 'stock_account_mappings', column: 'debit_account_id', label: 'stock account mappings' },
+    ];
+
+    for (const ref of referencingTables) {
+      const { count, error } = await supabase
+        .from(ref.table)
+        .select('id', { count: 'exact', head: true })
+        .eq(ref.column, accountId);
+      if (error) {
+        this.logger.error(`Failed to check ${ref.table}: ${error.message}`);
+        throw new BadRequestException(`Failed to verify account references: ${error.message}`);
+      }
+      if (count && count > 0) {
+        throw new BadRequestException(
+          `Cannot delete account: it is referenced by ${count} ${ref.label}. Deactivate it instead.`,
+        );
+      }
+    }
 
     const { error } = await supabase
       .from('accounts')
