@@ -1,9 +1,10 @@
-import { createFileRoute, Outlet, Navigate } from '@tanstack/react-router';
+import { createFileRoute, Outlet, Navigate, useRouterState } from '@tanstack/react-router';
 import { AdminLayout } from '@/components/AdminLayout';
 import { useAuth } from '@/hooks/useAuth';
 
 function AuthenticatedLayout() {
   const { user, isLoading, isInternalAdmin } = useAuth();
+  const { location } = useRouterState();
 
   if (isLoading) {
     return (
@@ -14,7 +15,8 @@ function AuthenticatedLayout() {
   }
 
   if (!user) {
-    return <Navigate to="/login" />;
+    const current = `${location.pathname}${location.searchStr ?? ''}`;
+    return <Navigate to="/login" search={{ redirect: current }} />;
   }
 
   if (!isInternalAdmin) {

@@ -343,19 +343,38 @@ export class AdminController {
   // Module Management Endpoints
   // ============================================
 
+  // Specific /modules/... routes must be declared BEFORE /modules/:id,
+  // otherwise NestJS/Express matches them as ":id = 'orphan-routes'"
+  // and returns 404 from the module lookup.
+
   @Get('modules')
   async getModules() {
     return this.adminService.getModules();
   }
 
-  @Get('modules/:id')
-  async getModule(@Param('id') id: string) {
-    return this.adminService.getModule(id);
+  @Get('modules/orphan-routes')
+  async getOrphanRoutes() {
+    return this.adminService.getOrphanRoutes();
+  }
+
+  @Post('modules/load-defaults')
+  async loadDefaultModules() {
+    return this.adminService.loadDefaultModules();
+  }
+
+  @Get('route-manifest')
+  async getRouteManifest() {
+    return this.adminService.getRouteManifest();
   }
 
   @Post('modules')
   async createModule(@Body() body: Record<string, unknown>) {
     return this.adminService.createModule(body);
+  }
+
+  @Get('modules/:id')
+  async getModule(@Param('id') id: string) {
+    return this.adminService.getModule(id);
   }
 
   @Patch('modules/:id')
@@ -375,24 +394,5 @@ export class AdminController {
     @Body() body: { name?: string; description?: string; features?: string[] },
   ) {
     return this.adminService.upsertModuleTranslation(moduleId, locale, body);
-  }
-
-  // ============================================
-  // Route Manifest (parsed from project/src/routeTree.gen.ts at build time)
-  // ============================================
-
-  @Get('route-manifest')
-  async getRouteManifest() {
-    return this.adminService.getRouteManifest();
-  }
-
-  @Get('modules/orphan-routes')
-  async getOrphanRoutes() {
-    return this.adminService.getOrphanRoutes();
-  }
-
-  @Post('modules/load-defaults')
-  async loadDefaultModules() {
-    return this.adminService.loadDefaultModules();
   }
 }
