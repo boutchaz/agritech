@@ -215,17 +215,29 @@ function ModulesPage() {
 
   const confirmBulkDelete = async () => {
     const ids = Array.from(selectedIds);
-    try {
-      for (const id of ids) {
+    const failures: Array<{ id: string; reason: string }> = [];
+    let succeeded = 0;
+    for (const id of ids) {
+      try {
         // eslint-disable-next-line no-await-in-loop
         await deleteModule.mutateAsync(id);
+        succeeded += 1;
+      } catch (err) {
+        const reason = err instanceof Error ? err.message : 'unknown';
+        failures.push({ id, reason });
       }
-      toast.success(`${ids.length} module${ids.length > 1 ? 's' : ''} supprimé${ids.length > 1 ? 's' : ''}`);
-      setSelectedIds(new Set());
-      setShowBulkDelete(false);
-    } catch {
-      toast.error('Échec de la suppression en masse');
     }
+    if (succeeded > 0) {
+      toast.success(`${succeeded} module${succeeded > 1 ? 's' : ''} supprimé${succeeded > 1 ? 's' : ''}`);
+    }
+    if (failures.length > 0) {
+      const preview = failures.slice(0, 2).map((f) => f.reason).join(' · ');
+      toast.error(
+        `${failures.length} échec${failures.length > 1 ? 's' : ''}${preview ? `: ${preview}` : ''}`,
+      );
+    }
+    setSelectedIds(new Set(failures.map((f) => f.id)));
+    setShowBulkDelete(false);
   };
 
   const confirmLoadDefaults = async () => {
@@ -528,7 +540,7 @@ function ModulesPage() {
           <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-xl shadow-xl w-[440px] z-50 p-6">
             <Dialog.Title className="text-lg font-semibold">Supprimer le module ?</Dialog.Title>
             <Dialog.Description className="mt-2 text-sm text-gray-600">
-              Cette action est irréversible. Les routes, widgets et traductions associés seront perdus.
+              Suppression définitive. Les traductions et les activations par organisation (organization_modules) seront supprimées en cascade. Les modules requis (is_required = true) sont protégés.
             </Dialog.Description>
             {deleteTarget && (
               <p className="mt-3 rounded-lg bg-gray-50 px-3 py-2 text-sm text-gray-700">
@@ -564,7 +576,7 @@ function ModulesPage() {
           <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-xl shadow-xl w-[480px] z-50 p-6">
             <Dialog.Title className="text-lg font-semibold">Supprimer {selectedIds.size} module{selectedIds.size > 1 ? 's' : ''} ?</Dialog.Title>
             <Dialog.Description className="mt-2 text-sm text-gray-600">
-              Les modules sélectionnés seront désactivés (soft delete). Leurs routes, widgets et traductions ne seront plus visibles.
+              Suppression définitive des modules sélectionnés. Les traductions et les activations par organisation (organization_modules) seront supprimées en cascade. Les modules requis (is_required = true) sont protégés et seront ignorés.
             </Dialog.Description>
             <ul className="mt-3 max-h-48 overflow-y-auto rounded-lg bg-gray-50 px-3 py-2 text-sm text-gray-700 space-y-1">
               {modules

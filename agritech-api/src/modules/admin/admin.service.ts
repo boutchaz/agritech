@@ -1374,16 +1374,35 @@ export class AdminService {
   async deleteModule(id: string) {
     const client = this.databaseService.getAdminClient();
 
-    // Soft delete — set is_available = false
-    const { data, error } = await client
+    // Verify the module exists + check if it's required (protected).
+    const { data: existing, error: fetchError } = await client
       .from('modules')
-      .update({ is_available: false, updated_at: new Date().toISOString() })
+      .select('id, slug, is_required')
       .eq('id', id)
-      .select()
-      .single();
+      .maybeSingle();
+    if (fetchError) {
+      throw new InternalServerErrorException(`Failed to load module: ${fetchError.message}`);
+    }
+    if (!existing) {
+      throw new NotFoundException('Module not found');
+    }
+    if (existing.is_required) {
+      throw new BadRequestException(
+        `Module '${existing.slug}' is required and cannot be deleted. Mark it unavailable instead.`,
+      );
+    }
 
-    if (error) throw new NotFoundException('Module not found');
-    return data;
+    // Hard delete. organization_modules and module_translations both have
+    // ON DELETE CASCADE, so per-org activations + i18n rows are cleaned up
+    // automatically.
+    const { error } = await client
+      .from('modules')
+      .delete()
+      .eq('id', id);
+    if (error) {
+      throw new InternalServerErrorException(`Failed to delete module: ${error.message}`);
+    }
+    return { id, slug: existing.slug, deleted: true };
   }
 
   async upsertModuleTranslation(
