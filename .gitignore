@@ -10,9 +10,13 @@
 .env.temp
 .env.dokploy
 .env.dokploy.satellite
+.env.dokploy.thebzlab
 .satellite-env
 !.env.example
 !.env.*.example
+
+# Cursor — local MCP config often contains API keys
+.cursor/mcp.json
 
 # Temporary / scratch files
 temp.txt

@@ -1368,6 +1368,12 @@ export class CalibrationService {
 
     emitProgress(5, "calibration_engine", "Exécution du moteur de calibration V2...");
 
+    if (weatherRows.length === 0) {
+      this.logger.warn(
+        `Calibration ${calibrationId} parcel ${parcelId}: weather_rows is empty before V2 run — /calibration/v2/run will reject. Ensure satellite /api/weather/historical returns data and weather_daily_data is populated for the parcel centroid grid.`,
+      );
+    }
+
     const calibrationInput = {
       parcel_id: parcelId,
       organization_id: organizationId,

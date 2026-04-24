@@ -132,6 +132,17 @@ class WeatherService:
 
         all_records = [_from_db_row(r) for r in cached] + fetched_records
         all_records.sort(key=lambda r: str(r["date"]))
+        if not all_records:
+            logger.warning(
+                "fetch_with_db_cache: no weather rows lat=%s lon=%s %s..%s "
+                "(cached=%s, fetched=%s) — check Open-Meteo from this host and Supabase upsert",
+                latitude,
+                longitude,
+                start_date,
+                end_date,
+                len(cached),
+                len(fetched_records),
+            )
         return all_records
 
     @staticmethod
