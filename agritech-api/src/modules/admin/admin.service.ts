@@ -1494,6 +1494,120 @@ export class AdminService {
     return unknown;
   }
 
+  /**
+   * Re-seed the canonical 12-SKU catalog and deactivate everything else.
+   * Same contract as the 20260424000000 migration — safe to re-run.
+   * Returns counts so the UI can toast "seeded N, deactivated M".
+   */
+  async loadDefaultModules(): Promise<{
+    seeded: number;
+    deactivated: number;
+    translationsSeeded: number;
+  }> {
+    const client = this.databaseService.getAdminClient();
+
+    const CANONICAL: Array<{
+      slug: string;
+      name: string;
+      icon: string;
+      color: string;
+      category: string;
+      description: string;
+      display_order: number;
+      price_monthly: number;
+      is_required: boolean;
+      is_recommended: boolean;
+      is_available: boolean;
+      navigation_items: string[];
+    }> = [
+      { slug: 'core', name: 'core', icon: 'Home', color: '#10b981', category: 'core', description: 'Core features available to every organization', display_order: 1, price_monthly: 0, is_required: true, is_recommended: true, is_available: true, navigation_items: ['/dashboard','/settings','/farm-hierarchy','/parcels','/notifications'] },
+      { slug: 'chat_advisor', name: 'chat_advisor', icon: 'Bot', color: '#10b981', category: 'analytics', description: 'Conversational AgromindIA assistant', display_order: 2, price_monthly: 0, is_required: false, is_recommended: true, is_available: true, navigation_items: ['/chat'] },
+      { slug: 'agromind_advisor', name: 'agromind_advisor', icon: 'Sparkles', color: '#7c3aed', category: 'analytics', description: 'AI advisor per parcel: calibration, diagnostics, recommendations, annual plan', display_order: 3, price_monthly: 0, is_required: false, is_recommended: false, is_available: true, navigation_items: ['/parcels/$parcelId/ai'] },
+      { slug: 'satellite', name: 'satellite', icon: 'Satellite', color: '#06b6d4', category: 'analytics', description: 'Satellite imagery, vegetation indices, weather', display_order: 4, price_monthly: 0, is_required: false, is_recommended: false, is_available: true, navigation_items: ['/satellite-analysis','/parcels/$parcelId/satellite','/parcels/$parcelId/weather'] },
+      { slug: 'personnel', name: 'personnel', icon: 'Users', color: '#3b82f6', category: 'hr', description: 'Workers and tasks', display_order: 5, price_monthly: 0, is_required: false, is_recommended: false, is_available: true, navigation_items: ['/workers','/tasks'] },
+      { slug: 'stock', name: 'stock', icon: 'Package', color: '#10b981', category: 'inventory', description: 'Inventory and infrastructure', display_order: 6, price_monthly: 0, is_required: false, is_recommended: false, is_available: true, navigation_items: ['/stock','/infrastructure'] },
+      { slug: 'production', name: 'production', icon: 'Wheat', color: '#f59e0b', category: 'production', description: 'Campaigns, crop cycles, harvests, quality', display_order: 7, price_monthly: 0, is_required: false, is_recommended: false, is_available: true, navigation_items: ['/campaigns','/crop-cycles','/harvests','/reception-batches','/quality-control'] },
+      { slug: 'fruit_trees', name: 'fruit_trees', icon: 'TreeDeciduous', color: '#10b981', category: 'agriculture', description: 'Trees, orchards, pruning', display_order: 8, price_monthly: 0, is_required: false, is_recommended: false, is_available: true, navigation_items: ['/trees','/orchards','/pruning'] },
+      { slug: 'compliance', name: 'compliance', icon: 'ShieldCheck', color: '#a855f7', category: 'operations', description: 'Compliance and certifications', display_order: 9, price_monthly: 0, is_required: false, is_recommended: false, is_available: true, navigation_items: ['/compliance'] },
+      { slug: 'sales_purchasing', name: 'sales_purchasing', icon: 'ShoppingCart', color: '#f43f5e', category: 'sales', description: 'Quotes, sales orders, purchase orders', display_order: 10, price_monthly: 0, is_required: false, is_recommended: false, is_available: true, navigation_items: ['/accounting/quotes','/accounting/sales-orders','/accounting/purchase-orders','/accounting/customers','/stock/suppliers'] },
+      { slug: 'accounting', name: 'accounting', icon: 'BookOpen', color: '#6366f1', category: 'accounting', description: 'Invoices, payments, journal, reports', display_order: 11, price_monthly: 0, is_required: false, is_recommended: false, is_available: true, navigation_items: ['/accounting'] },
+      { slug: 'marketplace', name: 'marketplace', icon: 'ShoppingBag', color: '#f97316', category: 'sales', description: 'B2B quote marketplace', display_order: 12, price_monthly: 0, is_required: false, is_recommended: false, is_available: true, navigation_items: ['/marketplace'] },
+    ];
+
+    // Upsert catalog rows
+    const rows = CANONICAL.map((m) => ({
+      ...m,
+      dashboard_widgets: [],
+    }));
+    const { error: upsertError } = await client
+      .from('modules')
+      .upsert(rows, { onConflict: 'slug' });
+    if (upsertError) {
+      throw new InternalServerErrorException(
+        `Failed to upsert default modules: ${upsertError.message}`,
+      );
+    }
+
+    // Deactivate everything else
+    const { data: deactivatedRows, error: deactError } = await client
+      .from('modules')
+      .update({ is_available: false, updated_at: new Date().toISOString() })
+      .not('slug', 'in', `(${CANONICAL.map((m) => `"${m.slug}"`).join(',')})`)
+      .select('id');
+    if (deactError) {
+      throw new InternalServerErrorException(
+        `Failed to deactivate non-canonical modules: ${deactError.message}`,
+      );
+    }
+
+    // Seed translations (fr/en/ar)
+    const T: Record<string, Record<'fr' | 'en' | 'ar', { name: string; description: string }>> = {
+      core: { fr: { name: 'Cœur', description: 'Fonctionnalités de base pour toute organisation' }, en: { name: 'Core', description: 'Core features available to every organization' }, ar: { name: 'الأساس', description: 'الميزات الأساسية المتاحة لكل مؤسسة' } },
+      chat_advisor: { fr: { name: 'Conseiller Chat', description: 'Assistant conversationnel AgromindIA' }, en: { name: 'Chat Advisor', description: 'Conversational AgromindIA assistant' }, ar: { name: 'المستشار الحواري', description: 'مساعد AgromindIA التفاعلي' } },
+      agromind_advisor: { fr: { name: 'Conseiller AgroMind', description: 'Conseiller IA par parcelle: calibrage, diagnostics, recommandations, plan annuel' }, en: { name: 'AgroMind Advisor', description: 'AI advisor per parcel: calibration, diagnostics, recommendations, annual plan' }, ar: { name: 'مستشار أغرومايند', description: 'مستشار ذكاء اصطناعي لكل قطعة' } },
+      satellite: { fr: { name: 'Satellite', description: 'Imagerie satellite, indices de végétation, météo' }, en: { name: 'Satellite', description: 'Satellite imagery, vegetation indices, weather' }, ar: { name: 'الأقمار الصناعية', description: 'صور الأقمار الصناعية' } },
+      personnel: { fr: { name: 'Personnel', description: 'Ouvriers et tâches' }, en: { name: 'Personnel', description: 'Workers and tasks' }, ar: { name: 'الموظفون', description: 'العمال والمهام' } },
+      stock: { fr: { name: 'Stock', description: 'Inventaire et infrastructure' }, en: { name: 'Stock', description: 'Inventory and infrastructure' }, ar: { name: 'المخزون', description: 'المخزون والبنية التحتية' } },
+      production: { fr: { name: 'Production', description: 'Campagnes, cycles culturaux, récoltes, qualité' }, en: { name: 'Production', description: 'Campaigns, crop cycles, harvests, quality' }, ar: { name: 'الإنتاج', description: 'الحملات ودورات المحاصيل والحصاد' } },
+      fruit_trees: { fr: { name: 'Arbres Fruitiers', description: 'Arbres, vergers, taille' }, en: { name: 'Fruit Trees', description: 'Trees, orchards, pruning' }, ar: { name: 'الأشجار المثمرة', description: 'الأشجار والبساتين' } },
+      compliance: { fr: { name: 'Conformité', description: 'Conformité et certifications' }, en: { name: 'Compliance', description: 'Compliance and certifications' }, ar: { name: 'الامتثال', description: 'الامتثال والشهادات' } },
+      sales_purchasing: { fr: { name: 'Ventes & Achats', description: 'Devis, commandes clients, commandes fournisseurs' }, en: { name: 'Sales & Purchasing', description: 'Quotes, sales orders, purchase orders' }, ar: { name: 'المبيعات والمشتريات', description: 'العروض وطلبات البيع' } },
+      accounting: { fr: { name: 'Comptabilité', description: 'Factures, paiements, journal, rapports' }, en: { name: 'Accounting', description: 'Invoices, payments, journal, reports' }, ar: { name: 'المحاسبة', description: 'الفواتير والمدفوعات والدفتر' } },
+      marketplace: { fr: { name: 'Place de Marché', description: 'Marketplace B2B de demandes de devis' }, en: { name: 'Marketplace', description: 'B2B quote marketplace' }, ar: { name: 'السوق', description: 'سوق عروض B2B' } },
+    };
+
+    const { data: seededModules } = await client
+      .from('modules')
+      .select('id, slug')
+      .in('slug', CANONICAL.map((m) => m.slug));
+    const slugToId = new Map<string, string>(
+      ((seededModules || []) as Array<{ id: string; slug: string }>).map((r) => [r.slug, r.id]),
+    );
+
+    const translationRows: Array<{ module_id: string; locale: string; name: string; description: string }> = [];
+    for (const [slug, locales] of Object.entries(T)) {
+      const moduleId = slugToId.get(slug);
+      if (!moduleId) continue;
+      for (const [locale, t] of Object.entries(locales)) {
+        translationRows.push({ module_id: moduleId, locale, name: t.name, description: t.description });
+      }
+    }
+    const { error: tError } = await client
+      .from('module_translations')
+      .upsert(translationRows, { onConflict: 'module_id,locale' });
+    if (tError) {
+      throw new InternalServerErrorException(
+        `Failed to seed translations: ${tError.message}`,
+      );
+    }
+
+    return {
+      seeded: CANONICAL.length,
+      deactivated: (deactivatedRows || []).length,
+      translationsSeeded: translationRows.length,
+    };
+  }
+
   async getOrphanRoutes(): Promise<{ orphans: string[]; count: number }> {
     const client = this.databaseService.getAdminClient();
     const { routes } = this.readManifest();

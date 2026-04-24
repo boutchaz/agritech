@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import { useForm, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Package, Plus, Pencil, Trash2, X, Loader2, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { Package, Plus, Pencil, Trash2, X, Loader2, AlertTriangle, CheckCircle2, RotateCcw } from 'lucide-react';
 import { apiRequest } from '@/lib/api-client';
 import { toast } from 'sonner';
 import clsx from 'clsx';
@@ -108,6 +108,21 @@ function useOrphanRoutes() {
   });
 }
 
+function useLoadDefaultModules() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      apiRequest<{ seeded: number; deactivated: number; translationsSeeded: number }>(
+        '/api/v1/admin/modules/load-defaults',
+        { method: 'POST', body: JSON.stringify({}) },
+      ),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin-modules'] });
+      qc.invalidateQueries({ queryKey: ['admin-orphan-routes'] });
+    },
+  });
+}
+
 function useCreateModule() {
   const qc = useQueryClient();
   return useMutation({
@@ -173,10 +188,57 @@ function ModulesPage() {
   const { data: manifest } = useRouteManifest();
   const updateModule = useUpdateModule();
   const deleteModule = useDeleteModule();
+  const loadDefaults = useLoadDefaultModules();
   const [editModule, setEditModule] = useState<AdminModule | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<AdminModule | null>(null);
   const [orphansExpanded, setOrphansExpanded] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [showBulkDelete, setShowBulkDelete] = useState(false);
+  const [showLoadDefaults, setShowLoadDefaults] = useState(false);
+
+  const allSelected = modules.length > 0 && modules.every((m) => selectedIds.has(m.id));
+  const someSelected = selectedIds.size > 0 && !allSelected;
+
+  const toggleOne = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+  const toggleAll = () => {
+    if (allSelected) setSelectedIds(new Set());
+    else setSelectedIds(new Set(modules.map((m) => m.id)));
+  };
+
+  const confirmBulkDelete = async () => {
+    const ids = Array.from(selectedIds);
+    try {
+      for (const id of ids) {
+        // eslint-disable-next-line no-await-in-loop
+        await deleteModule.mutateAsync(id);
+      }
+      toast.success(`${ids.length} module${ids.length > 1 ? 's' : ''} supprimé${ids.length > 1 ? 's' : ''}`);
+      setSelectedIds(new Set());
+      setShowBulkDelete(false);
+    } catch {
+      toast.error('Échec de la suppression en masse');
+    }
+  };
+
+  const confirmLoadDefaults = async () => {
+    try {
+      const res = await loadDefaults.mutateAsync();
+      toast.success(
+        `${res.seeded} modules par défaut rechargés, ${res.deactivated} désactivés, ${res.translationsSeeded} traductions.`,
+      );
+      setShowLoadDefaults(false);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Échec du chargement des valeurs par défaut');
+    }
+  };
 
   const handleToggle = async (mod: AdminModule) => {
     try {
@@ -208,13 +270,37 @@ function ModulesPage() {
           </h1>
           <p className="text-gray-500 mt-1">Configurez les modules, routes, widgets et traductions.</p>
         </div>
-        <button
-          onClick={() => setShowCreate(true)}
-          className="flex items-center gap-2 bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 text-sm font-medium"
-        >
-          <Plus className="h-4 w-4" />
-          Nouveau Module
-        </button>
+        <div className="flex items-center gap-2">
+          {selectedIds.size > 0 && (
+            <button
+              onClick={() => setShowBulkDelete(true)}
+              className="flex items-center gap-2 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 text-sm font-medium"
+            >
+              <Trash2 className="h-4 w-4" />
+              Supprimer ({selectedIds.size})
+            </button>
+          )}
+          <button
+            onClick={() => setShowLoadDefaults(true)}
+            disabled={loadDefaults.isPending}
+            className="flex items-center gap-2 bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50 text-sm font-medium disabled:opacity-50"
+            title="Réinsère les 12 modules canoniques et désactive les autres"
+          >
+            {loadDefaults.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <RotateCcw className="h-4 w-4" />
+            )}
+            Charger les valeurs par défaut
+          </button>
+          <button
+            onClick={() => setShowCreate(true)}
+            className="flex items-center gap-2 bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 text-sm font-medium"
+          >
+            <Plus className="h-4 w-4" />
+            Nouveau Module
+          </button>
+        </div>
       </div>
 
       {/* Manifest + orphan routes audit strip */}
@@ -279,6 +365,18 @@ function ModulesPage() {
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b">
               <tr>
+                <th className="w-10 px-4 py-3">
+                  <input
+                    type="checkbox"
+                    aria-label="Tout sélectionner"
+                    checked={allSelected}
+                    ref={(el) => {
+                      if (el) el.indeterminate = someSelected;
+                    }}
+                    onChange={toggleAll}
+                    className="h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                  />
+                </th>
                 <th className="text-left px-4 py-3 font-medium text-gray-600">Ordre</th>
                 <th className="text-left px-4 py-3 font-medium text-gray-600">Slug</th>
                 <th className="text-left px-4 py-3 font-medium text-gray-600">Nom</th>
@@ -302,7 +400,22 @@ function ModulesPage() {
                 if (filledLocales.length < LOCALES.length) missing.push('traductions');
                 if (navCount === 0) missing.push('routes');
                 return (
-                  <tr key={mod.id} className="border-b last:border-b-0 hover:bg-gray-50">
+                  <tr
+                    key={mod.id}
+                    className={clsx(
+                      'border-b last:border-b-0 hover:bg-gray-50',
+                      selectedIds.has(mod.id) && 'bg-emerald-50/50',
+                    )}
+                  >
+                    <td className="px-4 py-3">
+                      <input
+                        type="checkbox"
+                        aria-label={`Sélectionner ${mod.name}`}
+                        checked={selectedIds.has(mod.id)}
+                        onChange={() => toggleOne(mod.id)}
+                        className="h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                      />
+                    </td>
                     <td className="px-4 py-3 tabular-nums text-gray-500">{mod.display_order}</td>
                     <td className="px-4 py-3 font-mono text-xs">{mod.slug || <span className="text-red-500">—</span>}</td>
                     <td className="px-4 py-3 font-medium">{frTranslation?.name || mod.name}</td>
@@ -438,6 +551,77 @@ function ModulesPage() {
               >
                 {deleteModule.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
                 Supprimer
+              </button>
+            </div>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
+
+      {/* Bulk delete confirmation */}
+      <Dialog.Root open={showBulkDelete} onOpenChange={setShowBulkDelete}>
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed inset-0 bg-black/40 z-50" />
+          <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-xl shadow-xl w-[480px] z-50 p-6">
+            <Dialog.Title className="text-lg font-semibold">Supprimer {selectedIds.size} module{selectedIds.size > 1 ? 's' : ''} ?</Dialog.Title>
+            <Dialog.Description className="mt-2 text-sm text-gray-600">
+              Les modules sélectionnés seront désactivés (soft delete). Leurs routes, widgets et traductions ne seront plus visibles.
+            </Dialog.Description>
+            <ul className="mt-3 max-h-48 overflow-y-auto rounded-lg bg-gray-50 px-3 py-2 text-sm text-gray-700 space-y-1">
+              {modules
+                .filter((m) => selectedIds.has(m.id))
+                .map((m) => (
+                  <li key={m.id}>
+                    {m.name} <span className="font-mono text-xs text-gray-500">({m.slug || '—'})</span>
+                  </li>
+                ))}
+            </ul>
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setShowBulkDelete(false)}
+                className="rounded-lg px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100"
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                onClick={confirmBulkDelete}
+                disabled={deleteModule.isPending}
+                className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+              >
+                {deleteModule.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+                Supprimer {selectedIds.size}
+              </button>
+            </div>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
+
+      {/* Load defaults confirmation */}
+      <Dialog.Root open={showLoadDefaults} onOpenChange={setShowLoadDefaults}>
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed inset-0 bg-black/40 z-50" />
+          <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-xl shadow-xl w-[500px] z-50 p-6">
+            <Dialog.Title className="text-lg font-semibold">Charger les valeurs par défaut ?</Dialog.Title>
+            <Dialog.Description className="mt-2 text-sm text-gray-600">
+              Réinsère les 12 modules canoniques (core, chat_advisor, agromind_advisor, satellite, personnel, stock, production, fruit_trees, compliance, sales_purchasing, accounting, marketplace) avec leurs routes et traductions. Tout autre module sera désactivé (is_available = false). Les activations par organisation (organization_modules) ne sont pas touchées.
+            </Dialog.Description>
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setShowLoadDefaults(false)}
+                className="rounded-lg px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100"
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                onClick={confirmLoadDefaults}
+                disabled={loadDefaults.isPending}
+                className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
+              >
+                {loadDefaults.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+                Charger
               </button>
             </div>
           </Dialog.Content>

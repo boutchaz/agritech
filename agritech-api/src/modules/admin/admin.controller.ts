@@ -390,4 +390,9 @@ export class AdminController {
   async getOrphanRoutes() {
     return this.adminService.getOrphanRoutes();
   }
+
+  @Post('modules/load-defaults')
+  async loadDefaultModules() {
+    return this.adminService.loadDefaultModules();
+  }
 }
