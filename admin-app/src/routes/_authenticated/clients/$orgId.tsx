@@ -30,6 +30,9 @@ import {
   Power,
   PauseCircle,
   PlayCircle,
+  Search,
+  CheckSquare,
+  Square,
 } from 'lucide-react';
 import { apiRequest } from '@/lib/api-client';
 import { supabase } from '@/lib/supabase';
@@ -799,19 +802,41 @@ function HardLimitsCard({
   });
 
   const selected = useWatch({ control: form.control, name: 'selected_modules' }) ?? [];
+  const [search, setSearch] = useState('');
+
+  const setSelected = (next: string[]) => {
+    // Always keep required slugs present.
+    const merged = Array.from(new Set([...next, ...Array.from(requiredSlugs)]));
+    form.setValue('selected_modules', merged, { shouldDirty: true });
+  };
 
   const toggleModule = (slug: string) => {
-    // Required modules cannot be unchecked — back-end rejects this anyway,
-    // and the UI disables the input (defense in depth).
     if (requiredSlugs.has(slug)) return;
     const next = selected.includes(slug)
       ? selected.filter((s) => s !== slug)
       : [...selected, slug];
-    form.setValue('selected_modules', next, { shouldDirty: true });
+    setSelected(next);
   };
 
-  // Group modules by category for readability
-  const byCategory = (modulesCatalog ?? []).reduce<Record<string, typeof modulesCatalog>>(
+  const moduleKey = (mod: { slug: string; id: string }) => mod.slug || mod.id;
+  const matchesSearch = (mod: { slug: string; name: string; category: string | null }) => {
+    if (!search.trim()) return true;
+    const q = search.trim().toLowerCase();
+    return (
+      mod.name.toLowerCase().includes(q) ||
+      mod.slug.toLowerCase().includes(q) ||
+      (mod.category ?? '').toLowerCase().includes(q)
+    );
+  };
+
+  const filteredCatalog = useMemo(
+    () => (modulesCatalog ?? []).filter(matchesSearch),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [modulesCatalog, search],
+  );
+
+  // Group filtered modules by category for readability
+  const byCategory = filteredCatalog.reduce<Record<string, typeof modulesCatalog>>(
     (acc, mod) => {
       const key = mod.category || 'general';
       if (!acc[key]) acc[key] = [];
@@ -820,6 +845,30 @@ function HardLimitsCard({
     },
     {},
   );
+
+  const togglableSlugs = (mods: typeof modulesCatalog) =>
+    mods.filter((m) => !m.is_required).map(moduleKey);
+
+  const selectAllVisible = () => {
+    const visibleTogglable = togglableSlugs(filteredCatalog);
+    setSelected(Array.from(new Set([...selected, ...visibleTogglable])));
+  };
+
+  const deselectAllVisible = () => {
+    const visibleTogglable = new Set(togglableSlugs(filteredCatalog));
+    setSelected(selected.filter((s) => !visibleTogglable.has(s)));
+  };
+
+  const toggleCategory = (mods: typeof modulesCatalog) => {
+    const slugs = togglableSlugs(mods);
+    const allOn = slugs.every((s) => selected.includes(s));
+    if (allOn) {
+      const off = new Set(slugs);
+      setSelected(selected.filter((s) => !off.has(s)));
+    } else {
+      setSelected(Array.from(new Set([...selected, ...slugs])));
+    }
+  };
 
   return (
     <div className="rounded-lg border border-gray-200 bg-white p-5">
@@ -872,52 +921,117 @@ function HardLimitsCard({
         </div>
 
         <div>
-          <p className="text-xs font-medium uppercase tracking-wide text-gray-500 mb-2">
-            Enabled modules ({selected.length})
-          </p>
+          <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+              Enabled modules ({selected.length}
+              {modulesCatalog.length > 0 && ` / ${modulesCatalog.length}`})
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={selectAllVisible}
+                disabled={filteredCatalog.length === 0}
+                className="inline-flex items-center gap-1 rounded-md border border-gray-200 bg-white px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+              >
+                <CheckSquare className="h-3.5 w-3.5" />
+                {search.trim() ? 'Select visible' : 'Select all'}
+              </button>
+              <button
+                type="button"
+                onClick={deselectAllVisible}
+                disabled={filteredCatalog.length === 0}
+                className="inline-flex items-center gap-1 rounded-md border border-gray-200 bg-white px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+              >
+                <Square className="h-3.5 w-3.5" />
+                {search.trim() ? 'Deselect visible' : 'Deselect all'}
+              </button>
+            </div>
+          </div>
+
+          <div className="relative mb-3">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search modules by name, slug or category…"
+              className="w-full rounded-md border border-gray-300 pl-8 pr-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            />
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch('')}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-400 hover:text-gray-600"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+
           {modulesCatalog.length === 0 ? (
             <p className="text-sm text-gray-400">No module catalog loaded.</p>
+          ) : filteredCatalog.length === 0 ? (
+            <p className="text-sm text-gray-400">No modules match "{search}".</p>
           ) : (
             <div className="space-y-3">
-              {Object.entries(byCategory).map(([category, mods]) => (
-                <div key={category}>
-                  <p className="text-[11px] font-medium uppercase tracking-wide text-gray-400 mb-1.5">
-                    {category}
-                  </p>
-                  <div className="grid grid-cols-2 gap-1.5 md:grid-cols-3">
-                    {mods.map((mod) => {
-                      const key = mod.slug || mod.id;
-                      const isOn = selected.includes(key);
-                      const isRequired = !!mod.is_required;
-                      return (
-                        <label
-                          key={mod.id}
-                          title={isRequired ? 'Module requis — ne peut pas être désactivé' : undefined}
-                          className={clsx(
-                            'flex items-center gap-2 rounded-md border px-2.5 py-1.5 text-sm select-none',
-                            isRequired ? 'cursor-not-allowed' : 'cursor-pointer',
-                            isOn
-                              ? 'border-emerald-500 bg-emerald-50'
-                              : 'border-gray-200 bg-white hover:bg-gray-50',
-                          )}
+              {Object.entries(byCategory).map(([category, mods]) => {
+                const togglable = mods.filter((m) => !m.is_required);
+                const onCount = togglable.filter((m) => selected.includes(moduleKey(m))).length;
+                const allOn = togglable.length > 0 && onCount === togglable.length;
+                return (
+                  <div key={category}>
+                    <div className="mb-1.5 flex items-center justify-between">
+                      <p className="text-[11px] font-medium uppercase tracking-wide text-gray-400">
+                        {category}{' '}
+                        <span className="ml-1 normal-case text-gray-300">
+                          ({onCount}/{togglable.length})
+                        </span>
+                      </p>
+                      {togglable.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => toggleCategory(mods)}
+                          className="text-[11px] font-medium text-emerald-700 hover:underline"
                         >
-                          <input
-                            type="checkbox"
-                            checked={isOn}
-                            disabled={isRequired}
-                            onChange={() => toggleModule(key)}
-                            className="h-4 w-4 text-emerald-600 disabled:opacity-60"
-                          />
-                          <span className="truncate">
-                            {mod.name}
-                            {isRequired && <span className="ml-1 text-[10px] text-gray-400">(requis)</span>}
-                          </span>
-                        </label>
-                      );
-                    })}
+                          {allOn ? 'Deselect all' : 'Select all'}
+                        </button>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-2 gap-1.5 md:grid-cols-3">
+                      {mods.map((mod) => {
+                        const key = moduleKey(mod);
+                        const isOn = selected.includes(key);
+                        const isRequired = !!mod.is_required;
+                        return (
+                          <label
+                            key={mod.id}
+                            title={isRequired ? 'Module requis — ne peut pas être désactivé' : undefined}
+                            className={clsx(
+                              'flex items-center gap-2 rounded-md border px-2.5 py-1.5 text-sm select-none',
+                              isRequired ? 'cursor-not-allowed' : 'cursor-pointer',
+                              isOn
+                                ? 'border-emerald-500 bg-emerald-50'
+                                : 'border-gray-200 bg-white hover:bg-gray-50',
+                            )}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isOn}
+                              disabled={isRequired}
+                              onChange={() => toggleModule(key)}
+                              className="h-4 w-4 text-emerald-600 disabled:opacity-60"
+                            />
+                            <span className="truncate">
+                              {mod.name}
+                              {isRequired && <span className="ml-1 text-[10px] text-gray-400">(requis)</span>}
+                            </span>
+                          </label>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
