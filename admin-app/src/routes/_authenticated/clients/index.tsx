@@ -430,6 +430,6 @@ function StatCard({ icon: Icon, label, value, color }: { icon: any; label: strin
   );
 }
 
-export const Route = createFileRoute('/_authenticated/clients')({
+export const Route = createFileRoute('/_authenticated/clients/')({
   component: ClientsPage,
 });
