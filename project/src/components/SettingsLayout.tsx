@@ -3,10 +3,8 @@ import { useNavigate, useLocation } from "@tanstack/react-router";
 import type { LucideIcon } from "lucide-react";
 import {
   Building,
-  Boxes,
   Users,
   LayoutGrid,
-  CreditCard,
   User,
   FileText,
   Package,
@@ -155,27 +153,11 @@ const SettingsLayout = ({ children }: SettingsLayoutProps) => {
             roles: ADMIN_ROLES,
           },
           {
-            id: "subscription",
-            name: t("settings.menu.subscription"),
-            icon: CreditCard,
-            path: "/settings/subscription",
-            description: t("settings.menu.subscriptionDescription"),
-            roles: ADMIN_ROLES,
-          },
-          {
             id: "billing",
             name: t("settings.menu.billing", "Billing & Invoices"),
             icon: Receipt,
             path: "/settings/billing",
             description: t("settings.menu.billingDescription", "Manage billing and view invoices"),
-            roles: ADMIN_ROLES,
-          },
-          {
-            id: "modules",
-            name: t("settings.menu.modules"),
-            icon: Boxes,
-            path: "/settings/modules",
-            description: t("settings.menu.modulesDescription"),
             roles: ADMIN_ROLES,
           },
           {
