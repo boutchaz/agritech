@@ -248,6 +248,7 @@ CREATE TABLE IF NOT EXISTS organizations (
   phone VARCHAR(50),
   email VARCHAR(255),
   website VARCHAR(255),
+  contact_person VARCHAR(255),
   tax_id VARCHAR(100),
   currency_code VARCHAR(3) DEFAULT 'MAD',
   timezone VARCHAR(50) DEFAULT 'Africa/Casablanca',
@@ -269,7 +270,8 @@ CREATE TABLE IF NOT EXISTS organizations (
 ALTER TABLE organizations
   ADD COLUMN IF NOT EXISTS approval_status VARCHAR(20) NOT NULL DEFAULT 'pending',
   ADD COLUMN IF NOT EXISTS approved_at TIMESTAMPTZ,
-  ADD COLUMN IF NOT EXISTS approved_by UUID REFERENCES auth.users(id) ON DELETE SET NULL;
+  ADD COLUMN IF NOT EXISTS approved_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS contact_person VARCHAR(255);
 
 DO $$
 BEGIN

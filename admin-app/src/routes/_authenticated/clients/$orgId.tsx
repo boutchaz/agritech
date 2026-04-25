@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
@@ -727,6 +727,10 @@ function HardLimitsCard({
     queryKey: ['admin-org-modules', orgId],
     queryFn: () =>
       apiRequest<{ enabled: string[] }>(`/api/v1/admin/orgs/${orgId}/modules`),
+    // Without this, window focus refetches return a new object ref, the reset
+    // effect below fires, and any in-progress checkbox toggles get wiped.
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
   });
   const enabledModules = enabledModulesResp?.enabled ?? [];
 
@@ -743,17 +747,26 @@ function HardLimitsCard({
     defaultValues,
   });
 
-  // Re-sync defaults when subscription row / enabled modules arrive
+  // Re-sync defaults when subscription row / enabled modules arrive.
+  // keepDirtyValues preserves any field the user has already touched.
   useEffect(() => {
-    form.reset({
-      max_farms: subscription?.max_farms ?? 0,
-      max_users: subscription?.max_users ?? 0,
-      max_parcels: subscription?.max_parcels ?? 0,
-      contracted_hectares: Number(subscription?.contracted_hectares ?? 0),
-      selected_modules: enabledModules,
-    });
+    form.reset(
+      {
+        max_farms: subscription?.max_farms ?? 0,
+        max_users: subscription?.max_users ?? 0,
+        max_parcels: subscription?.max_parcels ?? 0,
+        contracted_hectares: Number(subscription?.contracted_hectares ?? 0),
+        selected_modules: enabledModules,
+      },
+      { keepDirtyValues: true },
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [subscription?.id, enabledModulesResp]);
+
+  const requiredSlugs = useMemo(
+    () => new Set((modulesCatalog ?? []).filter((m) => m.is_required).map((m) => m.slug)),
+    [modulesCatalog],
+  );
 
   const mutation = useMutation({
     mutationFn: async (data: LimitsFormData) => {
@@ -770,9 +783,14 @@ function HardLimitsCard({
           enabled,
         }),
       });
+
+      return { ...data, selected_modules: enabled };
     },
-    onSuccess: () => {
+    onSuccess: (saved) => {
       toast.success('Hard limits saved');
+      // Mark form clean using the values we just persisted, so the Save button
+      // disables until the user changes something else.
+      form.reset(saved);
       queryClient.invalidateQueries({ queryKey: ['admin-org-subscription', orgId] });
       queryClient.invalidateQueries({ queryKey: ['admin-org-usage', orgId] });
       queryClient.invalidateQueries({ queryKey: ['admin-org-modules', orgId] });
@@ -780,12 +798,7 @@ function HardLimitsCard({
     onError: (err: Error) => toast.error(err.message || 'Failed to save'),
   });
 
-  const selected = form.watch('selected_modules');
-
-  const requiredSlugs = useMemo(
-    () => new Set((modulesCatalog ?? []).filter((m) => m.is_required).map((m) => m.slug)),
-    [modulesCatalog],
-  );
+  const selected = useWatch({ control: form.control, name: 'selected_modules' }) ?? [];
 
   const toggleModule = (slug: string) => {
     // Required modules cannot be unchecked — back-end rejects this anyway,
