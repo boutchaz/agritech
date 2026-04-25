@@ -2,7 +2,7 @@ import { createFileRoute } from '@tanstack/react-router';
 import { PageLayout } from '@/components/PageLayout';
 import ModernPageHeader from '@/components/ModernPageHeader';
 import { BiologicalAssetsManagement } from '@/components/settings/BiologicalAssetsManagement';
-import { withRouteProtection } from '@/components/authorization/withRouteProtection';
+import { withLicensedRouteProtection } from '@/components/authorization/withLicensedRouteProtection';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/hooks/useAuth';
 import { Building2, TreeDeciduous } from 'lucide-react';
@@ -35,5 +35,5 @@ function BiologicalAssetsPage() {
 }
 
 export const Route = createFileRoute('/_authenticated/(production)/biological-assets')({
-  component: withRouteProtection(BiologicalAssetsPage, 'read', 'BiologicalAsset'),
+  component: withLicensedRouteProtection(BiologicalAssetsPage, 'read', 'BiologicalAsset'),
 });

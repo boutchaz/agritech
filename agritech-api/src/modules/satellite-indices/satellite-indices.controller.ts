@@ -20,12 +20,15 @@ import {
 import { SatelliteIndicesService } from './satellite-indices.service';
 import { SatelliteIndexFiltersDto, CreateSatelliteIndexDto } from './dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RequireModule } from '../../common/decorators/require-module.decorator';
 import { OrganizationGuard } from '../../common/guards/organization.guard';
+import { ModuleEntitlementGuard } from '../../common/guards/module-entitlement.guard';
 
 @ApiTags('satellite-indices')
 @ApiBearerAuth()
 @Controller('satellite-indices')
-@UseGuards(JwtAuthGuard, OrganizationGuard)
+@RequireModule('satellite')
+@UseGuards(JwtAuthGuard, OrganizationGuard, ModuleEntitlementGuard)
 export class SatelliteIndicesController {
   constructor(private readonly satelliteIndicesService: SatelliteIndicesService) {}
 

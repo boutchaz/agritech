@@ -1,13 +1,16 @@
 import { Controller, Get, UseGuards, Request, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RequireModule } from '../../common/decorators/require-module.decorator';
 import { OrganizationGuard } from '../../common/guards/organization.guard';
+import { ModuleEntitlementGuard } from '../../common/guards/module-entitlement.guard';
 import { CampaignsService } from './campaigns.service';
 
 @ApiTags('Campaign Summary')
 @ApiBearerAuth()
 @Controller('campaign-summary')
-@UseGuards(JwtAuthGuard, OrganizationGuard)
+@RequireModule('production')
+@UseGuards(JwtAuthGuard, OrganizationGuard, ModuleEntitlementGuard)
 export class CampaignSummaryController {
   constructor(private readonly campaignsService: CampaignsService) {}
 

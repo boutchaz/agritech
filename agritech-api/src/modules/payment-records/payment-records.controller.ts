@@ -10,11 +10,14 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RequireModule } from '../../common/decorators/require-module.decorator';
 import { OrganizationGuard } from '../../common/guards/organization.guard';
+import { ModuleEntitlementGuard } from '../../common/guards/module-entitlement.guard';
 import { PaymentRecordsService } from './payment-records.service';
 
 @Controller('organizations/:organizationId/payment-records')
-@UseGuards(JwtAuthGuard, OrganizationGuard)
+@RequireModule('personnel')
+@UseGuards(JwtAuthGuard, OrganizationGuard, ModuleEntitlementGuard)
 export class PaymentRecordsController {
   constructor(private readonly paymentRecordsService: PaymentRecordsService) {}
 

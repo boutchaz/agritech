@@ -5,6 +5,7 @@ import { useParcelById } from '@/hooks/useParcelsQuery'
 import { Cloud } from 'lucide-react'
 import { ContentSkeleton } from '@/components/ui/page-skeletons'
 import { SectionLoader } from '@/components/ui/loader';
+import { ModuleGate } from '@/components/authorization/ModuleGate';
 
 
 const WeatherAnalyticsView = lazy(() => import('../../../components/WeatherAnalytics/WeatherAnalyticsView'));
@@ -53,5 +54,9 @@ const ParcelWeatherPage = () => {
 };
 
 export const Route = createFileRoute('/_authenticated/(production)/parcels/$parcelId/weather')({
-  component: ParcelWeatherPage,
+  component: () => (
+    <ModuleGate>
+      <ParcelWeatherPage />
+    </ModuleGate>
+  ),
 });

@@ -2,7 +2,9 @@ import { Controller, Get, Post, Patch, Delete, Query, Param, Body, Req, UseGuard
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiHeader, ApiQuery, ApiParam, ApiBody } from '@nestjs/swagger';
 import { AccountsService } from './accounts.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RequireModule } from '../../common/decorators/require-module.decorator';
 import { OrganizationGuard } from '../../common/guards/organization.guard';
+import { ModuleEntitlementGuard } from '../../common/guards/module-entitlement.guard';
 import { PoliciesGuard } from '../casl/policies.guard';
 import {
     CanManageAccounts,
@@ -12,7 +14,8 @@ import { ApplyTemplateDto } from './dto/apply-template.dto';
 
 @ApiTags('accounts')
 @Controller('accounts')
-@UseGuards(JwtAuthGuard, OrganizationGuard, PoliciesGuard)
+@RequireModule('accounting')
+@UseGuards(JwtAuthGuard, OrganizationGuard, ModuleEntitlementGuard, PoliciesGuard)
 @ApiBearerAuth('JWT-auth')
 @ApiHeader({
   name: 'X-Organization-Id',

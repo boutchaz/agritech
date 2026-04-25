@@ -19,12 +19,15 @@ import {
 import { AIReportsService } from './ai-reports.service';
 import { GenerateAIReportDto, CalibrateRequestDto, FetchDataRequestDto, AIReportJobResponseDto } from './dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RequireModule } from '../../common/decorators/require-module.decorator';
 import { OrganizationGuard } from '../../common/guards/organization.guard';
+import { ModuleEntitlementGuard } from '../../common/guards/module-entitlement.guard';
 
 @ApiTags('ai-reports')
 @ApiBearerAuth()
 @Controller('ai-reports')
-@UseGuards(JwtAuthGuard, OrganizationGuard)
+@RequireModule('agromind_advisor')
+@UseGuards(JwtAuthGuard, OrganizationGuard, ModuleEntitlementGuard)
 export class AIReportsController {
   constructor(private readonly aiReportsService: AIReportsService) {}
 

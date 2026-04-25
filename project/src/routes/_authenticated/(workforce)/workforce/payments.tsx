@@ -36,7 +36,7 @@ import {
 import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import { Label } from '@/components/ui/label';
 import { DollarSign, Plus, Building2, Users, Clock, CheckCircle2 } from 'lucide-react';
-import { withRouteProtection } from '@/components/authorization/withRouteProtection';
+import { withLicensedRouteProtection } from '@/components/authorization/withLicensedRouteProtection';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 
@@ -517,5 +517,5 @@ function PaymentFormDialog({
 }
 
 export const Route = createFileRoute('/_authenticated/(workforce)/workforce/payments')({
-  component: withRouteProtection(PaymentsPage, 'read', 'Payment'),
+  component: withLicensedRouteProtection(PaymentsPage, 'read', 'Payment'),
 });

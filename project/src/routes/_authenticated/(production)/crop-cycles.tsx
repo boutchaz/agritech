@@ -2,7 +2,7 @@ import { createFileRoute } from '@tanstack/react-router';
 import { z } from 'zod';
 import ModernPageHeader from '@/components/ModernPageHeader';
 import { CropCyclesList } from '@/components/CropCycles/CropCyclesList';
-import { withRouteProtection } from '@/components/authorization/withRouteProtection';
+import { withLicensedRouteProtection } from '@/components/authorization/withLicensedRouteProtection';
 import { useTranslation } from 'react-i18next';
 
 const cropCyclesSearchSchema = z.object({
@@ -33,7 +33,7 @@ function CropCyclesPageInner() {
   );
 }
 
-const CropCyclesPage = withRouteProtection(CropCyclesPageInner, 'read', 'CropCycle');
+const CropCyclesPage = withLicensedRouteProtection(CropCyclesPageInner, 'read', 'CropCycle');
 
 export const Route = createFileRoute('/_authenticated/(production)/crop-cycles')({
   component: CropCyclesPage,

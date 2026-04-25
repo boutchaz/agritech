@@ -23,12 +23,15 @@ import {
   AIProviderType,
 } from './dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RequireModule } from '../../common/decorators/require-module.decorator';
 import { OrganizationGuard } from '../../common/guards/organization.guard';
+import { ModuleEntitlementGuard } from '../../common/guards/module-entitlement.guard';
 
 @ApiTags('organization-ai-settings')
 @ApiBearerAuth()
 @Controller('organization-ai-settings')
-@UseGuards(JwtAuthGuard, OrganizationGuard)
+@RequireModule('agromind_advisor')
+@UseGuards(JwtAuthGuard, OrganizationGuard, ModuleEntitlementGuard)
 export class OrganizationAISettingsController {
   constructor(
     private readonly aiSettingsService: OrganizationAISettingsService,

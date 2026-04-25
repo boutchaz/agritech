@@ -53,7 +53,7 @@ import {
   ClipboardList,
 } from 'lucide-react';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { withRouteProtection } from '@/components/authorization/withRouteProtection';
+import { withLicensedRouteProtection } from '@/components/authorization/withLicensedRouteProtection';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 
@@ -530,5 +530,5 @@ function ProductApplicationsPage() {
 }
 
 export const Route = createFileRoute('/_authenticated/(production)/product-applications')({
-  component: withRouteProtection(ProductApplicationsPage, 'read', 'Stock'),
+  component: withLicensedRouteProtection(ProductApplicationsPage, 'read', 'Stock'),
 });

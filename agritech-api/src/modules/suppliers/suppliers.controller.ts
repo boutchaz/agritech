@@ -22,7 +22,9 @@ import {
 import { SuppliersService } from './suppliers.service';
 import { CreateSupplierDto, UpdateSupplierDto, SupplierFiltersDto } from './dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RequireModule } from '../../common/decorators/require-module.decorator';
 import { OrganizationGuard } from '../../common/guards/organization.guard';
+import { ModuleEntitlementGuard } from '../../common/guards/module-entitlement.guard';
 
 @ApiTags('CRM - Suppliers')
 @ApiBearerAuth('JWT-auth')
@@ -32,7 +34,8 @@ import { OrganizationGuard } from '../../common/guards/organization.guard';
   required: true,
 })
 @Controller('suppliers')
-@UseGuards(JwtAuthGuard, OrganizationGuard)
+@RequireModule('sales_purchasing')
+@UseGuards(JwtAuthGuard, OrganizationGuard, ModuleEntitlementGuard)
 export class SuppliersController {
   constructor(private readonly suppliersService: SuppliersService) {}
 

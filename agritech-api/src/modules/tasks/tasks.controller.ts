@@ -13,7 +13,9 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiParam, ApiResponse, ApiHeader, ApiQuery } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RequireModule } from '../../common/decorators/require-module.decorator';
 import { OrganizationGuard } from '../../common/guards/organization.guard';
+import { ModuleEntitlementGuard } from '../../common/guards/module-entitlement.guard';
 import { PoliciesGuard } from '../casl/policies.guard';
 import {
     CanManageTasks,
@@ -37,7 +39,8 @@ import { CompleteHarvestTaskDto } from './dto/complete-harvest-task.dto';
   description: 'Organization ID for multi-tenant context',
   required: true,
 })
-@UseGuards(JwtAuthGuard, OrganizationGuard, PoliciesGuard)
+@RequireModule('personnel')
+@UseGuards(JwtAuthGuard, OrganizationGuard, ModuleEntitlementGuard, PoliciesGuard)
 @Controller('tasks')
 export class TasksController {
   constructor(private readonly tasksService: TasksService) {}

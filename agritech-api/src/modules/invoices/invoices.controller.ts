@@ -21,7 +21,9 @@ import {
 import { InvoicesService } from './invoices.service';
 import { InvoiceFiltersDto, UpdateInvoiceStatusDto, CreateInvoiceDto, UpdateInvoiceDto } from './dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RequireModule } from '../../common/decorators/require-module.decorator';
 import { OrganizationGuard } from '../../common/guards/organization.guard';
+import { ModuleEntitlementGuard } from '../../common/guards/module-entitlement.guard';
 import { PoliciesGuard } from '../casl/policies.guard';
 import {
   CanReadInvoices,
@@ -33,7 +35,8 @@ import {
 @ApiTags('invoices')
 @ApiBearerAuth()
 @Controller('invoices')
-@UseGuards(JwtAuthGuard, OrganizationGuard, PoliciesGuard)
+@RequireModule('accounting')
+@UseGuards(JwtAuthGuard, OrganizationGuard, ModuleEntitlementGuard, PoliciesGuard)
 export class InvoicesController {
   constructor(private readonly invoicesService: InvoicesService) {}
 

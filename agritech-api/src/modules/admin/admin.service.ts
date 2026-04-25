@@ -642,9 +642,30 @@ export class AdminService {
       );
     }
 
-    return (data || [])
+    const active = (data || [])
       .map((row: any) => row.modules?.slug as string | undefined)
       .filter((slug): slug is string => !!slug);
+
+    const { data: requiredModules, error: requiredError } = await client
+      .from('modules')
+      .select('slug')
+      .eq('is_required', true)
+      .eq('is_available', true);
+
+    if (requiredError) {
+      throw new InternalServerErrorException(
+        `Failed to load required modules: ${requiredError.message}`,
+      );
+    }
+
+    return Array.from(
+      new Set([
+        ...active,
+        ...((requiredModules || [])
+          .map((row: any) => row.slug as string | undefined)
+          .filter((slug): slug is string => !!slug)),
+      ]),
+    );
   }
 
   /**
@@ -1189,6 +1210,186 @@ export class AdminService {
     return { success: true, subscriptionId: data.id };
   }
 
+  async saveOrgContract(
+    orgId: string,
+    dto: {
+      contracted_hectares: number;
+      max_farms: number;
+      max_users: number;
+      max_parcels: number;
+      enabled: string[];
+    },
+    adminUserId: string,
+  ) {
+    const normalized = Array.from(
+      new Set((dto.enabled || []).map((slug) => slug.trim()).filter(Boolean)),
+    );
+
+    return this.databaseService.executeInPgTransaction(async (pgClient) => {
+      const catalogRes = await pgClient.query<{
+        id: string;
+        slug: string;
+        is_required: boolean;
+        is_available: boolean;
+      }>(
+        `SELECT id, slug, is_required, is_available
+         FROM modules`,
+      );
+
+      const moduleIdBySlug = new Map<string, string>();
+      const requiredSlugs: string[] = [];
+      for (const row of catalogRes.rows) {
+        if (row.is_available) {
+          moduleIdBySlug.set(row.slug, row.id);
+        }
+        if (row.is_required) {
+          requiredSlugs.push(row.slug);
+        }
+      }
+
+      const requestedSet = new Set(normalized);
+      const missingRequired = requiredSlugs.filter((slug) => !requestedSet.has(slug));
+      if (missingRequired.length > 0) {
+        throw new BadRequestException(
+          `Cannot deactivate required modules: ${missingRequired.join(', ')}`,
+        );
+      }
+
+      const enabled = Array.from(new Set([...normalized, ...requiredSlugs])).filter((slug) =>
+        moduleIdBySlug.has(slug),
+      );
+      const activeModuleIds = enabled
+        .map((slug) => moduleIdBySlug.get(slug))
+        .filter((id): id is string => !!id);
+
+      const subscriptionRes = await pgClient.query<{ id: string }>(
+        `SELECT id
+         FROM subscriptions
+         WHERE organization_id = $1
+         ORDER BY created_at DESC
+         LIMIT 1
+         FOR UPDATE`,
+        [orgId],
+      );
+
+      const now = new Date();
+      const enabledJson = JSON.stringify(enabled);
+      let subscriptionId: string;
+      let eventType: 'admin_create' | 'admin_update';
+
+      if (subscriptionRes.rows[0]?.id) {
+        subscriptionId = subscriptionRes.rows[0].id;
+        eventType = 'admin_update';
+
+        await pgClient.query(
+          `UPDATE subscriptions
+           SET max_farms = $2,
+               max_users = $3,
+               max_parcels = $4,
+               contracted_hectares = $5,
+               selected_modules = $6::jsonb,
+               updated_at = NOW()
+           WHERE id = $1`,
+          [
+            subscriptionId,
+            dto.max_farms,
+            dto.max_users,
+            dto.max_parcels,
+            dto.contracted_hectares,
+            enabledJson,
+          ],
+        );
+      } else {
+        eventType = 'admin_create';
+        const end = new Date(now);
+        end.setDate(end.getDate() + 14);
+
+        const insertRes = await pgClient.query<{ id: string }>(
+          `INSERT INTO subscriptions (
+             organization_id,
+             formula,
+             billing_cycle,
+             contracted_hectares,
+             status,
+             current_period_start,
+             current_period_end,
+             contract_start_at,
+             contract_end_at,
+             selected_modules,
+             discount_pct,
+             currency,
+             vat_rate,
+             max_farms,
+             max_users,
+             max_parcels
+           ) VALUES (
+             $1, 'starter', 'monthly', $2, 'trialing',
+             $3, $4, $3, $4, $5::jsonb, 10, 'MAD', 0.20, $6, $7, $8
+           )
+           RETURNING id`,
+          [
+            orgId,
+            dto.contracted_hectares,
+            now.toISOString(),
+            end.toISOString(),
+            enabledJson,
+            dto.max_farms,
+            dto.max_users,
+            dto.max_parcels,
+          ],
+        );
+
+        subscriptionId = insertRes.rows[0].id;
+      }
+
+      await pgClient.query(
+        `INSERT INTO subscription_events (
+           organization_id,
+           subscription_id,
+           event_type,
+           actor_type,
+           actor_id,
+           payload
+         ) VALUES ($1, $2, $3, 'admin', $4, $5::jsonb)`,
+        [
+          orgId,
+          subscriptionId,
+          eventType,
+          adminUserId,
+          JSON.stringify({
+            max_farms: dto.max_farms,
+            max_users: dto.max_users,
+            max_parcels: dto.max_parcels,
+            contracted_hectares: dto.contracted_hectares,
+            enabled,
+          }),
+        ],
+      );
+
+      if (activeModuleIds.length > 0) {
+        await pgClient.query(
+          `INSERT INTO organization_modules (organization_id, module_id, is_active)
+           SELECT $1, unnest($2::uuid[]), true
+           ON CONFLICT (organization_id, module_id) DO UPDATE SET
+             is_active = true,
+             updated_at = NOW()`,
+          [orgId, activeModuleIds],
+        );
+      }
+
+      await pgClient.query(
+        `UPDATE organization_modules
+         SET is_active = false,
+             updated_at = NOW()
+         WHERE organization_id = $1
+           AND NOT (module_id = ANY($2::uuid[]))`,
+        [orgId, activeModuleIds],
+      );
+
+      return { success: true, subscriptionId, enabled };
+    });
+  }
+
   // ============================================
   // Banner Admin Methods (cross-org)
   // ============================================
@@ -1540,12 +1741,12 @@ export class AdminService {
       navigation_items: string[];
     }> = [
       { slug: 'core', name: 'core', icon: 'Home', color: '#10b981', category: 'core', description: 'Core features available to every organization', display_order: 1, price_monthly: 0, is_required: true, is_recommended: true, is_available: true, navigation_items: ['/dashboard','/settings','/farm-hierarchy','/parcels','/notifications'] },
-      { slug: 'chat_advisor', name: 'chat_advisor', icon: 'Bot', color: '#10b981', category: 'analytics', description: 'Conversational AgromindIA assistant', display_order: 2, price_monthly: 0, is_required: false, is_recommended: true, is_available: true, navigation_items: ['/chat'] },
+      { slug: 'chat_advisor', name: 'chat_advisor', icon: 'Bot', color: '#10b981', category: 'analytics', description: 'Conversational AgromindIA assistant', display_order: 2, price_monthly: 0, is_required: true, is_recommended: true, is_available: true, navigation_items: ['/chat'] },
       { slug: 'agromind_advisor', name: 'agromind_advisor', icon: 'Sparkles', color: '#7c3aed', category: 'analytics', description: 'AI advisor per parcel: calibration, diagnostics, recommendations, annual plan', display_order: 3, price_monthly: 0, is_required: false, is_recommended: false, is_available: true, navigation_items: ['/parcels/$parcelId/ai'] },
-      { slug: 'satellite', name: 'satellite', icon: 'Satellite', color: '#06b6d4', category: 'analytics', description: 'Satellite imagery, vegetation indices, weather', display_order: 4, price_monthly: 0, is_required: false, is_recommended: false, is_available: true, navigation_items: ['/satellite-analysis','/parcels/$parcelId/satellite','/parcels/$parcelId/weather'] },
-      { slug: 'personnel', name: 'personnel', icon: 'Users', color: '#3b82f6', category: 'hr', description: 'Workers and tasks', display_order: 5, price_monthly: 0, is_required: false, is_recommended: false, is_available: true, navigation_items: ['/workers','/tasks'] },
+      { slug: 'satellite', name: 'satellite', icon: 'Satellite', color: '#06b6d4', category: 'analytics', description: 'Satellite imagery, vegetation indices, weather', display_order: 4, price_monthly: 0, is_required: false, is_recommended: false, is_available: true, navigation_items: ['/satellite-analysis','/production/satellite-analysis','/parcels/$parcelId/satellite','/parcels/$parcelId/weather'] },
+      { slug: 'personnel', name: 'personnel', icon: 'Users', color: '#3b82f6', category: 'hr', description: 'Workers and tasks', display_order: 5, price_monthly: 0, is_required: false, is_recommended: false, is_available: true, navigation_items: ['/workers','/tasks','/workforce/payments','/workforce/workers/piece-work'] },
       { slug: 'stock', name: 'stock', icon: 'Package', color: '#10b981', category: 'inventory', description: 'Inventory and infrastructure', display_order: 6, price_monthly: 0, is_required: false, is_recommended: false, is_available: true, navigation_items: ['/stock','/infrastructure'] },
-      { slug: 'production', name: 'production', icon: 'Wheat', color: '#f59e0b', category: 'production', description: 'Campaigns, crop cycles, harvests, quality', display_order: 7, price_monthly: 0, is_required: false, is_recommended: false, is_available: true, navigation_items: ['/campaigns','/crop-cycles','/harvests','/reception-batches','/quality-control'] },
+      { slug: 'production', name: 'production', icon: 'Wheat', color: '#f59e0b', category: 'production', description: 'Campaigns, crop cycles, harvests, quality', display_order: 7, price_monthly: 0, is_required: false, is_recommended: false, is_available: true, navigation_items: ['/campaigns','/crop-cycles','/harvests','/reception-batches','/quality-control','/biological-assets','/product-applications'] },
       { slug: 'fruit_trees', name: 'fruit_trees', icon: 'TreeDeciduous', color: '#10b981', category: 'agriculture', description: 'Trees, orchards, pruning', display_order: 8, price_monthly: 0, is_required: false, is_recommended: false, is_available: true, navigation_items: ['/trees','/orchards','/pruning'] },
       { slug: 'compliance', name: 'compliance', icon: 'ShieldCheck', color: '#a855f7', category: 'operations', description: 'Compliance and certifications', display_order: 9, price_monthly: 0, is_required: false, is_recommended: false, is_available: true, navigation_items: ['/compliance'] },
       { slug: 'sales_purchasing', name: 'sales_purchasing', icon: 'ShoppingCart', color: '#f43f5e', category: 'sales', description: 'Quotes, sales orders, purchase orders', display_order: 10, price_monthly: 0, is_required: false, is_recommended: false, is_available: true, navigation_items: ['/accounting/quotes','/accounting/sales-orders','/accounting/purchase-orders','/accounting/customers','/stock/suppliers'] },

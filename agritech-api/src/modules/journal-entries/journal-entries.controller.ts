@@ -1,10 +1,13 @@
 import { Controller, Post, Body, UseGuards, Req, Param } from '@nestjs/common';
 import { AccountingAutomationService } from './accounting-automation.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RequireModule } from '../../common/decorators/require-module.decorator';
 import { OrganizationGuard } from '../../common/guards/organization.guard';
+import { ModuleEntitlementGuard } from '../../common/guards/module-entitlement.guard';
 
 @Controller('accounting')
-@UseGuards(JwtAuthGuard, OrganizationGuard)
+@RequireModule('accounting')
+@UseGuards(JwtAuthGuard, OrganizationGuard, ModuleEntitlementGuard)
 export class AccountingController {
   constructor(
     private readonly accountingAutomationService: AccountingAutomationService,

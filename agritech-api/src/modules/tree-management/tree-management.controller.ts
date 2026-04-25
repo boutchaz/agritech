@@ -11,8 +11,10 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RequireModule } from '../../common/decorators/require-module.decorator';
 import { TreeManagementService } from './tree-management.service';
 import { OrganizationGuard } from '../../common/guards/organization.guard';
+import { ModuleEntitlementGuard } from '../../common/guards/module-entitlement.guard';
 import {
   CreateTreeCategoryDto,
   UpdateTreeCategoryDto,
@@ -25,7 +27,8 @@ import {
 @ApiTags('Tree Management')
 @ApiBearerAuth()
 @Controller('organizations/:organizationId/tree-management')
-@UseGuards(JwtAuthGuard, OrganizationGuard)
+@RequireModule('fruit_trees')
+@UseGuards(JwtAuthGuard, OrganizationGuard, ModuleEntitlementGuard)
 export class TreeManagementController {
   constructor(private readonly treeManagementService: TreeManagementService) {}
 

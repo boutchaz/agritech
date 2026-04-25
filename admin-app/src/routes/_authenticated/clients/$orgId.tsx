@@ -27,6 +27,9 @@ import {
   Loader2,
   Save,
   Sliders,
+  Power,
+  PauseCircle,
+  PlayCircle,
 } from 'lucide-react';
 import { apiRequest } from '@/lib/api-client';
 import { supabase } from '@/lib/supabase';
@@ -455,6 +458,11 @@ function OrgDetailPage() {
             )}
           </div>
 
+          {/* Subscription quick actions */}
+          <div className="lg:col-span-2">
+            <SubscriptionActionsCard orgId={orgId} subscription={subscription} />
+          </div>
+
           {/* Hard Limits & Modules (case-by-case) */}
           <div className="lg:col-span-2">
             <HardLimitsCard
@@ -751,32 +759,17 @@ function HardLimitsCard({
     mutationFn: async (data: LimitsFormData) => {
       const { selected_modules, ...limits } = data;
 
-      // Limits → subscriptions row
-      const url = subscription
-        ? `/api/v1/admin/subscriptions/${orgId}`
-        : `/api/v1/admin/subscriptions/${orgId}/create`;
-      const method = subscription ? 'PUT' : 'POST';
-      const body = subscription
-        ? limits
-        : {
-            ...limits,
-            formula: 'starter',
-            billing_cycle: 'monthly',
-            status: 'trialing',
-            days: 14,
-          };
-
       // Always include required slugs — the backend rejects payloads that
       // omit them, and the UI disables the checkbox anyway.
       const enabled = Array.from(new Set([...selected_modules, ...Array.from(requiredSlugs)]));
 
-      await Promise.all([
-        apiRequest(url, { method, body: JSON.stringify(body) }),
-        apiRequest(`/api/v1/admin/orgs/${orgId}/modules`, {
-          method: 'PUT',
-          body: JSON.stringify({ enabled }),
+      await apiRequest(`/api/v1/admin/orgs/${orgId}/contract`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          ...limits,
+          enabled,
         }),
-      ]);
+      });
     },
     onSuccess: () => {
       toast.success('Hard limits saved');
@@ -1132,6 +1125,96 @@ function DemoButton({
         <p className="text-xs text-gray-500 mt-0.5">{description}</p>
       </div>
     </button>
+  );
+}
+
+function SubscriptionActionsCard({
+  orgId,
+  subscription,
+}: {
+  orgId: string;
+  subscription: any;
+}) {
+  const queryClient = useQueryClient();
+
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: ['admin-org-subscription', orgId] });
+    queryClient.invalidateQueries({ queryKey: ['admin-org-usage', orgId] });
+  };
+
+  const updateStatus = useMutation({
+    mutationFn: (status: 'active' | 'suspended') =>
+      apiRequest(`/api/v1/admin/subscriptions/${orgId}`, {
+        method: 'PUT',
+        body: JSON.stringify({ status }),
+      }),
+    onSuccess: (_d, status) => {
+      toast.success(status === 'active' ? 'Subscription activated' : 'Subscription suspended');
+      invalidate();
+    },
+    onError: (err: Error) => toast.error(err.message || 'Failed'),
+  });
+
+  const createTrial = useMutation({
+    mutationFn: () =>
+      apiRequest(`/api/v1/admin/subscriptions/${orgId}/create`, {
+        method: 'POST',
+        body: JSON.stringify({
+          formula: 'starter',
+          billing_cycle: 'monthly',
+          contracted_hectares: 50,
+          days: 14,
+          status: 'trialing',
+        }),
+      }),
+    onSuccess: () => {
+      toast.success('Trial subscription created (14 days)');
+      invalidate();
+    },
+    onError: (err: Error) => toast.error(err.message || 'Failed'),
+  });
+
+  return (
+    <div className="rounded-lg border border-gray-200 bg-white p-5">
+      <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-4">
+        <Power className="h-4 w-4" /> Subscription Actions
+      </h3>
+      <div className="flex flex-wrap gap-2">
+        {!subscription && (
+          <button
+            type="button"
+            onClick={() => createTrial.mutate()}
+            disabled={createTrial.isPending}
+            className="inline-flex items-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+          >
+            {createTrial.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <PlayCircle className="h-4 w-4" />}
+            Create Trial (14 days)
+          </button>
+        )}
+        {subscription && subscription.status !== 'active' && (
+          <button
+            type="button"
+            onClick={() => updateStatus.mutate('active')}
+            disabled={updateStatus.isPending}
+            className="inline-flex items-center gap-2 rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
+          >
+            {updateStatus.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <PlayCircle className="h-4 w-4" />}
+            Activate
+          </button>
+        )}
+        {subscription && subscription.status === 'active' && (
+          <button
+            type="button"
+            onClick={() => updateStatus.mutate('suspended')}
+            disabled={updateStatus.isPending}
+            className="inline-flex items-center gap-2 rounded-md bg-amber-500 px-4 py-2 text-sm font-medium text-white hover:bg-amber-600 disabled:opacity-50"
+          >
+            {updateStatus.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <PauseCircle className="h-4 w-4" />}
+            Suspend
+          </button>
+        )}
+      </div>
+    </div>
   );
 }
 

@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router';
 import ModernPageHeader from '@/components/ModernPageHeader';
 import { CropCycleDetail } from '@/components/CropCycles/CropCycleDetail';
-import { withRouteProtection } from '@/components/authorization/withRouteProtection';
+import { withLicensedRouteProtection } from '@/components/authorization/withLicensedRouteProtection';
 import { useTranslation } from 'react-i18next';
 
 function CropCycleDetailPage() {
@@ -26,5 +26,5 @@ function CropCycleDetailPage() {
 }
 
 export const Route = createFileRoute('/_authenticated/(production)/crop-cycles/$cycleId')({
-  component: withRouteProtection(CropCycleDetailPage, 'read', 'CropCycle'),
+  component: withLicensedRouteProtection(CropCycleDetailPage, 'read', 'CropCycle'),
 });

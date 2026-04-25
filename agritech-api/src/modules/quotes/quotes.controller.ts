@@ -23,12 +23,15 @@ import {
 import { QuotesService } from './quotes.service';
 import { CreateQuoteDto, UpdateQuoteDto, UpdateQuoteStatusDto, QuoteFiltersDto } from './dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RequireModule } from '../../common/decorators/require-module.decorator';
 import { OrganizationGuard } from '../../common/guards/organization.guard';
+import { ModuleEntitlementGuard } from '../../common/guards/module-entitlement.guard';
 
 @ApiTags('quotes')
 @ApiBearerAuth()
 @Controller('quotes')
-@UseGuards(JwtAuthGuard, OrganizationGuard)
+@RequireModule('sales_purchasing')
+@UseGuards(JwtAuthGuard, OrganizationGuard, ModuleEntitlementGuard)
 export class QuotesController {
   constructor(private readonly quotesService: QuotesService) {}
 

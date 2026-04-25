@@ -3,7 +3,7 @@ import { CheckSquare, Calendar, Building2, Columns3 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useAutoStartTour } from '@/contexts/TourContext';
 import ModernPageHeader from '@/components/ModernPageHeader';
-import { withRouteProtection } from '@/components/authorization/withRouteProtection';
+import { withLicensedRouteProtection } from '@/components/authorization/withLicensedRouteProtection';
 import { useTranslation } from 'react-i18next';
 import { PageLoader } from '@/components/ui/loader';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -106,5 +106,5 @@ function TasksLayout() {
 }
 
 export const Route = createFileRoute('/_authenticated/(workforce)/tasks')({
-  component: withRouteProtection(TasksLayout, 'read', 'Task'),
+  component: withLicensedRouteProtection(TasksLayout, 'read', 'Task'),
 });

@@ -3,7 +3,7 @@ import { Leaf } from 'lucide-react';
 import { PageLayout } from '@/components/PageLayout';
 import ModernPageHeader from '@/components/ModernPageHeader';
 import { CampaignManagement } from '@/components/settings/CampaignManagement';
-import { withRouteProtection } from '@/components/authorization/withRouteProtection';
+import { withLicensedRouteProtection } from '@/components/authorization/withLicensedRouteProtection';
 import { useTranslation } from 'react-i18next';
 
 function CampaignsPage() {
@@ -38,5 +38,5 @@ function CampaignsPage() {
 }
 
 export const Route = createFileRoute('/_authenticated/(production)/campaigns')({
-  component: withRouteProtection(CampaignsPage, 'read', 'Campaign'),
+  component: withLicensedRouteProtection(CampaignsPage, 'read', 'Campaign'),
 });

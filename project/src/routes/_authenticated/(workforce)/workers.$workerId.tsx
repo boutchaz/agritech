@@ -38,7 +38,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { withRouteProtection } from "@/components/authorization/withRouteProtection";
+import { withLicensedRouteProtection } from "@/components/authorization/withLicensedRouteProtection";
 import { useCurrency } from "@/hooks/useCurrency";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -979,5 +979,5 @@ function WorkerDetailPage() {
 export const Route = createFileRoute(
   "/_authenticated/(workforce)/workers/$workerId",
 )({
-  component: withRouteProtection(WorkerDetailPage, "read", "Worker"),
+  component: withLicensedRouteProtection(WorkerDetailPage, "read", "Worker"),
 });

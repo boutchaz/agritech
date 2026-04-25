@@ -7,6 +7,7 @@ import { useCalibrationStatus } from '@/hooks/useAIReports'
 import { apiRequest } from '@/lib/api-client'
 import { Satellite, CheckCircle2, AlertTriangle, FileText, BarChart3, Map as MapIcon, Database } from 'lucide-react'
 import { SectionLoader } from '@/components/ui/loader';
+import { ModuleGate } from '@/components/authorization/ModuleGate';
 
 
 type SatelliteTab = 'timeseries' | 'heatmap';
@@ -170,5 +171,9 @@ const ParcelSatelliteLayout = () => {
 };
 
 export const Route = createFileRoute('/_authenticated/(production)/parcels/$parcelId/satellite')({
-  component: ParcelSatelliteLayout,
+  component: () => (
+    <ModuleGate>
+      <ParcelSatelliteLayout />
+    </ModuleGate>
+  ),
 });

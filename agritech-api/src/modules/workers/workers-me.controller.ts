@@ -7,11 +7,14 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery, ApiResponse } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RequireModule } from '../../common/decorators/require-module.decorator';
+import { ModuleEntitlementGuard } from '../../common/guards/module-entitlement.guard';
 import { WorkersService } from './workers.service';
 
 @ApiTags('Workforce - Worker Dashboard')
 @ApiBearerAuth('JWT-auth')
-@UseGuards(JwtAuthGuard)
+@RequireModule('personnel')
+@UseGuards(JwtAuthGuard, ModuleEntitlementGuard)
 @Controller('workers/me')
 export class WorkersMeController {
   constructor(private readonly workersService: WorkersService) {}

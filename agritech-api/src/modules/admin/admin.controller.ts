@@ -280,6 +280,15 @@ export class AdminController {
     return this.adminService.createSubscription(orgId, body, req.user.id);
   }
 
+  @Put('orgs/:id/contract')
+  async saveOrgContract(
+    @Param('id') orgId: string,
+    @Body() body: any,
+    @Request() req: any,
+  ) {
+    return this.adminService.saveOrgContract(orgId, body, req.user.id);
+  }
+
   // ============================================
   // Banners (cross-org admin management)
   // ============================================

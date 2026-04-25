@@ -12,7 +12,9 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiParam, ApiQuery, ApiResponse } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RequireModule } from '../../common/decorators/require-module.decorator';
 import { OrganizationGuard } from '../../common/guards/organization.guard';
+import { ModuleEntitlementGuard } from '../../common/guards/module-entitlement.guard';
 import { PoliciesGuard } from '../casl/policies.guard';
 import {
     CanManageWorkers,
@@ -27,7 +29,8 @@ import { UpdateWorkerDto } from './dto/update-worker.dto';
 
 @ApiTags('Workforce - Workers')
 @ApiBearerAuth('JWT-auth')
-@UseGuards(JwtAuthGuard, OrganizationGuard, PoliciesGuard)
+@RequireModule('personnel')
+@UseGuards(JwtAuthGuard, OrganizationGuard, ModuleEntitlementGuard, PoliciesGuard)
 @Controller('organizations/:organizationId/workers')
 export class WorkersController {
   constructor(private readonly workersService: WorkersService) {}

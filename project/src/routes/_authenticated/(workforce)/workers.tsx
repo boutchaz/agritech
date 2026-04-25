@@ -11,7 +11,7 @@ import { useAutoStartTour } from '@/contexts/TourContext';
 import { PageLayout } from '@/components/PageLayout';
 import ModernPageHeader from '@/components/ModernPageHeader';
 import { useCan } from '@/lib/casl/AbilityContext';
-import { withRouteProtection } from '@/components/authorization/withRouteProtection';
+import { withLicensedRouteProtection } from '@/components/authorization/withLicensedRouteProtection';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Card, CardContent } from '@/components/ui/card';
@@ -263,5 +263,5 @@ function WorkersPage() {
 }
 
 export const Route = createFileRoute('/_authenticated/(workforce)/workers')({
-  component: withRouteProtection(WorkersPage, 'read', 'Worker'),
+  component: withLicensedRouteProtection(WorkersPage, 'read', 'Worker'),
 });

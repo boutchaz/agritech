@@ -18,7 +18,9 @@ import {
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RequireModule } from '../../common/decorators/require-module.decorator';
 import { OrganizationGuard } from '../../common/guards/organization.guard';
+import { ModuleEntitlementGuard } from '../../common/guards/module-entitlement.guard';
 import { RequireRole } from '../../common/decorators/require-role.decorator';
 import { FiscalYearsService } from './fiscal-years.service';
 import { CreateFiscalYearDto } from './dto/create-fiscal-year.dto';
@@ -27,7 +29,8 @@ import { UpdateFiscalYearDto } from './dto/update-fiscal-year.dto';
 @ApiTags('Fiscal Years')
 @ApiBearerAuth()
 @Controller('fiscal-years')
-@UseGuards(JwtAuthGuard, OrganizationGuard)
+@RequireModule('accounting')
+@UseGuards(JwtAuthGuard, OrganizationGuard, ModuleEntitlementGuard)
 export class FiscalYearsController {
   constructor(private readonly fiscalYearsService: FiscalYearsService) {}
 

@@ -8,7 +8,7 @@ import ModernPageHeader from '@/components/ModernPageHeader';
 
 import { Building2, Package } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { withRouteProtection } from '@/components/authorization/withRouteProtection';
+import { withLicensedRouteProtection } from '@/components/authorization/withLicensedRouteProtection';
 import { cn } from '@/lib/utils';
 import { isRTLLocale } from '@/lib/is-rtl-locale';
 import { PageLoader } from '@/components/ui/loader';
@@ -122,5 +122,5 @@ const AppContent = () => {
 };
 
 export const Route = createFileRoute('/_authenticated/(inventory)/stock')({
-  component: withRouteProtection(AppContent, 'read', 'Stock'),
+  component: withLicensedRouteProtection(AppContent, 'read', 'Stock'),
 });

@@ -20,7 +20,9 @@ import {
   ApiQuery,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RequireModule } from '../../common/decorators/require-module.decorator';
 import { OrganizationGuard } from '../../common/guards/organization.guard';
+import { ModuleEntitlementGuard } from '../../common/guards/module-entitlement.guard';
 import { RequireRole } from '../../common/decorators/require-role.decorator';
 import { BiologicalAssetsService } from './biological-assets.service';
 import { CreateBiologicalAssetDto, BiologicalAssetStatus } from './dto';
@@ -30,7 +32,8 @@ import { CreateValuationDto } from './dto/create-valuation.dto';
 @ApiTags('Biological Assets')
 @ApiBearerAuth()
 @Controller('biological-assets')
-@UseGuards(JwtAuthGuard, OrganizationGuard)
+@RequireModule('production')
+@UseGuards(JwtAuthGuard, OrganizationGuard, ModuleEntitlementGuard)
 export class BiologicalAssetsController {
   constructor(private readonly biologicalAssetsService: BiologicalAssetsService) {}
 

@@ -16,7 +16,7 @@ import {
   SelectValue,
 } from '@/components/ui/radix-select';
 import { PageLoader } from '@/components/ui/loader';
-import { withRouteProtection } from '@/components/authorization/withRouteProtection';
+import { withLicensedRouteProtection } from '@/components/authorization/withLicensedRouteProtection';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 
 function PieceWorkPage() {
@@ -125,5 +125,5 @@ function PieceWorkPage() {
 }
 
 export const Route = createFileRoute('/_authenticated/(workforce)/workforce/workers/piece-work')({
-  component: withRouteProtection(PieceWorkPage, 'read', 'Worker'),
+  component: withLicensedRouteProtection(PieceWorkPage, 'read', 'Worker'),
 });

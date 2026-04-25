@@ -10,6 +10,7 @@ import { useCan } from '@/lib/casl';
 import { useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
+import { ModuleGate } from '@/components/authorization/ModuleGate';
 
 // Lazy load heavy satellite components (ECharts + Recharts ~1.6MB)
 const IndicesCalculator = lazy(() => import('@/components/SatelliteAnalysisView/IndicesCalculator'));
@@ -265,5 +266,9 @@ function SatelliteAnalysisPage() {
 }
 
 export const Route = createFileRoute('/_authenticated/(production)/production/satellite-analysis')({
-  component: SatelliteAnalysisPage,
+  component: () => (
+    <ModuleGate>
+      <SatelliteAnalysisPage />
+    </ModuleGate>
+  ),
 });

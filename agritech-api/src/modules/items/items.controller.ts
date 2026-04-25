@@ -26,11 +26,14 @@ import { UpdateItemDto } from './dto/update-item.dto';
 import { CreateItemGroupDto, UpdateItemGroupDto } from './dto/create-item-group.dto';
 import { CreateProductVariantDto, UpdateProductVariantDto } from './dto/product-variant.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RequireModule } from '../../common/decorators/require-module.decorator';
 import { OrganizationGuard } from '../../common/guards/organization.guard';
+import { ModuleEntitlementGuard } from '../../common/guards/module-entitlement.guard';
 
 @ApiTags('items')
 @Controller('items')
-@UseGuards(JwtAuthGuard, OrganizationGuard)
+@RequireModule('stock')
+@UseGuards(JwtAuthGuard, OrganizationGuard, ModuleEntitlementGuard)
 @ApiBearerAuth()
 export class ItemsController {
   constructor(private readonly itemsService: ItemsService) { }

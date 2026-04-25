@@ -27,7 +27,9 @@ import { CreateOpeningStockDto } from './dto/create-opening-stock.dto';
 import { UpdateOpeningStockDto } from './dto/update-opening-stock.dto';
 import { CreateStockAccountMappingDto, UpdateStockAccountMappingDto } from './dto/stock-account-mapping.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RequireModule } from '../../common/decorators/require-module.decorator';
 import { OrganizationGuard } from '../../common/guards/organization.guard';
+import { ModuleEntitlementGuard } from '../../common/guards/module-entitlement.guard';
 import { PoliciesGuard } from '../casl/policies.guard';
 import {
   CanCreateStockEntry,
@@ -40,7 +42,8 @@ import { StockEntryApprovalsService } from './stock-entry-approvals.service';
 
 @ApiTags('stock-entries')
 @Controller('stock-entries')
-@UseGuards(JwtAuthGuard, OrganizationGuard, PoliciesGuard)
+@RequireModule('stock')
+@UseGuards(JwtAuthGuard, OrganizationGuard, ModuleEntitlementGuard, PoliciesGuard)
 @ApiBearerAuth()
 export class StockEntriesController {
   constructor(

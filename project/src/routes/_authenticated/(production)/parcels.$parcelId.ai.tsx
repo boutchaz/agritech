@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { useParcelById } from '@/hooks/useParcelsQuery'
 import { useParcelPhase } from '@/hooks/useParcelPhase'
 import { ParcelPhaseStepper } from '@/components/ai/ParcelPhaseStepper'
+import { ModuleGate } from '@/components/authorization/ModuleGate'
 import {
   BrainCircuit,
   AlertTriangle,
@@ -224,5 +225,9 @@ const ParcelAILayout = () => {
 };
 
 export const Route = createFileRoute('/_authenticated/(production)/parcels/$parcelId/ai')({
-  component: ParcelAILayout,
+  component: () => (
+    <ModuleGate>
+      <ParcelAILayout />
+    </ModuleGate>
+  ),
 });
