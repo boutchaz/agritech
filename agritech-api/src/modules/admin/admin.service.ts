@@ -1228,7 +1228,7 @@ export class AdminService {
     return this.databaseService.executeInPgTransaction(async (pgClient) => {
       const catalogRes = await pgClient.query<{
         id: string;
-        slug: string;
+        slug: string | null;
         is_required: boolean;
         is_available: boolean;
       }>(
@@ -1236,31 +1236,52 @@ export class AdminService {
          FROM modules`,
       );
 
-      const moduleIdBySlug = new Map<string, string>();
+      // Admin can enable any module that exists in the catalog — `is_available`
+      // is a UI flag for end-user discoverability, not an admin-side gate.
+      // Accept both slugs and UUIDs in the payload (the picker falls back to
+      // mod.id when slug is null).
+      const moduleByKey = new Map<string, { id: string; slug: string | null }>();
       const requiredSlugs: string[] = [];
       for (const row of catalogRes.rows) {
-        if (row.is_available) {
-          moduleIdBySlug.set(row.slug, row.id);
-        }
-        if (row.is_required) {
+        moduleByKey.set(row.id, { id: row.id, slug: row.slug });
+        if (row.slug) moduleByKey.set(row.slug, { id: row.id, slug: row.slug });
+        if (row.is_required && row.slug) {
           requiredSlugs.push(row.slug);
         }
       }
 
-      const requestedSet = new Set(normalized);
-      const missingRequired = requiredSlugs.filter((slug) => !requestedSet.has(slug));
+      const unknown = normalized.filter((key) => !moduleByKey.has(key));
+      if (unknown.length > 0) {
+        throw new BadRequestException(
+          `Unknown modules in enabled[]: ${unknown.join(', ')}`,
+        );
+      }
+
+      const requestedSlugs = new Set(
+        normalized
+          .map((key) => moduleByKey.get(key)?.slug)
+          .filter((slug): slug is string => !!slug),
+      );
+      const missingRequired = requiredSlugs.filter((slug) => !requestedSlugs.has(slug));
       if (missingRequired.length > 0) {
         throw new BadRequestException(
           `Cannot deactivate required modules: ${missingRequired.join(', ')}`,
         );
       }
 
-      const enabled = Array.from(new Set([...normalized, ...requiredSlugs])).filter((slug) =>
-        moduleIdBySlug.has(slug),
+      const activeModuleIds = Array.from(
+        new Set(
+          [...normalized, ...requiredSlugs]
+            .map((key) => moduleByKey.get(key)?.id)
+            .filter((id): id is string => !!id),
+        ),
       );
-      const activeModuleIds = enabled
-        .map((slug) => moduleIdBySlug.get(slug))
-        .filter((id): id is string => !!id);
+      // For the response + selected_modules jsonb, prefer slugs but fall back
+      // to ids for catalog rows missing a slug.
+      const enabled = activeModuleIds.map((id) => {
+        const row = moduleByKey.get(id);
+        return row?.slug || id;
+      });
 
       const subscriptionRes = await pgClient.query<{ id: string }>(
         `SELECT id
