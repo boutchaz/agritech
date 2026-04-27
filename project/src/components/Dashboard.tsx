@@ -1,5 +1,5 @@
 
-import { Activity, AlertTriangle, MapPin } from 'lucide-react';
+import { Activity, AlertTriangle, MapPin, Package, Wheat, ShoppingCart, BookOpen, Users, Satellite } from 'lucide-react';
 import type { SensorData, DashboardSettings } from '../types';
 import { useSensorData } from '../hooks/useSensorData';
 import { useAuth } from '../hooks/useAuth';
@@ -14,6 +14,7 @@ import HarvestSummaryWidget from './Dashboard/HarvestSummaryWidget';
 import SalesOverviewWidget from './Dashboard/SalesOverviewWidget';
 import AccountingWidget from './Dashboard/AccountingWidget';
 import CostPerParcelWidget from './Dashboard/CostPerParcelWidget';
+import { ModuleGatedWidget } from './Dashboard/ModuleGatedWidget';
 import InlineFarmSelector from './InlineFarmSelector';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
@@ -184,13 +185,19 @@ const Dashboard = ({ sensorData: _sensorData, settings }: DashboardProps) => {
           <ParcelsOverviewWidget />
         </div>
         <div className="h-full">
-          <StockAlertsWidget />
+          <ModuleGatedWidget moduleSlug="stock" title={t('dashboard.widgets.stock.title', 'Stock')} icon={Package}>
+            <StockAlertsWidget />
+          </ModuleGatedWidget>
         </div>
         <div className="h-full">
-          <HarvestSummaryWidget />
+          <ModuleGatedWidget moduleSlug="production" title={t('dashboard.widgets.harvests.title', 'Harvests')} icon={Wheat}>
+            <HarvestSummaryWidget />
+          </ModuleGatedWidget>
         </div>
         <div className="h-full">
-          <SalesOverviewWidget />
+          <ModuleGatedWidget moduleSlug="sales_purchasing" title={t('dashboard.widgets.sales.title', 'Sales')} icon={ShoppingCart}>
+            <SalesOverviewWidget />
+          </ModuleGatedWidget>
         </div>
       </div>
 
@@ -199,26 +206,36 @@ const Dashboard = ({ sensorData: _sensorData, settings }: DashboardProps) => {
         {/* Left Column: Tasks & Workforce */}
         <div className="lg:col-span-7 space-y-6">
           <div data-tour="dashboard-tasks" className="bg-white dark:bg-slate-800 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
-            <UpcomingTasksWidget />
+            <ModuleGatedWidget moduleSlug="personnel" title={t('dashboard.widgets.tasks.title', 'Tasks')} icon={Activity}>
+              <UpcomingTasksWidget />
+            </ModuleGatedWidget>
           </div>
-          
+
           <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
-            <WorkersActivityWidget />
+            <ModuleGatedWidget moduleSlug="personnel" title={t('dashboard.widgets.workers.title', 'Workers')} icon={Users}>
+              <WorkersActivityWidget />
+            </ModuleGatedWidget>
           </div>
         </div>
 
         {/* Right Column: Financials & Data Analysis */}
         <div className="lg:col-span-5 space-y-6">
           <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
-            <AccountingWidget />
+            <ModuleGatedWidget moduleSlug="accounting" title={t('dashboard.widgets.accounting.title', 'Accounting')} icon={BookOpen}>
+              <AccountingWidget />
+            </ModuleGatedWidget>
           </div>
 
           <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
-            <CostPerParcelWidget />
+            <ModuleGatedWidget moduleSlug="accounting" title={t('dashboard.widgets.costs.title', 'Costs')} icon={BookOpen}>
+              <CostPerParcelWidget />
+            </ModuleGatedWidget>
           </div>
 
           <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
-            <AnalysisWidget />
+            <ModuleGatedWidget moduleSlug="satellite" title={t('dashboard.widgets.satellite.title', 'Satellite')} icon={Satellite}>
+              <AnalysisWidget />
+            </ModuleGatedWidget>
           </div>
         </div>
       </div>
