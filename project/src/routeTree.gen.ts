@@ -47,11 +47,9 @@ import { Route as AuthenticatedproductionCampaignsRouteImport } from './routes/_
 import { Route as AuthenticatedproductionBiologicalAssetsRouteImport } from './routes/_authenticated/(production)/biological-assets'
 import { Route as AuthenticatedmiscUtilitiesRouteImport } from './routes/_authenticated/(misc)/utilities'
 import { Route as AuthenticatedmiscNotificationsRouteImport } from './routes/_authenticated/(misc)/notifications'
-import { Route as AuthenticatedmiscModulesRouteImport } from './routes/_authenticated/(misc)/modules'
 import { Route as AuthenticatedmiscMarketplaceRouteImport } from './routes/_authenticated/(misc)/marketplace'
 import { Route as AuthenticatedmiscLabServicesRouteImport } from './routes/_authenticated/(misc)/lab-services'
 import { Route as AuthenticatedmiscInfrastructureRouteImport } from './routes/_authenticated/(misc)/infrastructure'
-import { Route as AuthenticatedmiscModuleIdRouteImport } from './routes/_authenticated/(misc)/$moduleId'
 import { Route as AuthenticatedinventoryStockRouteImport } from './routes/_authenticated/(inventory)/stock'
 import { Route as AuthenticatedinventoryReceptionBatchesRouteImport } from './routes/_authenticated/(inventory)/reception-batches'
 import { Route as AuthenticatedinventoryInventoryRouteImport } from './routes/_authenticated/(inventory)/inventory'
@@ -381,12 +379,6 @@ const AuthenticatedmiscNotificationsRoute =
     path: '/notifications',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
-const AuthenticatedmiscModulesRoute =
-  AuthenticatedmiscModulesRouteImport.update({
-    id: '/(misc)/modules',
-    path: '/modules',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
 const AuthenticatedmiscMarketplaceRoute =
   AuthenticatedmiscMarketplaceRouteImport.update({
     id: '/(misc)/marketplace',
@@ -403,12 +395,6 @@ const AuthenticatedmiscInfrastructureRoute =
   AuthenticatedmiscInfrastructureRouteImport.update({
     id: '/(misc)/infrastructure',
     path: '/infrastructure',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
-const AuthenticatedmiscModuleIdRoute =
-  AuthenticatedmiscModuleIdRouteImport.update({
-    id: '/(misc)/$moduleId',
-    path: '/$moduleId',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedinventoryStockRoute =
@@ -1147,11 +1133,9 @@ export interface FileRoutesByFullPath {
   '/inventory': typeof AuthenticatedinventoryInventoryRouteWithChildren
   '/reception-batches': typeof AuthenticatedinventoryReceptionBatchesRoute
   '/stock': typeof AuthenticatedinventoryStockRouteWithChildren
-  '/$moduleId': typeof AuthenticatedmiscModuleIdRoute
   '/infrastructure': typeof AuthenticatedmiscInfrastructureRoute
   '/lab-services': typeof AuthenticatedmiscLabServicesRoute
   '/marketplace': typeof AuthenticatedmiscMarketplaceRouteWithChildren
-  '/modules': typeof AuthenticatedmiscModulesRoute
   '/notifications': typeof AuthenticatedmiscNotificationsRoute
   '/utilities': typeof AuthenticatedmiscUtilitiesRoute
   '/biological-assets': typeof AuthenticatedproductionBiologicalAssetsRoute
@@ -1306,11 +1290,9 @@ export interface FileRoutesByTo {
   '/live-dashboard': typeof AuthenticatedcoreLiveDashboardRoute
   '/inventory': typeof AuthenticatedinventoryInventoryRouteWithChildren
   '/reception-batches': typeof AuthenticatedinventoryReceptionBatchesRoute
-  '/$moduleId': typeof AuthenticatedmiscModuleIdRoute
   '/infrastructure': typeof AuthenticatedmiscInfrastructureRoute
   '/lab-services': typeof AuthenticatedmiscLabServicesRoute
   '/marketplace': typeof AuthenticatedmiscMarketplaceRouteWithChildren
-  '/modules': typeof AuthenticatedmiscModulesRoute
   '/notifications': typeof AuthenticatedmiscNotificationsRoute
   '/utilities': typeof AuthenticatedmiscUtilitiesRoute
   '/biological-assets': typeof AuthenticatedproductionBiologicalAssetsRoute
@@ -1464,11 +1446,9 @@ export interface FileRoutesById {
   '/_authenticated/(inventory)/inventory': typeof AuthenticatedinventoryInventoryRouteWithChildren
   '/_authenticated/(inventory)/reception-batches': typeof AuthenticatedinventoryReceptionBatchesRoute
   '/_authenticated/(inventory)/stock': typeof AuthenticatedinventoryStockRouteWithChildren
-  '/_authenticated/(misc)/$moduleId': typeof AuthenticatedmiscModuleIdRoute
   '/_authenticated/(misc)/infrastructure': typeof AuthenticatedmiscInfrastructureRoute
   '/_authenticated/(misc)/lab-services': typeof AuthenticatedmiscLabServicesRoute
   '/_authenticated/(misc)/marketplace': typeof AuthenticatedmiscMarketplaceRouteWithChildren
-  '/_authenticated/(misc)/modules': typeof AuthenticatedmiscModulesRoute
   '/_authenticated/(misc)/notifications': typeof AuthenticatedmiscNotificationsRoute
   '/_authenticated/(misc)/utilities': typeof AuthenticatedmiscUtilitiesRoute
   '/_authenticated/(production)/biological-assets': typeof AuthenticatedproductionBiologicalAssetsRoute
@@ -1628,11 +1608,9 @@ export interface FileRouteTypes {
     | '/inventory'
     | '/reception-batches'
     | '/stock'
-    | '/$moduleId'
     | '/infrastructure'
     | '/lab-services'
     | '/marketplace'
-    | '/modules'
     | '/notifications'
     | '/utilities'
     | '/biological-assets'
@@ -1787,11 +1765,9 @@ export interface FileRouteTypes {
     | '/live-dashboard'
     | '/inventory'
     | '/reception-batches'
-    | '/$moduleId'
     | '/infrastructure'
     | '/lab-services'
     | '/marketplace'
-    | '/modules'
     | '/notifications'
     | '/utilities'
     | '/biological-assets'
@@ -1944,11 +1920,9 @@ export interface FileRouteTypes {
     | '/_authenticated/(inventory)/inventory'
     | '/_authenticated/(inventory)/reception-batches'
     | '/_authenticated/(inventory)/stock'
-    | '/_authenticated/(misc)/$moduleId'
     | '/_authenticated/(misc)/infrastructure'
     | '/_authenticated/(misc)/lab-services'
     | '/_authenticated/(misc)/marketplace'
-    | '/_authenticated/(misc)/modules'
     | '/_authenticated/(misc)/notifications'
     | '/_authenticated/(misc)/utilities'
     | '/_authenticated/(production)/biological-assets'
@@ -2362,13 +2336,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedmiscNotificationsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/(misc)/modules': {
-      id: '/_authenticated/(misc)/modules'
-      path: '/modules'
-      fullPath: '/modules'
-      preLoaderRoute: typeof AuthenticatedmiscModulesRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
     '/_authenticated/(misc)/marketplace': {
       id: '/_authenticated/(misc)/marketplace'
       path: '/marketplace'
@@ -2388,13 +2355,6 @@ declare module '@tanstack/react-router' {
       path: '/infrastructure'
       fullPath: '/infrastructure'
       preLoaderRoute: typeof AuthenticatedmiscInfrastructureRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/(misc)/$moduleId': {
-      id: '/_authenticated/(misc)/$moduleId'
-      path: '/$moduleId'
-      fullPath: '/$moduleId'
-      preLoaderRoute: typeof AuthenticatedmiscModuleIdRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/(inventory)/stock': {
@@ -3656,11 +3616,9 @@ interface AuthenticatedRouteChildren {
   AuthenticatedinventoryInventoryRoute: typeof AuthenticatedinventoryInventoryRouteWithChildren
   AuthenticatedinventoryReceptionBatchesRoute: typeof AuthenticatedinventoryReceptionBatchesRoute
   AuthenticatedinventoryStockRoute: typeof AuthenticatedinventoryStockRouteWithChildren
-  AuthenticatedmiscModuleIdRoute: typeof AuthenticatedmiscModuleIdRoute
   AuthenticatedmiscInfrastructureRoute: typeof AuthenticatedmiscInfrastructureRoute
   AuthenticatedmiscLabServicesRoute: typeof AuthenticatedmiscLabServicesRoute
   AuthenticatedmiscMarketplaceRoute: typeof AuthenticatedmiscMarketplaceRouteWithChildren
-  AuthenticatedmiscModulesRoute: typeof AuthenticatedmiscModulesRoute
   AuthenticatedmiscNotificationsRoute: typeof AuthenticatedmiscNotificationsRoute
   AuthenticatedmiscUtilitiesRoute: typeof AuthenticatedmiscUtilitiesRoute
   AuthenticatedproductionBiologicalAssetsRoute: typeof AuthenticatedproductionBiologicalAssetsRoute
@@ -3713,12 +3671,10 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
     AuthenticatedinventoryReceptionBatchesRoute,
   AuthenticatedinventoryStockRoute:
     AuthenticatedinventoryStockRouteWithChildren,
-  AuthenticatedmiscModuleIdRoute: AuthenticatedmiscModuleIdRoute,
   AuthenticatedmiscInfrastructureRoute: AuthenticatedmiscInfrastructureRoute,
   AuthenticatedmiscLabServicesRoute: AuthenticatedmiscLabServicesRoute,
   AuthenticatedmiscMarketplaceRoute:
     AuthenticatedmiscMarketplaceRouteWithChildren,
-  AuthenticatedmiscModulesRoute: AuthenticatedmiscModulesRoute,
   AuthenticatedmiscNotificationsRoute: AuthenticatedmiscNotificationsRoute,
   AuthenticatedmiscUtilitiesRoute: AuthenticatedmiscUtilitiesRoute,
   AuthenticatedproductionBiologicalAssetsRoute:
