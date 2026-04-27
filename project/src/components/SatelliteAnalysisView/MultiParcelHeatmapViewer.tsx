@@ -57,7 +57,7 @@ const MultiParcelHeatmapViewer = ({
   const [selectedIndex, setSelectedIndex] = useState<VegetationIndexType>(initialIndex);
   const [selectedDate, setSelectedDate] = useState(initialDate || '');
   const [availableDates, setAvailableDates] = useState<
-    Array<{ date: string; cloud_coverage: number }>
+    Array<{ date: string; cloud_coverage: number | null }>
   >([]);
   const [isCheckingDates, setIsCheckingDates] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -98,17 +98,16 @@ const MultiParcelHeatmapViewer = ({
     return count > 0 ? [totalLat / count, totalLon / count] : [46.2276, 2.2137];
   }, [usableParcels]);
 
-  // Combined boundary for clipping the heatmap to the union of all parcels.
-  // Format expected by SmoothHeatmapLayer is [lon, lat][] of an outer ring;
-  // since clip is best-effort visual, we pass the bounding hull (concat of all rings).
-  const clipBoundary: [number, number][] | undefined = useMemo(() => {
+  // One [lon, lat][] ring per parcel — keeps disjoint parcels disjoint inside
+  // SmoothHeatmapLayer (which clips on Canvas non-zero winding). Concatenating
+  // into a single ring would form a convex hull and the heatmap would leak
+  // across the gaps between parcels.
+  const clipRings: [number, number][][] | undefined = useMemo(() => {
     if (usableParcels.length === 0) return undefined;
-    const all: [number, number][] = [];
-    usableParcels.forEach((p) => {
-      const positions = toLeafletPositions(p.boundary);
-      positions.forEach(([lat, lon]) => all.push([lon, lat]));
-    });
-    return all.length ? all : undefined;
+    const rings = usableParcels.map((p) =>
+      toLeafletPositions(p.boundary).map(([lat, lon]) => [lon, lat] as [number, number]),
+    );
+    return rings.length ? rings : undefined;
   }, [usableParcels]);
 
   // Probe ONE parcel for available dates rather than the union of all parcels.
@@ -142,8 +141,13 @@ const MultiParcelHeatmapViewer = ({
       );
 
       const dates = (result.available_dates || [])
-        .filter((d) => d.available !== false)
-        .map((d) => ({ date: d.date, cloud_coverage: d.cloud_coverage }))
+        .filter((d) => d.available !== false && typeof d.date === 'string')
+        .map((d) => ({
+          date: d.date,
+          // API may omit cloud_coverage on some entries — coerce to a real number
+          // so the option label doesn't render "NaN% cloud".
+          cloud_coverage: Number.isFinite(d.cloud_coverage) ? Number(d.cloud_coverage) : null,
+        }))
         // newest → oldest so the picker shows recent dates first
         .sort((a, b) => b.date.localeCompare(a.date));
 
@@ -233,7 +237,10 @@ const MultiParcelHeatmapViewer = ({
             ) : (
               availableDates.map((d) => (
                 <option key={d.date} value={d.date}>
-                  {d.date} — {Math.round(d.cloud_coverage)}% cloud
+                  {d.date}
+                  {d.cloud_coverage !== null
+                    ? ` — ${Math.round(d.cloud_coverage)}% cloud`
+                    : ''}
                 </option>
               ))
             )}
@@ -319,7 +326,7 @@ const MultiParcelHeatmapViewer = ({
             data={data}
             colorPalette={colorPalette}
             valueDisplay="interactive"
-            boundary={clipBoundary}
+            boundaries={clipRings}
           />
 
           {usableParcels.map((p) => (

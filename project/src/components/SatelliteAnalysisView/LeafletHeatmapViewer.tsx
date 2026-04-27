@@ -262,7 +262,7 @@ function buildHeatmapCanvas(
   minLon: number, maxLat: number, pxDeg: number,
   min: number, range: number,
   colorPalette: ColorPalette, opacity: number,
-  aoiPolygon?: [number, number][],
+  aoiPolygons?: [number, number][] | [number, number][][],
 ): string {
   // Target ~3000px on the longest side for smooth rendering at any zoom
   const maxDim = Math.max(nCols, nRows);
@@ -351,13 +351,31 @@ function buildHeatmapCanvas(
   const lonToCanvasX = (lon: number) => (lon - bMinLon) / degPerPx;
   const latToCanvasY = (lat: number) => (bMaxLat - lat) / degPerPx;
 
-  if (aoiPolygon && aoiPolygon.length > 2) {
-    ctx.beginPath();
-    ctx.moveTo(lonToCanvasX(aoiPolygon[0][0]), latToCanvasY(aoiPolygon[0][1]));
-    for (let i = 1; i < aoiPolygon.length; i++) {
-      ctx.lineTo(lonToCanvasX(aoiPolygon[i][0]), latToCanvasY(aoiPolygon[i][1]));
+  // Normalise to multi-ring form. Single-ring input is wrapped so multi-parcel
+  // farms can pass one ring per parcel and the heatmap clips to the union (Canvas
+  // non-zero winding fills any subpath, so disjoint rings stay disjoint and the
+  // gaps between parcels stay transparent).
+  const polygonRings: [number, number][][] = (() => {
+    if (!aoiPolygons || (Array.isArray(aoiPolygons) && aoiPolygons.length === 0)) {
+      return [];
     }
-    ctx.closePath();
+    const first = (aoiPolygons as unknown[])[0];
+    const isMulti = Array.isArray(first) && Array.isArray((first as unknown[])[0]);
+    return isMulti
+      ? (aoiPolygons as [number, number][][])
+      : [aoiPolygons as [number, number][]];
+  })();
+
+  const validRings = polygonRings.filter((ring) => ring.length > 2);
+  if (validRings.length > 0) {
+    ctx.beginPath();
+    for (const ring of validRings) {
+      ctx.moveTo(lonToCanvasX(ring[0][0]), latToCanvasY(ring[0][1]));
+      for (let i = 1; i < ring.length; i++) {
+        ctx.lineTo(lonToCanvasX(ring[i][0]), latToCanvasY(ring[i][1]));
+      }
+      ctx.closePath();
+    }
     ctx.clip();
   }
 
@@ -366,13 +384,14 @@ function buildHeatmapCanvas(
 }
 
 // Smooth heatmap using Canvas ImageOverlay with bilinear interpolation + optional isolines
-export const SmoothHeatmapLayer = ({ data, colorPalette = 'red-green', opacity = 1.0, valueDisplay = 'interactive', showIsolines = false, boundary }: {
+export const SmoothHeatmapLayer = ({ data, colorPalette = 'red-green', opacity = 1.0, valueDisplay = 'interactive', showIsolines = false, boundary, boundaries }: {
   data: HeatmapDataResponse | null;
   colorPalette?: ColorPalette;
   opacity?: number;
   valueDisplay?: ValueDisplayMode;
   showIsolines?: boolean;
-  boundary?: [number, number][];  // [lon, lat][] fallback for AOI clipping
+  boundary?: [number, number][];  // single-ring [lon, lat][] fallback for AOI clipping
+  boundaries?: [number, number][][];  // multi-ring [lon, lat][][] for multi-parcel farms (preferred when set)
 }) => {
   const map = useMap();
   const overlayRef = useRef<L.ImageOverlay | null>(null);
@@ -458,9 +477,13 @@ export const SmoothHeatmapLayer = ({ data, colorPalette = 'red-green', opacity =
 
     const gridFilled = fillNaNsWithNearestBfs(grid, nRows, nCols);
 
-    const aoiPolygon = data.aoi_boundary?.length
-      ? data.aoi_boundary as [number, number][]
-      : boundary;
+    // Multi-ring boundaries (one per parcel) take precedence so disjoint
+    // parcels stay disjoint instead of being unioned into a convex hull.
+    const aoiPolygon: [number, number][] | [number, number][][] | undefined = boundaries?.length
+      ? boundaries
+      : data.aoi_boundary?.length
+        ? data.aoi_boundary as [number, number][]
+        : boundary;
     const dataUrl = buildHeatmapCanvas(gridFilled, nRows, nCols, minLon, maxLat, pxDeg, min, range, colorPalette, opacity, aoiPolygon);
     const bounds = L.latLngBounds([minLat - pxDeg/2, minLon - pxDeg/2], [maxLat + pxDeg/2, maxLon + pxDeg/2]);
     overlayRef.current = L.imageOverlay(dataUrl, bounds, { opacity: 1, interactive: false });
@@ -508,7 +531,7 @@ export const SmoothHeatmapLayer = ({ data, colorPalette = 'red-green', opacity =
       if (overlayRef.current) map.removeLayer(overlayRef.current);
       if (isolinesRef.current) map.removeLayer(isolinesRef.current);
     };
-  }, [data, colorPalette, opacity, map, showIsolines, boundary]);
+  }, [data, colorPalette, opacity, map, showIsolines, boundary, boundaries]);
 
   // Click popup for interactive mode
   useEffect(() => {
@@ -748,7 +771,7 @@ const LeafletHeatmapViewer = ({
     const colors: Record<VegetationIndexType, string> = {
       NDVI: '#22c55e', NDRE: '#10b981', NDMI: '#3b82f6', MNDWI: '#06b6d4',
       GCI: '#84cc16', SAVI: '#eab308', OSAVI: '#f59e0b', MSAVI2: '#f97316',
-      NIRv: '#ef4444', EVI: '#0ea5e9', MSI: '#8b5cf6', MCARI: '#ec4899', TCARI: '#f43f5e'
+      NIRv: '#ef4444', EVI: '#0ea5e9', EBI: '#fb7185', MSI: '#8b5cf6', MCARI: '#ec4899', TCARI: '#f43f5e'
     };
     return colors[index] || '#6b7280';
   };

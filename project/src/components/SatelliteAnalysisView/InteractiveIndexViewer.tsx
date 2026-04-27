@@ -432,7 +432,7 @@ const InteractiveIndexViewer = ({
     const colors: Record<VegetationIndexType, string> = {
       NDVI: '#22c55e', NDRE: '#10b981', NDMI: '#3b82f6', MNDWI: '#06b6d4',
       GCI: '#84cc16', SAVI: '#eab308', OSAVI: '#f59e0b', MSAVI2: '#f97316',
-      NIRv: '#ef4444', EVI: '#0ea5e9', MSI: '#8b5cf6', MCARI: '#ec4899', TCARI: '#f43f5e'
+      NIRv: '#ef4444', EVI: '#0ea5e9', EBI: '#fb7185', MSI: '#8b5cf6', MCARI: '#ec4899', TCARI: '#f43f5e'
     };
     return colors[index] || '#64748b';
   };
@@ -1257,7 +1257,7 @@ function getDefaultPaletteForIndex(index: VegetationIndexType): ColorPalette {
   const paletteMap: Record<VegetationIndexType, ColorPalette> = {
     NDVI: 'red-green', NDRE: 'viridis', NDMI: 'blue-red', MNDWI: 'blue-red',
     GCI: 'terrain', SAVI: 'red-green', OSAVI: 'red-green', MSAVI2: 'red-green',
-    NIRv: 'red-green', EVI: 'viridis', MSI: 'blue-red', MCARI: 'viridis', TCARI: 'viridis'
+    NIRv: 'red-green', EVI: 'viridis', EBI: 'viridis', MSI: 'blue-red', MCARI: 'viridis', TCARI: 'viridis'
   };
   return paletteMap[index] || 'red-green';
 }
