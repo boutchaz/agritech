@@ -165,6 +165,87 @@ def _normalize_lookup_token(value: Any) -> str:
     return re.sub(r"[^a-z0-9]+", " ", ascii_value.lower()).strip()
 
 
+# Frontoffice persists planting_system as the human label from the
+# `plantation_systems` table ("Intensive", "Super High Density",
+# "Intensive (6x5)" etc.) while referentials key by the canonical FR
+# identifier ("intensif", "super_intensif", "traditionnel"). Without
+# normalization, subtype-specific calibration overrides never resolve and
+# every parcel falls through to the top-level `required_indices`.
+#
+# Pipeline:
+#   1. _normalize_lookup_token (NFKD ASCII fold + lowercase + collapse to
+#      single-spaced alnum tokens)
+#   2. Strip trailing spacing-suffix tokens (any token starting with a digit
+#      OR containing 'm') — handles "intensive 6x5", "intensive 7m"
+#   3. Map normalized phrase to canonical FR key via _SUBTYPE_SYNONYMS
+_SUBTYPE_SYNONYMS: dict[str, str] = {
+    # → intensif
+    "intensive": "intensif",
+    "intensif": "intensif",
+    "high density": "intensif",
+    "haute densite": "intensif",
+    # → super_intensif
+    "super intensive": "super_intensif",
+    "super intensif": "super_intensif",
+    "super high density": "super_intensif",
+    "very high density": "super_intensif",
+    "tres haute densite": "super_intensif",
+    "ultra intensive": "super_intensif",
+    "ultra intensif": "super_intensif",
+    # → traditionnel
+    "traditional": "traditionnel",
+    "traditionnel": "traditionnel",
+    "extensive": "traditionnel",
+    "extensif": "traditionnel",
+    "standard": "traditionnel",
+    "conventional": "traditionnel",
+    "conventionnel": "traditionnel",
+    # → semi_intensif (no referential matches today, but accept the input)
+    "semi intensive": "semi_intensif",
+    "semi intensif": "semi_intensif",
+}
+
+
+def normalize_planting_system_subtype(value: Any) -> str:
+    """Map any frontoffice planting-system label to the canonical referential key.
+
+    Returns the canonical key ("intensif", "super_intensif", ...) or "" when
+    the input is empty / unparseable. Callers fall back to top-level
+    `capacites_calibrage` when the key isn't found in the referential subtypes.
+    """
+    token = _normalize_lookup_token(value)
+    if not token:
+        return ""
+
+    # Strip spacing/density suffix tokens: "intensive 6x5" -> "intensive".
+    # A suffix is a token starting with a digit or matching simple density
+    # patterns ("3m", "7m", "100ha"). Keep semantic tokens like "intensive".
+    cleaned_tokens = [
+        tok
+        for tok in token.split(" ")
+        if tok and not (tok[0].isdigit() or re.fullmatch(r"\d+[a-z]+", tok))
+    ]
+    cleaned = " ".join(cleaned_tokens).strip()
+    if not cleaned:
+        return ""
+
+    # Direct synonym map (longest phrase wins — try the full cleaned phrase first).
+    if cleaned in _SUBTYPE_SYNONYMS:
+        return _SUBTYPE_SYNONYMS[cleaned]
+
+    # Greedy: try shrinking from the right ("super intensive blah" → "super intensive").
+    parts = cleaned.split(" ")
+    for end in range(len(parts), 0, -1):
+        candidate = " ".join(parts[:end])
+        if candidate in _SUBTYPE_SYNONYMS:
+            return _SUBTYPE_SYNONYMS[candidate]
+
+    # Last resort: assume the caller already passed a canonical key
+    # ("intensif", "super_intensif", "traditionnel"). Underscore-collapse so
+    # "super intensif" still matches "super_intensif" referential keys.
+    return cleaned.replace(" ", "_")
+
+
 def _yield_curve_from_value(value: Any) -> tuple[dict[str, Any], bool]:
     if isinstance(value, dict):
         return dict(value), False
@@ -484,7 +565,13 @@ def get_index_key_from_referential(
     systemes = reference_data.get("systemes")
     if not isinstance(systemes, dict):
         return None
-    system = systemes.get(planting_system.strip().lower())
+    subtype_key = normalize_planting_system_subtype(planting_system)
+    system = systemes.get(subtype_key) if subtype_key else None
+    if system is None:
+        for k, v in systemes.items():
+            if normalize_planting_system_subtype(k) == subtype_key:
+                system = v
+                break
     if not isinstance(system, dict):
         return None
     indice = system.get("indice_cle")
@@ -509,7 +596,13 @@ def get_satellite_thresholds_from_referential(
     seuils = reference_data.get("seuils_satellite")
     if not isinstance(seuils, dict):
         return None
-    system_seuils = seuils.get(planting_system.strip().lower())
+    subtype_key = normalize_planting_system_subtype(planting_system)
+    system_seuils = seuils.get(subtype_key) if subtype_key else None
+    if system_seuils is None:
+        for k, v in seuils.items():
+            if normalize_planting_system_subtype(k) == subtype_key:
+                system_seuils = v
+                break
     if not isinstance(system_seuils, dict):
         return None
     index_seuils = system_seuils.get(index_key)
@@ -570,15 +663,19 @@ def get_calibration_capabilities(
     # Start with top-level capacites_calibrage values
     resolved: dict[str, Any] = dict(raw)
 
-    # Override with subtype-specific values if provided
-    subtype_key = subtype.strip().lower() if isinstance(subtype, str) else ""
+    # Override with subtype-specific values if provided. Frontoffice may pass
+    # any of: "Intensive", "Intensive (6x5)", "Super High Density", "intensif".
+    # normalize_planting_system_subtype maps all of those to canonical keys.
+    subtype_key = normalize_planting_system_subtype(subtype)
     if subtype_key:
         by_subtype = raw.get("subtypes") or raw.get("sous_types") or raw.get("by_subtype")
         if isinstance(by_subtype, dict):
             subtype_cfg = by_subtype.get(subtype_key)
             if subtype_cfg is None:
+                # Match referential keys via the same normalization so authors
+                # using mixed casing/spacing in JSON still resolve.
                 for k, v in by_subtype.items():
-                    if isinstance(k, str) and k.strip().lower() == subtype_key:
+                    if normalize_planting_system_subtype(k) == subtype_key:
                         subtype_cfg = v
                         break
             if isinstance(subtype_cfg, dict):
