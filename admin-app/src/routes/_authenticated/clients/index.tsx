@@ -61,7 +61,7 @@ function ClientsPage() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
-  const [approvalFilter, setApprovalFilter] = useState<ApprovalStatus | ''>('pending');
+  const [approvalFilter, setApprovalFilter] = useState<ApprovalStatus | ''>('');
 
   // Fetch organizations
   const { data, isLoading, refetch } = useQuery({
