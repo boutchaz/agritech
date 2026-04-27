@@ -55,6 +55,7 @@ interface ModernFarmHierarchyProps {
   onFarmSelect?: (farmId: string) => void;
   onAddParcel?: (farmId: string) => void;
   onManageFarm?: (farmId: string) => void;
+  onViewHeatmap?: (farmId: string) => void;
 }
 
 const flattenFarmNodes = (nodes: FarmNode[]): FarmNode[] => {
@@ -80,7 +81,8 @@ const ModernFarmHierarchy = ({
   organizationId,
   onFarmSelect: _onFarmSelect,
   onAddParcel: _onAddParcel,
-  onManageFarm
+  onManageFarm,
+  onViewHeatmap
 }: ModernFarmHierarchyProps) => {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
@@ -594,6 +596,7 @@ const ModernFarmHierarchy = ({
             manager_name: farm.manager_name,
           })}
           onViewParcels={() => setSelectedFarmForParcels({ id: farm.farm_id, name: farm.farm_name })}
+          onViewHeatmap={onViewHeatmap ? () => onViewHeatmap(farm.farm_id) : undefined}
           onDelete={() => handleDeleteFarmClick({ id: farm.farm_id, name: farm.farm_name })}
         />
         {farm.children && farm.children.length > 0 && (
@@ -631,6 +634,7 @@ const ModernFarmHierarchy = ({
           manager_name: farm.manager_name,
         })}
         onViewParcels={() => setSelectedFarmForParcels({ id: farm.farm_id, name: farm.farm_name })}
+        onViewHeatmap={onViewHeatmap ? () => onViewHeatmap(farm.farm_id) : undefined}
         onDelete={() => handleDeleteFarmClick({ id: farm.farm_id, name: farm.farm_name })}
       />
     ));

@@ -166,6 +166,7 @@ import { Route as AuthenticatedproductionParcelsParcelIdAiRecommendationsRouteIm
 import { Route as AuthenticatedproductionParcelsParcelIdAiPlanRouteImport } from './routes/_authenticated/(production)/parcels.$parcelId.ai.plan'
 import { Route as AuthenticatedproductionParcelsParcelIdAiCalibrationRouteImport } from './routes/_authenticated/(production)/parcels.$parcelId.ai.calibration'
 import { Route as AuthenticatedproductionParcelsParcelIdAiAlertsRouteImport } from './routes/_authenticated/(production)/parcels.$parcelId.ai.alerts'
+import { Route as AuthenticatedproductionFarmsFarmIdSatelliteHeatmapRouteImport } from './routes/_authenticated/(production)/farms.$farmId.satellite.heatmap'
 import { Route as AuthenticatedproductionParcelsParcelIdAiPlanIndexRouteImport } from './routes/_authenticated/(production)/parcels.$parcelId.ai.plan.index'
 import { Route as AuthenticatedproductionParcelsParcelIdAiPlanSummaryRouteImport } from './routes/_authenticated/(production)/parcels.$parcelId.ai.plan.summary'
 
@@ -1088,6 +1089,12 @@ const AuthenticatedproductionParcelsParcelIdAiAlertsRoute =
     path: '/alerts',
     getParentRoute: () => AuthenticatedproductionParcelsParcelIdAiRoute,
   } as any)
+const AuthenticatedproductionFarmsFarmIdSatelliteHeatmapRoute =
+  AuthenticatedproductionFarmsFarmIdSatelliteHeatmapRouteImport.update({
+    id: '/(production)/farms/$farmId/satellite/heatmap',
+    path: '/farms/$farmId/satellite/heatmap',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedproductionParcelsParcelIdAiPlanIndexRoute =
   AuthenticatedproductionParcelsParcelIdAiPlanIndexRouteImport.update({
     id: '/',
@@ -1249,6 +1256,7 @@ export interface FileRoutesByFullPath {
   '/stock/items/': typeof AuthenticatedinventoryStockItemsIndexRoute
   '/parcels/$parcelId/': typeof AuthenticatedproductionParcelsParcelIdIndexRoute
   '/workforce/tasks/': typeof AuthenticatedworkforceWorkforceTasksIndexRoute
+  '/farms/$farmId/satellite/heatmap': typeof AuthenticatedproductionFarmsFarmIdSatelliteHeatmapRoute
   '/parcels/$parcelId/ai/alerts': typeof AuthenticatedproductionParcelsParcelIdAiAlertsRoute
   '/parcels/$parcelId/ai/calibration': typeof AuthenticatedproductionParcelsParcelIdAiCalibrationRoute
   '/parcels/$parcelId/ai/plan': typeof AuthenticatedproductionParcelsParcelIdAiPlanRouteWithChildren
@@ -1401,6 +1409,7 @@ export interface FileRoutesByTo {
   '/stock/items': typeof AuthenticatedinventoryStockItemsIndexRoute
   '/parcels/$parcelId': typeof AuthenticatedproductionParcelsParcelIdIndexRoute
   '/workforce/tasks': typeof AuthenticatedworkforceWorkforceTasksIndexRoute
+  '/farms/$farmId/satellite/heatmap': typeof AuthenticatedproductionFarmsFarmIdSatelliteHeatmapRoute
   '/parcels/$parcelId/ai/alerts': typeof AuthenticatedproductionParcelsParcelIdAiAlertsRoute
   '/parcels/$parcelId/ai/calibration': typeof AuthenticatedproductionParcelsParcelIdAiCalibrationRoute
   '/parcels/$parcelId/ai/recommendations': typeof AuthenticatedproductionParcelsParcelIdAiRecommendationsRoute
@@ -1562,6 +1571,7 @@ export interface FileRoutesById {
   '/_authenticated/(inventory)/stock/items/': typeof AuthenticatedinventoryStockItemsIndexRoute
   '/_authenticated/(production)/parcels/$parcelId/': typeof AuthenticatedproductionParcelsParcelIdIndexRoute
   '/_authenticated/(workforce)/workforce/tasks/': typeof AuthenticatedworkforceWorkforceTasksIndexRoute
+  '/_authenticated/(production)/farms/$farmId/satellite/heatmap': typeof AuthenticatedproductionFarmsFarmIdSatelliteHeatmapRoute
   '/_authenticated/(production)/parcels/$parcelId/ai/alerts': typeof AuthenticatedproductionParcelsParcelIdAiAlertsRoute
   '/_authenticated/(production)/parcels/$parcelId/ai/calibration': typeof AuthenticatedproductionParcelsParcelIdAiCalibrationRoute
   '/_authenticated/(production)/parcels/$parcelId/ai/plan': typeof AuthenticatedproductionParcelsParcelIdAiPlanRouteWithChildren
@@ -1724,6 +1734,7 @@ export interface FileRouteTypes {
     | '/stock/items/'
     | '/parcels/$parcelId/'
     | '/workforce/tasks/'
+    | '/farms/$farmId/satellite/heatmap'
     | '/parcels/$parcelId/ai/alerts'
     | '/parcels/$parcelId/ai/calibration'
     | '/parcels/$parcelId/ai/plan'
@@ -1876,6 +1887,7 @@ export interface FileRouteTypes {
     | '/stock/items'
     | '/parcels/$parcelId'
     | '/workforce/tasks'
+    | '/farms/$farmId/satellite/heatmap'
     | '/parcels/$parcelId/ai/alerts'
     | '/parcels/$parcelId/ai/calibration'
     | '/parcels/$parcelId/ai/recommendations'
@@ -2036,6 +2048,7 @@ export interface FileRouteTypes {
     | '/_authenticated/(inventory)/stock/items/'
     | '/_authenticated/(production)/parcels/$parcelId/'
     | '/_authenticated/(workforce)/workforce/tasks/'
+    | '/_authenticated/(production)/farms/$farmId/satellite/heatmap'
     | '/_authenticated/(production)/parcels/$parcelId/ai/alerts'
     | '/_authenticated/(production)/parcels/$parcelId/ai/calibration'
     | '/_authenticated/(production)/parcels/$parcelId/ai/plan'
@@ -3169,6 +3182,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedproductionParcelsParcelIdAiAlertsRouteImport
       parentRoute: typeof AuthenticatedproductionParcelsParcelIdAiRoute
     }
+    '/_authenticated/(production)/farms/$farmId/satellite/heatmap': {
+      id: '/_authenticated/(production)/farms/$farmId/satellite/heatmap'
+      path: '/farms/$farmId/satellite/heatmap'
+      fullPath: '/farms/$farmId/satellite/heatmap'
+      preLoaderRoute: typeof AuthenticatedproductionFarmsFarmIdSatelliteHeatmapRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/(production)/parcels/$parcelId/ai/plan/': {
       id: '/_authenticated/(production)/parcels/$parcelId/ai/plan/'
       path: '/'
@@ -3654,6 +3674,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedworkforceWorkforceTasksCalendarRoute: typeof AuthenticatedworkforceWorkforceTasksCalendarRoute
   AuthenticatedworkforceWorkforceWorkersPieceWorkRoute: typeof AuthenticatedworkforceWorkforceWorkersPieceWorkRoute
   AuthenticatedworkforceWorkforceTasksIndexRoute: typeof AuthenticatedworkforceWorkforceTasksIndexRoute
+  AuthenticatedproductionFarmsFarmIdSatelliteHeatmapRoute: typeof AuthenticatedproductionFarmsFarmIdSatelliteHeatmapRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
@@ -3735,6 +3756,8 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
     AuthenticatedworkforceWorkforceWorkersPieceWorkRoute,
   AuthenticatedworkforceWorkforceTasksIndexRoute:
     AuthenticatedworkforceWorkforceTasksIndexRoute,
+  AuthenticatedproductionFarmsFarmIdSatelliteHeatmapRoute:
+    AuthenticatedproductionFarmsFarmIdSatelliteHeatmapRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(

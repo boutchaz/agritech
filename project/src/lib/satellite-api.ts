@@ -705,6 +705,40 @@ export const convertBoundaryToGeoJSON = (boundary: number[][]): GeoJSONGeometry 
   };
 };
 
+// Build a MultiPolygon GeoJSON from multiple parcel boundaries.
+// Each boundary is normalized via the same WGS84/Mercator detection as
+// convertBoundaryToGeoJSON so callers can mix parcels from different sources.
+export const convertBoundariesToMultiPolygon = (boundaries: number[][][]): GeoJSONGeometry => {
+  const validRings = boundaries
+    .filter((b) => b && b.length >= 3)
+    .map((boundary) => {
+      const ring = boundary.map((coord) => {
+        const [x, y] = coord;
+        if (Math.abs(x) > 180 || Math.abs(y) > 90) {
+          const lon = (x / 20037508.34) * 180;
+          const lat = (Math.atan(Math.exp((y / 20037508.34) * Math.PI)) * 360 / Math.PI) - 90;
+          return [lon, lat];
+        }
+        return [x, y];
+      });
+      const first = ring[0];
+      const last = ring[ring.length - 1];
+      if (first[0] !== last[0] || first[1] !== last[1]) {
+        ring.push([first[0], first[1]]);
+      }
+      return [ring];
+    });
+
+  if (validRings.length === 0) {
+    throw new Error('No valid parcel boundaries provided');
+  }
+
+  return {
+    type: 'MultiPolygon',
+    coordinates: validRings as unknown as number[][][],
+  };
+};
+
 export const formatDateForAPI = (date: Date): string => {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');

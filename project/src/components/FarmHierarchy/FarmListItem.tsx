@@ -1,5 +1,5 @@
 
-import { Building2, MapPin, User, Trash2, Eye, Map, Edit } from 'lucide-react';
+import { Building2, MapPin, User, Trash2, Eye, Map, Edit, Satellite } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 
@@ -21,6 +21,7 @@ interface FarmListItemProps {
   onManage?: () => void;
   onEditManager?: () => void;
   onViewParcels?: () => void;
+  onViewHeatmap?: () => void;
   onDelete?: () => void;
 }
 
@@ -32,6 +33,7 @@ const FarmListItem = ({
   onManage: _onManage,
   onEditManager,
   onViewParcels,
+  onViewHeatmap,
   onDelete,
 }: FarmListItemProps) => {
   const { t } = useTranslation();
@@ -135,6 +137,15 @@ const FarmListItem = ({
           >
             <Map className="w-4 h-4" />
           </Button>
+          {onViewHeatmap && (
+            <Button
+              onClick={onViewHeatmap}
+              className="p-2 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-lg transition-colors"
+              title={t('farmHierarchy.farm.viewHeatmap', 'View satellite heatmap')}
+            >
+              <Satellite className="w-4 h-4" />
+            </Button>
+          )}
           <Button
             onClick={onSelect}
             className="p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors"

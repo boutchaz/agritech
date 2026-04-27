@@ -87,6 +87,12 @@ function FarmHierarchyPage() {
                 search: { farmId }
               });
             }}
+            onViewHeatmap={(farmId) => {
+              navigate({
+                to: '/farms/$farmId/satellite/heatmap',
+                params: { farmId },
+              });
+            }}
           />
         )}
       </div>
