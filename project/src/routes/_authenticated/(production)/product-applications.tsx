@@ -8,6 +8,7 @@ import { useFarms } from '@/hooks/useParcelsQuery';
 import type { ProductApplication } from '@/lib/api/product-applications';
 import { ApplicationFormDialog } from '@/components/parcels/ApplicationFormDialog';
 import ModernPageHeader from '@/components/ModernPageHeader';
+import { ProductionTabs } from '@/components/Production/ProductionTabs';
 import { PageLoader } from '@/components/ui/loader';
 import { SectionLoader } from '@/components/ui/loader';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -157,6 +158,7 @@ function ProductApplicationsPage() {
       />
 
       <div className="p-3 sm:p-4 md:p-6 pb-20 md:pb-6">
+        <ProductionTabs />
         <ListPageLayout
           header={
             <ListPageHeader

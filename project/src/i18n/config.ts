@@ -10,9 +10,10 @@ import enStock from '../locales/en/stock.json';
 import enCompliance from '../locales/en/compliance.json';
 import enAccounting from '../locales/en/accounting.json';
 import enSatellite from '../locales/en/satellite.json';
+import enProduction from '../locales/en/production.json';
 
 export const SUPPORTED_LANGUAGES = ['en', 'fr', 'ar'] as const;
-const NAMESPACES = ['common', 'ai', 'stock', 'compliance', 'accounting', 'satellite'] as const;
+const NAMESPACES = ['common', 'ai', 'stock', 'compliance', 'accounting', 'satellite', 'production'] as const;
 type Namespace = (typeof NAMESPACES)[number];
 type TranslationResource = Record<string, unknown>;
 type LanguageBundles = Record<Namespace, TranslationResource>;
@@ -20,26 +21,28 @@ type LanguageBundles = Record<Namespace, TranslationResource>;
 // Lazy loaders for non-default languages
 const lazyLanguageLoaders: Record<string, () => Promise<LanguageBundles>> = {
   fr: async () => {
-    const [common, ai, stock, compliance, accounting, satellite] = await Promise.all([
+    const [common, ai, stock, compliance, accounting, satellite, production] = await Promise.all([
       import('../locales/fr/common.json'),
       import('../locales/fr/ai.json'),
       import('../locales/fr/stock.json'),
       import('../locales/fr/compliance.json'),
       import('../locales/fr/accounting.json'),
       import('../locales/fr/satellite.json'),
+      import('../locales/fr/production.json'),
     ]);
-    return { common: common.default, ai: ai.default, stock: stock.default, compliance: compliance.default, accounting: accounting.default, satellite: satellite.default };
+    return { common: common.default, ai: ai.default, stock: stock.default, compliance: compliance.default, accounting: accounting.default, satellite: satellite.default, production: production.default };
   },
   ar: async () => {
-    const [common, ai, stock, compliance, accounting, satellite] = await Promise.all([
+    const [common, ai, stock, compliance, accounting, satellite, production] = await Promise.all([
       import('../locales/ar/common.json'),
       import('../locales/ar/ai.json'),
       import('../locales/ar/stock.json'),
       import('../locales/ar/compliance.json'),
       import('../locales/ar/accounting.json'),
       import('../locales/ar/satellite.json'),
+      import('../locales/ar/production.json'),
     ]);
-    return { common: common.default, ai: ai.default, stock: stock.default, compliance: compliance.default, accounting: accounting.default, satellite: satellite.default };
+    return { common: common.default, ai: ai.default, stock: stock.default, compliance: compliance.default, accounting: accounting.default, satellite: satellite.default, production: production.default };
   },
 };
 
@@ -64,6 +67,7 @@ const initialResources: Record<string, LanguageBundles> = {
     compliance: enCompliance,
     accounting: enAccounting,
     satellite: enSatellite,
+    production: enProduction,
   },
 };
 
@@ -75,7 +79,7 @@ i18n
     lng: detectedLng === 'en' ? 'en' : undefined, // Let detector pick if not English
     fallbackLng: 'en',
     defaultNS: 'common',
-    ns: ['common', 'ai', 'stock', 'compliance', 'accounting', 'satellite'],
+    ns: ['common', 'ai', 'stock', 'compliance', 'accounting', 'satellite', 'production'],
 
     interpolation: {
       escapeValue: false,

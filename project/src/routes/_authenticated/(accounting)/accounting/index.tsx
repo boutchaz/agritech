@@ -1,13 +1,8 @@
 import React from 'react';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
-import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/hooks/useAuth';
 import { useAutoStartTour } from '@/contexts/TourContext';
-import { PageLayout } from '@/components/PageLayout';
-import ModernPageHeader from '@/components/ModernPageHeader';
 import {
-  Building2,
-  BookOpen,
   Receipt,
   CreditCard,
   AlertTriangle,
@@ -16,14 +11,12 @@ import {
   TrendingDown,
   Wallet,
   FileClock,
-  CalendarDays,
   CheckCircle2,
   Clock,
   PlusCircle,
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { withRouteProtection } from '@/components/authorization/withRouteProtection';
 import { useInvoices } from '@/hooks/useInvoices';
 import { useAccountingPayments } from '@/hooks/useAccountingPayments';
@@ -79,7 +72,6 @@ const daysBetween = (a: Date, b: Date) =>
   Math.floor((b.getTime() - a.getTime()) / (1000 * 60 * 60 * 24));
 
 const AppContent = () => {
-  const { t } = useTranslation();
   const { currentOrganization } = useAuth();
   const navigate = useNavigate();
 
@@ -300,38 +292,6 @@ const AppContent = () => {
   if (!currentOrganization) return <PageLoader />;
 
   return (
-    <PageLayout
-      activeModule="accounting"
-      header={
-        <ModernPageHeader
-          breadcrumbs={[
-            { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
-            {
-              icon: BookOpen,
-              label: t('accountingModule.dashboard.title', 'Accounting Dashboard'),
-              isActive: true,
-            },
-          ]}
-          title={t('accountingModule.dashboard.title', 'Accounting Dashboard')}
-          subtitle={t(
-            'accountingModule.dashboard.subtitle',
-            'Cash position, outstanding balances, and what needs your attention',
-          )}
-          actions={
-            currentFY ? (
-              <Badge
-                variant={fyWarning?.kind === 'closed' ? 'destructive' : 'outline'}
-                className="gap-1.5"
-              >
-                <CalendarDays className="h-3.5 w-3.5" />
-                {currentFY.name}
-                {fyWarning ? <span className="font-normal">· {fyWarning.label}</span> : null}
-              </Badge>
-            ) : null
-          }
-        />
-      }
-    >
       <div className="p-6 space-y-6" data-tour="accounting-overview">
         {/* Money metrics */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -523,7 +483,6 @@ const AppContent = () => {
           </Card>
         )}
       </div>
-    </PageLayout>
   );
 };
 

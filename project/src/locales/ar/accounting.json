@@ -1,4 +1,37 @@
 {
+  "title": "المحاسبة",
+  "subtitle": "إدارة الفواتير والمدفوعات والتقارير المالية",
+  "groups": {
+    "overview": "نظرة عامة",
+    "billing": "الفواتير",
+    "records": "السجلات",
+    "reports": "التقارير",
+    "settings": "الإعدادات"
+  },
+  "tabs": {
+    "dashboard": "لوحة التحكم",
+    "invoices": "الفواتير",
+    "quotes": "عروض الأسعار",
+    "salesOrders": "أوامر البيع",
+    "purchaseOrders": "أوامر الشراء",
+    "payments": "المدفوعات",
+    "journal": "الدفتر اليومي",
+    "customers": "العملاء",
+    "bankAccounts": "الحسابات البنكية",
+    "accounts": "الدليل المحاسبي",
+    "reports": "جميع التقارير",
+    "profitLoss": "حساب الأرباح والخسائر",
+    "balanceSheet": "الميزانية العمومية",
+    "trialBalance": "ميزان المراجعة",
+    "generalLedger": "دفتر الأستاذ العام",
+    "cashFlow": "التدفقات النقدية",
+    "agedReceivables": "أعمار الذمم المدينة",
+    "agedPayables": "أعمار الذمم الدائنة",
+    "reportsAnalysis": "الربحية",
+    "accountMappings": "تعيينات الحسابات",
+    "costCenters": "مراكز التكلفة",
+    "fiscalYears": "السنوات المالية"
+  },
   "reports": {
     "title": "التقارير المالية",
     "subtitle": "الوصول إلى التقارير والتحليلات المالية الشاملة",

@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { FilterBar, ResponsiveList, ListPageLayout } from '@/components/ui/data-table';
 import { TableCell, TableHead } from '@/components/ui/table';
 import ModernPageHeader from '@/components/ModernPageHeader';
+import { ProductionTabs } from '@/components/Production/ProductionTabs';
 
 export const Route = createFileRoute('/_authenticated/(production)/orchards')({
   component: Orchards,
@@ -65,6 +66,7 @@ function Orchards() {
         />
       }
     >
+      <ProductionTabs />
       <ResponsiveList
         items={filteredOrchards ?? []}
         isLoading={isLoading}

@@ -2,9 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/hooks/useAuth';
-import { PageLayout } from '@/components/PageLayout';
-import ModernPageHeader from '@/components/ModernPageHeader';
-import { Building2, TrendingUp, TrendingDown, AlertCircle, Download, Calendar, Wheat, CalendarRange } from 'lucide-react';
+import { TrendingUp, TrendingDown, AlertCircle, Download, Calendar, Wheat, CalendarRange } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -125,19 +123,6 @@ const AppContent = () => {
   }
 
   return (
-    <PageLayout
-      activeModule="accounting"
-      header={
-        <ModernPageHeader
-          breadcrumbs={[
-            { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
-            { icon: TrendingUp, label: t('reportsModule.profitLoss.title', 'Profit & Loss'), isActive: true }
-          ]}
-          title={t('reportsModule.profitLoss.title', 'Profit & Loss Statement')}
-          subtitle={t('reportsModule.profitLoss.subtitle', 'Income statement showing revenue, expenses, and net income')}
-        />
-      }
-    >
       <div className="p-6 space-y-6">
         {/* Date Filter */}
         <Card>
@@ -338,7 +323,6 @@ const AppContent = () => {
           </Card>
         )}
       </div>
-    </PageLayout>
   );
 };
 

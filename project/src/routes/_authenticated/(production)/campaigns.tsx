@@ -2,6 +2,7 @@ import { createFileRoute } from '@tanstack/react-router';
 import { Leaf } from 'lucide-react';
 import { PageLayout } from '@/components/PageLayout';
 import ModernPageHeader from '@/components/ModernPageHeader';
+import { ProductionTabs } from '@/components/Production/ProductionTabs';
 import { CampaignManagement } from '@/components/settings/CampaignManagement';
 import { withLicensedRouteProtection } from '@/components/authorization/withLicensedRouteProtection';
 import { useTranslation } from 'react-i18next';
@@ -31,6 +32,7 @@ function CampaignsPage() {
       }
     >
       <div className="p-3 sm:p-4 md:p-6 pb-20 md:pb-6">
+        <ProductionTabs />
         <CampaignManagement />
       </div>
     </PageLayout>

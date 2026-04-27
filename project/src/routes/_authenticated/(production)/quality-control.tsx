@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useAuth } from '@/hooks/useAuth';
 import ModernPageHeader from '@/components/ModernPageHeader';
+import { ProductionTabs } from '@/components/Production/ProductionTabs';
 import { ClipboardCheck, Building2, Plus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { SectionLoader } from '@/components/ui/loader';
@@ -38,6 +39,7 @@ function QualityControlPage() {
       />
 
       <div className="p-3 sm:p-4 md:p-6 pb-20 md:pb-6">
+        <ProductionTabs />
         <QualityControlList />
       </div>
 

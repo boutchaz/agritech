@@ -1,0 +1,22 @@
+{
+  "groups": {
+    "planning": "التخطيط",
+    "operations": "العمليات",
+    "infrastructure": "البنية التحتية",
+    "quality": "الجودة والتحليل"
+  },
+  "tabs": {
+    "campaigns": "الحملات",
+    "cropCycles": "دورات المحاصيل",
+    "harvests": "الحصاد",
+    "productApplications": "المعاملات",
+    "pruning": "التقليم",
+    "parcels": "القطع",
+    "orchards": "البساتين",
+    "trees": "الأشجار",
+    "biologicalAssets": "الأصول البيولوجية",
+    "farmHierarchy": "هيكل المزرعة",
+    "qualityControl": "مراقبة الجودة",
+    "satelliteAnalysis": "الأقمار الصناعية"
+  }
+}

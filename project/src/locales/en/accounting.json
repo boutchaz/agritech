@@ -1,4 +1,37 @@
 {
+  "title": "Accounting",
+  "subtitle": "Manage invoices, payments, and financial reports",
+  "groups": {
+    "overview": "Overview",
+    "billing": "Billing",
+    "records": "Records",
+    "reports": "Reports",
+    "settings": "Settings"
+  },
+  "tabs": {
+    "dashboard": "Dashboard",
+    "invoices": "Invoices",
+    "quotes": "Quotes",
+    "salesOrders": "Sales Orders",
+    "purchaseOrders": "Purchase Orders",
+    "payments": "Payments",
+    "journal": "Journal",
+    "customers": "Customers",
+    "bankAccounts": "Bank Accounts",
+    "accounts": "Chart of Accounts",
+    "reports": "All Reports",
+    "profitLoss": "Profit & Loss",
+    "balanceSheet": "Balance Sheet",
+    "trialBalance": "Trial Balance",
+    "generalLedger": "General Ledger",
+    "cashFlow": "Cash Flow",
+    "agedReceivables": "Aged Receivables",
+    "agedPayables": "Aged Payables",
+    "reportsAnalysis": "Profitability",
+    "accountMappings": "Account Mappings",
+    "costCenters": "Cost Centers",
+    "fiscalYears": "Fiscal Years"
+  },
   "reports": {
     "title": "Financial Reports",
     "subtitle": "Access comprehensive financial reports and analytics",

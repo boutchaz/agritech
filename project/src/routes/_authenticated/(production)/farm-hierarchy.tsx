@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/hooks/useAuth';
 import { PageLayout } from '@/components/PageLayout';
 import ModernPageHeader from '@/components/ModernPageHeader';
+import { ProductionTabs } from '@/components/Production/ProductionTabs';
 import ModernFarmHierarchy from '@/components/FarmHierarchy/ModernFarmHierarchy';
 import FarmRoleManager from '@/components/FarmRoleManager';
 import { useState } from 'react';
@@ -50,6 +51,7 @@ function FarmHierarchyPage() {
       }
     >
       <div className="p-3 sm:p-4 md:p-6 pb-20 md:pb-6">
+        <ProductionTabs />
         {selectedFarm ? (
           <div>
             {/* Back Button */}

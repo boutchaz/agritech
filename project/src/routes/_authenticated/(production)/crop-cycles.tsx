@@ -2,6 +2,7 @@ import { createFileRoute } from '@tanstack/react-router';
 import { z } from 'zod';
 import ModernPageHeader from '@/components/ModernPageHeader';
 import { CropCyclesList } from '@/components/CropCycles/CropCyclesList';
+import { ProductionTabs } from '@/components/Production/ProductionTabs';
 import { withLicensedRouteProtection } from '@/components/authorization/withLicensedRouteProtection';
 import { useTranslation } from 'react-i18next';
 
@@ -27,6 +28,7 @@ function CropCyclesPageInner() {
         ]}
       />
       <div className="p-3 sm:p-4 md:p-6 pb-20 md:pb-6">
+        <ProductionTabs />
         <CropCyclesList initialCampaignId={campaign_id} />
       </div>
     </>

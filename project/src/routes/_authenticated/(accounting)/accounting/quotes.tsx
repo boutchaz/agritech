@@ -4,10 +4,8 @@ import { useTranslation } from 'react-i18next';
 import i18n from '@/i18n/config';
 import { useAuth } from '@/hooks/useAuth';
 import { useAutoStartTour } from '@/contexts/TourContext';
-import { PageLayout } from '@/components/PageLayout';
-import ModernPageHeader from '@/components/ModernPageHeader';
 
-import { Building2, FileText, Plus, Eye, CheckCircle2, Clock, XCircle, Send, Download, Edit, MoreVertical } from 'lucide-react';
+import { FileText, Plus, Eye, CheckCircle2, Clock, XCircle, Send, Download, Edit, MoreVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -183,30 +181,11 @@ const AppContent = () => {
   }
 
   if (isLoading) {
-    return (
-      <PageLayout
-        activeModule="accounting"
-        header={
-          <div className="hidden md:block">
-            <ModernPageHeader
-              breadcrumbs={[
-                { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
-                { icon: FileText, label: t('quotes.pageTitle'), isActive: true }
-              ]}
-              title={t('quotes.pageTitle')}
-              subtitle={t('quotes.pageSubtitle')}
-            />
-          </div>
-        }
-      >
-        <SectionLoader />
-      </PageLayout>
-    );
+    return <SectionLoader />;
   }
 
   if (error) {
     return (
-      <PageLayout activeModule="accounting">
         <div className={cn("min-h-screen flex items-center justify-center", isRTL && "flex-row-reverse")}>
           <div className="text-center">
             <XCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
@@ -214,25 +193,11 @@ const AppContent = () => {
             <p className="text-sm text-gray-500 mt-2">{error instanceof Error ? error.message : t('quotes.error.unknown')}</p>
           </div>
         </div>
-      </PageLayout>
     );
   }
 
   return (
-    <PageLayout
-      activeModule="accounting"
-      header={
-        <ModernPageHeader
-          breadcrumbs={[
-            { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
-            { icon: FileText, label: t('quotes.pageTitle'), isActive: true }
-          ]}
-          title={t('quotes.title')}
-          subtitle={t('quotes.subtitle')}
-        />
-      }
-    >
-      <div className="p-3 sm:p-4 md:p-6 pb-20 md:pb-6">
+    <div className="p-3 sm:p-4 md:p-6 pb-20 md:pb-6">
         <ListPageLayout
           header={
             <ListPageHeader
@@ -744,7 +709,6 @@ const AppContent = () => {
           }}
         />
       </div>
-    </PageLayout>
   );
 };
 

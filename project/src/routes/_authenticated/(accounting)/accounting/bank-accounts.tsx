@@ -6,11 +6,10 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useAuth } from '@/hooks/useAuth';
 import { useBankAccounts, useCreateBankAccount, useDeleteBankAccount } from '@/hooks/useBankAccounts';
-import ModernPageHeader from '@/components/ModernPageHeader';
 import { PageLoader } from '@/components/ui/loader';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/Input';
-import { Landmark, Plus, Building2 } from 'lucide-react';
+import { Landmark, Plus } from 'lucide-react';
 import { withRouteProtection } from '@/components/authorization/withRouteProtection';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -109,21 +108,6 @@ function BankAccountsPage() {
 
   return (
     <>
-      <ModernPageHeader
-        breadcrumbs={[
-          { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
-          { icon: Landmark, label: t('bankAccounts.pageTitle', 'Bank Accounts'), isActive: true },
-        ]}
-        title={t('bankAccounts.pageTitle', 'Bank Accounts')}
-        subtitle={t('bankAccounts.description', 'Manage your organization bank accounts.')}
-        actions={
-          <Button variant="green" onClick={() => setShowForm(true)} className="flex items-center gap-2">
-            <Plus className="h-4 w-4" />
-            {t('bankAccounts.addAccount', 'Add Account')}
-          </Button>
-        }
-      />
-
       <div className="p-3 sm:p-4 md:p-6 pb-20 md:pb-6">
         {isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

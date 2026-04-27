@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { tasksApi } from '@/lib/api/tasks';
 import { useParcelsByOrganization } from '@/hooks/useParcelsQuery';
+import { ProductionTabs } from '@/components/Production/ProductionTabs';
 import type { TaskSummary } from '@/types/tasks';
 
 export const Route = createFileRoute('/_authenticated/(production)/trees')({
@@ -83,6 +84,7 @@ function Trees() {
 
   return (
     <div className="space-y-6 p-6">
+      <ProductionTabs />
       <div>
         <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
           <TreeDeciduous className="h-8 w-8" />

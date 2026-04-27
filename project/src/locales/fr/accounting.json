@@ -1,4 +1,37 @@
 {
+  "title": "Comptabilité",
+  "subtitle": "Gérer les factures, paiements et rapports financiers",
+  "groups": {
+    "overview": "Vue d'ensemble",
+    "billing": "Facturation",
+    "records": "Registres",
+    "reports": "Rapports",
+    "settings": "Paramètres"
+  },
+  "tabs": {
+    "dashboard": "Tableau de bord",
+    "invoices": "Factures",
+    "quotes": "Devis",
+    "salesOrders": "Bons de commande",
+    "purchaseOrders": "Bons d'achat",
+    "payments": "Paiements",
+    "journal": "Journal",
+    "customers": "Clients",
+    "bankAccounts": "Comptes bancaires",
+    "accounts": "Plan comptable",
+    "reports": "Tous les rapports",
+    "profitLoss": "Compte de résultat",
+    "balanceSheet": "Bilan",
+    "trialBalance": "Balance générale",
+    "generalLedger": "Grand livre",
+    "cashFlow": "Flux de trésorerie",
+    "agedReceivables": "Balance âgée clients",
+    "agedPayables": "Balance âgée fournisseurs",
+    "reportsAnalysis": "Rentabilité",
+    "accountMappings": "Affectations comptables",
+    "costCenters": "Centres de coûts",
+    "fiscalYears": "Exercices comptables"
+  },
   "reports": {
     "title": "Rapports Financiers",
     "subtitle": "Accédez à des rapports financiers et analyses complets",

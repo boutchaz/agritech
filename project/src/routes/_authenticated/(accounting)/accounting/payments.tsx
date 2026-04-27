@@ -2,10 +2,8 @@ import { useState } from "react";
 import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/hooks/useAuth';
-import { PageLayout } from '@/components/PageLayout';
-import ModernPageHeader from '@/components/ModernPageHeader';
 
-import { Building2, CreditCard, Plus, CheckCircle2, Clock, XCircle, Eye, Link2 } from 'lucide-react';
+import { CreditCard, Plus, CheckCircle2, Clock, XCircle, Eye, Link2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -123,19 +121,7 @@ const AppContent = () => {
   }
 
   return (
-    <PageLayout
-      activeModule="accounting"
-      header={
-        <ModernPageHeader
-          breadcrumbs={[
-            { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
-            { icon: CreditCard, label: t('payments.title', 'Payments'), isActive: true }
-          ]}
-          title={t('payments.title', 'Payments')}
-          subtitle={t('payments.subtitle', 'Track and manage incoming and outgoing payments')}
-        />
-      }
-    >
+    <>
       <div className="p-3 sm:p-4 md:p-6 pb-20 md:pb-6">
         <ListPageLayout
           header={
@@ -573,7 +559,7 @@ const AppContent = () => {
           }}
         />
       )}
-    </PageLayout>
+    </>
   );
 };
 

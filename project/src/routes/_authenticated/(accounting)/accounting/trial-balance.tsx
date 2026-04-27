@@ -2,9 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/hooks/useAuth';
-import { PageLayout } from '@/components/PageLayout';
-import ModernPageHeader from '@/components/ModernPageHeader';
-import { Building2, BookOpen, AlertCircle, Download, Calendar, CheckCircle2, XCircle, Search, ArrowRight } from 'lucide-react';
+import { BookOpen, AlertCircle, Download, Calendar, CheckCircle2, XCircle, Search, ArrowRight } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -109,19 +107,6 @@ const AppContent = () => {
   }
 
   return (
-    <PageLayout
-      activeModule="accounting"
-      header={
-        <ModernPageHeader
-          breadcrumbs={[
-            { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
-            { icon: BookOpen, label: t('reportsModule.trialBalance.title', 'Trial Balance'), isActive: true }
-          ]}
-          title={t('reportsModule.trialBalance.title', 'Trial Balance')}
-          subtitle={t('reportsModule.trialBalance.subtitle', 'List of all accounts with their debit and credit balances')}
-        />
-      }
-    >
       <div className="p-6 space-y-6">
           {/* Date Filter */}
           <Card>
@@ -397,7 +382,6 @@ const AppContent = () => {
             </>
           )}
         </div>
-    </PageLayout>
   );
 };
 

@@ -9,6 +9,7 @@ import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { FilterBar, ResponsiveList, ListPageLayout } from '@/components/ui/data-table';
 import { TableCell, TableHead } from '@/components/ui/table';
+import { ProductionTabs } from '@/components/Production/ProductionTabs';
 
 export const Route = createFileRoute('/_authenticated/(production)/pruning')({
   component: Pruning,
@@ -90,6 +91,7 @@ function Pruning() {
         />
       }
     >
+      <ProductionTabs />
       {/* Upcoming Pruning */}
       {upcomingPruning.length > 0 && (
         <div className="mb-6 rounded-lg border bg-card p-4">

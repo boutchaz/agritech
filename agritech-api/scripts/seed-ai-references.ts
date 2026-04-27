@@ -6,6 +6,7 @@ import * as path from 'path';
 
 import type {
   AgrumesReference,
+  AmandierReference,
   AvocatierReference,
   OlivierReference,
   PalmierDattierReference,
@@ -15,7 +16,8 @@ type RawCropAIReference =
   | Omit<OlivierReference, 'crop_type'>
   | Omit<AgrumesReference, 'crop_type'>
   | Omit<AvocatierReference, 'crop_type'>
-  | Omit<PalmierDattierReference, 'crop_type'>;
+  | Omit<PalmierDattierReference, 'crop_type'>
+  | Omit<AmandierReference, 'crop_type'>;
 
 type JsonPrimitive = string | number | boolean | null;
 type JsonValue = JsonPrimitive | JsonObject | JsonValue[];

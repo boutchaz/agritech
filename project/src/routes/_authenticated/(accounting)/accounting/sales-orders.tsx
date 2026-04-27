@@ -2,9 +2,7 @@ import {  useState  } from "react";
 import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/hooks/useAuth';
-import { PageLayout } from '@/components/PageLayout';
-import ModernPageHeader from '@/components/ModernPageHeader';
-import { Building2, ShoppingCart, Eye, CheckCircle2, Clock, XCircle, Truck } from 'lucide-react';
+import { ShoppingCart, Eye, CheckCircle2, Clock, XCircle, Truck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -94,27 +92,12 @@ const AppContent = () => {
 
   if (isLoading) {
     return (
-      <PageLayout
-        activeModule="accounting"
-        header={
-          <ModernPageHeader
-            breadcrumbs={[
-              { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
-              { icon: ShoppingCart, label: t('billingModule.salesOrders.title', 'Sales Orders'), isActive: true }
-            ]}
-            title={t('billingModule.salesOrders.title', 'Sales Orders')}
-            subtitle={t('billingModule.salesOrders.subtitle', 'Manage customer orders and fulfillment')}
-          />
-        }
-      >
         <SectionLoader />
-      </PageLayout>
     );
   }
 
   if (error) {
     return (
-      <PageLayout activeModule="accounting">
         <div className="min-h-screen flex items-center justify-center">
           <div className="text-center">
             <XCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
@@ -122,24 +105,11 @@ const AppContent = () => {
             <p className="text-sm text-gray-500 mt-2">{error instanceof Error ? error.message : t('billingModule.salesOrders.error.unknown', 'Unknown error')}</p>
           </div>
         </div>
-      </PageLayout>
     );
   }
 
   return (
-    <PageLayout
-      activeModule="accounting"
-      header={
-        <ModernPageHeader
-          breadcrumbs={[
-            { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
-            { icon: ShoppingCart, label: t('billingModule.salesOrders.title', 'Sales Orders'), isActive: true }
-          ]}
-          title={t('billingModule.salesOrders.title', 'Sales Orders')}
-          subtitle={t('billingModule.salesOrders.subtitle', 'Manage customer orders and fulfillment')}
-        />
-      }
-    >
+    <>
       <div className="p-3 sm:p-4 md:p-6 pb-20 md:pb-6">
         <ListPageLayout
           filters={
@@ -381,7 +351,7 @@ const AppContent = () => {
             }
           }}
         />
-    </PageLayout>
+    </>
   );
 };
 

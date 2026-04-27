@@ -93,7 +93,7 @@ interface MonthPlanEntry {
   readonly amendement?: string;
 }
 
-export type CropType = 'olivier' | 'agrumes' | 'avocatier' | 'palmier_dattier';
+export type CropType = 'olivier' | 'agrumes' | 'avocatier' | 'palmier_dattier' | 'amandier';
 
 type OlivierMetadata = ReferenceMetadata<'olivier'>;
 
@@ -1441,13 +1441,171 @@ export interface PalmierDattierReference {
   };
 }
 
-export type CropAIReference = OlivierReference | AgrumesReference | AvocatierReference | PalmierDattierReference;
+interface AmandierMetadata extends ReferenceMetadata<'amandier'> {
+  readonly nom_scientifique: string;
+  readonly code: string;
+  readonly zone_reference: string;
+  readonly altitude_m: string;
+  readonly systeme_irrigation: string;
+  readonly source_satellite: string;
+  readonly resolution_m: number;
+  readonly revisite_jours: number;
+  readonly api_meteo: string;
+}
+
+interface AmandierVarietyGroup {
+  readonly principales: readonly string[];
+  readonly pollinisation: string;
+  readonly floraison: string;
+  readonly recolte: string;
+}
+
+interface AmandierPhenologyMonth {
+  readonly mois: number;
+  readonly nom: string;
+  readonly stade: string;
+  readonly code_bbch: string;
+  readonly variete_med: string;
+  readonly variete_calif: string;
+  readonly actions: readonly string[];
+  readonly risques: readonly string[];
+  readonly priorite: 'critique' | 'important' | 'modere' | 'faible' | 'tres_faible';
+}
+
+interface AmandierIndexThreshold {
+  readonly min?: number;
+  readonly max?: number;
+  readonly action?: string;
+}
+
+interface AmandierIndexConfig {
+  readonly nom_complet: string;
+  readonly usage: string;
+  readonly seuils: Record<string, AmandierIndexThreshold>;
+  readonly formule?: string;
+  readonly cible_saison?: { readonly min: number; readonly max: number; readonly periode: string };
+  readonly cible_pilote?: { readonly min: number; readonly periode: string };
+  readonly priorite_periode?: string;
+  readonly usage_recolte?: string;
+  readonly usage_phenologique?: string;
+  readonly note?: string;
+  readonly alerte_code?: string;
+  readonly alerte_codes?: readonly string[];
+  readonly alerte_delta?: {
+    readonly variation: number;
+    readonly periode_jours: number;
+    readonly periode_mois?: readonly number[];
+    readonly code: string;
+  };
+}
+
+interface AmandierKcEntry {
+  readonly mois: number;
+  readonly nom: string;
+  readonly stade: string;
+  readonly kc_med: number;
+  readonly kc_calif: number;
+  readonly etp_ref_mm_j: number;
+  readonly besoin_mensuel_mm?: number;
+  readonly besoin_mensuel_mm_min?: number;
+  readonly besoin_mensuel_mm_max?: number;
+  readonly priorite: string;
+}
+
+interface AmandierNutritionMonth {
+  readonly periode: string;
+  readonly stade: string;
+  readonly N_u_ha: number;
+  readonly P2O5_u_ha: number;
+  readonly K2O_u_ha: number;
+  readonly oligoelements: readonly string[];
+  readonly mode: string;
+  readonly note: string;
+}
+
+interface AmandierAlert {
+  readonly code: string;
+  readonly niveau: 'CRITIQUE' | 'URGENT' | 'INFO';
+  readonly titre: string;
+  readonly declenchement: Record<string, unknown>;
+  readonly action: string;
+}
+
+interface AmandierPestDisease {
+  readonly organisme: string;
+  readonly nom_commun: string;
+  readonly type: 'champignon' | 'bacterie' | 'lepidoptere' | 'mycotoxine' | 'acarien';
+  readonly periode_risque_mois: readonly number[];
+  readonly signal_satellite: string;
+  readonly seuil_intervention: string;
+  readonly solution_integree: readonly string[];
+}
+
+interface AmandierCriticalWindow {
+  readonly id: number;
+  readonly nom: string;
+  readonly periode_mois: readonly number[];
+  readonly indices_cles: readonly string[];
+  readonly alertes_actives: readonly string[];
+  readonly kpi: string;
+}
+
+export interface AmandierReference {
+  readonly crop_type: 'amandier';
+  readonly metadata: AmandierMetadata;
+  readonly varietes: {
+    readonly mediterraneennes: AmandierVarietyGroup;
+    readonly californiennes: AmandierVarietyGroup;
+  };
+  readonly phenologie: readonly AmandierPhenologyMonth[];
+  readonly indices_satellitaires: {
+    readonly NDVI: AmandierIndexConfig;
+    readonly EVI: AmandierIndexConfig;
+    readonly GCI: AmandierIndexConfig;
+    readonly NDRE: AmandierIndexConfig;
+    readonly NDMI: AmandierIndexConfig;
+    readonly NIRv: AmandierIndexConfig;
+    readonly EBI: AmandierIndexConfig;
+  };
+  readonly irrigation: {
+    readonly formule: string;
+    readonly efficience_goutte_a_goutte: number;
+    readonly besoin_annuel_mm: { readonly min: number; readonly max: number };
+    readonly coefficients_kc: readonly AmandierKcEntry[];
+    readonly fenetre_critique: { readonly periode: string; readonly besoin_mm_2mois: number; readonly note: string };
+  };
+  readonly nutrition: {
+    readonly equilibre_reference: { readonly N: number; readonly P2O5: number; readonly K2O: number };
+    readonly apports_annuels_u_ha: {
+      readonly N: { readonly min: number; readonly max: number };
+      readonly P2O5: number;
+      readonly K2O: number;
+    };
+    readonly programme_mensuel: readonly AmandierNutritionMonth[];
+    readonly oligoelements_prioritaires_fes_meknes: Record<string, Record<string, string>>;
+  };
+  readonly alertes: readonly AmandierAlert[];
+  readonly ravageurs_maladies: readonly AmandierPestDisease[];
+  readonly plan_annuel: {
+    readonly algorithme: string;
+    readonly parametres_entree: readonly string[];
+    readonly fenetres_critiques: readonly AmandierCriticalWindow[];
+  };
+}
+
+export type CropAIReference =
+  | OlivierReference
+  | AgrumesReference
+  | AvocatierReference
+  | PalmierDattierReference
+  | AmandierReference;
 
 export type AIReferenceVarietiesResponse =
   | OlivierReference['varietes']
   | AgrumesReference['especes']
   | AvocatierReference['varietes']
-  | PalmierDattierReference['varietes'];
+  | PalmierDattierReference['varietes']
+  | AmandierReference['varietes'];
 
 export type AIReferenceBbchResponse = OlivierReference['stades_bbch'];
 
@@ -1455,6 +1613,7 @@ export type AIReferenceAlertsResponse =
   | OlivierReference['alertes']
   | AgrumesReference['alertes']
   | AvocatierReference['alertes']
-  | PalmierDattierReference['alertes'];
+  | PalmierDattierReference['alertes']
+  | AmandierReference['alertes'];
 
 export type AIReferenceNpkFormulasResponse = Record<string, unknown>;

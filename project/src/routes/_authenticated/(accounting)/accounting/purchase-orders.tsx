@@ -2,10 +2,8 @@ import {  useState  } from "react";
 import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/hooks/useAuth';
-import { PageLayout } from '@/components/PageLayout';
-import ModernPageHeader from '@/components/ModernPageHeader';
 
-import { Building2, Package, Plus, Eye, CheckCircle2, Clock, XCircle, Truck, Download, Send, MoreVertical } from 'lucide-react';
+import { Package, Plus, Eye, CheckCircle2, Clock, XCircle, Truck, Download, Send, MoreVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -165,27 +163,12 @@ const AppContent = () => {
 
   if (isLoading) {
     return (
-      <PageLayout
-        activeModule="accounting"
-        header={
-          <ModernPageHeader
-            breadcrumbs={[
-              { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
-              { icon: Package, label: t('billingModule.purchaseOrders.title', 'Purchase Orders'), isActive: true }
-            ]}
-            title={t('billingModule.purchaseOrders.title', 'Purchase Orders')}
-            subtitle={t('billingModule.purchaseOrders.loading', 'Manage supplier purchase orders')}
-          />
-        }
-      >
         <SectionLoader />
-      </PageLayout>
     );
   }
 
   if (error) {
     return (
-      <PageLayout activeModule="accounting">
         <div className="min-h-screen flex items-center justify-center">
           <div className="text-center">
             <XCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
@@ -193,24 +176,11 @@ const AppContent = () => {
             <p className="text-sm text-gray-500 mt-2">{error instanceof Error ? error.message : t('billingModule.purchaseOrders.error.unknown', 'Unknown error')}</p>
           </div>
         </div>
-      </PageLayout>
     );
   }
 
   return (
-    <PageLayout
-      activeModule="accounting"
-      header={
-        <ModernPageHeader
-          breadcrumbs={[
-            { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
-            { icon: Package, label: t('billingModule.purchaseOrders.title', 'Purchase Orders'), isActive: true }
-          ]}
-          title={t('billingModule.purchaseOrders.title', 'Purchase Orders')}
-          subtitle={t('billingModule.purchaseOrders.subtitle', 'Manage supplier purchase orders and goods receipt')}
-        />
-      }
-    >
+    <>
       <div className="p-3 sm:p-4 md:p-6 pb-20 md:pb-6">
         <ListPageLayout
           header={
@@ -723,7 +693,7 @@ const AppContent = () => {
             handleDownloadPDF(order);
           }}
         />
-      </PageLayout>
+    </>
   );
 };
 

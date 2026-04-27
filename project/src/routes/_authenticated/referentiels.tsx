@@ -63,6 +63,7 @@ const CROP_TABS = [
   { value: 'agrumes', label: 'Agrumes' },
   { value: 'avocatier', label: 'Avocatier' },
   { value: 'palmier_dattier', label: 'Palmier Dattier' },
+  { value: 'amandier', label: 'Amandier' },
 ];
 
 const SECTION_TABS = [

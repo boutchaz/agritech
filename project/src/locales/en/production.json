@@ -1,0 +1,22 @@
+{
+  "groups": {
+    "planning": "Planning",
+    "operations": "Operations",
+    "infrastructure": "Infrastructure",
+    "quality": "Quality & Analysis"
+  },
+  "tabs": {
+    "campaigns": "Campaigns",
+    "cropCycles": "Crop Cycles",
+    "harvests": "Harvests",
+    "productApplications": "Treatments",
+    "pruning": "Pruning",
+    "parcels": "Parcels",
+    "orchards": "Orchards",
+    "trees": "Trees",
+    "biologicalAssets": "Biological Assets",
+    "farmHierarchy": "Farm Hierarchy",
+    "qualityControl": "Quality Control",
+    "satelliteAnalysis": "Satellite"
+  }
+}
