@@ -10064,6 +10064,21 @@ export class DemoDataService {
       "REC-CLEM-BIO",
       "REC-ORA-NAV",
     ];
+    // Names seeded by createDemoStructures (both org-level + farm-level).
+    // Used to catch org-level demo structures whose farm_id is NULL.
+    const demoStructureNames = [
+      "Siège Administratif",
+      "Entrepôt Central",
+      "Station de Pompage Centrale",
+      "Bassin de Rétention Principal",
+      "Laboratoire Qualité",
+      "Puits Principal",
+      "Bassin de Stockage Est",
+      "Local Technique Ferme",
+      "Bassin de Stockage Ouest",
+      "Puits Secondaire",
+      "Écurie",
+    ];
 
     try {
       const { data: demoFarms } = await client
@@ -10585,13 +10600,14 @@ export class DemoDataService {
         : { count: 0 };
       deletedCounts["warehouses"] = warehousesCount || 0;
 
-      const { count: structuresCount } = farmIds.length
-        ? await client
-            .from("structures")
-            .delete({ count: "exact" })
-            .eq("organization_id", organizationId)
-            .in("farm_id", farmIds)
-        : { count: 0 };
+      // Match by name (covers both farm-level and org-level seeded structures,
+      // including org-level rows where farm_id IS NULL which the previous
+      // farm_id-only filter missed).
+      const { count: structuresCount } = await client
+        .from("structures")
+        .delete({ count: "exact" })
+        .eq("organization_id", organizationId)
+        .in("name", demoStructureNames);
       deletedCounts["structures"] = structuresCount || 0;
 
       const { count: tasksCount } = taskIds.length
