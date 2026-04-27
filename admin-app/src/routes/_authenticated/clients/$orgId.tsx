@@ -124,17 +124,36 @@ function OrgDetailPage() {
     },
   });
 
-  // Users
+  // Users — organization_users.user_id has no FK to user_profiles (both
+  // reference auth.users.id), so PostgREST can't embed user_profiles.
+  // Fetch separately and merge by user_id.
   const { data: users = [] } = useQuery({
     queryKey: ['admin-org-users', orgId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data: rows, error } = await supabase
         .from('organization_users')
-        .select('id, user_id, is_active, created_at, profiles(full_name, email), roles(name)')
+        .select('id, user_id, is_active, created_at, roles(name)')
         .eq('organization_id', orgId)
         .order('created_at', { ascending: false });
       if (error) throw error;
-      return (data ?? []) as unknown as OrgUser[];
+
+      const userIds = Array.from(new Set((rows ?? []).map((r: any) => r.user_id).filter(Boolean)));
+      const profileMap = new Map<string, { full_name: string | null; email: string | null }>();
+      if (userIds.length > 0) {
+        const { data: profiles, error: profilesError } = await supabase
+          .from('user_profiles')
+          .select('id, full_name, email')
+          .in('id', userIds);
+        if (profilesError) throw profilesError;
+        for (const p of profiles ?? []) {
+          profileMap.set(p.id as string, { full_name: p.full_name ?? null, email: p.email ?? null });
+        }
+      }
+
+      return (rows ?? []).map((r: any) => ({
+        ...r,
+        profiles: profileMap.get(r.user_id) ?? null,
+      })) as unknown as OrgUser[];
     },
     enabled: activeTab === 'users',
   });
