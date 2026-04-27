@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { MapContainer, Polygon, Tooltip } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Calendar, Loader, RefreshCw, ZoomIn, Layers, Maximize2, Minimize2 } from 'lucide-react';
+import { Loader, RefreshCw, ZoomIn, Layers, Maximize2, Minimize2 } from 'lucide-react';
 import {
   satelliteApi,
   type VegetationIndexType,
@@ -9,6 +9,7 @@ import {
   VEGETATION_INDEX_DESCRIPTIONS,
   type HeatmapDataResponse,
   convertBoundariesToMultiPolygon,
+  convertBoundaryToGeoJSON,
   DEFAULT_CLOUD_COVERAGE,
   formatDateForAPI,
 } from '@/lib/satellite-api';
@@ -55,7 +56,9 @@ const MultiParcelHeatmapViewer = ({
   const { t } = useTranslation('satellite');
   const [selectedIndex, setSelectedIndex] = useState<VegetationIndexType>(initialIndex);
   const [selectedDate, setSelectedDate] = useState(initialDate || '');
-  const [recommendedDate, setRecommendedDate] = useState<string | null>(null);
+  const [availableDates, setAvailableDates] = useState<
+    Array<{ date: string; cloud_coverage: number }>
+  >([]);
   const [isCheckingDates, setIsCheckingDates] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [data, setData] = useState<HeatmapDataResponse | null>(null);
@@ -108,8 +111,15 @@ const MultiParcelHeatmapViewer = ({
     return all.length ? all : undefined;
   }, [usableParcels]);
 
+  // Probe ONE parcel for available dates rather than the union of all parcels.
+  // Union geometry can span UTM zones / cover too large an area, making the GEE
+  // ImageCollection filter slow or empty. A single parcel's bbox is a tighter,
+  // representative AOI — every Sentinel-2 acquisition that covers one parcel
+  // also covers its neighbours within the same farm in practice.
+  const probeParcel = usableParcels[0];
+
   const checkAvailableDates = useCallback(async () => {
-    if (!multiGeometry) return;
+    if (!probeParcel) return;
     setIsCheckingDates(true);
     setError(null);
     try {
@@ -118,15 +128,28 @@ const MultiParcelHeatmapViewer = ({
       startDate.setMonth(startDate.getMonth() - 6);
       const startDateStr = formatDateForAPI(startDate);
 
-      const result = await satelliteApi.checkCloudCoverage({
-        geometry: multiGeometry,
-        date_range: { start_date: startDateStr, end_date: endDate },
-        max_cloud_coverage: DEFAULT_CLOUD_COVERAGE,
-      });
+      const probeGeometry = convertBoundaryToGeoJSON(probeParcel.boundary);
 
-      if (result.recommended_date) {
-        setRecommendedDate(result.recommended_date);
-        setSelectedDate((prev) => prev || result.recommended_date!);
+      // Use /indices/available-dates: returns the actual list of dates that
+      // have Sentinel-2 imagery (under the cloud-coverage threshold) for the
+      // probe parcel. Avoids picking a date that has no acquisition.
+      const result = await satelliteApi.getAvailableDates(
+        { geometry: probeGeometry, name: probeParcel.name },
+        startDateStr,
+        endDate,
+        DEFAULT_CLOUD_COVERAGE,
+        probeParcel.id,
+      );
+
+      const dates = (result.available_dates || [])
+        .filter((d) => d.available !== false)
+        .map((d) => ({ date: d.date, cloud_coverage: d.cloud_coverage }))
+        // newest → oldest so the picker shows recent dates first
+        .sort((a, b) => b.date.localeCompare(a.date));
+
+      setAvailableDates(dates);
+      if (dates.length > 0) {
+        setSelectedDate((prev) => prev || dates[0].date);
       }
     } catch (err) {
       console.error('checkAvailableDates failed:', err);
@@ -134,13 +157,13 @@ const MultiParcelHeatmapViewer = ({
     } finally {
       setIsCheckingDates(false);
     }
-  }, [multiGeometry, t]);
+  }, [probeParcel, t]);
 
   useEffect(() => {
-    if (multiGeometry && !selectedDate) {
+    if (probeParcel && !selectedDate) {
       void checkAvailableDates();
     }
-  }, [multiGeometry, selectedDate, checkAvailableDates]);
+  }, [probeParcel, selectedDate, checkAvailableDates]);
 
   const generate = useCallback(async () => {
     if (!multiGeometry || !selectedDate) return;
@@ -195,24 +218,26 @@ const MultiParcelHeatmapViewer = ({
               </span>
             )}
           </label>
-          <div className="relative">
-            <input
-              type="date"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              className="w-full rounded-md border border-gray-300 p-2"
-            />
-            {recommendedDate && recommendedDate !== selectedDate && (
-              <Button
-                variant="blue"
-                onClick={() => setSelectedDate(recommendedDate)}
-                className="absolute right-1 top-1 bottom-1 rounded bg-blue-500 px-2 text-xs hover:bg-blue-600"
-                title={`Use recommended date: ${recommendedDate}`}
-              >
-                <Calendar className="h-3 w-3" />
-              </Button>
+          <select
+            value={selectedDate}
+            onChange={(e) => setSelectedDate(e.target.value)}
+            disabled={availableDates.length === 0}
+            className="w-full rounded-md border border-gray-300 p-2 disabled:cursor-not-allowed disabled:bg-gray-100"
+          >
+            {availableDates.length === 0 ? (
+              <option value="">
+                {isCheckingDates
+                  ? t('satellite:heatmap.leafletViewer.checkingAvailability', 'Checking availability…')
+                  : t('satellite:heatmap.warnings.noAvailableDates', 'No imagery in last 6 months')}
+              </option>
+            ) : (
+              availableDates.map((d) => (
+                <option key={d.date} value={d.date}>
+                  {d.date} — {Math.round(d.cloud_coverage)}% cloud
+                </option>
+              ))
             )}
-          </div>
+          </select>
         </div>
 
         <div className="flex-1">
