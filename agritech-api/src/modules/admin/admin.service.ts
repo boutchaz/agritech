@@ -762,7 +762,7 @@ export class AdminService {
         id, name, country_code, created_at, is_active,
         email, phone, city, country, approval_status, approved_at,
         subscriptions(plan_type, status, current_period_start, current_period_end),
-        subscription_usage(mrr, arr, farms_count, parcels_count, users_count, storage_used_mb, last_activity_at)
+        subscription_usage(mrr, arr, storage_used_mb, last_activity_at)
       `)
       .eq('id', orgId)
       .single();
@@ -770,6 +770,27 @@ export class AdminService {
     if (error || !org) {
       throw new NotFoundException(`Organization ${orgId} not found`);
     }
+
+    // Count live from source tables — subscription_usage is a denormalized
+    // cache that may be stale or absent for new orgs.
+    const [farmsRes, parcelsRes, usersRes] = await Promise.all([
+      client
+        .from('farms')
+        .select('*', { count: 'exact', head: true })
+        .eq('organization_id', orgId),
+      client
+        .from('parcels')
+        .select('*', { count: 'exact', head: true })
+        .eq('organization_id', orgId),
+      client
+        .from('organization_users')
+        .select('*', { count: 'exact', head: true })
+        .eq('organization_id', orgId)
+        .eq('is_active', true),
+    ]);
+    const farmsCount = farmsRes.count ?? 0;
+    const parcelsCount = parcelsRes.count ?? 0;
+    const usersCount = usersRes.count ?? 0;
 
     // Fetch owner (first organization_admin) contact
     const { data: adminRow } = await client
@@ -822,9 +843,9 @@ export class AdminService {
       subscriptionStatus: (org.subscriptions as any)?.[0]?.status,
       mrr: (org.subscription_usage as any)?.[0]?.mrr || 0,
       arr: (org.subscription_usage as any)?.[0]?.arr || 0,
-      farmsCount: (org.subscription_usage as any)?.[0]?.farms_count || 0,
-      parcelsCount: (org.subscription_usage as any)?.[0]?.parcels_count || 0,
-      usersCount: (org.subscription_usage as any)?.[0]?.users_count || 0,
+      farmsCount,
+      parcelsCount,
+      usersCount,
       storageUsedMb: (org.subscription_usage as any)?.[0]?.storage_used_mb || 0,
       lastActivityAt: (org.subscription_usage as any)?.[0]?.last_activity_at,
       events7d: events7d || 0,
