@@ -7,7 +7,6 @@ import {
   Users,
   CalendarCheck,
   Building2,
-  CreditCard,
   Mail,
   Clock,
   Menu,
@@ -15,7 +14,6 @@ import {
   Megaphone,
   BookOpen,
   Globe,
-  Package,
   Library,
   PanelLeft,
   PanelLeftClose,
@@ -34,8 +32,9 @@ type NavItem = {
 const NAV_ITEMS: NavItem[] = [
   { to: '/', label: 'Référentiels', icon: Database, match: (p) => p === '/' || p.startsWith('/referentiels') },
   { to: '/clients', label: 'Clients', icon: Building2, match: (p) => p === '/clients' || p.startsWith('/clients/') },
-  { to: '/subscription-model', label: 'Subscription Model', icon: CreditCard },
-  { to: '/modules', label: 'Modules', icon: Package },
+  // Hidden until product decision — routes still reachable via direct URL.
+  // { to: '/subscription-model', label: 'Subscription Model', icon: CreditCard },
+  // { to: '/modules', label: 'Modules', icon: Package },
   { to: '/email-templates', label: 'Email Templates', icon: Mail },
   { to: '/cron-jobs', label: 'Cron Jobs', icon: Clock },
   { to: '/banners', label: 'Banners', icon: Megaphone },
