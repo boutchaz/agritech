@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
+import { useModuleEnabled } from '@/hooks/useModuleEnabled';
 import { itemsApi } from '@/lib/api/items';
 
 export interface FarmStockLevel {
@@ -36,6 +37,10 @@ export function useFarmStockLevels(options?: {
   low_stock_only?: boolean;
 }) {
   const { currentOrganization } = useAuth();
+  // Gate the call on `stock` module activation. QuoteForm and other
+  // sales/purchasing pages mount this hook even when the org has stock off
+  // — without this guard, every render fires a 403 against the API gate.
+  const stockEnabled = useModuleEnabled('stock');
 
   return useQuery({
     queryKey: ['farm-stock-levels', currentOrganization?.id, options],
@@ -51,6 +56,6 @@ export function useFarmStockLevels(options?: {
         currentOrganization.id,
       );
     },
-    enabled: !!currentOrganization?.id,
+    enabled: !!currentOrganization?.id && stockEnabled,
   });
 }
