@@ -1,4 +1,5 @@
 import {  useState, useEffect  } from "react";
+import { createPortal } from "react-dom";
 import {
   FileText,
   Download,
@@ -371,7 +372,7 @@ const ParcelReportGenerator = ({
         )}
       </div>
 
-      {viewingAIReport && getAIReportSections(viewingAIReport) && (
+      {viewingAIReport && getAIReportSections(viewingAIReport) && createPortal(
         <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 backdrop-blur-sm">
           <div className="min-h-screen px-4 py-8">
             <div className="relative max-w-5xl mx-auto bg-white dark:bg-gray-900 rounded-2xl shadow-2xl">
@@ -406,7 +407,7 @@ const ParcelReportGenerator = ({
             </div>
           </div>
         </div>
-      )}
+      , document.body)}
     </div>
   );
 };

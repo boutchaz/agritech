@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/hooks/useAuth';
@@ -450,7 +451,7 @@ function ProductApplicationsPage() {
       )}
 
       {/* Detail Dialog */}
-      {selectedApp && (
+      {selectedApp && createPortal(
         <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => setSelectedApp(null)}>
           <div className="bg-white dark:bg-gray-800 rounded-lg max-w-lg w-full p-6 space-y-4" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between">
@@ -511,8 +512,7 @@ function ProductApplicationsPage() {
             )}
           </div>
         </div>
-      )}
-
+      , document.body)}
       <ConfirmDialog
         open={confirmDeleteOpen}
         onOpenChange={setConfirmDeleteOpen}

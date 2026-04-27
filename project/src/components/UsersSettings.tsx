@@ -1,4 +1,5 @@
 import {  useState, useEffect  } from "react";
+import { createPortal } from "react-dom";
 import { Users, Plus, X, Trash2, Mail, Shield, UserCheck, UserX, Crown, Settings, Eye, Key, Copy, Check, AlertCircle, Clock, RefreshCw, Zap, Loader2 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useAuthStore } from '../stores/authStore';
@@ -709,7 +710,7 @@ const UsersSettings = () => {
       )}
 
       {/* Invite User Modal */}
-      {showInviteUser && (
+      {showInviteUser && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/80 backdrop-blur-md p-4 animate-in fade-in duration-300">
           <Card className="rounded-[2.5rem] border-slate-100 dark:border-slate-800 shadow-2xl max-w-lg w-full overflow-hidden">
             <CardHeader className="px-8 py-6 border-b border-slate-50 dark:border-slate-800 bg-slate-50/30">
@@ -832,10 +833,10 @@ const UsersSettings = () => {
             </CardContent>
           </Card>
         </div>
-      )}
+      , document.body)}
 
       {/* Password Management Dialog - Using same modern modal style */}
-      {passwordDialogUser && (
+      {passwordDialogUser && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/80 backdrop-blur-md p-4 animate-in fade-in duration-300">
           <Card className="rounded-[2.5rem] border-slate-100 dark:border-slate-800 shadow-2xl max-w-md w-full overflow-hidden">
             <CardHeader className="px-8 py-6 border-b border-slate-50 dark:border-slate-800 bg-slate-50/30">
@@ -949,7 +950,7 @@ const UsersSettings = () => {
             </CardContent>
           </Card>
         </div>
-      )}
+      , document.body)}
       <ConfirmDialog
         open={confirmOpen}
         onOpenChange={setConfirmOpen}

@@ -10,6 +10,7 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Save,
   User,
@@ -1017,7 +1018,7 @@ const AccountSettings = () => {
       </div>
 
       {/* Camera Capture Modal */}
-      {showCamera && (
+      {showCamera && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/80 backdrop-blur-md p-4 animate-in fade-in duration-300">
           <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-[0_32px_64px_-12px_rgba(0,0,0,0.3)] max-w-md w-full overflow-hidden border border-slate-100 dark:border-slate-800">
             <div className="flex items-center justify-between px-8 py-6 border-b border-slate-50 dark:border-slate-800">
@@ -1067,7 +1068,7 @@ const AccountSettings = () => {
             </div>
           </div>
         </div>
-      )}
+      , document.body)}
     </div>
   );
 };
