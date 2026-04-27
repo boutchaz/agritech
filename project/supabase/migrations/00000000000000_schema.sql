@@ -4761,6 +4761,22 @@ CREATE INDEX IF NOT EXISTS idx_structures_org ON structures(organization_id);
 CREATE INDEX IF NOT EXISTS idx_structures_farm ON structures(farm_id);
 CREATE INDEX IF NOT EXISTS idx_structures_geom ON structures USING GIST(geom) WHERE geom IS NOT NULL;
 
+-- Demo data tags: marks rows seeded by demo-data service so the selective
+-- "clear demo only" cleanup can delete them without touching client data.
+-- Internal table — admin client only (no RLS policies).
+CREATE TABLE IF NOT EXISTS demo_data_tags (
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  table_name TEXT NOT NULL,
+  row_id UUID NOT NULL,
+  seeded_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (organization_id, table_name, row_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_demo_data_tags_org_table
+  ON demo_data_tags(organization_id, table_name);
+
+ALTER TABLE demo_data_tags ENABLE ROW LEVEL SECURITY;
+
 -- Utilities
 CREATE TABLE IF NOT EXISTS utilities (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

@@ -7,6 +7,35 @@ export class DemoDataService {
 
   constructor(private readonly databaseService: DatabaseService) {}
 
+  /**
+   * Tag rows as demo-seeded so clearDemoDataOnly can delete them safely.
+   * Idempotent — duplicates are ignored via PK conflict.
+   */
+  private async tagDemoRows(
+    organizationId: string,
+    tableName: string,
+    rowIds: Array<string | null | undefined>,
+  ): Promise<void> {
+    const ids = rowIds.filter((id): id is string => typeof id === "string" && id.length > 0);
+    if (ids.length === 0) return;
+    const client = this.databaseService.getAdminClient();
+    const { error } = await client
+      .from("demo_data_tags")
+      .upsert(
+        ids.map((id) => ({
+          organization_id: organizationId,
+          table_name: tableName,
+          row_id: id,
+        })),
+        { onConflict: "organization_id,table_name,row_id", ignoreDuplicates: true },
+      );
+    if (error) {
+      this.logger.warn(
+        `Failed to tag demo rows for ${tableName}: ${error.message}`,
+      );
+    }
+  }
+
   /** Parse Supabase public object URL → bucket + object path for storage.download */
   private static parseSupabasePublicStorageUrl(
     publicUrl: string | null | undefined,
@@ -405,7 +434,7 @@ export class DemoDataService {
       this.logger.log(`✅ Created demo task equipment`);
 
       // 34e. Seed Task Templates (linked to task categories)
-      await this.createDemoTaskTemplates(taskCategories);
+      await this.createDemoTaskTemplates(organizationId, taskCategories);
       this.logger.log(`✅ Created demo task templates`);
 
       // 35. Seed Worker Payment Records
@@ -3690,7 +3719,14 @@ export class DemoDataService {
       },
     ];
 
-    await client.from("costs").insert(costs);
+    {
+      const { data, error } = await client.from("costs").insert(costs).select("id");
+      if (error) {
+        this.logger.error(`Failed to create demo costs: ${error.message}`);
+      } else {
+        await this.tagDemoRows(organizationId, "costs", (data || []).map((r) => r.id));
+      }
+    }
 
     // Revenues per parcel — realistic Moroccan market prices
     const revenues = [
@@ -3744,7 +3780,14 @@ export class DemoDataService {
       },
     ];
 
-    await client.from("revenues").insert(revenues);
+    {
+      const { data, error } = await client.from("revenues").insert(revenues).select("id");
+      if (error) {
+        this.logger.error(`Failed to create demo revenues: ${error.message}`);
+      } else {
+        await this.tagDemoRows(organizationId, "revenues", (data || []).map((r) => r.id));
+      }
+    }
   }
 
   /**
@@ -4698,23 +4741,29 @@ export class DemoDataService {
     ];
 
     // Insert organization-level structures
-    const { error: orgError } = await client
+    const { data: orgRows, error: orgError } = await client
       .from("structures")
-      .insert(organizationStructures);
+      .insert(organizationStructures)
+      .select("id");
     if (orgError) {
       this.logger.error(
         `Failed to create organization structures: ${orgError.message}`,
       );
+    } else {
+      await this.tagDemoRows(organizationId, "structures", (orgRows || []).map((r) => r.id));
     }
 
     // Insert farm-level structures
-    const { error: farmError } = await client
+    const { data: farmRows, error: farmError } = await client
       .from("structures")
-      .insert(farmStructures);
+      .insert(farmStructures)
+      .select("id");
     if (farmError) {
       this.logger.error(
         `Failed to create farm structures: ${farmError.message}`,
       );
+    } else {
+      await this.tagDemoRows(organizationId, "structures", (farmRows || []).map((r) => r.id));
     }
   }
 
@@ -4864,6 +4913,7 @@ export class DemoDataService {
     ];
 
     const { data: createdCategories } = await client.from("task_categories").insert(categories).select();
+    await this.tagDemoRows(organizationId, "task_categories", (createdCategories || []).map((r) => r.id));
 
     // Create task time logs for recent tasks
     const now = new Date();
@@ -5042,6 +5092,9 @@ export class DemoDataService {
     ];
 
     const { data: createdRecords, error } = await client.from("payment_records").insert(records).select();
+    if (createdRecords) {
+      await this.tagDemoRows(organizationId, "payment_records", createdRecords.map((r) => r.id));
+    }
     if (error) {
       this.logger.error(
         `Failed to create demo payment records: ${error.message}`,
@@ -5141,7 +5194,10 @@ export class DemoDataService {
       },
     ];
 
-    const { error } = await client.from("harvest_forecasts").insert(forecasts);
+    const { data, error } = await client.from("harvest_forecasts").insert(forecasts).select("id");
+    if (!error) {
+      await this.tagDemoRows(organizationId, "harvest_forecasts", (data || []).map((r) => r.id));
+    }
     if (error) {
       this.logger.error(
         `Failed to create demo harvest forecasts: ${error.message}`,
@@ -5489,7 +5545,7 @@ export class DemoDataService {
   /**
    * Create demo task templates linked to task categories
    */
-  private async createDemoTaskTemplates(taskCategories: any[]): Promise<void> {
+  private async createDemoTaskTemplates(organizationId: string, taskCategories: any[]): Promise<void> {
     if (!taskCategories?.length) return;
 
     const client = this.databaseService.getAdminClient();
@@ -5530,9 +5586,11 @@ export class DemoDataService {
     }
 
     if (templates.length > 0) {
-      const { error } = await client.from('task_templates').insert(templates);
+      const { data, error } = await client.from('task_templates').insert(templates).select("id");
       if (error) {
         this.logger.error(`Failed to create demo task templates: ${error.message}`);
+      } else {
+        await this.tagDemoRows(organizationId, "task_templates", (data || []).map((r) => r.id));
       }
     }
   }
@@ -5610,7 +5668,10 @@ export class DemoDataService {
       },
     ];
 
-    const { error } = await client.from('crop_templates').insert(templates);
+    const { data, error } = await client.from('crop_templates').insert(templates).select("id");
+    if (!error) {
+      await this.tagDemoRows(organizationId, "crop_templates", (data || []).map((r) => r.id));
+    }
     if (error) {
       this.logger.error(`Failed to create demo crop templates: ${error.message}`);
     }
@@ -5846,7 +5907,10 @@ export class DemoDataService {
       },
     ];
 
-    const { error } = await client.from('inventory_batches').insert(batches);
+    const { data, error } = await client.from('inventory_batches').insert(batches).select("id");
+    if (!error) {
+      await this.tagDemoRows(organizationId, "inventory_batches", (data || []).map((r) => r.id));
+    }
     if (error) {
       this.logger.error(`Failed to create demo inventory batches: ${error.message}`);
     }
@@ -5902,7 +5966,10 @@ export class DemoDataService {
       },
     ];
 
-    const { error } = await client.from('payment_advances').insert(advances);
+    const { data, error } = await client.from('payment_advances').insert(advances).select("id");
+    if (!error) {
+      await this.tagDemoRows(organizationId, "payment_advances", (data || []).map((r) => r.id));
+    }
     if (error) {
       this.logger.error(`Failed to create demo payment advances: ${error.message}`);
     }
@@ -6142,7 +6209,10 @@ export class DemoDataService {
       });
     }
 
-    const { error } = await client.from('metayage_settlements').insert(settlements);
+    const { data, error } = await client.from('metayage_settlements').insert(settlements).select("id");
+    if (!error) {
+      await this.tagDemoRows(organizationId, "metayage_settlements", (data || []).map((r) => r.id));
+    }
     if (error) {
       this.logger.error(`Failed to create demo metayage settlements: ${error.message}`);
     }
@@ -6276,7 +6346,10 @@ export class DemoDataService {
       },
     ];
 
-    const { error } = await client.from('pest_disease_reports').insert(reports);
+    const { data, error } = await client.from('pest_disease_reports').insert(reports).select("id");
+    if (!error) {
+      await this.tagDemoRows(organizationId, "pest_disease_reports", (data || []).map((r) => r.id));
+    }
     if (error) {
       this.logger.error(`Failed to create demo pest reports: ${error.message}`);
     }
@@ -6409,6 +6482,7 @@ export class DemoDataService {
       this.logger.error(`Failed to create demo calibrations: ${error.message}`);
       return;
     }
+    await this.tagDemoRows(organizationId, "calibrations", (createdCals || []).map((r) => r.id));
 
     // Update parcels with calibration reference and ai_phase
     if (createdCals?.length) {
@@ -6530,7 +6604,10 @@ export class DemoDataService {
       }),
     );
 
-    const { error } = await client.from("satellite_indices_data").insert(rows);
+    const { data, error } = await client.from("satellite_indices_data").insert(rows).select("id");
+    if (!error) {
+      await this.tagDemoRows(organizationId, "satellite_indices_data", (data || []).map((r) => r.id));
+    }
 
     if (error) {
       this.logger.error(
@@ -7568,9 +7645,14 @@ export class DemoDataService {
       },
     ];
 
-    const { error } = await client.from("chat_conversations").insert(messages);
+    const { data, error } = await client
+      .from("chat_conversations")
+      .insert(messages)
+      .select("id");
     if (error) {
       this.logger.error(`Failed to create demo chat history: ${error.message}`);
+    } else {
+      await this.tagDemoRows(organizationId, "chat_conversations", (data || []).map((r) => r.id));
     }
   }
 
@@ -7580,16 +7662,21 @@ export class DemoDataService {
     const periodStart = new Date(now.getFullYear(), now.getMonth(), 1);
     const periodEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
 
-    const { error } = await client.from("ai_quotas").insert({
-      organization_id: organizationId,
-      monthly_limit: 1200,
-      current_count: 186,
-      period_start: periodStart.toISOString(),
-      period_end: periodEnd.toISOString(),
-    });
+    const { data, error } = await client
+      .from("ai_quotas")
+      .insert({
+        organization_id: organizationId,
+        monthly_limit: 1200,
+        current_count: 186,
+        period_start: periodStart.toISOString(),
+        period_end: periodEnd.toISOString(),
+      })
+      .select("id");
 
     if (error) {
       this.logger.error(`Failed to create demo AI quota: ${error.message}`);
+    } else {
+      await this.tagDemoRows(organizationId, "ai_quotas", (data || []).map((r) => r.id));
     }
   }
 
@@ -8001,7 +8088,10 @@ export class DemoDataService {
       }));
     });
 
-    const { error } = await client.from("monitoring_analyses").insert(rows);
+    const { data, error } = await client.from("monitoring_analyses").insert(rows).select("id");
+    if (!error) {
+      await this.tagDemoRows(organizationId, "monitoring_analyses", (data || []).map((r) => r.id));
+    }
     if (error) {
       this.logger.error(`Failed to create demo monitoring analyses: ${error.message}`);
     }
@@ -8063,7 +8153,10 @@ export class DemoDataService {
       created_by: userId,
     }));
 
-    const { error } = await client.from("suivis_saison").insert(rows);
+    const { data, error } = await client.from("suivis_saison").insert(rows).select("id");
+    if (!error) {
+      await this.tagDemoRows(organizationId, "suivis_saison", (data || []).map((r) => r.id));
+    }
     if (error) {
       this.logger.error(`Failed to create demo season tracking: ${error.message}`);
     }
@@ -9075,7 +9168,7 @@ export class DemoDataService {
       await this.createDemoTaskEquipment(tasks);
       this.logger.log(`✅ Created SIAM task equipment`);
 
-      await this.createDemoTaskTemplates(taskCategories);
+      await this.createDemoTaskTemplates(organizationId, taskCategories);
       this.logger.log(`✅ Created SIAM task templates`);
 
       // --- Worker Payment Records ---
@@ -10064,23 +10157,67 @@ export class DemoDataService {
       "REC-CLEM-BIO",
       "REC-ORA-NAV",
     ];
-    // Names seeded by createDemoStructures (both org-level + farm-level).
-    // Used to catch org-level demo structures whose farm_id is NULL.
-    const demoStructureNames = [
-      "Siège Administratif",
-      "Entrepôt Central",
-      "Station de Pompage Centrale",
-      "Bassin de Rétention Principal",
-      "Laboratoire Qualité",
-      "Puits Principal",
-      "Bassin de Stockage Est",
-      "Local Technique Ferme",
-      "Bassin de Stockage Ouest",
-      "Puits Secondaire",
-      "Écurie",
-    ];
 
     try {
+      // -- Tag-driven cleanup -----------------------------------------------
+      // Delete rows tagged at seed time in demo_data_tags. This is the safe
+      // cleanup path: only rows the seed actually inserted get removed,
+      // even when seeded in tables that have user-created rows.
+      const { data: tags } = await client
+        .from("demo_data_tags")
+        .select("table_name, row_id")
+        .eq("organization_id", organizationId);
+
+      const idsByTable: Record<string, string[]> = {};
+      for (const tag of tags || []) {
+        (idsByTable[tag.table_name] ||= []).push(tag.row_id);
+      }
+
+      // Children before parents (FK-aware). Leaf tables can be in any order.
+      const taggedDeletionOrder = [
+        "ai_quotas",
+        "chat_conversations",
+        "costs",
+        "revenues",
+        "crop_templates",
+        "harvest_forecasts",
+        "inventory_batches",
+        "metayage_settlements",
+        "monitoring_analyses",
+        "payment_advances",
+        "pest_disease_reports",
+        "satellite_indices_data",
+        "suivis_saison",
+        "structures",
+        "calibrations",
+        "task_templates", // FK -> task_categories
+        "task_categories",
+        "payment_records", // children deleted later via prIds
+      ];
+
+      for (const tableName of taggedDeletionOrder) {
+        const ids = idsByTable[tableName];
+        if (!ids?.length) continue;
+        const { count, error } = await client
+          .from(tableName)
+          .delete({ count: "exact" })
+          .eq("organization_id", organizationId)
+          .in("id", ids);
+        if (error) {
+          this.logger.warn(
+            `Tag-driven delete failed for ${tableName}: ${error.message}`,
+          );
+        }
+        deletedCounts[tableName] =
+          (deletedCounts[tableName] || 0) + (count || 0);
+      }
+
+      // Wipe the tag rows themselves (cascade-safe; org delete also clears).
+      await client
+        .from("demo_data_tags")
+        .delete()
+        .eq("organization_id", organizationId);
+
       const { data: demoFarms } = await client
         .from("farms")
         .select("id")
@@ -10600,15 +10737,7 @@ export class DemoDataService {
         : { count: 0 };
       deletedCounts["warehouses"] = warehousesCount || 0;
 
-      // Match by name (covers both farm-level and org-level seeded structures,
-      // including org-level rows where farm_id IS NULL which the previous
-      // farm_id-only filter missed).
-      const { count: structuresCount } = await client
-        .from("structures")
-        .delete({ count: "exact" })
-        .eq("organization_id", organizationId)
-        .in("name", demoStructureNames);
-      deletedCounts["structures"] = structuresCount || 0;
+      // structures handled by tag-driven cleanup at top of try-block.
 
       const { count: tasksCount } = taskIds.length
         ? await client
