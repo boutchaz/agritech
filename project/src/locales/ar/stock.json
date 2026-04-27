@@ -19,6 +19,12 @@
       "reports": "التقارير والتحليلات",
       "more": "المزيد"
     },
+    "groups": {
+      "catalog": "الكتالوج",
+      "movements": "الحركات",
+      "operations": "العمليات",
+      "insights": "التحليلات"
+    },
     "lowStockAlerts": {
       "title": "تنبيهات انخفاض المخزون",
       "itemsBelowMinimum": "مادة/مواد أقل من الحد الأدنى للمخزون",

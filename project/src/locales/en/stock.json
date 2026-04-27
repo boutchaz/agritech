@@ -19,6 +19,12 @@
       "reports": "Reports & Analytics",
       "more": "More"
     },
+    "groups": {
+      "catalog": "Catalog",
+      "movements": "Movements",
+      "operations": "Operations",
+      "insights": "Insights"
+    },
     "lowStockAlerts": {
       "title": "Low Stock Alerts",
       "itemsBelowMinimum": "item(s) below minimum stock level",

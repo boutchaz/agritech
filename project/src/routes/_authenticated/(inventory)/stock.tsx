@@ -22,45 +22,86 @@ const AppContent = () => {
   const { location } = useRouterState();
   const isRTL = isRTLLocale(i18n.language);
 
-  const tabs = useMemo<{ value: string; label: string; to: string; priority: number; tourId?: string }[]>(
+  type TabDef = { value: string; label: string; to: string; tourId?: string };
+  type GroupDef = { value: string; label: string; tabs: TabDef[] };
+
+  const groups = useMemo<GroupDef[]>(
     () => [
-      { value: 'items', label: t('stock.tabs.items'), to: '/stock/items', priority: 1, tourId: 'stock-items' },
-      { value: 'inventory', label: t('stock.tabs.inventory'), to: '/stock/inventory', priority: 2, tourId: 'stock-warehouses' },
-      { value: 'entries', label: t('stock.tabs.entries'), to: '/stock/entries', priority: 3, tourId: 'stock-movements' },
-      { value: 'reception', label: t('stock.tabs.reception'), to: '/stock/reception', priority: 4 },
-      { value: 'deliveries', label: t('stock.tabs.deliveries', 'Deliveries'), to: '/stock/deliveries', priority: 5 },
-      { value: 'reports', label: t('stock.tabs.reports'), to: '/stock/reports', priority: 6 },
-      { value: 'dashboard', label: t('stock.tabs.dashboard', 'Dashboard'), to: '/stock/dashboard', priority: 7 },
-      { value: 'groups', label: t('stock.tabs.groups'), to: '/stock/groups', priority: 8 },
-      { value: 'suppliers', label: t('stock.tabs.suppliers', 'Suppliers'), to: '/stock/suppliers', priority: 9 },
-      { value: 'batches', label: t('stock.tabs.batches', 'Batches'), to: '/stock/batches', priority: 10 },
-      { value: 'approvals', label: t('stock.tabs.approvals', 'Approvals'), to: '/stock/approvals', priority: 11 },
-      { value: 'stock-take', label: t('stock.tabs.stockTake', 'Stock Take'), to: '/stock/stock-take', priority: 12 },
-      { value: 'quick-stock', label: t('stock.tabs.quickStock', 'Quick Entry'), to: '/stock/quick-stock', priority: 13 },
-      { value: 'expiry-alerts', label: t('stock.tabs.expiryAlerts', 'Expiry Alerts'), to: '/stock/expiry-alerts', priority: 14 },
-      { value: 'reorder', label: t('stock.tabs.reorder', 'Reorder'), to: '/stock/reorder-suggestions', priority: 15 },
+      {
+        value: 'catalog',
+        label: t('stock.groups.catalog', 'Catalog'),
+        tabs: [
+          { value: 'items', label: t('stock.tabs.items'), to: '/stock/items', tourId: 'stock-items' },
+          { value: 'groups', label: t('stock.tabs.groups'), to: '/stock/groups' },
+          { value: 'suppliers', label: t('stock.tabs.suppliers', 'Suppliers'), to: '/stock/suppliers' },
+          { value: 'batches', label: t('stock.tabs.batches', 'Batches'), to: '/stock/batches' },
+        ],
+      },
+      {
+        value: 'movements',
+        label: t('stock.groups.movements', 'Movements'),
+        tabs: [
+          { value: 'reception', label: t('stock.tabs.reception'), to: '/stock/reception' },
+          { value: 'deliveries', label: t('stock.tabs.deliveries', 'Deliveries'), to: '/stock/deliveries' },
+          { value: 'entries', label: t('stock.tabs.entries'), to: '/stock/entries', tourId: 'stock-movements' },
+          { value: 'quick-stock', label: t('stock.tabs.quickStock', 'Quick Entry'), to: '/stock/quick-stock' },
+          { value: 'approvals', label: t('stock.tabs.approvals', 'Approvals'), to: '/stock/approvals' },
+        ],
+      },
+      {
+        value: 'operations',
+        label: t('stock.groups.operations', 'Operations'),
+        tabs: [
+          { value: 'inventory', label: t('stock.tabs.inventory'), to: '/stock/inventory', tourId: 'stock-warehouses' },
+          { value: 'stock-take', label: t('stock.tabs.stockTake', 'Stock Take'), to: '/stock/stock-take' },
+          { value: 'expiry-alerts', label: t('stock.tabs.expiryAlerts', 'Expiry Alerts'), to: '/stock/expiry-alerts' },
+          { value: 'reorder', label: t('stock.tabs.reorder', 'Reorder'), to: '/stock/reorder-suggestions' },
+        ],
+      },
+      {
+        value: 'insights',
+        label: t('stock.groups.insights', 'Insights'),
+        tabs: [
+          { value: 'dashboard', label: t('stock.tabs.dashboard', 'Dashboard'), to: '/stock/dashboard' },
+          { value: 'reports', label: t('stock.tabs.reports'), to: '/stock/reports' },
+        ],
+      },
     ],
     [t],
   );
 
-  const orderedTabs = useMemo(
-    () => tabs.slice().sort((a, b) => a.priority - b.priority),
-    [tabs],
+  const allTabs = useMemo(
+    () => groups.flatMap((g) => g.tabs.map((tab) => ({ ...tab, group: g.value }))),
+    [groups],
   );
 
   const activeTab = useMemo(() => {
-    if (!location) return 'items';
+    if (!location) return allTabs[0]?.value ?? 'items';
     const path = location.pathname;
-    // Match longest prefix first
-    const match = tabs
+    const match = allTabs
       .slice()
       .sort((a, b) => b.to.length - a.to.length)
-      .find(tab => path.startsWith(tab.to));
-    return match?.value ?? 'items';
-  }, [location, tabs]);
+      .find((tab) => path.startsWith(tab.to));
+    return match?.value ?? allTabs[0]?.value ?? 'items';
+  }, [location, allTabs]);
+
+  const activeGroupValue = useMemo(() => {
+    return allTabs.find((tab) => tab.value === activeTab)?.group ?? groups[0]?.value ?? 'catalog';
+  }, [allTabs, activeTab, groups]);
+
+  const activeGroupTabs = useMemo(
+    () => groups.find((g) => g.value === activeGroupValue)?.tabs ?? [],
+    [groups, activeGroupValue],
+  );
+
+  const handleGroupChange = (value: string) => {
+    const target = groups.find((g) => g.value === value);
+    if (!target || target.tabs.length === 0) return;
+    router.navigate({ to: target.tabs[0].to });
+  };
 
   const handleTabChange = (value: string) => {
-    const target = orderedTabs.find((tab) => tab.value === value);
+    const target = allTabs.find((tab) => tab.value === value);
     if (!target) return;
     router.navigate({ to: target.to });
   };
@@ -87,8 +128,8 @@ const AppContent = () => {
     >
       {/* pt-0: avoid a gray strip between ModernPageHeader and the tab row (main bg shows through padding). */}
       <div className="px-3 pb-20 pt-0 sm:px-4 md:px-6 md:pb-6">
-        {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={handleTabChange} data-tour="stock-overview">
+        {/* Group tabs (top row) */}
+        <Tabs value={activeGroupValue} onValueChange={handleGroupChange} data-tour="stock-overview">
           <div
             className={cn(
               'relative flex w-full min-w-0 items-center gap-1',
@@ -99,7 +140,28 @@ const AppContent = () => {
               dir={isRTL ? 'rtl' : 'ltr'}
               className="w-full min-w-0 justify-start overflow-x-auto whitespace-nowrap rounded-lg [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
             >
-              {orderedTabs.map((tab) => (
+              {groups.map((g) => (
+                <TabsTrigger key={g.value} value={g.value} className="shrink-0 font-semibold">
+                  {g.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </div>
+        </Tabs>
+
+        {/* Sub-tabs (children of active group) */}
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="mt-2">
+          <div
+            className={cn(
+              'relative flex w-full min-w-0 items-center gap-1',
+              isRTL ? 'justify-end' : 'justify-start',
+            )}
+          >
+            <TabsList
+              dir={isRTL ? 'rtl' : 'ltr'}
+              className="w-full min-w-0 justify-start overflow-x-auto whitespace-nowrap rounded-md bg-muted/50 [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            >
+              {activeGroupTabs.map((tab) => (
                 <TabsTrigger
                   key={tab.value}
                   value={tab.value}
