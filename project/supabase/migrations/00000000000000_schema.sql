@@ -3735,8 +3735,41 @@ CREATE TABLE IF NOT EXISTS satellite_indices_data (
   trend_duration_days INTEGER,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
-  CHECK (index_name IN ('NDVI', 'NDRE', 'NDMI', 'MNDWI', 'GCI', 'SAVI', 'OSAVI', 'MSAVI2', 'NIRv', 'EVI', 'MSI', 'MCARI', 'TCARI'))
+  CONSTRAINT satellite_indices_data_index_name_check CHECK (index_name IN (
+    'NDVI', 'NDRE', 'NDMI', 'MNDWI', 'GCI', 'SAVI', 'OSAVI', 'MSAVI2',
+    'NIRv', 'EVI', 'MSI', 'MCARI', 'TCARI', 'TCARI_OSAVI', 'EBI'
+  ))
 );
+
+-- Fixup for DBs created before EBI / TCARI_OSAVI were added (CREATE TABLE
+-- IF NOT EXISTS does not update existing tables). Drops any pre-existing
+-- CHECK constraint on index_name (whatever its auto-generated name) and
+-- recreates the widened version with a stable name.
+DO $satidx_check$
+DECLARE
+  v_conname text;
+BEGIN
+  FOR v_conname IN
+    SELECT conname
+    FROM pg_constraint
+    WHERE conrelid = 'public.satellite_indices_data'::regclass
+      AND contype = 'c'
+      AND pg_get_constraintdef(oid) ILIKE '%index_name%'
+  LOOP
+    EXECUTE format(
+      'ALTER TABLE public.satellite_indices_data DROP CONSTRAINT %I',
+      v_conname
+    );
+  END LOOP;
+
+  ALTER TABLE public.satellite_indices_data
+    ADD CONSTRAINT satellite_indices_data_index_name_check
+    CHECK (index_name IN (
+      'NDVI', 'NDRE', 'NDMI', 'MNDWI', 'GCI', 'SAVI', 'OSAVI', 'MSAVI2',
+      'NIRv', 'EVI', 'MSI', 'MCARI', 'TCARI', 'TCARI_OSAVI', 'EBI'
+    ));
+END
+$satidx_check$;
 
 CREATE INDEX IF NOT EXISTS idx_satellite_indices_data_org ON satellite_indices_data(organization_id);
 CREATE INDEX IF NOT EXISTS idx_satellite_indices_data_parcel ON satellite_indices_data(parcel_id);
