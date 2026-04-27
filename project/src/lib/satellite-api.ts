@@ -9,6 +9,7 @@ export const DEFAULT_CLOUD_COVERAGE = 10;
 export interface VegetationIndex {
   NIRv: "NIRv";
   EVI: "EVI";
+  EBI: "EBI";
   NDRE: "NDRE";
   NDMI: "NDMI";
   NDVI: "NDVI";
@@ -44,6 +45,12 @@ export const INDEX_METADATA: Record<TimeSeriesIndexType, IndexMetadata> = {
     reliability: 'fiable',
     priority: 2,
     description: 'Végétation améliorée — réduit l\'effet sol/atmosphère, moins de saturation que NDVI',
+  },
+  EBI: {
+    reliability: 'utile',
+    priority: 2.5,
+    description: 'Indice de floraison amélioré (Chen 2019) — détecte les fleurs blanches (amandiers) en isolant brillance vs verdure/sol',
+    shortWarning: 'ε=1 calibré pour Sentinel-2 ; recalibrer pour drones',
   },
   NDRE: {
     reliability: 'fiable',
@@ -718,7 +725,7 @@ export const getDateRangeLastNDays = (days: number): DateRangeRequest => {
 
 // Ordered by audit priority: fiable → utile → prudence → inutile
 export const VEGETATION_INDICES: VegetationIndexType[] = [
-  'NIRv', 'EVI', 'NDRE', 'NDMI', 'NDVI', 'GCI', 'SAVI', 'MSAVI2', 'OSAVI', 'MSI', 'MNDWI', 'MCARI', 'TCARI'
+  'NIRv', 'EVI', 'EBI', 'NDRE', 'NDMI', 'NDVI', 'GCI', 'SAVI', 'MSAVI2', 'OSAVI', 'MSI', 'MNDWI', 'MCARI', 'TCARI'
 ];
 
 export const TIME_SERIES_INDICES: TimeSeriesIndexType[] = [...VEGETATION_INDICES, 'TCARI_OSAVI', 'NIRvP'];
@@ -726,6 +733,7 @@ export const TIME_SERIES_INDICES: TimeSeriesIndexType[] = [...VEGETATION_INDICES
 export const VEGETATION_INDEX_DESCRIPTIONS: Record<VegetationIndexType, string> = {
   NIRv: 'NIRv — Verdure fonctionnelle (isole végétation du sol)',
   EVI: 'EVI — Végétation améliorée (corrige sol et atmosphère)',
+  EBI: 'EBI — Floraison améliorée (détection fleurs, ε=1 sat / recalibrer drone)',
   NDRE: 'NDRE — Chlorophylle/azote (détection précoce stress azoté)',
   NDMI: 'NDMI — Contenu en eau foliaire (alerte sécheresse)',
   NDVI: 'NDVI — Verdure globale (référence historique)',
