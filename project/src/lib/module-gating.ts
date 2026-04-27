@@ -59,8 +59,12 @@ export function findOwningModuleSlug(
 }
 
 /**
- * True when the module owning `path` is in the active set. Blocks unknown
- * paths (null owner) and paths whose owner is inactive.
+ * True when the path is allowed: either owned by an ACTIVE module, or not
+ * owned by any module (permissive — unknown paths pass through).
+ *
+ * Rationale: layout-level wrapping must not block routes that simply haven't
+ * been registered in any module yet. Only block when a path is explicitly
+ * claimed by a module that the org has not enabled.
  */
 export function isPathEnabled(
   path: string,
@@ -68,7 +72,7 @@ export function isPathEnabled(
   activeSlugs: Set<string> | string[],
 ): boolean {
   const slug = findOwningModuleSlug(path, modules);
-  if (slug === null) return false;
+  if (slug === null) return true;
   const set = activeSlugs instanceof Set ? activeSlugs : new Set(activeSlugs);
   return set.has(slug);
 }

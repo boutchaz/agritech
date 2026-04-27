@@ -17220,7 +17220,7 @@ INSERT INTO modules (
   ('sales_purchasing', 'sales_purchasing', 'ShoppingCart',  '#f43f5e', 'sales',      'Quotes, sales orders, purchase orders',           10, 0,   false, false, true,
     '["/accounting/quotes","/accounting/sales-orders","/accounting/purchase-orders","/accounting/customers","/stock/suppliers"]'::jsonb, '[]'::jsonb),
   ('accounting',       'accounting',       'BookOpen',      '#6366f1', 'accounting', 'Invoices, payments, journal, reports',            11, 0,   false, false, true,
-    '["/accounting"]'::jsonb, '[]'::jsonb),
+    '["/accounting","/utilities"]'::jsonb, '[]'::jsonb),
   ('marketplace',      'marketplace',      'ShoppingBag',   '#f97316', 'sales',      'B2B quote marketplace',                           12, 0,   false, false, true,
     '["/marketplace"]'::jsonb, '[]'::jsonb)
 ON CONFLICT (slug) DO UPDATE SET

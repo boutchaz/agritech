@@ -23,6 +23,7 @@ import { usersApi } from '../lib/api/users'
 import { AuthenticatedLayoutSkeleton } from '@/components/AuthenticatedLayoutSkeleton';
 import { NotificationRealtimeBridge } from '@/components/NotificationRealtimeBridge';
 import { PullToRefresh } from '@/components/PullToRefresh';
+import { ModuleGate } from '@/components/authorization/ModuleGate';
 
 
 export const Route = createFileRoute('/_authenticated')({
@@ -204,7 +205,9 @@ function AuthenticatedLayout() {
               {/* No flex-1: let content define height so main scrolls on tablet/WebKit (flex-1 + min-h-0 traps overflow). */}
               <PullToRefresh>
                 <div className="flex min-h-0 min-w-0 w-full flex-col">
-                  <Outlet />
+                  <ModuleGate>
+                    <Outlet />
+                  </ModuleGate>
                 </div>
               </PullToRefresh>
             </ErrorBoundary>
