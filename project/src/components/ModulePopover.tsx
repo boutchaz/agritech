@@ -17,7 +17,7 @@ import { useAddonsOverview } from '../hooks/useAddons';
 import { useSubscription } from '../hooks/useSubscription';
 import { getPlanDetails, isModuleAvailableForPlan, CATEGORY_LABELS } from '../lib/polar';
 import { useNavigate } from '@tanstack/react-router';
-import type { OrganizationModule } from '../lib/api/modules';
+import type { ModuleConfig } from '../lib/api/module-config';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from './ui/scroll-area';
 import { cn } from '../lib/utils';
@@ -49,7 +49,7 @@ export const ModulePopover = ({ isCollapsed: _isCollapsed }: ModulePopoverProps)
   const [showAddons, setShowAddons] = useState(false);
 
   const modulesByCategory = React.useMemo(() => {
-    const grouped: Record<string, OrganizationModule[]> = {};
+    const grouped: Record<string, ModuleConfig[]> = {};
     modules.forEach((module) => {
       const category = module.category || 'general';
       if (!grouped[category]) {
@@ -188,11 +188,11 @@ export const ModulePopover = ({ isCollapsed: _isCollapsed }: ModulePopoverProps)
                   return (
                     <Button
                       key={module.id}
-                      onClick={() => handleModuleToggle(module.id, module.is_active)}
-                      disabled={isLocked && !module.is_active}
+                      onClick={() => handleModuleToggle(module.id, !!module.isActive)}
+                      disabled={isLocked && !module.isActive}
                       className={cn(
                         "w-full flex items-center gap-2 p-2 rounded-md text-left transition-colors",
-                        isLocked && !module.is_active ? "opacity-50 cursor-not-allowed" : "hover:bg-gray-50 dark:hover:bg-gray-800",
+                        isLocked && !module.isActive ? "opacity-50 cursor-not-allowed" : "hover:bg-gray-50 dark:hover:bg-gray-800",
                         !isLocked && "cursor-pointer"
                       )}
                     >
@@ -200,18 +200,18 @@ export const ModulePopover = ({ isCollapsed: _isCollapsed }: ModulePopoverProps)
                         <div className="flex items-center gap-1">
                           <span className={cn(
                             "w-4 h-4 rounded border flex items-center justify-center flex-shrink-0",
-                            module.is_active
+                            module.isActive
                               ? "bg-green-500 border-green-500 text-white"
                               : "border-gray-300 dark:border-gray-600"
                           )}>
-                            {module.is_active && <Check className="h-3 w-3" />}
+                            {module.isActive && <Check className="h-3 w-3" />}
                           </span>
                           <span className="text-sm font-medium text-gray-700 dark:text-gray-300 truncate">
                             {module.name}
                           </span>
                         </div>
                       </div>
-                      {isLocked && !module.is_active && (
+                      {isLocked && !module.isActive && (
                         <Lock className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
                       )}
                     </Button>

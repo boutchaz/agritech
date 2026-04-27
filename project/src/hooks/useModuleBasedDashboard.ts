@@ -28,7 +28,7 @@ export function useModuleBasedDashboard(): ModuleBasedDashboardConfig {
   const activeModuleSlugs = useMemo(() => {
     const active = new Set<string>();
     for (const m of orgModules) {
-      if (m.is_active && m.slug) active.add(m.slug);
+      if (m.isActive && m.slug) active.add(m.slug);
     }
     if (config) {
       for (const m of config.modules) {

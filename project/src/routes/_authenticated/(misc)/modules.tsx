@@ -182,7 +182,7 @@ function ModulesHub() {
   const activeSet = useMemo(() => {
     const s = new Set<string>();
     for (const m of orgModules) {
-      if (m.is_active && m.slug) s.add(m.slug);
+      if (m.isActive && m.slug) s.add(m.slug);
     }
     if (config) {
       for (const m of config.modules) {

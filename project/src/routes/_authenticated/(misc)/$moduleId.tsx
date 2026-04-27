@@ -279,7 +279,7 @@ const AppContent = () => {
         id: orgModule.id,
         name: configModule?.name ?? orgModule.name,
         icon: orgModule.icon || configModule?.icon || 'Leaf',
-        active: orgModule.is_active,
+        active: !!orgModule.isActive,
         category: orgModule.category || 'agriculture',
         description: configModule?.description ?? orgModule.description ?? '',
       }
@@ -295,7 +295,7 @@ const AppContent = () => {
       : undefined;
 
   if (!selectedModule) {
-    const activeModules = orgModules.filter(m => m.is_active);
+    const activeModules = orgModules.filter(m => m.isActive);
     return <ModuleNotFound moduleId={moduleId} activeModules={activeModules} />;
   }
 

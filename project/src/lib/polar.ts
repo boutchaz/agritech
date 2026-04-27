@@ -344,15 +344,18 @@ export function isModuleAvailable(
 }
 
 export function isModuleAvailableForPlan(
-  module: { required_plan?: BackendPlanType | null },
-  subscription: { plan_type?: BackendPlanType | null; formula?: BackendPlanType | null },
+  module: { required_plan?: BackendPlanType | string | null; requiredPlan?: BackendPlanType | string | null },
+  subscription: { plan_type?: BackendPlanType | null; formula?: BackendPlanType | null } | null | undefined,
 ): boolean {
-  if (!module.required_plan) return true;
+  const moduleRequired = (module.requiredPlan ?? module.required_plan ?? null) as
+    | BackendPlanType
+    | null;
+  if (!moduleRequired) return true;
 
   const currentPlan = normalizePlanType(
-    subscription.formula || subscription.plan_type || null,
+    subscription?.formula || subscription?.plan_type || null,
   );
-  const requiredPlan = normalizePlanType(module.required_plan);
+  const requiredPlan = normalizePlanType(moduleRequired);
 
   if (!currentPlan || !requiredPlan) return false;
 
