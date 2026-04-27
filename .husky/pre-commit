@@ -1,1 +1,2 @@
+pnpm --filter agritech-api gen:perms:check
 cd project && npx lint-staged

@@ -6,7 +6,7 @@ export const ADMIN_AND_MANAGER_ROLES: RoleName[] = ['system_admin', 'organizatio
 
 export interface Role {
   id: string;
-  name: RoleName;
+  name: string;
   display_name: string;
   description?: string;
   level: number;

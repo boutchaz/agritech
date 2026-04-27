@@ -18,6 +18,8 @@
     "test:e2e:integration": "jest --config ./test/jest-e2e.json",
     "db:migrate": "./scripts/db-push-selfhosted.sh",
     "db:migrate:dry-run": "DRY_RUN=1 ./scripts/db-push-selfhosted.sh",
+    "gen:perms": "ts-node scripts/gen-permissions-sql.ts",
+    "gen:perms:check": "ts-node scripts/gen-permissions-sql.ts --check",
     "migrate:reference-data": "ts-node scripts/migrate-reference-data.ts",
     "seed:crop-ai-references": "ts-node scripts/seed-ai-references.ts",
     "seed:strapi": "ts-node scripts/seed-strapi.ts",

@@ -1676,6 +1676,194 @@ export class AdminService {
   }
 
   // ============================================
+  // Frontoffice Access Control (Roles/Permissions)
+  // ============================================
+
+  async getAccessControlRoles() {
+    const client = this.databaseService.getAdminClient();
+    const { data, error } = await client
+      .from('roles')
+      .select('*')
+      .order('level', { ascending: true });
+    if (error) throw error;
+    return data || [];
+  }
+
+  // Custom roles must sit strictly below organization_admin (level 80) so they
+  // cannot be used to escalate above tenant admins via level-based checks.
+  private static readonly CUSTOM_ROLE_MAX_LEVEL = 79;
+
+  private async loadRoleOrThrow(roleId: string) {
+    const client = this.databaseService.getAdminClient();
+    const { data, error } = await client
+      .from('roles')
+      .select('id,name,source')
+      .eq('id', roleId)
+      .maybeSingle();
+    if (error) throw error;
+    if (!data) throw new NotFoundException('Role not found');
+    return data as { id: string; name: string; source: string | null };
+  }
+
+  private assertRoleMutable(role: { name: string; source: string | null }) {
+    if (role.name === 'internal_admin') {
+      throw new BadRequestException('internal_admin role cannot be modified');
+    }
+    if (role.source === 'system') {
+      throw new BadRequestException('System roles cannot be modified');
+    }
+  }
+
+  async createAccessControlRole(input: {
+    name?: string;
+    display_name?: string;
+    description?: string;
+    level?: number;
+    is_active?: boolean;
+  }, userId: string) {
+    const name = (input.name || '').trim();
+    const displayName = (input.display_name || '').trim();
+
+    if (!name) throw new BadRequestException('Role name is required');
+    if (!displayName) throw new BadRequestException('Role display_name is required');
+    if (name === 'internal_admin') {
+      throw new BadRequestException('internal_admin is a reserved role name');
+    }
+
+    const requestedLevel = input.level ?? 50;
+    if (requestedLevel < 1 || requestedLevel > AdminService.CUSTOM_ROLE_MAX_LEVEL) {
+      throw new BadRequestException(
+        `Custom role level must be between 1 and ${AdminService.CUSTOM_ROLE_MAX_LEVEL}`,
+      );
+    }
+
+    const client = this.databaseService.getAdminClient();
+    const { data, error } = await client
+      .from('roles')
+      .insert({
+        name,
+        display_name: displayName,
+        description: input.description || null,
+        level: requestedLevel,
+        is_active: input.is_active ?? true,
+        source: 'custom',
+        created_by: userId,
+        updated_by: userId,
+        updated_at: new Date().toISOString(),
+      })
+      .select('*')
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  async updateAccessControlRole(
+    roleId: string,
+    input: {
+      display_name?: string;
+      description?: string;
+      level?: number;
+      is_active?: boolean;
+    },
+    userId: string,
+  ) {
+    const role = await this.loadRoleOrThrow(roleId);
+    this.assertRoleMutable(role);
+
+    if (
+      input.level !== undefined &&
+      (input.level < 1 || input.level > AdminService.CUSTOM_ROLE_MAX_LEVEL)
+    ) {
+      throw new BadRequestException(
+        `Custom role level must be between 1 and ${AdminService.CUSTOM_ROLE_MAX_LEVEL}`,
+      );
+    }
+
+    const client = this.databaseService.getAdminClient();
+    const payload: Record<string, unknown> = {
+      updated_by: userId,
+      updated_at: new Date().toISOString(),
+    };
+
+    if (input.display_name !== undefined) payload.display_name = input.display_name;
+    if (input.description !== undefined) payload.description = input.description;
+    if (input.level !== undefined) payload.level = input.level;
+    if (input.is_active !== undefined) payload.is_active = input.is_active;
+
+    const { data, error } = await client
+      .from('roles')
+      .update(payload)
+      .eq('id', roleId)
+      .select('*')
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  async deleteAccessControlRole(roleId: string, userId: string) {
+    const role = await this.loadRoleOrThrow(roleId);
+    this.assertRoleMutable(role);
+
+    const client = this.databaseService.getAdminClient();
+    // soft delete for safety/auditability
+    const { data, error } = await client
+      .from('roles')
+      .update({
+        is_active: false,
+        updated_by: userId,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', roleId)
+      .select('*')
+      .single();
+    if (error) throw error;
+    return data;
+  }
+
+  async getAccessControlPermissions() {
+    const client = this.databaseService.getAdminClient();
+    const { data, error } = await client
+      .from('permissions')
+      .select('*')
+      .order('resource', { ascending: true })
+      .order('action', { ascending: true });
+    if (error) throw error;
+    return data || [];
+  }
+
+  async getRolePermissionIds(roleId: string): Promise<string[]> {
+    const client = this.databaseService.getAdminClient();
+    const { data, error } = await client
+      .from('role_permissions')
+      .select('permission_id')
+      .eq('role_id', roleId);
+    if (error) throw error;
+    return (data || []).map((row: { permission_id: string }) => row.permission_id);
+  }
+
+  async replaceRolePermissions(roleId: string, permissionIds: string[]) {
+    const role = await this.loadRoleOrThrow(roleId);
+    this.assertRoleMutable(role);
+
+    const uniquePermissionIds = Array.from(new Set(permissionIds.filter(Boolean)));
+
+    await this.databaseService.executeInPgTransaction(async (txClient) => {
+      await txClient.query('DELETE FROM role_permissions WHERE role_id = $1', [roleId]);
+
+      if (uniquePermissionIds.length > 0) {
+        await txClient.query(
+          'INSERT INTO role_permissions (role_id, permission_id) SELECT $1, unnest($2::uuid[])',
+          [roleId, uniquePermissionIds],
+        );
+      }
+    });
+
+    return { role_id: roleId, permission_ids: uniquePermissionIds };
+  }
+
+  // ============================================
   // Route Manifest
   // ============================================
 

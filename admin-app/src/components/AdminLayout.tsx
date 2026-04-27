@@ -17,6 +17,7 @@ import {
   Library,
   PanelLeft,
   PanelLeftClose,
+  Shield,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -35,6 +36,7 @@ const NAV_ITEMS: NavItem[] = [
   // Hidden until product decision — routes still reachable via direct URL.
   // { to: '/subscription-model', label: 'Subscription Model', icon: CreditCard },
   // { to: '/modules', label: 'Modules', icon: Package },
+  { to: '/access-control', label: 'Access Control', icon: Shield },
   { to: '/email-templates', label: 'Email Templates', icon: Mail },
   { to: '/cron-jobs', label: 'Cron Jobs', icon: Clock },
   { to: '/banners', label: 'Banners', icon: Megaphone },

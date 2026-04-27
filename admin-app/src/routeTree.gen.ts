@@ -21,6 +21,7 @@ import { Route as AuthenticatedEmailTemplatesRouteImport } from './routes/_authe
 import { Route as AuthenticatedCronJobsRouteImport } from './routes/_authenticated/cron-jobs'
 import { Route as AuthenticatedChangelogRouteImport } from './routes/_authenticated/changelog'
 import { Route as AuthenticatedBannersRouteImport } from './routes/_authenticated/banners'
+import { Route as AuthenticatedAccessControlRouteImport } from './routes/_authenticated/access-control'
 import { Route as AuthenticatedClientsIndexRouteImport } from './routes/_authenticated/clients/index'
 import { Route as AuthenticatedReferentielsCropRouteImport } from './routes/_authenticated/referentiels/$crop'
 import { Route as AuthenticatedClientsOrgIdRouteImport } from './routes/_authenticated/clients/$orgId'
@@ -87,6 +88,12 @@ const AuthenticatedBannersRoute = AuthenticatedBannersRouteImport.update({
   path: '/banners',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedAccessControlRoute =
+  AuthenticatedAccessControlRouteImport.update({
+    id: '/access-control',
+    path: '/access-control',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedClientsIndexRoute =
   AuthenticatedClientsIndexRouteImport.update({
     id: '/clients/',
@@ -109,6 +116,7 @@ const AuthenticatedClientsOrgIdRoute =
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
   '/login': typeof LoginRoute
+  '/access-control': typeof AuthenticatedAccessControlRoute
   '/banners': typeof AuthenticatedBannersRoute
   '/changelog': typeof AuthenticatedChangelogRoute
   '/cron-jobs': typeof AuthenticatedCronJobsRoute
@@ -124,6 +132,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
+  '/access-control': typeof AuthenticatedAccessControlRoute
   '/banners': typeof AuthenticatedBannersRoute
   '/changelog': typeof AuthenticatedChangelogRoute
   '/cron-jobs': typeof AuthenticatedCronJobsRoute
@@ -142,6 +151,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/login': typeof LoginRoute
+  '/_authenticated/access-control': typeof AuthenticatedAccessControlRoute
   '/_authenticated/banners': typeof AuthenticatedBannersRoute
   '/_authenticated/changelog': typeof AuthenticatedChangelogRoute
   '/_authenticated/cron-jobs': typeof AuthenticatedCronJobsRoute
@@ -161,6 +171,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/login'
+    | '/access-control'
     | '/banners'
     | '/changelog'
     | '/cron-jobs'
@@ -176,6 +187,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
+    | '/access-control'
     | '/banners'
     | '/changelog'
     | '/cron-jobs'
@@ -193,6 +205,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/_authenticated'
     | '/login'
+    | '/_authenticated/access-control'
     | '/_authenticated/banners'
     | '/_authenticated/changelog'
     | '/_authenticated/cron-jobs'
@@ -299,6 +312,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedBannersRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/access-control': {
+      id: '/_authenticated/access-control'
+      path: '/access-control'
+      fullPath: '/access-control'
+      preLoaderRoute: typeof AuthenticatedAccessControlRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/clients/': {
       id: '/_authenticated/clients/'
       path: '/clients'
@@ -324,6 +344,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteChildren {
+  AuthenticatedAccessControlRoute: typeof AuthenticatedAccessControlRoute
   AuthenticatedBannersRoute: typeof AuthenticatedBannersRoute
   AuthenticatedChangelogRoute: typeof AuthenticatedChangelogRoute
   AuthenticatedCronJobsRoute: typeof AuthenticatedCronJobsRoute
@@ -340,6 +361,7 @@ interface AuthenticatedRouteChildren {
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedAccessControlRoute: AuthenticatedAccessControlRoute,
   AuthenticatedBannersRoute: AuthenticatedBannersRoute,
   AuthenticatedChangelogRoute: AuthenticatedChangelogRoute,
   AuthenticatedCronJobsRoute: AuthenticatedCronJobsRoute,

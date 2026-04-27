@@ -4515,8 +4515,7 @@ CREATE TABLE IF NOT EXISTS roles (
   created_by UUID REFERENCES auth.users(id),
   updated_by UUID REFERENCES auth.users(id),
   created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW(),
-  CHECK (name IN ('internal_admin', 'system_admin', 'organization_admin', 'farm_manager', 'farm_worker', 'day_laborer', 'viewer'))
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- Permissions
@@ -6879,48 +6878,61 @@ ON CONFLICT (name) DO UPDATE SET
   is_active = EXCLUDED.is_active,
   updated_at = NOW();
 
--- Seed permissions
-INSERT INTO permissions (name, display_name, resource, action, description) VALUES
-  -- User management permissions
-  ('users.read', 'View Users', 'users', 'read', 'View users in the organization'),
-  ('users.create', 'Create Users', 'users', 'create', 'Invite new users to the organization'),
-  ('users.update', 'Update Users', 'users', 'update', 'Update user roles and information'),
-  ('users.delete', 'Delete Users', 'users', 'delete', 'Remove users from the organization'),
-  ('users.manage', 'Manage Users', 'users', 'manage', 'Full user management access'),
+-- Seed permissions: one row per (resource × action). Resources mirror the
+-- RESOURCE_SUBJECT_MAP keys in agritech-api/src/modules/casl/casl-ability.factory.ts
+-- so every CASL Subject is reachable from a custom role.
+DO $perms$
+DECLARE
+-- BEGIN GENERATED PERMISSION RESOURCES (do not edit by hand)
+  -- 68 resources × 5 actions = 340 permission rows
+  v_resources TEXT[] := ARRAY[
+    'users','organizations','roles','subscriptions',
+    'farms','parcels','warehouses','infrastructure',
+    'structures','trees','farm_hierarchy','invoices',
+    'payments','journal_entries','accounts','customers',
+    'suppliers','financial_reports','cost_centers','taxes',
+    'bank_accounts','periods','accounting_reports','account_mappings',
+    'workers','employees','day_laborers','tasks',
+    'piece_works','work_units','harvests','crop_cycles',
+    'campaigns','fiscal_years','product_applications','analyses',
+    'soil_analyses','plant_analyses','water_analyses','products',
+    'stock','stock_entries','stock_items','biological_assets',
+    'sales_orders','purchase_orders','quotes','deliveries',
+    'reception_batches','quality_controls','lab_services','certifications',
+    'compliance_checks','reports','satellite_analyses','satellite_reports',
+    'production_intelligence','dashboard','analytics','sensors',
+    'costs','revenues','inventory','utilities',
+    'agronomy_sources','chat','settings','api'
+  ];
+-- END GENERATED PERMISSION RESOURCES
+  v_actions TEXT[] := ARRAY['read','create','update','delete','manage'];
+  v_action_labels JSONB := '{"read":"View","create":"Create","update":"Update","delete":"Delete","manage":"Manage"}'::jsonb;
+  v_resource TEXT;
+  v_action TEXT;
+  v_display_resource TEXT;
+BEGIN
+  FOREACH v_resource IN ARRAY v_resources LOOP
+    -- "stock_entries" → "Stock Entries"
+    v_display_resource := initcap(replace(v_resource, '_', ' '));
 
-  -- Farm management permissions
-  ('farms.read', 'View Farms', 'farms', 'read', 'View farm information'),
-  ('farms.create', 'Create Farms', 'farms', 'create', 'Create new farms'),
-  ('farms.update', 'Update Farms', 'farms', 'update', 'Update farm information'),
-  ('farms.delete', 'Delete Farms', 'farms', 'delete', 'Delete farms'),
-  ('farms.manage', 'Manage Farms', 'farms', 'manage', 'Full farm management access'),
-
-  -- Parcel management permissions
-  ('parcels.read', 'View Parcels', 'parcels', 'read', 'View parcel information'),
-  ('parcels.create', 'Create Parcels', 'parcels', 'create', 'Create new parcels'),
-  ('parcels.update', 'Update Parcels', 'parcels', 'update', 'Update parcel information'),
-  ('parcels.delete', 'Delete Parcels', 'parcels', 'delete', 'Delete parcels'),
-  ('parcels.manage', 'Manage Parcels', 'parcels', 'manage', 'Full parcel management access'),
-
-  -- Stock management permissions
-  ('stock.read', 'View Stock', 'stock', 'read', 'View inventory and stock'),
-  ('stock.create', 'Create Stock Entries', 'stock', 'create', 'Create new stock entries'),
-  ('stock.update', 'Update Stock', 'stock', 'update', 'Update stock information'),
-  ('stock.delete', 'Delete Stock', 'stock', 'delete', 'Delete stock entries'),
-  ('stock.manage', 'Manage Stock', 'stock', 'manage', 'Full stock management access'),
-
-  -- Organization permissions
-  ('organizations.read', 'View Organization', 'organizations', 'read', 'View organization information'),
-  ('organizations.update', 'Update Organization', 'organizations', 'update', 'Update organization settings'),
-  ('organizations.manage', 'Manage Organization', 'organizations', 'manage', 'Full organization management'),
-
-  -- Report permissions
-  ('reports.read', 'View Reports', 'reports', 'read', 'View and generate reports')
-ON CONFLICT (name) DO UPDATE SET
-  display_name = EXCLUDED.display_name,
-  resource = EXCLUDED.resource,
-  action = EXCLUDED.action,
-  description = EXCLUDED.description;
+    FOREACH v_action IN ARRAY v_actions LOOP
+      INSERT INTO permissions (name, display_name, resource, action, description)
+      VALUES (
+        v_resource || '.' || v_action,
+        (v_action_labels->>v_action) || ' ' || v_display_resource,
+        v_resource,
+        v_action,
+        (v_action_labels->>v_action) || ' access for ' || v_display_resource
+      )
+      ON CONFLICT (name) DO UPDATE SET
+        display_name = EXCLUDED.display_name,
+        resource = EXCLUDED.resource,
+        action = EXCLUDED.action,
+        description = EXCLUDED.description;
+    END LOOP;
+  END LOOP;
+END
+$perms$;
 
 -- Seed role_permissions mapping
 -- This maps each role to their permissions
@@ -8673,6 +8685,52 @@ CREATE POLICY "org_delete_utilities" ON utilities
 -- ROLES & PERMISSIONS TABLES
 -- =====================================================
 
+-- ============================================================================
+-- INTERNAL ADMIN TABLE & FUNCTION
+-- (declared early so role/permission RLS policies below can reference is_internal_admin())
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS internal_admins (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  created_by UUID REFERENCES auth.users(id),
+  notes TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_internal_admins_user ON internal_admins(user_id);
+
+COMMENT ON TABLE internal_admins IS 'Platform-level administrators with access to admin app and reference data management';
+
+ALTER TABLE internal_admins ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "service_manage_internal_admins" ON internal_admins;
+CREATE POLICY "service_manage_internal_admins" ON internal_admins
+  FOR ALL USING (
+    current_setting('role', true) = 'service_role'
+  );
+
+DROP POLICY IF EXISTS "users_read_own_internal_admin" ON internal_admins;
+CREATE POLICY "users_read_own_internal_admin" ON internal_admins
+  FOR SELECT USING (user_id = auth.uid());
+
+CREATE OR REPLACE FUNCTION is_internal_admin()
+RETURNS BOOLEAN
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM internal_admins
+    WHERE user_id = auth.uid()
+      AND is_active = true
+  );
+$$;
+
+COMMENT ON FUNCTION is_internal_admin() IS 'Check if the current authenticated user is an internal platform admin';
+
 -- Roles Policies (no organization_id - allow all authenticated users to read)
 DROP POLICY IF EXISTS "org_read_roles" ON roles;
 CREATE POLICY "org_read_roles" ON roles
@@ -8680,15 +8738,24 @@ CREATE POLICY "org_read_roles" ON roles
 
 DROP POLICY IF EXISTS "org_write_roles" ON roles;
 CREATE POLICY "org_write_roles" ON roles
-  FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+  FOR INSERT WITH CHECK (
+    current_setting('role', true) = 'service_role'
+    OR is_internal_admin()
+  );
 
 DROP POLICY IF EXISTS "org_update_roles" ON roles;
 CREATE POLICY "org_update_roles" ON roles
-  FOR UPDATE USING (auth.uid() IS NOT NULL);
+  FOR UPDATE USING (
+    current_setting('role', true) = 'service_role'
+    OR is_internal_admin()
+  );
 
 DROP POLICY IF EXISTS "org_delete_roles" ON roles;
 CREATE POLICY "org_delete_roles" ON roles
-  FOR DELETE USING (auth.uid() IS NOT NULL);
+  FOR DELETE USING (
+    current_setting('role', true) = 'service_role'
+    OR is_internal_admin()
+  );
 
 -- Permissions Policies (no organization_id - allow all authenticated users to read)
 DROP POLICY IF EXISTS "org_read_permissions" ON permissions;
@@ -8697,15 +8764,24 @@ CREATE POLICY "org_read_permissions" ON permissions
 
 DROP POLICY IF EXISTS "org_write_permissions" ON permissions;
 CREATE POLICY "org_write_permissions" ON permissions
-  FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+  FOR INSERT WITH CHECK (
+    current_setting('role', true) = 'service_role'
+    OR is_internal_admin()
+  );
 
 DROP POLICY IF EXISTS "org_update_permissions" ON permissions;
 CREATE POLICY "org_update_permissions" ON permissions
-  FOR UPDATE USING (auth.uid() IS NOT NULL);
+  FOR UPDATE USING (
+    current_setting('role', true) = 'service_role'
+    OR is_internal_admin()
+  );
 
 DROP POLICY IF EXISTS "org_delete_permissions" ON permissions;
 CREATE POLICY "org_delete_permissions" ON permissions
-  FOR DELETE USING (auth.uid() IS NOT NULL);
+  FOR DELETE USING (
+    current_setting('role', true) = 'service_role'
+    OR is_internal_admin()
+  );
 
 -- Role Permissions Policies (check through roles relationship)
 DROP POLICY IF EXISTS "org_read_role_permissions" ON role_permissions;
@@ -8714,15 +8790,24 @@ CREATE POLICY "org_read_role_permissions" ON role_permissions
 
 DROP POLICY IF EXISTS "org_write_role_permissions" ON role_permissions;
 CREATE POLICY "org_write_role_permissions" ON role_permissions
-  FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+  FOR INSERT WITH CHECK (
+    current_setting('role', true) = 'service_role'
+    OR is_internal_admin()
+  );
 
 DROP POLICY IF EXISTS "org_update_role_permissions" ON role_permissions;
 CREATE POLICY "org_update_role_permissions" ON role_permissions
-  FOR UPDATE USING (auth.uid() IS NOT NULL);
+  FOR UPDATE USING (
+    current_setting('role', true) = 'service_role'
+    OR is_internal_admin()
+  );
 
 DROP POLICY IF EXISTS "org_delete_role_permissions" ON role_permissions;
 CREATE POLICY "org_delete_role_permissions" ON role_permissions
-  FOR DELETE USING (auth.uid() IS NOT NULL);
+  FOR DELETE USING (
+    current_setting('role', true) = 'service_role'
+    OR is_internal_admin()
+  );
 
 -- Role Templates Policies
 DROP POLICY IF EXISTS "org_read_role_templates" ON role_templates;
@@ -9274,53 +9359,10 @@ ALTER TABLE admin_job_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE saas_metrics_daily ENABLE ROW LEVEL SECURITY;
 
 -- ============================================================================
--- ADMIN APP: INTERNAL ADMIN ROLE & RLS POLICIES
+-- ADMIN APP: INTERNAL ADMIN REFERENCE DATA RLS POLICIES
 -- ============================================================================
--- Purpose: Enable platform-wide admin access for reference data management and analytics
-
--- Internal admins table (platform-level, not organization-bound)
-CREATE TABLE IF NOT EXISTS internal_admins (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE,
-  is_active BOOLEAN DEFAULT true,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  created_by UUID REFERENCES auth.users(id),
-  notes TEXT
-);
-
-CREATE INDEX IF NOT EXISTS idx_internal_admins_user ON internal_admins(user_id);
-
-COMMENT ON TABLE internal_admins IS 'Platform-level administrators with access to admin app and reference data management';
-
--- Enable RLS on internal_admins
-ALTER TABLE internal_admins ENABLE ROW LEVEL SECURITY;
-
--- Only service_role can manage internal_admins
-CREATE POLICY "service_manage_internal_admins" ON internal_admins
-  FOR ALL USING (
-    current_setting('role', true) = 'service_role'
-  );
-
--- Allow users to check if they are internal admins (for auth check)
-CREATE POLICY "users_read_own_internal_admin" ON internal_admins
-  FOR SELECT USING (user_id = auth.uid());
-
--- Function to check if current user is internal_admin
-CREATE OR REPLACE FUNCTION is_internal_admin()
-RETURNS BOOLEAN
-LANGUAGE sql
-SECURITY DEFINER
-STABLE
-SET search_path = public
-AS $$
-  SELECT EXISTS (
-    SELECT 1 FROM internal_admins
-    WHERE user_id = auth.uid()
-      AND is_active = true
-  );
-$$;
-
-COMMENT ON FUNCTION is_internal_admin() IS 'Check if the current authenticated user is an internal platform admin';
+-- (internal_admins table + is_internal_admin() function are declared earlier,
+--  alongside the roles/permissions RLS that depends on them.)
 
 -- RLS Policies for reference data tables
 

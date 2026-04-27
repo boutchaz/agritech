@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/hooks/useAuth';
@@ -245,27 +245,29 @@ const AppContent = () => {
   const { data: campaigns = [] } = useCampaigns();
   const { data: fiscalYears = [] } = useFiscalYears();
 
-  useEffect(() => {
-    if (selectedCampaign !== 'all') {
-      const campaign = campaigns.find(c => c.id === selectedCampaign);
+  const handleCampaignChange = (value: string) => {
+    setSelectedCampaign(value);
+    if (value !== 'all') {
+      const campaign = campaigns.find(c => c.id === value);
       if (campaign) {
         setStartDate(campaign.start_date);
         setEndDate(campaign.end_date);
         setSelectedFiscalYear('all');
       }
     }
-  }, [selectedCampaign, campaigns]);
+  };
 
-  useEffect(() => {
-    if (selectedFiscalYear !== 'all') {
-      const fiscalYear = fiscalYears.find(fy => fy.id === selectedFiscalYear);
+  const handleFiscalYearChange = (value: string) => {
+    setSelectedFiscalYear(value);
+    if (value !== 'all') {
+      const fiscalYear = fiscalYears.find(fy => fy.id === value);
       if (fiscalYear) {
         setStartDate(fiscalYear.start_date);
         setEndDate(fiscalYear.end_date);
         setSelectedCampaign('all');
       }
     }
-  }, [selectedFiscalYear, fiscalYears]);
+  };
 
   const activeFiscalYearId = selectedFiscalYear !== 'all' ? selectedFiscalYear : undefined;
   const { data: cashFlowReport, isLoading, error } = useCashFlow(startDate, endDate, activeFiscalYearId);
@@ -292,7 +294,7 @@ const AppContent = () => {
                 <NativeSelect
                   id="campaign"
                   value={selectedCampaign}
-                  onChange={(e) => setSelectedCampaign(e.target.value)}
+                  onChange={(e) => handleCampaignChange(e.target.value)}
                   className="max-w-xs"
                 >
                   <option value="all">{t('reportsModule.cashFlow.allCampaigns', 'All Campaigns')}</option>
@@ -309,7 +311,7 @@ const AppContent = () => {
                 <NativeSelect
                   id="fiscal_year"
                   value={selectedFiscalYear}
-                  onChange={(e) => setSelectedFiscalYear(e.target.value)}
+                  onChange={(e) => handleFiscalYearChange(e.target.value)}
                   className="max-w-xs"
                 >
                   <option value="all">{t('reportsModule.cashFlow.allFiscalYears', 'All Fiscal Years')}</option>

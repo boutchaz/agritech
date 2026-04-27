@@ -5930,7 +5930,15 @@ export type Database = {
           updated_at?: string | null
           version?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_crop_ai_references_crop_type"
+            columns: ["crop_type"]
+            isOneToOne: true
+            referencedRelation: "crop_types"
+            referencedColumns: ["code"]
+          },
+        ]
       }
       crop_categories: {
         Row: {
@@ -6895,6 +6903,7 @@ export type Database = {
         Row: {
           chill_hours_max: number | null
           chill_hours_min: number | null
+          code: string | null
           created_at: string | null
           description: string | null
           description_ar: string | null
@@ -6916,6 +6925,7 @@ export type Database = {
         Insert: {
           chill_hours_max?: number | null
           chill_hours_min?: number | null
+          code?: string | null
           created_at?: string | null
           description?: string | null
           description_ar?: string | null
@@ -6937,6 +6947,7 @@ export type Database = {
         Update: {
           chill_hours_max?: number | null
           chill_hours_min?: number | null
+          code?: string | null
           created_at?: string | null
           description?: string | null
           description_ar?: string | null
@@ -7996,6 +8007,119 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "deliveries"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      demo_data_tags: {
+        Row: {
+          organization_id: string
+          row_id: string
+          seeded_at: string
+          table_name: string
+        }
+        Insert: {
+          organization_id: string
+          row_id: string
+          seeded_at?: string
+          table_name: string
+        }
+        Update: {
+          organization_id?: string
+          row_id?: string
+          seeded_at?: string
+          table_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "demo_data_tags_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "accounting_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "demo_data_tags_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_churn_risk"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "demo_data_tags_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_org_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "demo_data_tags_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_top_orgs_by_activity"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "demo_data_tags_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "dashboard_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "demo_data_tags_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "financial_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "demo_data_tags_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "demo_data_tags_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "production_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "demo_data_tags_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "sales_analytics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "demo_data_tags_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "task_completion"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "demo_data_tags_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_organization_financial_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "demo_data_tags_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_production_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "demo_data_tags_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "workforce_summary"
+            referencedColumns: ["organization_id"]
           },
         ]
       }
@@ -15353,6 +15477,7 @@ export type Database = {
           approved_at: string | null
           approved_by: string | null
           city: string | null
+          contact_person: string | null
           country: string | null
           country_code: string | null
           created_at: string | null
@@ -15383,6 +15508,7 @@ export type Database = {
           approved_at?: string | null
           approved_by?: string | null
           city?: string | null
+          contact_person?: string | null
           country?: string | null
           country_code?: string | null
           created_at?: string | null
@@ -15413,6 +15539,7 @@ export type Database = {
           approved_at?: string | null
           approved_by?: string | null
           city?: string | null
+          contact_person?: string | null
           country?: string | null
           country_code?: string | null
           created_at?: string | null

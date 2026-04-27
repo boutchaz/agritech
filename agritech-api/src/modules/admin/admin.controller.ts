@@ -11,6 +11,7 @@ import {
   UseGuards,
   Request,
 } from '@nestjs/common';
+import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { InternalAdminGuard } from './guards/internal-admin.guard';
 import { AdminService } from './admin.service';
@@ -24,6 +25,9 @@ import {
   ReferenceDataQueryDto,
   ReferenceDataDiffDto,
   OrgUsageQueryDto,
+  CreateAccessControlRoleDto,
+  UpdateAccessControlRoleDto,
+  ReplaceRolePermissionsDto,
 } from './dto';
 
 @Controller('admin')
@@ -403,5 +407,82 @@ export class AdminController {
     @Body() body: { name?: string; description?: string; features?: string[] },
   ) {
     return this.adminService.upsertModuleTranslation(moduleId, locale, body);
+  }
+
+  // ============================================
+  // Frontoffice Access Control Endpoints
+  // (backoffice internal-admin only)
+  // ============================================
+
+  @Get('access-control/roles')
+  @ApiTags('admin/access-control')
+  @ApiOperation({ summary: 'List all frontoffice roles (system + custom)' })
+  async getAccessControlRoles() {
+    return this.adminService.getAccessControlRoles();
+  }
+
+  @Post('access-control/roles')
+  @ApiTags('admin/access-control')
+  @ApiOperation({ summary: 'Create a custom frontoffice role' })
+  @ApiResponse({ status: 201, description: 'Role created' })
+  @ApiResponse({ status: 400, description: 'Invalid name/level or reserved identifier' })
+  async createAccessControlRole(
+    @Body() body: CreateAccessControlRoleDto,
+    @Request() req: any,
+  ) {
+    return this.adminService.createAccessControlRole(body, req.user.id);
+  }
+
+  @Patch('access-control/roles/:id')
+  @ApiTags('admin/access-control')
+  @ApiOperation({ summary: 'Update a custom role (system roles are immutable)' })
+  @ApiResponse({ status: 400, description: 'System roles cannot be modified' })
+  @ApiResponse({ status: 404, description: 'Role not found' })
+  async updateAccessControlRole(
+    @Param('id') roleId: string,
+    @Body() body: UpdateAccessControlRoleDto,
+    @Request() req: any,
+  ) {
+    return this.adminService.updateAccessControlRole(roleId, body, req.user.id);
+  }
+
+  @Delete('access-control/roles/:id')
+  @ApiTags('admin/access-control')
+  @ApiOperation({ summary: 'Soft-disable a custom role (system roles cannot be deleted)' })
+  async deleteAccessControlRole(
+    @Param('id') roleId: string,
+    @Request() req: any,
+  ) {
+    return this.adminService.deleteAccessControlRole(roleId, req.user.id);
+  }
+
+  @Get('access-control/permissions')
+  @ApiTags('admin/access-control')
+  @ApiOperation({ summary: 'List all available permissions' })
+  async getAccessControlPermissions() {
+    return this.adminService.getAccessControlPermissions();
+  }
+
+  @Get('access-control/roles/:id/permissions')
+  @ApiTags('admin/access-control')
+  @ApiOperation({ summary: 'Get permission IDs assigned to a role' })
+  async getAccessControlRolePermissions(@Param('id') roleId: string) {
+    return {
+      role_id: roleId,
+      permission_ids: await this.adminService.getRolePermissionIds(roleId),
+    };
+  }
+
+  @Put('access-control/roles/:id/permissions')
+  @ApiTags('admin/access-control')
+  @ApiOperation({
+    summary: 'Replace the permission set assigned to a custom role (transactional)',
+  })
+  @ApiResponse({ status: 400, description: 'Cannot edit permissions on system roles' })
+  async replaceAccessControlRolePermissions(
+    @Param('id') roleId: string,
+    @Body() body: ReplaceRolePermissionsDto,
+  ) {
+    return this.adminService.replaceRolePermissions(roleId, body.permission_ids ?? []);
   }
 }

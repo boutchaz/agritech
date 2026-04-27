@@ -2,110 +2,11 @@ import { Ability, AbilityBuilder } from '@casl/ability';
 import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '../../modules/database/database.service';
 import { Action } from './action.enum';
+import { Subject } from './subject.enum';
+import { RESOURCE_SUBJECT_MAP } from './resources';
 
-// Define subjects for all resources in the system
-export enum Subject {
-    // User & Organization management
-    USER = 'User',
-    ORGANIZATION = 'Organization',
-    ROLE = 'Role',
-    SUBSCRIPTION = 'Subscription',
-
-    // Physical resources
-    FARM = 'Farm',
-    PARCEL = 'Parcel',
-    WAREHOUSE = 'Warehouse',
-    INFRASTRUCTURE = 'Infrastructure',
-    STRUCTURE = 'Structure',
-    TREE = 'Tree',
-    FARM_HIERARCHY = 'FarmHierarchy',
-
-    // Financial resources
-    INVOICE = 'Invoice',
-    PAYMENT = 'Payment',
-    JOURNAL_ENTRY = 'JournalEntry',
-    ACCOUNT = 'Account',
-    CUSTOMER = 'Customer',
-    SUPPLIER = 'Supplier',
-    FINANCIAL_REPORT = 'FinancialReport',
-    COST_CENTER = 'CostCenter',
-    TAX = 'Tax',
-    BANK_ACCOUNT = 'BankAccount',
-    PERIOD = 'Period',
-    ACCOUNTING_REPORT = 'AccountingReport',
-    ACCOUNT_MAPPING = 'AccountMapping',
-
-    // People & Workforce
-    WORKER = 'Worker',
-    EMPLOYEE = 'Employee',
-    DAY_LABORER = 'DayLaborer',
-    TASK = 'Task',
-    PIECE_WORK = 'PieceWork',
-    WORK_UNIT = 'WorkUnit',
-
-    // Production
-    HARVEST = 'Harvest',
-    CROP_CYCLE = 'CropCycle',
-    CAMPAIGN = 'Campaign',
-    FISCAL_YEAR = 'FiscalYear',
-    PRODUCT_APPLICATION = 'ProductApplication',
-    ANALYSIS = 'Analysis',
-    SOIL_ANALYSIS = 'SoilAnalysis',
-    PLANT_ANALYSIS = 'PlantAnalysis',
-    WATER_ANALYSIS = 'WaterAnalysis',
-
-    // Inventory & Stock
-    PRODUCT = 'Product',
-    STOCK = 'Stock',
-    STOCK_ENTRY = 'StockEntry',
-    STOCK_ITEM = 'StockItem',
-    BIOLOGICAL_ASSET = 'BiologicalAsset',
-
-    // Sales & Purchasing
-    SALES_ORDER = 'SalesOrder',
-    PURCHASE_ORDER = 'PurchaseOrder',
-    QUOTE = 'Quote',
-    DELIVERY = 'Delivery',
-    RECEPTION_BATCH = 'ReceptionBatch',
-
-    // Quality & Lab
-    QUALITY_CONTROL = 'QualityControl',
-    LAB_SERVICE = 'LabService',
-
-    // Compliance
-    CERTIFICATION = 'Certification',
-    COMPLIANCE_CHECK = 'ComplianceCheck',
-
-    // Reporting & Analytics
-    REPORT = 'Report',
-    SATELLITE_ANALYSIS = 'SatelliteAnalysis',
-    SATELLITE_REPORT = 'SatelliteReport',
-    PRODUCTION_INTELLIGENCE = 'ProductionIntelligence',
-    DASHBOARD = 'Dashboard',
-    ANALYTICS = 'Analytics',
-    SENSOR = 'Sensor',
-
-    // Financial analytics
-    COST = 'Cost',
-    REVENUE = 'Revenue',
-    INVENTORY = 'Inventory',
-    UTILITY = 'Utility',
-
-    // Agronomy RAG
-    AGRONOMY_SOURCE = 'AgronomySource',
-
-    // Communication
-    CHAT = 'Chat',
-
-    // Settings & Configuration
-    SETTINGS = 'Settings',
-
-    // API
-    API = 'API',
-
-    // System
-    ALL = 'all',
-}
+// Re-export so existing `import { Subject } from '.../casl-ability.factory'` keeps working.
+export { Subject };
 
 // Allow both enum values and matching string literals for flexibility
 export type AppSubjects = typeof Subject[keyof typeof Subject] | 'all' | string;
@@ -144,7 +45,7 @@ export class CaslAbilityFactory {
         const client = this.databaseService.getAdminClient();
         const { data: orgUser, error } = await client
             .from('organization_users')
-            .select('role_id, roles(name, level)')
+            .select('role_id, roles(name, level, source)')
             .eq('user_id', user.id)
             .eq('organization_id', organizationId)
             .eq('is_active', true)
@@ -174,6 +75,41 @@ export class CaslAbilityFactory {
             roleName,
             roleLevel,
         });
+
+        // Dynamic role-permission model (source of truth for CUSTOM roles only).
+        // System roles keep the hardcoded grants below — DB rows for them are
+        // legacy seed data and intentionally narrower than the hardcoded set.
+        if (role?.source === 'custom') {
+            const { data: dynamicRolePermissions, error: dynamicRolePermissionsError } = await client
+                .from('role_permissions')
+                .select('permissions(action, resource)')
+                .eq('role_id', orgUser.role_id);
+
+            if (dynamicRolePermissionsError) {
+                console.warn('[CaslAbilityFactory] Failed to fetch dynamic role permissions:', dynamicRolePermissionsError.message);
+            } else {
+                for (const rp of dynamicRolePermissions as any[]) {
+                    const permission = rp.permissions;
+                    const action = permission?.action as Action | undefined;
+                    const resource = (permission?.resource || '').toString().toLowerCase();
+                    if (!action || !resource) continue;
+
+                    if (resource === 'all') {
+                        can(action, Subject.ALL as any);
+                        continue;
+                    }
+
+                    const subject = RESOURCE_SUBJECT_MAP[resource];
+                    if (!subject) continue;
+                    can(action, subject as any);
+                }
+            }
+
+            const ability = build({
+                detectSubjectType: (item: any) => item.constructor as any,
+            } as any);
+            return ability;
+        }
 
         // ============ SYSTEM ADMIN ============
         if (roleName === 'system_admin') {
@@ -511,7 +447,7 @@ export class CaslAbilityFactory {
         // Fetch user's role in this organization
         const { data: orgUser, error } = await client
             .from('organization_users')
-            .select('role_id, roles(name, display_name, level)')
+            .select('role_id, roles(name, display_name, level, source)')
             .eq('user_id', user.id)
             .eq('organization_id', organizationId)
             .eq('is_active', true)
@@ -540,6 +476,42 @@ export class CaslAbilityFactory {
         const cannot = (action: Action, subject: Subject | string) => {
             abilities.push({ action, subject: subject as string, inverted: true });
         };
+
+        // Dynamic role-permission model (source of truth for CUSTOM roles only).
+        // System roles fall through to the hardcoded grants below.
+        if (role?.source === 'custom') {
+            const { data: dynamicRolePermissions, error: dynamicRolePermissionsError } = await client
+                .from('role_permissions')
+                .select('permissions(action, resource)')
+                .eq('role_id', orgUser.role_id);
+
+            if (!dynamicRolePermissionsError) {
+                for (const rp of dynamicRolePermissions as any[]) {
+                    const permission = rp.permissions;
+                    const action = permission?.action as Action | undefined;
+                    const resource = (permission?.resource || '').toString().toLowerCase();
+                    if (!action || !resource) continue;
+
+                    if (resource === 'all') {
+                        can(action, 'all');
+                        continue;
+                    }
+
+                    const subject = RESOURCE_SUBJECT_MAP[resource];
+                    if (!subject) continue;
+                    can(action, subject);
+                }
+            }
+
+            return {
+                role: {
+                    name: role?.name || '',
+                    display_name: role?.display_name || '',
+                    level: role?.level || 0,
+                },
+                abilities,
+            };
+        }
 
         // Build abilities based on role (same logic as createForUser)
         if (roleName === 'system_admin') {
