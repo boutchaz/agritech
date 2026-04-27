@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { parcelsApi, type Parcel, type CreateParcelDto, type UpdateParcelDto } from '../lib/api/parcels';
 import { useAuth } from '../hooks/useAuth';
+import { trackEntityCreate, trackEntityUpdate, trackEntityDelete } from '../lib/analytics';
 
 export function useParcels(farmId: string | null) {
   const { currentOrganization } = useAuth();
@@ -74,15 +75,21 @@ export function useParcels(farmId: string | null) {
     if (!currentOrganization?.id) throw new Error('No organization selected');
 
     try {
-      const parcelData: CreateParcelDto = {
+      const { area, ...restDetails } = details;
+      const parcelData = {
         name,
         boundary,
         farm_id: farmId,
-        ...details,
-      };
+        ...restDetails,
+      } as Omit<CreateParcelDto, 'area'> & Partial<Pick<CreateParcelDto, 'area'>>;
 
-      const data = await parcelsApi.create(parcelData, currentOrganization.id);
+      if (area !== undefined) {
+        parcelData.area = area;
+      }
 
+      const data = await parcelsApi.create(parcelData as CreateParcelDto, currentOrganization.id);
+
+      trackEntityCreate('parcel');
       setParcels(prev => [...prev, data]);
       return data;
     } catch (err) {
@@ -100,6 +107,7 @@ export function useParcels(farmId: string | null) {
     try {
       const data = await parcelsApi.update(id, updates, currentOrganization.id);
 
+      trackEntityUpdate('parcel');
       setParcels(prev => prev.map(p => p.id === id ? data : p));
       return data;
     } catch (err) {
@@ -115,6 +123,7 @@ export function useParcels(farmId: string | null) {
     try {
       await parcelsApi.delete(id, farmId, currentOrganization.id);
 
+      trackEntityDelete('parcel');
       setParcels(prev => prev.map(p => p.id === id ? { ...p, is_active: false } : p));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error archiving parcel');

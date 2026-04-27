@@ -4,6 +4,7 @@ import {
   useQueryClient,
   keepPreviousData,
 } from '@tanstack/react-query';
+import { trackEntityCreate, trackEntityUpdate } from '../lib/analytics';
 import {
   paymentRecordsApi,
   type PaginatedPaymentRecordsQuery,
@@ -145,6 +146,7 @@ export function useCreatePaymentRecord() {
       return paymentRecordsApi.create(currentOrganization.id, request);
     },
     onSuccess: (data, variables) => {
+      trackEntityCreate('payment');
       const workerId = data?.worker_id || variables.worker_id;
       const orgId = currentOrganization?.id;
       
@@ -177,6 +179,7 @@ export function useApprovePayment() {
       return paymentRecordsApi.approve(currentOrganization.id, payment_id, { notes });
     },
     onSuccess: (data) => {
+      trackEntityUpdate('payment');
       queryClient.invalidateQueries({ queryKey: ['payment', data.id] });
       queryClient.invalidateQueries({ queryKey: ['payments', currentOrganization?.id] });
       queryClient.invalidateQueries({ queryKey: ['payment-statistics', currentOrganization?.id] });
@@ -197,6 +200,7 @@ export function useProcessPayment() {
       return paymentRecordsApi.process(currentOrganization.id, payment_id, processData);
     },
     onSuccess: (data) => {
+      trackEntityUpdate('payment');
       queryClient.invalidateQueries({ queryKey: ['payment', data.id] });
       queryClient.invalidateQueries({ queryKey: ['payments', currentOrganization?.id] });
       queryClient.invalidateQueries({ queryKey: ['worker-payments', data.worker_id] });
@@ -218,6 +222,7 @@ export function useRequestAdvance() {
       return paymentRecordsApi.requestAdvance(currentOrganization.id, request);
     },
     onSuccess: () => {
+      trackEntityCreate('payment');
       queryClient.invalidateQueries({ queryKey: ['payment-advances', currentOrganization?.id] });
     },
   });
@@ -236,6 +241,7 @@ export function useApproveAdvance() {
       return paymentRecordsApi.approveAdvance(currentOrganization.id, advance_id, approvalData);
     },
     onSuccess: () => {
+      trackEntityUpdate('payment');
       queryClient.invalidateQueries({ queryKey: ['payment-advances', currentOrganization?.id] });
     },
   });
@@ -253,6 +259,7 @@ export function usePayAdvance() {
       return paymentRecordsApi.payAdvance(currentOrganization.id, advanceId, paymentMethod);
     },
     onSuccess: () => {
+      trackEntityUpdate('payment');
       queryClient.invalidateQueries({ queryKey: ['payment-advances', currentOrganization?.id] });
     },
   });

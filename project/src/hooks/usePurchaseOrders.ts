@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { useAuth } from '../hooks/useAuth';
+import { trackEntityCreate, trackEntityUpdate } from '../lib/analytics';
 import { purchaseOrdersApi, type PaginatedPurchaseOrderQuery, type PaginatedResponse } from '../lib/api/purchase-orders';
 import { type InvoiceItemInput } from '../lib/taxCalculations';
 
@@ -205,6 +206,7 @@ export function useCreatePurchaseOrder() {
       return po;
     },
     onSuccess: () => {
+      trackEntityCreate('purchase_order');
       queryClient.invalidateQueries({ queryKey: ['purchase_orders', currentOrganization?.id] });
     },
   });
@@ -231,6 +233,7 @@ export function useConvertPOToBill() {
       return response;
     },
     onSuccess: () => {
+      trackEntityUpdate('purchase_order');
       queryClient.invalidateQueries({ queryKey: ['purchase_orders', currentOrganization?.id] });
       queryClient.invalidateQueries({ queryKey: ['invoices', currentOrganization?.id] });
     },
@@ -288,6 +291,7 @@ export function useUpdatePurchaseOrder() {
       return data as PurchaseOrder;
     },
     onSuccess: () => {
+      trackEntityUpdate('purchase_order');
       queryClient.invalidateQueries({ queryKey: ['purchase_orders', currentOrganization?.id] });
     },
   });

@@ -24,6 +24,7 @@ import { AuthContext, type AuthOrganization, type AuthFarm } from '../contexts/A
 import {
   setAnalyticsUserProperties,
   trackSessionStart,
+  trackEvent,
   type AnalyticsUserProperties,
 } from '../lib/analytics';
 import { AuthenticatedLayoutSkeleton } from '@/components/AuthenticatedLayoutSkeleton';
@@ -483,7 +484,19 @@ export const MultiTenantAuthProvider = ({ children }: { children: React.ReactNod
     });
   }, [user?.id, currentOrganization?.id, userRole?.role_name, loading]);
 
-function getOrganizationSize(orgCount: number, farmCount: number): 'solo' | 'small' | 'medium' | 'large' {
+  const SESSION_HEARTBEAT_MS = 5 * 60 * 1000;
+
+  useEffect(() => {
+    if (!user) return;
+
+    const interval = setInterval(() => {
+      trackEvent({ action: 'session_heartbeat', category: 'Engagement' });
+    }, SESSION_HEARTBEAT_MS);
+
+    return () => clearInterval(interval);
+  }, [user?.id]);
+
+  function getOrganizationSize(orgCount: number, farmCount: number): 'solo' | 'small' | 'medium' | 'large' {
   if (orgCount === 1 && farmCount <= 1) return 'solo';
   if (orgCount <= 2 && farmCount <= 5) return 'small';
   if (orgCount <= 5 && farmCount <= 20) return 'medium';

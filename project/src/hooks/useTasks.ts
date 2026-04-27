@@ -4,6 +4,7 @@ import {
   useQueryClient,
   keepPreviousData,
 } from "@tanstack/react-query";
+import { trackEntityCreate, trackEntityUpdate, trackEntityDelete } from '../lib/analytics';
 import { tasksApi, type PaginatedTaskQuery } from "../lib/api/tasks";
 import { runOrQueue } from "../lib/offlineTaskQueue";
 import { useAuth } from "../hooks/useAuth";
@@ -34,7 +35,10 @@ export function useTasks(organizationId: string, filters?: TaskFilters) {
     queryKey: ["tasks", organizationId, filterKey],
     queryFn: async () => {
       if (!organizationId) return [];
-      const res = await tasksApi.getAll(organizationId, filters);
+      const res = await tasksApi.getAll(
+        organizationId,
+        filters as any,
+      );
       return res.data;
     },
     enabled: !!organizationId,
@@ -150,6 +154,7 @@ export function useCreateTask() {
       return tasksApi.create(taskData, organization_id);
     },
     onSuccess: (_data, variables) => {
+      trackEntityCreate('task');
       const orgId = variables.organization_id;
       // Invalidate all tasks queries (both paginated and non-paginated)
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
@@ -176,6 +181,7 @@ export function useUpdateTask() {
       return tasksApi.update(taskId, updates, organizationId);
     },
     onSuccess: (_data, variables) => {
+      trackEntityUpdate('task');
       const orgId = variables.organizationId;
       queryClient.invalidateQueries({
         queryKey: ["task", orgId, variables.taskId],
@@ -204,6 +210,7 @@ export function useDeleteTask() {
       return { taskId, organizationId };
     },
     onSuccess: (_data, variables) => {
+      trackEntityDelete('task');
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
       queryClient.invalidateQueries({
         queryKey: ["task-statistics", variables.organizationId],
@@ -352,6 +359,7 @@ export function useAddTaskComment() {
       return outcome.result;
     },
     onSuccess: (data) => {
+      trackEntityCreate('task');
       queryClient.invalidateQueries({
         queryKey: ['task-comments', data.task_id],
       });
@@ -372,6 +380,7 @@ export function useUpdateTaskComment() {
       return tasksApi.updateComment(currentOrganization.id, taskId, commentId, { comment });
     },
     onSuccess: (_data, variables) => {
+      trackEntityUpdate('task');
       queryClient.invalidateQueries({ queryKey: ['task-comments', variables.taskId] });
     },
   });
@@ -387,6 +396,7 @@ export function useDeleteTaskComment() {
       return tasksApi.deleteComment(currentOrganization.id, taskId, commentId);
     },
     onSuccess: (_data, variables) => {
+      trackEntityDelete('task');
       queryClient.invalidateQueries({ queryKey: ['task-comments', variables.taskId] });
     },
   });
@@ -402,6 +412,7 @@ export function useResolveTaskComment() {
       return tasksApi.resolveComment(currentOrganization.id, taskId, commentId, resolved);
     },
     onSuccess: (_data, variables) => {
+      trackEntityUpdate('task');
       queryClient.invalidateQueries({ queryKey: ['task-comments', variables.taskId] });
     },
   });
@@ -472,6 +483,7 @@ export function useCompleteTask() {
       });
     },
     onSuccess: (_data, variables) => {
+      trackEntityUpdate('task');
       queryClient.invalidateQueries({
         queryKey: ["task", variables.organizationId, variables.taskId],
       });
@@ -507,6 +519,7 @@ export function useAddChecklistItem() {
       return tasksApi.addChecklistItem(currentOrganization.id, taskId, title);
     },
     onSuccess: (_data, variables) => {
+      trackEntityCreate('task');
       queryClient.invalidateQueries({ queryKey: ['task-checklist', currentOrganization?.id, variables.taskId] });
       queryClient.invalidateQueries({ queryKey: ['task', currentOrganization?.id, variables.taskId] });
     },
@@ -523,6 +536,7 @@ export function useToggleChecklistItem() {
       return tasksApi.toggleChecklistItem(currentOrganization.id, taskId, itemId);
     },
     onSuccess: (_data, variables) => {
+      trackEntityUpdate('task');
       queryClient.invalidateQueries({ queryKey: ['task-checklist', currentOrganization?.id, variables.taskId] });
       queryClient.invalidateQueries({ queryKey: ['task', currentOrganization?.id, variables.taskId] });
     },
@@ -539,6 +553,7 @@ export function useRemoveChecklistItem() {
       return tasksApi.removeChecklistItem(currentOrganization.id, taskId, itemId);
     },
     onSuccess: (_data, variables) => {
+      trackEntityDelete('task');
       queryClient.invalidateQueries({ queryKey: ['task-checklist', currentOrganization?.id, variables.taskId] });
       queryClient.invalidateQueries({ queryKey: ['task', currentOrganization?.id, variables.taskId] });
     },
@@ -569,6 +584,7 @@ export function useAddDependency() {
       return tasksApi.addDependency(currentOrganization.id, taskId, dependsOnTaskId, dependencyType, lagDays);
     },
     onSuccess: (_data, variables) => {
+      trackEntityCreate('task');
       queryClient.invalidateQueries({ queryKey: ['task-dependencies', currentOrganization?.id, variables.taskId] });
       queryClient.invalidateQueries({ queryKey: ['task-dependencies', currentOrganization?.id, variables.dependsOnTaskId] });
       queryClient.invalidateQueries({ queryKey: ['task-blocked', currentOrganization?.id, variables.taskId] });
@@ -586,6 +602,7 @@ export function useRemoveDependency() {
       return tasksApi.removeDependency(currentOrganization.id, dependencyId);
     },
     onSuccess: () => {
+      trackEntityDelete('task');
       queryClient.invalidateQueries({ queryKey: ['task-dependencies'] });
       queryClient.invalidateQueries({ queryKey: ['task-blocked'] });
     },
@@ -620,6 +637,7 @@ export function useCreateTaskCategory() {
       return tasksApi.createCategory(currentOrganization.id, category);
     },
     onSuccess: () => {
+      trackEntityCreate('task');
       queryClient.invalidateQueries({
         queryKey: ["task-categories", currentOrganization?.id],
       });

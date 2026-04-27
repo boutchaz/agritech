@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
+import { trackEntityCreate, trackEntityUpdate, trackEntityDelete } from '../lib/analytics';
 import { workersApi, type PaginatedWorkerQuery } from '../lib/api/workers';
 import type { PaginatedResponse } from '../lib/api/types';
 import type { WorkerFormData, WorkRecord, MetayageSettlement } from '../types/workers';
@@ -69,6 +70,7 @@ export const useCreateWorker = () => {
       return workersApi.create(workerData, organization_id);
     },
     onSuccess: (worker) => {
+      trackEntityCreate('worker');
       queryClient.invalidateQueries({ queryKey: ['workers'] });
       queryClient.invalidateQueries({ queryKey: ['active-workers', worker.organization_id] });
     },
@@ -84,6 +86,7 @@ export const useUpdateWorker = () => {
       return workersApi.update(id, data, organizationId);
     },
     onSuccess: (worker) => {
+      trackEntityUpdate('worker');
       queryClient.invalidateQueries({ queryKey: ['workers'] });
       queryClient.invalidateQueries({ queryKey: ['worker', worker.organization_id, worker.id] });
       queryClient.invalidateQueries({ queryKey: ['active-workers', worker.organization_id] });
@@ -100,6 +103,7 @@ export const useDeleteWorker = () => {
       return workersApi.delete(workerId, organizationId);
     },
     onSuccess: (_, variables) => {
+      trackEntityDelete('worker');
       queryClient.invalidateQueries({ queryKey: ['workers'] });
       queryClient.invalidateQueries({ queryKey: ['active-workers', variables.organizationId] });
     },
@@ -115,6 +119,7 @@ export const useDeactivateWorker = () => {
       return workersApi.deactivate(organizationId, workerId, endDate);
     },
     onSuccess: (worker) => {
+      trackEntityDelete('worker');
       queryClient.invalidateQueries({ queryKey: ['workers'] });
       queryClient.invalidateQueries({ queryKey: ['worker', worker.organization_id, worker.id] });
       queryClient.invalidateQueries({ queryKey: ['active-workers', worker.organization_id] });
@@ -156,6 +161,7 @@ export const useCreateWorkRecord = () => {
       return workersApi.createWorkRecord(organizationId, workerId, data) as Promise<WorkRecord>;
     },
     onSuccess: (_, variables) => {
+      trackEntityCreate('worker');
       queryClient.invalidateQueries({ queryKey: ['work-records', variables.organizationId, variables.workerId] });
       queryClient.invalidateQueries({ queryKey: ['worker', variables.organizationId, variables.workerId] });
     },
@@ -181,6 +187,7 @@ export const useUpdateWorkRecord = () => {
       return workersApi.updateWorkRecord(organizationId, workerId, recordId, data) as Promise<WorkRecord>;
     },
     onSuccess: (_, variables) => {
+      trackEntityUpdate('worker');
       queryClient.invalidateQueries({ queryKey: ['work-records', variables.organizationId, variables.workerId] });
     },
   });
@@ -215,6 +222,7 @@ export const useCreateMetayageSettlement = () => {
       return workersApi.createMetayageSettlement(organizationId, workerId, data) as Promise<MetayageSettlement>;
     },
     onSuccess: (_, variables) => {
+      trackEntityCreate('worker');
       queryClient.invalidateQueries({ queryKey: ['metayage-settlements', variables.organizationId, variables.workerId] });
     },
   });

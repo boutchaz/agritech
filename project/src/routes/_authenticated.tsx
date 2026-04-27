@@ -17,6 +17,7 @@ import { LevelUpSuggestion } from '../components/adaptive'
 import { useSidebarMargin } from '../hooks/useSidebarLayout'
 import { useAuthStore, waitForHydration } from '../stores/authStore'
 import { useActivityTracking } from '../hooks/useActivityTracking'
+import { usePageView } from '../lib/analytics/hooks'
 import { isRTLLocale } from '../lib/is-rtl-locale'
 import { loadLanguage } from '@/i18n/config'
 import { usersApi } from '../lib/api/users'
@@ -78,6 +79,7 @@ function AuthenticatedLayout() {
 
   // Track user activity for live dashboard concurrent users
   useActivityTracking()
+  usePageView()
 
   // Keep localStorage aligned with DB for the next cold load (external storage only — no setState)
   useEffect(() => {
