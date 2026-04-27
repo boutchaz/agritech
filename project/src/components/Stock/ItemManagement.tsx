@@ -58,13 +58,18 @@ import { useNavigate } from '@tanstack/react-router';
 import { itemsApi } from '@/lib/api/items';
 import { marketplaceCategoriesApi } from '@/lib/api/marketplace-categories';
 import { toast } from 'sonner';
-import type { Item, CreateItemInput, ProductVariant, ItemStockLevelsResponse } from '@/types/items';
+import type { Item, CreateItemInput, ProductVariant, ItemStockLevelsResponse, ItemGroup } from '@/types/items';
 import type { WorkUnit } from '@/types/work-units';
 import LowStockAlerts from './LowStockAlerts';
 import ProductImageUpload from './ProductImageUpload';
 import ItemStockTimeline from './ItemStockTimeline';
 import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import { EmptyState } from '@/components/ui/empty-state';
+
+// Stable empty array reference to avoid creating a new `[]` on every render
+// when the useItemGroups query data is undefined. Without this, the form's
+// effect deps churn each render and trigger a setValue/reset re-render loop.
+const EMPTY_ITEM_GROUPS: ItemGroup[] = [];
 
 // Zod schema for item form validation
 const itemFormSchema = z.object({
@@ -230,7 +235,8 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
   const { currentOrganization } = useAuth();
   const { format: formatCurrency } = useCurrency();
   const navigate = useNavigate();
-  const { data: itemGroups = [], refetch: refetchGroups } = useItemGroups({ is_active: true });
+  const { data: itemGroupsData, refetch: refetchGroups } = useItemGroups({ is_active: true });
+  const itemGroups = itemGroupsData ?? EMPTY_ITEM_GROUPS;
   const createItem = useCreateItem();
   const updateItem = useUpdateItem();
   const { handleFormError } = useFormErrors<ItemFormData>();
@@ -244,6 +250,7 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
     setError,
     watch,
     setValue,
+    getValues,
     formState: { errors, isSubmitting },
   } = useForm<ItemFormData>({
     resolver: zodResolver(itemFormSchema),
@@ -387,10 +394,10 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
   }, [item, firstItemGroupId, reset, itemGroups]);
 
   useEffect(() => {
-    if (!item && itemGroups.length > 0 && !watch('item_group_id')) {
-      setValue('item_group_id', itemGroups[0].id);
+    if (!item && firstItemGroupId && !getValues('item_group_id')) {
+      setValue('item_group_id', firstItemGroupId);
     }
-  }, [itemGroups, item, watch, setValue]);
+  }, [firstItemGroupId, item, getValues, setValue]);
 
   const handleGroupCreated = async () => {
     await new Promise((resolve) => setTimeout(resolve, 100));
