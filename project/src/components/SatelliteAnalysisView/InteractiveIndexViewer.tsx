@@ -412,8 +412,11 @@ const InteractiveIndexViewer = ({
         }
       }
     } catch (err) {
+      const detail = (err as Error & { detail?: { code?: string } })?.detail;
       const errorMessage = err instanceof Error ? err.message : t('satellite:heatmap.warnings.failedToGenerate');
-      if (errorMessage.includes('No images found')) {
+      if (detail?.code === 'no_satellite_imagery') {
+        setError(t('satellite:heatmap.warnings.noImagesForDate', { date: selectedDate }));
+      } else if (errorMessage.includes('No images found')) {
         setError(t('satellite:heatmap.warnings.noImagesForDate', { date: selectedDate }));
       } else if (errorMessage.includes('cloud coverage')) {
         setError(t('satellite:heatmap.warnings.cloudCoverageError'));

@@ -725,7 +725,20 @@ const LeafletHeatmapViewer = ({
 
       setData(result as HeatmapDataResponse);
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('satellite:heatmap.warnings.failedToGenerate'));
+      // Backend signals "no Sentinel-2 acquisition for this date" via a
+      // structured 404 detail. Render a friendly warning instead of the
+      // generic "request failed" message.
+      const detail = (err as Error & { detail?: { code?: string; hint?: string } })?.detail;
+      if (detail?.code === 'no_satellite_imagery') {
+        setError(
+          t(
+            'satellite:heatmap.warnings.noImageryForDate',
+            'Aucune image Sentinel-2 disponible pour cette date. Le satellite repasse environ tous les 5 jours et les jours nuageux sont filtrés. Choisissez une date proche.',
+          ),
+        );
+      } else {
+        setError(err instanceof Error ? err.message : t('satellite:heatmap.warnings.failedToGenerate'));
+      }
     } finally {
       setIsLoading(false);
     }

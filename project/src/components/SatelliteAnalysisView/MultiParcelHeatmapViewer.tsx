@@ -155,11 +155,21 @@ const MultiParcelHeatmapViewer = ({
       });
       setData(result);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to generate heatmap');
+      const detail = (err as Error & { detail?: { code?: string } })?.detail;
+      if (detail?.code === 'no_satellite_imagery') {
+        setError(
+          t(
+            'satellite:heatmap.warnings.noImageryForDate',
+            'Aucune image Sentinel-2 disponible pour cette date. Le satellite repasse environ tous les 5 jours et les jours nuageux sont filtrés.',
+          ),
+        );
+      } else {
+        setError(err instanceof Error ? err.message : 'Failed to generate heatmap');
+      }
     } finally {
       setIsLoading(false);
     }
-  }, [multiGeometry, selectedDate, selectedIndex, farmName]);
+  }, [multiGeometry, selectedDate, selectedIndex, farmName, t]);
 
   if (usableParcels.length === 0) {
     return (
