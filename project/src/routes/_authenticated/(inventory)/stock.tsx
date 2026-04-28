@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { createFileRoute, Outlet, useRouter, useRouterState } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/hooks/useAuth';
@@ -100,6 +100,20 @@ const AppContent = () => {
     if (!target || target.tabs.length === 0) return;
     router.navigate({ to: target.tabs[0].to });
   };
+
+  // Tour integration: switch tab groups when the inventory tour advances to
+  // a step that targets a sub-tab in another group. The tour fires this event
+  // before the step renders so the target element is mounted.
+  useEffect(() => {
+    const onTourGroup = (e: Event) => {
+      const ce = e as CustomEvent<string>;
+      if (ce.detail) handleGroupChange(ce.detail);
+    };
+    window.addEventListener('tour:set-stock-group', onTourGroup);
+    return () => window.removeEventListener('tour:set-stock-group', onTourGroup);
+    // handleGroupChange closes over groups + router; safe — they're stable per render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [groups]);
 
   const handleTabChange = (value: string) => {
     const target = allTabs.find((tab) => tab.value === value);

@@ -5626,27 +5626,47 @@
     "inventory": {
       "step1": {
         "title": "Bienvenue dans Stock 📦",
-        "content": "Ce module gère tout ce que vous stockez : semences, engrais, phytosanitaires, emballages, récoltes. Les quatre onglets ci-dessus suivent votre flux quotidien — Catalogue → Mouvements → Opérations → Insights. On vous montre chacun en 30 secondes."
+        "content": "Ce module gère tout ce que vous stockez : semences, engrais, phytosanitaires, emballages, récoltes. Les quatre groupes (Catalogue → Mouvements → Opérations → Insights) suivent votre flux quotidien. On parcourt chaque écran — environ 90 secondes."
       },
       "step2": {
-        "title": "1. Catalogue — Définissez ce que vous stockez",
-        "content": "Commencez ici. Les **Articles** sont vos produits (ex. \"Urée 46%\"), les **Fournisseurs** sont chez qui vous achetez, les **Groupes** classent vos articles par catégorie, les **Lots** suivent les batches avec dates de péremption. Sans articles, rien d'autre ne fonctionne."
+        "title": "Articles — Votre catalogue produits",
+        "content": "Chaque produit que vous stockez vit ici (ex. \"Urée 46%\", \"Mancozèbe 80%\", \"Caisse 10kg\"). Chaque article a une unité, un seuil de réapprovisionnement optionnel, une méthode de valorisation FIFO/LIFO, et un ou plusieurs codes-barres. Rien ne fonctionne sans articles — commencez ici."
       },
       "step3": {
-        "title": "2. Mouvements — Enregistrez les entrées/sorties",
-        "content": "**Réception** capture les achats entrants (l'écran le plus utilisé). **Saisie Rapide** pour mobile au quotidien. **Entrées de Stock** est le journal complet de chaque IN/OUT. **Approbations** pour que les managers valident les gros mouvements. **Livraisons** trace ce qui sort vers les clients."
+        "title": "Fournisseurs — Chez qui vous achetez",
+        "content": "Enregistrez vos vendeurs avec leur ICE, conditions de paiement, devise par défaut. Lors d'une réception, le fournisseur se relie automatiquement à la facture et à l'écriture comptable au compte fournisseur."
       },
       "step4": {
-        "title": "3. Opérations — Gestion quotidienne",
-        "content": "**Inventaire** affiche les niveaux de stock en direct par entrepôt. **Inventaire Physique** pour les comptages physiques vs système (mensuel). **Alertes Péremption** signalent phytosanitaires/semences avant expiration — critique pour la conformité. **Réapprovisionnement** suggère quoi acheter quand le stock passe sous le seuil."
+        "title": "Réception — Saisir les achats entrants",
+        "content": "L'écran le plus utilisé. Choisissez un fournisseur, sélectionnez les articles (ou scannez), entrez qté + coût + lot + péremption → poste un Bon de Réception qui augmente le stock et crée le brouillon de facture fournisseur. 80% de la donnée stock entre par ici."
       },
       "step5": {
-        "title": "4. Insights — Voyez où dort votre argent",
-        "content": "**Tableau de bord** résume la valeur totale du stock et les KPIs. **Rapports** pour la comptabilité/management. **Vieillissement** affiche le stock dormant par 0-30 / 31-60 / 61-90 / 90+ jours — trouvez la bouteille de pesticide à 800 DH oubliée depuis 6 mois."
+        "title": "Saisie Rapide — Mobile pour le terrain",
+        "content": "Pour les ouvriers de terrain et la consommation quotidienne. Scanner un code-barres → saisir qté → valider. Évite le formulaire complet. Parfait pour la sortie quotidienne d'engrais vers une parcelle."
       },
       "step6": {
+        "title": "Entrées de Stock — Journal complet",
+        "content": "Chaque IN, OUT et TRANSFERT vit ici avec son écriture comptable, lot, parcelle, cycle de culture. Filtrez par date, type, entrepôt, article. Source de vérité pour les audits de conformité et la traçabilité."
+      },
+      "step7": {
+        "title": "Inventaire — Stock en direct par entrepôt",
+        "content": "Ce que vous avez, où, maintenant. Cliquez un article pour voir la décomposition par lot, les plus anciens, les réservations, et les allocations par parcelle. Utilisez avant un traitement ou avant une commande."
+      },
+      "step8": {
+        "title": "Inventaire Physique — Réconciliation mensuelle",
+        "content": "À faire chaque mois. L'assistant liste la qté attendue par article, vous saisissez la qté comptée, et il crée automatiquement une écriture de Réconciliation pour chaque écart — pas de calcul manuel, audit complet."
+      },
+      "step9": {
+        "title": "Alertes Péremption — Conformité + anti-gaspi",
+        "content": "Affiche chaque lot proche ou dépassé de péremption, regroupé par urgence (critique / avertissement / attention). Critique pour la conformité phyto — utiliser un produit expiré vous fait perdre la certification GlobalGAP / Bio."
+      },
+      "step10": {
+        "title": "Vieillissement — Où dort votre argent",
+        "content": "Vue par tranches de la valeur du stock restant : 0-30 / 31-60 / 61-90 / 90+ jours. La tranche 90+ est où vous trouvez la bouteille de pesticide à 800 DH qui prend la poussière depuis la dernière campagne. Libérez de la trésorerie."
+      },
+      "step11": {
         "title": "Prêt à démarrer 🚀",
-        "content": "Première action : ouvrez **Catalogue → Articles** et créez vos 5–10 principaux articles (les intrants que vous utilisez le plus). Puis **Mouvements → Réception** pour saisir votre premier achat. Tout le reste en découle."
+        "content": "Première action : ouvrez **Catalogue → Articles** et créez vos 5–10 principaux intrants. Puis **Catalogue → Fournisseurs** pour vos vendeurs principaux. Puis **Mouvements → Réception** pour votre premier achat. Rejouez ce tour à tout moment via le bouton ? (en haut à droite)."
       }
     },
     "accounting": {

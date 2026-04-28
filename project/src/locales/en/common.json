@@ -5788,27 +5788,47 @@
     "inventory": {
       "step1": {
         "title": "Welcome to Stock 📦",
-        "content": "This module covers everything you store: seeds, fertilizers, pesticides, packaging, harvested produce. The four tabs above mirror your daily flow — Catalog → Movements → Operations → Insights. We'll walk through each in 30 seconds."
+        "content": "This module covers everything you store: seeds, fertilizers, pesticides, packaging, harvested produce. The four groups (Catalog → Movements → Operations → Insights) follow your daily flow. We'll walk every screen — about 90 seconds."
       },
       "step2": {
-        "title": "1. Catalog — Define what you stock",
-        "content": "Start here. **Items** are your products (e.g. \"Urée 46%\"), **Suppliers** are who you buy from, **Groups** organize items into categories, **Batches** track lots with expiry dates. Without items, nothing else works."
+        "title": "Items — Your product catalog",
+        "content": "Every product you stock lives here (e.g. \"Urée 46%\", \"Mancozèbe 80%\", \"Caisse 10kg\"). Each item has a unit, optional reorder threshold, FIFO/LIFO valuation, and one or more barcodes. Nothing else works without items, so start here."
       },
       "step3": {
-        "title": "2. Movements — Record everything in/out",
-        "content": "**Reception** captures incoming purchases (the most-used screen). **Quick Entry** is for fast daily use on mobile. **Stock Entries** is the full audit log of every IN/OUT. **Approvals** is for managers to validate larger movements. **Deliveries** track outgoing to customers."
+        "title": "Suppliers — Who you buy from",
+        "content": "Register vendors with their tax ID (ICE), payment terms, and default currency. When you record a purchase reception, the supplier auto-links to the invoice and account-payable journal entry."
       },
       "step4": {
-        "title": "3. Operations — Day-to-day management",
-        "content": "**Inventory** shows live stock levels per warehouse. **Stock Take** is for physical counts vs system (do this monthly). **Expiry Alerts** flag pesticides/seeds before they expire — critical for compliance. **Reorder** suggests what to buy when stock falls below your reorder point."
+        "title": "Reception — Record incoming purchases",
+        "content": "The most-used screen. Pick a supplier, scan/select items, enter qty + cost + batch + expiry → posts a Material Receipt that increases warehouse stock and creates the supplier invoice draft. This is where 80% of stock data enters the system."
       },
       "step5": {
-        "title": "4. Insights — See where your money sits",
-        "content": "**Dashboard** summarizes total stock value and KPIs. **Reports** for accounting/management views. **Aging** shows slow-moving stock by 0-30 / 31-60 / 61-90 / 90+ days — find the expensive bottle of pesticide stuck on the shelf for 6 months."
+        "title": "Quick Entry — Fast mobile entry",
+        "content": "For field workers and quick consumption logging. Scan a barcode → enter qty → submit. Skips the form-heavy reception flow. Perfect for daily fertilizer issues to a parcel."
       },
       "step6": {
+        "title": "Stock Entries — Full audit log",
+        "content": "Every IN, OUT, and TRANSFER lives here with its journal entry, batch, parcel, and crop cycle. Filter by date, type, warehouse, or item. This is the source of truth for compliance audits and traceability."
+      },
+      "step7": {
+        "title": "Inventory — Live stock by warehouse",
+        "content": "What you have, where, right now. Drill into any item to see batch breakdowns, oldest lots, reservations, and per-parcel allocations. Use this when planning a treatment or before placing an order."
+      },
+      "step8": {
+        "title": "Stock Take — Physical count reconciliation",
+        "content": "Do this monthly. The wizard lists expected qty per item, you enter the counted qty, and it auto-creates a Stock Reconciliation entry for any variance — no manual math, full audit trail."
+      },
+      "step9": {
+        "title": "Expiry Alerts — Compliance + waste prevention",
+        "content": "Surfaces every batch nearing or past expiry, grouped by urgency (critical / warning / attention). Critical for pesticide compliance — using an expired phytosanitary disqualifies you from GlobalGAP / Bio audits."
+      },
+      "step10": {
+        "title": "Aging — Where your money is sleeping",
+        "content": "Bucketed view of remaining stock value by 0-30 / 31-60 / 61-90 / 90+ days. The 90+ bucket is where you find the 800-DH bottle of pesticide that's been gathering dust since last campaign. Free up cash by acting on it."
+      },
+      "step11": {
         "title": "Ready to start 🚀",
-        "content": "Your first action: open **Catalog → Items** and create your top 5–10 items (the inputs you use most). Then open **Movements → Reception** to record your first purchase. Everything else flows from there."
+        "content": "Your first action: open **Catalog → Items** and create your top 5–10 inputs. Then **Catalog → Suppliers** for your main vendors. Then **Movements → Reception** for your first purchase. Replay this tour anytime via the ? button (top-right)."
       }
     },
     "accounting": {

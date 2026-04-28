@@ -542,9 +542,10 @@ export const getTourDefinitions = (t: TFunction): Record<TourId, Step[]> => ({
     },
   ],
   inventory: [
-    // Anchored to the always-visible group tabs (the sub-tabs only render
-    // for the active group). Each step explains all the sub-tabs in that
-    // group verbally so the tour works without programmatic tab switching.
+    // Each step's `data.stockGroup` makes the Stock layout switch tab groups
+    // before that step renders, so sub-tabs are mounted in the DOM and
+    // Joyride can find them. See useEffect dispatcher in TourProvider and
+    // matching listener in routes/_authenticated/(inventory)/stock.tsx.
     {
       target: '[data-tour="stock-overview"]',
       title: t('tour.inventory.step1.title'),
@@ -553,37 +554,81 @@ export const getTourDefinitions = (t: TFunction): Record<TourId, Step[]> => ({
       skipBeacon: true,
     },
     {
-      target: '[data-tour="stock-group-catalog"]',
+      target: '[data-tour="stock-items"]',
       title: t('tour.inventory.step2.title'),
       content: t('tour.inventory.step2.content'),
       placement: 'bottom',
       skipBeacon: true,
+      data: { stockGroup: 'catalog' },
     },
     {
-      target: '[data-tour="stock-group-movements"]',
+      target: '[data-tour="stock-suppliers"]',
       title: t('tour.inventory.step3.title'),
       content: t('tour.inventory.step3.content'),
       placement: 'bottom',
       skipBeacon: true,
+      data: { stockGroup: 'catalog' },
     },
     {
-      target: '[data-tour="stock-group-operations"]',
+      target: '[data-tour="stock-reception"]',
       title: t('tour.inventory.step4.title'),
       content: t('tour.inventory.step4.content'),
       placement: 'bottom',
       skipBeacon: true,
+      data: { stockGroup: 'movements' },
     },
     {
-      target: '[data-tour="stock-group-insights"]',
+      target: '[data-tour="stock-quick"]',
       title: t('tour.inventory.step5.title'),
       content: t('tour.inventory.step5.content'),
       placement: 'bottom',
       skipBeacon: true,
+      data: { stockGroup: 'movements' },
+    },
+    {
+      target: '[data-tour="stock-movements"]',
+      title: t('tour.inventory.step6.title'),
+      content: t('tour.inventory.step6.content'),
+      placement: 'bottom',
+      skipBeacon: true,
+      data: { stockGroup: 'movements' },
+    },
+    {
+      target: '[data-tour="stock-warehouses"]',
+      title: t('tour.inventory.step7.title'),
+      content: t('tour.inventory.step7.content'),
+      placement: 'bottom',
+      skipBeacon: true,
+      data: { stockGroup: 'operations' },
+    },
+    {
+      target: '[data-tour="stock-take"]',
+      title: t('tour.inventory.step8.title'),
+      content: t('tour.inventory.step8.content'),
+      placement: 'bottom',
+      skipBeacon: true,
+      data: { stockGroup: 'operations' },
+    },
+    {
+      target: '[data-tour="stock-expiry"]',
+      title: t('tour.inventory.step9.title'),
+      content: t('tour.inventory.step9.content'),
+      placement: 'bottom',
+      skipBeacon: true,
+      data: { stockGroup: 'operations' },
+    },
+    {
+      target: '[data-tour="stock-aging"]',
+      title: t('tour.inventory.step10.title'),
+      content: t('tour.inventory.step10.content'),
+      placement: 'bottom',
+      skipBeacon: true,
+      data: { stockGroup: 'insights' },
     },
     {
       target: '[data-tour="stock-overview"]',
-      title: t('tour.inventory.step6.title'),
-      content: t('tour.inventory.step6.content'),
+      title: t('tour.inventory.step11.title'),
+      content: t('tour.inventory.step11.content'),
       placement: 'bottom',
       skipBeacon: true,
     },
@@ -1409,6 +1454,18 @@ export const TourProvider = ({ children }: TourProviderProps) => {
   // Do not filter steps here: a filtered array changes length/order vs. `stepIndex` and breaks
   // controlled mode. Missing targets are handled via EVENTS.TARGET_NOT_FOUND above.
   const shouldRun = tourState.isRunning && rawSteps.length > 0;
+
+  // Per-step side effects: when a step has data.stockGroup, dispatch a window
+  // event so the Stock layout can switch its active tab group before the next
+  // sub-tab step renders. Decouples tour from layout state.
+  useEffect(() => {
+    if (!tourState.isRunning || !tourState.currentTour) return;
+    const step = rawSteps[tourState.stepIndex];
+    const data = step?.data as { stockGroup?: string } | undefined;
+    if (data?.stockGroup) {
+      window.dispatchEvent(new CustomEvent('tour:set-stock-group', { detail: data.stockGroup }));
+    }
+  }, [tourState.currentTour, tourState.stepIndex, tourState.isRunning, rawSteps]);
 
   // ESC key listener to dismiss running tour
   useHotkey('Escape', endTour, {
