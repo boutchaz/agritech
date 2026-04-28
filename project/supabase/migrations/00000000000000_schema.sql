@@ -1233,7 +1233,26 @@ CREATE TABLE IF NOT EXISTS taxes (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Withholding tax support — Moroccan IGR (10% pro services) and supplier
+-- VAT withholding (1.75% on certain payments). When is_withholding=true,
+-- the GL helper splits the supplier credit: the supplier gets net-of-WHT,
+-- the state-WHT-payable account gets the WHT amount.
+ALTER TABLE taxes ADD COLUMN IF NOT EXISTS is_withholding BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE taxes ADD COLUMN IF NOT EXISTS withholding_account_id UUID;
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_taxes_withholding_account') THEN
+    ALTER TABLE taxes
+      ADD CONSTRAINT fk_taxes_withholding_account
+      FOREIGN KEY (withholding_account_id) REFERENCES accounts(id) ON DELETE SET NULL;
+  END IF;
+END $$;
+
 CREATE INDEX IF NOT EXISTS idx_taxes_org ON taxes(organization_id);
+CREATE INDEX IF NOT EXISTS idx_taxes_withholding ON taxes(organization_id) WHERE is_withholding = true;
+
+COMMENT ON COLUMN taxes.is_withholding IS 'True when this tax is withheld at source rather than added to the invoice total. Reduces what the supplier receives; the WHT amount goes to a state-payable account instead.';
+COMMENT ON COLUMN taxes.withholding_account_id IS 'GL account where the withheld amount accrues (state-WHT-payable). Falls back to the default tax payable mapping if NULL.';
 
 -- Bank Accounts
 CREATE TABLE IF NOT EXISTS bank_accounts (

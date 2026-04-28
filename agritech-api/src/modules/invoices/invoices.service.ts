@@ -550,7 +550,9 @@ export class InvoicesService {
           unit_of_measure,
           amount,
           tax_amount,
-          account_id
+          tax_id,
+          account_id,
+          tax:taxes(id, is_withholding, withholding_account_id)
         )
       `)
       .eq('id', invoiceId)
@@ -638,15 +640,24 @@ export class InvoicesService {
           grand_total: Number(invoice.grand_total),
           tax_total: Number(invoice.tax_total ?? 0),
           party_name: invoice.party_name,
-          items: (invoice.items || []).map((item: any) => ({
-            id: item.id,
-            item_name: item.item_name,
-            description: item.description,
-            amount: Number(item.amount),
-            tax_amount: Number(item.tax_amount ?? 0),
-            account_id: item.account_id || null,
-            cost_center_id: item.cost_center_id || null,
-          })),
+          items: (invoice.items || []).map((item: any) => {
+            const isWht = !!item.tax?.is_withholding;
+            const taxAmt = Number(item.tax_amount ?? 0);
+            return {
+              id: item.id,
+              item_name: item.item_name,
+              description: item.description,
+              amount: Number(item.amount),
+              // For WHT taxes, the tax_amount is the WITHHELD amount, not a
+              // separate VAT-style line — pass it via withholding_amount and
+              // zero out tax_amount so the helper doesn't double-book it.
+              tax_amount: isWht ? 0 : taxAmt,
+              withholding_amount: isWht ? taxAmt : 0,
+              withholding_account_id: isWht ? item.tax?.withholding_account_id ?? null : null,
+              account_id: item.account_id || null,
+              cost_center_id: item.cost_center_id || null,
+            };
+          }),
         },
         jeId,
         {

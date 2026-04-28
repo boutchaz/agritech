@@ -20,6 +20,9 @@ export interface InvoiceItem {
   /** @deprecated Use account_id instead */
   expense_account_id?: string | null;
   cost_center_id?: string | null;
+  /** When the line's tax is a withholding tax, the WHT amount accrues here instead of regular tax payable. */
+  withholding_amount?: number | null;
+  withholding_account_id?: string | null;
 }
 
 export interface InvoiceRecord {
@@ -193,8 +196,14 @@ export function buildInvoiceLedgerLines(
       lineDebits += amount;
     });
 
-    // Dr. Tax Receivable
-    if (taxTotal > 0) {
+    // Dr. Tax Receivable (regular VAT etc — non-withholding only)
+    const regularTaxTotal = roundCurrency(
+      invoice.items.reduce(
+        (sum, item) => sum + toNumber(item.tax_amount) * fx,
+        0,
+      ),
+    );
+    if (regularTaxTotal > 0) {
       if (!accounts.taxReceivableAccountId) {
         throw new Error('Missing tax receivable account for purchase invoice');
       }
@@ -202,26 +211,57 @@ export function buildInvoiceLedgerLines(
       lines.push({
         journal_entry_id: entryId,
         account_id: accounts.taxReceivableAccountId,
-        debit: taxTotal,
+        debit: regularTaxTotal,
         credit: 0,
         description: `Purchase tax for ${invoice.invoice_number}`,
       });
-      lineDebits += taxTotal;
+      lineDebits += regularTaxTotal;
     }
 
-    // Cr. Accounts Payable
+    // Withholding tax: reduce the payable credit, accrue a separate line to
+    // state-WHT-payable. Group by withholding_account_id so lines with the
+    // same account collapse to one journal item.
+    const whtByAccount = new Map<string, number>();
+    let withholdingTotal = 0;
+    invoice.items.forEach((item) => {
+      const wht = roundCurrency(toNumber(item.withholding_amount) * fx);
+      if (wht <= 0) return;
+      const acct = item.withholding_account_id || accounts.taxPayableAccountId;
+      if (!acct) {
+        throw new Error(
+          `Invoice item ${item.id} has withholding amount but no withholding_account_id and no fallback tax payable account.`,
+        );
+      }
+      whtByAccount.set(acct, (whtByAccount.get(acct) || 0) + wht);
+      withholdingTotal += wht;
+    });
+
+    for (const [acct, amount] of whtByAccount.entries()) {
+      lines.push({
+        journal_entry_id: entryId,
+        account_id: acct,
+        debit: 0,
+        credit: roundCurrency(amount),
+        description: `Withholding tax for ${invoice.invoice_number}`,
+      });
+    }
+
+    // Effective invoice total (excludes WHT — that's withheld at payment).
+    // The supplier credit is total minus WHT; balance: lineDebits = supplierCredit + WHT.
+    const effectiveTotal = roundCurrency(lineDebits);
+    const supplierCredit = roundCurrency(effectiveTotal - withholdingTotal);
     lines.push({
       journal_entry_id: entryId,
       account_id: accounts.payableAccountId,
       debit: 0,
-      credit: grandTotal,
+      credit: supplierCredit,
       description: `Invoice ${invoice.invoice_number} payable`,
     });
 
-    // Validate balance
-    if (roundCurrency(lineDebits) !== grandTotal) {
+    const totalCredits = roundCurrency(supplierCredit + withholdingTotal);
+    if (roundCurrency(lineDebits) !== totalCredits) {
       throw new Error(
-        `Purchase invoice debits and credits do not balance: ${lineDebits} != ${grandTotal}`,
+        `Purchase invoice debits and credits do not balance: ${lineDebits} != ${totalCredits}`,
       );
     }
   }
