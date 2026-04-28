@@ -45,6 +45,7 @@ export default function StockTakeWizard() {
     queryFn: async () => {
       if (!currentOrganization?.id) throw new Error('No organization');
       const res = await fetch('/api/v1/warehouses', {
+        credentials: 'include',
         headers: { 'X-Organization-Id': currentOrganization.id },
       });
       const data = await res.json();

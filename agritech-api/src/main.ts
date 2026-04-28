@@ -9,7 +9,9 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { IoAdapter } from '@nestjs/platform-socket.io';
 import { json, urlencoded } from 'express';
 import helmet from 'helmet';
-import cookieParser from 'cookie-parser';
+// cookie-parser is CommonJS — TS-style require keeps it callable
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+import cookieParser = require('cookie-parser');
 import { AppModule } from './app.module';
 
 // Global exception filter to log all 403 exceptions with stack traces
@@ -120,6 +122,38 @@ async function bootstrap() {
 
   // Cookie parser — required for httpOnly auth cookies
   app.use(cookieParser());
+
+  // CSRF defense — Origin check for state-changing methods.
+  // With cookie-based auth, attacker pages can trigger requests that auto-send
+  // cookies. We block requests whose Origin/Referer doesn't match an allowed
+  // origin. Cheap, deployable, and works with the existing CORS allowlist.
+  // Doesn't apply to GET/HEAD/OPTIONS, requests with no cookies (Bearer-only
+  // mobile clients), or whitelisted endpoints.
+  const csrfWhitelist = ['/api/v1/auth/oauth/callback']; // Public endpoints invoked from third parties
+  app.use((req, res, next) => {
+    const method = req.method.toUpperCase();
+    const stateChanging = method === 'POST' || method === 'PUT' || method === 'PATCH' || method === 'DELETE';
+    if (!stateChanging) return next();
+    if (csrfWhitelist.some(p => req.path.startsWith(p))) return next();
+
+    // No cookies = Bearer-only client (mobile / SDK) — let JWT auth handle it
+    const hasAuthCookie = !!(req as any).cookies?.agg_access || !!(req as any).cookies?.agg_refresh;
+    if (!hasAuthCookie) return next();
+
+    const origin = req.headers.origin || req.headers.referer || '';
+    const allowed = (configService.get('CORS_ORIGIN', 'http://localhost:5173') as string)
+      .split(',').map(s => s.trim());
+    const ok =
+      !origin // Same-origin requests have no Origin header — allow
+      || allowed.some(a => a === '*' || origin.startsWith(a))
+      || (process.env.NODE_ENV !== 'production' && origin.includes('localhost'));
+
+    if (!ok) {
+      logger.warn(`[CSRF] Blocked ${method} ${req.path} from origin ${origin}`);
+      return res.status(403).json({ statusCode: 403, message: 'CSRF: origin not allowed' });
+    }
+    next();
+  });
 
   // Configure WebSocket adapter for Socket.IO
   app.useWebSocketAdapter(new IoAdapter(app));

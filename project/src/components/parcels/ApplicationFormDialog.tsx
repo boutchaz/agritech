@@ -96,6 +96,7 @@ export const ApplicationFormDialog = ({
       if (!token || !parcelId) return null;
 
       const response = await fetch(`/api/v1/parcels/${parcelId}`, {
+        credentials: 'include',
         headers: {
           'Authorization': `Bearer ${token}`,
           'x-organization-id': currentOrganization?.id || '',
@@ -222,6 +223,7 @@ export const ApplicationFormDialog = ({
 
       const response = await fetch(`/api/v1/product-applications`, {
         method: 'POST',
+        credentials: 'include',
         headers: {
           'Authorization': `Bearer ${token}`,
           'x-organization-id': currentOrganization?.id || '',
@@ -303,6 +305,7 @@ export const ApplicationFormDialog = ({
       }
 
       const response = await fetch(`/api/v1/product-applications/available-products`, {
+        credentials: 'include',
         headers: {
           'Authorization': `Bearer ${token}`,
           'x-organization-id': orgId,
