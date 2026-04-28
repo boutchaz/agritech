@@ -7,6 +7,8 @@ import type {
   StockAccountMapping,
   CreateStockAccountMappingInput,
   UpdateStockAccountMappingInput,
+  StockGlReconciliation,
+  InitDefaultMappingsResult,
 } from '@/types/opening-stock';
 
 const BASE_URL = '/api/v1/stock-entries';
@@ -143,6 +145,27 @@ export const openingStockApi = {
   ): Promise<void> {
     return apiClient.delete<void>(
       `${BASE_URL}/account-mappings/${id}`,
+      {},
+      organizationId,
+    );
+  },
+
+  async initDefaultAccountMappings(
+    organizationId?: string,
+  ): Promise<InitDefaultMappingsResult> {
+    return apiClient.post<InitDefaultMappingsResult>(
+      `${BASE_URL}/account-mappings/init-defaults`,
+      {},
+      {},
+      organizationId,
+    );
+  },
+
+  async getGlReconciliation(
+    organizationId?: string,
+  ): Promise<StockGlReconciliation> {
+    return apiClient.get<StockGlReconciliation>(
+      `${BASE_URL}/gl-reconciliation`,
       {},
       organizationId,
     );

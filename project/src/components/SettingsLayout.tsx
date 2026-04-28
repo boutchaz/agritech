@@ -19,6 +19,7 @@ import {
   ChevronDown,
   Home,
   Receipt,
+  Calculator,
 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import { useTranslation } from "react-i18next";
@@ -188,6 +189,17 @@ const SettingsLayout = ({ children }: SettingsLayoutProps) => {
             icon: Package,
             path: "/settings/work-units",
             description: t("settings.menu.workUnitsDescription"),
+            roles: ADMIN_ROLES,
+          },
+          {
+            id: "stock-accounting",
+            name: t("settings.menu.stockAccounting", "Stock Accounting"),
+            icon: Calculator,
+            path: "/settings/stock-accounting",
+            description: t(
+              "settings.menu.stockAccountingDescription",
+              "GL mappings + stock vs ledger reconciliation",
+            ),
             roles: ADMIN_ROLES,
           },
         ],

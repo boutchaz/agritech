@@ -82,6 +82,7 @@ import { Route as AuthenticatedworkforceTasksTaskIdRouteImport } from './routes/
 import { Route as AuthenticatedsettingsSettingsWorkUnitsRouteImport } from './routes/_authenticated/(settings)/settings.work-units'
 import { Route as AuthenticatedsettingsSettingsUsersRouteImport } from './routes/_authenticated/(settings)/settings.users'
 import { Route as AuthenticatedsettingsSettingsSubscriptionRouteImport } from './routes/_authenticated/(settings)/settings.subscription'
+import { Route as AuthenticatedsettingsSettingsStockAccountingRouteImport } from './routes/_authenticated/(settings)/settings.stock-accounting'
 import { Route as AuthenticatedsettingsSettingsProfileRouteImport } from './routes/_authenticated/(settings)/settings.profile'
 import { Route as AuthenticatedsettingsSettingsPreferencesRouteImport } from './routes/_authenticated/(settings)/settings.preferences'
 import { Route as AuthenticatedsettingsSettingsOrganizationRouteImport } from './routes/_authenticated/(settings)/settings.organization'
@@ -583,6 +584,12 @@ const AuthenticatedsettingsSettingsSubscriptionRoute =
   AuthenticatedsettingsSettingsSubscriptionRouteImport.update({
     id: '/subscription',
     path: '/subscription',
+    getParentRoute: () => AuthenticatedsettingsSettingsRoute,
+  } as any)
+const AuthenticatedsettingsSettingsStockAccountingRoute =
+  AuthenticatedsettingsSettingsStockAccountingRouteImport.update({
+    id: '/stock-accounting',
+    path: '/stock-accounting',
     getParentRoute: () => AuthenticatedsettingsSettingsRoute,
   } as any)
 const AuthenticatedsettingsSettingsProfileRoute =
@@ -1224,6 +1231,7 @@ export interface FileRoutesByFullPath {
   '/settings/organization': typeof AuthenticatedsettingsSettingsOrganizationRoute
   '/settings/preferences': typeof AuthenticatedsettingsSettingsPreferencesRoute
   '/settings/profile': typeof AuthenticatedsettingsSettingsProfileRoute
+  '/settings/stock-accounting': typeof AuthenticatedsettingsSettingsStockAccountingRoute
   '/settings/subscription': typeof AuthenticatedsettingsSettingsSubscriptionRoute
   '/settings/users': typeof AuthenticatedsettingsSettingsUsersRoute
   '/settings/work-units': typeof AuthenticatedsettingsSettingsWorkUnitsRoute
@@ -1379,6 +1387,7 @@ export interface FileRoutesByTo {
   '/settings/organization': typeof AuthenticatedsettingsSettingsOrganizationRoute
   '/settings/preferences': typeof AuthenticatedsettingsSettingsPreferencesRoute
   '/settings/profile': typeof AuthenticatedsettingsSettingsProfileRoute
+  '/settings/stock-accounting': typeof AuthenticatedsettingsSettingsStockAccountingRoute
   '/settings/subscription': typeof AuthenticatedsettingsSettingsSubscriptionRoute
   '/settings/users': typeof AuthenticatedsettingsSettingsUsersRoute
   '/settings/work-units': typeof AuthenticatedsettingsSettingsWorkUnitsRoute
@@ -1539,6 +1548,7 @@ export interface FileRoutesById {
   '/_authenticated/(settings)/settings/organization': typeof AuthenticatedsettingsSettingsOrganizationRoute
   '/_authenticated/(settings)/settings/preferences': typeof AuthenticatedsettingsSettingsPreferencesRoute
   '/_authenticated/(settings)/settings/profile': typeof AuthenticatedsettingsSettingsProfileRoute
+  '/_authenticated/(settings)/settings/stock-accounting': typeof AuthenticatedsettingsSettingsStockAccountingRoute
   '/_authenticated/(settings)/settings/subscription': typeof AuthenticatedsettingsSettingsSubscriptionRoute
   '/_authenticated/(settings)/settings/users': typeof AuthenticatedsettingsSettingsUsersRoute
   '/_authenticated/(settings)/settings/work-units': typeof AuthenticatedsettingsSettingsWorkUnitsRoute
@@ -1702,6 +1712,7 @@ export interface FileRouteTypes {
     | '/settings/organization'
     | '/settings/preferences'
     | '/settings/profile'
+    | '/settings/stock-accounting'
     | '/settings/subscription'
     | '/settings/users'
     | '/settings/work-units'
@@ -1857,6 +1868,7 @@ export interface FileRouteTypes {
     | '/settings/organization'
     | '/settings/preferences'
     | '/settings/profile'
+    | '/settings/stock-accounting'
     | '/settings/subscription'
     | '/settings/users'
     | '/settings/work-units'
@@ -2016,6 +2028,7 @@ export interface FileRouteTypes {
     | '/_authenticated/(settings)/settings/organization'
     | '/_authenticated/(settings)/settings/preferences'
     | '/_authenticated/(settings)/settings/profile'
+    | '/_authenticated/(settings)/settings/stock-accounting'
     | '/_authenticated/(settings)/settings/subscription'
     | '/_authenticated/(settings)/settings/users'
     | '/_authenticated/(settings)/settings/work-units'
@@ -2592,6 +2605,13 @@ declare module '@tanstack/react-router' {
       path: '/subscription'
       fullPath: '/settings/subscription'
       preLoaderRoute: typeof AuthenticatedsettingsSettingsSubscriptionRouteImport
+      parentRoute: typeof AuthenticatedsettingsSettingsRoute
+    }
+    '/_authenticated/(settings)/settings/stock-accounting': {
+      id: '/_authenticated/(settings)/settings/stock-accounting'
+      path: '/stock-accounting'
+      fullPath: '/settings/stock-accounting'
+      preLoaderRoute: typeof AuthenticatedsettingsSettingsStockAccountingRouteImport
       parentRoute: typeof AuthenticatedsettingsSettingsRoute
     }
     '/_authenticated/(settings)/settings/profile': {
@@ -3538,6 +3558,7 @@ interface AuthenticatedsettingsSettingsRouteChildren {
   AuthenticatedsettingsSettingsOrganizationRoute: typeof AuthenticatedsettingsSettingsOrganizationRoute
   AuthenticatedsettingsSettingsPreferencesRoute: typeof AuthenticatedsettingsSettingsPreferencesRoute
   AuthenticatedsettingsSettingsProfileRoute: typeof AuthenticatedsettingsSettingsProfileRoute
+  AuthenticatedsettingsSettingsStockAccountingRoute: typeof AuthenticatedsettingsSettingsStockAccountingRoute
   AuthenticatedsettingsSettingsSubscriptionRoute: typeof AuthenticatedsettingsSettingsSubscriptionRoute
   AuthenticatedsettingsSettingsUsersRoute: typeof AuthenticatedsettingsSettingsUsersRoute
   AuthenticatedsettingsSettingsWorkUnitsRoute: typeof AuthenticatedsettingsSettingsWorkUnitsRoute
@@ -3571,6 +3592,8 @@ const AuthenticatedsettingsSettingsRouteChildren: AuthenticatedsettingsSettingsR
       AuthenticatedsettingsSettingsPreferencesRoute,
     AuthenticatedsettingsSettingsProfileRoute:
       AuthenticatedsettingsSettingsProfileRoute,
+    AuthenticatedsettingsSettingsStockAccountingRoute:
+      AuthenticatedsettingsSettingsStockAccountingRoute,
     AuthenticatedsettingsSettingsSubscriptionRoute:
       AuthenticatedsettingsSettingsSubscriptionRoute,
     AuthenticatedsettingsSettingsUsersRoute:

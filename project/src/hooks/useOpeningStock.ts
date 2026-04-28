@@ -2,11 +2,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
 import { openingStockApi } from '@/lib/api/opening-stock';
 import type {
-  OpeningStockBalance,
   CreateOpeningStockInput,
   UpdateOpeningStockInput,
   OpeningStockFilters,
-  StockAccountMapping,
   CreateStockAccountMappingInput,
   UpdateStockAccountMappingInput,
 } from '@/types/opening-stock';
@@ -215,5 +213,39 @@ export function useDeleteStockAccountMapping() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['stock-account-mappings'] });
     },
+  });
+}
+
+export function useInitDefaultStockAccountMappings() {
+  const queryClient = useQueryClient();
+  const { currentOrganization } = useAuth();
+
+  return useMutation({
+    mutationFn: async () => {
+      if (!currentOrganization?.id) {
+        throw new Error('No organization selected');
+      }
+      return openingStockApi.initDefaultAccountMappings(currentOrganization.id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['stock-account-mappings'] });
+      queryClient.invalidateQueries({ queryKey: ['stock-gl-reconciliation'] });
+    },
+  });
+}
+
+export function useStockGlReconciliation() {
+  const { currentOrganization } = useAuth();
+
+  return useQuery({
+    queryKey: ['stock-gl-reconciliation', currentOrganization?.id],
+    queryFn: async () => {
+      if (!currentOrganization?.id) {
+        throw new Error('No organization selected');
+      }
+      return openingStockApi.getGlReconciliation(currentOrganization.id);
+    },
+    enabled: !!currentOrganization?.id,
+    staleTime: 60 * 1000,
   });
 }

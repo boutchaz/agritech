@@ -2994,8 +2994,8 @@ export class StockEntriesService {
       .from('stock_account_mappings')
       .select(`
         *,
-        debit_account:accounts!stock_account_mappings_debit_account_id_fkey(id, account_number, account_name),
-        credit_account:accounts!stock_account_mappings_credit_account_id_fkey(id, account_number, account_name)
+        debit_account:accounts!stock_account_mappings_debit_account_id_fkey(id, code, name),
+        credit_account:accounts!stock_account_mappings_credit_account_id_fkey(id, code, name)
       `)
       .eq('organization_id', organizationId)
       .order('entry_type');
@@ -3027,8 +3027,8 @@ export class StockEntriesService {
       })
       .select(`
         *,
-        debit_account:accounts!stock_account_mappings_debit_account_id_fkey(id, account_number, account_name),
-        credit_account:accounts!stock_account_mappings_credit_account_id_fkey(id, account_number, account_name)
+        debit_account:accounts!stock_account_mappings_debit_account_id_fkey(id, code, name),
+        credit_account:accounts!stock_account_mappings_credit_account_id_fkey(id, code, name)
       `)
       .single();
 
@@ -3053,8 +3053,8 @@ export class StockEntriesService {
       .eq('organization_id', organizationId)
       .select(`
         *,
-        debit_account:accounts!stock_account_mappings_debit_account_id_fkey(id, account_number, account_name),
-        credit_account:accounts!stock_account_mappings_credit_account_id_fkey(id, account_number, account_name)
+        debit_account:accounts!stock_account_mappings_debit_account_id_fkey(id, code, name),
+        credit_account:accounts!stock_account_mappings_credit_account_id_fkey(id, code, name)
       `)
       .single();
 
