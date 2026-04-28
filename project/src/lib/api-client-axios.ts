@@ -149,7 +149,9 @@ export class ApiError extends Error {
   }
 }
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+// Empty default → relative URLs (use Vite proxy in dev, same-origin in prod).
+// Set VITE_API_URL only when API is on a different domain in production.
+const API_URL = import.meta.env.VITE_API_URL ?? '';
 
 /**
  * Get the current organization ID from Zustand store
@@ -172,6 +174,8 @@ function createApiClient(): AxiosInstance {
   const client = axios.create({
     baseURL: API_URL,
     timeout: 30000, // 30 seconds
+    // Send httpOnly auth cookies on every request (cookie-based auth)
+    withCredentials: true,
     headers: {
       'Content-Type': 'application/json',
     },

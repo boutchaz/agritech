@@ -52,8 +52,12 @@ import {
   DrawerDescription,
   DrawerFooter,
 } from '@/components/ui/drawer';
-import { Plus, Trash2, Pencil, Package, Loader2, ExternalLink, Eye, AlertTriangle, ShoppingBag, Layers, Clock3 } from 'lucide-react';
+import { Plus, Trash2, Pencil, Package, Loader2, ExternalLink, Eye, AlertTriangle, ShoppingBag, Layers, Clock3, ScanBarcode } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { useItemBarcodes, useCreateBarcode, useUpdateBarcode, useDeleteBarcode } from '@/hooks/useItemBarcodes';
+import { BARCODE_TYPE_OPTIONS } from '@/types/barcode';
+import type { ItemBarcode, CreateBarcodeInput, BarcodeType } from '@/types/barcode';
+import { Badge } from '@/components/ui/badge';
 import { useNavigate } from '@tanstack/react-router';
 import { itemsApi } from '@/lib/api/items';
 import { marketplaceCategoriesApi } from '@/lib/api/marketplace-categories';
@@ -1400,6 +1404,236 @@ function ItemVariantsDialog({ item, open, onOpenChange }: ItemVariantsDialogProp
   );
 }
 
+function ItemBarcodesDialog({ item, open, onOpenChange }: ItemVariantsDialogProps) {
+  const { t } = useTranslation('stock');
+  const { t: tCommon } = useTranslation('common');
+  const { currentOrganization } = useAuth();
+  const { data: barcodes = [], isLoading } = useItemBarcodes(item?.id || null);
+  const createBarcode = useCreateBarcode();
+  const updateBarcode = useUpdateBarcode();
+  const deleteBarcode = useDeleteBarcode();
+
+  const [newBarcode, setNewBarcode] = useState('');
+  const [newType, setNewType] = useState('');
+  const [newIsPrimary, setNewIsPrimary] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editType, setEditType] = useState('');
+  const [editIsPrimary, setEditIsPrimary] = useState(false);
+  const [barcodeToDelete, setBarcodeToDelete] = useState<ItemBarcode | null>(null);
+
+  const resetForm = () => {
+    setNewBarcode('');
+    setNewType('');
+    setNewIsPrimary(false);
+    setEditingId(null);
+    setEditType('');
+    setEditIsPrimary(false);
+  };
+
+  const handleAdd = async () => {
+    if (!item || !currentOrganization || !newBarcode.trim()) return;
+
+    const input: CreateBarcodeInput = {
+      organization_id: currentOrganization.id,
+      item_id: item.id,
+      barcode: newBarcode.trim(),
+      barcode_type: (newType || undefined) as BarcodeType | undefined,
+      is_primary: newIsPrimary,
+    };
+
+    try {
+      await createBarcode.mutateAsync(input);
+      toast.success(t('barcode.created', 'Barcode added'));
+      resetForm();
+    } catch (error: unknown) {
+      toast.error(`${t('barcode.createFailed', 'Failed to add barcode')}: ${error instanceof Error ? error.message : ''}`);
+    }
+  };
+
+  const handleEdit = (bc: ItemBarcode) => {
+    setEditingId(bc.id);
+    setEditType(bc.barcode_type || '');
+    setEditIsPrimary(bc.is_primary);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingId) return;
+    try {
+      await updateBarcode.mutateAsync({
+        id: editingId,
+        data: { barcode_type: (editType || undefined) as BarcodeType | undefined, is_primary: editIsPrimary },
+      });
+      toast.success(t('barcode.updated', 'Barcode updated'));
+      resetForm();
+    } catch (error: unknown) {
+      toast.error(`${t('barcode.updateFailed', 'Failed to update barcode')}: ${error instanceof Error ? error.message : ''}`);
+    }
+  };
+
+  const confirmDelete = async () => {
+    if (!barcodeToDelete) return;
+    try {
+      await deleteBarcode.mutateAsync(barcodeToDelete.id);
+      toast.success(t('barcode.deleted', 'Barcode deleted'));
+    } catch (error: unknown) {
+      toast.error(`${t('barcode.deleteFailed', 'Failed to delete barcode')}: ${error instanceof Error ? error.message : ''}`);
+    } finally {
+      setBarcodeToDelete(null);
+    }
+  };
+
+  return (
+    <ResponsiveDialog
+      open={open}
+      onOpenChange={(v) => { onOpenChange(v); if (!v) resetForm(); }}
+      title={`${t('barcode.manage', 'Barcodes')} - ${item?.item_name ?? ''}`}
+      description={t('barcode.manageDescription', 'Manage barcodes for this item')}
+      size="2xl"
+      contentClassName="max-h-[90vh] overflow-y-auto"
+    >
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row gap-3 items-end">
+          <div className="flex-1 w-full">
+            <Label>{t('barcode.value', 'Barcode')} *</Label>
+            <Input
+              value={newBarcode}
+              onChange={(e) => setNewBarcode(e.target.value)}
+              placeholder={t('barcode.enterBarcode', 'Enter or scan barcode...')}
+              className="mt-1"
+              disabled={!!editingId}
+            />
+          </div>
+          <div className="w-full sm:w-48">
+            <Label>{t('barcode.type', 'Type')}</Label>
+            <Select value={newType} onValueChange={setNewType}>
+              <SelectTrigger className="mt-1">
+                <SelectValue placeholder={t('barcode.autoDetect', 'Auto-detect')} />
+              </SelectTrigger>
+              <SelectContent>
+                {BARCODE_TYPE_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-center gap-2 pt-5">
+            <Switch checked={newIsPrimary} onCheckedChange={setNewIsPrimary} />
+            <span className="text-sm text-gray-600 dark:text-gray-400">{t('barcode.primary', 'Primary')}</span>
+          </div>
+          <Button
+            onClick={editingId ? handleSaveEdit : handleAdd}
+            disabled={!newBarcode.trim() || createBarcode.isPending || updateBarcode.isPending}
+            className="shrink-0"
+          >
+            {createBarcode.isPending || updateBarcode.isPending ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : editingId ? (
+              t('barcode.save', 'Save')
+            ) : (
+              <Plus className="w-4 h-4 mr-2" />
+            )}
+            {editingId ? t('barcode.save', 'Save') : t('barcode.add', 'Add')}
+          </Button>
+          {editingId && (
+            <Button variant="outline" onClick={resetForm} className="shrink-0">
+              {tCommon('app.cancel', 'Cancel')}
+            </Button>
+          )}
+        </div>
+
+        <div>
+          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+            {t('barcode.existing', 'Existing barcodes')}
+          </h3>
+          {isLoading ? (
+            <div className="flex items-center justify-center py-6">
+              <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+            </div>
+          ) : barcodes.length === 0 ? (
+            <EmptyState
+              variant="inline"
+              icon={ScanBarcode}
+              title={t('barcode.emptyTitle', 'No barcodes yet')}
+              description={t('barcode.empty', 'Add barcodes to enable quick scanning in stock operations')}
+            />
+          ) : (
+            <div className="border rounded-lg overflow-hidden">
+              <Table className="w-full">
+                <TableHeader className="bg-gray-50 dark:bg-gray-800">
+                  <TableRow>
+                    <TableHead className="px-4 py-2 text-left text-xs font-medium text-gray-500">{t('barcode.value', 'Barcode')}</TableHead>
+                    <TableHead className="px-4 py-2 text-left text-xs font-medium text-gray-500">{t('barcode.type', 'Type')}</TableHead>
+                    <TableHead className="px-4 py-2 text-left text-xs font-medium text-gray-500">{t('barcode.primary', 'Primary')}</TableHead>
+                    <TableHead className="px-4 py-2 text-left text-xs font-medium text-gray-500">{t('items.status', 'Status')}</TableHead>
+                    <TableHead className="px-4 py-2 text-right text-xs font-medium text-gray-500">{t('items.variants.actions', 'Actions')}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody className="divide-y">
+                  {barcodes.map((bc) => (
+                    <TableRow key={bc.id} className="text-sm">
+                      <TableCell className="px-4 py-2 font-mono text-gray-900 dark:text-white">{bc.barcode}</TableCell>
+                      <TableCell className="px-4 py-2 text-gray-700 dark:text-gray-300">{bc.barcode_type || '-'}</TableCell>
+                      <TableCell className="px-4 py-2">
+                        {bc.is_primary && (
+                          <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 text-xs">
+                            {t('barcode.primary', 'Primary')}
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="px-4 py-2">
+                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                          bc.is_active
+                            ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400'
+                            : 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400'
+                        }`}>
+                          {bc.is_active ? t('items.active') : t('items.inactive')}
+                        </span>
+                      </TableCell>
+                      <TableCell className="px-4 py-2 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <Button variant="ghost" size="sm" onClick={() => handleEdit(bc)}>
+                            <Pencil className="w-4 h-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => setBarcodeToDelete(bc)} className="text-red-600 hover:text-red-700">
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <AlertDialog open={!!barcodeToDelete} onOpenChange={(v) => !v && setBarcodeToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('barcode.deleteTitle', 'Delete Barcode')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('barcode.deleteConfirm', 'Are you sure you want to delete this barcode?')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('common.cancel', 'Cancel')}</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700 text-white">
+              {deleteBarcode.isPending ? (
+                <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{t('items.deleting')}</>
+              ) : (
+                t('items.delete')
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </ResponsiveDialog>
+  );
+}
+
 export default function ItemManagement() {
   const { t } = useTranslation('stock');
   const { currentOrganization } = useAuth();
@@ -1419,6 +1653,8 @@ export default function ItemManagement() {
   const [showVariantsDialog, setShowVariantsDialog] = useState(false);
   const [variantsItem, setVariantsItem] = useState<Item | null>(null);
   const [timelineItem, setTimelineItem] = useState<Item | null>(null);
+  const [barcodesItem, setBarcodesItem] = useState<Item | null>(null);
+  const [showBarcodesDialog, setShowBarcodesDialog] = useState(false);
 
   // Fetch stock levels for items with farm context
   const { data: stockLevels = {} } = useQuery<ItemStockLevelsResponse>({
@@ -1515,6 +1751,11 @@ export default function ItemManagement() {
   const handleVariants = (item: Item) => {
     setVariantsItem(item);
     setShowVariantsDialog(true);
+  };
+
+  const handleBarcodes = (item: Item) => {
+    setBarcodesItem(item);
+    setShowBarcodesDialog(true);
   };
 
   const handleDelete = (item: Item) => {
@@ -1697,6 +1938,18 @@ export default function ItemManagement() {
                         size="sm"
                         onClick={(event) => {
                           event.stopPropagation();
+                          handleBarcodes(item);
+                        }}
+                        className="p-1 text-purple-600 hover:text-purple-700 sm:p-2"
+                        title={t('barcode.manage', 'Barcodes')}
+                      >
+                        <ScanBarcode className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(event) => {
+                          event.stopPropagation();
                           setTimelineItem(item);
                         }}
                         className="p-1 text-sky-600 hover:text-sky-700 sm:p-2"
@@ -1839,6 +2092,18 @@ export default function ItemManagement() {
                         size="sm"
                         onClick={(event) => {
                           event.stopPropagation();
+                          handleBarcodes(item);
+                        }}
+                        className="p-1 text-purple-600 hover:text-purple-700 sm:p-2"
+                        title={t('barcode.manage', 'Barcodes')}
+                      >
+                        <ScanBarcode className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(event) => {
+                          event.stopPropagation();
                           setTimelineItem(item);
                         }}
                         className="p-1 text-sky-600 hover:text-sky-700 sm:p-2"
@@ -1897,6 +2162,16 @@ export default function ItemManagement() {
           setShowVariantsDialog(open);
           if (!open) {
             setVariantsItem(null);
+          }
+        }}
+      />
+      <ItemBarcodesDialog
+        item={barcodesItem}
+        open={showBarcodesDialog}
+        onOpenChange={(open) => {
+          setShowBarcodesDialog(open);
+          if (!open) {
+            setBarcodesItem(null);
           }
         }}
       />

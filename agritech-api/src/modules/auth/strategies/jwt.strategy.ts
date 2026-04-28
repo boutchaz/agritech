@@ -24,11 +24,17 @@ export class JwtStrategy implements CanActivate {
     const request = context.switchToHttp().getRequest();
     const authHeader = request.headers?.authorization;
 
-    if (!authHeader?.startsWith('Bearer ')) {
-      throw new UnauthorizedException('Missing authorization header');
+    let token: string | undefined;
+    if (authHeader?.startsWith('Bearer ')) {
+      token = authHeader.substring(7);
+    } else if (request.cookies?.agg_access) {
+      // Cookie-based auth — set by /auth/login when frontend uses credentials: 'include'
+      token = request.cookies.agg_access;
     }
 
-    const token = authHeader.substring(7);
+    if (!token) {
+      throw new UnauthorizedException('Missing authorization');
+    }
 
     try {
       // Validate with Supabase first (real security check - verifies RS256 signature)

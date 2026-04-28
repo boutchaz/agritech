@@ -1,6 +1,7 @@
 import { useAuthStore } from '../stores/authStore';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+// Empty default → relative URLs (Vite proxy in dev, same-origin in prod).
+const API_URL = import.meta.env.VITE_API_URL ?? '';
 
 interface LoginResponse {
   access_token: string;
@@ -49,9 +50,11 @@ const isNetworkError = (err: unknown): boolean =>
     err.message.includes('Load failed'));
 
 async function fetchWithRetry(url: string, options: RequestInit, retries = 2): Promise<Response> {
+  // Send/receive httpOnly auth cookies (cookie-based auth)
+  const optsWithCreds: RequestInit = { credentials: 'include', ...options };
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
-      return await fetch(url, options);
+      return await fetch(url, optsWithCreds);
     } catch (err) {
       if (isNetworkError(err) && attempt < retries) {
         await new Promise(resolve => setTimeout(resolve, 500 * (attempt + 1)));

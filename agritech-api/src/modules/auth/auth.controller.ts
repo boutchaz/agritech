@@ -1,4 +1,5 @@
-import { Controller, Get, Post, Patch, Body, UseGuards, Request, Headers } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Body, UseGuards, Request, Headers, Res, Req } from '@nestjs/common';
+import type { Response, Request as ExpressRequest } from 'express';
 import {
   ApiTags,
   ApiOperation,
@@ -12,6 +13,12 @@ import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { OrganizationGuard } from '../../common/guards/organization.guard';
 import { Public } from './decorators/public.decorator';
+import {
+  ACCESS_TOKEN_COOKIE,
+  REFRESH_TOKEN_COOKIE,
+  clearAuthCookies,
+  setAuthCookies,
+} from './utils/auth-cookies';
 import { SignupDto, SignupResponseDto, SetupOrganizationDto, SetupOrganizationResponseDto } from './dto/signup.dto';
 import { IsEmail, IsNotEmpty, IsString, IsBoolean, IsOptional } from 'class-validator';
 
@@ -131,12 +138,23 @@ export class AuthController {
     description: 'User logged in successfully',
   })
   @ApiResponse({ status: 401, description: 'Invalid credentials' })
-  async login(@Body() loginDto: LoginDto) {
-    return this.authService.login(
+  async login(
+    @Body() loginDto: LoginDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.authService.login(
       loginDto.email,
       loginDto.password,
       loginDto.rememberMe !== false,
     );
+    if (result?.access_token) {
+      setAuthCookies(res, {
+        accessToken: result.access_token,
+        refreshToken: result.refresh_token || '',
+        expiresIn: result.expires_in,
+      });
+    }
+    return result;
   }
 
   @Post('oauth/url')
@@ -298,10 +316,14 @@ export class AuthController {
    @ApiOperation({ summary: 'Logout and revoke session globally' })
    @ApiResponse({ status: 200, description: 'Logged out successfully' })
    @ApiResponse({ status: 401, description: 'Unauthorized' })
-   async logout(@Request() req) {
+   async logout(
+     @Request() req,
+     @Res({ passthrough: true }) res: Response,
+   ) {
      const authHeader = req.headers.authorization;
-     const jwt = authHeader?.substring(7);
+     const jwt = authHeader?.substring(7) || req.cookies?.[ACCESS_TOKEN_COOKIE];
      await this.authService.logout(jwt);
+     clearAuthCookies(res);
      return { message: 'Logged out successfully' };
    }
 
@@ -327,11 +349,24 @@ export class AuthController {
 
   @Post('refresh-token')
   @Public()
-  @ApiOperation({ summary: 'Refresh access token using refresh token' })
+  @ApiOperation({ summary: 'Refresh access token using refresh token (body or cookie)' })
   @ApiResponse({ status: 200, description: 'Token refreshed successfully' })
   @ApiResponse({ status: 401, description: 'Invalid refresh token' })
-  async refreshToken(@Body() body: RefreshTokenDto) {
-    return this.authService.refreshToken(body.refreshToken);
+  async refreshToken(
+    @Body() body: RefreshTokenDto,
+    @Req() req: ExpressRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const refreshToken = body?.refreshToken || req.cookies?.[REFRESH_TOKEN_COOKIE];
+    const result = await this.authService.refreshToken(refreshToken);
+    if (result?.access_token) {
+      setAuthCookies(res, {
+        accessToken: result.access_token,
+        refreshToken: result.refresh_token || refreshToken || '',
+        expiresIn: result.expires_in,
+      });
+    }
+    return result;
   }
 
   @Post('exchange-code')

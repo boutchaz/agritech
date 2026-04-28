@@ -20,11 +20,16 @@ export class SupabaseJwtGuard extends AuthGuard('jwt') {
     const request = context.switchToHttp().getRequest();
     const authHeader = request.headers.authorization;
 
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      throw new UnauthorizedException('Missing authorization header');
+    let token: string | undefined;
+    if (authHeader?.startsWith('Bearer ')) {
+      token = authHeader.substring(7);
+    } else if (request.cookies?.agg_access) {
+      token = request.cookies.agg_access;
     }
 
-    const token = authHeader.substring(7);
+    if (!token) {
+      throw new UnauthorizedException('Missing authorization');
+    }
 
     // Decode JWT without verification to extract payload
     // We'll validate with Supabase below

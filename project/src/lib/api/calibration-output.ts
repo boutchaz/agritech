@@ -586,15 +586,15 @@ export const calibrationApi = {
     format: "json" | "csv" | "zip",
     organizationId?: string,
   ): Promise<Blob> {
+    const apiBase = import.meta.env.VITE_API_URL ?? '';
     const response = await fetch(
-      `${import.meta.env.VITE_API_URL || "/api/v1"}/calibrations/${calibrationId}/export?format=${format}`,
+      `${apiBase}/api/v1/calibrations/${calibrationId}/export?format=${format}`,
       {
-        headers: {
-          ...(organizationId
-            ? { "x-organization-id": organizationId }
-            : {}),
-          Authorization: `Bearer ${localStorage.getItem("access_token") || ""}`,
-        },
+        // Cookie-based auth — sends httpOnly session cookie
+        credentials: 'include',
+        headers: organizationId
+          ? { 'x-organization-id': organizationId }
+          : {},
       },
     );
     if (!response.ok) {

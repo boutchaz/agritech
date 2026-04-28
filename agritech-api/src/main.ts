@@ -9,6 +9,7 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { IoAdapter } from '@nestjs/platform-socket.io';
 import { json, urlencoded } from 'express';
 import helmet from 'helmet';
+import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 
 // Global exception filter to log all 403 exceptions with stack traces
@@ -116,6 +117,9 @@ async function bootstrap() {
   );
   app.use(urlencoded({ extended: true, limit: bodyJsonLimit }));
   logger.log(`JSON / urlencoded body size limit: ${bodyJsonLimit}`);
+
+  // Cookie parser — required for httpOnly auth cookies
+  app.use(cookieParser());
 
   // Configure WebSocket adapter for Socket.IO
   app.useWebSocketAdapter(new IoAdapter(app));

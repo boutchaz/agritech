@@ -2,7 +2,9 @@ import { useOrganizationStore } from "../stores/organizationStore";
 import { useAuthStore } from "../stores/authStore";
 import { ErrorHandlers } from "./errors";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
+// Empty default → relative URLs (use Vite proxy in dev, same-origin in prod).
+// Set VITE_API_URL only when API is on a different domain in production.
+const API_URL = import.meta.env.VITE_API_URL ?? "";
 
 // Flag to prevent multiple redirects to login
 let isRedirectingToLogin = false;
@@ -203,6 +205,8 @@ export async function apiRequest<T>(
 
   const response = await fetchWithRetry(fullUrl, {
     ...options,
+    // Send httpOnly auth cookies on every request (cookie-based auth)
+    credentials: 'include',
     headers: {
       ...headers,
       ...options.headers,

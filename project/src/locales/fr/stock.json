@@ -1029,6 +1029,24 @@
     "suggestedQty": "Qté suggérée",
     "unit": "Unité",
     "generatePO": "Générer BC",
-    "generatePOPending": "Bientôt disponible"
+      "generatePOPending": "Bientôt disponible"
+    },
+    "barcode": {
+      "scanPlaceholder": "Scanner ou saisir le code-barres...",
+      "itemAdded": "Article ajouté : {{itemName}}",
+      "qtyIncreased": "{{itemName}} : quantité +1",
+      "notFound": "Aucun article trouvé pour ce code-barres",
+      "warehouseSet": "Entrepôt {{name}} défini pour les prochains scans",
+      "scanFailed": "Échec du scan : {{error}}",
+      "manageBarcodes": "Gérer les codes-barres",
+      "addBarcode": "Ajouter un code-barres",
+      "editBarcode": "Modifier le code-barres",
+      "barcodeType": "Type de code-barres",
+      "primaryBarcode": "Code-barres principal",
+      "setPrimary": "Définir comme principal",
+      "noBarcodes": "Aucun code-barres configuré",
+      "duplicateBarcode": "Ce code-barres est déjà utilisé par un autre article",
+      "invalidBarcode": "Format de code-barres invalide pour {{type}}"
+    }
   }
 }

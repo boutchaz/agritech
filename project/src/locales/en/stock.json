@@ -1079,6 +1079,24 @@
     "suggestedQty": "Suggested Order",
     "unit": "Unit",
     "generatePO": "Generate PO",
-    "generatePOPending": "Coming soon"
+      "generatePOPending": "Coming soon"
+    },
+    "barcode": {
+      "scanPlaceholder": "Scan or type barcode...",
+      "itemAdded": "Item added: {{itemName}}",
+      "qtyIncreased": "{{itemName}}: quantity +1",
+      "notFound": "No item found for this barcode",
+      "warehouseSet": "Warehouse {{name}} set for next scans",
+      "scanFailed": "Scan failed: {{error}}",
+      "manageBarcodes": "Manage Barcodes",
+      "addBarcode": "Add Barcode",
+      "editBarcode": "Edit Barcode",
+      "barcodeType": "Barcode Type",
+      "primaryBarcode": "Primary Barcode",
+      "setPrimary": "Set as Primary",
+      "noBarcodes": "No barcodes configured",
+      "duplicateBarcode": "This barcode is already used by another item",
+      "invalidBarcode": "Invalid barcode format for {{type}}"
+    }
   }
 }
