@@ -6,8 +6,9 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { useInvoice, useUpdateInvoiceStatus, usePostInvoice } from '@/hooks/useInvoices';
-import { Receipt, Calendar, User, FileText, CheckCircle2, XCircle, Mail, Loader2, DollarSign, Send, MapPin, Building2, Ban, RotateCcw } from 'lucide-react';
+import { Receipt, Calendar, User, FileText, CheckCircle2, XCircle, Mail, Loader2, DollarSign, Send, MapPin, Building2, Ban, RotateCcw, Coins } from 'lucide-react';
 import { CreditNoteDialog } from './CreditNoteDialog';
+import { ApplyAdvanceDialog } from './ApplyAdvanceDialog';
 import { useAuth } from '@/hooks/useAuth';
 import { useFarms } from '@/hooks/useParcelsQuery';
 import { useParcelById } from '@/hooks/useParcelsQuery';
@@ -47,6 +48,7 @@ export const InvoiceDetailDialog = ({
 
   const [isSendingEmail, setIsSendingEmail] = useState(false);
   const [creditNoteOpen, setCreditNoteOpen] = useState(false);
+  const [applyAdvanceOpen, setApplyAdvanceOpen] = useState(false);
   const updateInvoiceStatus = useUpdateInvoiceStatus();
   const postInvoice = usePostInvoice();
   
@@ -456,6 +458,15 @@ export const InvoiceDetailDialog = ({
                     {t('invoices.creditNote.button', 'Create Credit Note')}
                   </Button>
                 )}
+                {canMarkAsPaid && invoice && Number(invoice.outstanding_amount) > 0.01 && (
+                  <Button
+                    variant="outline"
+                    onClick={() => setApplyAdvanceOpen(true)}
+                  >
+                    <Coins className="h-4 w-4 mr-2" />
+                    {t('invoices.applyAdvance.button', 'Apply Advance')}
+                  </Button>
+                )}
                 {canCancel && (
                   <Button
                     variant="destructive"
@@ -486,6 +497,13 @@ export const InvoiceDetailDialog = ({
         <CreditNoteDialog
           open={creditNoteOpen}
           onOpenChange={setCreditNoteOpen}
+          invoice={invoice}
+        />
+      )}
+      {invoice && applyAdvanceOpen && (
+        <ApplyAdvanceDialog
+          open={applyAdvanceOpen}
+          onOpenChange={setApplyAdvanceOpen}
           invoice={invoice}
         />
       )}

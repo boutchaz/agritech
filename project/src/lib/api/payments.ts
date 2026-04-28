@@ -151,4 +151,59 @@ export const paymentsApi = {
   async delete(id: string, organizationId?: string): Promise<void> {
     return apiClient.delete(`${BASE_URL}/${id}`, {}, organizationId);
   },
+
+  // Advance payments
+  async createAdvance(data: CreateAdvanceInput, organizationId?: string): Promise<{ payment: AdvancePayment; journal_entry_id: string }> {
+    return apiClient.post(`${BASE_URL}/advances`, data, {}, organizationId);
+  },
+
+  async applyAdvance(id: string, data: ApplyAdvanceInput, organizationId?: string): Promise<{ journal_entry_id: string; allocated_total: number }> {
+    return apiClient.post(`${BASE_URL}/advances/${id}/apply`, data, {}, organizationId);
+  },
+
+  async listOpenAdvances(organizationId?: string, params?: { party_id?: string; party_type?: 'customer' | 'supplier' }): Promise<AdvancePayment[]> {
+    const qs = new URLSearchParams();
+    if (params?.party_id) qs.append('party_id', params.party_id);
+    if (params?.party_type) qs.append('party_type', params.party_type);
+    const url = `${BASE_URL}/advances${qs.toString() ? `?${qs.toString()}` : ''}`;
+    return apiClient.get(url, {}, organizationId);
+  },
 };
+
+export interface CreateAdvanceInput {
+  party_kind: 'customer' | 'supplier';
+  party_id: string;
+  party_name: string;
+  amount: number;
+  currency_code?: string;
+  exchange_rate?: number;
+  payment_date?: string;
+  payment_method?: 'cash' | 'bank_transfer' | 'check' | 'card';
+  bank_account_id?: string;
+  reference_number?: string;
+  notes?: string;
+}
+
+export interface ApplyAdvanceInput {
+  allocations: Array<{ invoice_id: string; amount: number }>;
+  posting_date?: string;
+}
+
+export interface AdvancePayment {
+  id: string;
+  payment_number: string;
+  payment_date: string;
+  party_id: string | null;
+  party_name: string;
+  party_type: string | null;
+  amount: number;
+  currency_code: string;
+  exchange_rate: number;
+  is_advance: boolean;
+  advance_account_id: string | null;
+  applied_amount?: number;
+  remaining_amount?: number;
+  bank_account_id: string | null;
+  reference_number: string | null;
+  status: string;
+}

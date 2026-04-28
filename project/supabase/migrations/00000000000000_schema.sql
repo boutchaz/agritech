@@ -1483,6 +1483,28 @@ CREATE TABLE IF NOT EXISTS payment_allocations (
 CREATE INDEX IF NOT EXISTS idx_payment_allocations_payment ON payment_allocations(payment_id);
 CREATE INDEX IF NOT EXISTS idx_payment_allocations_invoice ON payment_allocations(invoice_id);
 
+-- Advance payment support — added after initial accounting_payments schema.
+-- An advance is a payment received/paid before the matching invoice exists.
+-- Posts to a dedicated CGNC advance account (4421 customer advances /
+-- 3421 supplier advances) instead of receivable/payable. When later applied
+-- to an invoice via payment_allocations, an internal-transfer JE moves the
+-- amount from the advance account to AR/AP (handled in AdvancesService).
+ALTER TABLE accounting_payments ADD COLUMN IF NOT EXISTS is_advance BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE accounting_payments ADD COLUMN IF NOT EXISTS advance_account_id UUID;
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_accounting_payments_advance_account') THEN
+    ALTER TABLE accounting_payments
+      ADD CONSTRAINT fk_accounting_payments_advance_account
+      FOREIGN KEY (advance_account_id) REFERENCES accounts(id) ON DELETE SET NULL;
+  END IF;
+END $$;
+CREATE INDEX IF NOT EXISTS idx_accounting_payments_advance
+  ON accounting_payments(party_id, party_type, is_advance)
+  WHERE is_advance = true;
+COMMENT ON COLUMN accounting_payments.is_advance IS 'True when this payment is an advance (prepayment) not yet applied to any invoice. Allocations later transfer it to AR/AP.';
+COMMENT ON COLUMN accounting_payments.advance_account_id IS 'Liability (customer advance) or asset (supplier advance) account this payment hits at posting time.';
+
 -- =====================================================
 -- 10. RLS POLICIES
 -- =====================================================
