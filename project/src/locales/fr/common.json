@@ -5671,20 +5671,52 @@
     },
     "accounting": {
       "step1": {
-        "title": "Centre Comptable",
-        "content": "Votre vue d'ensemble financière : factures en cours, paiements récents et activité du journal. Tout connecté à vos ventes et production."
+        "title": "Bienvenue dans Comptabilité 📊",
+        "content": "Comptabilité en partie double adaptée à l'agriculture marocaine (plan CGNC, MAD, exercices fiscaux). Les cinq groupes (Aperçu → Facturation → Enregistrements → Rapports → Paramètres) couvrent le cycle complet d'audit. ~2 minutes pour la visite complète."
       },
       "step2": {
-        "title": "Factures",
-        "content": "Factures clients et fournisseurs. Créées depuis les commandes ou manuellement. Suivez les paiements et envoyez des relances."
+        "title": "Factures — Ventes et achats",
+        "content": "Factures clients et fournisseurs. Valider une facture crée automatiquement une écriture équilibrée et met à jour AR/AP. Inclut les avoirs (notes de crédit) pour les remboursements et retours — visibles directement sur chaque facture postée."
       },
       "step3": {
-        "title": "Écritures Comptables",
-        "content": "Comptabilité en partie double avec le plan comptable agricole marocain. Les paiements et mouvements de stock génèrent des écritures automatiquement."
+        "title": "Devis — Offres pré-vente",
+        "content": "Envoyez des devis aux clients. Convertissez en commande client en un clic à l'acceptation, puis en facture à la livraison. Très utilisé pour les pré-ventes de récolte aux mareyeurs/courtiers."
       },
       "step4": {
-        "title": "Rapports Financiers",
-        "content": "Bilan, compte de résultat, balance, analyse de rentabilité. Exportez pour votre comptable ou pour les banques."
+        "title": "Paiements — Cash entrant et sortant",
+        "content": "Enregistrez les paiements reçus des clients et payés aux fournisseurs. Allouez un paiement sur plusieurs factures. Lié à un compte bancaire ; met à jour AR/AP et le solde cash en même temps."
+      },
+      "step5": {
+        "title": "Journal — Toutes les écritures",
+        "content": "Le journal général complet. La plupart des écritures sont auto-générées par factures, paiements, mouvements de stock, récoltes. Les écritures manuelles (corrections, provisions, amortissements) vivent ici aussi. Les périodes clôturées sont en lecture seule."
+      },
+      "step6": {
+        "title": "Plan de Comptes — Votre PCG",
+        "content": "Plan CGNC hiérarchique pré-rempli pour le Maroc (311 Marchandises, 612 Achats consommés, 441 Fournisseurs, etc.). Ajoutez vos propres sous-comptes. Chaque ligne d'écriture référence un compte."
+      },
+      "step7": {
+        "title": "Comptes Bancaires — Positions cash",
+        "content": "Chaque banque ou caisse avec sa devise et son solde en direct. Les paiements y sont liés. La réconciliation contre les relevés bancaires (phase 4 prévue) utilisera cette liste."
+      },
+      "step8": {
+        "title": "Compte de Résultat — Comment ça va",
+        "content": "Compte de résultat sur n'importe quelle période : produits moins charges par compte. Filtrez par exercice, par ferme/parcelle, ou par cycle de culture. Vue spécifique agri : P&L par parcelle via les centres de coût."
+      },
+      "step9": {
+        "title": "Bilan — Ce que vous possédez et devez",
+        "content": "Photo à une date : actifs (stock, cash, créances, actifs biologiques en juste valeur), passifs (dettes, emprunts), capitaux propres. Requis pour les dossiers bancaires et les audits SIAM."
+      },
+      "step10": {
+        "title": "Créances Vieillies — Qui vous doit",
+        "content": "Clients regroupés par retard : 0-30 / 31-60 / 61-90 / 90+ jours. Le panier 90+ = votre liste de relances prioritaire. Idem pour les Dettes Fournisseurs (ce que vous devez, par âge)."
+      },
+      "step11": {
+        "title": "Paramètres — Câblage initial",
+        "content": "**Mappings de Comptes** indiquent quels comptes débiter/créditer pour chaque type de transaction (auto-rempli pour le Maroc). **Centres de Coût** allouent les coûts aux fermes/parcelles/cycles. **Exercices Fiscaux** ouvrent/clôturent l'année et verrouillent les périodes."
+      },
+      "step12": {
+        "title": "Premiers pas 🚀",
+        "content": "Si votre PCG est vide, lancez d'abord **Paramètres → Mappings de Comptes → Seed defaults**. Puis **Facturation → Factures → Créer** pour votre première vente. Voyez l'écriture comptable apparaître automatiquement. Rejouez ce tour à tout moment via ? (en haut à droite)."
       }
     },
     "satellite": {

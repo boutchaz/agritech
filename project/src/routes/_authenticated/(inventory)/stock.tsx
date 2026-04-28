@@ -106,11 +106,13 @@ const AppContent = () => {
   // before the step renders so the target element is mounted.
   useEffect(() => {
     const onTourGroup = (e: Event) => {
-      const ce = e as CustomEvent<string>;
-      if (ce.detail) handleGroupChange(ce.detail);
+      const ce = e as CustomEvent<{ module?: string; group?: string }>;
+      if (ce.detail?.module === 'stock' && ce.detail.group) {
+        handleGroupChange(ce.detail.group);
+      }
     };
-    window.addEventListener('tour:set-stock-group', onTourGroup);
-    return () => window.removeEventListener('tour:set-stock-group', onTourGroup);
+    window.addEventListener('tour:set-tab-group', onTourGroup);
+    return () => window.removeEventListener('tour:set-tab-group', onTourGroup);
     // handleGroupChange closes over groups + router; safe — they're stable per render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [groups]);
