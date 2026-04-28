@@ -140,11 +140,23 @@ EXCEPTION
   WHEN duplicate_object THEN null;
 END $$;
 
--- Invoice Type
+-- Invoice Type — direction (sales = outgoing, purchase = incoming)
 DO $$ BEGIN
   CREATE TYPE invoice_type AS ENUM (
     'sales',
     'purchase'
+  );
+EXCEPTION
+  WHEN duplicate_object THEN null;
+END $$;
+
+-- Invoice Document Type — orthogonal to direction.
+-- credit_note reverses an invoice (refund), debit_note adjusts an invoice upward.
+DO $$ BEGIN
+  CREATE TYPE invoice_document_type AS ENUM (
+    'invoice',
+    'credit_note',
+    'debit_note'
   );
 EXCEPTION
   WHEN duplicate_object THEN null;
@@ -1333,10 +1345,71 @@ CREATE TABLE IF NOT EXISTS invoices (
   CHECK (grand_total >= 0)
 );
 
+-- Credit / Debit note support — added after initial invoices schema.
+-- document_type defaults to 'invoice'; credit_note rows reference the original
+-- invoice via original_invoice_id. credited_amount tracks how much has been
+-- credited against this invoice (sum of grand_total of related credit notes).
+ALTER TABLE invoices ADD COLUMN IF NOT EXISTS document_type invoice_document_type NOT NULL DEFAULT 'invoice';
+ALTER TABLE invoices ADD COLUMN IF NOT EXISTS original_invoice_id UUID;
+ALTER TABLE invoices ADD COLUMN IF NOT EXISTS credit_reason TEXT;
+ALTER TABLE invoices ADD COLUMN IF NOT EXISTS credited_amount DECIMAL(15, 2) DEFAULT 0;
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_invoices_original_invoice') THEN
+    ALTER TABLE invoices
+      ADD CONSTRAINT fk_invoices_original_invoice
+      FOREIGN KEY (original_invoice_id) REFERENCES invoices(id) ON DELETE SET NULL;
+  END IF;
+END $$;
+
 CREATE INDEX IF NOT EXISTS idx_invoices_org ON invoices(organization_id);
 CREATE INDEX IF NOT EXISTS idx_invoices_type ON invoices(invoice_type);
 CREATE INDEX IF NOT EXISTS idx_invoices_status ON invoices(status);
 CREATE INDEX IF NOT EXISTS idx_invoices_date ON invoices(invoice_date DESC);
+CREATE INDEX IF NOT EXISTS idx_invoices_document_type ON invoices(document_type);
+CREATE INDEX IF NOT EXISTS idx_invoices_original ON invoices(original_invoice_id) WHERE original_invoice_id IS NOT NULL;
+
+COMMENT ON COLUMN invoices.document_type IS 'Document kind: invoice (default), credit_note (reverses an invoice), debit_note (adjusts upward).';
+COMMENT ON COLUMN invoices.original_invoice_id IS 'For credit/debit notes: the invoice being adjusted.';
+COMMENT ON COLUMN invoices.credit_reason IS 'Free-text reason on credit/debit notes (return, damage, weight dispute, price adjustment, other).';
+COMMENT ON COLUMN invoices.credited_amount IS 'Sum of grand_total of credit notes that reference this invoice. Updated by trigger.';
+
+-- Keep invoices.credited_amount in sync with related credit notes.
+-- Fires on INSERT / UPDATE of grand_total / DELETE of credit_note rows.
+CREATE OR REPLACE FUNCTION sync_invoice_credited_amount()
+RETURNS TRIGGER AS $$
+DECLARE
+  v_target UUID;
+BEGIN
+  v_target := COALESCE(NEW.original_invoice_id, OLD.original_invoice_id);
+  IF v_target IS NULL THEN
+    RETURN COALESCE(NEW, OLD);
+  END IF;
+
+  UPDATE invoices
+  SET credited_amount = COALESCE((
+    SELECT SUM(grand_total)
+    FROM invoices
+    WHERE original_invoice_id = v_target
+      AND document_type = 'credit_note'
+      AND status NOT IN ('cancelled')
+  ), 0)
+  WHERE id = v_target;
+
+  RETURN COALESCE(NEW, OLD);
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_sync_invoice_credited_amount ON invoices;
+CREATE TRIGGER trg_sync_invoice_credited_amount
+  AFTER INSERT OR UPDATE OF grand_total, status, original_invoice_id, document_type OR DELETE
+  ON invoices
+  FOR EACH ROW
+  WHEN (
+    (TG_OP = 'DELETE' AND OLD.document_type = 'credit_note' AND OLD.original_invoice_id IS NOT NULL)
+    OR (TG_OP <> 'DELETE' AND NEW.document_type = 'credit_note' AND NEW.original_invoice_id IS NOT NULL)
+  )
+  EXECUTE FUNCTION sync_invoice_credited_amount();
 
 -- Invoice Items
 CREATE TABLE IF NOT EXISTS invoice_items (
@@ -2960,6 +3033,112 @@ BEGIN
   ON CONFLICT DO NOTHING;
 
   ALTER TABLE item_barcodes ENABLE TRIGGER trg_sync_primary_barcode;
+END $$;
+
+-- =====================================================
+-- VARIANT BARCODES (multi-barcode per product variant)
+-- Mirrors item_barcodes structure, linked to product_variants
+-- =====================================================
+
+CREATE TABLE IF NOT EXISTS variant_barcodes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  variant_id UUID NOT NULL REFERENCES product_variants(id) ON DELETE CASCADE,
+  barcode TEXT NOT NULL,
+  barcode_type TEXT DEFAULT '' CHECK (barcode_type IN (
+    'EAN', 'EAN-8', 'EAN-13', 'UPC', 'UPC-A', 'CODE-39', 'CODE-128',
+    'GS1', 'GTIN', 'GTIN-14', 'ISBN', 'ISBN-10', 'ISBN-13',
+    'ISSN', 'JAN', 'PZN', 'QR', ''
+  )),
+  unit_id UUID REFERENCES work_units(id) ON DELETE SET NULL,
+  is_primary BOOLEAN DEFAULT false,
+  is_active BOOLEAN DEFAULT true,
+  deleted_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  created_by UUID REFERENCES auth.users(id),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_by UUID REFERENCES auth.users(id),
+  CHECK (barcode != '')
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_variant_barcodes_unique
+  ON variant_barcodes(organization_id, barcode)
+  WHERE deleted_at IS NULL;
+
+CREATE INDEX IF NOT EXISTS idx_variant_barcodes_barcode
+  ON variant_barcodes(barcode)
+  WHERE deleted_at IS NULL;
+
+CREATE INDEX IF NOT EXISTS idx_variant_barcodes_variant
+  ON variant_barcodes(variant_id)
+  WHERE deleted_at IS NULL;
+
+CREATE INDEX IF NOT EXISTS idx_variant_barcodes_org
+  ON variant_barcodes(organization_id)
+  WHERE deleted_at IS NULL;
+
+COMMENT ON TABLE variant_barcodes IS 'Multiple barcodes per product variant (e.g., 1L bottle vs 5L bottle each get a unique barcode). Primary barcode synced to product_variants.barcode via trigger.';
+COMMENT ON COLUMN variant_barcodes.barcode_type IS 'Barcode format: EAN, UPC-A, CODE-39, CODE-128, QR, etc.';
+COMMENT ON COLUMN variant_barcodes.unit_id IS 'UOM associated with this barcode';
+COMMENT ON COLUMN variant_barcodes.is_primary IS 'If true, this barcode is synced to product_variants.barcode for fast lookups';
+
+-- Trigger: auto-sync primary barcode to product_variants.barcode (denormalized cache)
+CREATE OR REPLACE FUNCTION sync_primary_barcode_to_variant()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.is_primary AND NEW.is_active AND (TG_OP = 'INSERT' OR TG_OP = 'UPDATE') THEN
+    UPDATE product_variants SET barcode = NEW.barcode, updated_at = NOW()
+    WHERE id = NEW.variant_id AND organization_id = NEW.organization_id;
+    UPDATE variant_barcodes SET is_primary = false, updated_at = NOW()
+    WHERE variant_id = NEW.variant_id AND organization_id = NEW.organization_id
+      AND id != NEW.id AND deleted_at IS NULL;
+  END IF;
+  IF (NOT NEW.is_active OR NEW.deleted_at IS NOT NULL) THEN
+    UPDATE product_variants SET barcode = COALESCE(
+      (SELECT barcode FROM variant_barcodes
+       WHERE variant_id = NEW.variant_id AND organization_id = NEW.organization_id
+         AND is_active = true AND deleted_at IS NULL AND id != NEW.id
+       ORDER BY created_at LIMIT 1),
+      NULL
+    ), updated_at = NOW()
+    WHERE id = NEW.variant_id AND organization_id = NEW.organization_id
+      AND barcode = OLD.barcode;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_sync_primary_barcode_variant
+  AFTER INSERT OR UPDATE OR DELETE ON variant_barcodes
+  FOR EACH ROW EXECUTE FUNCTION sync_primary_barcode_to_variant();
+
+CREATE OR REPLACE FUNCTION update_variant_barcodes_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER variant_barcodes_updated_at
+  BEFORE UPDATE ON variant_barcodes
+  FOR EACH ROW EXECUTE FUNCTION update_variant_barcodes_updated_at();
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON variant_barcodes TO authenticated;
+
+-- One-time backfill: migrate existing product_variants.barcode → variant_barcodes (primary)
+DO $$
+BEGIN
+  ALTER TABLE variant_barcodes DISABLE TRIGGER trg_sync_primary_barcode_variant;
+
+  INSERT INTO variant_barcodes (organization_id, variant_id, barcode, barcode_type, is_primary, created_by)
+  SELECT pv.organization_id, pv.id, pv.barcode, '', true, NULL
+  FROM product_variants pv
+  WHERE pv.barcode IS NOT NULL AND pv.barcode <> ''
+    AND pv.deleted_at IS NULL
+  ON CONFLICT DO NOTHING;
+
+  ALTER TABLE variant_barcodes ENABLE TRIGGER trg_sync_primary_barcode_variant;
 END $$;
 
 -- Add foreign key constraint to invoice_items (deferred because items table is created after invoice_items)
@@ -5123,6 +5302,31 @@ CREATE POLICY "org_update_harvest_records" ON harvest_records
 
 DROP POLICY IF EXISTS "org_delete_harvest_records" ON harvest_records;
 CREATE POLICY "org_delete_harvest_records" ON harvest_records
+  FOR DELETE USING (
+    is_organization_member(organization_id)
+  );
+
+ALTER TABLE variant_barcodes ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_read_variant_barcodes" ON variant_barcodes;
+CREATE POLICY "org_read_variant_barcodes" ON variant_barcodes
+  FOR SELECT USING (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_write_variant_barcodes" ON variant_barcodes;
+CREATE POLICY "org_write_variant_barcodes" ON variant_barcodes
+  FOR INSERT WITH CHECK (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_update_variant_barcodes" ON variant_barcodes;
+CREATE POLICY "org_update_variant_barcodes" ON variant_barcodes
+  FOR UPDATE USING (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_delete_variant_barcodes" ON variant_barcodes;
+CREATE POLICY "org_delete_variant_barcodes" ON variant_barcodes
   FOR DELETE USING (
     is_organization_member(organization_id)
   );

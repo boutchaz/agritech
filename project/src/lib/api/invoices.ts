@@ -1,7 +1,7 @@
 import { createCrudApi } from './createCrudApi';
 import { apiClient } from '../api-client';
 import type { Database } from '@/types/database.types';
-import { type PaginatedQuery, type PaginatedResponse, buildPaginatedQueryString } from './types';
+import { type PaginatedQuery, type PaginatedResponse } from './types';
 
 const BASE_URL = '/api/v1/invoices';
 
@@ -142,4 +142,31 @@ export const invoicesApi = {
   ): Promise<{ success: boolean; message: string }> {
     return apiClient.post(`${BASE_URL}/${invoiceId}/send-email`, { email }, {}, organizationId);
   },
+
+  async createCreditNote(
+    originalInvoiceId: string,
+    data: CreateCreditNoteInput,
+    organizationId?: string,
+  ): Promise<InvoiceWithItems> {
+    return apiClient.post<InvoiceWithItems>(
+      `${BASE_URL}/${originalInvoiceId}/credit-notes`,
+      data,
+      {},
+      organizationId,
+    );
+  },
 };
+
+export interface CreditNoteLineInput {
+  original_item_id: string;
+  quantity: number;
+  unit_price?: number;
+}
+
+export interface CreateCreditNoteInput {
+  lines?: CreditNoteLineInput[];
+  credit_reason: string;
+  restore_stock?: boolean;
+  invoice_date?: string;
+  notes?: string;
+}

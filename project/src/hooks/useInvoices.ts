@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tansta
 import { useAuth } from '../hooks/useAuth';
 import { createInvoiceFromItems, fetchPartyName } from '../lib/invoice-service';
 import { trackEntityCreate, trackEntityUpdate, trackEntityDelete } from '../lib/analytics';
-import { invoicesApi, type PaginatedInvoiceQuery } from '../lib/api/invoices';
+import { invoicesApi, type PaginatedInvoiceQuery, type CreateCreditNoteInput } from '../lib/api/invoices';
 import { type PaginatedResponse, extractApiResponse } from '../lib/api/types';
 
 export interface Invoice {
@@ -366,6 +366,42 @@ export function useUpdateInvoice() {
       trackEntityUpdate('invoice');
       queryClient.invalidateQueries({ queryKey: ['invoices', currentOrganization?.id] });
       queryClient.invalidateQueries({ queryKey: ['invoice', variables.invoiceId] });
+    },
+  });
+}
+
+/**
+ * Hook to create a credit note (avoir) against a posted invoice.
+ * Posts an inverse journal entry and optionally restores stock.
+ */
+export function useCreateCreditNote() {
+  const queryClient = useQueryClient();
+  const { currentOrganization } = useAuth();
+
+  return useMutation({
+    mutationFn: async ({
+      originalInvoiceId,
+      data,
+    }: {
+      originalInvoiceId: string;
+      data: CreateCreditNoteInput;
+    }) => {
+      if (!currentOrganization?.id) {
+        throw new Error('No organization selected');
+      }
+      return invoicesApi.createCreditNote(originalInvoiceId, data, currentOrganization.id);
+    },
+    onSuccess: (_, variables) => {
+      trackEntityCreate('invoice');
+      // Invalidate everything that depends on invoice / GL / stock state
+      queryClient.invalidateQueries({ queryKey: ['invoices', currentOrganization?.id] });
+      queryClient.invalidateQueries({ queryKey: ['invoice', variables.originalInvoiceId] });
+      queryClient.invalidateQueries({ queryKey: ['journal_entries'] });
+      queryClient.invalidateQueries({ queryKey: ['aged-receivables'] });
+      queryClient.invalidateQueries({ queryKey: ['aged-payables'] });
+      queryClient.invalidateQueries({ queryKey: ['stock-entries'] });
+      queryClient.invalidateQueries({ queryKey: ['stock-movements'] });
+      queryClient.invalidateQueries({ queryKey: ['warehouse-stock-levels'] });
     },
   });
 }

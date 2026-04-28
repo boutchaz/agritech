@@ -19,7 +19,7 @@ import {
   ApiQuery,
 } from '@nestjs/swagger';
 import { InvoicesService } from './invoices.service';
-import { InvoiceFiltersDto, UpdateInvoiceStatusDto, CreateInvoiceDto, UpdateInvoiceDto } from './dto';
+import { InvoiceFiltersDto, UpdateInvoiceStatusDto, CreateInvoiceDto, UpdateInvoiceDto, CreateCreditNoteDto } from './dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RequireModule } from '../../common/decorators/require-module.decorator';
 import { OrganizationGuard } from '../../common/guards/organization.guard';
@@ -111,6 +111,26 @@ export class InvoicesController {
     const organizationId = req.headers['x-organization-id'];
     const userId = req.user.id || req.user.sub;
     return this.invoicesService.postInvoice(id, organizationId, userId, dto.posting_date);
+  }
+
+  @Post(':id/credit-notes')
+  @CanCreateInvoice()
+  @ApiOperation({
+    summary: 'Create a credit note (avoir) against a posted invoice',
+    description:
+      'Posts an inverse journal entry and optionally restores stock (Material Receipt for sales credits, Material Issue for purchase credits). Cumulative credits cannot exceed the original grand_total.',
+  })
+  @ApiParam({ name: 'id', description: 'Original invoice ID' })
+  @ApiResponse({ status: 201, description: 'Credit note created and posted' })
+  @ApiResponse({ status: 400, description: 'Original not posted, exceeds uncredited balance, or missing account mapping' })
+  async createCreditNote(
+    @Req() req,
+    @Param('id') id: string,
+    @Body() dto: CreateCreditNoteDto,
+  ) {
+    const organizationId = req.headers['x-organization-id'];
+    const userId = req.user.id || req.user.sub;
+    return this.invoicesService.createCreditNote(id, dto, organizationId, userId);
   }
 
   @Patch(':id')

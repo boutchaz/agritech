@@ -6,7 +6,8 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { useInvoice, useUpdateInvoiceStatus, usePostInvoice } from '@/hooks/useInvoices';
-import { Receipt, Calendar, User, FileText, CheckCircle2, XCircle, Mail, Loader2, DollarSign, Send, MapPin, Building2, Ban } from 'lucide-react';
+import { Receipt, Calendar, User, FileText, CheckCircle2, XCircle, Mail, Loader2, DollarSign, Send, MapPin, Building2, Ban, RotateCcw } from 'lucide-react';
+import { CreditNoteDialog } from './CreditNoteDialog';
 import { useAuth } from '@/hooks/useAuth';
 import { useFarms } from '@/hooks/useParcelsQuery';
 import { useParcelById } from '@/hooks/useParcelsQuery';
@@ -45,6 +46,7 @@ export const InvoiceDetailDialog = ({
   };
 
   const [isSendingEmail, setIsSendingEmail] = useState(false);
+  const [creditNoteOpen, setCreditNoteOpen] = useState(false);
   const updateInvoiceStatus = useUpdateInvoiceStatus();
   const postInvoice = usePostInvoice();
   
@@ -96,6 +98,14 @@ export const InvoiceDetailDialog = ({
   const canMarkAsPaid = invoice && (invoice.status === 'submitted' || invoice.status === 'partially_paid' || invoice.status === 'overdue');
   const canSubmit = invoice && invoice.status === 'draft';
   const canCancel = invoice && (invoice.status === 'submitted' || invoice.status === 'overdue' || invoice.status === 'partially_paid');
+  const isCreditNote = invoice && (invoice as { document_type?: string }).document_type === 'credit_note';
+  const uncreditedBalance = invoice
+    ? Number(invoice.grand_total) - (Number((invoice as { credited_amount?: number }).credited_amount) || 0)
+    : 0;
+  const canCredit = invoice
+    && !isCreditNote
+    && ['submitted', 'partially_paid', 'paid', 'overdue'].includes(invoice.status as string)
+    && uncreditedBalance > 0.01;
 
   const handleCancelInvoice = () => {
     if (!invoiceId || !invoice) return;
@@ -437,6 +447,15 @@ export const InvoiceDetailDialog = ({
                   )}
                   {t('invoices.actions.sendEmail', 'Send Email')}
                 </Button>
+                {canCredit && (
+                  <Button
+                    variant="outline"
+                    onClick={() => setCreditNoteOpen(true)}
+                  >
+                    <RotateCcw className="h-4 w-4 mr-2" />
+                    {t('invoices.creditNote.button', 'Create Credit Note')}
+                  </Button>
+                )}
                 {canCancel && (
                   <Button
                     variant="destructive"
@@ -463,6 +482,13 @@ export const InvoiceDetailDialog = ({
         variant={confirmAction.variant}
         onConfirm={confirmAction.onConfirm}
       />
+      {invoice && creditNoteOpen && (
+        <CreditNoteDialog
+          open={creditNoteOpen}
+          onOpenChange={setCreditNoteOpen}
+          invoice={invoice}
+        />
+      )}
     </ResponsiveDialog>
   );
 };
