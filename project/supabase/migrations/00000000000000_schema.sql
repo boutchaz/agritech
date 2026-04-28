@@ -12446,6 +12446,20 @@ BEGIN
     ALTER TABLE farms ADD CONSTRAINT chk_farms_size_positive
       CHECK (size IS NULL OR size > 0);
   END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'chk_warehouse_stock_levels_qty_non_negative'
+  ) THEN
+    ALTER TABLE warehouse_stock_levels ADD CONSTRAINT chk_warehouse_stock_levels_qty_non_negative
+      CHECK (quantity >= 0);
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'chk_warehouse_stock_levels_reserved_non_negative'
+  ) THEN
+    ALTER TABLE warehouse_stock_levels ADD CONSTRAINT chk_warehouse_stock_levels_reserved_non_negative
+      CHECK (reserved_quantity >= 0);
+  END IF;
 END $$;
 
 -- =====================================================

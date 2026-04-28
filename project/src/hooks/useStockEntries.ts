@@ -2,16 +2,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../hooks/useAuth';
 import { stockEntriesApi } from '../lib/api/stock';
 import type {
-  StockEntry,
-  StockEntryWithItems,
-  StockMovement,
-  StockMovementWithDetails,
   CreateStockEntryInput,
   UpdateStockEntryInput,
   StockEntryFilters,
   StockMovementFilters,
-  StockEntryType,
-  StockEntryStatus,
 } from '../types/stock-entries';
 
 /**
@@ -115,6 +109,10 @@ export function usePostStockEntry() {
       queryClient.invalidateQueries({ queryKey: ['stock-entry', entryId] });
       queryClient.invalidateQueries({ queryKey: ['inventory-items'] });
       queryClient.invalidateQueries({ queryKey: ['stock-movements'] });
+      queryClient.invalidateQueries({ queryKey: ['stock-dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['stock-reorder-suggestions'] });
+      queryClient.invalidateQueries({ queryKey: ['stock-expiry-alerts'] });
+      queryClient.invalidateQueries({ queryKey: ['stock-batches'] });
     },
   });
 }
@@ -157,6 +155,10 @@ export function useReverseStockEntry() {
       queryClient.invalidateQueries({ queryKey: ['stock-entries', currentOrganization?.id] });
       queryClient.invalidateQueries({ queryKey: ['stock-movements'] });
       queryClient.invalidateQueries({ queryKey: ['inventory-items'] });
+      queryClient.invalidateQueries({ queryKey: ['stock-dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['stock-reorder-suggestions'] });
+      queryClient.invalidateQueries({ queryKey: ['stock-expiry-alerts'] });
+      queryClient.invalidateQueries({ queryKey: ['stock-batches'] });
     },
   });
 }
