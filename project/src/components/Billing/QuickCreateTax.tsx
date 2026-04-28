@@ -22,6 +22,7 @@ const taxSchema = z.object({
   tax_name: z.string().min(1, 'Tax name is required'),
   tax_rate: z.coerce.number().min(0, 'Rate must be 0 or greater').max(100, 'Rate cannot exceed 100%'),
   tax_type: z.enum(['sales', 'purchase', 'both']),
+  is_withholding: z.boolean().optional(),
 });
 
 type TaxFormData = z.infer<typeof taxSchema>;
@@ -54,7 +55,8 @@ export const QuickCreateTax = ({
         tax_rate: data.tax_rate,
         tax_type: data.tax_type,
         is_active: true,
-      });
+        is_withholding: data.is_withholding ?? false,
+      } as never);
 
       toast.success('Tax created successfully');
       reset();
@@ -128,6 +130,22 @@ export const QuickCreateTax = ({
               <option value="both">Both</option>
             </NativeSelect>
           </div>
+
+          <label className="flex items-start gap-2 text-sm cursor-pointer p-3 border rounded-md bg-amber-50 border-amber-200 dark:bg-amber-900/20 dark:border-amber-800">
+            <input
+              type="checkbox"
+              {...register('is_withholding')}
+              className="h-4 w-4 mt-0.5 rounded border-gray-300"
+            />
+            <span>
+              <span className="font-medium block text-amber-900 dark:text-amber-200">
+                Withholding tax (retenue à la source)
+              </span>
+              <span className="text-xs text-amber-800 dark:text-amber-300">
+                Withheld from supplier payment instead of added to total. Used for Moroccan IGR (10% pro services), VAT WHT (1.75% on supplier payments).
+              </span>
+            </span>
+          </label>
 
           <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
             <p className="text-sm text-blue-800">

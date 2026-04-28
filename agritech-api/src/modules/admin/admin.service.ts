@@ -289,11 +289,24 @@ export class AdminService {
         );
       }
 
+      // Seed default Moroccan tax rates (VAT 20/10/7, IGR 10% WHT, supplier WHT 1.75%)
+      let taxesCreated = 0;
+      if (dto.chartType === ChartOfAccountsType.MOROCCAN) {
+        try {
+          taxesCreated = await this.seedDefaultMoroccanTaxes(client, dto.organizationId);
+        } catch (taxErr: any) {
+          // eslint-disable-next-line no-console
+          console.warn(
+            `[seedAccounts] tax seed skipped: ${taxErr?.message || taxErr}`,
+          );
+        }
+      }
+
       // Update job log
       if (job) {
         await client.from('admin_job_logs').update({
           status: 'completed',
-          result_data: { accountsCreated, stockMappingsCreated },
+          result_data: { accountsCreated, stockMappingsCreated, taxesCreated },
           records_created: accountsCreated,
           completed_at: new Date().toISOString(),
         }).eq('id', job.id);
@@ -304,7 +317,7 @@ export class AdminService {
         organizationId: dto.organizationId,
         chartType: dto.chartType,
         accountsCreated,
-        message: `Successfully seeded ${accountsCreated} accounts (${stockMappingsCreated} stock GL mappings)`,
+        message: `Successfully seeded ${accountsCreated} accounts (${stockMappingsCreated} stock GL mappings, ${taxesCreated} taxes)`,
         jobId: job?.id,
       };
     } catch (error: any) {
@@ -1112,6 +1125,75 @@ export class AdminService {
       if (!error) created++;
     }
 
+    return created;
+  }
+
+  /**
+   * Seed default Moroccan tax rates: VAT (20/10/7%), IGR withholding (10%
+   * on professional services), supplier VAT withholding (1.75%). Idempotent:
+   * skips taxes that already exist by name.
+   */
+  private async seedDefaultMoroccanTaxes(
+    client: ReturnType<DatabaseService['getAdminClient']>,
+    organizationId: string,
+  ): Promise<number> {
+    // Look up needed accounts by CGNC code
+    const { data: accounts } = await client
+      .from('accounts')
+      .select('id, code')
+      .eq('organization_id', organizationId)
+      .in('code', ['4455', '3455', '445']);
+
+    const byCode = new Map<string, string>();
+    for (const a of accounts || []) byCode.set(a.code, a.id);
+
+    // 4455 = Etat - TVA facturée (collected); 3455 = Etat - TVA récupérable (deductible);
+    // 445 = État - créditeur (used as fallback for WHT-payable)
+    const tvaCollected = byCode.get('4455') || byCode.get('445');
+    const tvaDeductible = byCode.get('3455') || byCode.get('445');
+    const whtPayable = byCode.get('445') || byCode.get('4455');
+
+    const desired: Array<{
+      name: string;
+      rate: number;
+      tax_type: 'sales' | 'purchase' | 'both';
+      is_withholding: boolean;
+      account_id?: string;
+      withholding_account_id?: string;
+    }> = [
+      // Standard VAT
+      { name: 'TVA 20% (vente)', rate: 20, tax_type: 'sales', is_withholding: false, account_id: tvaCollected },
+      { name: 'TVA 20% (achat)', rate: 20, tax_type: 'purchase', is_withholding: false, account_id: tvaDeductible },
+      { name: 'TVA 10% (vente)', rate: 10, tax_type: 'sales', is_withholding: false, account_id: tvaCollected },
+      { name: 'TVA 10% (achat)', rate: 10, tax_type: 'purchase', is_withholding: false, account_id: tvaDeductible },
+      { name: 'TVA 7% (alim.)', rate: 7, tax_type: 'both', is_withholding: false, account_id: tvaCollected },
+      // Withholding
+      { name: 'IGR Honoraires 10%', rate: 10, tax_type: 'purchase', is_withholding: true, withholding_account_id: whtPayable },
+      { name: 'TVA Retenue 1.75%', rate: 1.75, tax_type: 'purchase', is_withholding: true, withholding_account_id: whtPayable },
+    ];
+
+    // Check what's already there to avoid duplicates
+    const { data: existing } = await client
+      .from('taxes')
+      .select('name')
+      .eq('organization_id', organizationId);
+    const existingNames = new Set((existing || []).map((t) => t.name));
+
+    let created = 0;
+    for (const tax of desired) {
+      if (existingNames.has(tax.name)) continue;
+      const { error } = await client.from('taxes').insert({
+        organization_id: organizationId,
+        name: tax.name,
+        rate: tax.rate,
+        tax_type: tax.tax_type,
+        is_withholding: tax.is_withholding,
+        account_id: tax.account_id || null,
+        withholding_account_id: tax.withholding_account_id || null,
+        is_active: true,
+      });
+      if (!error) created++;
+    }
     return created;
   }
 
