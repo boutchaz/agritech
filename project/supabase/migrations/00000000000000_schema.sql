@@ -2841,6 +2841,127 @@ EXECUTE FUNCTION update_product_variants_updated_at();
 
 GRANT SELECT, INSERT, UPDATE, DELETE ON product_variants TO authenticated;
 
+-- ====================================================================
+-- ITEM BARCODES (Multi-barcode per item — ERPNext parity)
+-- ====================================================================
+-- One item can have N barcodes, each with its own type and UOM.
+-- Primary barcode is synced to items.barcode via trigger.
+
+CREATE TABLE IF NOT EXISTS item_barcodes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  item_id UUID NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+  barcode TEXT NOT NULL,
+  barcode_type TEXT DEFAULT '' CHECK (barcode_type IN (
+    'EAN', 'EAN-8', 'EAN-13', 'UPC', 'UPC-A', 'CODE-39', 'CODE-128',
+    'GS1', 'GTIN', 'GTIN-14', 'ISBN', 'ISBN-10', 'ISBN-13',
+    'ISSN', 'JAN', 'PZN', 'QR', ''
+  )),
+  unit_id UUID REFERENCES work_units(id) ON DELETE SET NULL,
+  is_primary BOOLEAN DEFAULT false,
+  is_active BOOLEAN DEFAULT true,
+  deleted_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  created_by UUID REFERENCES auth.users(id),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_by UUID REFERENCES auth.users(id),
+  CHECK (barcode != '')
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_item_barcodes_unique
+  ON item_barcodes(organization_id, barcode)
+  WHERE deleted_at IS NULL;
+
+CREATE INDEX IF NOT EXISTS idx_item_barcodes_barcode
+  ON item_barcodes(barcode)
+  WHERE deleted_at IS NULL;
+
+CREATE INDEX IF NOT EXISTS idx_item_barcodes_item
+  ON item_barcodes(item_id)
+  WHERE deleted_at IS NULL;
+
+CREATE INDEX IF NOT EXISTS idx_item_barcodes_org
+  ON item_barcodes(organization_id)
+  WHERE deleted_at IS NULL;
+
+COMMENT ON TABLE item_barcodes IS 'Multiple barcodes per item (ERPNext-style). Primary barcode synced to items.barcode via trigger.';
+COMMENT ON COLUMN item_barcodes.barcode_type IS 'Barcode format: EAN, UPC-A, CODE-39, CODE-128, QR, etc.';
+COMMENT ON COLUMN item_barcodes.unit_id IS 'UOM associated with this barcode (e.g., 5L bottle has different barcode than 1L)';
+COMMENT ON COLUMN item_barcodes.is_primary IS 'If true, this barcode is synced to items.barcode for fast lookups';
+
+-- Trigger: auto-sync primary barcode to items.barcode (denormalized cache)
+CREATE OR REPLACE FUNCTION sync_primary_barcode_to_item()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.is_primary AND NEW.is_active AND (TG_OP = 'INSERT' OR TG_OP = 'UPDATE') THEN
+    UPDATE items SET barcode = NEW.barcode, updated_at = NOW()
+    WHERE id = NEW.item_id AND organization_id = NEW.organization_id;
+    -- Unset primary on other barcodes for same item
+    UPDATE item_barcodes SET is_primary = false, updated_at = NOW()
+    WHERE item_id = NEW.item_id AND organization_id = NEW.organization_id
+      AND id != NEW.id AND deleted_at IS NULL;
+  END IF;
+  IF (NOT NEW.is_active OR NEW.deleted_at IS NOT NULL) THEN
+    -- If this was the primary, find another barcode to promote
+    UPDATE items SET barcode = COALESCE(
+      (SELECT barcode FROM item_barcodes
+       WHERE item_id = NEW.item_id AND organization_id = NEW.organization_id
+         AND is_active = true AND deleted_at IS NULL AND id != NEW.id
+       ORDER BY created_at LIMIT 1),
+      NULL
+    ), updated_at = NOW()
+    WHERE id = NEW.item_id AND organization_id = NEW.organization_id
+      AND barcode = OLD.barcode;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_sync_primary_barcode
+  AFTER INSERT OR UPDATE OR DELETE ON item_barcodes
+  FOR EACH ROW EXECUTE FUNCTION sync_primary_barcode_to_item();
+
+-- Updated_at trigger
+CREATE OR REPLACE FUNCTION update_item_barcodes_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER item_barcodes_updated_at
+BEFORE UPDATE ON item_barcodes
+FOR EACH ROW EXECUTE FUNCTION update_item_barcodes_updated_at();
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON item_barcodes TO authenticated;
+
+-- One-time backfill: migrate existing items.barcode → item_barcodes (primary)
+-- and product_variants.barcode → item_barcodes (non-primary, with unit_id).
+-- Idempotent via ON CONFLICT DO NOTHING (unique on org_id, barcode where deleted_at IS NULL).
+DO $$
+BEGIN
+  -- Disable the sync trigger for this backfill so it doesn't recursively
+  -- update items.barcode (we're reading FROM items, would cause noise).
+  ALTER TABLE item_barcodes DISABLE TRIGGER trg_sync_primary_barcode;
+
+  INSERT INTO item_barcodes (organization_id, item_id, barcode, is_primary, created_at)
+  SELECT i.organization_id, i.id, i.barcode, true, COALESCE(i.created_at, NOW())
+  FROM items i
+  WHERE i.barcode IS NOT NULL AND i.barcode <> ''
+    AND i.deleted_at IS NULL
+  ON CONFLICT DO NOTHING;
+
+  INSERT INTO item_barcodes (organization_id, item_id, barcode, unit_id, is_primary, created_at)
+  SELECT pv.organization_id, pv.item_id, pv.barcode, pv.unit_id, false, COALESCE(pv.created_at, NOW())
+  FROM product_variants pv
+  WHERE pv.barcode IS NOT NULL AND pv.barcode <> ''
+    AND pv.deleted_at IS NULL
+  ON CONFLICT DO NOTHING;
+
+  ALTER TABLE item_barcodes ENABLE TRIGGER trg_sync_primary_barcode;
+END $$;
+
 -- Add foreign key constraint to invoice_items (deferred because items table is created after invoice_items)
 ALTER TABLE invoice_items ADD CONSTRAINT fk_invoice_items_item_id FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE SET NULL;
 
@@ -3110,6 +3231,7 @@ CREATE TABLE IF NOT EXISTS stock_entry_items (
   physical_quantity NUMERIC,
   variance NUMERIC DEFAULT 0, -- computed in service layer
   variant_id UUID REFERENCES product_variants(id) ON DELETE SET NULL,
+  scanned_barcode TEXT,
   notes TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   CHECK (quantity > 0)
@@ -5079,6 +5201,32 @@ CREATE POLICY "org_update_items" ON items
 
 DROP POLICY IF EXISTS "org_delete_items" ON items;
 CREATE POLICY "org_delete_items" ON items
+  FOR DELETE USING (
+    is_organization_member(organization_id)
+  );
+
+-- Item Barcodes Policies
+ALTER TABLE item_barcodes ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_read_item_barcodes" ON item_barcodes;
+CREATE POLICY "org_read_item_barcodes" ON item_barcodes
+  FOR SELECT USING (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_write_item_barcodes" ON item_barcodes;
+CREATE POLICY "org_write_item_barcodes" ON item_barcodes
+  FOR INSERT WITH CHECK (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_update_item_barcodes" ON item_barcodes;
+CREATE POLICY "org_update_item_barcodes" ON item_barcodes
+  FOR UPDATE USING (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_delete_item_barcodes" ON item_barcodes;
+CREATE POLICY "org_delete_item_barcodes" ON item_barcodes
   FOR DELETE USING (
     is_organization_member(organization_id)
   );

@@ -7,6 +7,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { SectionLoader } from '@/components/ui/loader';
 import FarmStockLevels from '@/components/Stock/FarmStockLevels';
 import ItemFarmUsage from '@/components/Stock/ItemFarmUsage';
+import { ItemBarcodesManager } from '@/components/Stock/ItemBarcodesManager';
 import { useItem } from '@/hooks/useItems';
 import { useCurrency } from '@/hooks/useCurrency';
 
@@ -72,6 +73,15 @@ function ItemDetailsPage() {
         </CardHeader>
         <CardContent>
           <ItemFarmUsage item_id={item.id} unit={item.default_unit} showDetails={true} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>{t('barcode.title', 'Barcodes')}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ItemBarcodesManager itemId={item.id} />
         </CardContent>
       </Card>
     </div>
