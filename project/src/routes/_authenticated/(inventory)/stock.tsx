@@ -64,6 +64,7 @@ const AppContent = () => {
         tabs: [
           { value: 'dashboard', label: t('stock.tabs.dashboard', 'Dashboard'), to: '/stock/dashboard' },
           { value: 'reports', label: t('stock.tabs.reports'), to: '/stock/reports' },
+          { value: 'aging', label: t('stock.tabs.aging', 'Aging'), to: '/stock/aging' },
         ],
       },
     ],

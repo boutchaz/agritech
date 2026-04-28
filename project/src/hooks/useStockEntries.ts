@@ -209,3 +209,22 @@ export function useStockMovements(filters?: StockMovementFilters) {
 export function useItemStockMovements(itemId: string | null) {
   return useStockMovements({ item_id: itemId || undefined });
 }
+
+/**
+ * Hook to fetch the stock aging report
+ */
+export function useStockAging(warehouseId?: string) {
+  const { currentOrganization } = useAuth();
+
+  return useQuery({
+    queryKey: ['stock-aging', currentOrganization?.id, warehouseId],
+    queryFn: async () => {
+      if (!currentOrganization?.id) {
+        throw new Error('No organization selected');
+      }
+      return stockEntriesApi.getAging(currentOrganization.id, warehouseId);
+    },
+    enabled: !!currentOrganization?.id,
+    staleTime: 60 * 1000,
+  });
+}

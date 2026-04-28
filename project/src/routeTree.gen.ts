@@ -121,6 +121,7 @@ import { Route as AuthenticatedinventoryStockDeliveriesRouteImport } from './rou
 import { Route as AuthenticatedinventoryStockDashboardRouteImport } from './routes/_authenticated/(inventory)/stock/dashboard'
 import { Route as AuthenticatedinventoryStockBatchesRouteImport } from './routes/_authenticated/(inventory)/stock/batches'
 import { Route as AuthenticatedinventoryStockApprovalsRouteImport } from './routes/_authenticated/(inventory)/stock/approvals'
+import { Route as AuthenticatedinventoryStockAgingRouteImport } from './routes/_authenticated/(inventory)/stock/aging'
 import { Route as AuthenticatedinventoryInventoryReceptionBatchesRouteImport } from './routes/_authenticated/(inventory)/inventory/reception-batches'
 import { Route as AuthenticatedaccountingAccountingTrialBalanceRouteImport } from './routes/_authenticated/(accounting)/accounting/trial-balance'
 import { Route as AuthenticatedaccountingAccountingSalesOrdersRouteImport } from './routes/_authenticated/(accounting)/accounting/sales-orders'
@@ -820,6 +821,12 @@ const AuthenticatedinventoryStockApprovalsRoute =
     path: '/approvals',
     getParentRoute: () => AuthenticatedinventoryStockRoute,
   } as any)
+const AuthenticatedinventoryStockAgingRoute =
+  AuthenticatedinventoryStockAgingRouteImport.update({
+    id: '/aging',
+    path: '/aging',
+    getParentRoute: () => AuthenticatedinventoryStockRoute,
+  } as any)
 const AuthenticatedinventoryInventoryReceptionBatchesRoute =
   AuthenticatedinventoryInventoryReceptionBatchesRouteImport.update({
     id: '/reception-batches',
@@ -1193,6 +1200,7 @@ export interface FileRoutesByFullPath {
   '/accounting/sales-orders': typeof AuthenticatedaccountingAccountingSalesOrdersRoute
   '/accounting/trial-balance': typeof AuthenticatedaccountingAccountingTrialBalanceRoute
   '/inventory/reception-batches': typeof AuthenticatedinventoryInventoryReceptionBatchesRoute
+  '/stock/aging': typeof AuthenticatedinventoryStockAgingRoute
   '/stock/approvals': typeof AuthenticatedinventoryStockApprovalsRoute
   '/stock/batches': typeof AuthenticatedinventoryStockBatchesRoute
   '/stock/dashboard': typeof AuthenticatedinventoryStockDashboardRoute
@@ -1350,6 +1358,7 @@ export interface FileRoutesByTo {
   '/accounting/sales-orders': typeof AuthenticatedaccountingAccountingSalesOrdersRoute
   '/accounting/trial-balance': typeof AuthenticatedaccountingAccountingTrialBalanceRoute
   '/inventory/reception-batches': typeof AuthenticatedinventoryInventoryReceptionBatchesRoute
+  '/stock/aging': typeof AuthenticatedinventoryStockAgingRoute
   '/stock/approvals': typeof AuthenticatedinventoryStockApprovalsRoute
   '/stock/batches': typeof AuthenticatedinventoryStockBatchesRoute
   '/stock/dashboard': typeof AuthenticatedinventoryStockDashboardRoute
@@ -1510,6 +1519,7 @@ export interface FileRoutesById {
   '/_authenticated/(accounting)/accounting/sales-orders': typeof AuthenticatedaccountingAccountingSalesOrdersRoute
   '/_authenticated/(accounting)/accounting/trial-balance': typeof AuthenticatedaccountingAccountingTrialBalanceRoute
   '/_authenticated/(inventory)/inventory/reception-batches': typeof AuthenticatedinventoryInventoryReceptionBatchesRoute
+  '/_authenticated/(inventory)/stock/aging': typeof AuthenticatedinventoryStockAgingRoute
   '/_authenticated/(inventory)/stock/approvals': typeof AuthenticatedinventoryStockApprovalsRoute
   '/_authenticated/(inventory)/stock/batches': typeof AuthenticatedinventoryStockBatchesRoute
   '/_authenticated/(inventory)/stock/dashboard': typeof AuthenticatedinventoryStockDashboardRoute
@@ -1674,6 +1684,7 @@ export interface FileRouteTypes {
     | '/accounting/sales-orders'
     | '/accounting/trial-balance'
     | '/inventory/reception-batches'
+    | '/stock/aging'
     | '/stock/approvals'
     | '/stock/batches'
     | '/stock/dashboard'
@@ -1831,6 +1842,7 @@ export interface FileRouteTypes {
     | '/accounting/sales-orders'
     | '/accounting/trial-balance'
     | '/inventory/reception-batches'
+    | '/stock/aging'
     | '/stock/approvals'
     | '/stock/batches'
     | '/stock/dashboard'
@@ -1990,6 +2002,7 @@ export interface FileRouteTypes {
     | '/_authenticated/(accounting)/accounting/sales-orders'
     | '/_authenticated/(accounting)/accounting/trial-balance'
     | '/_authenticated/(inventory)/inventory/reception-batches'
+    | '/_authenticated/(inventory)/stock/aging'
     | '/_authenticated/(inventory)/stock/approvals'
     | '/_authenticated/(inventory)/stock/batches'
     | '/_authenticated/(inventory)/stock/dashboard'
@@ -2880,6 +2893,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedinventoryStockApprovalsRouteImport
       parentRoute: typeof AuthenticatedinventoryStockRoute
     }
+    '/_authenticated/(inventory)/stock/aging': {
+      id: '/_authenticated/(inventory)/stock/aging'
+      path: '/aging'
+      fullPath: '/stock/aging'
+      preLoaderRoute: typeof AuthenticatedinventoryStockAgingRouteImport
+      parentRoute: typeof AuthenticatedinventoryStockRoute
+    }
     '/_authenticated/(inventory)/inventory/reception-batches': {
       id: '/_authenticated/(inventory)/inventory/reception-batches'
       path: '/reception-batches'
@@ -3320,6 +3340,7 @@ const AuthenticatedinventoryInventoryRouteWithChildren =
   )
 
 interface AuthenticatedinventoryStockRouteChildren {
+  AuthenticatedinventoryStockAgingRoute: typeof AuthenticatedinventoryStockAgingRoute
   AuthenticatedinventoryStockApprovalsRoute: typeof AuthenticatedinventoryStockApprovalsRoute
   AuthenticatedinventoryStockBatchesRoute: typeof AuthenticatedinventoryStockBatchesRoute
   AuthenticatedinventoryStockDashboardRoute: typeof AuthenticatedinventoryStockDashboardRoute
@@ -3343,6 +3364,8 @@ interface AuthenticatedinventoryStockRouteChildren {
 
 const AuthenticatedinventoryStockRouteChildren: AuthenticatedinventoryStockRouteChildren =
   {
+    AuthenticatedinventoryStockAgingRoute:
+      AuthenticatedinventoryStockAgingRoute,
     AuthenticatedinventoryStockApprovalsRoute:
       AuthenticatedinventoryStockApprovalsRoute,
     AuthenticatedinventoryStockBatchesRoute:

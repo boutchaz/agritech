@@ -272,11 +272,28 @@ export class AdminService {
         }
       }
 
+      // After CoA is seeded, wire up default stock account mappings.
+      // Errors here are non-fatal — admins can run "Seed defaults" from the
+      // Stock Accounting settings page later if this skips.
+      let stockMappingsCreated = 0;
+      try {
+        stockMappingsCreated = await this.seedDefaultStockAccountMappings(
+          client,
+          dto.organizationId,
+        );
+      } catch (mappingErr: any) {
+        // Log to job log but don't fail the whole seed.
+        // eslint-disable-next-line no-console
+        console.warn(
+          `[seedAccounts] stock mapping seed skipped: ${mappingErr?.message || mappingErr}`,
+        );
+      }
+
       // Update job log
       if (job) {
         await client.from('admin_job_logs').update({
           status: 'completed',
-          result_data: { accountsCreated },
+          result_data: { accountsCreated, stockMappingsCreated },
           records_created: accountsCreated,
           completed_at: new Date().toISOString(),
         }).eq('id', job.id);
@@ -287,7 +304,7 @@ export class AdminService {
         organizationId: dto.organizationId,
         chartType: dto.chartType,
         accountsCreated,
-        message: `Successfully seeded ${accountsCreated} accounts`,
+        message: `Successfully seeded ${accountsCreated} accounts (${stockMappingsCreated} stock GL mappings)`,
         jobId: job?.id,
       };
     } catch (error: any) {
@@ -1034,6 +1051,65 @@ export class AdminService {
         codeToId.set(acc.code, data.id);
         created++;
       }
+    }
+
+    return created;
+  }
+
+  /**
+   * Seed default Moroccan CGNC stock account mappings. Idempotent.
+   * Mirrors StockEntriesService.seedDefaultStockAccountMappings — duplicated
+   * here to avoid pulling the entire StockEntriesModule into AdminModule.
+   *
+   * Default GL flow:
+   *   Material Receipt:     DR 312 (Matières) / CR 441 (Fournisseurs)
+   *   Material Issue:       DR 612 (Achats consommés) / CR 312
+   *   Stock Reconciliation: DR 612 / CR 312
+   *   Opening Stock:        DR 312 / CR 312 (no GL impact, opens balance)
+   */
+  private async seedDefaultStockAccountMappings(
+    client: ReturnType<DatabaseService['getAdminClient']>,
+    organizationId: string,
+  ): Promise<number> {
+    const { data: accounts } = await client
+      .from('accounts')
+      .select('id, code')
+      .eq('organization_id', organizationId)
+      .in('code', ['312', '441', '612']);
+
+    const byCode = new Map<string, string>();
+    for (const a of accounts || []) byCode.set(a.code, a.id);
+    if (byCode.size === 0) return 0;
+
+    const inv = byCode.get('312');
+    const ap = byCode.get('441');
+    const cogs = byCode.get('612');
+
+    const desired = [
+      { entry_type: 'Material Receipt', debit_account_id: inv, credit_account_id: ap },
+      { entry_type: 'Material Issue', debit_account_id: cogs, credit_account_id: inv },
+      { entry_type: 'Stock Reconciliation', debit_account_id: cogs, credit_account_id: inv },
+      { entry_type: 'Opening Stock', debit_account_id: inv, credit_account_id: inv },
+    ];
+
+    const { data: existing } = await client
+      .from('stock_account_mappings')
+      .select('entry_type')
+      .eq('organization_id', organizationId);
+
+    const existingTypes = new Set((existing || []).map((m) => m.entry_type));
+    let created = 0;
+
+    for (const m of desired) {
+      if (existingTypes.has(m.entry_type)) continue;
+      if (!m.debit_account_id || !m.credit_account_id) continue;
+      const { error } = await client.from('stock_account_mappings').insert({
+        organization_id: organizationId,
+        entry_type: m.entry_type,
+        debit_account_id: m.debit_account_id,
+        credit_account_id: m.credit_account_id,
+      });
+      if (!error) created++;
     }
 
     return created;

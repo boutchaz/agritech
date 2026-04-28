@@ -236,4 +236,47 @@ export const stockEntriesApi = {
   async getPendingApprovals(organizationId?: string): Promise<ApprovalData[]> {
     return apiClient.get<ApprovalData[]>(`${BASE_URL}/approvals/pending`, {}, organizationId);
   },
+
+  async getAging(
+    organizationId?: string,
+    warehouseId?: string,
+  ): Promise<StockAgingReport> {
+    const params = new URLSearchParams();
+    if (warehouseId) params.append('warehouse_id', warehouseId);
+    const url = `${BASE_URL}/aging${params.toString() ? `?${params.toString()}` : ''}`;
+    return apiClient.get<StockAgingReport>(url, {}, organizationId);
+  },
 };
+
+export interface StockAgingBucket {
+  qty: number;
+  value: number;
+}
+
+export interface StockAgingItem {
+  itemId: string;
+  itemName: string;
+  itemCode: string | null;
+  warehouseId: string;
+  warehouseName: string;
+  unit: string;
+  totalQty: number;
+  totalValue: number;
+  oldestDays: number;
+  buckets: {
+    '0-30': StockAgingBucket;
+    '31-60': StockAgingBucket;
+    '61-90': StockAgingBucket;
+    '90+': StockAgingBucket;
+  };
+}
+
+export interface StockAgingReport {
+  buckets: {
+    '0-30': StockAgingBucket;
+    '31-60': StockAgingBucket;
+    '61-90': StockAgingBucket;
+    '90+': StockAgingBucket;
+  };
+  items: StockAgingItem[];
+}
