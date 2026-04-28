@@ -4,8 +4,18 @@ import { tanstackRouter } from '@tanstack/router-plugin/vite';
 import { sentryVitePlugin } from '@sentry/vite-plugin';
 import { compression } from 'vite-plugin-compression2';
 import { VitePWA } from 'vite-plugin-pwa';
-import prerender from 'vite-plugin-prerender';
 import path from 'path';
+
+// vite-plugin-prerender uses require() which crashes on Node v25+ ESM — only load for production
+let prerender: typeof import('vite-plugin-prerender').default | undefined;
+if (process.env.NODE_ENV === 'production') {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    prerender = require('vite-plugin-prerender');
+  } catch {
+    // Node v25 ESM fallback — skip prerender
+  }
+}
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -137,7 +147,7 @@ export default defineConfig({
         enabled: false, // Don't run SW in dev — avoids confusion
       },
     }),
-    prerender({
+    prerender && prerender({
       routes: ['/', '/login', '/register', '/terms-of-service', '/privacy-policy', '/rdv'],
       staticDir: path.resolve(__dirname, 'dist'),
     }),

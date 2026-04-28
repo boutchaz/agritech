@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,9 +13,11 @@ import {
 } from '@/components/ui/radix-select';
 import { useAuth } from '@/hooks/useAuth';
 import { useCreateStockEntry } from '@/hooks/useStockEntries';
-import { useBarcodeLookup } from '@/hooks/useBarcodeLookup';
+import { useBarcodeScanner } from '@/hooks/useBarcodeScanner';
 import { useWarehouses } from '@/hooks/useWarehouses';
-import { Barcode, Package, Plus, CheckCircle } from 'lucide-react';
+import BarcodeScanField from '@/components/Stock/BarcodeScanField';
+import type { ScanResult } from '@/types/barcode';
+import { Package, Plus, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function QuickStockEntry() {
@@ -23,20 +25,26 @@ export default function QuickStockEntry() {
   const { t: tCommon } = useTranslation('common');
   const { currentOrganization } = useAuth();
   const [warehouseId, setWarehouseId] = useState<string>('');
-  const [barcode, setBarcode] = useState('');
   const [quantity, setQuantity] = useState('');
   const [lastEntry, setLastEntry] = useState<string | null>(null);
+  const [scannedItem, setScannedItem] = useState<ScanResult | null>(null);
 
   const { data: warehouses = [], isLoading: warehousesLoading, isError: warehousesError } = useWarehouses();
-
-  const { data: foundItem, isLoading: isSearching } = useBarcodeLookup(barcode || null);
   const createEntry = useCreateStockEntry();
+
+  const scanner = useBarcodeScanner({
+    items: [],
+    onItemFound: (result) => {
+      setScannedItem(result);
+      if (!quantity) setQuantity('1');
+    },
+    warehouseId,
+  });
 
   const handleBarcodeSubmit = useCallback(
     (e: React.FormEvent) => {
       e.preventDefault();
-      if (!barcode || !warehouseId || !quantity || !currentOrganization?.id) return;
-      if (!foundItem) return;
+      if (!warehouseId || !quantity || !currentOrganization?.id || !scannedItem) return;
 
       createEntry.mutate(
         {
@@ -47,12 +55,13 @@ export default function QuickStockEntry() {
           notes: t('quickStockEntry.title', 'Quick Stock Entry'),
           items: [
             {
-              item_id: foundItem.id,
-              item_name: foundItem.item_name,
+              item_id: scannedItem.item_id,
+              item_name: scannedItem.item_name,
               quantity: parseFloat(quantity),
-              unit: foundItem.default_unit || 'pcs',
+              unit: scannedItem.unit_name || 'pcs',
               target_warehouse_id: warehouseId,
-              variant_id: foundItem.variantId || undefined,
+              variant_id: scannedItem.variant_id || undefined,
+              scanned_barcode: scannedItem.barcode,
             },
           ],
         },
@@ -60,8 +69,9 @@ export default function QuickStockEntry() {
           onSuccess: (entry) => {
             toast.success(t('quickStockEntry.success', 'Stock entry created'));
             setLastEntry(entry.entry_number);
-            setBarcode('');
             setQuantity('');
+            setScannedItem(null);
+            scanner.setScanValue('');
           },
           onError: (error: Error) => {
             toast.error(`${t('quickStockEntry.error', 'Failed to create entry')}: ${error.message}`);
@@ -69,7 +79,7 @@ export default function QuickStockEntry() {
         }
       );
     },
-    [barcode, warehouseId, quantity, currentOrganization, foundItem, createEntry, t]
+    [warehouseId, quantity, currentOrganization, scannedItem, createEntry, t, scanner]
   );
 
   return (
@@ -117,43 +127,29 @@ export default function QuickStockEntry() {
 
           <form onSubmit={handleBarcodeSubmit} className="space-y-4">
             <div>
-              <label htmlFor="quick-barcode" className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">
                 {t('quickStockEntry.barcode', 'Barcode / Scan')}
               </label>
-              <div className="relative">
-                <Barcode className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                <Input
-                  id="quick-barcode"
-                  value={barcode}
-                  onChange={(e) => setBarcode(e.target.value)}
-                  placeholder={t('quickStockEntry.barcodePlaceholder', 'Scan or enter barcode...')}
-                  className="pl-10 min-h-[48px] text-lg"
-                  autoFocus
-                />
-              </div>
+              <BarcodeScanField
+                value={scanner.scanValue}
+                onChange={scanner.setScanValue}
+                onScan={scanner.handleScan}
+                isScanning={scanner.isScanning}
+                error={scanner.error}
+                placeholder={t('quickStockEntry.barcodePlaceholder', 'Scan or enter barcode...')}
+                className="min-h-[48px]"
+              />
             </div>
 
-            {barcode && (
-              <div className="rounded-lg border p-3 dark:border-gray-700">
-                {isSearching ? (
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    {t('quickStockEntry.scanPrompt', 'Searching...')}
-                  </p>
-                ) : foundItem ? (
-                  <div className="flex items-center gap-2">
-                    <Package className="h-4 w-4 text-green-600" />
-                    <span className="font-medium text-gray-900 dark:text-white">
-                      {foundItem.item_name}
-                    </span>
-                    <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 text-xs">
-                      {t('quickStockEntry.autoDetected', 'Auto-detected')}
-                    </Badge>
-                  </div>
-                ) : (
-                  <p className="text-sm text-red-600 dark:text-red-400">
-                    {t('quickStockEntry.notFound', 'Item not found')}
-                  </p>
-                )}
+            {scannedItem && (
+              <div className="flex items-center gap-2 rounded-lg border p-3 dark:border-gray-700">
+                <Package className="h-4 w-4 text-green-600" />
+                <span className="font-medium text-gray-900 dark:text-white">
+                  {scannedItem.item_name}
+                </span>
+                <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 text-xs">
+                  {t('quickStockEntry.autoDetected', 'Auto-detected')}
+                </Badge>
               </div>
             )}
 
@@ -175,7 +171,7 @@ export default function QuickStockEntry() {
 
             <Button
               type="submit"
-              disabled={!barcode || !warehouseId || !quantity || !foundItem || createEntry.isPending}
+              disabled={!warehouseId || !quantity || !scannedItem || createEntry.isPending}
               variant="green"
               className="w-full min-h-[48px] text-lg"
             >

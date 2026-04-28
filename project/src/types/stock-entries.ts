@@ -232,6 +232,7 @@ export interface CreateStockEntryItemInput {
   valuation_method?: ValuationMethod; // FIFO, LIFO, or Moving Average
   system_quantity?: number; // For reconciliation
   physical_quantity?: number; // For reconciliation
+  scanned_barcode?: string;
   notes?: string;
 }
 

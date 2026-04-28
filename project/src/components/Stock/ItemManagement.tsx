@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
-  useItems,
+  usePaginatedItems,
   useItemGroups,
   useCreateItem,
   useUpdateItem,
@@ -20,7 +20,14 @@ import { useCurrency } from '@/hooks/useCurrency';
 import { useFarms } from '@/hooks/useParcelsQuery';
 import { useFormErrors } from '@/hooks/useFormErrors';
 import { Button } from '@/components/ui/button';
-import { FilterBar, ListPageLayout, ListPageHeader, ResponsiveList } from '@/components/ui/data-table';
+import {
+  FilterBar,
+  ListPageLayout,
+  ListPageHeader,
+  ResponsiveList,
+  useServerTableState,
+  DataTablePagination,
+} from '@/components/ui/data-table';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/label';
@@ -52,12 +59,8 @@ import {
   DrawerDescription,
   DrawerFooter,
 } from '@/components/ui/drawer';
-import { Plus, Trash2, Pencil, Package, Loader2, ExternalLink, Eye, AlertTriangle, ShoppingBag, Layers, Clock3, ScanBarcode } from 'lucide-react';
+import { Plus, Trash2, Pencil, Package, Loader2, ExternalLink, Eye, AlertTriangle, ShoppingBag, Layers, Clock3, ScanBarcode, Barcode } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import { useItemBarcodes, useCreateBarcode, useUpdateBarcode, useDeleteBarcode } from '@/hooks/useItemBarcodes';
-import { BARCODE_TYPE_OPTIONS } from '@/types/barcode';
-import type { ItemBarcode, CreateBarcodeInput, BarcodeType } from '@/types/barcode';
-import { Badge } from '@/components/ui/badge';
 import { useNavigate } from '@tanstack/react-router';
 import { itemsApi } from '@/lib/api/items';
 import { marketplaceCategoriesApi } from '@/lib/api/marketplace-categories';
@@ -68,7 +71,15 @@ import LowStockAlerts from './LowStockAlerts';
 import ProductImageUpload from './ProductImageUpload';
 import ItemStockTimeline from './ItemStockTimeline';
 import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { EmptyState } from '@/components/ui/empty-state';
+import { ItemBarcodesManager } from './ItemBarcodesManager';
 
 // Stable empty array reference to avoid creating a new `[]` on every render
 // when the useItemGroups query data is undefined. Without this, the form's
@@ -949,6 +960,9 @@ function ItemVariantsDialog({ item, open, onOpenChange }: ItemVariantsDialogProp
   const deleteVariant = useDeleteItemVariant();
   const [editingVariant, setEditingVariant] = useState<ProductVariant | null>(null);
   const [variantToDelete, setVariantToDelete] = useState<ProductVariant | null>(null);
+  const [skuManuallyEdited, setSkuManuallyEdited] = useState(false);
+  const [selectedVariantForBarcodes, setSelectedVariantForBarcodes] = useState<ProductVariant | null>(null);
+  const [showVariantBarcodes, setShowVariantBarcodes] = useState(false);
 
   // Fetch work units for unit selection
   const { data: workUnits = [], isLoading: workUnitsLoading } = useQuery({
@@ -983,10 +997,19 @@ function ItemVariantsDialog({ item, open, onOpenChange }: ItemVariantsDialogProp
     },
   });
 
+  const watchedVariantName = form.watch('variant_name');
+
+  useEffect(() => {
+    if (!open || editingVariant || !watchedVariantName || skuManuallyEdited) return;
+    const sku = `${item?.item_code ?? ''}-${watchedVariantName}`.toUpperCase().replace(/\s+/g, '');
+    form.setValue('variant_sku', sku);
+  }, [watchedVariantName, open, editingVariant, item, skuManuallyEdited, form]);
+
   // Reset form when dialog opens/closes or when switching between create/edit mode
   useEffect(() => {
     if (!open) {
       setEditingVariant(null);
+      setSkuManuallyEdited(false);
       form.reset({
         variant_name: '',
         variant_sku: '',
@@ -1129,8 +1152,9 @@ function ItemVariantsDialog({ item, open, onOpenChange }: ItemVariantsDialogProp
               <Input
                 id="variant_sku"
                 {...form.register('variant_sku')}
-                placeholder={t('items.variants.skuPlaceholder', 'Optional')}
+                placeholder={t('items.variants.skuPlaceholder', 'Auto-generated')}
                 className="mt-1"
+                onChange={() => setSkuManuallyEdited(true)}
               />
               {form.formState.errors.variant_sku && (
                 <p className="text-sm text-red-600 mt-1">{form.formState.errors.variant_sku.message}</p>
@@ -1207,18 +1231,6 @@ function ItemVariantsDialog({ item, open, onOpenChange }: ItemVariantsDialogProp
               />
               {form.formState.errors.min_stock_level && (
                 <p className="text-sm text-red-600 mt-1">{form.formState.errors.min_stock_level.message}</p>
-              )}
-            </div>
-            <div>
-              <Label htmlFor="variant_barcode">{t('items.variants.barcode', 'Barcode')}</Label>
-              <Input
-                id="variant_barcode"
-                {...form.register('barcode')}
-                placeholder="Optional"
-                className="mt-1"
-              />
-              {form.formState.errors.barcode && (
-                <p className="text-sm text-red-600 mt-1">{form.formState.errors.barcode.message}</p>
               )}
             </div>
             <div className="flex items-center gap-2 pt-6">
@@ -1347,7 +1359,18 @@ function ItemVariantsDialog({ item, open, onOpenChange }: ItemVariantsDialogProp
                           </span>
                         </TableCell>
                         <TableCell className="px-4 py-2 text-right">
-                          <div className="flex items-center justify-end gap-2">
+                          <div className="flex items-center justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedVariantForBarcodes(variant);
+                                setShowVariantBarcodes(true);
+                              }}
+                              title={t('barcode.dialog.title', 'Manage barcodes')}
+                            >
+                              <Barcode className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                            </Button>
                             <Button
                               variant="ghost"
                               size="sm"
@@ -1400,237 +1423,42 @@ function ItemVariantsDialog({ item, open, onOpenChange }: ItemVariantsDialogProp
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      {showVariantBarcodes && selectedVariantForBarcodes && (
+        <Dialog open={showVariantBarcodes} onOpenChange={setShowVariantBarcodes}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>
+                {t('barcode.dialog.title', 'Manage Barcodes')} — {selectedVariantForBarcodes.variant_name}
+              </DialogTitle>
+              <DialogDescription>
+                {t('barcode.dialog.description', 'Add, edit, or remove barcodes for this variant')}
+              </DialogDescription>
+            </DialogHeader>
+            <ItemBarcodesManager variantId={selectedVariantForBarcodes.id} />
+          </DialogContent>
+        </Dialog>
+      )}
     </ResponsiveDialog>
   );
 }
 
 function ItemBarcodesDialog({ item, open, onOpenChange }: ItemVariantsDialogProps) {
   const { t } = useTranslation('stock');
-  const { t: tCommon } = useTranslation('common');
-  const { currentOrganization } = useAuth();
-  const { data: barcodes = [], isLoading } = useItemBarcodes(item?.id || null);
-  const createBarcode = useCreateBarcode();
-  const updateBarcode = useUpdateBarcode();
-  const deleteBarcode = useDeleteBarcode();
-
-  const [newBarcode, setNewBarcode] = useState('');
-  const [newType, setNewType] = useState('');
-  const [newIsPrimary, setNewIsPrimary] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editType, setEditType] = useState('');
-  const [editIsPrimary, setEditIsPrimary] = useState(false);
-  const [barcodeToDelete, setBarcodeToDelete] = useState<ItemBarcode | null>(null);
-
-  const resetForm = () => {
-    setNewBarcode('');
-    setNewType('');
-    setNewIsPrimary(false);
-    setEditingId(null);
-    setEditType('');
-    setEditIsPrimary(false);
-  };
-
-  const handleAdd = async () => {
-    if (!item || !currentOrganization || !newBarcode.trim()) return;
-
-    const input: CreateBarcodeInput = {
-      organization_id: currentOrganization.id,
-      item_id: item.id,
-      barcode: newBarcode.trim(),
-      barcode_type: (newType || undefined) as BarcodeType | undefined,
-      is_primary: newIsPrimary,
-    };
-
-    try {
-      await createBarcode.mutateAsync(input);
-      toast.success(t('barcode.created', 'Barcode added'));
-      resetForm();
-    } catch (error: unknown) {
-      toast.error(`${t('barcode.createFailed', 'Failed to add barcode')}: ${error instanceof Error ? error.message : ''}`);
-    }
-  };
-
-  const handleEdit = (bc: ItemBarcode) => {
-    setEditingId(bc.id);
-    setEditType(bc.barcode_type || '');
-    setEditIsPrimary(bc.is_primary);
-  };
-
-  const handleSaveEdit = async () => {
-    if (!editingId) return;
-    try {
-      await updateBarcode.mutateAsync({
-        id: editingId,
-        data: { barcode_type: (editType || undefined) as BarcodeType | undefined, is_primary: editIsPrimary },
-      });
-      toast.success(t('barcode.updated', 'Barcode updated'));
-      resetForm();
-    } catch (error: unknown) {
-      toast.error(`${t('barcode.updateFailed', 'Failed to update barcode')}: ${error instanceof Error ? error.message : ''}`);
-    }
-  };
-
-  const confirmDelete = async () => {
-    if (!barcodeToDelete) return;
-    try {
-      await deleteBarcode.mutateAsync(barcodeToDelete.id);
-      toast.success(t('barcode.deleted', 'Barcode deleted'));
-    } catch (error: unknown) {
-      toast.error(`${t('barcode.deleteFailed', 'Failed to delete barcode')}: ${error instanceof Error ? error.message : ''}`);
-    } finally {
-      setBarcodeToDelete(null);
-    }
-  };
 
   return (
-    <ResponsiveDialog
-      open={open}
-      onOpenChange={(v) => { onOpenChange(v); if (!v) resetForm(); }}
-      title={`${t('barcode.manage', 'Barcodes')} - ${item?.item_name ?? ''}`}
-      description={t('barcode.manageDescription', 'Manage barcodes for this item')}
-      size="2xl"
-      contentClassName="max-h-[90vh] overflow-y-auto"
-    >
-      <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row gap-3 items-end">
-          <div className="flex-1 w-full">
-            <Label>{t('barcode.value', 'Barcode')} *</Label>
-            <Input
-              value={newBarcode}
-              onChange={(e) => setNewBarcode(e.target.value)}
-              placeholder={t('barcode.enterBarcode', 'Enter or scan barcode...')}
-              className="mt-1"
-              disabled={!!editingId}
-            />
-          </div>
-          <div className="w-full sm:w-48">
-            <Label>{t('barcode.type', 'Type')}</Label>
-            <Select value={newType} onValueChange={setNewType}>
-              <SelectTrigger className="mt-1">
-                <SelectValue placeholder={t('barcode.autoDetect', 'Auto-detect')} />
-              </SelectTrigger>
-              <SelectContent>
-                {BARCODE_TYPE_OPTIONS.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex items-center gap-2 pt-5">
-            <Switch checked={newIsPrimary} onCheckedChange={setNewIsPrimary} />
-            <span className="text-sm text-gray-600 dark:text-gray-400">{t('barcode.primary', 'Primary')}</span>
-          </div>
-          <Button
-            onClick={editingId ? handleSaveEdit : handleAdd}
-            disabled={!newBarcode.trim() || createBarcode.isPending || updateBarcode.isPending}
-            className="shrink-0"
-          >
-            {createBarcode.isPending || updateBarcode.isPending ? (
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            ) : editingId ? (
-              t('barcode.save', 'Save')
-            ) : (
-              <Plus className="w-4 h-4 mr-2" />
-            )}
-            {editingId ? t('barcode.save', 'Save') : t('barcode.add', 'Add')}
-          </Button>
-          {editingId && (
-            <Button variant="outline" onClick={resetForm} className="shrink-0">
-              {tCommon('app.cancel', 'Cancel')}
-            </Button>
-          )}
-        </div>
-
-        <div>
-          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-            {t('barcode.existing', 'Existing barcodes')}
-          </h3>
-          {isLoading ? (
-            <div className="flex items-center justify-center py-6">
-              <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
-            </div>
-          ) : barcodes.length === 0 ? (
-            <EmptyState
-              variant="inline"
-              icon={ScanBarcode}
-              title={t('barcode.emptyTitle', 'No barcodes yet')}
-              description={t('barcode.empty', 'Add barcodes to enable quick scanning in stock operations')}
-            />
-          ) : (
-            <div className="border rounded-lg overflow-hidden">
-              <Table className="w-full">
-                <TableHeader className="bg-gray-50 dark:bg-gray-800">
-                  <TableRow>
-                    <TableHead className="px-4 py-2 text-left text-xs font-medium text-gray-500">{t('barcode.value', 'Barcode')}</TableHead>
-                    <TableHead className="px-4 py-2 text-left text-xs font-medium text-gray-500">{t('barcode.type', 'Type')}</TableHead>
-                    <TableHead className="px-4 py-2 text-left text-xs font-medium text-gray-500">{t('barcode.primary', 'Primary')}</TableHead>
-                    <TableHead className="px-4 py-2 text-left text-xs font-medium text-gray-500">{t('items.status', 'Status')}</TableHead>
-                    <TableHead className="px-4 py-2 text-right text-xs font-medium text-gray-500">{t('items.variants.actions', 'Actions')}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody className="divide-y">
-                  {barcodes.map((bc) => (
-                    <TableRow key={bc.id} className="text-sm">
-                      <TableCell className="px-4 py-2 font-mono text-gray-900 dark:text-white">{bc.barcode}</TableCell>
-                      <TableCell className="px-4 py-2 text-gray-700 dark:text-gray-300">{bc.barcode_type || '-'}</TableCell>
-                      <TableCell className="px-4 py-2">
-                        {bc.is_primary && (
-                          <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 text-xs">
-                            {t('barcode.primary', 'Primary')}
-                          </Badge>
-                        )}
-                      </TableCell>
-                      <TableCell className="px-4 py-2">
-                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                          bc.is_active
-                            ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400'
-                            : 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400'
-                        }`}>
-                          {bc.is_active ? t('items.active') : t('items.inactive')}
-                        </span>
-                      </TableCell>
-                      <TableCell className="px-4 py-2 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <Button variant="ghost" size="sm" onClick={() => handleEdit(bc)}>
-                            <Pencil className="w-4 h-4" />
-                          </Button>
-                          <Button variant="ghost" size="sm" onClick={() => setBarcodeToDelete(bc)} className="text-red-600 hover:text-red-700">
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </div>
-      </div>
-
-      <AlertDialog open={!!barcodeToDelete} onOpenChange={(v) => !v && setBarcodeToDelete(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t('barcode.deleteTitle', 'Delete Barcode')}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {t('barcode.deleteConfirm', 'Are you sure you want to delete this barcode?')}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{t('common.cancel', 'Cancel')}</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700 text-white">
-              {deleteBarcode.isPending ? (
-                <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{t('items.deleting')}</>
-              ) : (
-                t('items.delete')
-              )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </ResponsiveDialog>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>
+            {t('barcode.manageBarcodes', 'Manage Barcodes')} — {item?.item_name ?? ''}
+          </DialogTitle>
+          <DialogDescription>
+            {t('barcode.dialog.description', 'Each barcode must be unique within your organization.')}
+          </DialogDescription>
+        </DialogHeader>
+        <ItemBarcodesManager itemId={item?.id} />
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -1641,9 +1469,19 @@ export default function ItemManagement() {
   const navigate = useNavigate();
   const [selectedFarm, setSelectedFarm] = useState<string>('all');
   const [lowStockOnly, setLowStockOnly] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  
-  const { data: items = [], isLoading } = useItems({ is_active: true, is_stock_item: true });
+  const tableState = useServerTableState({
+    defaultPageSize: 10,
+    defaultSort: { key: 'created_at', direction: 'desc' },
+  });
+
+  const { data: paginatedData, isLoading, isFetching } = usePaginatedItems({
+    ...tableState.queryParams,
+    is_active: true,
+    is_stock_item: true,
+  });
+  const items = paginatedData?.data ?? [];
+  const totalItems = paginatedData?.total ?? 0;
+  const totalPages = paginatedData?.totalPages ?? 0;
   const { data: farms = [] } = useFarms(currentOrganization?.id);
   const deleteItem = useDeleteItem();
   const [showForm, setShowForm] = useState(false);
@@ -1677,8 +1515,8 @@ export default function ItemManagement() {
     let filtered = items;
 
     // Filter by search term
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase();
+    if (tableState.search) {
+      const term = tableState.search.toLowerCase();
       filtered = filtered.filter(
         (item) =>
           item.item_code.toLowerCase().includes(term) ||
@@ -1736,7 +1574,7 @@ export default function ItemManagement() {
     }
 
     return filtered;
-  }, [items, searchTerm, selectedFarm, lowStockOnly, stockLevels]);
+  }, [items, tableState.search, selectedFarm, lowStockOnly, stockLevels]);
 
   const handleEdit = (item: Item) => {
     setSelectedItem(item);
@@ -1808,8 +1646,8 @@ export default function ItemManagement() {
                 <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:gap-4">
                   <div className="min-w-0 flex-1">
                     <FilterBar
-                      searchValue={searchTerm}
-                      onSearchChange={setSearchTerm}
+                      searchValue={tableState.search}
+                      onSearchChange={tableState.setSearch}
                       searchPlaceholder={t('items.searchPlaceholder', 'Search items...')}
                       className="w-full"
                     />
@@ -1835,10 +1673,9 @@ export default function ItemManagement() {
                     </Select>
                   </div>
 
-                  <button
-                    type="button"
+                  <label
+                    htmlFor="low-stock-only-switch"
                     className="flex cursor-pointer items-center justify-between gap-3 rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 transition-colors hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-900 dark:hover:bg-gray-800 sm:justify-start sm:px-3 sm:py-2"
-                    onClick={() => setLowStockOnly(!lowStockOnly)}
                   >
                     <div className="flex flex-1 items-center gap-2 sm:flex-initial">
                       <AlertTriangle className={`h-4 w-4 transition-colors ${lowStockOnly ? 'text-amber-600 dark:text-amber-400' : 'text-gray-400'}`} />
@@ -1847,11 +1684,11 @@ export default function ItemManagement() {
                       </span>
                     </div>
                     <Switch
+                      id="low-stock-only-switch"
                       checked={lowStockOnly}
                       onCheckedChange={setLowStockOnly}
-                      className="pointer-events-none"
                     />
-                  </button>
+                  </label>
                 </div>
               </CardContent>
             </Card>
@@ -1863,13 +1700,15 @@ export default function ItemManagement() {
             <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
           </div>
         ) : (
+          <>
           <ResponsiveList
             items={filteredItems}
             keyExtractor={(item) => item.id}
             emptyIcon={Package}
             emptyTitle={t('items.noItemsTitle', 'No items found')}
             emptyMessage={t('items.noItemsFound')}
-            emptyAction={!searchTerm && selectedFarm === 'all' && !lowStockOnly ? {
+            isFetching={isFetching}
+            emptyAction={!tableState.search && selectedFarm === 'all' && !lowStockOnly ? {
               label: t('items.createItem'),
               onClick: handleCreate,
             } : undefined}
@@ -2151,6 +1990,18 @@ export default function ItemManagement() {
               );
             }}
           />
+
+          {totalItems > 0 && (
+            <DataTablePagination
+              page={tableState.page}
+              pageSize={tableState.pageSize}
+              totalItems={totalItems}
+              totalPages={totalPages}
+              onPageChange={tableState.setPage}
+              onPageSizeChange={tableState.setPageSize}
+            />
+          )}
+          </>
         )}
       </ListPageLayout>
 

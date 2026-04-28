@@ -1,9 +1,9 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useWarehouses, type Warehouse } from '@/hooks/useWarehouses';
+import { usePaginatedWarehouses, type Warehouse } from '@/hooks/useWarehouses';
 import { useFarms } from '@/hooks/useParcelsQuery';
 import { useAuth } from '@/hooks/useAuth';
 import { warehousesApi, type CreateWarehouseInput } from '@/lib/api/warehouses';
@@ -31,8 +31,7 @@ import {
   TableCell,
   TableHead,
 } from '@/components/ui/table';
-import { FilterBar, ListPageLayout, ResponsiveList } from '@/components/ui/data-table';
-import { EmptyState } from '@/components/ui/empty-state';
+import { DataTablePagination, FilterBar, ListPageLayout, ResponsiveList, useServerTableState } from '@/components/ui/data-table';
 import { Plus, Edit, Trash2, Loader2, AlertCircle, Warehouse as WarehouseIcon } from 'lucide-react';
 
 const warehouseSchema = z.object({
@@ -453,38 +452,19 @@ export default function WarehouseManagement() {
   const { t: tCommon } = useTranslation('common');
   const { currentOrganization } = useAuth();
   const queryClient = useQueryClient();
-  const { data: warehouses = [], isLoading, error, refetch } = useWarehouses();
+  const tableState = useServerTableState({
+    defaultPageSize: 20,
+    defaultSort: { key: 'name', direction: 'asc' as const },
+  });
+  const { data, isLoading, isFetching, error, refetch } = usePaginatedWarehouses(tableState.queryParams);
+  const warehouses = data?.data ?? [];
+  const totalItems = data?.total ?? 0;
+  const totalPages = data?.totalPages ?? 0;
 
   const [showForm, setShowForm] = useState(false);
   const [selectedWarehouse, setSelectedWarehouse] = useState<Warehouse | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [warehouseToDelete, setWarehouseToDelete] = useState<Warehouse | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
-
-  const filteredWarehouses = useMemo(() => {
-    const query = searchTerm.trim().toLowerCase();
-
-    if (!query) {
-      return warehouses;
-    }
-
-    return warehouses.filter((warehouse) => {
-      const searchableFields = [
-        warehouse.name,
-        warehouse.description,
-        warehouse.location,
-        warehouse.address,
-        warehouse.city,
-        warehouse.postal_code,
-        warehouse.capacity_unit,
-        warehouse.security_level,
-        warehouse.manager_name,
-        warehouse.manager_phone,
-      ];
-
-      return searchableFields.some((value) => value?.toLowerCase().includes(query));
-    });
-  }, [warehouses, searchTerm]);
 
   const deleteMutation = useMutation({
     mutationFn: async (warehouseId: string) => {
@@ -563,8 +543,8 @@ export default function WarehouseManagement() {
       }
       filters={
         <FilterBar
-          searchValue={searchTerm}
-          onSearchChange={setSearchTerm}
+          searchValue={tableState.search}
+          onSearchChange={tableState.setSearch}
           searchPlaceholder={t('warehouses.searchPlaceholder', 'Search warehouses...')}
         />
       }
@@ -575,35 +555,29 @@ export default function WarehouseManagement() {
           <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
         </div>
       ) : (
+        <>
         <ResponsiveList
-          items={filteredWarehouses}
+          items={warehouses}
+          isLoading={isFetching}
           keyExtractor={(warehouse) => warehouse.id}
           emptyIcon={WarehouseIcon}
           emptyTitle={
-            warehouses.length === 0
+            totalItems === 0
               ? t('warehouses.noWarehouses')
               : t('warehouses.noSearchResults', 'No warehouses found')
           }
           emptyMessage={
-            warehouses.length === 0
+            totalItems === 0
               ? t('warehouses.noWarehousesDescription')
               : t('warehouses.noSearchResultsDescription', 'Try adjusting your search.')
           }
           emptyAction={
-            warehouses.length === 0
+            totalItems === 0
               ? {
                   label: t('warehouses.createFirstWarehouse'),
                   onClick: handleCreate,
                 }
               : undefined
-          }
-          emptyExtra={
-            warehouses.length > 0 && filteredWarehouses.length === 0 ? (
-              <EmptyState
-                variant="inline"
-                description={t('warehouses.noSearchResultsDescription', 'Try adjusting your search.')}
-              />
-            ) : undefined
           }
           renderCard={(warehouse) => (
             <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
@@ -763,6 +737,15 @@ export default function WarehouseManagement() {
             </>
           )}
         />
+        <DataTablePagination
+          page={tableState.page}
+          pageSize={tableState.pageSize}
+          totalItems={totalItems}
+          totalPages={totalPages}
+          onPageChange={tableState.setPage}
+          onPageSizeChange={tableState.setPageSize}
+        />
+        </>
       )}
 
       <WarehouseForm

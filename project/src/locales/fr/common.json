@@ -5749,20 +5749,36 @@
     },
     "harvests": {
       "step1": {
-        "title": "Tableau de Bord Récoltes",
-        "content": "Quantités totales, revenus estimés et répartition par culture. C'est le résultat de toute votre chaîne de production."
+        "title": "Bienvenue dans Production 🌾",
+        "content": "Cette section transforme parcelles + tâches + intrants en données de production réelles. Les 7 sous-pages suivent l'ordre temporel : Campagnes posent la saison → Cycles de Culture plantent + cultivent → Récolte sort le fruit → Réception/Qualité notent la marchandise → Actifs Biologiques valorisent les arbres → Applications de Produits suivent les intrants utilisés. ~90 secondes."
       },
       "step2": {
-        "title": "Historique des Récoltes",
-        "content": "Chaque enregistrement est lié à une parcelle avec quantité, grade de qualité et date. Les données qualité alimentent les rapports de conformité."
+        "title": "Campagnes — Le conteneur de saison",
+        "content": "Une campagne regroupe tout pour une saison de culture (ex. \"Agrumes 2026-2027\"). Peut couvrir 1-2 exercices fiscaux et lier fermes, parcelles, coûts, revenus. Ouvrez pour voir surface totale, production prévue vs réelle et budgets par cycle."
       },
       "step3": {
-        "title": "Enregistrer une Récolte",
-        "content": "Saisissez une récolte : sélectionnez la parcelle, entrez quantité et qualité. Cela met à jour vos stats et peut déclencher une commande de vente."
+        "title": "Cycles de Culture — De la plantation à la récolte",
+        "content": "Chaque cycle = une plantation sur une parcelle dans une campagne. Suivez date de plantation, dates de récolte prévue/réelle, statut (planifié → préparation → croissance → récolte → terminé) et méthode d'évaluation IFRS-41. Le pont entre agronomie et comptabilité."
       },
       "step4": {
-        "title": "Filtrer & Analyser",
-        "content": "Filtrez par période, culture ou ferme pour comparer les rendements. Quelles parcelles sont les plus performantes ? Quelles cultures les plus rentables ?"
+        "title": "Récoltes — Saisissez ce qui sort",
+        "content": "Enregistrez les événements de récolte : parcelle + culture + quantité + grade qualité + revenus estimés. Chaque enregistrement met à jour vos stats et démarre la traçabilité — chaque récolte reçoit un numéro de lot."
+      },
+      "step5": {
+        "title": "Lots de Réception — À la station",
+        "content": "Quand la récolte arrive à la station de conditionnement : pesage, tri, attribution de numéros de lot. Suit la défurca, le calibrage, et le lien aux pistes d'audit (GlobalGAP, Bio l'exigent)."
+      },
+      "step6": {
+        "title": "Contrôle Qualité — Notation par lot",
+        "content": "Inspections qualité par lot : défauts, calibrage, conformité certification. Une inspection échouée peut déclasser un lot ou déclencher une action corrective. Toutes les notes alimentent le module conformité."
+      },
+      "step7": {
+        "title": "Actifs Biologiques — Arbres, élevage, plantes",
+        "content": "Suivi à la juste valeur IFRS 41 pour les actifs productifs : plantes porteuses (agrumes, olivier, amandier), élevage. Enregistre acquisition, maturité, amortissement, et gains/pertes non réalisés sur réévaluation. Requis pour des bilans agricoles corrects."
+      },
+      "step8": {
+        "title": "Applications de Produits — Quoi, où, quand",
+        "content": "Chaque engrais, pesticide ou traitement appliqué à une parcelle : produit, dose, surface, date, ouvrier. Tire du stock (décrémente l'inventaire), alimente la conformité (registres PPP), et contribue au coût par parcelle. Rejouez ce tour à tout moment via ? (en haut à droite)."
       }
     },
     "infrastructure": {

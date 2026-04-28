@@ -1,15 +1,12 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
-import { useAuth } from '@/hooks/useAuth';
 import { useCurrency } from '@/hooks/useCurrency';
+import { usePaginatedFarmStockLevels } from '@/hooks/useFarmStockLevels';
 import { useItems } from '@/hooks/useItems';
 import { useWarehouses } from '@/hooks/useWarehouses';
-import { itemsApi } from '@/lib/api/items';
-import type { ItemStockLevelsResponse, ItemStockLevelWarehouse } from '@/types/items';
 import { Button } from '@/components/ui/button';
-import { FilterBar, ListPageLayout } from '@/components/ui/data-table';
+import { DataTablePagination, FilterBar, ListPageLayout, useServerTableState } from '@/components/ui/data-table';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ExternalLink, Loader2, AlertTriangle, CheckCircle } from 'lucide-react';
 
@@ -25,7 +22,9 @@ interface InventoryStockLevel {
   total_value: number;
 }
 
-interface InventoryWarehouseStockLevel extends Pick<ItemStockLevelWarehouse, 'warehouse_id' | 'warehouse_name'> {
+interface InventoryWarehouseStockLevel {
+  warehouse_id: string;
+  warehouse_name: string;
   item_id: string;
   total_quantity: number;
   total_value: number;
@@ -33,60 +32,36 @@ interface InventoryWarehouseStockLevel extends Pick<ItemStockLevelWarehouse, 'wa
 
 export default function InventoryStock() {
   const { t } = useTranslation('stock');
-  const { currentOrganization } = useAuth();
   const { format: formatCurrency } = useCurrency();
   const navigate = useNavigate();
-  const [searchTerm, setSearchTerm] = React.useState('');
+  const { page, pageSize, search, setPage, setPageSize, setSearch } = useServerTableState({ defaultPageSize: 20 });
   const [selectedWarehouse, setSelectedWarehouse] = React.useState<string>('all');
 
   const { data: items = [], isLoading: itemsLoading } = useItems({ is_stock_item: true });
   const { data: warehouses = [] } = useWarehouses();
+  const { data: stockLevelsResponse, isLoading: stockLoading } = usePaginatedFarmStockLevels({ page, pageSize });
 
-  // Fetch stock levels using NestJS API
-  const { data: stockLevelsData = {}, isLoading: stockLoading } = useQuery<ItemStockLevelsResponse>({
-    queryKey: ['inventory-stock-levels', currentOrganization?.id, selectedWarehouse],
-    queryFn: async () => {
-      if (!currentOrganization?.id) return {};
-
-       try {
-         // Use the items API stock-levels endpoint which aggregates stock by item and warehouse
-          const filters = {} as Record<string, never>;
-         // Note: The API returns data grouped by item_id with warehouse details
-         // We need to transform it to match the expected format
-         const stockData = await itemsApi.getStockLevels(filters, currentOrganization.id);
-         return stockData;
-       } catch (_error) {
-         return {};
-       }
-    },
-    enabled: !!currentOrganization?.id,
-  });
-
-  // Transform stock levels data to match the expected format
   const stockLevels = React.useMemo<InventoryWarehouseStockLevel[]>(() => {
     const result: InventoryWarehouseStockLevel[] = [];
 
-    Object.entries(stockLevelsData).forEach(([itemId, itemStock]) => {
-      if (itemStock.warehouses && Array.isArray(itemStock.warehouses)) {
-        itemStock.warehouses.forEach((wh) => {
-          // Filter by selected warehouse if not 'all'
-          if (selectedWarehouse !== 'all' && wh.warehouse_id !== selectedWarehouse) {
-            return;
-          }
+    stockLevelsResponse?.data.forEach((itemStock) => {
+      itemStock.by_farm.forEach((warehouseStock) => {
+        if (selectedWarehouse !== 'all' && warehouseStock.warehouse_id !== selectedWarehouse) {
+          return;
+        }
 
-          result.push({
-            item_id: itemId,
-            warehouse_id: wh.warehouse_id,
-            warehouse_name: wh.warehouse_name,
-            total_quantity: wh.quantity || 0,
-            total_value: wh.value || 0,
-          });
+        result.push({
+          item_id: itemStock.item_id,
+          warehouse_id: warehouseStock.warehouse_id,
+          warehouse_name: warehouseStock.warehouse_name,
+          total_quantity: warehouseStock.total_quantity || 0,
+          total_value: warehouseStock.total_value || 0,
         });
-      }
+      });
     });
 
     return result;
-  }, [stockLevelsData, selectedWarehouse]);
+  }, [selectedWarehouse, stockLevelsResponse?.data]);
 
   // Combine items with stock levels
   const inventoryData = React.useMemo(() => {
@@ -98,7 +73,7 @@ export default function InventoryStock() {
     const result: InventoryStockLevel[] = [];
 
     // If we have stock data, show items with stock
-    if (stockLevels.length > 0) {
+    if ((stockLevelsResponse?.data.length ?? 0) > 0) {
       stockLevels.forEach(stock => {
         const item = itemMap.get(stock.item_id);
         if (item) {
@@ -136,8 +111,8 @@ export default function InventoryStock() {
     }
 
     // Filter by search term
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase();
+    if (search) {
+      const term = search.toLowerCase();
       return result.filter(item =>
         item.item_code.toLowerCase().includes(term) ||
         item.item_name.toLowerCase().includes(term) ||
@@ -146,10 +121,18 @@ export default function InventoryStock() {
     }
 
     return result;
-  }, [items, stockLevels, warehouses, searchTerm]);
+  }, [items, search, stockLevels, stockLevelsResponse?.data.length, warehouses]);
+
+  const totalItems = stockLevelsResponse?.total ?? 0;
+  const totalPages = stockLevelsResponse?.totalPages ?? 0;
 
   const handleViewItem = (itemId: string) => {
     navigate({ to: '/stock/items', search: { itemId } });
+  };
+
+  const handleWarehouseChange = (value: string) => {
+    setSelectedWarehouse(value);
+    setPage(1);
   };
 
   if (itemsLoading || stockLoading) {
@@ -172,14 +155,14 @@ export default function InventoryStock() {
       }
       filters={
         <FilterBar
-          searchValue={searchTerm}
-          onSearchChange={setSearchTerm}
+          searchValue={search}
+          onSearchChange={setSearch}
           searchPlaceholder={t('inventoryStock.searchPlaceholder')}
           filters={[
             {
               key: 'warehouse',
               value: selectedWarehouse,
-              onChange: setSelectedWarehouse,
+              onChange: handleWarehouseChange,
               options: [
                 { value: 'all', label: t('inventoryStock.allWarehouses') },
                 ...warehouses.map((warehouse) => ({
@@ -283,6 +266,14 @@ export default function InventoryStock() {
           </TableBody>
         </Table>
       </div>
+      <DataTablePagination
+        page={page}
+        totalPages={totalPages}
+        pageSize={pageSize}
+        totalItems={totalItems}
+        onPageChange={setPage}
+        onPageSizeChange={setPageSize}
+      />
     </ListPageLayout>
   );
 }

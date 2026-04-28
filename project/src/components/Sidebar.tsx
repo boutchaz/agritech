@@ -1021,6 +1021,7 @@ const Sidebar = ({
                             currentPath === "/campaigns",
                           )}
                           onClick={(e) => handleNavigation("/campaigns", e)}
+                          data-tour="nav-campaigns"
                         >
                           {renderText(t("nav.campaigns", "Campaigns"))}
                         </Button>
@@ -1032,6 +1033,7 @@ const Sidebar = ({
                             currentPath === "/crop-cycles",
                           )}
                           onClick={(e) => handleNavigation("/crop-cycles", e)}
+                          data-tour="nav-crop-cycles"
                         >
                           {renderText(t("nav.cropCycles", "Crop Cycles"))}
                         </Button>
@@ -1043,6 +1045,7 @@ const Sidebar = ({
                             currentPath === "/harvests",
                           )}
                           onClick={(e) => handleNavigation("/harvests", e)}
+                          data-tour="nav-harvests"
                         >
                           {renderText(t("nav.harvests"))}
                         </Button>
@@ -1056,6 +1059,7 @@ const Sidebar = ({
                           onClick={(e) =>
                             handleNavigation("/reception-batches", e)
                           }
+                          data-tour="nav-reception-batches"
                         >
                           {renderText(t("nav.receptionBatches"))}
                         </Button>
@@ -1069,6 +1073,7 @@ const Sidebar = ({
                           onClick={(e) =>
                             handleNavigation("/quality-control", e)
                           }
+                          data-tour="nav-quality-control"
                         >
                           {renderText(t("nav.qualityControl"))}
                         </Button>
@@ -1082,6 +1087,7 @@ const Sidebar = ({
                           onClick={(e) =>
                             handleNavigation("/biological-assets", e)
                           }
+                          data-tour="nav-biological-assets"
                         >
                           {renderText(t("nav.biologicalAssets", "Biological Assets"))}
                         </Button>
@@ -1095,6 +1101,7 @@ const Sidebar = ({
                           onClick={(e) =>
                             handleNavigation("/product-applications", e)
                           }
+                          data-tour="nav-product-applications"
                         >
                           {renderText(t("nav.productApplications", "Product Applications"))}
                         </Button>

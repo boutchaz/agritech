@@ -8,14 +8,18 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { SectionLoader } from '@/components/ui/loader';
 import { EmptyState } from '@/components/ui/empty-state';
-import { ResponsiveList } from '@/components/ui/data-table';
-import { useReorderSuggestions } from '@/hooks/useReorderSuggestions';
+import { DataTablePagination, ResponsiveList, useServerTableState } from '@/components/ui/data-table';
+import { usePaginatedReorderSuggestions } from '@/hooks/useReorderSuggestions';
 import { ShoppingCart, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function ReorderSuggestions() {
   const { t } = useTranslation('stock');
-  const { data: suggestions = [], isLoading, error } = useReorderSuggestions();
+  const tableState = useServerTableState({ defaultPageSize: 10 });
+  const { data, isLoading, isFetching, error } = usePaginatedReorderSuggestions(tableState.queryParams);
+  const suggestions = data?.data ?? [];
+  const totalItems = data?.total ?? 0;
+  const totalPages = data?.totalPages ?? 0;
 
   const handleGeneratePO = () => {
     toast.info(t('reorderSuggestions.generatePOPending', 'Coming soon'));
@@ -58,13 +62,13 @@ export default function ReorderSuggestions() {
         <>
           <div className="flex items-center gap-2 mb-4">
             <Badge className="bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300">
-              {suggestions.length} {t('reorderSuggestions.subtitle', 'items below reorder point')}
+              {totalItems} {t('reorderSuggestions.subtitle', 'items below reorder point')}
             </Badge>
           </div>
 
           <ResponsiveList
             items={suggestions}
-            isLoading={false}
+            isLoading={isFetching}
             keyExtractor={(item) => item.itemId}
             emptyIcon={ShoppingCart}
             emptyMessage={t('reorderSuggestions.noSuggestions', 'No reorder suggestions')}
@@ -153,6 +157,14 @@ export default function ReorderSuggestions() {
                 </TableCell>
               </>
             )}
+          />
+          <DataTablePagination
+            page={tableState.page}
+            pageSize={tableState.pageSize}
+            totalItems={totalItems}
+            totalPages={totalPages}
+            onPageChange={tableState.setPage}
+            onPageSizeChange={tableState.setPageSize}
           />
         </>
       )}

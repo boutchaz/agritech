@@ -1,7 +1,9 @@
+import type { TFunction } from 'i18next';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { DataTablePagination } from '@/components/ui/data-table';
 import { Card, CardContent } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Input } from '@/components/ui/Input';
@@ -57,8 +59,7 @@ const formatNumber = (value: number) =>
     maximumFractionDigits: 3,
   }).format(value);
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const getWarehouseLabel = (movement: StockMovementWithDetails, t: any) => {
+const getWarehouseLabel = (movement: StockMovementWithDetails, t: TFunction) => {
   const warehouseName = movement.warehouse?.name || '—';
 
   if (movement.movement_type === 'TRANSFER') {
@@ -85,6 +86,8 @@ export default function ItemStockTimeline({ itemId, itemName, onClose }: ItemSto
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   const [movementType, setMovementType] = useState<MovementFilterValue>('all');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
 
   const filters = useMemo(
     () => ({
@@ -96,12 +99,16 @@ export default function ItemStockTimeline({ itemId, itemName, onClose }: ItemSto
   );
 
   const {
-    data: movements = [],
+    data: movementResponse,
     isLoading,
     isFetching,
     error,
     refetch,
-  } = useStockMovements(itemId, filters);
+  } = useStockMovements(itemId, filters, page, pageSize);
+
+  const movements = movementResponse?.data ?? [];
+  const totalMovements = movementResponse?.total ?? 0;
+  const totalPages = Math.ceil(totalMovements / pageSize);
 
   const timelineMovements = useMemo<TimelineMovement[]>(() => {
     const ascending = [...movements].sort(
@@ -285,6 +292,22 @@ export default function ItemStockTimeline({ itemId, itemName, onClose }: ItemSto
                   </CardContent>
                 </Card>
               ))}
+              <div className="space-y-3 pt-2">
+                <p className="text-xs text-muted-foreground">
+                  {t('items.timeline.runningBalancePageNote', 'Running balance is calculated for the current page only.')}
+                </p>
+                <DataTablePagination
+                  page={page}
+                  totalPages={totalPages}
+                  pageSize={pageSize}
+                  totalItems={totalMovements}
+                  onPageChange={setPage}
+                  onPageSizeChange={(size) => {
+                    setPageSize(size);
+                    setPage(1);
+                  }}
+                />
+              </div>
             </div>
           ) : (
             <div className="h-full overflow-auto">
@@ -342,6 +365,22 @@ export default function ItemStockTimeline({ itemId, itemName, onClose }: ItemSto
                   ))}
                 </TableBody>
               </Table>
+              <div className="border-t px-4">
+                <p className="pt-4 text-xs text-muted-foreground">
+                  {t('items.timeline.runningBalancePageNote', 'Running balance is calculated for the current page only.')}
+                </p>
+                <DataTablePagination
+                  page={page}
+                  totalPages={totalPages}
+                  pageSize={pageSize}
+                  totalItems={totalMovements}
+                  onPageChange={setPage}
+                  onPageSizeChange={(size) => {
+                    setPageSize(size);
+                    setPage(1);
+                  }}
+                />
+              </div>
             </div>
           )}
         </div>
@@ -349,7 +388,7 @@ export default function ItemStockTimeline({ itemId, itemName, onClose }: ItemSto
         <div className="flex items-center justify-between gap-3 border-t pt-3">
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <Clock3 className="h-4 w-4" />
-            <span>{t('items.timeline.count', { count: timelineMovements.length, defaultValue: '{{count}} movement(s)' })}</span>
+            <span>{t('items.timeline.count', { count: totalMovements, defaultValue: '{{count}} movement(s)' })}</span>
             {isFetching && !isLoading ? (
               <span className="inline-flex items-center gap-1">
                 <RefreshCcw className="h-3.5 w-3.5 animate-spin" />

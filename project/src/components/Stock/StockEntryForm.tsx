@@ -29,7 +29,10 @@ import { useCreateStockEntry } from '@/hooks/useStockEntries';
 import { useWarehouses } from '@/hooks/useWarehouses';
 import { useItemSelection } from '@/hooks/useItems';
 import { useAuth } from '@/hooks/useAuth';
+import { useBarcodeScanner } from '@/hooks/useBarcodeScanner';
+import BarcodeScanField from '@/components/Stock/BarcodeScanField';
 import type { StockEntryType, CreateStockEntryInput } from '@/types/stock-entries';
+import type { ScanResult } from '@/types/barcode';
 import { STOCK_ENTRY_TYPES } from '@/types/stock-entries';
 import { toast } from 'sonner';
 import { getLocalDate } from '@/utils/date';
@@ -197,6 +200,27 @@ export default function StockEntryForm({
   const { fields, append, remove } = useFieldArray({
     control: form.control,
     name: 'items',
+  });
+
+  const scanner = useBarcodeScanner({
+    items: fields.map((_, i) => ({
+      item_id: form.watch(`items.${i}.item_id`) || '',
+      quantity: form.watch(`items.${i}.quantity`) || 0,
+    })),
+    warehouseId: form.watch('to_warehouse_id') || form.watch('from_warehouse_id') || undefined,
+    onItemFound: (result: ScanResult) => {
+      const existingIndex = fields.findIndex(
+        (_, i) => form.watch(`items.${i}.item_id`) === result.item_id
+      );
+      if (existingIndex >= 0) {
+        const currentQty = form.watch(`items.${existingIndex}.quantity`) || 0;
+        form.setValue(`items.${existingIndex}.quantity`, currentQty + 1, { shouldValidate: true });
+      } else {
+        void applySelectedItem(fields.length, result.item_id).then(() => {
+          form.setValue(`items.${fields.length}.quantity`, 1, { shouldValidate: true });
+        });
+      }
+    },
   });
 
   const config = STOCK_ENTRY_TYPES[selectedType];
@@ -523,6 +547,16 @@ export default function StockEntryForm({
               />
             </div>
           </div>
+
+          {/* Barcode Scanner */}
+          <BarcodeScanField
+            value={scanner.scanValue}
+            onChange={scanner.setScanValue}
+            onScan={scanner.handleScan}
+            isScanning={scanner.isScanning}
+            error={scanner.error}
+            autoFocus={false}
+          />
 
           {/* Items */}
           <div>

@@ -18,6 +18,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { DataTablePagination } from '@/components/ui/data-table';
 import { useStockAging } from '@/hooks/useStockEntries';
 import { useWarehouses } from '@/hooks/useWarehouses';
 import { cn } from '@/lib/utils';
@@ -48,6 +49,8 @@ export function StockAgingReport() {
   const { t } = useTranslation('stock');
   const [warehouseId, setWarehouseId] = useState<string | undefined>(undefined);
   const [sortKey, setSortKey] = useState<SortKey>('oldest');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
   const { data, isLoading } = useStockAging(warehouseId);
   const { data: warehouses = [] } = useWarehouses();
 
@@ -61,6 +64,9 @@ export function StockAgingReport() {
     });
     return copy;
   }, [data, sortKey]);
+
+  const totalPages = Math.ceil(sortedItems.length / pageSize);
+  const paginatedItems = sortedItems.slice((page - 1) * pageSize, page * pageSize);
 
   return (
     <div className="space-y-6">
@@ -179,7 +185,7 @@ export function StockAgingReport() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {sortedItems.map((it) => (
+                  {paginatedItems.map((it) => (
                     <TableRow key={`${it.itemId}-${it.warehouseId}`}>
                       <TableCell>
                         <div className="font-medium text-sm">{it.itemName}</div>
@@ -222,6 +228,17 @@ export function StockAgingReport() {
                   ))}
                 </TableBody>
               </Table>
+              <DataTablePagination
+                page={page}
+                pageSize={pageSize}
+                totalItems={sortedItems.length}
+                totalPages={totalPages}
+                onPageChange={setPage}
+                onPageSizeChange={(size) => {
+                  setPageSize(size);
+                  setPage(1);
+                }}
+              />
             </div>
           )}
         </CardContent>

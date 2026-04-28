@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { keepPreviousData } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import {
   TableCell,
@@ -16,8 +17,8 @@ import {
 } from '@/components/ui/radix-select';
 import { SectionLoader } from '@/components/ui/loader';
 import { EmptyState } from '@/components/ui/empty-state';
-import { ResponsiveList } from '@/components/ui/data-table';
-import { useBatches } from '@/hooks/useBatches';
+import { DataTablePagination, ResponsiveList, useServerTableState } from '@/components/ui/data-table';
+import { usePaginatedBatches } from '@/hooks/useBatches';
 import type { BatchData } from '@/lib/api/stock';
 import { Package, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -44,24 +45,23 @@ export default function BatchManagement() {
   const { t } = useTranslation('stock');
   const [itemFilter, setItemFilter] = useState<string>('all');
   const [warehouseFilter, setWarehouseFilter] = useState<string>('all');
-  const [search, setSearch] = useState('');
+  const tableState = useServerTableState({
+    defaultPageSize: 10,
+    defaultSort: { key: 'created_at', direction: 'desc' as const },
+  });
 
-  const { data: batches = [], isLoading } = useBatches(
-    itemFilter !== 'all' || warehouseFilter !== 'all'
-      ? { item_id: itemFilter !== 'all' ? itemFilter : undefined, warehouse_id: warehouseFilter !== 'all' ? warehouseFilter : undefined }
-      : undefined
+  const { data, isLoading, isFetching } = usePaginatedBatches(
+    {
+      ...tableState.queryParams,
+      item_id: itemFilter !== 'all' ? itemFilter : undefined,
+      warehouse_id: warehouseFilter !== 'all' ? warehouseFilter : undefined,
+    },
+    keepPreviousData,
   );
 
-  const filteredBatches = useMemo(() => {
-    if (!search) return batches;
-    const lower = search.toLowerCase();
-    return batches.filter(
-      (b) =>
-        b.batchNumber.toLowerCase().includes(lower) ||
-        b.itemName.toLowerCase().includes(lower) ||
-        b.warehouseName.toLowerCase().includes(lower)
-    );
-  }, [batches, search]);
+  const batches = data?.data ?? [];
+  const totalItems = data?.total ?? 0;
+  const totalPages = data?.totalPages ?? 0;
 
   const uniqueItems = useMemo(
     () => [...new Map(batches.map((b) => [b.itemId, b.itemName])).entries()],
@@ -92,8 +92,8 @@ export default function BatchManagement() {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
             <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              value={tableState.search}
+              onChange={(e) => tableState.setSearch(e.target.value)}
               placeholder={t('batchManagement.filterByItem', 'Filter by item')}
               className="pl-9"
             />
@@ -123,7 +123,7 @@ export default function BatchManagement() {
         </div>
       </div>
 
-      {filteredBatches.length === 0 ? (
+      {batches.length === 0 ? (
         <EmptyState
           variant="card"
           icon={Package}
@@ -131,99 +131,110 @@ export default function BatchManagement() {
           description={t('batchManagement.noBatchesHint', 'Batches will appear when stock entries with batch numbers are posted')}
         />
       ) : (
-        <ResponsiveList
-          items={filteredBatches}
-          isLoading={false}
-          keyExtractor={(item) => item.id}
-          emptyIcon={Package}
-          emptyMessage={t('batchManagement.noBatches', 'No batches found')}
-          renderCard={(batch) => {
-            const freshness = getFreshnessColor(batch);
-            return (
-              <div className="rounded-lg border bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="truncate font-semibold text-gray-900 dark:text-white">
-                      {batch.itemName}
-                    </p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      {t('batchManagement.batchNumber', 'Batch')}: {batch.batchNumber}
-                    </p>
-                  </div>
-                  <Badge className={cn(freshness.bg, freshness.text)}>
-                    {t(`batchManagement.freshness.${freshness.label}`, freshness.label)}
-                  </Badge>
-                </div>
-                <div className="mt-3 grid grid-cols-2 gap-2 text-sm text-gray-600 dark:text-gray-300">
-                  <div>
-                    <span className="text-gray-500 dark:text-gray-400">
-                      {t('batchManagement.warehouse', 'Warehouse')}:
-                    </span>{' '}
-                    {batch.warehouseName}
-                  </div>
-                  <div>
-                    <span className="text-gray-500 dark:text-gray-400">
-                      {t('batchManagement.remainingQty', 'Remaining')}:
-                    </span>{' '}
-                    {batch.remainingQuantity} {batch.unit}
-                  </div>
-                  <div>
-                    <span className="text-gray-500 dark:text-gray-400">
-                      {t('batchManagement.costPerUnit', 'Cost/Unit')}:
-                    </span>{' '}
-                    {batch.costPerUnit.toLocaleString()} MAD
-                  </div>
-                  {batch.expiryDate && (
-                    <div>
-                      <span className="text-gray-500 dark:text-gray-400">
-                        {t('batchManagement.expiryDate', 'Expiry')}:
-                      </span>{' '}
-                      {new Date(batch.expiryDate).toLocaleDateString()}
+        <>
+          <ResponsiveList
+            items={batches}
+            isLoading={isFetching}
+            isFetching={isFetching}
+            keyExtractor={(item) => item.id}
+            emptyIcon={Package}
+            emptyMessage={t('batchManagement.noBatches', 'No batches found')}
+            renderCard={(batch) => {
+              const freshness = getFreshnessColor(batch);
+              return (
+                <div className="rounded-lg border bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate font-semibold text-gray-900 dark:text-white">
+                        {batch.itemName}
+                      </p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        {t('batchManagement.batchNumber', 'Batch')}: {batch.batchNumber}
+                      </p>
                     </div>
-                  )}
-                </div>
-              </div>
-            );
-          }}
-          renderTableHeader={
-            <TableRow>
-              <TableHead>{t('batchManagement.batchNumber', 'Batch Number')}</TableHead>
-              <TableHead>{t('batchManagement.itemName', 'Item Name')}</TableHead>
-              <TableHead>{t('batchManagement.warehouse', 'Warehouse')}</TableHead>
-              <TableHead>{t('batchManagement.remainingQty', 'Remaining Qty')}</TableHead>
-              <TableHead>{t('batchManagement.costPerUnit', 'Cost/Unit')}</TableHead>
-              <TableHead>{t('batchManagement.totalValue', 'Total Value')}</TableHead>
-              <TableHead>{t('batchManagement.expiryDate', 'Expiry Date')}</TableHead>
-            </TableRow>
-          }
-          renderTable={(batch) => {
-            const freshness = getFreshnessColor(batch);
-            return (
-              <>
-                <TableCell>
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium">{batch.batchNumber}</span>
-                    <Badge className={cn(freshness.bg, freshness.text, 'text-xs')}>
+                    <Badge className={cn(freshness.bg, freshness.text)}>
                       {t(`batchManagement.freshness.${freshness.label}`, freshness.label)}
                     </Badge>
                   </div>
-                </TableCell>
-                <TableCell>{batch.itemName}</TableCell>
-                <TableCell className="text-gray-600 dark:text-gray-400">{batch.warehouseName}</TableCell>
-                <TableCell>
-                  {batch.remainingQuantity} {batch.unit}
-                </TableCell>
-                <TableCell>{batch.costPerUnit.toLocaleString()} MAD</TableCell>
-                <TableCell className="font-medium">{batch.totalValue.toLocaleString()} MAD</TableCell>
-                <TableCell>
-                  {batch.expiryDate
-                    ? new Date(batch.expiryDate).toLocaleDateString()
-                    : '-'}
-                </TableCell>
-              </>
-            );
-          }}
-        />
+                  <div className="mt-3 grid grid-cols-2 gap-2 text-sm text-gray-600 dark:text-gray-300">
+                    <div>
+                      <span className="text-gray-500 dark:text-gray-400">
+                        {t('batchManagement.warehouse', 'Warehouse')}:
+                      </span>{' '}
+                      {batch.warehouseName}
+                    </div>
+                    <div>
+                      <span className="text-gray-500 dark:text-gray-400">
+                        {t('batchManagement.remainingQty', 'Remaining')}:
+                      </span>{' '}
+                      {batch.remainingQuantity} {batch.unit}
+                    </div>
+                    <div>
+                      <span className="text-gray-500 dark:text-gray-400">
+                        {t('batchManagement.costPerUnit', 'Cost/Unit')}:
+                      </span>{' '}
+                      {batch.costPerUnit.toLocaleString()} MAD
+                    </div>
+                    {batch.expiryDate && (
+                      <div>
+                        <span className="text-gray-500 dark:text-gray-400">
+                          {t('batchManagement.expiryDate', 'Expiry')}:
+                        </span>{' '}
+                        {new Date(batch.expiryDate).toLocaleDateString()}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            }}
+            renderTableHeader={
+              <TableRow>
+                <TableHead>{t('batchManagement.batchNumber', 'Batch Number')}</TableHead>
+                <TableHead>{t('batchManagement.itemName', 'Item Name')}</TableHead>
+                <TableHead>{t('batchManagement.warehouse', 'Warehouse')}</TableHead>
+                <TableHead>{t('batchManagement.remainingQty', 'Remaining Qty')}</TableHead>
+                <TableHead>{t('batchManagement.costPerUnit', 'Cost/Unit')}</TableHead>
+                <TableHead>{t('batchManagement.totalValue', 'Total Value')}</TableHead>
+                <TableHead>{t('batchManagement.expiryDate', 'Expiry Date')}</TableHead>
+              </TableRow>
+            }
+            renderTable={(batch) => {
+              const freshness = getFreshnessColor(batch);
+              return (
+                <>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">{batch.batchNumber}</span>
+                      <Badge className={cn(freshness.bg, freshness.text, 'text-xs')}>
+                        {t(`batchManagement.freshness.${freshness.label}`, freshness.label)}
+                      </Badge>
+                    </div>
+                  </TableCell>
+                  <TableCell>{batch.itemName}</TableCell>
+                  <TableCell className="text-gray-600 dark:text-gray-400">{batch.warehouseName}</TableCell>
+                  <TableCell>
+                    {batch.remainingQuantity} {batch.unit}
+                  </TableCell>
+                  <TableCell>{batch.costPerUnit.toLocaleString()} MAD</TableCell>
+                  <TableCell className="font-medium">{batch.totalValue.toLocaleString()} MAD</TableCell>
+                  <TableCell>
+                    {batch.expiryDate
+                      ? new Date(batch.expiryDate).toLocaleDateString()
+                      : '-'}
+                  </TableCell>
+                </>
+              );
+            }}
+          />
+          <DataTablePagination
+            page={tableState.page}
+            pageSize={tableState.pageSize}
+            totalItems={totalItems}
+            totalPages={totalPages}
+            onPageChange={tableState.setPage}
+            onPageSizeChange={tableState.setPageSize}
+          />
+        </>
       )}
     </div>
   );

@@ -5911,20 +5911,36 @@
     },
     "harvests": {
       "step1": {
-        "title": "Harvest Dashboard",
-        "content": "Total quantities, estimated revenue, and distribution by crop. This is the output of your entire production chain."
+        "title": "Welcome to Production 🌾",
+        "content": "This whole section turns parcels + tasks + inputs into actual production data. The 7 sub-pages are organized in time-order: Campaigns set the season → Crop Cycles plant + grow → Harvest pulls fruit out → Reception/Quality grades it → Biological Assets value the trees → Product Applications track inputs used. ~90 seconds."
       },
       "step2": {
-        "title": "Harvest Records",
-        "content": "Each record links to a parcel and includes quantity, quality grade, and date. Quality data feeds into compliance reports."
+        "title": "Campaigns — The season container",
+        "content": "A campaign groups everything for one growing season (e.g. \"Citrus 2026-2027\"). It can span 1-2 fiscal years and links farms, parcels, costs, revenues. Open it to see total area, planned vs actual production, and budgets per cycle."
       },
       "step3": {
-        "title": "Record a Harvest",
-        "content": "Log a harvest: select parcel, enter quantity and quality. This updates your production stats and can trigger a sales order."
+        "title": "Crop Cycles — Plant to harvest",
+        "content": "Each cycle is one planting on one parcel inside a campaign. Track planting date, expected/actual harvest dates, status (planned → land prep → growing → harvesting → completed), and IFRS-41 valuation method. The bridge between agronomy and accounting."
       },
       "step4": {
-        "title": "Filter & Analyze",
-        "content": "Filter by period, crop, or farm to compare yields. Which parcels perform best? Which crops are most profitable?"
+        "title": "Harvests — Record what comes out",
+        "content": "Log harvest events: parcel + crop + quantity + quality grade + estimated revenue. Each record updates your production stats and is the starting point for traceability — every harvest gets a batch number."
+      },
+      "step5": {
+        "title": "Reception Batches — At the warehouse",
+        "content": "When the harvest arrives at the packing house: weigh, sort, assign batch numbers. Tracks shrinkage, calibration, and the link to compliance audit trails (GlobalGAP, Bio require this)."
+      },
+      "step6": {
+        "title": "Quality Control — Per-batch grading",
+        "content": "Quality inspections per batch: defects, calibration, certification compliance. A failed inspection can downgrade a batch or trigger corrective action. All scores feed the compliance module."
+      },
+      "step7": {
+        "title": "Biological Assets — Trees, livestock, plants",
+        "content": "IFRS 41 fair-value tracking for productive assets: bearer plants (citrus, olive, almond), livestock. Records acquisition, maturity, depreciation, and unrealized gains/losses on revaluation. Required for proper farm balance sheets."
+      },
+      "step8": {
+        "title": "Product Applications — What you applied where",
+        "content": "Every fertilizer, pesticide, or treatment applied to a parcel: product, dose, area, date, worker. Pulls from stock (deducts inventory), feeds compliance (PPP usage logs), and contributes to per-parcel cost. Replay this tour anytime via ? (top-right)."
       }
     },
     "infrastructure": {
