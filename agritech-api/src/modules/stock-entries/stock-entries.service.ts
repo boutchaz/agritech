@@ -3078,4 +3078,214 @@ export class StockEntriesService {
       throw new BadRequestException(`Failed to delete stock account mapping: ${error.message}`);
     }
   }
+
+  /**
+   * Seed default stock account mappings using the Moroccan CGNC chart of
+   * accounts. Idempotent — skips entry types that already have a mapping.
+   *
+   * Default GL flow for agri inputs:
+   *   Material Receipt:       DR 312 (Matières) / CR 441 (Fournisseurs)
+   *   Material Issue:         DR 612 (Achats consommés) / CR 312
+   *   Stock Reconciliation:   DR 612 / CR 312 (treats loss as consumption)
+   *   Opening Stock:          DR 312 / CR 312 (no GL impact, just opens balance)
+   *
+   * Stock Transfer is intentionally not mapped — same legal entity = no GL.
+   */
+  async seedDefaultStockAccountMappings(organizationId: string): Promise<{
+    created: number;
+    skipped: Array<{ entry_type: string; reason: string }>;
+  }> {
+    const supabase = this.databaseService.getAdminClient();
+
+    const { data: accounts, error: accErr } = await supabase
+      .from('accounts')
+      .select('id, code, account_type')
+      .eq('organization_id', organizationId)
+      .in('code', ['312', '441', '612', '611']);
+
+    if (accErr) {
+      throw new BadRequestException(`Failed to load chart of accounts: ${accErr.message}`);
+    }
+
+    const byCode = new Map<string, string>();
+    for (const a of accounts || []) byCode.set(a.code, a.id);
+
+    if (byCode.size === 0) {
+      throw new BadRequestException(
+        'Chart of accounts not seeded. Run admin seedAccounts (Moroccan CGNC) first.',
+      );
+    }
+
+    const inv = byCode.get('312');
+    const ap = byCode.get('441');
+    const cogs = byCode.get('612');
+
+    const desiredMappings: Array<{
+      entry_type: string;
+      debit_account_id: string | undefined;
+      credit_account_id: string | undefined;
+    }> = [
+      { entry_type: 'Material Receipt', debit_account_id: inv, credit_account_id: ap },
+      { entry_type: 'Material Issue', debit_account_id: cogs, credit_account_id: inv },
+      { entry_type: 'Stock Reconciliation', debit_account_id: cogs, credit_account_id: inv },
+      { entry_type: 'Opening Stock', debit_account_id: inv, credit_account_id: inv },
+    ];
+
+    const { data: existing, error: exErr } = await supabase
+      .from('stock_account_mappings')
+      .select('entry_type')
+      .eq('organization_id', organizationId);
+
+    if (exErr) {
+      throw new BadRequestException(`Failed to load existing mappings: ${exErr.message}`);
+    }
+
+    const existingTypes = new Set((existing || []).map((m) => m.entry_type));
+    const skipped: Array<{ entry_type: string; reason: string }> = [];
+    let created = 0;
+
+    for (const m of desiredMappings) {
+      if (existingTypes.has(m.entry_type)) {
+        skipped.push({ entry_type: m.entry_type, reason: 'already exists' });
+        continue;
+      }
+      if (!m.debit_account_id || !m.credit_account_id) {
+        skipped.push({ entry_type: m.entry_type, reason: 'required CGNC account missing' });
+        continue;
+      }
+      const { error: insErr } = await supabase
+        .from('stock_account_mappings')
+        .insert({
+          organization_id: organizationId,
+          entry_type: m.entry_type,
+          debit_account_id: m.debit_account_id,
+          credit_account_id: m.credit_account_id,
+        });
+
+      if (insErr) {
+        skipped.push({ entry_type: m.entry_type, reason: insErr.message });
+      } else {
+        created++;
+      }
+    }
+
+    return { created, skipped };
+  }
+
+  /**
+   * Stock vs GL reconciliation report. Compares physical stock value
+   * (sum of stock_valuation.remaining_quantity × cost_per_unit) against the
+   * Inventory account's GL balance derived from journal_items posted by
+   * stock entries. Surfaces drift caused by missing mappings, manual GL
+   * postings, or rounding accumulation.
+   */
+  async getStockGlReconciliation(organizationId: string): Promise<any> {
+    const supabase = this.databaseService.getAdminClient();
+
+    // 1. Physical stock value from stock_valuation
+    const { data: valuationRows, error: vErr } = await supabase
+      .from('stock_valuation')
+      .select('remaining_quantity, cost_per_unit, warehouse_id')
+      .eq('organization_id', organizationId)
+      .gt('remaining_quantity', 0);
+
+    if (vErr) {
+      throw new BadRequestException(`Failed to load stock_valuation: ${vErr.message}`);
+    }
+
+    const physicalValueByWarehouse = new Map<string, number>();
+    let physicalTotal = 0;
+    for (const row of valuationRows || []) {
+      const v = (parseFloat(String(row.remaining_quantity)) || 0)
+        * (parseFloat(String(row.cost_per_unit)) || 0);
+      physicalTotal += v;
+      physicalValueByWarehouse.set(
+        row.warehouse_id,
+        (physicalValueByWarehouse.get(row.warehouse_id) || 0) + v,
+      );
+    }
+
+    // 2. Identify the configured inventory accounts
+    const { data: mappings } = await supabase
+      .from('stock_account_mappings')
+      .select('entry_type, debit_account_id, credit_account_id')
+      .eq('organization_id', organizationId);
+
+    const inventoryAccountIds = new Set<string>();
+    for (const m of mappings || []) {
+      // Material Receipt debits inventory; Material Issue credits inventory.
+      if (m.entry_type === 'Material Receipt' && m.debit_account_id) {
+        inventoryAccountIds.add(m.debit_account_id);
+      }
+      if (m.entry_type === 'Material Issue' && m.credit_account_id) {
+        inventoryAccountIds.add(m.credit_account_id);
+      }
+    }
+
+    let glBalance = 0;
+    let glAccounts: Array<{ id: string; code: string; name: string; debit: number; credit: number; balance: number }> = [];
+
+    if (inventoryAccountIds.size > 0) {
+      // 3. Sum journal_items for those accounts (only entries posted from stock)
+      const accountIds = Array.from(inventoryAccountIds);
+      const { data: jItems, error: jErr } = await supabase
+        .from('journal_items')
+        .select('account_id, debit, credit, journal_entries!inner(reference_type, organization_id)')
+        .in('account_id', accountIds)
+        .eq('journal_entries.organization_id', organizationId)
+        .eq('journal_entries.reference_type', 'Stock Entry');
+
+      if (jErr) {
+        throw new BadRequestException(`Failed to load journal_items: ${jErr.message}`);
+      }
+
+      const byAccount = new Map<string, { debit: number; credit: number }>();
+      for (const it of jItems || []) {
+        const cur = byAccount.get(it.account_id) || { debit: 0, credit: 0 };
+        cur.debit += parseFloat(String(it.debit || 0)) || 0;
+        cur.credit += parseFloat(String(it.credit || 0)) || 0;
+        byAccount.set(it.account_id, cur);
+      }
+
+      const { data: accountMeta } = await supabase
+        .from('accounts')
+        .select('id, code, name')
+        .in('id', accountIds);
+
+      const metaById = new Map<string, { code: string; name: string }>();
+      for (const a of accountMeta || []) metaById.set(a.id, { code: a.code, name: a.name });
+
+      glAccounts = accountIds.map((id) => {
+        const tot = byAccount.get(id) || { debit: 0, credit: 0 };
+        const balance = tot.debit - tot.credit;
+        glBalance += balance;
+        const meta = metaById.get(id);
+        return {
+          id,
+          code: meta?.code || '',
+          name: meta?.name || '',
+          debit: tot.debit,
+          credit: tot.credit,
+          balance,
+        };
+      });
+    }
+
+    return {
+      physical_value: physicalTotal,
+      gl_balance: glBalance,
+      drift: physicalTotal - glBalance,
+      drift_status:
+        Math.abs(physicalTotal - glBalance) < 0.01
+          ? 'balanced'
+          : inventoryAccountIds.size === 0
+            ? 'no_mappings'
+            : 'drift_detected',
+      inventory_accounts: glAccounts,
+      physical_by_warehouse: Array.from(physicalValueByWarehouse.entries()).map(([wh, v]) => ({
+        warehouse_id: wh,
+        value: v,
+      })),
+    };
+  }
 }

@@ -373,6 +373,30 @@ export class StockEntriesController {
     return this.stockEntriesService.deleteStockAccountMapping(id, organizationId);
   }
 
+  @Post('account-mappings/init-defaults')
+  @ApiOperation({
+    summary: 'Seed default stock account mappings using the Moroccan CGNC chart of accounts',
+    description:
+      'Idempotent: skips entry types with existing mappings. Requires the chart of accounts to already be seeded.',
+  })
+  @ApiResponse({ status: 201, description: 'Default mappings created' })
+  async initDefaultAccountMappings(@Req() req: any) {
+    const organizationId = req.headers['x-organization-id'];
+    return this.stockEntriesService.seedDefaultStockAccountMappings(organizationId);
+  }
+
+  @Get('gl-reconciliation')
+  @ApiOperation({
+    summary: 'Stock vs GL reconciliation report',
+    description:
+      'Compares physical stock value (sum of stock_valuation lots) against the inventory account GL balance from posted stock journal entries. Surfaces drift caused by missing mappings, manual GL postings, or rounding.',
+  })
+  @ApiResponse({ status: 200, description: 'Reconciliation report retrieved' })
+  async getGlReconciliation(@Req() req: any) {
+    const organizationId = req.headers['x-organization-id'];
+    return this.stockEntriesService.getStockGlReconciliation(organizationId);
+  }
+
   @Get('approvals/pending')
   @ApiOperation({ summary: 'Get pending stock entry approvals' })
   async getPendingApprovals(@Req() req: any) {
