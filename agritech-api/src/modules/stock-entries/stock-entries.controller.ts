@@ -239,6 +239,18 @@ export class StockEntriesController {
     );
   }
 
+  @Get('aging')
+  @ApiOperation({ summary: 'Get stock aging report bucketed by days in inventory' })
+  @ApiQuery({ name: 'warehouse_id', required: false })
+  @ApiResponse({ status: 200, description: 'Stock aging report retrieved successfully' })
+  async getStockAging(
+    @Req() req: any,
+    @Query('warehouse_id') warehouseId?: string,
+  ) {
+    const organizationId = req.headers['x-organization-id'];
+    return this.stockEntriesService.getStockAging(organizationId, warehouseId);
+  }
+
   @Get('fefo-suggestion')
   @ApiOperation({ summary: 'Get FEFO issue suggestion for item batches' })
   @ApiQuery({ name: 'item_id', required: true })

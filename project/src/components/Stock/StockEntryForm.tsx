@@ -35,6 +35,8 @@ import { toast } from 'sonner';
 import { getLocalDate } from '@/utils/date';
 import { itemsApi } from '@/lib/api/items';
 import type { ProductVariant } from '@/types/items';
+import { useQuery } from '@tanstack/react-query';
+import { parcelsApi } from '@/lib/api/parcels';
 
 // Zod schemas - Dynamic based on entry type
 const getStockEntrySchema = (entryType: StockEntryType) => {
@@ -77,6 +79,7 @@ const getStockEntrySchema = (entryType: StockEntryType) => {
     from_warehouse_id: z.string().optional().transform(val => val === '' ? undefined : val),
     to_warehouse_id: z.string().optional().transform(val => val === '' ? undefined : val),
     purpose: z.string().optional().transform(val => val === '' ? undefined : val),
+    parcel_id: z.string().optional().transform(val => val === '' ? undefined : val),
     notes: z.string().optional().transform(val => val === '' ? undefined : val),
     items: z.array(itemSchema).min(1, 'At least one item is required'),
   }).superRefine((data, ctx) => {
@@ -131,8 +134,17 @@ export default function StockEntryForm({
   const { currentOrganization } = useAuth();
   const createEntry = useCreateStockEntry();
   const { data: warehouses = [] } = useWarehouses();
-  const { data: items = [], isLoading: itemsLoading } = useItemSelection({ 
-    is_stock_item: true 
+  const { data: items = [], isLoading: itemsLoading } = useItemSelection({
+    is_stock_item: true
+  });
+  const { data: parcels = [] } = useQuery({
+    queryKey: ['parcels-org', currentOrganization?.id],
+    queryFn: () => {
+      const orgId = currentOrganization?.id;
+      if (!orgId) return Promise.resolve([]);
+      return parcelsApi.getAll({ organization_id: orgId }, orgId);
+    },
+    enabled: !!currentOrganization?.id,
   });
   const [variantOptionsByItemId, setVariantOptionsByItemId] = useState<Record<string, ProductVariant[]>>({});
   const [variantLoadingByItemId, setVariantLoadingByItemId] = useState<Record<string, boolean>>({});
@@ -223,6 +235,7 @@ export default function StockEntryForm({
         from_warehouse_id: '',
         to_warehouse_id: '',
         purpose: '',
+        parcel_id: '',
         notes: '',
         items: [
           {
@@ -293,6 +306,7 @@ export default function StockEntryForm({
         reference_id: referenceId,
         reference_number: referenceNumber,
         purpose: data.purpose,
+        parcel_id: data.parcel_id,
         notes: data.notes,
         items: data.items,
       };
@@ -463,7 +477,7 @@ export default function StockEntryForm({
             )}
           </div>
 
-          {/* Purpose and Notes */}
+          {/* Purpose, Parcel and Notes */}
           <div className="space-y-4">
             <div>
               <Label htmlFor="purpose">{t('stockEntries.form.purpose')}</Label>
@@ -474,6 +488,29 @@ export default function StockEntryForm({
                 className="mt-1"
               />
             </div>
+
+            {selectedType !== 'Stock Transfer' && (
+              <div>
+                <Label htmlFor="parcel_id">
+                  {t('stockEntries.form.parcel', 'Parcel (optional)')}
+                </Label>
+                <Select
+                  value={form.watch('parcel_id') || ''}
+                  onValueChange={(value) => form.setValue('parcel_id', value)}
+                >
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder={t('stockEntries.form.parcelPlaceholder', 'Allocate to a parcel for cost tracking')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {parcels.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             <div>
               <Label htmlFor="notes">{t('stockEntries.form.notes')}</Label>

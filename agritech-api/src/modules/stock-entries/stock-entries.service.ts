@@ -126,8 +126,9 @@ export class StockEntriesService {
         `INSERT INTO stock_entries (
           organization_id, entry_type, entry_number, entry_date,
           from_warehouse_id, to_warehouse_id, reference_type, reference_id,
-          reference_number, purpose, notes, status, created_by, posted_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+          reference_number, purpose, notes, status, created_by, posted_at,
+          parcel_id, crop_cycle_id
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
         RETURNING *`,
         [
           dto.organization_id,
@@ -144,6 +145,8 @@ export class StockEntriesService {
           dto.status || StockEntryStatus.DRAFT,
           dto.created_by || null,
           dto.status === StockEntryStatus.POSTED ? new Date() : null,
+          dto.parcel_id || null,
+          dto.crop_cycle_id || null,
         ],
       );
 
@@ -287,6 +290,8 @@ export class StockEntriesService {
         'reference_number',
         'purpose',
         'notes',
+        'parcel_id',
+        'crop_cycle_id',
       ];
 
       for (const field of allowedFields) {
@@ -1486,6 +1491,111 @@ export class StockEntriesService {
         };
       })
       .filter((item) => item.currentStock < item.reorderPoint);
+  }
+
+  /**
+   * Stock aging report: groups remaining stock_valuation lots by age buckets.
+   * Useful for identifying slow-moving agri inputs (e.g. expensive pesticides
+   * sitting unused) and triggering FIFO discipline.
+   */
+  async getStockAging(organizationId: string, warehouseId?: string): Promise<any> {
+    const supabase = this.databaseService.getAdminClient();
+
+    let query = supabase
+      .from('stock_valuation')
+      .select(`
+        item_id,
+        warehouse_id,
+        remaining_quantity,
+        cost_per_unit,
+        created_at,
+        items:items(id, item_name, item_code, default_unit),
+        warehouses:warehouses(id, name)
+      `)
+      .eq('organization_id', organizationId)
+      .gt('remaining_quantity', 0);
+
+    if (warehouseId) {
+      query = query.eq('warehouse_id', warehouseId);
+    }
+
+    const { data, error } = await query;
+    if (error) {
+      throw new BadRequestException(`Failed to fetch aging report: ${error.message}`);
+    }
+
+    const now = Date.now();
+    const buckets = {
+      '0-30': { qty: 0, value: 0 },
+      '31-60': { qty: 0, value: 0 },
+      '61-90': { qty: 0, value: 0 },
+      '90+': { qty: 0, value: 0 },
+    };
+
+    type ItemAgg = {
+      itemId: string;
+      itemName: string;
+      itemCode: string | null;
+      warehouseId: string;
+      warehouseName: string;
+      unit: string;
+      totalQty: number;
+      totalValue: number;
+      buckets: typeof buckets;
+      oldestDays: number;
+    };
+    const byItem = new Map<string, ItemAgg>();
+
+    for (const row of data || []) {
+      const remaining = parseFloat(String(row.remaining_quantity || 0)) || 0;
+      const costPerUnit = parseFloat(String(row.cost_per_unit || 0)) || 0;
+      const value = remaining * costPerUnit;
+      const ageDays = Math.floor((now - new Date(row.created_at).getTime()) / 86400000);
+
+      const bucketKey: keyof typeof buckets =
+        ageDays <= 30 ? '0-30' : ageDays <= 60 ? '31-60' : ageDays <= 90 ? '61-90' : '90+';
+
+      buckets[bucketKey].qty += remaining;
+      buckets[bucketKey].value += value;
+
+      const itemRel: any = row.items;
+      const whRel: any = row.warehouses;
+      const key = `${row.item_id}::${row.warehouse_id}`;
+      const existing = byItem.get(key);
+      if (existing) {
+        existing.totalQty += remaining;
+        existing.totalValue += value;
+        existing.buckets[bucketKey].qty += remaining;
+        existing.buckets[bucketKey].value += value;
+        existing.oldestDays = Math.max(existing.oldestDays, ageDays);
+      } else {
+        byItem.set(key, {
+          itemId: row.item_id,
+          itemName: itemRel?.item_name || 'Unknown',
+          itemCode: itemRel?.item_code || null,
+          warehouseId: row.warehouse_id,
+          warehouseName: whRel?.name || 'Unknown',
+          unit: itemRel?.default_unit || 'pcs',
+          totalQty: remaining,
+          totalValue: value,
+          buckets: {
+            '0-30': { qty: 0, value: 0 },
+            '31-60': { qty: 0, value: 0 },
+            '61-90': { qty: 0, value: 0 },
+            '90+': { qty: 0, value: 0 },
+          },
+          oldestDays: ageDays,
+        });
+        const fresh = byItem.get(key)!;
+        fresh.buckets[bucketKey].qty = remaining;
+        fresh.buckets[bucketKey].value = value;
+      }
+    }
+
+    return {
+      buckets,
+      items: Array.from(byItem.values()).sort((a, b) => b.oldestDays - a.oldestDays),
+    };
   }
 
   async getSystemQuantity(

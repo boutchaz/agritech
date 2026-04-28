@@ -3059,6 +3059,7 @@ CREATE TABLE IF NOT EXISTS stock_entries (
   journal_entry_id UUID REFERENCES journal_entries(id),
   reception_batch_id UUID,
   crop_cycle_id UUID,
+  parcel_id UUID,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   created_by UUID REFERENCES auth.users(id),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
@@ -3067,14 +3068,27 @@ CREATE TABLE IF NOT EXISTS stock_entries (
   CHECK (status IN ('Draft', 'Submitted', 'Posted', 'Cancelled', 'Reversed'))
 );
 
+ALTER TABLE stock_entries ADD COLUMN IF NOT EXISTS parcel_id UUID;
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_stock_entries_parcel_id') THEN
+    ALTER TABLE stock_entries
+      ADD CONSTRAINT fk_stock_entries_parcel_id
+      FOREIGN KEY (parcel_id) REFERENCES parcels(id) ON DELETE SET NULL;
+  END IF;
+END $$;
+
 CREATE INDEX IF NOT EXISTS idx_stock_entries_org ON stock_entries(organization_id);
 CREATE INDEX IF NOT EXISTS idx_stock_entries_type ON stock_entries(entry_type);
 CREATE INDEX IF NOT EXISTS idx_stock_entries_status ON stock_entries(status);
 CREATE INDEX IF NOT EXISTS idx_stock_entries_date ON stock_entries(entry_date DESC);
 CREATE INDEX IF NOT EXISTS idx_stock_entries_crop_cycle ON stock_entries(crop_cycle_id);
 CREATE INDEX IF NOT EXISTS idx_stock_entries_org_crop_cycle ON stock_entries(organization_id, crop_cycle_id);
+CREATE INDEX IF NOT EXISTS idx_stock_entries_parcel ON stock_entries(parcel_id);
+CREATE INDEX IF NOT EXISTS idx_stock_entries_org_parcel ON stock_entries(organization_id, parcel_id);
 
 COMMENT ON COLUMN stock_entries.crop_cycle_id IS 'Links the stock entry to a specific crop cycle for cost tracking and allocation';
+COMMENT ON COLUMN stock_entries.parcel_id IS 'Links the stock entry to a specific parcel for per-parcel cost allocation (fertilizer/pesticide use, harvest reception)';
 
 -- Stock Entry Items
 CREATE TABLE IF NOT EXISTS stock_entry_items (
@@ -3126,11 +3140,22 @@ CREATE TABLE IF NOT EXISTS stock_movements (
   base_quantity_at_movement NUMERIC,
   variant_id UUID REFERENCES product_variants(id) ON DELETE SET NULL,
   crop_cycle_id UUID,
+  parcel_id UUID,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   created_by UUID REFERENCES auth.users(id),
   CHECK (movement_type IN ('IN', 'OUT', 'TRANSFER'))
 );
+
+ALTER TABLE stock_movements ADD COLUMN IF NOT EXISTS parcel_id UUID;
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_stock_movements_parcel_id') THEN
+    ALTER TABLE stock_movements
+      ADD CONSTRAINT fk_stock_movements_parcel_id
+      FOREIGN KEY (parcel_id) REFERENCES parcels(id) ON DELETE SET NULL;
+  END IF;
+END $$;
 
 CREATE INDEX IF NOT EXISTS idx_stock_movements_org ON stock_movements(organization_id);
 CREATE INDEX IF NOT EXISTS idx_stock_movements_item ON stock_movements(item_id);
@@ -3140,8 +3165,11 @@ CREATE INDEX IF NOT EXISTS idx_stock_movements_marketplace_listing ON stock_move
 CREATE INDEX IF NOT EXISTS idx_stock_movements_marketplace_order_item ON stock_movements(marketplace_order_item_id);
 CREATE INDEX IF NOT EXISTS idx_stock_movements_crop_cycle ON stock_movements(crop_cycle_id);
 CREATE INDEX IF NOT EXISTS idx_stock_movements_org_crop_cycle ON stock_movements(organization_id, crop_cycle_id);
+CREATE INDEX IF NOT EXISTS idx_stock_movements_parcel ON stock_movements(parcel_id);
+CREATE INDEX IF NOT EXISTS idx_stock_movements_org_parcel ON stock_movements(organization_id, parcel_id);
 
 COMMENT ON COLUMN stock_movements.crop_cycle_id IS 'Links the stock movement to a specific crop cycle for cost tracking and allocation';
+COMMENT ON COLUMN stock_movements.parcel_id IS 'Links the stock movement to a specific parcel for per-parcel cost allocation';
 
 -- =====================================================
 -- STOCK MOVEMENT TRIGGERS AND FUNCTIONS
@@ -3213,6 +3241,30 @@ CREATE TRIGGER trg_validate_stock_movement_unit
   EXECUTE FUNCTION validate_stock_movement_unit();
 
 COMMENT ON FUNCTION validate_stock_movement_unit() IS 'Validates that stock_movements.unit matches the variant''s unit from work_units with detailed error messaging';
+
+-- Auto-propagate parcel_id / crop_cycle_id from parent stock_entry to movement
+-- Avoids touching every INSERT site in service layer
+CREATE OR REPLACE FUNCTION propagate_stock_entry_context_to_movement()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.stock_entry_id IS NOT NULL AND (NEW.parcel_id IS NULL OR NEW.crop_cycle_id IS NULL) THEN
+    SELECT
+      COALESCE(NEW.parcel_id, se.parcel_id),
+      COALESCE(NEW.crop_cycle_id, se.crop_cycle_id)
+    INTO NEW.parcel_id, NEW.crop_cycle_id
+    FROM stock_entries se
+    WHERE se.id = NEW.stock_entry_id;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_propagate_stock_entry_context ON stock_movements;
+CREATE TRIGGER trg_propagate_stock_entry_context
+  BEFORE INSERT ON stock_movements
+  FOR EACH ROW
+  WHEN (NEW.stock_entry_id IS NOT NULL)
+  EXECUTE FUNCTION propagate_stock_entry_context_to_movement();
 
 CREATE OR REPLACE FUNCTION sync_variant_quantity_from_movements()
 RETURNS TRIGGER AS $$
