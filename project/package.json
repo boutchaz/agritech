@@ -130,6 +130,7 @@
     "react-i18next": "^16.6.6",
     "react-is": "^19.2.4",
     "react-joyride": "^3.0.0",
+    "react-jsbarcode": "^1.1.4",
     "react-leaflet": "^5.0.0",
     "react-phone-number-input": "^3.4.16",
     "react-simple-maps": "^3.0.0",

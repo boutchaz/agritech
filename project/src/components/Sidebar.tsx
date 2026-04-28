@@ -370,6 +370,33 @@ const Sidebar = ({
     return () => viewport.removeEventListener("scroll", onScroll);
   }, []);
 
+  // Tour integration: a tour step can request a sidebar section be opened
+  // (so its sub-nav items mount in the DOM and Joyride can target them).
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const ce = e as CustomEvent<{ section?: string }>;
+      switch (ce.detail?.section) {
+        case 'production':
+          setShowProduction(true);
+          break;
+        case 'personnel':
+          setShowPersonnel(true);
+          break;
+        case 'compliance':
+          setShowCompliance(true);
+          break;
+        case 'sales-purchasing':
+          setShowSalesPurchasing(true);
+          break;
+        case 'accounting':
+          setShowAccounting(true);
+          break;
+      }
+    };
+    window.addEventListener('tour:expand-sidebar-section', handler);
+    return () => window.removeEventListener('tour:expand-sidebar-section', handler);
+  }, []);
+
   const getButtonClassName = (
     isActive: boolean,
     additionalClasses?: string,

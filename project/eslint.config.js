@@ -25,6 +25,8 @@ export default [
       '**/__tests__/**',
       '**/*.test.ts',
       '**/*.test.tsx',
+      '**/generated/**',
+      '**/types/database.types.ts',
     ],
   },
   js.configs.recommended,

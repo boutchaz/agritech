@@ -35,9 +35,13 @@ export class WarehousesController {
   @Get()
   @ApiOperation({ summary: 'Get all active warehouses' })
   @ApiResponse({ status: 200, description: 'Warehouses retrieved successfully' })
-  async findAll(@Req() req: any) {
+  async findAll(
+    @Req() req: any,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
+  ) {
     const organizationId = req.headers['x-organization-id'];
-    return this.warehousesService.findAll(organizationId);
+    return this.warehousesService.findAll(organizationId, Number(page) || 1, Number(pageSize) || 50);
   }
 
   @Get('inventory')
