@@ -53,6 +53,7 @@ import { DeliveriesModule } from "./modules/deliveries/deliveries.module";
 import { PaymentRecordsModule } from "./modules/payment-records/payment-records.module";
 import { CostCentersModule } from "./modules/cost-centers/cost-centers.module";
 import { BankAccountsModule } from "./modules/bank-accounts/bank-accounts.module";
+import { BankReconciliationModule } from "./modules/bank-reconciliation/bank-reconciliation.module";
 import { UtilitiesModule } from "./modules/utilities/utilities.module";
 import { ReportsModule } from "./modules/reports/reports.module";
 import { PieceWorkModule } from "./modules/piece-work/piece-work.module";
@@ -107,6 +108,7 @@ import { AuditModule } from "./modules/audit/audit.module";
 import { AiQuotaModule } from "./modules/ai-quota/ai-quota.module";
 import { PublicRdvModule } from "./modules/public-rdv/public-rdv.module";
 import { EmailTemplatesModule } from "./modules/email-templates/email-templates.module";
+import { BarcodeModule } from "./modules/barcode/barcode.module";
 
 @Module({
   imports: [
@@ -166,6 +168,7 @@ import { EmailTemplatesModule } from "./modules/email-templates/email-templates.
     PaymentRecordsModule,
     StockEntriesModule,
     ItemsModule,
+    BarcodeModule,
     WarehousesModule,
     ReferenceDataModule,
     SubscriptionsModule,
@@ -181,6 +184,7 @@ import { EmailTemplatesModule } from "./modules/email-templates/email-templates.
     BlogsModule,
     CostCentersModule,
     BankAccountsModule,
+    BankReconciliationModule,
     UtilitiesModule,
     ReportsModule,
     ProfitabilityModule,

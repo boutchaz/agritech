@@ -1274,6 +1274,51 @@ CREATE TABLE IF NOT EXISTS bank_accounts (
 
 CREATE INDEX IF NOT EXISTS idx_bank_accounts_org ON bank_accounts(organization_id);
 
+-- Bank Transactions (statement lines, for reconciliation against accounting_payments)
+-- Minimal cut: manual + future CSV/OFX import. Auto-matching engine to follow.
+CREATE TABLE IF NOT EXISTS bank_transactions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  bank_account_id UUID NOT NULL REFERENCES bank_accounts(id) ON DELETE CASCADE,
+  transaction_date DATE NOT NULL,
+  value_date DATE,
+  amount DECIMAL(15, 2) NOT NULL, -- Positive = inflow / Negative = outflow
+  currency_code VARCHAR(3) DEFAULT 'MAD' REFERENCES currencies(code),
+  description TEXT,
+  reference TEXT, -- Bank reference / cheque number / wire ref
+  balance_after DECIMAL(15, 2), -- Statement-reported running balance after this line
+  source TEXT NOT NULL DEFAULT 'manual' CHECK (source IN ('manual', 'csv', 'ofx', 'mt940', 'api')),
+  source_batch_id UUID, -- FK to bank_statement_imports when added
+  matched_payment_id UUID REFERENCES accounting_payments(id) ON DELETE SET NULL,
+  reconciled_at TIMESTAMPTZ,
+  reconciled_by UUID REFERENCES auth.users(id),
+  notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  created_by UUID REFERENCES auth.users(id),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_bank_transactions_org ON bank_transactions(organization_id);
+CREATE INDEX IF NOT EXISTS idx_bank_transactions_account ON bank_transactions(bank_account_id);
+CREATE INDEX IF NOT EXISTS idx_bank_transactions_date ON bank_transactions(transaction_date DESC);
+CREATE INDEX IF NOT EXISTS idx_bank_transactions_unreconciled
+  ON bank_transactions(bank_account_id, transaction_date DESC)
+  WHERE reconciled_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_bank_transactions_match
+  ON bank_transactions(matched_payment_id)
+  WHERE matched_payment_id IS NOT NULL;
+
+ALTER TABLE bank_transactions ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_access_bank_transactions" ON bank_transactions;
+CREATE POLICY "org_access_bank_transactions" ON bank_transactions
+  FOR ALL USING (is_organization_member(organization_id));
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON bank_transactions TO authenticated;
+
+COMMENT ON TABLE bank_transactions IS 'Raw statement lines from a bank account, manually entered or CSV/OFX imported. Reconciled by linking matched_payment_id.';
+COMMENT ON COLUMN bank_transactions.amount IS 'Positive = inflow / Negative = outflow';
+COMMENT ON COLUMN bank_transactions.source IS 'manual / csv / ofx / mt940 / api — provenance of the line';
+
 -- Journal Entries
 CREATE TABLE IF NOT EXISTS journal_entries (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
