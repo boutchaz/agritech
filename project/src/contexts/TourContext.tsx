@@ -542,32 +542,49 @@ export const getTourDefinitions = (t: TFunction): Record<TourId, Step[]> => ({
     },
   ],
   inventory: [
+    // Anchored to the always-visible group tabs (the sub-tabs only render
+    // for the active group). Each step explains all the sub-tabs in that
+    // group verbally so the tour works without programmatic tab switching.
     {
       target: '[data-tour="stock-overview"]',
       title: t('tour.inventory.step1.title'),
       content: t('tour.inventory.step1.content'),
-      placement: 'right',
+      placement: 'bottom',
       skipBeacon: true,
     },
     {
-      target: '[data-tour="stock-items"]',
+      target: '[data-tour="stock-group-catalog"]',
       title: t('tour.inventory.step2.title'),
       content: t('tour.inventory.step2.content'),
       placement: 'bottom',
       skipBeacon: true,
     },
     {
-      target: '[data-tour="stock-warehouses"]',
+      target: '[data-tour="stock-group-movements"]',
       title: t('tour.inventory.step3.title'),
       content: t('tour.inventory.step3.content'),
-      placement: 'left',
+      placement: 'bottom',
       skipBeacon: true,
     },
     {
-      target: '[data-tour="stock-movements"]',
+      target: '[data-tour="stock-group-operations"]',
       title: t('tour.inventory.step4.title'),
       content: t('tour.inventory.step4.content'),
-      placement: 'top',
+      placement: 'bottom',
+      skipBeacon: true,
+    },
+    {
+      target: '[data-tour="stock-group-insights"]',
+      title: t('tour.inventory.step5.title'),
+      content: t('tour.inventory.step5.content'),
+      placement: 'bottom',
+      skipBeacon: true,
+    },
+    {
+      target: '[data-tour="stock-overview"]',
+      title: t('tour.inventory.step6.title'),
+      content: t('tour.inventory.step6.content'),
+      placement: 'bottom',
       skipBeacon: true,
     },
   ],

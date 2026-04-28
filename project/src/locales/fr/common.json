@@ -5625,20 +5625,28 @@
     },
     "inventory": {
       "step1": {
-        "title": "Aperçu du Stock",
-        "content": "Votre tableau de bord stock : valeur totale, alertes de stock bas et mouvements récents. Le stock est consommé à la complétion des tâches."
+        "title": "Bienvenue dans Stock 📦",
+        "content": "Ce module gère tout ce que vous stockez : semences, engrais, phytosanitaires, emballages, récoltes. Les quatre onglets ci-dessus suivent votre flux quotidien — Catalogue → Mouvements → Opérations → Insights. On vous montre chacun en 30 secondes."
       },
       "step2": {
-        "title": "Catalogue d'Articles",
-        "content": "Tous vos produits : semences, engrais, phytosanitaires, équipement. Chaque article suit la quantité actuelle, seuil minimum et coût."
+        "title": "1. Catalogue — Définissez ce que vous stockez",
+        "content": "Commencez ici. Les **Articles** sont vos produits (ex. \"Urée 46%\"), les **Fournisseurs** sont chez qui vous achetez, les **Groupes** classent vos articles par catégorie, les **Lots** suivent les batches avec dates de péremption. Sans articles, rien d'autre ne fonctionne."
       },
       "step3": {
-        "title": "Entrepôts",
-        "content": "Organisez le stock par emplacement. Transférez entre entrepôts et suivez ce qui est stocké où."
+        "title": "2. Mouvements — Enregistrez les entrées/sorties",
+        "content": "**Réception** capture les achats entrants (l'écran le plus utilisé). **Saisie Rapide** pour mobile au quotidien. **Entrées de Stock** est le journal complet de chaque IN/OUT. **Approbations** pour que les managers valident les gros mouvements. **Livraisons** trace ce qui sort vers les clients."
       },
       "step4": {
-        "title": "Mouvements de Stock",
-        "content": "Chaque entrée et sortie est enregistrée : livraisons fournisseurs, consommation terrain, transferts. Traçabilité complète pour la conformité."
+        "title": "3. Opérations — Gestion quotidienne",
+        "content": "**Inventaire** affiche les niveaux de stock en direct par entrepôt. **Inventaire Physique** pour les comptages physiques vs système (mensuel). **Alertes Péremption** signalent phytosanitaires/semences avant expiration — critique pour la conformité. **Réapprovisionnement** suggère quoi acheter quand le stock passe sous le seuil."
+      },
+      "step5": {
+        "title": "4. Insights — Voyez où dort votre argent",
+        "content": "**Tableau de bord** résume la valeur totale du stock et les KPIs. **Rapports** pour la comptabilité/management. **Vieillissement** affiche le stock dormant par 0-30 / 31-60 / 61-90 / 90+ jours — trouvez la bouteille de pesticide à 800 DH oubliée depuis 6 mois."
+      },
+      "step6": {
+        "title": "Prêt à démarrer 🚀",
+        "content": "Première action : ouvrez **Catalogue → Articles** et créez vos 5–10 principaux articles (les intrants que vous utilisez le plus). Puis **Mouvements → Réception** pour saisir votre premier achat. Tout le reste en découle."
       }
     },
     "accounting": {

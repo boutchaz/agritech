@@ -33,7 +33,7 @@ const AppContent = () => {
         tabs: [
           { value: 'items', label: t('stock.tabs.items'), to: '/stock/items', tourId: 'stock-items' },
           { value: 'groups', label: t('stock.tabs.groups'), to: '/stock/groups' },
-          { value: 'suppliers', label: t('stock.tabs.suppliers', 'Suppliers'), to: '/stock/suppliers' },
+          { value: 'suppliers', label: t('stock.tabs.suppliers', 'Suppliers'), to: '/stock/suppliers', tourId: 'stock-suppliers' },
           { value: 'batches', label: t('stock.tabs.batches', 'Batches'), to: '/stock/batches' },
         ],
       },
@@ -41,10 +41,10 @@ const AppContent = () => {
         value: 'movements',
         label: t('stock.groups.movements', 'Movements'),
         tabs: [
-          { value: 'reception', label: t('stock.tabs.reception'), to: '/stock/reception' },
+          { value: 'reception', label: t('stock.tabs.reception'), to: '/stock/reception', tourId: 'stock-reception' },
           { value: 'deliveries', label: t('stock.tabs.deliveries', 'Deliveries'), to: '/stock/deliveries' },
           { value: 'entries', label: t('stock.tabs.entries'), to: '/stock/entries', tourId: 'stock-movements' },
-          { value: 'quick-stock', label: t('stock.tabs.quickStock', 'Quick Entry'), to: '/stock/quick-stock' },
+          { value: 'quick-stock', label: t('stock.tabs.quickStock', 'Quick Entry'), to: '/stock/quick-stock', tourId: 'stock-quick' },
           { value: 'approvals', label: t('stock.tabs.approvals', 'Approvals'), to: '/stock/approvals' },
         ],
       },
@@ -53,18 +53,18 @@ const AppContent = () => {
         label: t('stock.groups.operations', 'Operations'),
         tabs: [
           { value: 'inventory', label: t('stock.tabs.inventory'), to: '/stock/inventory', tourId: 'stock-warehouses' },
-          { value: 'stock-take', label: t('stock.tabs.stockTake', 'Stock Take'), to: '/stock/stock-take' },
-          { value: 'expiry-alerts', label: t('stock.tabs.expiryAlerts', 'Expiry Alerts'), to: '/stock/expiry-alerts' },
-          { value: 'reorder', label: t('stock.tabs.reorder', 'Reorder'), to: '/stock/reorder-suggestions' },
+          { value: 'stock-take', label: t('stock.tabs.stockTake', 'Stock Take'), to: '/stock/stock-take', tourId: 'stock-take' },
+          { value: 'expiry-alerts', label: t('stock.tabs.expiryAlerts', 'Expiry Alerts'), to: '/stock/expiry-alerts', tourId: 'stock-expiry' },
+          { value: 'reorder', label: t('stock.tabs.reorder', 'Reorder'), to: '/stock/reorder-suggestions', tourId: 'stock-reorder' },
         ],
       },
       {
         value: 'insights',
         label: t('stock.groups.insights', 'Insights'),
         tabs: [
-          { value: 'dashboard', label: t('stock.tabs.dashboard', 'Dashboard'), to: '/stock/dashboard' },
+          { value: 'dashboard', label: t('stock.tabs.dashboard', 'Dashboard'), to: '/stock/dashboard', tourId: 'stock-dashboard' },
           { value: 'reports', label: t('stock.tabs.reports'), to: '/stock/reports' },
-          { value: 'aging', label: t('stock.tabs.aging', 'Aging'), to: '/stock/aging' },
+          { value: 'aging', label: t('stock.tabs.aging', 'Aging'), to: '/stock/aging', tourId: 'stock-aging' },
         ],
       },
     ],
@@ -142,7 +142,12 @@ const AppContent = () => {
               className="w-full min-w-0 justify-start overflow-x-auto whitespace-nowrap rounded-lg [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
             >
               {groups.map((g) => (
-                <TabsTrigger key={g.value} value={g.value} className="shrink-0 font-semibold">
+                <TabsTrigger
+                  key={g.value}
+                  value={g.value}
+                  className="shrink-0 font-semibold"
+                  data-tour={`stock-group-${g.value}`}
+                >
                   {g.label}
                 </TabsTrigger>
               ))}

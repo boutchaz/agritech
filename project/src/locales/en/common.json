@@ -5787,20 +5787,28 @@
     },
     "inventory": {
       "step1": {
-        "title": "Stock Overview",
-        "content": "Your inventory dashboard: total value, low-stock alerts, and recent movements. Stock is consumed when tasks are completed."
+        "title": "Welcome to Stock 📦",
+        "content": "This module covers everything you store: seeds, fertilizers, pesticides, packaging, harvested produce. The four tabs above mirror your daily flow — Catalog → Movements → Operations → Insights. We'll walk through each in 30 seconds."
       },
       "step2": {
-        "title": "Item Catalog",
-        "content": "All your products: seeds, fertilizers, chemicals, equipment. Each item tracks current quantity, min threshold, and cost."
+        "title": "1. Catalog — Define what you stock",
+        "content": "Start here. **Items** are your products (e.g. \"Urée 46%\"), **Suppliers** are who you buy from, **Groups** organize items into categories, **Batches** track lots with expiry dates. Without items, nothing else works."
       },
       "step3": {
-        "title": "Warehouses",
-        "content": "Organize stock by location. Transfer between warehouses and keep track of what's stored where."
+        "title": "2. Movements — Record everything in/out",
+        "content": "**Reception** captures incoming purchases (the most-used screen). **Quick Entry** is for fast daily use on mobile. **Stock Entries** is the full audit log of every IN/OUT. **Approvals** is for managers to validate larger movements. **Deliveries** track outgoing to customers."
       },
       "step4": {
-        "title": "Stock Movements",
-        "content": "Every entry and exit is recorded: supplier deliveries, field consumption, transfers. Full traceability for compliance."
+        "title": "3. Operations — Day-to-day management",
+        "content": "**Inventory** shows live stock levels per warehouse. **Stock Take** is for physical counts vs system (do this monthly). **Expiry Alerts** flag pesticides/seeds before they expire — critical for compliance. **Reorder** suggests what to buy when stock falls below your reorder point."
+      },
+      "step5": {
+        "title": "4. Insights — See where your money sits",
+        "content": "**Dashboard** summarizes total stock value and KPIs. **Reports** for accounting/management views. **Aging** shows slow-moving stock by 0-30 / 31-60 / 61-90 / 90+ days — find the expensive bottle of pesticide stuck on the shelf for 6 months."
+      },
+      "step6": {
+        "title": "Ready to start 🚀",
+        "content": "Your first action: open **Catalog → Items** and create your top 5–10 items (the inputs you use most). Then open **Movements → Reception** to record your first purchase. Everything else flows from there."
       }
     },
     "accounting": {
