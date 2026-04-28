@@ -16,6 +16,7 @@ import {
 } from '@/lib/analytics'
 import { useAuthStore, waitForHydration } from '@/stores/authStore'
 import { Button } from '@/components/ui/button';
+import { useSEO } from '@/hooks/useSEO';
 
 export const Route = createFileRoute('/(auth)/login')({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -38,6 +39,12 @@ export const Route = createFileRoute('/(auth)/login')({
 
 function LoginPage() {
   const { t } = useTranslation()
+  useSEO({
+    title: t('auth.signIn.title', 'Connexion'),
+    description: t('seo.login.description', 'Connectez-vous à votre espace AgroGina pour gérer votre exploitation agricole. Accédez à vos parcelles, stocks et analyses satellite.'),
+    path: '/login',
+    keywords: 'connexion agrogina, login agriculture, espace gestion agricole',
+  })
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [rememberMe, setRememberMe] = useState(true)

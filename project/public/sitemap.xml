@@ -4,58 +4,79 @@
 
   <!-- Homepage / Landing Page -->
   <url>
-    <loc>https://agritech-dashboard.thebzlab.online/</loc>
-    <xhtml:link rel="alternate" hreflang="fr" href="https://agritech-dashboard.thebzlab.online/"/>
-    <xhtml:link rel="alternate" hreflang="ar" href="https://agritech-dashboard.thebzlab.online/?lang=ar"/>
-    <lastmod>2025-12-22</lastmod>
+    <loc>https://agrogina.com/</loc>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://agrogina.com/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://agrogina.com/?lang=en"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://agrogina.com/?lang=ar"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://agrogina.com/"/>
+    <lastmod>2026-04-28</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
 
   <!-- Login Page -->
   <url>
-    <loc>https://agritech-dashboard.thebzlab.online/login</loc>
-    <lastmod>2025-12-22</lastmod>
+    <loc>https://agrogina.com/login</loc>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://agrogina.com/login"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://agrogina.com/login?lang=en"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://agrogina.com/login?lang=ar"/>
+    <lastmod>2026-04-28</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
 
   <!-- Register Page -->
   <url>
-    <loc>https://agritech-dashboard.thebzlab.online/register</loc>
-    <lastmod>2025-12-22</lastmod>
+    <loc>https://agrogina.com/register</loc>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://agrogina.com/register"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://agrogina.com/register?lang=en"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://agrogina.com/register?lang=ar"/>
+    <lastmod>2026-04-28</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.9</priority>
   </url>
 
   <!-- Blog Page -->
   <url>
-    <loc>https://agritech-dashboard.thebzlab.online/blog</loc>
-    <lastmod>2025-12-22</lastmod>
+    <loc>https://agrogina.com/blog</loc>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://agrogina.com/blog"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://agrogina.com/blog?lang=en"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://agrogina.com/blog?lang=ar"/>
+    <lastmod>2026-04-28</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
 
-  <!-- Marketplace (External Link Reference) -->
+  <!-- Terms of Service -->
   <url>
-    <loc>https://marketplace.thebzlab.online/</loc>
-    <lastmod>2025-12-22</lastmod>
-    <changefreq>daily</changefreq>
+    <loc>https://agrogina.com/terms-of-service</loc>
+    <lastmod>2026-03-30</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+
+  <!-- Privacy Policy -->
+  <url>
+    <loc>https://agrogina.com/privacy-policy</loc>
+    <lastmod>2026-03-30</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+  </url>
+
+  <!-- Book a Demo / RDV -->
+  <url>
+    <loc>https://agrogina.com/rdv</loc>
+    <lastmod>2026-04-28</lastmod>
+    <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
 
+  <!-- Pitch Deck -->
   <url>
-    <loc>https://marketplace.thebzlab.online/products</loc>
-    <lastmod>2025-12-22</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.7</priority>
-  </url>
-
-  <url>
-    <loc>https://marketplace.thebzlab.online/categories</loc>
-    <lastmod>2025-12-22</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.7</priority>
+    <loc>https://agrogina.com/pitch-deck</loc>
+    <lastmod>2026-04-28</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
   </url>
 
 </urlset>

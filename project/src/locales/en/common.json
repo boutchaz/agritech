@@ -1933,6 +1933,23 @@
       }
     }
   },
+  "seo": {
+    "login": {
+      "description": "Sign in to your AgroGina account to manage your farm. Access your plots, inventory and satellite analytics."
+    },
+    "register": {
+      "description": "Create your free AgroGina account and discover the all-in-one farm management platform for Morocco."
+    },
+    "terms": {
+      "description": "Read AgroGina's terms of service: account, services, responsibilities and content policies."
+    },
+    "privacy": {
+      "description": "AgroGina privacy policy: personal data protection, compliance with Moroccan law 09-08 and CNDP."
+    },
+    "rdv": {
+      "description": "Book a free AgroGina demonstration. Discover how our farm management platform can optimize your operations."
+    }
+  },
   "landing": {
     "nav": {
       "features": "Features",

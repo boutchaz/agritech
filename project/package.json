@@ -185,6 +185,7 @@
     "typescript": "^6.0.2",
     "vite": "^7.3.1",
     "vite-plugin-compression2": "^2.5.3",
+    "vite-plugin-prerender": "^1.0.8",
     "vite-plugin-pwa": "^1.2.0",
     "vitest": "^4.1.4",
     "workbox-build": "^7.4.0",

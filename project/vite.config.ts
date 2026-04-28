@@ -4,6 +4,7 @@ import { tanstackRouter } from '@tanstack/router-plugin/vite';
 import { sentryVitePlugin } from '@sentry/vite-plugin';
 import { compression } from 'vite-plugin-compression2';
 import { VitePWA } from 'vite-plugin-pwa';
+import prerender from 'vite-plugin-prerender';
 import path from 'path';
 
 // https://vitejs.dev/config/
@@ -135,6 +136,10 @@ export default defineConfig({
       devOptions: {
         enabled: false, // Don't run SW in dev — avoids confusion
       },
+    }),
+    prerender({
+      routes: ['/', '/login', '/register', '/terms-of-service', '/privacy-policy', '/rdv'],
+      staticDir: path.resolve(__dirname, 'dist'),
     }),
   ],
   // API proxy configuration

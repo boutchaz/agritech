@@ -42,7 +42,7 @@ const LandingPage = () => {
     name: appConfig.name,
     url: `${siteOrigin}/`,
     description: t('landing.seo.description'),
-    image: `${siteOrigin}/og-image.png`,
+    image: `${siteOrigin}/assets/logo.png`,
     offers: { '@type': 'Offer', price: '25', priceCurrency: 'USD' },
   }), [siteOrigin, t]);
 
@@ -78,6 +78,22 @@ const LandingPage = () => {
     }
     return () => { document.querySelector('script[data-landing-schema]')?.remove(); };
   }, [t, siteOrigin, structuredData]);
+
+  const faqStructuredData = useMemo(() => {
+    const faqItems = [1, 2, 3, 4, 5, 6].map((n) => ({
+      '@type': 'Question',
+      name: t(`landing.faq.q${n}`),
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: t(`landing.faq.a${n}`),
+      },
+    }));
+    return {
+      '@context': 'https://schema.org',
+      '@type': 'FAQPage',
+      mainEntity: faqItems,
+    };
+  }, [t]);
 
   // Sticky header & Scroll Progress
   useEffect(() => {
@@ -775,6 +791,10 @@ const LandingPage = () => {
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqStructuredData) }}
         />
       </div>
     </div>

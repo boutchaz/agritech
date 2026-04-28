@@ -15,6 +15,7 @@ import {
   trackPageView,
 } from '@/lib/analytics'
 import { Button } from '@/components/ui/button';
+import { useSEO } from '@/hooks/useSEO';
 
 export const Route = createFileRoute('/(auth)/register')({
   component: RegisterPage,
@@ -22,6 +23,12 @@ export const Route = createFileRoute('/(auth)/register')({
 
 function RegisterPage() {
   const { t } = useTranslation()
+  useSEO({
+    title: t('auth.register.title', 'Créer un compte'),
+    description: t('seo.register.description', 'Créez votre compte AgroGina gratuitement et découvrez la plateforme de gestion agricole tout-en-un pour le Maroc.'),
+    path: '/register',
+    keywords: 'inscription agrogina, créer compte agriculture, logiciel agricole maroc',
+  })
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')

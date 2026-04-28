@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { LegalPageLayout } from '@/components/legal/LegalPageLayout'
 import { TermsOfServiceContent } from '@/components/legal/TermsOfServiceContent'
 import { ScrollText } from 'lucide-react'
+import { useSEO } from '@/hooks/useSEO'
 
 export const Route = createFileRoute('/(public)/terms-of-service')({
   component: TermsOfServicePage,
@@ -10,6 +11,12 @@ export const Route = createFileRoute('/(public)/terms-of-service')({
 
 function TermsOfServicePage() {
   const { t } = useTranslation()
+  useSEO({
+    title: t('public.terms.title', "Conditions Générales d'Utilisation"),
+    description: t('seo.terms.description', "Consultez les conditions générales d'utilisation d'AgroGina : compte, services, responsabilités et contenus."),
+    path: '/terms-of-service',
+    noindex: true,
+  })
 
   const termsToc = [
     { id: 'objet', label: t('public.terms.toc.objet', 'Objet') },

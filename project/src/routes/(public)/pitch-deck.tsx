@@ -4,6 +4,7 @@ import { marked } from 'marked'
 import { ChevronLeft, ChevronRight, Maximize2, X } from 'lucide-react'
 import { useHotkeys } from '@tanstack/react-hotkeys'
 import { Button } from '@/components/ui/button';
+import { useSEO } from '@/hooks/useSEO';
 
 export const Route = createFileRoute('/(public)/pitch-deck')({
     component: PitchDeck,
@@ -151,6 +152,12 @@ We are seeking **$[Amounts]** to:
 function PitchDeck() {
     const [currentSlide, setCurrentSlide] = useState(0)
     const [isFullScreen, setIsFullScreen] = useState(false)
+    useSEO({
+      title: 'AgroGina — Pitch Deck',
+      description: "Découvrez le pitch deck d'AgroGina : la plateforme de gestion agricole intelligente qui révolutionne l'agriculture au Maroc avec l'IA et les satellites.",
+      path: '/pitch-deck',
+      noindex: true,
+    })
 
     // Initialize slides directly
     const slides = RAW_MARKDOWN.split(/^---$/m)

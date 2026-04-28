@@ -1952,6 +1952,23 @@
       }
     }
   },
+  "seo": {
+    "login": {
+      "description": "Connectez-vous à votre espace AgroGina pour gérer votre exploitation agricole. Accédez à vos parcelles, stocks et analyses satellite."
+    },
+    "register": {
+      "description": "Créez votre compte AgroGina gratuitement et découvrez la plateforme de gestion agricole tout-en-un pour le Maroc."
+    },
+    "terms": {
+      "description": "Consultez les conditions générales d'utilisation d'AgroGina : compte, services, responsabilités et contenus."
+    },
+    "privacy": {
+      "description": "Politique de confidentialité AgroGina : protection des données personnelles, conformité loi 09-08 et CNDP au Maroc."
+    },
+    "rdv": {
+      "description": "Réservez une démonstration gratuite d'AgroGina. Découvrez comment notre plateforme de gestion agricole peut optimiser votre exploitation."
+    }
+  },
   "landing": {
     "nav": {
       "features": "Fonctionnalités",

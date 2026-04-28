@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { LegalPageLayout } from '@/components/legal/LegalPageLayout'
 import { PrivacyPolicyContent } from '@/components/legal/PrivacyPolicyContent'
 import { Shield } from 'lucide-react'
+import { useSEO } from '@/hooks/useSEO'
 
 export const Route = createFileRoute('/(public)/privacy-policy')({
   component: PrivacyPolicyPage,
@@ -10,6 +11,12 @@ export const Route = createFileRoute('/(public)/privacy-policy')({
 
 function PrivacyPolicyPage() {
   const { t } = useTranslation()
+  useSEO({
+    title: t('public.privacy.title', 'Politique de Confidentialité'),
+    description: t('seo.privacy.description', 'Politique de confidentialité AgroGina : protection des données personnelles, conformité loi 09-08 et CNDP au Maroc.'),
+    path: '/privacy-policy',
+    noindex: true,
+  })
 
   const privacyToc = [
     { id: 'responsable', label: t('public.privacy.toc.responsable', 'Responsable') },
