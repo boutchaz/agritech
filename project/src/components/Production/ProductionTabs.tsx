@@ -38,9 +38,6 @@ export function ProductionTabs() {
         label: t('groups.infrastructure', 'Infrastructure'),
         tabs: [
           { value: 'parcels', label: t('tabs.parcels', 'Parcels'), to: '/parcels' },
-          { value: 'orchards', label: t('tabs.orchards', 'Orchards'), to: '/orchards' },
-          { value: 'trees', label: t('tabs.trees', 'Trees'), to: '/trees' },
-          { value: 'biological-assets', label: t('tabs.biologicalAssets', 'Biological Assets'), to: '/biological-assets' },
           { value: 'farm-hierarchy', label: t('tabs.farmHierarchy', 'Farm Hierarchy'), to: '/farm-hierarchy' },
         ],
       },
