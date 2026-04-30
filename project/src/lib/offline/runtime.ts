@@ -1,3 +1,4 @@
+import type { QueryClient } from '@tanstack/react-query';
 import { useOrganizationStore } from '@/stores/organizationStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useConflictStore } from '@/stores/conflictStore';
@@ -19,12 +20,15 @@ import { listPending } from './outbox';
 import { wipeOffline } from './wipe';
 import { telemetry } from './telemetry';
 import { migrateLegacyQueue } from './legacyMigration';
+import { runPrefetch, resetPrefetchState } from './prefetch';
 
 let initialized = false;
+let qc: QueryClient | null = null;
 
-export function initOfflineRuntime(): void {
+export function initOfflineRuntime(queryClient?: QueryClient): void {
   if (initialized || typeof window === 'undefined') return;
   initialized = true;
+  qc = queryClient ?? null;
 
   void ensurePersistentStorage();
   startOnlineMonitor();
@@ -126,6 +130,7 @@ export function initOfflineRuntime(): void {
       telemetry.track('org_switch', { from: lastOrgId, to: newOrg });
       lastOrgId = newOrg;
       void flushNow('org-switch');
+      if (newOrg) void maybePrefetch('org-switch');
     }
   });
 
@@ -133,9 +138,44 @@ export function initOfflineRuntime(): void {
   useAuthStore.subscribe((state, prev) => {
     if (prev.isAuthenticated && !state.isAuthenticated) {
       void wipeOffline({ scope: 'all' });
+      void resetPrefetchState();
     }
   });
 
-  // Initial flush attempt on boot if online
+  // Smart prefetch: warm the cache so offline screens have data the user
+  // never explicitly visited. Runs only when (a) we have a query client,
+  // (b) user is authenticated, (c) device is leader, (d) we are online.
+  // Triggered on boot + on auth/org change.
+  async function maybePrefetch(reason: string) {
+    if (!qc) return;
+    if (!leader.isLeader()) return;
+    const auth = useAuthStore.getState();
+    if (!auth.isAuthenticated) return;
+    const orgId = useOrganizationStore.getState().currentOrganization?.id ?? null;
+    if (!orgId) return;
+    try {
+      await runPrefetch(qc, orgId);
+    } catch (err) {
+      console.warn('[offline.runtime] prefetch failed', err, reason);
+    }
+  }
+
+  // Auth changes -> prefetch on login
+  useAuthStore.subscribe((state, prev) => {
+    if (!prev.isAuthenticated && state.isAuthenticated) {
+      void maybePrefetch('post-login');
+    }
+  });
+
+  // Boot
   void flushNow('boot');
+  void maybePrefetch('boot');
+}
+
+/** Imperative trigger for the Settings UI "Précharger" button. */
+export async function triggerPrefetch(force = true): Promise<void> {
+  if (!qc) return;
+  const orgId = useOrganizationStore.getState().currentOrganization?.id ?? null;
+  if (!orgId) return;
+  await runPrefetch(qc, orgId, { force });
 }

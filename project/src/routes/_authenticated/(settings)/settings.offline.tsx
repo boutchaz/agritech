@@ -2,7 +2,7 @@ import { createFileRoute } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Trash2, Wifi, AlertTriangle } from 'lucide-react';
+import { Trash2, Wifi, AlertTriangle, Download, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/hooks/useAuth';
@@ -14,6 +14,12 @@ import {
 } from '@/lib/offline/outbox';
 import { getStorageStatus } from '@/lib/offline/storageGuard';
 import { useOnlineStatus } from '@/lib/offline/useOnlineStatus';
+import {
+  subscribePrefetchProgress,
+  getPrefetchProgress,
+  type PrefetchProgress,
+} from '@/lib/offline/prefetch';
+import { triggerPrefetch } from '@/lib/offline/runtime';
 
 export const Route = createFileRoute('/_authenticated/(settings)/settings/offline')({
   component: OfflineSettingsPage,
@@ -46,6 +52,20 @@ function OfflineSettingsPage() {
   const [oldestAge, setOldestAge] = useState(0);
   const [storage, setStorage] = useState<{ usage: number; quota: number; ratio: number; persisted: boolean } | null>(null);
   const [isWiping, setIsWiping] = useState(false);
+  const [prefetch, setPrefetch] = useState<PrefetchProgress>(getPrefetchProgress());
+
+  useEffect(() => {
+    return subscribePrefetchProgress(setPrefetch);
+  }, []);
+
+  const handlePrefetch = async () => {
+    try {
+      await triggerPrefetch(true);
+    } catch (err) {
+      toast.error(t('offline.prefetchError', 'Could not pre-load data.'));
+      console.error(err);
+    }
+  };
 
   useEffect(() => {
     if (!currentOrganization?.id) return;
@@ -122,6 +142,65 @@ function OfflineSettingsPage() {
               <div className="font-medium">{formatAge(oldestAge)}</div>
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Download className="h-5 w-5" />
+            {t('offline.prefetchTitle', 'Pre-load for offline')}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3 text-sm">
+          <p className="text-muted-foreground">
+            {t(
+              'offline.prefetchDescription',
+              'Warm the cache with farms, parcels, today + 7 days of tasks, workers, and stock so the app stays usable in the field.',
+            )}
+          </p>
+          {prefetch.total > 0 && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground">
+                  {prefetch.isRunning && prefetch.currentStep
+                    ? t('offline.prefetchProgress', 'Loading {{step}}…', { step: prefetch.currentStep })
+                    : t('offline.prefetchStatus', '{{done}} / {{total}} resources cached', {
+                        done: prefetch.completed,
+                        total: prefetch.total,
+                      })}
+                </span>
+                {prefetch.lastRunAt && !prefetch.isRunning && (
+                  <span className="text-muted-foreground">
+                    {new Date(prefetch.lastRunAt).toLocaleString()}
+                  </span>
+                )}
+              </div>
+              <div className="h-2 rounded bg-muted overflow-hidden">
+                <div
+                  className="h-full bg-emerald-500 transition-all"
+                  style={{
+                    width: `${prefetch.total === 0 ? 0 : (prefetch.completed / prefetch.total) * 100}%`,
+                  }}
+                />
+              </div>
+              {prefetch.lastError && !prefetch.isRunning && (
+                <p className="text-xs text-amber-600">
+                  {t('offline.prefetchLastError', 'Last error: {{err}}', { err: prefetch.lastError })}
+                </p>
+              )}
+            </div>
+          )}
+          <Button onClick={handlePrefetch} disabled={prefetch.isRunning || status === 'offline'}>
+            {prefetch.isRunning ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Download className="mr-2 h-4 w-4" />
+            )}
+            {prefetch.isRunning
+              ? t('offline.prefetchRunning', 'Pre-loading…')
+              : t('offline.prefetchButton', 'Pre-load now')}
+          </Button>
         </CardContent>
       </Card>
 

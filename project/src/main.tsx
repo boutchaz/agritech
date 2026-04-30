@@ -132,7 +132,7 @@ const App = () => {
 
 async function init() {
   await cleanupLegacyServiceWorkers();
-  initOfflineRuntime();
+  initOfflineRuntime(queryClient);
 
   if (import.meta.env.PROD) {
     import('./lib/sentry').then(({ initSentry }) => initSentry(router));

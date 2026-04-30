@@ -10,4 +10,14 @@ export * from './clock';
 export * from './telemetry';
 export * from './executor';
 export * from './runOrQueue';
-export { initOfflineRuntime } from './runtime';
+export { initOfflineRuntime, triggerPrefetch } from './runtime';
+export {
+  runPrefetch,
+  resetPrefetchState,
+  buildPrefetchPlan,
+  abortPrefetch,
+  getPrefetchProgress,
+  subscribePrefetchProgress,
+  type PrefetchProgress,
+  type PrefetchStep,
+} from './prefetch';
