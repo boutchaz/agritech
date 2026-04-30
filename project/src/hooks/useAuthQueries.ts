@@ -175,9 +175,14 @@ export const useOrganizationFarms = (organizationId: string | undefined) => {
               ? parseFloat(parcelsData.totalArea.toFixed(2))
               : farmSize;
 
+            // Defensive fallback: legacy farms in DB may have empty name. Show a
+            // synthesized label so the row is selectable instead of blank.
+            const rawName = (farm.farm_name || farm.name || '').toString().trim();
+            const safeName = rawName || `Farm ${String(farmId).slice(0, 8)}`;
+
             return {
               id: farmId,
-              name: farm.farm_name || farm.name,
+              name: safeName,
               location: farm.farm_location || farm.location,
               size: farmSize,
               size_unit: farm.size_unit,

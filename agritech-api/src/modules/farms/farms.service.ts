@@ -485,9 +485,16 @@ export class FarmsService {
       }
     }
 
-    // Check farm name uniqueness within organization
+    // Reject empty/whitespace names — DB has NOT NULL but tolerates '' which
+    // shows as a blank row in the farm switcher. Validate at the boundary.
     const trimmedName = (dto.name || '').trim();
-    if (trimmedName) {
+    if (!trimmedName) {
+      throw new BadRequestException('Farm name is required');
+    }
+    if (trimmedName.length > 255) {
+      throw new BadRequestException('Farm name must be 255 characters or fewer');
+    }
+    {
       const { data: existing } = await this.databaseService.getAdminClient()
         .from('farms')
         .select('id, name, is_active')
@@ -509,7 +516,7 @@ export class FarmsService {
     // Does NOT have: farm_type, parent_farm_id, hierarchy_level, manager_id
     const farmData: any = {
       organization_id: organizationId,
-      name: dto.name,
+      name: trimmedName,
       location: dto.location || null,
       size: dto.size || null,
       size_unit: dto.size_unit || 'hectare', // Default to 'hectare' per schema
