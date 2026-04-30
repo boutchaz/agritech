@@ -4,6 +4,7 @@ import { useAuth } from '../hooks/useAuth';
 import { trackEntityCreate, trackEntityUpdate, trackEntityDelete } from '../lib/analytics';
 import { itemsApi, type PaginatedItemQuery } from '../lib/api/items';
 import type { PaginatedResponse } from '../lib/api/types';
+import { withOfflineQueue } from '../lib/offline/withOfflineQueue';
 import type {
   ItemGroupWithChildren,
   Item,
@@ -359,8 +360,19 @@ export function useCreateItem() {
       if (!currentOrganization?.id) {
         throw new Error('No organization selected');
       }
-
-      return itemsApi.create(input, currentOrganization.id);
+      const queued = withOfflineQueue<CreateItemInput, Awaited<ReturnType<typeof itemsApi.create>>>(
+        {
+          organizationId: currentOrganization.id,
+          resource: 'item',
+          method: 'POST',
+          url: '/api/v1/items',
+          buildPayload: (payload, clientId) => ({ ...payload, client_id: clientId }),
+          buildOptimisticStub: (payload, clientId) =>
+            ({ id: clientId, _pending: true, ...payload }) as never,
+        },
+        (payload) => itemsApi.create(payload, currentOrganization.id),
+      );
+      return queued(input);
     },
     onSuccess: () => {
       trackEntityCreate('stock_item');
@@ -383,8 +395,18 @@ export function useUpdateItem() {
       if (!currentOrganization?.id) {
         throw new Error('No organization selected');
       }
-
-      return itemsApi.update(itemId, input, currentOrganization.id);
+      const queued = withOfflineQueue<UpdateItemInput, Awaited<ReturnType<typeof itemsApi.update>>>(
+        {
+          organizationId: currentOrganization.id,
+          resource: 'item',
+          method: 'PATCH',
+          url: `/api/v1/items/${itemId}`,
+          buildOptimisticStub: (payload, clientId) =>
+            ({ id: itemId, _pending: true, ...payload, client_id: clientId }) as never,
+        },
+        (payload) => itemsApi.update(itemId, payload, currentOrganization.id),
+      );
+      return queued(input);
     },
     onSuccess: (_, variables) => {
       trackEntityUpdate('stock_item');
@@ -408,8 +430,16 @@ export function useDeleteItem() {
       if (!currentOrganization?.id) {
         throw new Error('No organization selected');
       }
-
-      return itemsApi.delete(itemId, currentOrganization.id);
+      const queued = withOfflineQueue<void, Awaited<ReturnType<typeof itemsApi.delete>>>(
+        {
+          organizationId: currentOrganization.id,
+          resource: 'item',
+          method: 'DELETE',
+          url: `/api/v1/items/${itemId}`,
+        },
+        () => itemsApi.delete(itemId, currentOrganization.id),
+      );
+      return queued();
     },
     onSuccess: () => {
       trackEntityDelete('stock_item');

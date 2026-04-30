@@ -10,6 +10,7 @@ export * from './clock';
 export * from './telemetry';
 export * from './executor';
 export * from './runOrQueue';
+export * from './withOfflineQueue';
 export { initOfflineRuntime, triggerPrefetch } from './runtime';
 export {
   runPrefetch,

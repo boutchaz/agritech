@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { trackEntityCreate, trackEntityUpdate, trackEntityDelete } from '../lib/analytics';
 import { workersApi, type PaginatedWorkerQuery } from '../lib/api/workers';
+import { withOfflineQueue } from '../lib/offline/withOfflineQueue';
 import type { PaginatedResponse } from '../lib/api/types';
 import type { WorkerFormData, WorkRecord, MetayageSettlement } from '../types/workers';
 
@@ -67,7 +68,19 @@ export const useCreateWorker = () => {
   return useMutation({
     mutationFn: async (data: WorkerFormData & { organization_id: string }) => {
       const { organization_id, ...workerData } = data;
-      return workersApi.create(workerData, organization_id);
+      const queued = withOfflineQueue<WorkerFormData, Awaited<ReturnType<typeof workersApi.create>>>(
+        {
+          organizationId: organization_id,
+          resource: 'worker',
+          method: 'POST',
+          url: '/api/v1/workers',
+          buildPayload: (input, clientId) => ({ ...input, client_id: clientId }),
+          buildOptimisticStub: (input, clientId) =>
+            ({ id: clientId, _pending: true, organization_id, ...input }) as never,
+        },
+        (input) => workersApi.create(input, organization_id),
+      );
+      return queued(workerData);
     },
     onSuccess: (worker) => {
       trackEntityCreate('worker');
@@ -83,7 +96,18 @@ export const useUpdateWorker = () => {
 
   return useMutation({
     mutationFn: async ({ id, organizationId, data }: { id: string; organizationId: string; data: Partial<WorkerFormData> }) => {
-      return workersApi.update(id, data, organizationId);
+      const queued = withOfflineQueue<Partial<WorkerFormData>, Awaited<ReturnType<typeof workersApi.update>>>(
+        {
+          organizationId,
+          resource: 'worker',
+          method: 'PATCH',
+          url: `/api/v1/workers/${id}`,
+          buildOptimisticStub: (input, clientId) =>
+            ({ id, _pending: true, organization_id: organizationId, ...input, client_id: clientId }) as never,
+        },
+        (input) => workersApi.update(id, input, organizationId),
+      );
+      return queued(data);
     },
     onSuccess: (worker) => {
       trackEntityUpdate('worker');
@@ -100,7 +124,16 @@ export const useDeleteWorker = () => {
 
   return useMutation({
     mutationFn: async ({ workerId, organizationId }: { workerId: string; organizationId: string }) => {
-      return workersApi.delete(workerId, organizationId);
+      const queued = withOfflineQueue<void, Awaited<ReturnType<typeof workersApi.delete>>>(
+        {
+          organizationId,
+          resource: 'worker',
+          method: 'DELETE',
+          url: `/api/v1/workers/${workerId}`,
+        },
+        () => workersApi.delete(workerId, organizationId),
+      );
+      return queued();
     },
     onSuccess: (_, variables) => {
       trackEntityDelete('worker');

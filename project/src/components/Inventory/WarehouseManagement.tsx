@@ -8,6 +8,8 @@ import { useFarms } from '@/hooks/useParcelsQuery';
 import { useAuth } from '@/hooks/useAuth';
 import { warehousesApi, type CreateWarehouseInput } from '@/lib/api/warehouses';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { withOfflineQueue } from '@/lib/offline/withOfflineQueue';
+import { v4 as uuidv4 } from 'uuid';
 import { useFormErrors } from '@/hooks/useFormErrors';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -158,7 +160,17 @@ function WarehouseForm({ warehouse, open, onOpenChange }: WarehouseFormProps) {
       };
 
       if (warehouse) {
-        await warehousesApi.update(warehouse.id, cleanedData, currentOrganization.id);
+        const cid = uuidv4();
+        await withOfflineQueue<typeof cleanedData, unknown>(
+          {
+            organizationId: currentOrganization.id,
+            resource: 'warehouse',
+            method: 'PATCH',
+            url: `/api/v1/warehouses/${warehouse.id}`,
+          },
+          (input) => warehousesApi.update(warehouse.id, input, currentOrganization.id),
+        )(cleanedData);
+        void cid;
         toast.success(t('warehouses.warehouseUpdated'));
       } else {
         const createInput: CreateWarehouseInput = {
@@ -178,7 +190,16 @@ function WarehouseForm({ warehouse, open, onOpenChange }: WarehouseFormProps) {
           farm_id: cleanedData.farm_id,
           is_active: cleanedData.is_active ?? true,
         };
-        await warehousesApi.create(createInput, currentOrganization.id);
+        await withOfflineQueue<CreateWarehouseInput, unknown>(
+          {
+            organizationId: currentOrganization.id,
+            resource: 'warehouse',
+            method: 'POST',
+            url: '/api/v1/warehouses',
+            buildPayload: (input, clientId) => ({ ...input, client_id: clientId }),
+          },
+          (input) => warehousesApi.create(input, currentOrganization.id),
+        )(createInput);
         toast.success(t('warehouses.warehouseCreated'));
       }
 

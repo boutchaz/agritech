@@ -1,6 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { parcelsService, type Parcel as ServiceParcel } from '../services/parcelsService';
 import { farmsService, type Farm as ServiceFarm } from '../services/farmsService';
+import { withOfflineQueue } from '../lib/offline/withOfflineQueue';
+import { useOrganizationStore } from '../stores/organizationStore';
 
 export interface Parcel extends Omit<ServiceParcel, 'area' | 'area_unit' | 'description'> {
   area: number | null;
@@ -198,60 +200,75 @@ export const useParcelApplications = (parcelId: string | null | undefined) => {
 // Add parcel mutation using parcelsService (apiClient)
 export const useAddParcel = () => {
   const queryClient = useQueryClient();
+  const orgId = useOrganizationStore((s) => s.currentOrganization?.id ?? null);
 
   return useMutation({
-    mutationFn: async (parcelData: {
-      name: string;
-      farm_id: string;
-      boundary?: number[][];
-      description?: string;
-      area?: number;
-      area_unit?: string;
-      soil_type?: string;
-      irrigation_type?: string;
-      crop_category?: string;
-      crop_type?: string;
-      tree_type?: string;
-      tree_count?: number;
-      planting_year?: number;
-      variety?: string;
-      rootstock?: string;
-      planting_date?: string;
-      planting_type?: string;
-      planting_system?: string;
-      spacing?: string;
-      density_per_hectare?: number;
-      plant_count?: number;
-      calculated_area?: number;
-      perimeter?: number;
-    }) => {
-      const createData: Record<string, unknown> = {
-        farm_id: parcelData.farm_id,
-        name: parcelData.name,
-        area: parcelData.area ?? 0,
-      };
+    mutationFn: withOfflineQueue<
+      {
+        name: string;
+        farm_id: string;
+        boundary?: number[][];
+        description?: string;
+        area?: number;
+        area_unit?: string;
+        soil_type?: string;
+        irrigation_type?: string;
+        crop_category?: string;
+        crop_type?: string;
+        tree_type?: string;
+        tree_count?: number;
+        planting_year?: number;
+        variety?: string;
+        rootstock?: string;
+        planting_date?: string;
+        planting_type?: string;
+        planting_system?: string;
+        spacing?: string;
+        density_per_hectare?: number;
+        plant_count?: number;
+        calculated_area?: number;
+        perimeter?: number;
+      },
+      ServiceParcel
+    >(
+      {
+        organizationId: orgId,
+        resource: 'parcel',
+        method: 'POST',
+        url: '/api/v1/parcels',
+        buildPayload: (input, clientId) => ({ ...input, client_id: clientId }),
+        buildOptimisticStub: (input, clientId) =>
+          ({ id: clientId, _pending: true, ...input } as unknown as ServiceParcel),
+      },
+      async (parcelData) => {
+        const createData: Record<string, unknown> = {
+          farm_id: parcelData.farm_id,
+          name: parcelData.name,
+          area: parcelData.area ?? 0,
+        };
 
-      if (parcelData.description) createData.description = parcelData.description;
-      if (parcelData.area_unit) createData.area_unit = parcelData.area_unit;
-      if (parcelData.soil_type) createData.soil_type = parcelData.soil_type;
-      if (parcelData.irrigation_type) createData.irrigation_type = parcelData.irrigation_type;
-      if (parcelData.crop_category) createData.crop_category = parcelData.crop_category;
-      if (parcelData.crop_type) createData.crop_type = parcelData.crop_type;
-      if (parcelData.variety) createData.variety = parcelData.variety;
-      if (parcelData.planting_date) createData.planting_date = parcelData.planting_date;
-      if (parcelData.planting_year) createData.planting_year = parcelData.planting_year;
-      if (parcelData.rootstock) createData.rootstock = parcelData.rootstock;
-      if (parcelData.planting_system) createData.planting_system = parcelData.planting_system;
-      if (parcelData.planting_type) createData.planting_type = parcelData.planting_type;
-      if (parcelData.spacing) createData.spacing = parcelData.spacing;
-      if (parcelData.density_per_hectare) createData.density_per_hectare = parcelData.density_per_hectare;
-      if (parcelData.plant_count) createData.plant_count = parcelData.plant_count;
-      if (parcelData.boundary) createData.boundary = parcelData.boundary;
-      if (parcelData.calculated_area) createData.calculated_area = parcelData.calculated_area;
-      if (parcelData.perimeter) createData.perimeter = parcelData.perimeter;
+        if (parcelData.description) createData.description = parcelData.description;
+        if (parcelData.area_unit) createData.area_unit = parcelData.area_unit;
+        if (parcelData.soil_type) createData.soil_type = parcelData.soil_type;
+        if (parcelData.irrigation_type) createData.irrigation_type = parcelData.irrigation_type;
+        if (parcelData.crop_category) createData.crop_category = parcelData.crop_category;
+        if (parcelData.crop_type) createData.crop_type = parcelData.crop_type;
+        if (parcelData.variety) createData.variety = parcelData.variety;
+        if (parcelData.planting_date) createData.planting_date = parcelData.planting_date;
+        if (parcelData.planting_year) createData.planting_year = parcelData.planting_year;
+        if (parcelData.rootstock) createData.rootstock = parcelData.rootstock;
+        if (parcelData.planting_system) createData.planting_system = parcelData.planting_system;
+        if (parcelData.planting_type) createData.planting_type = parcelData.planting_type;
+        if (parcelData.spacing) createData.spacing = parcelData.spacing;
+        if (parcelData.density_per_hectare) createData.density_per_hectare = parcelData.density_per_hectare;
+        if (parcelData.plant_count) createData.plant_count = parcelData.plant_count;
+        if (parcelData.boundary) createData.boundary = parcelData.boundary;
+        if (parcelData.calculated_area) createData.calculated_area = parcelData.calculated_area;
+        if (parcelData.perimeter) createData.perimeter = parcelData.perimeter;
 
-      return parcelsService.createParcel(createData as Parameters<typeof parcelsService.createParcel>[0]);
-    },
+        return parcelsService.createParcel(createData as Parameters<typeof parcelsService.createParcel>[0]);
+      },
+    ),
     onSuccess: (data) => {
       // Invalidate relevant queries - invalidate ALL parcel queries
       queryClient.invalidateQueries({ queryKey: parcelsKeys.all });

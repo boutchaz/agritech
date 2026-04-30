@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient, UseQueryOptions, UseMutationOptions } from '@tanstack/react-query';
 import { useAuth } from '../hooks/useAuth';
 import type { CrudApi } from '../lib/api/createCrudApi';
+import { withOfflineQueue } from '../lib/offline/withOfflineQueue';
 
 /**
  * Hook factory for organization-scoped queries
@@ -79,6 +80,12 @@ export function createOrgCrudHooks<
   /**
    * Hook to create a new entity
    */
+  // Resource path conventions: pluralize the resourceName for the URL
+  // (matches every CRUD module on the backend). The hook factory only
+  // covers create/update/delete shapes — anything custom is migrated
+  // explicitly elsewhere.
+  const baseUrl = `/api/v1/${resourceName}`;
+
   function useCreate(
     options?: Omit<UseMutationOptions<TEntity, Error, TCreateInput>, 'mutationFn'>
   ) {
@@ -90,7 +97,19 @@ export function createOrgCrudHooks<
         if (!currentOrganization?.id) {
           throw new Error('No organization selected');
         }
-        return api.create(data, currentOrganization.id);
+        const queued = withOfflineQueue<TCreateInput, TEntity>(
+          {
+            organizationId: currentOrganization.id,
+            resource: resourceName,
+            method: 'POST',
+            url: baseUrl,
+            buildPayload: (input, clientId) => ({ ...(input as object), client_id: clientId }),
+            buildOptimisticStub: (input, clientId) =>
+              ({ id: clientId, _pending: true, ...(input as object) }) as unknown as TEntity,
+          },
+          (input) => api.create(input, currentOrganization.id),
+        );
+        return queued(data);
       },
       onSuccess: (data, variables, context) => {
         queryClient.invalidateQueries({ queryKey: [resourceName, currentOrganization?.id] });
@@ -113,7 +132,18 @@ export function createOrgCrudHooks<
         if (!currentOrganization?.id) {
           throw new Error('No organization selected');
         }
-        return api.update(id, data as TUpdateInput, currentOrganization.id);
+        const queued = withOfflineQueue<TUpdateInput, TEntity>(
+          {
+            organizationId: currentOrganization.id,
+            resource: resourceName,
+            method: 'PATCH',
+            url: `${baseUrl}/${id}`,
+            buildOptimisticStub: (input, clientId) =>
+              ({ id, _pending: true, ...(input as object), client_id: clientId }) as unknown as TEntity,
+          },
+          (input) => api.update(id, input, currentOrganization.id),
+        );
+        return queued(data as TUpdateInput);
       },
       onSuccess: (data, variables, context) => {
         queryClient.invalidateQueries({ queryKey: [resourceName, currentOrganization?.id] });
@@ -137,7 +167,16 @@ export function createOrgCrudHooks<
         if (!currentOrganization?.id) {
           throw new Error('No organization selected');
         }
-        return api.delete(id, currentOrganization.id);
+        const queued = withOfflineQueue<void, void>(
+          {
+            organizationId: currentOrganization.id,
+            resource: resourceName,
+            method: 'DELETE',
+            url: `${baseUrl}/${id}`,
+          },
+          () => api.delete(id, currentOrganization.id),
+        );
+        return queued();
       },
       onSuccess: (data, variables, context) => {
         queryClient.invalidateQueries({ queryKey: [resourceName, currentOrganization?.id] });

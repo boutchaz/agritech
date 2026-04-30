@@ -6,6 +6,7 @@ import {
   type CreateAttendanceInput,
   type UpsertGeofenceInput,
 } from '@/lib/api/attendance';
+import { withOfflineQueue } from '@/lib/offline/withOfflineQueue';
 
 export function useAttendanceRecords(filters: AttendanceFilters = {}) {
   const { currentOrganization } = useAuth();
@@ -25,7 +26,19 @@ export function useCreateAttendance() {
   return useMutation({
     mutationFn: async (data: CreateAttendanceInput) => {
       if (!currentOrganization?.id) throw new Error('No organization');
-      return attendanceApi.create(data, currentOrganization.id);
+      const queued = withOfflineQueue<CreateAttendanceInput, Awaited<ReturnType<typeof attendanceApi.create>>>(
+        {
+          organizationId: currentOrganization.id,
+          resource: 'attendance',
+          method: 'POST',
+          url: '/api/v1/attendance',
+          buildPayload: (input, clientId) => ({ ...input, client_id: clientId }),
+          buildOptimisticStub: (input, clientId) =>
+            ({ id: clientId, _pending: true, ...input }) as never,
+        },
+        (input) => attendanceApi.create(input, currentOrganization.id),
+      );
+      return queued(data);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['attendance', currentOrganization?.id] });
