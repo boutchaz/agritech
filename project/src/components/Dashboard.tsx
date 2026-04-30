@@ -4,6 +4,7 @@ import type { SensorData, DashboardSettings } from '../types';
 import { useSensorData } from '../hooks/useSensorData';
 import { useAuth } from '../hooks/useAuth';
 import { useDashboardSummary } from '../hooks/useDashboardSummary';
+import { useFarms } from '../hooks/useParcelsQuery';
 import { useNavigate } from '@tanstack/react-router';
 import UpcomingTasksWidget from './Dashboard/UpcomingTasksWidget';
 import ParcelsOverviewWidget from './Dashboard/ParcelsOverviewWidget';
@@ -14,6 +15,7 @@ import HarvestSummaryWidget from './Dashboard/HarvestSummaryWidget';
 import SalesOverviewWidget from './Dashboard/SalesOverviewWidget';
 import AccountingWidget from './Dashboard/AccountingWidget';
 import CostPerParcelWidget from './Dashboard/CostPerParcelWidget';
+import FirstRunOnboarding from './Dashboard/FirstRunOnboarding';
 import { ModuleGatedWidget } from './Dashboard/ModuleGatedWidget';
 import InlineFarmSelector from './InlineFarmSelector';
 import { useTranslation } from 'react-i18next';
@@ -28,10 +30,18 @@ interface DashboardProps {
 const Dashboard = ({ sensorData: _sensorData, settings }: DashboardProps) => {
   const { t } = useTranslation();
   const { latestReadings } = useSensorData();
-  const { currentFarm } = useAuth();
+  const { currentFarm, currentOrganization, user } = useAuth();
   const farmId = currentFarm?.id ?? null;
   const { data: dashboardData, isLoading: dashboardLoading } = useDashboardSummary(farmId || undefined);
+  const { data: farms = [], isLoading: farmsLoading } = useFarms(currentOrganization?.id);
   const navigate = useNavigate();
+
+  const hasFarm = farms.length > 0;
+  const hasParcel = (dashboardData?.parcels.total ?? 0) > 0;
+  const hasStock = (dashboardData?.inventory.total ?? 0) > 0;
+  const hasHarvest = (dashboardData?.harvests.total ?? 0) > 0;
+  const isEmpty = !hasFarm && !hasParcel && !hasStock && !hasHarvest;
+  const showOnboarding = !farmsLoading && !dashboardLoading && isEmpty;
 
   const getSensorValue = (type: string) => {
     return latestReadings[type]?.value.toFixed(1) || '0';
@@ -172,12 +182,30 @@ const Dashboard = ({ sensorData: _sensorData, settings }: DashboardProps) => {
     }
   };
 
+  if (showOnboarding) {
+    const u = user as { user_metadata?: { full_name?: string }; email?: string } | null;
+    const userName = u?.user_metadata?.full_name?.split(' ')[0]
+      || u?.email?.split('@')[0]
+      || null;
+    return (
+      <div className="space-y-6">
+        <FirstRunOnboarding
+          hasFarm={hasFarm}
+          hasParcel={hasParcel}
+          hasStock={hasStock}
+          userName={userName}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
-      {/* Farm Selection Context */}
-      <div className="bg-white dark:bg-slate-800 rounded-3xl p-1 shadow-sm border border-slate-100 dark:border-slate-700">
-        <InlineFarmSelector message={t('dashboard.widgets.noFarmSelected')} />
-      </div>
+      {hasFarm && (
+        <div className="bg-white dark:bg-slate-800 rounded-2xl p-1 shadow-sm border border-slate-100 dark:border-slate-700">
+          <InlineFarmSelector message={t('dashboard.widgets.noFarmSelected')} />
+        </div>
+      )}
 
       {/* Primary KPI Tier: Critical Business Metrics */}
       <div data-tour="dashboard-stats" className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-6">

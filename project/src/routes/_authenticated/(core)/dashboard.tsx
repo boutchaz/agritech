@@ -177,26 +177,28 @@ const AppContent = () => {
         subtitle={isLiveMode ? t('liveDashboard.subtitle') : t('dashboard.subtitle')}
         actions={
           <div className="flex flex-wrap items-center gap-3 sm:gap-4 w-full min-w-0 xl:w-auto">
-            {/* Enhanced Live Mode Toggle */}
-            <div className="flex items-center gap-3 bg-slate-100 dark:bg-slate-800/50 p-1.5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-inner">
-              <span className={cn(
-                "text-[10px] font-medium uppercase tracking-widest px-2 transition-colors",
-                isLiveMode ? "text-slate-400" : "text-slate-600 dark:text-slate-300"
-              )}>Static</span>
-              <label className="relative inline-flex items-center cursor-pointer">
+            {/* Auto-refresh toggle — refreshes metrics every 5s when on */}
+            <label
+              className="flex items-center gap-2 cursor-pointer text-xs text-slate-600 dark:text-slate-300"
+              title={t('dashboard.autoRefreshTooltip', 'Auto-refresh updates KPIs every 5 seconds. Off = static snapshot.')}
+            >
+              <span>{t('dashboard.autoRefresh', 'Auto-refresh')}</span>
+              <span className="relative inline-flex items-center">
                 <input
                   type="checkbox"
                   checked={isLiveMode}
                   onChange={(e) => toggleLiveMode(e.target.checked)}
                   className="sr-only peer"
                 />
-                <div className="w-10 h-5 bg-slate-300 dark:bg-slate-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500 shadow-sm"></div>
-              </label>
+                <div className="w-9 h-5 bg-slate-200 dark:bg-slate-700 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500"></div>
+              </span>
               <span className={cn(
-                "text-[10px] font-medium uppercase tracking-widest px-2 transition-colors",
-                isLiveMode ? "text-emerald-600 dark:text-emerald-400" : "text-slate-400"
-              )}>Live</span>
-            </div>
+                'text-xs font-medium tabular-nums',
+                isLiveMode ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'
+              )}>
+                {isLiveMode ? t('dashboard.on', 'on') : t('dashboard.off', 'off')}
+              </span>
+            </label>
 
             {/* Live mode refresh button */}
             {isLiveMode && (

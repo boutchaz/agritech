@@ -63,14 +63,12 @@ const StockAlertsWidget = () => {
   }
 
   return (
-    <div className="group bg-white dark:bg-slate-800 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-700 p-6 hover:shadow-xl hover:shadow-blue-500/5 transition-all duration-500 flex flex-col h-full">
+    <div className="group bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 p-4 sm:p-5 hover:shadow-md transition-all duration-300 flex flex-col h-full min-h-[200px]">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 bg-blue-50 dark:bg-blue-900/30 rounded-2xl group-hover:scale-110 transition-transform duration-500">
-            <Package className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-          </div>
-          <h3 className="text-lg font-semibold text-slate-900 dark:text-white tracking-tight uppercase">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2.5">
+          <Package className="h-4 w-4 text-blue-600 dark:text-blue-400" strokeWidth={1.75} />
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
             {t('dashboard.widgets.stock.title')}
           </h3>
         </div>
@@ -85,31 +83,29 @@ const StockAlertsWidget = () => {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-6 min-w-0">
-        <div className="relative min-w-0 bg-slate-50 dark:bg-slate-900/50 rounded-2xl p-3 sm:p-4 overflow-hidden group/card">
-          <div className="absolute top-0 right-0 w-16 h-16 bg-amber-500/5 rounded-full -mr-8 -mt-8 group-hover/card:scale-150 transition-transform duration-700"></div>
-          <div className="relative min-w-0">
-            <span className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wide sm:tracking-wider leading-tight break-words hyphens-auto">{t('dashboard.widgets.stock.alerts')}</span>
+      <div className="grid grid-cols-2 gap-3 mb-4 min-w-0">
+        <div className="min-w-0 bg-slate-50 dark:bg-slate-900/50 rounded-xl p-3">
+          <span className="text-xs text-slate-500 dark:text-slate-400">{t('dashboard.widgets.stock.alerts')}</span>
+          <div className="flex items-baseline gap-1.5 mt-1">
             <div className={cn(
-              "text-3xl font-bold tabular-nums mt-1",
+              "text-2xl font-semibold tabular-nums leading-none",
               lowStockItems.length > 0 ? "text-amber-600 dark:text-amber-400" : "text-slate-900 dark:text-white"
             )}>
               {lowStockItems.length}
             </div>
-            <div className="text-[10px] font-bold text-amber-600 dark:text-amber-400 mt-1 uppercase tracking-tight leading-tight break-words">
+            <div className="text-xs text-slate-500 dark:text-slate-400">
               {t('dashboard.widgets.stock.lowStock')}
             </div>
           </div>
         </div>
 
-        <div className="relative min-w-0 bg-slate-50 dark:bg-slate-900/50 rounded-2xl p-3 sm:p-4 overflow-hidden group/card">
-          <div className="absolute top-0 right-0 w-16 h-16 bg-emerald-500/5 rounded-full -mr-8 -mt-8 group-hover/card:scale-150 transition-transform duration-700"></div>
-          <div className="relative min-w-0">
-            <span className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wide sm:tracking-wider leading-tight break-words hyphens-auto">{t('dashboard.widgets.stock.ok')}</span>
-            <div className="text-3xl font-bold text-slate-900 dark:text-white tabular-nums mt-1">
+        <div className="min-w-0 bg-slate-50 dark:bg-slate-900/50 rounded-xl p-3">
+          <span className="text-xs text-slate-500 dark:text-slate-400">{t('dashboard.widgets.stock.ok')}</span>
+          <div className="flex items-baseline gap-1.5 mt-1">
+            <div className="text-2xl font-semibold text-slate-900 dark:text-white tabular-nums leading-none">
               {healthyStock}
             </div>
-            <div className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 mt-1 uppercase tracking-tight leading-tight break-words">
+            <div className="text-xs text-slate-500 dark:text-slate-400">
               {t('dashboard.widgets.stock.inStock')}
             </div>
           </div>
@@ -119,34 +115,28 @@ const StockAlertsWidget = () => {
       {/* Low Stock Items */}
       {lowStockItems.length > 0 ? (
         <div className="mt-auto">
-          <div className="flex items-center justify-between mb-3 px-1">
-            <h4 className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-widest">
-              {t('dashboard.widgets.stock.lowStock')}
-            </h4>
-            <div className="h-px flex-1 bg-slate-100 dark:bg-slate-800 mx-3"></div>
-          </div>
-          <div className="space-y-2 max-h-48 overflow-y-auto custom-scrollbar pr-1">
+          <h4 className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
+            {t('dashboard.widgets.stock.lowStock')}
+          </h4>
+          <div className="space-y-1 max-h-48 overflow-y-auto custom-scrollbar pr-1">
             {lowStockItems.slice(0, 5).map((item) => (
               <div
                 key={item.id}
-                className="flex items-center justify-between p-3 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700/50 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-all duration-300 shadow-sm hover:shadow"
+                className="flex items-center justify-between py-1.5 px-2.5 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700/40 transition-colors"
               >
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-semibold text-slate-900 dark:text-white truncate uppercase tracking-tight">
+                  <p className="text-sm text-slate-900 dark:text-white truncate">
                     {item.name}
                   </p>
-                  {item.brand && (
-                    <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase mt-0.5">
-                      {item.brand}
+                  {(item as InventoryItem & { brand?: string }).brand && (
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                      {(item as InventoryItem & { brand?: string }).brand}
                     </p>
                   )}
                 </div>
                 <div className="text-right ml-3 flex-shrink-0">
-                  <div className="text-sm font-semibold text-amber-600 dark:text-amber-400 tabular-nums">
-                    {item.quantity || 0}
-                  </div>
-                  <div className="text-[9px] font-medium text-slate-400 uppercase tracking-widest">
-                    {item.unit || t('dashboard.widgets.stock.units')}
+                  <div className="text-sm font-medium text-amber-600 dark:text-amber-400 tabular-nums">
+                    {item.quantity || 0} <span className="text-xs text-slate-500 dark:text-slate-400 font-normal">{item.unit || ''}</span>
                   </div>
                 </div>
               </div>
@@ -155,25 +145,25 @@ const StockAlertsWidget = () => {
           {lowStockItems.length > 5 && (
             <button
               onClick={handleViewStock}
-              className="w-full text-center py-2 mt-2 text-[10px] font-medium text-blue-600 dark:text-blue-400 uppercase tracking-widest hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-colors"
+              className="w-full text-center py-1.5 mt-1 text-xs text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
             >
               + {lowStockItems.length - 5} {t('dashboard.widgets.stock.moreItems')}
             </button>
           )}
         </div>
       ) : (
-        <div className="text-center py-8 bg-slate-50 dark:bg-slate-900/30 rounded-2xl border-2 border-dashed border-slate-100 dark:border-slate-800 mt-auto">
-          <CheckCircle className="h-8 w-8 text-emerald-300 dark:text-emerald-700 mx-auto mb-3" />
-          <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+        <div className="flex items-center justify-center gap-2 py-4 bg-emerald-50/50 dark:bg-emerald-950/20 rounded-xl mt-auto">
+          <CheckCircle className="h-4 w-4 text-emerald-500" strokeWidth={1.75} />
+          <p className="text-sm text-emerald-700 dark:text-emerald-400">
             {t('dashboard.widgets.stock.allOptimal')}
           </p>
         </div>
       )}
 
       {/* Footer Stats */}
-      <div className="mt-6 pt-4 border-t border-slate-50 dark:border-slate-700/50 flex items-center justify-between">
-        <span className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-widest">{t('dashboard.widgets.stock.totalProducts')}</span>
-        <span className="text-sm font-semibold text-slate-900 dark:text-white tabular-nums bg-slate-100 dark:bg-slate-900 px-2 py-0.5 rounded-lg">{totalItems}</span>
+      <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-700/50 flex items-center justify-between">
+        <span className="text-xs text-slate-500 dark:text-slate-400">{t('dashboard.widgets.stock.totalProducts')}</span>
+        <span className="text-sm font-medium text-slate-900 dark:text-white tabular-nums">{totalItems}</span>
       </div>
     </div>
   );
