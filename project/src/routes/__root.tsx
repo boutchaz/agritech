@@ -10,7 +10,6 @@ import { AuthProviderSwitch } from '../components/AuthProviderSwitch'
 import { AbilityProvider } from '../lib/casl/AbilityContext'
 import { ExperienceLevelProvider } from '../contexts/ExperienceLevelContext'
 import { NetworkStatusProvider } from '../components/NetworkStatusProvider'
-import { OfflineIndicator } from '../components/OfflineIndicator'
 import { ServiceWorkerUpdate } from '../components/ServiceWorkerUpdate'
 import { ErrorBoundary } from '../components/ErrorBoundary'
 import { NotFoundPage } from '../components/NotFoundPage'
@@ -117,7 +116,7 @@ function RootComponent() {
             },
           }}
         >
-          <NetworkStatusProvider enableToasts={true} enableSlowConnectionWarning={true}>
+          <NetworkStatusProvider enableToasts={false} enableSlowConnectionWarning={false}>
             <AuthProviderSwitch>
               <ExperienceLevelProvider>
                 <LazyErrorBoundary fallback={<FallbackShell />}>
@@ -177,7 +176,7 @@ function AppShell({ isOnboardingRoute }: { isOnboardingRoute: boolean }) {
       >
         <Outlet />
       </div>
-      <OfflineIndicator />
+      {/* OfflineIndicator superseded by OfflineBanner mounted in main.tsx */}
       <ServiceWorkerUpdate />
       {!isOnboardingRoute && (
         <Suspense>
