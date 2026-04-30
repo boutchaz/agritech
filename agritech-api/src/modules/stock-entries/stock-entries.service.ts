@@ -15,6 +15,7 @@ import { CreateStockAccountMappingDto, UpdateStockAccountMappingDto } from './dt
 import { StockAccountingService } from './stock-accounting.service';
 import { StockReservationsService } from './stock-reservations.service';
 import { StockEntryApprovalsService } from './stock-entry-approvals.service';
+import { AccountsService } from '../accounts/accounts.service';
 
 export interface StockEntryFilters {
   entry_type?: string;
@@ -39,6 +40,7 @@ export class StockEntriesService {
     private readonly notificationsService: NotificationsService,
     private readonly stockReservationsService: StockReservationsService,
     private readonly stockEntryApprovalsService: StockEntryApprovalsService,
+    private readonly accountsService: AccountsService,
   ) {}
 
   /**
@@ -3099,11 +3101,14 @@ export class StockEntriesService {
   }> {
     const supabase = this.databaseService.getAdminClient();
 
-    const { data: accounts, error: accErr } = await supabase
-      .from('accounts')
-      .select('id, code, account_type')
-      .eq('organization_id', organizationId)
-      .in('code', ['312', '441', '612', '611']);
+    const loadAccounts = async () =>
+      supabase
+        .from('accounts')
+        .select('id, code, account_type')
+        .eq('organization_id', organizationId)
+        .in('code', ['312', '441', '612', '611']);
+
+    let { data: accounts, error: accErr } = await loadAccounts();
 
     if (accErr) {
       throw new BadRequestException(`Failed to load chart of accounts: ${accErr.message}`);
@@ -3112,10 +3117,22 @@ export class StockEntriesService {
     const byCode = new Map<string, string>();
     for (const a of accounts || []) byCode.set(a.code, a.id);
 
+    // Auto-seed the Moroccan CGNC chart of accounts on first init so the
+    // Stock Accounting page works out of the box. Idempotent — re-running
+    // is safe because the seeder uses ON CONFLICT DO NOTHING.
     if (byCode.size === 0) {
-      throw new BadRequestException(
-        'Chart of accounts not seeded. Run admin seedAccounts (Moroccan CGNC) first.',
-      );
+      this.logger.log(`Auto-seeding Moroccan CGNC chart for org ${organizationId}`);
+      await this.accountsService.seedMoroccanChartOfAccounts(organizationId);
+      ({ data: accounts, error: accErr } = await loadAccounts());
+      if (accErr) {
+        throw new BadRequestException(`Failed to load chart of accounts: ${accErr.message}`);
+      }
+      for (const a of accounts || []) byCode.set(a.code, a.id);
+      if (byCode.size === 0) {
+        throw new BadRequestException(
+          'Chart of accounts seed completed but the expected codes (312/441/612) are missing.',
+        );
+      }
     }
 
     const inv = byCode.get('312');
