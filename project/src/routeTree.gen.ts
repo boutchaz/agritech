@@ -75,6 +75,7 @@ import { Route as AuthenticatedComplianceCertificationsCertIdRouteImport } from 
 import { Route as AuthenticatedworkforceWorkforcePaymentsRouteImport } from './routes/_authenticated/(workforce)/workforce/payments'
 import { Route as AuthenticatedworkforceWorkforceEmployeesRouteImport } from './routes/_authenticated/(workforce)/workforce/employees'
 import { Route as AuthenticatedworkforceWorkforceDayLaborersRouteImport } from './routes/_authenticated/(workforce)/workforce/day-laborers'
+import { Route as AuthenticatedworkforceWorkforceAttendanceRouteImport } from './routes/_authenticated/(workforce)/workforce/attendance'
 import { Route as AuthenticatedworkforceWorkersWorkerIdRouteImport } from './routes/_authenticated/(workforce)/workers.$workerId'
 import { Route as AuthenticatedworkforceTasksKanbanRouteImport } from './routes/_authenticated/(workforce)/tasks/kanban'
 import { Route as AuthenticatedworkforceTasksCalendarRouteImport } from './routes/_authenticated/(workforce)/tasks/calendar'
@@ -84,6 +85,7 @@ import { Route as AuthenticatedsettingsSettingsUsersRouteImport } from './routes
 import { Route as AuthenticatedsettingsSettingsSubscriptionRouteImport } from './routes/_authenticated/(settings)/settings.subscription'
 import { Route as AuthenticatedsettingsSettingsStockAccountingRouteImport } from './routes/_authenticated/(settings)/settings.stock-accounting'
 import { Route as AuthenticatedsettingsSettingsProfileRouteImport } from './routes/_authenticated/(settings)/settings.profile'
+import { Route as AuthenticatedsettingsSettingsPrintRouteImport } from './routes/_authenticated/(settings)/settings.print'
 import { Route as AuthenticatedsettingsSettingsPreferencesRouteImport } from './routes/_authenticated/(settings)/settings.preferences'
 import { Route as AuthenticatedsettingsSettingsOrganizationRouteImport } from './routes/_authenticated/(settings)/settings.organization'
 import { Route as AuthenticatedsettingsSettingsModulesRouteImport } from './routes/_authenticated/(settings)/settings.modules'
@@ -124,10 +126,12 @@ import { Route as AuthenticatedinventoryStockApprovalsRouteImport } from './rout
 import { Route as AuthenticatedinventoryStockAgingRouteImport } from './routes/_authenticated/(inventory)/stock/aging'
 import { Route as AuthenticatedinventoryInventoryReceptionBatchesRouteImport } from './routes/_authenticated/(inventory)/inventory/reception-batches'
 import { Route as AuthenticatedaccountingAccountingTrialBalanceRouteImport } from './routes/_authenticated/(accounting)/accounting/trial-balance'
+import { Route as AuthenticatedaccountingAccountingTaxesRouteImport } from './routes/_authenticated/(accounting)/accounting/taxes'
 import { Route as AuthenticatedaccountingAccountingSalesOrdersRouteImport } from './routes/_authenticated/(accounting)/accounting/sales-orders'
 import { Route as AuthenticatedaccountingAccountingReportsAnalysisRouteImport } from './routes/_authenticated/(accounting)/accounting/reports-analysis'
 import { Route as AuthenticatedaccountingAccountingReportsRouteImport } from './routes/_authenticated/(accounting)/accounting/reports'
 import { Route as AuthenticatedaccountingAccountingQuotesRouteImport } from './routes/_authenticated/(accounting)/accounting/quotes'
+import { Route as AuthenticatedaccountingAccountingPurchaseReceiptsRouteImport } from './routes/_authenticated/(accounting)/accounting/purchase-receipts'
 import { Route as AuthenticatedaccountingAccountingPurchaseOrdersRouteImport } from './routes/_authenticated/(accounting)/accounting/purchase-orders'
 import { Route as AuthenticatedaccountingAccountingProfitLossRouteImport } from './routes/_authenticated/(accounting)/accounting/profit-loss'
 import { Route as AuthenticatedaccountingAccountingPaymentsRouteImport } from './routes/_authenticated/(accounting)/accounting/payments'
@@ -135,6 +139,7 @@ import { Route as AuthenticatedaccountingAccountingJournalRouteImport } from './
 import { Route as AuthenticatedaccountingAccountingInvoicesRouteImport } from './routes/_authenticated/(accounting)/accounting/invoices'
 import { Route as AuthenticatedaccountingAccountingGeneralLedgerRouteImport } from './routes/_authenticated/(accounting)/accounting/general-ledger'
 import { Route as AuthenticatedaccountingAccountingFiscalYearsRouteImport } from './routes/_authenticated/(accounting)/accounting/fiscal-years'
+import { Route as AuthenticatedaccountingAccountingDeliveryNotesRouteImport } from './routes/_authenticated/(accounting)/accounting/delivery-notes'
 import { Route as AuthenticatedaccountingAccountingCustomersRouteImport } from './routes/_authenticated/(accounting)/accounting/customers'
 import { Route as AuthenticatedaccountingAccountingCostCentersRouteImport } from './routes/_authenticated/(accounting)/accounting/cost-centers'
 import { Route as AuthenticatedaccountingAccountingCashFlowRouteImport } from './routes/_authenticated/(accounting)/accounting/cash-flow'
@@ -545,6 +550,12 @@ const AuthenticatedworkforceWorkforceDayLaborersRoute =
     path: '/workforce/day-laborers',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedworkforceWorkforceAttendanceRoute =
+  AuthenticatedworkforceWorkforceAttendanceRouteImport.update({
+    id: '/(workforce)/workforce/attendance',
+    path: '/workforce/attendance',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedworkforceWorkersWorkerIdRoute =
   AuthenticatedworkforceWorkersWorkerIdRouteImport.update({
     id: '/$workerId',
@@ -597,6 +608,12 @@ const AuthenticatedsettingsSettingsProfileRoute =
   AuthenticatedsettingsSettingsProfileRouteImport.update({
     id: '/profile',
     path: '/profile',
+    getParentRoute: () => AuthenticatedsettingsSettingsRoute,
+  } as any)
+const AuthenticatedsettingsSettingsPrintRoute =
+  AuthenticatedsettingsSettingsPrintRouteImport.update({
+    id: '/print',
+    path: '/print',
     getParentRoute: () => AuthenticatedsettingsSettingsRoute,
   } as any)
 const AuthenticatedsettingsSettingsPreferencesRoute =
@@ -839,6 +856,12 @@ const AuthenticatedaccountingAccountingTrialBalanceRoute =
     path: '/trial-balance',
     getParentRoute: () => AuthenticatedaccountingAccountingRoute,
   } as any)
+const AuthenticatedaccountingAccountingTaxesRoute =
+  AuthenticatedaccountingAccountingTaxesRouteImport.update({
+    id: '/taxes',
+    path: '/taxes',
+    getParentRoute: () => AuthenticatedaccountingAccountingRoute,
+  } as any)
 const AuthenticatedaccountingAccountingSalesOrdersRoute =
   AuthenticatedaccountingAccountingSalesOrdersRouteImport.update({
     id: '/sales-orders',
@@ -861,6 +884,12 @@ const AuthenticatedaccountingAccountingQuotesRoute =
   AuthenticatedaccountingAccountingQuotesRouteImport.update({
     id: '/quotes',
     path: '/quotes',
+    getParentRoute: () => AuthenticatedaccountingAccountingRoute,
+  } as any)
+const AuthenticatedaccountingAccountingPurchaseReceiptsRoute =
+  AuthenticatedaccountingAccountingPurchaseReceiptsRouteImport.update({
+    id: '/purchase-receipts',
+    path: '/purchase-receipts',
     getParentRoute: () => AuthenticatedaccountingAccountingRoute,
   } as any)
 const AuthenticatedaccountingAccountingPurchaseOrdersRoute =
@@ -903,6 +932,12 @@ const AuthenticatedaccountingAccountingFiscalYearsRoute =
   AuthenticatedaccountingAccountingFiscalYearsRouteImport.update({
     id: '/fiscal-years',
     path: '/fiscal-years',
+    getParentRoute: () => AuthenticatedaccountingAccountingRoute,
+  } as any)
+const AuthenticatedaccountingAccountingDeliveryNotesRoute =
+  AuthenticatedaccountingAccountingDeliveryNotesRouteImport.update({
+    id: '/delivery-notes',
+    path: '/delivery-notes',
     getParentRoute: () => AuthenticatedaccountingAccountingRoute,
   } as any)
 const AuthenticatedaccountingAccountingCustomersRoute =
@@ -1187,6 +1222,7 @@ export interface FileRoutesByFullPath {
   '/accounting/cash-flow': typeof AuthenticatedaccountingAccountingCashFlowRoute
   '/accounting/cost-centers': typeof AuthenticatedaccountingAccountingCostCentersRoute
   '/accounting/customers': typeof AuthenticatedaccountingAccountingCustomersRoute
+  '/accounting/delivery-notes': typeof AuthenticatedaccountingAccountingDeliveryNotesRoute
   '/accounting/fiscal-years': typeof AuthenticatedaccountingAccountingFiscalYearsRoute
   '/accounting/general-ledger': typeof AuthenticatedaccountingAccountingGeneralLedgerRoute
   '/accounting/invoices': typeof AuthenticatedaccountingAccountingInvoicesRoute
@@ -1194,10 +1230,12 @@ export interface FileRoutesByFullPath {
   '/accounting/payments': typeof AuthenticatedaccountingAccountingPaymentsRoute
   '/accounting/profit-loss': typeof AuthenticatedaccountingAccountingProfitLossRoute
   '/accounting/purchase-orders': typeof AuthenticatedaccountingAccountingPurchaseOrdersRoute
+  '/accounting/purchase-receipts': typeof AuthenticatedaccountingAccountingPurchaseReceiptsRoute
   '/accounting/quotes': typeof AuthenticatedaccountingAccountingQuotesRoute
   '/accounting/reports': typeof AuthenticatedaccountingAccountingReportsRoute
   '/accounting/reports-analysis': typeof AuthenticatedaccountingAccountingReportsAnalysisRoute
   '/accounting/sales-orders': typeof AuthenticatedaccountingAccountingSalesOrdersRoute
+  '/accounting/taxes': typeof AuthenticatedaccountingAccountingTaxesRoute
   '/accounting/trial-balance': typeof AuthenticatedaccountingAccountingTrialBalanceRoute
   '/inventory/reception-batches': typeof AuthenticatedinventoryInventoryReceptionBatchesRoute
   '/stock/aging': typeof AuthenticatedinventoryStockAgingRoute
@@ -1238,6 +1276,7 @@ export interface FileRoutesByFullPath {
   '/settings/modules': typeof AuthenticatedsettingsSettingsModulesRoute
   '/settings/organization': typeof AuthenticatedsettingsSettingsOrganizationRoute
   '/settings/preferences': typeof AuthenticatedsettingsSettingsPreferencesRoute
+  '/settings/print': typeof AuthenticatedsettingsSettingsPrintRoute
   '/settings/profile': typeof AuthenticatedsettingsSettingsProfileRoute
   '/settings/stock-accounting': typeof AuthenticatedsettingsSettingsStockAccountingRoute
   '/settings/subscription': typeof AuthenticatedsettingsSettingsSubscriptionRoute
@@ -1247,6 +1286,7 @@ export interface FileRoutesByFullPath {
   '/tasks/calendar': typeof AuthenticatedworkforceTasksCalendarRoute
   '/tasks/kanban': typeof AuthenticatedworkforceTasksKanbanRoute
   '/workers/$workerId': typeof AuthenticatedworkforceWorkersWorkerIdRoute
+  '/workforce/attendance': typeof AuthenticatedworkforceWorkforceAttendanceRoute
   '/workforce/day-laborers': typeof AuthenticatedworkforceWorkforceDayLaborersRoute
   '/workforce/employees': typeof AuthenticatedworkforceWorkforceEmployeesRoute
   '/workforce/payments': typeof AuthenticatedworkforceWorkforcePaymentsRoute
@@ -1345,6 +1385,7 @@ export interface FileRoutesByTo {
   '/accounting/cash-flow': typeof AuthenticatedaccountingAccountingCashFlowRoute
   '/accounting/cost-centers': typeof AuthenticatedaccountingAccountingCostCentersRoute
   '/accounting/customers': typeof AuthenticatedaccountingAccountingCustomersRoute
+  '/accounting/delivery-notes': typeof AuthenticatedaccountingAccountingDeliveryNotesRoute
   '/accounting/fiscal-years': typeof AuthenticatedaccountingAccountingFiscalYearsRoute
   '/accounting/general-ledger': typeof AuthenticatedaccountingAccountingGeneralLedgerRoute
   '/accounting/invoices': typeof AuthenticatedaccountingAccountingInvoicesRoute
@@ -1352,10 +1393,12 @@ export interface FileRoutesByTo {
   '/accounting/payments': typeof AuthenticatedaccountingAccountingPaymentsRoute
   '/accounting/profit-loss': typeof AuthenticatedaccountingAccountingProfitLossRoute
   '/accounting/purchase-orders': typeof AuthenticatedaccountingAccountingPurchaseOrdersRoute
+  '/accounting/purchase-receipts': typeof AuthenticatedaccountingAccountingPurchaseReceiptsRoute
   '/accounting/quotes': typeof AuthenticatedaccountingAccountingQuotesRoute
   '/accounting/reports': typeof AuthenticatedaccountingAccountingReportsRoute
   '/accounting/reports-analysis': typeof AuthenticatedaccountingAccountingReportsAnalysisRoute
   '/accounting/sales-orders': typeof AuthenticatedaccountingAccountingSalesOrdersRoute
+  '/accounting/taxes': typeof AuthenticatedaccountingAccountingTaxesRoute
   '/accounting/trial-balance': typeof AuthenticatedaccountingAccountingTrialBalanceRoute
   '/inventory/reception-batches': typeof AuthenticatedinventoryInventoryReceptionBatchesRoute
   '/stock/aging': typeof AuthenticatedinventoryStockAgingRoute
@@ -1395,6 +1438,7 @@ export interface FileRoutesByTo {
   '/settings/modules': typeof AuthenticatedsettingsSettingsModulesRoute
   '/settings/organization': typeof AuthenticatedsettingsSettingsOrganizationRoute
   '/settings/preferences': typeof AuthenticatedsettingsSettingsPreferencesRoute
+  '/settings/print': typeof AuthenticatedsettingsSettingsPrintRoute
   '/settings/profile': typeof AuthenticatedsettingsSettingsProfileRoute
   '/settings/stock-accounting': typeof AuthenticatedsettingsSettingsStockAccountingRoute
   '/settings/subscription': typeof AuthenticatedsettingsSettingsSubscriptionRoute
@@ -1404,6 +1448,7 @@ export interface FileRoutesByTo {
   '/tasks/calendar': typeof AuthenticatedworkforceTasksCalendarRoute
   '/tasks/kanban': typeof AuthenticatedworkforceTasksKanbanRoute
   '/workers/$workerId': typeof AuthenticatedworkforceWorkersWorkerIdRoute
+  '/workforce/attendance': typeof AuthenticatedworkforceWorkforceAttendanceRoute
   '/workforce/day-laborers': typeof AuthenticatedworkforceWorkforceDayLaborersRoute
   '/workforce/employees': typeof AuthenticatedworkforceWorkforceEmployeesRoute
   '/workforce/payments': typeof AuthenticatedworkforceWorkforcePaymentsRoute
@@ -1506,6 +1551,7 @@ export interface FileRoutesById {
   '/_authenticated/(accounting)/accounting/cash-flow': typeof AuthenticatedaccountingAccountingCashFlowRoute
   '/_authenticated/(accounting)/accounting/cost-centers': typeof AuthenticatedaccountingAccountingCostCentersRoute
   '/_authenticated/(accounting)/accounting/customers': typeof AuthenticatedaccountingAccountingCustomersRoute
+  '/_authenticated/(accounting)/accounting/delivery-notes': typeof AuthenticatedaccountingAccountingDeliveryNotesRoute
   '/_authenticated/(accounting)/accounting/fiscal-years': typeof AuthenticatedaccountingAccountingFiscalYearsRoute
   '/_authenticated/(accounting)/accounting/general-ledger': typeof AuthenticatedaccountingAccountingGeneralLedgerRoute
   '/_authenticated/(accounting)/accounting/invoices': typeof AuthenticatedaccountingAccountingInvoicesRoute
@@ -1513,10 +1559,12 @@ export interface FileRoutesById {
   '/_authenticated/(accounting)/accounting/payments': typeof AuthenticatedaccountingAccountingPaymentsRoute
   '/_authenticated/(accounting)/accounting/profit-loss': typeof AuthenticatedaccountingAccountingProfitLossRoute
   '/_authenticated/(accounting)/accounting/purchase-orders': typeof AuthenticatedaccountingAccountingPurchaseOrdersRoute
+  '/_authenticated/(accounting)/accounting/purchase-receipts': typeof AuthenticatedaccountingAccountingPurchaseReceiptsRoute
   '/_authenticated/(accounting)/accounting/quotes': typeof AuthenticatedaccountingAccountingQuotesRoute
   '/_authenticated/(accounting)/accounting/reports': typeof AuthenticatedaccountingAccountingReportsRoute
   '/_authenticated/(accounting)/accounting/reports-analysis': typeof AuthenticatedaccountingAccountingReportsAnalysisRoute
   '/_authenticated/(accounting)/accounting/sales-orders': typeof AuthenticatedaccountingAccountingSalesOrdersRoute
+  '/_authenticated/(accounting)/accounting/taxes': typeof AuthenticatedaccountingAccountingTaxesRoute
   '/_authenticated/(accounting)/accounting/trial-balance': typeof AuthenticatedaccountingAccountingTrialBalanceRoute
   '/_authenticated/(inventory)/inventory/reception-batches': typeof AuthenticatedinventoryInventoryReceptionBatchesRoute
   '/_authenticated/(inventory)/stock/aging': typeof AuthenticatedinventoryStockAgingRoute
@@ -1557,6 +1605,7 @@ export interface FileRoutesById {
   '/_authenticated/(settings)/settings/modules': typeof AuthenticatedsettingsSettingsModulesRoute
   '/_authenticated/(settings)/settings/organization': typeof AuthenticatedsettingsSettingsOrganizationRoute
   '/_authenticated/(settings)/settings/preferences': typeof AuthenticatedsettingsSettingsPreferencesRoute
+  '/_authenticated/(settings)/settings/print': typeof AuthenticatedsettingsSettingsPrintRoute
   '/_authenticated/(settings)/settings/profile': typeof AuthenticatedsettingsSettingsProfileRoute
   '/_authenticated/(settings)/settings/stock-accounting': typeof AuthenticatedsettingsSettingsStockAccountingRoute
   '/_authenticated/(settings)/settings/subscription': typeof AuthenticatedsettingsSettingsSubscriptionRoute
@@ -1566,6 +1615,7 @@ export interface FileRoutesById {
   '/_authenticated/(workforce)/tasks/calendar': typeof AuthenticatedworkforceTasksCalendarRoute
   '/_authenticated/(workforce)/tasks/kanban': typeof AuthenticatedworkforceTasksKanbanRoute
   '/_authenticated/(workforce)/workers/$workerId': typeof AuthenticatedworkforceWorkersWorkerIdRoute
+  '/_authenticated/(workforce)/workforce/attendance': typeof AuthenticatedworkforceWorkforceAttendanceRoute
   '/_authenticated/(workforce)/workforce/day-laborers': typeof AuthenticatedworkforceWorkforceDayLaborersRoute
   '/_authenticated/(workforce)/workforce/employees': typeof AuthenticatedworkforceWorkforceEmployeesRoute
   '/_authenticated/(workforce)/workforce/payments': typeof AuthenticatedworkforceWorkforcePaymentsRoute
@@ -1671,6 +1721,7 @@ export interface FileRouteTypes {
     | '/accounting/cash-flow'
     | '/accounting/cost-centers'
     | '/accounting/customers'
+    | '/accounting/delivery-notes'
     | '/accounting/fiscal-years'
     | '/accounting/general-ledger'
     | '/accounting/invoices'
@@ -1678,10 +1729,12 @@ export interface FileRouteTypes {
     | '/accounting/payments'
     | '/accounting/profit-loss'
     | '/accounting/purchase-orders'
+    | '/accounting/purchase-receipts'
     | '/accounting/quotes'
     | '/accounting/reports'
     | '/accounting/reports-analysis'
     | '/accounting/sales-orders'
+    | '/accounting/taxes'
     | '/accounting/trial-balance'
     | '/inventory/reception-batches'
     | '/stock/aging'
@@ -1722,6 +1775,7 @@ export interface FileRouteTypes {
     | '/settings/modules'
     | '/settings/organization'
     | '/settings/preferences'
+    | '/settings/print'
     | '/settings/profile'
     | '/settings/stock-accounting'
     | '/settings/subscription'
@@ -1731,6 +1785,7 @@ export interface FileRouteTypes {
     | '/tasks/calendar'
     | '/tasks/kanban'
     | '/workers/$workerId'
+    | '/workforce/attendance'
     | '/workforce/day-laborers'
     | '/workforce/employees'
     | '/workforce/payments'
@@ -1829,6 +1884,7 @@ export interface FileRouteTypes {
     | '/accounting/cash-flow'
     | '/accounting/cost-centers'
     | '/accounting/customers'
+    | '/accounting/delivery-notes'
     | '/accounting/fiscal-years'
     | '/accounting/general-ledger'
     | '/accounting/invoices'
@@ -1836,10 +1892,12 @@ export interface FileRouteTypes {
     | '/accounting/payments'
     | '/accounting/profit-loss'
     | '/accounting/purchase-orders'
+    | '/accounting/purchase-receipts'
     | '/accounting/quotes'
     | '/accounting/reports'
     | '/accounting/reports-analysis'
     | '/accounting/sales-orders'
+    | '/accounting/taxes'
     | '/accounting/trial-balance'
     | '/inventory/reception-batches'
     | '/stock/aging'
@@ -1879,6 +1937,7 @@ export interface FileRouteTypes {
     | '/settings/modules'
     | '/settings/organization'
     | '/settings/preferences'
+    | '/settings/print'
     | '/settings/profile'
     | '/settings/stock-accounting'
     | '/settings/subscription'
@@ -1888,6 +1947,7 @@ export interface FileRouteTypes {
     | '/tasks/calendar'
     | '/tasks/kanban'
     | '/workers/$workerId'
+    | '/workforce/attendance'
     | '/workforce/day-laborers'
     | '/workforce/employees'
     | '/workforce/payments'
@@ -1989,6 +2049,7 @@ export interface FileRouteTypes {
     | '/_authenticated/(accounting)/accounting/cash-flow'
     | '/_authenticated/(accounting)/accounting/cost-centers'
     | '/_authenticated/(accounting)/accounting/customers'
+    | '/_authenticated/(accounting)/accounting/delivery-notes'
     | '/_authenticated/(accounting)/accounting/fiscal-years'
     | '/_authenticated/(accounting)/accounting/general-ledger'
     | '/_authenticated/(accounting)/accounting/invoices'
@@ -1996,10 +2057,12 @@ export interface FileRouteTypes {
     | '/_authenticated/(accounting)/accounting/payments'
     | '/_authenticated/(accounting)/accounting/profit-loss'
     | '/_authenticated/(accounting)/accounting/purchase-orders'
+    | '/_authenticated/(accounting)/accounting/purchase-receipts'
     | '/_authenticated/(accounting)/accounting/quotes'
     | '/_authenticated/(accounting)/accounting/reports'
     | '/_authenticated/(accounting)/accounting/reports-analysis'
     | '/_authenticated/(accounting)/accounting/sales-orders'
+    | '/_authenticated/(accounting)/accounting/taxes'
     | '/_authenticated/(accounting)/accounting/trial-balance'
     | '/_authenticated/(inventory)/inventory/reception-batches'
     | '/_authenticated/(inventory)/stock/aging'
@@ -2040,6 +2103,7 @@ export interface FileRouteTypes {
     | '/_authenticated/(settings)/settings/modules'
     | '/_authenticated/(settings)/settings/organization'
     | '/_authenticated/(settings)/settings/preferences'
+    | '/_authenticated/(settings)/settings/print'
     | '/_authenticated/(settings)/settings/profile'
     | '/_authenticated/(settings)/settings/stock-accounting'
     | '/_authenticated/(settings)/settings/subscription'
@@ -2049,6 +2113,7 @@ export interface FileRouteTypes {
     | '/_authenticated/(workforce)/tasks/calendar'
     | '/_authenticated/(workforce)/tasks/kanban'
     | '/_authenticated/(workforce)/workers/$workerId'
+    | '/_authenticated/(workforce)/workforce/attendance'
     | '/_authenticated/(workforce)/workforce/day-laborers'
     | '/_authenticated/(workforce)/workforce/employees'
     | '/_authenticated/(workforce)/workforce/payments'
@@ -2571,6 +2636,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedworkforceWorkforceDayLaborersRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/(workforce)/workforce/attendance': {
+      id: '/_authenticated/(workforce)/workforce/attendance'
+      path: '/workforce/attendance'
+      fullPath: '/workforce/attendance'
+      preLoaderRoute: typeof AuthenticatedworkforceWorkforceAttendanceRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/(workforce)/workers/$workerId': {
       id: '/_authenticated/(workforce)/workers/$workerId'
       path: '/$workerId'
@@ -2632,6 +2704,13 @@ declare module '@tanstack/react-router' {
       path: '/profile'
       fullPath: '/settings/profile'
       preLoaderRoute: typeof AuthenticatedsettingsSettingsProfileRouteImport
+      parentRoute: typeof AuthenticatedsettingsSettingsRoute
+    }
+    '/_authenticated/(settings)/settings/print': {
+      id: '/_authenticated/(settings)/settings/print'
+      path: '/print'
+      fullPath: '/settings/print'
+      preLoaderRoute: typeof AuthenticatedsettingsSettingsPrintRouteImport
       parentRoute: typeof AuthenticatedsettingsSettingsRoute
     }
     '/_authenticated/(settings)/settings/preferences': {
@@ -2914,6 +2993,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedaccountingAccountingTrialBalanceRouteImport
       parentRoute: typeof AuthenticatedaccountingAccountingRoute
     }
+    '/_authenticated/(accounting)/accounting/taxes': {
+      id: '/_authenticated/(accounting)/accounting/taxes'
+      path: '/taxes'
+      fullPath: '/accounting/taxes'
+      preLoaderRoute: typeof AuthenticatedaccountingAccountingTaxesRouteImport
+      parentRoute: typeof AuthenticatedaccountingAccountingRoute
+    }
     '/_authenticated/(accounting)/accounting/sales-orders': {
       id: '/_authenticated/(accounting)/accounting/sales-orders'
       path: '/sales-orders'
@@ -2940,6 +3026,13 @@ declare module '@tanstack/react-router' {
       path: '/quotes'
       fullPath: '/accounting/quotes'
       preLoaderRoute: typeof AuthenticatedaccountingAccountingQuotesRouteImport
+      parentRoute: typeof AuthenticatedaccountingAccountingRoute
+    }
+    '/_authenticated/(accounting)/accounting/purchase-receipts': {
+      id: '/_authenticated/(accounting)/accounting/purchase-receipts'
+      path: '/purchase-receipts'
+      fullPath: '/accounting/purchase-receipts'
+      preLoaderRoute: typeof AuthenticatedaccountingAccountingPurchaseReceiptsRouteImport
       parentRoute: typeof AuthenticatedaccountingAccountingRoute
     }
     '/_authenticated/(accounting)/accounting/purchase-orders': {
@@ -2989,6 +3082,13 @@ declare module '@tanstack/react-router' {
       path: '/fiscal-years'
       fullPath: '/accounting/fiscal-years'
       preLoaderRoute: typeof AuthenticatedaccountingAccountingFiscalYearsRouteImport
+      parentRoute: typeof AuthenticatedaccountingAccountingRoute
+    }
+    '/_authenticated/(accounting)/accounting/delivery-notes': {
+      id: '/_authenticated/(accounting)/accounting/delivery-notes'
+      path: '/delivery-notes'
+      fullPath: '/accounting/delivery-notes'
+      preLoaderRoute: typeof AuthenticatedaccountingAccountingDeliveryNotesRouteImport
       parentRoute: typeof AuthenticatedaccountingAccountingRoute
     }
     '/_authenticated/(accounting)/accounting/customers': {
@@ -3256,6 +3356,7 @@ interface AuthenticatedaccountingAccountingRouteChildren {
   AuthenticatedaccountingAccountingCashFlowRoute: typeof AuthenticatedaccountingAccountingCashFlowRoute
   AuthenticatedaccountingAccountingCostCentersRoute: typeof AuthenticatedaccountingAccountingCostCentersRoute
   AuthenticatedaccountingAccountingCustomersRoute: typeof AuthenticatedaccountingAccountingCustomersRoute
+  AuthenticatedaccountingAccountingDeliveryNotesRoute: typeof AuthenticatedaccountingAccountingDeliveryNotesRoute
   AuthenticatedaccountingAccountingFiscalYearsRoute: typeof AuthenticatedaccountingAccountingFiscalYearsRoute
   AuthenticatedaccountingAccountingGeneralLedgerRoute: typeof AuthenticatedaccountingAccountingGeneralLedgerRoute
   AuthenticatedaccountingAccountingInvoicesRoute: typeof AuthenticatedaccountingAccountingInvoicesRoute
@@ -3263,10 +3364,12 @@ interface AuthenticatedaccountingAccountingRouteChildren {
   AuthenticatedaccountingAccountingPaymentsRoute: typeof AuthenticatedaccountingAccountingPaymentsRoute
   AuthenticatedaccountingAccountingProfitLossRoute: typeof AuthenticatedaccountingAccountingProfitLossRoute
   AuthenticatedaccountingAccountingPurchaseOrdersRoute: typeof AuthenticatedaccountingAccountingPurchaseOrdersRoute
+  AuthenticatedaccountingAccountingPurchaseReceiptsRoute: typeof AuthenticatedaccountingAccountingPurchaseReceiptsRoute
   AuthenticatedaccountingAccountingQuotesRoute: typeof AuthenticatedaccountingAccountingQuotesRoute
   AuthenticatedaccountingAccountingReportsRoute: typeof AuthenticatedaccountingAccountingReportsRoute
   AuthenticatedaccountingAccountingReportsAnalysisRoute: typeof AuthenticatedaccountingAccountingReportsAnalysisRoute
   AuthenticatedaccountingAccountingSalesOrdersRoute: typeof AuthenticatedaccountingAccountingSalesOrdersRoute
+  AuthenticatedaccountingAccountingTaxesRoute: typeof AuthenticatedaccountingAccountingTaxesRoute
   AuthenticatedaccountingAccountingTrialBalanceRoute: typeof AuthenticatedaccountingAccountingTrialBalanceRoute
   AuthenticatedaccountingAccountingIndexRoute: typeof AuthenticatedaccountingAccountingIndexRoute
 }
@@ -3291,6 +3394,8 @@ const AuthenticatedaccountingAccountingRouteChildren: AuthenticatedaccountingAcc
       AuthenticatedaccountingAccountingCostCentersRoute,
     AuthenticatedaccountingAccountingCustomersRoute:
       AuthenticatedaccountingAccountingCustomersRoute,
+    AuthenticatedaccountingAccountingDeliveryNotesRoute:
+      AuthenticatedaccountingAccountingDeliveryNotesRoute,
     AuthenticatedaccountingAccountingFiscalYearsRoute:
       AuthenticatedaccountingAccountingFiscalYearsRoute,
     AuthenticatedaccountingAccountingGeneralLedgerRoute:
@@ -3305,6 +3410,8 @@ const AuthenticatedaccountingAccountingRouteChildren: AuthenticatedaccountingAcc
       AuthenticatedaccountingAccountingProfitLossRoute,
     AuthenticatedaccountingAccountingPurchaseOrdersRoute:
       AuthenticatedaccountingAccountingPurchaseOrdersRoute,
+    AuthenticatedaccountingAccountingPurchaseReceiptsRoute:
+      AuthenticatedaccountingAccountingPurchaseReceiptsRoute,
     AuthenticatedaccountingAccountingQuotesRoute:
       AuthenticatedaccountingAccountingQuotesRoute,
     AuthenticatedaccountingAccountingReportsRoute:
@@ -3313,6 +3420,8 @@ const AuthenticatedaccountingAccountingRouteChildren: AuthenticatedaccountingAcc
       AuthenticatedaccountingAccountingReportsAnalysisRoute,
     AuthenticatedaccountingAccountingSalesOrdersRoute:
       AuthenticatedaccountingAccountingSalesOrdersRoute,
+    AuthenticatedaccountingAccountingTaxesRoute:
+      AuthenticatedaccountingAccountingTaxesRoute,
     AuthenticatedaccountingAccountingTrialBalanceRoute:
       AuthenticatedaccountingAccountingTrialBalanceRoute,
     AuthenticatedaccountingAccountingIndexRoute:
@@ -3580,6 +3689,7 @@ interface AuthenticatedsettingsSettingsRouteChildren {
   AuthenticatedsettingsSettingsModulesRoute: typeof AuthenticatedsettingsSettingsModulesRoute
   AuthenticatedsettingsSettingsOrganizationRoute: typeof AuthenticatedsettingsSettingsOrganizationRoute
   AuthenticatedsettingsSettingsPreferencesRoute: typeof AuthenticatedsettingsSettingsPreferencesRoute
+  AuthenticatedsettingsSettingsPrintRoute: typeof AuthenticatedsettingsSettingsPrintRoute
   AuthenticatedsettingsSettingsProfileRoute: typeof AuthenticatedsettingsSettingsProfileRoute
   AuthenticatedsettingsSettingsStockAccountingRoute: typeof AuthenticatedsettingsSettingsStockAccountingRoute
   AuthenticatedsettingsSettingsSubscriptionRoute: typeof AuthenticatedsettingsSettingsSubscriptionRoute
@@ -3613,6 +3723,8 @@ const AuthenticatedsettingsSettingsRouteChildren: AuthenticatedsettingsSettingsR
       AuthenticatedsettingsSettingsOrganizationRoute,
     AuthenticatedsettingsSettingsPreferencesRoute:
       AuthenticatedsettingsSettingsPreferencesRoute,
+    AuthenticatedsettingsSettingsPrintRoute:
+      AuthenticatedsettingsSettingsPrintRoute,
     AuthenticatedsettingsSettingsProfileRoute:
       AuthenticatedsettingsSettingsProfileRoute,
     AuthenticatedsettingsSettingsStockAccountingRoute:
@@ -3711,6 +3823,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedproductionProductionQualityControlRoute: typeof AuthenticatedproductionProductionQualityControlRoute
   AuthenticatedproductionProductionSatelliteAnalysisRoute: typeof AuthenticatedproductionProductionSatelliteAnalysisRoute
   AuthenticatedproductionProductionSoilAnalysisRoute: typeof AuthenticatedproductionProductionSoilAnalysisRoute
+  AuthenticatedworkforceWorkforceAttendanceRoute: typeof AuthenticatedworkforceWorkforceAttendanceRoute
   AuthenticatedworkforceWorkforceDayLaborersRoute: typeof AuthenticatedworkforceWorkforceDayLaborersRoute
   AuthenticatedworkforceWorkforceEmployeesRoute: typeof AuthenticatedworkforceWorkforceEmployeesRoute
   AuthenticatedworkforceWorkforcePaymentsRoute: typeof AuthenticatedworkforceWorkforcePaymentsRoute
@@ -3784,6 +3897,8 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
     AuthenticatedproductionProductionSatelliteAnalysisRoute,
   AuthenticatedproductionProductionSoilAnalysisRoute:
     AuthenticatedproductionProductionSoilAnalysisRoute,
+  AuthenticatedworkforceWorkforceAttendanceRoute:
+    AuthenticatedworkforceWorkforceAttendanceRoute,
   AuthenticatedworkforceWorkforceDayLaborersRoute:
     AuthenticatedworkforceWorkforceDayLaborersRoute,
   AuthenticatedworkforceWorkforceEmployeesRoute:
