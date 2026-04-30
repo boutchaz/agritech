@@ -60,6 +60,28 @@ export function subscribeOutbox(cb: () => void): () => void {
   return () => listeners.delete(cb);
 }
 
+export interface ConflictEvent {
+  row: OutboxRow;
+  serverBody: unknown;
+}
+
+const conflictListeners = new Set<(e: ConflictEvent) => void>();
+
+export function subscribeConflicts(cb: (e: ConflictEvent) => void): () => void {
+  conflictListeners.add(cb);
+  return () => conflictListeners.delete(cb);
+}
+
+function emitConflict(e: ConflictEvent) {
+  conflictListeners.forEach((l) => {
+    try {
+      l(e);
+    } catch {
+      /* ignore */
+    }
+  });
+}
+
 export async function enqueue(input: EnqueueInput): Promise<OutboxRow> {
   const ts = nowClient();
   const row: OutboxRow = {
@@ -179,6 +201,7 @@ export async function flush(
           lastError: result.error ?? 'conflict',
           nextAttemptAt: Date.now() + computeBackoff(attempts),
         });
+        emitConflict({ row, serverBody: result.body });
         summary.conflicts += 1;
         summary.failed += 1;
       } else if (result.status === 'fatal') {

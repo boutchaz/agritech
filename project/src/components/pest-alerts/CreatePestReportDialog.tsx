@@ -20,10 +20,14 @@ import {
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { Button } from '@/components/ui/button';
-import { Plus, Loader2, Upload } from 'lucide-react';
+import { Plus, Loader2, Upload, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { v4 as uuidv4 } from 'uuid';
+import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { useCreatePestReport, usePestDiseaseLibrary } from '@/hooks/usePestAlerts';
+import { useOfflinePhotoUpload } from '@/lib/offline/useOfflinePhotoUpload';
+import { PhotoQuotaExceededError } from '@/lib/offline/photoQueue';
 import { useFarmHierarchy } from '@/hooks/useFarmHierarchy';
 import { useParcels } from '@/hooks/useParcels';
 
@@ -39,8 +43,18 @@ const createFormSchema = (t: (key: string, fallback: string) => string) => z.obj
 
 type FormValues = z.infer<ReturnType<typeof createFormSchema>>;
 
+interface AttachedPhoto {
+  previewUrl: string;
+  uploadedUrl?: string; // present when uploaded online
+  queuedClientId?: string; // present when queued offline
+}
+
 export function CreatePestReportDialog() {
   const [open, setOpen] = useState(false);
+  const [photos, setPhotos] = useState<AttachedPhoto[]>([]);
+  const [isAttaching, setIsAttaching] = useState(false);
+  const reportClientId = useMemo(() => uuidv4(), []);
+  const uploadPhoto = useOfflinePhotoUpload();
   const { t } = useTranslation();
   const { currentOrganization } = useAuth();
   const { mutate: createReport, isPending } = useCreatePestReport();
@@ -59,6 +73,40 @@ export function CreatePestReportDialog() {
   const selectedFarmId = form.watch('farm_id');
   const { parcels } = useParcels(selectedFarmId || null);
 
+  const handleAttachPhotos = async (fileList: FileList | null) => {
+    if (!fileList || fileList.length === 0 || !currentOrganization?.id) return;
+    setIsAttaching(true);
+    try {
+      for (const file of Array.from(fileList)) {
+        try {
+          const result = await uploadPhoto({
+            organizationId: currentOrganization.id,
+            parentResource: 'pest-report',
+            parentClientId: reportClientId,
+            fieldName: 'photo_urls',
+            file,
+            folder: 'pest-reports',
+          });
+          if (result.status === 'uploaded') {
+            setPhotos((p) => [...p, { previewUrl: result.url, uploadedUrl: result.url }]);
+          } else {
+            setPhotos((p) => [...p, { previewUrl: result.localPreviewUrl, queuedClientId: result.queuedClientId }]);
+          }
+        } catch (err) {
+          if (err instanceof PhotoQuotaExceededError) {
+            toast.error(t('pestReport.quotaError', 'Storage full — sync pending photos to free space.'));
+            break;
+          }
+          toast.error(t('pestReport.photoUploadError', 'Could not attach photo.'));
+        }
+      }
+    } finally {
+      setIsAttaching(false);
+    }
+  };
+
+  const removePhoto = (idx: number) => setPhotos((p) => p.filter((_, i) => i !== idx));
+
   const onSubmit = (values: FormValues) => {
     if (!currentOrganization?.id) return;
 
@@ -66,10 +114,13 @@ export function CreatePestReportDialog() {
       organizationId: currentOrganization.id,
       data: {
         ...values,
-        photo_urls: [], // TODO: Implement photo upload
-      },
+        client_id: reportClientId,
+        photo_urls: photos.filter((p) => p.uploadedUrl).map((p) => p.uploadedUrl as string),
+      } as never,
     }, {
       onSuccess: () => {
+        photos.forEach((p) => URL.revokeObjectURL(p.previewUrl));
+        setPhotos([]);
         setOpen(false);
         form.reset();
       },
@@ -260,18 +311,52 @@ export function CreatePestReportDialog() {
             )}
           />
 
-          {/* Photo upload placeholder */}
+          {/* Photo upload — online uploads direct, offline queued in IDB */}
           <div className="space-y-2">
             <div className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">{t('pestReport.photoUploadLabel', 'Photos')}</div>
-            <div className="border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center text-center hover:bg-gray-50 dark:hover:bg-gray-900/50 transition-colors cursor-pointer">
+            <label className="border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center text-center hover:bg-gray-50 dark:hover:bg-gray-900/50 transition-colors cursor-pointer block">
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                className="sr-only"
+                disabled={isAttaching}
+                onChange={(e) => {
+                  void handleAttachPhotos(e.target.files);
+                  e.target.value = '';
+                }}
+              />
               <Upload className="h-8 w-8 text-gray-400 mb-2" />
               <p className="text-sm text-gray-500">
-                {t('pestReport.clickToAddPhotos', 'Click to add photos')}
+                {isAttaching
+                  ? t('pestReport.attaching', 'Attaching…')
+                  : t('pestReport.clickToAddPhotos', 'Click to add photos')}
               </p>
               <p className="text-xs text-gray-400 mt-1">
                 {t('pestReport.photoFormats', 'JPG, PNG up to 5MB')}
               </p>
-            </div>
+            </label>
+            {photos.length > 0 && (
+              <div className="grid grid-cols-3 gap-2 pt-2">
+                {photos.map((p, i) => (
+                  <div key={p.previewUrl} className="relative group">
+                    <img src={p.previewUrl} alt="" className="w-full h-24 object-cover rounded border" />
+                    {!p.uploadedUrl && (
+                      <span className="absolute bottom-1 left-1 text-[10px] px-1 py-0.5 rounded bg-amber-500 text-white">
+                        {t('pestReport.pendingSync', 'pending')}
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => removePhoto(i)}
+                      className="absolute top-1 right-1 bg-black/60 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="flex justify-end gap-2 pt-4">

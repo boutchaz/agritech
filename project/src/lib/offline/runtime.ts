@@ -1,10 +1,21 @@
 import { useOrganizationStore } from '@/stores/organizationStore';
 import { useAuthStore } from '@/stores/authStore';
+import { useConflictStore } from '@/stores/conflictStore';
 import { startLeader } from './leader';
 import { startOnlineMonitor } from './useOnlineStatus';
 import { ensurePersistentStorage, getStorageStatus } from './storageGuard';
-import { flush, oldestPendingAgeSeconds, countByStatus } from './outbox';
+import { db } from './db';
+import {
+  flush,
+  oldestPendingAgeSeconds,
+  countByStatus,
+  subscribeConflicts,
+  retryDeadLetter,
+  discardDeadLetter,
+} from './outbox';
 import { apiExecutor } from './executor';
+import { batchFlush, shouldUseBatchMode } from './batchFlush';
+import { listPending } from './outbox';
 import { wipeOffline } from './wipe';
 import { telemetry } from './telemetry';
 import { migrateLegacyQueue } from './legacyMigration';
@@ -22,6 +33,47 @@ export function initOfflineRuntime(): void {
   // Migrate any pending entries from the localStorage queue
   void migrateLegacyQueue();
 
+  // Surface 409 conflicts to the user via the global conflict store.
+  subscribeConflicts(({ row, serverBody }) => {
+    const mine =
+      row.payload && typeof row.payload === 'object'
+        ? (row.payload as Record<string, unknown>)
+        : { value: row.payload };
+    const server =
+      serverBody && typeof serverBody === 'object'
+        ? (serverBody as Record<string, unknown>)
+        : { value: serverBody };
+
+    useConflictStore.getState().push({
+      id: row.id,
+      resourceLabel: `${row.method} ${row.resource}`,
+      mine,
+      server,
+      onResolve: async (decision) => {
+        if (decision === 'use-server') {
+          // Drop the queued mutation and accept the server state.
+          await db().outbox.delete(row.id);
+        } else if (decision === 'keep-mine') {
+          // Re-arm with the server's current version so retry succeeds.
+          const serverVersion =
+            (server as { version?: number }).version ??
+            (server as { current_version?: number }).current_version;
+          await db().outbox.update(row.id, {
+            status: 'pending',
+            ifMatchVersion: typeof serverVersion === 'number' ? serverVersion : null,
+            nextAttemptAt: Date.now(),
+            lastError: null,
+          });
+        }
+        // 'edit' -> caller will reopen the form; leave the row in failed state.
+      },
+    });
+  });
+
+  // Wire dead-letter retry/discard to the runtime so the review modal works.
+  void retryDeadLetter;
+  void discardDeadLetter;
+
   let lastOrgId = useOrganizationStore.getState().currentOrganization?.id ?? null;
 
   async function flushNow(reason: string) {
@@ -29,7 +81,17 @@ export function initOfflineRuntime(): void {
     if (!orgId) return;
     if (!leader.isLeader()) return;
     try {
-      await flush(orgId, apiExecutor);
+      const pending = await listPending(orgId);
+      if (shouldUseBatchMode(pending)) {
+        const batch = await batchFlush(orgId, pending);
+        // If batch endpoint was unreachable (attempted=0 and rows still pending),
+        // fall back to per-item executor.
+        if (batch.attempted === 0 && pending.length > 0) {
+          await flush(orgId, apiExecutor);
+        }
+      } else {
+        await flush(orgId, apiExecutor);
+      }
     } catch (err) {
       console.warn('[offline.runtime] flush failed', err, reason);
     }

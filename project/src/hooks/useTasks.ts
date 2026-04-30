@@ -6,7 +6,6 @@ import {
 } from "@tanstack/react-query";
 import { trackEntityCreate, trackEntityUpdate, trackEntityDelete } from '../lib/analytics';
 import { tasksApi, type PaginatedTaskQuery } from "../lib/api/tasks";
-import { runOrQueue } from "../lib/offlineTaskQueue";
 import { runOrQueue as runOrQueueOffline } from "../lib/offline/runOrQueue";
 import { v4 as uuidv4 } from "uuid";
 import { useAuth } from "../hooks/useAuth";
@@ -305,10 +304,16 @@ export function useClockIn() {
         location_lng: request.location_lng,
         notes: request.notes,
       };
-      // If the device is offline, queue the action so the worker's clock-in
-      // isn't lost when 3G drops in the field (rural Morocco).
-      const outcome = await runOrQueue(
-        { kind: 'clock-in', organizationId: currentOrganization.id, taskId: request.task_id, payload },
+      const cid = uuidv4();
+      const outcome = await runOrQueueOffline(
+        {
+          organizationId: currentOrganization.id,
+          resource: 'task-time-log',
+          method: 'POST',
+          url: `/api/v1/tasks/${request.task_id}/clock-in`,
+          payload,
+          clientId: cid,
+        },
         () => tasksApi.clockIn(currentOrganization.id, request.task_id, payload),
       );
       if (outcome.status === 'queued') {
@@ -351,8 +356,16 @@ export function useClockOut() {
         units_completed: request.units_completed,
         photo_url: request.photo_url,
       };
-      const outcome = await runOrQueue(
-        { kind: 'clock-out', organizationId: currentOrganization.id, timeLogId: request.time_log_id, payload },
+      const cid = uuidv4();
+      const outcome = await runOrQueueOffline(
+        {
+          organizationId: currentOrganization.id,
+          resource: 'task-time-log',
+          method: 'POST',
+          url: `/api/v1/tasks/time-logs/${request.time_log_id}/clock-out`,
+          payload,
+          clientId: cid,
+        },
         () => tasksApi.clockOut(currentOrganization.id, request.time_log_id, payload),
       );
       if (outcome.status === 'queued') {
@@ -395,8 +408,16 @@ export function useAddTaskComment() {
         worker_id: comment.worker_id,
         type: comment.type,
       };
-      const outcome = await runOrQueue(
-        { kind: 'comment', organizationId: currentOrganization.id, taskId: comment.task_id, payload },
+      const cid = uuidv4();
+      const outcome = await runOrQueueOffline(
+        {
+          organizationId: currentOrganization.id,
+          resource: 'task-comment',
+          method: 'POST',
+          url: `/api/v1/tasks/${comment.task_id}/comments`,
+          payload,
+          clientId: cid,
+        },
         () => tasksApi.addComment(currentOrganization.id, comment.task_id, payload),
       );
       if (outcome.status === 'queued') {

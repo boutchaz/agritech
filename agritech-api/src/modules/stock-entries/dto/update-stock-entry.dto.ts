@@ -1,8 +1,21 @@
-import { IsUUID, IsString, IsDate, IsOptional, IsEnum } from 'class-validator';
+import { IsUUID, IsString, IsDate, IsOptional, IsEnum, IsInt, IsISO8601, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 import { StockEntryType } from './create-stock-entry.dto';
 
 export class UpdateStockEntryDto {
+  @IsUUID()
+  @IsOptional()
+  client_id?: string;
+
+  @IsInt()
+  @Min(1)
+  @IsOptional()
+  version?: number;
+
+  @IsISO8601()
+  @IsOptional()
+  client_created_at?: string;
+
   @IsEnum(StockEntryType)
   @IsOptional()
   entry_type?: StockEntryType;

@@ -10,6 +10,7 @@ import { useOrganizationStore } from './stores/organizationStore'
 import { WowIntro } from './components/WowIntro'
 import { OfflineBanner } from './components/OfflineBanner'
 import { DeadLetterReview } from './components/DeadLetterReview'
+import { ConflictDialogHost } from './components/ConflictDialogHost'
 import {
   initOfflineRuntime,
   createIDBPersister,
@@ -122,6 +123,7 @@ const App = () => {
       <QueryClientProvider client={queryClient}>
         <OfflineBanner onReviewDeadLetters={() => setDeadLetterOpen(true)} />
         <DeadLetterReview open={deadLetterOpen} onOpenChange={setDeadLetterOpen} />
+        <ConflictDialogHost />
         <RouterProvider router={router} context={routerContext} />
       </QueryClientProvider>
     </>
