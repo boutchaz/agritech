@@ -957,7 +957,7 @@ export const PurchaseOrderDetailDialog = ({
                   </TableHeader>
                   <TableBody>
                     {po.items && po.items.length > 0 ? (
-                      po.items.map((item: PurchaseOrderItem, index: number) => (
+                      po.items.map((item: PurchaseOrderItem, _index: number) => (
                         <TableRow key={item.id} className="border-b border-gray-100 dark:border-gray-800">
                           <TableCell className="py-2 px-2 text-sm font-medium text-gray-900 dark:text-white">
                             {item.item_name}

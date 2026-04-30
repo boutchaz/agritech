@@ -80,3 +80,6 @@ supabase/.temp/
 # 
 debug_gee.pyproject/.env
 .gstack/
+
+# Claude Code session artifacts
+.claude/worktrees/

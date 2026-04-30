@@ -9,6 +9,7 @@ import LanguageSwitcher from '@/components/LanguageSwitcher'
 import { ListPageSkeleton } from '@/components/ui/page-skeletons';
 
 const AppContent = () => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { t } = useTranslation();
   const { currentOrganization, currentFarm } = useAuth();
 
