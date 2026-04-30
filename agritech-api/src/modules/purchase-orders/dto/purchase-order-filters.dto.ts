@@ -7,6 +7,7 @@ export enum PurchaseOrderStatus {
   SENT = 'sent',
   CONFIRMED = 'confirmed',
   RECEIVING = 'receiving',
+  PARTIALLY_RECEIVED = 'partially_received',
   RECEIVED = 'received',
   CANCELLED = 'cancelled',
   COMPLETED = 'completed',

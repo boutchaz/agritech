@@ -26,6 +26,21 @@ export function useTaxes(invoiceType?: 'sales' | 'purchase') {
 }
 
 /**
+ * Hook to fetch every tax (active + inactive) for the current organization
+ */
+export function useAllTaxes() {
+  const { currentOrganization } = useAuth();
+  return useQuery({
+    queryKey: ['taxes', currentOrganization?.id, 'all'],
+    queryFn: async () => {
+      if (!currentOrganization?.id) throw new Error('No organization selected');
+      return taxesApi.getAll({}, currentOrganization.id);
+    },
+    enabled: !!currentOrganization?.id,
+  });
+}
+
+/**
  * Hook to fetch a single tax by ID
  */
 export function useTax(taxId: string | null) {
@@ -76,6 +91,34 @@ export function useCreateTax() {
       }
 
       return taxesApi.create(tax, currentOrganization.id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['taxes', currentOrganization?.id] });
+    },
+  });
+}
+
+export function useUpdateTax() {
+  const { currentOrganization } = useAuth();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, patch }: { id: string; patch: Partial<CreateTaxInput> }) => {
+      if (!currentOrganization?.id) throw new Error('No organization selected');
+      return taxesApi.update(id, patch, currentOrganization.id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['taxes', currentOrganization?.id] });
+    },
+  });
+}
+
+export function useDeleteTax() {
+  const { currentOrganization } = useAuth();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      if (!currentOrganization?.id) throw new Error('No organization selected');
+      return taxesApi.delete(id, currentOrganization.id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['taxes', currentOrganization?.id] });

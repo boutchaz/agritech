@@ -143,6 +143,16 @@ export class SequencesService {
     return this.generateSequence(organizationId, SequenceType.PURCHASE_ORDER);
   }
 
+  // Until dedicated SequenceTypes exist, reuse PURCHASE_ORDER for receipts
+  // and INVOICE for delivery notes — sequences are namespaced per type+org.
+  async generatePurchaseReceiptNumber(organizationId: string): Promise<string> {
+    return this.generateSequence(organizationId, SequenceType.PURCHASE_ORDER);
+  }
+
+  async generateDeliveryNoteNumber(organizationId: string): Promise<string> {
+    return this.generateSequence(organizationId, SequenceType.INVOICE);
+  }
+
   /**
    * Generate journal entry number
    */

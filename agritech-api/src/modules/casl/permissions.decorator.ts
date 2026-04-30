@@ -180,6 +180,16 @@ export const CanReadQualityControl = () => RequirePermission(Action.Read, Subjec
 // Delivery permissions
 export const CanManageDeliveries = () => RequirePermission(Action.Manage, Subject.DELIVERY);
 export const CanReadDeliveries = () => RequirePermission(Action.Read, Subject.DELIVERY);
+// Aliases for delivery notes (alias granular CRUD onto DELIVERY subject)
+export const CanCreateDeliveryNote = () => RequirePermission(Action.Create, Subject.DELIVERY);
+export const CanUpdateDeliveryNote = () => RequirePermission(Action.Update, Subject.DELIVERY);
+export const CanDeleteDeliveryNote = () => RequirePermission(Action.Delete, Subject.DELIVERY);
+export const CanReadDeliveryNotes = CanReadDeliveries;
+// Aliases for purchase receipts (alias onto PURCHASE_ORDER subject)
+export const CanCreatePurchaseReceipt = CanCreatePurchaseOrder;
+export const CanUpdatePurchaseReceipt = CanUpdatePurchaseOrder;
+export const CanDeletePurchaseReceipt = CanDeletePurchaseOrder;
+export const CanReadPurchaseReceipts = CanReadPurchaseOrders;
 
 // Reception batch permissions
 export const CanManageReceptionBatches = () => RequirePermission(Action.Manage, Subject.RECEPTION_BATCH);
