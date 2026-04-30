@@ -104,7 +104,10 @@ export const useUserOrganizations = (userId: string | undefined) => {
       }
     },
     enabled: !!userId,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    // Short staleTime + refetchOnWindowFocus so admin approval (changes
+    // approval_status / is_active / role) reaches the user without a hard reload.
+    staleTime: 30 * 1000,
+    refetchOnWindowFocus: true,
     retry: (failureCount, error) => {
       // Don't retry if session expired
       if (error instanceof Error && (

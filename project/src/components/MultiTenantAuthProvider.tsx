@@ -423,6 +423,29 @@ export const MultiTenantAuthProvider = ({ children }: { children: React.ReactNod
     }
   }, [farms, currentFarm]);
 
+  // Keep currentOrganization in sync with latest `organizations` list.
+  // Fixes stale approval_status / is_active / role after admin approval — without
+  // this, local state holds the cached org from session start and the gate in
+  // _authenticated.tsx keeps showing PendingApproval even when the API returns approved.
+  useEffect(() => {
+    if (organizations.length === 0) return;
+    if (!currentOrganization) return;
+
+    const match = organizations.find(o => o.id === currentOrganization.id);
+    if (!match) return;
+
+    const stale =
+      currentOrganization.approval_status !== match.approval_status ||
+      currentOrganization.is_active !== match.is_active ||
+      currentOrganization.role !== match.role ||
+      currentOrganization.name !== match.name;
+
+    if (stale) {
+      setCurrentOrganization(match);
+      localStorage.setItem('currentOrganization', JSON.stringify(match));
+    }
+  }, [organizations, currentOrganization]);
+
   // Keep currentFarm in sync with latest `farms` list (ids + parcel-derived total_area).
   // Fixes empty Radix Select when `currentFarm.id` was missing from a transient [] or after refetch.
   useEffect(() => {
