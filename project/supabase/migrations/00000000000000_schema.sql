@@ -5047,6 +5047,27 @@ CREATE TRIGGER update_equipment_maintenance_updated_at
 ALTER TABLE equipment_assets ENABLE ROW LEVEL SECURITY;
 ALTER TABLE equipment_maintenance ENABLE ROW LEVEL SECURITY;
 
+-- Photos for structures, equipment, workers (additive, idempotent)
+ALTER TABLE structures       ADD COLUMN IF NOT EXISTS photos JSONB DEFAULT '[]'::jsonb;
+ALTER TABLE equipment_assets ADD COLUMN IF NOT EXISTS photos JSONB DEFAULT '[]'::jsonb;
+ALTER TABLE workers          ADD COLUMN IF NOT EXISTS photos JSONB DEFAULT '[]'::jsonb;
+
+-- Public storage bucket for infrastructure & equipment photos
+DO $$
+BEGIN
+  EXECUTE $q$ INSERT INTO storage.buckets (id, name, "public") VALUES ('entity-photos', 'entity-photos', true) ON CONFLICT (id) DO UPDATE SET "public" = true $q$;
+  EXECUTE $q$ DROP POLICY IF EXISTS "Public read entity-photos" ON storage.objects $q$;
+  EXECUTE $q$ CREATE POLICY "Public read entity-photos" ON storage.objects FOR SELECT USING (bucket_id = 'entity-photos') $q$;
+  EXECUTE $q$ DROP POLICY IF EXISTS "Authenticated upload entity-photos" ON storage.objects $q$;
+  EXECUTE $q$ CREATE POLICY "Authenticated upload entity-photos" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'entity-photos' AND auth.role() = 'authenticated') $q$;
+  EXECUTE $q$ DROP POLICY IF EXISTS "Authenticated update entity-photos" ON storage.objects $q$;
+  EXECUTE $q$ CREATE POLICY "Authenticated update entity-photos" ON storage.objects FOR UPDATE USING (bucket_id = 'entity-photos' AND auth.role() = 'authenticated') WITH CHECK (bucket_id = 'entity-photos' AND auth.role() = 'authenticated') $q$;
+  EXECUTE $q$ DROP POLICY IF EXISTS "Authenticated delete entity-photos" ON storage.objects $q$;
+  EXECUTE $q$ CREATE POLICY "Authenticated delete entity-photos" ON storage.objects FOR DELETE USING (bucket_id = 'entity-photos' AND auth.role() = 'authenticated') $q$;
+EXCEPTION WHEN OTHERS THEN
+  RAISE NOTICE 'entity-photos bucket setup skipped: %', SQLERRM;
+END$$;
+
 -- Demo data tags: marks rows seeded by demo-data service so the selective
 -- "clear demo only" cleanup can delete them without touching client data.
 -- Internal table — admin client only (no RLS policies).
@@ -18163,3 +18184,80 @@ BEGIN
     EXECUTE 'CREATE UNIQUE INDEX IF NOT EXISTS file_registry_org_sha256_uidx ON file_registry (organization_id, content_sha256) WHERE content_sha256 IS NOT NULL';
   END IF;
 END $$;
+
+-- =====================================================================
+-- HR Module — Phase 0: Attendance Foundation
+-- =====================================================================
+-- Per-ping attendance model: each check-in/check-out is one row.
+-- Geofences are point + radius (matches attendance.service.ts in agritech-api).
+
+CREATE TABLE IF NOT EXISTS farm_geofences (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  farm_id UUID REFERENCES farms(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  lat NUMERIC NOT NULL CHECK (lat BETWEEN -90 AND 90),
+  lng NUMERIC NOT NULL CHECK (lng BETWEEN -180 AND 180),
+  radius_m INTEGER NOT NULL DEFAULT 250 CHECK (radius_m BETWEEN 10 AND 50000),
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (organization_id, farm_id, name)
+);
+
+CREATE INDEX IF NOT EXISTS idx_farm_geofences_org ON farm_geofences(organization_id);
+CREATE INDEX IF NOT EXISTS idx_farm_geofences_farm ON farm_geofences(farm_id);
+CREATE INDEX IF NOT EXISTS idx_farm_geofences_active ON farm_geofences(organization_id, is_active);
+
+ALTER TABLE farm_geofences ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_access_farm_geofences" ON farm_geofences;
+CREATE POLICY "org_access_farm_geofences" ON farm_geofences
+  FOR ALL USING (is_organization_member(organization_id))
+  WITH CHECK (is_organization_member(organization_id));
+
+DROP TRIGGER IF EXISTS set_farm_geofences_updated_at ON farm_geofences;
+CREATE TRIGGER set_farm_geofences_updated_at
+  BEFORE UPDATE ON farm_geofences
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TABLE IF NOT EXISTS attendance_records (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  worker_id UUID NOT NULL REFERENCES workers(id) ON DELETE CASCADE,
+  farm_id UUID REFERENCES farms(id) ON DELETE SET NULL,
+  geofence_id UUID REFERENCES farm_geofences(id) ON DELETE SET NULL,
+
+  type TEXT NOT NULL CHECK (type IN ('check_in', 'check_out')),
+  occurred_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+  lat NUMERIC CHECK (lat IS NULL OR lat BETWEEN -90 AND 90),
+  lng NUMERIC CHECK (lng IS NULL OR lng BETWEEN -180 AND 180),
+  accuracy_m NUMERIC,
+  distance_m NUMERIC,
+  within_geofence BOOLEAN,
+
+  source TEXT NOT NULL DEFAULT 'mobile'
+    CHECK (source IN ('mobile', 'manual', 'admin', 'biometric')),
+  notes TEXT,
+
+  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_attendance_records_org ON attendance_records(organization_id);
+CREATE INDEX IF NOT EXISTS idx_attendance_records_worker ON attendance_records(worker_id);
+CREATE INDEX IF NOT EXISTS idx_attendance_records_farm ON attendance_records(farm_id);
+CREATE INDEX IF NOT EXISTS idx_attendance_records_occurred_at ON attendance_records(occurred_at DESC);
+CREATE INDEX IF NOT EXISTS idx_attendance_records_worker_occurred ON attendance_records(worker_id, occurred_at DESC);
+
+ALTER TABLE attendance_records ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_access_attendance_records" ON attendance_records;
+CREATE POLICY "org_access_attendance_records" ON attendance_records
+  FOR ALL USING (is_organization_member(organization_id))
+  WITH CHECK (is_organization_member(organization_id));
+
+DROP TRIGGER IF EXISTS set_attendance_records_updated_at ON attendance_records;
+CREATE TRIGGER set_attendance_records_updated_at
+  BEFORE UPDATE ON attendance_records
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
