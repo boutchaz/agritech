@@ -5,8 +5,10 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
+import { v4 as uuidv4 } from 'uuid';
 import { farmsService } from '../../services/farmsService';
 import { farmHierarchyApi } from '@/lib/api/farm-hierarchy';
+import { runOrQueue as runOrQueueOffline } from '@/lib/offline/runOrQueue';
 import { parcelsService } from '../../services/parcelsService';
 import FarmHierarchyHeader from './FarmHierarchyHeader';
 import FarmCard from './FarmCard';
@@ -250,14 +252,40 @@ const ModernFarmHierarchy = ({
     enabled: !!organizationId
   });
 
-  // Create farm mutation using farmsService (apiClient)
+  // Create farm mutation — routed through the offline outbox so the call
+  // doesn't hang on the network in the field.
   const createFarmMutation = useMutation({
     mutationFn: async (formData: FarmFormValues) => {
-      return farmsService.createFarm({
+      if (!organizationId) {
+        throw new Error('No organization selected');
+      }
+      const cid = uuidv4();
+      const payload = {
         name: formData.name,
         is_active: true,
         status: 'active',
-      });
+        client_id: cid,
+      };
+      const outcome = await runOrQueueOffline(
+        {
+          organizationId,
+          resource: 'farm',
+          method: 'POST',
+          url: '/api/v1/farms',
+          payload,
+          clientId: cid,
+        },
+        () =>
+          farmsService.createFarm({
+            name: formData.name,
+            is_active: true,
+            status: 'active',
+          }),
+      );
+      if (outcome.status === 'queued') {
+        return { id: cid, _pending: true, name: formData.name } as never;
+      }
+      return outcome.result;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['farm-hierarchy', organizationId] });
