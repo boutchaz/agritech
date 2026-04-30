@@ -7,6 +7,8 @@ import {
 import { trackEntityCreate, trackEntityUpdate, trackEntityDelete } from '../lib/analytics';
 import { tasksApi, type PaginatedTaskQuery } from "../lib/api/tasks";
 import { runOrQueue } from "../lib/offlineTaskQueue";
+import { runOrQueue as runOrQueueOffline } from "../lib/offline/runOrQueue";
+import { v4 as uuidv4 } from "uuid";
 import { useAuth } from "../hooks/useAuth";
 import type { PaginatedResponse } from "../lib/api/types";
 import type {
@@ -148,10 +150,34 @@ export function useCreateTask() {
 
   return useMutation({
     mutationFn: async (
-      request: CreateTaskRequest & { organization_id: string },
+      request: CreateTaskRequest & { organization_id: string; client_id?: string },
     ) => {
-      const { organization_id, ...taskData } = request;
-      return tasksApi.create(taskData, organization_id);
+      const { organization_id, client_id, ...taskData } = request;
+      const cid = client_id ?? uuidv4();
+      const payload: CreateTaskRequest & { client_id: string } = {
+        ...(taskData as CreateTaskRequest),
+        client_id: cid,
+      };
+      const outcome = await runOrQueueOffline(
+        {
+          organizationId: organization_id,
+          resource: 'task',
+          method: 'POST',
+          url: '/api/v1/tasks',
+          payload,
+          clientId: cid,
+        },
+        () => tasksApi.create(payload, organization_id),
+      );
+      if (outcome.status === 'queued') {
+        // Optimistic stub the UI can render with (pending) badge
+        return {
+          ...payload,
+          id: cid,
+          _pending: true,
+        } as unknown as Awaited<ReturnType<typeof tasksApi.create>>;
+      }
+      return outcome.result;
     },
     onSuccess: (_data, variables) => {
       trackEntityCreate('task');
@@ -173,12 +199,32 @@ export function useUpdateTask() {
       taskId,
       organizationId,
       updates,
+      version,
     }: {
       taskId: string;
       organizationId: string;
       updates: UpdateTaskRequest;
+      version?: number;
     }) => {
-      return tasksApi.update(taskId, updates, organizationId);
+      const cid = uuidv4();
+      const outcome = await runOrQueueOffline(
+        {
+          organizationId,
+          resource: 'task',
+          method: 'PATCH',
+          url: `/api/v1/tasks/${taskId}`,
+          payload: updates,
+          ifMatchVersion: version ?? null,
+          clientId: cid,
+        },
+        () => tasksApi.update(taskId, updates, organizationId),
+      );
+      if (outcome.status === 'queued') {
+        return { id: taskId, _pending: true, ...updates } as unknown as Awaited<
+          ReturnType<typeof tasksApi.update>
+        >;
+      }
+      return outcome.result;
     },
     onSuccess: (_data, variables) => {
       trackEntityUpdate('task');

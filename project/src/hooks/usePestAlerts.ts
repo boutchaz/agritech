@@ -1,5 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { v4 as uuidv4 } from 'uuid';
+import { runOrQueue as runOrQueueOffline } from '../lib/offline/runOrQueue';
 import {
   pestAlertsApi,
   type CreatePestReportDto,
@@ -92,7 +94,23 @@ export function useCreatePestReport() {
       organizationId: string;
       data: CreatePestReportDto;
     }): Promise<PestReportResponseDto> => {
-      return pestAlertsApi.createPestReport(organizationId, data);
+      const cid = uuidv4();
+      const payload = { ...data, client_id: cid } as CreatePestReportDto & { client_id: string };
+      const outcome = await runOrQueueOffline(
+        {
+          organizationId,
+          resource: 'pest-report',
+          method: 'POST',
+          url: '/api/v1/pest-alerts/reports',
+          payload,
+          clientId: cid,
+        },
+        () => pestAlertsApi.createPestReport(organizationId, payload),
+      );
+      if (outcome.status === 'queued') {
+        return { ...payload, id: cid, _pending: true } as unknown as PestReportResponseDto;
+      }
+      return outcome.result;
     },
     onSuccess: (_, variables) => {
       // Invalidate reports list

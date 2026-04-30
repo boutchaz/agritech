@@ -1,6 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { v4 as uuidv4 } from 'uuid';
 import { useAuth } from '../hooks/useAuth';
 import { stockEntriesApi } from '../lib/api/stock';
+import { runOrQueue as runOrQueueOffline } from '../lib/offline/runOrQueue';
 import type {
   CreateStockEntryInput,
   UpdateStockEntryInput,
@@ -57,8 +59,25 @@ export function useCreateStockEntry() {
       if (!currentOrganization?.id) {
         throw new Error('No organization or user');
       }
-
-      return stockEntriesApi.create(input, currentOrganization.id);
+      const cid = uuidv4();
+      const payload = { ...input, client_id: cid } as CreateStockEntryInput & { client_id: string };
+      const outcome = await runOrQueueOffline(
+        {
+          organizationId: currentOrganization.id,
+          resource: 'stock-entry',
+          method: 'POST',
+          url: '/api/v1/stock-entries',
+          payload,
+          clientId: cid,
+        },
+        () => stockEntriesApi.create(payload, currentOrganization.id),
+      );
+      if (outcome.status === 'queued') {
+        return { ...payload, id: cid, _pending: true } as unknown as Awaited<
+          ReturnType<typeof stockEntriesApi.create>
+        >;
+      }
+      return outcome.result;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['stock-entries', currentOrganization?.id] });
@@ -74,12 +93,29 @@ export function useUpdateStockEntry() {
   const { currentOrganization } = useAuth();
 
   return useMutation({
-    mutationFn: async ({ entryId, input }: { entryId: string; input: UpdateStockEntryInput }) => {
+    mutationFn: async ({ entryId, input, version }: { entryId: string; input: UpdateStockEntryInput; version?: number }) => {
       if (!currentOrganization?.id) {
         throw new Error('No organization selected');
       }
-
-      return stockEntriesApi.update(entryId, input, currentOrganization.id);
+      const cid = uuidv4();
+      const outcome = await runOrQueueOffline(
+        {
+          organizationId: currentOrganization.id,
+          resource: 'stock-entry',
+          method: 'PATCH',
+          url: `/api/v1/stock-entries/${entryId}`,
+          payload: input,
+          ifMatchVersion: version ?? null,
+          clientId: cid,
+        },
+        () => stockEntriesApi.update(entryId, input, currentOrganization.id),
+      );
+      if (outcome.status === 'queued') {
+        return { id: entryId, _pending: true, ...input } as unknown as Awaited<
+          ReturnType<typeof stockEntriesApi.update>
+        >;
+      }
+      return outcome.result;
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['stock-entries', currentOrganization?.id] });

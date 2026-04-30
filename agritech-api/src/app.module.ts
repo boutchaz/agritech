@@ -3,6 +3,7 @@ import { ConfigModule } from "@nestjs/config";
 import { ThrottlerModule } from "@nestjs/throttler";
 import { Reflector, APP_INTERCEPTOR } from "@nestjs/core";
 import { OfflineInterceptor } from "./common/interceptors/offline.interceptor";
+import { SyncModule } from "./modules/sync/sync.module";
 import { SentryModule } from "@sentry/nestjs/setup";
 import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
@@ -238,6 +239,7 @@ import { BarcodeModule } from "./modules/barcode/barcode.module";
     MonitoringModule,
     PublicRdvModule,
     EmailTemplatesModule,
+    SyncModule,
   ],
   controllers: [AppController],
   providers: [
