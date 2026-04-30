@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 
 export type OnlineStatus = 'online' | 'offline' | 'limited';
 
-const PING_PATH = '/auth/ping';
+const PING_PATH = '/api/v1/auth/ping';
 const PING_INTERVAL_MS = 30_000;
 const PING_TIMEOUT_MS = 5_000;
 
