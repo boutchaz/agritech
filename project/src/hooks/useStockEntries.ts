@@ -137,8 +137,24 @@ export function usePostStockEntry() {
       if (!currentOrganization?.id) {
         throw new Error('No organization selected');
       }
-
-      return stockEntriesApi.post(entryId, currentOrganization.id);
+      const cid = uuidv4();
+      const outcome = await runOrQueueOffline(
+        {
+          organizationId: currentOrganization.id,
+          resource: 'stock-entry-post',
+          method: 'PATCH',
+          url: `/api/v1/stock-entries/${entryId}/post`,
+          payload: {},
+          clientId: cid,
+        },
+        () => stockEntriesApi.post(entryId, currentOrganization.id),
+      );
+      if (outcome.status === 'queued') {
+        return { id: entryId, _pending: true } as unknown as Awaited<
+          ReturnType<typeof stockEntriesApi.post>
+        >;
+      }
+      return outcome.result;
     },
     onSuccess: (_, entryId) => {
       queryClient.invalidateQueries({ queryKey: ['stock-entries', currentOrganization?.id] });
@@ -165,8 +181,24 @@ export function useCancelStockEntry() {
       if (!currentOrganization?.id) {
         throw new Error('No organization selected');
       }
-
-      return stockEntriesApi.cancel(entryId, currentOrganization.id);
+      const cid = uuidv4();
+      const outcome = await runOrQueueOffline(
+        {
+          organizationId: currentOrganization.id,
+          resource: 'stock-entry-cancel',
+          method: 'PATCH',
+          url: `/api/v1/stock-entries/${entryId}/cancel`,
+          payload: {},
+          clientId: cid,
+        },
+        () => stockEntriesApi.cancel(entryId, currentOrganization.id),
+      );
+      if (outcome.status === 'queued') {
+        return { id: entryId, _pending: true } as unknown as Awaited<
+          ReturnType<typeof stockEntriesApi.cancel>
+        >;
+      }
+      return outcome.result;
     },
     onSuccess: (_, entryId) => {
       queryClient.invalidateQueries({ queryKey: ['stock-entries', currentOrganization?.id] });
@@ -184,8 +216,24 @@ export function useReverseStockEntry() {
       if (!currentOrganization?.id) {
         throw new Error('No organization selected');
       }
-
-      return stockEntriesApi.reverse(entryId, reason, currentOrganization.id);
+      const cid = uuidv4();
+      const outcome = await runOrQueueOffline(
+        {
+          organizationId: currentOrganization.id,
+          resource: 'stock-entry-reverse',
+          method: 'POST',
+          url: `/api/v1/stock-entries/${entryId}/reverse`,
+          payload: { reason },
+          clientId: cid,
+        },
+        () => stockEntriesApi.reverse(entryId, reason, currentOrganization.id),
+      );
+      if (outcome.status === 'queued') {
+        return { id: entryId, _pending: true } as unknown as Awaited<
+          ReturnType<typeof stockEntriesApi.reverse>
+        >;
+      }
+      return outcome.result;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['stock-entries', currentOrganization?.id] });

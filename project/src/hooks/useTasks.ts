@@ -251,7 +251,19 @@ export function useDeleteTask() {
       taskId: string;
       organizationId: string;
     }) => {
-      await tasksApi.delete(taskId, organizationId);
+      const cid = uuidv4();
+      const outcome = await runOrQueueOffline(
+        {
+          organizationId,
+          resource: 'task',
+          method: 'DELETE',
+          url: `/api/v1/tasks/${taskId}`,
+          payload: {},
+          clientId: cid,
+        },
+        () => tasksApi.delete(taskId, organizationId),
+      );
+      void outcome;
       return { taskId, organizationId };
     },
     onSuccess: (_data, variables) => {
@@ -277,7 +289,24 @@ export function useAssignTask() {
       organizationId: string;
       workerId: string;
     }) => {
-      return tasksApi.assign(organizationId, taskId, workerId);
+      const cid = uuidv4();
+      const outcome = await runOrQueueOffline(
+        {
+          organizationId,
+          resource: 'task-assignment',
+          method: 'PATCH',
+          url: `/api/v1/tasks/${taskId}/assign`,
+          payload: { worker_id: workerId },
+          clientId: cid,
+        },
+        () => tasksApi.assign(organizationId, taskId, workerId),
+      );
+      if (outcome.status === 'queued') {
+        return { id: taskId, organization_id: organizationId, _pending: true } as unknown as Awaited<
+          ReturnType<typeof tasksApi.assign>
+        >;
+      }
+      return outcome.result;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({
@@ -543,11 +572,29 @@ export function useCompleteTask() {
       actualCost?: number;
       notes?: string;
     }) => {
-      return tasksApi.complete(organizationId, taskId, {
+      const payload = {
         quality_rating: qualityRating,
         actual_cost: actualCost,
         notes,
-      });
+      };
+      const cid = uuidv4();
+      const outcome = await runOrQueueOffline(
+        {
+          organizationId,
+          resource: 'task-completion',
+          method: 'POST',
+          url: `/api/v1/tasks/${taskId}/complete`,
+          payload,
+          clientId: cid,
+        },
+        () => tasksApi.complete(organizationId, taskId, payload),
+      );
+      if (outcome.status === 'queued') {
+        return { id: taskId, _pending: true } as unknown as Awaited<
+          ReturnType<typeof tasksApi.complete>
+        >;
+      }
+      return outcome.result;
     },
     onSuccess: (_data, variables) => {
       trackEntityUpdate('task');

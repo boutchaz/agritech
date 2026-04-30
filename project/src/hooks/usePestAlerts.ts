@@ -137,12 +137,30 @@ export function useUpdatePestReport() {
       organizationId,
       reportId,
       data,
+      version,
     }: {
       organizationId: string;
       reportId: string;
       data: UpdatePestReportDto;
+      version?: number;
     }): Promise<PestReportResponseDto> => {
-      return pestAlertsApi.updatePestReport(organizationId, reportId, data);
+      const cid = uuidv4();
+      const outcome = await runOrQueueOffline(
+        {
+          organizationId,
+          resource: 'pest-report',
+          method: 'PATCH',
+          url: `/api/v1/pest-alerts/reports/${reportId}`,
+          payload: data,
+          ifMatchVersion: version ?? null,
+          clientId: cid,
+        },
+        () => pestAlertsApi.updatePestReport(organizationId, reportId, data),
+      );
+      if (outcome.status === 'queued') {
+        return { id: reportId, _pending: true, ...data } as unknown as PestReportResponseDto;
+      }
+      return outcome.result;
     },
     onSuccess: (_, variables) => {
       // Invalidate specific report and reports list

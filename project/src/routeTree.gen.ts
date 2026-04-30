@@ -88,6 +88,7 @@ import { Route as AuthenticatedsettingsSettingsProfileRouteImport } from './rout
 import { Route as AuthenticatedsettingsSettingsPrintRouteImport } from './routes/_authenticated/(settings)/settings.print'
 import { Route as AuthenticatedsettingsSettingsPreferencesRouteImport } from './routes/_authenticated/(settings)/settings.preferences'
 import { Route as AuthenticatedsettingsSettingsOrganizationRouteImport } from './routes/_authenticated/(settings)/settings.organization'
+import { Route as AuthenticatedsettingsSettingsOfflineRouteImport } from './routes/_authenticated/(settings)/settings.offline'
 import { Route as AuthenticatedsettingsSettingsModulesRouteImport } from './routes/_authenticated/(settings)/settings.modules'
 import { Route as AuthenticatedsettingsSettingsLegalRouteImport } from './routes/_authenticated/(settings)/settings.legal'
 import { Route as AuthenticatedsettingsSettingsFilesRouteImport } from './routes/_authenticated/(settings)/settings.files'
@@ -626,6 +627,12 @@ const AuthenticatedsettingsSettingsOrganizationRoute =
   AuthenticatedsettingsSettingsOrganizationRouteImport.update({
     id: '/organization',
     path: '/organization',
+    getParentRoute: () => AuthenticatedsettingsSettingsRoute,
+  } as any)
+const AuthenticatedsettingsSettingsOfflineRoute =
+  AuthenticatedsettingsSettingsOfflineRouteImport.update({
+    id: '/offline',
+    path: '/offline',
     getParentRoute: () => AuthenticatedsettingsSettingsRoute,
   } as any)
 const AuthenticatedsettingsSettingsModulesRoute =
@@ -1274,6 +1281,7 @@ export interface FileRoutesByFullPath {
   '/settings/files': typeof AuthenticatedsettingsSettingsFilesRoute
   '/settings/legal': typeof AuthenticatedsettingsSettingsLegalRoute
   '/settings/modules': typeof AuthenticatedsettingsSettingsModulesRoute
+  '/settings/offline': typeof AuthenticatedsettingsSettingsOfflineRoute
   '/settings/organization': typeof AuthenticatedsettingsSettingsOrganizationRoute
   '/settings/preferences': typeof AuthenticatedsettingsSettingsPreferencesRoute
   '/settings/print': typeof AuthenticatedsettingsSettingsPrintRoute
@@ -1436,6 +1444,7 @@ export interface FileRoutesByTo {
   '/settings/files': typeof AuthenticatedsettingsSettingsFilesRoute
   '/settings/legal': typeof AuthenticatedsettingsSettingsLegalRoute
   '/settings/modules': typeof AuthenticatedsettingsSettingsModulesRoute
+  '/settings/offline': typeof AuthenticatedsettingsSettingsOfflineRoute
   '/settings/organization': typeof AuthenticatedsettingsSettingsOrganizationRoute
   '/settings/preferences': typeof AuthenticatedsettingsSettingsPreferencesRoute
   '/settings/print': typeof AuthenticatedsettingsSettingsPrintRoute
@@ -1603,6 +1612,7 @@ export interface FileRoutesById {
   '/_authenticated/(settings)/settings/files': typeof AuthenticatedsettingsSettingsFilesRoute
   '/_authenticated/(settings)/settings/legal': typeof AuthenticatedsettingsSettingsLegalRoute
   '/_authenticated/(settings)/settings/modules': typeof AuthenticatedsettingsSettingsModulesRoute
+  '/_authenticated/(settings)/settings/offline': typeof AuthenticatedsettingsSettingsOfflineRoute
   '/_authenticated/(settings)/settings/organization': typeof AuthenticatedsettingsSettingsOrganizationRoute
   '/_authenticated/(settings)/settings/preferences': typeof AuthenticatedsettingsSettingsPreferencesRoute
   '/_authenticated/(settings)/settings/print': typeof AuthenticatedsettingsSettingsPrintRoute
@@ -1773,6 +1783,7 @@ export interface FileRouteTypes {
     | '/settings/files'
     | '/settings/legal'
     | '/settings/modules'
+    | '/settings/offline'
     | '/settings/organization'
     | '/settings/preferences'
     | '/settings/print'
@@ -1935,6 +1946,7 @@ export interface FileRouteTypes {
     | '/settings/files'
     | '/settings/legal'
     | '/settings/modules'
+    | '/settings/offline'
     | '/settings/organization'
     | '/settings/preferences'
     | '/settings/print'
@@ -2101,6 +2113,7 @@ export interface FileRouteTypes {
     | '/_authenticated/(settings)/settings/files'
     | '/_authenticated/(settings)/settings/legal'
     | '/_authenticated/(settings)/settings/modules'
+    | '/_authenticated/(settings)/settings/offline'
     | '/_authenticated/(settings)/settings/organization'
     | '/_authenticated/(settings)/settings/preferences'
     | '/_authenticated/(settings)/settings/print'
@@ -2725,6 +2738,13 @@ declare module '@tanstack/react-router' {
       path: '/organization'
       fullPath: '/settings/organization'
       preLoaderRoute: typeof AuthenticatedsettingsSettingsOrganizationRouteImport
+      parentRoute: typeof AuthenticatedsettingsSettingsRoute
+    }
+    '/_authenticated/(settings)/settings/offline': {
+      id: '/_authenticated/(settings)/settings/offline'
+      path: '/offline'
+      fullPath: '/settings/offline'
+      preLoaderRoute: typeof AuthenticatedsettingsSettingsOfflineRouteImport
       parentRoute: typeof AuthenticatedsettingsSettingsRoute
     }
     '/_authenticated/(settings)/settings/modules': {
@@ -3687,6 +3707,7 @@ interface AuthenticatedsettingsSettingsRouteChildren {
   AuthenticatedsettingsSettingsFilesRoute: typeof AuthenticatedsettingsSettingsFilesRoute
   AuthenticatedsettingsSettingsLegalRoute: typeof AuthenticatedsettingsSettingsLegalRoute
   AuthenticatedsettingsSettingsModulesRoute: typeof AuthenticatedsettingsSettingsModulesRoute
+  AuthenticatedsettingsSettingsOfflineRoute: typeof AuthenticatedsettingsSettingsOfflineRoute
   AuthenticatedsettingsSettingsOrganizationRoute: typeof AuthenticatedsettingsSettingsOrganizationRoute
   AuthenticatedsettingsSettingsPreferencesRoute: typeof AuthenticatedsettingsSettingsPreferencesRoute
   AuthenticatedsettingsSettingsPrintRoute: typeof AuthenticatedsettingsSettingsPrintRoute
@@ -3719,6 +3740,8 @@ const AuthenticatedsettingsSettingsRouteChildren: AuthenticatedsettingsSettingsR
       AuthenticatedsettingsSettingsLegalRoute,
     AuthenticatedsettingsSettingsModulesRoute:
       AuthenticatedsettingsSettingsModulesRoute,
+    AuthenticatedsettingsSettingsOfflineRoute:
+      AuthenticatedsettingsSettingsOfflineRoute,
     AuthenticatedsettingsSettingsOrganizationRoute:
       AuthenticatedsettingsSettingsOrganizationRoute,
     AuthenticatedsettingsSettingsPreferencesRoute:

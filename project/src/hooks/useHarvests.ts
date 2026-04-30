@@ -225,7 +225,21 @@ export function useDeleteHarvest() {
 
   return useMutation({
     mutationFn: async ({ harvestId, organizationId }: { harvestId: string; organizationId: string }) => {
-      await harvestsApi.delete(harvestId, organizationId);
+      const cid = uuidv4();
+      await runOrQueueOffline(
+        {
+          organizationId,
+          resource: 'harvest',
+          method: 'DELETE',
+          url: `/api/v1/organizations/${organizationId}/harvests/${harvestId}`,
+          payload: {},
+          clientId: cid,
+        },
+        async () => {
+          await harvestsApi.delete(harvestId, organizationId);
+          return null as unknown;
+        },
+      );
       return { harvestId, organizationId };
     },
     onSuccess: (data) => {

@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-04-30T14:31:32.682Z",
-  "count": 157,
+  "generated_at": "2026-04-30T14:51:06.708Z",
+  "count": 158,
   "routes": [
     "/",
     "/accounting",
@@ -114,6 +114,7 @@
     "/settings/files",
     "/settings/legal",
     "/settings/modules",
+    "/settings/offline",
     "/settings/organization",
     "/settings/preferences",
     "/settings/print",
