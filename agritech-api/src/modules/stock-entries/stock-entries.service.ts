@@ -127,8 +127,8 @@ export class StockEntriesService {
           organization_id, entry_type, entry_number, entry_date,
           from_warehouse_id, to_warehouse_id, reference_type, reference_id,
           reference_number, purpose, notes, status, created_by, posted_at,
-          parcel_id, crop_cycle_id
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+          parcel_id, crop_cycle_id, client_id, client_created_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
         RETURNING *`,
         [
           dto.organization_id,
@@ -147,6 +147,8 @@ export class StockEntriesService {
           dto.status === StockEntryStatus.POSTED ? new Date() : null,
           dto.parcel_id || null,
           dto.crop_cycle_id || null,
+          dto.client_id || null,
+          dto.client_created_at || null,
         ],
       );
 

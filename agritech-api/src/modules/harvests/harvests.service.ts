@@ -238,11 +238,15 @@ export class HarvestsService {
       }
     }
 
+    // Strip optimistic-lock version on insert (DB default 1; trigger bumps on update)
+    const { version: _v, ...harvestPayload } = createHarvestDto as CreateHarvestDto & { version?: number };
+    void _v;
+
     // Create harvest record
     const { data: harvest, error } = await client
       .from('harvest_records')
       .insert({
-        ...createHarvestDto,
+        ...harvestPayload,
         organization_id: organizationId,
         lot_number: lotNumber,
         estimated_revenue: Math.round(estimatedRevenue * 100) / 100,

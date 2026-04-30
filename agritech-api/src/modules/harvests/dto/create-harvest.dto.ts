@@ -7,6 +7,8 @@ import {
   IsDateString,
   IsIn,
   IsArray,
+  IsInt,
+  IsISO8601,
   Min,
   Max,
   ValidateNested,
@@ -31,6 +33,22 @@ export class HarvestWorkerDto {
 }
 
 export class CreateHarvestDto {
+  @ApiPropertyOptional({ description: 'Client-generated UUID for idempotent replay' })
+  @IsOptional()
+  @IsUUID()
+  client_id?: string;
+
+  @ApiPropertyOptional({ description: 'Row version' })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  version?: number;
+
+  @ApiPropertyOptional({ description: 'Client wall-clock at action time' })
+  @IsOptional()
+  @IsISO8601()
+  client_created_at?: string;
+
   @ApiProperty({ description: 'Farm ID' })
   @IsUUID()
   farm_id: string;

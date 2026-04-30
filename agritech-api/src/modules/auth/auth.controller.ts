@@ -130,6 +130,13 @@ export class RedeemExchangeCodeDto {
 export class AuthController {
   constructor(private authService: AuthService) {}
 
+  @Get('ping')
+  @Public()
+  @ApiOperation({ summary: 'Connectivity heartbeat for offline-first clients' })
+  ping() {
+    return { ok: true, ts: Date.now() };
+  }
+
   @Post('login')
   @Public()
   @ApiOperation({ summary: 'User login' })

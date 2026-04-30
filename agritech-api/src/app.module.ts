@@ -1,7 +1,8 @@
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 import { ThrottlerModule } from "@nestjs/throttler";
-import { Reflector } from "@nestjs/core";
+import { Reflector, APP_INTERCEPTOR } from "@nestjs/core";
+import { OfflineInterceptor } from "./common/interceptors/offline.interceptor";
 import { SentryModule } from "@sentry/nestjs/setup";
 import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
@@ -239,6 +240,10 @@ import { BarcodeModule } from "./modules/barcode/barcode.module";
     EmailTemplatesModule,
   ],
   controllers: [AppController],
-  providers: [AppService, Reflector],
+  providers: [
+    AppService,
+    Reflector,
+    { provide: APP_INTERCEPTOR, useClass: OfflineInterceptor },
+  ],
 })
 export class AppModule {}

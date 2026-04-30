@@ -76,11 +76,12 @@ export class FilesController {
     @UploadedFile() file: Express.Multer.File,
     @Query('folder') folder?: string,
     @Headers('x-organization-id') organizationId?: string,
+    @Headers('x-content-hash') contentHash?: string,
   ) {
     if (!file) {
       throw new BadRequestException('No file provided');
     }
-    return this.filesService.uploadFile(file, folder, organizationId);
+    return this.filesService.uploadFile(file, folder, organizationId, contentHash);
   }
 
   @Post('storage/upload')

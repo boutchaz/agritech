@@ -1,4 +1,4 @@
-import { IsUUID, IsString, IsDate, IsArray, IsNumber, IsOptional, IsEnum, ValidateNested } from 'class-validator';
+import { IsUUID, IsString, IsDate, IsArray, IsNumber, IsOptional, IsEnum, IsInt, IsISO8601, Min, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export enum StockEntryType {
@@ -83,6 +83,19 @@ export class StockEntryItemDto {
 }
 
 export class CreateStockEntryDto {
+  @IsUUID()
+  @IsOptional()
+  client_id?: string;
+
+  @IsInt()
+  @Min(1)
+  @IsOptional()
+  version?: number;
+
+  @IsISO8601()
+  @IsOptional()
+  client_created_at?: string;
+
   // Will be set by the controller from request headers
   @IsUUID()
   @IsOptional()

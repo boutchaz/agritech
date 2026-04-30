@@ -24,6 +24,7 @@ import {
     CanUpdateTask,
     CanDeleteTask,
 } from '../casl/permissions.decorator';
+import { Idempotent, OptimisticLock } from '../../common/decorators/offline.decorators';
 import { TasksService } from './tasks.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
@@ -233,6 +234,7 @@ export class TasksController {
 
   @Post()
   @CanCreateTask()
+  @Idempotent({ table: 'tasks' })
   @ApiOperation({ summary: 'Create a new task' })
   @ApiResponse({ status: 201, description: 'Task created successfully' })
   @ApiResponse({ status: 400, description: 'Bad request - validation error' })
@@ -247,6 +249,7 @@ export class TasksController {
 
   @Patch(':taskId')
   @CanUpdateTask()
+  @OptimisticLock({ table: 'tasks' })
   @ApiOperation({ summary: 'Update a task' })
   @ApiParam({ name: 'taskId', description: 'Task ID' })
   @ApiResponse({ status: 200, description: 'Task updated successfully' })

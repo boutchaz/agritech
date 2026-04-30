@@ -15,6 +15,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RequireModule } from '../../common/decorators/require-module.decorator';
 import { OrganizationGuard } from '../../common/guards/organization.guard';
 import { ModuleEntitlementGuard } from '../../common/guards/module-entitlement.guard';
+import { Idempotent, OptimisticLock } from '../../common/decorators/offline.decorators';
 import { HarvestsService } from './harvests.service';
 import { CreateHarvestDto } from './dto/create-harvest.dto';
 import { UpdateHarvestDto } from './dto/update-harvest.dto';
@@ -88,6 +89,7 @@ export class HarvestsController {
   }
 
   @Post()
+  @Idempotent({ table: 'harvest_records' })
   @ApiOperation({ summary: 'Create a new harvest' })
   @ApiParam({ name: 'organizationId', description: 'Organization ID' })
   @ApiResponse({ status: 201, description: 'Harvest created successfully' })
@@ -102,6 +104,7 @@ export class HarvestsController {
   }
 
   @Patch(':harvestId')
+  @OptimisticLock({ table: 'harvest_records' })
   @ApiOperation({ summary: 'Update a harvest' })
   @ApiParam({ name: 'organizationId', description: 'Organization ID' })
   @ApiParam({ name: 'harvestId', description: 'Harvest ID' })

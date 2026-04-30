@@ -17934,3 +17934,68 @@ FOR EACH ROW EXECUTE FUNCTION seed_required_modules_for_new_org();
 
 COMMENT ON FUNCTION seed_required_modules_for_new_org IS
   'Auto-activates all modules.is_required=true for newly created organizations.';
+
+-- ============================================================================
+-- OFFLINE-FIRST SUPPORT: client_id (idempotency) + version (optimistic lock) +
+-- client_created_at (skew-tolerant ordering). Phase 2 of offline-first plan.
+-- All columns are nullable and additive — safe to apply without backfill.
+-- ============================================================================
+
+-- Helper: bump version on UPDATE so optimistic lock works.
+CREATE OR REPLACE FUNCTION offline_bump_version()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.version IS NULL THEN
+    NEW.version := COALESCE(OLD.version, 1) + 1;
+  ELSIF NEW.version = OLD.version THEN
+    NEW.version := OLD.version + 1;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DO $$
+DECLARE
+  t TEXT;
+  tables TEXT[] := ARRAY[
+    'tasks', 'task_comments', 'work_records',
+    'stock_entries', 'stock_entry_items',
+    'harvest_records', 'pest_disease_reports'
+  ];
+BEGIN
+  FOREACH t IN ARRAY tables LOOP
+    -- Skip tables that don't exist in this branch
+    IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = t) THEN
+      CONTINUE;
+    END IF;
+    EXECUTE format('ALTER TABLE %I ADD COLUMN IF NOT EXISTS client_id UUID', t);
+    EXECUTE format('ALTER TABLE %I ADD COLUMN IF NOT EXISTS version INTEGER NOT NULL DEFAULT 1', t);
+    EXECUTE format('ALTER TABLE %I ADD COLUMN IF NOT EXISTS client_created_at TIMESTAMPTZ', t);
+    -- Idempotency unique index, scoped per organization, partial on non-null client_id.
+    -- Only create if the table has organization_id (all listed do).
+    IF EXISTS (
+      SELECT 1 FROM information_schema.columns
+      WHERE table_schema = 'public' AND table_name = t AND column_name = 'organization_id'
+    ) THEN
+      EXECUTE format(
+        'CREATE UNIQUE INDEX IF NOT EXISTS %I ON %I (organization_id, client_id) WHERE client_id IS NOT NULL',
+        t || '_org_client_id_uidx', t
+      );
+    END IF;
+    -- Version bump trigger
+    EXECUTE format('DROP TRIGGER IF EXISTS trg_offline_bump_version ON %I', t);
+    EXECUTE format(
+      'CREATE TRIGGER trg_offline_bump_version BEFORE UPDATE ON %I FOR EACH ROW EXECUTE FUNCTION offline_bump_version()',
+      t
+    );
+  END LOOP;
+END $$;
+
+-- Files SHA-256 dedupe (per organization).
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'file_registry') THEN
+    EXECUTE 'ALTER TABLE file_registry ADD COLUMN IF NOT EXISTS content_sha256 TEXT';
+    EXECUTE 'CREATE UNIQUE INDEX IF NOT EXISTS file_registry_org_sha256_uidx ON file_registry (organization_id, content_sha256) WHERE content_sha256 IS NOT NULL';
+  END IF;
+END $$;

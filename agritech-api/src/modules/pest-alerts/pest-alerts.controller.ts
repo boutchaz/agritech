@@ -18,6 +18,7 @@ import {
   ApiBearerAuth,
   ApiParam,
 } from '@nestjs/swagger';
+import { Idempotent, OptimisticLock } from '../../common/decorators/offline.decorators';
 import { PestAlertsService } from './pest-alerts.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { OrganizationGuard } from '../../common/guards/organization.guard';
@@ -102,6 +103,7 @@ export class PestAlertsController {
   @Post('reports')
   @UseGuards(PoliciesGuard)
   @CheckPolicies((ability: AppAbility) => ability.can(Action.Create, 'Farm'))
+  @Idempotent({ table: 'pest_disease_reports' })
   @ApiOperation({
     summary: 'Create new pest report',
     description: 'Create a new pest/disease report for a parcel',
@@ -125,6 +127,7 @@ export class PestAlertsController {
   @Patch('reports/:id')
   @UseGuards(PoliciesGuard)
   @CheckPolicies((ability: AppAbility) => ability.can(Action.Update, 'Farm'))
+  @OptimisticLock({ table: 'pest_disease_reports' })
   @ApiOperation({
     summary: 'Update pest report status',
     description: 'Update the status and treatment information of a pest/disease report',

@@ -19,6 +19,7 @@ import {
   ApiQuery,
   ApiParam
 } from '@nestjs/swagger';
+import { Idempotent, OptimisticLock } from '../../common/decorators/offline.decorators';
 import { StockEntriesService } from './stock-entries.service';
 import { CreateStockEntryDto } from './dto/create-stock-entry.dto';
 import { UpdateStockEntryDto } from './dto/update-stock-entry.dto';
@@ -448,6 +449,7 @@ export class StockEntriesController {
 
   @Post()
   @CanCreateStockEntry()
+  @Idempotent({ table: 'stock_entries' })
   @ApiOperation({ summary: 'Create a new stock entry' })
   @ApiResponse({ status: 201, description: 'Stock entry created successfully' })
   @ApiResponse({ status: 400, description: 'Bad request' })
@@ -476,6 +478,7 @@ export class StockEntriesController {
 
   @Patch(':id')
   @CanUpdateStockEntry()
+  @OptimisticLock({ table: 'stock_entries' })
   @ApiOperation({ summary: 'Update a draft stock entry' })
   @ApiParam({ name: 'id', description: 'Stock entry ID' })
   @ApiResponse({ status: 200, description: 'Stock entry updated successfully' })
