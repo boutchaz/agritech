@@ -4971,6 +4971,82 @@ CREATE INDEX IF NOT EXISTS idx_structures_org ON structures(organization_id);
 CREATE INDEX IF NOT EXISTS idx_structures_farm ON structures(farm_id);
 CREATE INDEX IF NOT EXISTS idx_structures_geom ON structures USING GIST(geom) WHERE geom IS NOT NULL;
 
+-- Equipment & Fleet Management
+CREATE TABLE IF NOT EXISTS equipment_assets (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  farm_id UUID REFERENCES farms(id) ON DELETE SET NULL,
+  name TEXT NOT NULL,
+  category TEXT NOT NULL,
+  brand TEXT,
+  model TEXT,
+  serial_number TEXT,
+  license_plate TEXT,
+  purchase_date DATE,
+  purchase_price NUMERIC(12,2),
+  current_value NUMERIC(12,2),
+  hour_meter_reading NUMERIC,
+  hour_meter_date DATE,
+  fuel_type TEXT,
+  status TEXT DEFAULT 'available',
+  assigned_to UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  insurance_expiry DATE,
+  registration_expiry DATE,
+  notes TEXT,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  CHECK (category IN ('tractor', 'harvester', 'sprayer', 'utility_vehicle', 'pump', 'small_tool', 'other')),
+  CHECK (fuel_type IS NULL OR fuel_type IN ('diesel', 'petrol', 'electric', 'other')),
+  CHECK (status IN ('available', 'in_use', 'maintenance', 'out_of_service'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_equipment_assets_org ON equipment_assets(organization_id);
+CREATE INDEX IF NOT EXISTS idx_equipment_assets_farm ON equipment_assets(farm_id);
+CREATE INDEX IF NOT EXISTS idx_equipment_assets_category ON equipment_assets(category);
+CREATE INDEX IF NOT EXISTS idx_equipment_assets_status ON equipment_assets(status);
+
+CREATE TRIGGER update_equipment_assets_updated_at
+  BEFORE UPDATE ON equipment_assets
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TABLE IF NOT EXISTS equipment_maintenance (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  equipment_id UUID NOT NULL REFERENCES equipment_assets(id) ON DELETE CASCADE,
+  type TEXT NOT NULL,
+  description TEXT,
+  cost NUMERIC(12,2),
+  maintenance_date DATE NOT NULL,
+  hour_meter_reading NUMERIC,
+  next_service_date DATE,
+  next_service_hours NUMERIC,
+  vendor TEXT,
+  vendor_invoice_number TEXT,
+  cost_center_id UUID REFERENCES cost_centers(id) ON DELETE SET NULL,
+  journal_entry_id UUID REFERENCES journal_entries(id) ON DELETE SET NULL,
+  performed_by_user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  notes TEXT,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  CHECK (type IN ('oil_change', 'repair', 'inspection', 'tire_replacement', 'battery', 'filter', 'fuel_fill', 'registration', 'insurance', 'other'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_equipment_maintenance_org ON equipment_maintenance(organization_id);
+CREATE INDEX IF NOT EXISTS idx_equipment_maintenance_equipment ON equipment_maintenance(equipment_id);
+CREATE INDEX IF NOT EXISTS idx_equipment_maintenance_date ON equipment_maintenance(maintenance_date);
+CREATE INDEX IF NOT EXISTS idx_equipment_maintenance_type ON equipment_maintenance(type);
+
+CREATE TRIGGER update_equipment_maintenance_updated_at
+  BEFORE UPDATE ON equipment_maintenance
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
+ALTER TABLE equipment_assets ENABLE ROW LEVEL SECURITY;
+ALTER TABLE equipment_maintenance ENABLE ROW LEVEL SECURITY;
+
 -- Demo data tags: marks rows seeded by demo-data service so the selective
 -- "clear demo only" cleanup can delete them without touching client data.
 -- Internal table — admin client only (no RLS policies).
@@ -7454,7 +7530,7 @@ ON CONFLICT (name) DO UPDATE SET
 DO $perms$
 DECLARE
 -- BEGIN GENERATED PERMISSION RESOURCES (do not edit by hand)
-  -- 68 resources × 5 actions = 340 permission rows
+  -- 69 resources × 5 actions = 345 permission rows
   v_resources TEXT[] := ARRAY[
     'users','organizations','roles','subscriptions',
     'farms','parcels','warehouses','infrastructure',
@@ -7472,7 +7548,8 @@ DECLARE
     'compliance_checks','reports','satellite_analyses','satellite_reports',
     'production_intelligence','dashboard','analytics','sensors',
     'costs','revenues','inventory','utilities',
-    'agronomy_sources','chat','settings','api'
+    'equipment','agronomy_sources','chat','settings',
+    'api'
   ];
 -- END GENERATED PERMISSION RESOURCES
   v_actions TEXT[] := ARRAY['read','create','update','delete','manage'];
@@ -9224,6 +9301,26 @@ CREATE POLICY "org_delete_structures" ON structures
   FOR DELETE USING (
     is_organization_member(organization_id)
   );
+
+-- Equipment Assets Policies
+DROP POLICY IF EXISTS "org_read_equipment_assets" ON equipment_assets;
+CREATE POLICY "org_read_equipment_assets" ON equipment_assets FOR SELECT USING (is_organization_member(organization_id));
+DROP POLICY IF EXISTS "org_write_equipment_assets" ON equipment_assets;
+CREATE POLICY "org_write_equipment_assets" ON equipment_assets FOR INSERT WITH CHECK (auth.uid() IS NOT NULL AND is_organization_member(organization_id));
+DROP POLICY IF EXISTS "org_update_equipment_assets" ON equipment_assets;
+CREATE POLICY "org_update_equipment_assets" ON equipment_assets FOR UPDATE USING (is_organization_member(organization_id));
+DROP POLICY IF EXISTS "org_delete_equipment_assets" ON equipment_assets;
+CREATE POLICY "org_delete_equipment_assets" ON equipment_assets FOR DELETE USING (is_organization_member(organization_id));
+
+-- Equipment Maintenance Policies
+DROP POLICY IF EXISTS "org_read_equipment_maintenance" ON equipment_maintenance;
+CREATE POLICY "org_read_equipment_maintenance" ON equipment_maintenance FOR SELECT USING (is_organization_member(organization_id));
+DROP POLICY IF EXISTS "org_write_equipment_maintenance" ON equipment_maintenance;
+CREATE POLICY "org_write_equipment_maintenance" ON equipment_maintenance FOR INSERT WITH CHECK (auth.uid() IS NOT NULL AND is_organization_member(organization_id));
+DROP POLICY IF EXISTS "org_update_equipment_maintenance" ON equipment_maintenance;
+CREATE POLICY "org_update_equipment_maintenance" ON equipment_maintenance FOR UPDATE USING (is_organization_member(organization_id));
+DROP POLICY IF EXISTS "org_delete_equipment_maintenance" ON equipment_maintenance;
+CREATE POLICY "org_delete_equipment_maintenance" ON equipment_maintenance FOR DELETE USING (is_organization_member(organization_id));
 
 -- Utilities Policies (using organization_id directly)
 DROP POLICY IF EXISTS "org_read_utilities" ON utilities;
@@ -14983,6 +15080,26 @@ CREATE POLICY "org_update_structures" ON structures
 DROP POLICY IF EXISTS "org_delete_structures" ON structures;
 CREATE POLICY "org_delete_structures" ON structures
   FOR DELETE USING (is_organization_member(organization_id));
+
+-- RLS for equipment_assets
+DROP POLICY IF EXISTS "org_read_equipment_assets" ON equipment_assets;
+CREATE POLICY "org_read_equipment_assets" ON equipment_assets FOR SELECT USING (is_organization_member(organization_id));
+DROP POLICY IF EXISTS "org_write_equipment_assets" ON equipment_assets;
+CREATE POLICY "org_write_equipment_assets" ON equipment_assets FOR INSERT WITH CHECK (is_organization_member(organization_id));
+DROP POLICY IF EXISTS "org_update_equipment_assets" ON equipment_assets;
+CREATE POLICY "org_update_equipment_assets" ON equipment_assets FOR UPDATE USING (is_organization_member(organization_id));
+DROP POLICY IF EXISTS "org_delete_equipment_assets" ON equipment_assets;
+CREATE POLICY "org_delete_equipment_assets" ON equipment_assets FOR DELETE USING (is_organization_member(organization_id));
+
+-- RLS for equipment_maintenance
+DROP POLICY IF EXISTS "org_read_equipment_maintenance" ON equipment_maintenance;
+CREATE POLICY "org_read_equipment_maintenance" ON equipment_maintenance FOR SELECT USING (is_organization_member(organization_id));
+DROP POLICY IF EXISTS "org_write_equipment_maintenance" ON equipment_maintenance;
+CREATE POLICY "org_write_equipment_maintenance" ON equipment_maintenance FOR INSERT WITH CHECK (is_organization_member(organization_id));
+DROP POLICY IF EXISTS "org_update_equipment_maintenance" ON equipment_maintenance;
+CREATE POLICY "org_update_equipment_maintenance" ON equipment_maintenance FOR UPDATE USING (is_organization_member(organization_id));
+DROP POLICY IF EXISTS "org_delete_equipment_maintenance" ON equipment_maintenance;
+CREATE POLICY "org_delete_equipment_maintenance" ON equipment_maintenance FOR DELETE USING (is_organization_member(organization_id));
 
 -- RLS for payment_records
 DROP POLICY IF EXISTS "org_read_payment_records" ON payment_records;

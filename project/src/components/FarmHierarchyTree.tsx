@@ -186,8 +186,9 @@ const FarmHierarchyTree = ({
       return newFarm as any;
     },
     onSuccess: () => {
-      // Invalidate and refetch farm hierarchy
+      // Invalidate and refetch farm hierarchy + farms list (used by dashboard onboarding gate)
       queryClient.invalidateQueries({ queryKey: ['farm-hierarchy', organizationId] });
+      queryClient.invalidateQueries({ queryKey: ['farms'] });
       reset();
     },
     onError: (error: unknown) => {

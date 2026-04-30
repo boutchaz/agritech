@@ -64,6 +64,7 @@ const FarmHierarchyManager = ({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['farm-hierarchy'] });
+      queryClient.invalidateQueries({ queryKey: ['farms'] });
       setNewFarm({
         name: '',
         location: '',

@@ -289,6 +289,7 @@ const ModernFarmHierarchy = ({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['farm-hierarchy', organizationId] });
+      queryClient.invalidateQueries({ queryKey: ['farms'] });
       reset();
       setShowAddForm(false);
     },
