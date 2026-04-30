@@ -317,6 +317,29 @@ CREATE TABLE IF NOT EXISTS organization_users (
   UNIQUE(organization_id, user_id)
 );
 
+-- Define is_organization_member() as early as possible so any RLS policy
+-- declared further down in this file can reference it. The canonical
+-- definition (with same body) is repeated near the RLS section to keep
+-- it visible to readers; CREATE OR REPLACE makes that idempotent.
+CREATE OR REPLACE FUNCTION is_organization_member(p_organization_id UUID)
+RETURNS BOOLEAN
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+SET search_path = public
+AS $$
+  SELECT CASE
+    WHEN p_organization_id IS NULL THEN false
+    ELSE EXISTS (
+      SELECT 1
+      FROM public.organization_users
+      WHERE user_id = auth.uid()
+        AND organization_id = p_organization_id
+        AND is_active = true
+    )
+  END;
+$$;
+
 CREATE INDEX IF NOT EXISTS idx_organization_users_org ON organization_users(organization_id);
 CREATE INDEX IF NOT EXISTS idx_organization_users_user ON organization_users(user_id);
 -- Composite index for OrganizationGuard: called on every authenticated request
@@ -1289,7 +1312,7 @@ CREATE TABLE IF NOT EXISTS bank_transactions (
   balance_after DECIMAL(15, 2), -- Statement-reported running balance after this line
   source TEXT NOT NULL DEFAULT 'manual' CHECK (source IN ('manual', 'csv', 'ofx', 'mt940', 'api')),
   source_batch_id UUID, -- FK to bank_statement_imports when added
-  matched_payment_id UUID REFERENCES accounting_payments(id) ON DELETE SET NULL,
+  matched_payment_id UUID, -- FK to accounting_payments added after that table is created
   reconciled_at TIMESTAMPTZ,
   reconciled_by UUID REFERENCES auth.users(id),
   notes TEXT,
@@ -1464,15 +1487,22 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- Trigger uses three flavors because TG_OP is not available in WHEN clauses.
+-- Each WHEN inspects only NEW (INSERT/UPDATE) or OLD (DELETE).
 DROP TRIGGER IF EXISTS trg_sync_invoice_credited_amount ON invoices;
-CREATE TRIGGER trg_sync_invoice_credited_amount
-  AFTER INSERT OR UPDATE OF grand_total, status, original_invoice_id, document_type OR DELETE
+DROP TRIGGER IF EXISTS trg_sync_invoice_credited_amount_iu ON invoices;
+DROP TRIGGER IF EXISTS trg_sync_invoice_credited_amount_d ON invoices;
+CREATE TRIGGER trg_sync_invoice_credited_amount_iu
+  AFTER INSERT OR UPDATE OF grand_total, status, original_invoice_id, document_type
   ON invoices
   FOR EACH ROW
-  WHEN (
-    (TG_OP = 'DELETE' AND OLD.document_type = 'credit_note' AND OLD.original_invoice_id IS NOT NULL)
-    OR (TG_OP <> 'DELETE' AND NEW.document_type = 'credit_note' AND NEW.original_invoice_id IS NOT NULL)
-  )
+  WHEN (NEW.document_type = 'credit_note' AND NEW.original_invoice_id IS NOT NULL)
+  EXECUTE FUNCTION sync_invoice_credited_amount();
+CREATE TRIGGER trg_sync_invoice_credited_amount_d
+  AFTER DELETE
+  ON invoices
+  FOR EACH ROW
+  WHEN (OLD.document_type = 'credit_note' AND OLD.original_invoice_id IS NOT NULL)
   EXECUTE FUNCTION sync_invoice_credited_amount();
 
 -- Invoice Items
@@ -1546,6 +1576,23 @@ CREATE TABLE IF NOT EXISTS payment_allocations (
 
 CREATE INDEX IF NOT EXISTS idx_payment_allocations_payment ON payment_allocations(payment_id);
 CREATE INDEX IF NOT EXISTS idx_payment_allocations_invoice ON payment_allocations(invoice_id);
+
+-- Deferred FK: bank_transactions.matched_payment_id -> accounting_payments(id)
+-- Declared inline above as a plain UUID because accounting_payments is created
+-- later in this file. Wire the FK now that both tables exist.
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.table_constraints
+    WHERE table_schema = 'public'
+      AND table_name = 'bank_transactions'
+      AND constraint_name = 'bank_transactions_matched_payment_id_fkey'
+  ) THEN
+    ALTER TABLE bank_transactions
+      ADD CONSTRAINT bank_transactions_matched_payment_id_fkey
+      FOREIGN KEY (matched_payment_id) REFERENCES accounting_payments(id) ON DELETE SET NULL;
+  END IF;
+END $$;
 
 -- Advance payment support — added after initial accounting_payments schema.
 -- An advance is a payment received/paid before the matching invoice exists.
