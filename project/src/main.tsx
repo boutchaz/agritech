@@ -2,23 +2,22 @@ import React, { useState } from 'react'
 import ReactDOM from 'react-dom/client'
 import { createRouter, RouterProvider } from '@tanstack/react-router'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { persistQueryClient } from '@tanstack/query-persist-client-core'
 import { routeTree } from './routeTree.gen'
 import { initGA } from './lib/analytics'
 import { useAuthStore, waitForHydration } from './stores/authStore'
+import { useOrganizationStore } from './stores/organizationStore'
 import { WowIntro } from './components/WowIntro'
-import { wireOfflineQueue } from './lib/offlineTaskQueue'
+import { OfflineBanner } from './components/OfflineBanner'
+import { DeadLetterReview } from './components/DeadLetterReview'
+import {
+  initOfflineRuntime,
+  createIDBPersister,
+  PERSIST_MAX_AGE_MS,
+  PERSIST_BUSTER,
+} from './lib/offline'
 import './i18n/config'
 import './index.css'
-
-// Install listeners that replay any queued clock-in/clock-out and comments
-// the moment the browser fires the 'online' event. Safe to run early —
-// idempotent and only touches localStorage on this tab.
-wireOfflineQueue((summary) => {
-  if (summary.sent > 0 || summary.remaining > 0) {
-    // eslint-disable-next-line no-console
-    console.info('[offlineQueue] flushed', summary);
-  }
-});
 
 // Initialize Locator for React DevTools debugging (development only)
 if (import.meta.env.DEV) {
@@ -27,12 +26,12 @@ if (import.meta.env.DEV) {
   });
 }
 
-// Create a client with sensible defaults
+// gcTime must be >= persister maxAge so persisted entries survive offline.
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 5 * 60 * 1000,
-      gcTime: 10 * 60 * 1000,
+      gcTime: PERSIST_MAX_AGE_MS,
       retry: 1,
       refetchOnWindowFocus: false,
       refetchOnReconnect: true,
@@ -40,8 +39,17 @@ const queryClient = new QueryClient({
   },
 })
 
-// Export queryClient for use in other modules
 export { queryClient }
+
+const persister = createIDBPersister(
+  () => useOrganizationStore.getState().currentOrganization?.id ?? null,
+)
+void persistQueryClient({
+  queryClient,
+  persister,
+  maxAge: PERSIST_MAX_AGE_MS,
+  buster: PERSIST_BUSTER,
+})
 
 // Create router context with auth
 const routerContext = {
@@ -102,6 +110,7 @@ const App = () => {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
   const isLandingPage = window.location.pathname === '/'
   const [showIntro, setShowIntro] = useState(!isAuthenticated && isLandingPage);
+  const [deadLetterOpen, setDeadLetterOpen] = useState(false);
 
   const handleIntroComplete = () => {
     setShowIntro(false);
@@ -111,6 +120,8 @@ const App = () => {
     <>
       {showIntro && <WowIntro onComplete={handleIntroComplete} />}
       <QueryClientProvider client={queryClient}>
+        <OfflineBanner onReviewDeadLetters={() => setDeadLetterOpen(true)} />
+        <DeadLetterReview open={deadLetterOpen} onOpenChange={setDeadLetterOpen} />
         <RouterProvider router={router} context={routerContext} />
       </QueryClientProvider>
     </>
@@ -119,6 +130,7 @@ const App = () => {
 
 async function init() {
   await cleanupLegacyServiceWorkers();
+  initOfflineRuntime();
 
   if (import.meta.env.PROD) {
     import('./lib/sentry').then(({ initSentry }) => initSentry(router));

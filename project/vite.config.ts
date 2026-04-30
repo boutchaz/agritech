@@ -69,14 +69,32 @@ export default defineConfig({
         // Runtime caching strategies
         runtimeCaching: [
           {
-            // API calls — network first, fall back to cache (offline support)
+            // Mutating API — Workbox Background Sync queue retries POST/PATCH/PUT/DELETE
+            // when SW is alive but app may be closed. App-level outbox is primary path.
+            urlPattern: ({ url, request }) =>
+              /^\/api\/(tasks|stock-entries|harvests|pest-alerts|files|sync)\b/.test(url.pathname) &&
+              ['POST', 'PATCH', 'PUT', 'DELETE'].includes(request.method),
+            handler: 'NetworkOnly',
+            method: 'POST',
+            options: {
+              backgroundSync: {
+                name: 'agrogina-mutations-queue',
+                options: {
+                  maxRetentionTime: 7 * 24 * 60, // 7 days in minutes
+                },
+              },
+            },
+          },
+          {
+            // Read API — NetworkFirst with 7-day fallback for offline reads.
+            // TanStack Query persister is primary; this is the SW-level safety net.
             urlPattern: /^\/api\//,
             handler: 'NetworkFirst',
             options: {
               cacheName: 'api-cache',
               expiration: {
-                maxEntries: 200,
-                maxAgeSeconds: 60 * 60, // 1 hour
+                maxEntries: 500,
+                maxAgeSeconds: 60 * 60 * 24 * 7, // 7 days
               },
               networkTimeoutSeconds: 10,
               cacheableResponse: {
