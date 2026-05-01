@@ -888,6 +888,11 @@ const Sidebar = ({
                         isActive={currentPath === "/workforce/payments"}
                       />
                     </ProtectedNavItem>
+                    <PopoverNavItem onNavigate={handleNavigation}
+                      path="/workforce/my-hr"
+                      label={t("nav.myHr", "My HR")}
+                      isActive={currentPath === "/workforce/my-hr"}
+                    />
                     <ProtectedNavItem action="read" subject="LeaveApplication">
                       <PopoverNavItem onNavigate={handleNavigation}
                         path="/workforce/leave-applications"
@@ -1097,6 +1102,15 @@ const Sidebar = ({
                           {renderText(t("nav.paymentRecords", "Payment Records"))}
                         </Button>
                       </ProtectedNavItem>
+                      <Button
+                        variant="ghost"
+                        className={getSubItemClassName(
+                          currentPath === "/workforce/my-hr",
+                        )}
+                        onClick={(e) => handleNavigation("/workforce/my-hr", e)}
+                      >
+                        {renderText(t("nav.myHr", "My HR"))}
+                      </Button>
                       <ProtectedNavItem action="read" subject="LeaveApplication">
                         <Button
                           variant="ghost"

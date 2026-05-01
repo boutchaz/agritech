@@ -191,6 +191,61 @@ export interface LeaveBalanceRow {
   period_end: string;
 }
 
+// ── My HR (self-service) ───────────────────────────────────────────
+
+export interface MyHrSummary {
+  worker: {
+    id: string;
+    first_name: string;
+    last_name: string;
+    cin: string | null;
+    worker_type: string;
+    farm_id: string | null;
+    is_active: boolean;
+    hire_date: string | null;
+    monthly_salary: number | null;
+    daily_rate: number | null;
+    is_cnss_declared: boolean | null;
+  } | null;
+  org_role: string | null;
+  leave_balances: Array<{
+    leave_type: string;
+    total_days: number;
+    used_days: number;
+    remaining_days: number;
+    period_end: string;
+  }>;
+  pending_leave: number;
+  latest_slip: {
+    id: string;
+    pay_period_start: string;
+    pay_period_end: string;
+    gross_pay: number;
+    net_pay: number;
+    status: string;
+  } | null;
+  pending_expense_claims: number;
+  expiring_qualifications: Array<{
+    id: string;
+    qualification_name: string;
+    qualification_type: string;
+    expiry_date: string;
+    is_valid: boolean;
+  }>;
+  active_appraisal: {
+    id: string;
+    status: string;
+    self_rating: number | null;
+    manager_rating: number | null;
+    cycle?: { id: string; name: string; status: string; end_date: string };
+  } | null;
+}
+
+export const myHrApi = {
+  summary: (orgId: string) =>
+    apiClient.get<MyHrSummary>(`${BASE(orgId)}/hr/me`, {}, orgId),
+};
+
 // ── Tasks Bridge ───────────────────────────────────────────────────
 
 export const hrTasksBridgeApi = {

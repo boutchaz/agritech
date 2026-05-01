@@ -2,6 +2,19 @@ import { useMemo, useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
+import { z } from 'zod';
+
+const leaveApplicationSchema = z.object({
+  worker_id: z.string().uuid({ message: 'Worker is required' }),
+  leave_type_id: z.string().uuid({ message: 'Leave type is required' }),
+  from_date: z.string().min(10, 'From date is required'),
+  to_date: z.string().min(10, 'To date is required'),
+  reason: z.string().trim().min(3, 'Reason must be at least 3 characters'),
+  half_day: z.boolean().optional(),
+  half_day_period: z.enum(['first_half', 'second_half']).optional(),
+  attachment_urls: z.array(z.string().url()).optional(),
+});
+
 import { Loader2, Check, X, Plus, Calendar as CalendarIcon } from 'lucide-react';
 import { withRouteProtection } from '@/components/authorization/withRouteProtection';
 import { useAuth } from '@/hooks/useAuth';
@@ -270,13 +283,19 @@ function ApplicationDialog({
   const workers = Array.isArray(workersQuery.data) ? workersQuery.data : [];
 
   const handleSubmit = async () => {
-    if (!draft.worker_id || !draft.leave_type_id || !draft.reason.trim()) {
-      toast.error(t('validation.allFieldsRequired', 'All fields are required'));
+    const result = leaveApplicationSchema.safeParse(draft);
+    if (!result.success) {
+      const first = result.error.issues[0];
+      toast.error(first?.message ?? t('validation.allFieldsRequired', 'All fields are required'));
+      return;
+    }
+    if (totalDays <= 0) {
+      toast.error(t('leaveApplications.invalidRange', 'To-date must be on or after from-date'));
       return;
     }
     setSubmitting(true);
     try {
-      await create.mutateAsync({ orgId, data: draft });
+      await create.mutateAsync({ orgId, data: result.data });
       toast.success(t('leaveApplications.created', 'Application submitted'));
       onClose();
     } catch (err: any) {

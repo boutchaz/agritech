@@ -17,6 +17,7 @@ import { PoliciesGuard } from '../casl/policies.guard';
 import { Action } from '../casl/action.enum';
 import { Subject } from '../casl/subject.enum';
 import { RequirePermission } from '../casl/permissions.decorator';
+import { resolveSelfScope } from '../../common/utils/self-scope';
 import { HrAdvancedService } from './hr-advanced.service';
 import { HrTasksBridgeService } from './hr-tasks-bridge.service';
 import {
@@ -38,6 +39,13 @@ export class HrAdvancedController {
     private readonly service: HrAdvancedService,
     private readonly tasksBridge: HrTasksBridgeService,
   ) {}
+
+  // ── Self-service (My HR) ──────────────────────────────────────
+  @Get('hr/me')
+  @RequirePermission(Action.Read, Subject.WORKER)
+  me(@Request() req: any, @Param('organizationId') orgId: string) {
+    return this.service.meSummary(orgId, req.user?.workerId ?? null, req.user?.orgRole ?? null);
+  }
 
   // ── Tasks Bridge ──────────────────────────────────────────────
   @Post('onboarding-records/:id/sync-tasks')
@@ -64,12 +72,20 @@ export class HrAdvancedController {
   @Get('grievances')
   @RequirePermission(Action.Read, Subject.GRIEVANCE)
   listGrievances(
+    @Request() req: any,
     @Param('organizationId') orgId: string,
     @Query('status') status?: string,
     @Query('priority') priority?: string,
     @Query('grievance_type') grievanceType?: string,
+    @Query('scope') scope?: string,
   ) {
-    return this.service.listGrievances(orgId, { status, priority, grievance_type: grievanceType });
+    const selfScope = resolveSelfScope(req.user, scope);
+    return this.service.listGrievances(orgId, {
+      status,
+      priority,
+      grievance_type: grievanceType,
+      raised_by_worker_id: selfScope.mine ? selfScope.workerId ?? '__none__' : undefined,
+    });
   }
 
   @Post('grievances')

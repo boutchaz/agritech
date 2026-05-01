@@ -18,6 +18,7 @@ import { Action } from '../casl/action.enum';
 import { Subject } from '../casl/subject.enum';
 import { RequirePermission } from '../casl/permissions.decorator';
 import { AgroHrService } from './agro-hr.service';
+import { resolveSelfScope } from '../../common/utils/self-scope';
 import {
   CreateSafetyIncidentDto,
   CreateSeasonalCampaignDto,
@@ -82,13 +83,17 @@ export class AgroHrController {
   @Get('worker-qualifications')
   @RequirePermission(Action.Read, Subject.WORKER_QUALIFICATION)
   listQualifications(
+    @Request() req: any,
     @Param('organizationId') orgId: string,
     @Query('worker_id') workerId?: string,
     @Query('expiring_within_days') expiringWithinDays?: string,
     @Query('type') type?: string,
+    @Query('scope') scope?: string,
   ) {
+    const selfScope = resolveSelfScope(req.user, scope);
+    const effectiveWorkerId = selfScope.mine ? selfScope.workerId ?? '__none__' : workerId;
     return this.service.listQualifications(orgId, {
-      worker_id: workerId,
+      worker_id: effectiveWorkerId,
       expiring_within_days: expiringWithinDays ? Number(expiringWithinDays) : undefined,
       type,
     });

@@ -133,7 +133,15 @@ export function useUpdateEnrollment() {
 
 // ── Tasks Bridge ────────────────────────────────────────────────────
 
-import { hrCalendarApi, hrTasksBridgeApi, type HrEventType } from '@/lib/api/hr-advanced';
+import { hrCalendarApi, hrTasksBridgeApi, myHrApi, type HrEventType } from '@/lib/api/hr-advanced';
+
+export function useMyHrSummary(orgId: string | null) {
+  return useQuery({
+    queryKey: orgKey(orgId, 'my-hr-summary'),
+    queryFn: () => myHrApi.summary(orgId!),
+    enabled: !!orgId,
+  });
+}
 
 export function useSyncOnboardingTasks() {
   const qc = useQueryClient();

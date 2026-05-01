@@ -16,6 +16,7 @@ import { PoliciesGuard } from '../casl/policies.guard';
 import { Action } from '../casl/action.enum';
 import { Subject } from '../casl/subject.enum';
 import { RequirePermission } from '../casl/permissions.decorator';
+import { resolveSelfScope } from '../../common/utils/self-scope';
 import { SalarySlipsService } from './salary-slips.service';
 import { GenerateSlipDto } from './dto';
 
@@ -29,15 +30,19 @@ export class SalarySlipsController {
   @Get()
   @RequirePermission(Action.Read, Subject.SALARY_SLIP)
   list(
+    @Request() req: any,
     @Param('organizationId') organizationId: string,
     @Query('worker_id') workerId?: string,
     @Query('payroll_run_id') payrollRunId?: string,
     @Query('from') from?: string,
     @Query('to') to?: string,
     @Query('status') status?: string,
+    @Query('scope') scope?: string,
   ) {
+    const selfScope = resolveSelfScope(req.user, scope);
+    const effectiveWorkerId = selfScope.mine ? selfScope.workerId ?? '__none__' : workerId;
     return this.service.list(organizationId, {
-      worker_id: workerId,
+      worker_id: effectiveWorkerId,
       payroll_run_id: payrollRunId,
       from,
       to,

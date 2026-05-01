@@ -18,6 +18,7 @@ import { Action } from '../casl/action.enum';
 import { Subject } from '../casl/subject.enum';
 import { RequirePermission } from '../casl/permissions.decorator';
 import { CaslAbilityFactory } from '../casl/casl-ability.factory';
+import { resolveSelfScope } from '../../common/utils/self-scope';
 import { LeaveApplicationsService } from './leave-applications.service';
 import { CreateLeaveApplicationDto, RejectLeaveApplicationDto } from './dto';
 
@@ -34,13 +35,23 @@ export class LeaveApplicationsController {
   @Get()
   @RequirePermission(Action.Read, Subject.LEAVE_APPLICATION)
   list(
+    @Request() req: any,
     @Param('organizationId') organizationId: string,
     @Query('worker_id') workerId?: string,
     @Query('status') status?: string,
     @Query('from') from?: string,
     @Query('to') to?: string,
+    @Query('scope') scope?: string,
   ) {
-    return this.service.list(organizationId, { worker_id: workerId, status, from, to });
+    const selfScope = resolveSelfScope(req.user, scope);
+    // Forced self-only roles override any worker_id passed by the client.
+    const effectiveWorkerId = selfScope.mine ? selfScope.workerId ?? '__none__' : workerId;
+    return this.service.list(organizationId, {
+      worker_id: effectiveWorkerId,
+      status,
+      from,
+      to,
+    });
   }
 
   @Get('calendar')

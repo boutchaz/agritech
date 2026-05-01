@@ -17,6 +17,7 @@ import { PoliciesGuard } from '../casl/policies.guard';
 import { Action } from '../casl/action.enum';
 import { Subject } from '../casl/subject.enum';
 import { RequirePermission } from '../casl/permissions.decorator';
+import { resolveSelfScope } from '../../common/utils/self-scope';
 import { PerformanceService } from './performance.service';
 import {
   CreateAppraisalCycleDto,
@@ -70,12 +71,20 @@ export class PerformanceController {
   @Get('appraisals')
   @RequirePermission(Action.Read, Subject.APPRAISAL)
   listAppraisals(
+    @Request() req: any,
     @Param('organizationId') orgId: string,
     @Query('cycle_id') cycleId?: string,
     @Query('worker_id') workerId?: string,
     @Query('status') status?: string,
+    @Query('scope') scope?: string,
   ) {
-    return this.service.listAppraisals(orgId, { cycle_id: cycleId, worker_id: workerId, status });
+    const selfScope = resolveSelfScope(req.user, scope);
+    const effectiveWorkerId = selfScope.mine ? selfScope.workerId ?? '__none__' : workerId;
+    return this.service.listAppraisals(orgId, {
+      cycle_id: cycleId,
+      worker_id: effectiveWorkerId,
+      status,
+    });
   }
 
   @Post('appraisals')
@@ -108,10 +117,14 @@ export class PerformanceController {
   @Get('performance-feedback')
   @RequirePermission(Action.Read, Subject.PERFORMANCE_FEEDBACK)
   listFeedback(
+    @Request() req: any,
     @Param('organizationId') orgId: string,
     @Query('worker_id') workerId?: string,
+    @Query('scope') scope?: string,
   ) {
-    return this.service.listFeedback(orgId, workerId);
+    const selfScope = resolveSelfScope(req.user, scope);
+    const effectiveWorkerId = selfScope.mine ? selfScope.workerId ?? '__none__' : workerId;
+    return this.service.listFeedback(orgId, effectiveWorkerId);
   }
 
   @Post('performance-feedback')

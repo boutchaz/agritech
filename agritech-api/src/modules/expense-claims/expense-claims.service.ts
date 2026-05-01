@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException, Logger } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { AccountingAutomationService } from '../journal-entries/accounting-automation.service';
 import {
@@ -118,25 +118,74 @@ export class ExpenseClaimsService {
     return data;
   }
 
-  async approveClaim(orgId: string, id: string, userId: string | null, dto: ApproveClaimDto) {
+  // Approval limit per role (MAD). org_admin/system_admin = unlimited.
+  // Above the limit, claim transitions to 'partially_approved' (needs upper-tier sign-off).
+  private static readonly APPROVAL_LIMITS: Record<string, number> = {
+    farm_manager: 5000,
+    farm_worker: 0,
+    day_laborer: 0,
+    viewer: 0,
+  };
+
+  async approveClaim(
+    orgId: string,
+    id: string,
+    userId: string | null,
+    dto: ApproveClaimDto,
+    approverRole?: string | null,
+  ) {
     const supabase = this.db.getAdminClient();
     const now = new Date().toISOString();
     const { data: existing, error: getErr } = await supabase
       .from('expense_claims')
-      .select('approval_history')
+      .select('approval_history, grand_total, status')
       .eq('organization_id', orgId)
       .eq('id', id)
       .single();
     if (getErr) throw new NotFoundException(getErr.message);
+
+    // Approval-limit gate: if approver's role has a cap and the claim
+    // exceeds it, transition to partially_approved (needs upper-tier signoff)
+    // and block JE posting until fully approved.
+    const grand = Number(existing.grand_total ?? 0);
+    const limit = approverRole
+      ? ExpenseClaimsService.APPROVAL_LIMITS[approverRole]
+      : undefined;
+    const exceedsLimit =
+      limit !== undefined && limit > 0 && grand > limit;
+    const fullyApproved =
+      !approverRole ||
+      approverRole === 'organization_admin' ||
+      approverRole === 'system_admin' ||
+      !exceedsLimit;
+    const nextStatus = fullyApproved ? 'approved' : 'partially_approved';
+
+    if (limit === 0) {
+      throw new ForbiddenException(
+        `Role '${approverRole}' is not authorized to approve expense claims.`,
+      );
+    }
+
     const history = (existing?.approval_history as unknown[]) ?? [];
     const { data, error } = await supabase
       .from('expense_claims')
       .update({
-        status: 'approved',
+        status: nextStatus,
         approved_by: userId,
         approved_at: now,
         rejection_reason: null,
-        approval_history: [...history, { action: 'approved', by: userId, at: now, notes: dto.notes }],
+        approval_history: [
+          ...history,
+          {
+            action: nextStatus === 'approved' ? 'approved' : 'tier1_approved',
+            by: userId,
+            role: approverRole ?? null,
+            at: now,
+            notes: dto.notes,
+            limit_applied: limit ?? null,
+            amount: grand,
+          },
+        ],
         updated_at: now,
       })
       .eq('organization_id', orgId)
@@ -145,8 +194,8 @@ export class ExpenseClaimsService {
       .single();
     if (error) throw new BadRequestException(error.message);
 
-    // Auto-post journal entry on approval (idempotent — only if not already posted)
-    if (data && !data.journal_entry_id) {
+    // Auto-post journal entry only when fully approved
+    if (data && nextStatus === 'approved' && !data.journal_entry_id) {
       try {
         await this.accounting.createJournalEntryFromExpenseClaim(
           orgId,

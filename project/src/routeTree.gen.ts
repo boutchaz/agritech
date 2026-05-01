@@ -87,6 +87,7 @@ import { Route as AuthenticatedworkforceWorkforceQualificationsRouteImport } fro
 import { Route as AuthenticatedworkforceWorkforcePayrollRunsRouteImport } from './routes/_authenticated/(workforce)/workforce/payroll-runs'
 import { Route as AuthenticatedworkforceWorkforcePaymentsRouteImport } from './routes/_authenticated/(workforce)/workforce/payments'
 import { Route as AuthenticatedworkforceWorkforceOnboardingRouteImport } from './routes/_authenticated/(workforce)/workforce/onboarding'
+import { Route as AuthenticatedworkforceWorkforceMyHrRouteImport } from './routes/_authenticated/(workforce)/workforce/my-hr'
 import { Route as AuthenticatedworkforceWorkforceLeaveTypesRouteImport } from './routes/_authenticated/(workforce)/workforce/leave-types'
 import { Route as AuthenticatedworkforceWorkforceLeaveApplicationsRouteImport } from './routes/_authenticated/(workforce)/workforce/leave-applications'
 import { Route as AuthenticatedworkforceWorkforceLeaveAllocationsRouteImport } from './routes/_authenticated/(workforce)/workforce/leave-allocations'
@@ -646,6 +647,12 @@ const AuthenticatedworkforceWorkforceOnboardingRoute =
   AuthenticatedworkforceWorkforceOnboardingRouteImport.update({
     id: '/(workforce)/workforce/onboarding',
     path: '/workforce/onboarding',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedworkforceWorkforceMyHrRoute =
+  AuthenticatedworkforceWorkforceMyHrRouteImport.update({
+    id: '/(workforce)/workforce/my-hr',
+    path: '/workforce/my-hr',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedworkforceWorkforceLeaveTypesRoute =
@@ -1483,6 +1490,7 @@ export interface FileRoutesByFullPath {
   '/workforce/leave-allocations': typeof AuthenticatedworkforceWorkforceLeaveAllocationsRoute
   '/workforce/leave-applications': typeof AuthenticatedworkforceWorkforceLeaveApplicationsRoute
   '/workforce/leave-types': typeof AuthenticatedworkforceWorkforceLeaveTypesRoute
+  '/workforce/my-hr': typeof AuthenticatedworkforceWorkforceMyHrRoute
   '/workforce/onboarding': typeof AuthenticatedworkforceWorkforceOnboardingRoute
   '/workforce/payments': typeof AuthenticatedworkforceWorkforcePaymentsRoute
   '/workforce/payroll-runs': typeof AuthenticatedworkforceWorkforcePayrollRunsRoute
@@ -1671,6 +1679,7 @@ export interface FileRoutesByTo {
   '/workforce/leave-allocations': typeof AuthenticatedworkforceWorkforceLeaveAllocationsRoute
   '/workforce/leave-applications': typeof AuthenticatedworkforceWorkforceLeaveApplicationsRoute
   '/workforce/leave-types': typeof AuthenticatedworkforceWorkforceLeaveTypesRoute
+  '/workforce/my-hr': typeof AuthenticatedworkforceWorkforceMyHrRoute
   '/workforce/onboarding': typeof AuthenticatedworkforceWorkforceOnboardingRoute
   '/workforce/payments': typeof AuthenticatedworkforceWorkforcePaymentsRoute
   '/workforce/payroll-runs': typeof AuthenticatedworkforceWorkforcePayrollRunsRoute
@@ -1864,6 +1873,7 @@ export interface FileRoutesById {
   '/_authenticated/(workforce)/workforce/leave-allocations': typeof AuthenticatedworkforceWorkforceLeaveAllocationsRoute
   '/_authenticated/(workforce)/workforce/leave-applications': typeof AuthenticatedworkforceWorkforceLeaveApplicationsRoute
   '/_authenticated/(workforce)/workforce/leave-types': typeof AuthenticatedworkforceWorkforceLeaveTypesRoute
+  '/_authenticated/(workforce)/workforce/my-hr': typeof AuthenticatedworkforceWorkforceMyHrRoute
   '/_authenticated/(workforce)/workforce/onboarding': typeof AuthenticatedworkforceWorkforceOnboardingRoute
   '/_authenticated/(workforce)/workforce/payments': typeof AuthenticatedworkforceWorkforcePaymentsRoute
   '/_authenticated/(workforce)/workforce/payroll-runs': typeof AuthenticatedworkforceWorkforcePayrollRunsRoute
@@ -2060,6 +2070,7 @@ export interface FileRouteTypes {
     | '/workforce/leave-allocations'
     | '/workforce/leave-applications'
     | '/workforce/leave-types'
+    | '/workforce/my-hr'
     | '/workforce/onboarding'
     | '/workforce/payments'
     | '/workforce/payroll-runs'
@@ -2248,6 +2259,7 @@ export interface FileRouteTypes {
     | '/workforce/leave-allocations'
     | '/workforce/leave-applications'
     | '/workforce/leave-types'
+    | '/workforce/my-hr'
     | '/workforce/onboarding'
     | '/workforce/payments'
     | '/workforce/payroll-runs'
@@ -2440,6 +2452,7 @@ export interface FileRouteTypes {
     | '/_authenticated/(workforce)/workforce/leave-allocations'
     | '/_authenticated/(workforce)/workforce/leave-applications'
     | '/_authenticated/(workforce)/workforce/leave-types'
+    | '/_authenticated/(workforce)/workforce/my-hr'
     | '/_authenticated/(workforce)/workforce/onboarding'
     | '/_authenticated/(workforce)/workforce/payments'
     | '/_authenticated/(workforce)/workforce/payroll-runs'
@@ -3056,6 +3069,13 @@ declare module '@tanstack/react-router' {
       path: '/workforce/onboarding'
       fullPath: '/workforce/onboarding'
       preLoaderRoute: typeof AuthenticatedworkforceWorkforceOnboardingRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/(workforce)/workforce/my-hr': {
+      id: '/_authenticated/(workforce)/workforce/my-hr'
+      path: '/workforce/my-hr'
+      fullPath: '/workforce/my-hr'
+      preLoaderRoute: typeof AuthenticatedworkforceWorkforceMyHrRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/(workforce)/workforce/leave-types': {
@@ -4377,6 +4397,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedworkforceWorkforceLeaveAllocationsRoute: typeof AuthenticatedworkforceWorkforceLeaveAllocationsRoute
   AuthenticatedworkforceWorkforceLeaveApplicationsRoute: typeof AuthenticatedworkforceWorkforceLeaveApplicationsRoute
   AuthenticatedworkforceWorkforceLeaveTypesRoute: typeof AuthenticatedworkforceWorkforceLeaveTypesRoute
+  AuthenticatedworkforceWorkforceMyHrRoute: typeof AuthenticatedworkforceWorkforceMyHrRoute
   AuthenticatedworkforceWorkforceOnboardingRoute: typeof AuthenticatedworkforceWorkforceOnboardingRoute
   AuthenticatedworkforceWorkforcePaymentsRoute: typeof AuthenticatedworkforceWorkforcePaymentsRoute
   AuthenticatedworkforceWorkforcePayrollRunsRoute: typeof AuthenticatedworkforceWorkforcePayrollRunsRoute
@@ -4486,6 +4507,8 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
     AuthenticatedworkforceWorkforceLeaveApplicationsRoute,
   AuthenticatedworkforceWorkforceLeaveTypesRoute:
     AuthenticatedworkforceWorkforceLeaveTypesRoute,
+  AuthenticatedworkforceWorkforceMyHrRoute:
+    AuthenticatedworkforceWorkforceMyHrRoute,
   AuthenticatedworkforceWorkforceOnboardingRoute:
     AuthenticatedworkforceWorkforceOnboardingRoute,
   AuthenticatedworkforceWorkforcePaymentsRoute:

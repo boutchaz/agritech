@@ -3,7 +3,23 @@ import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { Loader2, Plus, Check, X, Trash2, Receipt } from 'lucide-react';
+import { z } from 'zod';
 import { HrPageHeader } from '@/components/HrPageHeader';
+
+const expenseItemSchema = z.object({
+  description: z.string().trim().min(1, 'Item description is required'),
+  amount: z.number().positive('Amount must be > 0'),
+  tax: z.number().min(0).optional(),
+});
+
+const expenseClaimSchema = z.object({
+  worker_id: z.string().uuid({ message: 'Worker is required' }),
+  farm_id: z.string().uuid().optional(),
+  title: z.string().trim().min(3, 'Title must be at least 3 characters'),
+  description: z.string().optional(),
+  expense_date: z.string().min(10, 'Expense date is required'),
+  items: z.array(expenseItemSchema).min(1, 'Add at least one line item'),
+});
 import { withRouteProtection } from '@/components/authorization/withRouteProtection';
 import { useAuth } from '@/hooks/useAuth';
 import { useFarms } from '@/hooks/useParcelsQuery';
@@ -265,14 +281,23 @@ function ClaimDialog({
   const totalTax = draft.items.reduce((acc, it: any) => acc + Number(it.tax || 0), 0);
 
   const handleSubmit = async () => {
-    if (!draft.worker_id || !draft.title.trim() || draft.items.length === 0) {
-      toast.error(t('expenses.validationFailed', 'Worker, title and at least one item required'));
+    const candidate = {
+      ...draft,
+      items: draft.items.map((it: any) => ({
+        description: it.description ?? '',
+        amount: Number(it.amount ?? 0),
+        tax: Number(it.tax ?? 0),
+      })),
+    };
+    const result = expenseClaimSchema.safeParse(candidate);
+    if (!result.success) {
+      toast.error(result.error.issues[0]?.message ?? t('expenses.validationFailed', 'Validation failed'));
       return;
     }
     setSubmitting(true);
     try {
       await onSubmit({
-        ...draft,
+        ...result.data,
         total_amount: totalAmount,
         total_tax: totalTax,
         grand_total: totalAmount + totalTax,

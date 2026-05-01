@@ -17,6 +17,7 @@ import { PoliciesGuard } from '../casl/policies.guard';
 import { Action } from '../casl/action.enum';
 import { Subject } from '../casl/subject.enum';
 import { RequirePermission } from '../casl/permissions.decorator';
+import { resolveSelfScope } from '../../common/utils/self-scope';
 import { ExpenseClaimsService } from './expense-claims.service';
 import {
   ApproveClaimDto,
@@ -67,13 +68,22 @@ export class ExpenseClaimsController {
   @Get('expense-claims')
   @RequirePermission(Action.Read, Subject.EXPENSE_CLAIM)
   listClaims(
+    @Request() req: any,
     @Param('organizationId') orgId: string,
     @Query('worker_id') workerId?: string,
     @Query('status') status?: string,
     @Query('from') from?: string,
     @Query('to') to?: string,
+    @Query('scope') scope?: string,
   ) {
-    return this.service.listClaims(orgId, { worker_id: workerId, status, from, to });
+    const selfScope = resolveSelfScope(req.user, scope);
+    const effectiveWorkerId = selfScope.mine ? selfScope.workerId ?? '__none__' : workerId;
+    return this.service.listClaims(orgId, {
+      worker_id: effectiveWorkerId,
+      status,
+      from,
+      to,
+    });
   }
 
   @Post('expense-claims')
@@ -104,7 +114,13 @@ export class ExpenseClaimsController {
     @Param('id') id: string,
     @Body() dto: ApproveClaimDto,
   ) {
-    return this.service.approveClaim(orgId, id, req.user?.id ?? null, dto);
+    return this.service.approveClaim(
+      orgId,
+      id,
+      req.user?.id ?? null,
+      dto,
+      req.user?.orgRole ?? null,
+    );
   }
 
   @Put('expense-claims/:id/reject')

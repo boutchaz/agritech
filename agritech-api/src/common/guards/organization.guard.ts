@@ -7,13 +7,8 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { DatabaseService } from '../../modules/database/database.service';
+import { SKIP_ORGANIZATION_GUARD_KEY } from '../decorators/skip-organization-guard.decorator';
 
-/**
- * Guard to ensure:
- * 1. Request includes an organizationId
- * 2. User is a member of that organization
- * 3. User has the required role level (if specified)
- */
 @Injectable()
 export class OrganizationGuard implements CanActivate {
   constructor(
@@ -22,13 +17,21 @@ export class OrganizationGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    // Check if route is marked as public
     const isPublic = this.reflector.getAllAndOverride<boolean>('isPublic', [
       context.getHandler(),
       context.getClass(),
     ]);
 
     if (isPublic) {
+      return true;
+    }
+
+    const skipOrgGuard = this.reflector.getAllAndOverride<boolean>(SKIP_ORGANIZATION_GUARD_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
+
+    if (skipOrgGuard) {
       return true;
     }
 
@@ -109,12 +112,12 @@ export class OrganizationGuard implements CanActivate {
 
     // Attach organization info to request for later use
     request.organizationId = organizationId;
-    
+
     // Also attach to user object for convenience
     if (!user.organizationId) {
       user.organizationId = organizationId;
     }
-    
+
     // Also set userId for convenience (if not already set)
     if (!user.userId && user.id) {
       user.userId = user.id;
@@ -124,7 +127,40 @@ export class OrganizationGuard implements CanActivate {
       user.sub = user.id;
     }
 
+    // Attach orgRole + workerId for downstream services to branch on
+    // (e.g. self-service scoping in HR endpoints).
+    const ctx = await this.loadOrgContext(user.id, organizationId);
+    user.orgRole = ctx.orgRole;
+    user.workerId = ctx.workerId;
+
     return true;
+  }
+
+  private async loadOrgContext(
+    userId: string,
+    organizationId: string,
+  ): Promise<{ orgRole: string | null; workerId: string | null }> {
+    const client = this.databaseService.getAdminClient();
+    const [{ data: ouRow }, { data: workerRow }] = await Promise.all([
+      client
+        .from('organization_users')
+        .select('roles(name)')
+        .eq('user_id', userId)
+        .eq('organization_id', organizationId)
+        .eq('is_active', true)
+        .maybeSingle(),
+      client
+        .from('workers')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('organization_id', organizationId)
+        .is('deleted_at', null)
+        .maybeSingle(),
+    ]);
+    return {
+      orgRole: ((ouRow as any)?.roles?.name as string) ?? null,
+      workerId: (workerRow as any)?.id ?? null,
+    };
   }
 
   /**

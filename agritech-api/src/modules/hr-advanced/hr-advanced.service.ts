@@ -17,7 +17,12 @@ export class HrAdvancedService {
   // ── Grievances ────────────────────────────────────────────────
   async listGrievances(
     orgId: string,
-    filters: { status?: string; priority?: string; grievance_type?: string },
+    filters: {
+      status?: string;
+      priority?: string;
+      grievance_type?: string;
+      raised_by_worker_id?: string;
+    },
   ) {
     const supabase = this.db.getAdminClient();
     let q = supabase
@@ -28,9 +33,14 @@ export class HrAdvancedService {
     if (filters.status) q = q.eq('status', filters.status);
     if (filters.priority) q = q.eq('priority', filters.priority);
     if (filters.grievance_type) q = q.eq('grievance_type', filters.grievance_type);
+    if (filters.raised_by_worker_id) q = q.eq('raised_by_worker_id', filters.raised_by_worker_id);
     const { data, error } = await q;
     if (error) throw new BadRequestException(error.message);
-    return data ?? [];
+    // Strip raiser identity on anonymous grievances (defence-in-depth — RLS
+    // already controls access but admins listing should still not see name).
+    return (data ?? []).map((g: any) =>
+      g.is_anonymous ? { ...g, raised_by: null, raised_by_worker_id: null } : g,
+    );
   }
 
   async createGrievance(orgId: string, dto: CreateGrievanceDto) {
@@ -170,6 +180,91 @@ export class HrAdvancedService {
     if (error) throw new BadRequestException(error.message);
     if (!data) throw new NotFoundException();
     return data;
+  }
+
+  // ── Self-Service Summary ──────────────────────────────────────
+  async meSummary(orgId: string, workerId: string | null, orgRole: string | null) {
+    const supabase = this.db.getAdminClient();
+    if (!workerId) {
+      return {
+        worker: null,
+        org_role: orgRole,
+        leave_balances: [],
+        pending_leave: 0,
+        latest_slip: null,
+        pending_expense_claims: 0,
+        expiring_qualifications: [],
+        active_appraisal: null,
+      };
+    }
+
+    const today = new Date().toISOString().slice(0, 10);
+    const in30 = new Date();
+    in30.setDate(in30.getDate() + 30);
+    const in30Str = in30.toISOString().slice(0, 10);
+
+    const [
+      worker,
+      balances,
+      leaves,
+      slip,
+      claims,
+      quals,
+      appraisal,
+    ] = await Promise.all([
+      supabase
+        .from('workers')
+        .select('id, first_name, last_name, cin, worker_type, farm_id, is_active, hire_date, monthly_salary, daily_rate, is_cnss_declared')
+        .eq('id', workerId)
+        .single(),
+      supabase
+        .from('leave_balance_summary')
+        .select('*')
+        .eq('worker_id', workerId),
+      supabase
+        .from('leave_applications')
+        .select('id', { count: 'exact', head: true })
+        .eq('worker_id', workerId)
+        .eq('status', 'pending'),
+      supabase
+        .from('salary_slips')
+        .select('*')
+        .eq('worker_id', workerId)
+        .order('pay_period_end', { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      supabase
+        .from('expense_claims')
+        .select('id', { count: 'exact', head: true })
+        .eq('worker_id', workerId)
+        .in('status', ['pending', 'partially_approved']),
+      supabase
+        .from('worker_qualifications')
+        .select('id, qualification_name, qualification_type, expiry_date, is_valid')
+        .eq('worker_id', workerId)
+        .lte('expiry_date', in30Str)
+        .gte('expiry_date', today)
+        .order('expiry_date', { ascending: true }),
+      supabase
+        .from('appraisals')
+        .select('*, cycle:appraisal_cycles(id, name, status, end_date)')
+        .eq('worker_id', workerId)
+        .neq('status', 'completed')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+    ]);
+
+    return {
+      worker: worker.data ?? null,
+      org_role: orgRole,
+      leave_balances: balances.data ?? [],
+      pending_leave: leaves.count ?? 0,
+      latest_slip: slip.data ?? null,
+      pending_expense_claims: claims.count ?? 0,
+      expiring_qualifications: quals.data ?? [],
+      active_appraisal: appraisal.data ?? null,
+    };
   }
 
   // ── Analytics Views ───────────────────────────────────────────
