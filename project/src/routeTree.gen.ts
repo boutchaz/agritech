@@ -50,6 +50,7 @@ import { Route as AuthenticatedmiscNotificationsRouteImport } from './routes/_au
 import { Route as AuthenticatedmiscMarketplaceRouteImport } from './routes/_authenticated/(misc)/marketplace'
 import { Route as AuthenticatedmiscLabServicesRouteImport } from './routes/_authenticated/(misc)/lab-services'
 import { Route as AuthenticatedmiscInfrastructureRouteImport } from './routes/_authenticated/(misc)/infrastructure'
+import { Route as AuthenticatedmiscEquipmentRouteImport } from './routes/_authenticated/(misc)/equipment'
 import { Route as AuthenticatedinventoryStockRouteImport } from './routes/_authenticated/(inventory)/stock'
 import { Route as AuthenticatedinventoryReceptionBatchesRouteImport } from './routes/_authenticated/(inventory)/reception-batches'
 import { Route as AuthenticatedinventoryInventoryRouteImport } from './routes/_authenticated/(inventory)/inventory'
@@ -91,6 +92,7 @@ import { Route as AuthenticatedsettingsSettingsOrganizationRouteImport } from '.
 import { Route as AuthenticatedsettingsSettingsOfflineRouteImport } from './routes/_authenticated/(settings)/settings.offline'
 import { Route as AuthenticatedsettingsSettingsModulesRouteImport } from './routes/_authenticated/(settings)/settings.modules'
 import { Route as AuthenticatedsettingsSettingsLegalRouteImport } from './routes/_authenticated/(settings)/settings.legal'
+import { Route as AuthenticatedsettingsSettingsHrComplianceRouteImport } from './routes/_authenticated/(settings)/settings.hr-compliance'
 import { Route as AuthenticatedsettingsSettingsFilesRouteImport } from './routes/_authenticated/(settings)/settings.files'
 import { Route as AuthenticatedsettingsSettingsDocumentsRouteImport } from './routes/_authenticated/(settings)/settings.documents'
 import { Route as AuthenticatedsettingsSettingsDashboardRouteImport } from './routes/_authenticated/(settings)/settings.dashboard'
@@ -406,6 +408,12 @@ const AuthenticatedmiscInfrastructureRoute =
     path: '/infrastructure',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedmiscEquipmentRoute =
+  AuthenticatedmiscEquipmentRouteImport.update({
+    id: '/(misc)/equipment',
+    path: '/equipment',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedinventoryStockRoute =
   AuthenticatedinventoryStockRouteImport.update({
     id: '/(inventory)/stock',
@@ -645,6 +653,12 @@ const AuthenticatedsettingsSettingsLegalRoute =
   AuthenticatedsettingsSettingsLegalRouteImport.update({
     id: '/legal',
     path: '/legal',
+    getParentRoute: () => AuthenticatedsettingsSettingsRoute,
+  } as any)
+const AuthenticatedsettingsSettingsHrComplianceRoute =
+  AuthenticatedsettingsSettingsHrComplianceRouteImport.update({
+    id: '/hr-compliance',
+    path: '/hr-compliance',
     getParentRoute: () => AuthenticatedsettingsSettingsRoute,
   } as any)
 const AuthenticatedsettingsSettingsFilesRoute =
@@ -1196,6 +1210,7 @@ export interface FileRoutesByFullPath {
   '/inventory': typeof AuthenticatedinventoryInventoryRouteWithChildren
   '/reception-batches': typeof AuthenticatedinventoryReceptionBatchesRoute
   '/stock': typeof AuthenticatedinventoryStockRouteWithChildren
+  '/equipment': typeof AuthenticatedmiscEquipmentRoute
   '/infrastructure': typeof AuthenticatedmiscInfrastructureRoute
   '/lab-services': typeof AuthenticatedmiscLabServicesRoute
   '/marketplace': typeof AuthenticatedmiscMarketplaceRouteWithChildren
@@ -1279,6 +1294,7 @@ export interface FileRoutesByFullPath {
   '/settings/dashboard': typeof AuthenticatedsettingsSettingsDashboardRoute
   '/settings/documents': typeof AuthenticatedsettingsSettingsDocumentsRoute
   '/settings/files': typeof AuthenticatedsettingsSettingsFilesRoute
+  '/settings/hr-compliance': typeof AuthenticatedsettingsSettingsHrComplianceRoute
   '/settings/legal': typeof AuthenticatedsettingsSettingsLegalRoute
   '/settings/modules': typeof AuthenticatedsettingsSettingsModulesRoute
   '/settings/offline': typeof AuthenticatedsettingsSettingsOfflineRoute
@@ -1362,6 +1378,7 @@ export interface FileRoutesByTo {
   '/live-dashboard': typeof AuthenticatedcoreLiveDashboardRoute
   '/inventory': typeof AuthenticatedinventoryInventoryRouteWithChildren
   '/reception-batches': typeof AuthenticatedinventoryReceptionBatchesRoute
+  '/equipment': typeof AuthenticatedmiscEquipmentRoute
   '/infrastructure': typeof AuthenticatedmiscInfrastructureRoute
   '/lab-services': typeof AuthenticatedmiscLabServicesRoute
   '/marketplace': typeof AuthenticatedmiscMarketplaceRouteWithChildren
@@ -1442,6 +1459,7 @@ export interface FileRoutesByTo {
   '/settings/dashboard': typeof AuthenticatedsettingsSettingsDashboardRoute
   '/settings/documents': typeof AuthenticatedsettingsSettingsDocumentsRoute
   '/settings/files': typeof AuthenticatedsettingsSettingsFilesRoute
+  '/settings/hr-compliance': typeof AuthenticatedsettingsSettingsHrComplianceRoute
   '/settings/legal': typeof AuthenticatedsettingsSettingsLegalRoute
   '/settings/modules': typeof AuthenticatedsettingsSettingsModulesRoute
   '/settings/offline': typeof AuthenticatedsettingsSettingsOfflineRoute
@@ -1527,6 +1545,7 @@ export interface FileRoutesById {
   '/_authenticated/(inventory)/inventory': typeof AuthenticatedinventoryInventoryRouteWithChildren
   '/_authenticated/(inventory)/reception-batches': typeof AuthenticatedinventoryReceptionBatchesRoute
   '/_authenticated/(inventory)/stock': typeof AuthenticatedinventoryStockRouteWithChildren
+  '/_authenticated/(misc)/equipment': typeof AuthenticatedmiscEquipmentRoute
   '/_authenticated/(misc)/infrastructure': typeof AuthenticatedmiscInfrastructureRoute
   '/_authenticated/(misc)/lab-services': typeof AuthenticatedmiscLabServicesRoute
   '/_authenticated/(misc)/marketplace': typeof AuthenticatedmiscMarketplaceRouteWithChildren
@@ -1610,6 +1629,7 @@ export interface FileRoutesById {
   '/_authenticated/(settings)/settings/dashboard': typeof AuthenticatedsettingsSettingsDashboardRoute
   '/_authenticated/(settings)/settings/documents': typeof AuthenticatedsettingsSettingsDocumentsRoute
   '/_authenticated/(settings)/settings/files': typeof AuthenticatedsettingsSettingsFilesRoute
+  '/_authenticated/(settings)/settings/hr-compliance': typeof AuthenticatedsettingsSettingsHrComplianceRoute
   '/_authenticated/(settings)/settings/legal': typeof AuthenticatedsettingsSettingsLegalRoute
   '/_authenticated/(settings)/settings/modules': typeof AuthenticatedsettingsSettingsModulesRoute
   '/_authenticated/(settings)/settings/offline': typeof AuthenticatedsettingsSettingsOfflineRoute
@@ -1698,6 +1718,7 @@ export interface FileRouteTypes {
     | '/inventory'
     | '/reception-batches'
     | '/stock'
+    | '/equipment'
     | '/infrastructure'
     | '/lab-services'
     | '/marketplace'
@@ -1781,6 +1802,7 @@ export interface FileRouteTypes {
     | '/settings/dashboard'
     | '/settings/documents'
     | '/settings/files'
+    | '/settings/hr-compliance'
     | '/settings/legal'
     | '/settings/modules'
     | '/settings/offline'
@@ -1864,6 +1886,7 @@ export interface FileRouteTypes {
     | '/live-dashboard'
     | '/inventory'
     | '/reception-batches'
+    | '/equipment'
     | '/infrastructure'
     | '/lab-services'
     | '/marketplace'
@@ -1944,6 +1967,7 @@ export interface FileRouteTypes {
     | '/settings/dashboard'
     | '/settings/documents'
     | '/settings/files'
+    | '/settings/hr-compliance'
     | '/settings/legal'
     | '/settings/modules'
     | '/settings/offline'
@@ -2028,6 +2052,7 @@ export interface FileRouteTypes {
     | '/_authenticated/(inventory)/inventory'
     | '/_authenticated/(inventory)/reception-batches'
     | '/_authenticated/(inventory)/stock'
+    | '/_authenticated/(misc)/equipment'
     | '/_authenticated/(misc)/infrastructure'
     | '/_authenticated/(misc)/lab-services'
     | '/_authenticated/(misc)/marketplace'
@@ -2111,6 +2136,7 @@ export interface FileRouteTypes {
     | '/_authenticated/(settings)/settings/dashboard'
     | '/_authenticated/(settings)/settings/documents'
     | '/_authenticated/(settings)/settings/files'
+    | '/_authenticated/(settings)/settings/hr-compliance'
     | '/_authenticated/(settings)/settings/legal'
     | '/_authenticated/(settings)/settings/modules'
     | '/_authenticated/(settings)/settings/offline'
@@ -2474,6 +2500,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedmiscInfrastructureRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/(misc)/equipment': {
+      id: '/_authenticated/(misc)/equipment'
+      path: '/equipment'
+      fullPath: '/equipment'
+      preLoaderRoute: typeof AuthenticatedmiscEquipmentRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/(inventory)/stock': {
       id: '/_authenticated/(inventory)/stock'
       path: '/stock'
@@ -2759,6 +2792,13 @@ declare module '@tanstack/react-router' {
       path: '/legal'
       fullPath: '/settings/legal'
       preLoaderRoute: typeof AuthenticatedsettingsSettingsLegalRouteImport
+      parentRoute: typeof AuthenticatedsettingsSettingsRoute
+    }
+    '/_authenticated/(settings)/settings/hr-compliance': {
+      id: '/_authenticated/(settings)/settings/hr-compliance'
+      path: '/hr-compliance'
+      fullPath: '/settings/hr-compliance'
+      preLoaderRoute: typeof AuthenticatedsettingsSettingsHrComplianceRouteImport
       parentRoute: typeof AuthenticatedsettingsSettingsRoute
     }
     '/_authenticated/(settings)/settings/files': {
@@ -3705,6 +3745,7 @@ interface AuthenticatedsettingsSettingsRouteChildren {
   AuthenticatedsettingsSettingsDashboardRoute: typeof AuthenticatedsettingsSettingsDashboardRoute
   AuthenticatedsettingsSettingsDocumentsRoute: typeof AuthenticatedsettingsSettingsDocumentsRoute
   AuthenticatedsettingsSettingsFilesRoute: typeof AuthenticatedsettingsSettingsFilesRoute
+  AuthenticatedsettingsSettingsHrComplianceRoute: typeof AuthenticatedsettingsSettingsHrComplianceRoute
   AuthenticatedsettingsSettingsLegalRoute: typeof AuthenticatedsettingsSettingsLegalRoute
   AuthenticatedsettingsSettingsModulesRoute: typeof AuthenticatedsettingsSettingsModulesRoute
   AuthenticatedsettingsSettingsOfflineRoute: typeof AuthenticatedsettingsSettingsOfflineRoute
@@ -3736,6 +3777,8 @@ const AuthenticatedsettingsSettingsRouteChildren: AuthenticatedsettingsSettingsR
       AuthenticatedsettingsSettingsDocumentsRoute,
     AuthenticatedsettingsSettingsFilesRoute:
       AuthenticatedsettingsSettingsFilesRoute,
+    AuthenticatedsettingsSettingsHrComplianceRoute:
+      AuthenticatedsettingsSettingsHrComplianceRoute,
     AuthenticatedsettingsSettingsLegalRoute:
       AuthenticatedsettingsSettingsLegalRoute,
     AuthenticatedsettingsSettingsModulesRoute:
@@ -3817,6 +3860,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedinventoryInventoryRoute: typeof AuthenticatedinventoryInventoryRouteWithChildren
   AuthenticatedinventoryReceptionBatchesRoute: typeof AuthenticatedinventoryReceptionBatchesRoute
   AuthenticatedinventoryStockRoute: typeof AuthenticatedinventoryStockRouteWithChildren
+  AuthenticatedmiscEquipmentRoute: typeof AuthenticatedmiscEquipmentRoute
   AuthenticatedmiscInfrastructureRoute: typeof AuthenticatedmiscInfrastructureRoute
   AuthenticatedmiscLabServicesRoute: typeof AuthenticatedmiscLabServicesRoute
   AuthenticatedmiscMarketplaceRoute: typeof AuthenticatedmiscMarketplaceRouteWithChildren
@@ -3874,6 +3918,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
     AuthenticatedinventoryReceptionBatchesRoute,
   AuthenticatedinventoryStockRoute:
     AuthenticatedinventoryStockRouteWithChildren,
+  AuthenticatedmiscEquipmentRoute: AuthenticatedmiscEquipmentRoute,
   AuthenticatedmiscInfrastructureRoute: AuthenticatedmiscInfrastructureRoute,
   AuthenticatedmiscLabServicesRoute: AuthenticatedmiscLabServicesRoute,
   AuthenticatedmiscMarketplaceRoute:

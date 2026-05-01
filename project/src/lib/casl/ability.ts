@@ -30,6 +30,9 @@ export type Subject =
   | 'Harvest' | 'ReceptionBatch' | 'QualityControl'
   // Compliance subjects
   | 'Certification' | 'ComplianceCheck'
+  // HR subjects
+  | 'HrCompliance' | 'LeaveType' | 'LeaveAllocation' | 'LeaveApplication' | 'Holiday'
+  | 'SalaryStructure' | 'SalarySlip' | 'PayrollRun' | 'WorkerDocument'
   | 'all';
 
 // Define ability type
