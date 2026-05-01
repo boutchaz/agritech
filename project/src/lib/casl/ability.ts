@@ -37,6 +37,7 @@ export type Subject =
   | 'SeasonalCampaign' | 'WorkerQualification' | 'SafetyIncident' | 'WorkerTransport'
   | 'ExpenseClaim' | 'ExpenseCategory' | 'JobOpening' | 'JobApplicant' | 'Interview'
   | 'AppraisalCycle' | 'Appraisal' | 'PerformanceFeedback'
+  | 'Grievance' | 'TrainingProgram' | 'TrainingEnrollment'
   | 'all';
 
 // Define ability type

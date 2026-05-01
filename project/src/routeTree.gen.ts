@@ -74,6 +74,7 @@ import { Route as AuthenticatedinventoryStockIndexRouteImport } from './routes/_
 import { Route as AuthenticatedaccountingAccountingIndexRouteImport } from './routes/_authenticated/(accounting)/accounting/index'
 import { Route as AuthenticatedComplianceCertificationsCertIdRouteImport } from './routes/_authenticated/compliance/certifications/$certId'
 import { Route as AuthenticatedworkforceWorkforceWorkerTransportRouteImport } from './routes/_authenticated/(workforce)/workforce/worker-transport'
+import { Route as AuthenticatedworkforceWorkforceTrainingRouteImport } from './routes/_authenticated/(workforce)/workforce/training'
 import { Route as AuthenticatedworkforceWorkforceShiftsRouteImport } from './routes/_authenticated/(workforce)/workforce/shifts'
 import { Route as AuthenticatedworkforceWorkforceSeparationsRouteImport } from './routes/_authenticated/(workforce)/workforce/separations'
 import { Route as AuthenticatedworkforceWorkforceSeasonalCampaignsRouteImport } from './routes/_authenticated/(workforce)/workforce/seasonal-campaigns'
@@ -89,7 +90,9 @@ import { Route as AuthenticatedworkforceWorkforceOnboardingRouteImport } from '.
 import { Route as AuthenticatedworkforceWorkforceLeaveTypesRouteImport } from './routes/_authenticated/(workforce)/workforce/leave-types'
 import { Route as AuthenticatedworkforceWorkforceLeaveApplicationsRouteImport } from './routes/_authenticated/(workforce)/workforce/leave-applications'
 import { Route as AuthenticatedworkforceWorkforceLeaveAllocationsRouteImport } from './routes/_authenticated/(workforce)/workforce/leave-allocations'
+import { Route as AuthenticatedworkforceWorkforceHrAnalyticsRouteImport } from './routes/_authenticated/(workforce)/workforce/hr-analytics'
 import { Route as AuthenticatedworkforceWorkforceHolidaysRouteImport } from './routes/_authenticated/(workforce)/workforce/holidays'
+import { Route as AuthenticatedworkforceWorkforceGrievancesRouteImport } from './routes/_authenticated/(workforce)/workforce/grievances'
 import { Route as AuthenticatedworkforceWorkforceExpenseClaimsRouteImport } from './routes/_authenticated/(workforce)/workforce/expense-claims'
 import { Route as AuthenticatedworkforceWorkforceEmployeesRouteImport } from './routes/_authenticated/(workforce)/workforce/employees'
 import { Route as AuthenticatedworkforceWorkforceDayLaborersRouteImport } from './routes/_authenticated/(workforce)/workforce/day-laborers'
@@ -566,6 +569,12 @@ const AuthenticatedworkforceWorkforceWorkerTransportRoute =
     path: '/workforce/worker-transport',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedworkforceWorkforceTrainingRoute =
+  AuthenticatedworkforceWorkforceTrainingRouteImport.update({
+    id: '/(workforce)/workforce/training',
+    path: '/workforce/training',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedworkforceWorkforceShiftsRoute =
   AuthenticatedworkforceWorkforceShiftsRouteImport.update({
     id: '/(workforce)/workforce/shifts',
@@ -656,10 +665,22 @@ const AuthenticatedworkforceWorkforceLeaveAllocationsRoute =
     path: '/workforce/leave-allocations',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedworkforceWorkforceHrAnalyticsRoute =
+  AuthenticatedworkforceWorkforceHrAnalyticsRouteImport.update({
+    id: '/(workforce)/workforce/hr-analytics',
+    path: '/workforce/hr-analytics',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedworkforceWorkforceHolidaysRoute =
   AuthenticatedworkforceWorkforceHolidaysRouteImport.update({
     id: '/(workforce)/workforce/holidays',
     path: '/workforce/holidays',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedworkforceWorkforceGrievancesRoute =
+  AuthenticatedworkforceWorkforceGrievancesRouteImport.update({
+    id: '/(workforce)/workforce/grievances',
+    path: '/workforce/grievances',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedworkforceWorkforceExpenseClaimsRoute =
@@ -1448,7 +1469,9 @@ export interface FileRoutesByFullPath {
   '/workforce/day-laborers': typeof AuthenticatedworkforceWorkforceDayLaborersRoute
   '/workforce/employees': typeof AuthenticatedworkforceWorkforceEmployeesRoute
   '/workforce/expense-claims': typeof AuthenticatedworkforceWorkforceExpenseClaimsRoute
+  '/workforce/grievances': typeof AuthenticatedworkforceWorkforceGrievancesRoute
   '/workforce/holidays': typeof AuthenticatedworkforceWorkforceHolidaysRoute
+  '/workforce/hr-analytics': typeof AuthenticatedworkforceWorkforceHrAnalyticsRoute
   '/workforce/leave-allocations': typeof AuthenticatedworkforceWorkforceLeaveAllocationsRoute
   '/workforce/leave-applications': typeof AuthenticatedworkforceWorkforceLeaveApplicationsRoute
   '/workforce/leave-types': typeof AuthenticatedworkforceWorkforceLeaveTypesRoute
@@ -1464,6 +1487,7 @@ export interface FileRoutesByFullPath {
   '/workforce/seasonal-campaigns': typeof AuthenticatedworkforceWorkforceSeasonalCampaignsRoute
   '/workforce/separations': typeof AuthenticatedworkforceWorkforceSeparationsRouteWithChildren
   '/workforce/shifts': typeof AuthenticatedworkforceWorkforceShiftsRoute
+  '/workforce/training': typeof AuthenticatedworkforceWorkforceTrainingRoute
   '/workforce/worker-transport': typeof AuthenticatedworkforceWorkforceWorkerTransportRoute
   '/compliance/certifications/$certId': typeof AuthenticatedComplianceCertificationsCertIdRoute
   '/accounting/': typeof AuthenticatedaccountingAccountingIndexRoute
@@ -1632,7 +1656,9 @@ export interface FileRoutesByTo {
   '/workforce/day-laborers': typeof AuthenticatedworkforceWorkforceDayLaborersRoute
   '/workforce/employees': typeof AuthenticatedworkforceWorkforceEmployeesRoute
   '/workforce/expense-claims': typeof AuthenticatedworkforceWorkforceExpenseClaimsRoute
+  '/workforce/grievances': typeof AuthenticatedworkforceWorkforceGrievancesRoute
   '/workforce/holidays': typeof AuthenticatedworkforceWorkforceHolidaysRoute
+  '/workforce/hr-analytics': typeof AuthenticatedworkforceWorkforceHrAnalyticsRoute
   '/workforce/leave-allocations': typeof AuthenticatedworkforceWorkforceLeaveAllocationsRoute
   '/workforce/leave-applications': typeof AuthenticatedworkforceWorkforceLeaveApplicationsRoute
   '/workforce/leave-types': typeof AuthenticatedworkforceWorkforceLeaveTypesRoute
@@ -1648,6 +1674,7 @@ export interface FileRoutesByTo {
   '/workforce/seasonal-campaigns': typeof AuthenticatedworkforceWorkforceSeasonalCampaignsRoute
   '/workforce/separations': typeof AuthenticatedworkforceWorkforceSeparationsRouteWithChildren
   '/workforce/shifts': typeof AuthenticatedworkforceWorkforceShiftsRoute
+  '/workforce/training': typeof AuthenticatedworkforceWorkforceTrainingRoute
   '/workforce/worker-transport': typeof AuthenticatedworkforceWorkforceWorkerTransportRoute
   '/compliance/certifications/$certId': typeof AuthenticatedComplianceCertificationsCertIdRoute
   '/accounting': typeof AuthenticatedaccountingAccountingIndexRoute
@@ -1821,7 +1848,9 @@ export interface FileRoutesById {
   '/_authenticated/(workforce)/workforce/day-laborers': typeof AuthenticatedworkforceWorkforceDayLaborersRoute
   '/_authenticated/(workforce)/workforce/employees': typeof AuthenticatedworkforceWorkforceEmployeesRoute
   '/_authenticated/(workforce)/workforce/expense-claims': typeof AuthenticatedworkforceWorkforceExpenseClaimsRoute
+  '/_authenticated/(workforce)/workforce/grievances': typeof AuthenticatedworkforceWorkforceGrievancesRoute
   '/_authenticated/(workforce)/workforce/holidays': typeof AuthenticatedworkforceWorkforceHolidaysRoute
+  '/_authenticated/(workforce)/workforce/hr-analytics': typeof AuthenticatedworkforceWorkforceHrAnalyticsRoute
   '/_authenticated/(workforce)/workforce/leave-allocations': typeof AuthenticatedworkforceWorkforceLeaveAllocationsRoute
   '/_authenticated/(workforce)/workforce/leave-applications': typeof AuthenticatedworkforceWorkforceLeaveApplicationsRoute
   '/_authenticated/(workforce)/workforce/leave-types': typeof AuthenticatedworkforceWorkforceLeaveTypesRoute
@@ -1837,6 +1866,7 @@ export interface FileRoutesById {
   '/_authenticated/(workforce)/workforce/seasonal-campaigns': typeof AuthenticatedworkforceWorkforceSeasonalCampaignsRoute
   '/_authenticated/(workforce)/workforce/separations': typeof AuthenticatedworkforceWorkforceSeparationsRouteWithChildren
   '/_authenticated/(workforce)/workforce/shifts': typeof AuthenticatedworkforceWorkforceShiftsRoute
+  '/_authenticated/(workforce)/workforce/training': typeof AuthenticatedworkforceWorkforceTrainingRoute
   '/_authenticated/(workforce)/workforce/worker-transport': typeof AuthenticatedworkforceWorkforceWorkerTransportRoute
   '/_authenticated/compliance/certifications/$certId': typeof AuthenticatedComplianceCertificationsCertIdRoute
   '/_authenticated/(accounting)/accounting/': typeof AuthenticatedaccountingAccountingIndexRoute
@@ -2013,7 +2043,9 @@ export interface FileRouteTypes {
     | '/workforce/day-laborers'
     | '/workforce/employees'
     | '/workforce/expense-claims'
+    | '/workforce/grievances'
     | '/workforce/holidays'
+    | '/workforce/hr-analytics'
     | '/workforce/leave-allocations'
     | '/workforce/leave-applications'
     | '/workforce/leave-types'
@@ -2029,6 +2061,7 @@ export interface FileRouteTypes {
     | '/workforce/seasonal-campaigns'
     | '/workforce/separations'
     | '/workforce/shifts'
+    | '/workforce/training'
     | '/workforce/worker-transport'
     | '/compliance/certifications/$certId'
     | '/accounting/'
@@ -2197,7 +2230,9 @@ export interface FileRouteTypes {
     | '/workforce/day-laborers'
     | '/workforce/employees'
     | '/workforce/expense-claims'
+    | '/workforce/grievances'
     | '/workforce/holidays'
+    | '/workforce/hr-analytics'
     | '/workforce/leave-allocations'
     | '/workforce/leave-applications'
     | '/workforce/leave-types'
@@ -2213,6 +2248,7 @@ export interface FileRouteTypes {
     | '/workforce/seasonal-campaigns'
     | '/workforce/separations'
     | '/workforce/shifts'
+    | '/workforce/training'
     | '/workforce/worker-transport'
     | '/compliance/certifications/$certId'
     | '/accounting'
@@ -2385,7 +2421,9 @@ export interface FileRouteTypes {
     | '/_authenticated/(workforce)/workforce/day-laborers'
     | '/_authenticated/(workforce)/workforce/employees'
     | '/_authenticated/(workforce)/workforce/expense-claims'
+    | '/_authenticated/(workforce)/workforce/grievances'
     | '/_authenticated/(workforce)/workforce/holidays'
+    | '/_authenticated/(workforce)/workforce/hr-analytics'
     | '/_authenticated/(workforce)/workforce/leave-allocations'
     | '/_authenticated/(workforce)/workforce/leave-applications'
     | '/_authenticated/(workforce)/workforce/leave-types'
@@ -2401,6 +2439,7 @@ export interface FileRouteTypes {
     | '/_authenticated/(workforce)/workforce/seasonal-campaigns'
     | '/_authenticated/(workforce)/workforce/separations'
     | '/_authenticated/(workforce)/workforce/shifts'
+    | '/_authenticated/(workforce)/workforce/training'
     | '/_authenticated/(workforce)/workforce/worker-transport'
     | '/_authenticated/compliance/certifications/$certId'
     | '/_authenticated/(accounting)/accounting/'
@@ -2915,6 +2954,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedworkforceWorkforceWorkerTransportRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/(workforce)/workforce/training': {
+      id: '/_authenticated/(workforce)/workforce/training'
+      path: '/workforce/training'
+      fullPath: '/workforce/training'
+      preLoaderRoute: typeof AuthenticatedworkforceWorkforceTrainingRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/(workforce)/workforce/shifts': {
       id: '/_authenticated/(workforce)/workforce/shifts'
       path: '/workforce/shifts'
@@ -3020,11 +3066,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedworkforceWorkforceLeaveAllocationsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/(workforce)/workforce/hr-analytics': {
+      id: '/_authenticated/(workforce)/workforce/hr-analytics'
+      path: '/workforce/hr-analytics'
+      fullPath: '/workforce/hr-analytics'
+      preLoaderRoute: typeof AuthenticatedworkforceWorkforceHrAnalyticsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/(workforce)/workforce/holidays': {
       id: '/_authenticated/(workforce)/workforce/holidays'
       path: '/workforce/holidays'
       fullPath: '/workforce/holidays'
       preLoaderRoute: typeof AuthenticatedworkforceWorkforceHolidaysRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/(workforce)/workforce/grievances': {
+      id: '/_authenticated/(workforce)/workforce/grievances'
+      path: '/workforce/grievances'
+      fullPath: '/workforce/grievances'
+      preLoaderRoute: typeof AuthenticatedworkforceWorkforceGrievancesRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/(workforce)/workforce/expense-claims': {
@@ -4290,7 +4350,9 @@ interface AuthenticatedRouteChildren {
   AuthenticatedworkforceWorkforceDayLaborersRoute: typeof AuthenticatedworkforceWorkforceDayLaborersRoute
   AuthenticatedworkforceWorkforceEmployeesRoute: typeof AuthenticatedworkforceWorkforceEmployeesRoute
   AuthenticatedworkforceWorkforceExpenseClaimsRoute: typeof AuthenticatedworkforceWorkforceExpenseClaimsRoute
+  AuthenticatedworkforceWorkforceGrievancesRoute: typeof AuthenticatedworkforceWorkforceGrievancesRoute
   AuthenticatedworkforceWorkforceHolidaysRoute: typeof AuthenticatedworkforceWorkforceHolidaysRoute
+  AuthenticatedworkforceWorkforceHrAnalyticsRoute: typeof AuthenticatedworkforceWorkforceHrAnalyticsRoute
   AuthenticatedworkforceWorkforceLeaveAllocationsRoute: typeof AuthenticatedworkforceWorkforceLeaveAllocationsRoute
   AuthenticatedworkforceWorkforceLeaveApplicationsRoute: typeof AuthenticatedworkforceWorkforceLeaveApplicationsRoute
   AuthenticatedworkforceWorkforceLeaveTypesRoute: typeof AuthenticatedworkforceWorkforceLeaveTypesRoute
@@ -4306,6 +4368,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedworkforceWorkforceSeasonalCampaignsRoute: typeof AuthenticatedworkforceWorkforceSeasonalCampaignsRoute
   AuthenticatedworkforceWorkforceSeparationsRoute: typeof AuthenticatedworkforceWorkforceSeparationsRouteWithChildren
   AuthenticatedworkforceWorkforceShiftsRoute: typeof AuthenticatedworkforceWorkforceShiftsRoute
+  AuthenticatedworkforceWorkforceTrainingRoute: typeof AuthenticatedworkforceWorkforceTrainingRoute
   AuthenticatedworkforceWorkforceWorkerTransportRoute: typeof AuthenticatedworkforceWorkforceWorkerTransportRoute
   AuthenticatedComplianceCertificationsCertIdRoute: typeof AuthenticatedComplianceCertificationsCertIdRoute
   AuthenticatedComplianceCertificationsIndexRoute: typeof AuthenticatedComplianceCertificationsIndexRoute
@@ -4388,8 +4451,12 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
     AuthenticatedworkforceWorkforceEmployeesRoute,
   AuthenticatedworkforceWorkforceExpenseClaimsRoute:
     AuthenticatedworkforceWorkforceExpenseClaimsRoute,
+  AuthenticatedworkforceWorkforceGrievancesRoute:
+    AuthenticatedworkforceWorkforceGrievancesRoute,
   AuthenticatedworkforceWorkforceHolidaysRoute:
     AuthenticatedworkforceWorkforceHolidaysRoute,
+  AuthenticatedworkforceWorkforceHrAnalyticsRoute:
+    AuthenticatedworkforceWorkforceHrAnalyticsRoute,
   AuthenticatedworkforceWorkforceLeaveAllocationsRoute:
     AuthenticatedworkforceWorkforceLeaveAllocationsRoute,
   AuthenticatedworkforceWorkforceLeaveApplicationsRoute:
@@ -4420,6 +4487,8 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
     AuthenticatedworkforceWorkforceSeparationsRouteWithChildren,
   AuthenticatedworkforceWorkforceShiftsRoute:
     AuthenticatedworkforceWorkforceShiftsRoute,
+  AuthenticatedworkforceWorkforceTrainingRoute:
+    AuthenticatedworkforceWorkforceTrainingRoute,
   AuthenticatedworkforceWorkforceWorkerTransportRoute:
     AuthenticatedworkforceWorkforceWorkerTransportRoute,
   AuthenticatedComplianceCertificationsCertIdRoute:

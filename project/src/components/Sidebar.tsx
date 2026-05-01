@@ -1014,6 +1014,27 @@ const Sidebar = ({
                         isActive={currentPath === "/workforce/appraisals"}
                       />
                     </ProtectedNavItem>
+                    <ProtectedNavItem action="manage" subject="Grievance">
+                      <PopoverNavItem onNavigate={handleNavigation}
+                        path="/workforce/grievances"
+                        label={t("nav.grievances", "Grievances")}
+                        isActive={currentPath === "/workforce/grievances"}
+                      />
+                    </ProtectedNavItem>
+                    <ProtectedNavItem action="manage" subject="TrainingProgram">
+                      <PopoverNavItem onNavigate={handleNavigation}
+                        path="/workforce/training"
+                        label={t("nav.training", "Training")}
+                        isActive={currentPath === "/workforce/training"}
+                      />
+                    </ProtectedNavItem>
+                    <ProtectedNavItem action="read" subject="Worker">
+                      <PopoverNavItem onNavigate={handleNavigation}
+                        path="/workforce/hr-analytics"
+                        label={t("nav.hrAnalytics", "HR Analytics")}
+                        isActive={currentPath === "/workforce/hr-analytics"}
+                      />
+                    </ProtectedNavItem>
                   </CollapsedSectionPopover>
                 </div>
               ) : (
@@ -1265,6 +1286,39 @@ const Sidebar = ({
                           onClick={(e) => handleNavigation("/workforce/appraisals", e)}
                         >
                           {renderText(t("nav.appraisals", "Appraisals"))}
+                        </Button>
+                      </ProtectedNavItem>
+                      <ProtectedNavItem action="manage" subject="Grievance">
+                        <Button
+                          variant="ghost"
+                          className={getSubItemClassName(
+                            currentPath === "/workforce/grievances",
+                          )}
+                          onClick={(e) => handleNavigation("/workforce/grievances", e)}
+                        >
+                          {renderText(t("nav.grievances", "Grievances"))}
+                        </Button>
+                      </ProtectedNavItem>
+                      <ProtectedNavItem action="manage" subject="TrainingProgram">
+                        <Button
+                          variant="ghost"
+                          className={getSubItemClassName(
+                            currentPath === "/workforce/training",
+                          )}
+                          onClick={(e) => handleNavigation("/workforce/training", e)}
+                        >
+                          {renderText(t("nav.training", "Training"))}
+                        </Button>
+                      </ProtectedNavItem>
+                      <ProtectedNavItem action="read" subject="Worker">
+                        <Button
+                          variant="ghost"
+                          className={getSubItemClassName(
+                            currentPath === "/workforce/hr-analytics",
+                          )}
+                          onClick={(e) => handleNavigation("/workforce/hr-analytics", e)}
+                        >
+                          {renderText(t("nav.hrAnalytics", "HR Analytics"))}
                         </Button>
                       </ProtectedNavItem>
                     </>
