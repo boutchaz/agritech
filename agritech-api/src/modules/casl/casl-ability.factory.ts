@@ -139,6 +139,7 @@ export class CaslAbilityFactory {
             can(Action.Manage, Subject.PRODUCT);
             can(Action.Manage, Subject.BIOLOGICAL_ASSET);
             can(Action.Manage, Subject.INVENTORY);
+            can(Action.Manage, Subject.EQUIPMENT);
             can(Action.Manage, Subject.ANALYSIS);
             can(Action.Manage, Subject.SOIL_ANALYSIS);
             can(Action.Manage, Subject.PLANT_ANALYSIS);
@@ -162,6 +163,7 @@ export class CaslAbilityFactory {
             can(Action.Manage, Subject.ROLE); // Can manage roles
             can(Action.Manage, Subject.CERTIFICATION);
             can(Action.Manage, Subject.COMPLIANCE_CHECK);
+            can(Action.Manage, Subject.HR_COMPLIANCE);
             console.log('[CaslAbilityFactory] Organization admin - full org access granted');
         }
         // ============ FARM MANAGER ============
@@ -187,6 +189,7 @@ export class CaslAbilityFactory {
             can(Action.Manage, Subject.DELIVERY);
             can(Action.Manage, Subject.RECEPTION_BATCH);
             can(Action.Manage, Subject.QUALITY_CONTROL);
+            can(Action.Manage, Subject.EQUIPMENT);
 
             // Can create/view invoices and payments
             can(Action.Create, Subject.INVOICE);
@@ -227,6 +230,7 @@ export class CaslAbilityFactory {
             cannot(Action.Manage, Subject.ACCOUNT); // Cannot manage chart of accounts
             can(Action.Manage, Subject.CERTIFICATION);
             can(Action.Manage, Subject.COMPLIANCE_CHECK);
+            can(Action.Read, Subject.HR_COMPLIANCE);
 
             console.log('[CaslAbilityFactory] Farm manager permissions granted');
         }
@@ -271,6 +275,8 @@ export class CaslAbilityFactory {
 
             can(Action.Read, Subject.QUALITY_CONTROL);
             can(Action.Create, Subject.QUALITY_CONTROL);
+            can(Action.Read, Subject.EQUIPMENT);
+            can(Action.Update, Subject.EQUIPMENT); // Can log maintenance
             can(Action.Read, Subject.DASHBOARD); // Can read dashboard
 
             // Cannot access financial operations
@@ -351,6 +357,7 @@ export class CaslAbilityFactory {
             can(Action.Read, Subject.RECEPTION_BATCH);
             can(Action.Read, Subject.QUALITY_CONTROL);
             can(Action.Read, Subject.LAB_SERVICE);
+            can(Action.Read, Subject.EQUIPMENT);
             can(Action.Read, Subject.FINANCIAL_REPORT);
             can(Action.Read, Subject.REPORT);
             can(Action.Read, Subject.SATELLITE_ANALYSIS);
@@ -570,6 +577,7 @@ export class CaslAbilityFactory {
             can(Action.Manage, Subject.SATELLITE_REPORT);
             can(Action.Manage, Subject.PRODUCTION_INTELLIGENCE);
             can(Action.Manage, Subject.UTILITY);
+            can(Action.Manage, Subject.EQUIPMENT);
             can(Action.Read, Subject.DASHBOARD);
             can(Action.Update, Subject.DASHBOARD);
             can(Action.Read, Subject.CHAT);
@@ -583,6 +591,7 @@ export class CaslAbilityFactory {
             can(Action.Manage, Subject.ROLE);
             can(Action.Manage, Subject.CERTIFICATION);
             can(Action.Manage, Subject.COMPLIANCE_CHECK);
+            can(Action.Manage, Subject.HR_COMPLIANCE);
         } else if (roleName === 'farm_manager') {
             // Farm operations
             can(Action.Manage, Subject.FARM);
@@ -614,6 +623,7 @@ export class CaslAbilityFactory {
             can(Action.Manage, Subject.RECEPTION_BATCH);
             can(Action.Manage, Subject.QUALITY_CONTROL);
             can(Action.Manage, Subject.UTILITY);
+            can(Action.Manage, Subject.EQUIPMENT);
             can(Action.Read, Subject.CHAT);
             can(Action.Read, Subject.SETTINGS);
             can(Action.Update, Subject.SETTINGS);
@@ -657,6 +667,7 @@ export class CaslAbilityFactory {
             can(Action.Read, Subject.DASHBOARD);
             can(Action.Manage, Subject.CERTIFICATION);
             can(Action.Manage, Subject.COMPLIANCE_CHECK);
+            can(Action.Read, Subject.HR_COMPLIANCE);
 
             cannot(Action.Delete, Subject.JOURNAL_ENTRY);
             cannot(Action.Manage, Subject.ACCOUNT);
@@ -798,6 +809,7 @@ export class CaslAbilityFactory {
             can(Action.Read, Subject.RECEPTION_BATCH);
             can(Action.Read, Subject.QUALITY_CONTROL);
             can(Action.Read, Subject.LAB_SERVICE);
+            can(Action.Read, Subject.EQUIPMENT);
             can(Action.Read, Subject.FINANCIAL_REPORT);
             can(Action.Read, Subject.REPORT);
             can(Action.Read, Subject.SATELLITE_ANALYSIS);

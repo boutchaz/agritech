@@ -21,6 +21,8 @@ import { ProductionIntelligenceModule } from "./modules/production-intelligence/
 import { HarvestsModule } from "./modules/harvests/harvests.module";
 import { TasksModule } from "./modules/tasks/tasks.module";
 import { WorkersModule } from "./modules/workers/workers.module";
+import { AttendanceModule } from "./modules/attendance/attendance.module";
+import { HrComplianceModule } from "./modules/hr-compliance/hr-compliance.module";
 import { StockEntriesModule } from "./modules/stock-entries/stock-entries.module";
 import { ItemsModule } from "./modules/items/items.module";
 import { WarehousesModule } from "./modules/warehouses/warehouses.module";
@@ -33,6 +35,7 @@ import { UsersModule } from "./modules/users/users.module";
 import { OrganizationsModule } from "./modules/organizations/organizations.module";
 import { OrganizationModulesModule } from "./modules/organization-modules/organization-modules.module";
 import { StructuresModule } from "./modules/structures/structures.module";
+import { EquipmentModule } from "./modules/equipment/equipment.module";
 import { DashboardModule } from "./modules/dashboard/dashboard.module";
 import { ReceptionBatchesModule } from "./modules/reception-batches/reception-batches.module";
 import { BlogsModule } from "./modules/blogs/blogs.module";
@@ -163,6 +166,8 @@ import { BarcodeModule } from "./modules/barcode/barcode.module";
     TasksModule,
     TaskAssignmentsModule,
     WorkersModule,
+    AttendanceModule,
+    HrComplianceModule,
     WorkUnitsModule,
     BannersModule,
     ChangelogsModule,
@@ -181,6 +186,7 @@ import { BarcodeModule } from "./modules/barcode/barcode.module";
     SoilAnalysesModule,
     AnalysesModule,
     StructuresModule,
+    EquipmentModule,
     DashboardModule,
     ReceptionBatchesModule,
     BlogsModule,

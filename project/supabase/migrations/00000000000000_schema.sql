@@ -2486,7 +2486,7 @@ CREATE TABLE IF NOT EXISTS payment_records (
   attachments JSONB,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
-  CHECK (payment_type IN ('daily_wage', 'monthly_salary', 'metayage_share', 'bonus', 'overtime', 'advance')),
+  CHECK (payment_type IN ('daily_wage', 'monthly_salary', 'metayage_share', 'bonus', 'overtime', 'advance', 'piece_work')),
   CHECK (status IN ('pending', 'approved', 'paid', 'disputed', 'cancelled')),
   CHECK (payment_method IN ('cash', 'bank_transfer', 'check', 'mobile_money'))
 );
@@ -7551,7 +7551,7 @@ ON CONFLICT (name) DO UPDATE SET
 DO $perms$
 DECLARE
 -- BEGIN GENERATED PERMISSION RESOURCES (do not edit by hand)
-  -- 69 resources × 5 actions = 345 permission rows
+  -- 70 resources × 5 actions = 350 permission rows
   v_resources TEXT[] := ARRAY[
     'users','organizations','roles','subscriptions',
     'farms','parcels','warehouses','infrastructure',
@@ -7570,7 +7570,7 @@ DECLARE
     'production_intelligence','dashboard','analytics','sensors',
     'costs','revenues','inventory','utilities',
     'equipment','agronomy_sources','chat','settings',
-    'api'
+    'api','hr_compliance'
   ];
 -- END GENERATED PERMISSION RESOURCES
   v_actions TEXT[] := ARRAY['read','create','update','delete','manage'];
@@ -18261,3 +18261,117 @@ DROP TRIGGER IF EXISTS set_attendance_records_updated_at ON attendance_records;
 CREATE TRIGGER set_attendance_records_updated_at
   BEFORE UPDATE ON attendance_records
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- =====================================================================
+-- HR Module — Phase 1.0: Compliance Settings (Configuration Layer)
+-- =====================================================================
+-- One row per organization. Every payroll/leave module reads this first.
+-- When a flag is OFF, the corresponding calculation is skipped entirely.
+
+CREATE TABLE IF NOT EXISTS hr_compliance_settings (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE UNIQUE,
+
+  -- Country / preset
+  compliance_country TEXT NOT NULL DEFAULT 'MA',
+  compliance_preset TEXT NOT NULL DEFAULT 'morocco_none'
+    CHECK (compliance_preset IN ('morocco_standard', 'morocco_basic', 'morocco_none', 'custom')),
+
+  -- CNSS
+  cnss_enabled BOOLEAN NOT NULL DEFAULT false,
+  cnss_employee_rate NUMERIC(5,2) NOT NULL DEFAULT 0,
+  cnss_employer_rate NUMERIC(5,2) NOT NULL DEFAULT 0,
+  cnss_salary_cap NUMERIC,
+  cnss_auto_declare BOOLEAN NOT NULL DEFAULT false,
+  cnss_declaration_frequency TEXT
+    CHECK (cnss_declaration_frequency IS NULL OR cnss_declaration_frequency IN ('monthly', 'quarterly')),
+
+  -- AMO
+  amo_enabled BOOLEAN NOT NULL DEFAULT false,
+  amo_employee_rate NUMERIC(5,2) NOT NULL DEFAULT 0,
+  amo_employer_rate NUMERIC(5,2) NOT NULL DEFAULT 0,
+  amo_salary_cap NUMERIC,
+
+  -- CIS / RCAR
+  cis_enabled BOOLEAN NOT NULL DEFAULT false,
+  cis_employee_rate NUMERIC(5,2) NOT NULL DEFAULT 0,
+  cis_employer_rate NUMERIC(5,2) NOT NULL DEFAULT 0,
+  cis_salary_cap NUMERIC,
+
+  -- Income Tax (IR)
+  income_tax_enabled BOOLEAN NOT NULL DEFAULT false,
+  income_tax_config_id UUID,
+  professional_expenses_deduction_enabled BOOLEAN NOT NULL DEFAULT false,
+  professional_expenses_rate NUMERIC(5,2) NOT NULL DEFAULT 20,
+  professional_expenses_cap NUMERIC,
+  family_deduction_enabled BOOLEAN NOT NULL DEFAULT false,
+  family_deduction_per_child NUMERIC NOT NULL DEFAULT 0,
+  family_deduction_max_children INTEGER NOT NULL DEFAULT 0,
+
+  -- Leave compliance
+  leave_compliance_mode TEXT NOT NULL DEFAULT 'custom'
+    CHECK (leave_compliance_mode IN ('morocco_legal', 'custom')),
+  enforce_minimum_leave BOOLEAN NOT NULL DEFAULT false,
+  auto_allocate_annual_leave BOOLEAN NOT NULL DEFAULT false,
+  annual_leave_days_per_month NUMERIC NOT NULL DEFAULT 1.5,
+  sick_leave_days INTEGER NOT NULL DEFAULT 4,
+  maternity_leave_weeks INTEGER NOT NULL DEFAULT 14,
+  paternity_leave_days INTEGER NOT NULL DEFAULT 3,
+
+  -- Minimum wage
+  minimum_wage_check_enabled BOOLEAN NOT NULL DEFAULT false,
+  minimum_daily_wage NUMERIC,
+  minimum_monthly_wage NUMERIC,
+
+  -- Payroll behavior
+  default_pay_frequency TEXT NOT NULL DEFAULT 'monthly'
+    CHECK (default_pay_frequency IN ('daily', 'weekly', 'biweekly', 'monthly')),
+  default_currency TEXT NOT NULL DEFAULT 'MAD',
+  round_net_pay BOOLEAN NOT NULL DEFAULT true,
+  auto_generate_slips_on_payroll_run BOOLEAN NOT NULL DEFAULT true,
+  password_protect_payslips BOOLEAN NOT NULL DEFAULT false,
+
+  -- Overtime
+  overtime_enabled BOOLEAN NOT NULL DEFAULT false,
+  standard_working_hours NUMERIC NOT NULL DEFAULT 8,
+  overtime_rate_multiplier NUMERIC NOT NULL DEFAULT 1.5,
+  overtime_rate_multiplier_weekend NUMERIC NOT NULL DEFAULT 2,
+
+  last_updated_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_hr_compliance_settings_org ON hr_compliance_settings(organization_id);
+
+ALTER TABLE hr_compliance_settings ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_access_hr_compliance" ON hr_compliance_settings;
+CREATE POLICY "org_access_hr_compliance" ON hr_compliance_settings
+  FOR ALL USING (is_organization_member(organization_id))
+  WITH CHECK (is_organization_member(organization_id));
+
+DROP TRIGGER IF EXISTS update_hr_compliance_settings_updated_at ON hr_compliance_settings;
+CREATE TRIGGER update_hr_compliance_settings_updated_at
+  BEFORE UPDATE ON hr_compliance_settings
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Auto-create empty (morocco_none) settings row whenever an organization is created.
+CREATE OR REPLACE FUNCTION create_default_hr_compliance_settings()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO hr_compliance_settings (organization_id)
+  VALUES (NEW.id)
+  ON CONFLICT (organization_id) DO NOTHING;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_create_hr_compliance_settings ON organizations;
+CREATE TRIGGER trg_create_hr_compliance_settings
+  AFTER INSERT ON organizations
+  FOR EACH ROW EXECUTE FUNCTION create_default_hr_compliance_settings();
+
+-- Backfill: ensure every existing organization has a settings row.
+INSERT INTO hr_compliance_settings (organization_id)
+SELECT id FROM organizations
+ON CONFLICT (organization_id) DO NOTHING;

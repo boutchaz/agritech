@@ -11334,6 +11334,251 @@ export type Database = {
           },
         ]
       }
+      hr_compliance_settings: {
+        Row: {
+          amo_employee_rate: number
+          amo_employer_rate: number
+          amo_enabled: boolean
+          amo_salary_cap: number | null
+          annual_leave_days_per_month: number
+          auto_allocate_annual_leave: boolean
+          auto_generate_slips_on_payroll_run: boolean
+          cis_employee_rate: number
+          cis_employer_rate: number
+          cis_enabled: boolean
+          cis_salary_cap: number | null
+          cnss_auto_declare: boolean
+          cnss_declaration_frequency: string | null
+          cnss_employee_rate: number
+          cnss_employer_rate: number
+          cnss_enabled: boolean
+          cnss_salary_cap: number | null
+          compliance_country: string
+          compliance_preset: string
+          created_at: string
+          default_currency: string
+          default_pay_frequency: string
+          enforce_minimum_leave: boolean
+          family_deduction_enabled: boolean
+          family_deduction_max_children: number
+          family_deduction_per_child: number
+          id: string
+          income_tax_config_id: string | null
+          income_tax_enabled: boolean
+          last_updated_by: string | null
+          leave_compliance_mode: string
+          maternity_leave_weeks: number
+          minimum_daily_wage: number | null
+          minimum_monthly_wage: number | null
+          minimum_wage_check_enabled: boolean
+          organization_id: string
+          overtime_enabled: boolean
+          overtime_rate_multiplier: number
+          overtime_rate_multiplier_weekend: number
+          password_protect_payslips: boolean
+          paternity_leave_days: number
+          professional_expenses_cap: number | null
+          professional_expenses_deduction_enabled: boolean
+          professional_expenses_rate: number
+          round_net_pay: boolean
+          sick_leave_days: number
+          standard_working_hours: number
+          updated_at: string
+        }
+        Insert: {
+          amo_employee_rate?: number
+          amo_employer_rate?: number
+          amo_enabled?: boolean
+          amo_salary_cap?: number | null
+          annual_leave_days_per_month?: number
+          auto_allocate_annual_leave?: boolean
+          auto_generate_slips_on_payroll_run?: boolean
+          cis_employee_rate?: number
+          cis_employer_rate?: number
+          cis_enabled?: boolean
+          cis_salary_cap?: number | null
+          cnss_auto_declare?: boolean
+          cnss_declaration_frequency?: string | null
+          cnss_employee_rate?: number
+          cnss_employer_rate?: number
+          cnss_enabled?: boolean
+          cnss_salary_cap?: number | null
+          compliance_country?: string
+          compliance_preset?: string
+          created_at?: string
+          default_currency?: string
+          default_pay_frequency?: string
+          enforce_minimum_leave?: boolean
+          family_deduction_enabled?: boolean
+          family_deduction_max_children?: number
+          family_deduction_per_child?: number
+          id?: string
+          income_tax_config_id?: string | null
+          income_tax_enabled?: boolean
+          last_updated_by?: string | null
+          leave_compliance_mode?: string
+          maternity_leave_weeks?: number
+          minimum_daily_wage?: number | null
+          minimum_monthly_wage?: number | null
+          minimum_wage_check_enabled?: boolean
+          organization_id: string
+          overtime_enabled?: boolean
+          overtime_rate_multiplier?: number
+          overtime_rate_multiplier_weekend?: number
+          password_protect_payslips?: boolean
+          paternity_leave_days?: number
+          professional_expenses_cap?: number | null
+          professional_expenses_deduction_enabled?: boolean
+          professional_expenses_rate?: number
+          round_net_pay?: boolean
+          sick_leave_days?: number
+          standard_working_hours?: number
+          updated_at?: string
+        }
+        Update: {
+          amo_employee_rate?: number
+          amo_employer_rate?: number
+          amo_enabled?: boolean
+          amo_salary_cap?: number | null
+          annual_leave_days_per_month?: number
+          auto_allocate_annual_leave?: boolean
+          auto_generate_slips_on_payroll_run?: boolean
+          cis_employee_rate?: number
+          cis_employer_rate?: number
+          cis_enabled?: boolean
+          cis_salary_cap?: number | null
+          cnss_auto_declare?: boolean
+          cnss_declaration_frequency?: string | null
+          cnss_employee_rate?: number
+          cnss_employer_rate?: number
+          cnss_enabled?: boolean
+          cnss_salary_cap?: number | null
+          compliance_country?: string
+          compliance_preset?: string
+          created_at?: string
+          default_currency?: string
+          default_pay_frequency?: string
+          enforce_minimum_leave?: boolean
+          family_deduction_enabled?: boolean
+          family_deduction_max_children?: number
+          family_deduction_per_child?: number
+          id?: string
+          income_tax_config_id?: string | null
+          income_tax_enabled?: boolean
+          last_updated_by?: string | null
+          leave_compliance_mode?: string
+          maternity_leave_weeks?: number
+          minimum_daily_wage?: number | null
+          minimum_monthly_wage?: number | null
+          minimum_wage_check_enabled?: boolean
+          organization_id?: string
+          overtime_enabled?: boolean
+          overtime_rate_multiplier?: number
+          overtime_rate_multiplier_weekend?: number
+          password_protect_payslips?: boolean
+          paternity_leave_days?: number
+          professional_expenses_cap?: number | null
+          professional_expenses_deduction_enabled?: boolean
+          professional_expenses_rate?: number
+          round_net_pay?: boolean
+          sick_leave_days?: number
+          standard_working_hours?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hr_compliance_settings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "accounting_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "hr_compliance_settings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "admin_churn_risk"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hr_compliance_settings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "admin_org_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hr_compliance_settings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "admin_top_orgs_by_activity"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hr_compliance_settings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "dashboard_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "hr_compliance_settings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "financial_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "hr_compliance_settings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hr_compliance_settings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "production_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "hr_compliance_settings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "sales_analytics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "hr_compliance_settings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "task_completion"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "hr_compliance_settings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "v_organization_financial_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "hr_compliance_settings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "v_production_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "hr_compliance_settings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "workforce_summary"
+            referencedColumns: ["organization_id"]
+          },
+        ]
+      }
       internal_admins: {
         Row: {
           created_at: string | null

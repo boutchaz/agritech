@@ -88,6 +88,9 @@ export enum Subject {
     INVENTORY = 'Inventory',
     UTILITY = 'Utility',
 
+    // Equipment & Fleet
+    EQUIPMENT = 'Equipment',
+
     // Agronomy RAG
     AGRONOMY_SOURCE = 'AgronomySource',
 
@@ -96,6 +99,9 @@ export enum Subject {
 
     // Settings & Configuration
     SETTINGS = 'Settings',
+
+    // HR
+    HR_COMPLIANCE = 'HrCompliance',
 
     // API
     API = 'API',

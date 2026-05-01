@@ -107,6 +107,9 @@ export const RESOURCES: readonly ResourceDef[] = [
     { key: 'inventory', subject: Subject.INVENTORY, displayName: 'Inventory' },
     { key: 'utilities', subject: Subject.UTILITY, displayName: 'Utilities' },
 
+    // Equipment & Fleet
+    { key: 'equipment', subject: Subject.EQUIPMENT, displayName: 'Equipment' },
+
     // Agronomy RAG
     { key: 'agronomy_sources', subject: Subject.AGRONOMY_SOURCE, displayName: 'Agronomy Sources' },
 
@@ -114,6 +117,9 @@ export const RESOURCES: readonly ResourceDef[] = [
     { key: 'chat', subject: Subject.CHAT, displayName: 'Chat' },
     { key: 'settings', subject: Subject.SETTINGS, displayName: 'Settings' },
     { key: 'api', subject: Subject.API, displayName: 'API' },
+
+    // HR
+    { key: 'hr_compliance', subject: Subject.HR_COMPLIANCE, displayName: 'HR Compliance' },
 ];
 
 export const RESOURCE_SUBJECT_MAP: Record<string, Subject> = Object.freeze(
