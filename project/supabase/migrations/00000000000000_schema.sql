@@ -7551,7 +7551,7 @@ ON CONFLICT (name) DO UPDATE SET
 DO $perms$
 DECLARE
 -- BEGIN GENERATED PERMISSION RESOURCES (do not edit by hand)
-  -- 70 resources × 5 actions = 350 permission rows
+  -- 74 resources × 5 actions = 370 permission rows
   v_resources TEXT[] := ARRAY[
     'users','organizations','roles','subscriptions',
     'farms','parcels','warehouses','infrastructure',
@@ -7570,7 +7570,8 @@ DECLARE
     'production_intelligence','dashboard','analytics','sensors',
     'costs','revenues','inventory','utilities',
     'equipment','agronomy_sources','chat','settings',
-    'api','hr_compliance'
+    'api','hr_compliance','leave_types','leave_allocations',
+    'leave_applications','holidays'
   ];
 -- END GENERATED PERMISSION RESOURCES
   v_actions TEXT[] := ARRAY['read','create','update','delete','manage'];
@@ -18375,3 +18376,247 @@ CREATE TRIGGER trg_create_hr_compliance_settings
 INSERT INTO hr_compliance_settings (organization_id)
 SELECT id FROM organizations
 ON CONFLICT (organization_id) DO NOTHING;
+
+-- =====================================================================
+-- HR Module — Phase 1.A: Leave Management
+-- =====================================================================
+
+-- Leave Types (per org)
+CREATE TABLE IF NOT EXISTS leave_types (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  name_fr TEXT,
+  name_ar TEXT,
+  description TEXT,
+
+  annual_allocation NUMERIC NOT NULL DEFAULT 0,
+  is_carry_forward BOOLEAN NOT NULL DEFAULT false,
+  maximum_carry_forward_days NUMERIC NOT NULL DEFAULT 0,
+  carry_forward_expiry_months INTEGER NOT NULL DEFAULT 3,
+  is_encashable BOOLEAN NOT NULL DEFAULT false,
+  encashment_amount_per_day NUMERIC,
+
+  applicable_worker_types TEXT[] NOT NULL DEFAULT ARRAY['fixed_salary', 'daily_worker', 'metayage'],
+  is_paid BOOLEAN NOT NULL DEFAULT true,
+  requires_approval BOOLEAN NOT NULL DEFAULT true,
+  maximum_consecutive_days INTEGER,
+  minimum_advance_notice_days INTEGER NOT NULL DEFAULT 1,
+
+  is_earned_leave BOOLEAN NOT NULL DEFAULT false,
+  earned_leave_frequency TEXT
+    CHECK (earned_leave_frequency IS NULL OR earned_leave_frequency IN ('monthly', 'quarterly', 'biannual', 'annual')),
+  earned_leave_days_per_period NUMERIC,
+
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(organization_id, name)
+);
+
+CREATE INDEX IF NOT EXISTS idx_leave_types_org ON leave_types(organization_id);
+
+ALTER TABLE leave_types ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_access_leave_types" ON leave_types;
+CREATE POLICY "org_access_leave_types" ON leave_types
+  FOR ALL USING (is_organization_member(organization_id))
+  WITH CHECK (is_organization_member(organization_id));
+
+DROP TRIGGER IF EXISTS update_leave_types_updated_at ON leave_types;
+CREATE TRIGGER update_leave_types_updated_at
+  BEFORE UPDATE ON leave_types
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Holiday Lists
+CREATE TABLE IF NOT EXISTS holiday_lists (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  year INTEGER NOT NULL,
+  description TEXT,
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(organization_id, name)
+);
+
+CREATE INDEX IF NOT EXISTS idx_holiday_lists_org ON holiday_lists(organization_id);
+CREATE INDEX IF NOT EXISTS idx_holiday_lists_year ON holiday_lists(organization_id, year);
+
+ALTER TABLE holiday_lists ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_access_holiday_lists" ON holiday_lists;
+CREATE POLICY "org_access_holiday_lists" ON holiday_lists
+  FOR ALL USING (is_organization_member(organization_id))
+  WITH CHECK (is_organization_member(organization_id));
+
+DROP TRIGGER IF EXISTS update_holiday_lists_updated_at ON holiday_lists;
+CREATE TRIGGER update_holiday_lists_updated_at
+  BEFORE UPDATE ON holiday_lists
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Holidays (in a list)
+CREATE TABLE IF NOT EXISTS holidays (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  holiday_list_id UUID NOT NULL REFERENCES holiday_lists(id) ON DELETE CASCADE,
+  date DATE NOT NULL,
+  name TEXT NOT NULL,
+  name_fr TEXT,
+  name_ar TEXT,
+  holiday_type TEXT NOT NULL DEFAULT 'public'
+    CHECK (holiday_type IN ('public', 'optional', 'weekly_off')),
+  description TEXT,
+  UNIQUE(holiday_list_id, date)
+);
+
+CREATE INDEX IF NOT EXISTS idx_holidays_list ON holidays(holiday_list_id);
+CREATE INDEX IF NOT EXISTS idx_holidays_date ON holidays(date);
+
+ALTER TABLE holidays ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_access_holidays" ON holidays;
+CREATE POLICY "org_access_holidays" ON holidays
+  FOR ALL USING (
+    is_organization_member((SELECT organization_id FROM holiday_lists WHERE id = holiday_list_id))
+  ) WITH CHECK (
+    is_organization_member((SELECT organization_id FROM holiday_lists WHERE id = holiday_list_id))
+  );
+
+-- Leave Allocations (worker x leave_type x period)
+CREATE TABLE IF NOT EXISTS leave_allocations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  worker_id UUID NOT NULL REFERENCES workers(id) ON DELETE CASCADE,
+  leave_type_id UUID NOT NULL REFERENCES leave_types(id) ON DELETE CASCADE,
+
+  total_days NUMERIC NOT NULL DEFAULT 0,
+  used_days NUMERIC NOT NULL DEFAULT 0,
+  expired_days NUMERIC NOT NULL DEFAULT 0,
+  carry_forwarded_days NUMERIC NOT NULL DEFAULT 0,
+  encashed_days NUMERIC NOT NULL DEFAULT 0,
+  remaining_days NUMERIC GENERATED ALWAYS AS (
+    total_days - used_days - expired_days - encashed_days
+  ) STORED,
+
+  period_start DATE NOT NULL,
+  period_end DATE NOT NULL,
+
+  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+  UNIQUE(worker_id, leave_type_id, period_start)
+);
+
+CREATE INDEX IF NOT EXISTS idx_leave_allocations_org ON leave_allocations(organization_id);
+CREATE INDEX IF NOT EXISTS idx_leave_allocations_worker ON leave_allocations(worker_id);
+CREATE INDEX IF NOT EXISTS idx_leave_allocations_type ON leave_allocations(leave_type_id);
+
+ALTER TABLE leave_allocations ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_access_leave_allocations" ON leave_allocations;
+CREATE POLICY "org_access_leave_allocations" ON leave_allocations
+  FOR ALL USING (is_organization_member(organization_id))
+  WITH CHECK (is_organization_member(organization_id));
+
+DROP TRIGGER IF EXISTS update_leave_allocations_updated_at ON leave_allocations;
+CREATE TRIGGER update_leave_allocations_updated_at
+  BEFORE UPDATE ON leave_allocations
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Leave Applications
+CREATE TABLE IF NOT EXISTS leave_applications (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  worker_id UUID NOT NULL REFERENCES workers(id) ON DELETE CASCADE,
+  leave_type_id UUID NOT NULL REFERENCES leave_types(id) ON DELETE CASCADE,
+
+  from_date DATE NOT NULL,
+  to_date DATE NOT NULL,
+  total_days NUMERIC NOT NULL,
+  half_day BOOLEAN NOT NULL DEFAULT false,
+  half_day_period TEXT
+    CHECK (half_day_period IS NULL OR half_day_period IN ('first_half', 'second_half')),
+
+  reason TEXT NOT NULL,
+  attachment_urls TEXT[],
+
+  status TEXT NOT NULL DEFAULT 'pending'
+    CHECK (status IN ('pending', 'approved', 'rejected', 'cancelled')),
+  approved_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  approved_at TIMESTAMPTZ,
+  rejection_reason TEXT,
+
+  is_block_day BOOLEAN NOT NULL DEFAULT false,
+
+  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+  CHECK (to_date >= from_date)
+);
+
+CREATE INDEX IF NOT EXISTS idx_leave_applications_org ON leave_applications(organization_id);
+CREATE INDEX IF NOT EXISTS idx_leave_applications_worker ON leave_applications(worker_id);
+CREATE INDEX IF NOT EXISTS idx_leave_applications_status ON leave_applications(organization_id, status);
+CREATE INDEX IF NOT EXISTS idx_leave_applications_dates ON leave_applications(from_date, to_date);
+
+ALTER TABLE leave_applications ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_access_leave_applications" ON leave_applications;
+CREATE POLICY "org_access_leave_applications" ON leave_applications
+  FOR ALL USING (is_organization_member(organization_id))
+  WITH CHECK (is_organization_member(organization_id));
+
+DROP TRIGGER IF EXISTS update_leave_applications_updated_at ON leave_applications;
+CREATE TRIGGER update_leave_applications_updated_at
+  BEFORE UPDATE ON leave_applications
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Leave Block Dates (e.g. harvest blackout)
+CREATE TABLE IF NOT EXISTS leave_block_dates (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  block_date DATE NOT NULL,
+  reason TEXT NOT NULL,
+  applies_to TEXT[] NOT NULL DEFAULT ARRAY['all'],
+  allowed_approvers UUID[],
+  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(organization_id, block_date)
+);
+
+CREATE INDEX IF NOT EXISTS idx_leave_block_dates_org_date ON leave_block_dates(organization_id, block_date);
+
+ALTER TABLE leave_block_dates ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_access_leave_block_dates" ON leave_block_dates;
+CREATE POLICY "org_access_leave_block_dates" ON leave_block_dates
+  FOR ALL USING (is_organization_member(organization_id))
+  WITH CHECK (is_organization_member(organization_id));
+
+-- Leave Encashments
+CREATE TABLE IF NOT EXISTS leave_encashments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  worker_id UUID NOT NULL REFERENCES workers(id) ON DELETE CASCADE,
+  leave_type_id UUID NOT NULL REFERENCES leave_types(id) ON DELETE CASCADE,
+  leave_allocation_id UUID NOT NULL REFERENCES leave_allocations(id) ON DELETE CASCADE,
+
+  days_encashed NUMERIC NOT NULL CHECK (days_encashed > 0),
+  amount_per_day NUMERIC NOT NULL CHECK (amount_per_day >= 0),
+  total_amount NUMERIC NOT NULL CHECK (total_amount >= 0),
+  status TEXT NOT NULL DEFAULT 'pending'
+    CHECK (status IN ('pending', 'approved', 'paid', 'cancelled')),
+
+  approved_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  approved_at TIMESTAMPTZ,
+  paid_at TIMESTAMPTZ,
+
+  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_leave_encashments_org ON leave_encashments(organization_id);
+CREATE INDEX IF NOT EXISTS idx_leave_encashments_worker ON leave_encashments(worker_id);
+
+ALTER TABLE leave_encashments ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_access_leave_encashments" ON leave_encashments;
+CREATE POLICY "org_access_leave_encashments" ON leave_encashments
+  FOR ALL USING (is_organization_member(organization_id))
+  WITH CHECK (is_organization_member(organization_id));

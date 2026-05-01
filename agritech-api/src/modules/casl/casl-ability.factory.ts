@@ -164,6 +164,10 @@ export class CaslAbilityFactory {
             can(Action.Manage, Subject.CERTIFICATION);
             can(Action.Manage, Subject.COMPLIANCE_CHECK);
             can(Action.Manage, Subject.HR_COMPLIANCE);
+            can(Action.Manage, Subject.LEAVE_TYPE);
+            can(Action.Manage, Subject.LEAVE_ALLOCATION);
+            can(Action.Manage, Subject.LEAVE_APPLICATION);
+            can(Action.Manage, Subject.HOLIDAY);
             console.log('[CaslAbilityFactory] Organization admin - full org access granted');
         }
         // ============ FARM MANAGER ============
@@ -231,6 +235,10 @@ export class CaslAbilityFactory {
             can(Action.Manage, Subject.CERTIFICATION);
             can(Action.Manage, Subject.COMPLIANCE_CHECK);
             can(Action.Read, Subject.HR_COMPLIANCE);
+            can(Action.Read, Subject.LEAVE_TYPE);
+            can(Action.Manage, Subject.LEAVE_ALLOCATION);
+            can(Action.Manage, Subject.LEAVE_APPLICATION);
+            can(Action.Read, Subject.HOLIDAY);
 
             console.log('[CaslAbilityFactory] Farm manager permissions granted');
         }
@@ -294,6 +302,13 @@ export class CaslAbilityFactory {
             cannot(Action.Create, Subject.PURCHASE_ORDER);
             cannot(Action.Manage, Subject.FINANCIAL_REPORT);
 
+            // Self-service: read leave types/holidays/own applications/own allocations
+            can(Action.Read, Subject.LEAVE_TYPE);
+            can(Action.Read, Subject.HOLIDAY);
+            can(Action.Create, Subject.LEAVE_APPLICATION);
+            can(Action.Read, Subject.LEAVE_APPLICATION);
+            can(Action.Read, Subject.LEAVE_ALLOCATION);
+
             console.log('[CaslAbilityFactory] Farm worker permissions granted');
         }
         // ============ DAY LABORER ============
@@ -321,6 +336,13 @@ export class CaslAbilityFactory {
             cannot(Action.Manage, Subject.SUPPLIER);
             cannot(Action.Manage, Subject.WORKER);
             cannot(Action.Manage, Subject.FINANCIAL_REPORT);
+
+            // Self-service for day laborers
+            can(Action.Read, Subject.LEAVE_TYPE);
+            can(Action.Read, Subject.HOLIDAY);
+            can(Action.Create, Subject.LEAVE_APPLICATION);
+            can(Action.Read, Subject.LEAVE_APPLICATION);
+            can(Action.Read, Subject.LEAVE_ALLOCATION);
 
             console.log('[CaslAbilityFactory] Day laborer permissions granted');
         }
@@ -592,6 +614,10 @@ export class CaslAbilityFactory {
             can(Action.Manage, Subject.CERTIFICATION);
             can(Action.Manage, Subject.COMPLIANCE_CHECK);
             can(Action.Manage, Subject.HR_COMPLIANCE);
+            can(Action.Manage, Subject.LEAVE_TYPE);
+            can(Action.Manage, Subject.LEAVE_ALLOCATION);
+            can(Action.Manage, Subject.LEAVE_APPLICATION);
+            can(Action.Manage, Subject.HOLIDAY);
         } else if (roleName === 'farm_manager') {
             // Farm operations
             can(Action.Manage, Subject.FARM);
@@ -668,6 +694,10 @@ export class CaslAbilityFactory {
             can(Action.Manage, Subject.CERTIFICATION);
             can(Action.Manage, Subject.COMPLIANCE_CHECK);
             can(Action.Read, Subject.HR_COMPLIANCE);
+            can(Action.Read, Subject.LEAVE_TYPE);
+            can(Action.Manage, Subject.LEAVE_ALLOCATION);
+            can(Action.Manage, Subject.LEAVE_APPLICATION);
+            can(Action.Read, Subject.HOLIDAY);
 
             cannot(Action.Delete, Subject.JOURNAL_ENTRY);
             cannot(Action.Manage, Subject.ACCOUNT);
@@ -738,6 +768,12 @@ export class CaslAbilityFactory {
             cannot(Action.Create, Subject.SALES_ORDER);
             cannot(Action.Create, Subject.PURCHASE_ORDER);
             cannot(Action.Manage, Subject.FINANCIAL_REPORT);
+
+            can(Action.Read, Subject.LEAVE_TYPE);
+            can(Action.Read, Subject.HOLIDAY);
+            can(Action.Create, Subject.LEAVE_APPLICATION);
+            can(Action.Read, Subject.LEAVE_APPLICATION);
+            can(Action.Read, Subject.LEAVE_ALLOCATION);
         } else if (roleName === 'day_laborer') {
             can(Action.Read, Subject.TASK);
             can(Action.Update, Subject.TASK);
@@ -764,6 +800,12 @@ export class CaslAbilityFactory {
             cannot(Action.Manage, Subject.SUPPLIER);
             cannot(Action.Manage, Subject.WORKER);
             cannot(Action.Manage, Subject.FINANCIAL_REPORT);
+
+            can(Action.Read, Subject.LEAVE_TYPE);
+            can(Action.Read, Subject.HOLIDAY);
+            can(Action.Create, Subject.LEAVE_APPLICATION);
+            can(Action.Read, Subject.LEAVE_APPLICATION);
+            can(Action.Read, Subject.LEAVE_ALLOCATION);
         } else if (roleName === 'viewer') {
             // Read-only access
             can(Action.Read, Subject.FARM);

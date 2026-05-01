@@ -120,6 +120,10 @@ export const RESOURCES: readonly ResourceDef[] = [
 
     // HR
     { key: 'hr_compliance', subject: Subject.HR_COMPLIANCE, displayName: 'HR Compliance' },
+    { key: 'leave_types', subject: Subject.LEAVE_TYPE, displayName: 'Leave Types' },
+    { key: 'leave_allocations', subject: Subject.LEAVE_ALLOCATION, displayName: 'Leave Allocations' },
+    { key: 'leave_applications', subject: Subject.LEAVE_APPLICATION, displayName: 'Leave Applications' },
+    { key: 'holidays', subject: Subject.HOLIDAY, displayName: 'Holidays' },
 ];
 
 export const RESOURCE_SUBJECT_MAP: Record<string, Subject> = Object.freeze(

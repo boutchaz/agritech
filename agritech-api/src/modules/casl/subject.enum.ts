@@ -102,6 +102,10 @@ export enum Subject {
 
     // HR
     HR_COMPLIANCE = 'HrCompliance',
+    LEAVE_TYPE = 'LeaveType',
+    LEAVE_ALLOCATION = 'LeaveAllocation',
+    LEAVE_APPLICATION = 'LeaveApplication',
+    HOLIDAY = 'Holiday',
 
     // API
     API = 'API',

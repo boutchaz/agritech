@@ -23,6 +23,7 @@ import { TasksModule } from "./modules/tasks/tasks.module";
 import { WorkersModule } from "./modules/workers/workers.module";
 import { AttendanceModule } from "./modules/attendance/attendance.module";
 import { HrComplianceModule } from "./modules/hr-compliance/hr-compliance.module";
+import { LeaveManagementModule } from "./modules/leave-management/leave-management.module";
 import { StockEntriesModule } from "./modules/stock-entries/stock-entries.module";
 import { ItemsModule } from "./modules/items/items.module";
 import { WarehousesModule } from "./modules/warehouses/warehouses.module";
@@ -168,6 +169,7 @@ import { BarcodeModule } from "./modules/barcode/barcode.module";
     WorkersModule,
     AttendanceModule,
     HrComplianceModule,
+    LeaveManagementModule,
     WorkUnitsModule,
     BannersModule,
     ChangelogsModule,
