@@ -6,6 +6,8 @@ import { NotificationsService, InvoiceEmailData, MANAGEMENT_ROLES } from '../not
 import { NotificationType } from '../notifications/dto/notification.dto';
 import { StockEntriesService } from '../stock-entries/stock-entries.service';
 import { AccountingAutomationService } from '../journal-entries/accounting-automation.service';
+import { PaymentsService } from '../payments/payments.service';
+import { PaymentType } from '../payments/dto/payment.dto';
 import { StockEntryType, StockEntryStatus } from '../stock-entries/dto/create-stock-entry.dto';
 import { InvoiceFiltersDto, UpdateInvoiceStatusDto, CreateInvoiceDto, UpdateInvoiceDto, CreateCreditNoteDto } from './dto';
 import { buildInvoiceLedgerLines } from '../journal-entries/helpers/ledger.helper';
@@ -24,6 +26,7 @@ export class InvoicesService {
     private readonly notificationsService: NotificationsService,
     private readonly stockEntriesService: StockEntriesService,
     private readonly accountingAutomationService: AccountingAutomationService,
+    private readonly paymentsService: PaymentsService,
   ) {}
 
   async findAll(
@@ -513,47 +516,43 @@ export class InvoicesService {
       throw new BadRequestException(`Failed to update invoice status: ${error.message}`);
     }
 
-    // When marking as paid, create an accounting_payments record + allocation
+    // When marking as paid, route through the canonical PaymentsService flow so a JE
+    // is posted, the bank balance moves, and the payment lands in 'submitted' status
+    // with a journal_entry_id. The previous shortcut left the payment row without a JE.
     if (dto.status === 'paid') {
       try {
-        const paymentNumber = await this.sequencesService.generatePaymentNumber(organizationId);
-        const paymentType = currentInvoice.invoice_type === 'sales' ? 'receive' : 'pay';
+        const amount = Number(currentInvoice.grand_total) || 0;
+        const paymentType = currentInvoice.invoice_type === 'sales' ? PaymentType.RECEIVE : PaymentType.PAY;
 
-        const { data: payment, error: payError } = await supabaseClient
-          .from('accounting_payments')
-          .insert({
-            organization_id: organizationId,
-            payment_number: paymentNumber,
-            payment_date: new Date().toISOString().split('T')[0],
+        const draftPayment = await this.paymentsService.create(
+          {
             payment_type: paymentType,
-            payment_method: 'cash',
-            party_id: currentInvoice.party_id || null,
+            payment_method: 'cash' as any,
+            payment_date: new Date().toISOString().split('T')[0],
+            amount,
             party_name: currentInvoice.party_name || 'Unknown',
-            party_type: currentInvoice.party_type || (currentInvoice.invoice_type === 'sales' ? 'customer' : 'supplier'),
-            amount: Number(currentInvoice.grand_total) || 0,
+            party_id: currentInvoice.party_id || undefined,
+            party_type: (currentInvoice.party_type || (currentInvoice.invoice_type === 'sales' ? 'customer' : 'supplier')) as any,
             currency_code: currentInvoice.currency_code || 'MAD',
             reference_number: currentInvoice.invoice_number,
             remarks: `Payment for invoice ${currentInvoice.invoice_number}`,
-            status: 'submitted',
-            created_by: userId,
-          })
-          .select()
-          .single();
+          } as any,
+          organizationId,
+          userId,
+        );
 
-        if (!payError && payment) {
-          await supabaseClient
-            .from('payment_allocations')
-            .insert({
-              payment_id: payment.id,
-              invoice_id: id,
-              allocated_amount: Number(currentInvoice.grand_total) || 0,
-            });
-        } else {
-          this.logger.warn(`Failed to create payment record for invoice ${id}: ${payError?.message}`);
-        }
-      } catch (paymentErr) {
-        // Don't fail the status update if payment record creation fails
-        this.logger.error(`Error creating payment record for invoice ${id}: ${paymentErr instanceof Error ? paymentErr.message : String(paymentErr)}`);
+        await this.paymentsService.allocatePayment(
+          draftPayment.id,
+          { allocations: [{ invoice_id: id, amount }] } as any,
+          organizationId,
+          userId,
+        );
+      } catch (paymentErr: any) {
+        // Surface accounting failure so caller knows JE was not posted.
+        this.logger.error(`Failed to post payment for invoice ${id}: ${paymentErr?.message}`);
+        throw new BadRequestException(
+          `Invoice marked paid but payment posting failed: ${paymentErr?.message}. Reverse status or retry via Payments module.`,
+        );
       }
     }
 

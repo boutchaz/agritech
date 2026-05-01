@@ -9,12 +9,60 @@ import { sanitizeSearch } from '../../common/utils/sanitize-search';
 @Injectable()
 export class AccountingAutomationService {
   private readonly logger = new Logger(AccountingAutomationService.name);
+  private orgBaseCurrencyCache = new Map<string, string>();
 
   constructor(
     private readonly databaseService: DatabaseService,
     private readonly sequencesService: SequencesService,
     private readonly fiscalYearsService: FiscalYearsService,
   ) {}
+
+  /**
+   * Resolve the org base currency. Cached per-org for the process lifetime.
+   * Falls back to 'MAD' if not set.
+   */
+  private async getBaseCurrency(organizationId: string): Promise<string> {
+    if (this.orgBaseCurrencyCache.has(organizationId)) {
+      return this.orgBaseCurrencyCache.get(organizationId)!;
+    }
+    const supabase = this.databaseService.getAdminClient();
+    const { data } = await supabase
+      .from('organizations')
+      .select('currency_code')
+      .eq('id', organizationId)
+      .maybeSingle();
+    const ccy = ((data?.currency_code as string | undefined) || 'MAD').toUpperCase();
+    this.orgBaseCurrencyCache.set(organizationId, ccy);
+    return ccy;
+  }
+
+  /**
+   * Stamp default FX columns on a journal_items payload in base currency:
+   * currency=base, exchange_rate=1, fc_debit=debit, fc_credit=credit.
+   * Existing values on the item are preserved (caller can override).
+   */
+  private withFxDefaults<T extends { debit?: number; credit?: number; currency?: string; exchange_rate?: number; fc_debit?: number; fc_credit?: number }>(
+    item: T,
+    baseCurrency: string,
+  ): T {
+    const debit = Number(item.debit || 0);
+    const credit = Number(item.credit || 0);
+    return {
+      ...item,
+      currency: item.currency ?? baseCurrency,
+      exchange_rate: item.exchange_rate ?? 1,
+      fc_debit: item.fc_debit ?? debit,
+      fc_credit: item.fc_credit ?? credit,
+    } as T;
+  }
+
+  private async stampFxOnItems<T extends { debit?: number; credit?: number; currency?: string; exchange_rate?: number; fc_debit?: number; fc_credit?: number }>(
+    organizationId: string,
+    items: T[],
+  ): Promise<T[]> {
+    const base = await this.getBaseCurrency(organizationId);
+    return items.map((it) => this.withFxDefaults(it, base));
+  }
 
   /**
    * Create journal entry from a cost record
@@ -128,9 +176,10 @@ export class AccountingAutomationService {
       );
     }
 
+    const stampedItems = await this.stampFxOnItems(organizationId, items);
     const { error: itemsError } = await supabase
       .from('journal_items')
-      .insert(items);
+      .insert(stampedItems);
 
     if (itemsError) {
       this.logger.error(`Failed to create journal items: ${itemsError.message}`);
@@ -270,9 +319,10 @@ export class AccountingAutomationService {
       );
     }
 
+    const stampedItems = await this.stampFxOnItems(organizationId, items);
     const { error: itemsError } = await supabase
       .from('journal_items')
-      .insert(items);
+      .insert(stampedItems);
 
     if (itemsError) {
       this.logger.error(`Failed to create journal items: ${itemsError.message}`);
@@ -431,9 +481,10 @@ export class AccountingAutomationService {
       );
     }
 
+    const stampedItems = await this.stampFxOnItems(organizationId, items);
     const { error: itemsError } = await supabase
       .from('journal_items')
-      .insert(items);
+      .insert(stampedItems);
 
     if (itemsError) {
       this.logger.error(`Failed to create maintenance journal items: ${itemsError.message}`);
@@ -693,9 +744,10 @@ export class AccountingAutomationService {
       );
     }
 
+    const stampedItems = await this.stampFxOnItems(organizationId, items);
     const { error: itemsError } = await supabase
       .from('journal_items')
-      .insert(items);
+      .insert(stampedItems);
 
     if (itemsError) {
       this.logger.error(`Failed to create journal items for worker payment: ${itemsError.message}`);
@@ -852,7 +904,8 @@ export class AccountingAutomationService {
       );
     }
 
-    const { error: itemsError } = await supabase.from('journal_items').insert(items);
+    const stampedSalarySlipItems = await this.stampFxOnItems(organizationId, items);
+    const { error: itemsError } = await supabase.from('journal_items').insert(stampedSalarySlipItems);
     if (itemsError) {
       await supabase.from('journal_entries').delete().eq('id', journalEntry.id);
       throw new BadRequestException(`Failed to insert journal items: ${itemsError.message}`);
@@ -961,7 +1014,8 @@ export class AccountingAutomationService {
       },
     ];
 
-    const { error: itemsError } = await supabase.from('journal_items').insert(items);
+    const stampedClaimItems = await this.stampFxOnItems(organizationId, items);
+    const { error: itemsError } = await supabase.from('journal_items').insert(stampedClaimItems);
     if (itemsError) {
       await supabase.from('journal_entries').delete().eq('id', journalEntry.id);
       throw new BadRequestException(`Failed to insert journal items: ${itemsError.message}`);
@@ -1066,8 +1120,8 @@ export class AccountingAutomationService {
 
       // Copy items with debit/credit swapped
       const copyRes = await pgClient.query(
-        `INSERT INTO journal_items (journal_entry_id, account_id, description, debit, credit, cost_center_id, farm_id, parcel_id)
-         SELECT $1, account_id, COALESCE('Reversal: ' || description, 'Reversal'), credit, debit, cost_center_id, farm_id, parcel_id
+        `INSERT INTO journal_items (journal_entry_id, account_id, description, debit, credit, cost_center_id, farm_id, parcel_id, currency, exchange_rate, fc_debit, fc_credit)
+         SELECT $1, account_id, COALESCE('Reversal: ' || description, 'Reversal'), credit, debit, cost_center_id, farm_id, parcel_id, currency, exchange_rate, fc_credit, fc_debit
          FROM journal_items WHERE journal_entry_id = $2
          RETURNING debit, credit`,
         [reversalId, originalEntryId],

@@ -8806,7 +8806,23 @@
     "confirmMarkPaid": "Marquer comme payé ? Les écritures comptables seront postées au grand livre.",
     "markPaid": "Marquer payé",
     "confirmCancel": "Annuler le bulletin ? Les fiches seront annulées.",
-    "create": "Nouveau bulletin de paie"
+    "create": "Nouveau bulletin de paie",
+    "subtitle": "Traitez la paie pour une période : créez une série, générez les fiches pour les travailleurs correspondants, puis soumettez quand vous êtes prêt.",
+    "generated": "{{count}} fiches générées ({{skipped}} ignorées)",
+    "paidWithJe": "Payé · {{count}} écritures comptables postées",
+    "statuses": {
+      "draft": "Brouillon",
+      "processing": "En cours",
+      "submitted": "Soumis",
+      "paid": "Payé",
+      "cancelled": "Annulé"
+    },
+    "frequencies": {
+      "monthly": "Mensuel",
+      "biweekly": "Bimensuel",
+      "weekly": "Hebdomadaire",
+      "daily": "Journalier"
+    }
   },
   "salaryStructures": {
     "title": "Structures salariales",
@@ -8987,5 +9003,13 @@
     "totalDays": "Total jours par ouvrier",
     "selectWorkers": "Sélectionner les ouvriers"
   },
-  "actions": "Actions"
+  "actions": "Actions",
+  "view": "Voir",
+  "cancel": "Annuler",
+  "delete": "Supprimer",
+  "clearFilters": "Effacer les filtres",
+  "new": "Nouveau",
+  "error": {
+    "unknown": "Erreur inconnue"
+  }
 }

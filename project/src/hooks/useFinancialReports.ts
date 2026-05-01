@@ -7,6 +7,9 @@ export type {
   TrialBalanceReport,
   BalanceSheetReport,
   ProfitLossReport,
+  ProfitLossComparisonReport,
+  ProfitLossSection,
+  ProfitLossFilters,
   GeneralLedgerReport,
   AccountSummaryRow,
   AccountBalance,
@@ -57,20 +60,96 @@ export function useBalanceSheet(asOfDate?: string, fiscalYearId?: string) {
 }
 
 /**
- * Hook to fetch profit and loss statement
+ * Hook to fetch profit and loss statement (with optional ERPNext-style filters).
  */
-export function useProfitLoss(startDate: string | undefined, endDate?: string, fiscalYearId?: string) {
+export function useProfitLoss(
+  startDate: string | undefined,
+  endDate?: string,
+  fiscalYearId?: string,
+  filters?: {
+    cost_center_id?: string;
+    farm_id?: string;
+    parcel_id?: string;
+    include_zero_balances?: boolean;
+    include_budget?: boolean;
+    include_by_currency?: boolean;
+    basis?: 'accrual' | 'cash';
+  },
+) {
   const { currentOrganization } = useAuth();
 
   return useQuery({
-    queryKey: ['financial-reports', 'profit-loss', currentOrganization?.id, startDate, endDate, fiscalYearId],
+    queryKey: [
+      'financial-reports',
+      'profit-loss',
+      currentOrganization?.id,
+      startDate,
+      endDate,
+      fiscalYearId,
+      filters,
+    ],
     queryFn: async () => {
       if (!currentOrganization?.id) {
         throw new Error('No organization selected');
       }
-      return financialReportsApi.getProfitLoss(startDate, endDate, currentOrganization.id, fiscalYearId);
+      return financialReportsApi.getProfitLoss(
+        startDate,
+        endDate,
+        currentOrganization.id,
+        fiscalYearId,
+        filters,
+      );
     },
     enabled: !!currentOrganization?.id && (!!startDate || !!fiscalYearId),
+  });
+}
+
+/**
+ * Hook to fetch P&L statement with a comparison period (previous_period | previous_year).
+ */
+export function useProfitLossComparison(
+  startDate: string | undefined,
+  endDate: string | undefined,
+  compareWith: 'previous_period' | 'previous_year' | undefined,
+  fiscalYearId?: string,
+  filters?: {
+    cost_center_id?: string;
+    farm_id?: string;
+    parcel_id?: string;
+    include_zero_balances?: boolean;
+    include_budget?: boolean;
+    include_by_currency?: boolean;
+    basis?: 'accrual' | 'cash';
+  },
+) {
+  const { currentOrganization } = useAuth();
+
+  return useQuery({
+    queryKey: [
+      'financial-reports',
+      'profit-loss-comparison',
+      currentOrganization?.id,
+      startDate,
+      endDate,
+      compareWith,
+      fiscalYearId,
+      filters,
+    ],
+    queryFn: async () => {
+      if (!currentOrganization?.id || !startDate || !endDate || !compareWith) {
+        throw new Error('Missing parameters for comparison');
+      }
+      return financialReportsApi.getProfitLossComparison(
+        startDate,
+        endDate,
+        compareWith,
+        currentOrganization.id,
+        fiscalYearId,
+        filters,
+      );
+    },
+    enabled:
+      !!currentOrganization?.id && !!startDate && !!endDate && !!compareWith,
   });
 }
 

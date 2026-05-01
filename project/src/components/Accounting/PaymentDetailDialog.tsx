@@ -23,7 +23,7 @@ export const PaymentDetailDialog = ({
   onOpenChange,
   mode: initialMode = 'view',
 }: PaymentDetailDialogProps) => {
-  const { t } = useTranslation();
+  const { t } = useTranslation('accounting');
   const [mode, setMode] = React.useState<'view' | 'edit'>(initialMode);
   const deletePayment = useDeletePayment();
   const [allocationOpen, setAllocationOpen] = React.useState(false);

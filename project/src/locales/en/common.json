@@ -8997,7 +8997,23 @@
     "confirmMarkPaid": "Mark as paid? Journal entries will be posted to the GL.",
     "markPaid": "Mark paid",
     "confirmCancel": "Cancel run? Slips will be cancelled.",
-    "create": "New payroll run"
+    "create": "New payroll run",
+    "subtitle": "Process payroll for a period: create a run, generate slips for matching workers, then submit when ready.",
+    "generated": "Generated {{count}} slips ({{skipped}} skipped)",
+    "paidWithJe": "Paid · {{count}} JE posted",
+    "statuses": {
+      "draft": "Draft",
+      "processing": "Processing",
+      "submitted": "Submitted",
+      "paid": "Paid",
+      "cancelled": "Cancelled"
+    },
+    "frequencies": {
+      "monthly": "Monthly",
+      "biweekly": "Biweekly",
+      "weekly": "Weekly",
+      "daily": "Daily"
+    }
   },
   "salaryStructures": {
     "title": "Salary Structures",
@@ -9178,5 +9194,13 @@
     "totalDays": "Total days per worker",
     "selectWorkers": "Select workers"
   },
-  "actions": "Actions"
+  "actions": "Actions",
+  "view": "View",
+  "cancel": "Cancel",
+  "delete": "Delete",
+  "clearFilters": "Clear filters",
+  "new": "New",
+  "error": {
+    "unknown": "Unknown error"
+  }
 }

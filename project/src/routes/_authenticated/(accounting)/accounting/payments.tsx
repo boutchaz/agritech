@@ -19,7 +19,7 @@ import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 type PaymentStatus = 'draft' | 'submitted' | 'reconciled' | 'cancelled';
 
 const AppContent = () => {
-  const { t } = useTranslation();
+  const { t } = useTranslation('accounting');
   const { currentOrganization } = useAuth();
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);

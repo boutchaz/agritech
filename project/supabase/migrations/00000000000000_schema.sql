@@ -305,8 +305,6 @@ BEGIN
   END IF;
 END $$;
 
--- Backfill: all pre-existing organizations are considered approved
-UPDATE organizations SET approval_status = 'approved' WHERE approval_status = 'pending' AND created_at < NOW() - INTERVAL '1 minute';
 
 CREATE INDEX IF NOT EXISTS idx_organizations_slug ON organizations(slug);
 CREATE INDEX IF NOT EXISTS idx_organizations_country_code ON organizations(country_code);
@@ -1395,8 +1393,65 @@ CREATE TABLE IF NOT EXISTS journal_items (
   fiscal_year_id UUID,
   fiscal_period_id UUID,
   biological_asset_id UUID,
+  -- Multi-currency FX (4d): currency the source transaction was in,
+  -- exchange_rate to org base currency, fc_* hold foreign currency amounts.
+  -- debit/credit are always in org base currency.
+  currency CHAR(3),
+  exchange_rate DECIMAL(18, 8),
+  fc_debit DECIMAL(15, 2),
+  fc_credit DECIMAL(15, 2),
+  -- Phase 4c: Cash basis P&L. Set on items whose JE moved cash (or that touch a
+  -- cash/bank account); NULL means "not yet cash-settled" (excluded from cash-basis P&L).
+  cash_settlement_date DATE NULL,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+ALTER TABLE journal_items ADD COLUMN IF NOT EXISTS cash_settlement_date DATE NULL;
+
+-- Multi-currency FX rates (4d)
+CREATE TABLE IF NOT EXISTS exchange_rates (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+  rate_date DATE NOT NULL,
+  from_currency CHAR(3) NOT NULL,
+  to_currency CHAR(3) NOT NULL,
+  rate DECIMAL(18, 8) NOT NULL CHECK (rate > 0),
+  source VARCHAR(50) DEFAULT 'manual',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE (organization_id, rate_date, from_currency, to_currency)
+);
+CREATE INDEX IF NOT EXISTS idx_exchange_rates_lookup
+  ON exchange_rates (organization_id, from_currency, to_currency, rate_date DESC);
+
+-- =====================================================================
+-- P&L Phase 4f: Inter-organization (group) consolidation
+-- =====================================================================
+CREATE TABLE IF NOT EXISTS organization_groups (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  parent_organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  name VARCHAR(255) NOT NULL,
+  base_currency CHAR(3) NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE (parent_organization_id, name)
+);
+CREATE INDEX IF NOT EXISTS idx_org_groups_parent ON organization_groups(parent_organization_id);
+
+CREATE TABLE IF NOT EXISTS organization_group_members (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  group_id UUID NOT NULL REFERENCES organization_groups(id) ON DELETE CASCADE,
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE (group_id, organization_id)
+);
+CREATE INDEX IF NOT EXISTS idx_org_group_members_group ON organization_group_members(group_id);
+CREATE INDEX IF NOT EXISTS idx_org_group_members_org ON organization_group_members(organization_id);
+
+ALTER TABLE journal_entries
+  ADD COLUMN IF NOT EXISTS intercompany_pair_id UUID NULL;
+
+CREATE INDEX IF NOT EXISTS idx_journal_entries_intercompany
+  ON journal_entries(intercompany_pair_id)
+  WHERE intercompany_pair_id IS NOT NULL;
 
 CREATE INDEX IF NOT EXISTS idx_journal_items_entry ON journal_items(journal_entry_id);
 CREATE INDEX IF NOT EXISTS idx_journal_items_account ON journal_items(account_id);
@@ -1404,6 +1459,35 @@ CREATE INDEX IF NOT EXISTS idx_journal_items_cost_center ON journal_items(cost_c
 CREATE INDEX IF NOT EXISTS idx_journal_items_crop_cycle ON journal_items(crop_cycle_id);
 CREATE INDEX IF NOT EXISTS idx_journal_items_campaign ON journal_items(campaign_id);
 CREATE INDEX IF NOT EXISTS idx_journal_items_fiscal_year ON journal_items(fiscal_year_id);
+CREATE INDEX IF NOT EXISTS idx_journal_items_cash_settled
+  ON journal_items(cash_settlement_date)
+  WHERE cash_settlement_date IS NOT NULL;
+
+-- Phase 4c: trigger to populate cash_settlement_date when a JE is posted that moves cash.
+CREATE OR REPLACE FUNCTION set_cash_settlement_on_payment_post() RETURNS trigger AS $$
+BEGIN
+  IF NEW.status = 'posted' AND (OLD.status IS NULL OR OLD.status <> 'posted') THEN
+    IF NEW.entry_type IN ('payment','receipt','cash','bank')
+       OR EXISTS (
+         SELECT 1 FROM journal_items ji
+         JOIN accounts a ON a.id = ji.account_id
+         WHERE ji.journal_entry_id = NEW.id
+           AND a.account_type ILIKE 'asset'
+           AND (a.account_subtype ILIKE '%cash%' OR a.account_subtype ILIKE '%bank%'
+                OR a.name ILIKE '%cash%' OR a.name ILIKE '%bank%'
+                OR a.name ILIKE '%caisse%' OR a.name ILIKE '%banque%')
+       ) THEN
+      UPDATE journal_items SET cash_settlement_date = NEW.entry_date
+      WHERE journal_entry_id = NEW.id AND cash_settlement_date IS NULL;
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_set_cash_settlement ON journal_entries;
+CREATE TRIGGER trg_set_cash_settlement AFTER INSERT OR UPDATE ON journal_entries
+FOR EACH ROW EXECUTE FUNCTION set_cash_settlement_on_payment_post();
 
 -- Invoices
 CREATE TABLE IF NOT EXISTS invoices (
@@ -1725,6 +1809,24 @@ ALTER TABLE IF EXISTS taxes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS bank_accounts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS journal_entries ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS journal_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS exchange_rates ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_access" ON exchange_rates;
+CREATE POLICY "org_access" ON exchange_rates
+  FOR ALL USING (organization_id IS NULL OR is_organization_member(organization_id));
+ALTER TABLE IF EXISTS organization_groups ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_group_parent_access" ON organization_groups;
+CREATE POLICY "org_group_parent_access" ON organization_groups FOR ALL
+  USING (is_organization_member(parent_organization_id));
+ALTER TABLE IF EXISTS organization_group_members ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_group_member_access" ON organization_group_members;
+CREATE POLICY "org_group_member_access" ON organization_group_members FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_groups og
+      WHERE og.id = organization_group_members.group_id
+        AND is_organization_member(og.parent_organization_id)
+    )
+  );
 ALTER TABLE IF EXISTS invoices ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS invoice_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS accounting_payments ENABLE ROW LEVEL SECURITY;
@@ -3197,32 +3299,6 @@ FOR EACH ROW EXECUTE FUNCTION update_item_barcodes_updated_at();
 
 GRANT SELECT, INSERT, UPDATE, DELETE ON item_barcodes TO authenticated;
 
--- One-time backfill: migrate existing items.barcode → item_barcodes (primary)
--- and product_variants.barcode → item_barcodes (non-primary, with unit_id).
--- Idempotent via ON CONFLICT DO NOTHING (unique on org_id, barcode where deleted_at IS NULL).
-DO $$
-BEGIN
-  -- Disable the sync trigger for this backfill so it doesn't recursively
-  -- update items.barcode (we're reading FROM items, would cause noise).
-  ALTER TABLE item_barcodes DISABLE TRIGGER trg_sync_primary_barcode;
-
-  INSERT INTO item_barcodes (organization_id, item_id, barcode, is_primary, created_at)
-  SELECT i.organization_id, i.id, i.barcode, true, COALESCE(i.created_at, NOW())
-  FROM items i
-  WHERE i.barcode IS NOT NULL AND i.barcode <> ''
-    AND i.deleted_at IS NULL
-  ON CONFLICT DO NOTHING;
-
-  INSERT INTO item_barcodes (organization_id, item_id, barcode, unit_id, is_primary, created_at)
-  SELECT pv.organization_id, pv.item_id, pv.barcode, pv.unit_id, false, COALESCE(pv.created_at, NOW())
-  FROM product_variants pv
-  WHERE pv.barcode IS NOT NULL AND pv.barcode <> ''
-    AND pv.deleted_at IS NULL
-  ON CONFLICT DO NOTHING;
-
-  ALTER TABLE item_barcodes ENABLE TRIGGER trg_sync_primary_barcode;
-END $$;
-
 -- =====================================================
 -- VARIANT BARCODES (multi-barcode per product variant)
 -- Mirrors item_barcodes structure, linked to product_variants
@@ -3313,21 +3389,6 @@ CREATE TRIGGER variant_barcodes_updated_at
   FOR EACH ROW EXECUTE FUNCTION update_variant_barcodes_updated_at();
 
 GRANT SELECT, INSERT, UPDATE, DELETE ON variant_barcodes TO authenticated;
-
--- One-time backfill: migrate existing product_variants.barcode → variant_barcodes (primary)
-DO $$
-BEGIN
-  ALTER TABLE variant_barcodes DISABLE TRIGGER trg_sync_primary_barcode_variant;
-
-  INSERT INTO variant_barcodes (organization_id, variant_id, barcode, barcode_type, is_primary, created_by)
-  SELECT pv.organization_id, pv.id, pv.barcode, '', true, NULL
-  FROM product_variants pv
-  WHERE pv.barcode IS NOT NULL AND pv.barcode <> ''
-    AND pv.deleted_at IS NULL
-  ON CONFLICT DO NOTHING;
-
-  ALTER TABLE variant_barcodes ENABLE TRIGGER trg_sync_primary_barcode_variant;
-END $$;
 
 -- Add foreign key constraint to invoice_items (deferred because items table is created after invoice_items)
 ALTER TABLE invoice_items ADD CONSTRAINT fk_invoice_items_item_id FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE SET NULL;
@@ -3937,70 +3998,6 @@ CREATE TRIGGER trg_update_warehouse_stock_reserved
   FOR EACH ROW
   EXECUTE FUNCTION update_warehouse_stock_reserved();
 
--- One-time backfill for existing data
-DO $$
-DECLARE
-  v_record RECORD;
-  v_existing_id UUID;
-  v_reserved NUMERIC;
-BEGIN
-  FOR v_record IN
-    SELECT
-      sm.organization_id,
-      sm.item_id,
-      sm.variant_id,
-      sm.warehouse_id,
-      SUM(sm.quantity) AS quantity,
-      MAX(sm.created_at) AS last_movement_at
-    FROM stock_movements sm
-    GROUP BY sm.organization_id, sm.item_id, sm.variant_id, sm.warehouse_id
-  LOOP
-    SELECT COALESCE(SUM(quantity), 0) INTO v_reserved
-    FROM stock_reservations sr
-    WHERE sr.organization_id = v_record.organization_id
-      AND sr.item_id = v_record.item_id
-      AND sr.warehouse_id = v_record.warehouse_id
-      AND sr.status = 'active'
-      AND sr.expires_at > NOW()
-      AND (sr.variant_id = v_record.variant_id OR (v_record.variant_id IS NULL AND sr.variant_id IS NULL));
-
-    SELECT id INTO v_existing_id
-    FROM warehouse_stock_levels wsl
-    WHERE wsl.organization_id = v_record.organization_id
-      AND wsl.item_id = v_record.item_id
-      AND wsl.warehouse_id = v_record.warehouse_id
-      AND (wsl.variant_id = v_record.variant_id OR (v_record.variant_id IS NULL AND wsl.variant_id IS NULL))
-    LIMIT 1;
-
-    IF v_existing_id IS NOT NULL THEN
-      UPDATE warehouse_stock_levels
-      SET quantity = v_record.quantity,
-          reserved_quantity = v_reserved,
-          last_movement_at = v_record.last_movement_at,
-          updated_at = NOW()
-      WHERE id = v_existing_id;
-    ELSE
-      INSERT INTO warehouse_stock_levels (
-        organization_id,
-        item_id,
-        variant_id,
-        warehouse_id,
-        quantity,
-        reserved_quantity,
-        last_movement_at
-      )
-      VALUES (
-        v_record.organization_id,
-        v_record.item_id,
-        v_record.variant_id,
-        v_record.warehouse_id,
-        v_record.quantity,
-        v_reserved,
-        v_record.last_movement_at
-      );
-    END IF;
-  END LOOP;
-END $$;
 
 -- Stock Entry Approvals
 CREATE TABLE IF NOT EXISTS stock_entry_approvals (
@@ -6171,99 +6168,6 @@ CREATE TRIGGER on_auth_user_created
 -- =====================================================
 -- These UPDATE statements populate organization_id for records
 -- that existed before the multi-tenant columns were added
-
--- Backfill parcels
-UPDATE parcels p
-SET organization_id = f.organization_id
-FROM farms f
-WHERE p.farm_id = f.id
-  AND p.organization_id IS NULL
-  AND f.organization_id IS NOT NULL;
-
--- Backfill crops
-UPDATE crops c
-SET organization_id = f.organization_id
-FROM farms f
-WHERE c.farm_id = f.id
-  AND c.organization_id IS NULL
-  AND f.organization_id IS NOT NULL;
-
-
-
--- Backfill work_records
-UPDATE work_records w
-SET organization_id = f.organization_id
-FROM farms f
-WHERE w.farm_id = f.id
-  AND w.organization_id IS NULL
-  AND f.organization_id IS NOT NULL;
-
--- Backfill metayage_settlements
-UPDATE metayage_settlements m
-SET organization_id = f.organization_id
-FROM farms f
-WHERE m.farm_id = f.id
-  AND m.organization_id IS NULL
-  AND f.organization_id IS NOT NULL;
-
--- Backfill utilities
-UPDATE utilities u
-SET organization_id = f.organization_id
-FROM farms f
-WHERE u.farm_id = f.id
-  AND u.organization_id IS NULL
-  AND f.organization_id IS NOT NULL;
-
--- Backfill financial_transactions
-UPDATE financial_transactions ft
-SET organization_id = f.organization_id
-FROM farms f
-WHERE ft.farm_id = f.id
-  AND ft.organization_id IS NULL
-  AND f.organization_id IS NOT NULL;
-
--- Backfill livestock
-UPDATE livestock l
-SET organization_id = f.organization_id
-FROM farms f
-WHERE l.farm_id = f.id
-  AND l.organization_id IS NULL
-  AND f.organization_id IS NOT NULL;
-
--- Backfill analyses (via parcel -> farm)
-UPDATE analyses a
-SET organization_id = f.organization_id
-FROM parcels p
-JOIN farms f ON f.id = p.farm_id
-WHERE a.parcel_id = p.id
-  AND a.organization_id IS NULL
-  AND f.organization_id IS NOT NULL;
-
--- Backfill soil_analyses (via parcel -> farm)
-UPDATE soil_analyses sa
-SET organization_id = f.organization_id
-FROM parcels p
-JOIN farms f ON f.id = p.farm_id
-WHERE sa.parcel_id = p.id
-  AND sa.organization_id IS NULL
-  AND f.organization_id IS NOT NULL;
-
--- Backfill parcel_reports (via parcel -> farm)
-UPDATE parcel_reports pr
-SET organization_id = f.organization_id
-FROM parcels p
-JOIN farms f ON f.id = p.farm_id
-WHERE pr.parcel_id = p.id
-  AND pr.organization_id IS NULL
-  AND f.organization_id IS NOT NULL;
-
--- Backfill trees (via tree_categories)
-UPDATE trees t
-SET organization_id = tc.organization_id
-FROM tree_categories tc
-WHERE t.category_id = tc.id
-  AND t.organization_id IS NULL
-  AND tc.organization_id IS NOT NULL;
 
 -- =====================================================
 -- XX. METEOROLOGICAL DATA TABLES
@@ -16366,9 +16270,6 @@ BEGIN
   END IF;
 END $$;
 
--- Backfill existing rows: set updated_at = created_at for rows that had NULL
-UPDATE stock_movements SET updated_at = created_at WHERE updated_at IS NULL;
-UPDATE stock_valuation SET updated_at = created_at WHERE updated_at IS NULL;
 
 -- ============================================================================
 -- Migration: 20260224100000_add_agriculture_elevage_modules.sql
@@ -16412,92 +16313,6 @@ COMMENT ON COLUMN parcels.water_quantity_unit IS 'Unit for water quantity: m3, l
 -- ============================================================================
 -- Migration: 20260310100000_subscription_contract_alignment.sql
 -- ============================================================================
--- Backfill canonical values for existing rows (idempotent)
-
--- Canonical formula backfill from legacy plan_type values
-UPDATE subscriptions
-SET formula = CASE
-  WHEN COALESCE(formula, '') <> '' THEN formula
-  WHEN plan_type IN ('core', 'essential', 'starter') THEN 'starter'
-  WHEN plan_type IN ('professional', 'standard') THEN 'standard'
-  WHEN plan_type = 'premium' THEN 'premium'
-  WHEN plan_type = 'enterprise' THEN 'enterprise'
-  ELSE 'standard'
-END;
-
--- Canonical billing cycle backfill from legacy billing_interval values
-UPDATE subscriptions
-SET billing_cycle = CASE
-  WHEN COALESCE(billing_cycle, '') <> '' THEN billing_cycle
-  WHEN billing_interval IN ('month', 'monthly') THEN 'monthly'
-  WHEN billing_interval IN ('year', 'yearly', 'annual') THEN 'annual'
-  WHEN billing_interval IN ('semiannual', 'semestrial') THEN 'semiannual'
-  ELSE 'monthly'
-END;
-
--- Normalize legacy billing_interval textual values for compatibility reads
-UPDATE subscriptions
-SET billing_interval = CASE
-  WHEN billing_interval IN ('month', 'monthly') THEN 'monthly'
-  WHEN billing_interval IN ('year', 'yearly', 'annual') THEN 'annual'
-  WHEN billing_interval IN ('semiannual', 'semestrial') THEN 'semiannual'
-  ELSE COALESCE(billing_interval, 'monthly')
-END;
-
-UPDATE polar_subscriptions
-SET billing_interval = CASE
-  WHEN billing_interval IN ('month', 'monthly') THEN 'monthly'
-  WHEN billing_interval IN ('year', 'yearly', 'annual') THEN 'annual'
-  WHEN billing_interval IN ('semiannual', 'semestrial') THEN 'semiannual'
-  ELSE COALESCE(billing_interval, 'monthly')
-END
-WHERE billing_interval IS DISTINCT FROM CASE
-  WHEN billing_interval IN ('month', 'monthly') THEN 'monthly'
-  WHEN billing_interval IN ('year', 'yearly', 'annual') THEN 'annual'
-  WHEN billing_interval IN ('semiannual', 'semestrial') THEN 'semiannual'
-  ELSE COALESCE(billing_interval, 'monthly')
-END;
-
--- Included users default by formula when missing
-UPDATE subscriptions
-SET included_users = CASE
-  WHEN formula = 'starter' THEN 3
-  WHEN formula = 'standard' THEN 10
-  WHEN formula = 'premium' THEN 25
-  WHEN formula = 'enterprise' THEN NULL
-  ELSE 10
-END
-WHERE included_users IS NULL;
-
--- Default contracted hectares by formula when missing
-UPDATE subscriptions
-SET contracted_hectares = CASE
-  WHEN formula = 'starter' THEN 50
-  WHEN formula = 'standard' THEN 200
-  WHEN formula = 'premium' THEN 500
-  WHEN formula = 'enterprise' THEN 501
-  ELSE 200
-END
-WHERE contracted_hectares IS NULL;
-
--- Keep legacy plan_type synchronized during transition
-UPDATE subscriptions
-SET plan_type = CASE
-  WHEN formula = 'starter' THEN 'essential'
-  WHEN formula = 'standard' THEN 'professional'
-  WHEN formula = 'premium' THEN 'enterprise'
-  WHEN formula = 'enterprise' THEN 'enterprise'
-  ELSE plan_type
-END
-WHERE formula IS NOT NULL;
-
--- Queue migration switch at renewal date for currently active subscribers.
-UPDATE subscriptions
-SET pending_formula = COALESCE(pending_formula, formula),
-    pending_billing_cycle = COALESCE(pending_billing_cycle, billing_cycle),
-    migration_effective_at = COALESCE(migration_effective_at, current_period_end)
-WHERE status = 'active'
-  AND current_period_end IS NOT NULL;
 
 CREATE INDEX IF NOT EXISTS idx_subscriptions_next_billing ON subscriptions(next_billing_at);
 CREATE INDEX IF NOT EXISTS idx_subscriptions_migration_effective ON subscriptions(migration_effective_at);
@@ -18436,10 +18251,6 @@ CREATE TRIGGER trg_create_hr_compliance_settings
   AFTER INSERT ON organizations
   FOR EACH ROW EXECUTE FUNCTION create_default_hr_compliance_settings();
 
--- Backfill: ensure every existing organization has a settings row.
-INSERT INTO hr_compliance_settings (organization_id)
-SELECT id FROM organizations
-ON CONFLICT (organization_id) DO NOTHING;
 
 -- =====================================================================
 -- HR Module — Phase 1.A: Leave Management

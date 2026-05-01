@@ -184,9 +184,9 @@
     }
   }
 
-  /* Prevent pull-to-refresh and overscroll bounce on tablet */
+  /* Prevent pull-to-refresh / vertical bounce on tablet, but keep horizontal swipe-back working on macOS */
   html, body, #root {
-    overscroll-behavior: none;
+    overscroll-behavior-y: none;
     -webkit-overflow-scrolling: touch;
   }
 

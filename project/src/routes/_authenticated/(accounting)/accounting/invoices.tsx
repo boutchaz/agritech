@@ -31,7 +31,7 @@ import { SectionLoader } from '@/components/ui/loader';
 
 
 const AppContent = () => {
-  const { t } = useTranslation();
+  const { t } = useTranslation('accounting');
   const { currentOrganization } = useAuth();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmAction, setConfirmAction] = useState<{title:string;description?:string;variant?:"destructive"|"default";onConfirm:()=>void}>({title:"",onConfirm:()=>{}});

@@ -105,7 +105,7 @@ function PayrollRunsPage() {
                   <td className="px-3 py-2 text-gray-600">
                     {format(new Date(r.pay_period_start), 'PP')} → {format(new Date(r.pay_period_end), 'PP')}
                   </td>
-                  <td className="px-3 py-2">{r.pay_frequency}</td>
+                  <td className="px-3 py-2">{t(`payrollRuns.frequencies.${r.pay_frequency}`, r.pay_frequency)}</td>
                   <td className="px-3 py-2"><RunStatusBadge status={r.status} /></td>
                   <td className="px-3 py-2 text-right">{r.total_workers}</td>
                   <td className="px-3 py-2 text-right">
@@ -166,7 +166,9 @@ function PayrollRunsPage() {
                               {
                                 onSuccess: (res) =>
                                   toast.success(
-                                    t('payrollRuns.paidWithJe', `Paid · ${res.journal_entries_created} JE posted`),
+                                    t('payrollRuns.paidWithJe', `Paid · ${res.journal_entries_created} JE posted`, {
+                                      count: res.journal_entries_created,
+                                    }),
                                   ),
                                 onError: (err: any) => toast.error(err?.message ?? 'Error'),
                               },
@@ -217,6 +219,7 @@ function PayrollRunsPage() {
 }
 
 function RunStatusBadge({ status }: { status: RunStatus }) {
+  const { t } = useTranslation();
   const variants: Record<RunStatus, 'default' | 'secondary' | 'destructive' | 'outline'> = {
     draft: 'outline',
     processing: 'secondary',
@@ -224,7 +227,7 @@ function RunStatusBadge({ status }: { status: RunStatus }) {
     paid: 'default',
     cancelled: 'destructive',
   };
-  return <Badge variant={variants[status]}>{status}</Badge>;
+  return <Badge variant={variants[status]}>{t(`payrollRuns.statuses.${status}`, status)}</Badge>;
 }
 
 function CreateRunDialog({
@@ -310,10 +313,10 @@ function CreateRunDialog({
           >
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="monthly">monthly</SelectItem>
-              <SelectItem value="biweekly">biweekly</SelectItem>
-              <SelectItem value="weekly">weekly</SelectItem>
-              <SelectItem value="daily">daily</SelectItem>
+              <SelectItem value="monthly">{t('payrollRuns.frequencies.monthly', 'Monthly')}</SelectItem>
+              <SelectItem value="biweekly">{t('payrollRuns.frequencies.biweekly', 'Biweekly')}</SelectItem>
+              <SelectItem value="weekly">{t('payrollRuns.frequencies.weekly', 'Weekly')}</SelectItem>
+              <SelectItem value="daily">{t('payrollRuns.frequencies.daily', 'Daily')}</SelectItem>
             </SelectContent>
           </Select>
         </div>

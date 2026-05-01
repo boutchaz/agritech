@@ -15,6 +15,8 @@ import { SequencesModule } from "./modules/sequences/sequences.module";
 import { AccountsModule } from "./modules/accounts/accounts.module";
 import { InvoicesModule } from "./modules/invoices/invoices.module";
 import { JournalEntriesModule } from "./modules/journal-entries/journal-entries.module";
+import { ExchangeRatesModule } from "./modules/exchange-rates/exchange-rates.module";
+import { OrganizationGroupsModule } from "./modules/organization-groups/organization-groups.module";
 import { PaymentsModule } from "./modules/payments/payments.module";
 import { FinancialReportsModule } from "./modules/financial-reports/financial-reports.module";
 import { ProductionIntelligenceModule } from "./modules/production-intelligence/production-intelligence.module";
@@ -168,6 +170,8 @@ import { BarcodeModule } from "./modules/barcode/barcode.module";
     PurchaseOrdersModule,
     InvoicesModule,
     JournalEntriesModule,
+    ExchangeRatesModule,
+    OrganizationGroupsModule,
     PaymentsModule,
     FinancialReportsModule,
     ProductionIntelligenceModule,

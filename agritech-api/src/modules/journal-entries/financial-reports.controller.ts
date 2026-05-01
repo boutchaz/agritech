@@ -1,6 +1,8 @@
 import {
   Controller,
   Get,
+  Post,
+  Body,
   Query,
   Param,
   UseGuards,
@@ -15,6 +17,7 @@ import {
   ApiParam,
 } from '@nestjs/swagger';
 import { FinancialReportsService } from './financial-reports.service';
+import { FxRevaluationService } from './fx-revaluation.service';
 import { FiscalYearsService } from '../fiscal-years/fiscal-years.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RequireModule } from '../../common/decorators/require-module.decorator';
@@ -30,6 +33,7 @@ export class FinancialReportsController {
   constructor(
     private readonly reportsService: FinancialReportsService,
     private readonly fiscalYearsService: FiscalYearsService,
+    private readonly fxRevaluationService: FxRevaluationService,
   ) {}
 
   /**
@@ -95,16 +99,57 @@ export class FinancialReportsController {
   @ApiQuery({ name: 'start_date', required: false, description: 'Start date (YYYY-MM-DD)' })
   @ApiQuery({ name: 'end_date', required: false, description: 'End date (YYYY-MM-DD)' })
   @ApiQuery({ name: 'fiscal_year_id', required: false, description: 'Fiscal year ID (resolves start/end dates)' })
+  @ApiQuery({ name: 'cost_center_id', required: false, description: 'Filter by cost center' })
+  @ApiQuery({ name: 'farm_id', required: false, description: 'Filter by farm' })
+  @ApiQuery({ name: 'parcel_id', required: false, description: 'Filter by parcel' })
+  @ApiQuery({ name: 'include_zero_balances', required: false, description: 'Include accounts with zero balance' })
+  @ApiQuery({ name: 'include_budget', required: false, description: 'Merge cost_center_budgets into rows (requires fiscal_year_id)' })
+  @ApiQuery({ name: 'compare_with', required: false, description: 'previous_period | previous_year' })
+  @ApiQuery({ name: 'basis', required: false, description: 'accrual (default) | cash' })
   @ApiResponse({ status: 200, description: 'Profit/Loss statement retrieved successfully' })
   async getProfitLoss(
     @Req() req: any,
     @Query('start_date') startDate?: string,
     @Query('end_date') endDate?: string,
     @Query('fiscal_year_id') fiscalYearId?: string,
+    @Query('cost_center_id') costCenterId?: string,
+    @Query('farm_id') farmId?: string,
+    @Query('parcel_id') parcelId?: string,
+    @Query('include_zero_balances') includeZeroBalances?: string,
+    @Query('include_budget') includeBudget?: string,
+    @Query('include_by_currency') includeByCurrency?: string,
+    @Query('compare_with') compareWith?: string,
+    @Query('basis') basis?: string,
   ) {
     const organizationId = req.headers['x-organization-id'];
     const resolved = await this.resolveRange(organizationId, startDate, endDate, fiscalYearId);
-    return this.reportsService.getProfitLoss(organizationId, resolved.startDate!, resolved.endDate);
+    const resolvedBasis: 'accrual' | 'cash' = basis === 'cash' ? 'cash' : 'accrual';
+    const filters = {
+      cost_center_id: costCenterId,
+      farm_id: farmId,
+      parcel_id: parcelId,
+      fiscal_year_id: fiscalYearId,
+      include_zero_balances:
+        includeZeroBalances === 'true' || includeZeroBalances === '1',
+      include_budget: includeBudget === 'true' || includeBudget === '1',
+      include_by_currency: includeByCurrency === 'true' || includeByCurrency === '1',
+      basis: resolvedBasis,
+    };
+    if (compareWith === 'previous_period' || compareWith === 'previous_year') {
+      return this.reportsService.getProfitLossComparison(
+        organizationId,
+        resolved.startDate!,
+        resolved.endDate || new Date().toISOString().split('T')[0],
+        compareWith,
+        filters,
+      );
+    }
+    return this.reportsService.getProfitLoss(
+      organizationId,
+      resolved.startDate!,
+      resolved.endDate,
+      filters,
+    );
   }
 
   @Get('general-ledger/:accountId')
@@ -173,5 +218,81 @@ export class FinancialReportsController {
     const organizationId = req.headers['x-organization-id'];
     const resolved = await this.resolveRange(organizationId, startDate, endDate, fiscalYearId);
     return this.reportsService.getCashFlow(organizationId, resolved.startDate!, resolved.endDate);
+  }
+
+  @Post('close-fiscal-year')
+  @ApiOperation({ summary: 'Post a year-end closing voucher and close the fiscal year' })
+  @ApiResponse({ status: 201, description: 'Fiscal year closed successfully' })
+  async closeFiscalYear(
+    @Req() req: any,
+    @Body()
+    body: {
+      fiscal_year_id: string;
+      retained_earnings_account_id: string;
+      closing_date?: string;
+      remarks?: string;
+    },
+  ) {
+    const organizationId = req.headers['x-organization-id'];
+    const userId = req.user?.id || req.user?.userId;
+    return this.reportsService.closeFiscalYear({
+      organizationId,
+      userId,
+      fiscalYearId: body.fiscal_year_id,
+      retainedEarningsAccountId: body.retained_earnings_account_id,
+      closingDate: body.closing_date,
+      remarks: body.remarks,
+    });
+  }
+
+  @Post('fx-revaluate')
+  @ApiOperation({ summary: 'Run unrealized FX revaluation for an as-of date' })
+  @ApiResponse({ status: 201, description: 'FX revaluation entry posted' })
+  async fxRevaluate(
+    @Req() req: any,
+    @Body() body: { as_of_date: string; remarks?: string; base_currency?: string },
+  ) {
+    const organizationId = req.headers['x-organization-id'];
+    const userId = req.user?.id || req.user?.userId;
+    return this.fxRevaluationService.revaluate({
+      organizationId,
+      userId,
+      asOfDate: body.as_of_date,
+      baseCurrency: body.base_currency,
+      remarks: body.remarks,
+    });
+  }
+
+  @Post('fx-revaluate/reverse')
+  @ApiOperation({ summary: 'Reverse a previously-posted FX revaluation entry' })
+  @ApiResponse({ status: 201, description: 'FX revaluation reversed' })
+  async fxRevaluateReverse(
+    @Req() req: any,
+    @Body() body: { as_of_date: string; reason?: string },
+  ) {
+    const organizationId = req.headers['x-organization-id'];
+    const userId = req.user?.id || req.user?.userId;
+    return this.fxRevaluationService.reverse({
+      organizationId,
+      userId,
+      asOfDate: body.as_of_date,
+      reason: body.reason,
+    });
+  }
+
+  @Post('reopen-fiscal-year')
+  @ApiOperation({ summary: 'Reverse a closing voucher and reopen the fiscal year' })
+  @ApiResponse({ status: 201, description: 'Fiscal year reopened successfully' })
+  async reopenFiscalYear(
+    @Req() req: any,
+    @Body() body: { fiscal_year_id: string },
+  ) {
+    const organizationId = req.headers['x-organization-id'];
+    const userId = req.user?.id || req.user?.userId;
+    return this.reportsService.reverseFiscalYearClose(
+      organizationId,
+      userId,
+      body.fiscal_year_id,
+    );
   }
 }

@@ -78,7 +78,7 @@ describe('useFinancialReports', () => {
     it('uses correct queryKey with date range', () => {
       useProfitLoss('2024-01-01', '2024-01-31', 'fy-1');
       expect(mockUseQuery).toHaveBeenCalledWith(expect.objectContaining({
-        queryKey: ['financial-reports', 'profit-loss', 'org-123', '2024-01-01', '2024-01-31', 'fy-1'],
+        queryKey: ['financial-reports', 'profit-loss', 'org-123', '2024-01-01', '2024-01-31', 'fy-1', undefined],
         enabled: true,
       }));
     });

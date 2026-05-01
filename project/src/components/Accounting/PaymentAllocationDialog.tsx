@@ -22,7 +22,7 @@ export const PaymentAllocationDialog = ({
   onOpenChange,
   onAllocated,
 }: PaymentAllocationDialogProps) => {
-  const { t } = useTranslation();
+  const { t } = useTranslation('accounting');
   const invoiceType = payment.payment_type === 'receive' ? 'sales' : 'purchase';
   const { data: invoices = [], isLoading } = useInvoicesByType(invoiceType);
   const allocatePayment = useAllocatePayment();

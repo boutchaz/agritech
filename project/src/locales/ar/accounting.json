@@ -108,6 +108,66 @@
         "update": "تحديث الدفعة",
         "create": "إنشاء دفعة"
       }
+    },
+    "errors": {
+      "loadFailed": "فشل في تحميل المدفوعات"
+    },
+    "actions": {
+      "recordNew": "تسجيل دفعة",
+      "allocate": "تخصيص"
+    },
+    "search": {
+      "placeholder": "البحث برقم الدفعة أو الطرف..."
+    },
+    "filter": {
+      "allTypes": "جميع الأنواع",
+      "received": "مستلمة",
+      "paid": "صادرة",
+      "allStatus": "جميع الحالات"
+    },
+    "status": {
+      "draft": "مسودة",
+      "submitted": "مُقدمة",
+      "reconciled": "مسواة",
+      "cancelled": "ملغاة"
+    },
+    "stats": {
+      "total": "إجمالي المدفوعات",
+      "received": "مستلمة",
+      "paidOut": "صادرة",
+      "draft": "مسودات"
+    },
+    "list": {
+      "title": "جميع المدفوعات",
+      "subtitle": "عرض وتخصيص وإدارة معاملات الدفع"
+    },
+    "columns": {
+      "number": "رقم الدفعة",
+      "type": "النوع",
+      "party": "الطرف",
+      "date": "التاريخ",
+      "method": "الطريقة",
+      "amount": "المبلغ",
+      "status": "الحالة",
+      "allocation": "التخصيص"
+    },
+    "type": {
+      "receive": "استلام",
+      "pay": "صرف"
+    },
+    "allocation": {
+      "linked": "{{count}} فاتورة/فواتير",
+      "pending": "غير مخصصة"
+    },
+    "empty": {
+      "filtered": "لا توجد مدفوعات تطابق عوامل التصفية.",
+      "initial": "لم يتم العثور على مدفوعات. سجل أول دفعة للبدء."
+    },
+    "dialogs": {
+      "create": {
+        "title": "تسجيل دفعة جديدة",
+        "description": "سجل دفعة مستلمة من عميل أو مدفوعة لمورد"
+      }
     }
   },
   "journal": {
@@ -194,5 +254,284 @@
     "balanced": "✓ القيد متوازن",
     "cancelBtn": "إلغاء",
     "createEntry": "إنشاء القيد"
+  },
+  "invoices": {
+    "actions": {
+      "create": "إنشاء فاتورة",
+      "menu": "الإجراءات",
+      "submit": "إرسال الفاتورة",
+      "download": "تحميل PDF",
+      "delete": "حذف",
+      "onlyDraftDelete": "يمكن حذف الفواتير الأولية فقط",
+      "confirmDelete": "هل أنت متأكد من حذف الفاتورة {{invoiceNumber}} ؟",
+      "deleteSuccess": "تم حذف الفاتورة {{invoiceNumber}} بنجاح",
+      "deleteError": "فشل في حذف الفاتورة"
+    },
+    "search": {
+      "placeholder": "البحث بالرقم أو العميل..."
+    },
+    "filter": {
+      "allTypes": "جميع الأنواع",
+      "sales": "مبيعات",
+      "purchase": "مشتريات",
+      "allStatus": "جميع الحالات"
+    },
+    "status": {
+      "draft": "مسودة",
+      "submitted": "مُرسلة",
+      "paid": "مدفوعة",
+      "partiallyPaid": "مدفوعة جزئياً",
+      "overdue": "متأخرة",
+      "cancelled": "ملغاة"
+    },
+    "stats": {
+      "total": "إجمالي الفواتير",
+      "pending": "قيد الانتظار",
+      "paid": "مدفوعة",
+      "overdue": "متأخرة"
+    },
+    "allInvoices": "الفواتير",
+    "tableDescription": "قائمة بجميع فواتير البيع والشراء",
+    "table": {
+      "invoiceNumber": "رقم الفاتورة",
+      "type": "النوع",
+      "party": "العميل/المورد",
+      "date": "التاريخ",
+      "amount": "المبلغ",
+      "status": "الحالة",
+      "actions": "الإجراءات"
+    },
+    "type": {
+      "sales": "مبيعات",
+      "purchase": "مشتريات"
+    },
+    "error": {
+      "loading": "خطأ في تحميل الفواتير",
+      "editDraftOnly": "يمكن تعديل الفواتير الأولية فقط"
+    },
+    "empty": {
+      "filtered": "لا توجد فواتير تطابق عوامل التصفية.",
+      "message": "لم يتم العثور على فواتير. أنشئ أول فاتورة للبدء."
+    }
+  },
+  "fiscalYears": {
+    "title": "السنوات المالية",
+    "description": "إدارة السنوات المالية للتقارير المالية وإقفال الفترات.",
+    "addNew": "إضافة سنة مالية",
+    "noPermission": "ليس لديك صلاحية لإدارة السنوات المالية.",
+    "status": {
+      "closed": "مقفلة",
+      "current": "الحالية",
+      "open": "مفتوحة"
+    },
+    "edit": {
+      "title": "تعديل السنة المالية",
+      "description": "تحديث تفاصيل السنة المالية."
+    },
+    "close": {
+      "title": "إقفال السنة المالية",
+      "description": "هل أنت متأكد من إقفال السنة المالية \"{{name}}\" ؟ هذا الإجراء لا يمكن التراجع عنه. ستُقفل جميع المعاملات في هذه الفترة.",
+      "confirm": "إقفال السنة المالية"
+    },
+    "listTitle": "قائمة السنوات المالية",
+    "listDescription": "الإجمالي: {{count}} سنوات مالية",
+    "table": {
+      "code": "الرمز",
+      "name": "الاسم",
+      "period": "الفترة",
+      "periodType": "النوع",
+      "status": "الحالة",
+      "actions": "الإجراءات"
+    },
+    "filters": {
+      "searchPlaceholder": "البحث بالاسم أو الرمز",
+      "allStatuses": "جميع الحالات",
+      "allTypes": "جميع الأنواع"
+    },
+    "form": {
+      "code": "الرمز",
+      "name": "الاسم",
+      "startDate": "تاريخ البداية",
+      "endDate": "تاريخ النهاية",
+      "periodType": "نوع الفترة",
+      "monthly": "شهري",
+      "quarterly": "ربع سنوي",
+      "setCurrent": "تعيين كسنة مالية حالية",
+      "update": "تحديث",
+      "create": "إنشاء"
+    },
+    "create": {
+      "title": "إنشاء سنة مالية",
+      "description": "إضافة سنة مالية جديدة للتقارير المالية."
+    },
+    "empty": "لا توجد سنوات مالية بعد. أنشئ أول سنة مالية للبدء.",
+    "emptyFiltered": "لا توجد سنوات مالية تطابق بحثك أو عوامل التصفية.",
+    "emptyFilteredHint": "حاول تعديل أو مسح عوامل التصفية لعرض المزيد من السنوات المالية."
+  },
+  "accountMappings": {
+    "title": "تعيينات الحسابات",
+    "description": "تكوين كيفية ربط الأحداث التجارية بحسابات الأستاذ العام للقيود التلقائية.",
+    "noPermission": "ليس لديك صلاحية لإدارة تعيينات الحسابات.",
+    "initializeDefaults": "تهيئة الافتراضيات",
+    "addNew": "إضافة تعيين",
+    "active": "نشط",
+    "inactive": "غير نشط",
+    "deactivate": "تعطيل",
+    "activate": "تفعيل",
+    "deactivated": "تم تعطيل التعيين",
+    "activated": "تم تفعيل التعيين",
+    "toggleFailed": "فشل في تحديث حالة التعيين",
+    "table": {
+      "key": "المفتاح",
+      "account": "الحساب",
+      "description": "الوصف",
+      "status": "الحالة",
+      "actions": "الإجراءات"
+    },
+    "noAccounts": {
+      "title": "الدليل المحاسبي مطلوب",
+      "description": "يجب إعداد الدليل المحاسبي قبل تهيئة التعيينات.",
+      "link": "الذهاب إلى الحسابات"
+    },
+    "infoTitle": "كيف تعمل تعيينات الحسابات",
+    "infoDescription": "تربط تعيينات الحسابات الأحداث التجارية (مثل إتمام المهام أو مبيعات المحاصيل) بحسابات محددة في الأستاذ العام. عند إتمام مهمة أو بيع محصول، ينشئ النظام تلقائياً قيوداً محاسبية باستخدام هذه التعيينات.",
+    "searchPlaceholder": "البحث بالمفتاح أو الحساب...",
+    "filterType": "التصفية حسب النوع",
+    "filterStatus": "الحالة",
+    "allTypes": "جميع الأنواع",
+    "allStatus": "جميع الحالات",
+    "activeOnly": "نشط",
+    "inactiveOnly": "غير نشط",
+    "typeCount": "{{count}} تعيينات",
+    "noSearchResults": "لا توجد تعيينات تطابق عوامل التصفية.",
+    "empty": "لا توجد تعيينات حسابات مكونة. انقر على \"تهيئة الافتراضيات\" لإعداد التعيينات القياسية، أو أضفها يدوياً.",
+    "labels": {
+      "cost_type": "نوع التكلفة",
+      "revenue_type": "نوع الإيراد",
+      "harvest_sale": "بيع المحصول",
+      "cash": "نقد",
+      "planting": "الزراعة",
+      "harvesting": "الحصاد",
+      "irrigation": "الري",
+      "fertilization": "التسميد",
+      "pesticide": "المبيدات",
+      "pruning": "التقليم",
+      "maintenance": "الصيانة",
+      "transport": "النقل",
+      "labor": "العمالة",
+      "materials": "المواد",
+      "utilities": "المرافق",
+      "other": "أخرى",
+      "product_sales": "مبيعات المنتجات",
+      "service_income": "إيرادات الخدمات",
+      "other_income": "إيرادات أخرى",
+      "market": "السوق",
+      "export": "التصدير",
+      "wholesale": "الجملة",
+      "direct": "مباشر",
+      "processing": "التحويل",
+      "bank": "البنك",
+      "petty_cash": "الصندوق الصغير"
+    },
+    "create": {
+      "title": "إنشاء تعيين حساب",
+      "description": "ربط حدث تجاري بحساب في الأستاذ العام.",
+      "success": "تم إنشاء التعيين بنجاح",
+      "failed": "فشل في إنشاء التعيين"
+    },
+    "update": {
+      "success": "تم تحديث التعيين بنجاح",
+      "failed": "فشل في تحديث التعيين"
+    },
+    "delete": {
+      "title": "حذف تعيين الحساب",
+      "description": "هل أنت متأكد من حذف التعيين لـ \"{{key}}\" ؟ لن يؤثر هذا على القيود الموجودة، لكن القيود التلقائية الجديدة ستفشل بدون هذا التعيين.",
+      "success": "تم حذف التعيين بنجاح",
+      "failed": "فشل في حذف التعيين"
+    },
+    "initialize": {
+      "success": "تم تهيئة {{count}} تعيينات افتراضية",
+      "failed": "فشل في تهيئة التعيينات الافتراضية"
+    },
+    "edit": {
+      "title": "تعديل تعيين الحساب",
+      "description": "تحديث تفاصيل تعيين الحساب."
+    },
+    "form": {
+      "type": "نوع التعيين",
+      "typePlaceholder": "اختر نوع التعيين",
+      "key": "مفتاح التعيين",
+      "keyPlaceholder": "اختر مفتاح التعيين",
+      "account": "حساب الأستاذ العام",
+      "accountPlaceholder": "اختر حساباً",
+      "description": "الوصف",
+      "descriptionPlaceholder": "وصف اختياري...",
+      "active": "نشط",
+      "activeHelp": "يتم تجاهل التعيينات غير النشطة عند إنشاء القيود.",
+      "update": "تحديث",
+      "create": "إنشاء"
+    }
+  },
+  "common": {
+    "new": "جديد",
+    "view": "عرض",
+    "cancel": "إلغاء",
+    "delete": "حذف",
+    "clearFilters": "مسح الفلاتر",
+    "actions": "إجراءات",
+    "error": {
+      "unknown": "خطأ غير معروف"
+    }
+  },
+  "app": {
+    "edit": "تعديل",
+    "delete": "حذف",
+    "cancel": "إلغاء",
+    "unknownError": "خطأ غير معروف"
+  },
+  "dialogs": {
+    "paymentDetail": {
+      "title": "تفاصيل الدفع",
+      "editTitle": "تعديل الدفع",
+      "editDescription": "قم بتحديث معلومات الدفع أدناه.",
+      "paymentNumber": "الدفع",
+      "paymentDate": "التاريخ",
+      "amount": "المبلغ",
+      "paymentType": "النوع",
+      "paymentReceived": "دفع مستلم",
+      "paymentMade": "دفع مُنفَّذ",
+      "party": "الطرف",
+      "paymentMethod": "طريقة الدفع",
+      "referenceNumber": "المرجع",
+      "remarks": "ملاحظات",
+      "created": "تاريخ الإنشاء",
+      "updated": "تاريخ التحديث",
+      "allocateAndPost": "تخصيص وترحيل",
+      "paymentSubmitted": "تم الإرسال",
+      "deleting": "جارٍ الحذف...",
+      "deleteFailed": "فشل حذف الدفع",
+      "confirmDelete": "هل أنت متأكد من حذف هذا الدفع؟",
+      "confirmDeleteTitle": "حذف الدفع"
+    },
+    "paymentAllocation": {
+      "title": "تخصيص الدفع",
+      "description": "خصص هذا الدفع لفاتورة معلقة.",
+      "selectInvoiceError": "يرجى اختيار فاتورة",
+      "amountError": "يرجى إدخال مبلغ صالح",
+      "exceedsBalanceError": "المبلغ يتجاوز الحد الأقصى القابل للتخصيص",
+      "allocationFailed": "فشل تخصيص الدفع",
+      "noInvoicesFound": "لم يتم العثور على فواتير مؤهلة.",
+      "ensureSalesInvoice": "تأكد من وجود فاتورة مبيعات مرسلة واحدة على الأقل.",
+      "ensurePurchaseInvoice": "تأكد من وجود فاتورة مشتريات مرسلة واحدة على الأقل.",
+      "invoiceToSettle": "الفاتورة المراد تسويتها",
+      "selectInvoice": "اختر فاتورة...",
+      "remaining": "المتبقي:",
+      "invoiceBalance": "رصيد الفاتورة",
+      "paymentAmount": "مبلغ الدفع",
+      "amountToAllocate": "المبلغ المراد تخصيصه",
+      "maxAllocatable": "الحد الأقصى للتخصيص",
+      "posting": "جارٍ الترحيل...",
+      "allocateAndPost": "تخصيص وترحيل"
+    }
   }
 }

@@ -161,14 +161,17 @@ import { Route as AuthenticatedaccountingAccountingPurchaseReceiptsRouteImport }
 import { Route as AuthenticatedaccountingAccountingPurchaseOrdersRouteImport } from './routes/_authenticated/(accounting)/accounting/purchase-orders'
 import { Route as AuthenticatedaccountingAccountingProfitLossRouteImport } from './routes/_authenticated/(accounting)/accounting/profit-loss'
 import { Route as AuthenticatedaccountingAccountingPaymentsRouteImport } from './routes/_authenticated/(accounting)/accounting/payments'
+import { Route as AuthenticatedaccountingAccountingOrganizationGroupsRouteImport } from './routes/_authenticated/(accounting)/accounting/organization-groups'
 import { Route as AuthenticatedaccountingAccountingJournalRouteImport } from './routes/_authenticated/(accounting)/accounting/journal'
 import { Route as AuthenticatedaccountingAccountingInvoicesRouteImport } from './routes/_authenticated/(accounting)/accounting/invoices'
 import { Route as AuthenticatedaccountingAccountingGeneralLedgerRouteImport } from './routes/_authenticated/(accounting)/accounting/general-ledger'
 import { Route as AuthenticatedaccountingAccountingFiscalYearsRouteImport } from './routes/_authenticated/(accounting)/accounting/fiscal-years'
+import { Route as AuthenticatedaccountingAccountingExchangeRatesRouteImport } from './routes/_authenticated/(accounting)/accounting/exchange-rates'
 import { Route as AuthenticatedaccountingAccountingDeliveryNotesRouteImport } from './routes/_authenticated/(accounting)/accounting/delivery-notes'
 import { Route as AuthenticatedaccountingAccountingCustomersRouteImport } from './routes/_authenticated/(accounting)/accounting/customers'
 import { Route as AuthenticatedaccountingAccountingCustomerDeliveriesRouteImport } from './routes/_authenticated/(accounting)/accounting/customer-deliveries'
 import { Route as AuthenticatedaccountingAccountingCostCentersRouteImport } from './routes/_authenticated/(accounting)/accounting/cost-centers'
+import { Route as AuthenticatedaccountingAccountingConsolidatedProfitLossRouteImport } from './routes/_authenticated/(accounting)/accounting/consolidated-profit-loss'
 import { Route as AuthenticatedaccountingAccountingCashFlowRouteImport } from './routes/_authenticated/(accounting)/accounting/cash-flow'
 import { Route as AuthenticatedaccountingAccountingBankAccountsRouteImport } from './routes/_authenticated/(accounting)/accounting/bank-accounts'
 import { Route as AuthenticatedaccountingAccountingBalanceSheetRouteImport } from './routes/_authenticated/(accounting)/accounting/balance-sheet'
@@ -1094,6 +1097,12 @@ const AuthenticatedaccountingAccountingPaymentsRoute =
     path: '/payments',
     getParentRoute: () => AuthenticatedaccountingAccountingRoute,
   } as any)
+const AuthenticatedaccountingAccountingOrganizationGroupsRoute =
+  AuthenticatedaccountingAccountingOrganizationGroupsRouteImport.update({
+    id: '/organization-groups',
+    path: '/organization-groups',
+    getParentRoute: () => AuthenticatedaccountingAccountingRoute,
+  } as any)
 const AuthenticatedaccountingAccountingJournalRoute =
   AuthenticatedaccountingAccountingJournalRouteImport.update({
     id: '/journal',
@@ -1118,6 +1127,12 @@ const AuthenticatedaccountingAccountingFiscalYearsRoute =
     path: '/fiscal-years',
     getParentRoute: () => AuthenticatedaccountingAccountingRoute,
   } as any)
+const AuthenticatedaccountingAccountingExchangeRatesRoute =
+  AuthenticatedaccountingAccountingExchangeRatesRouteImport.update({
+    id: '/exchange-rates',
+    path: '/exchange-rates',
+    getParentRoute: () => AuthenticatedaccountingAccountingRoute,
+  } as any)
 const AuthenticatedaccountingAccountingDeliveryNotesRoute =
   AuthenticatedaccountingAccountingDeliveryNotesRouteImport.update({
     id: '/delivery-notes',
@@ -1140,6 +1155,12 @@ const AuthenticatedaccountingAccountingCostCentersRoute =
   AuthenticatedaccountingAccountingCostCentersRouteImport.update({
     id: '/cost-centers',
     path: '/cost-centers',
+    getParentRoute: () => AuthenticatedaccountingAccountingRoute,
+  } as any)
+const AuthenticatedaccountingAccountingConsolidatedProfitLossRoute =
+  AuthenticatedaccountingAccountingConsolidatedProfitLossRouteImport.update({
+    id: '/consolidated-profit-loss',
+    path: '/consolidated-profit-loss',
     getParentRoute: () => AuthenticatedaccountingAccountingRoute,
   } as any)
 const AuthenticatedaccountingAccountingCashFlowRoute =
@@ -1417,14 +1438,17 @@ export interface FileRoutesByFullPath {
   '/accounting/balance-sheet': typeof AuthenticatedaccountingAccountingBalanceSheetRoute
   '/accounting/bank-accounts': typeof AuthenticatedaccountingAccountingBankAccountsRoute
   '/accounting/cash-flow': typeof AuthenticatedaccountingAccountingCashFlowRoute
+  '/accounting/consolidated-profit-loss': typeof AuthenticatedaccountingAccountingConsolidatedProfitLossRoute
   '/accounting/cost-centers': typeof AuthenticatedaccountingAccountingCostCentersRoute
   '/accounting/customer-deliveries': typeof AuthenticatedaccountingAccountingCustomerDeliveriesRoute
   '/accounting/customers': typeof AuthenticatedaccountingAccountingCustomersRoute
   '/accounting/delivery-notes': typeof AuthenticatedaccountingAccountingDeliveryNotesRoute
+  '/accounting/exchange-rates': typeof AuthenticatedaccountingAccountingExchangeRatesRoute
   '/accounting/fiscal-years': typeof AuthenticatedaccountingAccountingFiscalYearsRoute
   '/accounting/general-ledger': typeof AuthenticatedaccountingAccountingGeneralLedgerRoute
   '/accounting/invoices': typeof AuthenticatedaccountingAccountingInvoicesRoute
   '/accounting/journal': typeof AuthenticatedaccountingAccountingJournalRoute
+  '/accounting/organization-groups': typeof AuthenticatedaccountingAccountingOrganizationGroupsRoute
   '/accounting/payments': typeof AuthenticatedaccountingAccountingPaymentsRoute
   '/accounting/profit-loss': typeof AuthenticatedaccountingAccountingProfitLossRoute
   '/accounting/purchase-orders': typeof AuthenticatedaccountingAccountingPurchaseOrdersRoute
@@ -1608,14 +1632,17 @@ export interface FileRoutesByTo {
   '/accounting/balance-sheet': typeof AuthenticatedaccountingAccountingBalanceSheetRoute
   '/accounting/bank-accounts': typeof AuthenticatedaccountingAccountingBankAccountsRoute
   '/accounting/cash-flow': typeof AuthenticatedaccountingAccountingCashFlowRoute
+  '/accounting/consolidated-profit-loss': typeof AuthenticatedaccountingAccountingConsolidatedProfitLossRoute
   '/accounting/cost-centers': typeof AuthenticatedaccountingAccountingCostCentersRoute
   '/accounting/customer-deliveries': typeof AuthenticatedaccountingAccountingCustomerDeliveriesRoute
   '/accounting/customers': typeof AuthenticatedaccountingAccountingCustomersRoute
   '/accounting/delivery-notes': typeof AuthenticatedaccountingAccountingDeliveryNotesRoute
+  '/accounting/exchange-rates': typeof AuthenticatedaccountingAccountingExchangeRatesRoute
   '/accounting/fiscal-years': typeof AuthenticatedaccountingAccountingFiscalYearsRoute
   '/accounting/general-ledger': typeof AuthenticatedaccountingAccountingGeneralLedgerRoute
   '/accounting/invoices': typeof AuthenticatedaccountingAccountingInvoicesRoute
   '/accounting/journal': typeof AuthenticatedaccountingAccountingJournalRoute
+  '/accounting/organization-groups': typeof AuthenticatedaccountingAccountingOrganizationGroupsRoute
   '/accounting/payments': typeof AuthenticatedaccountingAccountingPaymentsRoute
   '/accounting/profit-loss': typeof AuthenticatedaccountingAccountingProfitLossRoute
   '/accounting/purchase-orders': typeof AuthenticatedaccountingAccountingPurchaseOrdersRoute
@@ -1802,14 +1829,17 @@ export interface FileRoutesById {
   '/_authenticated/(accounting)/accounting/balance-sheet': typeof AuthenticatedaccountingAccountingBalanceSheetRoute
   '/_authenticated/(accounting)/accounting/bank-accounts': typeof AuthenticatedaccountingAccountingBankAccountsRoute
   '/_authenticated/(accounting)/accounting/cash-flow': typeof AuthenticatedaccountingAccountingCashFlowRoute
+  '/_authenticated/(accounting)/accounting/consolidated-profit-loss': typeof AuthenticatedaccountingAccountingConsolidatedProfitLossRoute
   '/_authenticated/(accounting)/accounting/cost-centers': typeof AuthenticatedaccountingAccountingCostCentersRoute
   '/_authenticated/(accounting)/accounting/customer-deliveries': typeof AuthenticatedaccountingAccountingCustomerDeliveriesRoute
   '/_authenticated/(accounting)/accounting/customers': typeof AuthenticatedaccountingAccountingCustomersRoute
   '/_authenticated/(accounting)/accounting/delivery-notes': typeof AuthenticatedaccountingAccountingDeliveryNotesRoute
+  '/_authenticated/(accounting)/accounting/exchange-rates': typeof AuthenticatedaccountingAccountingExchangeRatesRoute
   '/_authenticated/(accounting)/accounting/fiscal-years': typeof AuthenticatedaccountingAccountingFiscalYearsRoute
   '/_authenticated/(accounting)/accounting/general-ledger': typeof AuthenticatedaccountingAccountingGeneralLedgerRoute
   '/_authenticated/(accounting)/accounting/invoices': typeof AuthenticatedaccountingAccountingInvoicesRoute
   '/_authenticated/(accounting)/accounting/journal': typeof AuthenticatedaccountingAccountingJournalRoute
+  '/_authenticated/(accounting)/accounting/organization-groups': typeof AuthenticatedaccountingAccountingOrganizationGroupsRoute
   '/_authenticated/(accounting)/accounting/payments': typeof AuthenticatedaccountingAccountingPaymentsRoute
   '/_authenticated/(accounting)/accounting/profit-loss': typeof AuthenticatedaccountingAccountingProfitLossRoute
   '/_authenticated/(accounting)/accounting/purchase-orders': typeof AuthenticatedaccountingAccountingPurchaseOrdersRoute
@@ -2000,14 +2030,17 @@ export interface FileRouteTypes {
     | '/accounting/balance-sheet'
     | '/accounting/bank-accounts'
     | '/accounting/cash-flow'
+    | '/accounting/consolidated-profit-loss'
     | '/accounting/cost-centers'
     | '/accounting/customer-deliveries'
     | '/accounting/customers'
     | '/accounting/delivery-notes'
+    | '/accounting/exchange-rates'
     | '/accounting/fiscal-years'
     | '/accounting/general-ledger'
     | '/accounting/invoices'
     | '/accounting/journal'
+    | '/accounting/organization-groups'
     | '/accounting/payments'
     | '/accounting/profit-loss'
     | '/accounting/purchase-orders'
@@ -2191,14 +2224,17 @@ export interface FileRouteTypes {
     | '/accounting/balance-sheet'
     | '/accounting/bank-accounts'
     | '/accounting/cash-flow'
+    | '/accounting/consolidated-profit-loss'
     | '/accounting/cost-centers'
     | '/accounting/customer-deliveries'
     | '/accounting/customers'
     | '/accounting/delivery-notes'
+    | '/accounting/exchange-rates'
     | '/accounting/fiscal-years'
     | '/accounting/general-ledger'
     | '/accounting/invoices'
     | '/accounting/journal'
+    | '/accounting/organization-groups'
     | '/accounting/payments'
     | '/accounting/profit-loss'
     | '/accounting/purchase-orders'
@@ -2384,14 +2420,17 @@ export interface FileRouteTypes {
     | '/_authenticated/(accounting)/accounting/balance-sheet'
     | '/_authenticated/(accounting)/accounting/bank-accounts'
     | '/_authenticated/(accounting)/accounting/cash-flow'
+    | '/_authenticated/(accounting)/accounting/consolidated-profit-loss'
     | '/_authenticated/(accounting)/accounting/cost-centers'
     | '/_authenticated/(accounting)/accounting/customer-deliveries'
     | '/_authenticated/(accounting)/accounting/customers'
     | '/_authenticated/(accounting)/accounting/delivery-notes'
+    | '/_authenticated/(accounting)/accounting/exchange-rates'
     | '/_authenticated/(accounting)/accounting/fiscal-years'
     | '/_authenticated/(accounting)/accounting/general-ledger'
     | '/_authenticated/(accounting)/accounting/invoices'
     | '/_authenticated/(accounting)/accounting/journal'
+    | '/_authenticated/(accounting)/accounting/organization-groups'
     | '/_authenticated/(accounting)/accounting/payments'
     | '/_authenticated/(accounting)/accounting/profit-loss'
     | '/_authenticated/(accounting)/accounting/purchase-orders'
@@ -3602,6 +3641,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedaccountingAccountingPaymentsRouteImport
       parentRoute: typeof AuthenticatedaccountingAccountingRoute
     }
+    '/_authenticated/(accounting)/accounting/organization-groups': {
+      id: '/_authenticated/(accounting)/accounting/organization-groups'
+      path: '/organization-groups'
+      fullPath: '/accounting/organization-groups'
+      preLoaderRoute: typeof AuthenticatedaccountingAccountingOrganizationGroupsRouteImport
+      parentRoute: typeof AuthenticatedaccountingAccountingRoute
+    }
     '/_authenticated/(accounting)/accounting/journal': {
       id: '/_authenticated/(accounting)/accounting/journal'
       path: '/journal'
@@ -3630,6 +3676,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedaccountingAccountingFiscalYearsRouteImport
       parentRoute: typeof AuthenticatedaccountingAccountingRoute
     }
+    '/_authenticated/(accounting)/accounting/exchange-rates': {
+      id: '/_authenticated/(accounting)/accounting/exchange-rates'
+      path: '/exchange-rates'
+      fullPath: '/accounting/exchange-rates'
+      preLoaderRoute: typeof AuthenticatedaccountingAccountingExchangeRatesRouteImport
+      parentRoute: typeof AuthenticatedaccountingAccountingRoute
+    }
     '/_authenticated/(accounting)/accounting/delivery-notes': {
       id: '/_authenticated/(accounting)/accounting/delivery-notes'
       path: '/delivery-notes'
@@ -3656,6 +3709,13 @@ declare module '@tanstack/react-router' {
       path: '/cost-centers'
       fullPath: '/accounting/cost-centers'
       preLoaderRoute: typeof AuthenticatedaccountingAccountingCostCentersRouteImport
+      parentRoute: typeof AuthenticatedaccountingAccountingRoute
+    }
+    '/_authenticated/(accounting)/accounting/consolidated-profit-loss': {
+      id: '/_authenticated/(accounting)/accounting/consolidated-profit-loss'
+      path: '/consolidated-profit-loss'
+      fullPath: '/accounting/consolidated-profit-loss'
+      preLoaderRoute: typeof AuthenticatedaccountingAccountingConsolidatedProfitLossRouteImport
       parentRoute: typeof AuthenticatedaccountingAccountingRoute
     }
     '/_authenticated/(accounting)/accounting/cash-flow': {
@@ -3914,14 +3974,17 @@ interface AuthenticatedaccountingAccountingRouteChildren {
   AuthenticatedaccountingAccountingBalanceSheetRoute: typeof AuthenticatedaccountingAccountingBalanceSheetRoute
   AuthenticatedaccountingAccountingBankAccountsRoute: typeof AuthenticatedaccountingAccountingBankAccountsRoute
   AuthenticatedaccountingAccountingCashFlowRoute: typeof AuthenticatedaccountingAccountingCashFlowRoute
+  AuthenticatedaccountingAccountingConsolidatedProfitLossRoute: typeof AuthenticatedaccountingAccountingConsolidatedProfitLossRoute
   AuthenticatedaccountingAccountingCostCentersRoute: typeof AuthenticatedaccountingAccountingCostCentersRoute
   AuthenticatedaccountingAccountingCustomerDeliveriesRoute: typeof AuthenticatedaccountingAccountingCustomerDeliveriesRoute
   AuthenticatedaccountingAccountingCustomersRoute: typeof AuthenticatedaccountingAccountingCustomersRoute
   AuthenticatedaccountingAccountingDeliveryNotesRoute: typeof AuthenticatedaccountingAccountingDeliveryNotesRoute
+  AuthenticatedaccountingAccountingExchangeRatesRoute: typeof AuthenticatedaccountingAccountingExchangeRatesRoute
   AuthenticatedaccountingAccountingFiscalYearsRoute: typeof AuthenticatedaccountingAccountingFiscalYearsRoute
   AuthenticatedaccountingAccountingGeneralLedgerRoute: typeof AuthenticatedaccountingAccountingGeneralLedgerRoute
   AuthenticatedaccountingAccountingInvoicesRoute: typeof AuthenticatedaccountingAccountingInvoicesRoute
   AuthenticatedaccountingAccountingJournalRoute: typeof AuthenticatedaccountingAccountingJournalRoute
+  AuthenticatedaccountingAccountingOrganizationGroupsRoute: typeof AuthenticatedaccountingAccountingOrganizationGroupsRoute
   AuthenticatedaccountingAccountingPaymentsRoute: typeof AuthenticatedaccountingAccountingPaymentsRoute
   AuthenticatedaccountingAccountingProfitLossRoute: typeof AuthenticatedaccountingAccountingProfitLossRoute
   AuthenticatedaccountingAccountingPurchaseOrdersRoute: typeof AuthenticatedaccountingAccountingPurchaseOrdersRoute
@@ -3951,6 +4014,8 @@ const AuthenticatedaccountingAccountingRouteChildren: AuthenticatedaccountingAcc
       AuthenticatedaccountingAccountingBankAccountsRoute,
     AuthenticatedaccountingAccountingCashFlowRoute:
       AuthenticatedaccountingAccountingCashFlowRoute,
+    AuthenticatedaccountingAccountingConsolidatedProfitLossRoute:
+      AuthenticatedaccountingAccountingConsolidatedProfitLossRoute,
     AuthenticatedaccountingAccountingCostCentersRoute:
       AuthenticatedaccountingAccountingCostCentersRoute,
     AuthenticatedaccountingAccountingCustomerDeliveriesRoute:
@@ -3959,6 +4024,8 @@ const AuthenticatedaccountingAccountingRouteChildren: AuthenticatedaccountingAcc
       AuthenticatedaccountingAccountingCustomersRoute,
     AuthenticatedaccountingAccountingDeliveryNotesRoute:
       AuthenticatedaccountingAccountingDeliveryNotesRoute,
+    AuthenticatedaccountingAccountingExchangeRatesRoute:
+      AuthenticatedaccountingAccountingExchangeRatesRoute,
     AuthenticatedaccountingAccountingFiscalYearsRoute:
       AuthenticatedaccountingAccountingFiscalYearsRoute,
     AuthenticatedaccountingAccountingGeneralLedgerRoute:
@@ -3967,6 +4034,8 @@ const AuthenticatedaccountingAccountingRouteChildren: AuthenticatedaccountingAcc
       AuthenticatedaccountingAccountingInvoicesRoute,
     AuthenticatedaccountingAccountingJournalRoute:
       AuthenticatedaccountingAccountingJournalRoute,
+    AuthenticatedaccountingAccountingOrganizationGroupsRoute:
+      AuthenticatedaccountingAccountingOrganizationGroupsRoute,
     AuthenticatedaccountingAccountingPaymentsRoute:
       AuthenticatedaccountingAccountingPaymentsRoute,
     AuthenticatedaccountingAccountingProfitLossRoute:

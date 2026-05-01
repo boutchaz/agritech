@@ -108,6 +108,66 @@
         "update": "Update Payment",
         "create": "Create Payment"
       }
+    },
+    "errors": {
+      "loadFailed": "Failed to load payments"
+    },
+    "actions": {
+      "recordNew": "Record Payment",
+      "allocate": "Allocate"
+    },
+    "search": {
+      "placeholder": "Search by payment number or party..."
+    },
+    "filter": {
+      "allTypes": "All Types",
+      "received": "Received",
+      "paid": "Paid Out",
+      "allStatus": "All Status"
+    },
+    "status": {
+      "draft": "Draft",
+      "submitted": "Submitted",
+      "reconciled": "Reconciled",
+      "cancelled": "Cancelled"
+    },
+    "stats": {
+      "total": "Total Payments",
+      "received": "Received",
+      "paidOut": "Paid Out",
+      "draft": "Draft"
+    },
+    "list": {
+      "title": "All Payments",
+      "subtitle": "View, allocate, and manage your payment transactions"
+    },
+    "columns": {
+      "number": "Payment #",
+      "type": "Type",
+      "party": "Party",
+      "date": "Date",
+      "method": "Method",
+      "amount": "Amount",
+      "status": "Status",
+      "allocation": "Allocation"
+    },
+    "type": {
+      "receive": "Receive",
+      "pay": "Pay"
+    },
+    "allocation": {
+      "linked": "{{count}} invoice(s)",
+      "pending": "Unallocated"
+    },
+    "empty": {
+      "filtered": "No payments match your filters.",
+      "initial": "No payments found. Record your first payment to get started."
+    },
+    "dialogs": {
+      "create": {
+        "title": "Record New Payment",
+        "description": "Record a payment received from a customer or made to a supplier"
+      }
     }
   },
   "journal": {
@@ -194,5 +254,284 @@
     "balanced": "✓ Entry is balanced",
     "cancelBtn": "Cancel",
     "createEntry": "Create entry"
+  },
+  "invoices": {
+    "actions": {
+      "create": "Create Invoice",
+      "menu": "Actions",
+      "submit": "Submit Invoice",
+      "download": "Download PDF",
+      "delete": "Delete",
+      "onlyDraftDelete": "Only draft invoices can be deleted",
+      "confirmDelete": "Are you sure you want to delete invoice {{invoiceNumber}}?",
+      "deleteSuccess": "Invoice {{invoiceNumber}} deleted successfully",
+      "deleteError": "Failed to delete invoice"
+    },
+    "search": {
+      "placeholder": "Search invoices by number or customer..."
+    },
+    "filter": {
+      "allTypes": "All Types",
+      "sales": "Sales",
+      "purchase": "Purchase",
+      "allStatus": "All Status"
+    },
+    "status": {
+      "draft": "Draft",
+      "submitted": "Submitted",
+      "paid": "Paid",
+      "partiallyPaid": "Partially Paid",
+      "overdue": "Overdue",
+      "cancelled": "Cancelled"
+    },
+    "stats": {
+      "total": "Total Invoices",
+      "pending": "Pending",
+      "paid": "Paid",
+      "overdue": "Overdue"
+    },
+    "allInvoices": "Invoices",
+    "tableDescription": "A list of all your sales and purchase invoices",
+    "table": {
+      "invoiceNumber": "Invoice #",
+      "type": "Type",
+      "party": "Customer/Supplier",
+      "date": "Date",
+      "amount": "Amount",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "type": {
+      "sales": "Sales",
+      "purchase": "Purchase"
+    },
+    "error": {
+      "loading": "Error loading invoices",
+      "editDraftOnly": "Only draft invoices can be edited"
+    },
+    "empty": {
+      "filtered": "No invoices match your filters.",
+      "message": "No invoices found. Create your first invoice to get started."
+    }
+  },
+  "fiscalYears": {
+    "title": "Fiscal Years",
+    "description": "Manage fiscal years for financial reporting and period closing.",
+    "addNew": "Add Fiscal Year",
+    "noPermission": "You do not have permission to manage fiscal years.",
+    "status": {
+      "closed": "Closed",
+      "current": "Current",
+      "open": "Open"
+    },
+    "edit": {
+      "title": "Edit Fiscal Year",
+      "description": "Update the fiscal year details."
+    },
+    "close": {
+      "title": "Close Fiscal Year",
+      "description": "Are you sure you want to close fiscal year \"{{name}}\"? This action cannot be undone. All transactions in this period will be locked.",
+      "confirm": "Close Fiscal Year"
+    },
+    "listTitle": "Fiscal Year List",
+    "listDescription": "Total: {{count}} fiscal years",
+    "table": {
+      "code": "Code",
+      "name": "Name",
+      "period": "Period",
+      "periodType": "Type",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "filters": {
+      "searchPlaceholder": "Search by name or code",
+      "allStatuses": "All statuses",
+      "allTypes": "All types"
+    },
+    "form": {
+      "code": "Code",
+      "name": "Name",
+      "startDate": "Start Date",
+      "endDate": "End Date",
+      "periodType": "Period Type",
+      "monthly": "Monthly",
+      "quarterly": "Quarterly",
+      "setCurrent": "Set as current fiscal year",
+      "update": "Update",
+      "create": "Create"
+    },
+    "create": {
+      "title": "Create Fiscal Year",
+      "description": "Add a new fiscal year for financial reporting."
+    },
+    "empty": "No fiscal years yet. Create your first one to get started.",
+    "emptyFiltered": "No fiscal years match your search or filters.",
+    "emptyFilteredHint": "Try adjusting or clearing your filters to see more fiscal years."
+  },
+  "accountMappings": {
+    "title": "Account Mappings",
+    "description": "Configure how business events map to GL accounts for automatic journal entries.",
+    "noPermission": "You do not have permission to manage account mappings.",
+    "initializeDefaults": "Initialize Defaults",
+    "addNew": "Add Mapping",
+    "active": "Active",
+    "inactive": "Inactive",
+    "deactivate": "Deactivate",
+    "activate": "Activate",
+    "deactivated": "Account mapping deactivated",
+    "activated": "Account mapping activated",
+    "toggleFailed": "Failed to update mapping status",
+    "table": {
+      "key": "Key",
+      "account": "Account",
+      "description": "Description",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "noAccounts": {
+      "title": "Chart of Accounts Required",
+      "description": "You need to set up your chart of accounts before initializing mappings.",
+      "link": "Go to Accounts"
+    },
+    "infoTitle": "How Account Mappings Work",
+    "infoDescription": "Account mappings link business events (like task completion or harvest sales) to specific GL accounts. When a task is completed or a harvest is sold, the system automatically creates journal entries using these mappings.",
+    "searchPlaceholder": "Search by key or account...",
+    "filterType": "Filter by type",
+    "filterStatus": "Status",
+    "allTypes": "All Types",
+    "allStatus": "All Status",
+    "activeOnly": "Active",
+    "inactiveOnly": "Inactive",
+    "typeCount": "{{count}} mappings",
+    "noSearchResults": "No mappings found matching your filters.",
+    "empty": "No account mappings configured. Click \"Initialize Defaults\" to set up standard mappings, or add them manually.",
+    "labels": {
+      "cost_type": "Cost Type",
+      "revenue_type": "Revenue Type",
+      "harvest_sale": "Harvest Sale",
+      "cash": "Cash",
+      "planting": "Planting",
+      "harvesting": "Harvesting",
+      "irrigation": "Irrigation",
+      "fertilization": "Fertilization",
+      "pesticide": "Pesticide",
+      "pruning": "Pruning",
+      "maintenance": "Maintenance",
+      "transport": "Transport",
+      "labor": "Labor",
+      "materials": "Materials",
+      "utilities": "Utilities",
+      "other": "Other",
+      "product_sales": "Product Sales",
+      "service_income": "Service Income",
+      "other_income": "Other Income",
+      "market": "Market",
+      "export": "Export",
+      "wholesale": "Wholesale",
+      "direct": "Direct",
+      "processing": "Processing",
+      "bank": "Bank",
+      "petty_cash": "Petty Cash"
+    },
+    "create": {
+      "title": "Create Account Mapping",
+      "description": "Map a business event to a GL account.",
+      "success": "Account mapping created successfully",
+      "failed": "Failed to create account mapping"
+    },
+    "update": {
+      "success": "Account mapping updated successfully",
+      "failed": "Failed to update account mapping"
+    },
+    "delete": {
+      "title": "Delete Account Mapping",
+      "description": "Are you sure you want to delete the mapping for \"{{key}}\"? This will not affect existing journal entries, but new automatic entries will fail without this mapping.",
+      "success": "Account mapping deleted successfully",
+      "failed": "Failed to delete account mapping"
+    },
+    "initialize": {
+      "success": "Initialized {{count}} default mappings",
+      "failed": "Failed to initialize default mappings"
+    },
+    "edit": {
+      "title": "Edit Account Mapping",
+      "description": "Update the account mapping details."
+    },
+    "form": {
+      "type": "Mapping Type",
+      "typePlaceholder": "Select mapping type",
+      "key": "Mapping Key",
+      "keyPlaceholder": "Select mapping key",
+      "account": "GL Account",
+      "accountPlaceholder": "Select account",
+      "description": "Description",
+      "descriptionPlaceholder": "Optional description...",
+      "active": "Active",
+      "activeHelp": "Inactive mappings are ignored during journal creation.",
+      "update": "Update",
+      "create": "Create"
+    }
+  },
+  "common": {
+    "new": "New",
+    "view": "View",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "clearFilters": "Clear filters",
+    "actions": "Actions",
+    "error": {
+      "unknown": "Unknown error"
+    }
+  },
+  "app": {
+    "edit": "Edit",
+    "delete": "Delete",
+    "cancel": "Cancel",
+    "unknownError": "Unknown error"
+  },
+  "dialogs": {
+    "paymentDetail": {
+      "title": "Payment Details",
+      "editTitle": "Edit Payment",
+      "editDescription": "Update the payment information below.",
+      "paymentNumber": "Payment",
+      "paymentDate": "Date",
+      "amount": "Amount",
+      "paymentType": "Type",
+      "paymentReceived": "Payment Received",
+      "paymentMade": "Payment Made",
+      "party": "Party",
+      "paymentMethod": "Payment Method",
+      "referenceNumber": "Reference",
+      "remarks": "Remarks",
+      "created": "Created",
+      "updated": "Updated",
+      "allocateAndPost": "Allocate & Post",
+      "paymentSubmitted": "Submitted",
+      "deleting": "Deleting...",
+      "deleteFailed": "Failed to delete payment",
+      "confirmDelete": "Are you sure you want to delete this payment?",
+      "confirmDeleteTitle": "Delete payment"
+    },
+    "paymentAllocation": {
+      "title": "Allocate Payment",
+      "description": "Allocate this payment to an outstanding invoice.",
+      "selectInvoiceError": "Please select an invoice",
+      "amountError": "Please enter a valid amount",
+      "exceedsBalanceError": "Amount exceeds the maximum allocatable",
+      "allocationFailed": "Failed to allocate payment",
+      "noInvoicesFound": "No eligible invoices found.",
+      "ensureSalesInvoice": "Ensure there is at least one submitted sales invoice.",
+      "ensurePurchaseInvoice": "Ensure there is at least one submitted purchase invoice.",
+      "invoiceToSettle": "Invoice to settle",
+      "selectInvoice": "Select an invoice...",
+      "remaining": "Remaining:",
+      "invoiceBalance": "Invoice Balance",
+      "paymentAmount": "Payment Amount",
+      "amountToAllocate": "Amount to Allocate",
+      "maxAllocatable": "Max allocatable",
+      "posting": "Posting...",
+      "allocateAndPost": "Allocate & Post"
+    }
   }
 }

@@ -9781,6 +9781,124 @@ export type Database = {
           },
         ]
       }
+      exchange_rates: {
+        Row: {
+          created_at: string | null
+          from_currency: string
+          id: string
+          organization_id: string | null
+          rate: number
+          rate_date: string
+          source: string | null
+          to_currency: string
+        }
+        Insert: {
+          created_at?: string | null
+          from_currency: string
+          id?: string
+          organization_id?: string | null
+          rate: number
+          rate_date: string
+          source?: string | null
+          to_currency: string
+        }
+        Update: {
+          created_at?: string | null
+          from_currency?: string
+          id?: string
+          organization_id?: string | null
+          rate?: number
+          rate_date?: string
+          source?: string | null
+          to_currency?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exchange_rates_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "accounting_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "exchange_rates_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_churn_risk"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exchange_rates_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_org_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exchange_rates_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_top_orgs_by_activity"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exchange_rates_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "dashboard_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "exchange_rates_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "financial_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "exchange_rates_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exchange_rates_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "production_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "exchange_rates_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "sales_analytics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "exchange_rates_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "task_completion"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "exchange_rates_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_organization_financial_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "exchange_rates_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_production_summary"
+            referencedColumns: ["organization_id"]
+          },
+        ]
+      }
       expense_categories: {
         Row: {
           created_at: string
@@ -13312,6 +13430,7 @@ export type Database = {
           credit_reason: string | null
           credited_amount: number | null
           currency_code: string | null
+          default_tax_rate: number | null
           discount_amount: number | null
           document_type: Database["public"]["Enums"]["invoice_document_type"]
           due_date: string | null
@@ -13347,6 +13466,7 @@ export type Database = {
           credit_reason?: string | null
           credited_amount?: number | null
           currency_code?: string | null
+          default_tax_rate?: number | null
           discount_amount?: number | null
           document_type?: Database["public"]["Enums"]["invoice_document_type"]
           due_date?: string | null
@@ -13382,6 +13502,7 @@ export type Database = {
           credit_reason?: string | null
           credited_amount?: number | null
           currency_code?: string | null
+          default_tax_rate?: number | null
           discount_amount?: number | null
           document_type?: Database["public"]["Enums"]["invoice_document_type"]
           due_date?: string | null
@@ -14676,6 +14797,7 @@ export type Database = {
           entry_number: string
           entry_type: string | null
           id: string
+          intercompany_pair_id: string | null
           organization_id: string
           posted_at: string | null
           posted_by: string | null
@@ -14696,6 +14818,7 @@ export type Database = {
           entry_number: string
           entry_type?: string | null
           id?: string
+          intercompany_pair_id?: string | null
           organization_id: string
           posted_at?: string | null
           posted_by?: string | null
@@ -14716,6 +14839,7 @@ export type Database = {
           entry_number?: string
           entry_type?: string | null
           id?: string
+          intercompany_pair_id?: string | null
           organization_id?: string
           posted_at?: string | null
           posted_by?: string | null
@@ -14820,13 +14944,18 @@ export type Database = {
           account_id: string
           biological_asset_id: string | null
           campaign_id: string | null
+          cash_settlement_date: string | null
           cost_center_id: string | null
           created_at: string | null
           credit: number | null
           crop_cycle_id: string | null
+          currency: string | null
           debit: number | null
           description: string | null
+          exchange_rate: number | null
           farm_id: string | null
+          fc_credit: number | null
+          fc_debit: number | null
           fiscal_period_id: string | null
           fiscal_year_id: string | null
           id: string
@@ -14839,13 +14968,18 @@ export type Database = {
           account_id: string
           biological_asset_id?: string | null
           campaign_id?: string | null
+          cash_settlement_date?: string | null
           cost_center_id?: string | null
           created_at?: string | null
           credit?: number | null
           crop_cycle_id?: string | null
+          currency?: string | null
           debit?: number | null
           description?: string | null
+          exchange_rate?: number | null
           farm_id?: string | null
+          fc_credit?: number | null
+          fc_debit?: number | null
           fiscal_period_id?: string | null
           fiscal_year_id?: string | null
           id?: string
@@ -14858,13 +14992,18 @@ export type Database = {
           account_id?: string
           biological_asset_id?: string | null
           campaign_id?: string | null
+          cash_settlement_date?: string | null
           cost_center_id?: string | null
           created_at?: string | null
           credit?: number | null
           crop_cycle_id?: string | null
+          currency?: string | null
           debit?: number | null
           description?: string | null
+          exchange_rate?: number | null
           farm_id?: string | null
+          fc_credit?: number | null
+          fc_debit?: number | null
           fiscal_period_id?: string | null
           fiscal_year_id?: string | null
           id?: string
@@ -18533,6 +18672,231 @@ export type Database = {
           },
         ]
       }
+      organization_group_members: {
+        Row: {
+          created_at: string | null
+          group_id: string
+          id: string
+          organization_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          group_id: string
+          id?: string
+          organization_id: string
+        }
+        Update: {
+          created_at?: string | null
+          group_id?: string
+          id?: string
+          organization_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_group_members_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "organization_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_group_members_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "accounting_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "organization_group_members_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_churn_risk"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_group_members_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_org_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_group_members_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_top_orgs_by_activity"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_group_members_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "dashboard_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "organization_group_members_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "financial_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "organization_group_members_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_group_members_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "production_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "organization_group_members_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "sales_analytics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "organization_group_members_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "task_completion"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "organization_group_members_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_organization_financial_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "organization_group_members_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_production_summary"
+            referencedColumns: ["organization_id"]
+          },
+        ]
+      }
+      organization_groups: {
+        Row: {
+          base_currency: string
+          created_at: string | null
+          id: string
+          name: string
+          parent_organization_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          base_currency: string
+          created_at?: string | null
+          id?: string
+          name: string
+          parent_organization_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          base_currency?: string
+          created_at?: string | null
+          id?: string
+          name?: string
+          parent_organization_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_groups_parent_organization_id_fkey"
+            columns: ["parent_organization_id"]
+            isOneToOne: false
+            referencedRelation: "accounting_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "organization_groups_parent_organization_id_fkey"
+            columns: ["parent_organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_churn_risk"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_groups_parent_organization_id_fkey"
+            columns: ["parent_organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_org_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_groups_parent_organization_id_fkey"
+            columns: ["parent_organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_top_orgs_by_activity"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_groups_parent_organization_id_fkey"
+            columns: ["parent_organization_id"]
+            isOneToOne: false
+            referencedRelation: "dashboard_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "organization_groups_parent_organization_id_fkey"
+            columns: ["parent_organization_id"]
+            isOneToOne: false
+            referencedRelation: "financial_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "organization_groups_parent_organization_id_fkey"
+            columns: ["parent_organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_groups_parent_organization_id_fkey"
+            columns: ["parent_organization_id"]
+            isOneToOne: false
+            referencedRelation: "production_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "organization_groups_parent_organization_id_fkey"
+            columns: ["parent_organization_id"]
+            isOneToOne: false
+            referencedRelation: "sales_analytics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "organization_groups_parent_organization_id_fkey"
+            columns: ["parent_organization_id"]
+            isOneToOne: false
+            referencedRelation: "task_completion"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "organization_groups_parent_organization_id_fkey"
+            columns: ["parent_organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_organization_financial_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "organization_groups_parent_organization_id_fkey"
+            columns: ["parent_organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_production_summary"
+            referencedColumns: ["organization_id"]
+          },
+        ]
+      }
       organization_modules: {
         Row: {
           created_at: string | null
@@ -20820,6 +21184,206 @@ export type Database = {
           },
         ]
       }
+      petty_expenses: {
+        Row: {
+          amount: number
+          attachment_url: string | null
+          bank_account_id: string | null
+          cash_account_id: string | null
+          created_at: string
+          created_by: string | null
+          currency_code: string | null
+          description: string
+          expense_account_id: string | null
+          expense_date: string
+          expense_number: string
+          farm_id: string | null
+          id: string
+          journal_entry_id: string | null
+          organization_id: string
+          parcel_id: string | null
+          status: string
+          submitted_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          attachment_url?: string | null
+          bank_account_id?: string | null
+          cash_account_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          currency_code?: string | null
+          description: string
+          expense_account_id?: string | null
+          expense_date: string
+          expense_number: string
+          farm_id?: string | null
+          id?: string
+          journal_entry_id?: string | null
+          organization_id: string
+          parcel_id?: string | null
+          status?: string
+          submitted_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          attachment_url?: string | null
+          bank_account_id?: string | null
+          cash_account_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          currency_code?: string | null
+          description?: string
+          expense_account_id?: string | null
+          expense_date?: string
+          expense_number?: string
+          farm_id?: string | null
+          id?: string
+          journal_entry_id?: string | null
+          organization_id?: string
+          parcel_id?: string | null
+          status?: string
+          submitted_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "petty_expenses_bank_account_id_fkey"
+            columns: ["bank_account_id"]
+            isOneToOne: false
+            referencedRelation: "bank_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "petty_expenses_cash_account_id_fkey"
+            columns: ["cash_account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "petty_expenses_currency_code_fkey"
+            columns: ["currency_code"]
+            isOneToOne: false
+            referencedRelation: "currencies"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "petty_expenses_expense_account_id_fkey"
+            columns: ["expense_account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "petty_expenses_farm_id_fkey"
+            columns: ["farm_id"]
+            isOneToOne: false
+            referencedRelation: "farms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "petty_expenses_journal_entry_id_fkey"
+            columns: ["journal_entry_id"]
+            isOneToOne: false
+            referencedRelation: "journal_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "petty_expenses_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "accounting_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "petty_expenses_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_churn_risk"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "petty_expenses_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_org_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "petty_expenses_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_top_orgs_by_activity"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "petty_expenses_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "dashboard_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "petty_expenses_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "financial_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "petty_expenses_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "petty_expenses_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "production_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "petty_expenses_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "sales_analytics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "petty_expenses_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "task_completion"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "petty_expenses_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_organization_financial_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "petty_expenses_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_production_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "petty_expenses_parcel_id_fkey"
+            columns: ["parcel_id"]
+            isOneToOne: false
+            referencedRelation: "parcels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       phenological_stages: {
         Row: {
           bbch_code: string | null
@@ -22500,6 +23064,7 @@ export type Database = {
         Row: {
           created_at: string
           created_by: string | null
+          default_tax_rate: number | null
           expected_delivery_date: string | null
           id: string
           notes: string | null
@@ -22522,6 +23087,7 @@ export type Database = {
         Insert: {
           created_at?: string
           created_by?: string | null
+          default_tax_rate?: number | null
           expected_delivery_date?: string | null
           id?: string
           notes?: string | null
@@ -22544,6 +23110,7 @@ export type Database = {
         Update: {
           created_at?: string
           created_by?: string | null
+          default_tax_rate?: number | null
           expected_delivery_date?: string | null
           id?: string
           notes?: string | null
@@ -25247,6 +25814,7 @@ export type Database = {
           customer_contact: string | null
           customer_id: string | null
           customer_name: string
+          default_tax_rate: number | null
           expected_delivery_date: string | null
           id: string
           notes: string | null
@@ -25272,6 +25840,7 @@ export type Database = {
           customer_contact?: string | null
           customer_id?: string | null
           customer_name: string
+          default_tax_rate?: number | null
           expected_delivery_date?: string | null
           id?: string
           notes?: string | null
@@ -25297,6 +25866,7 @@ export type Database = {
           customer_contact?: string | null
           customer_id?: string | null
           customer_name?: string
+          default_tax_rate?: number | null
           expected_delivery_date?: string | null
           id?: string
           notes?: string | null

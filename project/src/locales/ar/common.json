@@ -8640,7 +8640,23 @@
     "confirmMarkPaid": "تعليم كمدفوع؟ سيتم ترحيل القيود إلى دفتر الأستاذ العام.",
     "markPaid": "تعليم كمدفوع",
     "confirmCancel": "إلغاء الدفعة؟ سيتم إلغاء الكشوف.",
-    "create": "دفعة رواتب جديدة"
+    "create": "دفعة رواتب جديدة",
+    "subtitle": "معالجة الرواتب لفترة: أنشئ دفعة، أنشئ الكشوف للعمال المطابقين، ثم أرسلها عندما تكون جاهزًا.",
+    "generated": "تم إنشاء {{count}} كشف (تم تخطي {{skipped}})",
+    "paidWithJe": "مدفوع · تم ترحيل {{count}} قيد",
+    "statuses": {
+      "draft": "مسودة",
+      "processing": "قيد المعالجة",
+      "submitted": "مُرسل",
+      "paid": "مدفوع",
+      "cancelled": "ملغي"
+    },
+    "frequencies": {
+      "monthly": "شهري",
+      "biweekly": "نصف شهري",
+      "weekly": "أسبوعي",
+      "daily": "يومي"
+    }
   },
   "salaryStructures": {
     "title": "هياكل الرواتب",
@@ -8821,5 +8837,13 @@
     "totalDays": "إجمالي الأيام لكل عامل",
     "selectWorkers": "اختر العمال"
   },
-  "actions": "إجراءات"
+  "actions": "إجراءات",
+  "view": "عرض",
+  "cancel": "إلغاء",
+  "delete": "حذف",
+  "clearFilters": "مسح عوامل التصفية",
+  "new": "جديد",
+  "error": {
+    "unknown": "خطأ غير معروف"
+  }
 }
