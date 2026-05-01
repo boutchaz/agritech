@@ -2,9 +2,9 @@
 import { Package, Warehouse, Building2, ExternalLink, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useFarmStockLevels } from '@/hooks/useFarmStockLevels';
-import { useCurrency } from '@/hooks/useCurrency';
 import { useTranslation } from 'react-i18next';
 import { formatQuantity } from '@/utils/units';
+import { StockValue } from '@/components/Stock/StockValue';
 
 interface FarmStockLevelsProps {
   item_id?: string;
@@ -18,7 +18,6 @@ export default function FarmStockLevels({
   showWarehouseDetails = true,
 }: FarmStockLevelsProps) {
   const { t, i18n } = useTranslation('stock');
-  const { format: formatCurrency } = useCurrency();
 
   const { data: stockLevels = [], isLoading } = useFarmStockLevels({
     item_id,
@@ -113,7 +112,7 @@ export default function FarmStockLevels({
                   {t('stock.farmStockLevels.totalValue', 'Total Value')}:
                 </span>
                 <span className="font-semibold text-gray-900 dark:text-white">
-                  {formatCurrency(totalValue)}
+                  <StockValue value={totalValue} />
                 </span>
               </div>
             </div>
@@ -147,7 +146,7 @@ export default function FarmStockLevels({
                         {formatQuantity(warehouseStock.total_quantity, stockLevels[0]?.default_unit, i18n.language)}
                       </p>
                       <p className="text-xs text-gray-500 dark:text-gray-400">
-                        {formatCurrency(warehouseStock.total_value)}
+                        <StockValue value={warehouseStock.total_value} />
                       </p>
                     </div>
                   </div>

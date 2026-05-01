@@ -54,6 +54,7 @@ const createTaskFormSchema = (t: (key: string) => string) => z.object({
   units_required: z.number().optional(),
   rate_per_unit: z.number().optional(),
   forfait_amount: z.number().optional(),
+  payment_amount: z.number().optional(),
   crop_id: z.string(),
   crop_cycle_id: z.string(),
   campaign_id: z.string(),
@@ -132,6 +133,7 @@ const TaskForm = ({
       units_required: task?.units_required,
       rate_per_unit: task?.rate_per_unit,
       forfait_amount: taskForfaitAmount,
+      payment_amount: (task as Task & { payment_amount?: number } | null)?.payment_amount ?? undefined,
       crop_id: '',
       crop_cycle_id: task?.crop_cycle_id || '',
       campaign_id: task?.campaign_id || '',
@@ -159,6 +161,7 @@ const TaskForm = ({
   const watchCropCycleId = watch('crop_cycle_id');
   const watchUnitsRequired = watch('units_required');
   const watchRatePerUnit = watch('rate_per_unit');
+  const watchEstimatedDuration = watch('estimated_duration');
 
   // Backward-compat alias for template references
   const formData = {
@@ -173,6 +176,7 @@ const TaskForm = ({
     crop_cycle_id: watchCropCycleId,
     units_required: watchUnitsRequired,
     rate_per_unit: watchRatePerUnit,
+    estimated_duration: watchEstimatedDuration,
   };
 
   useEffect(() => {
@@ -850,6 +854,38 @@ const TaskForm = ({
                 </div>
               )}
             </div>
+
+            {/* Payment amount (daily / monthly) — auto-filled from worker.daily_rate × duration; overridable */}
+            {(formData.payment_type === 'daily' || formData.payment_type === 'monthly') && (
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="payment_amount">{t('tasks.form.paymentAmountLabel', 'Montant à payer (MAD)')}</Label>
+                  <Input
+                    id="payment_amount"
+                    type="number"
+                    {...register('payment_amount', { valueAsNumber: true })}
+                    invalid={!!errors.payment_amount}
+                    min="0"
+                    step="0.01"
+                    placeholder={(() => {
+                      const w = workers.find(x => selectedWorkerIds.includes(x.id) && x.daily_rate);
+                      const dur = formData.estimated_duration ?? 0;
+                      const rate = w?.daily_rate ?? 0;
+                      const suggested = formData.payment_type === 'daily' && dur && rate
+                        ? (rate * (dur / 8)).toFixed(2)
+                        : '';
+                      return suggested || t('tasks.form.paymentAmountPlaceholder', 'Ex: 100.00');
+                    })()}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {t('tasks.form.paymentAmountHint', 'Auto-suggéré depuis le tarif journalier; modifiable.')}
+                  </p>
+                  {errors.payment_amount && (
+                    <p className="text-red-600 text-sm mt-1">{errors.payment_amount.message}</p>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Forfait amount (only if payment type is forfait) */}
             {formData.payment_type === 'forfait' && (

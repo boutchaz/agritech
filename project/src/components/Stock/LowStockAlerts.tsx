@@ -2,10 +2,10 @@ import { Link, useNavigate } from '@tanstack/react-router';
 import { AlertTriangle, Package, Plus, ExternalLink } from 'lucide-react';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { useFarmStockLevels } from '@/hooks/useFarmStockLevels';
-import { useCurrency } from '@/hooks/useCurrency';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 import { formatQuantity } from '@/utils/units';
+import { StockValue } from '@/components/Stock/StockValue';
 
 interface LowStockAlertsProps {
   farm_id?: string;
@@ -20,7 +20,6 @@ export default function LowStockAlerts({
 }: LowStockAlertsProps) {
   const { t, i18n } = useTranslation('stock');
   const navigate = useNavigate();
-  const { format: formatCurrency } = useCurrency();
 
   const { data: lowStockItems = [], isLoading } = useFarmStockLevels({
     farm_id,
@@ -122,7 +121,7 @@ export default function LowStockAlerts({
                       {t('stock.lowStockAlerts.totalValue', 'Total Value')}:
                     </span>
                     <span className="font-medium text-gray-900 dark:text-white">
-                      {formatCurrency(item.total_value)}
+                      <StockValue value={item.total_value} />
                     </span>
                   </div>
 

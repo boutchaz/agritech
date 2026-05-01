@@ -163,10 +163,27 @@ export class InvoicesService {
       const invoiceNumber = dto.invoice_number ||
         await this.sequencesService.generateInvoiceNumber(organizationId, dto.invoice_type);
 
-      // Calculate totals from items
-      const subtotal = dto.items.reduce((sum, item) => sum + item.amount, 0);
-      const taxTotal = dto.items.reduce((sum, item) => sum + item.tax_amount, 0);
-      const grandTotal = subtotal + taxTotal;
+      // Hybrid tax model: line tax_rate wins; if absent, fall back to header default_tax_rate.
+      // tax_amount derived when not provided by client.
+      const round2 = (x: number) => Math.round((x + Number.EPSILON) * 100) / 100;
+      const headerDefaultRate = Number((dto as { default_tax_rate?: number }).default_tax_rate ?? 0);
+      const resolvedItems = dto.items.map((item) => {
+        const lineRate = item.tax_rate != null && item.tax_rate !== 0
+          ? Number(item.tax_rate)
+          : headerDefaultRate;
+        const lineTaxAmount = item.tax_amount != null && item.tax_amount !== 0
+          ? Number(item.tax_amount)
+          : round2(Number(item.amount) * (lineRate / 100));
+        return {
+          ...item,
+          tax_rate: lineRate,
+          tax_amount: lineTaxAmount,
+          line_total: round2(Number(item.amount) + lineTaxAmount),
+        };
+      });
+      const subtotal = round2(resolvedItems.reduce((sum, item) => sum + Number(item.amount), 0));
+      const taxTotal = round2(resolvedItems.reduce((sum, item) => sum + item.tax_amount, 0));
+      const grandTotal = round2(subtotal + taxTotal);
 
       // Create invoice
       const { data: invoice, error: invoiceError } = await supabaseClient
@@ -180,10 +197,11 @@ export class InvoicesService {
           party_name: dto.party_name,
           invoice_date: dto.invoice_date,
           due_date: dto.due_date,
-          subtotal: dto.subtotal || subtotal,
-          tax_total: dto.tax_total || taxTotal,
-          grand_total: dto.grand_total || grandTotal,
-          outstanding_amount: dto.outstanding_amount || grandTotal,
+          subtotal: subtotal,
+          tax_total: taxTotal,
+          grand_total: grandTotal,
+          outstanding_amount: grandTotal,
+          default_tax_rate: headerDefaultRate || null,
           currency_code: dto.currency_code || 'MAD',
           exchange_rate: dto.exchange_rate || 1.0,
           payment_terms: dto.payment_terms || null,
@@ -203,7 +221,7 @@ export class InvoicesService {
 
       // Create invoice items
       // Note: Only using columns that exist in the current database schema
-      const itemsToInsert = dto.items.map((item, index) => ({
+      const itemsToInsert = resolvedItems.map((item, index) => ({
         invoice_id: invoice.id,
         line_number: index + 1,
         item_name: item.item_name,
@@ -291,16 +309,34 @@ export class InvoicesService {
     if (dto.payment_terms !== undefined) updateData.payment_terms = dto.payment_terms;
     if (dto.notes !== undefined) updateData.notes = dto.notes;
 
-    // If items are provided, recalculate totals
+    // If items are provided, recalculate totals (hybrid tax model)
+    let resolvedUpdateItems: any[] = [];
     if (dto.items && dto.items.length > 0) {
-      const subtotal = dto.items.reduce((sum, item) => sum + item.amount, 0);
-      const taxTotal = dto.items.reduce((sum, item) => sum + item.tax_amount, 0);
-      const grandTotal = subtotal + taxTotal;
+      const round2 = (x: number) => Math.round((x + Number.EPSILON) * 100) / 100;
+      const headerDefaultRate = Number((dto as { default_tax_rate?: number }).default_tax_rate ?? (existingInvoice as { default_tax_rate?: number }).default_tax_rate ?? 0);
+      resolvedUpdateItems = dto.items.map((item) => {
+        const lineRate = item.tax_rate != null && item.tax_rate !== 0
+          ? Number(item.tax_rate)
+          : headerDefaultRate;
+        const lineTaxAmount = item.tax_amount != null && item.tax_amount !== 0
+          ? Number(item.tax_amount)
+          : round2(Number(item.amount) * (lineRate / 100));
+        return {
+          ...item,
+          tax_rate: lineRate,
+          tax_amount: lineTaxAmount,
+          line_total: round2(Number(item.amount) + lineTaxAmount),
+        };
+      });
+      const subtotal = round2(resolvedUpdateItems.reduce((sum, item) => sum + Number(item.amount), 0));
+      const taxTotal = round2(resolvedUpdateItems.reduce((sum, item) => sum + item.tax_amount, 0));
+      const grandTotal = round2(subtotal + taxTotal);
 
       updateData.subtotal = subtotal;
       updateData.tax_total = taxTotal;
       updateData.grand_total = grandTotal;
       updateData.outstanding_amount = grandTotal;
+      updateData.default_tax_rate = headerDefaultRate || null;
     }
 
     // Update invoice header
@@ -330,7 +366,7 @@ export class InvoicesService {
 
       // Insert new items
       // Note: Only using columns that exist in the current database schema
-      const itemsToInsert = dto.items.map((item, index) => ({
+      const itemsToInsert = resolvedUpdateItems.map((item, index) => ({
         invoice_id: id,
         line_number: index + 1,
         item_name: item.item_name,

@@ -120,10 +120,18 @@ END $$;
 DO $$ BEGIN
   CREATE TYPE accounting_payment_type AS ENUM (
     'receive',
-    'pay'
+    'pay',
+    'bank_fee'
   );
 EXCEPTION
   WHEN duplicate_object THEN null;
+END $$;
+
+-- Idempotently add bank_fee for clusters that already have the type
+DO $$ BEGIN
+  ALTER TYPE accounting_payment_type ADD VALUE IF NOT EXISTS 'bank_fee';
+EXCEPTION
+  WHEN others THEN null;
 END $$;
 
 -- Invoice Status
@@ -1440,6 +1448,51 @@ ALTER TABLE invoices ADD COLUMN IF NOT EXISTS document_type invoice_document_typ
 ALTER TABLE invoices ADD COLUMN IF NOT EXISTS original_invoice_id UUID;
 ALTER TABLE invoices ADD COLUMN IF NOT EXISTS credit_reason TEXT;
 ALTER TABLE invoices ADD COLUMN IF NOT EXISTS credited_amount DECIMAL(15, 2) DEFAULT 0;
+-- Hybrid tax model: header default applies when a line has no tax_rate
+ALTER TABLE invoices ADD COLUMN IF NOT EXISTS default_tax_rate DECIMAL(5, 2);
+ALTER TABLE sales_orders ADD COLUMN IF NOT EXISTS default_tax_rate DECIMAL(5, 2);
+ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS default_tax_rate DECIMAL(5, 2);
+
+-- Petty / unjustified expenses (charges non justifiées)
+-- Standalone ledger of small expenses without a formal supplier invoice. Each row
+-- posts a journal entry DR expense / CR cash on submit, similar to invoice posting.
+CREATE TABLE IF NOT EXISTS petty_expenses (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  expense_number TEXT NOT NULL,
+  expense_date DATE NOT NULL,
+  amount DECIMAL(12, 2) NOT NULL CHECK (amount > 0),
+  currency_code VARCHAR(3) DEFAULT 'MAD' REFERENCES currencies(code),
+  expense_account_id UUID REFERENCES accounts(id) ON DELETE RESTRICT,
+  cash_account_id UUID REFERENCES accounts(id) ON DELETE RESTRICT,
+  bank_account_id UUID REFERENCES bank_accounts(id) ON DELETE SET NULL,
+  description TEXT NOT NULL,
+  attachment_url TEXT,
+  farm_id UUID REFERENCES farms(id) ON DELETE SET NULL,
+  parcel_id UUID REFERENCES parcels(id) ON DELETE SET NULL,
+  status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'submitted', 'cancelled')),
+  journal_entry_id UUID REFERENCES journal_entries(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  created_by UUID REFERENCES auth.users(id),
+  submitted_at TIMESTAMPTZ,
+  UNIQUE(organization_id, expense_number)
+);
+
+CREATE INDEX IF NOT EXISTS idx_petty_expenses_org ON petty_expenses(organization_id);
+CREATE INDEX IF NOT EXISTS idx_petty_expenses_date ON petty_expenses(expense_date DESC);
+CREATE INDEX IF NOT EXISTS idx_petty_expenses_status ON petty_expenses(status);
+CREATE INDEX IF NOT EXISTS idx_petty_expenses_farm ON petty_expenses(farm_id) WHERE farm_id IS NOT NULL;
+
+ALTER TABLE petty_expenses ENABLE ROW LEVEL SECURITY;
+
+DO $$ BEGIN
+  CREATE POLICY "petty_expenses_org_access" ON petty_expenses
+    FOR ALL USING (is_organization_member(organization_id));
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+  WHEN others THEN NULL;
+END $$;
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_invoices_original_invoice') THEN
@@ -2181,6 +2234,8 @@ CREATE TABLE IF NOT EXISTS tasks (
   units_completed NUMERIC DEFAULT 0,
   rate_per_unit NUMERIC,
   forfait_amount NUMERIC,
+  -- Payment amount per task (auto-fill = daily_rate × duration; nullable for non-paid tasks)
+  payment_amount NUMERIC,
   crop_cycle_id UUID,
   campaign_id UUID,
   created_by UUID REFERENCES auth.users(id),
@@ -11429,6 +11484,9 @@ ALTER TABLE stock_entries ADD CONSTRAINT fk_stock_entries_crop_cycle_id FOREIGN 
 ALTER TABLE stock_movements ADD CONSTRAINT fk_stock_movements_crop_cycle_id FOREIGN KEY (crop_cycle_id) REFERENCES crop_cycles(id) ON DELETE SET NULL;
 
 -- Add foreign key constraints to tasks (deferred because crop_cycles and agricultural_campaigns are created after tasks)
+-- Idempotent column add for clusters that pre-date payment_amount
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS payment_amount NUMERIC;
+
 ALTER TABLE tasks ADD CONSTRAINT fk_tasks_crop_cycle_id FOREIGN KEY (crop_cycle_id) REFERENCES crop_cycles(id) ON DELETE SET NULL;
 ALTER TABLE tasks ADD CONSTRAINT fk_tasks_campaign_id FOREIGN KEY (campaign_id) REFERENCES agricultural_campaigns(id) ON DELETE SET NULL;
 

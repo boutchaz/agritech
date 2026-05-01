@@ -31020,6 +31020,7 @@ export type Database = {
           organization_id: string
           parcel_id: string | null
           parent_task_id: string | null
+          payment_amount: number | null
           payment_type: string | null
           planned_items: Json | null
           priority: string | null
@@ -31076,6 +31077,7 @@ export type Database = {
           organization_id: string
           parcel_id?: string | null
           parent_task_id?: string | null
+          payment_amount?: number | null
           payment_type?: string | null
           planned_items?: Json | null
           priority?: string | null
@@ -31132,6 +31134,7 @@ export type Database = {
           organization_id?: string
           parcel_id?: string | null
           parent_task_id?: string | null
+          payment_amount?: number | null
           payment_type?: string | null
           planned_items?: Json | null
           priority?: string | null
@@ -38499,7 +38502,7 @@ export type Database = {
         | "submitted"
         | "reconciled"
         | "cancelled"
-      accounting_payment_type: "receive" | "pay"
+      accounting_payment_type: "receive" | "pay" | "bank_fee"
       accounting_standard_enum:
         | "CGNC"
         | "PCG"
@@ -38717,7 +38720,7 @@ export const Constants = {
         "reconciled",
         "cancelled",
       ],
-      accounting_payment_type: ["receive", "pay"],
+      accounting_payment_type: ["receive", "pay", "bank_fee"],
       accounting_standard_enum: [
         "CGNC",
         "PCG",

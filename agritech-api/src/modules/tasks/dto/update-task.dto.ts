@@ -154,6 +154,12 @@ export class UpdateTaskDto {
   @Min(0)
   forfait_amount?: number;
 
+  @ApiPropertyOptional({ description: 'Payment amount for this task (MAD)' })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  payment_amount?: number;
+
   @ApiPropertyOptional({ description: 'Work unit ID for piece-work' })
   @IsOptional()
   @EmptyStringToNull()

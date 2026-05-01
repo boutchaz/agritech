@@ -91,6 +91,9 @@ export enum Subject {
     // Equipment & Fleet
     EQUIPMENT = 'Equipment',
 
+    // Petty / unjustified expenses (charges non justifiées)
+    PETTY_EXPENSE = 'PettyExpense',
+
     // Agronomy RAG
     AGRONOMY_SOURCE = 'AgronomySource',
 

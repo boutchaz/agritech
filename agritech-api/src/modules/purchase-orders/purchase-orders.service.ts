@@ -48,9 +48,10 @@ export class PurchaseOrdersService {
 
       // Extract items from DTO
       const { items, ...orderData } = createPurchaseOrderDto;
+      const headerDefaultTaxRate = (orderData as { default_tax_rate?: number }).default_tax_rate;
 
       // Calculate totals
-      const { subtotal, taxAmount, totalAmount } = this.calculateTotals(items);
+      const { subtotal, taxAmount, totalAmount } = this.calculateTotals(items, headerDefaultTaxRate);
 
       // Create the purchase order
       const { data: purchaseOrder, error: orderError } = await supabaseClient
@@ -64,6 +65,7 @@ export class PurchaseOrdersService {
           subtotal,
           tax_amount: taxAmount,
           total_amount: totalAmount,
+          default_tax_rate: headerDefaultTaxRate || null,
           stock_received: orderData.stock_received || false,
         })
         .select()
@@ -80,7 +82,10 @@ export class PurchaseOrdersService {
         const discountAmount = item.discount_percent
           ? (item.quantity * item.unit_price * item.discount_percent) / 100
           : 0;
-        const taxAmount = item.tax_rate ? (lineAmount * item.tax_rate) / 100 : 0;
+        const resolvedTaxRate = item.tax_rate != null && item.tax_rate !== 0
+          ? Number(item.tax_rate)
+          : Number(headerDefaultTaxRate ?? 0);
+        const taxAmount = resolvedTaxRate ? (lineAmount * resolvedTaxRate) / 100 : 0;
         const lineTotal = lineAmount + taxAmount;
 
         return {
@@ -93,7 +98,7 @@ export class PurchaseOrdersService {
           unit_price: item.unit_price,
           discount_percent: item.discount_percent || 0,
           discount_amount: Math.round(discountAmount * 100) / 100,
-          tax_rate: item.tax_rate || 0,
+          tax_rate: resolvedTaxRate,
           tax_amount: Math.round(taxAmount * 100) / 100,
           inventory_item_id: item.item_id || null,
           account_id: item.account_id,
@@ -493,20 +498,24 @@ export class PurchaseOrdersService {
   /**
    * Calculate order totals from items
    */
-  private calculateTotals(items: any[]): {
+  private calculateTotals(items: any[], defaultTaxRate?: number): {
     subtotal: number;
     taxAmount: number;
     totalAmount: number;
   } {
     let subtotal = 0;
     let taxAmount = 0;
+    const headerRate = Number(defaultTaxRate ?? 0);
 
     items.forEach((item) => {
       const lineAmount = this.calculateLineAmount(item);
       subtotal += lineAmount;
 
-      if (item.tax_rate) {
-        taxAmount += (lineAmount * item.tax_rate) / 100;
+      const lineRate = item.tax_rate != null && item.tax_rate !== 0
+        ? Number(item.tax_rate)
+        : headerRate;
+      if (lineRate) {
+        taxAmount += (lineAmount * lineRate) / 100;
       }
     });
 

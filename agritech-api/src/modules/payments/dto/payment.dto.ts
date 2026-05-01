@@ -16,6 +16,7 @@ import { Type, Transform } from 'class-transformer';
 export enum PaymentType {
     RECEIVE = 'receive',
     PAY = 'pay',
+    BANK_FEE = 'bank_fee',
 }
 
 export enum PaymentMethod {

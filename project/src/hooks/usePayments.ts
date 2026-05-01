@@ -210,6 +210,39 @@ export function useProcessPayment() {
   });
 }
 
+/**
+ * Bulk process payments — runs per-payment process() calls client-side via
+ * Promise.allSettled. Reports per-row success/failure. Backend transactional
+ * endpoint is a follow-up; this gives us the UX win immediately.
+ */
+export function useBulkProcessPayments() {
+  const queryClient = useQueryClient();
+  const { currentOrganization } = useAuth();
+
+  return useMutation({
+    mutationFn: async (requests: ProcessPaymentRequest[]) => {
+      if (!currentOrganization) {
+        throw new Error('No organization selected');
+      }
+      const orgId = currentOrganization.id;
+      const results = await Promise.allSettled(
+        requests.map(({ payment_id, ...processData }) =>
+          paymentRecordsApi.process(orgId, payment_id, processData),
+        ),
+      );
+      const succeeded = results.filter((r) => r.status === 'fulfilled').length;
+      const failed = results.length - succeeded;
+      return { results, succeeded, failed };
+    },
+    onSuccess: () => {
+      trackEntityUpdate('payment');
+      queryClient.invalidateQueries({ queryKey: ['payments', currentOrganization?.id] });
+      queryClient.invalidateQueries({ queryKey: ['payment-statistics', currentOrganization?.id] });
+      queryClient.invalidateQueries({ queryKey: ['worker-payments'] });
+    },
+  });
+}
+
 export function useRequestAdvance() {
   const queryClient = useQueryClient();
   const { currentOrganization } = useAuth();

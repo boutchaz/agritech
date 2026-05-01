@@ -1063,6 +1063,9 @@
       "createTitle": "Ajouter un code-barres",
       "editTitle": "Modifier le code-barres",
       "description": "Chaque code-barres doit être unique au sein de votre organisation."
+    },
+    "valuation": {
+      "pending": "Valorisation en attente"
     }
   }
 }

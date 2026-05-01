@@ -1113,6 +1113,9 @@
       "createTitle": "Add barcode",
       "editTitle": "Edit barcode",
       "description": "Each barcode must be unique within your organization."
+    },
+    "valuation": {
+      "pending": "Valuation pending"
     }
   }
 }
