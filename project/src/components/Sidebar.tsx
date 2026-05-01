@@ -1030,6 +1030,13 @@ const Sidebar = ({
                     </ProtectedNavItem>
                     <ProtectedNavItem action="read" subject="Worker">
                       <PopoverNavItem onNavigate={handleNavigation}
+                        path="/workforce/hr-calendar"
+                        label={t("nav.hrCalendar", "HR Calendar")}
+                        isActive={currentPath === "/workforce/hr-calendar"}
+                      />
+                    </ProtectedNavItem>
+                    <ProtectedNavItem action="read" subject="Worker">
+                      <PopoverNavItem onNavigate={handleNavigation}
                         path="/workforce/hr-analytics"
                         label={t("nav.hrAnalytics", "HR Analytics")}
                         isActive={currentPath === "/workforce/hr-analytics"}
@@ -1308,6 +1315,17 @@ const Sidebar = ({
                           onClick={(e) => handleNavigation("/workforce/training", e)}
                         >
                           {renderText(t("nav.training", "Training"))}
+                        </Button>
+                      </ProtectedNavItem>
+                      <ProtectedNavItem action="read" subject="Worker">
+                        <Button
+                          variant="ghost"
+                          className={getSubItemClassName(
+                            currentPath === "/workforce/hr-calendar",
+                          )}
+                          onClick={(e) => handleNavigation("/workforce/hr-calendar", e)}
+                        >
+                          {renderText(t("nav.hrCalendar", "HR Calendar"))}
                         </Button>
                       </ProtectedNavItem>
                       <ProtectedNavItem action="read" subject="Worker">

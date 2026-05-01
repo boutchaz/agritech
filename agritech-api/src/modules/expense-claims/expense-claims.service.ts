@@ -1,5 +1,6 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
+import { AccountingAutomationService } from '../journal-entries/accounting-automation.service';
 import {
   ApproveClaimDto,
   CreateExpenseCategoryDto,
@@ -11,7 +12,11 @@ import {
 
 @Injectable()
 export class ExpenseClaimsService {
-  constructor(private readonly db: DatabaseService) {}
+  private readonly logger = new Logger(ExpenseClaimsService.name);
+  constructor(
+    private readonly db: DatabaseService,
+    private readonly accounting: AccountingAutomationService,
+  ) {}
 
   // ── Categories ────────────────────────────────────────────────
   async listCategories(orgId: string) {
@@ -136,9 +141,30 @@ export class ExpenseClaimsService {
       })
       .eq('organization_id', orgId)
       .eq('id', id)
-      .select('*')
+      .select('*, worker:workers(first_name, last_name)')
       .single();
     if (error) throw new BadRequestException(error.message);
+
+    // Auto-post journal entry on approval (idempotent — only if not already posted)
+    if (data && !data.journal_entry_id) {
+      try {
+        await this.accounting.createJournalEntryFromExpenseClaim(
+          orgId,
+          {
+            id: data.id,
+            farm_id: data.farm_id,
+            worker_id: data.worker_id,
+            title: data.title,
+            expense_date: data.expense_date,
+            grand_total: Number(data.grand_total),
+          },
+          `${data.worker?.first_name ?? ''} ${data.worker?.last_name ?? ''}`.trim() || 'Worker',
+          userId ?? data.worker_id,
+        );
+      } catch (err: any) {
+        this.logger.warn(`JE creation failed for expense claim ${id}: ${err?.message}`);
+      }
+    }
     return data;
   }
 

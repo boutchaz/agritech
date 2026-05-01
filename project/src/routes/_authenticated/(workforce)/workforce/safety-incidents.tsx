@@ -2,7 +2,7 @@ import { useMemo, useState, type ReactNode } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Loader2, Plus, AlertTriangle } from 'lucide-react';
+import { Loader2, Plus, AlertTriangle, ListTodo } from 'lucide-react';
 import { withRouteProtection } from '@/components/authorization/withRouteProtection';
 import { useAuth } from '@/hooks/useAuth';
 import { useFarms } from '@/hooks/useParcelsQuery';
@@ -12,6 +12,7 @@ import {
   useSafetyIncidents,
   useUpdateSafetyIncident,
 } from '@/hooks/useAgroHr';
+import { useSyncSafetyTasks } from '@/hooks/useHrAdvanced';
 import type {
   CreateIncidentInput,
   IncidentStatus,
@@ -64,6 +65,7 @@ function SafetyIncidentsPage() {
   const query = useSafetyIncidents(orgId, statusFilter === 'all' ? {} : { status: statusFilter });
   const create = useCreateSafetyIncident();
   const update = useUpdateSafetyIncident();
+  const syncTasks = useSyncSafetyTasks();
 
   const items = query.data ?? [];
   const farmList = (farms.data ?? []).map((f) => ({ id: f.id, name: f.name }));
@@ -125,7 +127,7 @@ function SafetyIncidentsPage() {
       ) : (
         <div className="space-y-2">
           {items.map((i) => (
-            <Card key={i.id} className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-900/40" onClick={() => setEditing(i)}>
+            <Card key={i.id} className="hover:bg-gray-50 dark:hover:bg-gray-900/40">
               <CardContent className="py-4 flex items-center justify-between gap-4">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 text-sm">
@@ -140,7 +142,37 @@ function SafetyIncidentsPage() {
                   <div className="text-sm font-medium mt-1 truncate">{i.description}</div>
                   <div className="text-xs text-gray-500 mt-0.5">
                     {new Date(i.incident_date).toLocaleString()} · {i.worker_ids.length} {t('safety.workers', 'workers')}
+                    {Array.isArray(i.corrective_actions) && i.corrective_actions.length > 0 && (
+                      <> · {i.corrective_actions.length} {t('safety.actions', 'actions')}</>
+                    )}
                   </div>
+                </div>
+                <div className="flex gap-1">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() =>
+                      syncTasks.mutate(
+                        { orgId, incidentId: i.id },
+                        {
+                          onSuccess: (res) =>
+                            toast.success(
+                              res.created
+                                ? t('safety.tasksCreated', `${res.created} tasks created`)
+                                : t('safety.tasksUpToDate', 'Tasks already in sync'),
+                            ),
+                          onError: (err: any) => toast.error(err?.message ?? 'Error'),
+                        },
+                      )
+                    }
+                    disabled={syncTasks.isPending || !Array.isArray(i.corrective_actions) || i.corrective_actions.length === 0}
+                    title={t('safety.syncTasks', 'Sync corrective actions to tasks')}
+                  >
+                    <ListTodo className="w-3 h-3" />
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => setEditing(i)}>
+                    {t('common.edit', 'Edit')}
+                  </Button>
                 </div>
               </CardContent>
             </Card>

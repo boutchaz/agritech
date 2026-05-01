@@ -71,6 +71,16 @@ export class PayrollRunsController {
     return this.service.submit(organizationId, req.user?.id ?? null, id);
   }
 
+  @Put(':id/mark-paid')
+  @RequirePermission(Action.Update, Subject.PAYROLL_RUN)
+  markPaid(
+    @Request() req: any,
+    @Param('organizationId') organizationId: string,
+    @Param('id') id: string,
+  ) {
+    return this.service.markAsPaid(organizationId, req.user?.id ?? null, id);
+  }
+
   @Put(':id/cancel')
   @RequirePermission(Action.Update, Subject.PAYROLL_RUN)
   cancel(

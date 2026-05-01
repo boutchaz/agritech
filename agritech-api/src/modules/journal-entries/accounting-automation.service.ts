@@ -723,6 +723,265 @@ export class AccountingAutomationService {
     return journalEntry;
   }
 
+  private round2(n: number): number {
+    return Math.round(n * 100) / 100;
+  }
+
+  /**
+   * Create journal entry from a salary slip (HR module integration).
+   * Dr. Salary expense       gross_pay
+   *    Cr. Statutory deductions    sum(deductions)  (CNSS, IR, etc.)
+   *    Cr. Cash/Bank               net_pay
+   * Stores journal_entry_id back on the salary_slip row.
+   */
+  async createJournalEntryFromSalarySlip(
+    organizationId: string,
+    slip: {
+      id: string;
+      farm_id: string | null;
+      worker_id: string;
+      pay_period_start: string;
+      pay_period_end: string;
+      gross_pay: number;
+      total_deductions: number;
+      net_pay: number;
+    },
+    workerName: string,
+    createdBy: string,
+  ): Promise<any> {
+    const date = new Date(slip.pay_period_end);
+    await this.assertPeriodOpen(organizationId, date);
+    const supabase = this.databaseService.getAdminClient();
+
+    // Salary expense account: try labor → salary → wages
+    let expenseAccountId =
+      (await this.getAccountIdByMapping(supabase, organizationId, 'cost_type', 'labor')) ||
+      (await this.getAccountIdByMapping(supabase, organizationId, 'cost_type', 'salary')) ||
+      (await this.getAccountIdByMapping(supabase, organizationId, 'cost_type', 'wages'));
+    const cashAccountId = await this.getAccountIdByMapping(supabase, organizationId, 'cash', 'bank');
+    // Statutory deductions liability — try mapping then fall back to expense (single-line).
+    const deductionsAccountId =
+      (await this.getAccountIdByMapping(supabase, organizationId, 'cost_type', 'statutory_deductions')) ||
+      (await this.getAccountIdByMapping(supabase, organizationId, 'cost_type', 'cnss'));
+
+    if (!expenseAccountId || !cashAccountId) {
+      this.logger.warn(
+        `Skipping JE for salary slip ${slip.id}: missing account mappings (labor/cash).`,
+      );
+      return null;
+    }
+
+    const entryNumber = await this.generateJournalEntryNumber(supabase, organizationId);
+    const dateStr = date.toISOString().split('T')[0];
+    const fiscalYearId = await this.fiscalYearsService.resolveFiscalYear(organizationId, dateStr);
+
+    const { data: journalEntry, error: entryError } = await supabase
+      .from('journal_entries')
+      .insert({
+        organization_id: organizationId,
+        entry_number: entryNumber,
+        entry_date: date,
+        entry_type: JournalEntryType.EXPENSE,
+        description: `Payroll: ${workerName} (${slip.pay_period_start} → ${slip.pay_period_end})`,
+        reference_id: slip.id,
+        reference_type: 'salary_slip',
+        total_debit: 0,
+        total_credit: 0,
+        status: JournalEntryStatus.DRAFT,
+        created_by: createdBy,
+        ...(fiscalYearId ? { fiscal_year_id: fiscalYearId } : {}),
+      })
+      .select()
+      .single();
+
+    if (entryError) {
+      this.logger.error(`Failed to create JE for salary slip ${slip.id}: ${entryError.message}`);
+      throw new BadRequestException(`Failed to create journal entry: ${entryError.message}`);
+    }
+
+    const items: any[] = [
+      {
+        journal_entry_id: journalEntry.id,
+        account_id: expenseAccountId,
+        debit: this.round2(slip.gross_pay),
+        credit: 0,
+        description: `Gross salary - ${workerName}`,
+        farm_id: slip.farm_id,
+        ...(fiscalYearId ? { fiscal_year_id: fiscalYearId } : {}),
+      },
+    ];
+
+    if (slip.total_deductions > 0 && deductionsAccountId) {
+      items.push({
+        journal_entry_id: journalEntry.id,
+        account_id: deductionsAccountId,
+        debit: 0,
+        credit: this.round2(slip.total_deductions),
+        description: `Statutory deductions - ${workerName}`,
+        farm_id: slip.farm_id,
+        ...(fiscalYearId ? { fiscal_year_id: fiscalYearId } : {}),
+      });
+      items.push({
+        journal_entry_id: journalEntry.id,
+        account_id: cashAccountId,
+        debit: 0,
+        credit: this.round2(slip.net_pay),
+        description: `Net pay - ${workerName}`,
+        farm_id: slip.farm_id,
+        ...(fiscalYearId ? { fiscal_year_id: fiscalYearId } : {}),
+      });
+    } else {
+      // No deductions mapping — credit cash for full gross
+      items.push({
+        journal_entry_id: journalEntry.id,
+        account_id: cashAccountId,
+        debit: 0,
+        credit: this.round2(slip.gross_pay),
+        description: `Salary payment - ${workerName}`,
+        farm_id: slip.farm_id,
+        ...(fiscalYearId ? { fiscal_year_id: fiscalYearId } : {}),
+      });
+    }
+
+    const totalDebit = items.reduce((s, it) => s + it.debit, 0);
+    const totalCredit = items.reduce((s, it) => s + it.credit, 0);
+    if (Math.abs(totalDebit - totalCredit) >= 0.01) {
+      await supabase.from('journal_entries').delete().eq('id', journalEntry.id);
+      throw new BadRequestException(
+        `Salary slip JE not balanced: debits=${totalDebit}, credits=${totalCredit}`,
+      );
+    }
+
+    const { error: itemsError } = await supabase.from('journal_items').insert(items);
+    if (itemsError) {
+      await supabase.from('journal_entries').delete().eq('id', journalEntry.id);
+      throw new BadRequestException(`Failed to insert journal items: ${itemsError.message}`);
+    }
+
+    await supabase
+      .from('journal_entries')
+      .update({ status: JournalEntryStatus.POSTED, total_debit: totalDebit, total_credit: totalCredit })
+      .eq('id', journalEntry.id);
+
+    // Back-reference on the slip
+    await supabase
+      .from('salary_slips')
+      .update({ journal_entry_id: journalEntry.id })
+      .eq('id', slip.id);
+
+    this.logger.log(`JE created for salary slip ${slip.id}: ${entryNumber}`);
+    return journalEntry;
+  }
+
+  /**
+   * Create journal entry from an approved expense claim.
+   * Dr. Expense (cost_type='general' or per-category)   grand_total
+   *    Cr. Accounts payable / Bank                         grand_total
+   */
+  async createJournalEntryFromExpenseClaim(
+    organizationId: string,
+    claim: {
+      id: string;
+      farm_id: string | null;
+      worker_id: string;
+      title: string;
+      expense_date: string;
+      grand_total: number;
+    },
+    workerName: string,
+    createdBy: string,
+  ): Promise<any> {
+    const date = new Date(claim.expense_date);
+    await this.assertPeriodOpen(organizationId, date);
+    const supabase = this.databaseService.getAdminClient();
+
+    // Try 'expense_claim' mapping then fallback to 'general' / labor
+    const expenseAccountId =
+      (await this.getAccountIdByMapping(supabase, organizationId, 'cost_type', 'expense_claim')) ||
+      (await this.getAccountIdByMapping(supabase, organizationId, 'cost_type', 'general')) ||
+      (await this.getAccountIdByMapping(supabase, organizationId, 'cost_type', 'labor'));
+    // Payable mapping (preferred) or cash
+    const payableAccountId =
+      (await this.getAccountIdByMapping(supabase, organizationId, 'cost_type', 'accounts_payable')) ||
+      (await this.getAccountIdByMapping(supabase, organizationId, 'cash', 'bank'));
+
+    if (!expenseAccountId || !payableAccountId) {
+      this.logger.warn(
+        `Skipping JE for expense claim ${claim.id}: missing account mappings.`,
+      );
+      return null;
+    }
+
+    const entryNumber = await this.generateJournalEntryNumber(supabase, organizationId);
+    const dateStr = date.toISOString().split('T')[0];
+    const fiscalYearId = await this.fiscalYearsService.resolveFiscalYear(organizationId, dateStr);
+
+    const { data: journalEntry, error: entryError } = await supabase
+      .from('journal_entries')
+      .insert({
+        organization_id: organizationId,
+        entry_number: entryNumber,
+        entry_date: date,
+        entry_type: JournalEntryType.EXPENSE,
+        description: `Expense claim: ${claim.title} - ${workerName}`,
+        reference_id: claim.id,
+        reference_type: 'expense_claim',
+        total_debit: 0,
+        total_credit: 0,
+        status: JournalEntryStatus.DRAFT,
+        created_by: createdBy,
+        ...(fiscalYearId ? { fiscal_year_id: fiscalYearId } : {}),
+      })
+      .select()
+      .single();
+
+    if (entryError) {
+      throw new BadRequestException(`Failed to create JE: ${entryError.message}`);
+    }
+
+    const amount = this.round2(claim.grand_total);
+    const items = [
+      {
+        journal_entry_id: journalEntry.id,
+        account_id: expenseAccountId,
+        debit: amount,
+        credit: 0,
+        description: claim.title,
+        farm_id: claim.farm_id,
+        ...(fiscalYearId ? { fiscal_year_id: fiscalYearId } : {}),
+      },
+      {
+        journal_entry_id: journalEntry.id,
+        account_id: payableAccountId,
+        debit: 0,
+        credit: amount,
+        description: `Payable to ${workerName}`,
+        farm_id: claim.farm_id,
+        ...(fiscalYearId ? { fiscal_year_id: fiscalYearId } : {}),
+      },
+    ];
+
+    const { error: itemsError } = await supabase.from('journal_items').insert(items);
+    if (itemsError) {
+      await supabase.from('journal_entries').delete().eq('id', journalEntry.id);
+      throw new BadRequestException(`Failed to insert journal items: ${itemsError.message}`);
+    }
+
+    await supabase
+      .from('journal_entries')
+      .update({ status: JournalEntryStatus.POSTED, total_debit: amount, total_credit: amount })
+      .eq('id', journalEntry.id);
+
+    // Back-reference on the claim
+    await supabase
+      .from('expense_claims')
+      .update({ journal_entry_id: journalEntry.id })
+      .eq('id', claim.id);
+
+    this.logger.log(`JE created for expense claim ${claim.id}: ${entryNumber}`);
+    return journalEntry;
+  }
+
   /**
    * Create a reversing journal entry for a previously posted entry.
    * Swaps debit/credit on every line and posts it. Used for invoice voids,

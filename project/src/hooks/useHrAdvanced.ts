@@ -131,6 +131,47 @@ export function useUpdateEnrollment() {
   });
 }
 
+// ── Tasks Bridge ────────────────────────────────────────────────────
+
+import { hrCalendarApi, hrTasksBridgeApi, type HrEventType } from '@/lib/api/hr-advanced';
+
+export function useSyncOnboardingTasks() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ orgId, recordId }: { orgId: string; recordId: string }) =>
+      hrTasksBridgeApi.syncOnboarding(orgId, recordId),
+    onSuccess: (_d, v) => {
+      qc.invalidateQueries({ queryKey: orgKey(v.orgId, 'onboarding-records') });
+    },
+  });
+}
+
+export function useSyncSafetyTasks() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ orgId, incidentId }: { orgId: string; incidentId: string }) =>
+      hrTasksBridgeApi.syncSafetyIncident(orgId, incidentId),
+    onSuccess: (_d, v) => {
+      qc.invalidateQueries({ queryKey: orgKey(v.orgId, 'safety-incidents') });
+    },
+  });
+}
+
+// ── Calendar ────────────────────────────────────────────────────────
+
+export function useHrCalendar(
+  orgId: string | null,
+  from: string,
+  to: string,
+  types?: HrEventType[],
+) {
+  return useQuery({
+    queryKey: orgKey(orgId, 'hr-calendar', from, to, types),
+    queryFn: () => hrCalendarApi.list(orgId!, from, to, types),
+    enabled: !!orgId && !!from && !!to,
+  });
+}
+
 // ── Analytics ───────────────────────────────────────────────────────
 
 export function useWorkforceSummary(orgId: string | null) {

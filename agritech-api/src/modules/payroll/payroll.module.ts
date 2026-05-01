@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { HrComplianceModule } from '../hr-compliance/hr-compliance.module';
+import { JournalEntriesModule } from '../journal-entries/journal-entries.module';
 import { SalaryStructuresController } from './salary-structures.controller';
 import { SalaryStructuresService } from './salary-structures.service';
 import { SalarySlipsController } from './salary-slips.controller';
@@ -10,7 +11,7 @@ import { PayrollCalcService } from './payroll-calc.service';
 import { IrBracketsService } from './ir-brackets.service';
 
 @Module({
-  imports: [HrComplianceModule],
+  imports: [HrComplianceModule, JournalEntriesModule],
   controllers: [
     SalaryStructuresController,
     SalarySlipsController,

@@ -1,8 +1,9 @@
-import { useState, type ReactNode } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Loader2, Plus, Check, X, Trash2 } from 'lucide-react';
+import { Loader2, Plus, Check, X, Trash2, Receipt } from 'lucide-react';
+import { HrPageHeader } from '@/components/HrPageHeader';
 import { withRouteProtection } from '@/components/authorization/withRouteProtection';
 import { useAuth } from '@/hooks/useAuth';
 import { useFarms } from '@/hooks/useParcelsQuery';
@@ -66,39 +67,61 @@ function ExpenseClaimsPage() {
   const reject = useRejectExpenseClaim();
   const remove = useDeleteExpenseClaim();
 
-  if (!orgId) return null;
-
   const claims = query.data ?? [];
   const farmList = (farms.data ?? []).map((f) => ({ id: f.id, name: f.name }));
   const workerList = (workers.data ?? []).map((w) => ({ id: w.id, name: `${w.first_name} ${w.last_name}` }));
 
+  const stats = useMemo(() => {
+    const all = claims;
+    const pending = all.filter((c) => c.status === 'pending');
+    const approved = all.filter((c) => c.status === 'approved' || c.status === 'paid');
+    const pendingTotal = pending.reduce((s, c) => s + Number(c.grand_total || 0), 0);
+    const approvedTotal = approved.reduce((s, c) => s + Number(c.grand_total || 0), 0);
+    return { count: all.length, pending: pending.length, pendingTotal, approvedTotal };
+  }, [claims]);
+
+  if (!orgId) return null;
+
   return (
     <div className="p-6 space-y-6 max-w-6xl">
-      <header className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold">{t('expenses.title', 'Expense Claims')}</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            {t('expenses.subtitle', 'Worker expense reimbursements with approval workflow.')}
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as typeof statusFilter)}>
-            <SelectTrigger className="w-44">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{t('common.all', 'All')}</SelectItem>
-              {STATUSES.map((s) => (
-                <SelectItem key={s} value={s}>{s}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button onClick={() => setCreating(true)} disabled={!workerList.length}>
-            <Plus className="w-4 h-4 mr-2" />
-            {t('expenses.create', 'New claim')}
-          </Button>
-        </div>
-      </header>
+      <HrPageHeader
+        icon={Receipt}
+        title={t('expenses.title', 'Expense Claims')}
+        subtitle={t('expenses.subtitle', 'Worker expense reimbursements with approval workflow. Approved claims auto-post to the GL.')}
+        stats={[
+          { label: t('expenses.totalClaims', 'Total claims'), value: stats.count },
+          { label: t('expenses.pending', 'Pending'), value: stats.pending, accent: stats.pending > 0 ? 'warn' : 'default' },
+          {
+            label: t('expenses.pendingAmount', 'Pending amount'),
+            value: `${stats.pendingTotal.toLocaleString()} MAD`,
+            accent: 'warn',
+          },
+          {
+            label: t('expenses.approvedAmount', 'Approved this period'),
+            value: `${stats.approvedTotal.toLocaleString()} MAD`,
+            accent: 'success',
+          },
+        ]}
+        actions={
+          <>
+            <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as typeof statusFilter)}>
+              <SelectTrigger className="w-44">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t('common.all', 'All')}</SelectItem>
+                {STATUSES.map((s) => (
+                  <SelectItem key={s} value={s}>{s}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button onClick={() => setCreating(true)} disabled={!workerList.length}>
+              <Plus className="w-4 h-4 mr-2" />
+              {t('expenses.create', 'New claim')}
+            </Button>
+          </>
+        }
+      />
 
       {query.isLoading ? (
         <div className="flex items-center justify-center h-40">

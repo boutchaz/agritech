@@ -6,6 +6,7 @@ import {
 import { DatabaseService } from '../database/database.service';
 import { HrComplianceService } from '../hr-compliance/hr-compliance.service';
 import { SalarySlipsService } from './salary-slips.service';
+import { AccountingAutomationService } from '../journal-entries/accounting-automation.service';
 import { CreatePayrollRunDto } from './dto';
 
 @Injectable()
@@ -14,6 +15,7 @@ export class PayrollRunsService {
     private readonly db: DatabaseService,
     private readonly slips: SalarySlipsService,
     private readonly compliance: HrComplianceService,
+    private readonly accounting: AccountingAutomationService,
   ) {}
 
   async list(organizationId: string) {
@@ -171,6 +173,56 @@ export class PayrollRunsService {
       .single();
     if (error) throw new BadRequestException(error.message);
     return data;
+  }
+
+  async markAsPaid(organizationId: string, userId: string | null, runId: string) {
+    const run = await this.getOne(organizationId, runId);
+    if (run.status !== 'submitted')
+      throw new BadRequestException(
+        `Cannot mark as paid: run status is ${run.status} (must be submitted)`,
+      );
+
+    const supabase = this.db.getAdminClient();
+    const { data: slips, error: slipsErr } = await supabase
+      .from('salary_slips')
+      .select('id, farm_id, worker_id, pay_period_start, pay_period_end, gross_pay, total_deductions, net_pay, journal_entry_id, worker:workers(first_name, last_name)')
+      .eq('payroll_run_id', runId)
+      .eq('organization_id', organizationId);
+    if (slipsErr) throw new BadRequestException(slipsErr.message);
+
+    const created: string[] = [];
+    for (const slip of (slips ?? []) as any[]) {
+      if (slip.journal_entry_id) continue; // idempotent
+      const workerName = `${slip.worker?.first_name ?? ''} ${slip.worker?.last_name ?? ''}`.trim() || 'Worker';
+      try {
+        const je = await this.accounting.createJournalEntryFromSalarySlip(
+          organizationId,
+          slip,
+          workerName,
+          userId ?? slip.worker_id,
+        );
+        if (je) created.push(je.id);
+      } catch (err: any) {
+        // Don't block payment on accounting failure — log and continue
+        // (payment can still be marked paid; JE can be retried later)
+        // eslint-disable-next-line no-console
+        console.error(`[payroll] JE creation failed for slip ${slip.id}: ${err?.message}`);
+      }
+    }
+
+    await supabase
+      .from('salary_slips')
+      .update({ status: 'paid', updated_at: new Date().toISOString() })
+      .eq('payroll_run_id', runId);
+
+    const { data, error } = await supabase
+      .from('payroll_runs')
+      .update({ status: 'paid', updated_at: new Date().toISOString() })
+      .eq('id', runId)
+      .select('*')
+      .single();
+    if (error) throw new BadRequestException(error.message);
+    return { ...data, journal_entries_created: created.length };
   }
 
   async cancel(organizationId: string, runId: string) {

@@ -191,6 +191,56 @@ export interface LeaveBalanceRow {
   period_end: string;
 }
 
+// ── Tasks Bridge ───────────────────────────────────────────────────
+
+export const hrTasksBridgeApi = {
+  syncOnboarding: (orgId: string, recordId: string) =>
+    apiClient.post<{ created: number }>(
+      `${BASE(orgId)}/onboarding-records/${recordId}/sync-tasks`,
+      {},
+      {},
+      orgId,
+    ),
+  syncSafetyIncident: (orgId: string, incidentId: string) =>
+    apiClient.post<{ created: number }>(
+      `${BASE(orgId)}/safety-incidents/${incidentId}/sync-tasks`,
+      {},
+      {},
+      orgId,
+    ),
+};
+
+// ── HR Calendar ────────────────────────────────────────────────────
+
+export type HrEventType =
+  | 'leave' | 'interview' | 'training' | 'qualification_expiry'
+  | 'separation' | 'campaign' | 'holiday';
+
+export interface HrCalendarEvent {
+  id: string;
+  type: HrEventType;
+  title: string;
+  date: string;
+  end_date?: string;
+  worker_id?: string | null;
+  worker_name?: string | null;
+  status?: string | null;
+  meta?: Record<string, unknown>;
+  link?: string;
+}
+
+export const hrCalendarApi = {
+  list: (orgId: string, from: string, to: string, types?: HrEventType[]) => {
+    const u = new URLSearchParams({ from, to });
+    if (types?.length) u.set('types', types.join(','));
+    return apiClient.get<HrCalendarEvent[]>(
+      `${BASE(orgId)}/hr-calendar?${u.toString()}`,
+      {},
+      orgId,
+    );
+  },
+};
+
 export const hrAnalyticsApi = {
   workforce: (orgId: string) =>
     apiClient.get<WorkforceSummary[]>(`${BASE(orgId)}/hr-analytics/workforce`, {}, orgId),

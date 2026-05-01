@@ -135,6 +135,15 @@ export function useSubmitPayrollRun() {
   });
 }
 
+export function useMarkPayrollRunPaid() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ orgId, id }: { orgId: string; id: string }) =>
+      payrollRunsApi.markPaid(orgId, id),
+    onSuccess: (_d, v) => invalidateRunAndSlips(qc, v.orgId),
+  });
+}
+
 export function useCancelPayrollRun() {
   const qc = useQueryClient();
   return useMutation({

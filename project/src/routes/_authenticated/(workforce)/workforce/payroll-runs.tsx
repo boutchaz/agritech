@@ -7,6 +7,7 @@ import { withRouteProtection } from '@/components/authorization/withRouteProtect
 import { useAuth } from '@/hooks/useAuth';
 import {
   useCancelPayrollRun,
+  useMarkPayrollRunPaid,
   useCreatePayrollRun,
   useGeneratePayrollRun,
   usePayrollRuns,
@@ -44,6 +45,7 @@ function PayrollRunsPage() {
   const generate = useGeneratePayrollRun();
   const submit = useSubmitPayrollRun();
   const cancel = useCancelPayrollRun();
+  const markPaid = useMarkPayrollRunPaid();
 
   const [creating, setCreating] = useState(false);
 
@@ -147,6 +149,28 @@ function PayrollRunsPage() {
                         >
                           <Send className="w-3 h-3 mr-1" />
                           {t('common.submit', 'Submit')}
+                        </Button>
+                      )}
+                      {r.status === 'submitted' && (
+                        <Button
+                          size="sm"
+                          onClick={() => {
+                            if (!confirm(t('payrollRuns.confirmMarkPaid', 'Mark as paid? Journal entries will be posted to the GL.')))
+                              return;
+                            markPaid.mutate(
+                              { orgId, id: r.id },
+                              {
+                                onSuccess: (res) =>
+                                  toast.success(
+                                    t('payrollRuns.paidWithJe', `Paid · ${res.journal_entries_created} JE posted`),
+                                  ),
+                                onError: (err: any) => toast.error(err?.message ?? 'Error'),
+                              },
+                            );
+                          }}
+                          disabled={markPaid.isPending}
+                        >
+                          {t('payrollRuns.markPaid', 'Mark paid')}
                         </Button>
                       )}
                       {r.status !== 'paid' && r.status !== 'cancelled' && (

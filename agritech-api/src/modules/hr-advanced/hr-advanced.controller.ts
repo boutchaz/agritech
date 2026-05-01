@@ -18,6 +18,7 @@ import { Action } from '../casl/action.enum';
 import { Subject } from '../casl/subject.enum';
 import { RequirePermission } from '../casl/permissions.decorator';
 import { HrAdvancedService } from './hr-advanced.service';
+import { HrTasksBridgeService } from './hr-tasks-bridge.service';
 import {
   BulkEnrollDto,
   CreateEnrollmentDto,
@@ -33,7 +34,31 @@ import {
 @UseGuards(JwtAuthGuard, OrganizationGuard, PoliciesGuard)
 @Controller('organizations/:organizationId')
 export class HrAdvancedController {
-  constructor(private readonly service: HrAdvancedService) {}
+  constructor(
+    private readonly service: HrAdvancedService,
+    private readonly tasksBridge: HrTasksBridgeService,
+  ) {}
+
+  // ── Tasks Bridge ──────────────────────────────────────────────
+  @Post('onboarding-records/:id/sync-tasks')
+  @RequirePermission(Action.Update, Subject.ONBOARDING)
+  syncOnboardingTasks(
+    @Request() req: any,
+    @Param('organizationId') orgId: string,
+    @Param('id') id: string,
+  ) {
+    return this.tasksBridge.syncOnboardingTasks(orgId, id, req.user?.id ?? null);
+  }
+
+  @Post('safety-incidents/:id/sync-tasks')
+  @RequirePermission(Action.Update, Subject.SAFETY_INCIDENT)
+  syncSafetyTasks(
+    @Request() req: any,
+    @Param('organizationId') orgId: string,
+    @Param('id') id: string,
+  ) {
+    return this.tasksBridge.syncSafetyIncidentTasks(orgId, id, req.user?.id ?? null);
+  }
 
   // Grievances
   @Get('grievances')

@@ -207,6 +207,13 @@ export const payrollRunsApi = {
     ),
   submit: (orgId: string, id: string) =>
     apiClient.put<PayrollRun>(`${BASE(orgId)}/payroll-runs/${id}/submit`, {}, {}, orgId),
+  markPaid: (orgId: string, id: string) =>
+    apiClient.put<PayrollRun & { journal_entries_created: number }>(
+      `${BASE(orgId)}/payroll-runs/${id}/mark-paid`,
+      {},
+      {},
+      orgId,
+    ),
   cancel: (orgId: string, id: string) =>
     apiClient.put<PayrollRun>(`${BASE(orgId)}/payroll-runs/${id}/cancel`, {}, {}, orgId),
 };

@@ -90,6 +90,7 @@ import { Route as AuthenticatedworkforceWorkforceOnboardingRouteImport } from '.
 import { Route as AuthenticatedworkforceWorkforceLeaveTypesRouteImport } from './routes/_authenticated/(workforce)/workforce/leave-types'
 import { Route as AuthenticatedworkforceWorkforceLeaveApplicationsRouteImport } from './routes/_authenticated/(workforce)/workforce/leave-applications'
 import { Route as AuthenticatedworkforceWorkforceLeaveAllocationsRouteImport } from './routes/_authenticated/(workforce)/workforce/leave-allocations'
+import { Route as AuthenticatedworkforceWorkforceHrCalendarRouteImport } from './routes/_authenticated/(workforce)/workforce/hr-calendar'
 import { Route as AuthenticatedworkforceWorkforceHrAnalyticsRouteImport } from './routes/_authenticated/(workforce)/workforce/hr-analytics'
 import { Route as AuthenticatedworkforceWorkforceHolidaysRouteImport } from './routes/_authenticated/(workforce)/workforce/holidays'
 import { Route as AuthenticatedworkforceWorkforceGrievancesRouteImport } from './routes/_authenticated/(workforce)/workforce/grievances'
@@ -663,6 +664,12 @@ const AuthenticatedworkforceWorkforceLeaveAllocationsRoute =
   AuthenticatedworkforceWorkforceLeaveAllocationsRouteImport.update({
     id: '/(workforce)/workforce/leave-allocations',
     path: '/workforce/leave-allocations',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedworkforceWorkforceHrCalendarRoute =
+  AuthenticatedworkforceWorkforceHrCalendarRouteImport.update({
+    id: '/(workforce)/workforce/hr-calendar',
+    path: '/workforce/hr-calendar',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedworkforceWorkforceHrAnalyticsRoute =
@@ -1472,6 +1479,7 @@ export interface FileRoutesByFullPath {
   '/workforce/grievances': typeof AuthenticatedworkforceWorkforceGrievancesRoute
   '/workforce/holidays': typeof AuthenticatedworkforceWorkforceHolidaysRoute
   '/workforce/hr-analytics': typeof AuthenticatedworkforceWorkforceHrAnalyticsRoute
+  '/workforce/hr-calendar': typeof AuthenticatedworkforceWorkforceHrCalendarRoute
   '/workforce/leave-allocations': typeof AuthenticatedworkforceWorkforceLeaveAllocationsRoute
   '/workforce/leave-applications': typeof AuthenticatedworkforceWorkforceLeaveApplicationsRoute
   '/workforce/leave-types': typeof AuthenticatedworkforceWorkforceLeaveTypesRoute
@@ -1659,6 +1667,7 @@ export interface FileRoutesByTo {
   '/workforce/grievances': typeof AuthenticatedworkforceWorkforceGrievancesRoute
   '/workforce/holidays': typeof AuthenticatedworkforceWorkforceHolidaysRoute
   '/workforce/hr-analytics': typeof AuthenticatedworkforceWorkforceHrAnalyticsRoute
+  '/workforce/hr-calendar': typeof AuthenticatedworkforceWorkforceHrCalendarRoute
   '/workforce/leave-allocations': typeof AuthenticatedworkforceWorkforceLeaveAllocationsRoute
   '/workforce/leave-applications': typeof AuthenticatedworkforceWorkforceLeaveApplicationsRoute
   '/workforce/leave-types': typeof AuthenticatedworkforceWorkforceLeaveTypesRoute
@@ -1851,6 +1860,7 @@ export interface FileRoutesById {
   '/_authenticated/(workforce)/workforce/grievances': typeof AuthenticatedworkforceWorkforceGrievancesRoute
   '/_authenticated/(workforce)/workforce/holidays': typeof AuthenticatedworkforceWorkforceHolidaysRoute
   '/_authenticated/(workforce)/workforce/hr-analytics': typeof AuthenticatedworkforceWorkforceHrAnalyticsRoute
+  '/_authenticated/(workforce)/workforce/hr-calendar': typeof AuthenticatedworkforceWorkforceHrCalendarRoute
   '/_authenticated/(workforce)/workforce/leave-allocations': typeof AuthenticatedworkforceWorkforceLeaveAllocationsRoute
   '/_authenticated/(workforce)/workforce/leave-applications': typeof AuthenticatedworkforceWorkforceLeaveApplicationsRoute
   '/_authenticated/(workforce)/workforce/leave-types': typeof AuthenticatedworkforceWorkforceLeaveTypesRoute
@@ -2046,6 +2056,7 @@ export interface FileRouteTypes {
     | '/workforce/grievances'
     | '/workforce/holidays'
     | '/workforce/hr-analytics'
+    | '/workforce/hr-calendar'
     | '/workforce/leave-allocations'
     | '/workforce/leave-applications'
     | '/workforce/leave-types'
@@ -2233,6 +2244,7 @@ export interface FileRouteTypes {
     | '/workforce/grievances'
     | '/workforce/holidays'
     | '/workforce/hr-analytics'
+    | '/workforce/hr-calendar'
     | '/workforce/leave-allocations'
     | '/workforce/leave-applications'
     | '/workforce/leave-types'
@@ -2424,6 +2436,7 @@ export interface FileRouteTypes {
     | '/_authenticated/(workforce)/workforce/grievances'
     | '/_authenticated/(workforce)/workforce/holidays'
     | '/_authenticated/(workforce)/workforce/hr-analytics'
+    | '/_authenticated/(workforce)/workforce/hr-calendar'
     | '/_authenticated/(workforce)/workforce/leave-allocations'
     | '/_authenticated/(workforce)/workforce/leave-applications'
     | '/_authenticated/(workforce)/workforce/leave-types'
@@ -3064,6 +3077,13 @@ declare module '@tanstack/react-router' {
       path: '/workforce/leave-allocations'
       fullPath: '/workforce/leave-allocations'
       preLoaderRoute: typeof AuthenticatedworkforceWorkforceLeaveAllocationsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/(workforce)/workforce/hr-calendar': {
+      id: '/_authenticated/(workforce)/workforce/hr-calendar'
+      path: '/workforce/hr-calendar'
+      fullPath: '/workforce/hr-calendar'
+      preLoaderRoute: typeof AuthenticatedworkforceWorkforceHrCalendarRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/(workforce)/workforce/hr-analytics': {
@@ -4353,6 +4373,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedworkforceWorkforceGrievancesRoute: typeof AuthenticatedworkforceWorkforceGrievancesRoute
   AuthenticatedworkforceWorkforceHolidaysRoute: typeof AuthenticatedworkforceWorkforceHolidaysRoute
   AuthenticatedworkforceWorkforceHrAnalyticsRoute: typeof AuthenticatedworkforceWorkforceHrAnalyticsRoute
+  AuthenticatedworkforceWorkforceHrCalendarRoute: typeof AuthenticatedworkforceWorkforceHrCalendarRoute
   AuthenticatedworkforceWorkforceLeaveAllocationsRoute: typeof AuthenticatedworkforceWorkforceLeaveAllocationsRoute
   AuthenticatedworkforceWorkforceLeaveApplicationsRoute: typeof AuthenticatedworkforceWorkforceLeaveApplicationsRoute
   AuthenticatedworkforceWorkforceLeaveTypesRoute: typeof AuthenticatedworkforceWorkforceLeaveTypesRoute
@@ -4457,6 +4478,8 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
     AuthenticatedworkforceWorkforceHolidaysRoute,
   AuthenticatedworkforceWorkforceHrAnalyticsRoute:
     AuthenticatedworkforceWorkforceHrAnalyticsRoute,
+  AuthenticatedworkforceWorkforceHrCalendarRoute:
+    AuthenticatedworkforceWorkforceHrCalendarRoute,
   AuthenticatedworkforceWorkforceLeaveAllocationsRoute:
     AuthenticatedworkforceWorkforceLeaveAllocationsRoute,
   AuthenticatedworkforceWorkforceLeaveApplicationsRoute:

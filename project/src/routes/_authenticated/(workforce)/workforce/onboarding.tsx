@@ -2,7 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Loader2, Plus, Pencil, Trash2, Play, Check } from 'lucide-react';
+import { Loader2, Plus, Pencil, Trash2, Play, Check, ListTodo } from 'lucide-react';
 import { withRouteProtection } from '@/components/authorization/withRouteProtection';
 import { useAuth } from '@/hooks/useAuth';
 import { useWorkers } from '@/hooks/useWorkers';
@@ -15,6 +15,7 @@ import {
   useUpdateOnboardingRecord,
   useUpdateOnboardingTemplate,
 } from '@/hooks/useEmployeeLifecycle';
+import { useSyncOnboardingTasks } from '@/hooks/useHrAdvanced';
 import type {
   CreateOnboardingTemplateInput,
   OnboardingActivity,
@@ -61,6 +62,7 @@ function OnboardingPage() {
   const deleteTemplate = useDeleteOnboardingTemplate();
   const startOnboarding = useStartOnboarding();
   const updateRecord = useUpdateOnboardingRecord();
+  const syncTasks = useSyncOnboardingTasks();
 
   if (!orgId) return null;
 
@@ -122,9 +124,31 @@ function OnboardingPage() {
                       label={t('onboarding.activities', 'Activities')}
                       value={`${r.activities.filter((a) => a.status === 'completed').length} / ${r.activities.length}`}
                     />
-                    <div className="pt-2">
+                    <div className="pt-2 flex gap-2">
                       <Button size="sm" variant="ghost" onClick={() => setViewingRecord(r)}>
                         {t('common.view', 'View')}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() =>
+                          syncTasks.mutate(
+                            { orgId, recordId: r.id },
+                            {
+                              onSuccess: (res) =>
+                                toast.success(
+                                  res.created
+                                    ? t('onboarding.tasksCreated', `${res.created} tasks created`)
+                                    : t('onboarding.tasksUpToDate', 'Tasks already in sync'),
+                                ),
+                              onError: (err: any) => toast.error(err?.message ?? 'Error'),
+                            },
+                          )
+                        }
+                        disabled={syncTasks.isPending}
+                      >
+                        <ListTodo className="w-3 h-3 mr-1" />
+                        {t('onboarding.syncTasks', 'Sync tasks')}
                       </Button>
                     </div>
                   </CardContent>
