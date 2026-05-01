@@ -7551,7 +7551,7 @@ ON CONFLICT (name) DO UPDATE SET
 DO $perms$
 DECLARE
 -- BEGIN GENERATED PERMISSION RESOURCES (do not edit by hand)
-  -- 77 resources × 5 actions = 385 permission rows
+  -- 78 resources × 5 actions = 390 permission rows
   v_resources TEXT[] := ARRAY[
     'users','organizations','roles','subscriptions',
     'farms','parcels','warehouses','infrastructure',
@@ -7572,7 +7572,7 @@ DECLARE
     'equipment','agronomy_sources','chat','settings',
     'api','hr_compliance','leave_types','leave_allocations',
     'leave_applications','holidays','salary_structures','salary_slips',
-    'payroll_runs'
+    'payroll_runs','worker_documents'
   ];
 -- END GENERATED PERMISSION RESOURCES
   v_actions TEXT[] := ARRAY['read','create','update','delete','manage'];
@@ -18885,3 +18885,113 @@ CREATE POLICY "self_read_salary_slips" ON salary_slips
   FOR SELECT USING (
     worker_id IN (SELECT id FROM workers WHERE user_id = auth.uid())
   );
+
+-- =====================================================================
+-- HR Module — Phase 1.C: Enhanced Worker Profile
+-- =====================================================================
+
+-- Personal
+ALTER TABLE workers ADD COLUMN IF NOT EXISTS employment_type TEXT
+  CHECK (employment_type IS NULL OR employment_type IN ('full_time', 'part_time', 'intern', 'contract', 'seasonal', 'probation'));
+ALTER TABLE workers ADD COLUMN IF NOT EXISTS gender TEXT
+  CHECK (gender IS NULL OR gender IN ('male', 'female'));
+ALTER TABLE workers ADD COLUMN IF NOT EXISTS marital_status TEXT
+  CHECK (marital_status IS NULL OR marital_status IN ('single', 'married', 'divorced', 'widowed'));
+ALTER TABLE workers ADD COLUMN IF NOT EXISTS number_of_children INTEGER NOT NULL DEFAULT 0
+  CHECK (number_of_children >= 0);
+ALTER TABLE workers ADD COLUMN IF NOT EXISTS nationality TEXT;
+ALTER TABLE workers ADD COLUMN IF NOT EXISTS cin_issue_date DATE;
+ALTER TABLE workers ADD COLUMN IF NOT EXISTS cin_issue_place TEXT;
+
+-- Emergency contact
+ALTER TABLE workers ADD COLUMN IF NOT EXISTS emergency_contact_name TEXT;
+ALTER TABLE workers ADD COLUMN IF NOT EXISTS emergency_contact_phone TEXT;
+ALTER TABLE workers ADD COLUMN IF NOT EXISTS emergency_contact_relation TEXT;
+
+-- Health
+ALTER TABLE workers ADD COLUMN IF NOT EXISTS health_insurance_provider TEXT;
+ALTER TABLE workers ADD COLUMN IF NOT EXISTS health_insurance_number TEXT;
+ALTER TABLE workers ADD COLUMN IF NOT EXISTS blood_type TEXT
+  CHECK (blood_type IS NULL OR blood_type IN ('A+','A-','B+','B-','AB+','AB-','O+','O-'));
+
+-- Contract
+ALTER TABLE workers ADD COLUMN IF NOT EXISTS contract_start_date DATE;
+ALTER TABLE workers ADD COLUMN IF NOT EXISTS contract_end_date DATE;
+ALTER TABLE workers ADD COLUMN IF NOT EXISTS probation_end_date DATE;
+ALTER TABLE workers ADD COLUMN IF NOT EXISTS notice_period_days INTEGER NOT NULL DEFAULT 30
+  CHECK (notice_period_days >= 0);
+ALTER TABLE workers ADD COLUMN IF NOT EXISTS confirmation_date DATE;
+ALTER TABLE workers ADD COLUMN IF NOT EXISTS reporting_to UUID REFERENCES workers(id) ON DELETE SET NULL;
+
+-- Profile / address
+ALTER TABLE workers ADD COLUMN IF NOT EXISTS photo_url TEXT;
+ALTER TABLE workers ADD COLUMN IF NOT EXISTS personal_email TEXT;
+ALTER TABLE workers ADD COLUMN IF NOT EXISTS permanent_address TEXT;
+ALTER TABLE workers ADD COLUMN IF NOT EXISTS current_address TEXT;
+ALTER TABLE workers ADD COLUMN IF NOT EXISTS educational_qualification TEXT;
+ALTER TABLE workers ADD COLUMN IF NOT EXISTS previous_work_experience JSONB NOT NULL DEFAULT '[]'::jsonb;
+
+-- HR FK pointers (nullable; set by admin)
+ALTER TABLE workers ADD COLUMN IF NOT EXISTS holiday_list_id UUID REFERENCES holiday_lists(id) ON DELETE SET NULL;
+ALTER TABLE workers ADD COLUMN IF NOT EXISTS salary_structure_assignment_id UUID REFERENCES salary_structure_assignments(id) ON DELETE SET NULL;
+
+-- Banking / tax
+ALTER TABLE workers ADD COLUMN IF NOT EXISTS bank_name TEXT;
+ALTER TABLE workers ADD COLUMN IF NOT EXISTS bank_rib TEXT;
+ALTER TABLE workers ADD COLUMN IF NOT EXISTS tax_identification_number TEXT;
+
+-- Status (employment lifecycle)
+ALTER TABLE workers ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'active'
+  CHECK (status IN ('active', 'inactive', 'on_leave', 'terminated', 'probation'));
+
+CREATE INDEX IF NOT EXISTS idx_workers_status ON workers(organization_id, status);
+CREATE INDEX IF NOT EXISTS idx_workers_reporting_to ON workers(reporting_to) WHERE reporting_to IS NOT NULL;
+
+-- Worker Documents
+CREATE TABLE IF NOT EXISTS worker_documents (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  worker_id UUID NOT NULL REFERENCES workers(id) ON DELETE CASCADE,
+
+  document_type TEXT NOT NULL CHECK (document_type IN (
+    'cin', 'passport', 'work_permit', 'contract', 'cnss_card', 'medical_certificate',
+    'driving_license', 'pesticide_certification', 'training_certificate',
+    'bank_details', 'tax_document', 'photo', 'other'
+  )),
+  document_name TEXT NOT NULL,
+  file_url TEXT NOT NULL,
+  file_size INTEGER,
+  mime_type TEXT,
+  expiry_date DATE,
+  is_verified BOOLEAN NOT NULL DEFAULT false,
+  verified_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  verified_at TIMESTAMPTZ,
+  notes TEXT,
+
+  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+  UNIQUE(worker_id, document_type)
+);
+
+CREATE INDEX IF NOT EXISTS idx_worker_documents_org ON worker_documents(organization_id);
+CREATE INDEX IF NOT EXISTS idx_worker_documents_worker ON worker_documents(worker_id);
+CREATE INDEX IF NOT EXISTS idx_worker_documents_expiry ON worker_documents(expiry_date) WHERE expiry_date IS NOT NULL;
+
+ALTER TABLE worker_documents ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_access_worker_documents" ON worker_documents;
+CREATE POLICY "org_access_worker_documents" ON worker_documents
+  FOR ALL USING (is_organization_member(organization_id))
+  WITH CHECK (is_organization_member(organization_id));
+
+DROP POLICY IF EXISTS "self_read_worker_documents" ON worker_documents;
+CREATE POLICY "self_read_worker_documents" ON worker_documents
+  FOR SELECT USING (
+    worker_id IN (SELECT id FROM workers WHERE user_id = auth.uid())
+  );
+
+DROP TRIGGER IF EXISTS update_worker_documents_updated_at ON worker_documents;
+CREATE TRIGGER update_worker_documents_updated_at
+  BEFORE UPDATE ON worker_documents
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();

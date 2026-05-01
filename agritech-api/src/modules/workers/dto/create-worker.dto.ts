@@ -9,6 +9,7 @@ import {
   IsBoolean,
   IsNumber,
   IsArray,
+  IsUrl,
   Min,
   Max,
   Matches,
@@ -187,8 +188,95 @@ export class CreateWorkerDto {
   @IsString()
   notes?: string;
 
+  @ApiPropertyOptional({ description: 'Photo URLs', type: [String] })
+  @IsOptional()
+  @IsArray()
+  @IsUrl({}, { each: true })
+  photos?: string[];
+
   @ApiPropertyOptional({ description: 'Active status', default: true })
   @IsOptional()
   @IsBoolean()
   is_active?: boolean;
+
+  // ── Phase 1.C — Enhanced Profile ────────────────────────────────────
+  @ApiPropertyOptional({
+    enum: ['full_time', 'part_time', 'intern', 'contract', 'seasonal', 'probation'],
+  })
+  @IsOptional()
+  @IsIn(['full_time', 'part_time', 'intern', 'contract', 'seasonal', 'probation'])
+  employment_type?: string;
+
+  @ApiPropertyOptional({ enum: ['male', 'female'] })
+  @IsOptional()
+  @IsIn(['male', 'female'])
+  gender?: 'male' | 'female';
+
+  @ApiPropertyOptional({ enum: ['single', 'married', 'divorced', 'widowed'] })
+  @IsOptional()
+  @IsIn(['single', 'married', 'divorced', 'widowed'])
+  marital_status?: 'single' | 'married' | 'divorced' | 'widowed';
+
+  @ApiPropertyOptional({ description: 'Number of dependent children (used for IR family deduction)' })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  number_of_children?: number;
+
+  @ApiPropertyOptional() @IsOptional() @IsString() nationality?: string;
+  @ApiPropertyOptional() @IsOptional() @IsDateString() cin_issue_date?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() cin_issue_place?: string;
+
+  @ApiPropertyOptional() @IsOptional() @IsString() emergency_contact_name?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() emergency_contact_phone?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() emergency_contact_relation?: string;
+
+  @ApiPropertyOptional() @IsOptional() @IsString() health_insurance_provider?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() health_insurance_number?: string;
+
+  @ApiPropertyOptional({ enum: ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'] })
+  @IsOptional()
+  @IsIn(['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'])
+  blood_type?: string;
+
+  @ApiPropertyOptional() @IsOptional() @IsDateString() contract_start_date?: string;
+  @ApiPropertyOptional() @IsOptional() @IsDateString() contract_end_date?: string;
+  @ApiPropertyOptional() @IsOptional() @IsDateString() probation_end_date?: string;
+
+  @ApiPropertyOptional({ description: 'Notice period in days' })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  notice_period_days?: number;
+
+  @ApiPropertyOptional() @IsOptional() @IsDateString() confirmation_date?: string;
+  @ApiPropertyOptional() @IsOptional() @IsUUID() reporting_to?: string;
+
+  @ApiPropertyOptional() @IsOptional() @IsString() photo_url?: string;
+  @ApiPropertyOptional() @IsOptional() @IsEmail() personal_email?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() permanent_address?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() current_address?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() educational_qualification?: string;
+
+  @ApiPropertyOptional({ description: 'Previous work experience (free-form JSON array)' })
+  @IsOptional()
+  @IsArray()
+  previous_work_experience?: unknown[];
+
+  @ApiPropertyOptional() @IsOptional() @IsUUID() holiday_list_id?: string;
+  @ApiPropertyOptional() @IsOptional() @IsUUID() salary_structure_assignment_id?: string;
+
+  @ApiPropertyOptional() @IsOptional() @IsString() bank_name?: string;
+  @ApiPropertyOptional({ description: 'Bank RIB (Relevé d’Identité Bancaire)' })
+  @IsOptional()
+  @IsString()
+  bank_rib?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() tax_identification_number?: string;
+
+  @ApiPropertyOptional({
+    enum: ['active', 'inactive', 'on_leave', 'terminated', 'probation'],
+  })
+  @IsOptional()
+  @IsIn(['active', 'inactive', 'on_leave', 'terminated', 'probation'])
+  status?: string;
 }

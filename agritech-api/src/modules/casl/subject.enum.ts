@@ -109,6 +109,7 @@ export enum Subject {
     SALARY_STRUCTURE = 'SalaryStructure',
     SALARY_SLIP = 'SalarySlip',
     PAYROLL_RUN = 'PayrollRun',
+    WORKER_DOCUMENT = 'WorkerDocument',
 
     // API
     API = 'API',

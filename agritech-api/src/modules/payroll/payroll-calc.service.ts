@@ -66,7 +66,7 @@ export class PayrollCalcService {
 
     const { data: worker, error: werr } = await supabase
       .from('workers')
-      .select('id, organization_id, monthly_salary, daily_rate, farm_id')
+      .select('id, organization_id, monthly_salary, daily_rate, farm_id, number_of_children')
       .eq('id', workerId)
       .eq('organization_id', organizationId)
       .single();
@@ -172,9 +172,18 @@ export class PayrollCalcService {
       );
       let monthlyTax = this.irBrackets.computeMonthlyTax(taxable, brackets);
 
-      // Family deduction is not applied here: workers schema does not yet
-      // track number of dependants. Admin can override the slip post-generation
-      // or wait for P1.C worker profile fields.
+      if (compliance.family_deduction_enabled) {
+        const claimedChildren = Math.min(
+          Number(worker.number_of_children ?? 0),
+          Number(compliance.family_deduction_max_children ?? 0),
+        );
+        if (claimedChildren > 0) {
+          // family_deduction_per_child is annual; convert to monthly.
+          const monthlyDeduction =
+            (Number(compliance.family_deduction_per_child) * claimedChildren) / 12;
+          monthlyTax = Math.max(0, monthlyTax - monthlyDeduction);
+        }
+      }
 
       incomeTax = round2(monthlyTax);
       if (incomeTax > 0)

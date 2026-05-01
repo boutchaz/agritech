@@ -31995,36 +31995,235 @@ export type Database = {
           },
         ]
       }
+      worker_documents: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          document_name: string
+          document_type: string
+          expiry_date: string | null
+          file_size: number | null
+          file_url: string
+          id: string
+          is_verified: boolean
+          mime_type: string | null
+          notes: string | null
+          organization_id: string
+          updated_at: string
+          verified_at: string | null
+          verified_by: string | null
+          worker_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          document_name: string
+          document_type: string
+          expiry_date?: string | null
+          file_size?: number | null
+          file_url: string
+          id?: string
+          is_verified?: boolean
+          mime_type?: string | null
+          notes?: string | null
+          organization_id: string
+          updated_at?: string
+          verified_at?: string | null
+          verified_by?: string | null
+          worker_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          document_name?: string
+          document_type?: string
+          expiry_date?: string | null
+          file_size?: number | null
+          file_url?: string
+          id?: string
+          is_verified?: boolean
+          mime_type?: string | null
+          notes?: string | null
+          organization_id?: string
+          updated_at?: string
+          verified_at?: string | null
+          verified_by?: string | null
+          worker_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worker_documents_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "accounting_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "worker_documents_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_churn_risk"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_documents_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_org_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_documents_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_top_orgs_by_activity"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_documents_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "dashboard_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "worker_documents_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "financial_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "worker_documents_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_documents_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "production_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "worker_documents_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "sales_analytics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "worker_documents_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "task_completion"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "worker_documents_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_organization_financial_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "worker_documents_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_production_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "worker_documents_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "workforce_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "worker_documents_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "assignable_users"
+            referencedColumns: ["worker_id"]
+          },
+          {
+            foreignKeyName: "worker_documents_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "v_active_workers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_documents_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "worker_assignments"
+            referencedColumns: ["worker_id"]
+          },
+          {
+            foreignKeyName: "worker_documents_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workers: {
         Row: {
           address: string | null
           bank_account: string | null
+          bank_name: string | null
+          bank_rib: string | null
+          blood_type: string | null
           calculation_basis:
             | Database["public"]["Enums"]["calculation_basis"]
             | null
           certifications: string[] | null
           cin: string | null
+          cin_issue_date: string | null
+          cin_issue_place: string | null
           cnss_number: string | null
+          confirmation_date: string | null
+          contract_end_date: string | null
+          contract_start_date: string | null
           created_at: string | null
           created_by: string | null
+          current_address: string | null
           daily_rate: number | null
           date_of_birth: string | null
           deleted_at: string | null
           documents: Json | null
+          educational_qualification: string | null
           email: string | null
+          emergency_contact_name: string | null
+          emergency_contact_phone: string | null
+          emergency_contact_relation: string | null
+          employment_type: string | null
           end_date: string | null
           farm_id: string | null
           first_name: string
+          gender: string | null
+          health_insurance_number: string | null
+          health_insurance_provider: string | null
           hire_date: string
+          holiday_list_id: string | null
           id: string
           is_active: boolean | null
           is_cnss_declared: boolean | null
           last_name: string
+          marital_status: string | null
           metayage_contract_details: Json | null
           metayage_percentage: number | null
           metayage_type: Database["public"]["Enums"]["metayage_type"] | null
           monthly_salary: number | null
+          nationality: string | null
           notes: string | null
+          notice_period_days: number
+          number_of_children: number
           organization_id: string
           payment_frequencies: string[] | null
           payment_frequency:
@@ -32032,10 +32231,19 @@ export type Database = {
             | null
           payment_method: string | null
           per_unit_rate: number | null
+          permanent_address: string | null
+          personal_email: string | null
           phone: string | null
+          photo_url: string | null
           photos: Json | null
           position: string | null
+          previous_work_experience: Json
+          probation_end_date: string | null
+          reporting_to: string | null
+          salary_structure_assignment_id: string | null
           specialties: string[] | null
+          status: string
+          tax_identification_number: string | null
           total_days_worked: number | null
           total_tasks_completed: number | null
           updated_at: string | null
@@ -32045,32 +32253,54 @@ export type Database = {
         Insert: {
           address?: string | null
           bank_account?: string | null
+          bank_name?: string | null
+          bank_rib?: string | null
+          blood_type?: string | null
           calculation_basis?:
             | Database["public"]["Enums"]["calculation_basis"]
             | null
           certifications?: string[] | null
           cin?: string | null
+          cin_issue_date?: string | null
+          cin_issue_place?: string | null
           cnss_number?: string | null
+          confirmation_date?: string | null
+          contract_end_date?: string | null
+          contract_start_date?: string | null
           created_at?: string | null
           created_by?: string | null
+          current_address?: string | null
           daily_rate?: number | null
           date_of_birth?: string | null
           deleted_at?: string | null
           documents?: Json | null
+          educational_qualification?: string | null
           email?: string | null
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
+          emergency_contact_relation?: string | null
+          employment_type?: string | null
           end_date?: string | null
           farm_id?: string | null
           first_name: string
+          gender?: string | null
+          health_insurance_number?: string | null
+          health_insurance_provider?: string | null
           hire_date?: string
+          holiday_list_id?: string | null
           id?: string
           is_active?: boolean | null
           is_cnss_declared?: boolean | null
           last_name: string
+          marital_status?: string | null
           metayage_contract_details?: Json | null
           metayage_percentage?: number | null
           metayage_type?: Database["public"]["Enums"]["metayage_type"] | null
           monthly_salary?: number | null
+          nationality?: string | null
           notes?: string | null
+          notice_period_days?: number
+          number_of_children?: number
           organization_id: string
           payment_frequencies?: string[] | null
           payment_frequency?:
@@ -32078,10 +32308,19 @@ export type Database = {
             | null
           payment_method?: string | null
           per_unit_rate?: number | null
+          permanent_address?: string | null
+          personal_email?: string | null
           phone?: string | null
+          photo_url?: string | null
           photos?: Json | null
           position?: string | null
+          previous_work_experience?: Json
+          probation_end_date?: string | null
+          reporting_to?: string | null
+          salary_structure_assignment_id?: string | null
           specialties?: string[] | null
+          status?: string
+          tax_identification_number?: string | null
           total_days_worked?: number | null
           total_tasks_completed?: number | null
           updated_at?: string | null
@@ -32091,32 +32330,54 @@ export type Database = {
         Update: {
           address?: string | null
           bank_account?: string | null
+          bank_name?: string | null
+          bank_rib?: string | null
+          blood_type?: string | null
           calculation_basis?:
             | Database["public"]["Enums"]["calculation_basis"]
             | null
           certifications?: string[] | null
           cin?: string | null
+          cin_issue_date?: string | null
+          cin_issue_place?: string | null
           cnss_number?: string | null
+          confirmation_date?: string | null
+          contract_end_date?: string | null
+          contract_start_date?: string | null
           created_at?: string | null
           created_by?: string | null
+          current_address?: string | null
           daily_rate?: number | null
           date_of_birth?: string | null
           deleted_at?: string | null
           documents?: Json | null
+          educational_qualification?: string | null
           email?: string | null
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
+          emergency_contact_relation?: string | null
+          employment_type?: string | null
           end_date?: string | null
           farm_id?: string | null
           first_name?: string
+          gender?: string | null
+          health_insurance_number?: string | null
+          health_insurance_provider?: string | null
           hire_date?: string
+          holiday_list_id?: string | null
           id?: string
           is_active?: boolean | null
           is_cnss_declared?: boolean | null
           last_name?: string
+          marital_status?: string | null
           metayage_contract_details?: Json | null
           metayage_percentage?: number | null
           metayage_type?: Database["public"]["Enums"]["metayage_type"] | null
           monthly_salary?: number | null
+          nationality?: string | null
           notes?: string | null
+          notice_period_days?: number
+          number_of_children?: number
           organization_id?: string
           payment_frequencies?: string[] | null
           payment_frequency?:
@@ -32124,10 +32385,19 @@ export type Database = {
             | null
           payment_method?: string | null
           per_unit_rate?: number | null
+          permanent_address?: string | null
+          personal_email?: string | null
           phone?: string | null
+          photo_url?: string | null
           photos?: Json | null
           position?: string | null
+          previous_work_experience?: Json
+          probation_end_date?: string | null
+          reporting_to?: string | null
+          salary_structure_assignment_id?: string | null
           specialties?: string[] | null
+          status?: string
+          tax_identification_number?: string | null
           total_days_worked?: number | null
           total_tasks_completed?: number | null
           updated_at?: string | null
@@ -32140,6 +32410,13 @@ export type Database = {
             columns: ["farm_id"]
             isOneToOne: false
             referencedRelation: "farms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workers_holiday_list_id_fkey"
+            columns: ["holiday_list_id"]
+            isOneToOne: false
+            referencedRelation: "holiday_lists"
             referencedColumns: ["id"]
           },
           {
@@ -32232,6 +32509,41 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "workers_reporting_to_fkey"
+            columns: ["reporting_to"]
+            isOneToOne: false
+            referencedRelation: "assignable_users"
+            referencedColumns: ["worker_id"]
+          },
+          {
+            foreignKeyName: "workers_reporting_to_fkey"
+            columns: ["reporting_to"]
+            isOneToOne: false
+            referencedRelation: "v_active_workers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workers_reporting_to_fkey"
+            columns: ["reporting_to"]
+            isOneToOne: false
+            referencedRelation: "worker_assignments"
+            referencedColumns: ["worker_id"]
+          },
+          {
+            foreignKeyName: "workers_reporting_to_fkey"
+            columns: ["reporting_to"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workers_salary_structure_assignment_id_fkey"
+            columns: ["salary_structure_assignment_id"]
+            isOneToOne: false
+            referencedRelation: "salary_structure_assignments"
+            referencedColumns: ["id"]
           },
         ]
       }
