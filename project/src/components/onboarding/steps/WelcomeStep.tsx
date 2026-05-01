@@ -1,8 +1,12 @@
-import {  useState, useEffect  } from "react";
-import { Sprout, Globe, User, ArrowRight, Clock } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Globe, User, ArrowRight, ArrowLeft, Clock, MessageCircle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { isValidPhoneNumber } from 'react-phone-number-input';
+import { loadLanguage } from '@/i18n/config';
 import { OnboardingInput } from '../ui/OnboardingInput';
 import { SelectionCard } from '../ui/SelectionCard';
 import { Button } from '@/components/ui/button';
+import { PhoneInput } from '@/components/ui/phone-input';
 
 interface ProfileData {
   first_name: string;
@@ -18,62 +22,78 @@ interface WelcomeStepProps {
   onNext: () => void;
 }
 
-const LANGUAGES = [
-  { id: 'fr', name: 'Français', flag: '🇫🇷', description: 'Interface en français' },
-  { id: 'en', name: 'English', flag: '🇬🇧', description: 'English interface' },
-  { id: 'ar', name: 'العربية', flag: '🇲🇦', description: 'واجهة عربية' },
-];
+const LANGUAGE_IDS = ['fr', 'en', 'ar'] as const;
 
-const TIMEZONES = [
-  { id: 'Africa/Casablanca', name: 'Casablanca', offset: 'GMT+1', icon: '🇲🇦' },
-  { id: 'Europe/Paris', name: 'Paris', offset: 'GMT+1/+2', icon: '🇫🇷' },
-  { id: 'Europe/London', name: 'Londres', offset: 'GMT+0/+1', icon: '🇬🇧' },
-  { id: 'UTC', name: 'UTC', offset: 'GMT+0', icon: '🌍' },
-];
+const LANGUAGE_FLAG: Record<(typeof LANGUAGE_IDS)[number], string> = {
+  fr: '🇫🇷',
+  en: '🇬🇧',
+  ar: '🇲🇦',
+};
 
-export const WelcomeStep = ({
-  profileData,
-  onUpdate,
-  onNext,
-}: WelcomeStepProps) => {
+const TIMEZONE_IDS = ['Africa/Casablanca', 'Europe/Paris', 'Europe/London', 'UTC'] as const;
+
+const TIMEZONE_FLAG: Record<(typeof TIMEZONE_IDS)[number], string> = {
+  'Africa/Casablanca': '🇲🇦',
+  'Europe/Paris': '🇫🇷',
+  'Europe/London': '🇬🇧',
+  UTC: '🌍',
+};
+
+export const WelcomeStep = ({ profileData, onUpdate, onNext }: WelcomeStepProps) => {
+  const { t } = useTranslation();
   const [subStep, setSubStep] = useState(0);
   const [showGreeting, setShowGreeting] = useState(true);
+  const [phoneTouched, setPhoneTouched] = useState(false);
 
-  // Auto-advance from greeting
   useEffect(() => {
     if (showGreeting) {
-      const timer = setTimeout(() => setShowGreeting(false), 2500);
+      const timer = setTimeout(() => setShowGreeting(false), 2000);
       return () => clearTimeout(timer);
     }
   }, [showGreeting]);
 
-  const isValid = profileData.first_name.trim() && profileData.last_name.trim();
+  const handleLanguageSelect = useCallback(
+    (langId: string) => {
+      void loadLanguage(langId);
+      onUpdate({ language: langId });
+    },
+    [onUpdate],
+  );
 
-  // Greeting screen
+  const namesOk = Boolean(profileData.first_name.trim() && profileData.last_name.trim());
+  const phoneOk = isValidPhoneNumber(profileData.phone || '');
+  const phoneShowError = phoneTouched && profileData.phone && !phoneOk;
+
+  const primaryClass =
+    'h-11 min-w-0 flex-1 rounded-lg shadow-sm transition-all duration-200 active:scale-[0.98] disabled:cursor-not-allowed';
+
   if (showGreeting) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] text-center animate-fade-in py-8">
-        <div className="relative mb-10">
-          <div className="w-28 h-28 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-full flex items-center justify-center shadow-2xl shadow-emerald-500/40 animate-bounce-slow">
-            <Sprout className="w-14 h-14 text-white" />
-          </div>
-          {/* Pulse rings */}
-          <div className="absolute inset-0 w-28 h-28 rounded-full border-4 border-emerald-400/40 animate-ping" />
-          <div className="absolute -inset-2 w-32 h-32 rounded-full border-2 border-emerald-300/20 animate-pulse" />
-        </div>
+      <div
+        className="flex min-h-[260px] flex-col items-center justify-center px-4 py-6 text-center animate-fade-in"
+        data-testid="onboarding-step-greeting"
+      >
+        <picture className="mb-4 block animate-slide-up">
+          <source srcSet="/assets/logo.webp" type="image/webp" />
+          <img src="/assets/logo.png" alt={t('onboarding.welcome.greetingBrand', 'AgroGina')} className="mx-auto h-14 w-auto sm:h-16" decoding="async" />
+        </picture>
 
-        <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4 animate-slide-up">
-          Bienvenue sur <span className="bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">AgroGina</span>
+        <h1 className="mb-1.5 text-2xl font-bold text-slate-900 animate-slide-up dark:text-white">
+          {t('onboarding.welcome.greetingPrefix', 'Welcome to')}{' '}
+          <span className="text-emerald-600">{t('onboarding.welcome.greetingBrand', 'AgroGina')}</span>
         </h1>
-        
-        <p className="text-lg md:text-xl text-gray-600 max-w-md animate-slide-up px-4" style={{ animationDelay: '0.2s' }}>
-          Cultivez votre succès avec intelligence
+
+        <p
+          className="max-w-sm animate-slide-up px-2 text-sm text-slate-500 dark:text-slate-400"
+          style={{ animationDelay: '0.15s' }}
+        >
+          {t('onboarding.welcome.greetingTagline', 'Grow your success with intelligence')}
         </p>
 
-        <div className="mt-10 flex items-center gap-3 text-emerald-600 animate-pulse">
-          <div className="w-2 h-2 bg-emerald-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-          <div className="w-2 h-2 bg-emerald-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-          <div className="w-2 h-2 bg-emerald-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+        <div className="mt-6 flex items-center gap-2">
+          <div className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-300 dark:bg-slate-600" style={{ animationDelay: '0ms' }} />
+          <div className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-300 dark:bg-slate-600" style={{ animationDelay: '150ms' }} />
+          <div className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-300 dark:bg-slate-600" style={{ animationDelay: '300ms' }} />
         </div>
 
         <style>{`
@@ -81,181 +101,274 @@ export const WelcomeStep = ({
             from { opacity: 0; }
             to { opacity: 1; }
           }
-          
           @keyframes slide-up {
-            from { opacity: 0; transform: translateY(20px); }
+            from { opacity: 0; transform: translateY(12px); }
             to { opacity: 1; transform: translateY(0); }
           }
-          
-          @keyframes bounce-slow {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-8px); }
-          }
-          
-          .animate-fade-in { animation: fade-in 0.6s ease-out forwards; }
-          .animate-slide-up { animation: slide-up 0.6s ease-out forwards; }
-          .animate-bounce-slow { animation: bounce-slow 2s ease-in-out infinite; }
+          .animate-fade-in { animation: fade-in 0.5s ease-out forwards; }
+          .animate-slide-up { animation: slide-up 0.5s ease-out forwards; }
         `}</style>
       </div>
     );
   }
 
-  // Sub-step 0: Name input
   if (subStep === 0) {
     return (
-      <div className="max-w-md mx-auto animate-fade-in px-2">
-        <div className="text-center mb-10">
-          <div className="w-18 h-18 bg-gradient-to-br from-emerald-100 to-emerald-200 rounded-2xl flex items-center justify-center mx-auto mb-5 p-4">
-            <User className="w-9 h-9 text-emerald-600" />
+      <div className="mx-auto max-w-md animate-fade-in px-1">
+        <div className="mb-5 text-center">
+          <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800">
+            <User className="h-5 w-5 text-slate-600 dark:text-slate-300" />
           </div>
-          <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3">
-            Comment vous appelez-vous ?
+          <h2 className="mb-0.5 text-lg font-semibold text-slate-900 dark:text-white" data-testid="onboarding-step-name-title">
+            {t('onboarding.welcome.nameTitle', 'What should we call you?')}
           </h2>
-          <p className="text-gray-500 text-base">
-            Nous personnaliserons votre expérience
-          </p>
+          <p className="text-xs text-slate-500 dark:text-slate-400">{t('onboarding.welcome.nameSubtitle', 'We will personalize your experience')}</p>
         </div>
 
-        <div className="space-y-5">
+        <div className="space-y-3 rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
           <OnboardingInput
-            label="Prénom"
+            label={t('onboarding.welcome.firstName', 'First name')}
             value={profileData.first_name}
             onChange={(e) => onUpdate({ first_name: e.target.value })}
             autoFocus
           />
-          
           <OnboardingInput
-            label="Nom"
+            label={t('onboarding.welcome.lastName', 'Last name')}
             value={profileData.last_name}
             onChange={(e) => onUpdate({ last_name: e.target.value })}
           />
         </div>
 
         <Button
+          type="button"
+          variant="emerald"
           onClick={() => setSubStep(1)}
-          disabled={!profileData.first_name.trim() || !profileData.last_name.trim()}
+          disabled={!namesOk}
           data-testid="onboarding-continue-name"
-          className="mt-10 w-full py-4 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-2xl font-semibold text-base
-            shadow-lg shadow-emerald-500/25 hover:shadow-xl hover:shadow-emerald-500/30
-            disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-lg
-            transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]
-            flex items-center justify-center gap-3"
+          className="mt-4 flex h-11 w-full items-center justify-center gap-2 rounded-lg font-medium shadow-sm transition-all duration-200 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
         >
-          <span>Continuer</span>
-          <ArrowRight className="w-5 h-5" />
+          <span>{t('onboarding.welcome.continue', 'Continue')}</span>
+          <ArrowRight className="h-4 w-4" />
         </Button>
 
         <style>{`
           @keyframes fade-in {
-            from { opacity: 0; transform: translateY(10px); }
+            from { opacity: 0; transform: translateY(8px); }
             to { opacity: 1; transform: translateY(0); }
           }
-          .animate-fade-in { animation: fade-in 0.4s ease-out forwards; }
+          .animate-fade-in { animation: fade-in 0.3s ease-out forwards; }
         `}</style>
       </div>
     );
   }
 
-  // Sub-step 1: Language selection (skip phone - it's in OrganizationStep)
   if (subStep === 1) {
     return (
-      <div className="max-w-md mx-auto animate-fade-in px-2">
-        <div className="text-center mb-10">
-          <div className="w-18 h-18 bg-gradient-to-br from-blue-100 to-indigo-200 rounded-2xl flex items-center justify-center mx-auto mb-5 p-4">
-            <Globe className="w-9 h-9 text-blue-600" />
+      <div className="mx-auto max-w-md animate-fade-in px-1">
+        <div className="mb-5 text-center">
+          <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800">
+            <MessageCircle className="h-5 w-5 text-slate-600 dark:text-slate-300" />
           </div>
-          <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3">
-            Bonjour, {profileData.first_name} ! 👋
+          <h2 className="mb-0.5 text-lg font-semibold text-slate-900 dark:text-white">
+            {t('onboarding.welcome.phoneTitle', 'Your mobile number')}
           </h2>
-          <p className="text-gray-500 text-base">
-            Quelle langue préférez-vous ?
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            {t(
+              'onboarding.welcome.phoneSubtitle',
+              'We use it for WhatsApp, SMS, and important account updates.',
+            )}
           </p>
         </div>
 
-        <div className="space-y-3">
-          {LANGUAGES.map((lang) => (
+        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+          <label className="mb-2 block pl-1 text-xs font-medium text-slate-500 dark:text-slate-400">
+            {t('onboarding.welcome.phoneLabel', 'Phone number')}
+          </label>
+          <PhoneInput
+            id="onboarding-profile-phone"
+            international
+            defaultCountry="MA"
+            value={profileData.phone || undefined}
+            onChange={(v) => onUpdate({ phone: v ?? '' })}
+            invalid={phoneShowError}
+            className="w-full"
+            onBlur={() => setPhoneTouched(true)}
+          />
+          <p className="mt-2 pl-0.5 text-xs text-slate-400 dark:text-slate-500">
+            {t(
+              'onboarding.welcome.phoneHint',
+              'Choose your country, then enter your number in international format.',
+            )}
+          </p>
+          {phoneShowError && (
+            <p className="mt-1.5 pl-0.5 text-xs font-medium text-red-600 dark:text-red-400">
+              {t(
+                'onboarding.welcome.phoneInvalid',
+                'Please enter a valid phone number for the selected country.',
+              )}
+            </p>
+          )}
+        </div>
+
+        <div className="mt-4 flex gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setSubStep(0)}
+            className="h-11 shrink-0 gap-1.5 px-3 sm:px-4"
+            data-testid="onboarding-back-phone"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            <span>{t('onboarding.welcome.back', 'Back')}</span>
+          </Button>
+          <Button
+            type="button"
+            variant="emerald"
+            onClick={() => {
+              setPhoneTouched(true);
+              if (phoneOk) setSubStep(2);
+            }}
+            data-testid="onboarding-continue-phone"
+            disabled={!phoneOk}
+            className={`${primaryClass} flex items-center justify-center gap-2 font-medium disabled:opacity-40`}
+          >
+            <span>{t('onboarding.welcome.continue', 'Continue')}</span>
+            <ArrowRight className="h-4 w-4" />
+          </Button>
+        </div>
+
+        <style>{`
+          @keyframes fade-in {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+          }
+          .animate-fade-in { animation: fade-in 0.3s ease-out forwards; }
+        `}</style>
+      </div>
+    );
+  }
+
+  if (subStep === 2) {
+    return (
+      <div className="mx-auto max-w-md animate-fade-in px-1">
+        <div className="mb-5 text-center">
+          <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800">
+            <Globe className="h-5 w-5 text-slate-600 dark:text-slate-300" />
+          </div>
+          <h2 className="mb-0.5 text-lg font-semibold text-slate-900 dark:text-white" data-testid="onboarding-step-language-title">
+            {t('onboarding.welcome.languageHello', 'Hello, {{name}}', { name: profileData.first_name })}
+          </h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            {t('onboarding.welcome.languagePickSubtitle', 'Which language do you prefer?')}
+          </p>
+        </div>
+
+        <div className="space-y-2">
+          {LANGUAGE_IDS.map((langId) => (
             <SelectionCard
-              key={lang.id}
-              title={`${lang.flag} ${lang.name}`}
-              description={lang.description}
-              icon={<Globe className="w-5 h-5" />}
-              selected={profileData.language === lang.id}
-              onClick={() => onUpdate({ language: lang.id })}
+              key={langId}
+              testId={`onboarding-lang-${langId}`}
+              title={`${LANGUAGE_FLAG[langId]} ${t(`onboarding.welcome.languages.${langId}.name`)}`}
+              description={t(`onboarding.welcome.languages.${langId}.description`)}
+              icon={<Globe className="h-5 w-5" />}
+              selected={profileData.language === langId}
+              onClick={() => handleLanguageSelect(langId)}
             />
           ))}
         </div>
 
-        <Button
-          onClick={() => setSubStep(2)}
-          data-testid="onboarding-continue-language"
-          className="mt-10 w-full py-4 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-2xl font-semibold text-base
-            shadow-lg shadow-emerald-500/25 hover:shadow-xl hover:shadow-emerald-500/30
-            transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]
-            flex items-center justify-center gap-3"
-        >
-          <span>Continuer</span>
-          <ArrowRight className="w-5 h-5" />
-        </Button>
+        <div className="mt-4 flex gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setSubStep(1)}
+            className="h-11 shrink-0 gap-1.5 px-3 sm:px-4"
+            data-testid="onboarding-back-language"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            <span>{t('onboarding.welcome.back', 'Back')}</span>
+          </Button>
+          <Button
+            type="button"
+            variant="emerald"
+            onClick={() => setSubStep(3)}
+            data-testid="onboarding-continue-language"
+            className={`${primaryClass} flex items-center justify-center gap-2 font-medium`}
+          >
+            <span>{t('onboarding.welcome.continue', 'Continue')}</span>
+            <ArrowRight className="h-4 w-4" />
+          </Button>
+        </div>
 
         <style>{`
           @keyframes fade-in {
-            from { opacity: 0; transform: translateY(10px); }
+            from { opacity: 0; transform: translateY(8px); }
             to { opacity: 1; transform: translateY(0); }
           }
-          .animate-fade-in { animation: fade-in 0.4s ease-out forwards; }
+          .animate-fade-in { animation: fade-in 0.3s ease-out forwards; }
         `}</style>
       </div>
     );
   }
 
-  // Sub-step 2: Timezone selection
   return (
-    <div className="max-w-md mx-auto animate-fade-in px-2">
-      <div className="text-center mb-10">
-        <div className="w-18 h-18 bg-gradient-to-br from-amber-100 to-orange-200 rounded-2xl flex items-center justify-center mx-auto mb-5 p-4">
-          <Clock className="w-9 h-9 text-amber-600" />
+    <div className="mx-auto max-w-md animate-fade-in px-1">
+      <div className="mb-5 text-center">
+        <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800">
+          <Clock className="h-5 w-5 text-slate-600 dark:text-slate-300" />
         </div>
-        <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3">
-          Votre fuseau horaire
+        <h2 className="mb-0.5 text-lg font-semibold text-slate-900 dark:text-white" data-testid="onboarding-step-timezone-title">
+          {t('onboarding.welcome.timezoneTitle', 'Your time zone')}
         </h2>
-        <p className="text-gray-500 text-base">
-          Pour synchroniser vos tâches et rappels
+        <p className="text-xs text-slate-500 dark:text-slate-400">
+          {t('onboarding.welcome.timezoneSubtitle', 'To sync your tasks and reminders')}
         </p>
       </div>
 
-      <div className="space-y-3">
-        {TIMEZONES.map((tz) => (
+      <div className="space-y-2">
+        {TIMEZONE_IDS.map((tzId) => (
           <SelectionCard
-            key={tz.id}
-            title={`${tz.icon} ${tz.name}`}
-            description={tz.offset}
-            icon={<Clock className="w-5 h-5" />}
-            selected={profileData.timezone === tz.id}
-            onClick={() => onUpdate({ timezone: tz.id })}
+            key={tzId}
+            testId={`onboarding-tz-${tzId.replace(/\//g, '-')}`}
+            title={`${TIMEZONE_FLAG[tzId]} ${t(`onboarding.welcome.timezones.${tzId}.city`)}`}
+            description={t(`onboarding.welcome.timezones.${tzId}.offset`)}
+            icon={<Clock className="h-5 w-5" />}
+            selected={profileData.timezone === tzId}
+            onClick={() => onUpdate({ timezone: tzId })}
           />
         ))}
       </div>
 
-      <Button
-        onClick={onNext}
-        disabled={!isValid}
-        data-testid="onboarding-next-step-profile"
-        className="mt-10 w-full py-4 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-2xl font-semibold text-base
-          shadow-lg shadow-emerald-500/25 hover:shadow-xl hover:shadow-emerald-500/30
-          disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-lg
-          transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]
-          flex items-center justify-center gap-3"
-      >
-        <span>Étape suivante</span>
-        <ArrowRight className="w-5 h-5" />
-      </Button>
+      <div className="mt-4 flex gap-3">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => setSubStep(2)}
+          className="h-11 shrink-0 gap-1.5 px-3 sm:px-4"
+          data-testid="onboarding-back-timezone"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          <span>{t('onboarding.welcome.back', 'Back')}</span>
+        </Button>
+        <Button
+          type="button"
+          variant="emerald"
+          onClick={onNext}
+          disabled={!namesOk}
+          data-testid="onboarding-next-step-profile"
+          className={`${primaryClass} flex items-center justify-center gap-2 font-medium disabled:opacity-40`}
+        >
+          <span>{t('onboarding.welcome.nextStep', 'Next step')}</span>
+          <ArrowRight className="h-4 w-4" />
+        </Button>
+      </div>
 
       <style>{`
         @keyframes fade-in {
-          from { opacity: 0; transform: translateY(10px); }
+          from { opacity: 0; transform: translateY(8px); }
           to { opacity: 1; transform: translateY(0); }
         }
-        .animate-fade-in { animation: fade-in 0.4s ease-out forwards; }
+        .animate-fade-in { animation: fade-in 0.3s ease-out forwards; }
       `}</style>
     </div>
   );

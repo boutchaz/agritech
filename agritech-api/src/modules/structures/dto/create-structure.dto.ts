@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsOptional, IsUUID, IsDateString, IsIn, IsObject, IsBoolean, registerDecorator, ValidationOptions, ValidationArguments } from 'class-validator';
+import { IsString, IsOptional, IsUUID, IsDateString, IsIn, IsObject, IsBoolean, IsArray, IsUrl, registerDecorator, ValidationOptions, ValidationArguments } from 'class-validator';
 
 // Custom validator to ensure numeric dimension values are not negative
 function IsNonNegativeDimensions(validationOptions?: ValidationOptions) {
@@ -98,6 +98,12 @@ export class CreateStructureDto {
   @IsOptional()
   @IsString()
   notes?: string;
+
+  @ApiPropertyOptional({ description: 'Photo URLs', type: [String] })
+  @IsOptional()
+  @IsArray()
+  @IsUrl({}, { each: true })
+  photos?: string[];
 
   @ApiPropertyOptional({ description: 'Active status', default: true })
   @IsOptional()

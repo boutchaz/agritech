@@ -471,6 +471,10 @@ export class AccountMappingsService {
         { mapping_type: 'cost_type', mapping_key: 'materials', account_code: '6126', description: 'Pièces de rechange' },
         { mapping_type: 'cost_type', mapping_key: 'utilities', account_code: '6167', description: 'Électricité' },
         { mapping_type: 'cost_type', mapping_key: 'other', account_code: '6131', description: 'Locations machines agricoles' },
+        { mapping_type: 'cost_type', mapping_key: 'equipment_maintenance', account_code: '6125', description: 'Entretien et réparations équipement' },
+        { mapping_type: 'cost_type', mapping_key: 'equipment_fuel', account_code: '6113', description: 'Carburant équipement' },
+        { mapping_type: 'cost_type', mapping_key: 'equipment_insurance', account_code: '616', description: 'Primes d\'assurance équipement' },
+        { mapping_type: 'cost_type', mapping_key: 'equipment_registration', account_code: '6122', description: 'Redevances et frais d\'immatriculation équipement' },
 
         // Revenue types
         { mapping_type: 'revenue_type', mapping_key: 'product_sales', account_code: '7111', description: 'Ventes fruits et légumes' },

@@ -26,6 +26,10 @@ export interface OnboardingOrganizationData {
 export interface OnboardingFarmData {
   name: string;
   location: string;
+  /** From geocoder (Nominatim); saved as farm `coordinates` when present. */
+  latitude?: number;
+  longitude?: number;
+  place_id?: string;
   size: number;
   size_unit: string;
   farm_type?: 'main' | 'sub';
@@ -51,6 +55,8 @@ export interface OnboardingPreferences {
   date_format: string;
   use_demo_data: boolean;
   enable_notifications: boolean;
+  /** ISO2 chart template (MA, FR, TN, US, GB, DE) — required for accounting setup */
+  accounting_template_country: string;
 }
 
 export interface OnboardingState {
@@ -78,6 +84,9 @@ export interface OnboardingState {
   farmData: {
     name: string;
     location: string;
+    latitude?: number;
+    longitude?: number;
+    place_id?: string;
     size: number;
     size_unit: string;
     farm_type: 'main' | 'sub';
@@ -169,9 +178,13 @@ export const onboardingApi = {
 
   /**
    * Save preferences and complete onboarding (Step 5)
+   * @param organizationId — pass the org created during onboarding so headers are correct before app shell hydrates the org store.
    */
-  async savePreferencesAndComplete(data: OnboardingPreferences): Promise<{ success: boolean }> {
-    return apiClient.post<{ success: boolean }>(`${BASE_URL}/complete`, data);
+  async savePreferencesAndComplete(
+    data: OnboardingPreferences,
+    organizationId?: string | null,
+  ): Promise<{ success: boolean }> {
+    return apiClient.post<{ success: boolean }>(`${BASE_URL}/complete`, data, {}, organizationId ?? undefined);
   },
 
   /**

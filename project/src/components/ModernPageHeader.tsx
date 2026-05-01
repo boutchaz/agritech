@@ -205,7 +205,7 @@ const ModernPageHeader = ({
                 </div>
               )}
               <div className="min-w-0 flex-1">
-                <h1 className="text-2xl sm:text-3xl xl:text-4xl font-semibold text-slate-900 dark:text-white tracking-tight uppercase break-words hyphens-auto">
+                <h1 className="text-xl sm:text-2xl font-semibold text-slate-900 dark:text-white tracking-tight break-words hyphens-auto">
                   {title || currentPage.label}
                 </h1>
                 {subtitle && (

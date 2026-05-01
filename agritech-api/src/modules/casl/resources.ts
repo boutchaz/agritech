@@ -133,6 +133,21 @@ export const RESOURCES: readonly ResourceDef[] = [
     { key: 'shift_requests', subject: Subject.SHIFT_REQUEST, displayName: 'Shift Requests' },
     { key: 'onboarding', subject: Subject.ONBOARDING, displayName: 'Onboarding' },
     { key: 'separations', subject: Subject.SEPARATION, displayName: 'Separations' },
+    { key: 'expense_claims', subject: Subject.EXPENSE_CLAIM, displayName: 'Expense Claims' },
+    { key: 'expense_categories', subject: Subject.EXPENSE_CATEGORY, displayName: 'Expense Categories' },
+    { key: 'job_openings', subject: Subject.JOB_OPENING, displayName: 'Job Openings' },
+    { key: 'job_applicants', subject: Subject.JOB_APPLICANT, displayName: 'Job Applicants' },
+    { key: 'interviews', subject: Subject.INTERVIEW, displayName: 'Interviews' },
+    { key: 'appraisal_cycles', subject: Subject.APPRAISAL_CYCLE, displayName: 'Appraisal Cycles' },
+    { key: 'appraisals', subject: Subject.APPRAISAL, displayName: 'Appraisals' },
+    { key: 'performance_feedback', subject: Subject.PERFORMANCE_FEEDBACK, displayName: 'Performance Feedback' },
+    { key: 'seasonal_campaigns', subject: Subject.SEASONAL_CAMPAIGN, displayName: 'Seasonal Campaigns' },
+    { key: 'worker_qualifications', subject: Subject.WORKER_QUALIFICATION, displayName: 'Worker Qualifications' },
+    { key: 'safety_incidents', subject: Subject.SAFETY_INCIDENT, displayName: 'Safety Incidents' },
+    { key: 'worker_transport', subject: Subject.WORKER_TRANSPORT, displayName: 'Worker Transport' },
+    { key: 'grievances', subject: Subject.GRIEVANCE, displayName: 'Grievances' },
+    { key: 'training_programs', subject: Subject.TRAINING_PROGRAM, displayName: 'Training Programs' },
+    { key: 'training_enrollments', subject: Subject.TRAINING_ENROLLMENT, displayName: 'Training Enrollments' },
 ];
 
 export const RESOURCE_SUBJECT_MAP: Record<string, Subject> = Object.freeze(

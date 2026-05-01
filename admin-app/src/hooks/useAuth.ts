@@ -95,15 +95,43 @@ export function useAuth() {
           return;
         }
 
-        let isInternalAdmin = false;
+        // Validate session against server — detects deleted user / revoked JWT
+        let validUser: User | null = null;
         if (session?.user) {
-          isInternalAdmin = await checkInternalAdmin(session.user.id);
+          try {
+            const { data: { user: serverUser }, error: getUserError } = await withTimeout(
+              supabase.auth.getUser(),
+              GET_SESSION_TIMEOUT_MS,
+              'getUser',
+            );
+            if (getUserError || !serverUser) {
+              console.warn('[useAuth] Stale session — signing out', getUserError);
+              await supabase.auth.signOut();
+              if (mounted) {
+                setState({ user: null, session: null, isLoading: false, isInternalAdmin: false });
+              }
+              return;
+            }
+            validUser = serverUser;
+          } catch (e) {
+            console.warn('[useAuth] getUser failed — signing out', e);
+            await supabase.auth.signOut();
+            if (mounted) {
+              setState({ user: null, session: null, isLoading: false, isInternalAdmin: false });
+            }
+            return;
+          }
+        }
+
+        let isInternalAdmin = false;
+        if (validUser) {
+          isInternalAdmin = await checkInternalAdmin(validUser.id);
         }
 
         if (mounted) {
           setState({
-            user: session?.user ?? null,
-            session,
+            user: validUser,
+            session: validUser ? session : null,
             isLoading: false,
             isInternalAdmin,
           });
@@ -126,6 +154,12 @@ export function useAuth() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (!mounted) return;
+
+        if (event === 'SIGNED_OUT') {
+          adminCacheRef.current.clear();
+          setState({ user: null, session: null, isLoading: false, isInternalAdmin: false });
+          return;
+        }
 
         // On token refresh, keep existing admin status — don't re-query
         if (event === 'TOKEN_REFRESHED' && session?.user) {

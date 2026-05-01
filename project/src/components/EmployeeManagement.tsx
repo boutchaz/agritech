@@ -4,7 +4,8 @@ import { workersApi } from '../lib/api/workers';
 import { useAuth } from '../hooks/useAuth';
 import { DEFAULT_CURRENCY } from '../utils/currencies';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useForm, type FieldErrors, type Resolver, type SubmitHandler } from 'react-hook-form';
+import { useForm, Controller, type FieldErrors, type Resolver, type SubmitHandler } from 'react-hook-form';
+import { PhotoUpload } from '@/components/ui/PhotoUpload';
 import { useTranslation } from 'react-i18next';
 import { FormField } from './ui/FormField';
 import { Input } from './ui/Input';
@@ -27,6 +28,7 @@ interface Employee {
   position: string;
   salary: number;
   status: 'active' | 'inactive';
+  photos: string[];
 }
 
 const createEmployeeSchema = (t: any) => z.object({
@@ -39,6 +41,7 @@ const createEmployeeSchema = (t: any) => z.object({
   position: z.string().min(1, t('employeeManagement.validation.positionRequired', 'Position is required')),
   salary: z.coerce.number().nonnegative(t('employeeManagement.validation.salaryInvalid', 'Invalid salary')),
   status: z.union([z.literal('active'), z.literal('inactive')]),
+  photos: z.array(z.string().url()).optional().default([]),
 });
 
 type EmployeeFormValues = z.infer<ReturnType<typeof createEmployeeSchema>>;
@@ -72,6 +75,7 @@ const EmployeeManagement = () => {
     position: '',
     salary: 0,
     status: 'active',
+    photos: [],
   }), []);
 
   const employeeSchema = useMemo(() => createEmployeeSchema(t), [t]);
@@ -129,6 +133,7 @@ const EmployeeManagement = () => {
         position: editingEmployee.position,
         salary: editingEmployee.salary,
         status: editingEmployee.status,
+        photos: editingEmployee.photos ?? [],
       });
     } else if (showAddModal) {
       form.reset(emptyDefaults);
@@ -154,6 +159,7 @@ const EmployeeManagement = () => {
           position: worker.position || '',
           salary: worker.monthly_salary ?? 0,
           status: worker.is_active ? 'active' as const : 'inactive' as const,
+          photos: ((worker as any).photos as string[] | undefined) ?? [],
         }))
         .sort((a, b) => a.last_name.localeCompare(b.last_name));
     },
@@ -176,11 +182,12 @@ const EmployeeManagement = () => {
         monthly_salary: values.salary,
         is_active: values.status === 'active',
         notes: values.address || undefined,
+        photos: values.photos,
         farm_id: farmId,
         worker_type: 'fixed_salary',
         payment_frequency: 'monthly',
         is_cnss_declared: false,
-      }, organizationId);
+      } as any, organizationId);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['employees', organizationId, farmId] });
@@ -204,10 +211,11 @@ const EmployeeManagement = () => {
         monthly_salary: values.salary,
         is_active: values.status === 'active',
         notes: values.address || undefined,
+        photos: values.photos,
         farm_id: farmId,
         worker_type: 'fixed_salary',
         payment_frequency: 'monthly',
-      }, organizationId);
+      } as any, organizationId);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['employees', organizationId, farmId] });
@@ -256,11 +264,25 @@ const EmployeeManagement = () => {
   const renderEmployeeCard = (employee: Employee) => (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
       <div className="flex justify-between items-start mb-4 gap-4">
-        <div>
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-            {employee.first_name} {employee.last_name}
-          </h3>
-          <p className="text-sm text-gray-500 dark:text-gray-400">{employee.position || '—'}</p>
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          {employee.photos?.[0] ? (
+            <img
+              src={employee.photos[0]}
+              alt=""
+              className="h-12 w-12 rounded-full object-cover border border-gray-200 dark:border-gray-700 flex-shrink-0"
+              loading="lazy"
+            />
+          ) : (
+            <div className="h-12 w-12 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-sm font-medium text-gray-500 dark:text-gray-300 flex-shrink-0">
+              {(employee.first_name?.[0] || '').toUpperCase()}{(employee.last_name?.[0] || '').toUpperCase()}
+            </div>
+          )}
+          <div className="min-w-0">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white truncate">
+              {employee.first_name} {employee.last_name}
+            </h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400 truncate">{employee.position || '—'}</p>
+          </div>
         </div>
         <div className="flex space-x-2">
           <Button
@@ -320,11 +342,25 @@ const EmployeeManagement = () => {
   const renderEmployeeTable = (employee: Employee) => (
     <>
       <TableCell className="px-4 py-3">
-        <div>
-          <p className="font-medium text-gray-900 dark:text-white">
-            {employee.first_name} {employee.last_name}
-          </p>
-          <p className="text-sm text-gray-500 dark:text-gray-400">{employee.position || '—'}</p>
+        <div className="flex items-center gap-3">
+          {employee.photos?.[0] ? (
+            <img
+              src={employee.photos[0]}
+              alt=""
+              className="h-9 w-9 rounded-full object-cover border border-gray-200 dark:border-gray-700 flex-shrink-0"
+              loading="lazy"
+            />
+          ) : (
+            <div className="h-9 w-9 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-xs font-medium text-gray-500 dark:text-gray-300 flex-shrink-0">
+              {(employee.first_name?.[0] || '').toUpperCase()}{(employee.last_name?.[0] || '').toUpperCase()}
+            </div>
+          )}
+          <div className="min-w-0">
+            <p className="font-medium text-gray-900 dark:text-white truncate">
+              {employee.first_name} {employee.last_name}
+            </p>
+            <p className="text-sm text-gray-500 dark:text-gray-400 truncate">{employee.position || '—'}</p>
+          </div>
         </div>
       </TableCell>
       <TableCell className="px-4 py-3">{employee.cin || '—'}</TableCell>
@@ -500,6 +536,29 @@ const EmployeeManagement = () => {
                       <option value="inactive">{t('employeeManagement.status.inactive', 'Inactive')}</option>
                     </Select>
                   </FormField>
+
+                  {organizationId && (
+                    <FormField label={t('employeeManagement.fields.photos', 'Photos')}>
+                      <Controller
+                        control={form.control}
+                        name="photos"
+                        render={({ field }) => (
+                          <PhotoUpload
+                            organizationId={organizationId}
+                            photos={field.value ?? []}
+                            onChange={(p) => field.onChange(p)}
+                            bucket="entity-photos"
+                            entityType="worker"
+                            entityId={editingEmployee?.id}
+                            folder={editingEmployee?.id || `new-worker-${Date.now()}`}
+                            fieldName="photos"
+                            maxPhotos={4}
+                            showPrimary
+                          />
+                        )}
+                      />
+                    </FormField>
+                  )}
 
                   <div className="mt-6 flex justify-end space-x-3">
                     <Button

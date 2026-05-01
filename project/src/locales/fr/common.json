@@ -42,7 +42,25 @@
     "none": "Aucun"
   },
   "utilities": {
-    "loadingDashboard": "Chargement du tableau de bord..."
+    "title": "Gestion des Utilités",
+    "subtitle": "Suivez et gérez la consommation d'eau et d'électricité de vos fermes",
+    "loading": "Chargement de l'organisation...",
+    "loadingDashboard": "Chargement du tableau de bord...",
+    "accountNotFoundError": "Compte comptable de type \"{{accountType}}\"{{subtypeMsg}} introuvable. Veuillez créer ce compte dans le plan comptable.",
+    "selectFarmToAddCharge": "Sélectionnez une ferme pour ajouter une charge.",
+    "fileUploadError": "Erreur lors du téléchargement du fichier",
+    "journalEntryMissingAccountHelp": "✓ Charge enregistrée avec succès.\n\n⚠️ L'écriture comptable n'a pas pu être créée automatiquement.\n\nRaison: {{errorMessage}}\n\n→ Veuillez configurer le plan comptable dans la section Comptabilité > Plan Comptable.\n→ Comptes requis: Charges d'exploitation, Trésorerie, Dettes fournisseurs.",
+    "journalEntryCreatedWithError": "Charge enregistrée, mais l'écriture comptable n'a pas été créée: {{errorMessage}}",
+    "selectFarmToEditCharge": "Sélectionnez une ferme pour modifier une charge.",
+    "utilityTypes": {
+      "electricity": "Électricité",
+      "water": "Eau",
+      "diesel": "Diesel",
+      "gas": "Gaz",
+      "internet": "Internet",
+      "phone": "Téléphone",
+      "other": "Autre"
+    }
   },
   "parcelCard": {
     "soil": "sol",
@@ -55,34 +73,433 @@
     "defineBoundaryWeather": "Veuillez définir les limites de la parcelle pour accéder aux analyses météo & climatiques."
   },
   "dashboard": {
-    "totalParcelsTitle": "Parcelles totales",
-    "ongoingTasksTitle": "Tâches en cours",
-    "completedTasksTitle": "Tâches complétées",
-    "activeWorkersTitle": "Travailleurs actifs",
-    "thisMonthHarvestsTitle": "Récoltes ce mois",
-    "lowStockTitle": "Stock faible",
-    "newSoilAnalysisTitle": "Nouvelle analyse de sol",
-    "newSoilAnalysisDescription": "Enregistrer une nouvelle analyse",
-    "addParcelTitle": "Ajouter une parcelle",
-    "addParcelDescription": "Créer une nouvelle parcelle",
-    "newTaskTitle": "Nouvelle tâche",
-    "newTaskDescription": "Créer une nouvelle tâche",
-    "loadingData": "Chargement des données...",
-    "loadError": "Erreur lors du chargement des données du tableau de bord."
+    "title": "Tableau de bord",
+    "subtitle": "Analysez vos fermes, vos équipes et votre performance financière en un seul endroit",
+    "loading": "Chargement de l'organisation...",
+    "heroTitle": "Pilotage de l'exploitation agricole",
+    "quickActions": "Actions rapides",
+    "pageTitle": "Tableau de bord",
+    "metaDescription": "Pilotez vos fermes : visualisez parcelles, tâches, analyses et comptabilité dans une seule interface.",
+    "keyFeatures": {
+      "title": "Points clés de la plateforme",
+      "subtitle": "Activez les modules qui soutiennent vos objectifs quotidiens et accédez rapidement aux actions stratégiques",
+      "farmOps": {
+        "title": "Opérations agricoles pilotées",
+        "description": "Visualisez vos fermes, parcelles et suivis culturaux en temps réel pour déclencher les bonnes actions",
+        "cta": "Ouvrir la gestion des parcelles"
+      },
+      "taskExecution": {
+        "title": "Tâches et main-d'œuvre coordonnés",
+        "description": "Planifiez les travaux, assignez vos équipes et suivez l'avancement et le temps passé depuis un seul écran",
+        "cta": "Planifier une tâche"
+      },
+      "financialHealth": {
+        "title": "Santé financière consolidée",
+        "description": "Reliez factures, paiements et coûts par ferme pour anticiper trésorerie et marges",
+        "cta": "Consulter la comptabilité"
+      },
+      "labServices": {
+        "title": "Analyses & services intégrés",
+        "description": "Commandez vos analyses de sol et laboratoire depuis la plateforme et intégrez les résultats à vos décisions",
+        "cta": "Explorer les analyses"
+      }
+    },
+    "structuredData": {
+      "platformName": "plateforme de gestion agricole",
+      "description": "Solution unifiée de gestion agricole : fermes, parcelles, tâches, comptabilité et analyses.",
+      "services": {
+        "parcels": "Gestion des parcelles",
+        "tasks": "Planification des tâches",
+        "accounting": "Comptabilité agricole",
+        "analyses": "Analyses de laboratoire"
+      }
+    },
+    "commands": {
+      "sections": {
+        "navigation": "Navigation",
+        "modules": "Modules",
+        "preferences": "Préférences"
+      },
+      "navigation": {
+        "dashboard": "Aller au tableau de bord",
+        "dashboardKeywords": "dashboard accueil home tableau",
+        "analyses": "Ouvrir les analyses",
+        "analysesKeywords": "analyses soil rapport",
+        "parcels": "Voir les parcelles",
+        "parcelsKeywords": "parcelles champs map",
+        "stock": "Accéder au stock",
+        "stockKeywords": "stock inventaire",
+        "infrastructure": "Consulter les infrastructures",
+        "infrastructureKeywords": "infrastructure irrigation équipements",
+        "farmHierarchy": "Gérer les fermes",
+        "farmHierarchyKeywords": "fermes hiérarchie",
+        "tasks": "Gérer les tâches",
+        "tasksKeywords": "tâches missions travail",
+        "settings": "Ouvrir les paramètres",
+        "settingsKeywords": "paramètres settings organisation"
+      },
+      "create": {
+        "parcel": "Créer une parcelle",
+        "task": "Créer une tâche",
+        "cycle": "Créer un cycle cultural",
+        "stockEntry": "Créer une entrée de stock",
+        "invoice": "Créer une facture",
+        "worker": "Ajouter un travailleur"
+      },
+      "searchPlaceholder": "Rechercher une action ou une page...",
+      "noResults": "Aucun résultat trouvé.",
+      "modules": {
+        "subtitle": "Modules disponibles"
+      },
+      "preferences": {
+        "lightMode": "Passer en mode clair",
+        "darkMode": "Passer en mode sombre",
+        "themeKeywords": "theme mode sombre clair dark light"
+      }
+    },
+    "widgets": {
+      "noFarmSelected": "Sélectionnez une ferme pour afficher les parcelles et données associées",
+      "farm": {
+        "title": "Ferme",
+        "noFarm": "Aucune ferme sélectionnée",
+        "parcels": "Parcelles",
+        "surface": "Surface",
+        "analyses": "Analyses",
+        "viewParcels": "Voir les parcelles",
+        "addParcel": "Ajouter une parcelle"
+      },
+      "soil": {
+        "title": "Analyses du Sol",
+        "total": "Total",
+        "analyses": "analyses",
+        "recent": "Récentes",
+        "last30Days": "derniers 30j",
+        "needsAttention": "{{count}} parcelle nécessite une attention",
+        "needsAttention_plural": "{{count}} parcelles nécessitent une attention",
+        "outOfNorm": "pH ou niveaux de nutriments hors norme",
+        "latestAnalysis": "Dernière analyse",
+        "parcel": "Parcelle",
+        "allInNorm": "Toutes les analyses sont dans les normes",
+        "empty": "Aucune analyse du sol",
+        "addAnalysis": "Ajouter une analyse"
+      },
+      "climate": {
+        "temperature": "Température"
+      },
+      "irrigation": {
+        "title": "Irrigation",
+        "active": "En cours",
+        "stopped": "Arrêtée",
+        "sector": "Secteur",
+        "start": "Début",
+        "duration": "Durée"
+      },
+      "maintenance": {
+        "title": "Maintenance",
+        "inProgress": "en cours",
+        "start": "Début",
+        "expectedEnd": "Fin prévue"
+      },
+      "production": {
+        "title": "Analyse des rendements",
+        "chartComing": "Graphique à venir"
+      },
+      "financial": {
+        "title": "Données financières",
+        "chartComing": "Graphique à venir"
+      },
+      "alerts": {
+        "title": "Alertes de stock",
+        "lowStock": "Stock faible"
+      },
+      "viewAll": "Voir tout",
+      "parcels": {
+        "title": "Parcelles",
+        "total": "Total",
+        "parcels": "parcelles",
+        "surface": "Surface",
+        "hectares": "hectares",
+        "topCrops": "Principales cultures",
+        "empty": "Aucune parcelle créée",
+        "create": "Créer une parcelle",
+        "unspecifiedCrop": "Non spécifié"
+      },
+      "workers": {
+        "title": "Activité Travailleurs",
+        "active": "Actifs",
+        "outOfTotal": "sur {{total}} total",
+        "today": "Aujourd'hui",
+        "activeToday": "en activité",
+        "tasksInProgress": "Tâches en cours",
+        "tasksScheduledToday": "{{count}} tâche prévue aujourd'hui",
+        "tasksScheduledToday_plural": "{{count}} tâches prévues aujourd'hui",
+        "mostActive": "Plus actifs",
+        "tasks": "tâches",
+        "empty": "Aucun travailleur enregistré",
+        "addWorkers": "Ajouter des travailleurs"
+      },
+      "stock": {
+        "title": "Stock & Inventaire",
+        "alerts": "Alertes",
+        "lowStock": "stock faible",
+        "ok": "OK",
+        "inStock": "en stock",
+        "units": "unités",
+        "min": "Min",
+        "moreItems": "+{{count}} autres articles en stock faible",
+        "allOptimal": "Tous les stocks sont au niveau optimal",
+        "totalProducts": "Total produits"
+      },
+      "harvests": {
+        "title": "Récoltes",
+        "thisMonth": "Ce mois",
+        "harvests": "récoltes",
+        "quantity": "Quantité",
+        "kgThisMonth": "kg ce mois",
+        "lastHarvest": "Dernière récolte",
+        "parcel": "Parcelle",
+        "quality": "Qualité",
+        "kg": "kg",
+        "totalHarvests": "Total récoltes",
+        "empty": "Aucune récolte enregistrée",
+        "record": "Enregistrer une récolte"
+      },
+      "tasks": {
+        "title": "Tâches à venir",
+        "noTasks": "Aucune tâche prévue",
+        "upcomingSummary": "{{count}} tâche à venir dans les 30 prochains jours",
+        "upcomingSummary_plural": "{{count}} tâches à venir dans les 30 prochains jours",
+        "priority": {
+          "low": "Basse",
+          "medium": "Moyenne",
+          "high": "Haute",
+          "urgent": "Urgente"
+        },
+        "status": {
+          "pending": "En attente",
+          "assigned": "Assignée",
+          "inProgress": "En cours",
+          "completed": "Terminée",
+          "cancelled": "Annulée",
+          "paused": "En pause"
+        }
+      },
+      "analysis": {
+        "title": "Analyses",
+        "tabs": {
+          "soil": "Sol",
+          "plant": "Plante",
+          "water": "Eau"
+        },
+        "total": "Total",
+        "analyses": "analyses",
+        "recent": "Récentes",
+        "last30Days": "derniers 30j",
+        "needsAttention": "{{count}} analyse nécessite une attention",
+        "needsAttention_plural": "{{count}} analyses nécessitent une attention",
+        "outOfNorm": "Paramètres hors norme",
+        "latestAnalysis": "Dernière analyse",
+        "parcel": "Parcelle",
+        "allInNorm": "Toutes les analyses sont dans les normes",
+        "empty": "Aucune analyse disponible",
+        "addAnalysis": "Ajouter une analyse",
+        "chlorophyll": "Chlorophylle"
+      },
+      "sales": {
+        "title": "Commandes de vente",
+        "thisMonth": "Ce mois",
+        "ordersCount": "{{count}} commandes",
+        "totalOrders": "Total commandes",
+        "pending": "En attente",
+        "inProgress": "En cours",
+        "shipped": "Expédié",
+        "completed": "Terminé",
+        "recentOrders": "Commandes récentes",
+        "noOrders": "Aucune commande de vente"
+      },
+      "accounting": {
+        "title": "Comptabilité",
+        "revenue": "Revenus",
+        "expenses": "Dépenses",
+        "invoicesCount": "{{count}} factures",
+        "draft": "Brouillon",
+        "pending": "En attente",
+        "paid": "Payé",
+        "overdue": "En retard",
+        "outstandingAlert": "Montant en cours",
+        "recentInvoices": "Factures récentes",
+        "noInvoices": "Aucune facture",
+        "sale": "Vente",
+        "purchase": "Achat"
+      }
+    },
+    "description": "Personnalisez l'affichage de votre tableau de bord en choisissant les données à afficher et leur disposition.",
+    "saving": "Sauvegarde...",
+    "sections": {
+      "dataDisplay": "Données à afficher",
+      "alerts": "Alertes et notifications",
+      "layout": "Disposition du tableau de bord"
+    },
+    "data": {
+      "soil": {
+        "title": "Données du sol",
+        "description": "Humidité, pH, nutriments"
+      },
+      "climate": {
+        "title": "Données climatiques",
+        "description": "Température, humidité, pluviométrie"
+      },
+      "irrigation": {
+        "title": "Données d'irrigation",
+        "description": "Consommation d'eau, planning"
+      },
+      "maintenance": {
+        "title": "Données de maintenance",
+        "description": "État des équipements, interventions"
+      },
+      "production": {
+        "title": "Données de production",
+        "description": "Rendements, récoltes, qualité"
+      },
+      "financial": {
+        "title": "Données financières",
+        "description": "Coûts, revenus, rentabilité"
+      }
+    },
+    "alerts": {
+      "stock": {
+        "title": "Alertes de stock",
+        "description": "Stock faible, ruptures, expirations"
+      },
+      "tasks": {
+        "title": "Alertes de tâches",
+        "description": "Tâches en retard, échéances"
+      }
+    },
+    "layout": {
+      "topRow": "Ligne supérieure",
+      "middleRow": "Ligne centrale",
+      "bottomRow": "Ligne inférieure",
+      "helper": "Maintenez Ctrl/Cmd pour sélectionner plusieurs options",
+      "structureTitle": "Organisation du tableau de bord",
+      "structureIntro": "Le haut du tableau de bord est fixe : contexte ferme, indicateurs, tâches, équipes, comptabilité et analyses apparaissent toujours dans cet ordre.",
+      "fixedStripLabel": "Fixe — toujours affiché",
+      "fixedStripDetail": "Sélecteur de ferme · 4 indicateurs · Tâches et équipes · Comptabilité et analyses labo",
+      "optionalBlockTitle": "Widgets optionnels en dessous",
+      "optionalTwoCol": "Rangée large (2 colonnes sur grand écran)",
+      "optionalThreeCol": "Rangée en tuiles (3 colonnes sur grand écran)",
+      "toggleHint": "Appuyez sur une carte pour afficher ou masquer le widget sur le tableau de bord.",
+      "previewFixed": "Disposition fixe",
+      "previewOptional": "Vos widgets optionnels",
+      "legacyBottomNote": "Certains blocs enregistrés ne sont pas encore affichés sur le tableau de bord et sont ignorés : {{keys}}",
+      "toggleOn": "Affiché",
+      "toggleOff": "Masqué"
+    },
+    "layoutOptions": {
+      "soil": "Données du sol",
+      "climate": "Données climatiques",
+      "irrigation": "Irrigation",
+      "maintenance": "Maintenance",
+      "production": "Production",
+      "financial": "Financier",
+      "stock": "Stock",
+      "alerts": "Alertes",
+      "tasks": "Tâches",
+      "weather": "Météo"
+    },
+    "preview": {
+      "title": "Aperçu de la disposition"
+    },
+    "save": "Enregistrer",
+    "saveResult": {
+      "success": "Paramètres sauvegardés avec succès",
+      "failed": "Erreur lors de la sauvegarde des paramètres",
+      "failedDescription": "Une erreur s'est produite lors de la sauvegarde des paramètres."
+    },
+    "errors": {
+      "userOrOrgNotFound": "Utilisateur ou organisation non trouvé"
+    }
   },
   "aiReport": {
+    "title": "Rapport IA Intelligent",
+    "subtitle": "Analyse approfondie de votre parcelle par intelligence artificielle",
     "loadingProviders": "Chargement des fournisseurs IA...",
+    "noProvidersTitle": "Aucun fournisseur IA configuré",
+    "noProvidersDescription": "Pour générer des rapports IA, veuillez configurer au moins un fournisseur (OpenAI ou Google Gemini) dans les paramètres de votre organisation.",
+    "dateRange": "Période d'analyse",
+    "startDate": "Date de début",
+    "endDate": "Date de fin",
+    "errorTitle": "Erreur de génération",
+    "errorGeneric": "Une erreur est survenue. Veuillez réessayer.",
+    "generating": "Analyse en cours...",
+    "generateButton": "Générer le rapport IA",
+    "generatingHint": "L'IA analyse vos données satellites, analyses de sol et autres informations...",
     "providersLoadError": "Erreur lors du chargement des fournisseurs IA",
     "noProvidersAvailable": "Aucun fournisseur IA disponible",
     "configureApiKeys": "Veuillez configurer les clés API OpenAI ou Gemini dans les paramètres du serveur.",
     "analysisPeriod": "Période d'analyse",
-    "startDate": "Date de début",
-    "endDate": "Date de fin",
-    "generating": "Génération en cours...",
-    "generateReport": "Générer le Rapport IA",
     "analysisBlocked": "Analysis blocked: Missing critical data. Please recalibrate and fetch missing data.",
     "generationErrorFallback": "Erreur lors de la génération du rapport",
-    "generateNewReport": "← Générer un nouveau rapport"
+    "generateNewReport": "← Générer un nouveau rapport",
+    "generatingShort": "Génération en cours...",
+    "generateReport": "Générer le Rapport IA",
+    "generatedWith": "Généré avec",
+    "regenerate": "Régénérer",
+    "exportPdf": "Exporter PDF",
+    "sections": {
+      "executiveSummary": "Résumé Exécutif",
+      "healthAssessment": "Évaluation de Santé",
+      "riskAlerts": "Alertes",
+      "recommendations": "Recommandations",
+      "actionItems": "Actions à Entreprendre"
+    },
+    "health": {
+      "soil": "Sol",
+      "vegetation": "Végétation",
+      "water": "Eau",
+      "notEvaluated": "Non évalué"
+    },
+    "priority": {
+      "high": "Priorité haute",
+      "medium": "Priorité moyenne",
+      "low": "Priorité basse"
+    },
+    "providers": {
+      "openai": {
+        "name": "OpenAI GPT-4",
+        "description": "Modèle avancé pour des analyses détaillées"
+      },
+      "gemini": {
+        "name": "Google Gemini",
+        "description": "IA multimodale de Google"
+      }
+    },
+    "configureProviders": "Configurer les fournisseurs IA",
+    "securityNote": "Vos clés API sont chiffrées et stockées de manière sécurisée.",
+    "dataAvailability": {
+      "title": "Données disponibles",
+      "loading": "Vérification des données...",
+      "statusExcellent": "Excellente couverture",
+      "statusGood": "Bonne couverture",
+      "statusBasic": "Couverture de base",
+      "statusInsufficient": "Données insuffisantes",
+      "statusPartial": "Couverture partielle",
+      "statusLimited": "Couverture limitée",
+      "requiredSection": "Requis",
+      "optionalSection": "Optionnel (améliore la précision)",
+      "optional": "optionnel",
+      "satellite": "Données satellites",
+      "satelliteDetail": "{{count}} points",
+      "soil": "Analyse de sol",
+      "water": "Analyse d'eau",
+      "plant": "Analyse végétale",
+      "weather": "Données météo",
+      "canGenerateBasic": "Vous pouvez générer un rapport de base. Ajoutez des analyses pour plus de précision.",
+      "cannotGenerate": "Les données satellites et météo sont requises pour générer un rapport.",
+      "lowCoverageWarning": "Le rapport IA sera moins précis avec peu de données. Ajoutez des analyses pour de meilleurs résultats.",
+      "addAnalysis": "Ajouter"
+    },
+    "generatedOn": "Généré le"
   },
   "farmImport": {
     "title": "Importer des fermes",
@@ -721,6 +1138,7 @@
     "settings": "Paramètres",
     "stock": "Gestion des stocks",
     "infrastructure": "Infrastructure",
+    "equipment": "Équipement",
     "farmHierarchy": "Gestion des Fermes",
     "productApplications": "Applications de produits",
     "expenses": "Charges",
@@ -767,7 +1185,8 @@
     "sentRequests": "Demandes envoyées",
     "viewMarketplace": "Voir la marketplace",
     "paymentRecords": "Paiements",
-    "bankAccounts": "Comptes bancaires"
+    "bankAccounts": "Comptes bancaires",
+    "infrastructureEquipment": "Infrastructure & Équipement"
   },
   "sidebar": {
     "collapse": "Réduire",
@@ -829,354 +1248,6 @@
       "viewTask": "Voir la Tâche",
       "viewFarm": "Voir la Ferme",
       "more": "plus"
-    }
-  },
-  "dashboard": {
-    "title": "Tableau de bord",
-    "subtitle": "Analysez vos fermes, vos équipes et votre performance financière en un seul endroit",
-    "loading": "Chargement de l'organisation...",
-    "heroTitle": "Pilotage de l'exploitation agricole",
-    "quickActions": "Actions rapides",
-    "pageTitle": "Tableau de bord",
-    "metaDescription": "Pilotez vos fermes : visualisez parcelles, tâches, analyses et comptabilité dans une seule interface.",
-    "keyFeatures": {
-      "title": "Points clés de la plateforme",
-      "subtitle": "Activez les modules qui soutiennent vos objectifs quotidiens et accédez rapidement aux actions stratégiques",
-      "farmOps": {
-        "title": "Opérations agricoles pilotées",
-        "description": "Visualisez vos fermes, parcelles et suivis culturaux en temps réel pour déclencher les bonnes actions",
-        "cta": "Ouvrir la gestion des parcelles"
-      },
-      "taskExecution": {
-        "title": "Tâches et main-d'œuvre coordonnés",
-        "description": "Planifiez les travaux, assignez vos équipes et suivez l'avancement et le temps passé depuis un seul écran",
-        "cta": "Planifier une tâche"
-      },
-      "financialHealth": {
-        "title": "Santé financière consolidée",
-        "description": "Reliez factures, paiements et coûts par ferme pour anticiper trésorerie et marges",
-        "cta": "Consulter la comptabilité"
-      },
-      "labServices": {
-        "title": "Analyses & services intégrés",
-        "description": "Commandez vos analyses de sol et laboratoire depuis la plateforme et intégrez les résultats à vos décisions",
-        "cta": "Explorer les analyses"
-      }
-    },
-    "structuredData": {
-      "platformName": "plateforme de gestion agricole",
-      "description": "Solution unifiée de gestion agricole : fermes, parcelles, tâches, comptabilité et analyses.",
-      "services": {
-        "parcels": "Gestion des parcelles",
-        "tasks": "Planification des tâches",
-        "accounting": "Comptabilité agricole",
-        "analyses": "Analyses de laboratoire"
-      }
-    },
-    "commands": {
-      "sections": {
-        "navigation": "Navigation",
-        "modules": "Modules",
-        "preferences": "Préférences"
-      },
-      "navigation": {
-        "dashboard": "Aller au tableau de bord",
-        "dashboardKeywords": "dashboard accueil home tableau",
-        "analyses": "Ouvrir les analyses",
-        "analysesKeywords": "analyses soil rapport",
-        "parcels": "Voir les parcelles",
-        "parcelsKeywords": "parcelles champs map",
-        "stock": "Accéder au stock",
-        "stockKeywords": "stock inventaire",
-        "infrastructure": "Consulter les infrastructures",
-        "infrastructureKeywords": "infrastructure irrigation équipements",
-        "farmHierarchy": "Gérer les fermes",
-        "farmHierarchyKeywords": "fermes hiérarchie",
-        "tasks": "Gérer les tâches",
-        "tasksKeywords": "tâches missions travail",
-        "settings": "Ouvrir les paramètres",
-        "settingsKeywords": "paramètres settings organisation"
-      },
-      "create": {
-        "parcel": "Créer une parcelle",
-        "task": "Créer une tâche",
-        "cycle": "Créer un cycle cultural",
-        "stockEntry": "Créer une entrée de stock",
-        "invoice": "Créer une facture",
-        "worker": "Ajouter un travailleur"
-      },
-      "searchPlaceholder": "Rechercher une action ou une page...",
-      "noResults": "Aucun résultat trouvé.",
-      "modules": {
-        "subtitle": "Modules disponibles"
-      },
-      "preferences": {
-        "lightMode": "Passer en mode clair",
-        "darkMode": "Passer en mode sombre",
-        "themeKeywords": "theme mode sombre clair dark light"
-      }
-    },
-    "widgets": {
-      "noFarmSelected": "Sélectionnez une ferme pour afficher les parcelles et données associées",
-      "farm": {
-        "title": "Ferme",
-        "noFarm": "Aucune ferme sélectionnée",
-        "parcels": "Parcelles",
-        "surface": "Surface",
-        "analyses": "Analyses",
-        "viewParcels": "Voir les parcelles",
-        "addParcel": "Ajouter une parcelle"
-      },
-      "soil": {
-        "title": "Analyses du Sol",
-        "total": "Total",
-        "analyses": "analyses",
-        "recent": "Récentes",
-        "last30Days": "derniers 30j",
-        "needsAttention": "{{count}} parcelle nécessite une attention",
-        "needsAttention_plural": "{{count}} parcelles nécessitent une attention",
-        "outOfNorm": "pH ou niveaux de nutriments hors norme",
-        "latestAnalysis": "Dernière analyse",
-        "parcel": "Parcelle",
-        "allInNorm": "Toutes les analyses sont dans les normes",
-        "empty": "Aucune analyse du sol",
-        "addAnalysis": "Ajouter une analyse"
-      },
-      "climate": {
-        "temperature": "Température"
-      },
-      "irrigation": {
-        "title": "Irrigation",
-        "active": "En cours",
-        "stopped": "Arrêtée",
-        "sector": "Secteur",
-        "start": "Début",
-        "duration": "Durée"
-      },
-      "maintenance": {
-        "title": "Maintenance",
-        "inProgress": "en cours",
-        "start": "Début",
-        "expectedEnd": "Fin prévue"
-      },
-      "production": {
-        "title": "Analyse des rendements",
-        "chartComing": "Graphique à venir"
-      },
-      "financial": {
-        "title": "Données financières",
-        "chartComing": "Graphique à venir"
-      },
-      "alerts": {
-        "title": "Alertes de stock",
-        "lowStock": "Stock faible"
-      },
-      "viewAll": "Voir tout",
-      "parcels": {
-        "title": "Parcelles",
-        "total": "Total",
-        "parcels": "parcelles",
-        "surface": "Surface",
-        "hectares": "hectares",
-        "topCrops": "Principales cultures",
-        "empty": "Aucune parcelle créée",
-        "create": "Créer une parcelle",
-        "unspecifiedCrop": "Non spécifié"
-      },
-      "workers": {
-        "title": "Activité Travailleurs",
-        "active": "Actifs",
-        "outOfTotal": "sur {{total}} total",
-        "today": "Aujourd'hui",
-        "activeToday": "en activité",
-        "tasksInProgress": "Tâches en cours",
-        "tasksScheduledToday": "{{count}} tâche prévue aujourd'hui",
-        "tasksScheduledToday_plural": "{{count}} tâches prévues aujourd'hui",
-        "mostActive": "Plus actifs",
-        "tasks": "tâches",
-        "empty": "Aucun travailleur enregistré",
-        "addWorkers": "Ajouter des travailleurs"
-      },
-      "stock": {
-        "title": "Stock & Inventaire",
-        "alerts": "Alertes",
-        "lowStock": "stock faible",
-        "ok": "OK",
-        "inStock": "en stock",
-        "units": "unités",
-        "min": "Min",
-        "moreItems": "+{{count}} autres articles en stock faible",
-        "allOptimal": "Tous les stocks sont au niveau optimal",
-        "totalProducts": "Total produits"
-      },
-      "harvests": {
-        "title": "Récoltes",
-        "thisMonth": "Ce mois",
-        "harvests": "récoltes",
-        "quantity": "Quantité",
-        "kgThisMonth": "kg ce mois",
-        "lastHarvest": "Dernière récolte",
-        "parcel": "Parcelle",
-        "quality": "Qualité",
-        "kg": "kg",
-        "totalHarvests": "Total récoltes",
-        "empty": "Aucune récolte enregistrée",
-        "record": "Enregistrer une récolte"
-      },
-      "tasks": {
-        "title": "Tâches à venir",
-        "noTasks": "Aucune tâche prévue",
-        "upcomingSummary": "{{count}} tâche à venir dans les 30 prochains jours",
-        "upcomingSummary_plural": "{{count}} tâches à venir dans les 30 prochains jours",
-        "priority": {
-          "low": "Basse",
-          "medium": "Moyenne",
-          "high": "Haute",
-          "urgent": "Urgente"
-        },
-        "status": {
-          "pending": "En attente",
-          "assigned": "Assignée",
-          "inProgress": "En cours",
-          "completed": "Terminée",
-          "cancelled": "Annulée",
-          "paused": "En pause"
-        }
-      },
-      "analysis": {
-        "title": "Analyses",
-        "tabs": {
-          "soil": "Sol",
-          "plant": "Plante",
-          "water": "Eau"
-        },
-        "total": "Total",
-        "analyses": "analyses",
-        "recent": "Récentes",
-        "last30Days": "derniers 30j",
-        "needsAttention": "{{count}} analyse nécessite une attention",
-        "needsAttention_plural": "{{count}} analyses nécessitent une attention",
-        "outOfNorm": "Paramètres hors norme",
-        "latestAnalysis": "Dernière analyse",
-        "parcel": "Parcelle",
-        "allInNorm": "Toutes les analyses sont dans les normes",
-        "empty": "Aucune analyse disponible",
-        "addAnalysis": "Ajouter une analyse",
-        "chlorophyll": "Chlorophylle"
-      },
-      "sales": {
-        "title": "Commandes de vente",
-        "thisMonth": "Ce mois",
-        "ordersCount": "{{count}} commandes",
-        "totalOrders": "Total commandes",
-        "pending": "En attente",
-        "inProgress": "En cours",
-        "shipped": "Expédié",
-        "completed": "Terminé",
-        "recentOrders": "Commandes récentes",
-        "noOrders": "Aucune commande de vente"
-      },
-      "accounting": {
-        "title": "Comptabilité",
-        "revenue": "Revenus",
-        "expenses": "Dépenses",
-        "invoicesCount": "{{count}} factures",
-        "draft": "Brouillon",
-        "pending": "En attente",
-        "paid": "Payé",
-        "overdue": "En retard",
-        "outstandingAlert": "Montant en cours",
-        "recentInvoices": "Factures récentes",
-        "noInvoices": "Aucune facture",
-        "sale": "Vente",
-        "purchase": "Achat"
-      }
-    },
-    "description": "Personnalisez l'affichage de votre tableau de bord en choisissant les données à afficher et leur disposition.",
-    "saving": "Sauvegarde...",
-    "sections": {
-      "dataDisplay": "Données à afficher",
-      "alerts": "Alertes et notifications",
-      "layout": "Disposition du tableau de bord"
-    },
-    "data": {
-      "soil": {
-        "title": "Données du sol",
-        "description": "Humidité, pH, nutriments"
-      },
-      "climate": {
-        "title": "Données climatiques",
-        "description": "Température, humidité, pluviométrie"
-      },
-      "irrigation": {
-        "title": "Données d'irrigation",
-        "description": "Consommation d'eau, planning"
-      },
-      "maintenance": {
-        "title": "Données de maintenance",
-        "description": "État des équipements, interventions"
-      },
-      "production": {
-        "title": "Données de production",
-        "description": "Rendements, récoltes, qualité"
-      },
-      "financial": {
-        "title": "Données financières",
-        "description": "Coûts, revenus, rentabilité"
-      }
-    },
-    "alerts": {
-      "stock": {
-        "title": "Alertes de stock",
-        "description": "Stock faible, ruptures, expirations"
-      },
-      "tasks": {
-        "title": "Alertes de tâches",
-        "description": "Tâches en retard, échéances"
-      }
-    },
-    "layout": {
-      "topRow": "Ligne supérieure",
-      "middleRow": "Ligne centrale",
-      "bottomRow": "Ligne inférieure",
-      "helper": "Maintenez Ctrl/Cmd pour sélectionner plusieurs options",
-      "structureTitle": "Organisation du tableau de bord",
-      "structureIntro": "Le haut du tableau de bord est fixe : contexte ferme, indicateurs, tâches, équipes, comptabilité et analyses apparaissent toujours dans cet ordre.",
-      "fixedStripLabel": "Fixe — toujours affiché",
-      "fixedStripDetail": "Sélecteur de ferme · 4 indicateurs · Tâches et équipes · Comptabilité et analyses labo",
-      "optionalBlockTitle": "Widgets optionnels en dessous",
-      "optionalTwoCol": "Rangée large (2 colonnes sur grand écran)",
-      "optionalThreeCol": "Rangée en tuiles (3 colonnes sur grand écran)",
-      "toggleHint": "Appuyez sur une carte pour afficher ou masquer le widget sur le tableau de bord.",
-      "previewFixed": "Disposition fixe",
-      "previewOptional": "Vos widgets optionnels",
-      "legacyBottomNote": "Certains blocs enregistrés ne sont pas encore affichés sur le tableau de bord et sont ignorés : {{keys}}",
-      "toggleOn": "Affiché",
-      "toggleOff": "Masqué"
-    },
-    "layoutOptions": {
-      "soil": "Données du sol",
-      "climate": "Données climatiques",
-      "irrigation": "Irrigation",
-      "maintenance": "Maintenance",
-      "production": "Production",
-      "financial": "Financier",
-      "stock": "Stock",
-      "alerts": "Alertes",
-      "tasks": "Tâches",
-      "weather": "Météo"
-    },
-    "preview": {
-      "title": "Aperçu de la disposition"
-    },
-    "save": "Enregistrer",
-    "saveResult": {
-      "success": "Paramètres sauvegardés avec succès",
-      "failed": "Erreur lors de la sauvegarde des paramètres",
-      "failedDescription": "Une erreur s'est produite lors de la sauvegarde des paramètres."
-    },
-    "errors": {
-      "userOrOrgNotFound": "Utilisateur ou organisation non trouvé"
     }
   },
   "profitability": {
@@ -1343,7 +1414,7 @@
     },
     "signUp": "S'inscrire",
     "signIn": {
-        "title": "Connectez-vous à AgroGina",
+      "title": "Connectez-vous à AgroGina",
       "subtitle": "Bon retour",
       "helperText": "Accédez à vos données satellite, tableau de bord d'exploitation et collaborateurs depuis un espace sécurisé.",
       "noAccount": "Vous n'avez pas encore de compte ?",
@@ -1372,6 +1443,9 @@
       "errorTosRequired": "Vous devez accepter les Conditions Générales d'Utilisation et la Politique de Confidentialité",
       "errorPasswordMismatch": "Les mots de passe ne correspondent pas",
       "errorEmailExists": "Un utilisateur avec cet email existe déjà",
+      "errorEmailExistsTitle": "Cet email est déjà enregistré.",
+      "errorEmailExistsAction": "Connectez-vous à votre compte existant et créez une nouvelle organisation.",
+      "signInToCreateOrg": "Se connecter & créer l'organisation",
       "errorGeneric": "Une erreur est survenue lors de l'inscription"
     },
     "createAccount": "Créer un compte",
@@ -1424,6 +1498,9 @@
       "errorTosRequired": "Vous devez accepter les Conditions Générales d'Utilisation et la Politique de Confidentialité",
       "errorPasswordMismatch": "Les mots de passe ne correspondent pas",
       "errorEmailExists": "Un utilisateur avec cet email existe déjà",
+      "errorEmailExistsTitle": "Cet email est déjà enregistré.",
+      "errorEmailExistsAction": "Connectez-vous à votre compte existant et créez une nouvelle organisation.",
+      "signInToCreateOrg": "Se connecter & créer l'organisation",
       "errorGeneric": "Une erreur est survenue lors de l'inscription",
       "submitButton": "S'inscrire",
       "submitting": "Création du compte..."
@@ -1489,7 +1566,89 @@
   },
   "onboarding": {
     "loading": "Chargement...",
+    "header": {
+      "step": "Étape {{current}} sur {{total}}"
+    },
     "errorGeneric": "Une erreur est survenue",
+    "welcome": {
+      "back": "Retour",
+      "continue": "Continuer",
+      "nextStep": "Étape suivante",
+      "greetingPrefix": "Bienvenue sur",
+      "greetingBrand": "AgroGina",
+      "greetingTagline": "Cultivez votre succès avec intelligence",
+      "nameTitle": "Comment vous appelez-vous ?",
+      "nameSubtitle": "Nous personnaliserons votre expérience",
+      "firstName": "Prénom",
+      "lastName": "Nom",
+      "languageHello": "Bonjour, {{name}}",
+      "languagePickSubtitle": "Quelle langue préférez-vous ?",
+      "timezoneTitle": "Votre fuseau horaire",
+      "timezoneSubtitle": "Pour synchroniser vos tâches et rappels",
+      "languages": {
+        "fr": { "name": "Français", "description": "Interface en français" },
+        "en": { "name": "English", "description": "Interface en anglais" },
+        "ar": { "name": "العربية", "description": "واجهة عربية" }
+      },
+      "timezones": {
+        "Africa/Casablanca": { "city": "Casablanca", "offset": "GMT+1" },
+        "Europe/Paris": { "city": "Paris", "offset": "GMT+1/+2" },
+        "Europe/London": { "city": "Londres", "offset": "GMT+0/+1" },
+        "UTC": { "city": "UTC", "offset": "GMT+0" }
+      },
+      "phoneTitle": "Votre numéro de mobile",
+      "phoneSubtitle": "Pour WhatsApp, les SMS et les messages importants concernant votre compte.",
+      "phoneLabel": "Numéro de téléphone",
+      "phoneHint": "Choisissez le pays, puis saisissez votre numéro au format international.",
+      "phoneInvalid": "Veuillez saisir un numéro valide pour le pays sélectionné."
+    },
+    "organization": {
+      "accountTypeTitle": "Quel type de compte ?",
+      "accountTypeSubtitle": "Nous adapterons les fonctionnalités à vos besoins",
+      "accountTypes": {
+        "individual": { "name": "Particulier", "description": "Petit producteur ou jardinier" },
+        "farm": { "name": "Exploitation agricole", "description": "Ferme professionnelle", "badge": "Populaire" },
+        "business": { "name": "Entreprise", "description": "Coopérative ou grande exploitation" }
+      },
+      "orgNameTitleFarm": "Nommez votre exploitation",
+      "orgNameTitleOrg": "Nommez votre organisation",
+      "orgNameSubtitle": "Ce nom apparaîtra sur vos rapports et factures",
+      "orgNameLabel": "Nom de l'organisation",
+      "slugLabel": "Identifiant unique (slug)",
+      "slugTaken": "Ce slug est déjà pris",
+      "slugHint": "Votre URL : agrogina.ma/{{slug}}",
+      "slugPlaceholder": "votre-slug",
+      "slugSuggest": "Utiliser « {{suggestion}} » à la place",
+      "previewLabel": "Aperçu",
+      "contactTitle": "Contact & localisation",
+      "contactSubtitle": "Pour les factures et communications",
+      "emailLabel": "Email professionnel",
+      "addressOptional": "Adresse (optionnel)",
+      "cityLabel": "Ville",
+      "countryLabel": "Pays",
+      "saving": "Enregistrement...",
+      "countries": {
+        "MA": "Maroc",
+        "FR": "France",
+        "ES": "Espagne",
+        "DZ": "Algérie",
+        "TN": "Tunisie"
+      },
+      "phoneLabel": "Téléphone de l'organisation (optionnel)",
+      "phoneHint": "Pour les factures et le support. Laissez vide si identique au vôtre.",
+      "phoneInvalid": "Ce numéro ne semble pas valide pour le pays sélectionné.",
+      "reuseProfilePhone": "Utiliser le même numéro que sur mon profil",
+      "sameAsProfilePhone": "C'est le même numéro que sur votre profil."
+    },
+    "farm": {
+      "locationLabel": "Localisation",
+      "locationPlaceholder": "Rechercher un lieu…",
+      "locationPlaceholderMA": "Rechercher au Maroc…",
+      "locationSearching": "Recherche…",
+      "locationNoResults": "Aucun lieu trouvé.",
+      "locationHelp": "Recherchez sur OpenStreetMap et choisissez un résultat pour enregistrer des coordonnées précises (cartes et parcelles).",
+      "locationChange": "Modifier"
+    },
     "selectTrial": {
       "setupSteps": {
         "auth": "Vérification de l'authentification...",
@@ -1534,6 +1693,40 @@
       "startingTrial": "Démarrage de votre essai...",
       "noCreditCard": "Aucune carte bancaire requise. Annulez à tout moment.",
       "errorTrialFailed": "Échec de la création de l'abonnement d'essai"
+    },
+    "settings": {
+      "title": "Derniers réglages",
+      "subtitle": "Devise, format des dates et plan comptable (pays) sont nécessaires pour enregistrer correctement coûts, stock et paie.",
+      "chartTitle": "Plan comptable (pays)",
+      "chartHelp": "Nous installons le plan de comptes et les mappings par défaut pour ce pays. Vous pourrez les affiner dans Comptabilité.",
+      "chart": {
+        "ma": "Maroc (CGNC)",
+        "fr": "France (PCG)",
+        "tn": "Tunisie (PCN)",
+        "us": "États-Unis (US GAAP)",
+        "gb": "Royaume-Uni (FRS 102)",
+        "de": "Allemagne (HGB)"
+      },
+      "currency": "Devise",
+      "currencyNames": {
+        "mad": "Dirham marocain",
+        "eur": "Euro",
+        "usd": "Dollar US"
+      },
+      "dateFormat": "Format de date",
+      "dateFormatLabels": {
+        "eu": "31/12/2024 (Europe)",
+        "us": "12/31/2024 (États-Unis)",
+        "iso": "2024-12-31 (ISO)"
+      },
+      "demoTitle": "Données de démonstration",
+      "demoDesc": "Uniquement si vous n’avez pas encore de ferme — sinon ignoré pour conserver votre ferme et vos parcelles.",
+      "notificationsTitle": "Notifications",
+      "notificationsDesc": "Alertes importantes par e-mail",
+      "modulesLine": "{{count}} modules",
+      "launching": "Configuration…",
+      "launch": "Ouvrir mon espace",
+      "incomplete": "Choisissez un pays de plan comptable, une devise et un format de date pour continuer."
     }
   },
   "public": {
@@ -2114,7 +2307,7 @@
     "seo": {
       "title": "AGROGINA - La Suite de Gestion Agricole Tout-en-Un | Maroc",
       "description": "AGROGINA révolutionne l'agriculture au Maroc. Une plateforme unique pour piloter production, finance, RH, stocks et commercialisation. Agriculture de précision et gestion d'exploitation simplifiée.",
-    "keywords": "gestion agricole, logiciel agriculture maroc, erp agricole, parcelles, NDVI, analyse satellite, comptabilité agricole, gestion ferme, agriculture de précision, marketplace agricole, contrôle qualité fruit, gestion main d'oeuvre agricole, agrogina"
+      "keywords": "gestion agricole, logiciel agriculture maroc, erp agricole, parcelles, NDVI, analyse satellite, comptabilité agricole, gestion ferme, agriculture de précision, marketplace agricole, contrôle qualité fruit, gestion main d'oeuvre agricole, agrogina"
     }
   },
   "suppliers": {
@@ -3950,7 +4143,7 @@
   },
   "authPages": {
     "login": {
-        "title": "Connectez-vous à AgroGina",
+      "title": "Connectez-vous à AgroGina",
       "subtitle": "Bon retour",
       "emailLabel": "Adresse email",
       "passwordLabel": "Mot de passe",
@@ -4099,7 +4292,9 @@
       "pumpType": "Type de pompe",
       "pumpPower": "Puissance pompe",
       "pump": "Pompe"
-    }
+    },
+    "tabInfra": "Infrastructures",
+    "tabEquipment": "Équipement"
   },
   "parcels": {
     "title": "Gestion des Parcelles",
@@ -5910,87 +6105,6 @@
       }
     }
   },
-  "aiReport": {
-    "title": "Rapport IA Intelligent",
-    "subtitle": "Analyse approfondie de votre parcelle par intelligence artificielle",
-    "loadingProviders": "Chargement des fournisseurs IA...",
-    "noProvidersTitle": "Aucun fournisseur IA configuré",
-    "noProvidersDescription": "Pour générer des rapports IA, veuillez configurer au moins un fournisseur (OpenAI ou Google Gemini) dans les paramètres de votre organisation.",
-    "dateRange": "Période d'analyse",
-    "startDate": "Date de début",
-    "endDate": "Date de fin",
-    "errorTitle": "Erreur de génération",
-    "errorGeneric": "Une erreur est survenue. Veuillez réessayer.",
-    "generating": "Analyse en cours...",
-    "generateButton": "Générer le rapport IA",
-    "generatingHint": "L'IA analyse vos données satellites, analyses de sol et autres informations...",
-    "providersLoadError": "Erreur lors du chargement des fournisseurs IA",
-    "noProvidersAvailable": "Aucun fournisseur IA disponible",
-    "configureApiKeys": "Veuillez configurer les clés API OpenAI ou Gemini dans les paramètres du serveur.",
-    "analysisPeriod": "Période d'analyse",
-    "analysisBlocked": "Analysis blocked: Missing critical data. Please recalibrate and fetch missing data.",
-    "generationErrorFallback": "Erreur lors de la génération du rapport",
-    "generateNewReport": "← Générer un nouveau rapport",
-    "generatingShort": "Génération en cours...",
-    "generateReport": "Générer le Rapport IA",
-    "generatedWith": "Généré avec",
-    "regenerate": "Régénérer",
-    "exportPdf": "Exporter PDF",
-    "sections": {
-      "executiveSummary": "Résumé Exécutif",
-      "healthAssessment": "Évaluation de Santé",
-      "riskAlerts": "Alertes",
-      "recommendations": "Recommandations",
-      "actionItems": "Actions à Entreprendre"
-    },
-    "health": {
-      "soil": "Sol",
-      "vegetation": "Végétation",
-      "water": "Eau",
-      "notEvaluated": "Non évalué"
-    },
-    "priority": {
-      "high": "Priorité haute",
-      "medium": "Priorité moyenne",
-      "low": "Priorité basse"
-    },
-    "providers": {
-      "openai": {
-        "name": "OpenAI GPT-4",
-        "description": "Modèle avancé pour des analyses détaillées"
-      },
-      "gemini": {
-        "name": "Google Gemini",
-        "description": "IA multimodale de Google"
-      }
-    },
-    "configureProviders": "Configurer les fournisseurs IA",
-    "securityNote": "Vos clés API sont chiffrées et stockées de manière sécurisée.",
-    "dataAvailability": {
-      "title": "Données disponibles",
-      "loading": "Vérification des données...",
-      "statusExcellent": "Excellente couverture",
-      "statusGood": "Bonne couverture",
-      "statusBasic": "Couverture de base",
-      "statusInsufficient": "Données insuffisantes",
-      "statusPartial": "Couverture partielle",
-      "statusLimited": "Couverture limitée",
-      "requiredSection": "Requis",
-      "optionalSection": "Optionnel (améliore la précision)",
-      "optional": "optionnel",
-      "satellite": "Données satellites",
-      "satelliteDetail": "{{count}} points",
-      "soil": "Analyse de sol",
-      "water": "Analyse d'eau",
-      "plant": "Analyse végétale",
-      "weather": "Données météo",
-      "canGenerateBasic": "Vous pouvez générer un rapport de base. Ajoutez des analyses pour plus de précision.",
-      "cannotGenerate": "Les données satellites et météo sont requises pour générer un rapport.",
-      "lowCoverageWarning": "Le rapport IA sera moins précis avec peu de données. Ajoutez des analyses pour de meilleurs résultats.",
-      "addAnalysis": "Ajouter"
-    },
-    "generatedOn": "Généré le"
-  },
   "dataTransparency": {
     "modalTitle": "Transparence des Données Sources",
     "modalDescription": "Consultez et vérifiez les sources de données utilisées pour générer ce rapport IA.",
@@ -6549,27 +6663,6 @@
     "actions": {
       "viewDetails": "Voir les détails",
       "createReception": "Créer lot de réception"
-    }
-  },
-  "utilities": {
-    "title": "Gestion des Utilités",
-    "subtitle": "Suivez et gérez la consommation d'eau et d'électricité de vos fermes",
-    "loading": "Chargement de l'organisation...",
-    "loadingDashboard": "Chargement du tableau de bord...",
-    "accountNotFoundError": "Compte comptable de type \"{{accountType}}\"{{subtypeMsg}} introuvable. Veuillez créer ce compte dans le plan comptable.",
-    "selectFarmToAddCharge": "Sélectionnez une ferme pour ajouter une charge.",
-    "fileUploadError": "Erreur lors du téléchargement du fichier",
-    "journalEntryMissingAccountHelp": "✓ Charge enregistrée avec succès.\n\n⚠️ L'écriture comptable n'a pas pu être créée automatiquement.\n\nRaison: {{errorMessage}}\n\n→ Veuillez configurer le plan comptable dans la section Comptabilité > Plan Comptable.\n→ Comptes requis: Charges d'exploitation, Trésorerie, Dettes fournisseurs.",
-    "journalEntryCreatedWithError": "Charge enregistrée, mais l'écriture comptable n'a pas été créée: {{errorMessage}}",
-    "selectFarmToEditCharge": "Sélectionnez une ferme pour modifier une charge.",
-    "utilityTypes": {
-      "electricity": "Électricité",
-      "water": "Eau",
-      "diesel": "Diesel",
-      "gas": "Gaz",
-      "internet": "Internet",
-      "phone": "Téléphone",
-      "other": "Autre"
     }
   },
   "receptionBatches": {
@@ -7732,40 +7825,275 @@
     "title": "Gestion des charges fixes",
     "subtitle": "Suivez les charges fixes, la consommation et les écritures comptables liées.",
     "selectFarmMessage": "Sélectionnez une ferme pour gérer les charges fixes.",
-    "utilityTypes": { "electricity": "Électricité", "water": "Eau", "diesel": "Diesel", "gas": "Gaz", "internet": "Internet", "phone": "Téléphone", "other": "Autre" },
-    "paymentStatus": { "paid": "Payé", "pending": "En attente", "overdue": "En retard" },
-    "views": { "grouped": "Vue groupée", "cards": "Vue cartes", "list": "Vue liste", "dashboard": "Vue tableau de bord" },
-    "actions": {
-      "resetFilters": "Réinitialiser les filtres", "addUtility": "Ajouter une charge", "downloadInvoice": "Télécharger la facture", "accountingJournal": "Journal comptable", "selectFarmToAdd": "Sélectionnez une ferme pour ajouter une charge", "newUtility": "Nouvelle charge", "advancedFilters": "Filtres avancés", "filters": "Filtres", "openChartOfAccounts": "Ouvrir le plan comptable", "cancel": "Annuler", "uploading": "Téléchargement...", "update": "Mettre à jour", "add": "Ajouter", "chooseFile": "Choisir un fichier"
+    "utilityTypes": {
+      "electricity": "Électricité",
+      "water": "Eau",
+      "diesel": "Diesel",
+      "gas": "Gaz",
+      "internet": "Internet",
+      "phone": "Téléphone",
+      "other": "Autre"
     },
-    "placeholders": { "search": "Rechercher par type, montant, note ou date...", "consumption": "ex: 500", "selectUnit": "Sélectionner une unité" },
-    "filters": { "allStatuses": "Tous les statuts", "allTypes": "Tous les types", "allRecurring": "Toutes", "recurring": "Récurrentes", "nonRecurring": "Non récurrentes", "startDate": "Date début", "endDate": "Date fin", "sortBy": "Trier par", "order": "Ordre", "descending": "Décroissant", "ascending": "Croissant" },
-    "columns": { "date": "Date", "amount": "Montant", "type": "Type" },
-    "stats": { "totalExpenses": "Total des charges", "recurringExpenses": "Charges récurrentes", "pending": "En attente", "totalCount": "Nombre total" },
-    "dashboardAccess": { "title": "Accès limité au tableau de bord", "description": "Votre rôle ne permet pas d'accéder aux analyses financières détaillées." },
-    "dialog": { "editTitle": "Modifier la charge", "newTitle": "Nouvelle charge", "editDescription": "Modifiez les détails de cette charge. Les modifications seront automatiquement synchronisées avec le livre comptable.", "newDescription": "Ajoutez une nouvelle charge. Une écriture comptable sera automatiquement créée dans le livre." },
-    "fields": { "utilityType": "Type de charge", "consumptionDetails": "Détails de consommation (optionnel)", "leaveBlankIfUnavailable": "Laissez vide si non disponible", "consumption": "Consommation", "unit": "Unité", "unitCost": "Coût unitaire:", "date": "Date", "recurringExpense": "Charge récurrente", "frequency": "Fréquence", "notes": "Notes", "invoice": "Facture (PDF, Image)", "invoiceAttached": "Facture attachée" },
-    "frequency": { "monthly": "Mensuelle", "quarterly": "Trimestrielle", "yearly": "Annuelle" },
-    "empty": { "noResultsTitle": "Aucun résultat trouvé", "noUtilitiesTitle": "Aucune charge fixe", "noResultsMessage": "Aucune charge ne correspond aux filtres sélectionnés. Essayez de modifier vos critères de recherche.", "noUtilitiesMessage": "Commencez par ajouter vos premières charges fixes (électricité, eau, etc.)." }
+    "paymentStatus": {
+      "paid": "Payé",
+      "pending": "En attente",
+      "overdue": "En retard"
+    },
+    "views": {
+      "grouped": "Vue groupée",
+      "cards": "Vue cartes",
+      "list": "Vue liste",
+      "dashboard": "Vue tableau de bord"
+    },
+    "actions": {
+      "resetFilters": "Réinitialiser les filtres",
+      "addUtility": "Ajouter une charge",
+      "downloadInvoice": "Télécharger la facture",
+      "accountingJournal": "Journal comptable",
+      "selectFarmToAdd": "Sélectionnez une ferme pour ajouter une charge",
+      "newUtility": "Nouvelle charge",
+      "advancedFilters": "Filtres avancés",
+      "filters": "Filtres",
+      "openChartOfAccounts": "Ouvrir le plan comptable",
+      "cancel": "Annuler",
+      "uploading": "Téléchargement...",
+      "update": "Mettre à jour",
+      "add": "Ajouter",
+      "chooseFile": "Choisir un fichier"
+    },
+    "placeholders": {
+      "search": "Rechercher par type, montant, note ou date...",
+      "consumption": "ex: 500",
+      "selectUnit": "Sélectionner une unité"
+    },
+    "filters": {
+      "allStatuses": "Tous les statuts",
+      "allTypes": "Tous les types",
+      "allRecurring": "Toutes",
+      "recurring": "Récurrentes",
+      "nonRecurring": "Non récurrentes",
+      "startDate": "Date début",
+      "endDate": "Date fin",
+      "sortBy": "Trier par",
+      "order": "Ordre",
+      "descending": "Décroissant",
+      "ascending": "Croissant"
+    },
+    "columns": {
+      "date": "Date",
+      "amount": "Montant",
+      "type": "Type"
+    },
+    "stats": {
+      "totalExpenses": "Total des charges",
+      "recurringExpenses": "Charges récurrentes",
+      "pending": "En attente",
+      "totalCount": "Nombre total"
+    },
+    "dashboardAccess": {
+      "title": "Accès limité au tableau de bord",
+      "description": "Votre rôle ne permet pas d'accéder aux analyses financières détaillées."
+    },
+    "dialog": {
+      "editTitle": "Modifier la charge",
+      "newTitle": "Nouvelle charge",
+      "editDescription": "Modifiez les détails de cette charge. Les modifications seront automatiquement synchronisées avec le livre comptable.",
+      "newDescription": "Ajoutez une nouvelle charge. Une écriture comptable sera automatiquement créée dans le livre."
+    },
+    "fields": {
+      "utilityType": "Type de charge",
+      "consumptionDetails": "Détails de consommation (optionnel)",
+      "leaveBlankIfUnavailable": "Laissez vide si non disponible",
+      "consumption": "Consommation",
+      "unit": "Unité",
+      "unitCost": "Coût unitaire:",
+      "date": "Date",
+      "recurringExpense": "Charge récurrente",
+      "frequency": "Fréquence",
+      "notes": "Notes",
+      "invoice": "Facture (PDF, Image)",
+      "invoiceAttached": "Facture attachée"
+    },
+    "frequency": {
+      "monthly": "Mensuelle",
+      "quarterly": "Trimestrielle",
+      "yearly": "Annuelle"
+    },
+    "empty": {
+      "noResultsTitle": "Aucun résultat trouvé",
+      "noUtilitiesTitle": "Aucune charge fixe",
+      "noResultsMessage": "Aucune charge ne correspond aux filtres sélectionnés. Essayez de modifier vos critères de recherche.",
+      "noUtilitiesMessage": "Commencez par ajouter vos premières charges fixes (électricité, eau, etc.)."
+    }
   },
   "taskDetail": {
-    "timeline": { "taskCreated": "Tâche créée", "workStarted": "Travail démarré", "workEnded": "Travail terminé", "taskApproved": "Tâche approuvée", "taskCompleted": "Tâche terminée", "issueReported": "Problème signalé", "statusUpdate": "Mise à jour de statut", "comment": "Commentaire", "clockedIn": "Pointage d'entrée", "clockedOut": "Pointage de sortie · {{hours}}h" },
-    "fields": { "taskType": "Type de tâche", "farm": "Ferme", "parcel": "Parcelle", "assignedTo": "Assigné à", "estimatedDuration": "Durée estimée", "estimatedDurationValue": "{{hours}} heures", "scheduledDate": "Date prévue", "dueDate": "Date limite", "description": "Description", "notes": "Notes", "progress": "Progression" },
-    "payment": { "title": "Informations de paiement", "type": "Type de paiement", "estimatedUnits": "Unités estimées", "estimatedUnitsValue": "Unités estimées: {{count}}", "ratePerUnit": "Tarif par unité", "types": { "perUnit": "À l'unité", "daily": "Journalier", "monthly": "Mensuel", "metayage": "Métayage" } },
-    "perUnitForm": { "title": "Paiement à l'unité", "ratePerUnit": "Tarif par unité (MAD) *", "ratePlaceholder": "Ex: 5.00", "unitsPerWorker": "Unités par travailleur", "unitsCompleted": "Unités complétées *", "unitsPlaceholder": "Ex: 100", "totalPayment": "Paiement total", "notesPlaceholder": "Notes sur le travail effectué..." },
-    "harvestForm": { "title": "Enregistrer la récolte", "completionType": "Type de complétion", "completeFull": "Terminer complètement", "completeFullDesc": "Marquer la tâche comme terminée", "partial": "Récolte partielle", "partialDesc": "Continuer la tâche après", "lotNumber": "Numéro de lot *", "lotPlaceholder": "Ex: P1FM1-0012025", "cropHarvested": "Culture récoltée *", "selectCrop": "Sélectionner une culture", "selectCropPlaceholder": "Sélectionner une culture...", "harvestDate": "Date de récolte *", "quantityHarvested": "Quantité récoltée *", "quantityPlaceholder": "Ex: 500", "unit": "Unité", "select": "Sélectionner", "qualityGrade": "Grade de qualité", "notesPlaceholder": "Notes sur la récolte...", "units": { "kg": "Kilogrammes (kg)", "tons": "Tonnes", "units": "Unités", "boxes": "Caisses", "crates": "Cagettes", "liters": "Litres" }, "grades": { "extra": "Extra", "a": "Grade A", "first": "Première qualité", "b": "Grade B", "second": "Deuxième qualité", "c": "Grade C", "third": "Troisième qualité" } },
-    "actions": { "close": "Fermer", "start": "Démarrer", "pause": "Pause", "resume": "Reprendre", "completeWithHarvest": "Terminer avec récolte", "complete": "Terminer", "cancel": "Annuler", "saving": "Enregistrement...", "completeAndPay": "Terminer et payer", "savePartialHarvest": "Enregistrer récolte partielle", "completeAndSave": "Terminer et enregistrer" }
+    "timeline": {
+      "taskCreated": "Tâche créée",
+      "workStarted": "Travail démarré",
+      "workEnded": "Travail terminé",
+      "taskApproved": "Tâche approuvée",
+      "taskCompleted": "Tâche terminée",
+      "issueReported": "Problème signalé",
+      "statusUpdate": "Mise à jour de statut",
+      "comment": "Commentaire",
+      "clockedIn": "Pointage d'entrée",
+      "clockedOut": "Pointage de sortie · {{hours}}h"
+    },
+    "fields": {
+      "taskType": "Type de tâche",
+      "farm": "Ferme",
+      "parcel": "Parcelle",
+      "assignedTo": "Assigné à",
+      "estimatedDuration": "Durée estimée",
+      "estimatedDurationValue": "{{hours}} heures",
+      "scheduledDate": "Date prévue",
+      "dueDate": "Date limite",
+      "description": "Description",
+      "notes": "Notes",
+      "progress": "Progression"
+    },
+    "payment": {
+      "title": "Informations de paiement",
+      "type": "Type de paiement",
+      "estimatedUnits": "Unités estimées",
+      "estimatedUnitsValue": "Unités estimées: {{count}}",
+      "ratePerUnit": "Tarif par unité",
+      "types": {
+        "perUnit": "À l'unité",
+        "daily": "Journalier",
+        "monthly": "Mensuel",
+        "metayage": "Métayage"
+      }
+    },
+    "perUnitForm": {
+      "title": "Paiement à l'unité",
+      "ratePerUnit": "Tarif par unité (MAD) *",
+      "ratePlaceholder": "Ex: 5.00",
+      "unitsPerWorker": "Unités par travailleur",
+      "unitsCompleted": "Unités complétées *",
+      "unitsPlaceholder": "Ex: 100",
+      "totalPayment": "Paiement total",
+      "notesPlaceholder": "Notes sur le travail effectué..."
+    },
+    "harvestForm": {
+      "title": "Enregistrer la récolte",
+      "completionType": "Type de complétion",
+      "completeFull": "Terminer complètement",
+      "completeFullDesc": "Marquer la tâche comme terminée",
+      "partial": "Récolte partielle",
+      "partialDesc": "Continuer la tâche après",
+      "lotNumber": "Numéro de lot *",
+      "lotPlaceholder": "Ex: P1FM1-0012025",
+      "cropHarvested": "Culture récoltée *",
+      "selectCrop": "Sélectionner une culture",
+      "selectCropPlaceholder": "Sélectionner une culture...",
+      "harvestDate": "Date de récolte *",
+      "quantityHarvested": "Quantité récoltée *",
+      "quantityPlaceholder": "Ex: 500",
+      "unit": "Unité",
+      "select": "Sélectionner",
+      "qualityGrade": "Grade de qualité",
+      "notesPlaceholder": "Notes sur la récolte...",
+      "units": {
+        "kg": "Kilogrammes (kg)",
+        "tons": "Tonnes",
+        "units": "Unités",
+        "boxes": "Caisses",
+        "crates": "Cagettes",
+        "liters": "Litres"
+      },
+      "grades": {
+        "extra": "Extra",
+        "a": "Grade A",
+        "first": "Première qualité",
+        "b": "Grade B",
+        "second": "Deuxième qualité",
+        "c": "Grade C",
+        "third": "Troisième qualité"
+      }
+    },
+    "actions": {
+      "close": "Fermer",
+      "start": "Démarrer",
+      "pause": "Pause",
+      "resume": "Reprendre",
+      "completeWithHarvest": "Terminer avec récolte",
+      "complete": "Terminer",
+      "cancel": "Annuler",
+      "saving": "Enregistrement...",
+      "completeAndPay": "Terminer et payer",
+      "savePartialHarvest": "Enregistrer récolte partielle",
+      "completeAndSave": "Terminer et enregistrer"
+    }
   },
   "treeManagement": {
-    "tabs": { "trees": "Types d'arbres", "plantations": "Types de plantation" },
-    "headers": { "treesTitle": "Types d'arbres", "treesSubtitle": "Gérez les catégories et les arbres disponibles.", "plantationsTitle": "Types de plantation", "plantationsSubtitle": "Gérez les densités et espacements de plantation.", "addPlantationType": "Ajouter un type de plantation" },
-    "actions": { "clearSearch": "Effacer la recherche", "addThisCategory": "Ajouter cette catégorie", "addThisType": "Ajouter ce type", "addCategory": "Ajouter catégorie", "add": "Ajouter" },
-    "columns": { "category": "Catégorie", "trees": "Arbres", "actions": "Actions", "type": "Type", "spacing": "Espacement", "treesPerHa": "Arbres/ha" },
-    "fields": { "type": "Type", "spacing": "Espacement", "treesPerHa": "Arbres/ha", "spacingLabel": "Espacement:", "treesPerHaLabel": "Arbres/ha:" },
-    "placeholders": { "addTree": "Ajouter un arbre...", "searchTrees": "Rechercher une catégorie ou un arbre...", "newCategory": "Nouvelle catégorie...", "searchPlantations": "Rechercher un type, un espacement ou une densité...", "plantationType": "Type (ex: Super intensif)", "plantationSpacing": "Espacement (ex: 4x1,5)", "plantationTreesPerHa": "Arbres/ha" },
-    "empty": { "noResults": "Aucun résultat", "noCategories": "Aucune catégorie", "noTreeMatches": "Aucune catégorie ni aucun arbre ne correspond à votre recherche.", "addFirstCategory": "Ajoutez votre première catégorie d'arbres pour commencer.", "noPlantationTypes": "Aucun type de plantation", "noPlantationMatches": "Aucun type de plantation ne correspond à votre recherche.", "addFirstPlantationType": "Ajoutez votre premier type de plantation pour commencer." },
-    "confirm": { "deleteCategory": "Êtes-vous sûr de vouloir supprimer cette catégorie?", "deletePlantationType": "Êtes-vous sûr de vouloir supprimer ce type de plantation?" },
-    "errors": { "unknown": "Erreur inconnue", "addCategory": "Error adding category", "deleteCategory": "Error deleting category", "updateCategory": "Error updating category", "addTree": "Error adding tree", "deleteTree": "Error deleting tree", "updateTree": "Error updating tree", "addPlantationType": "Error adding plantation type", "deletePlantationType": "Error deleting plantation type", "updatePlantationType": "Error updating plantation type" },
+    "tabs": {
+      "trees": "Types d'arbres",
+      "plantations": "Types de plantation"
+    },
+    "headers": {
+      "treesTitle": "Types d'arbres",
+      "treesSubtitle": "Gérez les catégories et les arbres disponibles.",
+      "plantationsTitle": "Types de plantation",
+      "plantationsSubtitle": "Gérez les densités et espacements de plantation.",
+      "addPlantationType": "Ajouter un type de plantation"
+    },
+    "actions": {
+      "clearSearch": "Effacer la recherche",
+      "addThisCategory": "Ajouter cette catégorie",
+      "addThisType": "Ajouter ce type",
+      "addCategory": "Ajouter catégorie",
+      "add": "Ajouter"
+    },
+    "columns": {
+      "category": "Catégorie",
+      "trees": "Arbres",
+      "actions": "Actions",
+      "type": "Type",
+      "spacing": "Espacement",
+      "treesPerHa": "Arbres/ha"
+    },
+    "fields": {
+      "type": "Type",
+      "spacing": "Espacement",
+      "treesPerHa": "Arbres/ha",
+      "spacingLabel": "Espacement:",
+      "treesPerHaLabel": "Arbres/ha:"
+    },
+    "placeholders": {
+      "addTree": "Ajouter un arbre...",
+      "searchTrees": "Rechercher une catégorie ou un arbre...",
+      "newCategory": "Nouvelle catégorie...",
+      "searchPlantations": "Rechercher un type, un espacement ou une densité...",
+      "plantationType": "Type (ex: Super intensif)",
+      "plantationSpacing": "Espacement (ex: 4x1,5)",
+      "plantationTreesPerHa": "Arbres/ha"
+    },
+    "empty": {
+      "noResults": "Aucun résultat",
+      "noCategories": "Aucune catégorie",
+      "noTreeMatches": "Aucune catégorie ni aucun arbre ne correspond à votre recherche.",
+      "addFirstCategory": "Ajoutez votre première catégorie d'arbres pour commencer.",
+      "noPlantationTypes": "Aucun type de plantation",
+      "noPlantationMatches": "Aucun type de plantation ne correspond à votre recherche.",
+      "addFirstPlantationType": "Ajoutez votre premier type de plantation pour commencer."
+    },
+    "confirm": {
+      "deleteCategory": "Êtes-vous sûr de vouloir supprimer cette catégorie?",
+      "deletePlantationType": "Êtes-vous sûr de vouloir supprimer ce type de plantation?"
+    },
+    "errors": {
+      "unknown": "Erreur inconnue",
+      "addCategory": "Error adding category",
+      "deleteCategory": "Error deleting category",
+      "updateCategory": "Error updating category",
+      "addTree": "Error adding tree",
+      "deleteTree": "Error deleting tree",
+      "updateTree": "Error updating tree",
+      "addPlantationType": "Error adding plantation type",
+      "deletePlantationType": "Error deleting plantation type",
+      "updatePlantationType": "Error updating plantation type"
+    },
     "errorState": "Erreur",
     "treeCount": "{{count}} arbre",
     "treeCount_plural": "{{count}} arbres"
@@ -7815,5 +8143,97 @@
     "organizationLabel": "Organisation",
     "needHelp": "Besoin d'aide ?",
     "signOut": "Se déconnecter"
+  },
+  "equipment": {
+    "title": "Équipement",
+    "subtitle": "Gérez votre flotte et équipements",
+    "add": "Ajouter un équipement",
+    "edit": "Modifier l'équipement",
+    "addFirst": "Ajouter votre premier équipement",
+    "empty": "Aucun équipement trouvé",
+    "search": "Rechercher un équipement...",
+    "name": "Nom",
+    "brand": "Marque",
+    "model": "Modèle",
+    "serialNumber": "Numéro de série",
+    "licensePlate": "Plaque d'immatriculation",
+    "purchaseDate": "Date d'achat",
+    "purchasePrice": "Prix d'achat",
+    "currentValue": "Valeur actuelle",
+    "hourMeter": "Compteur horaire",
+    "fuel": "Carburant",
+    "farm": "Ferme",
+    "hours": "Heures",
+    "noModel": "Pas de modèle",
+    "noFarm": "Aucune ferme assignée",
+    "notes": "Notes",
+    "insuranceExpiry": "Expiration assurance",
+    "registrationExpiry": "Expiration immatriculation",
+    "description": "Description",
+    "cost": "Coût (MAD)",
+    "vendor": "Fournisseur",
+    "maintenanceDate": "Date",
+    "nextServiceDate": "Prochaine révision",
+    "allCategories": "Toutes les catégories",
+    "allStatuses": "Tous les statuts",
+    "allFarms": "Toutes les fermes",
+    "validation": {
+      "nameRequired": "Le nom est requis"
+    },
+    "updated": "Équipement mis à jour",
+    "created": "Équipement créé",
+    "deleted": "Équipement supprimé",
+    "saveFailed": "Échec de la sauvegarde",
+    "deleteConfirm": "Supprimer l'équipement ?",
+    "deleteConfirmDesc": "Êtes-vous sûr de vouloir supprimer cet équipement ?",
+    "deleteFailed": "Échec de la suppression",
+    "loadFailed": "Échec du chargement",
+    "maintenance": "Maintenance",
+    "maintenanceTitle": "Historique de maintenance",
+    "maintenanceCreated": "Enregistrement de maintenance créé",
+    "maintenanceCreateFailed": "Échec de la création",
+    "maintenanceDeleted": "Enregistrement supprimé",
+    "maintenanceDeleteFailed": "Échec de la suppression",
+    "deleteMaintenance": "Supprimer cet enregistrement ?",
+    "logMaintenance": "Enregistrer maintenance",
+    "ytdCost": "Total annuel",
+    "noMaintenance": "Aucun enregistrement de maintenance",
+    "category": {
+      "tractor": "Tracteur",
+      "harvester": "Moissonneuse",
+      "sprayer": "Pulvérisateur",
+      "utility_vehicle": "Véhicule utilitaire",
+      "pump": "Pompe",
+      "small_tool": "Petit outil",
+      "other": "Autre",
+      "label": "Catégorie"
+    },
+    "status": {
+      "available": "Disponible",
+      "in_use": "En utilisation",
+      "maintenance": "En maintenance",
+      "out_of_service": "Hors service",
+      "label": "Statut"
+    },
+    "fuelType": {
+      "diesel": "Diesel",
+      "petrol": "Essence",
+      "electric": "Électrique",
+      "other": "Autre",
+      "label": "Type de carburant"
+    },
+    "maintenanceType": {
+      "oil_change": "Vidange",
+      "repair": "Réparation",
+      "inspection": "Inspection",
+      "tire_replacement": "Remplacement pneus",
+      "battery": "Batterie",
+      "filter": "Filtre",
+      "fuel_fill": "Plein de carburant",
+      "registration": "Immatriculation",
+      "insurance": "Assurance",
+      "other": "Autre",
+      "label": "Type"
+    }
   }
 }

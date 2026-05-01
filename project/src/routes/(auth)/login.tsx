@@ -83,6 +83,28 @@ function LoginPage() {
       const response = await loginViaApi(email, password, rememberMe)
       if (response?.user) {
         trackLoginSuccess('email')
+
+        const pendingOrgName = sessionStorage.getItem('pendingOrgName')
+        if (pendingOrgName) {
+          sessionStorage.removeItem('pendingOrgName')
+          const accessToken = useAuthStore.getState().getAccessToken()
+          if (accessToken) {
+            try {
+              const apiUrl = import.meta.env.VITE_API_URL || ''
+              await fetch(`${apiUrl}/api/v1/auth/setup-organization`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${accessToken}`,
+                },
+                body: JSON.stringify({ organizationName: pendingOrgName }),
+              })
+            } catch {
+              // Non-blocking: user lands on dashboard and can retry from settings
+            }
+          }
+        }
+
         await new Promise(resolve => setTimeout(resolve, 100))
         window.location.href = redirectTo || '/dashboard'
       }

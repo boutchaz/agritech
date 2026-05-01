@@ -8,6 +8,7 @@ type UserProfile = Database['public']['Tables']['user_profiles']['Row'];
 type Farm = Database['public']['Tables']['farms']['Row'];
 import { useAuthStore } from '../stores/authStore';
 import { useOrganizationStore } from '../stores/organizationStore';
+import { useFarmStore } from '../stores/farmStore';
 import { trackLogout } from '../lib/analytics';
 
 // Query keys
@@ -165,7 +166,9 @@ export const useOrganizationFarms = (organizationId: string | undefined) => {
           }
 
           // Map farm_id and farm_name to id and name for compatibility
-          return farmsData.map((farm) => {
+          return (farmsData as Array<Farm & { farm_id?: string; farm_name?: string; farm_size?: number; farm_location?: string }>)
+            .filter((farm) => Boolean(farm.farm_id || farm.id))
+            .map((farm) => {
             const farmId = farm.farm_id || farm.id;
             const parcelsData = parcelsByFarm[farmId];
             const farmSize = farm.farm_size ?? farm.size;
@@ -276,12 +279,12 @@ export const useSignOut = () => {
 
       useAuthStore.getState().clearAuth();
       useOrganizationStore.getState().clearOrganization();
+      useFarmStore.getState().clearFarm();
     },
     onSuccess: () => {
       // Clear all auth-related queries
       queryClient.removeQueries({ queryKey: ['auth'] });
       localStorage.removeItem('currentOrganization');
-      localStorage.removeItem('currentFarm');
 
       const userId = useAuthStore.getState().user?.id;
       const tourKeyPrefix = userId ? `agritech_${userId}_` : 'agritech_';

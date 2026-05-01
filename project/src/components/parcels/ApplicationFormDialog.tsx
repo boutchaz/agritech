@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -7,16 +7,14 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/hooks/useAuth';
 import { DEFAULT_CURRENCY } from '@/utils/currencies';
 import { useAuthStore } from '@/stores/authStore';
-import { storageApi } from '@/lib/api/storage';
-import { filesApi } from '@/lib/api/files';
 import { tasksApi } from '@/lib/api/tasks';
-import { Calendar, Droplets, AlertCircle, ImagePlus, X } from 'lucide-react';
+import { Calendar, Droplets, AlertCircle } from 'lucide-react';
+import { PhotoUpload } from '@/components/ui/PhotoUpload';
 import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
-import { toast } from 'sonner';
 import {
   Select,
   SelectContent,
@@ -63,11 +61,8 @@ export const ApplicationFormDialog = ({
   const { currentOrganization } = useAuth();
   const queryClient = useQueryClient();
   const getAccessToken = useAuthStore((state) => state.getAccessToken);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
   // Image upload state
   const [images, setImages] = useState<string[]>([]);
-  const [uploading, setUploading] = useState(false);
 
   const form = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -127,85 +122,9 @@ export const ApplicationFormDialog = ({
     }
   }, [open, farmId, parcelId, currentOrganization?.currency, form]);
 
-  // Image upload function
-  const uploadImage = async (file: File): Promise<string | null> => {
-    try {
-      if (!file.type.startsWith('image/')) {
-        toast.error('Only image files are allowed');
-        return null;
-      }
-
-      if (file.size > 5 * 1024 * 1024) {
-        toast.error('Image must be less than 5MB');
-        return null;
-      }
-
-       const fileExt = file.name.split('.').pop()?.toLowerCase() || 'jpg';
-       const fileName = `${currentOrganization?.id || 'default'}/product-applications/${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
-
-       const { publicUrl } = await storageApi.upload('products', fileName, file, {
-         cacheControl: '31536000',
-         upsert: false
-       });
-
-       try {
-         await filesApi.register({
-           bucket_name: 'products',
-           file_path: fileName,
-           file_name: file.name,
-           file_size: file.size,
-           mime_type: file.type,
-           entity_type: 'product-application',
-           field_name: 'images',
-         }, currentOrganization?.id);
-       } catch (registerError) {
-         console.error('Failed to register file in tracking system:', registerError);
-       }
-
-       return publicUrl;
-    } catch (error: unknown) {
-      console.error('Failed to upload image:', error);
-      toast.error('Failed to upload image');
-      return null;
-    }
-  };
-
-  const handleFileSelect = async (files: FileList | null) => {
-    if (!files || files.length === 0) return;
-
-    const maxImages = 5;
-    const remainingSlots = maxImages - images.length;
-    if (remainingSlots <= 0) {
-      toast.error(`Maximum ${maxImages} images allowed`);
-      return;
-    }
-
-    const filesToUpload = Array.from(files).slice(0, remainingSlots);
-    setUploading(true);
-
-    try {
-      const uploadPromises = filesToUpload.map(file => uploadImage(file));
-      const results = await Promise.all(uploadPromises);
-      const successfulUploads = results.filter((url): url is string => url !== null);
-
-      if (successfulUploads.length > 0) {
-        const newImages = [...images, ...successfulUploads];
-        setImages(newImages);
-        form.setValue('images', newImages);
-        toast.success(`${successfulUploads.length} image(s) uploaded`);
-      }
-    } finally {
-      setUploading(false);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
-    }
-  };
-
-  const removeImage = (index: number) => {
-    const newImages = images.filter((_, i) => i !== index);
-    setImages(newImages);
-    form.setValue('images', newImages);
+  const handlePhotosChange = (next: string[]) => {
+    setImages(next);
+    form.setValue('images', next);
   };
 
   const mutation = useMutation({
@@ -587,65 +506,22 @@ export const ApplicationFormDialog = ({
           </div>
 
           {/* Images */}
-          <div className="space-y-3">
-            <Label>{t('parcels.index.images') || 'Images'}</Label>
-
-            {/* Upload Button */}
-            <div className="flex items-center gap-3">
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                multiple
-                className="hidden"
-                onChange={(e) => handleFileSelect(e.target.files)}
-                disabled={uploading || mutation.isPending}
+          {currentOrganization?.id && (
+            <div className="space-y-2">
+              <Label>{t('parcels.index.images') || 'Images'}</Label>
+              <PhotoUpload
+                organizationId={currentOrganization.id}
+                photos={images}
+                onChange={handlePhotosChange}
+                bucket="products"
+                entityType="product-application"
+                folder="product-applications"
+                fieldName="images"
+                maxPhotos={5}
+                disabled={mutation.isPending}
               />
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={uploading || mutation.isPending || images.length >= 5}
-                className="w-full sm:w-auto"
-              >
-                <ImagePlus className="h-4 w-4 mr-2" />
-                {uploading ? 'Uploading...' : `Add Images (${images.length}/5)`}
-              </Button>
             </div>
-
-            {/* Image Previews */}
-            {images.length > 0 && (
-              <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
-                {images.map((url, index) => (
-                  <div
-                    key={url}
-                    className="relative aspect-square rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 group"
-                  >
-                    <img
-                      src={url}
-                      alt={`Application attachment ${index + 1}`}
-                      className="w-full h-full object-cover"
-                    />
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      size="sm"
-                      className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={() => removeImage(index)}
-                      disabled={mutation.isPending}
-                    >
-                      <X className="h-3 w-3" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Upload Instructions */}
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              Upload photos of the application (before/after, equipment used, etc.). PNG, JPG, WEBP up to 5MB each.
-            </p>
-          </div>
+          )}
 
       </form>
     </ResponsiveDialog>

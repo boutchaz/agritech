@@ -2,6 +2,9 @@ import { Injectable, Logger, BadRequestException, InternalServerErrorException }
 import { DatabaseService } from '../database/database.service';
 import { SubscriptionsService } from '../subscriptions/subscriptions.service';
 import { TrialPlanInput } from '../subscriptions/dto/create-trial-subscription.dto';
+import { AccountsService } from '../accounts/accounts.service';
+import { FiscalYearsService } from '../fiscal-years/fiscal-years.service';
+import { DemoDataService } from '../demo-data/demo-data.service';
 import {
   SaveOnboardingProfileDto,
   SaveOnboardingOrganizationDto,
@@ -13,6 +16,9 @@ import {
 
 const STORAGE_VERSION = 2;
 
+/** Countries with a built-in chart of accounts template in AccountsService.getFallbackTemplate */
+const SUPPORTED_CHART_COUNTRIES = new Set(['MA', 'FR', 'TN', 'US', 'GB', 'DE']);
+
 @Injectable()
 export class OnboardingService {
   private readonly logger = new Logger(OnboardingService.name);
@@ -20,7 +26,88 @@ export class OnboardingService {
   constructor(
     private databaseService: DatabaseService,
     private subscriptionsService: SubscriptionsService,
+    private readonly accountsService: AccountsService,
+    private readonly fiscalYearsService: FiscalYearsService,
+    private readonly demoDataService: DemoDataService,
   ) {}
+
+  /**
+   * Map organization country (e.g. ES, DZ) to a chart template we ship (MA, FR, …).
+   */
+  private resolveChartTemplateCountry(iso2: string | null | undefined): string {
+    const upper = (iso2 || 'MA').trim().toUpperCase();
+    if (SUPPORTED_CHART_COUNTRIES.has(upper)) {
+      return upper;
+    }
+    const fallback: Record<string, string> = {
+      ES: 'FR',
+      DZ: 'MA',
+      AD: 'FR',
+      BE: 'FR',
+      LU: 'FR',
+      CH: 'FR',
+    };
+    return fallback[upper] || 'MA';
+  }
+
+  /**
+   * Ensures an organization has an active row in organization_modules for the given catalog slug.
+   * Used when completing onboarding so accounting APIs (RequireModule('accounting')) succeed.
+   */
+  private async ensureOrganizationModuleActive(organizationId: string, moduleSlug: string): Promise<void> {
+    const client = this.databaseService.getAdminClient();
+    const { data: mod, error: modErr } = await client
+      .from('modules')
+      .select('id')
+      .eq('slug', moduleSlug)
+      .eq('is_available', true)
+      .maybeSingle();
+
+    if (modErr || !mod?.id) {
+      this.logger.warn(
+        `ensureOrganizationModuleActive: module "${moduleSlug}" not found or unavailable: ${modErr?.message ?? 'no row'}`,
+      );
+      return;
+    }
+
+    const { error: upErr } = await client.from('organization_modules').upsert(
+      {
+        organization_id: organizationId,
+        module_id: mod.id,
+        is_active: true,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'organization_id,module_id' },
+    );
+
+    if (upErr) {
+      this.logger.warn(`ensureOrganizationModuleActive: upsert failed for ${moduleSlug}: ${upErr.message}`);
+    }
+  }
+
+  private async resolveOrganizationIdForUser(
+    userId: string,
+    headerOrganizationId: string | null | undefined,
+  ): Promise<string | null> {
+    if (headerOrganizationId && headerOrganizationId.trim()) {
+      return headerOrganizationId;
+    }
+    const client = this.databaseService.getAdminClient();
+    const { data, error } = await client
+      .from('organization_users')
+      .select('organization_id')
+      .eq('user_id', userId)
+      .eq('is_active', true)
+      .order('created_at', { ascending: true })
+      .limit(1)
+      .maybeSingle();
+
+    if (error) {
+      this.logger.warn(`resolveOrganizationIdForUser: ${error.message}`);
+      return null;
+    }
+    return data?.organization_id ?? null;
+  }
 
   /**
    * Check if a slug is available for use
@@ -259,6 +346,8 @@ export class OnboardingService {
 
     if (existingOrgId) {
       // Update existing organization
+      const countryCode =
+        dto.country && dto.country.length === 2 ? dto.country.toUpperCase() : null;
       const { data, error } = await client
         .from('organizations')
         .update({
@@ -270,6 +359,7 @@ export class OnboardingService {
           address: dto.address || null,
           city: dto.city || null,
           country: dto.country,
+          ...(countryCode ? { country_code: countryCode } : {}),
           updated_at: new Date().toISOString(),
         })
         .eq('id', existingOrgId)
@@ -298,6 +388,8 @@ export class OnboardingService {
       const roleId = roleData.id;
 
       // Create new organization
+      const countryCode =
+        dto.country && dto.country.length === 2 ? dto.country.toUpperCase() : null;
       const { data, error } = await client
         .from('organizations')
         .insert({
@@ -309,6 +401,7 @@ export class OnboardingService {
           address: dto.address || null,
           city: dto.city || null,
           country: dto.country,
+          ...(countryCode ? { country_code: countryCode } : {}),
           is_active: true,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
@@ -398,23 +491,31 @@ export class OnboardingService {
       }
     }
 
+    const coordinates =
+      dto.latitude != null &&
+      dto.longitude != null &&
+      Number.isFinite(dto.latitude) &&
+      Number.isFinite(dto.longitude)
+        ? { type: 'Point' as const, coordinates: [dto.longitude, dto.latitude] }
+        : undefined;
+
     if (farmId) {
       // Update existing farm
-      const { data, error } = await client
-        .from('farms')
-        .update({
-          name: dto.name,
-          location: dto.location,
-          size: dto.size,
-          size_unit: dto.size_unit,
-          description: dto.description || null,
-          soil_type: dto.soil_type || null,
-          climate_zone: dto.climate_zone || null,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', farmId)
-        .select('id')
-        .single();
+      const updatePayload: Record<string, unknown> = {
+        name: dto.name,
+        location: dto.location,
+        size: dto.size,
+        size_unit: dto.size_unit,
+        description: dto.description || null,
+        soil_type: dto.soil_type || null,
+        climate_zone: dto.climate_zone || null,
+        updated_at: new Date().toISOString(),
+      };
+      if (coordinates) {
+        updatePayload.coordinates = coordinates;
+      }
+
+      const { data, error } = await client.from('farms').update(updatePayload).eq('id', farmId).select('id').single();
 
       if (error) {
         this.logger.error(`Failed to update farm: ${error.message}`);
@@ -425,23 +526,24 @@ export class OnboardingService {
     } else {
       // Create new farm
       // Note: farms table doesn't have farm_type column - hierarchy not yet supported
-      const { data, error } = await client
-        .from('farms')
-        .insert({
-          organization_id: organizationId,
-          name: dto.name,
-          location: dto.location,
-          size: dto.size,
-          size_unit: dto.size_unit,
-          description: dto.description || null,
-          soil_type: dto.soil_type || null,
-          climate_zone: dto.climate_zone || null,
-          is_active: true,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        })
-        .select('id')
-        .single();
+      const insertPayload: Record<string, unknown> = {
+        organization_id: organizationId,
+        name: dto.name,
+        location: dto.location,
+        size: dto.size,
+        size_unit: dto.size_unit,
+        description: dto.description || null,
+        soil_type: dto.soil_type || null,
+        climate_zone: dto.climate_zone || null,
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      if (coordinates) {
+        insertPayload.coordinates = coordinates;
+      }
+
+      const { data, error } = await client.from('farms').insert(insertPayload).select('id').single();
 
       if (error) {
         this.logger.error(`Failed to create farm: ${error.message}`);
@@ -546,23 +648,156 @@ export class OnboardingService {
   ): Promise<{ success: boolean }> {
     const client = this.databaseService.getAdminClient();
 
-    // Update organization with currency preference
-    if (organizationId) {
-      const { error: orgError } = await client
-        .from('organizations')
-        .update({
-          currency_code: dto.currency,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', organizationId);
+    const resolvedOrgId = await this.resolveOrganizationIdForUser(userId, organizationId);
+    if (!resolvedOrgId) {
+      throw new BadRequestException(
+        'No organization found for this user. Finish the organization step before completing onboarding.',
+      );
+    }
 
-      if (orgError) {
-        this.logger.error(`Failed to update organization: ${orgError.message}`);
-        throw new InternalServerErrorException('Failed to update organization');
+    const { data: orgRow, error: orgFetchError } = await client
+      .from('organizations')
+      .select('id, country, country_code, accounting_settings')
+      .eq('id', resolvedOrgId)
+      .maybeSingle();
+
+    if (orgFetchError || !orgRow) {
+      this.logger.error(`Failed to load organization: ${orgFetchError?.message}`);
+      throw new InternalServerErrorException('Failed to load organization');
+    }
+
+    const isoCountry =
+      (dto.accounting_template_country || orgRow.country_code || orgRow.country || 'MA')
+        .toString()
+        .trim()
+        .toUpperCase();
+    const chartCountry = this.resolveChartTemplateCountry(
+      isoCountry.length === 2 ? isoCountry : 'MA',
+    );
+
+    const prevSettings =
+      orgRow.accounting_settings && typeof orgRow.accounting_settings === 'object'
+        ? (orgRow.accounting_settings as Record<string, unknown>)
+        : {};
+    const accounting_settings = {
+      ...prevSettings,
+      date_format: dto.date_format,
+    };
+
+    const { error: orgError } = await client
+      .from('organizations')
+      .update({
+        currency_code: dto.currency,
+        country_code:
+          orgRow.country_code ||
+          (orgRow.country && String(orgRow.country).length === 2
+            ? String(orgRow.country).toUpperCase()
+            : chartCountry),
+        accounting_settings,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', resolvedOrgId);
+
+    if (orgError) {
+      this.logger.error(`Failed to update organization: ${orgError.message}`);
+      throw new InternalServerErrorException('Failed to update organization');
+    }
+
+    // Chart + currency step implies accounting; module is not is_required in catalog, so activate it here.
+    await this.ensureOrganizationModuleActive(resolvedOrgId, 'accounting');
+
+    const { data: sampleAccount, error: sampleAccountError } = await client
+      .from('accounts')
+      .select('id')
+      .eq('organization_id', resolvedOrgId)
+      .limit(1)
+      .maybeSingle();
+
+    if (sampleAccountError) {
+      this.logger.warn(`Account presence check failed: ${sampleAccountError.message}`);
+    }
+
+    if (!sampleAccount) {
+      try {
+        await this.accountsService.applyTemplate(chartCountry, resolvedOrgId, { overwrite: false });
+        this.logger.log(`Chart of accounts template ${chartCountry} applied for org ${resolvedOrgId}`);
+      } catch (e) {
+        this.logger.error(
+          `Failed to apply chart template during onboarding: ${e instanceof Error ? e.message : e}`,
+        );
+        throw new BadRequestException(
+          `Could not install the chart of accounts for ${chartCountry}. Check country and try again, or apply a template later in Accounting.`,
+        );
       }
     }
 
-    // Update user profile with onboarding completion
+    const { data: existingFy, error: fyErr } = await client
+      .from('fiscal_years')
+      .select('id')
+      .eq('organization_id', resolvedOrgId)
+      .limit(1)
+      .maybeSingle();
+
+    if (!fyErr && !existingFy) {
+      const y = new Date().getFullYear();
+      try {
+        await this.fiscalYearsService.create(resolvedOrgId, userId, {
+          name: `FY ${y}`,
+          code: `FY${y}`,
+          start_date: `${y}-01-01`,
+          end_date: `${y}-12-31`,
+          period_type: 'monthly',
+          is_current: true,
+        });
+        this.logger.log(`Default fiscal year FY${y} created for org ${resolvedOrgId}`);
+      } catch (e) {
+        this.logger.warn(`Could not create default fiscal year: ${e instanceof Error ? e.message : e}`);
+      }
+    }
+
+    if (dto.use_demo_data) {
+      const { count: farmCount, error: farmCountErr } = await client
+        .from('farms')
+        .select('id', { count: 'exact', head: true })
+        .eq('organization_id', resolvedOrgId)
+        .eq('is_active', true);
+
+      if (!farmCountErr && Number(farmCount) === 0) {
+        try {
+          await this.demoDataService.seedDemoData(resolvedOrgId, userId);
+          this.logger.log(`Demo data seeded for org ${resolvedOrgId} during onboarding`);
+        } catch (e) {
+          this.logger.warn(`Demo data seed skipped or failed: ${e instanceof Error ? e.message : e}`);
+        }
+      } else {
+        this.logger.log(
+          'Skipping demo data seed: organization already has farms (avoids wiping onboarding data).',
+        );
+      }
+    }
+
+    const { data: profileRow } = await client
+      .from('user_profiles')
+      .select('notification_preferences')
+      .eq('id', userId)
+      .maybeSingle();
+
+    const prevNotif =
+      profileRow?.notification_preferences &&
+      typeof profileRow.notification_preferences === 'object'
+        ? (profileRow.notification_preferences as Record<string, unknown>)
+        : {};
+    const notification_preferences = {
+      email: true,
+      push: true,
+      alerts: true,
+      reports: false,
+      ...prevNotif,
+    };
+    notification_preferences.email = dto.enable_notifications;
+    notification_preferences.push = dto.enable_notifications;
+    notification_preferences.alerts = dto.enable_notifications;
+
     const { error: profileError } = await client
       .from('user_profiles')
       .update({
@@ -570,6 +805,7 @@ export class OnboardingService {
         onboarding_completed_at: new Date().toISOString(),
         onboarding_state: null,
         onboarding_current_step: 1,
+        notification_preferences,
         updated_at: new Date().toISOString(),
       })
       .eq('id', userId);

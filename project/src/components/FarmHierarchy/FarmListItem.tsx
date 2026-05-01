@@ -1,5 +1,5 @@
 
-import { Building2, MapPin, User, Trash2, Eye, Map, Edit, Satellite } from 'lucide-react';
+import { Building2, MapPin, User, Trash2, Map, Edit, Satellite } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 
@@ -128,12 +128,13 @@ const FarmListItem = ({
           </div>
         </div>
 
-        {/* Actions */}
-        <div className="flex-shrink-0 flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+        {/* Actions — primary actions grouped, destructive separated */}
+        <div className="flex-shrink-0 flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
           <Button
             onClick={onViewParcels}
             className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
             title={t('farmHierarchy.farm.manageParcels')}
+            aria-label={t('farmHierarchy.farm.manageParcels')}
           >
             <Map className="w-4 h-4" />
           </Button>
@@ -142,21 +143,17 @@ const FarmListItem = ({
               onClick={onViewHeatmap}
               className="p-2 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-lg transition-colors"
               title={t('farmHierarchy.farm.viewHeatmap', 'View satellite heatmap')}
+              aria-label={t('farmHierarchy.farm.viewHeatmap', 'View satellite heatmap')}
             >
               <Satellite className="w-4 h-4" />
             </Button>
           )}
-          <Button
-            onClick={onSelect}
-            className="p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors"
-            title={t('farmHierarchy.farm.viewDetails')}
-          >
-            <Eye className="w-4 h-4" />
-          </Button>
+          <div className="w-px h-5 bg-gray-200 dark:bg-gray-700 mx-1" />
           <Button
             onClick={onDelete}
             className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
             title={t('farmHierarchy.farm.delete')}
+            aria-label={t('farmHierarchy.farm.delete')}
           >
             <Trash2 className="w-4 h-4" />
           </Button>

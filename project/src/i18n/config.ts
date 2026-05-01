@@ -1,6 +1,7 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import LanguageDetector from 'i18next-browser-languagedetector';
+import { isRTLLocale } from '@/lib/is-rtl-locale';
 
 // Only import the detected/default language synchronously
 // Other languages load on demand
@@ -58,6 +59,18 @@ const detectLanguage = (): string => {
 
 const detectedLng = detectLanguage();
 
+function applyDocumentLanguage(lng: string) {
+  if (typeof document === 'undefined') return;
+  const base = lng.split('-')[0] || lng;
+  if (isRTLLocale(lng)) {
+    document.documentElement.dir = 'rtl';
+    document.documentElement.lang = base;
+  } else {
+    document.documentElement.dir = 'ltr';
+    document.documentElement.lang = base;
+  }
+}
+
 // Build initial resources — always include English as fallback
 const initialResources: Record<string, LanguageBundles> = {
   en: {
@@ -95,6 +108,9 @@ i18n
       useSuspense: false,
     },
   });
+
+i18n.on('languageChanged', applyDocumentLanguage);
+applyDocumentLanguage(i18n.language || 'en');
 
 // Load non-English language resources after init
 if (detectedLng !== 'en' && lazyLanguageLoaders[detectedLng]) {

@@ -3,9 +3,10 @@ import { PieceWorkController } from './piece-work.controller';
 import { PieceWorkService } from './piece-work.service';
 import { DatabaseModule } from '../database/database.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { PaymentRecordsModule } from '../payment-records/payment-records.module';
 
 @Module({
-  imports: [DatabaseModule, NotificationsModule],
+  imports: [DatabaseModule, NotificationsModule, PaymentRecordsModule],
   controllers: [PieceWorkController],
   providers: [PieceWorkService],
   exports: [PieceWorkService],

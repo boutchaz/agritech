@@ -152,11 +152,12 @@ export class PieceWorkController {
     description: 'Payments generated successfully',
   })
   async bulkGeneratePayments(
+    @Req() req: any,
     @Param('organizationId') organizationId: string,
     @Param('farmId') farmId: string,
     @Body() body: { ids: string[] },
   ) {
-    return this.pieceWorkService.bulkGeneratePayments(organizationId, farmId, body.ids);
+    return this.pieceWorkService.bulkGeneratePayments(organizationId, farmId, body.ids, req.user.sub);
   }
 
   @Post(':id/generate-payment')
@@ -170,11 +171,12 @@ export class PieceWorkController {
   })
   @ApiResponse({ status: 400, description: 'Record not in approved status' })
   async generatePayment(
+    @Req() req: any,
     @Param('organizationId') organizationId: string,
     @Param('farmId') farmId: string,
     @Param('id') id: string,
   ) {
-    return this.pieceWorkService.generatePayment(organizationId, farmId, id);
+    return this.pieceWorkService.generatePayment(organizationId, farmId, id, req.user.sub);
   }
 
   @Patch(':id/verify')

@@ -98,8 +98,8 @@ const moreMenuItems: MoreMenuItem[] = [
   },
   {
     id: "infrastructure",
-    labelKey: "nav.infrastructure",
-    fallback: "Infrastructure",
+    labelKey: "nav.infrastructureEquipment",
+    fallback: "Infrastructure & Equipment",
     icon: Building2,
     path: "/infrastructure",
   },

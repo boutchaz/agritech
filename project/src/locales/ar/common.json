@@ -42,6 +42,10 @@
     "none": "لا يوجد"
   },
   "utilities": {
+    "title": "إدارة المرافق",
+    "subtitle": "تتبع وإدارة استهلاك المياه والكهرباء لمزارعك",
+    "loading": "جاري تحميل المنظمة...",
+    "loadingDashboard": "جاري تحميل لوحة التحكم...",
     "accountNotFoundError": "نوع الحساب \"{{accountType}}\"{{subtypeMsg}} غير موجود. يرجى إنشاء هذا الحساب في دليل الحسابات.",
     "selectFarmToAddCharge": "اختر مزرعة لإضافة مصروف.",
     "fileUploadError": "حدث خطأ أثناء رفع الملف",
@@ -69,34 +73,505 @@
     "defineBoundaryWeather": "يرجى تحديد حدود القطعة للوصول إلى تحليلات الطقس والمناخ."
   },
   "dashboard": {
-    "totalParcelsTitle": "إجمالي القطع",
-    "ongoingTasksTitle": "المهام الجارية",
-    "completedTasksTitle": "المهام المكتملة",
-    "activeWorkersTitle": "العمال النشطون",
-    "thisMonthHarvestsTitle": "الحصاد هذا الشهر",
-    "lowStockTitle": "المخزون المنخفض",
-    "newSoilAnalysisTitle": "تحليل تربة جديد",
-    "newSoilAnalysisDescription": "حفظ تحليل جديد",
-    "addParcelTitle": "إضافة قطعة",
-    "addParcelDescription": "إنشاء قطعة جديدة",
-    "newTaskTitle": "مهمة جديدة",
-    "newTaskDescription": "إنشاء مهمة جديدة",
-    "loadingData": "جاري تحميل البيانات...",
-    "loadError": "حدث خطأ أثناء تحميل بيانات لوحة التحكم."
+    "title": "لوحة التحكم",
+    "subtitle": "حلل مزارعك وفرقك وأدائك المالي في مكان واحد",
+    "loading": "جاري تحميل المنظمة...",
+    "heroTitle": "إدارة عمليات المزرعة الزراعية",
+    "quickActions": "إجراءات سريعة",
+    "pageTitle": "لوحة القيادة",
+    "metaDescription": "قم بإدارة مزارعك: تصور القطع والمهام والتحليلات والمحاسبة في واجهة واحدة.",
+    "keyFeatures": {
+      "title": "الميزات الرئيسية للمنصة",
+      "subtitle": "قم بتفعيل الوحدات التي تدعم أهدافك اليومية والوصول بسرعة إلى الإجراءات الاستراتيجية",
+      "farmOps": {
+        "title": "عمليات زراعية مُدارة",
+        "description": "شاهد مزارعك وقطعك ومراقبة المحاصيل في الوقت الفعلي لتفعيل الإجراءات الصحيحة",
+        "cta": "فتح إدارة القطع"
+      },
+      "taskExecution": {
+        "title": "مهام وقوى عاملة منسقة",
+        "description": "خطط للعمل، عيّن فرقك وتابع التقدم والوقت المستغرق من شاشة واحدة",
+        "cta": "تخطيط مهمة"
+      },
+      "financialHealth": {
+        "title": "الصحة المالية الموحدة",
+        "description": "اربط الفواتير والمدفوعات والتكاليف حسب المزرعة لتوقع التدفق النقدي والهوامش",
+        "cta": "التحقق من المحاسبة"
+      },
+      "labServices": {
+        "title": "التحليلات والخدمات المتكاملة",
+        "description": "اطلب تحليلات التربة والمختبر من المنصة ودمج النتائج في قراراتك",
+        "cta": "استكشاف التحليلات"
+      }
+    },
+    "structuredData": {
+      "platformName": "منصة إدارة زراعية",
+      "description": "حل موحد لإدارة الزراعة: المزارع والقطع والمهام والمحاسبة والتحليلات.",
+      "services": {
+        "parcels": "إدارة القطع",
+        "tasks": "تخطيط المهام",
+        "accounting": "المحاسبة الزراعية",
+        "analyses": "تحليلات المختبر"
+      }
+    },
+    "commands": {
+      "sections": {
+        "navigation": "التنقل",
+        "modules": "الوحدات",
+        "preferences": "التفضيلات"
+      },
+      "navigation": {
+        "dashboard": "الانتقال إلى لوحة القيادة",
+        "dashboardKeywords": "لوحة القيادة الرئيسية",
+        "analyses": "فتح التحليلات",
+        "analysesKeywords": "تحليلات التربة تقرير",
+        "parcels": "عرض القطع",
+        "parcelsKeywords": "قطع حقول خريطة",
+        "stock": "الوصول إلى المخزون",
+        "stockKeywords": "مخزون جرد",
+        "infrastructure": "عرض البنية التحتية",
+        "infrastructureKeywords": "بنية تحتية ري معدات",
+        "farmHierarchy": "إدارة المزارع",
+        "farmHierarchyKeywords": "مزارع هيكلية",
+        "tasks": "إدارة المهام",
+        "tasksKeywords": "مهام مهام عمل",
+        "settings": "فتح الإعدادات",
+        "settingsKeywords": "إعدادات منظمة"
+      },
+      "create": {
+        "parcel": "إنشاء قطعة",
+        "task": "إنشاء مهمة",
+        "cycle": "إنشاء دورة محصول",
+        "stockEntry": "إنشاء إدخال مخزون",
+        "invoice": "إنشاء فاتورة",
+        "worker": "إضافة عامل"
+      },
+      "searchPlaceholder": "البحث عن إجراء أو صفحة...",
+      "noResults": "لم يتم العثور على نتائج.",
+      "modules": {
+        "subtitle": "الوحدات المتاحة"
+      },
+      "preferences": {
+        "lightMode": "التبديل إلى الوضع الفاتح",
+        "darkMode": "التبديل إلى الوضع الداكن",
+        "themeKeywords": "مظهر داكن فاتح وضع"
+      }
+    },
+    "widgets": {
+      "noFarmSelected": "حدد مزرعة لعرض القطع والبيانات المرتبطة",
+      "farm": {
+        "title": "المزرعة",
+        "noFarm": "لم يتم تحديد مزرعة",
+        "parcels": "القطع",
+        "surface": "المساحة",
+        "analyses": "التحليلات",
+        "viewParcels": "عرض القطع",
+        "addParcel": "إضافة قطعة"
+      },
+      "soil": {
+        "title": "تحليلات التربة",
+        "total": "الإجمالي",
+        "analyses": "تحليلات",
+        "recent": "حديثة",
+        "last30Days": "آخر 30 يوم",
+        "needsAttention": "{{count}} قطعة تحتاج إلى انتباه",
+        "needsAttention_plural": "{{count}} قطع تحتاج إلى انتباه",
+        "outOfNorm": "الأس الهيدروجيني أو مستويات العناصر الغذائية خارج المعيار",
+        "latestAnalysis": "آخر تحليل",
+        "parcel": "القطعة",
+        "allInNorm": "جميع التحليلات ضمن المعايير",
+        "empty": "لا يوجد تحليل للتربة",
+        "addAnalysis": "إضافة تحليل"
+      },
+      "climate": {
+        "temperature": "درجة الحرارة"
+      },
+      "irrigation": {
+        "title": "الري",
+        "active": "نشط",
+        "stopped": "متوقف",
+        "sector": "القطاع",
+        "start": "البداية",
+        "duration": "المدة"
+      },
+      "maintenance": {
+        "title": "الصيانة",
+        "inProgress": "قيد التنفيذ",
+        "start": "البداية",
+        "expectedEnd": "النهاية المتوقعة"
+      },
+      "production": {
+        "title": "تحليل المحصول",
+        "chartComing": "الرسم البياني قريباً"
+      },
+      "financial": {
+        "title": "البيانات المالية",
+        "chartComing": "الرسم البياني قريباً"
+      },
+      "alerts": {
+        "title": "تنبيهات المخزون",
+        "lowStock": "مخزون منخفض"
+      },
+      "viewAll": "عرض الكل",
+      "parcels": {
+        "title": "القطع",
+        "total": "الإجمالي",
+        "parcels": "قطع",
+        "surface": "المساحة",
+        "hectares": "هكتار",
+        "topCrops": "المحاصيل الرئيسية",
+        "empty": "لم يتم إنشاء أي قطعة",
+        "create": "إنشاء قطعة",
+        "unspecifiedCrop": "غير محدد"
+      },
+      "workers": {
+        "title": "نشاط العمال",
+        "active": "نشط",
+        "outOfTotal": "من أصل {{total}} إجمالي",
+        "today": "اليوم",
+        "activeToday": "نشط",
+        "tasksInProgress": "المهام قيد التنفيذ",
+        "tasksScheduledToday": "{{count}} مهمة مجدولة اليوم",
+        "tasksScheduledToday_plural": "{{count}} مهام مجدولة اليوم",
+        "mostActive": "الأكثر نشاطاً",
+        "tasks": "مهام",
+        "empty": "لا يوجد عمال مسجلون",
+        "addWorkers": "إضافة عمال"
+      },
+      "stock": {
+        "title": "المخزون والمخزون",
+        "alerts": "التنبيهات",
+        "lowStock": "مخزون منخفض",
+        "ok": "حسناً",
+        "inStock": "في المخزون",
+        "units": "وحدات",
+        "min": "الحد الأدنى",
+        "moreItems": "+{{count}} عناصر أخرى في المخزون المنخفض",
+        "allOptimal": "جميع المخزونات في المستوى الأمثل",
+        "totalProducts": "إجمالي المنتجات"
+      },
+      "harvests": {
+        "title": "الحصاد",
+        "thisMonth": "هذا الشهر",
+        "harvests": "حصاد",
+        "quantity": "الكمية",
+        "kgThisMonth": "كجم هذا الشهر",
+        "lastHarvest": "آخر حصاد",
+        "parcel": "القطعة",
+        "quality": "الجودة",
+        "kg": "كجم",
+        "totalHarvests": "إجمالي الحصاد",
+        "empty": "لا يوجد حصاد مسجل",
+        "record": "تسجيل حصاد"
+      },
+      "tasks": {
+        "title": "المهام القادمة",
+        "noTasks": "لا توجد مهام مجدولة",
+        "upcomingSummary": "{{count}} مهمة قادمة في الثلاثين يوماً القادمة",
+        "upcomingSummary_plural": "{{count}} مهام قادمة في الثلاثين يوماً القادمة",
+        "priority": {
+          "low": "منخفضة",
+          "medium": "متوسطة",
+          "high": "عالية",
+          "urgent": "عاجلة"
+        },
+        "status": {
+          "pending": "قيد الانتظار",
+          "assigned": "مُعيَّنة",
+          "inProgress": "قيد التنفيذ",
+          "completed": "مكتملة",
+          "cancelled": "ملغاة",
+          "paused": "متوقفة"
+        }
+      },
+      "analysis": {
+        "title": "التحليلات",
+        "tabs": {
+          "soil": "التربة",
+          "plant": "النبات",
+          "water": "الماء"
+        },
+        "total": "الإجمالي",
+        "analyses": "تحليلات",
+        "recent": "حديثة",
+        "last30Days": "آخر 30 يوم",
+        "needsAttention": "{{count}} تحليل يحتاج إلى انتباه",
+        "needsAttention_plural": "{{count}} تحليلات تحتاج إلى انتباه",
+        "outOfNorm": "المعايير خارج النطاق الطبيعي",
+        "latestAnalysis": "آخر تحليل",
+        "parcel": "القطعة",
+        "allInNorm": "جميع التحليلات ضمن النطاق الطبيعي",
+        "empty": "لا توجد تحليلات متاحة",
+        "addAnalysis": "إضافة تحليل",
+        "chlorophyll": "الكلوروفيل"
+      },
+      "sales": {
+        "title": "طلبات البيع",
+        "thisMonth": "هذا الشهر",
+        "ordersCount": "{{count}} طلبات",
+        "totalOrders": "إجمالي الطلبات",
+        "pending": "قيد الانتظار",
+        "inProgress": "قيد التنفيذ",
+        "shipped": "تم الشحن",
+        "completed": "مكتمل",
+        "recentOrders": "الطلبات الأخيرة",
+        "noOrders": "لا توجد طلبات بيع"
+      },
+      "accounting": {
+        "title": "المحاسبة",
+        "revenue": "الإيرادات",
+        "expenses": "المصاريف",
+        "invoicesCount": "{{count}} فواتير",
+        "draft": "مسودة",
+        "pending": "قيد الانتظار",
+        "paid": "مدفوع",
+        "overdue": "متأخر",
+        "outstandingAlert": "المبلغ المستحق",
+        "recentInvoices": "الفواتير الأخيرة",
+        "noInvoices": "لا توجد فواتير",
+        "sale": "بيع",
+        "purchase": "شراء"
+      }
+    },
+    "description": "قم بتخصيص عرض لوحة التحكم الخاصة بك عن طريق اختيار البيانات المراد عرضها وتخطيطها.",
+    "saving": "جاري الحفظ...",
+    "sections": {
+      "dataDisplay": "البيانات المراد عرضها",
+      "alerts": "التنبيهات والإشعارات",
+      "layout": "تخطيط لوحة التحكم"
+    },
+    "data": {
+      "soil": {
+        "title": "بيانات التربة",
+        "description": "الرطوبة، الأس الهيدروجيني، العناصر الغذائية"
+      },
+      "climate": {
+        "title": "البيانات المناخية",
+        "description": "درجة الحرارة، الرطوبة، هطول الأمطار"
+      },
+      "irrigation": {
+        "title": "بيانات الري",
+        "description": "استهلاك المياه، الجدولة"
+      },
+      "maintenance": {
+        "title": "بيانات الصيانة",
+        "description": "حالة المعدات، التدخلات"
+      },
+      "production": {
+        "title": "بيانات الإنتاج",
+        "description": "المحاصيل، الحصاد، الجودة"
+      },
+      "financial": {
+        "title": "البيانات المالية",
+        "description": "التكاليف، الإيرادات، الربحية"
+      }
+    },
+    "alerts": {
+      "stock": {
+        "title": "تنبيهات المخزون",
+        "description": "مخزون منخفض، نقص، انتهاء الصلاحية"
+      },
+      "tasks": {
+        "title": "تنبيهات المهام",
+        "description": "مهام متأخرة، مواعيد نهائية"
+      }
+    },
+    "layout": {
+      "topRow": "الصف العلوي",
+      "middleRow": "الصف الأوسط",
+      "bottomRow": "الصف السفلي",
+      "helper": "اضغط على Ctrl/Cmd لتحديد خيارات متعددة",
+      "structureTitle": "كيف يُنظَّم لوحة التحكم",
+      "structureIntro": "أعلى لوحة التحكم ثابت: سياق المزرعة، مؤشرات الأداء، المهام، الطاقم، المحاسبة والتحليلات تظهر دائماً بهذا الترتيب.",
+      "fixedStripLabel": "ثابت — يظهر دائماً",
+      "fixedStripDetail": "محدد المزرعة · 4 مؤشرات · المهام والطاقم · المحاسبة وتحليلات المختبر",
+      "optionalBlockTitle": "عناصر اختيارية أسفل ذلك",
+      "optionalTwoCol": "صف عريض (عمودان على الشاشات الكبيرة)",
+      "optionalThreeCol": "صف بلاطات (3 أعمدة على الشاشات الكبيرة)",
+      "toggleHint": "اضغط على بطاقة لإظهار العنصر على لوحة التحكم أو إخفائه.",
+      "previewFixed": "تخطيط ثابت",
+      "previewOptional": "عناصرك الاختيارية",
+      "legacyBottomNote": "بعض البلاطات المحفوظة لا تُعرض بعد على لوحة التحكم وتُتجاهل: {{keys}}",
+      "toggleOn": "ظاهر",
+      "toggleOff": "مخفي"
+    },
+    "layoutOptions": {
+      "soil": "بيانات التربة",
+      "climate": "البيانات المناخية",
+      "irrigation": "الري",
+      "maintenance": "الصيانة",
+      "production": "الإنتاج",
+      "financial": "المالية",
+      "stock": "المخزون",
+      "alerts": "التنبيهات",
+      "tasks": "المهام",
+      "weather": "الطقس"
+    },
+    "preview": {
+      "title": "معاينة التخطيط"
+    },
+    "save": "حفظ",
+    "saveResult": {
+      "success": "تم حفظ الإعدادات بنجاح",
+      "failed": "فشل حفظ الإعدادات",
+      "failedDescription": "حدث خطأ أثناء حفظ الإعدادات."
+    },
+    "errors": {
+      "userOrOrgNotFound": "المستخدم أو المنظمة غير موجود"
+    }
   },
   "aiReport": {
+    "title": "تقرير الذكاء الاصطناعي",
+    "subtitle": "تحليل معمق لقطعة الأرض باستخدام الذكاء الاصطناعي",
     "loadingProviders": "جاري تحميل مزودي الذكاء الاصطناعي...",
+    "noProvidersTitle": "لم يتم تكوين مزودي الذكاء الاصطناعي",
+    "noProvidersDescription": "لإنشاء تقارير الذكاء الاصطناعي، يرجى تكوين مزود واحد على الأقل (OpenAI أو Google Gemini) في إعدادات منظمتك.",
+    "dateRange": "فترة التحليل",
+    "startDate": "تاريخ البداية",
+    "endDate": "تاريخ النهاية",
+    "errorTitle": "خطأ في الإنشاء",
+    "errorGeneric": "حدث خطأ. يرجى المحاولة مرة أخرى.",
+    "generating": "جاري التحليل...",
+    "generateButton": "إنشاء تقرير الذكاء الاصطناعي",
+    "generatingHint": "يقوم الذكاء الاصطناعي بتحليل بيانات الأقمار الصناعية وتحليلات التربة والمعلومات الأخرى...",
     "providersLoadError": "حدث خطأ أثناء تحميل مزودي الذكاء الاصطناعي",
     "noProvidersAvailable": "لا يوجد مزود ذكاء اصطناعي متاح",
     "configureApiKeys": "يرجى ضبط مفاتيح API الخاصة بـ OpenAI أو Gemini في إعدادات الخادم.",
     "analysisPeriod": "فترة التحليل",
-    "startDate": "تاريخ البدء",
-    "endDate": "تاريخ الانتهاء",
-    "generating": "جارٍ التوليد...",
-    "generateReport": "إنشاء تقرير الذكاء الاصطناعي",
     "analysisBlocked": "Analysis blocked: Missing critical data. Please recalibrate and fetch missing data.",
     "generationErrorFallback": "حدث خطأ أثناء إنشاء التقرير",
-    "generateNewReport": "← إنشاء تقرير جديد"
+    "generateNewReport": "← إنشاء تقرير جديد",
+    "generatingShort": "جارٍ التوليد...",
+    "generateReport": "إنشاء تقرير الذكاء الاصطناعي",
+    "generatedWith": "تم الإنشاء بواسطة",
+    "regenerate": "إعادة الإنشاء",
+    "exportPdf": "تصدير PDF",
+    "sections": {
+      "executiveSummary": "الملخص التنفيذي",
+      "healthAssessment": "تقييم الصحة",
+      "riskAlerts": "التنبيهات",
+      "recommendations": "التوصيات",
+      "actionItems": "الإجراءات المطلوبة"
+    },
+    "health": {
+      "soil": "التربة",
+      "vegetation": "الغطاء النباتي",
+      "water": "المياه",
+      "notEvaluated": "غير مقيم"
+    },
+    "priority": {
+      "high": "أولوية عالية",
+      "medium": "أولوية متوسطة",
+      "low": "أولوية منخفضة"
+    },
+    "providers": {
+      "openai": {
+        "name": "OpenAI GPT-4",
+        "description": "نموذج متقدم للتحليلات المفصلة"
+      },
+      "gemini": {
+        "name": "Google Gemini",
+        "description": "الذكاء الاصطناعي متعدد الوسائط من Google"
+      }
+    },
+    "configureProviders": "تكوين مزودي الذكاء الاصطناعي",
+    "securityNote": "مفاتيح API الخاصة بك مشفرة ومخزنة بشكل آمن.",
+    "dataAvailability": {
+      "title": "البيانات المتاحة",
+      "loading": "جاري التحقق من البيانات...",
+      "statusExcellent": "تغطية ممتازة",
+      "statusGood": "تغطية جيدة",
+      "statusBasic": "تغطية أساسية",
+      "statusInsufficient": "بيانات غير كافية",
+      "statusPartial": "تغطية جزئية",
+      "statusLimited": "تغطية محدودة",
+      "requiredSection": "مطلوب",
+      "optionalSection": "اختياري (يحسن الدقة)",
+      "optional": "اختياري",
+      "satellite": "بيانات الأقمار الصناعية",
+      "satelliteDetail": "{{count}} نقاط",
+      "soil": "تحليل التربة",
+      "water": "تحليل المياه",
+      "plant": "تحليل النبات",
+      "weather": "بيانات الطقس",
+      "canGenerateBasic": "يمكنك إنشاء تقرير أساسي. أضف تحليلات لمزيد من الدقة.",
+      "cannotGenerate": "بيانات الأقمار الصناعية والطقس مطلوبة لإنشاء تقرير.",
+      "lowCoverageWarning": "سيكون تقرير الذكاء الاصطناعي أقل دقة مع البيانات المحدودة. أضف تحليلات للحصول على نتائج أفضل.",
+      "addAnalysis": "إضافة"
+    },
+    "detail": {
+      "errors": {
+        "rateRequired": "يرجى إدخال السعر لكل وحدة",
+        "unitsRequired": "يرجى إدخال عدد الوحدات المكتملة",
+        "workerUnitsRequired": "يرجى إدخال الوحدات لعامل واحد على الأقل",
+        "completeFailed": "فشل إكمال المهمة",
+        "cropRequired": "يرجى اختيار محصول",
+        "quantityRequired": "يرجى إدخال كمية صالحة",
+        "lotNumberRequired": "يرجى إدخال رقم الدفعة",
+        "harvestCompleteFailed": "فشل إكمال عملية الحصاد"
+      }
+    },
+    "paymentTypes": {
+      "perUnit": "لكل وحدة",
+      "daily": "يومي",
+      "monthly": "شهري",
+      "metayage": "المزارعة"
+    },
+    "harvestForm": {
+      "title": "تسجيل الحصاد",
+      "completionType": "نوع الإكمال",
+      "completeFull": "إكمال كامل",
+      "completeFullDesc": "وضع علامة على المهمة كمكتملة",
+      "partial": "حصاد جزئي",
+      "partialDesc": "متابعة المهمة بعد ذلك",
+      "lotNumber": "رقم الدفعة *",
+      "lotPlaceholder": "مثال: P1FM1-0012025",
+      "cropHarvested": "المحصول المحصود *",
+      "selectCrop": "اختر محصولاً",
+      "selectCropPlaceholder": "اختر محصولاً...",
+      "harvestDate": "تاريخ الحصاد *",
+      "quantityHarvested": "الكمية المحصودة *",
+      "quantityPlaceholder": "مثال: 500",
+      "unit": "الوحدة",
+      "select": "اختر",
+      "units": {
+        "kg": "كيلوغرامات (كغ)",
+        "tons": "أطنان",
+        "units": "وحدات",
+        "boxes": "صناديق",
+        "crates": "قفف",
+        "liters": "لترات"
+      },
+      "qualityGrade": "درجة الجودة",
+      "grades": {
+        "extra": "ممتاز",
+        "a": "الدرجة A",
+        "first": "الجودة الأولى",
+        "b": "الدرجة B",
+        "second": "الجودة الثانية",
+        "c": "الدرجة C",
+        "third": "الجودة الثالثة"
+      },
+      "perUnitPayment": "الدفع لكل وحدة",
+      "ratePerUnit": "السعر لكل وحدة (درهم):",
+      "ratePlaceholder": "مثال: 30",
+      "enterWorkerUnits": "أدخل عدد الوحدات التي أنجزها كل عامل.",
+      "totalPayments": "إجمالي المدفوعات:",
+      "notes": "ملاحظات",
+      "notesPlaceholder": "ملاحظات حول الحصاد...",
+      "savePartial": "حفظ الحصاد الجزئي",
+      "completeAndSave": "إكمال وحفظ"
+    },
+    "perUnitForm": {
+      "ratePerUnit": "السعر لكل وحدة (درهم) *",
+      "ratePlaceholder": "مثال: 5.00",
+      "unitsPerWorker": "الوحدات لكل عامل",
+      "unitsCompleted": "الوحدات المكتملة *",
+      "unitsPlaceholder": "مثال: 100",
+      "total": "الإجمالي",
+      "notes": "ملاحظات",
+      "notesPlaceholder": "ملاحظات حول العمل المنجز..."
+    }
   },
   "farmImport": {
     "title": "استيراد المزارع",
@@ -735,6 +1210,7 @@
     "settings": "الإعدادات",
     "stock": "إدارة المخزون",
     "infrastructure": "البنية التحتية",
+    "equipment": "المعدات",
     "farmHierarchy": "إدارة المزارع",
     "productApplications": "تطبيقات المنتجات",
     "expenses": "التكاليف",
@@ -781,7 +1257,8 @@
     "sentRequests": "الطلبات المرسلة",
     "viewMarketplace": "عرض السوق",
     "paymentRecords": "المدفوعات",
-    "bankAccounts": "الحسابات البنكية"
+    "bankAccounts": "الحسابات البنكية",
+    "infrastructureEquipment": "البنية التحتية والمعدات"
   },
   "sidebar": {
     "collapse": "طي",
@@ -843,354 +1320,6 @@
       "viewTask": "عرض المهمة",
       "viewFarm": "عرض المزرعة",
       "more": "المزيد"
-    }
-  },
-  "dashboard": {
-    "title": "لوحة التحكم",
-    "subtitle": "حلل مزارعك وفرقك وأدائك المالي في مكان واحد",
-    "loading": "جاري تحميل المنظمة...",
-    "heroTitle": "إدارة عمليات المزرعة الزراعية",
-    "quickActions": "إجراءات سريعة",
-    "pageTitle": "لوحة القيادة",
-    "metaDescription": "قم بإدارة مزارعك: تصور القطع والمهام والتحليلات والمحاسبة في واجهة واحدة.",
-    "keyFeatures": {
-      "title": "الميزات الرئيسية للمنصة",
-      "subtitle": "قم بتفعيل الوحدات التي تدعم أهدافك اليومية والوصول بسرعة إلى الإجراءات الاستراتيجية",
-      "farmOps": {
-        "title": "عمليات زراعية مُدارة",
-        "description": "شاهد مزارعك وقطعك ومراقبة المحاصيل في الوقت الفعلي لتفعيل الإجراءات الصحيحة",
-        "cta": "فتح إدارة القطع"
-      },
-      "taskExecution": {
-        "title": "مهام وقوى عاملة منسقة",
-        "description": "خطط للعمل، عيّن فرقك وتابع التقدم والوقت المستغرق من شاشة واحدة",
-        "cta": "تخطيط مهمة"
-      },
-      "financialHealth": {
-        "title": "الصحة المالية الموحدة",
-        "description": "اربط الفواتير والمدفوعات والتكاليف حسب المزرعة لتوقع التدفق النقدي والهوامش",
-        "cta": "التحقق من المحاسبة"
-      },
-      "labServices": {
-        "title": "التحليلات والخدمات المتكاملة",
-        "description": "اطلب تحليلات التربة والمختبر من المنصة ودمج النتائج في قراراتك",
-        "cta": "استكشاف التحليلات"
-      }
-    },
-    "structuredData": {
-      "platformName": "منصة إدارة زراعية",
-      "description": "حل موحد لإدارة الزراعة: المزارع والقطع والمهام والمحاسبة والتحليلات.",
-      "services": {
-        "parcels": "إدارة القطع",
-        "tasks": "تخطيط المهام",
-        "accounting": "المحاسبة الزراعية",
-        "analyses": "تحليلات المختبر"
-      }
-    },
-    "commands": {
-      "sections": {
-        "navigation": "التنقل",
-        "modules": "الوحدات",
-        "preferences": "التفضيلات"
-      },
-      "navigation": {
-        "dashboard": "الانتقال إلى لوحة القيادة",
-        "dashboardKeywords": "لوحة القيادة الرئيسية",
-        "analyses": "فتح التحليلات",
-        "analysesKeywords": "تحليلات التربة تقرير",
-        "parcels": "عرض القطع",
-        "parcelsKeywords": "قطع حقول خريطة",
-        "stock": "الوصول إلى المخزون",
-        "stockKeywords": "مخزون جرد",
-        "infrastructure": "عرض البنية التحتية",
-        "infrastructureKeywords": "بنية تحتية ري معدات",
-        "farmHierarchy": "إدارة المزارع",
-        "farmHierarchyKeywords": "مزارع هيكلية",
-        "tasks": "إدارة المهام",
-        "tasksKeywords": "مهام مهام عمل",
-        "settings": "فتح الإعدادات",
-        "settingsKeywords": "إعدادات منظمة"
-      },
-      "create": {
-        "parcel": "إنشاء قطعة",
-        "task": "إنشاء مهمة",
-        "cycle": "إنشاء دورة محصول",
-        "stockEntry": "إنشاء إدخال مخزون",
-        "invoice": "إنشاء فاتورة",
-        "worker": "إضافة عامل"
-      },
-      "searchPlaceholder": "البحث عن إجراء أو صفحة...",
-      "noResults": "لم يتم العثور على نتائج.",
-      "modules": {
-        "subtitle": "الوحدات المتاحة"
-      },
-      "preferences": {
-        "lightMode": "التبديل إلى الوضع الفاتح",
-        "darkMode": "التبديل إلى الوضع الداكن",
-        "themeKeywords": "مظهر داكن فاتح وضع"
-      }
-    },
-    "widgets": {
-      "noFarmSelected": "حدد مزرعة لعرض القطع والبيانات المرتبطة",
-      "farm": {
-        "title": "المزرعة",
-        "noFarm": "لم يتم تحديد مزرعة",
-        "parcels": "القطع",
-        "surface": "المساحة",
-        "analyses": "التحليلات",
-        "viewParcels": "عرض القطع",
-        "addParcel": "إضافة قطعة"
-      },
-      "soil": {
-        "title": "تحليلات التربة",
-        "total": "الإجمالي",
-        "analyses": "تحليلات",
-        "recent": "حديثة",
-        "last30Days": "آخر 30 يوم",
-        "needsAttention": "{{count}} قطعة تحتاج إلى انتباه",
-        "needsAttention_plural": "{{count}} قطع تحتاج إلى انتباه",
-        "outOfNorm": "الأس الهيدروجيني أو مستويات العناصر الغذائية خارج المعيار",
-        "latestAnalysis": "آخر تحليل",
-        "parcel": "القطعة",
-        "allInNorm": "جميع التحليلات ضمن المعايير",
-        "empty": "لا يوجد تحليل للتربة",
-        "addAnalysis": "إضافة تحليل"
-      },
-      "climate": {
-        "temperature": "درجة الحرارة"
-      },
-      "irrigation": {
-        "title": "الري",
-        "active": "نشط",
-        "stopped": "متوقف",
-        "sector": "القطاع",
-        "start": "البداية",
-        "duration": "المدة"
-      },
-      "maintenance": {
-        "title": "الصيانة",
-        "inProgress": "قيد التنفيذ",
-        "start": "البداية",
-        "expectedEnd": "النهاية المتوقعة"
-      },
-      "production": {
-        "title": "تحليل المحصول",
-        "chartComing": "الرسم البياني قريباً"
-      },
-      "financial": {
-        "title": "البيانات المالية",
-        "chartComing": "الرسم البياني قريباً"
-      },
-      "alerts": {
-        "title": "تنبيهات المخزون",
-        "lowStock": "مخزون منخفض"
-      },
-      "viewAll": "عرض الكل",
-      "parcels": {
-        "title": "القطع",
-        "total": "الإجمالي",
-        "parcels": "قطع",
-        "surface": "المساحة",
-        "hectares": "هكتار",
-        "topCrops": "المحاصيل الرئيسية",
-        "empty": "لم يتم إنشاء أي قطعة",
-        "create": "إنشاء قطعة",
-        "unspecifiedCrop": "غير محدد"
-      },
-      "workers": {
-        "title": "نشاط العمال",
-        "active": "نشط",
-        "outOfTotal": "من أصل {{total}} إجمالي",
-        "today": "اليوم",
-        "activeToday": "نشط",
-        "tasksInProgress": "المهام قيد التنفيذ",
-        "tasksScheduledToday": "{{count}} مهمة مجدولة اليوم",
-        "tasksScheduledToday_plural": "{{count}} مهام مجدولة اليوم",
-        "mostActive": "الأكثر نشاطاً",
-        "tasks": "مهام",
-        "empty": "لا يوجد عمال مسجلون",
-        "addWorkers": "إضافة عمال"
-      },
-      "stock": {
-        "title": "المخزون والمخزون",
-        "alerts": "التنبيهات",
-        "lowStock": "مخزون منخفض",
-        "ok": "حسناً",
-        "inStock": "في المخزون",
-        "units": "وحدات",
-        "min": "الحد الأدنى",
-        "moreItems": "+{{count}} عناصر أخرى في المخزون المنخفض",
-        "allOptimal": "جميع المخزونات في المستوى الأمثل",
-        "totalProducts": "إجمالي المنتجات"
-      },
-      "harvests": {
-        "title": "الحصاد",
-        "thisMonth": "هذا الشهر",
-        "harvests": "حصاد",
-        "quantity": "الكمية",
-        "kgThisMonth": "كجم هذا الشهر",
-        "lastHarvest": "آخر حصاد",
-        "parcel": "القطعة",
-        "quality": "الجودة",
-        "kg": "كجم",
-        "totalHarvests": "إجمالي الحصاد",
-        "empty": "لا يوجد حصاد مسجل",
-        "record": "تسجيل حصاد"
-      },
-      "tasks": {
-        "title": "المهام القادمة",
-        "noTasks": "لا توجد مهام مجدولة",
-        "upcomingSummary": "{{count}} مهمة قادمة في الثلاثين يوماً القادمة",
-        "upcomingSummary_plural": "{{count}} مهام قادمة في الثلاثين يوماً القادمة",
-        "priority": {
-          "low": "منخفضة",
-          "medium": "متوسطة",
-          "high": "عالية",
-          "urgent": "عاجلة"
-        },
-        "status": {
-          "pending": "قيد الانتظار",
-          "assigned": "مُعيَّنة",
-          "inProgress": "قيد التنفيذ",
-          "completed": "مكتملة",
-          "cancelled": "ملغاة",
-          "paused": "متوقفة"
-        }
-      },
-      "analysis": {
-        "title": "التحليلات",
-        "tabs": {
-          "soil": "التربة",
-          "plant": "النبات",
-          "water": "الماء"
-        },
-        "total": "الإجمالي",
-        "analyses": "تحليلات",
-        "recent": "حديثة",
-        "last30Days": "آخر 30 يوم",
-        "needsAttention": "{{count}} تحليل يحتاج إلى انتباه",
-        "needsAttention_plural": "{{count}} تحليلات تحتاج إلى انتباه",
-        "outOfNorm": "المعايير خارج النطاق الطبيعي",
-        "latestAnalysis": "آخر تحليل",
-        "parcel": "القطعة",
-        "allInNorm": "جميع التحليلات ضمن النطاق الطبيعي",
-        "empty": "لا توجد تحليلات متاحة",
-        "addAnalysis": "إضافة تحليل",
-        "chlorophyll": "الكلوروفيل"
-      },
-      "sales": {
-        "title": "طلبات البيع",
-        "thisMonth": "هذا الشهر",
-        "ordersCount": "{{count}} طلبات",
-        "totalOrders": "إجمالي الطلبات",
-        "pending": "قيد الانتظار",
-        "inProgress": "قيد التنفيذ",
-        "shipped": "تم الشحن",
-        "completed": "مكتمل",
-        "recentOrders": "الطلبات الأخيرة",
-        "noOrders": "لا توجد طلبات بيع"
-      },
-      "accounting": {
-        "title": "المحاسبة",
-        "revenue": "الإيرادات",
-        "expenses": "المصاريف",
-        "invoicesCount": "{{count}} فواتير",
-        "draft": "مسودة",
-        "pending": "قيد الانتظار",
-        "paid": "مدفوع",
-        "overdue": "متأخر",
-        "outstandingAlert": "المبلغ المستحق",
-        "recentInvoices": "الفواتير الأخيرة",
-        "noInvoices": "لا توجد فواتير",
-        "sale": "بيع",
-        "purchase": "شراء"
-      }
-    },
-    "description": "قم بتخصيص عرض لوحة التحكم الخاصة بك عن طريق اختيار البيانات المراد عرضها وتخطيطها.",
-    "saving": "جاري الحفظ...",
-    "sections": {
-      "dataDisplay": "البيانات المراد عرضها",
-      "alerts": "التنبيهات والإشعارات",
-      "layout": "تخطيط لوحة التحكم"
-    },
-    "data": {
-      "soil": {
-        "title": "بيانات التربة",
-        "description": "الرطوبة، الأس الهيدروجيني، العناصر الغذائية"
-      },
-      "climate": {
-        "title": "البيانات المناخية",
-        "description": "درجة الحرارة، الرطوبة، هطول الأمطار"
-      },
-      "irrigation": {
-        "title": "بيانات الري",
-        "description": "استهلاك المياه، الجدولة"
-      },
-      "maintenance": {
-        "title": "بيانات الصيانة",
-        "description": "حالة المعدات، التدخلات"
-      },
-      "production": {
-        "title": "بيانات الإنتاج",
-        "description": "المحاصيل، الحصاد، الجودة"
-      },
-      "financial": {
-        "title": "البيانات المالية",
-        "description": "التكاليف، الإيرادات، الربحية"
-      }
-    },
-    "alerts": {
-      "stock": {
-        "title": "تنبيهات المخزون",
-        "description": "مخزون منخفض، نقص، انتهاء الصلاحية"
-      },
-      "tasks": {
-        "title": "تنبيهات المهام",
-        "description": "مهام متأخرة، مواعيد نهائية"
-      }
-    },
-    "layout": {
-      "topRow": "الصف العلوي",
-      "middleRow": "الصف الأوسط",
-      "bottomRow": "الصف السفلي",
-      "helper": "اضغط على Ctrl/Cmd لتحديد خيارات متعددة",
-      "structureTitle": "كيف يُنظَّم لوحة التحكم",
-      "structureIntro": "أعلى لوحة التحكم ثابت: سياق المزرعة، مؤشرات الأداء، المهام، الطاقم، المحاسبة والتحليلات تظهر دائماً بهذا الترتيب.",
-      "fixedStripLabel": "ثابت — يظهر دائماً",
-      "fixedStripDetail": "محدد المزرعة · 4 مؤشرات · المهام والطاقم · المحاسبة وتحليلات المختبر",
-      "optionalBlockTitle": "عناصر اختيارية أسفل ذلك",
-      "optionalTwoCol": "صف عريض (عمودان على الشاشات الكبيرة)",
-      "optionalThreeCol": "صف بلاطات (3 أعمدة على الشاشات الكبيرة)",
-      "toggleHint": "اضغط على بطاقة لإظهار العنصر على لوحة التحكم أو إخفائه.",
-      "previewFixed": "تخطيط ثابت",
-      "previewOptional": "عناصرك الاختيارية",
-      "legacyBottomNote": "بعض البلاطات المحفوظة لا تُعرض بعد على لوحة التحكم وتُتجاهل: {{keys}}",
-      "toggleOn": "ظاهر",
-      "toggleOff": "مخفي"
-    },
-    "layoutOptions": {
-      "soil": "بيانات التربة",
-      "climate": "البيانات المناخية",
-      "irrigation": "الري",
-      "maintenance": "الصيانة",
-      "production": "الإنتاج",
-      "financial": "المالية",
-      "stock": "المخزون",
-      "alerts": "التنبيهات",
-      "tasks": "المهام",
-      "weather": "الطقس"
-    },
-    "preview": {
-      "title": "معاينة التخطيط"
-    },
-    "save": "حفظ",
-    "saveResult": {
-      "success": "تم حفظ الإعدادات بنجاح",
-      "failed": "فشل حفظ الإعدادات",
-      "failedDescription": "حدث خطأ أثناء حفظ الإعدادات."
-    },
-    "errors": {
-      "userOrOrgNotFound": "المستخدم أو المنظمة غير موجود"
     }
   },
   "profitability": {
@@ -1386,6 +1515,9 @@
       "errorTosRequired": "يجب الموافقة على شروط الاستخدام وسياسة الخصوصية",
       "errorPasswordMismatch": "كلمات المرور غير متطابقة",
       "errorEmailExists": "يوجد مستخدم بهذا البريد الإلكتروني بالفعل",
+      "errorEmailExistsTitle": "هذا البريد الإلكتروني مسجل بالفعل.",
+      "errorEmailExistsAction": "سجّل الدخول إلى حسابك الحالي وأنشئ مؤسسة جديدة.",
+      "signInToCreateOrg": "تسجيل الدخول وإنشاء مؤسسة",
       "errorGeneric": "حدث خطأ أثناء التسجيل"
     },
     "createAccount": "إنشاء حساب",
@@ -1438,6 +1570,9 @@
       "errorTosRequired": "يجب الموافقة على شروط الاستخدام وسياسة الخصوصية",
       "errorPasswordMismatch": "كلمات المرور غير متطابقة",
       "errorEmailExists": "يوجد مستخدم بهذا البريد الإلكتروني بالفعل",
+      "errorEmailExistsTitle": "هذا البريد الإلكتروني مسجل بالفعل.",
+      "errorEmailExistsAction": "سجّل الدخول إلى حسابك الحالي وأنشئ مؤسسة جديدة.",
+      "signInToCreateOrg": "تسجيل الدخول وإنشاء مؤسسة",
       "errorGeneric": "حدث خطأ أثناء التسجيل",
       "submitButton": "إنشاء حساب",
       "submitting": "جاري إنشاء الحساب..."
@@ -1503,7 +1638,89 @@
   },
   "onboarding": {
     "loading": "جاري التحميل...",
+    "header": {
+      "step": "الخطوة {{current}} من {{total}}"
+    },
     "errorGeneric": "حدث خطأ",
+    "welcome": {
+      "back": "رجوع",
+      "continue": "متابعة",
+      "nextStep": "الخطوة التالية",
+      "greetingPrefix": "مرحبًا بك في",
+      "greetingBrand": "AgroGina",
+      "greetingTagline": "نمِّ نجاحك بذكاء",
+      "nameTitle": "كيف نُناديك؟",
+      "nameSubtitle": "سنخصّص تجربتك",
+      "firstName": "الاسم الأول",
+      "lastName": "اسم العائلة",
+      "languageHello": "مرحبًا، {{name}}",
+      "languagePickSubtitle": "ما اللغة التي تفضّلها؟",
+      "timezoneTitle": "منطقتك الزمنية",
+      "timezoneSubtitle": "لمزامنة مهامك وتذكيراتك",
+      "languages": {
+        "fr": { "name": "Français", "description": "واجهة بالفرنسية" },
+        "en": { "name": "English", "description": "واجهة بالإنجليزية" },
+        "ar": { "name": "العربية", "description": "واجهة بالعربية" }
+      },
+      "timezones": {
+        "Africa/Casablanca": { "city": "الدار البيضاء", "offset": "GMT+1" },
+        "Europe/Paris": { "city": "باريس", "offset": "GMT+1/+2" },
+        "Europe/London": { "city": "لندن", "offset": "GMT+0/+1" },
+        "UTC": { "city": "UTC", "offset": "GMT+0" }
+      },
+      "phoneTitle": "رقم هاتفك المحمول",
+      "phoneSubtitle": "نستخدمه للواتساب والرسائل القصيرة وتحديثات الحساب المهمة.",
+      "phoneLabel": "رقم الهاتف",
+      "phoneHint": "اختر الدولة ثم أدخل رقمك بالصيغة الدولية.",
+      "phoneInvalid": "يرجى إدخال رقم صالح للدولة المختارة."
+    },
+    "organization": {
+      "accountTypeTitle": "ما نوع الحساب؟",
+      "accountTypeSubtitle": "سنضبط الميزات حسب احتياجك",
+      "accountTypes": {
+        "individual": { "name": "فرد", "description": "مزارع صغير أو نبات منزلي" },
+        "farm": { "name": "مزرعة", "description": "مزرعة مهنية", "badge": "الأكثر شيوعًا" },
+        "business": { "name": "شركة", "description": "تعاونية أو عملية كبيرة" }
+      },
+      "orgNameTitleFarm": "سمِّ مزرعتك",
+      "orgNameTitleOrg": "سمِّ منظمتك",
+      "orgNameSubtitle": "سيظهر هذا الاسم في تقاريرك وفواتيرك",
+      "orgNameLabel": "اسم المنظمة",
+      "slugLabel": "معرّف فريد (slug)",
+      "slugTaken": "هذا المعرّف مستخدم بالفعل",
+      "slugHint": "رابطك: agrogina.ma/{{slug}}",
+      "slugPlaceholder": "معرّفك",
+      "slugSuggest": "استخدم « {{suggestion}} » بدلًا منه",
+      "previewLabel": "معاينة",
+      "contactTitle": "جهة الاتصال والموقع",
+      "contactSubtitle": "للفواتير والمراسلات",
+      "emailLabel": "البريد المهني",
+      "addressOptional": "العنوان (اختياري)",
+      "cityLabel": "المدينة",
+      "countryLabel": "الدولة",
+      "saving": "جاري الحفظ...",
+      "countries": {
+        "MA": "المغرب",
+        "FR": "فرنسا",
+        "ES": "إسبانيا",
+        "DZ": "الجزائر",
+        "TN": "تونس"
+      },
+      "phoneLabel": "هاتف المنظمة (اختياري)",
+      "phoneHint": "للفواتير والدعم. اتركه فارغًا إن كان نفس رقمك الشخصي.",
+      "phoneInvalid": "يبدو أن هذا الرقم غير صالح للدولة المختارة.",
+      "reuseProfilePhone": "استخدام نفس الرقم الموجود في ملفي الشخصي",
+      "sameAsProfilePhone": "هذا هو نفس الرقم المسجل في ملفك الشخصي."
+    },
+    "farm": {
+      "locationLabel": "الموقع",
+      "locationPlaceholder": "ابحث عن مكان…",
+      "locationPlaceholderMA": "ابحث في المغرب…",
+      "locationSearching": "جاري البحث…",
+      "locationNoResults": "لم يُعثر على أماكن.",
+      "locationHelp": "ابحث عبر OpenStreetMap واختر نتيجة لحفظ إحداثيات دقيقة للخرائط والقطع.",
+      "locationChange": "تغيير"
+    },
     "selectTrial": {
       "setupSteps": {
         "auth": "جاري التحقق من المصادقة...",
@@ -1548,6 +1765,40 @@
       "startingTrial": "جاري بدء تجربتك...",
       "noCreditCard": "لا حاجة لبطاقة بنكية. يمكنك الإلغاء في أي وقت.",
       "errorTrialFailed": "فشل إنشاء اشتراك التجربة"
+    },
+    "settings": {
+      "title": "الإعدادات الأخيرة",
+      "subtitle": "العملة والتاريخ وخطة الحسابات مطلوبة حتى تُسجَّل التكاليف والمخزون والأجور بشكل صحيح.",
+      "chartTitle": "خطة الحسابات (البلد)",
+      "chartHelp": "نثبّت دليل الحسابات والربط الافتراضي لهذا البلد. يمكنك تعديل الربط لاحقاً من المحاسبة.",
+      "chart": {
+        "ma": "المغرب (CGNC)",
+        "fr": "فرنسا (PCG)",
+        "tn": "تونس (PCN)",
+        "us": "الولايات المتحدة (US GAAP)",
+        "gb": "المملكة المتحدة (FRS 102)",
+        "de": "ألمانيا (HGB)"
+      },
+      "currency": "العملة",
+      "currencyNames": {
+        "mad": "الدرهم المغربي",
+        "eur": "اليورو",
+        "usd": "الدولار الأمريكي"
+      },
+      "dateFormat": "تنسيق التاريخ",
+      "dateFormatLabels": {
+        "eu": "31/12/2024 (أوروبا)",
+        "us": "12/31/2024 (الولايات المتحدة)",
+        "iso": "2024-12-31 (ISO)"
+      },
+      "demoTitle": "بيانات تجريبية",
+      "demoDesc": "فقط إن لم تكن لديك مزرعة بعد — وإلا يُتخطى ذلك للحفاظ على مزرعتك وأراضيك.",
+      "notificationsTitle": "الإشعارات",
+      "notificationsDesc": "تنبيهات مهمة عبر البريد",
+      "modulesLine": "{{count}} وحدات",
+      "launching": "جاري الإعداد…",
+      "launch": "فتح مساحة العمل",
+      "incomplete": "اختر بلد خطة الحسابات والعملة وتنسيق التاريخ للمتابعة."
     }
   },
   "public": {
@@ -4004,7 +4255,9 @@
       "pumpType": "نوع المضخة",
       "pumpPower": "قوة المضخة",
       "pump": "المضخة"
-    }
+    },
+    "tabInfra": "البنية التحتية",
+    "tabEquipment": "المعدات"
   },
   "parcels": {
     "title": "إدارة القطع",
@@ -5778,159 +6031,6 @@
       }
     }
   },
-  "aiReport": {
-    "title": "تقرير الذكاء الاصطناعي",
-    "subtitle": "تحليل معمق لقطعة الأرض باستخدام الذكاء الاصطناعي",
-    "loadingProviders": "جاري تحميل مزودي الذكاء الاصطناعي...",
-    "noProvidersTitle": "لم يتم تكوين مزودي الذكاء الاصطناعي",
-    "noProvidersDescription": "لإنشاء تقارير الذكاء الاصطناعي، يرجى تكوين مزود واحد على الأقل (OpenAI أو Google Gemini) في إعدادات منظمتك.",
-    "dateRange": "فترة التحليل",
-    "startDate": "تاريخ البداية",
-    "endDate": "تاريخ النهاية",
-    "errorTitle": "خطأ في الإنشاء",
-    "errorGeneric": "حدث خطأ. يرجى المحاولة مرة أخرى.",
-    "generating": "جاري التحليل...",
-    "generateButton": "إنشاء تقرير الذكاء الاصطناعي",
-    "generatingHint": "يقوم الذكاء الاصطناعي بتحليل بيانات الأقمار الصناعية وتحليلات التربة والمعلومات الأخرى...",
-    "providersLoadError": "حدث خطأ أثناء تحميل مزودي الذكاء الاصطناعي",
-    "noProvidersAvailable": "لا يوجد مزود ذكاء اصطناعي متاح",
-    "configureApiKeys": "يرجى ضبط مفاتيح API الخاصة بـ OpenAI أو Gemini في إعدادات الخادم.",
-    "analysisPeriod": "فترة التحليل",
-    "analysisBlocked": "Analysis blocked: Missing critical data. Please recalibrate and fetch missing data.",
-    "generationErrorFallback": "حدث خطأ أثناء إنشاء التقرير",
-    "generateNewReport": "← إنشاء تقرير جديد",
-    "generatingShort": "جارٍ التوليد...",
-    "generateReport": "إنشاء تقرير الذكاء الاصطناعي",
-    "generatedWith": "تم الإنشاء بواسطة",
-    "regenerate": "إعادة الإنشاء",
-    "exportPdf": "تصدير PDF",
-    "sections": {
-      "executiveSummary": "الملخص التنفيذي",
-      "healthAssessment": "تقييم الصحة",
-      "riskAlerts": "التنبيهات",
-      "recommendations": "التوصيات",
-      "actionItems": "الإجراءات المطلوبة"
-    },
-    "health": {
-      "soil": "التربة",
-      "vegetation": "الغطاء النباتي",
-      "water": "المياه",
-      "notEvaluated": "غير مقيم"
-    },
-    "priority": {
-      "high": "أولوية عالية",
-      "medium": "أولوية متوسطة",
-      "low": "أولوية منخفضة"
-    },
-    "providers": {
-      "openai": {
-        "name": "OpenAI GPT-4",
-        "description": "نموذج متقدم للتحليلات المفصلة"
-      },
-      "gemini": {
-        "name": "Google Gemini",
-        "description": "الذكاء الاصطناعي متعدد الوسائط من Google"
-      }
-    },
-    "configureProviders": "تكوين مزودي الذكاء الاصطناعي",
-    "securityNote": "مفاتيح API الخاصة بك مشفرة ومخزنة بشكل آمن.",
-    "dataAvailability": {
-      "title": "البيانات المتاحة",
-      "loading": "جاري التحقق من البيانات...",
-      "statusExcellent": "تغطية ممتازة",
-      "statusGood": "تغطية جيدة",
-      "statusBasic": "تغطية أساسية",
-      "statusInsufficient": "بيانات غير كافية",
-      "statusPartial": "تغطية جزئية",
-      "statusLimited": "تغطية محدودة",
-      "requiredSection": "مطلوب",
-      "optionalSection": "اختياري (يحسن الدقة)",
-      "optional": "اختياري",
-      "satellite": "بيانات الأقمار الصناعية",
-      "satelliteDetail": "{{count}} نقاط",
-      "soil": "تحليل التربة",
-      "water": "تحليل المياه",
-      "plant": "تحليل النبات",
-      "weather": "بيانات الطقس",
-      "canGenerateBasic": "يمكنك إنشاء تقرير أساسي. أضف تحليلات لمزيد من الدقة.",
-      "cannotGenerate": "بيانات الأقمار الصناعية والطقس مطلوبة لإنشاء تقرير.",
-      "lowCoverageWarning": "سيكون تقرير الذكاء الاصطناعي أقل دقة مع البيانات المحدودة. أضف تحليلات للحصول على نتائج أفضل.",
-      "addAnalysis": "إضافة"
-    },
-    "detail": {
-      "errors": {
-        "rateRequired": "يرجى إدخال السعر لكل وحدة",
-        "unitsRequired": "يرجى إدخال عدد الوحدات المكتملة",
-        "workerUnitsRequired": "يرجى إدخال الوحدات لعامل واحد على الأقل",
-        "completeFailed": "فشل إكمال المهمة",
-        "cropRequired": "يرجى اختيار محصول",
-        "quantityRequired": "يرجى إدخال كمية صالحة",
-        "lotNumberRequired": "يرجى إدخال رقم الدفعة",
-        "harvestCompleteFailed": "فشل إكمال عملية الحصاد"
-      }
-    },
-    "paymentTypes": {
-      "perUnit": "لكل وحدة",
-      "daily": "يومي",
-      "monthly": "شهري",
-      "metayage": "المزارعة"
-    },
-    "harvestForm": {
-      "title": "تسجيل الحصاد",
-      "completionType": "نوع الإكمال",
-      "completeFull": "إكمال كامل",
-      "completeFullDesc": "وضع علامة على المهمة كمكتملة",
-      "partial": "حصاد جزئي",
-      "partialDesc": "متابعة المهمة بعد ذلك",
-      "lotNumber": "رقم الدفعة *",
-      "lotPlaceholder": "مثال: P1FM1-0012025",
-      "cropHarvested": "المحصول المحصود *",
-      "selectCrop": "اختر محصولاً",
-      "selectCropPlaceholder": "اختر محصولاً...",
-      "harvestDate": "تاريخ الحصاد *",
-      "quantityHarvested": "الكمية المحصودة *",
-      "quantityPlaceholder": "مثال: 500",
-      "unit": "الوحدة",
-      "select": "اختر",
-      "units": {
-        "kg": "كيلوغرامات (كغ)",
-        "tons": "أطنان",
-        "units": "وحدات",
-        "boxes": "صناديق",
-        "crates": "قفف",
-        "liters": "لترات"
-      },
-      "qualityGrade": "درجة الجودة",
-      "grades": {
-        "extra": "ممتاز",
-        "a": "الدرجة A",
-        "first": "الجودة الأولى",
-        "b": "الدرجة B",
-        "second": "الجودة الثانية",
-        "c": "الدرجة C",
-        "third": "الجودة الثالثة"
-      },
-      "perUnitPayment": "الدفع لكل وحدة",
-      "ratePerUnit": "السعر لكل وحدة (درهم):",
-      "ratePlaceholder": "مثال: 30",
-      "enterWorkerUnits": "أدخل عدد الوحدات التي أنجزها كل عامل.",
-      "totalPayments": "إجمالي المدفوعات:",
-      "notes": "ملاحظات",
-      "notesPlaceholder": "ملاحظات حول الحصاد...",
-      "savePartial": "حفظ الحصاد الجزئي",
-      "completeAndSave": "إكمال وحفظ"
-    },
-    "perUnitForm": {
-      "ratePerUnit": "السعر لكل وحدة (درهم) *",
-      "ratePlaceholder": "مثال: 5.00",
-      "unitsPerWorker": "الوحدات لكل عامل",
-      "unitsCompleted": "الوحدات المكتملة *",
-      "unitsPlaceholder": "مثال: 100",
-      "total": "الإجمالي",
-      "notes": "ملاحظات",
-      "notesPlaceholder": "ملاحظات حول العمل المنجز..."
-    }
-  },
   "aiSettings": {
     "title": "مزودو الذكاء الاصطناعي",
     "description": "قم بتكوين مفاتيح API الخاصة بك لتمكين تقارير الذكاء الاصطناعي على قطعك.",
@@ -6317,27 +6417,6 @@
     "actions": {
       "viewDetails": "عرض التفاصيل",
       "createReception": "إنشاء دفعة استقبال"
-    }
-  },
-  "utilities": {
-    "title": "إدارة المرافق",
-    "subtitle": "تتبع وإدارة استهلاك المياه والكهرباء لمزارعك",
-    "loading": "جاري تحميل المنظمة...",
-    "loadingDashboard": "جاري تحميل لوحة التحكم...",
-    "accountNotFoundError": "نوع الحساب \"{{accountType}}\"{{subtypeMsg}} غير موجود. يرجى إنشاء هذا الحساب في دليل الحسابات.",
-    "selectFarmToAddCharge": "اختر مزرعة لإضافة مصروف.",
-    "fileUploadError": "حدث خطأ أثناء رفع الملف",
-    "journalEntryMissingAccountHelp": "✓ تم حفظ المصروف بنجاح.\n\n⚠️ تعذر إنشاء القيد المحاسبي تلقائياً.\n\nالسبب: {{errorMessage}}\n\n→ يرجى ضبط دليل الحسابات في المحاسبة > دليل الحسابات.\n→ الحسابات المطلوبة: مصاريف التشغيل، النقدية، الحسابات الدائنة.",
-    "journalEntryCreatedWithError": "تم حفظ المصروف، لكن لم يتم إنشاء القيد المحاسبي: {{errorMessage}}",
-    "selectFarmToEditCharge": "اختر مزرعة لتعديل مصروف.",
-    "utilityTypes": {
-      "electricity": "الكهرباء",
-      "water": "الماء",
-      "diesel": "الديزل",
-      "gas": "الغاز",
-      "internet": "الإنترنت",
-      "phone": "الهاتف",
-      "other": "أخرى"
     }
   },
   "receptionBatches": {
@@ -7580,38 +7659,275 @@
     "title": "إدارة المصاريف الثابتة",
     "subtitle": "تتبّع المصاريف الثابتة والاستهلاك والقيود المحاسبية المرتبطة بها.",
     "selectFarmMessage": "اختر مزرعة لإدارة المصاريف الثابتة.",
-    "utilityTypes": { "electricity": "الكهرباء", "water": "الماء", "diesel": "الديزل", "gas": "الغاز", "internet": "الإنترنت", "phone": "الهاتف", "other": "أخرى" },
-    "paymentStatus": { "paid": "مدفوع", "pending": "قيد الانتظار", "overdue": "متأخر" },
-    "views": { "grouped": "عرض مجمّع", "cards": "عرض بطاقات", "list": "عرض قائمة", "dashboard": "عرض لوحة التحكم" },
-    "actions": { "resetFilters": "إعادة تعيين الفلاتر", "addUtility": "إضافة مصروف", "downloadInvoice": "تنزيل الفاتورة", "accountingJournal": "دفتر اليومية المحاسبي", "selectFarmToAdd": "اختر مزرعة لإضافة مصروف", "newUtility": "مصروف جديد", "advancedFilters": "فلاتر متقدمة", "filters": "الفلاتر", "openChartOfAccounts": "فتح دليل الحسابات", "cancel": "إلغاء", "uploading": "جاري الرفع...", "update": "تحديث", "add": "إضافة", "chooseFile": "اختيار ملف" },
-    "placeholders": { "search": "ابحث حسب النوع أو المبلغ أو الملاحظة أو التاريخ...", "consumption": "مثال: 500", "selectUnit": "اختر وحدة" },
-    "filters": { "allStatuses": "كل الحالات", "allTypes": "كل الأنواع", "allRecurring": "الكل", "recurring": "متكررة", "nonRecurring": "غير متكررة", "startDate": "تاريخ البداية", "endDate": "تاريخ النهاية", "sortBy": "ترتيب حسب", "order": "الترتيب", "descending": "تنازلي", "ascending": "تصاعدي" },
-    "columns": { "date": "التاريخ", "amount": "المبلغ", "type": "النوع" },
-    "stats": { "totalExpenses": "إجمالي المصاريف", "recurringExpenses": "المصاريف المتكررة", "pending": "قيد الانتظار", "totalCount": "العدد الإجمالي" },
-    "dashboardAccess": { "title": "وصول محدود إلى لوحة التحكم", "description": "لا يسمح دورك بالوصول إلى التحليلات المالية التفصيلية." },
-    "dialog": { "editTitle": "تعديل المصروف", "newTitle": "مصروف جديد", "editDescription": "عدّل تفاصيل هذا المصروف. ستتم مزامنة التغييرات تلقائياً مع دفتر الأستاذ.", "newDescription": "أضف مصروفاً جديداً. سيتم إنشاء قيد محاسبي تلقائياً في دفتر الأستاذ." },
-    "fields": { "utilityType": "نوع المصروف", "consumptionDetails": "تفاصيل الاستهلاك (اختياري)", "leaveBlankIfUnavailable": "اتركه فارغاً إذا لم يكن متاحاً", "consumption": "الاستهلاك", "unit": "الوحدة", "unitCost": "تكلفة الوحدة:", "date": "التاريخ", "recurringExpense": "مصروف متكرر", "frequency": "التكرار", "notes": "ملاحظات", "invoice": "الفاتورة (PDF أو صورة)", "invoiceAttached": "فاتورة مرفقة" },
-    "frequency": { "monthly": "شهري", "quarterly": "ربع سنوي", "yearly": "سنوي" },
-    "empty": { "noResultsTitle": "لا توجد نتائج", "noUtilitiesTitle": "لا توجد مصاريف ثابتة", "noResultsMessage": "لا يوجد مصروف يطابق الفلاتر المحددة. جرّب تغيير معايير البحث.", "noUtilitiesMessage": "ابدأ بإضافة أول مصاريفك الثابتة (الكهرباء، الماء، إلخ)." }
+    "utilityTypes": {
+      "electricity": "الكهرباء",
+      "water": "الماء",
+      "diesel": "الديزل",
+      "gas": "الغاز",
+      "internet": "الإنترنت",
+      "phone": "الهاتف",
+      "other": "أخرى"
+    },
+    "paymentStatus": {
+      "paid": "مدفوع",
+      "pending": "قيد الانتظار",
+      "overdue": "متأخر"
+    },
+    "views": {
+      "grouped": "عرض مجمّع",
+      "cards": "عرض بطاقات",
+      "list": "عرض قائمة",
+      "dashboard": "عرض لوحة التحكم"
+    },
+    "actions": {
+      "resetFilters": "إعادة تعيين الفلاتر",
+      "addUtility": "إضافة مصروف",
+      "downloadInvoice": "تنزيل الفاتورة",
+      "accountingJournal": "دفتر اليومية المحاسبي",
+      "selectFarmToAdd": "اختر مزرعة لإضافة مصروف",
+      "newUtility": "مصروف جديد",
+      "advancedFilters": "فلاتر متقدمة",
+      "filters": "الفلاتر",
+      "openChartOfAccounts": "فتح دليل الحسابات",
+      "cancel": "إلغاء",
+      "uploading": "جاري الرفع...",
+      "update": "تحديث",
+      "add": "إضافة",
+      "chooseFile": "اختيار ملف"
+    },
+    "placeholders": {
+      "search": "ابحث حسب النوع أو المبلغ أو الملاحظة أو التاريخ...",
+      "consumption": "مثال: 500",
+      "selectUnit": "اختر وحدة"
+    },
+    "filters": {
+      "allStatuses": "كل الحالات",
+      "allTypes": "كل الأنواع",
+      "allRecurring": "الكل",
+      "recurring": "متكررة",
+      "nonRecurring": "غير متكررة",
+      "startDate": "تاريخ البداية",
+      "endDate": "تاريخ النهاية",
+      "sortBy": "ترتيب حسب",
+      "order": "الترتيب",
+      "descending": "تنازلي",
+      "ascending": "تصاعدي"
+    },
+    "columns": {
+      "date": "التاريخ",
+      "amount": "المبلغ",
+      "type": "النوع"
+    },
+    "stats": {
+      "totalExpenses": "إجمالي المصاريف",
+      "recurringExpenses": "المصاريف المتكررة",
+      "pending": "قيد الانتظار",
+      "totalCount": "العدد الإجمالي"
+    },
+    "dashboardAccess": {
+      "title": "وصول محدود إلى لوحة التحكم",
+      "description": "لا يسمح دورك بالوصول إلى التحليلات المالية التفصيلية."
+    },
+    "dialog": {
+      "editTitle": "تعديل المصروف",
+      "newTitle": "مصروف جديد",
+      "editDescription": "عدّل تفاصيل هذا المصروف. ستتم مزامنة التغييرات تلقائياً مع دفتر الأستاذ.",
+      "newDescription": "أضف مصروفاً جديداً. سيتم إنشاء قيد محاسبي تلقائياً في دفتر الأستاذ."
+    },
+    "fields": {
+      "utilityType": "نوع المصروف",
+      "consumptionDetails": "تفاصيل الاستهلاك (اختياري)",
+      "leaveBlankIfUnavailable": "اتركه فارغاً إذا لم يكن متاحاً",
+      "consumption": "الاستهلاك",
+      "unit": "الوحدة",
+      "unitCost": "تكلفة الوحدة:",
+      "date": "التاريخ",
+      "recurringExpense": "مصروف متكرر",
+      "frequency": "التكرار",
+      "notes": "ملاحظات",
+      "invoice": "الفاتورة (PDF أو صورة)",
+      "invoiceAttached": "فاتورة مرفقة"
+    },
+    "frequency": {
+      "monthly": "شهري",
+      "quarterly": "ربع سنوي",
+      "yearly": "سنوي"
+    },
+    "empty": {
+      "noResultsTitle": "لا توجد نتائج",
+      "noUtilitiesTitle": "لا توجد مصاريف ثابتة",
+      "noResultsMessage": "لا يوجد مصروف يطابق الفلاتر المحددة. جرّب تغيير معايير البحث.",
+      "noUtilitiesMessage": "ابدأ بإضافة أول مصاريفك الثابتة (الكهرباء، الماء، إلخ)."
+    }
   },
   "taskDetail": {
-    "timeline": { "taskCreated": "تم إنشاء المهمة", "workStarted": "بدأ العمل", "workEnded": "انتهى العمل", "taskApproved": "تم اعتماد المهمة", "taskCompleted": "اكتملت المهمة", "issueReported": "تم الإبلاغ عن مشكلة", "statusUpdate": "تحديث الحالة", "comment": "تعليق", "clockedIn": "تسجيل دخول", "clockedOut": "تسجيل خروج · {{hours}}س" },
-    "fields": { "taskType": "نوع المهمة", "farm": "المزرعة", "parcel": "القطعة", "assignedTo": "مُسندة إلى", "estimatedDuration": "المدة التقديرية", "estimatedDurationValue": "{{hours}} ساعة", "scheduledDate": "التاريخ المجدول", "dueDate": "تاريخ الاستحقاق", "description": "الوصف", "notes": "ملاحظات", "progress": "التقدم" },
-    "payment": { "title": "معلومات الدفع", "type": "نوع الدفع", "estimatedUnits": "الوحدات المقدرة", "estimatedUnitsValue": "الوحدات المقدرة: {{count}}", "ratePerUnit": "السعر لكل وحدة", "types": { "perUnit": "لكل وحدة", "daily": "يومي", "monthly": "شهري", "metayage": "المزارعة" } },
-    "perUnitForm": { "title": "الدفع لكل وحدة", "ratePerUnit": "السعر لكل وحدة (درهم) *", "ratePlaceholder": "مثال: 5.00", "unitsPerWorker": "الوحدات لكل عامل", "unitsCompleted": "الوحدات المكتملة *", "unitsPlaceholder": "مثال: 100", "totalPayment": "إجمالي الدفع", "notesPlaceholder": "ملاحظات حول العمل المنجز..." },
-    "harvestForm": { "title": "تسجيل الحصاد", "completionType": "نوع الإكمال", "completeFull": "إكمال كامل", "completeFullDesc": "وضع علامة على المهمة كمكتملة", "partial": "حصاد جزئي", "partialDesc": "متابعة المهمة بعد ذلك", "lotNumber": "رقم الدفعة *", "lotPlaceholder": "مثال: P1FM1-0012025", "cropHarvested": "المحصول المحصود *", "selectCrop": "اختر محصولاً", "selectCropPlaceholder": "اختر محصولاً...", "harvestDate": "تاريخ الحصاد *", "quantityHarvested": "الكمية المحصودة *", "quantityPlaceholder": "مثال: 500", "unit": "الوحدة", "select": "اختر", "qualityGrade": "درجة الجودة", "notesPlaceholder": "ملاحظات حول الحصاد...", "units": { "kg": "كيلوغرامات (كغ)", "tons": "أطنان", "units": "وحدات", "boxes": "صناديق", "crates": "قفف", "liters": "لترات" }, "grades": { "extra": "ممتاز", "a": "الدرجة A", "first": "الجودة الأولى", "b": "الدرجة B", "second": "الجودة الثانية", "c": "الدرجة C", "third": "الجودة الثالثة" } },
-    "actions": { "close": "إغلاق", "start": "بدء", "pause": "إيقاف مؤقت", "resume": "استئناف", "completeWithHarvest": "إكمال مع الحصاد", "complete": "إكمال", "cancel": "إلغاء", "saving": "جاري الحفظ...", "completeAndPay": "إكمال والدفع", "savePartialHarvest": "حفظ الحصاد الجزئي", "completeAndSave": "إكمال وحفظ" }
+    "timeline": {
+      "taskCreated": "تم إنشاء المهمة",
+      "workStarted": "بدأ العمل",
+      "workEnded": "انتهى العمل",
+      "taskApproved": "تم اعتماد المهمة",
+      "taskCompleted": "اكتملت المهمة",
+      "issueReported": "تم الإبلاغ عن مشكلة",
+      "statusUpdate": "تحديث الحالة",
+      "comment": "تعليق",
+      "clockedIn": "تسجيل دخول",
+      "clockedOut": "تسجيل خروج · {{hours}}س"
+    },
+    "fields": {
+      "taskType": "نوع المهمة",
+      "farm": "المزرعة",
+      "parcel": "القطعة",
+      "assignedTo": "مُسندة إلى",
+      "estimatedDuration": "المدة التقديرية",
+      "estimatedDurationValue": "{{hours}} ساعة",
+      "scheduledDate": "التاريخ المجدول",
+      "dueDate": "تاريخ الاستحقاق",
+      "description": "الوصف",
+      "notes": "ملاحظات",
+      "progress": "التقدم"
+    },
+    "payment": {
+      "title": "معلومات الدفع",
+      "type": "نوع الدفع",
+      "estimatedUnits": "الوحدات المقدرة",
+      "estimatedUnitsValue": "الوحدات المقدرة: {{count}}",
+      "ratePerUnit": "السعر لكل وحدة",
+      "types": {
+        "perUnit": "لكل وحدة",
+        "daily": "يومي",
+        "monthly": "شهري",
+        "metayage": "المزارعة"
+      }
+    },
+    "perUnitForm": {
+      "title": "الدفع لكل وحدة",
+      "ratePerUnit": "السعر لكل وحدة (درهم) *",
+      "ratePlaceholder": "مثال: 5.00",
+      "unitsPerWorker": "الوحدات لكل عامل",
+      "unitsCompleted": "الوحدات المكتملة *",
+      "unitsPlaceholder": "مثال: 100",
+      "totalPayment": "إجمالي الدفع",
+      "notesPlaceholder": "ملاحظات حول العمل المنجز..."
+    },
+    "harvestForm": {
+      "title": "تسجيل الحصاد",
+      "completionType": "نوع الإكمال",
+      "completeFull": "إكمال كامل",
+      "completeFullDesc": "وضع علامة على المهمة كمكتملة",
+      "partial": "حصاد جزئي",
+      "partialDesc": "متابعة المهمة بعد ذلك",
+      "lotNumber": "رقم الدفعة *",
+      "lotPlaceholder": "مثال: P1FM1-0012025",
+      "cropHarvested": "المحصول المحصود *",
+      "selectCrop": "اختر محصولاً",
+      "selectCropPlaceholder": "اختر محصولاً...",
+      "harvestDate": "تاريخ الحصاد *",
+      "quantityHarvested": "الكمية المحصودة *",
+      "quantityPlaceholder": "مثال: 500",
+      "unit": "الوحدة",
+      "select": "اختر",
+      "qualityGrade": "درجة الجودة",
+      "notesPlaceholder": "ملاحظات حول الحصاد...",
+      "units": {
+        "kg": "كيلوغرامات (كغ)",
+        "tons": "أطنان",
+        "units": "وحدات",
+        "boxes": "صناديق",
+        "crates": "قفف",
+        "liters": "لترات"
+      },
+      "grades": {
+        "extra": "ممتاز",
+        "a": "الدرجة A",
+        "first": "الجودة الأولى",
+        "b": "الدرجة B",
+        "second": "الجودة الثانية",
+        "c": "الدرجة C",
+        "third": "الجودة الثالثة"
+      }
+    },
+    "actions": {
+      "close": "إغلاق",
+      "start": "بدء",
+      "pause": "إيقاف مؤقت",
+      "resume": "استئناف",
+      "completeWithHarvest": "إكمال مع الحصاد",
+      "complete": "إكمال",
+      "cancel": "إلغاء",
+      "saving": "جاري الحفظ...",
+      "completeAndPay": "إكمال والدفع",
+      "savePartialHarvest": "حفظ الحصاد الجزئي",
+      "completeAndSave": "إكمال وحفظ"
+    }
   },
   "treeManagement": {
-    "tabs": { "trees": "أنواع الأشجار", "plantations": "أنواع الغرس" },
-    "headers": { "treesTitle": "أنواع الأشجار", "treesSubtitle": "إدارة الفئات والأشجار المتاحة.", "plantationsTitle": "أنواع الغرس", "plantationsSubtitle": "إدارة الكثافات ومسافات الغرس.", "addPlantationType": "إضافة نوع غرس" },
-    "actions": { "clearSearch": "مسح البحث", "addThisCategory": "إضافة هذه الفئة", "addThisType": "إضافة هذا النوع", "addCategory": "إضافة فئة", "add": "إضافة" },
-    "columns": { "category": "الفئة", "trees": "الأشجار", "actions": "الإجراءات", "type": "النوع", "spacing": "التباعد", "treesPerHa": "أشجار/هكتار" },
-    "fields": { "type": "النوع", "spacing": "التباعد", "treesPerHa": "أشجار/هكتار", "spacingLabel": "التباعد:", "treesPerHaLabel": "أشجار/هكتار:" },
-    "placeholders": { "addTree": "إضافة شجرة...", "searchTrees": "البحث عن فئة أو شجرة...", "newCategory": "فئة جديدة...", "searchPlantations": "البحث عن نوع أو تباعد أو كثافة...", "plantationType": "النوع (مثال: كثيف جداً)", "plantationSpacing": "التباعد (مثال: 4x1.5)", "plantationTreesPerHa": "أشجار/هكتار" },
-    "empty": { "noResults": "لا توجد نتائج", "noCategories": "لا توجد فئات", "noTreeMatches": "لا توجد فئة أو شجرة تطابق بحثك.", "addFirstCategory": "أضف أول فئة أشجار للبدء.", "noPlantationTypes": "لا توجد أنواع غرس", "noPlantationMatches": "لا يوجد نوع غرس يطابق بحثك.", "addFirstPlantationType": "أضف أول نوع غرس للبدء." },
-    "confirm": { "deleteCategory": "هل أنت متأكد من حذف هذه الفئة؟", "deletePlantationType": "هل أنت متأكد من حذف هذا النوع من الغرس؟" },
-    "errors": { "unknown": "خطأ غير معروف", "addCategory": "خطأ أثناء إضافة الفئة", "deleteCategory": "خطأ أثناء حذف الفئة", "updateCategory": "خطأ أثناء تحديث الفئة", "addTree": "خطأ أثناء إضافة الشجرة", "deleteTree": "خطأ أثناء حذف الشجرة", "updateTree": "خطأ أثناء تحديث الشجرة", "addPlantationType": "خطأ أثناء إضافة نوع الغرس", "deletePlantationType": "خطأ أثناء حذف نوع الغرس", "updatePlantationType": "خطأ أثناء تحديث نوع الغرس" },
+    "tabs": {
+      "trees": "أنواع الأشجار",
+      "plantations": "أنواع الغرس"
+    },
+    "headers": {
+      "treesTitle": "أنواع الأشجار",
+      "treesSubtitle": "إدارة الفئات والأشجار المتاحة.",
+      "plantationsTitle": "أنواع الغرس",
+      "plantationsSubtitle": "إدارة الكثافات ومسافات الغرس.",
+      "addPlantationType": "إضافة نوع غرس"
+    },
+    "actions": {
+      "clearSearch": "مسح البحث",
+      "addThisCategory": "إضافة هذه الفئة",
+      "addThisType": "إضافة هذا النوع",
+      "addCategory": "إضافة فئة",
+      "add": "إضافة"
+    },
+    "columns": {
+      "category": "الفئة",
+      "trees": "الأشجار",
+      "actions": "الإجراءات",
+      "type": "النوع",
+      "spacing": "التباعد",
+      "treesPerHa": "أشجار/هكتار"
+    },
+    "fields": {
+      "type": "النوع",
+      "spacing": "التباعد",
+      "treesPerHa": "أشجار/هكتار",
+      "spacingLabel": "التباعد:",
+      "treesPerHaLabel": "أشجار/هكتار:"
+    },
+    "placeholders": {
+      "addTree": "إضافة شجرة...",
+      "searchTrees": "البحث عن فئة أو شجرة...",
+      "newCategory": "فئة جديدة...",
+      "searchPlantations": "البحث عن نوع أو تباعد أو كثافة...",
+      "plantationType": "النوع (مثال: كثيف جداً)",
+      "plantationSpacing": "التباعد (مثال: 4x1.5)",
+      "plantationTreesPerHa": "أشجار/هكتار"
+    },
+    "empty": {
+      "noResults": "لا توجد نتائج",
+      "noCategories": "لا توجد فئات",
+      "noTreeMatches": "لا توجد فئة أو شجرة تطابق بحثك.",
+      "addFirstCategory": "أضف أول فئة أشجار للبدء.",
+      "noPlantationTypes": "لا توجد أنواع غرس",
+      "noPlantationMatches": "لا يوجد نوع غرس يطابق بحثك.",
+      "addFirstPlantationType": "أضف أول نوع غرس للبدء."
+    },
+    "confirm": {
+      "deleteCategory": "هل أنت متأكد من حذف هذه الفئة؟",
+      "deletePlantationType": "هل أنت متأكد من حذف هذا النوع من الغرس؟"
+    },
+    "errors": {
+      "unknown": "خطأ غير معروف",
+      "addCategory": "خطأ أثناء إضافة الفئة",
+      "deleteCategory": "خطأ أثناء حذف الفئة",
+      "updateCategory": "خطأ أثناء تحديث الفئة",
+      "addTree": "خطأ أثناء إضافة الشجرة",
+      "deleteTree": "خطأ أثناء حذف الشجرة",
+      "updateTree": "خطأ أثناء تحديث الشجرة",
+      "addPlantationType": "خطأ أثناء إضافة نوع الغرس",
+      "deletePlantationType": "خطأ أثناء حذف نوع الغرس",
+      "updatePlantationType": "خطأ أثناء تحديث نوع الغرس"
+    },
     "errorState": "خطأ",
     "treeCount": "{{count}} شجرة",
     "treeCount_plural": "{{count}} أشجار"
@@ -7661,5 +7977,97 @@
     "organizationLabel": "المؤسسة",
     "needHelp": "هل تحتاج إلى مساعدة؟",
     "signOut": "تسجيل الخروج"
+  },
+  "equipment": {
+    "title": "المعدات",
+    "subtitle": "إدارة أسطولك ومعداتك",
+    "add": "إضافة معدات",
+    "edit": "تعديل المعدات",
+    "addFirst": "أضف أول معدات لك",
+    "empty": "لم يتم العثور على معدات",
+    "search": "البحث عن معدات...",
+    "name": "الاسم",
+    "brand": "العلامة التجارية",
+    "model": "الطراز",
+    "serialNumber": "الرقم التسلسلي",
+    "licensePlate": "لوحة الترخيص",
+    "purchaseDate": "تاريخ الشراء",
+    "purchasePrice": "سعر الشراء",
+    "currentValue": "القيمة الحالية",
+    "hourMeter": "عداد الساعات",
+    "fuel": "الوقود",
+    "farm": "المزرعة",
+    "hours": "ساعات",
+    "noModel": "لا يوجد معلومات طراز",
+    "noFarm": "لا توجد مزرعة مخصصة",
+    "notes": "ملاحظات",
+    "insuranceExpiry": "انتهاء التأمين",
+    "registrationExpiry": "انتهاء التسجيل",
+    "description": "الوصف",
+    "cost": "التكلفة (درهم)",
+    "vendor": "المورد",
+    "maintenanceDate": "التاريخ",
+    "nextServiceDate": "تاريخ الصيانة القادمة",
+    "allCategories": "جميع الفئات",
+    "allStatuses": "جميع الحالات",
+    "allFarms": "جميع المزارع",
+    "validation": {
+      "nameRequired": "الاسم مطلوب"
+    },
+    "updated": "تم تحديث المعدات",
+    "created": "تم إنشاء المعدات",
+    "deleted": "تم حذف المعدات",
+    "saveFailed": "فشل في حفظ المعدات",
+    "deleteConfirm": "حذف المعدات؟",
+    "deleteConfirmDesc": "هل أنت متأكد أنك تريد حذف هذه المعدات؟",
+    "deleteFailed": "فشل في الحذف",
+    "loadFailed": "فشل في تحميل المعدات",
+    "maintenance": "الصيانة",
+    "maintenanceTitle": "سجل الصيانة",
+    "maintenanceCreated": "تم إنشاء سجل الصيانة",
+    "maintenanceCreateFailed": "فشل في إنشاء سجل الصيانة",
+    "maintenanceDeleted": "تم حذف سجل الصيانة",
+    "maintenanceDeleteFailed": "فشل في حذف سجل الصيانة",
+    "deleteMaintenance": "حذف سجل الصيانة؟",
+    "logMaintenance": "تسجيل صيانة",
+    "ytdCost": "المجموع السنوي",
+    "noMaintenance": "لا توجد سجلات صيانة",
+    "category": {
+      "tractor": "جرار",
+      "harvester": "حصادة",
+      "sprayer": "رشاشة",
+      "utility_vehicle": "سيارة نفعية",
+      "pump": "مضخة",
+      "small_tool": "أداة صغيرة",
+      "other": "أخرى",
+      "label": "الفئة"
+    },
+    "status": {
+      "available": "متاح",
+      "in_use": "قيد الاستخدام",
+      "maintenance": "صيانة",
+      "out_of_service": "خارج الخدمة",
+      "label": "الحالة"
+    },
+    "fuelType": {
+      "diesel": "ديزل",
+      "petrol": "بنزين",
+      "electric": "كهربائي",
+      "other": "أخرى",
+      "label": "نوع الوقود"
+    },
+    "maintenanceType": {
+      "oil_change": "تغيير الزيت",
+      "repair": "إصلاح",
+      "inspection": "فحص",
+      "tire_replacement": "تغيير الإطارات",
+      "battery": "بطارية",
+      "filter": "فلتر",
+      "fuel_fill": "تعبئة الوقود",
+      "registration": "تسجيل",
+      "insurance": "تأمين",
+      "other": "أخرى",
+      "label": "النوع"
+    }
   }
 }

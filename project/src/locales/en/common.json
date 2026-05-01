@@ -688,6 +688,7 @@
     "settings": "Settings",
     "stock": "Stock Management",
     "infrastructure": "Infrastructure",
+    "equipment": "Equipment",
     "farmHierarchy": "Farm Management",
     "productApplications": "Product Applications",
     "expenses": "Expenses",
@@ -734,7 +735,8 @@
     "sentRequests": "Sent Requests",
     "viewMarketplace": "View Marketplace",
     "paymentRecords": "Payment Records",
-    "bankAccounts": "Bank Accounts"
+    "bankAccounts": "Bank Accounts",
+    "infrastructureEquipment": "Infrastructure & Equipment"
   },
   "sidebar": {
     "collapse": "Collapse",
@@ -1324,7 +1326,7 @@
     },
     "signUp": "Sign up",
     "signIn": {
-        "title": "Sign in to AgroGina",
+      "title": "Sign in to AgroGina",
       "subtitle": "Welcome back",
       "helperText": "Access your satellite insights, operations dashboard, and farm collaborators from one secure workspace.",
       "noAccount": "Don't have an account yet?",
@@ -1353,6 +1355,9 @@
       "errorTosRequired": "You must accept the Terms of Service and Privacy Policy",
       "errorPasswordMismatch": "Passwords do not match",
       "errorEmailExists": "A user with this email already exists",
+      "errorEmailExistsTitle": "This email is already registered.",
+      "errorEmailExistsAction": "Sign in to your existing account and create a new organization.",
+      "signInToCreateOrg": "Sign in & create organization",
       "errorGeneric": "An error occurred during registration"
     },
     "createAccount": "Create an account",
@@ -1405,6 +1410,9 @@
       "errorTosRequired": "You must accept the Terms of Service and Privacy Policy",
       "errorPasswordMismatch": "Passwords do not match",
       "errorEmailExists": "A user with this email already exists",
+      "errorEmailExistsTitle": "This email is already registered.",
+      "errorEmailExistsAction": "Sign in to your existing account and create a new organization.",
+      "signInToCreateOrg": "Sign in & create organization",
       "errorGeneric": "An error occurred during registration",
       "submitButton": "Sign up",
       "submitting": "Creating account..."
@@ -1470,7 +1478,89 @@
   },
   "onboarding": {
     "loading": "Loading...",
+    "header": {
+      "step": "Step {{current}} of {{total}}"
+    },
     "errorGeneric": "An error occurred",
+    "welcome": {
+      "back": "Back",
+      "continue": "Continue",
+      "nextStep": "Next step",
+      "greetingPrefix": "Welcome to",
+      "greetingBrand": "AgroGina",
+      "greetingTagline": "Grow your success with intelligence",
+      "nameTitle": "What should we call you?",
+      "nameSubtitle": "We will personalize your experience",
+      "firstName": "First name",
+      "lastName": "Last name",
+      "languageHello": "Hello, {{name}}",
+      "languagePickSubtitle": "Which language do you prefer?",
+      "timezoneTitle": "Your time zone",
+      "timezoneSubtitle": "To sync your tasks and reminders",
+      "languages": {
+        "fr": { "name": "Français", "description": "Interface in French" },
+        "en": { "name": "English", "description": "Interface in English" },
+        "ar": { "name": "العربية", "description": "Interface in Arabic" }
+      },
+      "timezones": {
+        "Africa/Casablanca": { "city": "Casablanca", "offset": "GMT+1" },
+        "Europe/Paris": { "city": "Paris", "offset": "GMT+1/+2" },
+        "Europe/London": { "city": "London", "offset": "GMT+0/+1" },
+        "UTC": { "city": "UTC", "offset": "GMT+0" }
+      },
+      "phoneTitle": "Your mobile number",
+      "phoneSubtitle": "We use it for WhatsApp, SMS, and important account updates.",
+      "phoneLabel": "Phone number",
+      "phoneHint": "Choose your country, then enter your number in international format.",
+      "phoneInvalid": "Please enter a valid phone number for the selected country."
+    },
+    "organization": {
+      "accountTypeTitle": "What type of account?",
+      "accountTypeSubtitle": "We will tailor features to your needs",
+      "accountTypes": {
+        "individual": { "name": "Individual", "description": "Small grower or gardener" },
+        "farm": { "name": "Farm", "description": "Professional farm operation", "badge": "Popular" },
+        "business": { "name": "Business", "description": "Cooperative or large operation" }
+      },
+      "orgNameTitleFarm": "Name your farm",
+      "orgNameTitleOrg": "Name your organization",
+      "orgNameSubtitle": "This name will appear on your reports and invoices",
+      "orgNameLabel": "Organization name",
+      "slugLabel": "Unique identifier (slug)",
+      "slugTaken": "This slug is already taken",
+      "slugHint": "Your URL: agrogina.ma/{{slug}}",
+      "slugPlaceholder": "your-slug",
+      "slugSuggest": "Use \"{{suggestion}}\" instead",
+      "previewLabel": "Preview",
+      "contactTitle": "Contact & location",
+      "contactSubtitle": "For invoices and communications",
+      "emailLabel": "Work email",
+      "addressOptional": "Address (optional)",
+      "cityLabel": "City",
+      "countryLabel": "Country",
+      "saving": "Saving...",
+      "countries": {
+        "MA": "Morocco",
+        "FR": "France",
+        "ES": "Spain",
+        "DZ": "Algeria",
+        "TN": "Tunisia"
+      },
+      "phoneLabel": "Organization phone (optional)",
+      "phoneHint": "For invoices and support. Leave blank if the same as your personal number.",
+      "phoneInvalid": "This phone number does not look valid for the selected country.",
+      "reuseProfilePhone": "Use the same number as my profile",
+      "sameAsProfilePhone": "This is the same number as on your profile."
+    },
+    "farm": {
+      "locationLabel": "Location",
+      "locationPlaceholder": "Search for a place…",
+      "locationPlaceholderMA": "Search in Morocco…",
+      "locationSearching": "Searching…",
+      "locationNoResults": "No places found.",
+      "locationHelp": "Search OpenStreetMap and pick a result so we can save exact coordinates for maps and parcels.",
+      "locationChange": "Change"
+    },
     "selectTrial": {
       "setupSteps": {
         "auth": "Checking authentication...",
@@ -1515,6 +1605,40 @@
       "startingTrial": "Starting your trial...",
       "noCreditCard": "No credit card required. Cancel anytime.",
       "errorTrialFailed": "Failed to create trial subscription"
+    },
+    "settings": {
+      "title": "Final settings",
+      "subtitle": "Currency, dates, and your chart of accounts are required so costs, stock, and payroll post correctly.",
+      "chartTitle": "Chart of accounts (country)",
+      "chartHelp": "We install the official account plan and default mappings for this country. You can refine mappings later in Accounting.",
+      "chart": {
+        "ma": "Morocco (CGNC)",
+        "fr": "France (PCG)",
+        "tn": "Tunisia (PCN)",
+        "us": "United States (US GAAP)",
+        "gb": "United Kingdom (FRS 102)",
+        "de": "Germany (HGB)"
+      },
+      "currency": "Currency",
+      "currencyNames": {
+        "mad": "Moroccan dirham",
+        "eur": "Euro",
+        "usd": "US dollar"
+      },
+      "dateFormat": "Date format",
+      "dateFormatLabels": {
+        "eu": "31/12/2024 (Europe)",
+        "us": "12/31/2024 (US)",
+        "iso": "2024-12-31 (ISO)"
+      },
+      "demoTitle": "Demo data",
+      "demoDesc": "Only if you have no farm yet — otherwise skipped to keep your farm and parcels.",
+      "notificationsTitle": "Notifications",
+      "notificationsDesc": "Important alerts by email",
+      "modulesLine": "{{count}} modules",
+      "launching": "Setting up…",
+      "launch": "Open my workspace",
+      "incomplete": "Choose a chart country, currency, and date format to continue."
     }
   },
   "public": {
@@ -2095,7 +2219,7 @@
     "seo": {
       "title": "AGROGINA - The All-in-One Agricultural Management Suite | Morocco",
       "description": "AGROGINA revolutionizes agriculture in Morocco. A unique platform to manage production, finance, HR, inventory and marketing. Precision agriculture and simplified farm management.",
-    "keywords": "agricultural management, agriculture software morocco, agricultural erp, parcels, NDVI, satellite analysis, agricultural accounting, farm management, precision agriculture, agricultural marketplace, fruit quality control, agricultural labor management, agrogina"
+      "keywords": "agricultural management, agriculture software morocco, agricultural erp, parcels, NDVI, satellite analysis, agricultural accounting, farm management, precision agriculture, agricultural marketplace, fruit quality control, agricultural labor management, agrogina"
     }
   },
   "suppliers": {
@@ -3935,7 +4059,7 @@
   },
   "authPages": {
     "login": {
-        "title": "Sign in to AgroGina",
+      "title": "Sign in to AgroGina",
       "subtitle": "Welcome back",
       "emailLabel": "Email address",
       "passwordLabel": "Password",
@@ -4084,7 +4208,9 @@
       "pumpType": "Pump Type",
       "pumpPower": "Pump Power",
       "pump": "Pump"
-    }
+    },
+    "tabInfra": "Infrastructure",
+    "tabEquipment": "Equipment"
   },
   "parcels": {
     "title": "Parcel Management",
@@ -8211,5 +8337,97 @@
     "organizationLabel": "Organization",
     "needHelp": "Need help?",
     "signOut": "Sign out"
+  },
+  "equipment": {
+    "title": "Equipment",
+    "subtitle": "Manage your fleet and equipment",
+    "add": "Add Equipment",
+    "edit": "Edit Equipment",
+    "addFirst": "Add your first equipment",
+    "empty": "No equipment found",
+    "search": "Search equipment...",
+    "name": "Name",
+    "brand": "Brand",
+    "model": "Model",
+    "serialNumber": "Serial Number",
+    "licensePlate": "License Plate",
+    "purchaseDate": "Purchase Date",
+    "purchasePrice": "Purchase Price",
+    "currentValue": "Current Value",
+    "hourMeter": "Hour Meter",
+    "fuel": "Fuel",
+    "farm": "Farm",
+    "hours": "Hours",
+    "noModel": "No model info",
+    "noFarm": "No farm assignment",
+    "notes": "Notes",
+    "insuranceExpiry": "Insurance Expiry",
+    "registrationExpiry": "Registration Expiry",
+    "description": "Description",
+    "cost": "Cost (MAD)",
+    "vendor": "Vendor",
+    "maintenanceDate": "Date",
+    "nextServiceDate": "Next Service Date",
+    "allCategories": "All Categories",
+    "allStatuses": "All Statuses",
+    "allFarms": "All Farms",
+    "validation": {
+      "nameRequired": "Name is required"
+    },
+    "updated": "Equipment updated",
+    "created": "Equipment created",
+    "deleted": "Equipment deleted",
+    "saveFailed": "Failed to save equipment",
+    "deleteConfirm": "Delete equipment?",
+    "deleteConfirmDesc": "Are you sure you want to delete this equipment?",
+    "deleteFailed": "Failed to delete",
+    "loadFailed": "Failed to load equipment",
+    "maintenance": "Maintenance",
+    "maintenanceTitle": "Maintenance History",
+    "maintenanceCreated": "Maintenance record created",
+    "maintenanceCreateFailed": "Failed to create maintenance record",
+    "maintenanceDeleted": "Maintenance record deleted",
+    "maintenanceDeleteFailed": "Failed to delete",
+    "deleteMaintenance": "Delete maintenance record?",
+    "logMaintenance": "Log Maintenance",
+    "ytdCost": "Total YTD",
+    "noMaintenance": "No maintenance records",
+    "category": {
+      "tractor": "Tractor",
+      "harvester": "Harvester",
+      "sprayer": "Sprayer",
+      "utility_vehicle": "Utility Vehicle",
+      "pump": "Pump",
+      "small_tool": "Small Tool",
+      "other": "Other",
+      "label": "Category"
+    },
+    "status": {
+      "available": "Available",
+      "in_use": "In Use",
+      "maintenance": "Maintenance",
+      "out_of_service": "Out of Service",
+      "label": "Status"
+    },
+    "fuelType": {
+      "diesel": "Diesel",
+      "petrol": "Petrol",
+      "electric": "Electric",
+      "other": "Other",
+      "label": "Fuel Type"
+    },
+    "maintenanceType": {
+      "oil_change": "Oil Change",
+      "repair": "Repair",
+      "inspection": "Inspection",
+      "tire_replacement": "Tire Replacement",
+      "battery": "Battery",
+      "filter": "Filter",
+      "fuel_fill": "Fuel Fill",
+      "registration": "Registration",
+      "insurance": "Insurance",
+      "other": "Other",
+      "label": "Type"
+    }
   }
 }

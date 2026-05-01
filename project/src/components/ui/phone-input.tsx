@@ -19,6 +19,8 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 
 import 'react-phone-number-input/style.css'
 
+const PhoneInputInvalidContext = React.createContext(false)
+
 type PhoneInputProps = Omit<
   React.ComponentProps<'input'>,
   'onChange' | 'value' | 'ref'
@@ -28,37 +30,40 @@ type PhoneInputProps = Omit<
     invalid?: boolean
   }
 
+/** Stable `inputComponent` ref so RPNInput does not remount the field on every parent render (fixes focus loss per keystroke). */
+const RPNBoundInput = React.forwardRef<HTMLInputElement, React.ComponentProps<'input'>>(
+  (inputProps, ref) => {
+    const invalid = React.useContext(PhoneInputInvalidContext)
+    return (
+      <Input
+        {...inputProps}
+        ref={ref}
+        invalid={invalid}
+        className={cn('rounded-s-none rounded-e-lg', inputProps.className)}
+      />
+    )
+  },
+)
+RPNBoundInput.displayName = 'PhoneInputBoundInput'
+
 const PhoneInput: React.ForwardRefExoticComponent<PhoneInputProps> =
   React.forwardRef<React.ComponentRef<typeof RPNInput.default>, PhoneInputProps>(
     ({ className, onChange, invalid, ...props }, ref) => (
-      <RPNInput.default
-        ref={ref}
-        className={cn('flex', className)}
-        flagComponent={FlagComponent}
-        countrySelectComponent={CountrySelect}
-        inputComponent={(inputProps) => (
-          <InputComponent {...inputProps} invalid={invalid} />
-        )}
-        smartCaret={false}
-        onChange={(value) => onChange?.(value || ('' as RPNInput.Value))}
-        {...props}
-      />
+      <PhoneInputInvalidContext.Provider value={!!invalid}>
+        <RPNInput.default
+          ref={ref}
+          className={cn('flex', className)}
+          flagComponent={FlagComponent}
+          countrySelectComponent={CountrySelect}
+          inputComponent={RPNBoundInput}
+          smartCaret={false}
+          onChange={(value) => onChange?.(value || ('' as RPNInput.Value))}
+          {...props}
+        />
+      </PhoneInputInvalidContext.Provider>
     ),
   )
 PhoneInput.displayName = 'PhoneInput'
-
-const InputComponent = React.forwardRef<
-  HTMLInputElement,
-  React.ComponentProps<'input'> & { invalid?: boolean }
->(({ className, invalid, ...props }, ref) => (
-  <Input
-    {...props}
-    ref={ref}
-    invalid={invalid}
-    className={cn('rounded-s-none rounded-e-lg', className)}
-  />
-))
-InputComponent.displayName = 'PhoneInputInput'
 
 type CountrySelectOption = { label: string; value: RPNInput.Country }
 

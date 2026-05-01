@@ -177,6 +177,21 @@ export class CaslAbilityFactory {
             can(Action.Manage, Subject.SHIFT_REQUEST);
             can(Action.Manage, Subject.ONBOARDING);
             can(Action.Manage, Subject.SEPARATION);
+            can(Action.Manage, Subject.EXPENSE_CLAIM);
+            can(Action.Manage, Subject.EXPENSE_CATEGORY);
+            can(Action.Manage, Subject.JOB_OPENING);
+            can(Action.Manage, Subject.JOB_APPLICANT);
+            can(Action.Manage, Subject.INTERVIEW);
+            can(Action.Manage, Subject.APPRAISAL_CYCLE);
+            can(Action.Manage, Subject.APPRAISAL);
+            can(Action.Manage, Subject.PERFORMANCE_FEEDBACK);
+            can(Action.Manage, Subject.SEASONAL_CAMPAIGN);
+            can(Action.Manage, Subject.WORKER_QUALIFICATION);
+            can(Action.Manage, Subject.SAFETY_INCIDENT);
+            can(Action.Manage, Subject.WORKER_TRANSPORT);
+            can(Action.Manage, Subject.GRIEVANCE);
+            can(Action.Manage, Subject.TRAINING_PROGRAM);
+            can(Action.Manage, Subject.TRAINING_ENROLLMENT);
             console.log('[CaslAbilityFactory] Organization admin - full org access granted');
         }
         // ============ FARM MANAGER ============
@@ -257,6 +272,21 @@ export class CaslAbilityFactory {
             can(Action.Manage, Subject.SHIFT_REQUEST);
             can(Action.Manage, Subject.ONBOARDING);
             can(Action.Read, Subject.SEPARATION);
+            can(Action.Manage, Subject.EXPENSE_CLAIM);
+            can(Action.Read, Subject.EXPENSE_CATEGORY);
+            can(Action.Manage, Subject.JOB_OPENING);
+            can(Action.Manage, Subject.JOB_APPLICANT);
+            can(Action.Manage, Subject.INTERVIEW);
+            can(Action.Read, Subject.APPRAISAL_CYCLE);
+            can(Action.Manage, Subject.APPRAISAL);
+            can(Action.Manage, Subject.PERFORMANCE_FEEDBACK);
+            can(Action.Manage, Subject.SEASONAL_CAMPAIGN);
+            can(Action.Manage, Subject.WORKER_QUALIFICATION);
+            can(Action.Manage, Subject.SAFETY_INCIDENT);
+            can(Action.Manage, Subject.WORKER_TRANSPORT);
+            can(Action.Read, Subject.GRIEVANCE);
+            can(Action.Read, Subject.TRAINING_PROGRAM);
+            can(Action.Manage, Subject.TRAINING_ENROLLMENT);
 
             console.log('[CaslAbilityFactory] Farm manager permissions granted');
         }
@@ -332,6 +362,15 @@ export class CaslAbilityFactory {
             can(Action.Read, Subject.SHIFT_ASSIGNMENT);
             can(Action.Create, Subject.SHIFT_REQUEST);
             can(Action.Read, Subject.SHIFT_REQUEST);
+            // Self-service P3+
+            can(Action.Create, Subject.EXPENSE_CLAIM);
+            can(Action.Read, Subject.EXPENSE_CLAIM); // own only via RLS
+            can(Action.Read, Subject.APPRAISAL); // own only via RLS
+            can(Action.Read, Subject.WORKER_QUALIFICATION); // own
+            can(Action.Create, Subject.GRIEVANCE);
+            can(Action.Read, Subject.GRIEVANCE); // own only via RLS
+            can(Action.Read, Subject.TRAINING_PROGRAM);
+            can(Action.Read, Subject.TRAINING_ENROLLMENT); // own
 
             console.log('[CaslAbilityFactory] Farm worker permissions granted');
         }
@@ -655,6 +694,21 @@ export class CaslAbilityFactory {
             can(Action.Manage, Subject.SHIFT_REQUEST);
             can(Action.Manage, Subject.ONBOARDING);
             can(Action.Manage, Subject.SEPARATION);
+            can(Action.Manage, Subject.EXPENSE_CLAIM);
+            can(Action.Manage, Subject.EXPENSE_CATEGORY);
+            can(Action.Manage, Subject.JOB_OPENING);
+            can(Action.Manage, Subject.JOB_APPLICANT);
+            can(Action.Manage, Subject.INTERVIEW);
+            can(Action.Manage, Subject.APPRAISAL_CYCLE);
+            can(Action.Manage, Subject.APPRAISAL);
+            can(Action.Manage, Subject.PERFORMANCE_FEEDBACK);
+            can(Action.Manage, Subject.SEASONAL_CAMPAIGN);
+            can(Action.Manage, Subject.WORKER_QUALIFICATION);
+            can(Action.Manage, Subject.SAFETY_INCIDENT);
+            can(Action.Manage, Subject.WORKER_TRANSPORT);
+            can(Action.Manage, Subject.GRIEVANCE);
+            can(Action.Manage, Subject.TRAINING_PROGRAM);
+            can(Action.Manage, Subject.TRAINING_ENROLLMENT);
         } else if (roleName === 'farm_manager') {
             // Farm operations
             can(Action.Manage, Subject.FARM);
@@ -744,6 +798,21 @@ export class CaslAbilityFactory {
             can(Action.Manage, Subject.SHIFT_REQUEST);
             can(Action.Manage, Subject.ONBOARDING);
             can(Action.Read, Subject.SEPARATION);
+            can(Action.Manage, Subject.EXPENSE_CLAIM);
+            can(Action.Read, Subject.EXPENSE_CATEGORY);
+            can(Action.Manage, Subject.JOB_OPENING);
+            can(Action.Manage, Subject.JOB_APPLICANT);
+            can(Action.Manage, Subject.INTERVIEW);
+            can(Action.Read, Subject.APPRAISAL_CYCLE);
+            can(Action.Manage, Subject.APPRAISAL);
+            can(Action.Manage, Subject.PERFORMANCE_FEEDBACK);
+            can(Action.Manage, Subject.SEASONAL_CAMPAIGN);
+            can(Action.Manage, Subject.WORKER_QUALIFICATION);
+            can(Action.Manage, Subject.SAFETY_INCIDENT);
+            can(Action.Manage, Subject.WORKER_TRANSPORT);
+            can(Action.Read, Subject.GRIEVANCE);
+            can(Action.Read, Subject.TRAINING_PROGRAM);
+            can(Action.Manage, Subject.TRAINING_ENROLLMENT);
 
             cannot(Action.Delete, Subject.JOURNAL_ENTRY);
             cannot(Action.Manage, Subject.ACCOUNT);
@@ -826,6 +895,14 @@ export class CaslAbilityFactory {
             can(Action.Read, Subject.SHIFT_ASSIGNMENT);
             can(Action.Create, Subject.SHIFT_REQUEST);
             can(Action.Read, Subject.SHIFT_REQUEST);
+            can(Action.Create, Subject.EXPENSE_CLAIM);
+            can(Action.Read, Subject.EXPENSE_CLAIM);
+            can(Action.Read, Subject.APPRAISAL);
+            can(Action.Read, Subject.WORKER_QUALIFICATION);
+            can(Action.Create, Subject.GRIEVANCE);
+            can(Action.Read, Subject.GRIEVANCE);
+            can(Action.Read, Subject.TRAINING_PROGRAM);
+            can(Action.Read, Subject.TRAINING_ENROLLMENT);
         } else if (roleName === 'day_laborer') {
             can(Action.Read, Subject.TASK);
             can(Action.Update, Subject.TASK);

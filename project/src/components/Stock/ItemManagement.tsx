@@ -68,7 +68,7 @@ import { toast } from 'sonner';
 import type { Item, CreateItemInput, ProductVariant, ItemStockLevelsResponse, ItemGroup } from '@/types/items';
 import type { WorkUnit } from '@/types/work-units';
 import LowStockAlerts from './LowStockAlerts';
-import ProductImageUpload from './ProductImageUpload';
+import { PhotoUpload } from '@/components/ui/PhotoUpload';
 import ItemStockTimeline from './ItemStockTimeline';
 import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import {
@@ -785,13 +785,17 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
                   <Label className="text-sm font-medium">
                     {t('items.marketplace.images', 'Product Images')}
                   </Label>
-                  <ProductImageUpload
-                    itemId={item?.id}
+                  <PhotoUpload
                     organizationId={currentOrganization?.id || ''}
-                    images={watch('images') || []}
-                    onImagesChange={(images) => setValue('images', images)}
-                    maxImages={5}
+                    photos={watch('images') || []}
+                    onChange={(images) => setValue('images', images)}
+                    bucket="products"
+                    entityType="stock-item"
+                    entityId={item?.id}
+                    fieldName="images"
+                    maxPhotos={5}
                     disabled={!currentOrganization?.id}
+                    showPrimary
                   />
                 </div>
 

@@ -31,12 +31,12 @@ async function completeOnboarding(page: Page) {
   await page.waitForTimeout(3500);
 
   // ========================================
-  // STEP 1: Profile (3 sub-steps)
+  // STEP 1: Profile (name → phone → language → timezone)
   // ========================================
-  
+
   // Sub-step 0: Name input
   console.log('Step 1.0: Profile - Name input...');
-  const nameHeading = page.locator('h2:has-text("Comment vous appelez-vous")');
+  const nameHeading = page.getByTestId('onboarding-step-name-title');
   if (await nameHeading.isVisible({ timeout: 10000 }).catch(() => false)) {
     await page.waitForTimeout(500);
 
@@ -58,16 +58,29 @@ async function completeOnboarding(page: Page) {
     console.log(`  Current URL after name: ${page.url()}`);
   }
 
-  // Sub-step 1: Language selection
-  console.log('Step 1.1: Profile - Language selection...');
+  // Sub-step 1: Phone (international, default MA)
+  console.log('Step 1.1: Profile - Phone...');
+  const phoneField = page.locator('#onboarding-profile-phone');
+  if (await phoneField.isVisible({ timeout: 8000 }).catch(() => false)) {
+    await phoneField.fill('+212612345678');
+    console.log('  Filled phone +212612345678');
+    const continuePhoneBtn = page.locator('[data-testid="onboarding-continue-phone"]');
+    await expect(continuePhoneBtn).toBeEnabled({ timeout: 5000 });
+    await continuePhoneBtn.click();
+    console.log('  Clicked Continue (phone)');
+    await page.waitForTimeout(1000);
+  }
+
+  // Sub-step 2: Language selection
+  console.log('Step 1.2: Profile - Language selection...');
   
-  const langHeading = page.locator('h2').filter({ hasText: /Quelle langue préférez-vous|Bonjour/ });
+  const langHeading = page.getByTestId('onboarding-step-language-title');
   const langVisible = await langHeading.isVisible({ timeout: 8000 }).catch(() => false);
   
   if (langVisible) {
     await page.waitForTimeout(500);
 
-    const frenchCard = page.locator('button').filter({ hasText: 'Français' }).first();
+    const frenchCard = page.getByTestId('onboarding-lang-fr');
     if (await frenchCard.isVisible({ timeout: 3000 }).catch(() => false)) {
       await frenchCard.click();
       console.log('  Selected Français');
@@ -81,13 +94,13 @@ async function completeOnboarding(page: Page) {
     await page.waitForTimeout(1000);
   }
 
-  // Sub-step 2: Timezone selection
-  console.log('Step 1.2: Profile - Timezone selection...');
-  const tzHeading = page.locator('h2:has-text("Votre fuseau horaire")');
+  // Sub-step 3: Timezone selection
+  console.log('Step 1.3: Profile - Timezone selection...');
+  const tzHeading = page.getByTestId('onboarding-step-timezone-title');
   if (await tzHeading.isVisible({ timeout: 5000 }).catch(() => false)) {
     await page.waitForTimeout(500);
 
-    const casablancaCard = page.locator('button').filter({ hasText: 'Casablanca' }).first();
+    const casablancaCard = page.getByTestId('onboarding-tz-Africa-Casablanca');
     if (await casablancaCard.isVisible({ timeout: 3000 }).catch(() => false)) {
       await casablancaCard.click();
       console.log('  Selected Casablanca timezone');
@@ -119,10 +132,10 @@ async function completeOnboarding(page: Page) {
   } else if (currentUrlAfterProfile.includes('/onboarding/organization')) {
     console.log('  On organization step - filling form...');
     
-    const orgAccountTypeHeading = page.locator('h2:has-text("Quel type de compte")');
+    const orgAccountTypeHeading = page.getByTestId('onboarding-org-account-type-title');
     if (await orgAccountTypeHeading.isVisible({ timeout: 5000 }).catch(() => false)) {
       console.log('  Sub-step 0: Account type selection');
-      const farmTypeCard = page.locator('button').filter({ hasText: 'Exploitation Agricole' }).first();
+      const farmTypeCard = page.getByTestId('onboarding-org-account-farm');
       await farmTypeCard.click();
       console.log('  Selected "Exploitation Agricole"');
       
@@ -178,14 +191,19 @@ async function completeOnboarding(page: Page) {
   if (await farmNameHeading.isVisible({ timeout: 8000 }).catch(() => false)) {
     // Sub-step 0: Farm name & location
     const farmNameInput = page.locator('[data-testid="onboarding-input-nom-de-la-ferme"]');
-    const locationInput = page.locator('[data-testid="onboarding-input-localisation"]');
+    const locationSearch = page.locator('[data-testid="farm-location-search"]');
 
     await farmNameInput.waitFor({ state: 'visible', timeout: 5000 });
     await farmNameInput.fill(TEST_USER.farmName);
     console.log(`  Filled farm name: ${TEST_USER.farmName}`);
 
-    await locationInput.fill(TEST_USER.farmLocation);
-    console.log(`  Filled location: ${TEST_USER.farmLocation}`);
+    await locationSearch.waitFor({ state: 'visible', timeout: 5000 });
+    await locationSearch.fill(TEST_USER.farmLocation);
+    console.log(`  Searched location: ${TEST_USER.farmLocation}`);
+    const firstResult = page.locator('[data-testid="farm-location-result-0"]');
+    await firstResult.waitFor({ state: 'visible', timeout: 25000 });
+    await firstResult.click();
+    console.log('  Selected first geocoding result');
 
     let continueBtn = page.locator('button:has-text("Continuer")').first();
     await expect(continueBtn).toBeEnabled({ timeout: 5000 });
@@ -256,15 +274,28 @@ async function completeOnboarding(page: Page) {
       await page.waitForTimeout(500);
     }
 
-    // Click "Dernière étape" button to complete
+    // Click "Dernière étape" → final settings (chart, currency, dates) → launch workspace
     const lastStepBtn = page.locator('button:has-text("Dernière étape")');
     if (await lastStepBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
       console.log('  Clicking "Dernière étape" button...');
       await Promise.all([
-        page.waitForURL(url => !url.toString().includes('/onboarding'), { timeout: 30000 }).catch(() => null),
-        lastStepBtn.click()
+        page.waitForURL((url) => url.toString().includes('/onboarding/complete'), { timeout: 30000 }).catch(() => null),
+        lastStepBtn.click(),
       ]);
       console.log('  Clicked Dernière étape');
+
+      const launchBtn = page.locator(
+        'button:has-text("Ouvrir mon espace"), button:has-text("Open my workspace")',
+      );
+      if (await launchBtn.isVisible({ timeout: 15000 }).catch(() => false)) {
+        await Promise.all([
+          page.waitForURL((url) => !url.toString().includes('/onboarding'), { timeout: 60000 }).catch(() => null),
+          launchBtn.click(),
+        ]);
+        console.log('  Clicked launch workspace (onboarding complete)');
+      } else {
+        console.log('  Launch workspace button not found on complete step');
+      }
     } else {
       console.log('  "Dernière étape" button not found');
     }

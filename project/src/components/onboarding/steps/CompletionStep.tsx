@@ -1,13 +1,15 @@
-import {  useState  } from "react";
-import { Rocket, Settings, Bell, Database, ArrowRight, Check, Loader2, Sparkles } from 'lucide-react';
+import { useEffect, useMemo } from 'react';
+import { Rocket, Settings, Bell, Database, Check, Loader2, Landmark } from 'lucide-react';
 import { SelectionCard } from '../ui/SelectionCard';
 import { Button } from '@/components/ui/button';
+import { useTranslation } from 'react-i18next';
 
 interface Preferences {
   currency: string;
   date_format: string;
   use_demo_data: boolean;
   enable_notifications: boolean;
+  accounting_template_country: string;
 }
 
 interface CompletionStepProps {
@@ -16,22 +18,42 @@ interface CompletionStepProps {
   organizationName: string;
   farmName: string;
   selectedModulesCount: number;
+  /** Organization country from step 2 (ISO2), used to default chart template */
+  defaultAccountingCountry: string;
   onUpdate: (data: Partial<Preferences>) => void;
   onComplete: () => void;
   isLoading: boolean;
 }
 
 const CURRENCIES = [
-  { id: 'MAD', name: 'Dirham Marocain', symbol: 'د.م.' },
-  { id: 'EUR', name: 'Euro', symbol: '€' },
-  { id: 'USD', name: 'Dollar US', symbol: '$' },
+  { id: 'MAD', nameKey: 'onboarding.settings.currencyNames.mad', nameFallback: 'Moroccan dirham', symbol: 'د.م.' },
+  { id: 'EUR', nameKey: 'onboarding.settings.currencyNames.eur', nameFallback: 'Euro', symbol: '€' },
+  { id: 'USD', nameKey: 'onboarding.settings.currencyNames.usd', nameFallback: 'US dollar', symbol: '$' },
 ];
 
 const DATE_FORMATS = [
-  { id: 'DD/MM/YYYY', name: '31/12/2024', description: 'Format européen' },
-  { id: 'MM/DD/YYYY', name: '12/31/2024', description: 'Format américain' },
-  { id: 'YYYY-MM-DD', name: '2024-12-31', description: 'Format ISO' },
+  { id: 'DD/MM/YYYY', labelKey: 'onboarding.settings.dateFormatLabels.eu', labelFallback: '31/12/2024 (Europe)' },
+  { id: 'MM/DD/YYYY', labelKey: 'onboarding.settings.dateFormatLabels.us', labelFallback: '12/31/2024 (US)' },
+  { id: 'YYYY-MM-DD', labelKey: 'onboarding.settings.dateFormatLabels.iso', labelFallback: '2024-12-31 (ISO)' },
 ];
+
+/** Chart templates shipped in the API (must match AccountsService fallbacks) */
+const CHART_COUNTRIES = [
+  { id: 'MA', labelKey: 'onboarding.settings.chart.ma', labelFallback: 'Morocco (CGNC)' },
+  { id: 'FR', labelKey: 'onboarding.settings.chart.fr', labelFallback: 'France (PCG)' },
+  { id: 'TN', labelKey: 'onboarding.settings.chart.tn', labelFallback: 'Tunisia (PCN)' },
+  { id: 'US', labelKey: 'onboarding.settings.chart.us', labelFallback: 'United States (US GAAP)' },
+  { id: 'GB', labelKey: 'onboarding.settings.chart.gb', labelFallback: 'United Kingdom (FRS 102)' },
+  { id: 'DE', labelKey: 'onboarding.settings.chart.de', labelFallback: 'Germany (HGB)' },
+];
+
+function mapOrgCountryToDefaultTemplate(iso: string): string {
+  const u = (iso || 'MA').toUpperCase().trim();
+  if (CHART_COUNTRIES.some((c) => c.id === u)) return u;
+  if (u === 'ES') return 'FR';
+  if (u === 'DZ') return 'MA';
+  return 'MA';
+}
 
 export const CompletionStep = ({
   preferences,
@@ -39,218 +61,143 @@ export const CompletionStep = ({
   organizationName,
   farmName,
   selectedModulesCount,
+  defaultAccountingCountry,
   onUpdate,
   onComplete,
   isLoading,
 }: CompletionStepProps) => {
-  const [showPreferences, setShowPreferences] = useState(false);
+  const { t } = useTranslation();
 
-  if (!showPreferences) {
-    // Summary view before launch
-    return (
-      <div className="max-w-lg mx-auto animate-fade-in">
-        <div className="text-center mb-8">
-          <div className="relative w-20 h-20 mx-auto mb-6">
-            <div className="absolute inset-0 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-full animate-pulse" />
-            <div className="absolute inset-2 bg-white rounded-full flex items-center justify-center">
-              <Rocket className="w-8 h-8 text-emerald-600" />
-            </div>
-            {/* Orbiting sparkles */}
-            <div className="absolute inset-0 animate-spin-slow">
-              <Sparkles className="absolute -top-1 left-1/2 w-4 h-4 text-amber-400" />
-              <Sparkles className="absolute top-1/2 -right-1 w-3 h-3 text-sky-400" />
-              <Sparkles className="absolute -bottom-1 left-1/4 w-4 h-4 text-pink-400" />
-            </div>
-          </div>
-          
-          <h2 className="text-3xl font-bold text-gray-900 mb-2">
-            Prêt pour le décollage !
-          </h2>
-          <p className="text-gray-500">
-            Voici un résumé de votre configuration
-          </p>
-        </div>
+  const chartDefault = useMemo(
+    () => mapOrgCountryToDefaultTemplate(defaultAccountingCountry),
+    [defaultAccountingCountry],
+  );
 
-        {/* Summary cards */}
-        <div className="space-y-3 mb-8">
-          <div className="p-4 bg-gradient-to-r from-emerald-50 to-emerald-100 rounded-xl border border-emerald-200 flex items-center gap-4">
-            <div className="w-10 h-10 bg-emerald-500 rounded-full flex items-center justify-center flex-shrink-0">
-              <Check className="w-5 h-5 text-white" />
-            </div>
-            <div className="flex-1">
-              <div className="font-semibold text-emerald-900">Profil créé</div>
-              <div className="text-sm text-emerald-700">{profileName}</div>
-            </div>
-          </div>
+  useEffect(() => {
+    if (!preferences.accounting_template_country) {
+      onUpdate({ accounting_template_country: chartDefault });
+    }
+  }, [chartDefault, preferences.accounting_template_country, onUpdate]);
 
-          <div className="p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl border border-blue-200 flex items-center gap-4">
-            <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
-              <Check className="w-5 h-5 text-white" />
-            </div>
-            <div className="flex-1">
-              <div className="font-semibold text-blue-900">Organisation configurée</div>
-              <div className="text-sm text-blue-700">{organizationName}</div>
-            </div>
-          </div>
+  const canLaunch =
+    !!preferences.currency &&
+    !!preferences.date_format &&
+    !!preferences.accounting_template_country;
 
-          <div className="p-4 bg-gradient-to-r from-amber-50 to-amber-100 rounded-xl border border-amber-200 flex items-center gap-4">
-            <div className="w-10 h-10 bg-amber-500 rounded-full flex items-center justify-center flex-shrink-0">
-              <Check className="w-5 h-5 text-white" />
-            </div>
-            <div className="flex-1">
-              <div className="font-semibold text-amber-900">Ferme prête</div>
-              <div className="text-sm text-amber-700">{farmName}</div>
-            </div>
-          </div>
-
-          <div className="p-4 bg-gradient-to-r from-violet-50 to-violet-100 rounded-xl border border-violet-200 flex items-center gap-4">
-            <div className="w-10 h-10 bg-violet-500 rounded-full flex items-center justify-center flex-shrink-0">
-              <Check className="w-5 h-5 text-white" />
-            </div>
-            <div className="flex-1">
-              <div className="font-semibold text-violet-900">Modules activés</div>
-              <div className="text-sm text-violet-700">{selectedModulesCount} super-pouvoirs</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Preferences toggle */}
-        <Button
-          onClick={() => setShowPreferences(true)}
-          className="w-full p-4 mb-6 bg-gray-50 hover:bg-gray-100 rounded-xl border border-gray-200 flex items-center justify-between transition-colors"
-        >
-          <div className="flex items-center gap-3">
-            <Settings className="w-5 h-5 text-gray-500" />
-            <span className="text-gray-700">Personnaliser les préférences</span>
-          </div>
-          <ArrowRight className="w-5 h-5 text-gray-400" />
-        </Button>
-
-        {/* Launch button */}
-        <Button
-          onClick={onComplete}
-          disabled={isLoading}
-          className="w-full py-5 bg-gradient-to-r from-emerald-500 via-emerald-600 to-teal-600 text-white rounded-2xl font-bold text-lg
-            shadow-xl shadow-emerald-500/30 hover:shadow-2xl hover:shadow-emerald-500/40
-            disabled:opacity-70 disabled:cursor-not-allowed
-            transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]
-            flex items-center justify-center gap-3"
-        >
-          {isLoading ? (
-            <>
-              <Loader2 className="w-6 h-6 animate-spin" />
-              Lancement en cours...
-            </>
-          ) : (
-            <>
-              <Rocket className="w-6 h-6" />
-              Lancer mon tableau de bord
-            </>
-          )}
-        </Button>
-
-        <p className="mt-4 text-center text-sm text-gray-500">
-          3... 2... 1... C'est parti !
-        </p>
-
-        <style>{`
-          @keyframes fade-in {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-          }
-          @keyframes spin-slow {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-          }
-          .animate-fade-in { animation: fade-in 0.4s ease-out forwards; }
-          .animate-spin-slow { animation: spin-slow 8s linear infinite; }
-        `}</style>
-      </div>
-    );
-  }
-
-  // Preferences view
   return (
-    <div className="max-w-lg mx-auto animate-fade-in">
-      <div className="text-center mb-8">
-        <div className="w-16 h-16 bg-gradient-to-br from-gray-100 to-gray-200 rounded-2xl flex items-center justify-center mx-auto mb-4">
-          <Settings className="w-8 h-8 text-gray-600" />
+    <div className="mx-auto w-full max-w-2xl animate-fade-in">
+      <div className="text-center mb-6">
+        <div className="w-14 h-14 bg-gradient-to-br from-emerald-100 to-emerald-200 rounded-2xl flex items-center justify-center mx-auto mb-3">
+          <Settings className="w-7 h-7 text-emerald-700" />
         </div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">
-          Préférences système
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-1">
+          {t('onboarding.settings.title', 'Final settings')}
         </h2>
-        <p className="text-gray-500">
-          Ajustez selon vos besoins
+        <p className="text-sm text-gray-600 dark:text-gray-400">
+          {t(
+            'onboarding.settings.subtitle',
+            'Currency, dates, and your chart of accounts are required so costs, stock, and payroll post correctly.',
+          )}
         </p>
       </div>
 
-      <div className="space-y-6">
-        {/* Currency */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Devise</label>
+      <div className="space-y-6 mb-6">
+        <section className="rounded-xl border border-gray-200 dark:border-slate-700 bg-white/80 dark:bg-slate-900/60 p-4">
+          <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-3 flex items-center gap-2">
+            <Landmark className="w-4 h-4 text-emerald-600" />
+            {t('onboarding.settings.chartTitle', 'Chart of accounts (country)')}
+          </h3>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+            {t(
+              'onboarding.settings.chartHelp',
+              'We install the official account plan and default mappings for this country. You can refine mappings later in Accounting.',
+            )}
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            {CHART_COUNTRIES.map((c) => (
+              <Button
+                key={c.id}
+                type="button"
+                variant="outline"
+                onClick={() => onUpdate({ accounting_template_country: c.id })}
+                className={`h-auto py-2.5 px-3 text-left text-sm justify-start ${
+                  preferences.accounting_template_country === c.id
+                    ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/40 ring-1 ring-emerald-500'
+                    : ''
+                }`}
+              >
+                {t(c.labelKey, c.labelFallback)}
+              </Button>
+            ))}
+          </div>
+        </section>
+
+        <section>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            {t('onboarding.settings.currency', 'Currency')}
+          </label>
           <div className="grid grid-cols-3 gap-2">
             {CURRENCIES.map((currency) => (
               <Button
                 key={currency.id}
                 type="button"
+                variant="outline"
                 onClick={() => onUpdate({ currency: currency.id })}
-                className={`
-                  py-3 px-4 rounded-xl border-2 text-center transition-all duration-200
-                  ${preferences.currency === currency.id
-                    ? 'border-emerald-500 bg-emerald-50'
-                    : 'border-gray-200 hover:border-gray-300'
-                  }
-                `}
+                className={`py-3 px-2 h-auto flex flex-col items-center gap-0.5 ${
+                  preferences.currency === currency.id
+                    ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/40'
+                    : ''
+                }`}
               >
-                <div className="text-lg font-bold">{currency.symbol}</div>
-                <div className="text-xs text-gray-500">{currency.id}</div>
+                <span className="text-lg font-bold">{currency.symbol}</span>
+                <span className="text-[10px] text-gray-500">{currency.id}</span>
+                <span className="text-[10px] text-gray-600 dark:text-gray-400 line-clamp-2 text-center">
+                  {t(currency.nameKey, currency.nameFallback)}
+                </span>
               </Button>
             ))}
           </div>
-        </div>
+        </section>
 
-        {/* Date format */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Format de date</label>
+        <section>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            {t('onboarding.settings.dateFormat', 'Date format')}
+          </label>
           <div className="space-y-2">
             {DATE_FORMATS.map((format) => (
               <Button
                 key={format.id}
                 type="button"
+                variant="outline"
                 onClick={() => onUpdate({ date_format: format.id })}
-                className={`
-                  w-full p-3 rounded-xl border-2 text-left flex items-center justify-between transition-all duration-200
-                  ${preferences.date_format === format.id
-                    ? 'border-emerald-500 bg-emerald-50'
-                    : 'border-gray-200 hover:border-gray-300'
-                  }
-                `}
+                className={`w-full justify-between h-auto py-3 ${
+                  preferences.date_format === format.id
+                    ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/40'
+                    : ''
+                }`}
               >
-                <div>
-                  <div className="font-medium">{format.name}</div>
-                  <div className="text-xs text-gray-500">{format.description}</div>
-                </div>
-                {preferences.date_format === format.id && (
-                  <Check className="w-5 h-5 text-emerald-500" />
-                )}
+                <span className="font-medium text-sm">{t(format.labelKey, format.labelFallback)}</span>
+                {preferences.date_format === format.id && <Check className="w-4 h-4 text-emerald-600 shrink-0" />}
               </Button>
             ))}
           </div>
-        </div>
+        </section>
 
-        {/* Toggles */}
         <div className="space-y-3">
           <SelectionCard
-            title="Données de démonstration"
-            description="Pré-remplir avec des exemples pour découvrir"
+            title={t('onboarding.settings.demoTitle', 'Demo data')}
+            description={t(
+              'onboarding.settings.demoDesc',
+              'Only if you have no farm yet — otherwise skipped to keep your farm and parcels.',
+            )}
             icon={<Database className="w-5 h-5" />}
             selected={preferences.use_demo_data}
             onClick={() => onUpdate({ use_demo_data: !preferences.use_demo_data })}
           />
-          
+
           <SelectionCard
-            title="Notifications"
-            description="Recevoir les alertes importantes par email"
+            title={t('onboarding.settings.notificationsTitle', 'Notifications')}
+            description={t('onboarding.settings.notificationsDesc', 'Important alerts by email')}
             icon={<Bell className="w-5 h-5" />}
             selected={preferences.enable_notifications}
             onClick={() => onUpdate({ enable_notifications: !preferences.enable_notifications })}
@@ -258,36 +205,52 @@ export const CompletionStep = ({
         </div>
       </div>
 
-      <div className="mt-8 flex gap-3">
-        <Button
-          onClick={() => setShowPreferences(false)}
-          className="flex-1 py-4 bg-gray-100 text-gray-700 rounded-xl font-medium
-            hover:bg-gray-200 transition-all duration-200"
-        >
-          Retour
-        </Button>
-        <Button
-          onClick={onComplete}
-          disabled={isLoading}
-          className="flex-1 py-4 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-xl font-semibold
-            shadow-lg shadow-emerald-500/30 hover:shadow-xl
-            disabled:opacity-70 disabled:cursor-not-allowed
-            transition-all duration-300 hover:scale-[1.02]
-            flex items-center justify-center gap-2"
-        >
-          {isLoading ? (
-            <>
-              <Loader2 className="w-5 h-5 animate-spin" />
-              Lancement...
-            </>
-          ) : (
-            <>
-              Terminer
-              <Rocket className="w-5 h-5" />
-            </>
-          )}
-        </Button>
+      <div className="space-y-2 mb-6 text-sm border-t border-gray-200 dark:border-slate-700 pt-4">
+        <div className="flex items-center gap-2 text-emerald-800 dark:text-emerald-300">
+          <Check className="w-4 h-4 shrink-0" />
+          <span className="truncate">{profileName}</span>
+        </div>
+        <div className="flex items-center gap-2 text-blue-800 dark:text-blue-300">
+          <Check className="w-4 h-4 shrink-0" />
+          <span className="truncate">{organizationName}</span>
+        </div>
+        <div className="flex items-center gap-2 text-amber-800 dark:text-amber-300">
+          <Check className="w-4 h-4 shrink-0" />
+          <span className="truncate">{farmName}</span>
+        </div>
+        <div className="flex items-center gap-2 text-violet-800 dark:text-violet-300">
+          <Check className="w-4 h-4 shrink-0" />
+          {t('onboarding.settings.modulesLine', '{{count}} modules', { count: selectedModulesCount })}
+        </div>
       </div>
+
+      <Button
+        onClick={onComplete}
+        disabled={isLoading || !canLaunch}
+        className="w-full py-5 bg-gradient-to-r from-emerald-500 via-emerald-600 to-teal-600 text-white rounded-2xl font-bold text-lg
+          shadow-xl shadow-emerald-500/30 hover:shadow-2xl hover:shadow-emerald-500/40
+          disabled:opacity-60 disabled:cursor-not-allowed
+          transition-all duration-300 hover:scale-[1.01] active:scale-[0.99]
+          flex items-center justify-center gap-3"
+      >
+        {isLoading ? (
+          <>
+            <Loader2 className="w-6 h-6 animate-spin" />
+            {t('onboarding.settings.launching', 'Setting up…')}
+          </>
+        ) : (
+          <>
+            <Rocket className="w-6 h-6" />
+            {t('onboarding.settings.launch', 'Open my workspace')}
+          </>
+        )}
+      </Button>
+
+      {!canLaunch && (
+        <p className="mt-2 text-center text-xs text-amber-700 dark:text-amber-400">
+          {t('onboarding.settings.incomplete', 'Choose a chart country, currency, and date format to continue.')}
+        </p>
+      )}
 
       <style>{`
         @keyframes fade-in {

@@ -1,4 +1,4 @@
-import {  useState, useMemo, useRef, useEffect  } from "react";
+import {  useState, useMemo, useEffect  } from "react";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -17,7 +17,15 @@ import ParcelManagementModal from './ParcelManagementModal';
 import FarmDetailsModal from './FarmDetailsModal';
 import FarmImportDialog from './FarmImportDialog';
 import EditFarmManagerModal from './EditFarmManagerModal';
-import { X, Trash2, Building2 } from 'lucide-react';
+import { Trash2, Building2 } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from '@/components/ui/dialog';
 import { EmptyState } from '@/components/ui/empty-state';
 import {
   DataTablePagination,
@@ -119,7 +127,6 @@ const ModernFarmHierarchy = ({
     manager_phone?: string;
   } | null>(null);
 
-  const addFormRef = useRef<HTMLDivElement>(null);
   // Debug: Log organization ID on mount and when it changes
   if (!organizationId) {
     console.error('❌ ModernFarmHierarchy: No organizationId provided!');
@@ -133,12 +140,6 @@ const ModernFarmHierarchy = ({
   } = useForm<FarmFormValues>({
     resolver: zodResolver(getFarmSchema(t)),
   });
-
-  useEffect(() => {
-    if (showAddForm) {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-  }, [showAddForm]);
 
   // Fetch organization using farmsService (apiClient)
   const { data: organization } = useQuery({
@@ -712,20 +713,21 @@ const ModernFarmHierarchy = ({
 
       </div>
 
-      {/* Add Farm Form Modal */}
-      {showAddForm && (
-        <div ref={addFormRef} data-testid="create-farm-form" className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-              {t('farmHierarchy.farm.createNew')}
-            </h3>
-            <Button
-              onClick={() => setShowAddForm(false)}
-              className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-            >
-              <X className="w-5 h-5" />
-            </Button>
-          </div>
+      {/* Add Farm Modal */}
+      <Dialog
+        open={showAddForm}
+        onOpenChange={(open) => {
+          setShowAddForm(open);
+          if (!open) reset();
+        }}
+      >
+        <DialogContent data-testid="create-farm-form" className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t('farmHierarchy.farm.createNew')}</DialogTitle>
+            <DialogDescription>
+              {t('farmHierarchy.farm.createNewDescription', 'Add a new farm to your organization.')}
+            </DialogDescription>
+          </DialogHeader>
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div>
@@ -737,6 +739,7 @@ const ModernFarmHierarchy = ({
                 id="farm-name"
                 data-testid="farm-name-input"
                 type="text"
+                autoFocus
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
                 placeholder={t('farmHierarchy.farm.namePlaceholder')}
               />
@@ -745,10 +748,7 @@ const ModernFarmHierarchy = ({
               )}
             </div>
 
-            <div className="flex items-center gap-3 pt-2">
-              <Button variant="green" type="submit" data-testid="farm-submit-button" disabled={createFarmMutation.isPending} className="flex-1 px-4 py-2 text-sm font-medium rounded-lg transition-colors" >
-                {createFarmMutation.isPending ? t('farmHierarchy.farm.creating') : t('farmHierarchy.farm.create')}
-              </Button>
+            <DialogFooter>
               <Button
                 type="button"
                 onClick={() => setShowAddForm(false)}
@@ -756,10 +756,19 @@ const ModernFarmHierarchy = ({
               >
                 {t('app.cancel')}
               </Button>
-            </div>
+              <Button
+                variant="green"
+                type="submit"
+                data-testid="farm-submit-button"
+                disabled={createFarmMutation.isPending}
+                className="px-4 py-2 text-sm font-medium rounded-lg transition-colors"
+              >
+                {createFarmMutation.isPending ? t('farmHierarchy.farm.creating') : t('farmHierarchy.farm.create')}
+              </Button>
+            </DialogFooter>
           </form>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
 
       {/* Multi-selection Action Bar */}
       {viewMode === 'list' && selectedFarmIds.size > 0 && (

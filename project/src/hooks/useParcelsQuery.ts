@@ -100,18 +100,30 @@ export const useFarms = (organizationId: string | undefined) => {
         // If parcels fetch fails, fall back to stored farm size
       }
 
-      return farms.map((farm: ServiceFarm) => {
-        const storedSize = farm.size ?? null;
-        const calculatedArea = parcelAreaByFarm[farm.id];
-        return {
-          id: farm.id,
-          name: farm.name,
-          location: farm.location ?? null,
-          size: storedSize,
-          manager_name: farm.manager_name ?? null,
-          total_area: calculatedArea !== undefined ? parseFloat(calculatedArea.toFixed(2)) : storedSize,
-        };
-      });
+      // Backend returns FarmDto with farm_id / farm_name / farm_size / farm_location;
+      // normalize to id / name / size / location at the boundary so consumers don't
+      // see undefineds. Drop entries with no usable id.
+      return (farms as Array<ServiceFarm & {
+        farm_id?: string;
+        farm_name?: string;
+        farm_size?: number;
+        farm_location?: string;
+      }>)
+        .filter((farm) => Boolean(farm.farm_id || farm.id))
+        .map((farm) => {
+          const id = (farm.farm_id || farm.id) as string;
+          const name = farm.farm_name || farm.name;
+          const storedSize = (farm.farm_size ?? farm.size) ?? null;
+          const calculatedArea = parcelAreaByFarm[id];
+          return {
+            id,
+            name,
+            location: (farm.farm_location ?? farm.location) ?? null,
+            size: storedSize,
+            manager_name: farm.manager_name ?? null,
+            total_area: calculatedArea !== undefined ? parseFloat(calculatedArea.toFixed(2)) : storedSize,
+          };
+        });
     },
     enabled: !!organizationId,
     staleTime: 5 * 60 * 1000, // 5 minutes

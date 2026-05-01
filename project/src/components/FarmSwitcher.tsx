@@ -27,7 +27,7 @@ const FarmSwitcher = ({ currentFarmId, onFarmChange }: FarmSwitcherProps) => {
   const buttonRef = useRef<HTMLButtonElement>(null);
 
   const { data: richFarms = [] } = useFarms(currentOrganization?.id);
-
+  console.log('richFarms', currentOrganization?.id, richFarms);
   const handleAddFarm = () => {
     setIsOpen(false);
     navigate({ to: '/farm-hierarchy' });
@@ -43,10 +43,17 @@ const FarmSwitcher = ({ currentFarmId, onFarmChange }: FarmSwitcherProps) => {
 
   const selectedFarmId = currentFarmId || currentFarm?.id;
 
+  const farmDisplayName = (farm: { id: string; name?: string | null }) => {
+    const trimmed = (farm.name ?? '').toString().trim();
+    return trimmed || `Farm ${String(farm.id).slice(0, 8)}`;
+  };
+
   const enrichedFarms = farms.map((farm) => {
     const richFarm = richFarms.find((f) => f.id === farm.id);
+    const richName = (richFarm?.name ?? '').toString().trim();
     return {
       ...farm,
+      name: ((farm.name ?? '').toString().trim() || richName || farmDisplayName(farm)),
       size:
         richFarm?.size ??
         (richFarm as { total_area?: number } | undefined)?.total_area ??
@@ -108,12 +115,16 @@ const FarmSwitcher = ({ currentFarmId, onFarmChange }: FarmSwitcherProps) => {
       <Button
         type="button"
         ref={buttonRef}
-        title={currentFarm?.name || t('farmSwitcher.selectFarm')}
+        title={
+          currentFarm
+            ? farmDisplayName(currentFarm)
+            : t('farmSwitcher.selectFarm')
+        }
         onClick={() => setIsOpen(!isOpen)}
         className={cn(headerToolbarTextTriggerClass, 'max-w-[200px] justify-between sm:max-w-[220px]')}
       >
         <span className="min-w-0 flex-1 truncate text-start">
-          {currentFarm?.name || t('farmSwitcher.selectFarm')}
+          {currentFarm ? farmDisplayName(currentFarm) : t('farmSwitcher.selectFarm')}
         </span>
         <ChevronDown className="h-4 w-4 shrink-0 text-gray-500" />
       </Button>
@@ -134,7 +145,7 @@ const FarmSwitcher = ({ currentFarmId, onFarmChange }: FarmSwitcherProps) => {
                 <Button
                   key={farm.id}
                   type="button"
-                  onClick={() => handleFarmSelect(farm)}
+                  onClick={() => handleFarmSelect({ ...farm, size: farm.size ?? null } as AuthFarm)}
                   className={`flex w-full items-center justify-between px-4 py-2.5 text-start text-sm transition-colors ${
                     farm.id === selectedFarmId
                       ? 'bg-green-50 font-medium text-green-700 dark:bg-green-900/30 dark:text-green-300'

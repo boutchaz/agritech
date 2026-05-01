@@ -13,6 +13,7 @@ import {
   type AuthUser,
 } from '../contexts/AuthContext';
 import { PageLoader } from '@/components/ui/loader';
+import { useFarmStore } from '../stores/farmStore';
 
 
 const ROLE_HIERARCHY: Record<string, number> = {
@@ -35,7 +36,9 @@ export const LocalAuthProvider = ({ children }: { children: React.ReactNode }) =
   const [organizations, setOrganizations] = useState<AuthOrganization[]>([]);
   const [currentOrganization, setCurrentOrganization] = useState<AuthOrganization | null>(null);
   const [farms, setFarms] = useState<AuthFarm[]>([]);
-  const [currentFarm, setCurrentFarm] = useState<AuthFarm | null>(null);
+  const currentFarm = useFarmStore((s) => s.currentFarm) as AuthFarm | null;
+  const setCurrentFarm = useFarmStore((s) => s.setCurrentFarm);
+  const clearFarm = useFarmStore((s) => s.clearFarm);
   const [userRole, setUserRole] = useState<UserRole | null>(null);
   const [loading, setLoading] = useState(true);
   const [needsImport, setNeedsImport] = useState(true);
@@ -62,7 +65,7 @@ export const LocalAuthProvider = ({ children }: { children: React.ReactNode }) =
 
   const handleSetCurrentOrganization = (org: AuthOrganization) => {
     setCurrentOrganization(org);
-    setCurrentFarm(null);
+    clearFarm();
     queryClient.clear();
     localStorage.setItem('currentOrganization', JSON.stringify(org));
     loadFarms(org.id);
@@ -70,7 +73,6 @@ export const LocalAuthProvider = ({ children }: { children: React.ReactNode }) =
 
   const handleSetCurrentFarm = (farm: AuthFarm) => {
     setCurrentFarm(farm);
-    localStorage.setItem('currentFarm', JSON.stringify(farm));
     queryClient.invalidateQueries();
   };
 
@@ -81,12 +83,11 @@ export const LocalAuthProvider = ({ children }: { children: React.ReactNode }) =
     }
     localStorage.removeItem('agritech_desktop_session');
     localStorage.removeItem('currentOrganization');
-    localStorage.removeItem('currentFarm');
     setUser(null);
     setOrganizations([]);
     setCurrentOrganization(null);
     setFarms([]);
-    setCurrentFarm(null);
+    clearFarm();
     queryClient.clear();
     navigate({ to: '/login' });
   };
@@ -121,21 +122,16 @@ export const LocalAuthProvider = ({ children }: { children: React.ReactNode }) =
         manager_name: f.manager_name,
       }));
       setFarms(mappedFarms);
-      
-      if (mappedFarms.length > 0 && !currentFarm) {
-        const savedFarm = localStorage.getItem('currentFarm');
-        if (savedFarm) {
-          try {
-            const parsed = JSON.parse(savedFarm);
-            const valid = mappedFarms.find(f => f.id === parsed.id);
-            if (valid) {
-              setCurrentFarm(valid);
-              return;
-            }
-          } catch {
-            // Failed to parse saved farm
-          }
+
+      // Drop a persisted selection that no longer belongs to this account/org
+      // (e.g. logged in as a different user with the previous farm-storage still in localStorage).
+      if (currentFarm && !mappedFarms.some(f => f.id === currentFarm.id)) {
+        if (mappedFarms.length === 0) {
+          clearFarm();
+        } else {
+          setCurrentFarm(mappedFarms[0]);
         }
+      } else if (mappedFarms.length > 0 && !currentFarm) {
         setCurrentFarm(mappedFarms[0]);
       }
     } catch (error) {

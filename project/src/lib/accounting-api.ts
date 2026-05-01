@@ -85,7 +85,7 @@ export const accountingApi = {
   // =====================================================
 
   async getAccounts(organizationId: string) {
-    return accountsApi.getAll(organizationId);
+    return accountsApi.getAll({}, organizationId);
   },
 
   async getAccount(accountId: string) {
@@ -368,7 +368,7 @@ export const accountingApi = {
   // =====================================================
 
   async getTaxes(organizationId: string) {
-    const data = await taxesApi.getAll(organizationId);
+    const data = await taxesApi.getAll({}, organizationId);
     return data as Tax[];
   },
 

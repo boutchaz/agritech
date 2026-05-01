@@ -33,13 +33,13 @@ export default defineConfig({
     }),
     // Brotli compression — ~70% smaller than uncompressed
     compression({
-      algorithm: 'brotliCompress',
+      algorithms: ['brotliCompress'],
       exclude: [/\.(br)$/, /\.(gz)$/],
       threshold: 1024, // Only compress files > 1KB
     }),
     // Gzip fallback for older clients
     compression({
-      algorithm: 'gzip',
+      algorithms: ['gzip'],
       exclude: [/\.(br)$/, /\.(gz)$/],
       threshold: 1024,
     }),

@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsEnum, IsBoolean, IsNumber, IsObject, Matches, MinLength, MaxLength } from 'class-validator';
+import { IsString, IsOptional, IsEnum, IsBoolean, IsNumber, IsObject, Matches, MinLength, MaxLength, Length } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CheckSlugAvailabilityResponseDto {
@@ -62,6 +62,9 @@ export class OnboardingStateDto {
   farmData?: {
     name?: string;
     location?: string;
+    latitude?: number;
+    longitude?: number;
+    place_id?: string;
     size?: number;
     size_unit?: string;
     farm_type?: 'main' | 'sub';
@@ -92,6 +95,7 @@ export class OnboardingStateDto {
     date_format?: string;
     use_demo_data?: boolean;
     enable_notifications?: boolean;
+    accounting_template_country?: string;
   };
 
   @ApiPropertyOptional({ description: 'Existing organization ID' })
@@ -174,6 +178,21 @@ export class SaveOnboardingFarmDto {
   @IsString()
   location: string;
 
+  @ApiPropertyOptional({ description: 'Latitude from geocoder (WGS84)' })
+  @IsNumber()
+  @IsOptional()
+  latitude?: number;
+
+  @ApiPropertyOptional({ description: 'Longitude from geocoder (WGS84)' })
+  @IsNumber()
+  @IsOptional()
+  longitude?: number;
+
+  @ApiPropertyOptional({ description: 'Geocoder place id (e.g. Nominatim)' })
+  @IsString()
+  @IsOptional()
+  place_id?: string;
+
   @ApiProperty({ description: 'Size' })
   @IsNumber()
   size: number;
@@ -234,4 +253,13 @@ export class SaveOnboardingPreferencesDto {
   @ApiProperty({ description: 'Enable notifications' })
   @IsBoolean()
   enable_notifications: boolean;
+
+  @ApiPropertyOptional({
+    description:
+      'ISO 3166-1 alpha-2 country for chart of accounts template (MA, FR, TN, US, GB, DE). ES/DZ map to supported templates.',
+  })
+  @IsOptional()
+  @IsString()
+  @Length(2, 2)
+  accounting_template_country?: string;
 }

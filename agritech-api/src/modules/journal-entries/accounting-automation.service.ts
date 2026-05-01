@@ -318,6 +318,147 @@ export class AccountingAutomationService {
    * Delegates to FiscalYearsService. Throws if the fiscal year covering
    * the date is closed. Safe to call from any service that posts to GL.
    */
+  async createJournalEntryFromMaintenance(
+    organizationId: string,
+    maintenanceId: string,
+    amount: number,
+    date: Date,
+    description: string,
+    createdBy: string,
+    equipmentName: string,
+    maintenanceType: string,
+    costCenterId?: string,
+    farmId?: string,
+  ): Promise<any> {
+    await this.assertPeriodOpen(organizationId, date);
+    const supabase = this.databaseService.getAdminClient();
+
+    const maintenanceTypeToCostType: Record<string, string> = {
+      fuel_fill: 'equipment_fuel',
+      insurance: 'equipment_insurance',
+      registration: 'equipment_registration',
+    };
+    const costType = maintenanceTypeToCostType[maintenanceType] || 'equipment_maintenance';
+
+    const expenseAccountId = await this.getAccountIdByMapping(
+      supabase,
+      organizationId,
+      'cost_type',
+      costType,
+    );
+
+    const cashAccountId = await this.getAccountIdByMapping(
+      supabase,
+      organizationId,
+      'cash',
+      'bank',
+    );
+
+    if (!expenseAccountId) {
+      throw new BadRequestException(
+        `Account mapping missing for cost_type: ${costType}. ` +
+        `Please configure account mappings before creating maintenance entries.`,
+      );
+    }
+
+    if (!cashAccountId) {
+      throw new BadRequestException(
+        `Cash account mapping missing. ` +
+        `Please configure cash/bank account mapping before creating maintenance entries.`,
+      );
+    }
+
+    const entryNumber = await this.generateJournalEntryNumber(supabase, organizationId);
+
+    const dateStr = date instanceof Date ? date.toISOString().split('T')[0] : String(date);
+    const fiscalYearId = await this.fiscalYearsService.resolveFiscalYear(organizationId, dateStr);
+
+    const { data: journalEntry, error: entryError } = await supabase
+      .from('journal_entries')
+      .insert({
+        organization_id: organizationId,
+        entry_number: entryNumber,
+        entry_date: date,
+        entry_type: JournalEntryType.EXPENSE,
+        description: description || `Maintenance: ${maintenanceType} - ${equipmentName}`,
+        reference_id: maintenanceId,
+        reference_type: 'equipment_maintenance',
+        total_debit: 0,
+        total_credit: 0,
+        status: JournalEntryStatus.DRAFT,
+        created_by: createdBy,
+        ...(fiscalYearId ? { fiscal_year_id: fiscalYearId } : {}),
+      })
+      .select()
+      .single();
+
+    if (entryError) {
+      this.logger.error(`Failed to create maintenance journal entry: ${entryError.message}`);
+      throw new BadRequestException(`Failed to create journal entry: ${entryError.message}`);
+    }
+
+    const commonItemFields = {
+      ...(costCenterId ? { cost_center_id: costCenterId } : {}),
+      ...(farmId ? { farm_id: farmId } : {}),
+      ...(fiscalYearId ? { fiscal_year_id: fiscalYearId } : {}),
+    };
+
+    const items = [
+      {
+        journal_entry_id: journalEntry.id,
+        account_id: expenseAccountId,
+        debit: amount,
+        credit: 0,
+        description: description || `Maintenance: ${maintenanceType} - ${equipmentName}`,
+        ...commonItemFields,
+      },
+      {
+        journal_entry_id: journalEntry.id,
+        account_id: cashAccountId,
+        debit: 0,
+        credit: amount,
+        description: `Payment for ${maintenanceType} - ${equipmentName}`,
+        ...commonItemFields,
+      },
+    ];
+
+    const totalDebit = items.reduce((sum, item) => sum + item.debit, 0);
+    const totalCredit = items.reduce((sum, item) => sum + item.credit, 0);
+
+    if (Math.abs(totalDebit - totalCredit) >= 0.01) {
+      throw new BadRequestException(
+        `Maintenance journal entry is not balanced: debits=${totalDebit}, credits=${totalCredit}`,
+      );
+    }
+
+    const { error: itemsError } = await supabase
+      .from('journal_items')
+      .insert(items);
+
+    if (itemsError) {
+      this.logger.error(`Failed to create maintenance journal items: ${itemsError.message}`);
+      await supabase
+        .from('journal_entries')
+        .delete()
+        .eq('id', journalEntry.id)
+        .eq('organization_id', organizationId);
+      throw new BadRequestException(`Failed to create journal items: ${itemsError.message}`);
+    }
+
+    const { error: postError } = await supabase
+      .from('journal_entries')
+      .update({ status: JournalEntryStatus.POSTED, total_debit: totalDebit, total_credit: totalCredit })
+      .eq('id', journalEntry.id);
+
+    if (postError) {
+      this.logger.error(`Failed to post maintenance journal entry: ${postError.message}`);
+      throw new BadRequestException(`Failed to post journal entry: ${postError.message}`);
+    }
+
+    this.logger.log(`Journal entry created for maintenance ${maintenanceId}: ${entryNumber}`);
+    return journalEntry;
+  }
+
   async assertPeriodOpen(organizationId: string, date: Date | string): Promise<void> {
     const dateStr = date instanceof Date ? date.toISOString().split('T')[0] : String(date);
     await this.fiscalYearsService.assertPeriodOpen(organizationId, dateStr);

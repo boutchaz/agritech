@@ -37,6 +37,7 @@ function RegisterPage() {
   const [tosAccepted, setTosAccepted] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [emailExistsError, setEmailExistsError] = useState(false)
   const navigate = useNavigate()
   const { user } = useAuth()
 
@@ -107,7 +108,10 @@ function RegisterPage() {
     } catch (error) {
       const message = error instanceof Error ? error.message : t('auth.register.errorGeneric')
       if (message.includes('already exists') || message.includes('already registered')) {
-        setError(t('auth.register.errorEmailExists'))
+        if (organizationName) {
+          sessionStorage.setItem('pendingOrgName', organizationName)
+        }
+        setEmailExistsError(true)
         trackRegisterFailure('email_already_exists')
       } else {
         setError(t('auth.register.errorGeneric'))
@@ -251,7 +255,26 @@ function RegisterPage() {
           </div>
         </div>
 
-        {error && (
+        {emailExistsError && (
+          <div className="rounded-2xl border border-amber-200/70 bg-amber-50/90 px-4 py-3 text-sm shadow-sm">
+            <p className="text-amber-800 font-medium mb-2">
+              {t('auth.register.errorEmailExistsTitle', 'This email is already registered.')}
+            </p>
+            <p className="text-amber-700 mb-3">
+              {t('auth.register.errorEmailExistsAction', 'Sign in to your existing account and create a new organization.')}
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full rounded-xl border-amber-300 bg-amber-100/50 text-amber-800 hover:bg-amber-100 hover:text-amber-900"
+              onClick={() => navigate({ to: '/login', search: { redirect: '/onboarding/select-trial' } })}
+            >
+              {t('auth.register.signInToCreateOrg', 'Sign in & create organization')}
+            </Button>
+          </div>
+        )}
+
+        {error && !emailExistsError && (
           <div className="rounded-2xl border border-red-200/70 bg-red-50/90 px-4 py-3 text-sm text-red-700 shadow-sm">
             {error}
           </div>

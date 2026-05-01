@@ -307,6 +307,7 @@ function OrgRow({ org, sub }: {
               <ExternalLink className="h-3 w-3 opacity-0 group-hover:opacity-100" />
             </Link>
             <p className="text-xs text-gray-400">{org.account_type}</p>
+            <p className="font-mono text-[11px] text-gray-400">@{org.slug}</p>
           </div>
         </td>
         <td className="px-4 py-3">

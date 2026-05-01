@@ -2,6 +2,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { PieceWorkService } from './piece-work.service';
 import { DatabaseService } from '../database/database.service';
+import { NotificationsService } from '../notifications/notifications.service';
+import { PaymentRecordsService } from '../payment-records/payment-records.service';
 import { PieceWorkPaymentStatus } from './dto';
 import {
   createMockSupabaseClient,
@@ -99,6 +101,11 @@ describe('PieceWorkService', () => {
       providers: [
         PieceWorkService,
         { provide: DatabaseService, useValue: mockDatabaseService },
+        {
+          provide: NotificationsService,
+          useValue: { createNotificationsForRoles: jest.fn(), createNotification: jest.fn() },
+        },
+        { provide: PaymentRecordsService, useValue: { process: jest.fn().mockResolvedValue({}) } },
       ],
     }).compile();
 
