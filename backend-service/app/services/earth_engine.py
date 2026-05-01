@@ -607,6 +607,23 @@ class EarthEngineService:
                 .rename("EVI")
             )
 
+        # EBI — Enhanced Bloom Index (Chen et al. 2019, almond bloom detection)
+        # EBI = (R+G+B) / ((G/B) * (R - B + ε))
+        # ε=1 assumes Sentinel-2 reflectance at native [0,10000] scale per the paper.
+        # NOTE: drone imagery uses a different reflectance scale — ε must be
+        # recalibrated when drone support lands (likely ε ≈ 1e-4 for [0,1] floats).
+        if "EBI" in indices:
+            epsilon = 1.0
+            brightness = bands["red"].add(bands["green"]).add(bands["blue"])
+            soil_signature = bands["red"].subtract(bands["blue"]).add(epsilon)
+            greenness = bands["green"].divide(bands["blue"].max(ee.Image(1e-10)))
+            ebi_denominator = greenness.multiply(soil_signature)
+            results["EBI"] = (
+                brightness
+                .divide(ebi_denominator.where(ebi_denominator.eq(0), ee.Image(1e-10)))
+                .rename("EBI")
+            )
+
         # MSI
         if "MSI" in indices:
             results["MSI"] = bands["swir1"].divide(bands["nir"]).rename("MSI")
@@ -1512,6 +1529,11 @@ class EarthEngineService:
                 "min": 0,
                 "max": 0.8,
                 "palette": ["#8B0000", "#FF4500", "#FFD700", "#ADFF2F", "#00FF00"],
+            },
+            "EBI": {
+                "min": 0,
+                "max": 5,
+                "palette": ["#1a472a", "#7cba6e", "#fde68a", "#f9a8d4", "#ec4899"],
             },
         }
 

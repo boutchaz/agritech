@@ -1,19 +1,18 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { modulesApi, type OrganizationModule, type UpdateModuleInput } from '../lib/api/modules';
+import { useMemo } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { modulesApi, type UpdateModuleInput } from '../lib/api/modules';
 import { useAuth } from '../hooks/useAuth';
+import { useModuleConfig, MODULE_CONFIG_QUERY_KEY } from './useModuleConfig';
+import type { ModuleConfig } from '@/lib/api/module-config';
 
+/**
+ * Returns modules with org activation state. Thin derivation over
+ * useModuleConfig — single underlying request.
+ */
 export const useModules = () => {
-  const { currentOrganization } = useAuth();
-
-  return useQuery({
-    queryKey: ['modules', currentOrganization?.id],
-    queryFn: async (): Promise<OrganizationModule[]> => {
-      if (!currentOrganization?.id) return [];
-      return modulesApi.getAll(undefined, currentOrganization.id);
-    },
-    enabled: !!currentOrganization?.id,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-  });
+  const query = useModuleConfig();
+  const data = useMemo<ModuleConfig[]>(() => query.data?.modules ?? [], [query.data]);
+  return { ...query, data };
 };
 
 export const useUpdateModule = () => {
@@ -45,7 +44,7 @@ export const useUpdateModule = () => {
       return modulesApi.update(currentOrganization.id, moduleId, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['modules', currentOrganization?.id] });
+      queryClient.invalidateQueries({ queryKey: MODULE_CONFIG_QUERY_KEY });
     },
   });
 };

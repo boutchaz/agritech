@@ -1,9 +1,12 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Clock, Play, Square, Loader2, User } from 'lucide-react';
-import { useTaskTimeLogs, useClockIn, useClockOut } from '@/hooks/useTasks';
+import { Clock, Play, Square, Loader2, User, Hash } from 'lucide-react';
+import { useTaskTimeLogs, useClockIn, useClockOut, useTask } from '@/hooks/useTasks';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/Input';
+import { Textarea } from '@/components/ui/Textarea';
+import { Label } from '@/components/ui/label';
 import type { TaskTimeLog } from '@/types/tasks';
 import { format, formatDistance } from 'date-fns';
 import { fr, enUS, ar } from 'date-fns/locale';
@@ -16,13 +19,21 @@ interface TaskWorklogProps {
 
 export default function TaskWorklog({ taskId, taskStatus, assignedWorkerId }: TaskWorklogProps) {
   const { t, i18n } = useTranslation();
-  const { user } = useAuth();
+  const { user, currentOrganization } = useAuth();
   const { data: timeLogs = [], isLoading } = useTaskTimeLogs(taskId);
+  const { data: task } = useTask(currentOrganization?.id || null, taskId);
   const clockIn = useClockIn();
   const clockOut = useClockOut();
   const typedTimeLogs = timeLogs as TaskTimeLog[];
 
+  const isPerUnit = task?.payment_type === 'per_unit';
+
   const [now, setNow] = useState(() => Date.now());
+  // Inline clock-out form state — prompts for units + notes when the worker
+  // stops the timer so we capture piece-work output at the same moment.
+  const [showStopForm, setShowStopForm] = useState(false);
+  const [unitsCompleted, setUnitsCompleted] = useState<string>('');
+  const [clockOutNotes, setClockOutNotes] = useState<string>('');
 
   const getLocale = () => {
     if (i18n.language.startsWith('fr')) return fr;
@@ -77,11 +88,31 @@ export default function TaskWorklog({ taskId, taskStatus, assignedWorkerId }: Ta
     });
   };
 
-  const handleClockOut = () => {
+  const handleRequestClockOut = () => {
+    if (isPerUnit) {
+      setShowStopForm(true);
+    } else {
+      handleConfirmClockOut();
+    }
+  };
+
+  const handleConfirmClockOut = () => {
     if (!activeLog) return;
-    clockOut.mutate({
-      time_log_id: activeLog.id,
-    });
+    const parsedUnits = unitsCompleted.trim() === '' ? undefined : Number(unitsCompleted);
+    clockOut.mutate(
+      {
+        time_log_id: activeLog.id,
+        units_completed: parsedUnits,
+        notes: clockOutNotes.trim() || undefined,
+      },
+      {
+        onSettled: () => {
+          setShowStopForm(false);
+          setUnitsCompleted('');
+          setClockOutNotes('');
+        },
+      },
+    );
   };
 
   const canStartTimer = taskStatus === 'in_progress' && !activeLog;
@@ -110,14 +141,72 @@ export default function TaskWorklog({ taskId, taskStatus, assignedWorkerId }: Ta
                   time: formatDistance(new Date(activeLog.start_time), new Date(), { locale: getLocale() }),
                 })}
               </p>
-              <Button variant="red" onClick={handleClockOut} disabled={clockOut.isPending} className="mt-3" size="sm" >
-                {clockOut.isPending ? (
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                ) : (
-                  <Square className="w-4 h-4 mr-2" />
-                )}
-                {t('tasks.detail.stopTimer', 'Stop Timer')}
-              </Button>
+              {!showStopForm ? (
+                <Button variant="red" onClick={handleRequestClockOut} disabled={clockOut.isPending} className="mt-3" size="sm" >
+                  {clockOut.isPending ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Square className="w-4 h-4 mr-2" />
+                  )}
+                  {t('tasks.detail.stopTimer', 'Stop Timer')}
+                </Button>
+              ) : (
+                <div className="mt-3 text-start space-y-3 bg-white dark:bg-gray-900 rounded-md p-3 border border-green-200 dark:border-green-800">
+                  <p className="text-xs font-medium text-green-900 dark:text-green-200">
+                    {t('tasks.worklog.beforeStop', 'Before you stop — how much did you complete?')}
+                  </p>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="units_completed_inline" className="flex items-center gap-1.5 text-xs">
+                      <Hash className="h-3 w-3" />
+                      {t('tasks.worklog.unitsCompleted', 'Units completed')}
+                      {task?.units_required ? (
+                        <span className="text-gray-400">/ {task.units_required}</span>
+                      ) : null}
+                    </Label>
+                    <Input
+                      id="units_completed_inline"
+                      type="number"
+                      min="0"
+                      step="1"
+                      value={unitsCompleted}
+                      onChange={(e) => setUnitsCompleted(e.target.value)}
+                      placeholder="0"
+                      className="h-9"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="clock_out_notes" className="text-xs">
+                      {t('tasks.worklog.notes', 'Notes (optional)')}
+                    </Label>
+                    <Textarea
+                      id="clock_out_notes"
+                      value={clockOutNotes}
+                      onChange={(e) => setClockOutNotes(e.target.value)}
+                      rows={2}
+                      placeholder={t('tasks.worklog.notesPlaceholder', 'Anything to flag for the manager?')}
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="red"
+                      onClick={handleConfirmClockOut}
+                      disabled={clockOut.isPending}
+                      size="sm"
+                      className="flex-1"
+                    >
+                      {clockOut.isPending ? (
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      ) : (
+                        <Square className="w-4 h-4 mr-2" />
+                      )}
+                      {t('tasks.worklog.confirmStop', 'Stop and save')}
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => setShowStopForm(false)}>
+                      {t('common.cancel', 'Cancel')}
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

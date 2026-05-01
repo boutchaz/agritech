@@ -8,6 +8,8 @@ import NotificationBell from './NotificationBell';
 import LanguageSwitcher from './LanguageSwitcher';
 import { useAuth } from '../hooks/useAuth';
 import { useIsMdUp } from '../hooks/useMediaQuery';
+import { useHideOnScroll } from '../hooks/useHideOnScroll';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/Input';
 import {
@@ -71,6 +73,10 @@ const ModernPageHeader = ({
   const currentFarmId = currentFarm?.id;
   /** Use md (768px), not lg (1024px), so iPad / tablet get farm + org switchers like desktop. */
   const showExpandedTopBar = useIsMdUp();
+  // YouTube-style hide-on-scroll on mobile only. Desktop keeps the
+  // header fully pinned — large viewports don't need the extra
+  // vertical real estate and the hide/show motion is distracting.
+  const hiddenOnScroll = useHideOnScroll({ disabled: showExpandedTopBar });
 
   // Handle farm change
   const handleFarmChange = (farmId: string) => {
@@ -81,7 +87,12 @@ const ModernPageHeader = ({
   };
 
   return (
-    <div className="sticky top-0 z-30 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-100 dark:border-slate-800 shadow-sm transition-all duration-300">
+    <div
+      className={cn(
+        'sticky top-0 z-30 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-100 dark:border-slate-800 shadow-sm transition-transform duration-300 will-change-transform',
+        hiddenOnScroll && '-translate-y-full',
+      )}
+    >
       {/* Top bar: compact on narrow phones only; from md up show farm + org switchers (aligns with sidebar). NotificationBell mounts in one branch only. */}
       {!showExpandedTopBar ? (
         <div className="border-b border-slate-50 dark:border-slate-800/50">
@@ -194,7 +205,7 @@ const ModernPageHeader = ({
                 </div>
               )}
               <div className="min-w-0 flex-1">
-                <h1 className="text-2xl sm:text-3xl xl:text-4xl font-semibold text-slate-900 dark:text-white tracking-tight uppercase break-words hyphens-auto">
+                <h1 className="text-xl sm:text-2xl font-semibold text-slate-900 dark:text-white tracking-tight break-words hyphens-auto">
                   {title || currentPage.label}
                 </h1>
                 {subtitle && (

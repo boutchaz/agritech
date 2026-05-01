@@ -18,7 +18,9 @@ import {
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RequireModule } from '../../common/decorators/require-module.decorator';
 import { OrganizationGuard } from '../../common/guards/organization.guard';
+import { ModuleEntitlementGuard } from '../../common/guards/module-entitlement.guard';
 import { RequireRole } from '../../common/decorators/require-role.decorator';
 import { FiscalYearsService } from './fiscal-years.service';
 import { CreateFiscalYearDto } from './dto/create-fiscal-year.dto';
@@ -27,7 +29,8 @@ import { UpdateFiscalYearDto } from './dto/update-fiscal-year.dto';
 @ApiTags('Fiscal Years')
 @ApiBearerAuth()
 @Controller('fiscal-years')
-@UseGuards(JwtAuthGuard, OrganizationGuard)
+@RequireModule('accounting')
+@UseGuards(JwtAuthGuard, OrganizationGuard, ModuleEntitlementGuard)
 export class FiscalYearsController {
   constructor(private readonly fiscalYearsService: FiscalYearsService) {}
 
@@ -91,9 +94,9 @@ export class FiscalYearsController {
   @ApiOperation({ summary: 'Close fiscal year' })
   @ApiResponse({ status: 200, description: 'Fiscal year closed successfully' })
   @RequireRole('organization_admin', 'system_admin')
-  close(@Param('id') id: string, @Request() req) {
+  close(@Param('id') id: string, @Body() body: { closing_notes?: string }, @Request() req) {
     const organizationId = req.headers['x-organization-id'] as string;
-    return this.fiscalYearsService.close(id, organizationId, req.user.id);
+    return this.fiscalYearsService.close(id, organizationId, req.user.id, body?.closing_notes);
   }
 
   @Post(':id/reopen')

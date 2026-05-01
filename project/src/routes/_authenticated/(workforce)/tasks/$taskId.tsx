@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { subscribeQueue, isOnline as isDeviceOnline } from '@/lib/offlineTaskQueue';
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import {
@@ -17,9 +18,30 @@ import {
   Timer,
   Banknote,
   Loader2,
+  Lock,
+  Wallet,
+  Eye,
+  EyeOff,
+  Check,
+  Trash2,
+  X as XIcon,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { DetailPageSkeleton } from '@/components/ui/page-skeletons';
-import { useTask, useUpdateTask, useTaskComments } from '@/hooks/useTasks';
+import {
+  useTask,
+  useUpdateTask,
+  useTaskComments,
+  useTaskTimeLogs,
+  useIsTaskBlocked,
+  useTaskDependencies,
+  useTaskWatchers,
+  useFollowTask,
+  useUnfollowTask,
+  useUpdateTaskComment,
+  useDeleteTaskComment,
+  useResolveTaskComment,
+} from '@/hooks/useTasks';
 import { useTaskAssignments } from '@/hooks/useTaskAssignments';
 import TaskAttachments from '@/components/Tasks/TaskAttachments';
 import TaskChecklist from '@/components/Tasks/TaskChecklist';
@@ -29,7 +51,7 @@ import TaskCommentInput from '@/components/Tasks/TaskCommentInput';
 import CommentDisplay from '@/components/Tasks/CommentDisplay';
 import { tasksApi } from '@/lib/api/tasks';
 import type { TaskAssignment } from '@/lib/api/task-assignments';
-import { useCropsForTask, type Crop } from '@/hooks/useCrops';
+type CropOption = { id: string; name: string; parcel_id?: string; parcel_name?: string; farm_id?: string; variety_id?: string; variety_name?: string; created_at?: string; updated_at?: string };
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
 import type { CompleteHarvestTaskRequest } from '@/types/tasks';
@@ -124,6 +146,58 @@ function TaskDetailPage() {
   // Comments
   const { data: comments = [], isLoading: commentsLoading } = useTaskComments(taskId);
 
+  // Collaboration + worklog data
+  const { data: timeLogs = [] } = useTaskTimeLogs(taskId);
+  const { data: blockedStatus } = useIsTaskBlocked(taskId);
+  const { data: dependencies } = useTaskDependencies(taskId);
+  const { data: watchers = [] } = useTaskWatchers(taskId);
+  const followTask = useFollowTask();
+  const unfollowTask = useUnfollowTask();
+  const updateComment = useUpdateTaskComment();
+  const deleteComment = useDeleteTaskComment();
+  const resolveComment = useResolveTaskComment();
+
+  const currentUserId = profile?.id;
+  const isWatching = !!watchers.find((w) => w.user_id === currentUserId);
+
+  // Comment editing state — inline editor per comment
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState('');
+
+  // Offline queue status: online/offline + how many actions waiting to sync
+  const [isOnline, setIsOnline] = useState(isDeviceOnline());
+  const [queuedCount, setQueuedCount] = useState(0);
+  useEffect(() => {
+    const onOnline = () => setIsOnline(true);
+    const onOffline = () => setIsOnline(false);
+    window.addEventListener('online', onOnline);
+    window.addEventListener('offline', onOffline);
+    const unsub = subscribeQueue((items) => setQueuedCount(items.length));
+    return () => {
+      window.removeEventListener('online', onOnline);
+      window.removeEventListener('offline', onOffline);
+      unsub();
+    };
+  }, []);
+
+  // Running cost summary — live roll-up of hours and piece-work earnings
+  const costSummary = useMemo(() => {
+    const totalHours = timeLogs.reduce((sum, l) => sum + Number(l.total_hours || 0), 0);
+    const unitsCompleted = Number(task?.units_completed ?? 0);
+    const ratePerUnit = Number(task?.rate_per_unit ?? 0);
+    const pieceWorkCost = unitsCompleted * ratePerUnit;
+    const actualCost = Number(task?.actual_cost ?? 0);
+    const estimatedCost = Number(task?.cost_estimate ?? 0);
+    return {
+      totalHours,
+      unitsCompleted,
+      pieceWorkCost,
+      actualCost,
+      estimatedCost,
+      hasAny: totalHours > 0 || unitsCompleted > 0 || actualCost > 0 || estimatedCost > 0,
+    };
+  }, [timeLogs, task?.units_completed, task?.rate_per_unit, task?.actual_cost, task?.cost_estimate]);
+
   const getLocale = () => {
     if (i18n.language.startsWith('fr')) return fr;
     if (i18n.language.startsWith('ar')) return ar;
@@ -141,16 +215,9 @@ function TaskDetailPage() {
     }
   }, [showHarvestForm, lotNumber, task]);
 
-  const { data: crops = [] } = useCropsForTask({
-    farmId: task?.farm_id,
-    parcelId: task?.parcel_id,
-    enabled: !!task?.farm_id,
-  });
-
   const { data: parcel } = useParcelById(task?.parcel_id);
 
-  const availableCrops: Crop[] = useMemo(() => {
-    if (crops.length > 0) return crops;
+  const availableCrops: CropOption[] = useMemo(() => {
     if (parcel && parcel.crop_type && task?.parcel_id) {
       return [{
         id: `parcel-${parcel.id}`,
@@ -162,10 +229,10 @@ function TaskDetailPage() {
         variety_name: parcel.variety || undefined,
         created_at: parcel.created_at || new Date().toISOString(),
         updated_at: parcel.updated_at || new Date().toISOString(),
-      } as Crop];
+      }];
     }
-    return crops;
-  }, [crops, parcel, task?.parcel_id, task?.farm_id]);
+    return [];
+  }, [parcel, task?.parcel_id, task?.farm_id]);
 
   const initialCropId = task?.crop_id || (availableCrops.length > 0 ? availableCrops[0].id : '');
   const firstAvailableCropId = availableCrops[0]?.id;
@@ -314,15 +381,15 @@ function TaskDetailPage() {
   const handleCompletePerUnit = async () => {
     const taskOrganizationId = getTaskOrganizationId();
     if (perUnitData.rate_per_unit <= 0) {
-      setError('Veuillez entrer le tarif par unité');
+      setError(t('tasks.detail.errors.rateRequired', 'Please enter the rate per unit'));
       return;
     }
     if (!hasMultipleWorkers && perUnitData.units_completed <= 0) {
-      setError('Veuillez entrer le nombre d\'unités complétées');
+      setError(t('tasks.detail.errors.unitsRequired', 'Please enter the number of completed units'));
       return;
     }
     if (hasMultipleWorkers && Object.values(workerUnits).every(v => v <= 0)) {
-      setError('Veuillez entrer le nombre d\'unités pour au moins un travailleur');
+      setError(t('tasks.detail.errors.workerUnitsRequired', 'Please enter units for at least one worker'));
       return;
     }
     try {
@@ -353,7 +420,7 @@ function TaskDetailPage() {
       queryClient.invalidateQueries({ queryKey: ['work-records'] });
       navigate({ to: '/tasks', search: { editTaskId: undefined } });
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Erreur lors de la complétion de la tâche');
+      setError(err instanceof Error ? err.message : t('tasks.detail.errors.completeFailed', 'Failed to complete task'));
     } finally {
       setIsActionLoading(false);
     }
@@ -367,15 +434,15 @@ function TaskDetailPage() {
     }
 
     if (!harvestData.crop_id) {
-      setError('Veuillez sélectionner une culture');
+      setError(t('tasks.detail.errors.cropRequired', 'Please select a crop'));
       return;
     }
     if (!harvestData.quantity || harvestData.quantity <= 0) {
-      setError('Veuillez entrer une quantité valide');
+      setError(t('tasks.detail.errors.quantityRequired', 'Please enter a valid quantity'));
       return;
     }
     if (!lotNumber) {
-      setError('Veuillez entrer un numéro de lot');
+      setError(t('tasks.detail.errors.lotNumberRequired', 'Please enter a lot number'));
       return;
     }
 
@@ -383,7 +450,7 @@ function TaskDetailPage() {
     if (isPerUnitTask && hasMultipleWorkers) {
       const totalUnits = Object.values(harvestWorkerUnits).reduce((s, v) => s + v, 0);
       if (totalUnits <= 0) {
-        setError('Veuillez entrer le nombre d\'unités pour au moins un travailleur');
+        setError(t('tasks.detail.errors.workerUnitsRequired', 'Please enter units for at least one worker'));
         return;
       }
     }
@@ -452,7 +519,7 @@ function TaskDetailPage() {
         navigate({ to: '/tasks', search: { editTaskId: undefined } });
       }
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Erreur lors de la complétion de la récolte');
+      setError(err instanceof Error ? err.message : t('tasks.detail.errors.harvestCompleteFailed', 'Failed to complete harvest'));
     } finally {
       setIsActionLoading(false);
     }
@@ -460,6 +527,65 @@ function TaskDetailPage() {
 
   const handleEditTask = () => {
     navigate({ to: '/tasks', search: { editTaskId: task.id } });
+  };
+
+  const handleToggleWatch = async () => {
+    if (!taskId) return;
+    try {
+      if (isWatching) {
+        await unfollowTask.mutateAsync(taskId);
+        toast.success(t('tasks.watch.unfollowed', 'You are no longer watching this task'));
+      } else {
+        await followTask.mutateAsync(taskId);
+        toast.success(t('tasks.watch.followed', "You'll be notified of activity on this task"));
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t('tasks.watch.failed', 'Failed to update watch status'));
+    }
+  };
+
+  const handleStartEditComment = (commentId: string, currentText: string) => {
+    setEditingCommentId(commentId);
+    setEditDraft(currentText);
+  };
+
+  const handleCancelEditComment = () => {
+    setEditingCommentId(null);
+    setEditDraft('');
+  };
+
+  const handleSaveEditComment = async (commentId: string) => {
+    if (!taskId || !editDraft.trim()) return;
+    try {
+      await updateComment.mutateAsync({ taskId, commentId, comment: editDraft });
+      toast.success(t('tasks.comments.updated', 'Comment updated'));
+      handleCancelEditComment();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t('tasks.comments.updateFailed', 'Failed to update comment'));
+    }
+  };
+
+  const handleDeleteComment = async (commentId: string) => {
+    if (!taskId) return;
+    if (!confirm(t('tasks.comments.deleteConfirm', 'Delete this comment?'))) return;
+    try {
+      await deleteComment.mutateAsync({ taskId, commentId });
+      toast.success(t('tasks.comments.deleted', 'Comment deleted'));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t('tasks.comments.deleteFailed', 'Failed to delete comment'));
+    }
+  };
+
+  const handleToggleResolve = async (commentId: string, currentlyResolved: boolean) => {
+    if (!taskId) return;
+    try {
+      await resolveComment.mutateAsync({ taskId, commentId, resolved: !currentlyResolved });
+      toast.success(currentlyResolved
+        ? t('tasks.comments.reopened', 'Comment reopened')
+        : t('tasks.comments.resolved', 'Comment resolved'));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t('tasks.comments.resolveFailed', 'Failed to update comment'));
+    }
   };
 
   return (
@@ -502,10 +628,31 @@ function TaskDetailPage() {
             </div>
           </div>
         </div>
-        <Button variant="outline" size="sm" onClick={handleEditTask} className="flex-shrink-0">
-          <Edit className="w-4 h-4 mr-2" />
-          {t('common.edit', 'Edit')}
-        </Button>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <Button
+            variant={isWatching ? 'default' : 'outline'}
+            size="sm"
+            onClick={handleToggleWatch}
+            disabled={followTask.isPending || unfollowTask.isPending}
+            title={isWatching
+              ? t('tasks.watch.unfollow', 'Unfollow this task')
+              : t('tasks.watch.follow', 'Follow this task to get notified of activity')}
+          >
+            {isWatching ? <Eye className="w-4 h-4 sm:mr-2" /> : <EyeOff className="w-4 h-4 sm:mr-2" />}
+            <span className="hidden sm:inline">
+              {isWatching
+                ? t('tasks.watch.watching', 'Watching')
+                : t('tasks.watch.watch', 'Watch')}
+            </span>
+            {watchers.length > 0 && (
+              <span className="ml-1 text-xs opacity-70">· {watchers.length}</span>
+            )}
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleEditTask}>
+            <Edit className="w-4 h-4 mr-2" />
+            {t('common.edit', 'Edit')}
+          </Button>
+        </div>
       </div>
 
       {error && (
@@ -515,7 +662,112 @@ function TaskDetailPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Offline / queue status banner — makes it clear to the worker that their
+          clock-in/out still works offline and will sync when the connection returns */}
+      {(!isOnline || queuedCount > 0) && (
+        <div className={`rounded-lg p-3 border flex items-center gap-3 ${
+          !isOnline
+            ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800'
+            : 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'
+        }`}>
+          <span className={`inline-block w-2 h-2 rounded-full ${!isOnline ? 'bg-amber-500 animate-pulse' : 'bg-blue-500'}`} />
+          <div className="flex-1 text-sm">
+            {!isOnline ? (
+              <span className="text-amber-800 dark:text-amber-200">
+                {t('tasks.offline.title', "You're offline")}
+                {queuedCount > 0 && (
+                  <span className="ml-1">
+                    · {t('tasks.offline.queued', '{{count}} action waiting to sync', { count: queuedCount })}
+                  </span>
+                )}
+              </span>
+            ) : (
+              <span className="text-blue-800 dark:text-blue-200">
+                {t('tasks.offline.syncing', 'Syncing {{count}} pending action...', { count: queuedCount })}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Blocked-by banner — unresolved dependencies */}
+      {blockedStatus?.blocked && blockedStatus.blockers.length > 0 && (
+        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+          <div className="flex items-start gap-3">
+            <Lock className="w-5 h-5 text-amber-600 flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-amber-900 dark:text-amber-100">
+                {t('tasks.blocked.title', 'Blocked by {{count}} unresolved dependency', { count: blockedStatus.blockers.length })}
+              </p>
+              <ul className="mt-2 space-y-1">
+                {blockedStatus.blockers.map((b, i) => (
+                  <li key={b.id ?? i} className="text-sm text-amber-800 dark:text-amber-200">
+                    • {b.title ?? 'Untitled task'}
+                    {b.status ? <span className="ml-2 text-xs italic">({b.status})</span> : null}
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">
+                {t('tasks.blocked.hint', 'Complete the blockers above before starting this task.')}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Running cost tile — mobile-visible summary (same panel also appears in sidebar on desktop) */}
+      {costSummary.hasAny && (
+        <div className="bg-gradient-to-br from-emerald-50 to-blue-50 dark:from-emerald-900/20 dark:to-blue-900/20 border border-emerald-200/60 dark:border-emerald-800/60 rounded-lg p-4 lg:hidden">
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="font-medium text-gray-900 dark:text-white flex items-center gap-2 text-sm">
+              <Wallet className="w-4 h-4 text-emerald-600" />
+              {t('tasks.cost.title', 'Running cost')}
+            </h4>
+            {costSummary.estimatedCost > 0 && (
+              <span className="text-xs text-gray-500 dark:text-gray-400">
+                {t('tasks.cost.vs', 'vs {{est}} MAD est.', { est: costSummary.estimatedCost.toLocaleString('fr-FR') })}
+              </span>
+            )}
+          </div>
+          <div className="grid grid-cols-2 gap-3 text-sm">
+            <div>
+              <p className="text-gray-500 dark:text-gray-400 text-xs">
+                {t('tasks.cost.hoursLogged', 'Hours logged')}
+              </p>
+              <p className="font-semibold text-gray-900 dark:text-white">
+                {costSummary.totalHours.toFixed(2)}h
+              </p>
+            </div>
+            <div>
+              <p className="text-gray-500 dark:text-gray-400 text-xs">
+                {t('tasks.cost.unitsDone', 'Units done')}
+              </p>
+              <p className="font-semibold text-gray-900 dark:text-white">
+                {costSummary.unitsCompleted}
+                {task.units_required ? <span className="text-gray-400"> / {task.units_required}</span> : null}
+              </p>
+            </div>
+            <div>
+              <p className="text-gray-500 dark:text-gray-400 text-xs">
+                {t('tasks.cost.pieceWork', 'Piece-work')}
+              </p>
+              <p className="font-semibold text-emerald-700 dark:text-emerald-400">
+                {costSummary.pieceWorkCost.toLocaleString('fr-FR')} MAD
+              </p>
+            </div>
+            <div>
+              <p className="text-gray-500 dark:text-gray-400 text-xs">
+                {t('tasks.cost.actual', 'Actual cost')}
+              </p>
+              <p className="font-semibold text-gray-900 dark:text-white">
+                {costSummary.actualCost.toLocaleString('fr-FR')} MAD
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pb-24 lg:pb-0">
         {/* Main Content */}
         <div className="lg:col-span-2 space-y-6">
           {/* Task Info */}
@@ -693,9 +945,9 @@ function TaskDetailPage() {
                 <div>
                   <p className="text-gray-500 dark:text-gray-400">{t('tasks.detail.paymentType', 'Payment type')}</p>
                   <p className="font-medium text-gray-900 dark:text-white">
-                    {task.payment_type === 'per_unit' ? "A l'unité" :
-                     task.payment_type === 'daily' ? 'Journalier' :
-                     task.payment_type === 'monthly' ? 'Mensuel' : 'Métayage'}
+                    {task.payment_type === 'per_unit' ? t('tasks.paymentTypes.perUnit', 'Per unit') :
+                     task.payment_type === 'daily' ? t('tasks.paymentTypes.daily', 'Daily') :
+                     task.payment_type === 'monthly' ? t('tasks.paymentTypes.monthly', 'Monthly') : t('tasks.paymentTypes.metayage', 'Sharecropping')}
                   </p>
                 </div>
                 {task.units_required && (
@@ -719,12 +971,12 @@ function TaskDetailPage() {
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 space-y-4">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                 <Wheat className="w-5 h-5 text-amber-600" />
-                Enregistrer la récolte
+                {t('tasks.harvestForm.title', 'Record harvest')}
               </h3>
 
               {/* Completion Type Selector */}
               <div className="space-y-2">
-                <Label>Type de complétion</Label>
+                <Label>{t('tasks.harvestForm.completionType', 'Completion type')}</Label>
                 <div className="flex gap-4">
                   <label className={`flex items-center gap-2 p-3 rounded-lg border cursor-pointer transition-colors ${
                     completionType === 'complete'
@@ -734,8 +986,8 @@ function TaskDetailPage() {
                     <input type="radio" name="completionType" value="complete" checked={completionType === 'complete'} onChange={() => setCompletionType('complete')} className="sr-only" />
                     <CheckCircle className={`w-5 h-5 ${completionType === 'complete' ? 'text-green-600' : 'text-gray-400'}`} />
                     <div>
-                      <p className="font-medium text-sm">Terminer complètement</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">Marquer la tâche comme terminée</p>
+                      <p className="font-medium text-sm">{t('tasks.harvestForm.completeFull', 'Complete fully')}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{t('tasks.harvestForm.completeFullDesc', 'Mark the task as completed')}</p>
                     </div>
                   </label>
                   <label className={`flex items-center gap-2 p-3 rounded-lg border cursor-pointer transition-colors ${
@@ -746,8 +998,8 @@ function TaskDetailPage() {
                     <input type="radio" name="completionType" value="partial" checked={completionType === 'partial'} onChange={() => setCompletionType('partial')} className="sr-only" />
                     <PackageCheck className={`w-5 h-5 ${completionType === 'partial' ? 'text-amber-600' : 'text-gray-400'}`} />
                     <div>
-                      <p className="font-medium text-sm">Récolte partielle</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">Continuer la tâche après</p>
+                      <p className="font-medium text-sm">{t('tasks.harvestForm.partial', 'Partial harvest')}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{t('tasks.harvestForm.partialDesc', 'Continue the task after')}</p>
                     </div>
                   </label>
                 </div>
@@ -757,30 +1009,30 @@ function TaskDetailPage() {
               <div className="space-y-2">
                 <Label htmlFor="lot_number" className="flex items-center gap-2">
                   <Hash className="w-4 h-4" />
-                  Numéro de lot *
+                  {t('tasks.harvestForm.lotNumber', 'Lot number *')}
                 </Label>
                 <Input
                   id="lot_number"
                   type="text"
                   value={lotNumber}
                   onChange={(e) => setLotNumber(e.target.value)}
-                  placeholder="Ex: P1FM1-0012025"
+                  placeholder={t('tasks.harvestForm.lotPlaceholder', 'e.g. P1FM1-0012025')}
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2 col-span-2">
-                  <Label htmlFor="crop_id">Culture récoltée *</Label>
+                  <Label htmlFor="crop_id">{t('tasks.harvestForm.cropHarvested', 'Harvested crop *')}</Label>
                   <Select
                     value={harvestData.crop_id || '__none__'}
                     onValueChange={(value) => setHarvestData({ ...harvestData, crop_id: value === '__none__' ? '' : value })}
                   >
                     <SelectTrigger id="crop_id">
-                      <SelectValue placeholder="Sélectionner une culture" />
+                      <SelectValue placeholder={t('tasks.harvestForm.selectCrop', 'Select a crop')} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="__none__">Sélectionner une culture...</SelectItem>
-                      {availableCrops.map((crop: Crop) => (
+                      <SelectItem value="__none__">{t('tasks.harvestForm.selectCropPlaceholder', 'Select a crop...')}</SelectItem>
+                      {availableCrops.map((crop: CropOption) => (
                         <SelectItem key={crop.id} value={crop.id}>
                           {crop.name} {crop.parcel_name ? `(${crop.parcel_name})` : ''}
                         </SelectItem>
@@ -790,7 +1042,7 @@ function TaskDetailPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="harvest_date">Date de récolte *</Label>
+                  <Label htmlFor="harvest_date">{t('tasks.harvestForm.harvestDate', 'Harvest date *')}</Label>
                   <Input
                     id="harvest_date"
                     type="date"
@@ -800,7 +1052,7 @@ function TaskDetailPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="quantity">Quantité récoltée *</Label>
+                  <Label htmlFor="quantity">{t('tasks.harvestForm.quantityHarvested', 'Quantity harvested *')}</Label>
                   <Input
                     id="quantity"
                     type="number"
@@ -808,41 +1060,41 @@ function TaskDetailPage() {
                     step="0.1"
                     value={harvestData.quantity || ''}
                     onChange={(e) => setHarvestData({ ...harvestData, quantity: parseFloat(e.target.value) || 0 })}
-                    placeholder="Ex: 500"
+                    placeholder={t('tasks.harvestForm.quantityPlaceholder', 'e.g. 500')}
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="unit">Unité</Label>
+                  <Label htmlFor="unit">{t('tasks.harvestForm.unit', 'Unit')}</Label>
                   <Select value={harvestData.unit} onValueChange={(value) => setHarvestData({ ...harvestData, unit: value as HarvestUnit })}>
                     <SelectTrigger id="unit">
-                      <SelectValue placeholder="Sélectionner" />
+                      <SelectValue placeholder={t('tasks.harvestForm.select', 'Select')} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="kg">Kilogrammes (kg)</SelectItem>
-                      <SelectItem value="tons">Tonnes</SelectItem>
-                      <SelectItem value="units">Unités</SelectItem>
-                      <SelectItem value="boxes">Caisses</SelectItem>
-                      <SelectItem value="crates">Cagettes</SelectItem>
-                      <SelectItem value="liters">Litres</SelectItem>
+                      <SelectItem value="kg">{t('tasks.harvestForm.units.kg', 'Kilograms (kg)')}</SelectItem>
+                      <SelectItem value="tons">{t('tasks.harvestForm.units.tons', 'Tons')}</SelectItem>
+                      <SelectItem value="units">{t('tasks.harvestForm.units.units', 'Units')}</SelectItem>
+                      <SelectItem value="boxes">{t('tasks.harvestForm.units.boxes', 'Boxes')}</SelectItem>
+                      <SelectItem value="crates">{t('tasks.harvestForm.units.crates', 'Crates')}</SelectItem>
+                      <SelectItem value="liters">{t('tasks.harvestForm.units.liters', 'Liters')}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="quality_grade">Grade de qualité</Label>
+                  <Label htmlFor="quality_grade">{t('tasks.harvestForm.qualityGrade', 'Quality grade')}</Label>
                   <Select value={harvestData.quality_grade} onValueChange={(value) => setHarvestData({ ...harvestData, quality_grade: value as HarvestQualityGrade })}>
                     <SelectTrigger id="quality_grade">
-                      <SelectValue placeholder="Sélectionner" />
+                      <SelectValue placeholder={t('tasks.harvestForm.select', 'Select')} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Extra">Extra</SelectItem>
-                      <SelectItem value="A">Grade A</SelectItem>
-                      <SelectItem value="First">Première qualité</SelectItem>
-                      <SelectItem value="B">Grade B</SelectItem>
-                      <SelectItem value="Second">Deuxième qualité</SelectItem>
-                      <SelectItem value="C">Grade C</SelectItem>
-                      <SelectItem value="Third">Troisième qualité</SelectItem>
+                      <SelectItem value="Extra">{t('tasks.harvestForm.grades.extra', 'Extra')}</SelectItem>
+                      <SelectItem value="A">{t('tasks.harvestForm.grades.a', 'Grade A')}</SelectItem>
+                      <SelectItem value="First">{t('tasks.harvestForm.grades.first', 'First quality')}</SelectItem>
+                      <SelectItem value="B">{t('tasks.harvestForm.grades.b', 'Grade B')}</SelectItem>
+                      <SelectItem value="Second">{t('tasks.harvestForm.grades.second', 'Second quality')}</SelectItem>
+                      <SelectItem value="C">{t('tasks.harvestForm.grades.c', 'Grade C')}</SelectItem>
+                      <SelectItem value="Third">{t('tasks.harvestForm.grades.third', 'Third quality')}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -852,12 +1104,12 @@ function TaskDetailPage() {
               {isPerUnitTask && hasMultipleWorkers && (
                 <div className="space-y-3 border border-blue-200 dark:border-blue-800 rounded-lg p-4 bg-blue-50 dark:bg-blue-900/20">
                   <p className="text-sm font-medium text-blue-800 dark:text-blue-200">
-                    Paiement à l'unité ({harvestData.unit || 'unités'})
+                    {t('tasks.harvestForm.perUnitPayment', 'Per-unit payment')} ({harvestData.unit || 'unités'})
                   </p>
 
                   {/* Rate per unit input */}
                   <div className="flex items-center gap-3">
-                    <Label htmlFor="harvest-rate-per-unit" className="text-sm text-blue-800 dark:text-blue-200 whitespace-nowrap">Tarif par unité (MAD) :</Label>
+                    <Label htmlFor="harvest-rate-per-unit" className="text-sm text-blue-800 dark:text-blue-200 whitespace-nowrap">{t('tasks.harvestForm.ratePerUnit', 'Rate per unit (MAD):')}</Label>
                     <Input
                       id="harvest-rate-per-unit"
                       type="number"
@@ -865,13 +1117,13 @@ function TaskDetailPage() {
                       step="0.01"
                       value={harvestRatePerUnit || ''}
                       onChange={(e) => setHarvestRatePerUnit(parseFloat(e.target.value) || 0)}
-                      placeholder="Ex: 30"
+                      placeholder={t('tasks.harvestForm.ratePlaceholder', 'e.g. 30')}
                       className="w-28 bg-white dark:bg-gray-800"
                     />
                   </div>
 
                   <p className="text-xs text-blue-600 dark:text-blue-400">
-                    Indiquez le nombre d'unités accomplies par chaque travailleur.
+                    {t('tasks.harvestForm.enterWorkerUnits', 'Enter the number of units completed by each worker.')}
                   </p>
                   {allWorkers.map(a => {
                     const units = harvestWorkerUnits[a.worker_id] ?? 0;
@@ -903,7 +1155,7 @@ function TaskDetailPage() {
                   })}
                   {harvestRatePerUnit > 0 && Object.values(harvestWorkerUnits).some(v => v > 0) && (
                     <div className="flex justify-between items-center pt-2 border-t border-blue-200 dark:border-blue-700">
-                      <span className="text-sm font-medium text-blue-800 dark:text-blue-200">Total paiements :</span>
+                      <span className="text-sm font-medium text-blue-800 dark:text-blue-200">{t('tasks.harvestForm.totalPayments', 'Total payments:')}</span>
                       <span className="font-bold text-green-600">
                         {(Object.values(harvestWorkerUnits).reduce((s, v) => s + v, 0) * harvestRatePerUnit).toFixed(2)} MAD
                       </span>
@@ -913,19 +1165,19 @@ function TaskDetailPage() {
               )}
 
               <div className="space-y-2">
-                <Label htmlFor="harvest_notes">Notes</Label>
+                <Label htmlFor="harvest_notes">{t('tasks.harvestForm.notes', 'Notes')}</Label>
                 <Textarea
                   id="harvest_notes"
                   value={harvestData.harvest_notes || ''}
                   onChange={(e) => setHarvestData({ ...harvestData, harvest_notes: e.target.value })}
                   rows={2}
-                  placeholder="Notes sur la récolte..."
+                  placeholder={t('tasks.harvestForm.notesPlaceholder', 'Harvest notes...')}
                 />
               </div>
 
               <div className="flex justify-end gap-3 pt-4 border-t dark:border-gray-700">
                 <Button variant="outline" onClick={() => { setShowHarvestForm(false); setCompletionType('complete'); setLotNumber(''); setHarvestWorkerUnits({}); setHarvestRatePerUnit(0); }}>
-                  Annuler
+                  {t('common.cancel', 'Cancel')}
                 </Button>
                 <Button
                   variant={completionType === 'partial' ? 'amber' : 'green'}
@@ -933,7 +1185,11 @@ function TaskDetailPage() {
                   disabled={isActionLoading}
                 >
                   {completionType === 'partial' ? <PackageCheck className="w-4 h-4 mr-2" /> : <CheckCircle className="w-4 h-4 mr-2" />}
-                  {isActionLoading ? 'Enregistrement...' : completionType === 'partial' ? 'Enregistrer récolte partielle' : 'Terminer et enregistrer'}
+                  {isActionLoading
+                    ? t('common.saving', 'Saving...')
+                    : completionType === 'partial'
+                      ? t('tasks.harvestForm.savePartial', 'Save partial harvest')
+                      : t('tasks.harvestForm.completeAndSave', 'Complete and save')}
                 </Button>
               </div>
             </div>
@@ -989,29 +1245,100 @@ function TaskDetailPage() {
               </p>
             ) : (
               <div className="space-y-4">
-                {comments.map((comment: TaskComment) => (
-                  <div key={comment.id} className="flex gap-3">
-                    <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
-                      <User className="w-4 h-4 text-blue-600" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-sm font-medium text-gray-900 dark:text-white">
-                          {comment.user_name || comment.worker_name || t('tasks.detail.anonymous', 'User')}
-                        </span>
-                        <span className="text-xs text-gray-500 dark:text-gray-400">
-                          {formatDistance(new Date(comment.created_at), new Date(), {
-                            addSuffix: true,
-                            locale: getLocale(),
-                          })}
-                        </span>
+                {comments.map((comment) => {
+                  const anyComment = comment as TaskComment & {
+                    edited_at?: string | null;
+                    resolved_at?: string | null;
+                    resolved_by?: string | null;
+                  };
+                  const isOwn = anyComment.user_id === currentUserId;
+                  const isEditing = editingCommentId === comment.id;
+                  const isIssue = comment.type === 'issue';
+                  const isResolved = !!anyComment.resolved_at;
+                  return (
+                    <div key={comment.id} className={`flex gap-3 rounded-lg p-2 ${isResolved ? 'opacity-60 bg-gray-50 dark:bg-gray-900/40' : ''} ${isIssue && !isResolved ? 'bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800' : ''}`}>
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${isIssue ? 'bg-amber-100 dark:bg-amber-900/30' : 'bg-blue-100 dark:bg-blue-900/30'}`}>
+                        {isIssue ? (
+                          <AlertCircle className="w-4 h-4 text-amber-600" />
+                        ) : (
+                          <User className="w-4 h-4 text-blue-600" />
+                        )}
                       </div>
-                      <p className="text-sm text-gray-700 dark:text-gray-300">
-                        <CommentDisplay comment={comment.comment} />
-                      </p>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
+                          <span className="text-sm font-medium text-gray-900 dark:text-white">
+                            {comment.user_name || comment.worker_name || t('tasks.detail.anonymous', 'User')}
+                          </span>
+                          <span className="text-xs text-gray-500 dark:text-gray-400">
+                            {formatDistance(new Date(comment.created_at), new Date(), {
+                              addSuffix: true,
+                              locale: getLocale(),
+                            })}
+                          </span>
+                          {anyComment.edited_at && (
+                            <span className="text-xs italic text-gray-400">· {t('tasks.comments.edited', 'edited')}</span>
+                          )}
+                          {isIssue && !isResolved && (
+                            <span className="text-xs px-1.5 py-0.5 rounded bg-amber-200 dark:bg-amber-900/50 text-amber-900 dark:text-amber-200 font-medium">
+                              {t('tasks.comments.open', 'Open')}
+                            </span>
+                          )}
+                          {isResolved && (
+                            <span className="text-xs px-1.5 py-0.5 rounded bg-emerald-200 dark:bg-emerald-900/50 text-emerald-900 dark:text-emerald-200 font-medium">
+                              {t('tasks.comments.resolved', 'Resolved')}
+                            </span>
+                          )}
+                        </div>
+                        {isEditing ? (
+                          <div className="space-y-2">
+                            <Textarea
+                              value={editDraft}
+                              onChange={(e) => setEditDraft(e.target.value)}
+                              rows={3}
+                              className="text-sm"
+                            />
+                            <div className="flex items-center gap-2">
+                              <Button size="sm" onClick={() => handleSaveEditComment(comment.id)} disabled={updateComment.isPending || !editDraft.trim()}>
+                                <Check className="w-3 h-3 mr-1" />
+                                {t('common.save', 'Save')}
+                              </Button>
+                              <Button size="sm" variant="outline" onClick={handleCancelEditComment}>
+                                <XIcon className="w-3 h-3 mr-1" />
+                                {t('common.cancel', 'Cancel')}
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            <p className="text-sm text-gray-700 dark:text-gray-300">
+                              <CommentDisplay comment={comment.comment} />
+                            </p>
+                            <div className="flex items-center gap-1 mt-1">
+                              {isIssue && (
+                                <Button size="sm" variant="ghost" onClick={() => handleToggleResolve(comment.id, isResolved)} className="h-7 px-2 text-xs">
+                                  <Check className="w-3 h-3 mr-1" />
+                                  {isResolved ? t('tasks.comments.reopen', 'Reopen') : t('tasks.comments.resolve', 'Resolve')}
+                                </Button>
+                              )}
+                              {isOwn && (
+                                <>
+                                  <Button size="sm" variant="ghost" onClick={() => handleStartEditComment(comment.id, comment.comment)} className="h-7 px-2 text-xs">
+                                    <Edit className="w-3 h-3 mr-1" />
+                                    {t('common.edit', 'Edit')}
+                                  </Button>
+                                  <Button size="sm" variant="ghost" onClick={() => handleDeleteComment(comment.id)} className="h-7 px-2 text-xs text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20">
+                                    <Trash2 className="w-3 h-3 mr-1" />
+                                    {t('common.delete', 'Delete')}
+                                  </Button>
+                                </>
+                              )}
+                            </div>
+                          </>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -1019,6 +1346,89 @@ function TaskDetailPage() {
 
         {/* Sidebar - Actions */}
         <div className="space-y-6">
+          {/* Running cost tile — desktop sidebar variant */}
+          {costSummary.hasAny && (
+            <div className="hidden lg:block bg-gradient-to-br from-emerald-50 to-blue-50 dark:from-emerald-900/20 dark:to-blue-900/20 border border-emerald-200/60 dark:border-emerald-800/60 rounded-lg p-4">
+              <h2 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2 mb-3">
+                <Wallet className="w-4 h-4 text-emerald-600" />
+                {t('tasks.cost.title', 'Running cost')}
+              </h2>
+              <dl className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <dt className="text-gray-500 dark:text-gray-400">{t('tasks.cost.hoursLogged', 'Hours logged')}</dt>
+                  <dd className="font-semibold text-gray-900 dark:text-white">{costSummary.totalHours.toFixed(2)}h</dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-gray-500 dark:text-gray-400">{t('tasks.cost.unitsDone', 'Units done')}</dt>
+                  <dd className="font-semibold text-gray-900 dark:text-white">
+                    {costSummary.unitsCompleted}
+                    {task.units_required ? <span className="text-gray-400"> / {task.units_required}</span> : null}
+                  </dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-gray-500 dark:text-gray-400">{t('tasks.cost.pieceWork', 'Piece-work')}</dt>
+                  <dd className="font-semibold text-emerald-700 dark:text-emerald-400">
+                    {costSummary.pieceWorkCost.toLocaleString('fr-FR')} MAD
+                  </dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-gray-500 dark:text-gray-400">{t('tasks.cost.actual', 'Actual')}</dt>
+                  <dd className="font-semibold text-gray-900 dark:text-white">
+                    {costSummary.actualCost.toLocaleString('fr-FR')} MAD
+                  </dd>
+                </div>
+                {costSummary.estimatedCost > 0 && (
+                  <div className="flex justify-between pt-2 border-t border-emerald-200/60 dark:border-emerald-800/60">
+                    <dt className="text-gray-500 dark:text-gray-400">{t('tasks.cost.estimated', 'Estimated')}</dt>
+                    <dd className="text-gray-500 dark:text-gray-400">
+                      {costSummary.estimatedCost.toLocaleString('fr-FR')} MAD
+                    </dd>
+                  </div>
+                )}
+              </dl>
+            </div>
+          )}
+
+          {/* Dependencies compact view — desktop sidebar */}
+          {dependencies && (dependencies.depends_on.length > 0 || dependencies.required_by.length > 0) && (
+            <div className="hidden lg:block bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+              <h2 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2 mb-3">
+                <Lock className="w-4 h-4 text-gray-500" />
+                {t('tasks.dependencies.title', 'Dependencies')}
+              </h2>
+              {dependencies.depends_on.length > 0 && (
+                <>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                    {t('tasks.dependencies.dependsOn', 'Depends on')}
+                  </p>
+                  <ul className="space-y-1 mb-3">
+                    {dependencies.depends_on.map((d) => (
+                      <li key={d.id} className="text-xs text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                        <span className={`inline-block w-2 h-2 rounded-full ${d.status === 'completed' ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+                        <span className="truncate">{d.title}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
+              {dependencies.required_by.length > 0 && (
+                <>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                    {t('tasks.dependencies.requiredBy', 'Required by')}
+                  </p>
+                  <ul className="space-y-1">
+                    {dependencies.required_by.map((d) => (
+                      <li key={d.id} className="text-xs text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                        <span className="inline-block w-2 h-2 rounded-full bg-blue-500" />
+                        <span className="truncate">{d.title}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
+            </div>
+          )}
+
           {/* Assignee — the manager who created/assigned this task */}
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
@@ -1090,22 +1500,22 @@ function TaskDetailPage() {
                 <div className="border-t dark:border-gray-700 pt-4 space-y-4">
                   <h3 className="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                     <Banknote className="w-4 h-4 text-green-600" />
-                    Paiement à l'unité
+                    {t('tasks.harvestForm.perUnitPayment', 'Per-unit payment')}
                   </h3>
                   <div className="space-y-2">
-                    <Label>Tarif par unité (MAD) *</Label>
+                    <Label>{t('tasks.perUnitForm.ratePerUnit', 'Rate per unit (MAD) *')}</Label>
                     <Input
                       type="number"
                       min="0"
                       step="0.01"
                       value={perUnitData.rate_per_unit || ''}
                       onChange={(e) => setPerUnitData({ ...perUnitData, rate_per_unit: parseFloat(e.target.value) || 0 })}
-                      placeholder="Ex: 5.00"
+                      placeholder={t('tasks.perUnitForm.ratePlaceholder', 'e.g. 5.00')}
                     />
                   </div>
                   {hasMultipleWorkers ? (
                     <div className="space-y-2">
-                      <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Unités par travailleur</p>
+                      <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('tasks.perUnitForm.unitsPerWorker', 'Units per worker')}</p>
                       {allWorkers.map(a => (
                         <div key={a.worker_id} className="flex items-center gap-2">
                           <span className="text-sm text-gray-700 dark:text-gray-300 w-32 truncate">
@@ -1133,21 +1543,21 @@ function TaskDetailPage() {
                     </div>
                   ) : (
                     <div className="space-y-2">
-                      <Label>Unités complétées *</Label>
+                      <Label>{t('tasks.perUnitForm.unitsCompleted', 'Units completed *')}</Label>
                       <Input
                         type="number"
                         min="0"
                         step="0.01"
                         value={perUnitData.units_completed || ''}
                         onChange={(e) => setPerUnitData({ ...perUnitData, units_completed: parseFloat(e.target.value) || 0 })}
-                        placeholder="Ex: 100"
+                        placeholder={t('tasks.perUnitForm.unitsPlaceholder', 'e.g. 100')}
                       />
                     </div>
                   )}
                   {perUnitData.rate_per_unit > 0 && (
                     <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3">
                       <div className="flex justify-between items-center">
-                        <span className="text-sm font-medium text-green-800 dark:text-green-200">Total</span>
+                        <span className="text-sm font-medium text-green-800 dark:text-green-200">{t('tasks.perUnitForm.total', 'Total')}</span>
                         <span className="font-bold text-green-600">
                           {hasMultipleWorkers
                             ? (Object.values(workerUnits).reduce((s, v) => s + v, 0) * perUnitData.rate_per_unit).toFixed(2)
@@ -1157,21 +1567,21 @@ function TaskDetailPage() {
                     </div>
                   )}
                   <div className="space-y-2">
-                    <Label>Notes</Label>
+                    <Label>{t('tasks.perUnitForm.notes', 'Notes')}</Label>
                     <Textarea
                       value={perUnitData.notes}
                       onChange={(e) => setPerUnitData({ ...perUnitData, notes: e.target.value })}
                       rows={2}
-                      placeholder="Notes sur le travail effectué..."
+                      placeholder={t('tasks.perUnitForm.notesPlaceholder', 'Notes on the work done...')}
                     />
                   </div>
                   <div className="flex gap-2">
                     <Button variant="outline" onClick={() => setShowPerUnitForm(false)} className="flex-1">
-                      Annuler
+                      {t('common.cancel', 'Cancel')}
                     </Button>
                     <Button onClick={handleCompletePerUnit} disabled={isActionLoading} className="flex-1">
                       <CheckCircle className="w-4 h-4 mr-2" />
-                      {isActionLoading ? 'En cours...' : 'Confirmer'}
+                      {isActionLoading ? t('common.processing', 'Processing...') : t('common.confirm', 'Confirm')}
                     </Button>
                   </div>
                 </div>
@@ -1240,6 +1650,71 @@ function TaskDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Sticky mobile action bar — floats at the bottom of the viewport so workers
+          don't have to scroll past description + worklog to reach Clock In / Complete. */}
+      {!showHarvestForm && !showPerUnitForm && (canStart || canPause || canResume || canComplete) && (
+        <div className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 dark:bg-gray-900/95 backdrop-blur border-t border-gray-200 dark:border-gray-800 px-4 py-3 shadow-lg">
+          <div className="flex items-center gap-2">
+            {canStart && (
+              <Button
+                onClick={handleStartTask}
+                disabled={isActionLoading || blockedStatus?.blocked}
+                className="flex-1 h-12 text-base"
+              >
+                <Play className="w-5 h-5 mr-2" />
+                {t('tasks.start', 'Start')}
+              </Button>
+            )}
+            {canPause && (
+              <Button
+                onClick={handlePauseTask}
+                disabled={isActionLoading}
+                variant="outline"
+                className="flex-1 h-12 text-base"
+              >
+                <Pause className="w-5 h-5 mr-2" />
+                {t('tasks.pause', 'Pause')}
+              </Button>
+            )}
+            {canResume && (
+              <Button
+                onClick={handleResumeTask}
+                disabled={isActionLoading}
+                className="flex-1 h-12 text-base"
+              >
+                <Play className="w-5 h-5 mr-2" />
+                {t('tasks.resume', 'Resume')}
+              </Button>
+            )}
+            {canComplete && (
+              <Button
+                onClick={handleCompleteTask}
+                disabled={isActionLoading}
+                className="flex-1 h-12 text-base bg-emerald-600 hover:bg-emerald-700 text-white"
+              >
+                {isHarvestingTask ? (
+                  <>
+                    <Wheat className="w-5 h-5 mr-2" />
+                    {t('tasks.completeShort', 'Finish')}
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="w-5 h-5 mr-2" />
+                    {t('tasks.completeShort', 'Finish')}
+                  </>
+                )}
+              </Button>
+            )}
+          </div>
+          {blockedStatus?.blocked && canStart && (
+            <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-1.5 text-center">
+              <Lock className="w-3 h-3 inline mr-1" />
+              {t('tasks.blocked.hintMobile', 'Waiting on dependencies')}
+            </p>
+          )}
+        </div>
+      )}
     </div>
   );
 }

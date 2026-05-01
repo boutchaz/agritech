@@ -15,6 +15,19 @@ import { CreateStockAccountMappingDto, UpdateStockAccountMappingDto } from './dt
 import { StockAccountingService } from './stock-accounting.service';
 import { StockReservationsService } from './stock-reservations.service';
 import { StockEntryApprovalsService } from './stock-entry-approvals.service';
+import { AccountsService } from '../accounts/accounts.service';
+
+export interface StockEntryFilters {
+  entry_type?: string;
+  status?: string;
+  from_date?: string;
+  to_date?: string;
+  warehouse_id?: string;
+  reference_type?: string;
+  search?: string;
+  page?: number;
+  pageSize?: number;
+}
 
 @Injectable()
 export class StockEntriesService {
@@ -27,12 +40,13 @@ export class StockEntriesService {
     private readonly notificationsService: NotificationsService,
     private readonly stockReservationsService: StockReservationsService,
     private readonly stockEntryApprovalsService: StockEntryApprovalsService,
+    private readonly accountsService: AccountsService,
   ) {}
 
   /**
    * Get all stock entries with optional filters
    */
-  async findAll(organizationId: string, filters?: any): Promise<PaginatedResponse<any>> {
+  async findAll(organizationId: string, filters?: StockEntryFilters): Promise<PaginatedResponse<any>> {
     const client = this.databaseService.getAdminClient();
 
     return paginate(client, 'stock_entries', {
@@ -114,8 +128,9 @@ export class StockEntriesService {
         `INSERT INTO stock_entries (
           organization_id, entry_type, entry_number, entry_date,
           from_warehouse_id, to_warehouse_id, reference_type, reference_id,
-          reference_number, purpose, notes, status, created_by, posted_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+          reference_number, purpose, notes, status, created_by, posted_at,
+          parcel_id, crop_cycle_id, client_id, client_created_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
         RETURNING *`,
         [
           dto.organization_id,
@@ -132,6 +147,10 @@ export class StockEntriesService {
           dto.status || StockEntryStatus.DRAFT,
           dto.created_by || null,
           dto.status === StockEntryStatus.POSTED ? new Date() : null,
+          dto.parcel_id || null,
+          dto.crop_cycle_id || null,
+          dto.client_id || null,
+          dto.client_created_at || null,
         ],
       );
 
@@ -275,6 +294,8 @@ export class StockEntriesService {
         'reference_number',
         'purpose',
         'notes',
+        'parcel_id',
+        'crop_cycle_id',
       ];
 
       for (const field of allowedFields) {
@@ -399,8 +420,8 @@ export class StockEntriesService {
       await client.query(
         `UPDATE stock_entries
          SET status = $1, posted_at = $2
-         WHERE id = $3`,
-        [StockEntryStatus.POSTED, new Date(), stockEntryId],
+         WHERE id = $3 AND organization_id = $4`,
+        [StockEntryStatus.POSTED, new Date(), stockEntryId, organizationId],
       );
 
       // 4. Process stock movements
@@ -1474,6 +1495,111 @@ export class StockEntriesService {
         };
       })
       .filter((item) => item.currentStock < item.reorderPoint);
+  }
+
+  /**
+   * Stock aging report: groups remaining stock_valuation lots by age buckets.
+   * Useful for identifying slow-moving agri inputs (e.g. expensive pesticides
+   * sitting unused) and triggering FIFO discipline.
+   */
+  async getStockAging(organizationId: string, warehouseId?: string): Promise<any> {
+    const supabase = this.databaseService.getAdminClient();
+
+    let query = supabase
+      .from('stock_valuation')
+      .select(`
+        item_id,
+        warehouse_id,
+        remaining_quantity,
+        cost_per_unit,
+        created_at,
+        items:items(id, item_name, item_code, default_unit),
+        warehouses:warehouses(id, name)
+      `)
+      .eq('organization_id', organizationId)
+      .gt('remaining_quantity', 0);
+
+    if (warehouseId) {
+      query = query.eq('warehouse_id', warehouseId);
+    }
+
+    const { data, error } = await query;
+    if (error) {
+      throw new BadRequestException(`Failed to fetch aging report: ${error.message}`);
+    }
+
+    const now = Date.now();
+    const buckets = {
+      '0-30': { qty: 0, value: 0 },
+      '31-60': { qty: 0, value: 0 },
+      '61-90': { qty: 0, value: 0 },
+      '90+': { qty: 0, value: 0 },
+    };
+
+    type ItemAgg = {
+      itemId: string;
+      itemName: string;
+      itemCode: string | null;
+      warehouseId: string;
+      warehouseName: string;
+      unit: string;
+      totalQty: number;
+      totalValue: number;
+      buckets: typeof buckets;
+      oldestDays: number;
+    };
+    const byItem = new Map<string, ItemAgg>();
+
+    for (const row of data || []) {
+      const remaining = parseFloat(String(row.remaining_quantity || 0)) || 0;
+      const costPerUnit = parseFloat(String(row.cost_per_unit || 0)) || 0;
+      const value = remaining * costPerUnit;
+      const ageDays = Math.floor((now - new Date(row.created_at).getTime()) / 86400000);
+
+      const bucketKey: keyof typeof buckets =
+        ageDays <= 30 ? '0-30' : ageDays <= 60 ? '31-60' : ageDays <= 90 ? '61-90' : '90+';
+
+      buckets[bucketKey].qty += remaining;
+      buckets[bucketKey].value += value;
+
+      const itemRel: any = row.items;
+      const whRel: any = row.warehouses;
+      const key = `${row.item_id}::${row.warehouse_id}`;
+      const existing = byItem.get(key);
+      if (existing) {
+        existing.totalQty += remaining;
+        existing.totalValue += value;
+        existing.buckets[bucketKey].qty += remaining;
+        existing.buckets[bucketKey].value += value;
+        existing.oldestDays = Math.max(existing.oldestDays, ageDays);
+      } else {
+        byItem.set(key, {
+          itemId: row.item_id,
+          itemName: itemRel?.item_name || 'Unknown',
+          itemCode: itemRel?.item_code || null,
+          warehouseId: row.warehouse_id,
+          warehouseName: whRel?.name || 'Unknown',
+          unit: itemRel?.default_unit || 'pcs',
+          totalQty: remaining,
+          totalValue: value,
+          buckets: {
+            '0-30': { qty: 0, value: 0 },
+            '31-60': { qty: 0, value: 0 },
+            '61-90': { qty: 0, value: 0 },
+            '90+': { qty: 0, value: 0 },
+          },
+          oldestDays: ageDays,
+        });
+        const fresh = byItem.get(key)!;
+        fresh.buckets[bucketKey].qty = remaining;
+        fresh.buckets[bucketKey].value = value;
+      }
+    }
+
+    return {
+      buckets,
+      items: Array.from(byItem.values()).sort((a, b) => b.oldestDays - a.oldestDays),
+    };
   }
 
   async getSystemQuantity(
@@ -2753,6 +2879,7 @@ export class StockEntriesService {
           movement_type,
           movement_date,
           item_id,
+          variant_id,
           warehouse_id,
           quantity,
           unit,
@@ -2762,12 +2889,13 @@ export class StockEntriesService {
           batch_number,
           serial_number,
           created_by
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
         [
           organizationId,
           'IN',
           openingStock.opening_date,
           openingStock.item_id,
+          openingStock.variant_id || null,
           openingStock.warehouse_id,
           openingStock.quantity,
           unit,
@@ -2817,11 +2945,27 @@ export class StockEntriesService {
   async cancelOpeningStockBalance(id: string, organizationId: string): Promise<any> {
     const supabase = this.databaseService.getAdminClient();
 
+    const { data: existing, error: fetchError } = await supabase
+      .from('opening_stock_balances')
+      .select('id, status')
+      .eq('id', id)
+      .eq('organization_id', organizationId)
+      .single();
+
+    if (fetchError || !existing) {
+      throw new NotFoundException('Opening stock balance not found');
+    }
+
+    if (existing.status !== 'Draft') {
+      throw new BadRequestException('Only draft opening stock balances can be cancelled');
+    }
+
     const { data, error } = await supabase
       .from('opening_stock_balances')
       .update({ status: 'Cancelled' })
       .eq('id', id)
       .eq('organization_id', organizationId)
+      .eq('status', 'Draft')
       .select()
       .single();
 
@@ -2854,8 +2998,8 @@ export class StockEntriesService {
       .from('stock_account_mappings')
       .select(`
         *,
-        debit_account:accounts!stock_account_mappings_debit_account_id_fkey(id, account_number, account_name),
-        credit_account:accounts!stock_account_mappings_credit_account_id_fkey(id, account_number, account_name)
+        debit_account:accounts!stock_account_mappings_debit_account_id_fkey(id, code, name),
+        credit_account:accounts!stock_account_mappings_credit_account_id_fkey(id, code, name)
       `)
       .eq('organization_id', organizationId)
       .order('entry_type');
@@ -2873,16 +3017,22 @@ export class StockEntriesService {
   ): Promise<any> {
     const supabase = this.databaseService.getAdminClient();
 
+    // Defensively strip organization_id in case a caller injects it in the
+    // body — the header-derived value is the only source of truth.
+    const { organization_id: _dtoOrgId, ...safeDto } = dto as CreateStockAccountMappingDto & {
+      organization_id?: string;
+    };
+
     const { data, error } = await supabase
       .from('stock_account_mappings')
       .insert({
         organization_id: organizationId,
-        ...dto,
+        ...safeDto,
       })
       .select(`
         *,
-        debit_account:accounts!stock_account_mappings_debit_account_id_fkey(id, account_number, account_name),
-        credit_account:accounts!stock_account_mappings_credit_account_id_fkey(id, account_number, account_name)
+        debit_account:accounts!stock_account_mappings_debit_account_id_fkey(id, code, name),
+        credit_account:accounts!stock_account_mappings_credit_account_id_fkey(id, code, name)
       `)
       .single();
 
@@ -2907,8 +3057,8 @@ export class StockEntriesService {
       .eq('organization_id', organizationId)
       .select(`
         *,
-        debit_account:accounts!stock_account_mappings_debit_account_id_fkey(id, account_number, account_name),
-        credit_account:accounts!stock_account_mappings_credit_account_id_fkey(id, account_number, account_name)
+        debit_account:accounts!stock_account_mappings_debit_account_id_fkey(id, code, name),
+        credit_account:accounts!stock_account_mappings_credit_account_id_fkey(id, code, name)
       `)
       .single();
 
@@ -2931,5 +3081,230 @@ export class StockEntriesService {
     if (error) {
       throw new BadRequestException(`Failed to delete stock account mapping: ${error.message}`);
     }
+  }
+
+  /**
+   * Seed default stock account mappings using the Moroccan CGNC chart of
+   * accounts. Idempotent — skips entry types that already have a mapping.
+   *
+   * Default GL flow for agri inputs:
+   *   Material Receipt:       DR 312 (Matières) / CR 441 (Fournisseurs)
+   *   Material Issue:         DR 612 (Achats consommés) / CR 312
+   *   Stock Reconciliation:   DR 612 / CR 312 (treats loss as consumption)
+   *   Opening Stock:          DR 312 / CR 312 (no GL impact, just opens balance)
+   *
+   * Stock Transfer is intentionally not mapped — same legal entity = no GL.
+   */
+  async seedDefaultStockAccountMappings(organizationId: string): Promise<{
+    created: number;
+    skipped: Array<{ entry_type: string; reason: string }>;
+  }> {
+    const supabase = this.databaseService.getAdminClient();
+
+    const loadAccounts = async () =>
+      supabase
+        .from('accounts')
+        .select('id, code, account_type')
+        .eq('organization_id', organizationId)
+        .in('code', ['312', '441', '612', '611']);
+
+    let { data: accounts, error: accErr } = await loadAccounts();
+
+    if (accErr) {
+      throw new BadRequestException(`Failed to load chart of accounts: ${accErr.message}`);
+    }
+
+    const byCode = new Map<string, string>();
+    for (const a of accounts || []) byCode.set(a.code, a.id);
+
+    // Auto-seed the Moroccan CGNC chart of accounts on first init so the
+    // Stock Accounting page works out of the box. Idempotent — re-running
+    // is safe because the seeder uses ON CONFLICT DO NOTHING.
+    if (byCode.size === 0) {
+      this.logger.log(`Auto-seeding Moroccan CGNC chart for org ${organizationId}`);
+      await this.accountsService.seedMoroccanChartOfAccounts(organizationId);
+      ({ data: accounts, error: accErr } = await loadAccounts());
+      if (accErr) {
+        throw new BadRequestException(`Failed to load chart of accounts: ${accErr.message}`);
+      }
+      for (const a of accounts || []) byCode.set(a.code, a.id);
+      if (byCode.size === 0) {
+        throw new BadRequestException(
+          'Chart of accounts seed completed but the expected codes (312/441/612) are missing.',
+        );
+      }
+    }
+
+    const inv = byCode.get('312');
+    const ap = byCode.get('441');
+    const cogs = byCode.get('612');
+
+    const desiredMappings: Array<{
+      entry_type: string;
+      debit_account_id: string | undefined;
+      credit_account_id: string | undefined;
+    }> = [
+      { entry_type: 'Material Receipt', debit_account_id: inv, credit_account_id: ap },
+      { entry_type: 'Material Issue', debit_account_id: cogs, credit_account_id: inv },
+      { entry_type: 'Stock Reconciliation', debit_account_id: cogs, credit_account_id: inv },
+      { entry_type: 'Opening Stock', debit_account_id: inv, credit_account_id: inv },
+    ];
+
+    const { data: existing, error: exErr } = await supabase
+      .from('stock_account_mappings')
+      .select('entry_type')
+      .eq('organization_id', organizationId);
+
+    if (exErr) {
+      throw new BadRequestException(`Failed to load existing mappings: ${exErr.message}`);
+    }
+
+    const existingTypes = new Set((existing || []).map((m) => m.entry_type));
+    const skipped: Array<{ entry_type: string; reason: string }> = [];
+    let created = 0;
+
+    for (const m of desiredMappings) {
+      if (existingTypes.has(m.entry_type)) {
+        skipped.push({ entry_type: m.entry_type, reason: 'already exists' });
+        continue;
+      }
+      if (!m.debit_account_id || !m.credit_account_id) {
+        skipped.push({ entry_type: m.entry_type, reason: 'required CGNC account missing' });
+        continue;
+      }
+      const { error: insErr } = await supabase
+        .from('stock_account_mappings')
+        .insert({
+          organization_id: organizationId,
+          entry_type: m.entry_type,
+          debit_account_id: m.debit_account_id,
+          credit_account_id: m.credit_account_id,
+        });
+
+      if (insErr) {
+        skipped.push({ entry_type: m.entry_type, reason: insErr.message });
+      } else {
+        created++;
+      }
+    }
+
+    return { created, skipped };
+  }
+
+  /**
+   * Stock vs GL reconciliation report. Compares physical stock value
+   * (sum of stock_valuation.remaining_quantity × cost_per_unit) against the
+   * Inventory account's GL balance derived from journal_items posted by
+   * stock entries. Surfaces drift caused by missing mappings, manual GL
+   * postings, or rounding accumulation.
+   */
+  async getStockGlReconciliation(organizationId: string): Promise<any> {
+    const supabase = this.databaseService.getAdminClient();
+
+    // 1. Physical stock value from stock_valuation
+    const { data: valuationRows, error: vErr } = await supabase
+      .from('stock_valuation')
+      .select('remaining_quantity, cost_per_unit, warehouse_id')
+      .eq('organization_id', organizationId)
+      .gt('remaining_quantity', 0);
+
+    if (vErr) {
+      throw new BadRequestException(`Failed to load stock_valuation: ${vErr.message}`);
+    }
+
+    const physicalValueByWarehouse = new Map<string, number>();
+    let physicalTotal = 0;
+    for (const row of valuationRows || []) {
+      const v = (parseFloat(String(row.remaining_quantity)) || 0)
+        * (parseFloat(String(row.cost_per_unit)) || 0);
+      physicalTotal += v;
+      physicalValueByWarehouse.set(
+        row.warehouse_id,
+        (physicalValueByWarehouse.get(row.warehouse_id) || 0) + v,
+      );
+    }
+
+    // 2. Identify the configured inventory accounts
+    const { data: mappings } = await supabase
+      .from('stock_account_mappings')
+      .select('entry_type, debit_account_id, credit_account_id')
+      .eq('organization_id', organizationId);
+
+    const inventoryAccountIds = new Set<string>();
+    for (const m of mappings || []) {
+      // Material Receipt debits inventory; Material Issue credits inventory.
+      if (m.entry_type === 'Material Receipt' && m.debit_account_id) {
+        inventoryAccountIds.add(m.debit_account_id);
+      }
+      if (m.entry_type === 'Material Issue' && m.credit_account_id) {
+        inventoryAccountIds.add(m.credit_account_id);
+      }
+    }
+
+    let glBalance = 0;
+    let glAccounts: Array<{ id: string; code: string; name: string; debit: number; credit: number; balance: number }> = [];
+
+    if (inventoryAccountIds.size > 0) {
+      // 3. Sum journal_items for those accounts (only entries posted from stock)
+      const accountIds = Array.from(inventoryAccountIds);
+      const { data: jItems, error: jErr } = await supabase
+        .from('journal_items')
+        .select('account_id, debit, credit, journal_entries!inner(reference_type, organization_id)')
+        .in('account_id', accountIds)
+        .eq('journal_entries.organization_id', organizationId)
+        .eq('journal_entries.reference_type', 'Stock Entry');
+
+      if (jErr) {
+        throw new BadRequestException(`Failed to load journal_items: ${jErr.message}`);
+      }
+
+      const byAccount = new Map<string, { debit: number; credit: number }>();
+      for (const it of jItems || []) {
+        const cur = byAccount.get(it.account_id) || { debit: 0, credit: 0 };
+        cur.debit += parseFloat(String(it.debit || 0)) || 0;
+        cur.credit += parseFloat(String(it.credit || 0)) || 0;
+        byAccount.set(it.account_id, cur);
+      }
+
+      const { data: accountMeta } = await supabase
+        .from('accounts')
+        .select('id, code, name')
+        .in('id', accountIds);
+
+      const metaById = new Map<string, { code: string; name: string }>();
+      for (const a of accountMeta || []) metaById.set(a.id, { code: a.code, name: a.name });
+
+      glAccounts = accountIds.map((id) => {
+        const tot = byAccount.get(id) || { debit: 0, credit: 0 };
+        const balance = tot.debit - tot.credit;
+        glBalance += balance;
+        const meta = metaById.get(id);
+        return {
+          id,
+          code: meta?.code || '',
+          name: meta?.name || '',
+          debit: tot.debit,
+          credit: tot.credit,
+          balance,
+        };
+      });
+    }
+
+    return {
+      physical_value: physicalTotal,
+      gl_balance: glBalance,
+      drift: physicalTotal - glBalance,
+      drift_status:
+        Math.abs(physicalTotal - glBalance) < 0.01
+          ? 'balanced'
+          : inventoryAccountIds.size === 0
+            ? 'no_mappings'
+            : 'drift_detected',
+      inventory_accounts: glAccounts,
+      physical_by_warehouse: Array.from(physicalValueByWarehouse.entries()).map(([wh, v]) => ({
+        warehouse_id: wh,
+        value: v,
+      })),
+    };
   }
 }

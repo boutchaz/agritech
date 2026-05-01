@@ -117,6 +117,19 @@ export class SequencesService {
   }
 
   /**
+   * Generate credit note number — distinct prefix from regular invoices so
+   * they're visually obvious in lists, while sharing the INVOICE sequence
+   * counter (ERPNext convention).
+   */
+  async generateCreditNoteNumber(
+    organizationId: string,
+    invoiceType: 'sales' | 'purchase' = 'sales',
+  ): Promise<string> {
+    const prefix = invoiceType === 'sales' ? 'CN' : 'PCN';
+    return this.generateSequence(organizationId, SequenceType.INVOICE, prefix);
+  }
+
+  /**
    * Generate sales order number
    */
   async generateSalesOrderNumber(organizationId: string): Promise<string> {
@@ -128,6 +141,16 @@ export class SequencesService {
    */
   async generatePurchaseOrderNumber(organizationId: string): Promise<string> {
     return this.generateSequence(organizationId, SequenceType.PURCHASE_ORDER);
+  }
+
+  // Until dedicated SequenceTypes exist, reuse PURCHASE_ORDER for receipts
+  // and INVOICE for delivery notes — sequences are namespaced per type+org.
+  async generatePurchaseReceiptNumber(organizationId: string): Promise<string> {
+    return this.generateSequence(organizationId, SequenceType.PURCHASE_ORDER);
+  }
+
+  async generateDeliveryNoteNumber(organizationId: string): Promise<string> {
+    return this.generateSequence(organizationId, SequenceType.INVOICE);
   }
 
   /**

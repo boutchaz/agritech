@@ -330,6 +330,18 @@
       "notes": "Notes",
       "excludedCycles": "Cycles exclus"
     },
+    "phenology": {
+      "aiEnrichment": {
+        "title": "Explication simple",
+        "fragileStatus": "Résultat à prendre avec prudence",
+        "degradationReasons": "Pourquoi il faut rester prudent",
+        "imputedStages": "Dates estimées",
+        "missing": "à confirmer",
+        "phaseNarratives": "Ce que ça veut dire",
+        "recommendations": "Que faire maintenant",
+        "disclaimer": "Résumé assisté par IA — vérifie toujours sur le terrain."
+      }
+    },
     "spectral": {
       "title": "SEUILS SPECTRAUX",
       "noData": "Pas de données spectrales disponibles",
@@ -385,6 +397,18 @@
       "downloading": "Préparation de l’export…",
       "error": "Échec de l’export",
       "success": "Export réussi en {{format}}"
+    },
+    "chill": {
+      "title": "Heures de froid",
+      "unit": "h",
+      "referenceLabel": "Référence",
+      "fallbackBadge": "Réf. par défaut",
+      "bands": {
+        "green": "Suffisant",
+        "yellow": "Acceptable",
+        "red": "Insuffisant",
+        "critique": "Déficit critique"
+      }
     },
     "blockA": {
       "healthScore": "Score de santé",
@@ -600,10 +624,31 @@
     "calibrationValidated": "Calibrage validé",
     "calibrationValidateError": "Impossible de valider le calibrage",
     "nutritionConfirmed": "Option nutrition confirmée",
-    "nutritionConfirmError": "Impossible de confirmer l'option nutrition"
+    "nutritionConfirmError": "Impossible de confirmer l'option nutrition",
+    "targetYieldConfirmed": "Objectif rendement confirmé",
+    "targetYieldConfirmedWithDrift": "Objectif rendement mis à jour — pensez à régénérer le plan",
+    "targetYieldConfirmError": "Impossible de confirmer l'objectif rendement"
   },
   "errors": {
     "invalidPlanPayload": "Le serveur a renvoyé un plan annuel invalide."
+  },
+  "usage": {
+    "tokenChart": "Utilisation des jetons",
+    "noData": "Aucune donnée d'utilisation pour cette période",
+    "recentActivity": "Activité récente",
+    "export": "Exporter CSV",
+    "date": "Date",
+    "feature": "Type",
+    "model": "Modèle",
+    "tokens": "Jetons",
+    "noEntries": "Aucune utilisation IA enregistrée",
+    "showLess": "Afficher moins",
+    "showAll": "Tout afficher ({{count}})",
+    "totalTokens": "Total jetons",
+    "totalRequests": "Total requêtes",
+    "requests": "Requêtes",
+    "loadFailedTitle": "Impossible de charger les détails d'utilisation",
+    "loadFailedDescription": "Vérifiez votre connexion et réessayez."
   },
   "settings": {
     "title": "Paramètres IA",
@@ -629,5 +674,45 @@
     "exceededDescription": "Vous avez utilisé {{used}} sur {{limit}} requêtes IA ce mois. Votre quota se réinitialise le {{resetDate}}.",
     "upgradeAction": "Mettre à niveau",
     "byokAction": "Ajouter votre propre clé"
+  },
+  "weather": {
+    "pageTitle": "Analyse météo IA",
+    "pageSubtitle": "Analyses météo, tendances de prévision et signaux de risque culturaux pour cette parcelle.",
+    "riskUnavailable": "Analyse de risque indisponible",
+    "riskUnavailableDescription": "Les analyses météo restent disponibles, mais le modèle de risque de maladies n’a pas pu être chargé pour cette parcelle.",
+    "riskBriefTitle": "Synthèse IA des risques météo",
+    "riskBriefDescription": "Exposition aux maladies propre à la culture, déduite des dernières conditions météo de la parcelle.",
+    "crop": "Culture : {{crop}}",
+    "unknown": "Inconnu",
+    "activeRisks": "Risques actifs",
+    "activeRisksDescription": "Les conditions correspondent actuellement à un ou plusieurs profils de maladie.",
+    "noActiveRisks": "Aucun signal actif de maladie dans le dernier relevé météo.",
+    "latestTemperature": "Dernière température",
+    "measuredOn": "Mesuré le {{date}}",
+    "noRecentReading": "Aucune donnée météo récente sur la parcelle.",
+    "latestHumidity": "Dernière humidité",
+    "humidityDescription": "Utilisée pour évaluer les seuils d’humidité propres à la culture.",
+    "noDiseaseModels": "Aucun modèle de maladie n’est encore configuré pour cette culture ; seules les analyses météo sont affichées ci-dessous.",
+    "noActiveProfiles": "La température et l’humidité actuelles n’activent aucun profil de risque de maladie configuré pour cette culture.",
+    "temperatureWindow": "Plage de température : {{min}}°C à {{max}}°C",
+    "humidityThreshold": "Seuil d’humidité : {{value}}%",
+    "suggestedTreatment": "Traitement suggéré : {{treatment}}",
+    "timing": "Moment : {{timing}}",
+    "notAvailable": "N/A",
+    "noBoundary": "Les données de localisation de la parcelle sont nécessaires pour l’analyse météo.",
+    "noBoundaryHint": "Ajoutez ou corrigez la limite de la parcelle pour activer les prévisions, l’analyse climatique et l’analyse de risque.",
+    "severity": {
+      "critical": "Critique",
+      "high": "Élevé",
+      "medium": "Moyen",
+      "low": "Faible",
+      "unknown": "Inconnu"
+    }
+  },
+  "alerts": {
+    "title": "Alertes IA",
+    "subtitle": "Consultez et gérez les risques détectés par le modèle IA.",
+    "noAlerts": "Aucune alerte active",
+    "noAlertsMessage": "Le modèle IA n’a détecté aucun risque significatif pour cette parcelle."
   }
 }

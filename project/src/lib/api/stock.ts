@@ -8,6 +8,7 @@ import type {
   StockEntryFilters,
   StockMovementFilters,
 } from '../../types/stock-entries';
+import type { PaginatedQuery, PaginatedResponse } from './types';
 
 const BASE_URL = '/api/v1/stock-entries';
 
@@ -184,6 +185,32 @@ export const stockEntriesApi = {
     return apiClient.get<BatchData[]>(url, {}, organizationId);
   },
 
+  async getBatchesPaginated(
+    organizationId?: string,
+    queryParams?: Record<string, unknown>,
+  ): Promise<PaginatedResponse<BatchData>> {
+    const params = new URLSearchParams();
+
+    if (queryParams) {
+      Object.entries(queryParams).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          params.append(key, String(value));
+        }
+      });
+    }
+
+    if (queryParams?.page !== undefined && queryParams.page !== null && queryParams.page !== '') {
+      params.set('page', String(queryParams.page));
+    }
+
+    if (queryParams?.pageSize !== undefined && queryParams.pageSize !== null && queryParams.pageSize !== '') {
+      params.set('pageSize', String(queryParams.pageSize));
+    }
+
+    const url = `${BASE_URL}/batches${params.toString() ? `?${params.toString()}` : ''}`;
+    return apiClient.get<PaginatedResponse<BatchData>>(url, {}, organizationId);
+  },
+
   async getExpiryAlerts(daysThreshold?: number, organizationId?: string): Promise<ExpiryAlertData[]> {
     const params = new URLSearchParams();
     if (daysThreshold) params.append('days_threshold', String(daysThreshold));
@@ -206,6 +233,20 @@ export const stockEntriesApi = {
 
   async getReorderSuggestions(organizationId?: string): Promise<ReorderSuggestionData[]> {
     return apiClient.get<ReorderSuggestionData[]>(`${BASE_URL}/reorder-suggestions`, {}, organizationId);
+  },
+
+  async getReorderSuggestionsPaginated(
+    organizationId?: string,
+    queryParams?: PaginatedQuery,
+  ): Promise<PaginatedResponse<ReorderSuggestionData>> {
+    const params = new URLSearchParams();
+
+    if (queryParams?.page !== undefined) params.append('page', String(queryParams.page));
+    if (queryParams?.pageSize !== undefined) params.append('pageSize', String(queryParams.pageSize));
+    if (queryParams?.search) params.append('search', queryParams.search);
+
+    const url = `${BASE_URL}/reorder-suggestions${params.toString() ? `?${params.toString()}` : ''}`;
+    return apiClient.get<PaginatedResponse<ReorderSuggestionData>>(url, {}, organizationId);
   },
 
   async getSystemQuantity(
@@ -236,4 +277,47 @@ export const stockEntriesApi = {
   async getPendingApprovals(organizationId?: string): Promise<ApprovalData[]> {
     return apiClient.get<ApprovalData[]>(`${BASE_URL}/approvals/pending`, {}, organizationId);
   },
+
+  async getAging(
+    organizationId?: string,
+    warehouseId?: string,
+  ): Promise<StockAgingReport> {
+    const params = new URLSearchParams();
+    if (warehouseId) params.append('warehouse_id', warehouseId);
+    const url = `${BASE_URL}/aging${params.toString() ? `?${params.toString()}` : ''}`;
+    return apiClient.get<StockAgingReport>(url, {}, organizationId);
+  },
 };
+
+export interface StockAgingBucket {
+  qty: number;
+  value: number;
+}
+
+export interface StockAgingItem {
+  itemId: string;
+  itemName: string;
+  itemCode: string | null;
+  warehouseId: string;
+  warehouseName: string;
+  unit: string;
+  totalQty: number;
+  totalValue: number;
+  oldestDays: number;
+  buckets: {
+    '0-30': StockAgingBucket;
+    '31-60': StockAgingBucket;
+    '61-90': StockAgingBucket;
+    '90+': StockAgingBucket;
+  };
+}
+
+export interface StockAgingReport {
+  buckets: {
+    '0-30': StockAgingBucket;
+    '31-60': StockAgingBucket;
+    '61-90': StockAgingBucket;
+    '90+': StockAgingBucket;
+  };
+  items: StockAgingItem[];
+}

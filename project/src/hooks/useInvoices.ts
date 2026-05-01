@@ -1,7 +1,8 @@
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { useAuth } from '../hooks/useAuth';
 import { createInvoiceFromItems, fetchPartyName } from '../lib/invoice-service';
-import { invoicesApi, type PaginatedInvoiceQuery } from '../lib/api/invoices';
+import { trackEntityCreate, trackEntityUpdate, trackEntityDelete } from '../lib/analytics';
+import { invoicesApi, type PaginatedInvoiceQuery, type CreateCreditNoteInput } from '../lib/api/invoices';
 import { type PaginatedResponse, extractApiResponse } from '../lib/api/types';
 
 export interface Invoice {
@@ -236,6 +237,7 @@ export function useCreateInvoice() {
       return invoice;
     },
     onSuccess: () => {
+      trackEntityCreate('invoice');
       // Invalidate and refetch invoices
       queryClient.invalidateQueries({ queryKey: ['invoices', currentOrganization?.id] });
     },
@@ -263,6 +265,7 @@ export function usePostInvoice() {
       );
     },
     onSuccess: (_, variables) => {
+      trackEntityCreate('invoice');
       // Invalidate invoices and the specific invoice
       queryClient.invalidateQueries({ queryKey: ['invoices', currentOrganization?.id] });
       queryClient.invalidateQueries({ queryKey: ['invoice', variables.invoice_id] });
@@ -291,6 +294,7 @@ export function useUpdateInvoiceStatus() {
       );
     },
     onSuccess: (_, variables) => {
+      trackEntityUpdate('invoice');
       queryClient.invalidateQueries({ queryKey: ['invoices', currentOrganization?.id] });
       queryClient.invalidateQueries({ queryKey: ['invoice', variables.invoice_id] });
     },
@@ -313,6 +317,7 @@ export function useDeleteInvoice() {
       await invoicesApi.delete(invoiceId, currentOrganization.id);
     },
     onSuccess: () => {
+      trackEntityDelete('invoice');
       queryClient.invalidateQueries({ queryKey: ['invoices', currentOrganization?.id] });
     },
   });
@@ -358,8 +363,45 @@ export function useUpdateInvoice() {
       return await invoicesApi.update(invoiceId, updateData, currentOrganization.id);
     },
     onSuccess: (_, variables) => {
+      trackEntityUpdate('invoice');
       queryClient.invalidateQueries({ queryKey: ['invoices', currentOrganization?.id] });
       queryClient.invalidateQueries({ queryKey: ['invoice', variables.invoiceId] });
+    },
+  });
+}
+
+/**
+ * Hook to create a credit note (avoir) against a posted invoice.
+ * Posts an inverse journal entry and optionally restores stock.
+ */
+export function useCreateCreditNote() {
+  const queryClient = useQueryClient();
+  const { currentOrganization } = useAuth();
+
+  return useMutation({
+    mutationFn: async ({
+      originalInvoiceId,
+      data,
+    }: {
+      originalInvoiceId: string;
+      data: CreateCreditNoteInput;
+    }) => {
+      if (!currentOrganization?.id) {
+        throw new Error('No organization selected');
+      }
+      return invoicesApi.createCreditNote(originalInvoiceId, data, currentOrganization.id);
+    },
+    onSuccess: (_, variables) => {
+      trackEntityCreate('invoice');
+      // Invalidate everything that depends on invoice / GL / stock state
+      queryClient.invalidateQueries({ queryKey: ['invoices', currentOrganization?.id] });
+      queryClient.invalidateQueries({ queryKey: ['invoice', variables.originalInvoiceId] });
+      queryClient.invalidateQueries({ queryKey: ['journal_entries'] });
+      queryClient.invalidateQueries({ queryKey: ['aged-receivables'] });
+      queryClient.invalidateQueries({ queryKey: ['aged-payables'] });
+      queryClient.invalidateQueries({ queryKey: ['stock-entries'] });
+      queryClient.invalidateQueries({ queryKey: ['stock-movements'] });
+      queryClient.invalidateQueries({ queryKey: ['warehouse-stock-levels'] });
     },
   });
 }

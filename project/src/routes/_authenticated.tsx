@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { cn } from '@/lib/utils'
 import { useTranslation } from 'react-i18next'
 import Sidebar from '../components/Sidebar'
+import PendingApproval from '../components/PendingApproval'
 import SubscriptionRequired from '../components/SubscriptionRequired'
 import SubscriptionBanner from '../components/SubscriptionBanner'
 import LegacyUserBanner from '../components/LegacyUserBanner'
@@ -16,11 +17,14 @@ import { LevelUpSuggestion } from '../components/adaptive'
 import { useSidebarMargin } from '../hooks/useSidebarLayout'
 import { useAuthStore, waitForHydration } from '../stores/authStore'
 import { useActivityTracking } from '../hooks/useActivityTracking'
+import { usePageView } from '../lib/analytics/hooks'
 import { isRTLLocale } from '../lib/is-rtl-locale'
+import { loadLanguage } from '@/i18n/config'
 import { usersApi } from '../lib/api/users'
 import { AuthenticatedLayoutSkeleton } from '@/components/AuthenticatedLayoutSkeleton';
 import { NotificationRealtimeBridge } from '@/components/NotificationRealtimeBridge';
 import { PullToRefresh } from '@/components/PullToRefresh';
+import { ModuleGate } from '@/components/authorization/ModuleGate';
 
 
 export const Route = createFileRoute('/_authenticated')({
@@ -75,6 +79,7 @@ function AuthenticatedLayout() {
 
   // Track user activity for live dashboard concurrent users
   useActivityTracking()
+  usePageView()
 
   // Keep localStorage aligned with DB for the next cold load (external storage only — no setState)
   useEffect(() => {
@@ -85,10 +90,10 @@ function AuthenticatedLayout() {
 
   // Sync language from DB profile on load (overrides localStorage if DB has a value)
   useEffect(() => {
-    if (profile?.language && profile.language !== i18n.language) {
-      i18n.changeLanguage(profile.language)
+    if (profile?.language) {
+      loadLanguage(profile.language)
     }
-  }, [profile?.language, i18n])
+  }, [profile?.language])
 
   // Toggle dark mode and persist to DB + localStorage
   const handleThemeToggle = useCallback(() => {
@@ -99,6 +104,14 @@ function AuthenticatedLayout() {
     usersApi.updateMe({ dark_mode: newValue }).catch((err) => {
       console.warn('Failed to persist dark mode to DB:', err)
     })
+  }, [isDarkMode])
+
+  /** Radix portals render under `body`; Tailwind `dark:` only applies under an ancestor with `.dark`. Theme was only on a layout div, so portaled popovers/menus stayed light — sync to `<html>`. */
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', isDarkMode)
+    return () => {
+      document.documentElement.classList.remove('dark')
+    }
   }, [isDarkMode])
 
   // Mock modules data - this should come from your state management
@@ -113,6 +126,12 @@ function AuthenticatedLayout() {
   const isSubscriptionPending = !subscriptionFetched && (subscriptionLoading || !!currentOrganization)
   if (isSubscriptionPending) {
     return <AuthenticatedLayoutSkeleton />
+  }
+
+  // Gate: new organizations awaiting internal-admin approval cannot access the app
+  const approvalStatus = currentOrganization?.approval_status ?? 'approved'
+  if (currentOrganization && approvalStatus !== 'approved') {
+    return <PendingApproval status={approvalStatus} />
   }
 
   // Check if subscription is valid
@@ -137,10 +156,7 @@ function AuthenticatedLayout() {
   }
 
   return (
-    <div
-      className={cn(isDarkMode ? 'dark' : '', 'flex min-h-0 flex-1 flex-col')}
-      dir={isRTL ? 'rtl' : 'ltr'}
-    >
+    <div className="flex min-h-0 flex-1 flex-col" dir={isRTL ? 'rtl' : 'ltr'}>
       <div
         data-authenticated-app
         className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-slate-100 dark:bg-slate-950"
@@ -191,7 +207,9 @@ function AuthenticatedLayout() {
               {/* No flex-1: let content define height so main scrolls on tablet/WebKit (flex-1 + min-h-0 traps overflow). */}
               <PullToRefresh>
                 <div className="flex min-h-0 min-w-0 w-full flex-col">
-                  <Outlet />
+                  <ModuleGate>
+                    <Outlet />
+                  </ModuleGate>
                 </div>
               </PullToRefresh>
             </ErrorBoundary>

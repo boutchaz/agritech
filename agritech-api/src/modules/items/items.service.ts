@@ -461,6 +461,39 @@ export class ItemsService {
   async findByBarcode(barcode: string, organizationId: string): Promise<any> {
     const supabase = this.databaseService.getAdminClient();
 
+    const { data: itemBarcode, error: itemBarcodeError } = await supabase
+      .from('item_barcodes')
+      .select('item_id')
+      .eq('barcode', barcode)
+      .eq('organization_id', organizationId)
+      .eq('is_active', true)
+      .is('deleted_at', null)
+      .maybeSingle();
+
+    if (itemBarcodeError) {
+      this.logger.error(`Failed to fetch barcode from item_barcodes: ${itemBarcodeError.message}`);
+      throw new BadRequestException(`Failed to fetch barcode from item_barcodes: ${itemBarcodeError.message}`);
+    }
+
+    if (itemBarcode?.item_id) {
+      const { data: itemFromBarcode, error: itemFromBarcodeError } = await supabase
+        .from('items')
+        .select('*, variants:product_variants(*)')
+        .eq('id', itemBarcode.item_id)
+        .eq('organization_id', organizationId)
+        .is('deleted_at', null)
+        .maybeSingle();
+
+      if (itemFromBarcodeError) {
+        this.logger.error(`Failed to fetch item by item_barcodes link: ${itemFromBarcodeError.message}`);
+        throw new BadRequestException(`Failed to fetch item by item_barcodes link: ${itemFromBarcodeError.message}`);
+      }
+
+      if (itemFromBarcode) {
+        return { type: 'item', item: itemFromBarcode };
+      }
+    }
+
     const { data: variant, error: variantError } = await supabase
       .from('product_variants')
       .select('*, item:items(*)')
@@ -543,7 +576,10 @@ export class ItemsService {
 
     const { data, error } = await supabase
       .from('product_variants')
-      .update(dto)
+      .update({
+        ...dto,
+        updated_by: userId,
+      })
       .eq('id', id)
       .eq('organization_id', organizationId)
       .is('deleted_at', null)
@@ -914,9 +950,14 @@ export class ItemsService {
       farm_id?: string;
       item_id?: string;
       low_stock_only?: boolean;
+      page?: number;
+      pageSize?: number;
     },
-  ): Promise<any> {
+  ): Promise<PaginatedResponse<any>> {
     const supabase = this.databaseService.getAdminClient();
+    const page = Number(filters?.page) || 1;
+    const pageSize = Number(filters?.pageSize) || 100;
+    const from = (page - 1) * pageSize;
 
     // First, get warehouse IDs for the farm if filtering by farm
     let warehouseIds: string[] | null = null;
@@ -936,7 +977,7 @@ export class ItemsService {
 
       warehouseIds = warehouses?.map((w) => w.id) || [];
       if (warehouseIds.length === 0) {
-        return []; // No warehouses for this farm
+        return paginatedResponse([], 0, page, pageSize);
       }
     }
 
@@ -1085,7 +1126,7 @@ export class ItemsService {
       result = result.filter((item) => item.is_low_stock);
     }
 
-    return result;
+    return paginatedResponse(result.slice(from, from + pageSize), result.length, page, pageSize);
   }
 
   /**

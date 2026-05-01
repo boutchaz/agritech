@@ -3,10 +3,8 @@ import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import i18n from '@/i18n/config';
 import { useAuth } from '@/hooks/useAuth';
-import { PageLayout } from '@/components/PageLayout';
-import ModernPageHeader from '@/components/ModernPageHeader';
 
-import { Building2, Receipt, Plus, CheckCircle2, Clock, XCircle, Eye, Edit, Trash2, MoreVertical, Download, Send } from 'lucide-react';
+import { Receipt, Plus, CheckCircle2, Clock, XCircle, Eye, Edit, Trash2, MoreVertical, Download, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
@@ -144,19 +142,7 @@ const AppContent = () => {
   }
 
   return (
-    <PageLayout
-      activeModule="accounting"
-      header={
-        <ModernPageHeader
-          breadcrumbs={[
-            { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
-            { icon: Receipt, label: t('invoices.pageTitle', 'Invoices'), isActive: true }
-          ]}
-          title={t('invoices.title', 'Invoices')}
-          subtitle={t('invoices.subtitle', 'Manage sales and purchase invoices')}
-        />
-      }
-    >
+    <>
       <div className={cn("p-3 sm:p-4 md:p-6 pb-20 md:pb-6", isRTL && "text-right")}>
         <ListPageLayout
           header={
@@ -589,7 +575,7 @@ const AppContent = () => {
           invoiceId={viewInvoiceId}
         />
       </div>
-          <ConfirmDialog
+      <ConfirmDialog
         open={confirmOpen}
         onOpenChange={setConfirmOpen}
         title={confirmAction.title}
@@ -597,7 +583,7 @@ const AppContent = () => {
         variant={confirmAction.variant}
         onConfirm={confirmAction.onConfirm}
       />
-    </PageLayout>
+    </>
   );
 };
 

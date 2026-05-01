@@ -365,6 +365,8 @@ const SubscriptionSettings = () => {
                 </div>
 
                 <Button
+                  type="button"
+                  variant="default"
                   onClick={() => purchasePlan.mutate(plan.id)}
                   disabled={(purchasePlan.isPending && selectedFormula === plan.id) || isCurrentPlan}
                   className={`w-full mt-5 px-4 py-2.5 rounded-lg font-medium transition-colors ${
@@ -742,6 +744,8 @@ const SubscriptionSettings = () => {
                   {t('subscription.billingManagementDescription')}
                 </p>
                 <Button
+                  type="button"
+                  variant="default"
                   onClick={() => {
                     if (isModular) {
                       modularCheckout.mutate();
@@ -750,7 +754,7 @@ const SubscriptionSettings = () => {
                       purchasePlan.mutate(targetPlan);
                     }
                   }}
-                  className="w-full h-12 rounded-2xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-semibold text-xs uppercase tracking-widest hover:opacity-90 transition-all shadow-xl"
+                  className="w-full h-12 rounded-2xl bg-slate-900 text-white hover:bg-slate-800 hover:text-white dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100 dark:hover:text-slate-900 font-semibold text-xs uppercase tracking-widest shadow-xl transition-all hover:opacity-95 active:opacity-90 disabled:opacity-50"
                   disabled={purchasePlan.isPending || modularCheckout.isPending}
                 >
                   {purchasePlan.isPending || modularCheckout.isPending ? (

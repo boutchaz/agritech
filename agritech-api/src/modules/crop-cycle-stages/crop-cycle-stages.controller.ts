@@ -17,7 +17,9 @@ import {
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RequireModule } from '../../common/decorators/require-module.decorator';
 import { OrganizationGuard } from '../../common/guards/organization.guard';
+import { ModuleEntitlementGuard } from '../../common/guards/module-entitlement.guard';
 import { RequireRole } from '../../common/decorators/require-role.decorator';
 import { CropCycleStagesService } from './crop-cycle-stages.service';
 import { CreateCropCycleStageDto } from './dto/create-crop-cycle-stage.dto';
@@ -25,7 +27,8 @@ import { CreateCropCycleStageDto } from './dto/create-crop-cycle-stage.dto';
 @ApiTags('Crop Cycle Stages')
 @ApiBearerAuth()
 @Controller('crop-cycle-stages')
-@UseGuards(JwtAuthGuard, OrganizationGuard)
+@RequireModule('production')
+@UseGuards(JwtAuthGuard, OrganizationGuard, ModuleEntitlementGuard)
 export class CropCycleStagesController {
   constructor(private readonly cropCycleStagesService: CropCycleStagesService) {}
 

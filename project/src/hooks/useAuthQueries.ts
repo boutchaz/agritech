@@ -8,6 +8,7 @@ type UserProfile = Database['public']['Tables']['user_profiles']['Row'];
 type Farm = Database['public']['Tables']['farms']['Row'];
 import { useAuthStore } from '../stores/authStore';
 import { useOrganizationStore } from '../stores/organizationStore';
+import { useFarmStore } from '../stores/farmStore';
 import { trackLogout } from '../lib/analytics';
 
 // Query keys
@@ -104,7 +105,10 @@ export const useUserOrganizations = (userId: string | undefined) => {
       }
     },
     enabled: !!userId,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    // Short staleTime + refetchOnWindowFocus so admin approval (changes
+    // approval_status / is_active / role) reaches the user without a hard reload.
+    staleTime: 30 * 1000,
+    refetchOnWindowFocus: true,
     retry: (failureCount, error) => {
       // Don't retry if session expired
       if (error instanceof Error && (
@@ -162,7 +166,9 @@ export const useOrganizationFarms = (organizationId: string | undefined) => {
           }
 
           // Map farm_id and farm_name to id and name for compatibility
-          return farmsData.map((farm) => {
+          return (farmsData as Array<Farm & { farm_id?: string; farm_name?: string; farm_size?: number; farm_location?: string }>)
+            .filter((farm) => Boolean(farm.farm_id || farm.id))
+            .map((farm) => {
             const farmId = farm.farm_id || farm.id;
             const parcelsData = parcelsByFarm[farmId];
             const farmSize = farm.farm_size ?? farm.size;
@@ -172,9 +178,14 @@ export const useOrganizationFarms = (organizationId: string | undefined) => {
               ? parseFloat(parcelsData.totalArea.toFixed(2))
               : farmSize;
 
+            // Defensive fallback: legacy farms in DB may have empty name. Show a
+            // synthesized label so the row is selectable instead of blank.
+            const rawName = (farm.farm_name || farm.name || '').toString().trim();
+            const safeName = rawName || `Farm ${String(farmId).slice(0, 8)}`;
+
             return {
               id: farmId,
-              name: farm.farm_name || farm.name,
+              name: safeName,
               location: farm.farm_location || farm.location,
               size: farmSize,
               size_unit: farm.size_unit,
@@ -268,12 +279,12 @@ export const useSignOut = () => {
 
       useAuthStore.getState().clearAuth();
       useOrganizationStore.getState().clearOrganization();
+      useFarmStore.getState().clearFarm();
     },
     onSuccess: () => {
       // Clear all auth-related queries
       queryClient.removeQueries({ queryKey: ['auth'] });
       localStorage.removeItem('currentOrganization');
-      localStorage.removeItem('currentFarm');
 
       const userId = useAuthStore.getState().user?.id;
       const tourKeyPrefix = userId ? `agritech_${userId}_` : 'agritech_';

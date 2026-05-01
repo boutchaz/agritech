@@ -18,9 +18,12 @@
     "test:e2e:integration": "jest --config ./test/jest-e2e.json",
     "db:migrate": "./scripts/db-push-selfhosted.sh",
     "db:migrate:dry-run": "DRY_RUN=1 ./scripts/db-push-selfhosted.sh",
+    "gen:perms": "ts-node scripts/gen-permissions-sql.ts",
+    "gen:perms:check": "ts-node scripts/gen-permissions-sql.ts --check",
     "migrate:reference-data": "ts-node scripts/migrate-reference-data.ts",
     "seed:crop-ai-references": "ts-node scripts/seed-ai-references.ts",
-    "seed:strapi": "ts-node scripts/seed-strapi.ts"
+    "seed:strapi": "ts-node scripts/seed-strapi.ts",
+    "test:agronomy-rag-eval": "ts-node test/integration/agronomy-rag/eval-runner.ts"
   },
   "keywords": [],
   "author": "",
@@ -28,6 +31,7 @@
   "description": "",
   "dependencies": {
     "@casl/ability": "^6.8.0",
+    "@nestjs/axios": "^4.0.1",
     "@nestjs/common": "^11.1.17",
     "@nestjs/config": "^4.0.3",
     "@nestjs/core": "^11.1.17",
@@ -51,6 +55,7 @@
     "axios": "^1.14.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.2",
+    "cookie-parser": "^1.4.7",
     "express": "^4.22.1",
     "handlebars": "^4.7.9",
     "helmet": "^8.1.0",
@@ -78,6 +83,7 @@
     "@swc/core": "^1.15.21",
     "@swc/jest": "^0.2.39",
     "@types/archiver": "^7.0.0",
+    "@types/cookie-parser": "^1.4.10",
     "@types/express": "^5.0.6",
     "@types/jest": "^30.0.0",
     "@types/jsonwebtoken": "^9.0.10",

@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedReportsRouteImport } from './routes/_authenticated/reports'
 import { Route as AuthenticatedReferentielsRouteImport } from './routes/_authenticated/referentiels'
 import { Route as publicTermsOfServiceRouteImport } from './routes/(public)/terms-of-service'
 import { Route as publicRdvSiamRouteImport } from './routes/(public)/rdv-siam'
@@ -33,6 +34,7 @@ import { Route as AuthenticatedworkforceWorkersRouteImport } from './routes/_aut
 import { Route as AuthenticatedworkforceTasksRouteImport } from './routes/_authenticated/(workforce)/tasks'
 import { Route as AuthenticatedsettingsSettingsRouteImport } from './routes/_authenticated/(settings)/settings'
 import { Route as AuthenticatedproductionTreesRouteImport } from './routes/_authenticated/(production)/trees'
+import { Route as AuthenticatedproductionSatelliteAnalysisRouteImport } from './routes/_authenticated/(production)/satellite-analysis'
 import { Route as AuthenticatedproductionQualityControlRouteImport } from './routes/_authenticated/(production)/quality-control'
 import { Route as AuthenticatedproductionPruningRouteImport } from './routes/_authenticated/(production)/pruning'
 import { Route as AuthenticatedproductionProductApplicationsRouteImport } from './routes/_authenticated/(production)/product-applications'
@@ -40,7 +42,6 @@ import { Route as AuthenticatedproductionParcelsRouteImport } from './routes/_au
 import { Route as AuthenticatedproductionOrchardsRouteImport } from './routes/_authenticated/(production)/orchards'
 import { Route as AuthenticatedproductionHarvestsRouteImport } from './routes/_authenticated/(production)/harvests'
 import { Route as AuthenticatedproductionFarmHierarchyRouteImport } from './routes/_authenticated/(production)/farm-hierarchy'
-import { Route as AuthenticatedproductionCropsRouteImport } from './routes/_authenticated/(production)/crops'
 import { Route as AuthenticatedproductionCropCyclesRouteImport } from './routes/_authenticated/(production)/crop-cycles'
 import { Route as AuthenticatedproductionCampaignsRouteImport } from './routes/_authenticated/(production)/campaigns'
 import { Route as AuthenticatedproductionBiologicalAssetsRouteImport } from './routes/_authenticated/(production)/biological-assets'
@@ -49,7 +50,7 @@ import { Route as AuthenticatedmiscNotificationsRouteImport } from './routes/_au
 import { Route as AuthenticatedmiscMarketplaceRouteImport } from './routes/_authenticated/(misc)/marketplace'
 import { Route as AuthenticatedmiscLabServicesRouteImport } from './routes/_authenticated/(misc)/lab-services'
 import { Route as AuthenticatedmiscInfrastructureRouteImport } from './routes/_authenticated/(misc)/infrastructure'
-import { Route as AuthenticatedmiscModuleIdRouteImport } from './routes/_authenticated/(misc)/$moduleId'
+import { Route as AuthenticatedmiscEquipmentRouteImport } from './routes/_authenticated/(misc)/equipment'
 import { Route as AuthenticatedinventoryStockRouteImport } from './routes/_authenticated/(inventory)/stock'
 import { Route as AuthenticatedinventoryReceptionBatchesRouteImport } from './routes/_authenticated/(inventory)/reception-batches'
 import { Route as AuthenticatedinventoryInventoryRouteImport } from './routes/_authenticated/(inventory)/inventory'
@@ -72,9 +73,33 @@ import { Route as AuthenticatedsettingsSettingsIndexRouteImport } from './routes
 import { Route as AuthenticatedinventoryStockIndexRouteImport } from './routes/_authenticated/(inventory)/stock/index'
 import { Route as AuthenticatedaccountingAccountingIndexRouteImport } from './routes/_authenticated/(accounting)/accounting/index'
 import { Route as AuthenticatedComplianceCertificationsCertIdRouteImport } from './routes/_authenticated/compliance/certifications/$certId'
+import { Route as AuthenticatedworkforceWorkforceWorkerTransportRouteImport } from './routes/_authenticated/(workforce)/workforce/worker-transport'
+import { Route as AuthenticatedworkforceWorkforceTrainingRouteImport } from './routes/_authenticated/(workforce)/workforce/training'
+import { Route as AuthenticatedworkforceWorkforceShiftsRouteImport } from './routes/_authenticated/(workforce)/workforce/shifts'
+import { Route as AuthenticatedworkforceWorkforceSeparationsRouteImport } from './routes/_authenticated/(workforce)/workforce/separations'
+import { Route as AuthenticatedworkforceWorkforceSeasonalCampaignsRouteImport } from './routes/_authenticated/(workforce)/workforce/seasonal-campaigns'
+import { Route as AuthenticatedworkforceWorkforceSalaryStructuresRouteImport } from './routes/_authenticated/(workforce)/workforce/salary-structures'
+import { Route as AuthenticatedworkforceWorkforceSalarySlipsRouteImport } from './routes/_authenticated/(workforce)/workforce/salary-slips'
+import { Route as AuthenticatedworkforceWorkforceSafetyIncidentsRouteImport } from './routes/_authenticated/(workforce)/workforce/safety-incidents'
+import { Route as AuthenticatedworkforceWorkforceRosterRouteImport } from './routes/_authenticated/(workforce)/workforce/roster'
+import { Route as AuthenticatedworkforceWorkforceRecruitmentRouteImport } from './routes/_authenticated/(workforce)/workforce/recruitment'
+import { Route as AuthenticatedworkforceWorkforceQualificationsRouteImport } from './routes/_authenticated/(workforce)/workforce/qualifications'
+import { Route as AuthenticatedworkforceWorkforcePayrollRunsRouteImport } from './routes/_authenticated/(workforce)/workforce/payroll-runs'
 import { Route as AuthenticatedworkforceWorkforcePaymentsRouteImport } from './routes/_authenticated/(workforce)/workforce/payments'
+import { Route as AuthenticatedworkforceWorkforceOnboardingRouteImport } from './routes/_authenticated/(workforce)/workforce/onboarding'
+import { Route as AuthenticatedworkforceWorkforceMyHrRouteImport } from './routes/_authenticated/(workforce)/workforce/my-hr'
+import { Route as AuthenticatedworkforceWorkforceLeaveTypesRouteImport } from './routes/_authenticated/(workforce)/workforce/leave-types'
+import { Route as AuthenticatedworkforceWorkforceLeaveApplicationsRouteImport } from './routes/_authenticated/(workforce)/workforce/leave-applications'
+import { Route as AuthenticatedworkforceWorkforceLeaveAllocationsRouteImport } from './routes/_authenticated/(workforce)/workforce/leave-allocations'
+import { Route as AuthenticatedworkforceWorkforceHrCalendarRouteImport } from './routes/_authenticated/(workforce)/workforce/hr-calendar'
+import { Route as AuthenticatedworkforceWorkforceHrAnalyticsRouteImport } from './routes/_authenticated/(workforce)/workforce/hr-analytics'
+import { Route as AuthenticatedworkforceWorkforceHolidaysRouteImport } from './routes/_authenticated/(workforce)/workforce/holidays'
+import { Route as AuthenticatedworkforceWorkforceGrievancesRouteImport } from './routes/_authenticated/(workforce)/workforce/grievances'
+import { Route as AuthenticatedworkforceWorkforceExpenseClaimsRouteImport } from './routes/_authenticated/(workforce)/workforce/expense-claims'
 import { Route as AuthenticatedworkforceWorkforceEmployeesRouteImport } from './routes/_authenticated/(workforce)/workforce/employees'
 import { Route as AuthenticatedworkforceWorkforceDayLaborersRouteImport } from './routes/_authenticated/(workforce)/workforce/day-laborers'
+import { Route as AuthenticatedworkforceWorkforceAttendanceRouteImport } from './routes/_authenticated/(workforce)/workforce/attendance'
+import { Route as AuthenticatedworkforceWorkforceAppraisalsRouteImport } from './routes/_authenticated/(workforce)/workforce/appraisals'
 import { Route as AuthenticatedworkforceWorkersWorkerIdRouteImport } from './routes/_authenticated/(workforce)/workers.$workerId'
 import { Route as AuthenticatedworkforceTasksKanbanRouteImport } from './routes/_authenticated/(workforce)/tasks/kanban'
 import { Route as AuthenticatedworkforceTasksCalendarRouteImport } from './routes/_authenticated/(workforce)/tasks/calendar'
@@ -82,21 +107,22 @@ import { Route as AuthenticatedworkforceTasksTaskIdRouteImport } from './routes/
 import { Route as AuthenticatedsettingsSettingsWorkUnitsRouteImport } from './routes/_authenticated/(settings)/settings.work-units'
 import { Route as AuthenticatedsettingsSettingsUsersRouteImport } from './routes/_authenticated/(settings)/settings.users'
 import { Route as AuthenticatedsettingsSettingsSubscriptionRouteImport } from './routes/_authenticated/(settings)/settings.subscription'
+import { Route as AuthenticatedsettingsSettingsStockAccountingRouteImport } from './routes/_authenticated/(settings)/settings.stock-accounting'
 import { Route as AuthenticatedsettingsSettingsProfileRouteImport } from './routes/_authenticated/(settings)/settings.profile'
+import { Route as AuthenticatedsettingsSettingsPrintRouteImport } from './routes/_authenticated/(settings)/settings.print'
 import { Route as AuthenticatedsettingsSettingsPreferencesRouteImport } from './routes/_authenticated/(settings)/settings.preferences'
 import { Route as AuthenticatedsettingsSettingsOrganizationRouteImport } from './routes/_authenticated/(settings)/settings.organization'
+import { Route as AuthenticatedsettingsSettingsOfflineRouteImport } from './routes/_authenticated/(settings)/settings.offline'
 import { Route as AuthenticatedsettingsSettingsModulesRouteImport } from './routes/_authenticated/(settings)/settings.modules'
 import { Route as AuthenticatedsettingsSettingsLegalRouteImport } from './routes/_authenticated/(settings)/settings.legal'
-import { Route as AuthenticatedsettingsSettingsFiscalYearsRouteImport } from './routes/_authenticated/(settings)/settings.fiscal-years'
+import { Route as AuthenticatedsettingsSettingsHrComplianceRouteImport } from './routes/_authenticated/(settings)/settings.hr-compliance'
 import { Route as AuthenticatedsettingsSettingsFilesRouteImport } from './routes/_authenticated/(settings)/settings.files'
 import { Route as AuthenticatedsettingsSettingsDocumentsRouteImport } from './routes/_authenticated/(settings)/settings.documents'
 import { Route as AuthenticatedsettingsSettingsDashboardRouteImport } from './routes/_authenticated/(settings)/settings.dashboard'
 import { Route as AuthenticatedsettingsSettingsDangerZoneRouteImport } from './routes/_authenticated/(settings)/settings.danger-zone'
-import { Route as AuthenticatedsettingsSettingsCostCentersRouteImport } from './routes/_authenticated/(settings)/settings.cost-centers'
 import { Route as AuthenticatedsettingsSettingsBiologicalAssetsRouteImport } from './routes/_authenticated/(settings)/settings.biological-assets'
 import { Route as AuthenticatedsettingsSettingsBillingRouteImport } from './routes/_authenticated/(settings)/settings.billing'
 import { Route as AuthenticatedsettingsSettingsAiRouteImport } from './routes/_authenticated/(settings)/settings.ai'
-import { Route as AuthenticatedsettingsSettingsAccountMappingsRouteImport } from './routes/_authenticated/(settings)/settings.account-mappings'
 import { Route as AuthenticatedsettingsSettingsAccountRouteImport } from './routes/_authenticated/(settings)/settings.account'
 import { Route as AuthenticatedproductionProductionSoilAnalysisRouteImport } from './routes/_authenticated/(production)/production/soil-analysis'
 import { Route as AuthenticatedproductionProductionSatelliteAnalysisRouteImport } from './routes/_authenticated/(production)/production/satellite-analysis'
@@ -115,7 +141,6 @@ import { Route as AuthenticatedinventoryStockReportsRouteImport } from './routes
 import { Route as AuthenticatedinventoryStockReorderSuggestionsRouteImport } from './routes/_authenticated/(inventory)/stock/reorder-suggestions'
 import { Route as AuthenticatedinventoryStockReceptionRouteImport } from './routes/_authenticated/(inventory)/stock/reception'
 import { Route as AuthenticatedinventoryStockQuickStockRouteImport } from './routes/_authenticated/(inventory)/stock/quick-stock'
-import { Route as AuthenticatedinventoryStockItemsRouteImport } from './routes/_authenticated/(inventory)/stock/items'
 import { Route as AuthenticatedinventoryStockInventoryRouteImport } from './routes/_authenticated/(inventory)/stock/inventory'
 import { Route as AuthenticatedinventoryStockGroupsRouteImport } from './routes/_authenticated/(inventory)/stock/groups'
 import { Route as AuthenticatedinventoryStockExpiryAlertsRouteImport } from './routes/_authenticated/(inventory)/stock/expiry-alerts'
@@ -124,29 +149,38 @@ import { Route as AuthenticatedinventoryStockDeliveriesRouteImport } from './rou
 import { Route as AuthenticatedinventoryStockDashboardRouteImport } from './routes/_authenticated/(inventory)/stock/dashboard'
 import { Route as AuthenticatedinventoryStockBatchesRouteImport } from './routes/_authenticated/(inventory)/stock/batches'
 import { Route as AuthenticatedinventoryStockApprovalsRouteImport } from './routes/_authenticated/(inventory)/stock/approvals'
+import { Route as AuthenticatedinventoryStockAgingRouteImport } from './routes/_authenticated/(inventory)/stock/aging'
 import { Route as AuthenticatedinventoryInventoryReceptionBatchesRouteImport } from './routes/_authenticated/(inventory)/inventory/reception-batches'
 import { Route as AuthenticatedaccountingAccountingTrialBalanceRouteImport } from './routes/_authenticated/(accounting)/accounting/trial-balance'
+import { Route as AuthenticatedaccountingAccountingTaxesRouteImport } from './routes/_authenticated/(accounting)/accounting/taxes'
 import { Route as AuthenticatedaccountingAccountingSalesOrdersRouteImport } from './routes/_authenticated/(accounting)/accounting/sales-orders'
 import { Route as AuthenticatedaccountingAccountingReportsAnalysisRouteImport } from './routes/_authenticated/(accounting)/accounting/reports-analysis'
 import { Route as AuthenticatedaccountingAccountingReportsRouteImport } from './routes/_authenticated/(accounting)/accounting/reports'
 import { Route as AuthenticatedaccountingAccountingQuotesRouteImport } from './routes/_authenticated/(accounting)/accounting/quotes'
+import { Route as AuthenticatedaccountingAccountingPurchaseReceiptsRouteImport } from './routes/_authenticated/(accounting)/accounting/purchase-receipts'
 import { Route as AuthenticatedaccountingAccountingPurchaseOrdersRouteImport } from './routes/_authenticated/(accounting)/accounting/purchase-orders'
 import { Route as AuthenticatedaccountingAccountingProfitLossRouteImport } from './routes/_authenticated/(accounting)/accounting/profit-loss'
 import { Route as AuthenticatedaccountingAccountingPaymentsRouteImport } from './routes/_authenticated/(accounting)/accounting/payments'
 import { Route as AuthenticatedaccountingAccountingJournalRouteImport } from './routes/_authenticated/(accounting)/accounting/journal'
 import { Route as AuthenticatedaccountingAccountingInvoicesRouteImport } from './routes/_authenticated/(accounting)/accounting/invoices'
 import { Route as AuthenticatedaccountingAccountingGeneralLedgerRouteImport } from './routes/_authenticated/(accounting)/accounting/general-ledger'
+import { Route as AuthenticatedaccountingAccountingFiscalYearsRouteImport } from './routes/_authenticated/(accounting)/accounting/fiscal-years'
+import { Route as AuthenticatedaccountingAccountingDeliveryNotesRouteImport } from './routes/_authenticated/(accounting)/accounting/delivery-notes'
 import { Route as AuthenticatedaccountingAccountingCustomersRouteImport } from './routes/_authenticated/(accounting)/accounting/customers'
+import { Route as AuthenticatedaccountingAccountingCostCentersRouteImport } from './routes/_authenticated/(accounting)/accounting/cost-centers'
 import { Route as AuthenticatedaccountingAccountingCashFlowRouteImport } from './routes/_authenticated/(accounting)/accounting/cash-flow'
 import { Route as AuthenticatedaccountingAccountingBankAccountsRouteImport } from './routes/_authenticated/(accounting)/accounting/bank-accounts'
 import { Route as AuthenticatedaccountingAccountingBalanceSheetRouteImport } from './routes/_authenticated/(accounting)/accounting/balance-sheet'
 import { Route as AuthenticatedaccountingAccountingAgedReceivablesRouteImport } from './routes/_authenticated/(accounting)/accounting/aged-receivables'
 import { Route as AuthenticatedaccountingAccountingAgedPayablesRouteImport } from './routes/_authenticated/(accounting)/accounting/aged-payables'
 import { Route as AuthenticatedaccountingAccountingAccountsRouteImport } from './routes/_authenticated/(accounting)/accounting/accounts'
+import { Route as AuthenticatedaccountingAccountingAccountMappingsRouteImport } from './routes/_authenticated/(accounting)/accounting/account-mappings'
 import { Route as AuthenticatedworkforceWorkforceTasksIndexRouteImport } from './routes/_authenticated/(workforce)/workforce/tasks.index'
 import { Route as AuthenticatedproductionParcelsParcelIdIndexRouteImport } from './routes/_authenticated/(production)/parcels.$parcelId.index'
+import { Route as AuthenticatedinventoryStockItemsIndexRouteImport } from './routes/_authenticated/(inventory)/stock/items.index'
 import { Route as AuthenticatedworkforceWorkforceWorkersPieceWorkRouteImport } from './routes/_authenticated/(workforce)/workforce/workers.piece-work'
 import { Route as AuthenticatedworkforceWorkforceTasksCalendarRouteImport } from './routes/_authenticated/(workforce)/workforce/tasks.calendar'
+import { Route as AuthenticatedworkforceWorkforceSeparationsSeparationIdRouteImport } from './routes/_authenticated/(workforce)/workforce/separations.$separationId'
 import { Route as AuthenticatedproductionParcelsParcelIdWeatherRouteImport } from './routes/_authenticated/(production)/parcels.$parcelId.weather'
 import { Route as AuthenticatedproductionParcelsParcelIdSatelliteRouteImport } from './routes/_authenticated/(production)/parcels.$parcelId.satellite'
 import { Route as AuthenticatedproductionParcelsParcelIdReportsRouteImport } from './routes/_authenticated/(production)/parcels.$parcelId.reports'
@@ -156,6 +190,7 @@ import { Route as AuthenticatedproductionParcelsParcelIdAnalyseRouteImport } fro
 import { Route as AuthenticatedproductionParcelsParcelIdAiRouteImport } from './routes/_authenticated/(production)/parcels.$parcelId.ai'
 import { Route as AuthenticatedmiscMarketplaceQuoteRequestsSentRouteImport } from './routes/_authenticated/(misc)/marketplace/quote-requests.sent'
 import { Route as AuthenticatedmiscMarketplaceQuoteRequestsReceivedRouteImport } from './routes/_authenticated/(misc)/marketplace/quote-requests.received'
+import { Route as AuthenticatedinventoryStockItemsItemIdRouteImport } from './routes/_authenticated/(inventory)/stock/items.$itemId'
 import { Route as AuthenticatedproductionParcelsParcelIdSatelliteIndexRouteImport } from './routes/_authenticated/(production)/parcels.$parcelId.satellite.index'
 import { Route as AuthenticatedproductionParcelsParcelIdAiIndexRouteImport } from './routes/_authenticated/(production)/parcels.$parcelId.ai.index'
 import { Route as AuthenticatedproductionParcelsParcelIdSatelliteTimeseriesRouteImport } from './routes/_authenticated/(production)/parcels.$parcelId.satellite.timeseries'
@@ -165,6 +200,7 @@ import { Route as AuthenticatedproductionParcelsParcelIdAiRecommendationsRouteIm
 import { Route as AuthenticatedproductionParcelsParcelIdAiPlanRouteImport } from './routes/_authenticated/(production)/parcels.$parcelId.ai.plan'
 import { Route as AuthenticatedproductionParcelsParcelIdAiCalibrationRouteImport } from './routes/_authenticated/(production)/parcels.$parcelId.ai.calibration'
 import { Route as AuthenticatedproductionParcelsParcelIdAiAlertsRouteImport } from './routes/_authenticated/(production)/parcels.$parcelId.ai.alerts'
+import { Route as AuthenticatedproductionFarmsFarmIdSatelliteHeatmapRouteImport } from './routes/_authenticated/(production)/farms.$farmId.satellite.heatmap'
 import { Route as AuthenticatedproductionParcelsParcelIdAiPlanIndexRouteImport } from './routes/_authenticated/(production)/parcels.$parcelId.ai.plan.index'
 import { Route as AuthenticatedproductionParcelsParcelIdAiPlanSummaryRouteImport } from './routes/_authenticated/(production)/parcels.$parcelId.ai.plan.summary'
 
@@ -176,6 +212,11 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedReportsRoute = AuthenticatedReportsRouteImport.update({
+  id: '/reports',
+  path: '/reports',
+  getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedReferentielsRoute =
   AuthenticatedReferentielsRouteImport.update({
@@ -295,6 +336,12 @@ const AuthenticatedproductionTreesRoute =
     path: '/trees',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedproductionSatelliteAnalysisRoute =
+  AuthenticatedproductionSatelliteAnalysisRouteImport.update({
+    id: '/(production)/satellite-analysis',
+    path: '/satellite-analysis',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedproductionQualityControlRoute =
   AuthenticatedproductionQualityControlRouteImport.update({
     id: '/(production)/quality-control',
@@ -335,12 +382,6 @@ const AuthenticatedproductionFarmHierarchyRoute =
   AuthenticatedproductionFarmHierarchyRouteImport.update({
     id: '/(production)/farm-hierarchy',
     path: '/farm-hierarchy',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
-const AuthenticatedproductionCropsRoute =
-  AuthenticatedproductionCropsRouteImport.update({
-    id: '/(production)/crops',
-    path: '/crops',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedproductionCropCyclesRoute =
@@ -391,10 +432,10 @@ const AuthenticatedmiscInfrastructureRoute =
     path: '/infrastructure',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
-const AuthenticatedmiscModuleIdRoute =
-  AuthenticatedmiscModuleIdRouteImport.update({
-    id: '/(misc)/$moduleId',
-    path: '/$moduleId',
+const AuthenticatedmiscEquipmentRoute =
+  AuthenticatedmiscEquipmentRouteImport.update({
+    id: '/(misc)/equipment',
+    path: '/equipment',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedinventoryStockRoute =
@@ -524,10 +565,142 @@ const AuthenticatedComplianceCertificationsCertIdRoute =
     path: '/compliance/certifications/$certId',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedworkforceWorkforceWorkerTransportRoute =
+  AuthenticatedworkforceWorkforceWorkerTransportRouteImport.update({
+    id: '/(workforce)/workforce/worker-transport',
+    path: '/workforce/worker-transport',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedworkforceWorkforceTrainingRoute =
+  AuthenticatedworkforceWorkforceTrainingRouteImport.update({
+    id: '/(workforce)/workforce/training',
+    path: '/workforce/training',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedworkforceWorkforceShiftsRoute =
+  AuthenticatedworkforceWorkforceShiftsRouteImport.update({
+    id: '/(workforce)/workforce/shifts',
+    path: '/workforce/shifts',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedworkforceWorkforceSeparationsRoute =
+  AuthenticatedworkforceWorkforceSeparationsRouteImport.update({
+    id: '/(workforce)/workforce/separations',
+    path: '/workforce/separations',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedworkforceWorkforceSeasonalCampaignsRoute =
+  AuthenticatedworkforceWorkforceSeasonalCampaignsRouteImport.update({
+    id: '/(workforce)/workforce/seasonal-campaigns',
+    path: '/workforce/seasonal-campaigns',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedworkforceWorkforceSalaryStructuresRoute =
+  AuthenticatedworkforceWorkforceSalaryStructuresRouteImport.update({
+    id: '/(workforce)/workforce/salary-structures',
+    path: '/workforce/salary-structures',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedworkforceWorkforceSalarySlipsRoute =
+  AuthenticatedworkforceWorkforceSalarySlipsRouteImport.update({
+    id: '/(workforce)/workforce/salary-slips',
+    path: '/workforce/salary-slips',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedworkforceWorkforceSafetyIncidentsRoute =
+  AuthenticatedworkforceWorkforceSafetyIncidentsRouteImport.update({
+    id: '/(workforce)/workforce/safety-incidents',
+    path: '/workforce/safety-incidents',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedworkforceWorkforceRosterRoute =
+  AuthenticatedworkforceWorkforceRosterRouteImport.update({
+    id: '/(workforce)/workforce/roster',
+    path: '/workforce/roster',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedworkforceWorkforceRecruitmentRoute =
+  AuthenticatedworkforceWorkforceRecruitmentRouteImport.update({
+    id: '/(workforce)/workforce/recruitment',
+    path: '/workforce/recruitment',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedworkforceWorkforceQualificationsRoute =
+  AuthenticatedworkforceWorkforceQualificationsRouteImport.update({
+    id: '/(workforce)/workforce/qualifications',
+    path: '/workforce/qualifications',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedworkforceWorkforcePayrollRunsRoute =
+  AuthenticatedworkforceWorkforcePayrollRunsRouteImport.update({
+    id: '/(workforce)/workforce/payroll-runs',
+    path: '/workforce/payroll-runs',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedworkforceWorkforcePaymentsRoute =
   AuthenticatedworkforceWorkforcePaymentsRouteImport.update({
     id: '/(workforce)/workforce/payments',
     path: '/workforce/payments',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedworkforceWorkforceOnboardingRoute =
+  AuthenticatedworkforceWorkforceOnboardingRouteImport.update({
+    id: '/(workforce)/workforce/onboarding',
+    path: '/workforce/onboarding',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedworkforceWorkforceMyHrRoute =
+  AuthenticatedworkforceWorkforceMyHrRouteImport.update({
+    id: '/(workforce)/workforce/my-hr',
+    path: '/workforce/my-hr',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedworkforceWorkforceLeaveTypesRoute =
+  AuthenticatedworkforceWorkforceLeaveTypesRouteImport.update({
+    id: '/(workforce)/workforce/leave-types',
+    path: '/workforce/leave-types',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedworkforceWorkforceLeaveApplicationsRoute =
+  AuthenticatedworkforceWorkforceLeaveApplicationsRouteImport.update({
+    id: '/(workforce)/workforce/leave-applications',
+    path: '/workforce/leave-applications',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedworkforceWorkforceLeaveAllocationsRoute =
+  AuthenticatedworkforceWorkforceLeaveAllocationsRouteImport.update({
+    id: '/(workforce)/workforce/leave-allocations',
+    path: '/workforce/leave-allocations',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedworkforceWorkforceHrCalendarRoute =
+  AuthenticatedworkforceWorkforceHrCalendarRouteImport.update({
+    id: '/(workforce)/workforce/hr-calendar',
+    path: '/workforce/hr-calendar',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedworkforceWorkforceHrAnalyticsRoute =
+  AuthenticatedworkforceWorkforceHrAnalyticsRouteImport.update({
+    id: '/(workforce)/workforce/hr-analytics',
+    path: '/workforce/hr-analytics',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedworkforceWorkforceHolidaysRoute =
+  AuthenticatedworkforceWorkforceHolidaysRouteImport.update({
+    id: '/(workforce)/workforce/holidays',
+    path: '/workforce/holidays',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedworkforceWorkforceGrievancesRoute =
+  AuthenticatedworkforceWorkforceGrievancesRouteImport.update({
+    id: '/(workforce)/workforce/grievances',
+    path: '/workforce/grievances',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedworkforceWorkforceExpenseClaimsRoute =
+  AuthenticatedworkforceWorkforceExpenseClaimsRouteImport.update({
+    id: '/(workforce)/workforce/expense-claims',
+    path: '/workforce/expense-claims',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedworkforceWorkforceEmployeesRoute =
@@ -540,6 +713,18 @@ const AuthenticatedworkforceWorkforceDayLaborersRoute =
   AuthenticatedworkforceWorkforceDayLaborersRouteImport.update({
     id: '/(workforce)/workforce/day-laborers',
     path: '/workforce/day-laborers',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedworkforceWorkforceAttendanceRoute =
+  AuthenticatedworkforceWorkforceAttendanceRouteImport.update({
+    id: '/(workforce)/workforce/attendance',
+    path: '/workforce/attendance',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedworkforceWorkforceAppraisalsRoute =
+  AuthenticatedworkforceWorkforceAppraisalsRouteImport.update({
+    id: '/(workforce)/workforce/appraisals',
+    path: '/workforce/appraisals',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedworkforceWorkersWorkerIdRoute =
@@ -584,10 +769,22 @@ const AuthenticatedsettingsSettingsSubscriptionRoute =
     path: '/subscription',
     getParentRoute: () => AuthenticatedsettingsSettingsRoute,
   } as any)
+const AuthenticatedsettingsSettingsStockAccountingRoute =
+  AuthenticatedsettingsSettingsStockAccountingRouteImport.update({
+    id: '/stock-accounting',
+    path: '/stock-accounting',
+    getParentRoute: () => AuthenticatedsettingsSettingsRoute,
+  } as any)
 const AuthenticatedsettingsSettingsProfileRoute =
   AuthenticatedsettingsSettingsProfileRouteImport.update({
     id: '/profile',
     path: '/profile',
+    getParentRoute: () => AuthenticatedsettingsSettingsRoute,
+  } as any)
+const AuthenticatedsettingsSettingsPrintRoute =
+  AuthenticatedsettingsSettingsPrintRouteImport.update({
+    id: '/print',
+    path: '/print',
     getParentRoute: () => AuthenticatedsettingsSettingsRoute,
   } as any)
 const AuthenticatedsettingsSettingsPreferencesRoute =
@@ -602,6 +799,12 @@ const AuthenticatedsettingsSettingsOrganizationRoute =
     path: '/organization',
     getParentRoute: () => AuthenticatedsettingsSettingsRoute,
   } as any)
+const AuthenticatedsettingsSettingsOfflineRoute =
+  AuthenticatedsettingsSettingsOfflineRouteImport.update({
+    id: '/offline',
+    path: '/offline',
+    getParentRoute: () => AuthenticatedsettingsSettingsRoute,
+  } as any)
 const AuthenticatedsettingsSettingsModulesRoute =
   AuthenticatedsettingsSettingsModulesRouteImport.update({
     id: '/modules',
@@ -614,10 +817,10 @@ const AuthenticatedsettingsSettingsLegalRoute =
     path: '/legal',
     getParentRoute: () => AuthenticatedsettingsSettingsRoute,
   } as any)
-const AuthenticatedsettingsSettingsFiscalYearsRoute =
-  AuthenticatedsettingsSettingsFiscalYearsRouteImport.update({
-    id: '/fiscal-years',
-    path: '/fiscal-years',
+const AuthenticatedsettingsSettingsHrComplianceRoute =
+  AuthenticatedsettingsSettingsHrComplianceRouteImport.update({
+    id: '/hr-compliance',
+    path: '/hr-compliance',
     getParentRoute: () => AuthenticatedsettingsSettingsRoute,
   } as any)
 const AuthenticatedsettingsSettingsFilesRoute =
@@ -644,12 +847,6 @@ const AuthenticatedsettingsSettingsDangerZoneRoute =
     path: '/danger-zone',
     getParentRoute: () => AuthenticatedsettingsSettingsRoute,
   } as any)
-const AuthenticatedsettingsSettingsCostCentersRoute =
-  AuthenticatedsettingsSettingsCostCentersRouteImport.update({
-    id: '/cost-centers',
-    path: '/cost-centers',
-    getParentRoute: () => AuthenticatedsettingsSettingsRoute,
-  } as any)
 const AuthenticatedsettingsSettingsBiologicalAssetsRoute =
   AuthenticatedsettingsSettingsBiologicalAssetsRouteImport.update({
     id: '/biological-assets',
@@ -666,12 +863,6 @@ const AuthenticatedsettingsSettingsAiRoute =
   AuthenticatedsettingsSettingsAiRouteImport.update({
     id: '/ai',
     path: '/ai',
-    getParentRoute: () => AuthenticatedsettingsSettingsRoute,
-  } as any)
-const AuthenticatedsettingsSettingsAccountMappingsRoute =
-  AuthenticatedsettingsSettingsAccountMappingsRouteImport.update({
-    id: '/account-mappings',
-    path: '/account-mappings',
     getParentRoute: () => AuthenticatedsettingsSettingsRoute,
   } as any)
 const AuthenticatedsettingsSettingsAccountRoute =
@@ -782,12 +973,6 @@ const AuthenticatedinventoryStockQuickStockRoute =
     path: '/quick-stock',
     getParentRoute: () => AuthenticatedinventoryStockRoute,
   } as any)
-const AuthenticatedinventoryStockItemsRoute =
-  AuthenticatedinventoryStockItemsRouteImport.update({
-    id: '/items',
-    path: '/items',
-    getParentRoute: () => AuthenticatedinventoryStockRoute,
-  } as any)
 const AuthenticatedinventoryStockInventoryRoute =
   AuthenticatedinventoryStockInventoryRouteImport.update({
     id: '/inventory',
@@ -836,6 +1021,12 @@ const AuthenticatedinventoryStockApprovalsRoute =
     path: '/approvals',
     getParentRoute: () => AuthenticatedinventoryStockRoute,
   } as any)
+const AuthenticatedinventoryStockAgingRoute =
+  AuthenticatedinventoryStockAgingRouteImport.update({
+    id: '/aging',
+    path: '/aging',
+    getParentRoute: () => AuthenticatedinventoryStockRoute,
+  } as any)
 const AuthenticatedinventoryInventoryReceptionBatchesRoute =
   AuthenticatedinventoryInventoryReceptionBatchesRouteImport.update({
     id: '/reception-batches',
@@ -846,6 +1037,12 @@ const AuthenticatedaccountingAccountingTrialBalanceRoute =
   AuthenticatedaccountingAccountingTrialBalanceRouteImport.update({
     id: '/trial-balance',
     path: '/trial-balance',
+    getParentRoute: () => AuthenticatedaccountingAccountingRoute,
+  } as any)
+const AuthenticatedaccountingAccountingTaxesRoute =
+  AuthenticatedaccountingAccountingTaxesRouteImport.update({
+    id: '/taxes',
+    path: '/taxes',
     getParentRoute: () => AuthenticatedaccountingAccountingRoute,
   } as any)
 const AuthenticatedaccountingAccountingSalesOrdersRoute =
@@ -870,6 +1067,12 @@ const AuthenticatedaccountingAccountingQuotesRoute =
   AuthenticatedaccountingAccountingQuotesRouteImport.update({
     id: '/quotes',
     path: '/quotes',
+    getParentRoute: () => AuthenticatedaccountingAccountingRoute,
+  } as any)
+const AuthenticatedaccountingAccountingPurchaseReceiptsRoute =
+  AuthenticatedaccountingAccountingPurchaseReceiptsRouteImport.update({
+    id: '/purchase-receipts',
+    path: '/purchase-receipts',
     getParentRoute: () => AuthenticatedaccountingAccountingRoute,
   } as any)
 const AuthenticatedaccountingAccountingPurchaseOrdersRoute =
@@ -908,10 +1111,28 @@ const AuthenticatedaccountingAccountingGeneralLedgerRoute =
     path: '/general-ledger',
     getParentRoute: () => AuthenticatedaccountingAccountingRoute,
   } as any)
+const AuthenticatedaccountingAccountingFiscalYearsRoute =
+  AuthenticatedaccountingAccountingFiscalYearsRouteImport.update({
+    id: '/fiscal-years',
+    path: '/fiscal-years',
+    getParentRoute: () => AuthenticatedaccountingAccountingRoute,
+  } as any)
+const AuthenticatedaccountingAccountingDeliveryNotesRoute =
+  AuthenticatedaccountingAccountingDeliveryNotesRouteImport.update({
+    id: '/delivery-notes',
+    path: '/delivery-notes',
+    getParentRoute: () => AuthenticatedaccountingAccountingRoute,
+  } as any)
 const AuthenticatedaccountingAccountingCustomersRoute =
   AuthenticatedaccountingAccountingCustomersRouteImport.update({
     id: '/customers',
     path: '/customers',
+    getParentRoute: () => AuthenticatedaccountingAccountingRoute,
+  } as any)
+const AuthenticatedaccountingAccountingCostCentersRoute =
+  AuthenticatedaccountingAccountingCostCentersRouteImport.update({
+    id: '/cost-centers',
+    path: '/cost-centers',
     getParentRoute: () => AuthenticatedaccountingAccountingRoute,
   } as any)
 const AuthenticatedaccountingAccountingCashFlowRoute =
@@ -950,6 +1171,12 @@ const AuthenticatedaccountingAccountingAccountsRoute =
     path: '/accounts',
     getParentRoute: () => AuthenticatedaccountingAccountingRoute,
   } as any)
+const AuthenticatedaccountingAccountingAccountMappingsRoute =
+  AuthenticatedaccountingAccountingAccountMappingsRouteImport.update({
+    id: '/account-mappings',
+    path: '/account-mappings',
+    getParentRoute: () => AuthenticatedaccountingAccountingRoute,
+  } as any)
 const AuthenticatedworkforceWorkforceTasksIndexRoute =
   AuthenticatedworkforceWorkforceTasksIndexRouteImport.update({
     id: '/(workforce)/workforce/tasks/',
@@ -962,6 +1189,12 @@ const AuthenticatedproductionParcelsParcelIdIndexRoute =
     path: '/',
     getParentRoute: () => AuthenticatedproductionParcelsParcelIdRoute,
   } as any)
+const AuthenticatedinventoryStockItemsIndexRoute =
+  AuthenticatedinventoryStockItemsIndexRouteImport.update({
+    id: '/items/',
+    path: '/items/',
+    getParentRoute: () => AuthenticatedinventoryStockRoute,
+  } as any)
 const AuthenticatedworkforceWorkforceWorkersPieceWorkRoute =
   AuthenticatedworkforceWorkforceWorkersPieceWorkRouteImport.update({
     id: '/(workforce)/workforce/workers/piece-work',
@@ -973,6 +1206,12 @@ const AuthenticatedworkforceWorkforceTasksCalendarRoute =
     id: '/(workforce)/workforce/tasks/calendar',
     path: '/workforce/tasks/calendar',
     getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedworkforceWorkforceSeparationsSeparationIdRoute =
+  AuthenticatedworkforceWorkforceSeparationsSeparationIdRouteImport.update({
+    id: '/$separationId',
+    path: '/$separationId',
+    getParentRoute: () => AuthenticatedworkforceWorkforceSeparationsRoute,
   } as any)
 const AuthenticatedproductionParcelsParcelIdWeatherRoute =
   AuthenticatedproductionParcelsParcelIdWeatherRouteImport.update({
@@ -1028,6 +1267,12 @@ const AuthenticatedmiscMarketplaceQuoteRequestsReceivedRoute =
     path: '/quote-requests/received',
     getParentRoute: () => AuthenticatedmiscMarketplaceRoute,
   } as any)
+const AuthenticatedinventoryStockItemsItemIdRoute =
+  AuthenticatedinventoryStockItemsItemIdRouteImport.update({
+    id: '/items/$itemId',
+    path: '/items/$itemId',
+    getParentRoute: () => AuthenticatedinventoryStockRoute,
+  } as any)
 const AuthenticatedproductionParcelsParcelIdSatelliteIndexRoute =
   AuthenticatedproductionParcelsParcelIdSatelliteIndexRouteImport.update({
     id: '/',
@@ -1082,6 +1327,12 @@ const AuthenticatedproductionParcelsParcelIdAiAlertsRoute =
     path: '/alerts',
     getParentRoute: () => AuthenticatedproductionParcelsParcelIdAiRoute,
   } as any)
+const AuthenticatedproductionFarmsFarmIdSatelliteHeatmapRoute =
+  AuthenticatedproductionFarmsFarmIdSatelliteHeatmapRouteImport.update({
+    id: '/(production)/farms/$farmId/satellite/heatmap',
+    path: '/farms/$farmId/satellite/heatmap',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedproductionParcelsParcelIdAiPlanIndexRoute =
   AuthenticatedproductionParcelsParcelIdAiPlanIndexRouteImport.update({
     id: '/',
@@ -1111,6 +1362,7 @@ export interface FileRoutesByFullPath {
   '/rdv-siam': typeof publicRdvSiamRoute
   '/terms-of-service': typeof publicTermsOfServiceRoute
   '/referentiels': typeof AuthenticatedReferentielsRoute
+  '/reports': typeof AuthenticatedReportsRoute
   '/auth/callback': typeof authAuthCallbackRoute
   '/onboarding/complete': typeof publicOnboardingCompleteRoute
   '/onboarding/farm': typeof publicOnboardingFarmRoute
@@ -1126,7 +1378,7 @@ export interface FileRoutesByFullPath {
   '/inventory': typeof AuthenticatedinventoryInventoryRouteWithChildren
   '/reception-batches': typeof AuthenticatedinventoryReceptionBatchesRoute
   '/stock': typeof AuthenticatedinventoryStockRouteWithChildren
-  '/$moduleId': typeof AuthenticatedmiscModuleIdRoute
+  '/equipment': typeof AuthenticatedmiscEquipmentRoute
   '/infrastructure': typeof AuthenticatedmiscInfrastructureRoute
   '/lab-services': typeof AuthenticatedmiscLabServicesRoute
   '/marketplace': typeof AuthenticatedmiscMarketplaceRouteWithChildren
@@ -1135,7 +1387,6 @@ export interface FileRoutesByFullPath {
   '/biological-assets': typeof AuthenticatedproductionBiologicalAssetsRoute
   '/campaigns': typeof AuthenticatedproductionCampaignsRoute
   '/crop-cycles': typeof AuthenticatedproductionCropCyclesRouteWithChildren
-  '/crops': typeof AuthenticatedproductionCropsRoute
   '/farm-hierarchy': typeof AuthenticatedproductionFarmHierarchyRoute
   '/harvests': typeof AuthenticatedproductionHarvestsRoute
   '/orchards': typeof AuthenticatedproductionOrchardsRoute
@@ -1143,6 +1394,7 @@ export interface FileRoutesByFullPath {
   '/product-applications': typeof AuthenticatedproductionProductApplicationsRoute
   '/pruning': typeof AuthenticatedproductionPruningRoute
   '/quality-control': typeof AuthenticatedproductionQualityControlRoute
+  '/satellite-analysis': typeof AuthenticatedproductionSatelliteAnalysisRoute
   '/trees': typeof AuthenticatedproductionTreesRoute
   '/settings': typeof AuthenticatedsettingsSettingsRouteWithChildren
   '/tasks': typeof AuthenticatedworkforceTasksRouteWithChildren
@@ -1151,25 +1403,32 @@ export interface FileRoutesByFullPath {
   '/onboarding/': typeof publicOnboardingIndexRoute
   '/compliance/': typeof AuthenticatedComplianceIndexRoute
   '/pest-alerts/': typeof AuthenticatedPestAlertsIndexRoute
+  '/accounting/account-mappings': typeof AuthenticatedaccountingAccountingAccountMappingsRoute
   '/accounting/accounts': typeof AuthenticatedaccountingAccountingAccountsRoute
   '/accounting/aged-payables': typeof AuthenticatedaccountingAccountingAgedPayablesRoute
   '/accounting/aged-receivables': typeof AuthenticatedaccountingAccountingAgedReceivablesRoute
   '/accounting/balance-sheet': typeof AuthenticatedaccountingAccountingBalanceSheetRoute
   '/accounting/bank-accounts': typeof AuthenticatedaccountingAccountingBankAccountsRoute
   '/accounting/cash-flow': typeof AuthenticatedaccountingAccountingCashFlowRoute
+  '/accounting/cost-centers': typeof AuthenticatedaccountingAccountingCostCentersRoute
   '/accounting/customers': typeof AuthenticatedaccountingAccountingCustomersRoute
+  '/accounting/delivery-notes': typeof AuthenticatedaccountingAccountingDeliveryNotesRoute
+  '/accounting/fiscal-years': typeof AuthenticatedaccountingAccountingFiscalYearsRoute
   '/accounting/general-ledger': typeof AuthenticatedaccountingAccountingGeneralLedgerRoute
   '/accounting/invoices': typeof AuthenticatedaccountingAccountingInvoicesRoute
   '/accounting/journal': typeof AuthenticatedaccountingAccountingJournalRoute
   '/accounting/payments': typeof AuthenticatedaccountingAccountingPaymentsRoute
   '/accounting/profit-loss': typeof AuthenticatedaccountingAccountingProfitLossRoute
   '/accounting/purchase-orders': typeof AuthenticatedaccountingAccountingPurchaseOrdersRoute
+  '/accounting/purchase-receipts': typeof AuthenticatedaccountingAccountingPurchaseReceiptsRoute
   '/accounting/quotes': typeof AuthenticatedaccountingAccountingQuotesRoute
   '/accounting/reports': typeof AuthenticatedaccountingAccountingReportsRoute
   '/accounting/reports-analysis': typeof AuthenticatedaccountingAccountingReportsAnalysisRoute
   '/accounting/sales-orders': typeof AuthenticatedaccountingAccountingSalesOrdersRoute
+  '/accounting/taxes': typeof AuthenticatedaccountingAccountingTaxesRoute
   '/accounting/trial-balance': typeof AuthenticatedaccountingAccountingTrialBalanceRoute
   '/inventory/reception-batches': typeof AuthenticatedinventoryInventoryReceptionBatchesRoute
+  '/stock/aging': typeof AuthenticatedinventoryStockAgingRoute
   '/stock/approvals': typeof AuthenticatedinventoryStockApprovalsRoute
   '/stock/batches': typeof AuthenticatedinventoryStockBatchesRoute
   '/stock/dashboard': typeof AuthenticatedinventoryStockDashboardRoute
@@ -1178,7 +1437,6 @@ export interface FileRoutesByFullPath {
   '/stock/expiry-alerts': typeof AuthenticatedinventoryStockExpiryAlertsRoute
   '/stock/groups': typeof AuthenticatedinventoryStockGroupsRoute
   '/stock/inventory': typeof AuthenticatedinventoryStockInventoryRoute
-  '/stock/items': typeof AuthenticatedinventoryStockItemsRoute
   '/stock/quick-stock': typeof AuthenticatedinventoryStockQuickStockRoute
   '/stock/reception': typeof AuthenticatedinventoryStockReceptionRoute
   '/stock/reorder-suggestions': typeof AuthenticatedinventoryStockReorderSuggestionsRoute
@@ -1197,21 +1455,22 @@ export interface FileRoutesByFullPath {
   '/production/satellite-analysis': typeof AuthenticatedproductionProductionSatelliteAnalysisRoute
   '/production/soil-analysis': typeof AuthenticatedproductionProductionSoilAnalysisRoute
   '/settings/account': typeof AuthenticatedsettingsSettingsAccountRoute
-  '/settings/account-mappings': typeof AuthenticatedsettingsSettingsAccountMappingsRoute
   '/settings/ai': typeof AuthenticatedsettingsSettingsAiRoute
   '/settings/billing': typeof AuthenticatedsettingsSettingsBillingRoute
   '/settings/biological-assets': typeof AuthenticatedsettingsSettingsBiologicalAssetsRoute
-  '/settings/cost-centers': typeof AuthenticatedsettingsSettingsCostCentersRoute
   '/settings/danger-zone': typeof AuthenticatedsettingsSettingsDangerZoneRoute
   '/settings/dashboard': typeof AuthenticatedsettingsSettingsDashboardRoute
   '/settings/documents': typeof AuthenticatedsettingsSettingsDocumentsRoute
   '/settings/files': typeof AuthenticatedsettingsSettingsFilesRoute
-  '/settings/fiscal-years': typeof AuthenticatedsettingsSettingsFiscalYearsRoute
+  '/settings/hr-compliance': typeof AuthenticatedsettingsSettingsHrComplianceRoute
   '/settings/legal': typeof AuthenticatedsettingsSettingsLegalRoute
   '/settings/modules': typeof AuthenticatedsettingsSettingsModulesRoute
+  '/settings/offline': typeof AuthenticatedsettingsSettingsOfflineRoute
   '/settings/organization': typeof AuthenticatedsettingsSettingsOrganizationRoute
   '/settings/preferences': typeof AuthenticatedsettingsSettingsPreferencesRoute
+  '/settings/print': typeof AuthenticatedsettingsSettingsPrintRoute
   '/settings/profile': typeof AuthenticatedsettingsSettingsProfileRoute
+  '/settings/stock-accounting': typeof AuthenticatedsettingsSettingsStockAccountingRoute
   '/settings/subscription': typeof AuthenticatedsettingsSettingsSubscriptionRoute
   '/settings/users': typeof AuthenticatedsettingsSettingsUsersRoute
   '/settings/work-units': typeof AuthenticatedsettingsSettingsWorkUnitsRoute
@@ -1219,9 +1478,33 @@ export interface FileRoutesByFullPath {
   '/tasks/calendar': typeof AuthenticatedworkforceTasksCalendarRoute
   '/tasks/kanban': typeof AuthenticatedworkforceTasksKanbanRoute
   '/workers/$workerId': typeof AuthenticatedworkforceWorkersWorkerIdRoute
+  '/workforce/appraisals': typeof AuthenticatedworkforceWorkforceAppraisalsRoute
+  '/workforce/attendance': typeof AuthenticatedworkforceWorkforceAttendanceRoute
   '/workforce/day-laborers': typeof AuthenticatedworkforceWorkforceDayLaborersRoute
   '/workforce/employees': typeof AuthenticatedworkforceWorkforceEmployeesRoute
+  '/workforce/expense-claims': typeof AuthenticatedworkforceWorkforceExpenseClaimsRoute
+  '/workforce/grievances': typeof AuthenticatedworkforceWorkforceGrievancesRoute
+  '/workforce/holidays': typeof AuthenticatedworkforceWorkforceHolidaysRoute
+  '/workforce/hr-analytics': typeof AuthenticatedworkforceWorkforceHrAnalyticsRoute
+  '/workforce/hr-calendar': typeof AuthenticatedworkforceWorkforceHrCalendarRoute
+  '/workforce/leave-allocations': typeof AuthenticatedworkforceWorkforceLeaveAllocationsRoute
+  '/workforce/leave-applications': typeof AuthenticatedworkforceWorkforceLeaveApplicationsRoute
+  '/workforce/leave-types': typeof AuthenticatedworkforceWorkforceLeaveTypesRoute
+  '/workforce/my-hr': typeof AuthenticatedworkforceWorkforceMyHrRoute
+  '/workforce/onboarding': typeof AuthenticatedworkforceWorkforceOnboardingRoute
   '/workforce/payments': typeof AuthenticatedworkforceWorkforcePaymentsRoute
+  '/workforce/payroll-runs': typeof AuthenticatedworkforceWorkforcePayrollRunsRoute
+  '/workforce/qualifications': typeof AuthenticatedworkforceWorkforceQualificationsRoute
+  '/workforce/recruitment': typeof AuthenticatedworkforceWorkforceRecruitmentRoute
+  '/workforce/roster': typeof AuthenticatedworkforceWorkforceRosterRoute
+  '/workforce/safety-incidents': typeof AuthenticatedworkforceWorkforceSafetyIncidentsRoute
+  '/workforce/salary-slips': typeof AuthenticatedworkforceWorkforceSalarySlipsRoute
+  '/workforce/salary-structures': typeof AuthenticatedworkforceWorkforceSalaryStructuresRoute
+  '/workforce/seasonal-campaigns': typeof AuthenticatedworkforceWorkforceSeasonalCampaignsRoute
+  '/workforce/separations': typeof AuthenticatedworkforceWorkforceSeparationsRouteWithChildren
+  '/workforce/shifts': typeof AuthenticatedworkforceWorkforceShiftsRoute
+  '/workforce/training': typeof AuthenticatedworkforceWorkforceTrainingRoute
+  '/workforce/worker-transport': typeof AuthenticatedworkforceWorkforceWorkerTransportRoute
   '/compliance/certifications/$certId': typeof AuthenticatedComplianceCertificationsCertIdRoute
   '/accounting/': typeof AuthenticatedaccountingAccountingIndexRoute
   '/stock/': typeof AuthenticatedinventoryStockIndexRoute
@@ -1229,6 +1512,7 @@ export interface FileRoutesByFullPath {
   '/tasks/': typeof AuthenticatedworkforceTasksIndexRoute
   '/compliance/certifications/': typeof AuthenticatedComplianceCertificationsIndexRoute
   '/compliance/corrective-actions/': typeof AuthenticatedComplianceCorrectiveActionsIndexRoute
+  '/stock/items/$itemId': typeof AuthenticatedinventoryStockItemsItemIdRoute
   '/marketplace/quote-requests/received': typeof AuthenticatedmiscMarketplaceQuoteRequestsReceivedRoute
   '/marketplace/quote-requests/sent': typeof AuthenticatedmiscMarketplaceQuoteRequestsSentRoute
   '/parcels/$parcelId/ai': typeof AuthenticatedproductionParcelsParcelIdAiRouteWithChildren
@@ -1238,10 +1522,13 @@ export interface FileRoutesByFullPath {
   '/parcels/$parcelId/reports': typeof AuthenticatedproductionParcelsParcelIdReportsRoute
   '/parcels/$parcelId/satellite': typeof AuthenticatedproductionParcelsParcelIdSatelliteRouteWithChildren
   '/parcels/$parcelId/weather': typeof AuthenticatedproductionParcelsParcelIdWeatherRoute
+  '/workforce/separations/$separationId': typeof AuthenticatedworkforceWorkforceSeparationsSeparationIdRoute
   '/workforce/tasks/calendar': typeof AuthenticatedworkforceWorkforceTasksCalendarRoute
   '/workforce/workers/piece-work': typeof AuthenticatedworkforceWorkforceWorkersPieceWorkRoute
+  '/stock/items/': typeof AuthenticatedinventoryStockItemsIndexRoute
   '/parcels/$parcelId/': typeof AuthenticatedproductionParcelsParcelIdIndexRoute
   '/workforce/tasks/': typeof AuthenticatedworkforceWorkforceTasksIndexRoute
+  '/farms/$farmId/satellite/heatmap': typeof AuthenticatedproductionFarmsFarmIdSatelliteHeatmapRoute
   '/parcels/$parcelId/ai/alerts': typeof AuthenticatedproductionParcelsParcelIdAiAlertsRoute
   '/parcels/$parcelId/ai/calibration': typeof AuthenticatedproductionParcelsParcelIdAiCalibrationRoute
   '/parcels/$parcelId/ai/plan': typeof AuthenticatedproductionParcelsParcelIdAiPlanRouteWithChildren
@@ -1269,6 +1556,7 @@ export interface FileRoutesByTo {
   '/rdv-siam': typeof publicRdvSiamRoute
   '/terms-of-service': typeof publicTermsOfServiceRoute
   '/referentiels': typeof AuthenticatedReferentielsRoute
+  '/reports': typeof AuthenticatedReportsRoute
   '/auth/callback': typeof authAuthCallbackRoute
   '/onboarding/complete': typeof publicOnboardingCompleteRoute
   '/onboarding/farm': typeof publicOnboardingFarmRoute
@@ -1282,7 +1570,7 @@ export interface FileRoutesByTo {
   '/live-dashboard': typeof AuthenticatedcoreLiveDashboardRoute
   '/inventory': typeof AuthenticatedinventoryInventoryRouteWithChildren
   '/reception-batches': typeof AuthenticatedinventoryReceptionBatchesRoute
-  '/$moduleId': typeof AuthenticatedmiscModuleIdRoute
+  '/equipment': typeof AuthenticatedmiscEquipmentRoute
   '/infrastructure': typeof AuthenticatedmiscInfrastructureRoute
   '/lab-services': typeof AuthenticatedmiscLabServicesRoute
   '/marketplace': typeof AuthenticatedmiscMarketplaceRouteWithChildren
@@ -1291,7 +1579,6 @@ export interface FileRoutesByTo {
   '/biological-assets': typeof AuthenticatedproductionBiologicalAssetsRoute
   '/campaigns': typeof AuthenticatedproductionCampaignsRoute
   '/crop-cycles': typeof AuthenticatedproductionCropCyclesRouteWithChildren
-  '/crops': typeof AuthenticatedproductionCropsRoute
   '/farm-hierarchy': typeof AuthenticatedproductionFarmHierarchyRoute
   '/harvests': typeof AuthenticatedproductionHarvestsRoute
   '/orchards': typeof AuthenticatedproductionOrchardsRoute
@@ -1299,31 +1586,39 @@ export interface FileRoutesByTo {
   '/product-applications': typeof AuthenticatedproductionProductApplicationsRoute
   '/pruning': typeof AuthenticatedproductionPruningRoute
   '/quality-control': typeof AuthenticatedproductionQualityControlRoute
+  '/satellite-analysis': typeof AuthenticatedproductionSatelliteAnalysisRoute
   '/trees': typeof AuthenticatedproductionTreesRoute
   '/workers': typeof AuthenticatedworkforceWorkersRouteWithChildren
   '/pest-alerts/$reportId': typeof AuthenticatedPestAlertsReportIdRoute
   '/onboarding': typeof publicOnboardingIndexRoute
   '/compliance': typeof AuthenticatedComplianceIndexRoute
   '/pest-alerts': typeof AuthenticatedPestAlertsIndexRoute
+  '/accounting/account-mappings': typeof AuthenticatedaccountingAccountingAccountMappingsRoute
   '/accounting/accounts': typeof AuthenticatedaccountingAccountingAccountsRoute
   '/accounting/aged-payables': typeof AuthenticatedaccountingAccountingAgedPayablesRoute
   '/accounting/aged-receivables': typeof AuthenticatedaccountingAccountingAgedReceivablesRoute
   '/accounting/balance-sheet': typeof AuthenticatedaccountingAccountingBalanceSheetRoute
   '/accounting/bank-accounts': typeof AuthenticatedaccountingAccountingBankAccountsRoute
   '/accounting/cash-flow': typeof AuthenticatedaccountingAccountingCashFlowRoute
+  '/accounting/cost-centers': typeof AuthenticatedaccountingAccountingCostCentersRoute
   '/accounting/customers': typeof AuthenticatedaccountingAccountingCustomersRoute
+  '/accounting/delivery-notes': typeof AuthenticatedaccountingAccountingDeliveryNotesRoute
+  '/accounting/fiscal-years': typeof AuthenticatedaccountingAccountingFiscalYearsRoute
   '/accounting/general-ledger': typeof AuthenticatedaccountingAccountingGeneralLedgerRoute
   '/accounting/invoices': typeof AuthenticatedaccountingAccountingInvoicesRoute
   '/accounting/journal': typeof AuthenticatedaccountingAccountingJournalRoute
   '/accounting/payments': typeof AuthenticatedaccountingAccountingPaymentsRoute
   '/accounting/profit-loss': typeof AuthenticatedaccountingAccountingProfitLossRoute
   '/accounting/purchase-orders': typeof AuthenticatedaccountingAccountingPurchaseOrdersRoute
+  '/accounting/purchase-receipts': typeof AuthenticatedaccountingAccountingPurchaseReceiptsRoute
   '/accounting/quotes': typeof AuthenticatedaccountingAccountingQuotesRoute
   '/accounting/reports': typeof AuthenticatedaccountingAccountingReportsRoute
   '/accounting/reports-analysis': typeof AuthenticatedaccountingAccountingReportsAnalysisRoute
   '/accounting/sales-orders': typeof AuthenticatedaccountingAccountingSalesOrdersRoute
+  '/accounting/taxes': typeof AuthenticatedaccountingAccountingTaxesRoute
   '/accounting/trial-balance': typeof AuthenticatedaccountingAccountingTrialBalanceRoute
   '/inventory/reception-batches': typeof AuthenticatedinventoryInventoryReceptionBatchesRoute
+  '/stock/aging': typeof AuthenticatedinventoryStockAgingRoute
   '/stock/approvals': typeof AuthenticatedinventoryStockApprovalsRoute
   '/stock/batches': typeof AuthenticatedinventoryStockBatchesRoute
   '/stock/dashboard': typeof AuthenticatedinventoryStockDashboardRoute
@@ -1332,7 +1627,6 @@ export interface FileRoutesByTo {
   '/stock/expiry-alerts': typeof AuthenticatedinventoryStockExpiryAlertsRoute
   '/stock/groups': typeof AuthenticatedinventoryStockGroupsRoute
   '/stock/inventory': typeof AuthenticatedinventoryStockInventoryRoute
-  '/stock/items': typeof AuthenticatedinventoryStockItemsRoute
   '/stock/quick-stock': typeof AuthenticatedinventoryStockQuickStockRoute
   '/stock/reception': typeof AuthenticatedinventoryStockReceptionRoute
   '/stock/reorder-suggestions': typeof AuthenticatedinventoryStockReorderSuggestionsRoute
@@ -1350,21 +1644,22 @@ export interface FileRoutesByTo {
   '/production/satellite-analysis': typeof AuthenticatedproductionProductionSatelliteAnalysisRoute
   '/production/soil-analysis': typeof AuthenticatedproductionProductionSoilAnalysisRoute
   '/settings/account': typeof AuthenticatedsettingsSettingsAccountRoute
-  '/settings/account-mappings': typeof AuthenticatedsettingsSettingsAccountMappingsRoute
   '/settings/ai': typeof AuthenticatedsettingsSettingsAiRoute
   '/settings/billing': typeof AuthenticatedsettingsSettingsBillingRoute
   '/settings/biological-assets': typeof AuthenticatedsettingsSettingsBiologicalAssetsRoute
-  '/settings/cost-centers': typeof AuthenticatedsettingsSettingsCostCentersRoute
   '/settings/danger-zone': typeof AuthenticatedsettingsSettingsDangerZoneRoute
   '/settings/dashboard': typeof AuthenticatedsettingsSettingsDashboardRoute
   '/settings/documents': typeof AuthenticatedsettingsSettingsDocumentsRoute
   '/settings/files': typeof AuthenticatedsettingsSettingsFilesRoute
-  '/settings/fiscal-years': typeof AuthenticatedsettingsSettingsFiscalYearsRoute
+  '/settings/hr-compliance': typeof AuthenticatedsettingsSettingsHrComplianceRoute
   '/settings/legal': typeof AuthenticatedsettingsSettingsLegalRoute
   '/settings/modules': typeof AuthenticatedsettingsSettingsModulesRoute
+  '/settings/offline': typeof AuthenticatedsettingsSettingsOfflineRoute
   '/settings/organization': typeof AuthenticatedsettingsSettingsOrganizationRoute
   '/settings/preferences': typeof AuthenticatedsettingsSettingsPreferencesRoute
+  '/settings/print': typeof AuthenticatedsettingsSettingsPrintRoute
   '/settings/profile': typeof AuthenticatedsettingsSettingsProfileRoute
+  '/settings/stock-accounting': typeof AuthenticatedsettingsSettingsStockAccountingRoute
   '/settings/subscription': typeof AuthenticatedsettingsSettingsSubscriptionRoute
   '/settings/users': typeof AuthenticatedsettingsSettingsUsersRoute
   '/settings/work-units': typeof AuthenticatedsettingsSettingsWorkUnitsRoute
@@ -1372,9 +1667,33 @@ export interface FileRoutesByTo {
   '/tasks/calendar': typeof AuthenticatedworkforceTasksCalendarRoute
   '/tasks/kanban': typeof AuthenticatedworkforceTasksKanbanRoute
   '/workers/$workerId': typeof AuthenticatedworkforceWorkersWorkerIdRoute
+  '/workforce/appraisals': typeof AuthenticatedworkforceWorkforceAppraisalsRoute
+  '/workforce/attendance': typeof AuthenticatedworkforceWorkforceAttendanceRoute
   '/workforce/day-laborers': typeof AuthenticatedworkforceWorkforceDayLaborersRoute
   '/workforce/employees': typeof AuthenticatedworkforceWorkforceEmployeesRoute
+  '/workforce/expense-claims': typeof AuthenticatedworkforceWorkforceExpenseClaimsRoute
+  '/workforce/grievances': typeof AuthenticatedworkforceWorkforceGrievancesRoute
+  '/workforce/holidays': typeof AuthenticatedworkforceWorkforceHolidaysRoute
+  '/workforce/hr-analytics': typeof AuthenticatedworkforceWorkforceHrAnalyticsRoute
+  '/workforce/hr-calendar': typeof AuthenticatedworkforceWorkforceHrCalendarRoute
+  '/workforce/leave-allocations': typeof AuthenticatedworkforceWorkforceLeaveAllocationsRoute
+  '/workforce/leave-applications': typeof AuthenticatedworkforceWorkforceLeaveApplicationsRoute
+  '/workforce/leave-types': typeof AuthenticatedworkforceWorkforceLeaveTypesRoute
+  '/workforce/my-hr': typeof AuthenticatedworkforceWorkforceMyHrRoute
+  '/workforce/onboarding': typeof AuthenticatedworkforceWorkforceOnboardingRoute
   '/workforce/payments': typeof AuthenticatedworkforceWorkforcePaymentsRoute
+  '/workforce/payroll-runs': typeof AuthenticatedworkforceWorkforcePayrollRunsRoute
+  '/workforce/qualifications': typeof AuthenticatedworkforceWorkforceQualificationsRoute
+  '/workforce/recruitment': typeof AuthenticatedworkforceWorkforceRecruitmentRoute
+  '/workforce/roster': typeof AuthenticatedworkforceWorkforceRosterRoute
+  '/workforce/safety-incidents': typeof AuthenticatedworkforceWorkforceSafetyIncidentsRoute
+  '/workforce/salary-slips': typeof AuthenticatedworkforceWorkforceSalarySlipsRoute
+  '/workforce/salary-structures': typeof AuthenticatedworkforceWorkforceSalaryStructuresRoute
+  '/workforce/seasonal-campaigns': typeof AuthenticatedworkforceWorkforceSeasonalCampaignsRoute
+  '/workforce/separations': typeof AuthenticatedworkforceWorkforceSeparationsRouteWithChildren
+  '/workforce/shifts': typeof AuthenticatedworkforceWorkforceShiftsRoute
+  '/workforce/training': typeof AuthenticatedworkforceWorkforceTrainingRoute
+  '/workforce/worker-transport': typeof AuthenticatedworkforceWorkforceWorkerTransportRoute
   '/compliance/certifications/$certId': typeof AuthenticatedComplianceCertificationsCertIdRoute
   '/accounting': typeof AuthenticatedaccountingAccountingIndexRoute
   '/stock': typeof AuthenticatedinventoryStockIndexRoute
@@ -1382,6 +1701,7 @@ export interface FileRoutesByTo {
   '/tasks': typeof AuthenticatedworkforceTasksIndexRoute
   '/compliance/certifications': typeof AuthenticatedComplianceCertificationsIndexRoute
   '/compliance/corrective-actions': typeof AuthenticatedComplianceCorrectiveActionsIndexRoute
+  '/stock/items/$itemId': typeof AuthenticatedinventoryStockItemsItemIdRoute
   '/marketplace/quote-requests/received': typeof AuthenticatedmiscMarketplaceQuoteRequestsReceivedRoute
   '/marketplace/quote-requests/sent': typeof AuthenticatedmiscMarketplaceQuoteRequestsSentRoute
   '/parcels/$parcelId/analyse': typeof AuthenticatedproductionParcelsParcelIdAnalyseRoute
@@ -1389,10 +1709,13 @@ export interface FileRoutesByTo {
   '/parcels/$parcelId/profitability': typeof AuthenticatedproductionParcelsParcelIdProfitabilityRoute
   '/parcels/$parcelId/reports': typeof AuthenticatedproductionParcelsParcelIdReportsRoute
   '/parcels/$parcelId/weather': typeof AuthenticatedproductionParcelsParcelIdWeatherRoute
+  '/workforce/separations/$separationId': typeof AuthenticatedworkforceWorkforceSeparationsSeparationIdRoute
   '/workforce/tasks/calendar': typeof AuthenticatedworkforceWorkforceTasksCalendarRoute
   '/workforce/workers/piece-work': typeof AuthenticatedworkforceWorkforceWorkersPieceWorkRoute
+  '/stock/items': typeof AuthenticatedinventoryStockItemsIndexRoute
   '/parcels/$parcelId': typeof AuthenticatedproductionParcelsParcelIdIndexRoute
   '/workforce/tasks': typeof AuthenticatedworkforceWorkforceTasksIndexRoute
+  '/farms/$farmId/satellite/heatmap': typeof AuthenticatedproductionFarmsFarmIdSatelliteHeatmapRoute
   '/parcels/$parcelId/ai/alerts': typeof AuthenticatedproductionParcelsParcelIdAiAlertsRoute
   '/parcels/$parcelId/ai/calibration': typeof AuthenticatedproductionParcelsParcelIdAiCalibrationRoute
   '/parcels/$parcelId/ai/recommendations': typeof AuthenticatedproductionParcelsParcelIdAiRecommendationsRoute
@@ -1422,6 +1745,7 @@ export interface FileRoutesById {
   '/(public)/rdv-siam': typeof publicRdvSiamRoute
   '/(public)/terms-of-service': typeof publicTermsOfServiceRoute
   '/_authenticated/referentiels': typeof AuthenticatedReferentielsRoute
+  '/_authenticated/reports': typeof AuthenticatedReportsRoute
   '/(auth)/auth/callback': typeof authAuthCallbackRoute
   '/(public)/onboarding/complete': typeof publicOnboardingCompleteRoute
   '/(public)/onboarding/farm': typeof publicOnboardingFarmRoute
@@ -1437,7 +1761,7 @@ export interface FileRoutesById {
   '/_authenticated/(inventory)/inventory': typeof AuthenticatedinventoryInventoryRouteWithChildren
   '/_authenticated/(inventory)/reception-batches': typeof AuthenticatedinventoryReceptionBatchesRoute
   '/_authenticated/(inventory)/stock': typeof AuthenticatedinventoryStockRouteWithChildren
-  '/_authenticated/(misc)/$moduleId': typeof AuthenticatedmiscModuleIdRoute
+  '/_authenticated/(misc)/equipment': typeof AuthenticatedmiscEquipmentRoute
   '/_authenticated/(misc)/infrastructure': typeof AuthenticatedmiscInfrastructureRoute
   '/_authenticated/(misc)/lab-services': typeof AuthenticatedmiscLabServicesRoute
   '/_authenticated/(misc)/marketplace': typeof AuthenticatedmiscMarketplaceRouteWithChildren
@@ -1446,7 +1770,6 @@ export interface FileRoutesById {
   '/_authenticated/(production)/biological-assets': typeof AuthenticatedproductionBiologicalAssetsRoute
   '/_authenticated/(production)/campaigns': typeof AuthenticatedproductionCampaignsRoute
   '/_authenticated/(production)/crop-cycles': typeof AuthenticatedproductionCropCyclesRouteWithChildren
-  '/_authenticated/(production)/crops': typeof AuthenticatedproductionCropsRoute
   '/_authenticated/(production)/farm-hierarchy': typeof AuthenticatedproductionFarmHierarchyRoute
   '/_authenticated/(production)/harvests': typeof AuthenticatedproductionHarvestsRoute
   '/_authenticated/(production)/orchards': typeof AuthenticatedproductionOrchardsRoute
@@ -1454,6 +1777,7 @@ export interface FileRoutesById {
   '/_authenticated/(production)/product-applications': typeof AuthenticatedproductionProductApplicationsRoute
   '/_authenticated/(production)/pruning': typeof AuthenticatedproductionPruningRoute
   '/_authenticated/(production)/quality-control': typeof AuthenticatedproductionQualityControlRoute
+  '/_authenticated/(production)/satellite-analysis': typeof AuthenticatedproductionSatelliteAnalysisRoute
   '/_authenticated/(production)/trees': typeof AuthenticatedproductionTreesRoute
   '/_authenticated/(settings)/settings': typeof AuthenticatedsettingsSettingsRouteWithChildren
   '/_authenticated/(workforce)/tasks': typeof AuthenticatedworkforceTasksRouteWithChildren
@@ -1462,25 +1786,32 @@ export interface FileRoutesById {
   '/(public)/onboarding/': typeof publicOnboardingIndexRoute
   '/_authenticated/compliance/': typeof AuthenticatedComplianceIndexRoute
   '/_authenticated/pest-alerts/': typeof AuthenticatedPestAlertsIndexRoute
+  '/_authenticated/(accounting)/accounting/account-mappings': typeof AuthenticatedaccountingAccountingAccountMappingsRoute
   '/_authenticated/(accounting)/accounting/accounts': typeof AuthenticatedaccountingAccountingAccountsRoute
   '/_authenticated/(accounting)/accounting/aged-payables': typeof AuthenticatedaccountingAccountingAgedPayablesRoute
   '/_authenticated/(accounting)/accounting/aged-receivables': typeof AuthenticatedaccountingAccountingAgedReceivablesRoute
   '/_authenticated/(accounting)/accounting/balance-sheet': typeof AuthenticatedaccountingAccountingBalanceSheetRoute
   '/_authenticated/(accounting)/accounting/bank-accounts': typeof AuthenticatedaccountingAccountingBankAccountsRoute
   '/_authenticated/(accounting)/accounting/cash-flow': typeof AuthenticatedaccountingAccountingCashFlowRoute
+  '/_authenticated/(accounting)/accounting/cost-centers': typeof AuthenticatedaccountingAccountingCostCentersRoute
   '/_authenticated/(accounting)/accounting/customers': typeof AuthenticatedaccountingAccountingCustomersRoute
+  '/_authenticated/(accounting)/accounting/delivery-notes': typeof AuthenticatedaccountingAccountingDeliveryNotesRoute
+  '/_authenticated/(accounting)/accounting/fiscal-years': typeof AuthenticatedaccountingAccountingFiscalYearsRoute
   '/_authenticated/(accounting)/accounting/general-ledger': typeof AuthenticatedaccountingAccountingGeneralLedgerRoute
   '/_authenticated/(accounting)/accounting/invoices': typeof AuthenticatedaccountingAccountingInvoicesRoute
   '/_authenticated/(accounting)/accounting/journal': typeof AuthenticatedaccountingAccountingJournalRoute
   '/_authenticated/(accounting)/accounting/payments': typeof AuthenticatedaccountingAccountingPaymentsRoute
   '/_authenticated/(accounting)/accounting/profit-loss': typeof AuthenticatedaccountingAccountingProfitLossRoute
   '/_authenticated/(accounting)/accounting/purchase-orders': typeof AuthenticatedaccountingAccountingPurchaseOrdersRoute
+  '/_authenticated/(accounting)/accounting/purchase-receipts': typeof AuthenticatedaccountingAccountingPurchaseReceiptsRoute
   '/_authenticated/(accounting)/accounting/quotes': typeof AuthenticatedaccountingAccountingQuotesRoute
   '/_authenticated/(accounting)/accounting/reports': typeof AuthenticatedaccountingAccountingReportsRoute
   '/_authenticated/(accounting)/accounting/reports-analysis': typeof AuthenticatedaccountingAccountingReportsAnalysisRoute
   '/_authenticated/(accounting)/accounting/sales-orders': typeof AuthenticatedaccountingAccountingSalesOrdersRoute
+  '/_authenticated/(accounting)/accounting/taxes': typeof AuthenticatedaccountingAccountingTaxesRoute
   '/_authenticated/(accounting)/accounting/trial-balance': typeof AuthenticatedaccountingAccountingTrialBalanceRoute
   '/_authenticated/(inventory)/inventory/reception-batches': typeof AuthenticatedinventoryInventoryReceptionBatchesRoute
+  '/_authenticated/(inventory)/stock/aging': typeof AuthenticatedinventoryStockAgingRoute
   '/_authenticated/(inventory)/stock/approvals': typeof AuthenticatedinventoryStockApprovalsRoute
   '/_authenticated/(inventory)/stock/batches': typeof AuthenticatedinventoryStockBatchesRoute
   '/_authenticated/(inventory)/stock/dashboard': typeof AuthenticatedinventoryStockDashboardRoute
@@ -1489,7 +1820,6 @@ export interface FileRoutesById {
   '/_authenticated/(inventory)/stock/expiry-alerts': typeof AuthenticatedinventoryStockExpiryAlertsRoute
   '/_authenticated/(inventory)/stock/groups': typeof AuthenticatedinventoryStockGroupsRoute
   '/_authenticated/(inventory)/stock/inventory': typeof AuthenticatedinventoryStockInventoryRoute
-  '/_authenticated/(inventory)/stock/items': typeof AuthenticatedinventoryStockItemsRoute
   '/_authenticated/(inventory)/stock/quick-stock': typeof AuthenticatedinventoryStockQuickStockRoute
   '/_authenticated/(inventory)/stock/reception': typeof AuthenticatedinventoryStockReceptionRoute
   '/_authenticated/(inventory)/stock/reorder-suggestions': typeof AuthenticatedinventoryStockReorderSuggestionsRoute
@@ -1508,21 +1838,22 @@ export interface FileRoutesById {
   '/_authenticated/(production)/production/satellite-analysis': typeof AuthenticatedproductionProductionSatelliteAnalysisRoute
   '/_authenticated/(production)/production/soil-analysis': typeof AuthenticatedproductionProductionSoilAnalysisRoute
   '/_authenticated/(settings)/settings/account': typeof AuthenticatedsettingsSettingsAccountRoute
-  '/_authenticated/(settings)/settings/account-mappings': typeof AuthenticatedsettingsSettingsAccountMappingsRoute
   '/_authenticated/(settings)/settings/ai': typeof AuthenticatedsettingsSettingsAiRoute
   '/_authenticated/(settings)/settings/billing': typeof AuthenticatedsettingsSettingsBillingRoute
   '/_authenticated/(settings)/settings/biological-assets': typeof AuthenticatedsettingsSettingsBiologicalAssetsRoute
-  '/_authenticated/(settings)/settings/cost-centers': typeof AuthenticatedsettingsSettingsCostCentersRoute
   '/_authenticated/(settings)/settings/danger-zone': typeof AuthenticatedsettingsSettingsDangerZoneRoute
   '/_authenticated/(settings)/settings/dashboard': typeof AuthenticatedsettingsSettingsDashboardRoute
   '/_authenticated/(settings)/settings/documents': typeof AuthenticatedsettingsSettingsDocumentsRoute
   '/_authenticated/(settings)/settings/files': typeof AuthenticatedsettingsSettingsFilesRoute
-  '/_authenticated/(settings)/settings/fiscal-years': typeof AuthenticatedsettingsSettingsFiscalYearsRoute
+  '/_authenticated/(settings)/settings/hr-compliance': typeof AuthenticatedsettingsSettingsHrComplianceRoute
   '/_authenticated/(settings)/settings/legal': typeof AuthenticatedsettingsSettingsLegalRoute
   '/_authenticated/(settings)/settings/modules': typeof AuthenticatedsettingsSettingsModulesRoute
+  '/_authenticated/(settings)/settings/offline': typeof AuthenticatedsettingsSettingsOfflineRoute
   '/_authenticated/(settings)/settings/organization': typeof AuthenticatedsettingsSettingsOrganizationRoute
   '/_authenticated/(settings)/settings/preferences': typeof AuthenticatedsettingsSettingsPreferencesRoute
+  '/_authenticated/(settings)/settings/print': typeof AuthenticatedsettingsSettingsPrintRoute
   '/_authenticated/(settings)/settings/profile': typeof AuthenticatedsettingsSettingsProfileRoute
+  '/_authenticated/(settings)/settings/stock-accounting': typeof AuthenticatedsettingsSettingsStockAccountingRoute
   '/_authenticated/(settings)/settings/subscription': typeof AuthenticatedsettingsSettingsSubscriptionRoute
   '/_authenticated/(settings)/settings/users': typeof AuthenticatedsettingsSettingsUsersRoute
   '/_authenticated/(settings)/settings/work-units': typeof AuthenticatedsettingsSettingsWorkUnitsRoute
@@ -1530,9 +1861,33 @@ export interface FileRoutesById {
   '/_authenticated/(workforce)/tasks/calendar': typeof AuthenticatedworkforceTasksCalendarRoute
   '/_authenticated/(workforce)/tasks/kanban': typeof AuthenticatedworkforceTasksKanbanRoute
   '/_authenticated/(workforce)/workers/$workerId': typeof AuthenticatedworkforceWorkersWorkerIdRoute
+  '/_authenticated/(workforce)/workforce/appraisals': typeof AuthenticatedworkforceWorkforceAppraisalsRoute
+  '/_authenticated/(workforce)/workforce/attendance': typeof AuthenticatedworkforceWorkforceAttendanceRoute
   '/_authenticated/(workforce)/workforce/day-laborers': typeof AuthenticatedworkforceWorkforceDayLaborersRoute
   '/_authenticated/(workforce)/workforce/employees': typeof AuthenticatedworkforceWorkforceEmployeesRoute
+  '/_authenticated/(workforce)/workforce/expense-claims': typeof AuthenticatedworkforceWorkforceExpenseClaimsRoute
+  '/_authenticated/(workforce)/workforce/grievances': typeof AuthenticatedworkforceWorkforceGrievancesRoute
+  '/_authenticated/(workforce)/workforce/holidays': typeof AuthenticatedworkforceWorkforceHolidaysRoute
+  '/_authenticated/(workforce)/workforce/hr-analytics': typeof AuthenticatedworkforceWorkforceHrAnalyticsRoute
+  '/_authenticated/(workforce)/workforce/hr-calendar': typeof AuthenticatedworkforceWorkforceHrCalendarRoute
+  '/_authenticated/(workforce)/workforce/leave-allocations': typeof AuthenticatedworkforceWorkforceLeaveAllocationsRoute
+  '/_authenticated/(workforce)/workforce/leave-applications': typeof AuthenticatedworkforceWorkforceLeaveApplicationsRoute
+  '/_authenticated/(workforce)/workforce/leave-types': typeof AuthenticatedworkforceWorkforceLeaveTypesRoute
+  '/_authenticated/(workforce)/workforce/my-hr': typeof AuthenticatedworkforceWorkforceMyHrRoute
+  '/_authenticated/(workforce)/workforce/onboarding': typeof AuthenticatedworkforceWorkforceOnboardingRoute
   '/_authenticated/(workforce)/workforce/payments': typeof AuthenticatedworkforceWorkforcePaymentsRoute
+  '/_authenticated/(workforce)/workforce/payroll-runs': typeof AuthenticatedworkforceWorkforcePayrollRunsRoute
+  '/_authenticated/(workforce)/workforce/qualifications': typeof AuthenticatedworkforceWorkforceQualificationsRoute
+  '/_authenticated/(workforce)/workforce/recruitment': typeof AuthenticatedworkforceWorkforceRecruitmentRoute
+  '/_authenticated/(workforce)/workforce/roster': typeof AuthenticatedworkforceWorkforceRosterRoute
+  '/_authenticated/(workforce)/workforce/safety-incidents': typeof AuthenticatedworkforceWorkforceSafetyIncidentsRoute
+  '/_authenticated/(workforce)/workforce/salary-slips': typeof AuthenticatedworkforceWorkforceSalarySlipsRoute
+  '/_authenticated/(workforce)/workforce/salary-structures': typeof AuthenticatedworkforceWorkforceSalaryStructuresRoute
+  '/_authenticated/(workforce)/workforce/seasonal-campaigns': typeof AuthenticatedworkforceWorkforceSeasonalCampaignsRoute
+  '/_authenticated/(workforce)/workforce/separations': typeof AuthenticatedworkforceWorkforceSeparationsRouteWithChildren
+  '/_authenticated/(workforce)/workforce/shifts': typeof AuthenticatedworkforceWorkforceShiftsRoute
+  '/_authenticated/(workforce)/workforce/training': typeof AuthenticatedworkforceWorkforceTrainingRoute
+  '/_authenticated/(workforce)/workforce/worker-transport': typeof AuthenticatedworkforceWorkforceWorkerTransportRoute
   '/_authenticated/compliance/certifications/$certId': typeof AuthenticatedComplianceCertificationsCertIdRoute
   '/_authenticated/(accounting)/accounting/': typeof AuthenticatedaccountingAccountingIndexRoute
   '/_authenticated/(inventory)/stock/': typeof AuthenticatedinventoryStockIndexRoute
@@ -1540,6 +1895,7 @@ export interface FileRoutesById {
   '/_authenticated/(workforce)/tasks/': typeof AuthenticatedworkforceTasksIndexRoute
   '/_authenticated/compliance/certifications/': typeof AuthenticatedComplianceCertificationsIndexRoute
   '/_authenticated/compliance/corrective-actions/': typeof AuthenticatedComplianceCorrectiveActionsIndexRoute
+  '/_authenticated/(inventory)/stock/items/$itemId': typeof AuthenticatedinventoryStockItemsItemIdRoute
   '/_authenticated/(misc)/marketplace/quote-requests/received': typeof AuthenticatedmiscMarketplaceQuoteRequestsReceivedRoute
   '/_authenticated/(misc)/marketplace/quote-requests/sent': typeof AuthenticatedmiscMarketplaceQuoteRequestsSentRoute
   '/_authenticated/(production)/parcels/$parcelId/ai': typeof AuthenticatedproductionParcelsParcelIdAiRouteWithChildren
@@ -1549,10 +1905,13 @@ export interface FileRoutesById {
   '/_authenticated/(production)/parcels/$parcelId/reports': typeof AuthenticatedproductionParcelsParcelIdReportsRoute
   '/_authenticated/(production)/parcels/$parcelId/satellite': typeof AuthenticatedproductionParcelsParcelIdSatelliteRouteWithChildren
   '/_authenticated/(production)/parcels/$parcelId/weather': typeof AuthenticatedproductionParcelsParcelIdWeatherRoute
+  '/_authenticated/(workforce)/workforce/separations/$separationId': typeof AuthenticatedworkforceWorkforceSeparationsSeparationIdRoute
   '/_authenticated/(workforce)/workforce/tasks/calendar': typeof AuthenticatedworkforceWorkforceTasksCalendarRoute
   '/_authenticated/(workforce)/workforce/workers/piece-work': typeof AuthenticatedworkforceWorkforceWorkersPieceWorkRoute
+  '/_authenticated/(inventory)/stock/items/': typeof AuthenticatedinventoryStockItemsIndexRoute
   '/_authenticated/(production)/parcels/$parcelId/': typeof AuthenticatedproductionParcelsParcelIdIndexRoute
   '/_authenticated/(workforce)/workforce/tasks/': typeof AuthenticatedworkforceWorkforceTasksIndexRoute
+  '/_authenticated/(production)/farms/$farmId/satellite/heatmap': typeof AuthenticatedproductionFarmsFarmIdSatelliteHeatmapRoute
   '/_authenticated/(production)/parcels/$parcelId/ai/alerts': typeof AuthenticatedproductionParcelsParcelIdAiAlertsRoute
   '/_authenticated/(production)/parcels/$parcelId/ai/calibration': typeof AuthenticatedproductionParcelsParcelIdAiCalibrationRoute
   '/_authenticated/(production)/parcels/$parcelId/ai/plan': typeof AuthenticatedproductionParcelsParcelIdAiPlanRouteWithChildren
@@ -1583,6 +1942,7 @@ export interface FileRouteTypes {
     | '/rdv-siam'
     | '/terms-of-service'
     | '/referentiels'
+    | '/reports'
     | '/auth/callback'
     | '/onboarding/complete'
     | '/onboarding/farm'
@@ -1598,7 +1958,7 @@ export interface FileRouteTypes {
     | '/inventory'
     | '/reception-batches'
     | '/stock'
-    | '/$moduleId'
+    | '/equipment'
     | '/infrastructure'
     | '/lab-services'
     | '/marketplace'
@@ -1607,7 +1967,6 @@ export interface FileRouteTypes {
     | '/biological-assets'
     | '/campaigns'
     | '/crop-cycles'
-    | '/crops'
     | '/farm-hierarchy'
     | '/harvests'
     | '/orchards'
@@ -1615,6 +1974,7 @@ export interface FileRouteTypes {
     | '/product-applications'
     | '/pruning'
     | '/quality-control'
+    | '/satellite-analysis'
     | '/trees'
     | '/settings'
     | '/tasks'
@@ -1623,25 +1983,32 @@ export interface FileRouteTypes {
     | '/onboarding/'
     | '/compliance/'
     | '/pest-alerts/'
+    | '/accounting/account-mappings'
     | '/accounting/accounts'
     | '/accounting/aged-payables'
     | '/accounting/aged-receivables'
     | '/accounting/balance-sheet'
     | '/accounting/bank-accounts'
     | '/accounting/cash-flow'
+    | '/accounting/cost-centers'
     | '/accounting/customers'
+    | '/accounting/delivery-notes'
+    | '/accounting/fiscal-years'
     | '/accounting/general-ledger'
     | '/accounting/invoices'
     | '/accounting/journal'
     | '/accounting/payments'
     | '/accounting/profit-loss'
     | '/accounting/purchase-orders'
+    | '/accounting/purchase-receipts'
     | '/accounting/quotes'
     | '/accounting/reports'
     | '/accounting/reports-analysis'
     | '/accounting/sales-orders'
+    | '/accounting/taxes'
     | '/accounting/trial-balance'
     | '/inventory/reception-batches'
+    | '/stock/aging'
     | '/stock/approvals'
     | '/stock/batches'
     | '/stock/dashboard'
@@ -1650,7 +2017,6 @@ export interface FileRouteTypes {
     | '/stock/expiry-alerts'
     | '/stock/groups'
     | '/stock/inventory'
-    | '/stock/items'
     | '/stock/quick-stock'
     | '/stock/reception'
     | '/stock/reorder-suggestions'
@@ -1669,21 +2035,22 @@ export interface FileRouteTypes {
     | '/production/satellite-analysis'
     | '/production/soil-analysis'
     | '/settings/account'
-    | '/settings/account-mappings'
     | '/settings/ai'
     | '/settings/billing'
     | '/settings/biological-assets'
-    | '/settings/cost-centers'
     | '/settings/danger-zone'
     | '/settings/dashboard'
     | '/settings/documents'
     | '/settings/files'
-    | '/settings/fiscal-years'
+    | '/settings/hr-compliance'
     | '/settings/legal'
     | '/settings/modules'
+    | '/settings/offline'
     | '/settings/organization'
     | '/settings/preferences'
+    | '/settings/print'
     | '/settings/profile'
+    | '/settings/stock-accounting'
     | '/settings/subscription'
     | '/settings/users'
     | '/settings/work-units'
@@ -1691,9 +2058,33 @@ export interface FileRouteTypes {
     | '/tasks/calendar'
     | '/tasks/kanban'
     | '/workers/$workerId'
+    | '/workforce/appraisals'
+    | '/workforce/attendance'
     | '/workforce/day-laborers'
     | '/workforce/employees'
+    | '/workforce/expense-claims'
+    | '/workforce/grievances'
+    | '/workforce/holidays'
+    | '/workforce/hr-analytics'
+    | '/workforce/hr-calendar'
+    | '/workforce/leave-allocations'
+    | '/workforce/leave-applications'
+    | '/workforce/leave-types'
+    | '/workforce/my-hr'
+    | '/workforce/onboarding'
     | '/workforce/payments'
+    | '/workforce/payroll-runs'
+    | '/workforce/qualifications'
+    | '/workforce/recruitment'
+    | '/workforce/roster'
+    | '/workforce/safety-incidents'
+    | '/workforce/salary-slips'
+    | '/workforce/salary-structures'
+    | '/workforce/seasonal-campaigns'
+    | '/workforce/separations'
+    | '/workforce/shifts'
+    | '/workforce/training'
+    | '/workforce/worker-transport'
     | '/compliance/certifications/$certId'
     | '/accounting/'
     | '/stock/'
@@ -1701,6 +2092,7 @@ export interface FileRouteTypes {
     | '/tasks/'
     | '/compliance/certifications/'
     | '/compliance/corrective-actions/'
+    | '/stock/items/$itemId'
     | '/marketplace/quote-requests/received'
     | '/marketplace/quote-requests/sent'
     | '/parcels/$parcelId/ai'
@@ -1710,10 +2102,13 @@ export interface FileRouteTypes {
     | '/parcels/$parcelId/reports'
     | '/parcels/$parcelId/satellite'
     | '/parcels/$parcelId/weather'
+    | '/workforce/separations/$separationId'
     | '/workforce/tasks/calendar'
     | '/workforce/workers/piece-work'
+    | '/stock/items/'
     | '/parcels/$parcelId/'
     | '/workforce/tasks/'
+    | '/farms/$farmId/satellite/heatmap'
     | '/parcels/$parcelId/ai/alerts'
     | '/parcels/$parcelId/ai/calibration'
     | '/parcels/$parcelId/ai/plan'
@@ -1741,6 +2136,7 @@ export interface FileRouteTypes {
     | '/rdv-siam'
     | '/terms-of-service'
     | '/referentiels'
+    | '/reports'
     | '/auth/callback'
     | '/onboarding/complete'
     | '/onboarding/farm'
@@ -1754,7 +2150,7 @@ export interface FileRouteTypes {
     | '/live-dashboard'
     | '/inventory'
     | '/reception-batches'
-    | '/$moduleId'
+    | '/equipment'
     | '/infrastructure'
     | '/lab-services'
     | '/marketplace'
@@ -1763,7 +2159,6 @@ export interface FileRouteTypes {
     | '/biological-assets'
     | '/campaigns'
     | '/crop-cycles'
-    | '/crops'
     | '/farm-hierarchy'
     | '/harvests'
     | '/orchards'
@@ -1771,31 +2166,39 @@ export interface FileRouteTypes {
     | '/product-applications'
     | '/pruning'
     | '/quality-control'
+    | '/satellite-analysis'
     | '/trees'
     | '/workers'
     | '/pest-alerts/$reportId'
     | '/onboarding'
     | '/compliance'
     | '/pest-alerts'
+    | '/accounting/account-mappings'
     | '/accounting/accounts'
     | '/accounting/aged-payables'
     | '/accounting/aged-receivables'
     | '/accounting/balance-sheet'
     | '/accounting/bank-accounts'
     | '/accounting/cash-flow'
+    | '/accounting/cost-centers'
     | '/accounting/customers'
+    | '/accounting/delivery-notes'
+    | '/accounting/fiscal-years'
     | '/accounting/general-ledger'
     | '/accounting/invoices'
     | '/accounting/journal'
     | '/accounting/payments'
     | '/accounting/profit-loss'
     | '/accounting/purchase-orders'
+    | '/accounting/purchase-receipts'
     | '/accounting/quotes'
     | '/accounting/reports'
     | '/accounting/reports-analysis'
     | '/accounting/sales-orders'
+    | '/accounting/taxes'
     | '/accounting/trial-balance'
     | '/inventory/reception-batches'
+    | '/stock/aging'
     | '/stock/approvals'
     | '/stock/batches'
     | '/stock/dashboard'
@@ -1804,7 +2207,6 @@ export interface FileRouteTypes {
     | '/stock/expiry-alerts'
     | '/stock/groups'
     | '/stock/inventory'
-    | '/stock/items'
     | '/stock/quick-stock'
     | '/stock/reception'
     | '/stock/reorder-suggestions'
@@ -1822,21 +2224,22 @@ export interface FileRouteTypes {
     | '/production/satellite-analysis'
     | '/production/soil-analysis'
     | '/settings/account'
-    | '/settings/account-mappings'
     | '/settings/ai'
     | '/settings/billing'
     | '/settings/biological-assets'
-    | '/settings/cost-centers'
     | '/settings/danger-zone'
     | '/settings/dashboard'
     | '/settings/documents'
     | '/settings/files'
-    | '/settings/fiscal-years'
+    | '/settings/hr-compliance'
     | '/settings/legal'
     | '/settings/modules'
+    | '/settings/offline'
     | '/settings/organization'
     | '/settings/preferences'
+    | '/settings/print'
     | '/settings/profile'
+    | '/settings/stock-accounting'
     | '/settings/subscription'
     | '/settings/users'
     | '/settings/work-units'
@@ -1844,9 +2247,33 @@ export interface FileRouteTypes {
     | '/tasks/calendar'
     | '/tasks/kanban'
     | '/workers/$workerId'
+    | '/workforce/appraisals'
+    | '/workforce/attendance'
     | '/workforce/day-laborers'
     | '/workforce/employees'
+    | '/workforce/expense-claims'
+    | '/workforce/grievances'
+    | '/workforce/holidays'
+    | '/workforce/hr-analytics'
+    | '/workforce/hr-calendar'
+    | '/workforce/leave-allocations'
+    | '/workforce/leave-applications'
+    | '/workforce/leave-types'
+    | '/workforce/my-hr'
+    | '/workforce/onboarding'
     | '/workforce/payments'
+    | '/workforce/payroll-runs'
+    | '/workforce/qualifications'
+    | '/workforce/recruitment'
+    | '/workforce/roster'
+    | '/workforce/safety-incidents'
+    | '/workforce/salary-slips'
+    | '/workforce/salary-structures'
+    | '/workforce/seasonal-campaigns'
+    | '/workforce/separations'
+    | '/workforce/shifts'
+    | '/workforce/training'
+    | '/workforce/worker-transport'
     | '/compliance/certifications/$certId'
     | '/accounting'
     | '/stock'
@@ -1854,6 +2281,7 @@ export interface FileRouteTypes {
     | '/tasks'
     | '/compliance/certifications'
     | '/compliance/corrective-actions'
+    | '/stock/items/$itemId'
     | '/marketplace/quote-requests/received'
     | '/marketplace/quote-requests/sent'
     | '/parcels/$parcelId/analyse'
@@ -1861,10 +2289,13 @@ export interface FileRouteTypes {
     | '/parcels/$parcelId/profitability'
     | '/parcels/$parcelId/reports'
     | '/parcels/$parcelId/weather'
+    | '/workforce/separations/$separationId'
     | '/workforce/tasks/calendar'
     | '/workforce/workers/piece-work'
+    | '/stock/items'
     | '/parcels/$parcelId'
     | '/workforce/tasks'
+    | '/farms/$farmId/satellite/heatmap'
     | '/parcels/$parcelId/ai/alerts'
     | '/parcels/$parcelId/ai/calibration'
     | '/parcels/$parcelId/ai/recommendations'
@@ -1893,6 +2324,7 @@ export interface FileRouteTypes {
     | '/(public)/rdv-siam'
     | '/(public)/terms-of-service'
     | '/_authenticated/referentiels'
+    | '/_authenticated/reports'
     | '/(auth)/auth/callback'
     | '/(public)/onboarding/complete'
     | '/(public)/onboarding/farm'
@@ -1908,7 +2340,7 @@ export interface FileRouteTypes {
     | '/_authenticated/(inventory)/inventory'
     | '/_authenticated/(inventory)/reception-batches'
     | '/_authenticated/(inventory)/stock'
-    | '/_authenticated/(misc)/$moduleId'
+    | '/_authenticated/(misc)/equipment'
     | '/_authenticated/(misc)/infrastructure'
     | '/_authenticated/(misc)/lab-services'
     | '/_authenticated/(misc)/marketplace'
@@ -1917,7 +2349,6 @@ export interface FileRouteTypes {
     | '/_authenticated/(production)/biological-assets'
     | '/_authenticated/(production)/campaigns'
     | '/_authenticated/(production)/crop-cycles'
-    | '/_authenticated/(production)/crops'
     | '/_authenticated/(production)/farm-hierarchy'
     | '/_authenticated/(production)/harvests'
     | '/_authenticated/(production)/orchards'
@@ -1925,6 +2356,7 @@ export interface FileRouteTypes {
     | '/_authenticated/(production)/product-applications'
     | '/_authenticated/(production)/pruning'
     | '/_authenticated/(production)/quality-control'
+    | '/_authenticated/(production)/satellite-analysis'
     | '/_authenticated/(production)/trees'
     | '/_authenticated/(settings)/settings'
     | '/_authenticated/(workforce)/tasks'
@@ -1933,25 +2365,32 @@ export interface FileRouteTypes {
     | '/(public)/onboarding/'
     | '/_authenticated/compliance/'
     | '/_authenticated/pest-alerts/'
+    | '/_authenticated/(accounting)/accounting/account-mappings'
     | '/_authenticated/(accounting)/accounting/accounts'
     | '/_authenticated/(accounting)/accounting/aged-payables'
     | '/_authenticated/(accounting)/accounting/aged-receivables'
     | '/_authenticated/(accounting)/accounting/balance-sheet'
     | '/_authenticated/(accounting)/accounting/bank-accounts'
     | '/_authenticated/(accounting)/accounting/cash-flow'
+    | '/_authenticated/(accounting)/accounting/cost-centers'
     | '/_authenticated/(accounting)/accounting/customers'
+    | '/_authenticated/(accounting)/accounting/delivery-notes'
+    | '/_authenticated/(accounting)/accounting/fiscal-years'
     | '/_authenticated/(accounting)/accounting/general-ledger'
     | '/_authenticated/(accounting)/accounting/invoices'
     | '/_authenticated/(accounting)/accounting/journal'
     | '/_authenticated/(accounting)/accounting/payments'
     | '/_authenticated/(accounting)/accounting/profit-loss'
     | '/_authenticated/(accounting)/accounting/purchase-orders'
+    | '/_authenticated/(accounting)/accounting/purchase-receipts'
     | '/_authenticated/(accounting)/accounting/quotes'
     | '/_authenticated/(accounting)/accounting/reports'
     | '/_authenticated/(accounting)/accounting/reports-analysis'
     | '/_authenticated/(accounting)/accounting/sales-orders'
+    | '/_authenticated/(accounting)/accounting/taxes'
     | '/_authenticated/(accounting)/accounting/trial-balance'
     | '/_authenticated/(inventory)/inventory/reception-batches'
+    | '/_authenticated/(inventory)/stock/aging'
     | '/_authenticated/(inventory)/stock/approvals'
     | '/_authenticated/(inventory)/stock/batches'
     | '/_authenticated/(inventory)/stock/dashboard'
@@ -1960,7 +2399,6 @@ export interface FileRouteTypes {
     | '/_authenticated/(inventory)/stock/expiry-alerts'
     | '/_authenticated/(inventory)/stock/groups'
     | '/_authenticated/(inventory)/stock/inventory'
-    | '/_authenticated/(inventory)/stock/items'
     | '/_authenticated/(inventory)/stock/quick-stock'
     | '/_authenticated/(inventory)/stock/reception'
     | '/_authenticated/(inventory)/stock/reorder-suggestions'
@@ -1979,21 +2417,22 @@ export interface FileRouteTypes {
     | '/_authenticated/(production)/production/satellite-analysis'
     | '/_authenticated/(production)/production/soil-analysis'
     | '/_authenticated/(settings)/settings/account'
-    | '/_authenticated/(settings)/settings/account-mappings'
     | '/_authenticated/(settings)/settings/ai'
     | '/_authenticated/(settings)/settings/billing'
     | '/_authenticated/(settings)/settings/biological-assets'
-    | '/_authenticated/(settings)/settings/cost-centers'
     | '/_authenticated/(settings)/settings/danger-zone'
     | '/_authenticated/(settings)/settings/dashboard'
     | '/_authenticated/(settings)/settings/documents'
     | '/_authenticated/(settings)/settings/files'
-    | '/_authenticated/(settings)/settings/fiscal-years'
+    | '/_authenticated/(settings)/settings/hr-compliance'
     | '/_authenticated/(settings)/settings/legal'
     | '/_authenticated/(settings)/settings/modules'
+    | '/_authenticated/(settings)/settings/offline'
     | '/_authenticated/(settings)/settings/organization'
     | '/_authenticated/(settings)/settings/preferences'
+    | '/_authenticated/(settings)/settings/print'
     | '/_authenticated/(settings)/settings/profile'
+    | '/_authenticated/(settings)/settings/stock-accounting'
     | '/_authenticated/(settings)/settings/subscription'
     | '/_authenticated/(settings)/settings/users'
     | '/_authenticated/(settings)/settings/work-units'
@@ -2001,9 +2440,33 @@ export interface FileRouteTypes {
     | '/_authenticated/(workforce)/tasks/calendar'
     | '/_authenticated/(workforce)/tasks/kanban'
     | '/_authenticated/(workforce)/workers/$workerId'
+    | '/_authenticated/(workforce)/workforce/appraisals'
+    | '/_authenticated/(workforce)/workforce/attendance'
     | '/_authenticated/(workforce)/workforce/day-laborers'
     | '/_authenticated/(workforce)/workforce/employees'
+    | '/_authenticated/(workforce)/workforce/expense-claims'
+    | '/_authenticated/(workforce)/workforce/grievances'
+    | '/_authenticated/(workforce)/workforce/holidays'
+    | '/_authenticated/(workforce)/workforce/hr-analytics'
+    | '/_authenticated/(workforce)/workforce/hr-calendar'
+    | '/_authenticated/(workforce)/workforce/leave-allocations'
+    | '/_authenticated/(workforce)/workforce/leave-applications'
+    | '/_authenticated/(workforce)/workforce/leave-types'
+    | '/_authenticated/(workforce)/workforce/my-hr'
+    | '/_authenticated/(workforce)/workforce/onboarding'
     | '/_authenticated/(workforce)/workforce/payments'
+    | '/_authenticated/(workforce)/workforce/payroll-runs'
+    | '/_authenticated/(workforce)/workforce/qualifications'
+    | '/_authenticated/(workforce)/workforce/recruitment'
+    | '/_authenticated/(workforce)/workforce/roster'
+    | '/_authenticated/(workforce)/workforce/safety-incidents'
+    | '/_authenticated/(workforce)/workforce/salary-slips'
+    | '/_authenticated/(workforce)/workforce/salary-structures'
+    | '/_authenticated/(workforce)/workforce/seasonal-campaigns'
+    | '/_authenticated/(workforce)/workforce/separations'
+    | '/_authenticated/(workforce)/workforce/shifts'
+    | '/_authenticated/(workforce)/workforce/training'
+    | '/_authenticated/(workforce)/workforce/worker-transport'
     | '/_authenticated/compliance/certifications/$certId'
     | '/_authenticated/(accounting)/accounting/'
     | '/_authenticated/(inventory)/stock/'
@@ -2011,6 +2474,7 @@ export interface FileRouteTypes {
     | '/_authenticated/(workforce)/tasks/'
     | '/_authenticated/compliance/certifications/'
     | '/_authenticated/compliance/corrective-actions/'
+    | '/_authenticated/(inventory)/stock/items/$itemId'
     | '/_authenticated/(misc)/marketplace/quote-requests/received'
     | '/_authenticated/(misc)/marketplace/quote-requests/sent'
     | '/_authenticated/(production)/parcels/$parcelId/ai'
@@ -2020,10 +2484,13 @@ export interface FileRouteTypes {
     | '/_authenticated/(production)/parcels/$parcelId/reports'
     | '/_authenticated/(production)/parcels/$parcelId/satellite'
     | '/_authenticated/(production)/parcels/$parcelId/weather'
+    | '/_authenticated/(workforce)/workforce/separations/$separationId'
     | '/_authenticated/(workforce)/workforce/tasks/calendar'
     | '/_authenticated/(workforce)/workforce/workers/piece-work'
+    | '/_authenticated/(inventory)/stock/items/'
     | '/_authenticated/(production)/parcels/$parcelId/'
     | '/_authenticated/(workforce)/workforce/tasks/'
+    | '/_authenticated/(production)/farms/$farmId/satellite/heatmap'
     | '/_authenticated/(production)/parcels/$parcelId/ai/alerts'
     | '/_authenticated/(production)/parcels/$parcelId/ai/calibration'
     | '/_authenticated/(production)/parcels/$parcelId/ai/plan'
@@ -2071,6 +2538,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/reports': {
+      id: '/_authenticated/reports'
+      path: '/reports'
+      fullPath: '/reports'
+      preLoaderRoute: typeof AuthenticatedReportsRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/referentiels': {
       id: '/_authenticated/referentiels'
@@ -2226,6 +2700,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedproductionTreesRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/(production)/satellite-analysis': {
+      id: '/_authenticated/(production)/satellite-analysis'
+      path: '/satellite-analysis'
+      fullPath: '/satellite-analysis'
+      preLoaderRoute: typeof AuthenticatedproductionSatelliteAnalysisRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/(production)/quality-control': {
       id: '/_authenticated/(production)/quality-control'
       path: '/quality-control'
@@ -2273,13 +2754,6 @@ declare module '@tanstack/react-router' {
       path: '/farm-hierarchy'
       fullPath: '/farm-hierarchy'
       preLoaderRoute: typeof AuthenticatedproductionFarmHierarchyRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/(production)/crops': {
-      id: '/_authenticated/(production)/crops'
-      path: '/crops'
-      fullPath: '/crops'
-      preLoaderRoute: typeof AuthenticatedproductionCropsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/(production)/crop-cycles': {
@@ -2338,11 +2812,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedmiscInfrastructureRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/(misc)/$moduleId': {
-      id: '/_authenticated/(misc)/$moduleId'
-      path: '/$moduleId'
-      fullPath: '/$moduleId'
-      preLoaderRoute: typeof AuthenticatedmiscModuleIdRouteImport
+    '/_authenticated/(misc)/equipment': {
+      id: '/_authenticated/(misc)/equipment'
+      path: '/equipment'
+      fullPath: '/equipment'
+      preLoaderRoute: typeof AuthenticatedmiscEquipmentRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/(inventory)/stock': {
@@ -2499,11 +2973,165 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedComplianceCertificationsCertIdRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/(workforce)/workforce/worker-transport': {
+      id: '/_authenticated/(workforce)/workforce/worker-transport'
+      path: '/workforce/worker-transport'
+      fullPath: '/workforce/worker-transport'
+      preLoaderRoute: typeof AuthenticatedworkforceWorkforceWorkerTransportRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/(workforce)/workforce/training': {
+      id: '/_authenticated/(workforce)/workforce/training'
+      path: '/workforce/training'
+      fullPath: '/workforce/training'
+      preLoaderRoute: typeof AuthenticatedworkforceWorkforceTrainingRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/(workforce)/workforce/shifts': {
+      id: '/_authenticated/(workforce)/workforce/shifts'
+      path: '/workforce/shifts'
+      fullPath: '/workforce/shifts'
+      preLoaderRoute: typeof AuthenticatedworkforceWorkforceShiftsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/(workforce)/workforce/separations': {
+      id: '/_authenticated/(workforce)/workforce/separations'
+      path: '/workforce/separations'
+      fullPath: '/workforce/separations'
+      preLoaderRoute: typeof AuthenticatedworkforceWorkforceSeparationsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/(workforce)/workforce/seasonal-campaigns': {
+      id: '/_authenticated/(workforce)/workforce/seasonal-campaigns'
+      path: '/workforce/seasonal-campaigns'
+      fullPath: '/workforce/seasonal-campaigns'
+      preLoaderRoute: typeof AuthenticatedworkforceWorkforceSeasonalCampaignsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/(workforce)/workforce/salary-structures': {
+      id: '/_authenticated/(workforce)/workforce/salary-structures'
+      path: '/workforce/salary-structures'
+      fullPath: '/workforce/salary-structures'
+      preLoaderRoute: typeof AuthenticatedworkforceWorkforceSalaryStructuresRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/(workforce)/workforce/salary-slips': {
+      id: '/_authenticated/(workforce)/workforce/salary-slips'
+      path: '/workforce/salary-slips'
+      fullPath: '/workforce/salary-slips'
+      preLoaderRoute: typeof AuthenticatedworkforceWorkforceSalarySlipsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/(workforce)/workforce/safety-incidents': {
+      id: '/_authenticated/(workforce)/workforce/safety-incidents'
+      path: '/workforce/safety-incidents'
+      fullPath: '/workforce/safety-incidents'
+      preLoaderRoute: typeof AuthenticatedworkforceWorkforceSafetyIncidentsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/(workforce)/workforce/roster': {
+      id: '/_authenticated/(workforce)/workforce/roster'
+      path: '/workforce/roster'
+      fullPath: '/workforce/roster'
+      preLoaderRoute: typeof AuthenticatedworkforceWorkforceRosterRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/(workforce)/workforce/recruitment': {
+      id: '/_authenticated/(workforce)/workforce/recruitment'
+      path: '/workforce/recruitment'
+      fullPath: '/workforce/recruitment'
+      preLoaderRoute: typeof AuthenticatedworkforceWorkforceRecruitmentRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/(workforce)/workforce/qualifications': {
+      id: '/_authenticated/(workforce)/workforce/qualifications'
+      path: '/workforce/qualifications'
+      fullPath: '/workforce/qualifications'
+      preLoaderRoute: typeof AuthenticatedworkforceWorkforceQualificationsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/(workforce)/workforce/payroll-runs': {
+      id: '/_authenticated/(workforce)/workforce/payroll-runs'
+      path: '/workforce/payroll-runs'
+      fullPath: '/workforce/payroll-runs'
+      preLoaderRoute: typeof AuthenticatedworkforceWorkforcePayrollRunsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/(workforce)/workforce/payments': {
       id: '/_authenticated/(workforce)/workforce/payments'
       path: '/workforce/payments'
       fullPath: '/workforce/payments'
       preLoaderRoute: typeof AuthenticatedworkforceWorkforcePaymentsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/(workforce)/workforce/onboarding': {
+      id: '/_authenticated/(workforce)/workforce/onboarding'
+      path: '/workforce/onboarding'
+      fullPath: '/workforce/onboarding'
+      preLoaderRoute: typeof AuthenticatedworkforceWorkforceOnboardingRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/(workforce)/workforce/my-hr': {
+      id: '/_authenticated/(workforce)/workforce/my-hr'
+      path: '/workforce/my-hr'
+      fullPath: '/workforce/my-hr'
+      preLoaderRoute: typeof AuthenticatedworkforceWorkforceMyHrRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/(workforce)/workforce/leave-types': {
+      id: '/_authenticated/(workforce)/workforce/leave-types'
+      path: '/workforce/leave-types'
+      fullPath: '/workforce/leave-types'
+      preLoaderRoute: typeof AuthenticatedworkforceWorkforceLeaveTypesRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/(workforce)/workforce/leave-applications': {
+      id: '/_authenticated/(workforce)/workforce/leave-applications'
+      path: '/workforce/leave-applications'
+      fullPath: '/workforce/leave-applications'
+      preLoaderRoute: typeof AuthenticatedworkforceWorkforceLeaveApplicationsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/(workforce)/workforce/leave-allocations': {
+      id: '/_authenticated/(workforce)/workforce/leave-allocations'
+      path: '/workforce/leave-allocations'
+      fullPath: '/workforce/leave-allocations'
+      preLoaderRoute: typeof AuthenticatedworkforceWorkforceLeaveAllocationsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/(workforce)/workforce/hr-calendar': {
+      id: '/_authenticated/(workforce)/workforce/hr-calendar'
+      path: '/workforce/hr-calendar'
+      fullPath: '/workforce/hr-calendar'
+      preLoaderRoute: typeof AuthenticatedworkforceWorkforceHrCalendarRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/(workforce)/workforce/hr-analytics': {
+      id: '/_authenticated/(workforce)/workforce/hr-analytics'
+      path: '/workforce/hr-analytics'
+      fullPath: '/workforce/hr-analytics'
+      preLoaderRoute: typeof AuthenticatedworkforceWorkforceHrAnalyticsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/(workforce)/workforce/holidays': {
+      id: '/_authenticated/(workforce)/workforce/holidays'
+      path: '/workforce/holidays'
+      fullPath: '/workforce/holidays'
+      preLoaderRoute: typeof AuthenticatedworkforceWorkforceHolidaysRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/(workforce)/workforce/grievances': {
+      id: '/_authenticated/(workforce)/workforce/grievances'
+      path: '/workforce/grievances'
+      fullPath: '/workforce/grievances'
+      preLoaderRoute: typeof AuthenticatedworkforceWorkforceGrievancesRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/(workforce)/workforce/expense-claims': {
+      id: '/_authenticated/(workforce)/workforce/expense-claims'
+      path: '/workforce/expense-claims'
+      fullPath: '/workforce/expense-claims'
+      preLoaderRoute: typeof AuthenticatedworkforceWorkforceExpenseClaimsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/(workforce)/workforce/employees': {
@@ -2518,6 +3146,20 @@ declare module '@tanstack/react-router' {
       path: '/workforce/day-laborers'
       fullPath: '/workforce/day-laborers'
       preLoaderRoute: typeof AuthenticatedworkforceWorkforceDayLaborersRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/(workforce)/workforce/attendance': {
+      id: '/_authenticated/(workforce)/workforce/attendance'
+      path: '/workforce/attendance'
+      fullPath: '/workforce/attendance'
+      preLoaderRoute: typeof AuthenticatedworkforceWorkforceAttendanceRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/(workforce)/workforce/appraisals': {
+      id: '/_authenticated/(workforce)/workforce/appraisals'
+      path: '/workforce/appraisals'
+      fullPath: '/workforce/appraisals'
+      preLoaderRoute: typeof AuthenticatedworkforceWorkforceAppraisalsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/(workforce)/workers/$workerId': {
@@ -2569,11 +3211,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedsettingsSettingsSubscriptionRouteImport
       parentRoute: typeof AuthenticatedsettingsSettingsRoute
     }
+    '/_authenticated/(settings)/settings/stock-accounting': {
+      id: '/_authenticated/(settings)/settings/stock-accounting'
+      path: '/stock-accounting'
+      fullPath: '/settings/stock-accounting'
+      preLoaderRoute: typeof AuthenticatedsettingsSettingsStockAccountingRouteImport
+      parentRoute: typeof AuthenticatedsettingsSettingsRoute
+    }
     '/_authenticated/(settings)/settings/profile': {
       id: '/_authenticated/(settings)/settings/profile'
       path: '/profile'
       fullPath: '/settings/profile'
       preLoaderRoute: typeof AuthenticatedsettingsSettingsProfileRouteImport
+      parentRoute: typeof AuthenticatedsettingsSettingsRoute
+    }
+    '/_authenticated/(settings)/settings/print': {
+      id: '/_authenticated/(settings)/settings/print'
+      path: '/print'
+      fullPath: '/settings/print'
+      preLoaderRoute: typeof AuthenticatedsettingsSettingsPrintRouteImport
       parentRoute: typeof AuthenticatedsettingsSettingsRoute
     }
     '/_authenticated/(settings)/settings/preferences': {
@@ -2590,6 +3246,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedsettingsSettingsOrganizationRouteImport
       parentRoute: typeof AuthenticatedsettingsSettingsRoute
     }
+    '/_authenticated/(settings)/settings/offline': {
+      id: '/_authenticated/(settings)/settings/offline'
+      path: '/offline'
+      fullPath: '/settings/offline'
+      preLoaderRoute: typeof AuthenticatedsettingsSettingsOfflineRouteImport
+      parentRoute: typeof AuthenticatedsettingsSettingsRoute
+    }
     '/_authenticated/(settings)/settings/modules': {
       id: '/_authenticated/(settings)/settings/modules'
       path: '/modules'
@@ -2604,11 +3267,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedsettingsSettingsLegalRouteImport
       parentRoute: typeof AuthenticatedsettingsSettingsRoute
     }
-    '/_authenticated/(settings)/settings/fiscal-years': {
-      id: '/_authenticated/(settings)/settings/fiscal-years'
-      path: '/fiscal-years'
-      fullPath: '/settings/fiscal-years'
-      preLoaderRoute: typeof AuthenticatedsettingsSettingsFiscalYearsRouteImport
+    '/_authenticated/(settings)/settings/hr-compliance': {
+      id: '/_authenticated/(settings)/settings/hr-compliance'
+      path: '/hr-compliance'
+      fullPath: '/settings/hr-compliance'
+      preLoaderRoute: typeof AuthenticatedsettingsSettingsHrComplianceRouteImport
       parentRoute: typeof AuthenticatedsettingsSettingsRoute
     }
     '/_authenticated/(settings)/settings/files': {
@@ -2639,13 +3302,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedsettingsSettingsDangerZoneRouteImport
       parentRoute: typeof AuthenticatedsettingsSettingsRoute
     }
-    '/_authenticated/(settings)/settings/cost-centers': {
-      id: '/_authenticated/(settings)/settings/cost-centers'
-      path: '/cost-centers'
-      fullPath: '/settings/cost-centers'
-      preLoaderRoute: typeof AuthenticatedsettingsSettingsCostCentersRouteImport
-      parentRoute: typeof AuthenticatedsettingsSettingsRoute
-    }
     '/_authenticated/(settings)/settings/biological-assets': {
       id: '/_authenticated/(settings)/settings/biological-assets'
       path: '/biological-assets'
@@ -2665,13 +3321,6 @@ declare module '@tanstack/react-router' {
       path: '/ai'
       fullPath: '/settings/ai'
       preLoaderRoute: typeof AuthenticatedsettingsSettingsAiRouteImport
-      parentRoute: typeof AuthenticatedsettingsSettingsRoute
-    }
-    '/_authenticated/(settings)/settings/account-mappings': {
-      id: '/_authenticated/(settings)/settings/account-mappings'
-      path: '/account-mappings'
-      fullPath: '/settings/account-mappings'
-      preLoaderRoute: typeof AuthenticatedsettingsSettingsAccountMappingsRouteImport
       parentRoute: typeof AuthenticatedsettingsSettingsRoute
     }
     '/_authenticated/(settings)/settings/account': {
@@ -2800,13 +3449,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedinventoryStockQuickStockRouteImport
       parentRoute: typeof AuthenticatedinventoryStockRoute
     }
-    '/_authenticated/(inventory)/stock/items': {
-      id: '/_authenticated/(inventory)/stock/items'
-      path: '/items'
-      fullPath: '/stock/items'
-      preLoaderRoute: typeof AuthenticatedinventoryStockItemsRouteImport
-      parentRoute: typeof AuthenticatedinventoryStockRoute
-    }
     '/_authenticated/(inventory)/stock/inventory': {
       id: '/_authenticated/(inventory)/stock/inventory'
       path: '/inventory'
@@ -2863,6 +3505,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedinventoryStockApprovalsRouteImport
       parentRoute: typeof AuthenticatedinventoryStockRoute
     }
+    '/_authenticated/(inventory)/stock/aging': {
+      id: '/_authenticated/(inventory)/stock/aging'
+      path: '/aging'
+      fullPath: '/stock/aging'
+      preLoaderRoute: typeof AuthenticatedinventoryStockAgingRouteImport
+      parentRoute: typeof AuthenticatedinventoryStockRoute
+    }
     '/_authenticated/(inventory)/inventory/reception-batches': {
       id: '/_authenticated/(inventory)/inventory/reception-batches'
       path: '/reception-batches'
@@ -2875,6 +3524,13 @@ declare module '@tanstack/react-router' {
       path: '/trial-balance'
       fullPath: '/accounting/trial-balance'
       preLoaderRoute: typeof AuthenticatedaccountingAccountingTrialBalanceRouteImport
+      parentRoute: typeof AuthenticatedaccountingAccountingRoute
+    }
+    '/_authenticated/(accounting)/accounting/taxes': {
+      id: '/_authenticated/(accounting)/accounting/taxes'
+      path: '/taxes'
+      fullPath: '/accounting/taxes'
+      preLoaderRoute: typeof AuthenticatedaccountingAccountingTaxesRouteImport
       parentRoute: typeof AuthenticatedaccountingAccountingRoute
     }
     '/_authenticated/(accounting)/accounting/sales-orders': {
@@ -2903,6 +3559,13 @@ declare module '@tanstack/react-router' {
       path: '/quotes'
       fullPath: '/accounting/quotes'
       preLoaderRoute: typeof AuthenticatedaccountingAccountingQuotesRouteImport
+      parentRoute: typeof AuthenticatedaccountingAccountingRoute
+    }
+    '/_authenticated/(accounting)/accounting/purchase-receipts': {
+      id: '/_authenticated/(accounting)/accounting/purchase-receipts'
+      path: '/purchase-receipts'
+      fullPath: '/accounting/purchase-receipts'
+      preLoaderRoute: typeof AuthenticatedaccountingAccountingPurchaseReceiptsRouteImport
       parentRoute: typeof AuthenticatedaccountingAccountingRoute
     }
     '/_authenticated/(accounting)/accounting/purchase-orders': {
@@ -2947,11 +3610,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedaccountingAccountingGeneralLedgerRouteImport
       parentRoute: typeof AuthenticatedaccountingAccountingRoute
     }
+    '/_authenticated/(accounting)/accounting/fiscal-years': {
+      id: '/_authenticated/(accounting)/accounting/fiscal-years'
+      path: '/fiscal-years'
+      fullPath: '/accounting/fiscal-years'
+      preLoaderRoute: typeof AuthenticatedaccountingAccountingFiscalYearsRouteImport
+      parentRoute: typeof AuthenticatedaccountingAccountingRoute
+    }
+    '/_authenticated/(accounting)/accounting/delivery-notes': {
+      id: '/_authenticated/(accounting)/accounting/delivery-notes'
+      path: '/delivery-notes'
+      fullPath: '/accounting/delivery-notes'
+      preLoaderRoute: typeof AuthenticatedaccountingAccountingDeliveryNotesRouteImport
+      parentRoute: typeof AuthenticatedaccountingAccountingRoute
+    }
     '/_authenticated/(accounting)/accounting/customers': {
       id: '/_authenticated/(accounting)/accounting/customers'
       path: '/customers'
       fullPath: '/accounting/customers'
       preLoaderRoute: typeof AuthenticatedaccountingAccountingCustomersRouteImport
+      parentRoute: typeof AuthenticatedaccountingAccountingRoute
+    }
+    '/_authenticated/(accounting)/accounting/cost-centers': {
+      id: '/_authenticated/(accounting)/accounting/cost-centers'
+      path: '/cost-centers'
+      fullPath: '/accounting/cost-centers'
+      preLoaderRoute: typeof AuthenticatedaccountingAccountingCostCentersRouteImport
       parentRoute: typeof AuthenticatedaccountingAccountingRoute
     }
     '/_authenticated/(accounting)/accounting/cash-flow': {
@@ -2996,6 +3680,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedaccountingAccountingAccountsRouteImport
       parentRoute: typeof AuthenticatedaccountingAccountingRoute
     }
+    '/_authenticated/(accounting)/accounting/account-mappings': {
+      id: '/_authenticated/(accounting)/accounting/account-mappings'
+      path: '/account-mappings'
+      fullPath: '/accounting/account-mappings'
+      preLoaderRoute: typeof AuthenticatedaccountingAccountingAccountMappingsRouteImport
+      parentRoute: typeof AuthenticatedaccountingAccountingRoute
+    }
     '/_authenticated/(workforce)/workforce/tasks/': {
       id: '/_authenticated/(workforce)/workforce/tasks/'
       path: '/workforce/tasks'
@@ -3010,6 +3701,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedproductionParcelsParcelIdIndexRouteImport
       parentRoute: typeof AuthenticatedproductionParcelsParcelIdRoute
     }
+    '/_authenticated/(inventory)/stock/items/': {
+      id: '/_authenticated/(inventory)/stock/items/'
+      path: '/items'
+      fullPath: '/stock/items/'
+      preLoaderRoute: typeof AuthenticatedinventoryStockItemsIndexRouteImport
+      parentRoute: typeof AuthenticatedinventoryStockRoute
+    }
     '/_authenticated/(workforce)/workforce/workers/piece-work': {
       id: '/_authenticated/(workforce)/workforce/workers/piece-work'
       path: '/workforce/workers/piece-work'
@@ -3023,6 +3721,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/workforce/tasks/calendar'
       preLoaderRoute: typeof AuthenticatedworkforceWorkforceTasksCalendarRouteImport
       parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/(workforce)/workforce/separations/$separationId': {
+      id: '/_authenticated/(workforce)/workforce/separations/$separationId'
+      path: '/$separationId'
+      fullPath: '/workforce/separations/$separationId'
+      preLoaderRoute: typeof AuthenticatedworkforceWorkforceSeparationsSeparationIdRouteImport
+      parentRoute: typeof AuthenticatedworkforceWorkforceSeparationsRoute
     }
     '/_authenticated/(production)/parcels/$parcelId/weather': {
       id: '/_authenticated/(production)/parcels/$parcelId/weather'
@@ -3087,6 +3792,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedmiscMarketplaceQuoteRequestsReceivedRouteImport
       parentRoute: typeof AuthenticatedmiscMarketplaceRoute
     }
+    '/_authenticated/(inventory)/stock/items/$itemId': {
+      id: '/_authenticated/(inventory)/stock/items/$itemId'
+      path: '/items/$itemId'
+      fullPath: '/stock/items/$itemId'
+      preLoaderRoute: typeof AuthenticatedinventoryStockItemsItemIdRouteImport
+      parentRoute: typeof AuthenticatedinventoryStockRoute
+    }
     '/_authenticated/(production)/parcels/$parcelId/satellite/': {
       id: '/_authenticated/(production)/parcels/$parcelId/satellite/'
       path: '/'
@@ -3150,6 +3862,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedproductionParcelsParcelIdAiAlertsRouteImport
       parentRoute: typeof AuthenticatedproductionParcelsParcelIdAiRoute
     }
+    '/_authenticated/(production)/farms/$farmId/satellite/heatmap': {
+      id: '/_authenticated/(production)/farms/$farmId/satellite/heatmap'
+      path: '/farms/$farmId/satellite/heatmap'
+      fullPath: '/farms/$farmId/satellite/heatmap'
+      preLoaderRoute: typeof AuthenticatedproductionFarmsFarmIdSatelliteHeatmapRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/(production)/parcels/$parcelId/ai/plan/': {
       id: '/_authenticated/(production)/parcels/$parcelId/ai/plan/'
       path: '/'
@@ -3168,29 +3887,37 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedaccountingAccountingRouteChildren {
+  AuthenticatedaccountingAccountingAccountMappingsRoute: typeof AuthenticatedaccountingAccountingAccountMappingsRoute
   AuthenticatedaccountingAccountingAccountsRoute: typeof AuthenticatedaccountingAccountingAccountsRoute
   AuthenticatedaccountingAccountingAgedPayablesRoute: typeof AuthenticatedaccountingAccountingAgedPayablesRoute
   AuthenticatedaccountingAccountingAgedReceivablesRoute: typeof AuthenticatedaccountingAccountingAgedReceivablesRoute
   AuthenticatedaccountingAccountingBalanceSheetRoute: typeof AuthenticatedaccountingAccountingBalanceSheetRoute
   AuthenticatedaccountingAccountingBankAccountsRoute: typeof AuthenticatedaccountingAccountingBankAccountsRoute
   AuthenticatedaccountingAccountingCashFlowRoute: typeof AuthenticatedaccountingAccountingCashFlowRoute
+  AuthenticatedaccountingAccountingCostCentersRoute: typeof AuthenticatedaccountingAccountingCostCentersRoute
   AuthenticatedaccountingAccountingCustomersRoute: typeof AuthenticatedaccountingAccountingCustomersRoute
+  AuthenticatedaccountingAccountingDeliveryNotesRoute: typeof AuthenticatedaccountingAccountingDeliveryNotesRoute
+  AuthenticatedaccountingAccountingFiscalYearsRoute: typeof AuthenticatedaccountingAccountingFiscalYearsRoute
   AuthenticatedaccountingAccountingGeneralLedgerRoute: typeof AuthenticatedaccountingAccountingGeneralLedgerRoute
   AuthenticatedaccountingAccountingInvoicesRoute: typeof AuthenticatedaccountingAccountingInvoicesRoute
   AuthenticatedaccountingAccountingJournalRoute: typeof AuthenticatedaccountingAccountingJournalRoute
   AuthenticatedaccountingAccountingPaymentsRoute: typeof AuthenticatedaccountingAccountingPaymentsRoute
   AuthenticatedaccountingAccountingProfitLossRoute: typeof AuthenticatedaccountingAccountingProfitLossRoute
   AuthenticatedaccountingAccountingPurchaseOrdersRoute: typeof AuthenticatedaccountingAccountingPurchaseOrdersRoute
+  AuthenticatedaccountingAccountingPurchaseReceiptsRoute: typeof AuthenticatedaccountingAccountingPurchaseReceiptsRoute
   AuthenticatedaccountingAccountingQuotesRoute: typeof AuthenticatedaccountingAccountingQuotesRoute
   AuthenticatedaccountingAccountingReportsRoute: typeof AuthenticatedaccountingAccountingReportsRoute
   AuthenticatedaccountingAccountingReportsAnalysisRoute: typeof AuthenticatedaccountingAccountingReportsAnalysisRoute
   AuthenticatedaccountingAccountingSalesOrdersRoute: typeof AuthenticatedaccountingAccountingSalesOrdersRoute
+  AuthenticatedaccountingAccountingTaxesRoute: typeof AuthenticatedaccountingAccountingTaxesRoute
   AuthenticatedaccountingAccountingTrialBalanceRoute: typeof AuthenticatedaccountingAccountingTrialBalanceRoute
   AuthenticatedaccountingAccountingIndexRoute: typeof AuthenticatedaccountingAccountingIndexRoute
 }
 
 const AuthenticatedaccountingAccountingRouteChildren: AuthenticatedaccountingAccountingRouteChildren =
   {
+    AuthenticatedaccountingAccountingAccountMappingsRoute:
+      AuthenticatedaccountingAccountingAccountMappingsRoute,
     AuthenticatedaccountingAccountingAccountsRoute:
       AuthenticatedaccountingAccountingAccountsRoute,
     AuthenticatedaccountingAccountingAgedPayablesRoute:
@@ -3203,8 +3930,14 @@ const AuthenticatedaccountingAccountingRouteChildren: AuthenticatedaccountingAcc
       AuthenticatedaccountingAccountingBankAccountsRoute,
     AuthenticatedaccountingAccountingCashFlowRoute:
       AuthenticatedaccountingAccountingCashFlowRoute,
+    AuthenticatedaccountingAccountingCostCentersRoute:
+      AuthenticatedaccountingAccountingCostCentersRoute,
     AuthenticatedaccountingAccountingCustomersRoute:
       AuthenticatedaccountingAccountingCustomersRoute,
+    AuthenticatedaccountingAccountingDeliveryNotesRoute:
+      AuthenticatedaccountingAccountingDeliveryNotesRoute,
+    AuthenticatedaccountingAccountingFiscalYearsRoute:
+      AuthenticatedaccountingAccountingFiscalYearsRoute,
     AuthenticatedaccountingAccountingGeneralLedgerRoute:
       AuthenticatedaccountingAccountingGeneralLedgerRoute,
     AuthenticatedaccountingAccountingInvoicesRoute:
@@ -3217,6 +3950,8 @@ const AuthenticatedaccountingAccountingRouteChildren: AuthenticatedaccountingAcc
       AuthenticatedaccountingAccountingProfitLossRoute,
     AuthenticatedaccountingAccountingPurchaseOrdersRoute:
       AuthenticatedaccountingAccountingPurchaseOrdersRoute,
+    AuthenticatedaccountingAccountingPurchaseReceiptsRoute:
+      AuthenticatedaccountingAccountingPurchaseReceiptsRoute,
     AuthenticatedaccountingAccountingQuotesRoute:
       AuthenticatedaccountingAccountingQuotesRoute,
     AuthenticatedaccountingAccountingReportsRoute:
@@ -3225,6 +3960,8 @@ const AuthenticatedaccountingAccountingRouteChildren: AuthenticatedaccountingAcc
       AuthenticatedaccountingAccountingReportsAnalysisRoute,
     AuthenticatedaccountingAccountingSalesOrdersRoute:
       AuthenticatedaccountingAccountingSalesOrdersRoute,
+    AuthenticatedaccountingAccountingTaxesRoute:
+      AuthenticatedaccountingAccountingTaxesRoute,
     AuthenticatedaccountingAccountingTrialBalanceRoute:
       AuthenticatedaccountingAccountingTrialBalanceRoute,
     AuthenticatedaccountingAccountingIndexRoute:
@@ -3252,6 +3989,7 @@ const AuthenticatedinventoryInventoryRouteWithChildren =
   )
 
 interface AuthenticatedinventoryStockRouteChildren {
+  AuthenticatedinventoryStockAgingRoute: typeof AuthenticatedinventoryStockAgingRoute
   AuthenticatedinventoryStockApprovalsRoute: typeof AuthenticatedinventoryStockApprovalsRoute
   AuthenticatedinventoryStockBatchesRoute: typeof AuthenticatedinventoryStockBatchesRoute
   AuthenticatedinventoryStockDashboardRoute: typeof AuthenticatedinventoryStockDashboardRoute
@@ -3260,7 +3998,6 @@ interface AuthenticatedinventoryStockRouteChildren {
   AuthenticatedinventoryStockExpiryAlertsRoute: typeof AuthenticatedinventoryStockExpiryAlertsRoute
   AuthenticatedinventoryStockGroupsRoute: typeof AuthenticatedinventoryStockGroupsRoute
   AuthenticatedinventoryStockInventoryRoute: typeof AuthenticatedinventoryStockInventoryRoute
-  AuthenticatedinventoryStockItemsRoute: typeof AuthenticatedinventoryStockItemsRoute
   AuthenticatedinventoryStockQuickStockRoute: typeof AuthenticatedinventoryStockQuickStockRoute
   AuthenticatedinventoryStockReceptionRoute: typeof AuthenticatedinventoryStockReceptionRoute
   AuthenticatedinventoryStockReorderSuggestionsRoute: typeof AuthenticatedinventoryStockReorderSuggestionsRoute
@@ -3270,10 +4007,14 @@ interface AuthenticatedinventoryStockRouteChildren {
   AuthenticatedinventoryStockSuppliersRoute: typeof AuthenticatedinventoryStockSuppliersRoute
   AuthenticatedinventoryStockWarehousesRoute: typeof AuthenticatedinventoryStockWarehousesRoute
   AuthenticatedinventoryStockIndexRoute: typeof AuthenticatedinventoryStockIndexRoute
+  AuthenticatedinventoryStockItemsItemIdRoute: typeof AuthenticatedinventoryStockItemsItemIdRoute
+  AuthenticatedinventoryStockItemsIndexRoute: typeof AuthenticatedinventoryStockItemsIndexRoute
 }
 
 const AuthenticatedinventoryStockRouteChildren: AuthenticatedinventoryStockRouteChildren =
   {
+    AuthenticatedinventoryStockAgingRoute:
+      AuthenticatedinventoryStockAgingRoute,
     AuthenticatedinventoryStockApprovalsRoute:
       AuthenticatedinventoryStockApprovalsRoute,
     AuthenticatedinventoryStockBatchesRoute:
@@ -3290,8 +4031,6 @@ const AuthenticatedinventoryStockRouteChildren: AuthenticatedinventoryStockRoute
       AuthenticatedinventoryStockGroupsRoute,
     AuthenticatedinventoryStockInventoryRoute:
       AuthenticatedinventoryStockInventoryRoute,
-    AuthenticatedinventoryStockItemsRoute:
-      AuthenticatedinventoryStockItemsRoute,
     AuthenticatedinventoryStockQuickStockRoute:
       AuthenticatedinventoryStockQuickStockRoute,
     AuthenticatedinventoryStockReceptionRoute:
@@ -3310,6 +4049,10 @@ const AuthenticatedinventoryStockRouteChildren: AuthenticatedinventoryStockRoute
       AuthenticatedinventoryStockWarehousesRoute,
     AuthenticatedinventoryStockIndexRoute:
       AuthenticatedinventoryStockIndexRoute,
+    AuthenticatedinventoryStockItemsItemIdRoute:
+      AuthenticatedinventoryStockItemsItemIdRoute,
+    AuthenticatedinventoryStockItemsIndexRoute:
+      AuthenticatedinventoryStockItemsIndexRoute,
   }
 
 const AuthenticatedinventoryStockRouteWithChildren =
@@ -3475,21 +4218,22 @@ const AuthenticatedproductionParcelsRouteWithChildren =
 
 interface AuthenticatedsettingsSettingsRouteChildren {
   AuthenticatedsettingsSettingsAccountRoute: typeof AuthenticatedsettingsSettingsAccountRoute
-  AuthenticatedsettingsSettingsAccountMappingsRoute: typeof AuthenticatedsettingsSettingsAccountMappingsRoute
   AuthenticatedsettingsSettingsAiRoute: typeof AuthenticatedsettingsSettingsAiRoute
   AuthenticatedsettingsSettingsBillingRoute: typeof AuthenticatedsettingsSettingsBillingRoute
   AuthenticatedsettingsSettingsBiologicalAssetsRoute: typeof AuthenticatedsettingsSettingsBiologicalAssetsRoute
-  AuthenticatedsettingsSettingsCostCentersRoute: typeof AuthenticatedsettingsSettingsCostCentersRoute
   AuthenticatedsettingsSettingsDangerZoneRoute: typeof AuthenticatedsettingsSettingsDangerZoneRoute
   AuthenticatedsettingsSettingsDashboardRoute: typeof AuthenticatedsettingsSettingsDashboardRoute
   AuthenticatedsettingsSettingsDocumentsRoute: typeof AuthenticatedsettingsSettingsDocumentsRoute
   AuthenticatedsettingsSettingsFilesRoute: typeof AuthenticatedsettingsSettingsFilesRoute
-  AuthenticatedsettingsSettingsFiscalYearsRoute: typeof AuthenticatedsettingsSettingsFiscalYearsRoute
+  AuthenticatedsettingsSettingsHrComplianceRoute: typeof AuthenticatedsettingsSettingsHrComplianceRoute
   AuthenticatedsettingsSettingsLegalRoute: typeof AuthenticatedsettingsSettingsLegalRoute
   AuthenticatedsettingsSettingsModulesRoute: typeof AuthenticatedsettingsSettingsModulesRoute
+  AuthenticatedsettingsSettingsOfflineRoute: typeof AuthenticatedsettingsSettingsOfflineRoute
   AuthenticatedsettingsSettingsOrganizationRoute: typeof AuthenticatedsettingsSettingsOrganizationRoute
   AuthenticatedsettingsSettingsPreferencesRoute: typeof AuthenticatedsettingsSettingsPreferencesRoute
+  AuthenticatedsettingsSettingsPrintRoute: typeof AuthenticatedsettingsSettingsPrintRoute
   AuthenticatedsettingsSettingsProfileRoute: typeof AuthenticatedsettingsSettingsProfileRoute
+  AuthenticatedsettingsSettingsStockAccountingRoute: typeof AuthenticatedsettingsSettingsStockAccountingRoute
   AuthenticatedsettingsSettingsSubscriptionRoute: typeof AuthenticatedsettingsSettingsSubscriptionRoute
   AuthenticatedsettingsSettingsUsersRoute: typeof AuthenticatedsettingsSettingsUsersRoute
   AuthenticatedsettingsSettingsWorkUnitsRoute: typeof AuthenticatedsettingsSettingsWorkUnitsRoute
@@ -3500,15 +4244,11 @@ const AuthenticatedsettingsSettingsRouteChildren: AuthenticatedsettingsSettingsR
   {
     AuthenticatedsettingsSettingsAccountRoute:
       AuthenticatedsettingsSettingsAccountRoute,
-    AuthenticatedsettingsSettingsAccountMappingsRoute:
-      AuthenticatedsettingsSettingsAccountMappingsRoute,
     AuthenticatedsettingsSettingsAiRoute: AuthenticatedsettingsSettingsAiRoute,
     AuthenticatedsettingsSettingsBillingRoute:
       AuthenticatedsettingsSettingsBillingRoute,
     AuthenticatedsettingsSettingsBiologicalAssetsRoute:
       AuthenticatedsettingsSettingsBiologicalAssetsRoute,
-    AuthenticatedsettingsSettingsCostCentersRoute:
-      AuthenticatedsettingsSettingsCostCentersRoute,
     AuthenticatedsettingsSettingsDangerZoneRoute:
       AuthenticatedsettingsSettingsDangerZoneRoute,
     AuthenticatedsettingsSettingsDashboardRoute:
@@ -3517,18 +4257,24 @@ const AuthenticatedsettingsSettingsRouteChildren: AuthenticatedsettingsSettingsR
       AuthenticatedsettingsSettingsDocumentsRoute,
     AuthenticatedsettingsSettingsFilesRoute:
       AuthenticatedsettingsSettingsFilesRoute,
-    AuthenticatedsettingsSettingsFiscalYearsRoute:
-      AuthenticatedsettingsSettingsFiscalYearsRoute,
+    AuthenticatedsettingsSettingsHrComplianceRoute:
+      AuthenticatedsettingsSettingsHrComplianceRoute,
     AuthenticatedsettingsSettingsLegalRoute:
       AuthenticatedsettingsSettingsLegalRoute,
     AuthenticatedsettingsSettingsModulesRoute:
       AuthenticatedsettingsSettingsModulesRoute,
+    AuthenticatedsettingsSettingsOfflineRoute:
+      AuthenticatedsettingsSettingsOfflineRoute,
     AuthenticatedsettingsSettingsOrganizationRoute:
       AuthenticatedsettingsSettingsOrganizationRoute,
     AuthenticatedsettingsSettingsPreferencesRoute:
       AuthenticatedsettingsSettingsPreferencesRoute,
+    AuthenticatedsettingsSettingsPrintRoute:
+      AuthenticatedsettingsSettingsPrintRoute,
     AuthenticatedsettingsSettingsProfileRoute:
       AuthenticatedsettingsSettingsProfileRoute,
+    AuthenticatedsettingsSettingsStockAccountingRoute:
+      AuthenticatedsettingsSettingsStockAccountingRoute,
     AuthenticatedsettingsSettingsSubscriptionRoute:
       AuthenticatedsettingsSettingsSubscriptionRoute,
     AuthenticatedsettingsSettingsUsersRoute:
@@ -3583,8 +4329,24 @@ const AuthenticatedworkforceWorkersRouteWithChildren =
     AuthenticatedworkforceWorkersRouteChildren,
   )
 
+interface AuthenticatedworkforceWorkforceSeparationsRouteChildren {
+  AuthenticatedworkforceWorkforceSeparationsSeparationIdRoute: typeof AuthenticatedworkforceWorkforceSeparationsSeparationIdRoute
+}
+
+const AuthenticatedworkforceWorkforceSeparationsRouteChildren: AuthenticatedworkforceWorkforceSeparationsRouteChildren =
+  {
+    AuthenticatedworkforceWorkforceSeparationsSeparationIdRoute:
+      AuthenticatedworkforceWorkforceSeparationsSeparationIdRoute,
+  }
+
+const AuthenticatedworkforceWorkforceSeparationsRouteWithChildren =
+  AuthenticatedworkforceWorkforceSeparationsRoute._addFileChildren(
+    AuthenticatedworkforceWorkforceSeparationsRouteChildren,
+  )
+
 interface AuthenticatedRouteChildren {
   AuthenticatedReferentielsRoute: typeof AuthenticatedReferentielsRoute
+  AuthenticatedReportsRoute: typeof AuthenticatedReportsRoute
   AuthenticatedaccountingAccountingRoute: typeof AuthenticatedaccountingAccountingRouteWithChildren
   AuthenticatedcoreAnalyticsRoute: typeof AuthenticatedcoreAnalyticsRoute
   AuthenticatedcoreChatRoute: typeof AuthenticatedcoreChatRoute
@@ -3593,7 +4355,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedinventoryInventoryRoute: typeof AuthenticatedinventoryInventoryRouteWithChildren
   AuthenticatedinventoryReceptionBatchesRoute: typeof AuthenticatedinventoryReceptionBatchesRoute
   AuthenticatedinventoryStockRoute: typeof AuthenticatedinventoryStockRouteWithChildren
-  AuthenticatedmiscModuleIdRoute: typeof AuthenticatedmiscModuleIdRoute
+  AuthenticatedmiscEquipmentRoute: typeof AuthenticatedmiscEquipmentRoute
   AuthenticatedmiscInfrastructureRoute: typeof AuthenticatedmiscInfrastructureRoute
   AuthenticatedmiscLabServicesRoute: typeof AuthenticatedmiscLabServicesRoute
   AuthenticatedmiscMarketplaceRoute: typeof AuthenticatedmiscMarketplaceRouteWithChildren
@@ -3602,7 +4364,6 @@ interface AuthenticatedRouteChildren {
   AuthenticatedproductionBiologicalAssetsRoute: typeof AuthenticatedproductionBiologicalAssetsRoute
   AuthenticatedproductionCampaignsRoute: typeof AuthenticatedproductionCampaignsRoute
   AuthenticatedproductionCropCyclesRoute: typeof AuthenticatedproductionCropCyclesRouteWithChildren
-  AuthenticatedproductionCropsRoute: typeof AuthenticatedproductionCropsRoute
   AuthenticatedproductionFarmHierarchyRoute: typeof AuthenticatedproductionFarmHierarchyRoute
   AuthenticatedproductionHarvestsRoute: typeof AuthenticatedproductionHarvestsRoute
   AuthenticatedproductionOrchardsRoute: typeof AuthenticatedproductionOrchardsRoute
@@ -3610,6 +4371,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedproductionProductApplicationsRoute: typeof AuthenticatedproductionProductApplicationsRoute
   AuthenticatedproductionPruningRoute: typeof AuthenticatedproductionPruningRoute
   AuthenticatedproductionQualityControlRoute: typeof AuthenticatedproductionQualityControlRoute
+  AuthenticatedproductionSatelliteAnalysisRoute: typeof AuthenticatedproductionSatelliteAnalysisRoute
   AuthenticatedproductionTreesRoute: typeof AuthenticatedproductionTreesRoute
   AuthenticatedsettingsSettingsRoute: typeof AuthenticatedsettingsSettingsRouteWithChildren
   AuthenticatedworkforceTasksRoute: typeof AuthenticatedworkforceTasksRouteWithChildren
@@ -3623,19 +4385,45 @@ interface AuthenticatedRouteChildren {
   AuthenticatedproductionProductionQualityControlRoute: typeof AuthenticatedproductionProductionQualityControlRoute
   AuthenticatedproductionProductionSatelliteAnalysisRoute: typeof AuthenticatedproductionProductionSatelliteAnalysisRoute
   AuthenticatedproductionProductionSoilAnalysisRoute: typeof AuthenticatedproductionProductionSoilAnalysisRoute
+  AuthenticatedworkforceWorkforceAppraisalsRoute: typeof AuthenticatedworkforceWorkforceAppraisalsRoute
+  AuthenticatedworkforceWorkforceAttendanceRoute: typeof AuthenticatedworkforceWorkforceAttendanceRoute
   AuthenticatedworkforceWorkforceDayLaborersRoute: typeof AuthenticatedworkforceWorkforceDayLaborersRoute
   AuthenticatedworkforceWorkforceEmployeesRoute: typeof AuthenticatedworkforceWorkforceEmployeesRoute
+  AuthenticatedworkforceWorkforceExpenseClaimsRoute: typeof AuthenticatedworkforceWorkforceExpenseClaimsRoute
+  AuthenticatedworkforceWorkforceGrievancesRoute: typeof AuthenticatedworkforceWorkforceGrievancesRoute
+  AuthenticatedworkforceWorkforceHolidaysRoute: typeof AuthenticatedworkforceWorkforceHolidaysRoute
+  AuthenticatedworkforceWorkforceHrAnalyticsRoute: typeof AuthenticatedworkforceWorkforceHrAnalyticsRoute
+  AuthenticatedworkforceWorkforceHrCalendarRoute: typeof AuthenticatedworkforceWorkforceHrCalendarRoute
+  AuthenticatedworkforceWorkforceLeaveAllocationsRoute: typeof AuthenticatedworkforceWorkforceLeaveAllocationsRoute
+  AuthenticatedworkforceWorkforceLeaveApplicationsRoute: typeof AuthenticatedworkforceWorkforceLeaveApplicationsRoute
+  AuthenticatedworkforceWorkforceLeaveTypesRoute: typeof AuthenticatedworkforceWorkforceLeaveTypesRoute
+  AuthenticatedworkforceWorkforceMyHrRoute: typeof AuthenticatedworkforceWorkforceMyHrRoute
+  AuthenticatedworkforceWorkforceOnboardingRoute: typeof AuthenticatedworkforceWorkforceOnboardingRoute
   AuthenticatedworkforceWorkforcePaymentsRoute: typeof AuthenticatedworkforceWorkforcePaymentsRoute
+  AuthenticatedworkforceWorkforcePayrollRunsRoute: typeof AuthenticatedworkforceWorkforcePayrollRunsRoute
+  AuthenticatedworkforceWorkforceQualificationsRoute: typeof AuthenticatedworkforceWorkforceQualificationsRoute
+  AuthenticatedworkforceWorkforceRecruitmentRoute: typeof AuthenticatedworkforceWorkforceRecruitmentRoute
+  AuthenticatedworkforceWorkforceRosterRoute: typeof AuthenticatedworkforceWorkforceRosterRoute
+  AuthenticatedworkforceWorkforceSafetyIncidentsRoute: typeof AuthenticatedworkforceWorkforceSafetyIncidentsRoute
+  AuthenticatedworkforceWorkforceSalarySlipsRoute: typeof AuthenticatedworkforceWorkforceSalarySlipsRoute
+  AuthenticatedworkforceWorkforceSalaryStructuresRoute: typeof AuthenticatedworkforceWorkforceSalaryStructuresRoute
+  AuthenticatedworkforceWorkforceSeasonalCampaignsRoute: typeof AuthenticatedworkforceWorkforceSeasonalCampaignsRoute
+  AuthenticatedworkforceWorkforceSeparationsRoute: typeof AuthenticatedworkforceWorkforceSeparationsRouteWithChildren
+  AuthenticatedworkforceWorkforceShiftsRoute: typeof AuthenticatedworkforceWorkforceShiftsRoute
+  AuthenticatedworkforceWorkforceTrainingRoute: typeof AuthenticatedworkforceWorkforceTrainingRoute
+  AuthenticatedworkforceWorkforceWorkerTransportRoute: typeof AuthenticatedworkforceWorkforceWorkerTransportRoute
   AuthenticatedComplianceCertificationsCertIdRoute: typeof AuthenticatedComplianceCertificationsCertIdRoute
   AuthenticatedComplianceCertificationsIndexRoute: typeof AuthenticatedComplianceCertificationsIndexRoute
   AuthenticatedComplianceCorrectiveActionsIndexRoute: typeof AuthenticatedComplianceCorrectiveActionsIndexRoute
   AuthenticatedworkforceWorkforceTasksCalendarRoute: typeof AuthenticatedworkforceWorkforceTasksCalendarRoute
   AuthenticatedworkforceWorkforceWorkersPieceWorkRoute: typeof AuthenticatedworkforceWorkforceWorkersPieceWorkRoute
   AuthenticatedworkforceWorkforceTasksIndexRoute: typeof AuthenticatedworkforceWorkforceTasksIndexRoute
+  AuthenticatedproductionFarmsFarmIdSatelliteHeatmapRoute: typeof AuthenticatedproductionFarmsFarmIdSatelliteHeatmapRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedReferentielsRoute: AuthenticatedReferentielsRoute,
+  AuthenticatedReportsRoute: AuthenticatedReportsRoute,
   AuthenticatedaccountingAccountingRoute:
     AuthenticatedaccountingAccountingRouteWithChildren,
   AuthenticatedcoreAnalyticsRoute: AuthenticatedcoreAnalyticsRoute,
@@ -3648,7 +4436,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
     AuthenticatedinventoryReceptionBatchesRoute,
   AuthenticatedinventoryStockRoute:
     AuthenticatedinventoryStockRouteWithChildren,
-  AuthenticatedmiscModuleIdRoute: AuthenticatedmiscModuleIdRoute,
+  AuthenticatedmiscEquipmentRoute: AuthenticatedmiscEquipmentRoute,
   AuthenticatedmiscInfrastructureRoute: AuthenticatedmiscInfrastructureRoute,
   AuthenticatedmiscLabServicesRoute: AuthenticatedmiscLabServicesRoute,
   AuthenticatedmiscMarketplaceRoute:
@@ -3660,7 +4448,6 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedproductionCampaignsRoute: AuthenticatedproductionCampaignsRoute,
   AuthenticatedproductionCropCyclesRoute:
     AuthenticatedproductionCropCyclesRouteWithChildren,
-  AuthenticatedproductionCropsRoute: AuthenticatedproductionCropsRoute,
   AuthenticatedproductionFarmHierarchyRoute:
     AuthenticatedproductionFarmHierarchyRoute,
   AuthenticatedproductionHarvestsRoute: AuthenticatedproductionHarvestsRoute,
@@ -3672,6 +4459,8 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedproductionPruningRoute: AuthenticatedproductionPruningRoute,
   AuthenticatedproductionQualityControlRoute:
     AuthenticatedproductionQualityControlRoute,
+  AuthenticatedproductionSatelliteAnalysisRoute:
+    AuthenticatedproductionSatelliteAnalysisRoute,
   AuthenticatedproductionTreesRoute: AuthenticatedproductionTreesRoute,
   AuthenticatedsettingsSettingsRoute:
     AuthenticatedsettingsSettingsRouteWithChildren,
@@ -3694,12 +4483,60 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
     AuthenticatedproductionProductionSatelliteAnalysisRoute,
   AuthenticatedproductionProductionSoilAnalysisRoute:
     AuthenticatedproductionProductionSoilAnalysisRoute,
+  AuthenticatedworkforceWorkforceAppraisalsRoute:
+    AuthenticatedworkforceWorkforceAppraisalsRoute,
+  AuthenticatedworkforceWorkforceAttendanceRoute:
+    AuthenticatedworkforceWorkforceAttendanceRoute,
   AuthenticatedworkforceWorkforceDayLaborersRoute:
     AuthenticatedworkforceWorkforceDayLaborersRoute,
   AuthenticatedworkforceWorkforceEmployeesRoute:
     AuthenticatedworkforceWorkforceEmployeesRoute,
+  AuthenticatedworkforceWorkforceExpenseClaimsRoute:
+    AuthenticatedworkforceWorkforceExpenseClaimsRoute,
+  AuthenticatedworkforceWorkforceGrievancesRoute:
+    AuthenticatedworkforceWorkforceGrievancesRoute,
+  AuthenticatedworkforceWorkforceHolidaysRoute:
+    AuthenticatedworkforceWorkforceHolidaysRoute,
+  AuthenticatedworkforceWorkforceHrAnalyticsRoute:
+    AuthenticatedworkforceWorkforceHrAnalyticsRoute,
+  AuthenticatedworkforceWorkforceHrCalendarRoute:
+    AuthenticatedworkforceWorkforceHrCalendarRoute,
+  AuthenticatedworkforceWorkforceLeaveAllocationsRoute:
+    AuthenticatedworkforceWorkforceLeaveAllocationsRoute,
+  AuthenticatedworkforceWorkforceLeaveApplicationsRoute:
+    AuthenticatedworkforceWorkforceLeaveApplicationsRoute,
+  AuthenticatedworkforceWorkforceLeaveTypesRoute:
+    AuthenticatedworkforceWorkforceLeaveTypesRoute,
+  AuthenticatedworkforceWorkforceMyHrRoute:
+    AuthenticatedworkforceWorkforceMyHrRoute,
+  AuthenticatedworkforceWorkforceOnboardingRoute:
+    AuthenticatedworkforceWorkforceOnboardingRoute,
   AuthenticatedworkforceWorkforcePaymentsRoute:
     AuthenticatedworkforceWorkforcePaymentsRoute,
+  AuthenticatedworkforceWorkforcePayrollRunsRoute:
+    AuthenticatedworkforceWorkforcePayrollRunsRoute,
+  AuthenticatedworkforceWorkforceQualificationsRoute:
+    AuthenticatedworkforceWorkforceQualificationsRoute,
+  AuthenticatedworkforceWorkforceRecruitmentRoute:
+    AuthenticatedworkforceWorkforceRecruitmentRoute,
+  AuthenticatedworkforceWorkforceRosterRoute:
+    AuthenticatedworkforceWorkforceRosterRoute,
+  AuthenticatedworkforceWorkforceSafetyIncidentsRoute:
+    AuthenticatedworkforceWorkforceSafetyIncidentsRoute,
+  AuthenticatedworkforceWorkforceSalarySlipsRoute:
+    AuthenticatedworkforceWorkforceSalarySlipsRoute,
+  AuthenticatedworkforceWorkforceSalaryStructuresRoute:
+    AuthenticatedworkforceWorkforceSalaryStructuresRoute,
+  AuthenticatedworkforceWorkforceSeasonalCampaignsRoute:
+    AuthenticatedworkforceWorkforceSeasonalCampaignsRoute,
+  AuthenticatedworkforceWorkforceSeparationsRoute:
+    AuthenticatedworkforceWorkforceSeparationsRouteWithChildren,
+  AuthenticatedworkforceWorkforceShiftsRoute:
+    AuthenticatedworkforceWorkforceShiftsRoute,
+  AuthenticatedworkforceWorkforceTrainingRoute:
+    AuthenticatedworkforceWorkforceTrainingRoute,
+  AuthenticatedworkforceWorkforceWorkerTransportRoute:
+    AuthenticatedworkforceWorkforceWorkerTransportRoute,
   AuthenticatedComplianceCertificationsCertIdRoute:
     AuthenticatedComplianceCertificationsCertIdRoute,
   AuthenticatedComplianceCertificationsIndexRoute:
@@ -3712,6 +4549,8 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
     AuthenticatedworkforceWorkforceWorkersPieceWorkRoute,
   AuthenticatedworkforceWorkforceTasksIndexRoute:
     AuthenticatedworkforceWorkforceTasksIndexRoute,
+  AuthenticatedproductionFarmsFarmIdSatelliteHeatmapRoute:
+    AuthenticatedproductionFarmsFarmIdSatelliteHeatmapRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(

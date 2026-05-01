@@ -1,4 +1,5 @@
 import {  useState, useEffect  } from "react";
+import { createPortal } from "react-dom";
 import { Users, Plus, X, Trash2, Mail, Shield, UserCheck, UserX, Crown, Settings, Eye, Key, Copy, Check, AlertCircle, Clock, RefreshCw, Zap, Loader2 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useAuthStore } from '../stores/authStore';
@@ -59,7 +60,7 @@ const UsersSettings = () => {
 
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmAction, setConfirmAction] = useState<{title:string;description?:string;variant?:"destructive"|"default";onConfirm:()=>void}>({title:"",onConfirm:()=>{}});
-  const _showConfirm = (title: string, onConfirm: () => void, opts?: {description?: string; variant?: "destructive" | "default"}) => {
+  const showConfirm = (title: string, onConfirm: () => void, opts?: {description?: string; variant?: "destructive" | "default"}) => {
     setConfirmAction({title, onConfirm, ...opts});
     setConfirmOpen(true);
   };
@@ -218,20 +219,35 @@ const UsersSettings = () => {
   };
 
   // Remove user from organization
-  const handleRemoveUser = async (userId: string) => {
-    if (!currentOrganization?.id || userId === currentUser?.id) return;
+  const handleRemoveUser = (user: OrganizationUser) => {
+    if (!currentOrganization?.id || user.user_id === currentUser?.id) return;
 
-    if (!confirm(t('users.remove.confirm'))) return;
+    const fullName =
+      `${user.profile?.first_name || ''} ${user.profile?.last_name || ''}`.trim() ||
+      user.profile?.email ||
+      t('users.defaultName');
 
-    try {
-      await organizationUsersApi.removeUser(currentOrganization.id, userId);
-      await fetchUsers();
-      toast.success(t('users.remove.success'));
-    } catch (err) {
-      console.error('Error removing user:', err);
-      setError(t('users.remove.failed'));
-      toast.error(t('users.remove.failed'));
-    }
+    showConfirm(
+      t('users.remove.confirm', `Remove ${fullName}?`),
+      async () => {
+        try {
+          await organizationUsersApi.removeUser(currentOrganization.id, user.user_id);
+          await fetchUsers();
+          toast.success(t('users.remove.success'));
+        } catch (err) {
+          console.error('Error removing user:', err);
+          setError(t('users.remove.failed'));
+          toast.error(t('users.remove.failed'));
+        }
+      },
+      {
+        variant: 'destructive',
+        description: t(
+          'users.remove.confirmDescription',
+          'They will lose access to this organization immediately. This cannot be undone.',
+        ),
+      },
+    );
   };
 
   // View temporary password for a worker user
@@ -410,8 +426,13 @@ const UsersSettings = () => {
           <div className="md:hidden space-y-4">
             {users.map((user) => {
               const fullName = `${user.profile?.first_name || ''} ${user.profile?.last_name || ''}`.trim() || t('users.defaultName');
-              const canModify = can('update', 'User') &&
-                (user.user_id !== currentUser?.id || userRole?.role_name === 'system_admin');
+              const isSelf = user.user_id === currentUser?.id;
+              const isSysAdmin = userRole?.role_name === 'system_admin';
+              const hasUpdatePerm = can('update', 'User');
+              const hasRemovePerm = can('remove', 'User');
+              const canEditRow = hasUpdatePerm && (!isSelf || isSysAdmin);
+              const canRemoveRow = hasRemovePerm && !isSelf;
+              const showActions = hasUpdatePerm || hasRemovePerm;
 
               return (
                 <Card key={user.id} className="rounded-3xl border-slate-100 dark:border-slate-700 overflow-hidden shadow-sm hover:shadow-md transition-all">
@@ -454,15 +475,16 @@ const UsersSettings = () => {
                       </div>
                     </div>
 
-                    {/* Actions */}
-                    {(canModify || (can('remove', 'User') && user.user_id !== currentUser?.id)) && (
-                      <div className="flex items-center gap-3 mt-6 pt-6 border-t border-slate-50 dark:border-slate-800">
-                        {canModify && (
-                          <>
+                    {/* Actions — render if user has either permission, even on own row.
+                        Self gets disabled buttons with a hint instead of an empty section. */}
+                    {showActions && (
+                      <div className="space-y-2 mt-6 pt-6 border-t border-slate-50 dark:border-slate-800">
+                        <div className="flex items-center gap-3">
+                          {hasUpdatePerm && (
                             <Select
                               value={user.role_id}
                               onValueChange={(val) => handleUpdateUserRole(user.user_id, val)}
-                              disabled={user.user_id === currentUser?.id}
+                              disabled={!canEditRow}
                             >
                               <SelectTrigger className="h-10 rounded-xl bg-slate-50 dark:bg-slate-900/50 border-slate-100 dark:border-slate-700 font-bold text-[10px] uppercase tracking-widest flex-1">
                                 <SelectValue />
@@ -475,7 +497,9 @@ const UsersSettings = () => {
                                 ))}
                               </SelectContent>
                             </Select>
-                            
+                          )}
+
+                          {hasUpdatePerm && (
                             <Button
                               variant="ghost"
                               size="icon"
@@ -484,32 +508,41 @@ const UsersSettings = () => {
                                 "h-10 w-10 rounded-xl",
                                 user.is_active ? 'text-amber-600 bg-amber-50 dark:bg-amber-900/20' : 'text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20'
                               )}
-                              disabled={user.user_id === currentUser?.id}
+                              disabled={!canEditRow}
+                              title={!canEditRow && isSelf ? t('users.actions.cannotModifySelf', 'You cannot deactivate your own account') : undefined}
                             >
                               {user.is_active ? <UserX className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}
                             </Button>
-                            
-                            {user.role?.name === 'farm_worker' && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleViewPassword(user)}
-                                className="h-10 w-10 text-blue-600 bg-blue-50 dark:bg-blue-900/20 rounded-xl"
-                              >
-                                <Key className="h-4 w-4" />
-                              </Button>
-                            )}
-                          </>
-                        )}
-                        {can('remove', 'User') && user.user_id !== currentUser?.id && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleRemoveUser(user.user_id)}
-                            className="h-10 w-10 text-rose-600 bg-rose-50 dark:bg-rose-900/20 rounded-xl"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          )}
+
+                          {canEditRow && user.role?.name === 'farm_worker' && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleViewPassword(user)}
+                              className="h-10 w-10 text-blue-600 bg-blue-50 dark:bg-blue-900/20 rounded-xl"
+                            >
+                              <Key className="h-4 w-4" />
+                            </Button>
+                          )}
+
+                          {hasRemovePerm && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleRemoveUser(user)}
+                              className="h-10 w-10 text-rose-600 bg-rose-50 dark:bg-rose-900/20 rounded-xl"
+                              disabled={!canRemoveRow}
+                              title={!canRemoveRow && isSelf ? t('users.actions.cannotRemoveSelf', 'You cannot remove your own account') : undefined}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                        {isSelf && (
+                          <p className="text-[10px] text-slate-400 italic">
+                            {t('users.actions.selfHint', 'Editing your own role and status is restricted')}
+                          </p>
                         )}
                       </div>
                     )}
@@ -544,8 +577,13 @@ const UsersSettings = () => {
               <TableBody className="bg-white dark:bg-slate-800">
                 {users.map((user) => {
                   const fullName = `${user.profile?.first_name || ''} ${user.profile?.last_name || ''}`.trim() || t('users.defaultName');
-                  const canModify = can('update', 'User') &&
-                    (user.user_id !== currentUser?.id || userRole?.role_name === 'system_admin');
+                  const isSelf = user.user_id === currentUser?.id;
+                  const isSysAdmin = userRole?.role_name === 'system_admin';
+                  const hasUpdatePerm = can('update', 'User');
+                  const hasRemovePerm = can('remove', 'User');
+                  const canEditRow = hasUpdatePerm && (!isSelf || isSysAdmin);
+                  const canRemoveRow = hasRemovePerm && !isSelf;
+                  const showActions = hasUpdatePerm || hasRemovePerm;
 
                   return (
                     <TableRow key={user.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors group">
@@ -594,15 +632,20 @@ const UsersSettings = () => {
                         </span>
                       </TableCell>
                       <TableCell className="px-8 py-5">
-                        <div className="flex items-center justify-end gap-3">
-                          {canModify && (
-                            <>
+                        {!showActions ? (
+                          <div className="text-end text-[10px] text-slate-400 italic">—</div>
+                        ) : (
+                          <div className="flex items-center justify-end gap-3">
+                            {hasUpdatePerm && (
                               <Select
                                 value={user.role_id}
                                 onValueChange={(val) => handleUpdateUserRole(user.user_id, val)}
-                                disabled={user.user_id === currentUser?.id}
+                                disabled={!canEditRow}
                               >
-                                <SelectTrigger className="h-9 w-40 rounded-xl bg-slate-50 dark:bg-slate-900 border-slate-100 dark:border-slate-700 font-bold text-[10px] uppercase tracking-widest">
+                                <SelectTrigger
+                                  className="h-9 w-40 rounded-xl bg-slate-50 dark:bg-slate-900 border-slate-100 dark:border-slate-700 font-bold text-[10px] uppercase tracking-widest"
+                                  title={!canEditRow && isSelf ? t('users.actions.cannotChangeSelfRole', 'You cannot change your own role') : undefined}
+                                >
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent className="rounded-xl border-slate-200">
@@ -613,7 +656,9 @@ const UsersSettings = () => {
                                   ))}
                                 </SelectContent>
                               </Select>
+                            )}
 
+                            {hasUpdatePerm && (
                               <Button
                                 variant="ghost"
                                 size="icon"
@@ -622,35 +667,38 @@ const UsersSettings = () => {
                                   "h-9 w-9 rounded-xl transition-all",
                                   user.is_active ? 'text-amber-600 hover:bg-amber-50' : 'text-emerald-600 hover:bg-emerald-50'
                                 )}
-                                disabled={user.user_id === currentUser?.id}
+                                disabled={!canEditRow}
+                                title={!canEditRow && isSelf ? t('users.actions.cannotModifySelf', 'You cannot deactivate your own account') : undefined}
                               >
                                 {user.is_active ? <UserX className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}
                               </Button>
+                            )}
 
-                              {user.role?.name === 'farm_worker' && (
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => handleViewPassword(user)}
-                                  className="h-9 w-9 text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
-                                >
-                                  <Key className="h-4 w-4" />
-                                </Button>
-                              )}
-                            </>
-                          )}
+                            {canEditRow && user.role?.name === 'farm_worker' && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleViewPassword(user)}
+                                className="h-9 w-9 text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
+                              >
+                                <Key className="h-4 w-4" />
+                              </Button>
+                            )}
 
-                          {can('remove', 'User') && user.user_id !== currentUser?.id && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleRemoveUser(user.user_id)}
-                              className="h-9 w-9 text-rose-600 hover:bg-rose-50 rounded-xl transition-all"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
+                            {hasRemovePerm && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleRemoveUser(user)}
+                                className="h-9 w-9 text-rose-600 hover:bg-rose-50 rounded-xl transition-all"
+                                disabled={!canRemoveRow}
+                                title={!canRemoveRow && isSelf ? t('users.actions.cannotRemoveSelf', 'You cannot remove your own account') : undefined}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        )}
                       </TableCell>
                     </TableRow>
                   );
@@ -662,7 +710,7 @@ const UsersSettings = () => {
       )}
 
       {/* Invite User Modal */}
-      {showInviteUser && (
+      {showInviteUser && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/80 backdrop-blur-md p-4 animate-in fade-in duration-300">
           <Card className="rounded-[2.5rem] border-slate-100 dark:border-slate-800 shadow-2xl max-w-lg w-full overflow-hidden">
             <CardHeader className="px-8 py-6 border-b border-slate-50 dark:border-slate-800 bg-slate-50/30">
@@ -785,10 +833,10 @@ const UsersSettings = () => {
             </CardContent>
           </Card>
         </div>
-      )}
+      , document.body)}
 
       {/* Password Management Dialog - Using same modern modal style */}
-      {passwordDialogUser && (
+      {passwordDialogUser && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/80 backdrop-blur-md p-4 animate-in fade-in duration-300">
           <Card className="rounded-[2.5rem] border-slate-100 dark:border-slate-800 shadow-2xl max-w-md w-full overflow-hidden">
             <CardHeader className="px-8 py-6 border-b border-slate-50 dark:border-slate-800 bg-slate-50/30">
@@ -902,7 +950,7 @@ const UsersSettings = () => {
             </CardContent>
           </Card>
         </div>
-      )}
+      , document.body)}
       <ConfirmDialog
         open={confirmOpen}
         onOpenChange={setConfirmOpen}

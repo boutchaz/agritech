@@ -1,7 +1,51 @@
 import { apiClient } from "../api-client";
 import type { CalibrationOutput,
-NutritionOption, } from "@/types/calibration-output";
+NutritionOption, CalibrationPercentilesResponse, CalibrationZonesResponse, IrrigationRecommendationResponse, } from "@/types/calibration-output";
 import type { CalibrationReviewView } from "@/types/calibration-review";
+
+export type { CalibrationPercentilesResponse, CalibrationZonesResponse, IrrigationRecommendationResponse };
+
+export interface AICalibration {
+  id: string;
+  parcel_id: string;
+  status: 'pending' | 'provisioning' | 'in_progress' | 'awaiting_validation' | 'validated' | 'completed' | 'failed';
+  confidence_score: number;
+  zone_classification: 'optimal' | 'normal' | 'stressed' | null;
+  error_message: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type AiScenarioCode = 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G' | 'H';
+
+export interface AiDiagnosticsIndicators {
+  reading_date: string;
+  p50_ndvi: number;
+  current_ndvi: number;
+  ndvi_delta: number;
+  ndvi_band: 'above_optimal' | 'optimal' | 'vigilance' | 'alert';
+  ndvi_trend: 'improving' | 'stable' | 'declining';
+  p50_ndre: number | null;
+  current_ndre: number | null;
+  ndre_delta: number | null;
+  ndre_status: 'high' | 'normal' | 'low';
+  ndre_trend: 'improving' | 'stable' | 'declining';
+  p50_ndmi: number | null;
+  current_ndmi: number | null;
+  ndmi_delta: number | null;
+  ndmi_trend: 'improving' | 'stable' | 'declining';
+  water_balance: number | null;
+  weather_anomaly: boolean;
+}
+
+export interface AiDiagnosticsResponse {
+  scenario: string;
+  scenario_code: AiScenarioCode;
+  confidence: number;
+  description: string;
+  indicators: AiDiagnosticsIndicators;
+  observation_only?: boolean;
+}
 
 const BASE_URL = "/api/v1/parcels";
 
@@ -38,6 +82,45 @@ export interface NutritionConfirmationResponse {
   parcel_id: string;
   option: NutritionOption;
   ai_phase: "active";
+}
+
+export interface TargetYieldEnvelope {
+  hard_min: number;
+  hard_max: number;
+  binding_upper_bound: 'calibration' | 'varietal_phase';
+}
+
+export interface TargetYieldSuggestionResponse {
+  current_target_yield_t_ha: number | null;
+  current_source: 'suggested' | 'user_override' | null;
+  current_confirmed_at: string | null;
+  suggested_t_ha: number;
+  suggestion_method: 'history_best3_x_0_95' | 'potential_central_x_coef' | 'fallback';
+  envelope: TargetYieldEnvelope;
+  history_best3_avg: number | null;
+  warnings: {
+    wide_range: boolean;
+    young_no_history: boolean;
+    low_confidence: boolean;
+  };
+  should_auto_show: boolean;
+  inputs: {
+    yield_potential_min: number;
+    yield_potential_max: number;
+    phase_age: string | null;
+    variety: string | null;
+    planting_density: number | null;
+    varietal_cap_t_ha: number | null;
+    confidence_score: number | null;
+  };
+}
+
+export interface TargetYieldConfirmationResponse {
+  target_yield_t_ha: number;
+  source: 'suggested' | 'user_override';
+  envelope: TargetYieldEnvelope;
+  drift_marked: boolean;
+  previous_target_yield_t_ha: number | null;
 }
 
 export interface CalibrationHistoryRecord {
@@ -130,6 +213,21 @@ interface ParcelPhaseResponse {
   } | null;
 }
 
+export interface CalibrationProgressResponse {
+  calibration_id: string;
+  status: string;
+  started_at: string | null;
+  progress: {
+    step: number;
+    total_steps: number;
+    step_key: string | null;
+    message: string | null;
+    percent: number;
+    updated_at: string;
+  } | null;
+  stale: boolean;
+}
+
 export const calibrationApi = {
   async startCalibration(
     parcelId: string,
@@ -219,6 +317,43 @@ export const calibrationApi = {
     return apiClient.post<NutritionConfirmationResponse>(
       `${BASE_URL}/${parcelId}/calibration/${calibrationId}/nutrition-option`,
       { option },
+      {},
+      organizationId,
+    );
+  },
+
+  async getTargetYieldSuggestion(
+    parcelId: string,
+    calibrationId: string,
+    organizationId?: string,
+  ): Promise<TargetYieldSuggestionResponse> {
+    return apiClient.get<TargetYieldSuggestionResponse>(
+      `${BASE_URL}/${parcelId}/calibration/${calibrationId}/target-yield-suggestion`,
+      {},
+      organizationId,
+    );
+  },
+
+  async confirmTargetYield(
+    parcelId: string,
+    calibrationId: string,
+    body: { target_yield_t_ha: number; source: 'suggested' | 'user_override' },
+    organizationId?: string,
+  ): Promise<TargetYieldConfirmationResponse> {
+    return apiClient.post<TargetYieldConfirmationResponse>(
+      `${BASE_URL}/${parcelId}/calibration/${calibrationId}/target-yield`,
+      body,
+      {},
+      organizationId,
+    );
+  },
+
+  async getCalibrationProgress(
+    parcelId: string,
+    organizationId?: string,
+  ): Promise<CalibrationProgressResponse | null> {
+    return apiClient.get<CalibrationProgressResponse | null>(
+      `${BASE_URL}/${parcelId}/calibration/progress`,
       {},
       organizationId,
     );
@@ -402,20 +537,64 @@ export const calibrationApi = {
     );
   },
 
+  async getCalibrationPercentiles(
+    parcelId: string,
+    organizationId?: string,
+  ): Promise<CalibrationPercentilesResponse> {
+    return apiClient.get<CalibrationPercentilesResponse>(
+      `${BASE_URL}/${parcelId}/calibration/percentiles`,
+      {},
+      organizationId,
+    );
+  },
+
+  async getCalibrationZones(
+    parcelId: string,
+    organizationId?: string,
+  ): Promise<CalibrationZonesResponse> {
+    return apiClient.get<CalibrationZonesResponse>(
+      `${BASE_URL}/${parcelId}/calibration/zones`,
+      {},
+      organizationId,
+    );
+  },
+
+  async getIrrigationRecommendation(
+    parcelId: string,
+    organizationId?: string,
+  ): Promise<IrrigationRecommendationResponse> {
+    return apiClient.get<IrrigationRecommendationResponse>(
+      `${BASE_URL}/${parcelId}/calibration/irrigation-recommendation`,
+      {},
+      organizationId,
+    );
+  },
+
+  async getAIDiagnostics(
+    parcelId: string,
+    organizationId?: string,
+  ): Promise<AiDiagnosticsResponse> {
+    return apiClient.get<AiDiagnosticsResponse>(
+      `${BASE_URL}/${parcelId}/ai/diagnostics`,
+      {},
+      organizationId,
+    );
+  },
+
   async exportCalibration(
     calibrationId: string,
     format: "json" | "csv" | "zip",
     organizationId?: string,
   ): Promise<Blob> {
+    const apiBase = import.meta.env.VITE_API_URL ?? '';
     const response = await fetch(
-      `${import.meta.env.VITE_API_URL || "/api/v1"}/calibrations/${calibrationId}/export?format=${format}`,
+      `${apiBase}/api/v1/calibrations/${calibrationId}/export?format=${format}`,
       {
-        headers: {
-          ...(organizationId
-            ? { "x-organization-id": organizationId }
-            : {}),
-          Authorization: `Bearer ${localStorage.getItem("access_token") || ""}`,
-        },
+        // Cookie-based auth — sends httpOnly session cookie
+        credentials: 'include',
+        headers: organizationId
+          ? { 'x-organization-id': organizationId }
+          : {},
       },
     );
     if (!response.ok) {

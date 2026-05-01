@@ -14,6 +14,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { analysesApi } from '@/lib/api/analyses';
+import { harvestsApi } from '@/lib/api/harvests';
 import { useStartCalibration } from '@/hooks/useCalibrationReport';
 import { useAuth } from '@/hooks/useAuth';
 import { useCalibrationDraft, useSaveCalibrationDraft } from '@/hooks/useCalibrationDraft';
@@ -413,6 +414,55 @@ export function CalibrationWizard({ parcelId, parcelData, onStarted }: Calibrati
     }
   };
 
+  const saveHarvestRecords = async (wizardValues: CalibrationWizardFormValues) => {
+    if (!currentOrganization?.id || !parcelData?.farm_id) return;
+    if (!wizardValues.harvests?.length) return;
+
+    const parcelArea = parcelData.area ?? 0;
+
+    const existingHarvests = await harvestsApi.getAll(
+      { parcel_id: parcelId },
+      currentOrganization.id,
+    );
+
+    for (const harvest of wizardValues.harvests) {
+      let dbUnit: 'kg' | 'tons';
+      let totalQuantity: number;
+
+      if (harvest.unit === 't_ha') {
+        dbUnit = 'tons';
+        totalQuantity = parcelArea > 0 ? harvest.yield_value * parcelArea : harvest.yield_value;
+      } else {
+        dbUnit = 'kg';
+        totalQuantity = harvest.yield_value;
+      }
+
+      const harvestDate = `${harvest.year}-11-15`;
+      const observation = harvest.observation?.trim() || undefined;
+
+      const existingForYear = existingHarvests.filter(
+        (h) => h.parcel_id === parcelId && h.harvest_date?.startsWith(`${harvest.year}-`),
+      );
+      for (const existing of existingForYear) {
+        await harvestsApi.delete(existing.id, currentOrganization.id);
+      }
+
+      await harvestsApi.create(
+        {
+          farm_id: parcelData.farm_id,
+          parcel_id: parcelId,
+          harvest_date: harvestDate,
+          quantity: totalQuantity,
+          unit: dbUnit,
+          quality_grade: (harvest.quality_grade as 'A' | 'B' | 'C' | 'Extra' | 'First' | 'Second' | 'Third') || undefined,
+          quality_notes: observation,
+          notes: `Calibration wizard — year ${harvest.year}`,
+        },
+        currentOrganization.id,
+      );
+    }
+  };
+
   const launchCalibration = async () => {
     const validatedValues = await form.trigger();
     if (!validatedValues) {
@@ -427,6 +477,7 @@ export function CalibrationWizard({ parcelId, parcelData, onStarted }: Calibrati
     }
 
     await createAnalysesFromWizard(wizardValues);
+    await saveHarvestRecords(wizardValues);
 
     try {
       const result = await startCalibration.mutateAsync({

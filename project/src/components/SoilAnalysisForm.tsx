@@ -1,8 +1,9 @@
-import {  useState, useEffect  } from "react";
+import {  useState, useEffect, useMemo  } from "react";
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Save, X, Loader2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import type { SoilAnalysis } from '../types';
 import { useFormErrors } from '@/hooks/useFormErrors';
 import { FormField } from './ui/FormField';
@@ -17,14 +18,14 @@ interface Parcel {
 }
 
 interface SoilAnalysisFormProps {
-  onSave: (data: SoilAnalysis) => void;
+  onSave: (data: SoilAnalysis) => void | Promise<void>;
   onCancel: () => void;
   initialData?: SoilAnalysis;
   selectedParcel?: Parcel | null;
 }
 
-const soilAnalysisSchema = z.object({
-  texture: z.string().min(1, 'Texture du sol est requise'),
+const createSoilAnalysisSchema = (t: (key: string, fallback: string) => string) => z.object({
+  texture: z.string().min(1, t('soilAnalysisForm.validation.textureRequired', 'Soil texture is required')),
   ph: z.number().min(0).max(14),
   organicMatter: z.number().min(0),
   soilType: z.string().optional(),
@@ -35,11 +36,13 @@ const soilAnalysisSchema = z.object({
   earthwormCount: z.number().min(0),
 });
 
-type SoilAnalysisFormData = z.infer<typeof soilAnalysisSchema>;
+type SoilAnalysisFormData = z.infer<ReturnType<typeof createSoilAnalysisSchema>>;
 
 const SoilAnalysisForm = ({ onSave, onCancel, initialData, selectedParcel }: SoilAnalysisFormProps) => {
   const [testType, setTestType] = useState('basic');
+  const { t } = useTranslation();
   const { handleFormError } = useFormErrors<SoilAnalysisFormData>();
+  const soilAnalysisSchema = useMemo(() => createSoilAnalysisSchema(t), [t]);
 
   const {
     register,
@@ -96,10 +99,10 @@ const SoilAnalysisForm = ({ onSave, onCancel, initialData, selectedParcel }: Soi
         },
         recommendations: [],
       };
-      onSave(soilAnalysis);
+      await onSave(soilAnalysis);
     } catch (error: unknown) {
       handleFormError(error, setError, {
-        toastMessage: 'Erreur lors de l\'enregistrement de l\'analyse du sol',
+        toastMessage: t('soilAnalysisForm.validation.saveError', 'Failed to save soil analysis'),
       });
     }
   };
@@ -107,7 +110,7 @@ const SoilAnalysisForm = ({ onSave, onCancel, initialData, selectedParcel }: Soi
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
       <div className="flex items-center justify-between mb-6">
-        <h3 className="text-lg font-semibold">Analyse du Sol</h3>
+        <h3 className="text-lg font-semibold">{t('soilAnalysisForm.titleDetailed', 'Soil Analysis')}</h3>
         <Button
           onClick={onCancel}
           className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
@@ -121,41 +124,41 @@ const SoilAnalysisForm = ({ onSave, onCancel, initialData, selectedParcel }: Soi
         {selectedParcel && (
           <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
             <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-2">
-              Parcelle sélectionnée
+              {t('soilAnalysisForm.parcelInfoTitle', 'Selected parcel')}
             </h4>
             <p className="text-sm text-blue-800 dark:text-blue-200">
               <strong>{selectedParcel.name}</strong>
               {selectedParcel.soil_type && (
-                <span> - Type de sol: {selectedParcel.soil_type}</span>
+                <span> - {t('soilAnalysisForm.parcelSoilType', 'Soil type')}: {selectedParcel.soil_type}</span>
               )}
             </p>
           </div>
         )}
 
         {/* Test Type Selection */}
-        <FormField label="Type d'analyse" htmlFor="testType">
+        <FormField label={t('soilAnalysisForm.testTypeLabel', 'Test type')} htmlFor="testType">
           <Select
             id="testType"
             value={testType}
             onChange={(e) => setTestType(e.target.value)}
           >
-            <option value="basic">Analyse de base</option>
-            <option value="complete">Analyse complète</option>
-            <option value="specialized">Analyse spécialisée arboriculture</option>
+            <option value="basic">{t('soilAnalysisForm.testTypes.basic', 'Basic analysis')}</option>
+            <option value="complete">{t('soilAnalysisForm.testTypes.complete', 'Complete analysis')}</option>
+            <option value="specialized">{t('soilAnalysisForm.testTypes.specialized', 'Specialized orchard analysis')}</option>
           </Select>
         </FormField>
 
         {/* Physical Properties */}
         <div>
-          <h4 className="font-medium mb-4">Propriétés Physiques</h4>
+          <h4 className="font-medium mb-4">{t('soilAnalysisForm.physicalProperties', 'Physical properties')}</h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <FormField
                 label={
                   <>
-                    Type de sol
+                    {t('soilAnalysisForm.soilTypeLabel', 'Soil type')}
                     {selectedParcel?.soil_type && (
-                      <span className="text-sm text-blue-600 dark:text-blue-400 ml-1">(depuis la parcelle)</span>
+                      <span className="text-sm text-blue-600 dark:text-blue-400 ml-1">({t('soilAnalysisForm.soilTypeFromParcel', 'from parcel')})</span>
                     )}
                   </>
                 }
@@ -166,7 +169,7 @@ const SoilAnalysisForm = ({ onSave, onCancel, initialData, selectedParcel }: Soi
                   type="text"
                   {...register('soilType')}
                   invalid={!!errors.soilType}
-                  placeholder="Ex: Sols calci-magnésique, carbonatés..."
+                  placeholder={t('soilAnalysisForm.soilTypePlaceholder', 'E.g. calcareous, carbonate soils...')}
                   className={selectedParcel?.soil_type ? 'bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-400' : ''}
                   readOnly={!!selectedParcel?.soil_type}
                 />
@@ -177,19 +180,19 @@ const SoilAnalysisForm = ({ onSave, onCancel, initialData, selectedParcel }: Soi
             </div>
 
             <div>
-              <FormField label="Texture du Sol" htmlFor="texture">
+              <FormField label={t('soilAnalysisForm.textureLabel', 'Soil texture')} htmlFor="texture">
                 <Select
                   id="texture"
                   {...register('texture')}
                   invalid={!!errors.texture}
                 >
-                  <option value="">Sélectionner...</option>
-                  <option value="Limoneuse">Limoneuse</option>
-                  <option value="Argileuse">Argileuse</option>
-                  <option value="Sableuse">Sableuse</option>
-                  <option value="Argilo-limoneuse">Argilo-limoneuse</option>
-                  <option value="Limono-sableuse">Limono-sableuse</option>
-                  <option value="Argilo-sableuse">Argilo-sableuse</option>
+                  <option value="">{t('soilAnalysisForm.selectPlaceholder', 'Select...')}</option>
+                  <option value="Limoneuse">{t('soilAnalysisForm.textureOptions.silty', 'Silty')}</option>
+                  <option value="Argileuse">{t('soilAnalysisForm.textureOptions.clayey', 'Clayey')}</option>
+                  <option value="Sableuse">{t('soilAnalysisForm.textureOptions.sandy', 'Sandy')}</option>
+                  <option value="Argilo-limoneuse">{t('soilAnalysisForm.textureOptions.siltyClay', 'Silty clay')}</option>
+                  <option value="Limono-sableuse">{t('soilAnalysisForm.textureOptions.sandySilty', 'Sandy silty')}</option>
+                  <option value="Argilo-sableuse">{t('soilAnalysisForm.textureOptions.sandyClay', 'Sandy clay')}</option>
                 </Select>
               </FormField>
               {errors.texture && (
@@ -198,7 +201,7 @@ const SoilAnalysisForm = ({ onSave, onCancel, initialData, selectedParcel }: Soi
             </div>
 
             <div>
-              <FormField label="pH" htmlFor="ph">
+              <FormField label={t('soilAnalysisForm.phLabel', 'pH')} htmlFor="ph">
                 <Input
                   id="ph"
                   type="number"
@@ -215,7 +218,7 @@ const SoilAnalysisForm = ({ onSave, onCancel, initialData, selectedParcel }: Soi
             </div>
 
             <div>
-              <FormField label="Humidité (%)" htmlFor="organicMatter">
+              <FormField label={t('soilAnalysisForm.moistureLabel', 'Moisture (%)')} htmlFor="organicMatter">
                 <Input
                   id="organicMatter"
                   type="number"
@@ -235,10 +238,10 @@ const SoilAnalysisForm = ({ onSave, onCancel, initialData, selectedParcel }: Soi
 
         {/* Chemical Properties */}
         <div>
-          <h4 className="font-medium mb-4">Propriétés Chimiques</h4>
+          <h4 className="font-medium mb-4">{t('soilAnalysisForm.chemicalProperties', 'Chemical properties')}</h4>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <FormField label="Phosphore assimilable (mg/kg P2O5)" htmlFor="phosphorus">
+              <FormField label={t('soilAnalysisForm.phosphorusLabel', 'Available phosphorus (mg/kg P2O5)')} htmlFor="phosphorus">
                 <Input
                   id="phosphorus"
                   type="number"
@@ -254,7 +257,7 @@ const SoilAnalysisForm = ({ onSave, onCancel, initialData, selectedParcel }: Soi
             </div>
 
             <div>
-              <FormField label="Potassium (mg/kg K2O)" htmlFor="potassium">
+              <FormField label={t('soilAnalysisForm.potassiumLabel', 'Potassium (mg/kg K2O)')} htmlFor="potassium">
                 <Input
                   id="potassium"
                   type="number"
@@ -271,7 +274,7 @@ const SoilAnalysisForm = ({ onSave, onCancel, initialData, selectedParcel }: Soi
 
             {testType !== 'basic' && (
               <div>
-                <FormField label="Azote total (g/kg N)" htmlFor="nitrogen">
+                <FormField label={t('soilAnalysisForm.nitrogenLabel', 'Total nitrogen (g/kg N)')} htmlFor="nitrogen">
                   <Input
                     id="nitrogen"
                     type="number"
@@ -291,18 +294,18 @@ const SoilAnalysisForm = ({ onSave, onCancel, initialData, selectedParcel }: Soi
 
         {/* Biological Properties */}
         <div>
-          <h4 className="font-medium mb-4">Propriétés Biologiques</h4>
+          <h4 className="font-medium mb-4">{t('soilAnalysisForm.biologicalProperties', 'Biological properties')}</h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <FormField label="Activité Microbienne" htmlFor="microbialActivity">
+              <FormField label={t('soilAnalysisForm.microbialActivityLabel', 'Microbial activity')} htmlFor="microbialActivity">
                 <Select
                   id="microbialActivity"
                   {...register('microbialActivity')}
                   invalid={!!errors.microbialActivity}
                 >
-                  <option value="low">Faible</option>
-                  <option value="medium">Moyenne</option>
-                  <option value="high">Élevée</option>
+                  <option value="low">{t('soilAnalysisForm.microbialActivityOptions.low', 'Low')}</option>
+                  <option value="medium">{t('soilAnalysisForm.microbialActivityOptions.medium', 'Medium')}</option>
+                  <option value="high">{t('soilAnalysisForm.microbialActivityOptions.high', 'High')}</option>
                 </Select>
               </FormField>
               {errors.microbialActivity && (
@@ -311,7 +314,7 @@ const SoilAnalysisForm = ({ onSave, onCancel, initialData, selectedParcel }: Soi
             </div>
 
             <div>
-              <FormField label="Nombre de Vers de Terre (par m²)" htmlFor="earthwormCount">
+              <FormField label={t('soilAnalysisForm.earthwormCountLabel', 'Earthworm count (per m²)')} htmlFor="earthwormCount">
                 <Input
                   id="earthwormCount"
                   type="number"
@@ -331,8 +334,7 @@ const SoilAnalysisForm = ({ onSave, onCancel, initialData, selectedParcel }: Soi
         {testType === 'specialized' && (
           <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
             <p className="text-sm text-green-800 dark:text-green-200">
-              Cette analyse est spécialement adaptée pour l'arboriculture. Des recommandations 
-              spécifiques pour la gestion des vergers seront générées en fonction des résultats.
+              {t('soilAnalysisForm.specializedNotice', 'This analysis is specially adapted for orchards. Specific recommendations for orchard management will be generated based on the results.')}
             </p>
           </div>
         )}
@@ -344,18 +346,18 @@ const SoilAnalysisForm = ({ onSave, onCancel, initialData, selectedParcel }: Soi
             disabled={isSubmitting}
             className="px-4 py-2 text-gray-600 hover:text-gray-800 disabled:opacity-50"
           >
-            Annuler
+            {t('soilAnalysisForm.cancel', 'Cancel')}
           </Button>
           <Button variant="green" type="submit" disabled={isSubmitting} className="px-4 py-2 rounded-md disabled:bg-green-400 flex items-center space-x-2" >
             {isSubmitting ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
-                <span>Enregistrement...</span>
+                <span>{t('soilAnalysisForm.saving', 'Saving...')}</span>
               </>
             ) : (
               <>
                 <Save className="h-4 w-4" />
-                <span>Enregistrer</span>
+                <span>{t('soilAnalysisForm.save', 'Save')}</span>
               </>
             )}
           </Button>

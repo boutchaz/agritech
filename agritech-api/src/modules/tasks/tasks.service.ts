@@ -1752,6 +1752,20 @@ export class TasksService {
 
       const commenterName = commenter?.full_name || commenter?.email || "Someone";
 
+      // Persist structured mention rows so we can query "tasks that mention me"
+      // and keep an audit trail separate from the comment body.
+      const mentionRows = Array.from(mentionedUserIds).map((mid) => ({
+        comment_id: data.id,
+        task_id: taskId,
+        mentioned_user_id: mid,
+      }));
+      if (mentionRows.length > 0) {
+        const { error: mentionInsertError } = await client.from("task_mentions").insert(mentionRows);
+        if (mentionInsertError) {
+          this.logger.warn(`Failed to persist task_mentions: ${mentionInsertError.message}`);
+        }
+      }
+
       for (const mentionedId of mentionedUserIds) {
         try {
           await this.notificationsService.createNotification({
@@ -1772,7 +1786,198 @@ export class TasksService {
       }
     }
 
+    // Also notify watchers of new activity on the task
+    await this.notifyWatchersOfActivity(taskRecord, userId, commentData.comment);
+
     return data;
+  }
+
+  /**
+   * Update the body of a comment. Only the author can edit their own comment.
+   */
+  async updateComment(
+    userId: string,
+    organizationId: string,
+    taskId: string,
+    commentId: string,
+    updates: { comment?: string },
+  ) {
+    const client = this.databaseService.getAdminClient();
+    const { data: existing, error: fetchError } = await client
+      .from('task_comments')
+      .select('id, user_id, task_id, comment, tasks!inner(organization_id)')
+      .eq('id', commentId)
+      .eq('task_id', taskId)
+      .maybeSingle();
+    if (fetchError || !existing) throw new NotFoundException('Comment not found');
+    if ((existing as any).tasks.organization_id !== organizationId) {
+      throw new NotFoundException('Comment not in this organization');
+    }
+    if (existing.user_id !== userId) {
+      throw new ForbiddenException('You can only edit your own comments');
+    }
+    if (!updates.comment || !updates.comment.trim()) {
+      throw new BadRequestException('Comment body is required');
+    }
+    const { data, error } = await client
+      .from('task_comments')
+      .update({
+        comment: updates.comment,
+        edited_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', commentId)
+      .select()
+      .single();
+    if (error) throw new BadRequestException(`Failed to update comment: ${error.message}`);
+    return data;
+  }
+
+  /**
+   * Delete a comment. Author or any org admin can delete.
+   */
+  async deleteComment(
+    userId: string,
+    organizationId: string,
+    taskId: string,
+    commentId: string,
+  ) {
+    const client = this.databaseService.getAdminClient();
+    const { data: existing, error: fetchError } = await client
+      .from('task_comments')
+      .select('id, user_id, task_id, tasks!inner(organization_id)')
+      .eq('id', commentId)
+      .eq('task_id', taskId)
+      .maybeSingle();
+    if (fetchError || !existing) throw new NotFoundException('Comment not found');
+    if ((existing as any).tasks.organization_id !== organizationId) {
+      throw new NotFoundException('Comment not in this organization');
+    }
+    if (existing.user_id !== userId) {
+      // Allow admins too (org_admin policy)
+      const { data: orgUser } = await client
+        .from('organization_users')
+        .select('roles(name)')
+        .eq('user_id', userId)
+        .eq('organization_id', organizationId)
+        .eq('is_active', true)
+        .maybeSingle();
+      const roleName = (orgUser as any)?.roles?.name;
+      if (roleName !== 'organization_admin' && roleName !== 'system_admin') {
+        throw new ForbiddenException('You can only delete your own comments');
+      }
+    }
+    const { error } = await client.from('task_comments').delete().eq('id', commentId);
+    if (error) throw new BadRequestException(`Failed to delete comment: ${error.message}`);
+    return { success: true };
+  }
+
+  /**
+   * Mark an "issue" comment as resolved. Any org member can resolve.
+   */
+  async resolveComment(
+    userId: string,
+    organizationId: string,
+    taskId: string,
+    commentId: string,
+    resolved: boolean,
+  ) {
+    const client = this.databaseService.getAdminClient();
+    const { data: existing, error: fetchError } = await client
+      .from('task_comments')
+      .select('id, tasks!inner(organization_id)')
+      .eq('id', commentId)
+      .eq('task_id', taskId)
+      .maybeSingle();
+    if (fetchError || !existing) throw new NotFoundException('Comment not found');
+    if ((existing as any).tasks.organization_id !== organizationId) {
+      throw new NotFoundException('Comment not in this organization');
+    }
+    const { data, error } = await client
+      .from('task_comments')
+      .update({
+        resolved_at: resolved ? new Date().toISOString() : null,
+        resolved_by: resolved ? userId : null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', commentId)
+      .select()
+      .single();
+    if (error) throw new BadRequestException(`Failed to update comment: ${error.message}`);
+    return data;
+  }
+
+  /**
+   * Notify watchers when a comment or status change happens on a task they follow.
+   * Quiet no-op if the watchers table is empty.
+   */
+  private async notifyWatchersOfActivity(
+    task: { id: string; title?: string; organization_id: string },
+    actorUserId: string,
+    snippet?: string,
+  ) {
+    const client = this.databaseService.getAdminClient();
+    try {
+      const { data: watchers } = await client
+        .from('task_watchers')
+        .select('user_id')
+        .eq('task_id', task.id);
+      if (!watchers || watchers.length === 0) return;
+      for (const w of watchers) {
+        if (w.user_id === actorUserId) continue;
+        try {
+          await this.notificationsService.createNotification({
+            userId: w.user_id,
+            organizationId: task.organization_id,
+            type: NotificationType.TASK_STATUS_CHANGED,
+            title: `New activity on "${task.title || 'a task'}"`,
+            message: (snippet || '').substring(0, 160),
+            data: { taskId: task.id },
+          });
+        } catch (err) {
+          this.logger.warn(`Failed to notify watcher ${w.user_id}: ${err}`);
+        }
+      }
+    } catch (err) {
+      this.logger.warn(`Failed to query task watchers: ${err}`);
+    }
+  }
+
+  /**
+   * Watchers: list, follow, unfollow.
+   */
+  async getWatchers(organizationId: string, taskId: string) {
+    const client = this.databaseService.getAdminClient();
+    const { data, error } = await client
+      .from('task_watchers')
+      .select('id, user_id, created_at, user_profile:user_profiles!task_watchers_user_id_fkey(id, first_name, last_name, email)')
+      .eq('task_id', taskId)
+      .eq('organization_id', organizationId);
+    if (error) throw new BadRequestException(`Failed to load watchers: ${error.message}`);
+    return data ?? [];
+  }
+
+  async addWatcher(userId: string, organizationId: string, taskId: string) {
+    const client = this.databaseService.getAdminClient();
+    const { data, error } = await client
+      .from('task_watchers')
+      .upsert({ task_id: taskId, user_id: userId, organization_id: organizationId }, { onConflict: 'task_id,user_id' })
+      .select()
+      .single();
+    if (error) throw new BadRequestException(`Failed to follow task: ${error.message}`);
+    return data;
+  }
+
+  async removeWatcher(userId: string, organizationId: string, taskId: string) {
+    const client = this.databaseService.getAdminClient();
+    const { error } = await client
+      .from('task_watchers')
+      .delete()
+      .eq('task_id', taskId)
+      .eq('user_id', userId)
+      .eq('organization_id', organizationId);
+    if (error) throw new BadRequestException(`Failed to unfollow task: ${error.message}`);
+    return { success: true };
   }
 
   // =====================================================
@@ -2186,6 +2391,8 @@ export class TasksService {
         end_time: new Date().toISOString(),
         break_duration: clockOutData.break_duration || 0,
         notes: clockOutData.notes || null,
+        units_completed: clockOutData.units_completed ?? null,
+        photo_url: clockOutData.photo_url ?? null,
       })
       .eq("id", timeLogId)
       .select("*, task:tasks!task_id(id, organization_id)")

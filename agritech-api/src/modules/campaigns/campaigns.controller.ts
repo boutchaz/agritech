@@ -20,7 +20,9 @@ import {
   ApiQuery,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RequireModule } from '../../common/decorators/require-module.decorator';
 import { OrganizationGuard } from '../../common/guards/organization.guard';
+import { ModuleEntitlementGuard } from '../../common/guards/module-entitlement.guard';
 import { RequireRole } from '../../common/decorators/require-role.decorator';
 import { CampaignsService } from './campaigns.service';
 import { CreateCampaignDto } from './dto/create-campaign.dto';
@@ -30,7 +32,8 @@ import { CampaignStatus } from './dto/create-campaign.dto';
 @ApiTags('Campaigns')
 @ApiBearerAuth()
 @Controller('campaigns')
-@UseGuards(JwtAuthGuard, OrganizationGuard)
+@RequireModule('production')
+@UseGuards(JwtAuthGuard, OrganizationGuard, ModuleEntitlementGuard)
 export class CampaignsController {
   constructor(private readonly campaignsService: CampaignsService) {}
 

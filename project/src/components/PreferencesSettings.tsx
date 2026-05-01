@@ -11,6 +11,7 @@ import { useAuth } from '../hooks/useAuth';
 import { usersApi } from '../lib/api/users';
 import { useQueryClient } from '@tanstack/react-query';
 import { isRTLLocale } from '@/lib/is-rtl-locale';
+import { loadLanguage } from '@/i18n/config';
 
 const PreferencesSettings = () => {
   const { i18n, t } = useTranslation();
@@ -31,9 +32,9 @@ const PreferencesSettings = () => {
   // Handle language change immediately
   const handleLanguageChange = async (newLanguage: string) => {
     setLanguage(newLanguage);
-    // Immediately change i18n language
-    await i18n.changeLanguage(newLanguage);
-    
+    // Load bundles then switch language
+    await loadLanguage(newLanguage);
+
     // Set document direction for RTL languages
     if (isRTLLocale(newLanguage)) {
       document.documentElement.dir = 'rtl';
@@ -88,7 +89,7 @@ const PreferencesSettings = () => {
 
       // Update i18n language immediately
       if (i18n.language !== language) {
-        await i18n.changeLanguage(language);
+        await loadLanguage(language);
         // Set document direction
         if (isRTLLocale(language)) {
           document.documentElement.dir = 'rtl';
@@ -171,7 +172,6 @@ const PreferencesSettings = () => {
                 <option value="fr">Français</option>
                 <option value="en">English</option>
                 <option value="ar">العربية</option>
-                <option value="es">Español</option>
               </Select>
             </FormField>
 

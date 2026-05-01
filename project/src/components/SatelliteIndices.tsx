@@ -1,4 +1,5 @@
 import {  useState, useEffect, useRef  } from "react";
+import { useTranslation } from 'react-i18next';
 import {
   Satellite,
   TrendingUp,
@@ -47,6 +48,7 @@ interface SatelliteIndicesProps {
 }
 
 const SatelliteIndices = ({ parcel }: SatelliteIndicesProps) => {
+  const { t } = useTranslation();
   const {
     calculateIndices,
     getTimeSeries,
@@ -83,6 +85,10 @@ const SatelliteIndices = ({ parcel }: SatelliteIndicesProps) => {
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [showTemperatureOverlay, setShowTemperatureOverlay] = useState(false);
   const exportMenuRef = useRef<HTMLDivElement>(null);
+  const noBoundaryMessage = t(
+    'satelliteIndices.errors.noBoundaryDetailed',
+    "This parcel does not have geographic boundaries defined. Please define the boundaries on the map first.",
+  );
 
   // TIF Image state
   const [tifImageUrl, setTifImageUrl] = useState<string | null>(
@@ -169,9 +175,7 @@ const SatelliteIndices = ({ parcel }: SatelliteIndicesProps) => {
 
   const handleCalculateCurrentIndices = async () => {
     if (!parcel.boundary || parcel.boundary.length === 0) {
-      toast.error(
-        "Cette parcelle n'a pas de limites géographiques définies. Veuillez d'abord définir les limites sur la carte.",
-      );
+      toast.error(noBoundaryMessage);
       return;
     }
 
@@ -191,9 +195,7 @@ const SatelliteIndices = ({ parcel }: SatelliteIndicesProps) => {
 
   const handleGetTimeSeries = async () => {
     if (!parcel.boundary || parcel.boundary.length === 0) {
-      toast.error(
-        "Cette parcelle n'a pas de limites géographiques définies. Veuillez d'abord définir les limites sur la carte.",
-      );
+      toast.error(noBoundaryMessage);
       return;
     }
 
@@ -238,7 +240,7 @@ const SatelliteIndices = ({ parcel }: SatelliteIndicesProps) => {
 
   const handleExportMap = async (format: ImageExportFormat = "GeoTIFF") => {
     if (!parcel.boundary || parcel.boundary.length === 0) {
-      toast.error("Cette parcelle n'a pas de limites géographiques définies.");
+      toast.error(t('satelliteIndices.errors.noBoundaryShort', 'This parcel does not have geographic boundaries defined.'));
       return;
     }
 
@@ -278,9 +280,7 @@ const SatelliteIndices = ({ parcel }: SatelliteIndicesProps) => {
 
   const handleExportData = async (format: DataExportFormat) => {
     if (!timeSeriesData) {
-      toast.warning(
-        "Veuillez d'abord charger les données de la série temporelle.",
-      );
+      toast.warning(t('satelliteIndices.errors.loadTimeSeriesFirst', 'Please load the time series data first.'));
       return;
     }
 
@@ -333,9 +333,7 @@ const SatelliteIndices = ({ parcel }: SatelliteIndicesProps) => {
       } else {
         // Maximum 5 indices for performance
         if (prev.length >= 5) {
-          toast.warning(
-            "Maximum 5 indices peuvent être affichés simultanément",
-          );
+          toast.warning(t('satelliteIndices.errors.maxIndices', 'A maximum of 5 indices can be displayed at the same time.'));
           return prev;
         }
         return [...prev, index];
@@ -369,17 +367,16 @@ const SatelliteIndices = ({ parcel }: SatelliteIndicesProps) => {
         <div className="flex items-center space-x-2 mb-4">
           <Satellite className="h-5 w-5 text-blue-600" />
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-            Indices Satellites
+            {t('satelliteIndices.title', 'Satellite Indices')}
           </h3>
         </div>
         <div className="text-center py-8">
           <AlertCircle className="h-12 w-12 text-amber-500 mx-auto mb-4" />
           <p className="text-gray-600 dark:text-gray-400 mb-2">
-            Limites géographiques non définies
+            {t('satelliteIndices.empty.noBoundariesTitle', 'Geographic boundaries not defined')}
           </p>
           <p className="text-sm text-gray-500 dark:text-gray-500">
-            Veuillez d'abord définir les limites de cette parcelle sur la carte
-            pour accéder aux données satellites.
+            {t('satelliteIndices.empty.noBoundariesDescription', 'Please define this parcel\'s boundaries on the map first to access satellite data.')}
           </p>
         </div>
       </div>
@@ -392,7 +389,7 @@ const SatelliteIndices = ({ parcel }: SatelliteIndicesProps) => {
         <div className="flex items-center space-x-2">
           <Satellite className="h-5 w-5 text-blue-600" />
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-            Indices Satellites
+            {t('satelliteIndices.title', 'Satellite Indices')}
           </h3>
         </div>
         <div className="flex items-center space-x-2">
@@ -414,14 +411,14 @@ const SatelliteIndices = ({ parcel }: SatelliteIndicesProps) => {
             onClick={() => fileInputRef.current?.click()}
             disabled={isUploading}
             className="flex items-center space-x-1 px-2 py-1 text-xs border border-blue-300 text-blue-600 rounded-md hover:bg-blue-50 dark:border-blue-600 dark:text-blue-400 dark:hover:bg-blue-900/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            title="Importer image TIF depuis drone"
+            title={t('satelliteIndices.actions.importTifTitle', 'Import TIF image from drone')}
           >
             {isUploading ? (
               <Loader2 className="h-3 w-3 animate-spin" />
             ) : (
               <Image className="h-3 w-3" />
             )}
-            <span>{tifImageUrl ? "Remplacer TIF" : "Importer TIF"}</span>
+            <span>{tifImageUrl ? t('satelliteIndices.actions.replaceTif', 'Replace TIF') : t('satelliteIndices.actions.importTif', 'Import TIF')}</span>
           </Button>
           <input
             ref={fileInputRef}
@@ -438,7 +435,7 @@ const SatelliteIndices = ({ parcel }: SatelliteIndicesProps) => {
           <Button
             onClick={() => window.location.reload()}
             className="p-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-            title="Actualiser"
+            title={t('satelliteIndices.actions.refresh', 'Refresh')}
           >
             <RefreshCw className="h-4 w-4" />
           </Button>
@@ -456,7 +453,7 @@ const SatelliteIndices = ({ parcel }: SatelliteIndicesProps) => {
           }`}
         >
           <BarChart3 className="h-4 w-4 inline mr-2" />
-          Valeurs Actuelles
+          {t('satelliteIndices.tabs.currentValues', 'Current Values')}
         </Button>
         <Button
           onClick={() => setActiveTab("timeseries")}
@@ -467,7 +464,7 @@ const SatelliteIndices = ({ parcel }: SatelliteIndicesProps) => {
           }`}
         >
           <TrendingUp className="h-4 w-4 inline mr-2" />
-          Série Temporelle
+          {t('satelliteIndices.tabs.timeSeries', 'Time Series')}
         </Button>
       </div>
 
@@ -478,32 +475,32 @@ const SatelliteIndices = ({ parcel }: SatelliteIndicesProps) => {
             <div className="flex items-center space-x-2">
               <Image className="h-5 w-5 text-blue-600 dark:text-blue-400" />
               <div>
-                <h4 className="font-semibold text-gray-900 dark:text-white">
-                  Image Drone
-                </h4>
-                <p className="text-xs text-gray-600 dark:text-gray-400">
-                  Image orthomosaïque GeoTIFF
-                </p>
+                  <h4 className="font-semibold text-gray-900 dark:text-white">
+                    {t('satelliteIndices.droneImage.title', 'Drone Capture')}
+                  </h4>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">
+                    {t('satelliteIndices.droneImage.subtitle', 'GeoTIFF orthomosaic capture')}
+                  </p>
               </div>
             </div>
             <div className="flex items-center space-x-2">
               <Button
                 onClick={() => window.open(tifImageUrl, "_blank")}
                 className="p-1 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-                title="Ouvrir en plein écran"
+                title={t('satelliteIndices.actions.openFullscreen', 'Open fullscreen')}
               >
                 <Maximize2 className="h-4 w-4" />
               </Button>
               <Button
                 onClick={() => {
-                  showConfirm("Êtes-vous sûr de vouloir supprimer cette image ?", () => {
+                  showConfirm(t('satelliteIndices.confirm.deleteImage', 'Are you sure you want to delete this capture?'), () => {
                     removeTif();
                     setTifImageUrl(null);
                   })
                 }}
                 disabled={isUploading}
                 className="p-1 text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                title="Supprimer l'image"
+                title={t('satelliteIndices.actions.deleteImage', 'Delete capture')}
               >
                 <X className="h-4 w-4" />
               </Button>
@@ -515,25 +512,30 @@ const SatelliteIndices = ({ parcel }: SatelliteIndicesProps) => {
             className="relative bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden"
             style={{ maxHeight: "300px" }}
           >
-            <img
-              src={tifImageUrl}
-              alt="Image drone de la parcelle"
-              className="w-full h-auto object-contain cursor-pointer"
-              onClick={() => window.open(tifImageUrl, "_blank")}
-              onError={(e) => {
-                e.currentTarget.src =
-                  "data:image/svg+xml," +
-                  encodeURIComponent(
-                    '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect fill="%23f3f4f6" width="100" height="100"/><text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="%239ca3af" font-size="12">Image non disponible</text></svg>',
-                  );
-              }}
-            />
+            <button
+              type="button"
+              className="block w-full"
+              onClick={() => window.open(tifImageUrl, '_blank')}
+            >
+              <img
+                src={tifImageUrl}
+                alt={t('satelliteIndices.droneImage.alt', 'Drone capture for the parcel')}
+                className="w-full h-auto object-contain cursor-pointer"
+                onError={(e) => {
+                  e.currentTarget.src =
+                    "data:image/svg+xml," +
+                    encodeURIComponent(
+                        `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect fill="%23f3f4f6" width="100" height="100"/><text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="%239ca3af" font-size="12">${t('satelliteIndices.droneImage.notAvailable', 'Unavailable')}</text></svg>`,
+                    );
+                }}
+              />
+            </button>
           </div>
 
           {uploadProgress > 0 && uploadProgress < 100 && (
             <div className="mt-2">
               <div className="flex justify-between text-xs text-gray-600 dark:text-gray-400 mb-1">
-                <span>Importation en cours...</span>
+                 <span>{t('satelliteIndices.droneImage.uploading', 'Uploading...')}</span>
                 <span>{uploadProgress}%</span>
               </div>
               <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
@@ -571,7 +573,7 @@ const SatelliteIndices = ({ parcel }: SatelliteIndicesProps) => {
               ) : (
                 <BarChart3 className="h-4 w-4" />
               )}
-              <span>Calculer</span>
+              <span>{t('satelliteIndices.actions.calculate', 'Calculate')}</span>
             </Button>
           </div>
 
@@ -612,9 +614,9 @@ const SatelliteIndices = ({ parcel }: SatelliteIndicesProps) => {
             <div className="flex items-center gap-4">
               {/* Chart Mode Toggle */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Mode d'affichage
-                </label>
+                <span className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  {t('satelliteIndices.labels.displayMode', 'Display mode')}
+                </span>
                 <div className="flex bg-gray-100 dark:bg-gray-700 rounded-md p-1">
                   <Button
                     onClick={() => setChartMode("single")}
@@ -624,7 +626,7 @@ const SatelliteIndices = ({ parcel }: SatelliteIndicesProps) => {
                         : "text-gray-600 dark:text-gray-400"
                     }`}
                   >
-                    Indice unique
+                    {t('satelliteIndices.chartModes.single', 'Single index')}
                   </Button>
                   <Button
                     onClick={() => setChartMode("multi")}
@@ -634,35 +636,35 @@ const SatelliteIndices = ({ parcel }: SatelliteIndicesProps) => {
                         : "text-gray-600 dark:text-gray-400"
                     }`}
                   >
-                    Multi-indices
+                    {t('satelliteIndices.chartModes.multi', 'Multi-index')}
                   </Button>
                 </div>
               </div>
 
               {/* Time Range Selector */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Période
-                </label>
+                <span className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  {t('satelliteIndices.labels.period', 'Period')}
+                </span>
                 <select
                   value={timeRange}
                   onChange={(e) => setTimeRange(e.target.value as TimeRange)}
                   className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                 >
-                  <option value="30d">30 derniers jours</option>
-                  <option value="90d">3 derniers mois</option>
-                  <option value="6m">6 derniers mois</option>
-                  <option value="1y">1 dernière année</option>
-                  <option value="2y">2 dernières années</option>
+                  <option value="30d">{t('satelliteIndices.periods.30d', 'Last 30 days')}</option>
+                  <option value="90d">{t('satelliteIndices.periods.90d', 'Last 3 months')}</option>
+                  <option value="6m">{t('satelliteIndices.periods.6m', 'Last 6 months')}</option>
+                  <option value="1y">{t('satelliteIndices.periods.1y', 'Last year')}</option>
+                  <option value="2y">{t('satelliteIndices.periods.2y', 'Last 2 years')}</option>
                 </select>
               </div>
 
               {/* Index Selector for Single Mode */}
               {chartMode === "single" && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Indice
-                  </label>
+                  <span className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    {t('satelliteIndices.labels.index', 'Index')}
+                  </span>
                   <select
                     value={selectedIndex}
                     onChange={(e) => setSelectedIndex(e.target.value)}
@@ -680,14 +682,14 @@ const SatelliteIndices = ({ parcel }: SatelliteIndicesProps) => {
               {/* Multi-Index Selector Button */}
               {chartMode === "multi" && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Indices ({selectedIndices.length}/5)
-                  </label>
+                  <span className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    {t('satelliteIndices.labels.indicesCount', 'Indices ({{count}}/5)', { count: selectedIndices.length })}
+                  </span>
                   <Button
                     onClick={() => setShowIndexSelector(!showIndexSelector)}
                     className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-600"
                   >
-                    Sélectionner les indices
+                    {t('satelliteIndices.actions.selectIndices', 'Select indices')}
                   </Button>
                 </div>
               )}
@@ -695,9 +697,9 @@ const SatelliteIndices = ({ parcel }: SatelliteIndicesProps) => {
               {/* Temperature Overlay Toggle */}
               {chartMode === "single" && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Température
-                  </label>
+                  <span className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    {t('satelliteIndices.labels.temperature', 'Temperature')}
+                  </span>
                   <Button
                     onClick={() =>
                       setShowTemperatureOverlay(!showTemperatureOverlay)
@@ -707,11 +709,11 @@ const SatelliteIndices = ({ parcel }: SatelliteIndicesProps) => {
                         ? "bg-red-50 dark:bg-red-900/30 border-red-300 dark:border-red-700 text-red-700 dark:text-red-300"
                         : "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600"
                     }`}
-                    title="Afficher la température au moment du passage satellite (11h)"
+                    title={t('satelliteIndices.actions.temperatureTitle', 'Show temperature at satellite pass time (11h)')}
                   >
                     <Thermometer className="h-4 w-4" />
                     <span className="hidden sm:inline">
-                      {showTemperatureOverlay ? "Masquer" : "Afficher"}
+                      {showTemperatureOverlay ? t('satelliteIndices.actions.hide', 'Hide') : t('satelliteIndices.actions.show', 'Show')}
                     </span>
                   </Button>
                 </div>
@@ -725,7 +727,7 @@ const SatelliteIndices = ({ parcel }: SatelliteIndicesProps) => {
               ) : (
                 <TrendingUp className="h-4 w-4" />
               )}
-              <span>Charger Série</span>
+              <span>{t('satelliteIndices.actions.loadSeries', 'Load series')}</span>
             </Button>
           </div>
 
@@ -734,7 +736,7 @@ const SatelliteIndices = ({ parcel }: SatelliteIndicesProps) => {
             <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
               <div className="flex justify-between items-center mb-3">
                 <h4 className="font-medium text-gray-900 dark:text-white">
-                  Sélectionnez les indices à comparer
+                  {t('satelliteIndices.multiIndex.selectorTitle', 'Select the indices to compare')}
                 </h4>
                 <Button
                   onClick={() => setShowIndexSelector(false)}

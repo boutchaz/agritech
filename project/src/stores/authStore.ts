@@ -135,11 +135,14 @@ export const useAuthStore = create<AuthState>()(
           const { tokens } = get();
           if (!tokens?.refresh_token) return false;
 
-          const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+          const API_URL = import.meta.env.VITE_API_URL ?? '';
 
           try {
             const response = await fetch(`${API_URL}/api/v1/auth/refresh-token`, {
               method: 'POST',
+              // Send/receive httpOnly auth cookies — refresh-token cookie may
+              // exist server-side even if the body refreshToken is missing
+              credentials: 'include',
               headers: {
                 'Content-Type': 'application/json',
               },

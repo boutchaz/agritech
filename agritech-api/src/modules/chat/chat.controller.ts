@@ -22,7 +22,9 @@ import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { ChatService } from './chat.service';
 import { SendMessageDto, ChatResponseDto } from './dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RequireModule } from '../../common/decorators/require-module.decorator';
 import { OrganizationGuard } from '../../common/guards/organization.guard';
+import { ModuleEntitlementGuard } from '../../common/guards/module-entitlement.guard';
 import { Res } from '@nestjs/common';
 import { Response } from 'express';
 
@@ -52,7 +54,8 @@ function chatStreamErrorMessage(err: unknown): string {
 @ApiTags('Chat')
 @ApiBearerAuth()
 @Controller('organizations/:organizationId/chat')
-@UseGuards(JwtAuthGuard, OrganizationGuard)
+@RequireModule('chat_advisor')
+@UseGuards(JwtAuthGuard, OrganizationGuard, ModuleEntitlementGuard)
 export class ChatController {
   constructor(private readonly chatService: ChatService) {}
 

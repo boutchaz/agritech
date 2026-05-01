@@ -1,12 +1,12 @@
-// Calibration Hooks for Mobile App
-// Adapted from web: project/src/hooks/useCalibrationReport.ts
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { calibrationApi } from '@/lib/api';
 import { useAuthStore } from '@/stores/authStore';
 import type {
   NutritionOption,
   PartialRecalibrationDto,
+  CalibrationDraftResponse,
+  CalibrationReviewView,
+  AnnualMissingTaskResolution,
 } from '@/types/calibration';
 
 // Query Keys
@@ -157,6 +157,87 @@ export function useStartPartialRecalibration(parcelId: string) {
       queryClient.invalidateQueries({ queryKey: calibrationKeys.report(parcelId) });
       queryClient.invalidateQueries({ queryKey: calibrationKeys.phase(parcelId) });
       queryClient.invalidateQueries({ queryKey: calibrationKeys.history(parcelId) });
+    },
+  });
+}
+
+// Draft hooks
+export function useCalibrationDraft(parcelId: string) {
+  const orgId = useAuthStore((s) => s.currentOrganization?.id);
+
+  return useQuery({
+    queryKey: [...calibrationKeys.all, 'draft', parcelId],
+    queryFn: () => calibrationApi.getDraft(parcelId),
+    enabled: !!parcelId && !!orgId,
+    staleTime: 60 * 1000,
+  });
+}
+
+export function useSaveCalibrationDraft(parcelId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (dto: { current_step: number; form_data: Record<string, unknown> }) =>
+      calibrationApi.saveDraft(parcelId, dto),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [...calibrationKeys.all, 'draft', parcelId] });
+    },
+  });
+}
+
+export function useDeleteCalibrationDraft(parcelId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () => calibrationApi.deleteDraft(parcelId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [...calibrationKeys.all, 'draft', parcelId] });
+    },
+  });
+}
+
+// Review hook
+export function useCalibrationReview(parcelId: string) {
+  const orgId = useAuthStore((s) => s.currentOrganization?.id);
+
+  return useQuery({
+    queryKey: [...calibrationKeys.all, 'review', parcelId],
+    queryFn: () => calibrationApi.getCalibrationReview(parcelId),
+    enabled: !!parcelId && !!orgId,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+// Export hook
+export function useExportCalibration() {
+  return useMutation({
+    mutationFn: ({ calibrationId, format }: { calibrationId: string; format: 'json' | 'csv' | 'zip' }) =>
+      calibrationApi.exportCalibration(calibrationId, format),
+  });
+}
+
+// Snooze annual reminder
+export function useSnoozeAnnualReminder(parcelId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (days: number) => calibrationApi.snoozeAnnualReminder(parcelId, days),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [...calibrationKeys.all, 'status', parcelId] });
+    },
+  });
+}
+
+// Resolve annual missing tasks
+export function useResolveAnnualMissingTasks(parcelId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (resolutions: AnnualMissingTaskResolution[]) =>
+      calibrationApi.resolveAnnualMissingTasks(parcelId, resolutions),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: calibrationKeys.status(parcelId) });
+      queryClient.invalidateQueries({ queryKey: [...calibrationKeys.all, 'missing-tasks', parcelId] });
     },
   });
 }

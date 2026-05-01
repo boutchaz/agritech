@@ -76,8 +76,13 @@ export class StockAccountingService {
         return { journal_entry_id: null, success: true };
       }
 
-      // Calculate total value from items
-      const totalValue = this.calculateTotalValue(items);
+      // For outbound entries (Material Issue), the true cost comes from the valuation engine
+      // (FIFO / weighted-avg / moving-avg) which was run when stock_movements were inserted.
+      // Using DTO cost_per_unit would allow users to manipulate GL value; re-fetch from the
+      // stock_movements side-effect to guarantee the journal matches the inventory valuation.
+      const totalValue = stockEntry.entry_type === StockEntryType.MATERIAL_ISSUE
+        ? await this.getComputedOutboundValue(client, stockEntry.id)
+        : this.calculateTotalValue(items);
 
       if (totalValue === 0) {
         this.logger.log(
@@ -234,13 +239,49 @@ export class StockAccountingService {
   }
 
   /**
-   * Calculate total value from stock entry items
+   * Calculate total value from stock entry items (used for inbound entries where DTO cost is authoritative)
    */
   private calculateTotalValue(items: StockEntryItem[]): number {
     return items.reduce((total, item) => {
       const costPerUnit = item.cost_per_unit || 0;
       return total + (item.quantity * costPerUnit);
     }, 0);
+  }
+
+  /**
+   * Sum the absolute total_cost of stock_movements already inserted for this stock entry.
+   * For Material Issue, this reflects FIFO / weighted-avg / moving-avg valuation — NOT
+   * user-entered DTO cost_per_unit, which must not be trusted for outbound cost.
+   */
+  private async getComputedOutboundValue(
+    client: PoolClient,
+    stockEntryId: string,
+  ): Promise<number> {
+    const result = await client.query(
+      `SELECT COALESCE(SUM(ABS(total_cost)), 0) AS total FROM stock_movements WHERE stock_entry_id = $1`,
+      [stockEntryId],
+    );
+    return Number(result.rows[0]?.total || 0);
+  }
+
+  private async getComputedOutboundValueForReversal(
+    client: PoolClient,
+    reversalStockEntryId: string,
+  ): Promise<number> {
+    const result = await client.query(
+      `SELECT COALESCE(SUM(ABS(total_cost)), 0) AS total FROM stock_movements WHERE stock_entry_id = $1`,
+      [reversalStockEntryId],
+    );
+    const value = Number(result.rows[0]?.total || 0);
+    if (value > 0) return value;
+    const fallback = await client.query(
+      `SELECT se.reference_id FROM stock_entries se WHERE se.id = $1`,
+      [reversalStockEntryId],
+    );
+    if (fallback.rows[0]?.reference_id) {
+      return this.getComputedOutboundValue(client, fallback.rows[0].reference_id);
+    }
+    return 0;
   }
 
   /**
@@ -425,7 +466,9 @@ export class StockAccountingService {
         return { journal_entry_id: null, success: true };
       }
 
-      const totalValue = this.calculateTotalValue(items);
+      const totalValue = reversalStockEntry.entry_type === StockEntryType.MATERIAL_ISSUE
+        ? await this.getComputedOutboundValueForReversal(client, reversalStockEntry.id)
+        : this.calculateTotalValue(items);
 
       if (totalValue === 0) {
         return { journal_entry_id: null, success: true };

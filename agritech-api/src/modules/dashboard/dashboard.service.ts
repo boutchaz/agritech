@@ -561,7 +561,8 @@ export class DashboardService {
             .from('organization_users')
             .select(`
                 user_id,
-                role,
+                role_id,
+                roles:role_id (name),
                 last_login,
                 profiles:user_id (
                     id,
@@ -584,11 +585,12 @@ export class DashboardService {
             .map(ou => {
                 const profile = ou.profiles as any;
                 const lastActivity = profile?.updated_at || ou.last_login || new Date(0).toISOString();
+                const roleObj = ou.roles as any;
                 return {
                     id: ou.user_id,
                     name: profile?.full_name || 'Unknown User',
                     email: profile?.email || '',
-                    role: ou.role || 'member',
+                    role: roleObj?.name || 'member',
                     lastActivity,
                     currentPage: '/dashboard',
                     avatarUrl: profile?.avatar_url,

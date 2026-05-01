@@ -1,9 +1,10 @@
-import { createFileRoute, Outlet, Navigate } from '@tanstack/react-router';
+import { createFileRoute, Outlet, Navigate, useRouterState } from '@tanstack/react-router';
 import { AdminLayout } from '@/components/AdminLayout';
 import { useAuth } from '@/hooks/useAuth';
 
 function AuthenticatedLayout() {
-  const { user, isLoading, isInternalAdmin } = useAuth();
+  const { user, isLoading, isInternalAdmin, signOut } = useAuth();
+  const { location } = useRouterState();
 
   if (isLoading) {
     return (
@@ -14,7 +15,8 @@ function AuthenticatedLayout() {
   }
 
   if (!user) {
-    return <Navigate to="/login" />;
+    const current = `${location.pathname}${location.searchStr ?? ''}`;
+    return <Navigate to="/login" search={{ redirect: current }} />;
   }
 
   if (!isInternalAdmin) {
@@ -25,13 +27,28 @@ function AuthenticatedLayout() {
           <p className="mb-4 text-sm text-gray-600 sm:text-base">
             You don't have internal admin privileges to access this application.
           </p>
-          <button
-            type="button"
-            onClick={() => (window.location.href = '/')}
-            className="text-primary hover:underline"
-          >
-            Go back
-          </button>
+          <div className="flex flex-col gap-2 sm:flex-row sm:justify-center">
+            <button
+              type="button"
+              onClick={async () => {
+                try {
+                  await signOut();
+                } finally {
+                  window.location.href = '/login';
+                }
+              }}
+              className="rounded bg-primary px-4 py-2 text-sm font-medium text-white hover:opacity-90"
+            >
+              Sign out
+            </button>
+            <button
+              type="button"
+              onClick={() => (window.location.href = '/')}
+              className="text-primary hover:underline"
+            >
+              Go back
+            </button>
+          </div>
         </div>
       </div>
     );

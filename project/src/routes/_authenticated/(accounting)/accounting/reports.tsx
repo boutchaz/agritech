@@ -3,14 +3,11 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/hooks/useAuth';
 import { useAutoStartTour } from '@/contexts/TourContext';
-import { PageLayout } from '@/components/PageLayout';
-import ModernPageHeader from '@/components/ModernPageHeader';
 import { useAccountSummary } from '@/hooks/useFinancialReports';
 import { withRouteProtection } from '@/components/authorization/withRouteProtection';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
-  Building2,
   FileSpreadsheet,
   TrendingUp,
   TrendingDown,
@@ -232,18 +229,6 @@ const AppContent = () => {
   }
 
   return (
-    <PageLayout
-      header={
-        <ModernPageHeader
-          breadcrumbs={[
-            { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
-            { icon: FileSpreadsheet, label: t('reports.title', 'Financial Reports'), isActive: true },
-          ]}
-          title={t('reports.title', 'Financial Reports')}
-          subtitle={t('reports.subtitle', 'Access comprehensive financial reports and analytics')}
-        />
-      }
-    >
       <div className="p-6 space-y-8" data-tour="accounting-reports">
         {/* KPI Summary Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -326,7 +311,6 @@ const AppContent = () => {
           </div>
         </div>
       </div>
-    </PageLayout>
   );
 };
 

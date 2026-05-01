@@ -138,7 +138,7 @@ export class AlertService {
 
     if (!isRecovery) {
       lines.push(
-        `<p style="margin-top:16px;color:#6b7280;font-size:12px">Next alert for this service in ${this.cooldownMs / 60000} minutes (cooldown active).</p>`,
+        `<p style="margin-top:16px;color:#6b7280;font-size:12px">You will be re-notified only when the service state changes.</p>`,
       );
     }
 
@@ -227,7 +227,7 @@ export class AlertService {
     if (downDuration) lines.push(`<b>Down duration:</b> ${downDuration}`);
 
     if (!isRecovery) {
-      lines.push('', `<i>Next alert in ${this.cooldownMs / 60000}min (cooldown)</i>`);
+      lines.push('', `<i>You will be re-notified only when the service state changes.</i>`);
     }
 
     const telegramApiUrl = `https://api.telegram.org/bot${this.telegramBotToken}/sendMessage`;

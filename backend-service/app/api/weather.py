@@ -10,14 +10,65 @@ from app.models.weather_schemas import (
     DerivedWeatherResponse,
     DerivedDailyData,
 )
-from app.services.weather_service import weather_service
+from app.services.weather_service import weather_service, WeatherFetchError, WeatherService
 from app.services.supabase_service import supabase_service
+from app.services.weather.hour_counter import count_hours
+from app.services.weather.phenological_counters import (
+    UnsupportedCropError,
+    compute_phenological_counters,
+)
 import logging
 
 from app.middleware.auth import get_current_user_or_service
 
 router = APIRouter(dependencies=[Depends(get_current_user_or_service)])
 logger = logging.getLogger(__name__)
+
+
+@router.get("/hour-counter")
+async def get_hour_counter(
+    latitude: float = Query(...),
+    longitude: float = Query(...),
+    start_date: str = Query(...),
+    end_date: str = Query(...),
+    threshold: float = Query(...),
+    compare: str = Query(..., regex="^(below|above|between)$"),
+    upper: Optional[float] = Query(None),
+    months: Optional[str] = Query(None, description="CSV of 1-12, e.g. '11,12,1,2'"),
+):
+    """Generic hour counter — counts hours where temperature meets the comparison."""
+    try:
+        ws = WeatherService()
+        rows = await ws.fetch_hourly_temperature(latitude, longitude, start_date, end_date)
+    except WeatherFetchError as e:
+        raise HTTPException(status_code=502, detail={"error": "open-meteo unavailable", "details": str(e)})
+    months_set = None
+    if months:
+        try:
+            months_set = {int(m.strip()) for m in months.split(",") if m.strip()}
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid months parameter")
+    count = count_hours(rows, threshold=threshold, compare=compare, upper=upper, months=months_set)
+    return {"count": int(count), "fetched_hours": len(rows), "from_cache": False}
+
+
+@router.get("/phenological-counters")
+async def get_phenological_counters(
+    latitude: float = Query(...),
+    longitude: float = Query(...),
+    year: int = Query(...),
+    crop_type: str = Query(...),
+):
+    """Stage-aware reading: returns all (stage, threshold) counters from the crop's referentiel."""
+    try:
+        result = await compute_phenological_counters(
+            latitude=latitude, longitude=longitude, year=year, crop_type=crop_type
+        )
+    except UnsupportedCropError as e:
+        raise HTTPException(status_code=400, detail={"error": "unsupported crop", "details": str(e)})
+    except WeatherFetchError as e:
+        raise HTTPException(status_code=502, detail={"error": "open-meteo unavailable", "details": str(e)})
+    return result
 
 
 @router.get("/historical", response_model=WeatherDataResponse)
@@ -31,8 +82,8 @@ async def get_historical_weather(
         raise HTTPException(
             status_code=400, detail="start_date must be before end_date"
         )
-    if (end_date - start_date).days > 365 * 3:
-        raise HTTPException(status_code=400, detail="Maximum date range is 3 years")
+    if (end_date - start_date).days > 365 * 4:
+        raise HTTPException(status_code=400, detail="Maximum date range is 4 years")
 
     try:
         records = await weather_service.fetch_with_db_cache(

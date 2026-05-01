@@ -10,6 +10,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { useAutoStartTour } from '@/contexts/TourContext'
 import ParcelsMap from '@/components/Map'
 import ModernPageHeader from '@/components/ModernPageHeader'
+import { ProductionTabs } from '@/components/Production/ProductionTabs';
 import { PageLoader, SectionLoader } from '@/components/ui/loader'
 import { useFarms, useParcelsByFarm, useParcelsByOrganization, useUpdateParcel, useDeleteParcel, useRestoreParcel, type Parcel } from '@/hooks/useParcelsQuery';
 import { Edit2, Trash2, MapPin, Ruler, Droplets, Building2, TreePine, Trees as Tree, Archive, RotateCcw } from 'lucide-react'
@@ -145,6 +146,7 @@ const ParcelsListContent = ({ search }: ParcelsListContentProps) => {
           })()}
         />
         <div className="p-3 sm:p-4 lg:p-6 space-y-4 sm:space-y-6">
+          <ProductionTabs />
           <div data-tour="parcel-filters" className="flex items-center gap-3">
             <div className="flex-1">
               <FilterBar
@@ -189,7 +191,7 @@ const ParcelsListContent = ({ search }: ParcelsListContentProps) => {
               </Button>
             </div>
           ) : parcels.length === 0 && !showAddParcelMap ? (
-            <div data-testid="parcels-empty-state">
+            <div data-testid="parcels-empty-state" className="bg-white dark:bg-gray-800 rounded-lg">
               <EmptyState
                 icon={MapPin}
                 title={t('parcels.emptyTitle', 'No parcels yet')}

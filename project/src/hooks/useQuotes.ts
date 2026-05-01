@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { useAuth } from '../hooks/useAuth';
+import { trackEntityCreate, trackEntityUpdate } from '../lib/analytics';
 import { quotesApi } from '../lib/api/quotes';
 import { extractApiResponse } from '../lib/api/types';
 import type {
@@ -126,6 +127,7 @@ export function useCreateQuote() {
       return data;
     },
     onSuccess: () => {
+      trackEntityCreate('quote');
       queryClient.invalidateQueries({ queryKey: ['quotes', currentOrganization?.id] });
     },
   });
@@ -167,6 +169,7 @@ export function useUpdateQuote() {
       return data as unknown as QuoteResponse;
     },
     onSuccess: () => {
+      trackEntityUpdate('quote');
       queryClient.invalidateQueries({ queryKey: ['quotes', currentOrganization?.id] });
     },
   });
@@ -193,6 +196,7 @@ export function useUpdateQuoteStatus() {
       return data as unknown as QuoteResponse;
     },
     onSuccess: () => {
+      trackEntityUpdate('quote');
       queryClient.invalidateQueries({ queryKey: ['quotes', currentOrganization?.id] });
     },
   });

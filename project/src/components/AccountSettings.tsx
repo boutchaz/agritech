@@ -10,6 +10,7 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Save,
   User,
@@ -35,6 +36,7 @@ import { Input } from '@/components/ui/Input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/radix-select';
 import { useTranslation } from 'react-i18next';
 import { isRTLLocale } from '@/lib/is-rtl-locale';
+import { loadLanguage } from '@/i18n/config';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { ExperienceLevelSelector } from '@/components/settings/ExperienceLevelSelector';
@@ -68,7 +70,7 @@ interface PasswordChangeData {
 
 type TabId = 'profile' | 'preferences' | 'security';
 
-const SUPPORTED_LANGUAGES = new Set(['fr', 'en', 'ar', 'es']);
+const SUPPORTED_LANGUAGES = new Set(['fr', 'en', 'ar']);
 
 /** Radix Select throws if value is not among SelectItems; API/i18n may send e.g. en-US */
 function normalizeProfileLanguage(lang: string | undefined, i18nFallback: string): string {
@@ -158,7 +160,6 @@ const AccountSettings = () => {
     { value: 'fr', label: 'Français' },
     { value: 'en', label: 'English' },
     { value: 'ar', label: 'العربية' },
-    { value: 'es', label: 'Español' },
   ];
 
   // Load profile data
@@ -212,8 +213,8 @@ const AccountSettings = () => {
 
     setProfile({ ...profile, language: newLanguage });
 
-    // Immediately change i18n language
-    await i18n.changeLanguage(newLanguage);
+    // Load bundles then switch language
+    await loadLanguage(newLanguage);
 
     // Set document direction for RTL languages
     if (isRTLLocale(newLanguage)) {
@@ -1017,7 +1018,7 @@ const AccountSettings = () => {
       </div>
 
       {/* Camera Capture Modal */}
-      {showCamera && (
+      {showCamera && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/80 backdrop-blur-md p-4 animate-in fade-in duration-300">
           <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-[0_32px_64px_-12px_rgba(0,0,0,0.3)] max-w-md w-full overflow-hidden border border-slate-100 dark:border-slate-800">
             <div className="flex items-center justify-between px-8 py-6 border-b border-slate-50 dark:border-slate-800">
@@ -1067,7 +1068,7 @@ const AccountSettings = () => {
             </div>
           </div>
         </div>
-      )}
+      , document.body)}
     </div>
   );
 };

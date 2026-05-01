@@ -1,17 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { v4 as uuidv4 } from 'uuid';
 import { useAuth } from '../hooks/useAuth';
 import { stockEntriesApi } from '../lib/api/stock';
+import { runOrQueue as runOrQueueOffline } from '../lib/offline/runOrQueue';
 import type {
-  StockEntry,
-  StockEntryWithItems,
-  StockMovement,
-  StockMovementWithDetails,
   CreateStockEntryInput,
   UpdateStockEntryInput,
   StockEntryFilters,
   StockMovementFilters,
-  StockEntryType,
-  StockEntryStatus,
 } from '../types/stock-entries';
 
 /**
@@ -63,8 +59,25 @@ export function useCreateStockEntry() {
       if (!currentOrganization?.id) {
         throw new Error('No organization or user');
       }
-
-      return stockEntriesApi.create(input, currentOrganization.id);
+      const cid = uuidv4();
+      const payload = { ...input, client_id: cid } as CreateStockEntryInput & { client_id: string };
+      const outcome = await runOrQueueOffline(
+        {
+          organizationId: currentOrganization.id,
+          resource: 'stock-entry',
+          method: 'POST',
+          url: '/api/v1/stock-entries',
+          payload,
+          clientId: cid,
+        },
+        () => stockEntriesApi.create(payload, currentOrganization.id),
+      );
+      if (outcome.status === 'queued') {
+        return { ...payload, id: cid, _pending: true } as unknown as Awaited<
+          ReturnType<typeof stockEntriesApi.create>
+        >;
+      }
+      return outcome.result;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['stock-entries', currentOrganization?.id] });
@@ -80,12 +93,29 @@ export function useUpdateStockEntry() {
   const { currentOrganization } = useAuth();
 
   return useMutation({
-    mutationFn: async ({ entryId, input }: { entryId: string; input: UpdateStockEntryInput }) => {
+    mutationFn: async ({ entryId, input, version }: { entryId: string; input: UpdateStockEntryInput; version?: number }) => {
       if (!currentOrganization?.id) {
         throw new Error('No organization selected');
       }
-
-      return stockEntriesApi.update(entryId, input, currentOrganization.id);
+      const cid = uuidv4();
+      const outcome = await runOrQueueOffline(
+        {
+          organizationId: currentOrganization.id,
+          resource: 'stock-entry',
+          method: 'PATCH',
+          url: `/api/v1/stock-entries/${entryId}`,
+          payload: input,
+          ifMatchVersion: version ?? null,
+          clientId: cid,
+        },
+        () => stockEntriesApi.update(entryId, input, currentOrganization.id),
+      );
+      if (outcome.status === 'queued') {
+        return { id: entryId, _pending: true, ...input } as unknown as Awaited<
+          ReturnType<typeof stockEntriesApi.update>
+        >;
+      }
+      return outcome.result;
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['stock-entries', currentOrganization?.id] });
@@ -107,14 +137,34 @@ export function usePostStockEntry() {
       if (!currentOrganization?.id) {
         throw new Error('No organization selected');
       }
-
-      return stockEntriesApi.post(entryId, currentOrganization.id);
+      const cid = uuidv4();
+      const outcome = await runOrQueueOffline(
+        {
+          organizationId: currentOrganization.id,
+          resource: 'stock-entry-post',
+          method: 'PATCH',
+          url: `/api/v1/stock-entries/${entryId}/post`,
+          payload: {},
+          clientId: cid,
+        },
+        () => stockEntriesApi.post(entryId, currentOrganization.id),
+      );
+      if (outcome.status === 'queued') {
+        return { id: entryId, _pending: true } as unknown as Awaited<
+          ReturnType<typeof stockEntriesApi.post>
+        >;
+      }
+      return outcome.result;
     },
     onSuccess: (_, entryId) => {
       queryClient.invalidateQueries({ queryKey: ['stock-entries', currentOrganization?.id] });
       queryClient.invalidateQueries({ queryKey: ['stock-entry', entryId] });
       queryClient.invalidateQueries({ queryKey: ['inventory-items'] });
       queryClient.invalidateQueries({ queryKey: ['stock-movements'] });
+      queryClient.invalidateQueries({ queryKey: ['stock-dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['stock-reorder-suggestions'] });
+      queryClient.invalidateQueries({ queryKey: ['stock-expiry-alerts'] });
+      queryClient.invalidateQueries({ queryKey: ['stock-batches'] });
     },
   });
 }
@@ -131,8 +181,24 @@ export function useCancelStockEntry() {
       if (!currentOrganization?.id) {
         throw new Error('No organization selected');
       }
-
-      return stockEntriesApi.cancel(entryId, currentOrganization.id);
+      const cid = uuidv4();
+      const outcome = await runOrQueueOffline(
+        {
+          organizationId: currentOrganization.id,
+          resource: 'stock-entry-cancel',
+          method: 'PATCH',
+          url: `/api/v1/stock-entries/${entryId}/cancel`,
+          payload: {},
+          clientId: cid,
+        },
+        () => stockEntriesApi.cancel(entryId, currentOrganization.id),
+      );
+      if (outcome.status === 'queued') {
+        return { id: entryId, _pending: true } as unknown as Awaited<
+          ReturnType<typeof stockEntriesApi.cancel>
+        >;
+      }
+      return outcome.result;
     },
     onSuccess: (_, entryId) => {
       queryClient.invalidateQueries({ queryKey: ['stock-entries', currentOrganization?.id] });
@@ -150,13 +216,33 @@ export function useReverseStockEntry() {
       if (!currentOrganization?.id) {
         throw new Error('No organization selected');
       }
-
-      return stockEntriesApi.reverse(entryId, reason, currentOrganization.id);
+      const cid = uuidv4();
+      const outcome = await runOrQueueOffline(
+        {
+          organizationId: currentOrganization.id,
+          resource: 'stock-entry-reverse',
+          method: 'POST',
+          url: `/api/v1/stock-entries/${entryId}/reverse`,
+          payload: { reason },
+          clientId: cid,
+        },
+        () => stockEntriesApi.reverse(entryId, reason, currentOrganization.id),
+      );
+      if (outcome.status === 'queued') {
+        return { id: entryId, _pending: true } as unknown as Awaited<
+          ReturnType<typeof stockEntriesApi.reverse>
+        >;
+      }
+      return outcome.result;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['stock-entries', currentOrganization?.id] });
       queryClient.invalidateQueries({ queryKey: ['stock-movements'] });
       queryClient.invalidateQueries({ queryKey: ['inventory-items'] });
+      queryClient.invalidateQueries({ queryKey: ['stock-dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['stock-reorder-suggestions'] });
+      queryClient.invalidateQueries({ queryKey: ['stock-expiry-alerts'] });
+      queryClient.invalidateQueries({ queryKey: ['stock-batches'] });
     },
   });
 }
@@ -206,4 +292,23 @@ export function useStockMovements(filters?: StockMovementFilters) {
  */
 export function useItemStockMovements(itemId: string | null) {
   return useStockMovements({ item_id: itemId || undefined });
+}
+
+/**
+ * Hook to fetch the stock aging report
+ */
+export function useStockAging(warehouseId?: string) {
+  const { currentOrganization } = useAuth();
+
+  return useQuery({
+    queryKey: ['stock-aging', currentOrganization?.id, warehouseId],
+    queryFn: async () => {
+      if (!currentOrganization?.id) {
+        throw new Error('No organization selected');
+      }
+      return stockEntriesApi.getAging(currentOrganization.id, warehouseId);
+    },
+    enabled: !!currentOrganization?.id,
+    staleTime: 60 * 1000,
+  });
 }

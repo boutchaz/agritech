@@ -4,22 +4,48 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        - VITE_SUPABASE_URL=${VITE_SUPABASE_URL:-https://agritech.thebzlab.online}
-        - VITE_SUPABASE_ANON_KEY=${VITE_SUPABASE_ANON_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3NjM0OTE1NTIsImV4cCI6MTg5MzQ1NjAwMCwicm9sZSI6ImFub24iLCJpc3MiOiJzdXBhYmFzZSJ9.ok7p9M-b444e7aBbIF0tGIogkN2hX-g2o1XaDH9bwzA}
-        - VITE_API_URL=${VITE_API_URL:-https://agritech-api.thebzlab.online}
+        - VITE_SUPABASE_URL=${VITE_SUPABASE_URL}
+        - VITE_SUPABASE_ANON_KEY=${VITE_SUPABASE_ANON_KEY}
+        - VITE_API_URL=${VITE_API_URL}
     container_name: agritech-admin
     ports:
       - "3003:80"
     restart: unless-stopped
     networks:
-      - agritech-network
+      - agritech-admin-network
+      - dokploy-network
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=${TRAEFIK_NETWORK:-dokploy-network}
+      # Loadbalancer: nginx serves on port 80 (ports 3003:80)
+      - traefik.http.services.admin-frontend.loadbalancer.server.port=80
+      # Traefik.me domain (set ADMIN_TRAEFIK_HOST in compose env)
+      - traefik.http.routers.admin-frontend-traefik-web.rule=Host(`${ADMIN_TRAEFIK_HOST:-localhost}`)
+      - traefik.http.routers.admin-frontend-traefik-web.entrypoints=web
+      - traefik.http.routers.admin-frontend-traefik-web.service=admin-frontend
+      - traefik.http.routers.admin-frontend-traefik-web.middlewares=redirect-to-https@file
+      - traefik.http.routers.admin-frontend-traefik-websecure.rule=Host(`${ADMIN_TRAEFIK_HOST:-localhost}`)
+      - traefik.http.routers.admin-frontend-traefik-websecure.entrypoints=websecure
+      - traefik.http.routers.admin-frontend-traefik-websecure.service=admin-frontend
+      - traefik.http.routers.admin-frontend-traefik-websecure.tls.certresolver=letsencrypt
+      # Custom domain (set ADMIN_PUBLIC_HOST in compose env, e.g. admin.agrogina.com)
+      - traefik.http.routers.admin-frontend-custom-web.rule=Host(`${ADMIN_PUBLIC_HOST:-admin-domain-placeholder.invalid}`)
+      - traefik.http.routers.admin-frontend-custom-web.entrypoints=web
+      - traefik.http.routers.admin-frontend-custom-web.service=admin-frontend
+      - traefik.http.routers.admin-frontend-custom-web.middlewares=redirect-to-https@file
+      - traefik.http.routers.admin-frontend-custom-websecure.rule=Host(`${ADMIN_PUBLIC_HOST:-admin-domain-placeholder.invalid}`)
+      - traefik.http.routers.admin-frontend-custom-websecure.entrypoints=websecure
+      - traefik.http.routers.admin-frontend-custom-websecure.service=admin-frontend
+      - traefik.http.routers.admin-frontend-custom-websecure.tls.certresolver=letsencrypt
 
 networks:
-  agritech-network:
+  agritech-admin-network:
     driver: bridge
+  dokploy-network:
+    external: true

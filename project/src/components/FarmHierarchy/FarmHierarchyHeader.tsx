@@ -62,6 +62,8 @@ const FarmHierarchyHeader = ({
           )}
           {onImport && (
             <Button
+              type="button"
+              variant="outline"
               onClick={onImport}
             >
               <Upload className="w-4 h-4" />
@@ -81,53 +83,33 @@ const FarmHierarchyHeader = ({
       </div>
 
       {/* Stats Cards */}
-      <div data-tour="farm-stats" className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div data-tour="farm-stats" className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-3 mb-3">
             <div className="p-2 bg-green-50 dark:bg-green-900/20 rounded-lg">
               <Building2 className="w-5 h-5 text-green-600 dark:text-green-400" />
             </div>
-            <span className="text-xs font-medium text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded-full">
-              +12%
-            </span>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              {t('farmHierarchy.totalFarms')}
+            </p>
           </div>
-          <p className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
+          <p className="text-2xl font-bold text-gray-900 dark:text-white">
             {totalFarms}
-          </p>
-          <p className="text-sm text-gray-600 dark:text-gray-400">
-            {t('farmHierarchy.totalFarms')}
           </p>
         </div>
 
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-3 mb-3">
             <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
               <BarChart3 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
-            <span className="text-xs font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-full">
-              +5%
-            </span>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              {t('farmHierarchy.totalArea')}
+            </p>
           </div>
-          <p className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
+          <p className="text-2xl font-bold text-gray-900 dark:text-white">
             {totalArea.toFixed(1)}
             <span className="text-lg font-normal text-gray-500 ml-1">ha</span>
-          </p>
-          <p className="text-sm text-gray-600 dark:text-gray-400">
-            {t('farmHierarchy.totalArea')}
-          </p>
-        </div>
-
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
-          <div className="flex items-center justify-between mb-3">
-            <div className="p-2 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
-              <Download className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-            </div>
-          </div>
-          <p className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
-            {t('farmHierarchy.exportImport')}
-          </p>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-            {t('farmHierarchy.exportImportDescription')}
           </p>
         </div>
       </div>

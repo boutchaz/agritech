@@ -7,17 +7,29 @@ services:
         - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
         - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
         - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
-    ports:
-      - "3001:3000"
     environment:
       - NODE_ENV=production
       - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
       - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
       - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
     restart: unless-stopped
+    networks:
+      - dokploy-network
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=dokploy-network
+      - traefik.http.routers.${MARKETPLACE_SLUG}.rule=Host(`${MARKETPLACE_HOST}`)
+      - traefik.http.routers.${MARKETPLACE_SLUG}.entrypoints=websecure
+      - traefik.http.routers.${MARKETPLACE_SLUG}.tls=true
+      - traefik.http.routers.${MARKETPLACE_SLUG}.tls.certresolver=letsencrypt
+      - traefik.http.services.${MARKETPLACE_SLUG}.loadbalancer.server.port=3000
+
+networks:
+  dokploy-network:
+    external: true

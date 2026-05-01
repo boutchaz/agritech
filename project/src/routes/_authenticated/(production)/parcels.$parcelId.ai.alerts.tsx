@@ -3,9 +3,11 @@ import { useAIAlerts, useAcknowledgeAIAlert, useResolveAIAlert } from '@/hooks/u
 import { AlertCard } from '@/components/ai/AlertCard'
 import { AlertTriangle } from 'lucide-react'
 import { SectionLoader } from '@/components/ui/loader';
+import { useTranslation } from 'react-i18next'
 
 
 const AIAlertsPage = () => {
+  const { t } = useTranslation('ai');
   const { parcelId } = Route.useParams();
   const { data: alerts, isLoading } = useAIAlerts(parcelId);
   const { mutate: acknowledgeAlert, isPending: isAcknowledging } = useAcknowledgeAIAlert();
@@ -20,8 +22,8 @@ const AIAlertsPage = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-bold text-gray-900 dark:text-white">AI Alerts</h2>
-        <p className="text-sm text-gray-600 dark:text-gray-400">Review and manage risks detected by the AI model.</p>
+        <h2 className="text-xl font-bold text-gray-900 dark:text-white">{t('alerts.title')}</h2>
+        <p className="text-sm text-gray-600 dark:text-gray-400">{t('alerts.subtitle')}</p>
       </div>
 
       {!alerts || alerts.length === 0 ? (
@@ -29,8 +31,8 @@ const AIAlertsPage = () => {
           <div className="w-16 h-16 bg-green-50 dark:bg-green-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
             <AlertTriangle className="w-8 h-8 text-green-500" />
           </div>
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No Active Alerts</h3>
-          <p className="text-gray-500 dark:text-gray-400">The AI model has not detected any significant risks for this parcel.</p>
+          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">{t('alerts.noAlerts')}</h3>
+          <p className="text-gray-500 dark:text-gray-400">{t('alerts.noAlertsMessage')}</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-4">

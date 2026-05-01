@@ -1368,8 +1368,19 @@ async def get_heatmap_data(
             f"error={e}, elapsed={total_elapsed:.2f}s, "
             f"geometry={geo_summary}, date={request.date}"
         )
+        # Return structured detail so the frontend can render a meaningful
+        # warning ("No Sentinel-2 acquisition for this date") instead of a
+        # generic error toast. 404 stays so existing clients still treat
+        # this as "no data".
         raise HTTPException(
-            status_code=404, detail="No data found for the specified parameters"
+            status_code=404,
+            detail={
+                "code": "no_satellite_imagery",
+                "message": "No Sentinel-2 imagery available for this date.",
+                "requested_date": request.date,
+                "index": request.index.value,
+                "hint": "Sentinel-2 revisit is ~5 days per tile and cloudy scenes are filtered. Try a nearby date.",
+            },
         )
     except HTTPException:
         raise

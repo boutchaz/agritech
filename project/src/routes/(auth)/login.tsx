@@ -5,7 +5,8 @@ import { AuthLayout } from '@/components/AuthLayout'
 import { FormField } from '@/components/ui/FormField'
 import { Input } from '@/components/ui/Input'
 import { PasswordInput } from '@/components/ui/PasswordInput'
-import { loginViaApi, signInWithGoogle } from '@/lib/auth-api'
+// signInWithGoogle — restore when re-enabling Google OAuth on this page
+import { loginViaApi } from '@/lib/auth-api'
 import { useAuth } from '@/hooks/useAuth'
 import {
   trackLoginAttempt,
@@ -15,6 +16,7 @@ import {
 } from '@/lib/analytics'
 import { useAuthStore, waitForHydration } from '@/stores/authStore'
 import { Button } from '@/components/ui/button';
+import { useSEO } from '@/hooks/useSEO';
 
 export const Route = createFileRoute('/(auth)/login')({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -23,7 +25,7 @@ export const Route = createFileRoute('/(auth)/login')({
   beforeLoad: async ({ context, search }) => {
     await waitForHydration()
     
-    const contextUser = context.auth?.user
+    const contextUser = (context as { auth?: { user?: unknown } }).auth?.user
     const storeState = useAuthStore.getState()
     const storeUser = storeState.isAuthenticated ? storeState.user : null
     
@@ -37,11 +39,17 @@ export const Route = createFileRoute('/(auth)/login')({
 
 function LoginPage() {
   const { t } = useTranslation()
+  useSEO({
+    title: t('auth.signIn.title', 'Connexion'),
+    description: t('seo.login.description', 'Connectez-vous à votre espace AgroGina pour gérer votre exploitation agricole. Accédez à vos parcelles, stocks et analyses satellite.'),
+    path: '/login',
+    keywords: 'connexion agrogina, login agriculture, espace gestion agricole',
+  })
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [rememberMe, setRememberMe] = useState(true)
   const [isLoading, setIsLoading] = useState(false)
-  const [isOAuthLoading, setIsOAuthLoading] = useState<boolean>(false)
+  // const [isOAuthLoading, setIsOAuthLoading] = useState<boolean>(false) // Google OAuth temporarily disabled
   const [error, setError] = useState<string | null>(null)
   const navigate = useNavigate()
   const { user } = useAuth()
@@ -75,6 +83,28 @@ function LoginPage() {
       const response = await loginViaApi(email, password, rememberMe)
       if (response?.user) {
         trackLoginSuccess('email')
+
+        const pendingOrgName = sessionStorage.getItem('pendingOrgName')
+        if (pendingOrgName) {
+          sessionStorage.removeItem('pendingOrgName')
+          const accessToken = useAuthStore.getState().getAccessToken()
+          if (accessToken) {
+            try {
+              const apiUrl = import.meta.env.VITE_API_URL || ''
+              await fetch(`${apiUrl}/api/v1/auth/setup-organization`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${accessToken}`,
+                },
+                body: JSON.stringify({ organizationName: pendingOrgName }),
+              })
+            } catch {
+              // Non-blocking: user lands on dashboard and can retry from settings
+            }
+          }
+        }
+
         await new Promise(resolve => setTimeout(resolve, 100))
         window.location.href = redirectTo || '/dashboard'
       }
@@ -88,21 +118,22 @@ function LoginPage() {
     }
   }
 
-  const handleGoogleSignIn = async () => {
-    setIsOAuthLoading(true)
-    setError(null)
-    trackLoginAttempt('google')
-
-    try {
-      await signInWithGoogle()
-      trackLoginSuccess('google')
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : t('auth.errors.oauthFailed')
-      setError(errorMessage)
-      trackLoginFailure('google', errorMessage)
-      setIsOAuthLoading(false)
-    }
-  }
+  // Google OAuth temporarily disabled — uncomment block below to restore
+  // const handleGoogleSignIn = async () => {
+  //   setIsOAuthLoading(true)
+  //   setError(null)
+  //   trackLoginAttempt('google')
+  //
+  //   try {
+  //     await signInWithGoogle()
+  //     trackLoginSuccess('google')
+  //   } catch (err) {
+  //     const errorMessage = err instanceof Error ? err.message : t('auth.errors.oauthFailed')
+  //     setError(errorMessage)
+  //     trackLoginFailure('google', errorMessage)
+  //     setIsOAuthLoading(false)
+  //   }
+  // }
 
   return (
     <AuthLayout
@@ -116,6 +147,8 @@ function LoginPage() {
       backLabel={t('auth.backToLanding')}
     >
       <div className="space-y-6">
+        {/* Google OAuth temporarily disabled — restore with handleGoogleSignIn + isOAuthLoading */}
+        {/*
         <div className="space-y-3">
           <Button
             type="button"
@@ -148,6 +181,7 @@ function LoginPage() {
             <span className="bg-white px-4 font-medium text-slate-600">{t('auth.orContinueWith')}</span>
           </div>
         </div>
+        */}
 
         <form className="space-y-6" onSubmit={handleSubmit}>
           <div className="space-y-4">
@@ -193,7 +227,7 @@ function LoginPage() {
               to="/forgot-password"
               className="text-sm font-medium text-emerald-600 transition hover:text-emerald-500 sm:self-auto sm:shrink-0"
             >
-              {t('auth.forgotPassword')}
+              {t('auth.forgotPasswordLegacy')}
             </Link>
           </div>
 
@@ -205,7 +239,7 @@ function LoginPage() {
 
           <Button
             type="submit"
-            disabled={isLoading || isOAuthLoading}
+            disabled={isLoading}
             className="w-full rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 py-3 text-sm font-semibold text-white shadow-md shadow-emerald-900/15 transition hover:from-emerald-700 hover:to-emerald-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isLoading ? t('auth.signingIn') : t('auth.signIn.button')}

@@ -178,9 +178,9 @@ function DocumentSettingsPage() {
                         )}
                       </div>
                       <div className="flex gap-4 text-sm text-gray-500 dark:text-gray-400 mt-1 flex-wrap">
-                        <span>{t('documents.header')}: {template.header_html ? t('documents.enabled') : t('documents.disabled')}</span>
+                        <span>{t('documents.header')}: {template.header_enabled !== false ? t('documents.enabled') : t('documents.disabled')}</span>
                         <span>•</span>
-                        <span>{t('documents.footer')}: {template.footer_html ? t('documents.enabled') : t('documents.disabled')}</span>
+                        <span>{t('documents.footer')}: {template.footer_enabled !== false ? t('documents.enabled') : t('documents.disabled')}</span>
                       </div>
                     </div>
                   </div>
@@ -261,8 +261,8 @@ function DocumentSettingsPage() {
                   </td>
                   <td className="px-4 py-4 text-sm text-gray-500 dark:text-gray-400">
                     <div className="flex flex-col gap-1">
-                      <span>{t('documents.header')}: {template.header_html ? t('documents.enabled') : t('documents.disabled')}</span>
-                      <span>{t('documents.footer')}: {template.footer_html ? t('documents.enabled') : t('documents.disabled')}</span>
+                      <span>{t('documents.header')}: {template.header_enabled !== false ? t('documents.enabled') : t('documents.disabled')}</span>
+                      <span>{t('documents.footer')}: {template.footer_enabled !== false ? t('documents.enabled') : t('documents.disabled')}</span>
                     </div>
                   </td>
                   <td className="px-4 py-4">

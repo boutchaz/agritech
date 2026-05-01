@@ -1,14 +1,17 @@
 import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery, ApiHeader } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RequireModule } from '../../common/decorators/require-module.decorator';
 import { OrganizationId } from '../../common/decorators/organization.decorator';
 import { FinancialReportsService } from './financial-reports.service';
 import { OrganizationGuard } from '../../common/guards/organization.guard';
+import { ModuleEntitlementGuard } from '../../common/guards/module-entitlement.guard';
 
 @ApiTags('Financial Reports')
 @ApiBearerAuth()
 @ApiHeader({ name: 'x-organization-id', required: true, description: 'Organization ID' })
-@UseGuards(JwtAuthGuard, OrganizationGuard)
+@RequireModule('accounting')
+@UseGuards(JwtAuthGuard, OrganizationGuard, ModuleEntitlementGuard)
 @Controller('financial-reports')
 export class FinancialReportsController {
   constructor(private readonly financialReportsService: FinancialReportsService) {}

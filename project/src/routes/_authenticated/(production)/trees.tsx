@@ -1,13 +1,14 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
-import { TreeDeciduous, Calendar, Scissors, Sprout } from 'lucide-react';
+import { TreeDeciduous, Calendar, Scissors } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { cropsApi } from '@/lib/api/crops';
 import { tasksApi } from '@/lib/api/tasks';
+import { useParcelsByOrganization } from '@/hooks/useParcelsQuery';
+import { ProductionTabs } from '@/components/Production/ProductionTabs';
 import type { TaskSummary } from '@/types/tasks';
 
 export const Route = createFileRoute('/_authenticated/(production)/trees')({
@@ -20,12 +21,10 @@ function Trees() {
   const navigate = useNavigate();
   const organizationId = currentOrganization?.id;
 
-  // Fetch tree crops with module filter
-  const { data: treeCrops, isLoading: cropsLoading } = useQuery({
-    queryKey: ['crops', organizationId, 'fruit-trees'],
-    queryFn: () => cropsApi.getAll(organizationId!),
-    enabled: !!organizationId,
-  });
+  // Use parcels with tree_type as proxy for tree crops
+  const { data: parcelsData = [] } = useParcelsByOrganization(organizationId);
+  const treeCrops = parcelsData.filter((p) => p.tree_type);
+  const cropsLoading = false;
 
   // Fetch pruning tasks
   const { data: pruningTasks } = useQuery({
@@ -44,7 +43,7 @@ function Trees() {
     icon: typeof TreeDeciduous;
     title: string;
     description: string;
-    route: '/orchards' | '/pruning' | '/crops' | '/harvests';
+    route: '/orchards' | '/pruning' | '/harvests';
     search?: { module: 'fruit-trees' };
     color: string;
     bgColor: string;
@@ -72,16 +71,6 @@ function Trees() {
       bgColor: 'bg-orange-100',
     },
     {
-      icon: Sprout,
-      title: t('trees.varieties', 'Tree Varieties'),
-      description: t('trees.varietiesDesc', 'Browse available tree varieties'),
-      route: '/crops',
-      search: { module: 'fruit-trees' },
-      onClick: () => window.location.assign('/crops?module=fruit-trees'),
-      color: 'text-green-600',
-      bgColor: 'bg-green-100',
-    },
-    {
       icon: Calendar,
       title: t('trees.harvests', 'Fruit Harvests'),
       description: t('trees.harvestsDesc', 'Track fruit harvest records'),
@@ -95,6 +84,7 @@ function Trees() {
 
   return (
     <div className="space-y-6 p-6">
+      <ProductionTabs />
       <div>
         <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
           <TreeDeciduous className="h-8 w-8" />

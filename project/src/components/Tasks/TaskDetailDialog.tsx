@@ -14,11 +14,24 @@ import {
   PackageCheck,
   Hash,
   Banknote,
+  Lock,
+  MessageSquare,
+  PlayCircle,
+  StopCircle,
+  Wallet,
+  Activity,
 } from 'lucide-react';
-import { useUpdateTask } from '../../hooks/useTasks';
+import {
+  useUpdateTask,
+  useTaskComments,
+  useTaskTimeLogs,
+  useIsTaskBlocked,
+  useTaskDependencies,
+} from '../../hooks/useTasks';
 import { useTaskAssignments } from '../../hooks/useTaskAssignments';
 import { tasksApi } from '../../lib/api/tasks';
-import { useCropsForTask, type Crop } from '../../hooks/useCrops';
+// crops module removed — parcel.crop_type used directly for harvest context
+type CropOption = { id: string; name: string; parcel_id?: string; parcel_name?: string; farm_id?: string; variety_id?: string; variety_name?: string; created_at?: string; updated_at?: string };
 import { useQueryClient } from '@tanstack/react-query';
 import type { Task, TaskSummary, CompleteHarvestTaskRequest } from '../../types/tasks';
 import { useParcelById } from '../../hooks/useParcelsQuery';
@@ -90,6 +103,144 @@ const TaskDetailDialog = ({
   const { data: taskAssignments = [] } = useTaskAssignments(task.id);
   const hasMultipleWorkers = taskAssignments.length > 1;
 
+  // Collaboration + worklog data — all surfaced via existing hooks
+  const { data: comments = [] } = useTaskComments(task.id);
+  const { data: timeLogs = [] } = useTaskTimeLogs(task.id);
+  const { data: blockedStatus } = useIsTaskBlocked(task.id);
+  const { data: dependencies } = useTaskDependencies(task.id);
+
+  // Merged activity timeline: status milestones + comments + clock events
+  const timelineEvents = useMemo(() => {
+    type TimelineEvent = {
+      id: string;
+      at: string;
+      kind: 'milestone' | 'comment' | 'clock';
+      icon: typeof Clock;
+      tone: 'neutral' | 'success' | 'warning' | 'info';
+      title: string;
+      body?: string;
+      author?: string;
+    };
+    const events: TimelineEvent[] = [];
+
+    if (task.created_at) {
+      events.push({
+        id: 'created',
+        at: task.created_at,
+        kind: 'milestone',
+        icon: Calendar,
+        tone: 'neutral',
+        title: t('taskDetail.timeline.taskCreated', 'Task created'),
+      });
+    }
+    if (task.actual_start) {
+      events.push({
+        id: 'started',
+        at: task.actual_start,
+        kind: 'milestone',
+        icon: PlayCircle,
+        tone: 'info',
+        title: t('taskDetail.timeline.workStarted', 'Work started'),
+      });
+    }
+    if (task.actual_end) {
+      events.push({
+        id: 'ended',
+        at: task.actual_end,
+        kind: 'milestone',
+        icon: StopCircle,
+        tone: 'info',
+        title: t('taskDetail.timeline.workEnded', 'Work ended'),
+      });
+    }
+    if (task.approved_at) {
+      events.push({
+        id: 'approved',
+        at: task.approved_at,
+        kind: 'milestone',
+        icon: CheckCircle,
+        tone: 'success',
+        title: t('taskDetail.timeline.taskApproved', 'Task approved'),
+      });
+    }
+    if (task.completed_date) {
+      events.push({
+        id: 'completed',
+        at: task.completed_date,
+        kind: 'milestone',
+        icon: CheckCircle,
+        tone: 'success',
+        title: t('taskDetail.timeline.taskCompleted', 'Task completed'),
+      });
+    }
+
+    for (const c of comments) {
+      events.push({
+        id: `comment-${c.id}`,
+        at: c.created_at,
+        kind: 'comment',
+        icon: MessageSquare,
+        tone: c.type === 'issue' ? 'warning' : 'neutral',
+        title: c.type === 'issue'
+          ? t('taskDetail.timeline.issueReported', 'Issue reported')
+          : c.type === 'status_update'
+            ? t('taskDetail.timeline.statusUpdate', 'Status update')
+            : t('taskDetail.timeline.comment', 'Comment'),
+        body: c.comment,
+        author: c.user_name || c.worker_id || undefined,
+      });
+    }
+
+    for (const log of timeLogs) {
+      events.push({
+        id: `clock-in-${log.id}`,
+        at: log.start_time,
+        kind: 'clock',
+        icon: PlayCircle,
+        tone: 'info',
+        title: t('taskDetail.timeline.clockedIn', 'Clocked in'),
+        body: log.notes || undefined,
+        author: log.worker_id,
+      });
+      if (log.end_time) {
+        const hours = Number(log.total_hours || 0);
+        events.push({
+          id: `clock-out-${log.id}`,
+          at: log.end_time,
+          kind: 'clock',
+          icon: StopCircle,
+          tone: 'info',
+          title: t('taskDetail.timeline.clockedOut', 'Clocked out · {{hours}}h', { hours: hours.toFixed(2) }),
+          body: log.notes || undefined,
+          author: log.worker_id,
+        });
+      }
+    }
+
+    return events.sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime());
+  }, [task.created_at, task.actual_start, task.actual_end, task.approved_at, task.completed_date, comments, timeLogs, t]);
+
+  // Running cost tile — combines piece-work completion and logged hours.
+  // If we had worker hourly rates we'd use them; without, we fall back to
+  // actual_cost when the service computes it.
+  const costSummary = useMemo(() => {
+    const totalHours = timeLogs.reduce((sum, l) => sum + Number(l.total_hours || 0), 0);
+    const unitsCompleted = Number(task.units_completed ?? 0);
+    const ratePerUnit = Number(task.rate_per_unit ?? 0);
+    const pieceWorkCost = unitsCompleted * ratePerUnit;
+    const actualCost = Number(task.actual_cost ?? 0);
+    const estimatedCost = Number(task.cost_estimate ?? 0);
+    return {
+      totalHours,
+      unitsCompleted,
+      ratePerUnit,
+      pieceWorkCost,
+      actualCost,
+      estimatedCost,
+      hasAny: totalHours > 0 || unitsCompleted > 0 || actualCost > 0 || estimatedCost > 0,
+    };
+  }, [timeLogs, task.units_completed, task.rate_per_unit, task.actual_cost, task.cost_estimate]);
+
   // Per-worker unit completion (for per_unit tasks with multiple workers)
   const [workerUnits, setWorkerUnits] = useState<Record<string, number>>({});
 
@@ -106,25 +257,14 @@ const TaskDetailDialog = ({
     }
   }, [showHarvestForm, lotNumber, task.parcel_id, task.farm_id]);
 
-  const { data: crops = [] } = useCropsForTask({
-    farmId: task.farm_id,
-    parcelId: task.parcel_id,
-    enabled: !!task.farm_id,
-  });
-
-  // Fetch parcel details to get crop_type if no crops are found
+  // Fetch parcel details to get crop_type
   const { data: parcel } = useParcelById(task.parcel_id);
 
-  // Create a virtual crop from parcel if parcel has crop_type but no crops exist
-  const availableCrops: Crop[] = useMemo(() => {
-    if (crops.length > 0) {
-      return crops;
-    }
-    
-    // If no crops found but parcel has crop_type, create a virtual crop
+  // Build crop options from parcel crop_type
+  const availableCrops = useMemo(() => {
     if (parcel && parcel.crop_type && task.parcel_id) {
       return [{
-        id: `parcel-${parcel.id}`, // Virtual ID based on parcel - backend will handle this
+        id: `parcel-${parcel.id}`,
         name: parcel.crop_type,
         parcel_id: parcel.id,
         parcel_name: parcel.name,
@@ -133,11 +273,11 @@ const TaskDetailDialog = ({
         variety_name: parcel.variety || undefined,
         created_at: parcel.created_at || new Date().toISOString(),
         updated_at: parcel.updated_at || new Date().toISOString(),
-      } as Crop];
+      } as CropOption];
     }
-    
-    return crops;
-  }, [crops, parcel, task.parcel_id, task.farm_id]);
+
+    return [];
+  }, [parcel, task.parcel_id, task.farm_id]);
 
   // Harvest completion form data
   // Auto-initialize crop_id with virtual crop from parcel if available and no crop_id in task
@@ -179,7 +319,7 @@ const TaskDetailDialog = ({
       });
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Erreur lors du démarrage de la tâche');
+      setError(err instanceof Error ? err.message : t('taskDetail.errors.start', 'Failed to start task'));
     } finally {
       setIsLoading(false);
     }
@@ -196,7 +336,7 @@ const TaskDetailDialog = ({
       });
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Erreur lors de la pause de la tâche');
+      setError(err instanceof Error ? err.message : t('taskDetail.errors.pause', 'Failed to pause task'));
     } finally {
       setIsLoading(false);
     }
@@ -213,7 +353,7 @@ const TaskDetailDialog = ({
       });
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Erreur lors de la reprise de la tâche');
+      setError(err instanceof Error ? err.message : t('taskDetail.errors.resume', 'Failed to resume task'));
     } finally {
       setIsLoading(false);
     }
@@ -239,7 +379,7 @@ const TaskDetailDialog = ({
       queryClient.invalidateQueries({ queryKey: ['work-records'] });
       onClose();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Erreur lors de la complétion de la tâche');
+      setError(err instanceof Error ? err.message : t('taskDetail.errors.complete', 'Failed to complete task'));
     } finally {
       setIsLoading(false);
     }
@@ -247,7 +387,7 @@ const TaskDetailDialog = ({
 
   const handleCompletePerUnit = async () => {
     if (!hasMultipleWorkers && perUnitData.units_completed <= 0) {
-      setError('Veuillez entrer le nombre d\'unités complétées');
+      setError(t('taskDetail.errors.unitsRequired', 'Please enter completed units'));
       return;
     }
 
@@ -280,7 +420,7 @@ const TaskDetailDialog = ({
       queryClient.invalidateQueries({ queryKey: ['work-records'] });
       onClose();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Erreur lors de la complétion de la tâche');
+      setError(err instanceof Error ? err.message : t('taskDetail.errors.complete', 'Failed to complete task'));
     } finally {
       setIsLoading(false);
     }
@@ -288,15 +428,15 @@ const TaskDetailDialog = ({
 
   const handleCompleteWithHarvest = async () => {
     if (!harvestData.crop_id) {
-      setError('Veuillez sélectionner une culture');
+      setError(t('taskDetail.errors.cropRequired', 'Please select a crop'));
       return;
     }
     if (!harvestData.quantity || harvestData.quantity <= 0) {
-      setError('Veuillez entrer une quantité valide');
+      setError(t('taskDetail.errors.quantityRequired', 'Please enter a valid quantity'));
       return;
     }
     if (!lotNumber) {
-      setError('Veuillez entrer un numéro de lot');
+      setError(t('taskDetail.errors.lotRequired', 'Please enter a lot number'));
       return;
     }
 
@@ -367,7 +507,7 @@ const TaskDetailDialog = ({
         onClose();
       }
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Erreur lors de la complétion de la récolte');
+      setError(err instanceof Error ? err.message : t('taskDetail.errors.harvestComplete', 'Failed to complete harvest'));
     } finally {
       setIsLoading(false);
     }
@@ -435,10 +575,39 @@ const TaskDetailDialog = ({
             </div>
           )}
 
+          {/* Blocked-by banner — surfaces unresolved dependencies so workers know
+              why the task can't be started yet. */}
+          {blockedStatus?.blocked && blockedStatus.blockers.length > 0 && (
+            <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <Lock className="w-5 h-5 text-amber-600 flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-amber-900 dark:text-amber-100">
+                    {t('tasks.blocked.title', 'Task is blocked by {{count}} unresolved dependency', {
+                      count: blockedStatus.blockers.length,
+                      defaultValue_plural: 'Task is blocked by {{count}} unresolved dependencies',
+                    })}
+                  </p>
+                  <ul className="mt-2 space-y-1">
+                    {blockedStatus.blockers.map((b, i) => (
+                      <li key={b.id ?? i} className="text-sm text-amber-800 dark:text-amber-200">
+                        • {b.title ?? 'Untitled task'}
+                        {b.status ? <span className="ml-2 text-xs italic">({b.status})</span> : null}
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">
+                    {t('tasks.blocked.hint', 'Complete the blockers above before starting this task.')}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Task Info */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
-              <p className="text-sm text-gray-500 dark:text-gray-400">Type de tâche</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">{t('taskDetail.fields.taskType', 'Task type')}</p>
               <p className="font-medium text-gray-900 dark:text-white">
                 {getTaskTypeLabel(task.task_type, 'fr')}
               </p>
@@ -446,7 +615,7 @@ const TaskDetailDialog = ({
 
             {'farm_name' in task && task.farm_name && (
               <div className="space-y-1">
-                <p className="text-sm text-gray-500 dark:text-gray-400">Ferme</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{t('taskDetail.fields.farm', 'Farm')}</p>
                 <p className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
                   <MapPin className="w-4 h-4" />
                   {task.farm_name}
@@ -456,7 +625,7 @@ const TaskDetailDialog = ({
 
             {'parcel_name' in task && task.parcel_name && (
               <div className="space-y-1">
-                <p className="text-sm text-gray-500 dark:text-gray-400">Parcelle</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{t('taskDetail.fields.parcel', 'Parcel')}</p>
                 <p className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
                   <MapPin className="w-4 h-4 text-green-600" />
                   {task.parcel_name}
@@ -466,7 +635,7 @@ const TaskDetailDialog = ({
 
             {'worker_name' in task && task.worker_name && (
               <div className="space-y-1">
-                <p className="text-sm text-gray-500 dark:text-gray-400">Assigné à</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{t('taskDetail.fields.assignedTo', 'Assigned to')}</p>
                 <p className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
                   <User className="w-4 h-4" />
                   {task.worker_name}
@@ -476,17 +645,17 @@ const TaskDetailDialog = ({
 
             {task.estimated_duration && (
               <div className="space-y-1">
-                <p className="text-sm text-gray-500 dark:text-gray-400">Durée estimée</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{t('taskDetail.fields.estimatedDuration', 'Estimated duration')}</p>
                 <p className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
                   <Clock className="w-4 h-4" />
-                  {task.estimated_duration} heures
+                  {t('taskDetail.fields.estimatedDurationValue', '{{hours}} hours', { hours: task.estimated_duration })}
                 </p>
               </div>
             )}
 
             {task.scheduled_start && (
               <div className="space-y-1">
-                <p className="text-sm text-gray-500 dark:text-gray-400">Date prévue</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{t('taskDetail.fields.scheduledDate', 'Scheduled date')}</p>
                 <p className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
                   <Calendar className="w-4 h-4" />
                   {format(new Date(task.scheduled_start), 'PPP', { locale: fr })}
@@ -496,7 +665,7 @@ const TaskDetailDialog = ({
 
             {task.due_date && (
               <div className="space-y-1">
-                <p className="text-sm text-gray-500 dark:text-gray-400">Date limite</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{t('taskDetail.fields.dueDate', 'Due date')}</p>
                 <p className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
                   <Calendar className="w-4 h-4" />
                   {format(new Date(task.due_date), 'PPP', { locale: fr })}
@@ -507,7 +676,7 @@ const TaskDetailDialog = ({
 
           {task.description && (
             <div className="space-y-1">
-              <p className="text-sm text-gray-500 dark:text-gray-400">Description</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">{t('taskDetail.fields.description', 'Description')}</p>
               <p className="text-gray-900 dark:text-white">{task.description}</p>
             </div>
           )}
@@ -515,25 +684,25 @@ const TaskDetailDialog = ({
           {/* Payment Info */}
           {task.payment_type && (
             <div className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-4 space-y-2">
-              <h4 className="font-medium text-gray-900 dark:text-white">Informations de paiement</h4>
+              <h4 className="font-medium text-gray-900 dark:text-white">{t('taskDetail.payment.title', 'Payment information')}</h4>
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <p className="text-gray-500 dark:text-gray-400">Type de paiement</p>
+                  <p className="text-gray-500 dark:text-gray-400">{t('taskDetail.payment.type', 'Payment type')}</p>
                   <p className="font-medium text-gray-900 dark:text-white">
-                    {task.payment_type === 'per_unit' ? 'À l\'unité' :
-                     task.payment_type === 'daily' ? 'Journalier' :
-                     task.payment_type === 'monthly' ? 'Mensuel' : 'Métayage'}
+                    {task.payment_type === 'per_unit' ? t('taskDetail.payment.types.perUnit', 'Per unit') :
+                     task.payment_type === 'daily' ? t('taskDetail.payment.types.daily', 'Daily') :
+                     task.payment_type === 'monthly' ? t('taskDetail.payment.types.monthly', 'Monthly') : t('taskDetail.payment.types.metayage', 'Sharecropping')}
                   </p>
                 </div>
                 {task.units_required && (
                   <div>
-                    <p className="text-gray-500 dark:text-gray-400">Unités estimées</p>
+                    <p className="text-gray-500 dark:text-gray-400">{t('taskDetail.payment.estimatedUnits', 'Estimated units')}</p>
                     <p className="font-medium text-gray-900 dark:text-white">{task.units_required}</p>
                   </div>
                 )}
                 {task.rate_per_unit && (
                   <div>
-                    <p className="text-gray-500 dark:text-gray-400">Tarif par unité</p>
+                    <p className="text-gray-500 dark:text-gray-400">{t('taskDetail.payment.ratePerUnit', 'Rate per unit')}</p>
                     <p className="font-medium text-gray-900 dark:text-white">{task.rate_per_unit} MAD</p>
                   </div>
                 )}
@@ -547,13 +716,13 @@ const TaskDetailDialog = ({
             <div className="border-t dark:border-gray-700 pt-6 space-y-4">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                 <Banknote className="w-5 h-5 text-green-600" />
-                Paiement à l'unité
+                {t('taskDetail.perUnitForm.title', 'Per-unit payment')}
               </h3>
 
               {/* Tarif par unité (always shown) */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="rate_per_unit_completion">Tarif par unité (MAD) *</Label>
+                  <Label htmlFor="rate_per_unit_completion">{t('taskDetail.perUnitForm.ratePerUnit', 'Rate per unit (MAD) *')}</Label>
                   <Input
                     id="rate_per_unit_completion"
                     type="number"
@@ -561,7 +730,7 @@ const TaskDetailDialog = ({
                     step="0.01"
                     value={perUnitData.rate_per_unit || ''}
                     onChange={(e) => setPerUnitData({ ...perUnitData, rate_per_unit: parseFloat(e.target.value) || 0 })}
-                    placeholder="Ex: 5.00"
+                    placeholder={t('taskDetail.perUnitForm.ratePlaceholder', 'E.g. 5.00')}
                   />
                 </div>
               </div>
@@ -569,7 +738,7 @@ const TaskDetailDialog = ({
               {/* Per-worker units if multiple workers */}
               {hasMultipleWorkers ? (
                 <div className="space-y-3">
-                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Unités par travailleur</p>
+                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('taskDetail.perUnitForm.unitsPerWorker', 'Units per worker')}</p>
                   {taskAssignments.map(assignment => (
                     <div key={assignment.worker_id} className="flex items-center gap-3">
                       <span className="text-sm text-gray-700 dark:text-gray-300 w-40 truncate">
@@ -597,7 +766,7 @@ const TaskDetailDialog = ({
                 </div>
               ) : (
                 <div className="space-y-2">
-                  <Label htmlFor="units_completed">Unités complétées *</Label>
+                  <Label htmlFor="units_completed">{t('taskDetail.perUnitForm.unitsCompleted', 'Units completed *')}</Label>
                   <Input
                     id="units_completed"
                     type="number"
@@ -605,11 +774,11 @@ const TaskDetailDialog = ({
                     step="0.01"
                     value={perUnitData.units_completed || ''}
                     onChange={(e) => setPerUnitData({ ...perUnitData, units_completed: parseFloat(e.target.value) || 0 })}
-                    placeholder="Ex: 100"
+                    placeholder={t('taskDetail.perUnitForm.unitsPlaceholder', 'E.g. 100')}
                   />
                   {task.units_required && (
                     <p className="text-xs text-gray-500 dark:text-gray-400">
-                      Unités estimées: {task.units_required}
+                      {t('taskDetail.payment.estimatedUnitsValue', 'Estimated units: {{count}}', { count: task.units_required })}
                     </p>
                   )}
                 </div>
@@ -620,7 +789,7 @@ const TaskDetailDialog = ({
                 <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
                   <div className="flex justify-between items-center">
                     <span className="text-sm font-medium text-green-800 dark:text-green-200">
-                      Paiement total
+                      {t('taskDetail.perUnitForm.totalPayment', 'Total payment')}
                     </span>
                     <span className="text-lg font-bold text-green-600 dark:text-green-400">
                       {hasMultipleWorkers
@@ -632,13 +801,13 @@ const TaskDetailDialog = ({
               )}
 
               <div className="space-y-2">
-                <Label htmlFor="per_unit_notes">Notes</Label>
+                <Label htmlFor="per_unit_notes">{t('taskDetail.fields.notes', 'Notes')}</Label>
                 <Textarea
                   id="per_unit_notes"
                   value={perUnitData.notes}
                   onChange={(e) => setPerUnitData({ ...perUnitData, notes: e.target.value })}
                   rows={2}
-                  placeholder="Notes sur le travail effectué..."
+                  placeholder={t('taskDetail.perUnitForm.notesPlaceholder', 'Notes about the work completed...')}
                 />
               </div>
             </div>
@@ -648,12 +817,12 @@ const TaskDetailDialog = ({
             <div className="border-t dark:border-gray-700 pt-6 space-y-4">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                 <Wheat className="w-5 h-5 text-amber-600" />
-                Enregistrer la récolte
+                {t('taskDetail.harvestForm.title', 'Record harvest')}
               </h3>
 
               {/* Completion Type Selector */}
               <div className="space-y-2">
-                <Label>Type de complétion</Label>
+                <Label>{t('taskDetail.harvestForm.completionType', 'Completion type')}</Label>
                 <div className="flex gap-4">
                   <label className={`flex items-center gap-2 p-3 rounded-lg border cursor-pointer transition-colors ${
                     completionType === 'complete'
@@ -670,8 +839,8 @@ const TaskDetailDialog = ({
                     />
                     <CheckCircle className={`w-5 h-5 ${completionType === 'complete' ? 'text-green-600' : 'text-gray-400'}`} />
                     <div>
-                      <p className="font-medium text-sm">Terminer complètement</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">Marquer la tâche comme terminée</p>
+                      <p className="font-medium text-sm">{t('taskDetail.harvestForm.completeFull', 'Complete fully')}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{t('taskDetail.harvestForm.completeFullDesc', 'Mark the task as completed')}</p>
                     </div>
                   </label>
                   <label className={`flex items-center gap-2 p-3 rounded-lg border cursor-pointer transition-colors ${
@@ -689,8 +858,8 @@ const TaskDetailDialog = ({
                     />
                     <PackageCheck className={`w-5 h-5 ${completionType === 'partial' ? 'text-amber-600' : 'text-gray-400'}`} />
                     <div>
-                      <p className="font-medium text-sm">Récolte partielle</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">Continuer la tâche après</p>
+                      <p className="font-medium text-sm">{t('taskDetail.harvestForm.partial', 'Partial harvest')}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{t('taskDetail.harvestForm.partialDesc', 'Continue the task after')}</p>
                     </div>
                   </label>
                 </div>
@@ -700,14 +869,14 @@ const TaskDetailDialog = ({
               <div className="space-y-2">
                 <Label htmlFor="lot_number" className="flex items-center gap-2">
                   <Hash className="w-4 h-4" />
-                  Numéro de lot *
+                  {t('taskDetail.harvestForm.lotNumber', 'Lot number *')}
                 </Label>
                 <Input
                   id="lot_number"
                   type="text"
                   value={lotNumber}
                   onChange={(e) => setLotNumber(e.target.value)}
-                  placeholder="Ex: P1FM1-0012025"
+                  placeholder={t('taskDetail.harvestForm.lotPlaceholder', 'E.g. P1FM1-0012025')}
                 />
                 <p className="text-xs text-gray-500 dark:text-gray-400">
                   Format automatique: {'{'}ParcelCode{'}'}{'{'}FarmCode{'}'}-{'{'}Sequence{'}'}{'{'}Year{'}'}
@@ -717,17 +886,17 @@ const TaskDetailDialog = ({
               <div className="grid grid-cols-2 gap-4">
                 {/* Crop Selector */}
                 <div className="space-y-2 col-span-2">
-                  <Label htmlFor="crop_id">Culture récoltée *</Label>
+                  <Label htmlFor="crop_id">{t('taskDetail.harvestForm.cropHarvested', 'Harvested crop *')}</Label>
                   <Select
                     value={harvestData.crop_id || '__none__'}
                     onValueChange={(value) => setHarvestData({ ...harvestData, crop_id: value === '__none__' ? '' : value })}
                   >
                     <SelectTrigger id="crop_id">
-                      <SelectValue placeholder="Sélectionner une culture" />
+                        <SelectValue placeholder={t('taskDetail.harvestForm.selectCrop', 'Select a crop')} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="__none__">Sélectionner une culture...</SelectItem>
-                      {availableCrops.map((crop: Crop) => (
+                        <SelectItem value="__none__">{t('taskDetail.harvestForm.selectCropPlaceholder', 'Select a crop...')}</SelectItem>
+                      {availableCrops.map((crop: CropOption) => (
                         <SelectItem key={crop.id} value={crop.id}>
                           {crop.name} {crop.parcel_name ? `(${crop.parcel_name})` : ''}
                         </SelectItem>
@@ -738,15 +907,15 @@ const TaskDetailDialog = ({
                     <p className="text-sm text-amber-600">
                       {task.parcel_id
                         ? parcel && !parcel.crop_type
-                          ? "Cette parcelle n'a pas de type de culture défini. Veuillez modifier la parcelle pour ajouter un type de culture."
-                          : "Aucune culture trouvée pour cette parcelle. Veuillez d'abord créer une culture dans Agriculture > Cultures."
-                        : "Aucune parcelle assignée à cette tâche. Modifiez la tâche pour ajouter une parcelle, ou créez une culture dans Agriculture > Cultures."}
+                          ? t('taskDetail.noCropType', "This parcel has no crop type defined. Please edit the parcel to add a crop type.")
+                          : t('taskDetail.noCropFound', "No crop found for this parcel. Please create a crop in Agriculture > Crops first.")
+                        : t('taskDetail.noParcel', "No parcel assigned to this task. Edit the task to add a parcel, or create a crop in Agriculture > Crops.")}
                     </p>
                   )}
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="harvest_date">Date de récolte *</Label>
+                  <Label htmlFor="harvest_date">{t('taskDetail.harvestForm.harvestDate', 'Harvest date *')}</Label>
                   <Input
                     id="harvest_date"
                     type="date"
@@ -756,7 +925,7 @@ const TaskDetailDialog = ({
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="quantity">Quantité récoltée *</Label>
+                  <Label htmlFor="quantity">{t('taskDetail.harvestForm.quantityHarvested', 'Quantity harvested *')}</Label>
                   <Input
                     id="quantity"
                     type="number"
@@ -764,60 +933,60 @@ const TaskDetailDialog = ({
                     step="0.1"
                     value={harvestData.quantity || ''}
                     onChange={(e) => setHarvestData({ ...harvestData, quantity: parseFloat(e.target.value) || 0 })}
-                    placeholder="Ex: 500"
+                    placeholder={t('taskDetail.harvestForm.quantityPlaceholder', 'E.g. 500')}
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="unit">Unité</Label>
+                  <Label htmlFor="unit">{t('taskDetail.harvestForm.unit', 'Unit')}</Label>
                   <Select
                     value={harvestData.unit}
                     onValueChange={(value) => setHarvestData({ ...harvestData, unit: value as HarvestUnit })}
                   >
                     <SelectTrigger id="unit">
-                      <SelectValue placeholder="Sélectionner" />
+                        <SelectValue placeholder={t('taskDetail.harvestForm.select', 'Select')} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="kg">Kilogrammes (kg)</SelectItem>
-                      <SelectItem value="tons">Tonnes</SelectItem>
-                      <SelectItem value="units">Unités</SelectItem>
-                      <SelectItem value="boxes">Caisses</SelectItem>
-                      <SelectItem value="crates">Cagettes</SelectItem>
-                      <SelectItem value="liters">Litres</SelectItem>
+                        <SelectItem value="kg">{t('taskDetail.harvestForm.units.kg', 'Kilograms (kg)')}</SelectItem>
+                        <SelectItem value="tons">{t('taskDetail.harvestForm.units.tons', 'Tons')}</SelectItem>
+                        <SelectItem value="units">{t('taskDetail.harvestForm.units.units', 'Units')}</SelectItem>
+                        <SelectItem value="boxes">{t('taskDetail.harvestForm.units.boxes', 'Boxes')}</SelectItem>
+                        <SelectItem value="crates">{t('taskDetail.harvestForm.units.crates', 'Crates')}</SelectItem>
+                        <SelectItem value="liters">{t('taskDetail.harvestForm.units.liters', 'Liters')}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="quality_grade">Grade de qualité</Label>
+                  <Label htmlFor="quality_grade">{t('taskDetail.harvestForm.qualityGrade', 'Quality grade')}</Label>
                   <Select
                     value={harvestData.quality_grade}
                     onValueChange={(value) => setHarvestData({ ...harvestData, quality_grade: value as HarvestQualityGrade })}
                   >
                     <SelectTrigger id="quality_grade">
-                      <SelectValue placeholder="Sélectionner" />
+                        <SelectValue placeholder={t('taskDetail.harvestForm.select', 'Select')} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Extra">Extra</SelectItem>
-                      <SelectItem value="A">Grade A</SelectItem>
-                      <SelectItem value="First">Première qualité</SelectItem>
-                      <SelectItem value="B">Grade B</SelectItem>
-                      <SelectItem value="Second">Deuxième qualité</SelectItem>
-                      <SelectItem value="C">Grade C</SelectItem>
-                      <SelectItem value="Third">Troisième qualité</SelectItem>
+                        <SelectItem value="Extra">{t('taskDetail.harvestForm.grades.extra', 'Extra')}</SelectItem>
+                        <SelectItem value="A">{t('taskDetail.harvestForm.grades.a', 'Grade A')}</SelectItem>
+                        <SelectItem value="First">{t('taskDetail.harvestForm.grades.first', 'First quality')}</SelectItem>
+                        <SelectItem value="B">{t('taskDetail.harvestForm.grades.b', 'Grade B')}</SelectItem>
+                        <SelectItem value="Second">{t('taskDetail.harvestForm.grades.second', 'Second quality')}</SelectItem>
+                        <SelectItem value="C">{t('taskDetail.harvestForm.grades.c', 'Grade C')}</SelectItem>
+                        <SelectItem value="Third">{t('taskDetail.harvestForm.grades.third', 'Third quality')}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="harvest_notes">Notes</Label>
+                <Label htmlFor="harvest_notes">{t('taskDetail.fields.notes', 'Notes')}</Label>
                 <Textarea
                   id="harvest_notes"
                   value={harvestData.harvest_notes || ''}
                   onChange={(e) => setHarvestData({ ...harvestData, harvest_notes: e.target.value })}
                   rows={2}
-                  placeholder="Notes sur la récolte..."
+                  placeholder={t('taskDetail.harvestForm.notesPlaceholder', 'Harvest notes...')}
                 />
               </div>
             </div>
@@ -827,7 +996,7 @@ const TaskDetailDialog = ({
           {task.completion_percentage > 0 && task.status !== 'completed' && (
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
-                <span className="text-gray-500 dark:text-gray-400">Progression</span>
+                <span className="text-gray-500 dark:text-gray-400">{t('taskDetail.fields.progress', 'Progress')}</span>
                 <span className="font-medium text-gray-900 dark:text-white">{task.completion_percentage}%</span>
               </div>
               <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
@@ -838,19 +1007,157 @@ const TaskDetailDialog = ({
               </div>
             </div>
           )}
+
+          {/* Running Cost tile — live summary of hours logged and piece-work earned */}
+          {costSummary.hasAny && (
+            <div className="bg-gradient-to-br from-emerald-50 to-blue-50 dark:from-emerald-900/20 dark:to-blue-900/20 border border-emerald-200/60 dark:border-emerald-800/60 rounded-lg p-4">
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
+                  <Wallet className="w-4 h-4 text-emerald-600" />
+                  {t('tasks.cost.title', 'Running cost')}
+                </h4>
+                {costSummary.estimatedCost > 0 && (
+                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                    {t('tasks.cost.vs', 'vs {{est}} MAD estimated', { est: costSummary.estimatedCost.toLocaleString('fr-FR') })}
+                  </span>
+                )}
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+                <div>
+                  <p className="text-gray-500 dark:text-gray-400 text-xs">
+                    {t('tasks.cost.hoursLogged', 'Hours logged')}
+                  </p>
+                  <p className="font-semibold text-gray-900 dark:text-white">
+                    {costSummary.totalHours.toFixed(2)}h
+                  </p>
+                </div>
+                <div>
+                  <p className="text-gray-500 dark:text-gray-400 text-xs">
+                    {t('tasks.cost.unitsDone', 'Units done')}
+                  </p>
+                  <p className="font-semibold text-gray-900 dark:text-white">
+                    {costSummary.unitsCompleted}
+                    {task.units_required ? (
+                      <span className="text-gray-400"> / {task.units_required}</span>
+                    ) : null}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-gray-500 dark:text-gray-400 text-xs">
+                    {t('tasks.cost.pieceWork', 'Piece-work')}
+                  </p>
+                  <p className="font-semibold text-emerald-700 dark:text-emerald-400">
+                    {costSummary.pieceWorkCost.toLocaleString('fr-FR')} MAD
+                  </p>
+                </div>
+                <div>
+                  <p className="text-gray-500 dark:text-gray-400 text-xs">
+                    {t('tasks.cost.actual', 'Actual cost')}
+                  </p>
+                  <p className="font-semibold text-gray-900 dark:text-white">
+                    {costSummary.actualCost.toLocaleString('fr-FR')} MAD
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Dependencies section — shows what this task depends on AND what depends on it */}
+          {dependencies && (dependencies.depends_on.length > 0 || dependencies.required_by.length > 0) && (
+            <div className="space-y-3">
+              <h4 className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
+                <Lock className="w-4 h-4 text-gray-500" />
+                {t('tasks.dependencies.title', 'Dependencies')}
+              </h4>
+              {dependencies.depends_on.length > 0 && (
+                <div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                    {t('tasks.dependencies.dependsOn', 'Depends on')}
+                  </p>
+                  <ul className="space-y-1">
+                    {dependencies.depends_on.map((d) => (
+                      <li key={d.id} className="text-sm text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                        <span className={`inline-block w-2 h-2 rounded-full ${d.status === 'completed' ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+                        {d.title}
+                        {d.status ? <span className="text-xs text-gray-400">({d.status})</span> : null}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {dependencies.required_by.length > 0 && (
+                <div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                    {t('tasks.dependencies.requiredBy', 'Required by')}
+                  </p>
+                  <ul className="space-y-1">
+                    {dependencies.required_by.map((d) => (
+                      <li key={d.id} className="text-sm text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                        <span className="inline-block w-2 h-2 rounded-full bg-blue-500" />
+                        {d.title}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Activity timeline — merged feed of milestones, comments, and clock events */}
+          {timelineEvents.length > 0 && (
+            <div className="space-y-3">
+              <h4 className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
+                <Activity className="w-4 h-4 text-gray-500" />
+                {t('tasks.activity.title', 'Activity')}
+                <span className="text-xs text-gray-400 font-normal">({timelineEvents.length})</span>
+              </h4>
+              <ol className="relative border-s border-gray-200 dark:border-gray-700 ps-6 space-y-4">
+                {timelineEvents.map((evt) => {
+                  const Icon = evt.icon;
+                  const toneClasses =
+                    evt.tone === 'success'
+                      ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-400'
+                      : evt.tone === 'warning'
+                      ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-400'
+                      : evt.tone === 'info'
+                      ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400'
+                      : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400';
+                  return (
+                    <li key={evt.id} className="relative">
+                      <span className={`absolute -start-9 flex h-6 w-6 items-center justify-center rounded-full ring-4 ring-white dark:ring-gray-800 ${toneClasses}`}>
+                        <Icon className="h-3 w-3" />
+                      </span>
+                      <div>
+                        <p className="text-sm font-medium text-gray-900 dark:text-white">{evt.title}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          {format(new Date(evt.at), 'PPp', { locale: fr })}
+                          {evt.author ? <span className="ml-2">· {evt.author}</span> : null}
+                        </p>
+                        {evt.body && (
+                          <p className="mt-1 text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+                            {evt.body}
+                          </p>
+                        )}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ol>
+            </div>
+          )}
         </div>
 
         {/* Actions */}
         <div className="sticky bottom-0 bg-white dark:bg-gray-800 border-t dark:border-gray-700 px-6 py-4">
           <div className="flex justify-end gap-3">
             <Button variant="outline" onClick={onClose}>
-              Fermer
+              {t('taskDetail.actions.close', 'Close')}
             </Button>
 
             {canStart && (
               <Button variant="blue" onClick={handleStartTask} disabled={isLoading} >
                 <Play className="w-4 h-4 mr-2" />
-                Démarrer
+                {t('taskDetail.actions.start', 'Start')}
               </Button>
             )}
 
@@ -861,14 +1168,14 @@ const TaskDetailDialog = ({
                 variant="outline"
               >
                 <Pause className="w-4 h-4 mr-2" />
-                Pause
+                {t('taskDetail.actions.pause', 'Pause')}
               </Button>
             )}
 
             {canResume && (
               <Button variant="blue" onClick={handleResumeTask} disabled={isLoading} >
                 <Play className="w-4 h-4 mr-2" />
-                Reprendre
+                {t('taskDetail.actions.resume', 'Resume')}
               </Button>
             )}
 
@@ -877,12 +1184,12 @@ const TaskDetailDialog = ({
                 {isHarvestingTask ? (
                   <>
                     <Wheat className="w-4 h-4 mr-2" />
-                    Terminer avec récolte
+                    {t('taskDetail.actions.completeWithHarvest', 'Complete with harvest')}
                   </>
                 ) : (
                   <>
                     <CheckCircle className="w-4 h-4 mr-2" />
-                    Terminer
+                    {t('taskDetail.actions.complete', 'Complete')}
                   </>
                 )}
               </Button>
@@ -895,15 +1202,15 @@ const TaskDetailDialog = ({
                   variant="outline"
                   onClick={() => setShowPerUnitForm(false)}
                 >
-                  Annuler
+                  {t('taskDetail.actions.cancel', 'Cancel')}
                 </Button>
                 <Button variant="green" onClick={handleCompletePerUnit} disabled={isLoading || perUnitData.units_completed <= 0} >
                   {isLoading ? (
-                    'Enregistrement...'
+                    t('taskDetail.actions.saving', 'Saving...')
                   ) : (
                     <>
                       <Banknote className="w-4 h-4 mr-2" />
-                      Terminer et payer
+                      {t('taskDetail.actions.completeAndPay', 'Complete and pay')}
                     </>
                   )}
                 </Button>
@@ -919,7 +1226,7 @@ const TaskDetailDialog = ({
                     setLotNumber('');
                   }}
                 >
-                  Annuler
+                  {t('taskDetail.actions.cancel', 'Cancel')}
                 </Button>
                 <Button
                   variant={completionType === 'partial' ? 'amber' : 'green'}
@@ -932,10 +1239,10 @@ const TaskDetailDialog = ({
                     <CheckCircle className="w-4 h-4 mr-2" />
                   )}
                   {isLoading
-                    ? 'Enregistrement...'
+                    ? t('taskDetail.actions.saving', 'Saving...')
                     : completionType === 'partial'
-                    ? 'Enregistrer récolte partielle'
-                    : 'Terminer et enregistrer'}
+                    ? t('taskDetail.actions.savePartialHarvest', 'Save partial harvest')
+                    : t('taskDetail.actions.completeAndSave', 'Complete and save')}
                 </Button>
               </>
             )}

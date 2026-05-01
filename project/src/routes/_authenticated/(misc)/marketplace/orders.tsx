@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import {
   Package,
   CheckCircle,
@@ -43,35 +44,18 @@ interface Order {
   items?: OrderItem[];
 }
 
-const statusConfig: Record<
-  string,
-  { label: string; color: string; icon: LucideIcon }
-> = {
-  pending: {
-    label: 'En attente',
-    color: 'bg-yellow-100 text-yellow-800',
-    icon: Clock,
-  },
-  confirmed: {
-    label: 'Confirm\u00e9e',
-    color: 'bg-blue-100 text-blue-800',
-    icon: CheckCircle,
-  },
-  shipped: {
-    label: 'Exp\u00e9di\u00e9e',
-    color: 'bg-purple-100 text-purple-800',
-    icon: Truck,
-  },
-  delivered: {
-    label: 'Livr\u00e9e',
-    color: 'bg-green-100 text-green-800',
-    icon: Home,
-  },
-  cancelled: {
-    label: 'Annul\u00e9e',
-    color: 'bg-red-100 text-red-800',
-    icon: XCircle,
-  },
+const getStatusConfig = (t: TFunction) => (status: string): { label: string; color: string; icon: LucideIcon } => {
+  const configs: Record<
+    string,
+    { label: string; color: string; icon: LucideIcon }
+  > = {
+    pending: { label: t('marketplace.orders.status.pending', 'Pending'), color: 'bg-yellow-100 text-yellow-800', icon: Clock },
+    confirmed: { label: t('marketplace.orders.status.confirmed', 'Confirmed'), color: 'bg-blue-100 text-blue-800', icon: CheckCircle },
+    shipped: { label: t('marketplace.orders.status.shipped', 'Shipped'), color: 'bg-purple-100 text-purple-800', icon: Truck },
+    delivered: { label: t('marketplace.orders.status.delivered', 'Delivered'), color: 'bg-green-100 text-green-800', icon: Home },
+    cancelled: { label: t('marketplace.orders.status.cancelled', 'Cancelled'), color: 'bg-red-100 text-red-800', icon: XCircle },
+  };
+  return configs[status] || configs.pending;
 };
 
 function SellerOrdersPage() {
@@ -149,7 +133,7 @@ function SellerOrdersPage() {
   };
 
   const renderOrderCard = (order: Order) => {
-    const status = statusConfig[order.status] || statusConfig.pending;
+    const status = getStatusConfig(t)(order.status);
     const StatusIcon = status.icon;
     const actions = getAvailableActions(order);
 
@@ -215,7 +199,7 @@ function SellerOrdersPage() {
   };
 
   const renderOrderTable = (order: Order) => {
-    const status = statusConfig[order.status] || statusConfig.pending;
+    const status = getStatusConfig(t)(order.status);
     const StatusIcon = status.icon;
     const actions = getAvailableActions(order);
 

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -29,12 +29,17 @@ import { useCreateStockEntry } from '@/hooks/useStockEntries';
 import { useWarehouses } from '@/hooks/useWarehouses';
 import { useItemSelection } from '@/hooks/useItems';
 import { useAuth } from '@/hooks/useAuth';
+import { useBarcodeScanner } from '@/hooks/useBarcodeScanner';
+import BarcodeScanField from '@/components/Stock/BarcodeScanField';
 import type { StockEntryType, CreateStockEntryInput } from '@/types/stock-entries';
+import type { ScanResult } from '@/types/barcode';
 import { STOCK_ENTRY_TYPES } from '@/types/stock-entries';
 import { toast } from 'sonner';
 import { getLocalDate } from '@/utils/date';
 import { itemsApi } from '@/lib/api/items';
 import type { ProductVariant } from '@/types/items';
+import { useQuery } from '@tanstack/react-query';
+import { parcelsApi } from '@/lib/api/parcels';
 
 // Zod schemas - Dynamic based on entry type
 const getStockEntrySchema = (entryType: StockEntryType) => {
@@ -77,6 +82,7 @@ const getStockEntrySchema = (entryType: StockEntryType) => {
     from_warehouse_id: z.string().optional().transform(val => val === '' ? undefined : val),
     to_warehouse_id: z.string().optional().transform(val => val === '' ? undefined : val),
     purpose: z.string().optional().transform(val => val === '' ? undefined : val),
+    parcel_id: z.string().optional().transform(val => val === '' ? undefined : val),
     notes: z.string().optional().transform(val => val === '' ? undefined : val),
     items: z.array(itemSchema).min(1, 'At least one item is required'),
   }).superRefine((data, ctx) => {
@@ -131,11 +137,25 @@ export default function StockEntryForm({
   const { currentOrganization } = useAuth();
   const createEntry = useCreateStockEntry();
   const { data: warehouses = [] } = useWarehouses();
-  const { data: items = [], isLoading: itemsLoading } = useItemSelection({ 
-    is_stock_item: true 
+  const { data: items = [], isLoading: itemsLoading } = useItemSelection({
+    is_stock_item: true
+  });
+  const { data: parcels = [] } = useQuery({
+    queryKey: ['parcels-org', currentOrganization?.id],
+    queryFn: () => {
+      const orgId = currentOrganization?.id;
+      if (!orgId) return Promise.resolve([]);
+      return parcelsApi.getAll({ organization_id: orgId }, orgId);
+    },
+    enabled: !!currentOrganization?.id,
   });
   const [variantOptionsByItemId, setVariantOptionsByItemId] = useState<Record<string, ProductVariant[]>>({});
   const [variantLoadingByItemId, setVariantLoadingByItemId] = useState<Record<string, boolean>>({});
+  /** Mirrors variant cache so applySelectedItem does not depend on that state (avoids infinite effect loops). */
+  const variantOptionsByItemIdRef = useRef<Record<string, ProductVariant[]>>({});
+  useEffect(() => {
+    variantOptionsByItemIdRef.current = variantOptionsByItemId;
+  }, [variantOptionsByItemId]);
   const [selectedType, setSelectedType] = useState<StockEntryType>(defaultType);
   const typeStyles = {
     green: {
@@ -182,6 +202,27 @@ export default function StockEntryForm({
     name: 'items',
   });
 
+  const scanner = useBarcodeScanner({
+    items: fields.map((_, i) => ({
+      item_id: form.watch(`items.${i}.item_id`) || '',
+      quantity: form.watch(`items.${i}.quantity`) || 0,
+    })),
+    warehouseId: form.watch('to_warehouse_id') || form.watch('from_warehouse_id') || undefined,
+    onItemFound: (result: ScanResult) => {
+      const existingIndex = fields.findIndex(
+        (_, i) => form.watch(`items.${i}.item_id`) === result.item_id
+      );
+      if (existingIndex >= 0) {
+        const currentQty = form.watch(`items.${existingIndex}.quantity`) || 0;
+        form.setValue(`items.${existingIndex}.quantity`, currentQty + 1, { shouldValidate: true });
+      } else {
+        void applySelectedItem(fields.length, result.item_id).then(() => {
+          form.setValue(`items.${fields.length}.quantity`, 1, { shouldValidate: true });
+        });
+      }
+    },
+  });
+
   const config = STOCK_ENTRY_TYPES[selectedType];
 
   const applySelectedItem = useCallback(
@@ -194,7 +235,7 @@ export default function StockEntryForm({
       form.setValue(`items.${index}.unit`, selectedItem.default_unit, { shouldValidate: true });
       form.setValue(`items.${index}.variant_id`, '', { shouldValidate: false });
 
-      if (!variantOptionsByItemId[itemId] && currentOrganization?.id) {
+      if (!variantOptionsByItemIdRef.current[itemId] && currentOrganization?.id) {
         setVariantLoadingByItemId((prev) => ({ ...prev, [itemId]: true }));
         try {
           const variants = await itemsApi.getVariants(itemId, currentOrganization?.id);
@@ -206,7 +247,7 @@ export default function StockEntryForm({
         }
       }
     },
-    [currentOrganization?.id, form, items, variantOptionsByItemId],
+    [currentOrganization?.id, form, items],
   );
 
   useEffect(() => {
@@ -218,6 +259,7 @@ export default function StockEntryForm({
         from_warehouse_id: '',
         to_warehouse_id: '',
         purpose: '',
+        parcel_id: '',
         notes: '',
         items: [
           {
@@ -288,6 +330,7 @@ export default function StockEntryForm({
         reference_id: referenceId,
         reference_number: referenceNumber,
         purpose: data.purpose,
+        parcel_id: data.parcel_id,
         notes: data.notes,
         items: data.items,
       };
@@ -358,15 +401,15 @@ export default function StockEntryForm({
                   key={type.type}
                   type="button"
                   onClick={() => setSelectedType(type.type)}
-                  className={`p-2 md:p-4 border-2 rounded-lg text-left transition-all ${
+                  className={`flex flex-col items-start justify-start gap-1 h-auto min-h-[64px] md:min-h-[100px] w-full p-2 md:p-4 border-2 rounded-lg text-left whitespace-normal transition-all ${
                     selectedType === type.type
                       ? style.active
                       : 'border-gray-200 hover:border-gray-300'
                   }`}
                 >
-                  <Icon className={`w-5 h-5 md:w-6 md:h-6 mb-1 md:mb-2 ${style.icon}`} />
-                  <div className="font-medium text-xs md:text-sm">{type.label}</div>
-                  <div className="text-xs text-gray-500 mt-1 hidden md:block">{type.description}</div>
+                  <Icon className={`w-5 h-5 md:w-6 md:h-6 ${style.icon}`} />
+                  <div className="font-medium text-xs md:text-sm leading-tight">{type.label}</div>
+                  <div className="text-xs text-gray-500 leading-tight hidden md:block">{type.description}</div>
                 </Button>
               );
             })}
@@ -458,7 +501,7 @@ export default function StockEntryForm({
             )}
           </div>
 
-          {/* Purpose and Notes */}
+          {/* Purpose, Parcel and Notes */}
           <div className="space-y-4">
             <div>
               <Label htmlFor="purpose">{t('stockEntries.form.purpose')}</Label>
@@ -469,6 +512,29 @@ export default function StockEntryForm({
                 className="mt-1"
               />
             </div>
+
+            {selectedType !== 'Stock Transfer' && (
+              <div>
+                <Label htmlFor="parcel_id">
+                  {t('stockEntries.form.parcel', 'Parcel (optional)')}
+                </Label>
+                <Select
+                  value={form.watch('parcel_id') || ''}
+                  onValueChange={(value) => form.setValue('parcel_id', value)}
+                >
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder={t('stockEntries.form.parcelPlaceholder', 'Allocate to a parcel for cost tracking')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {parcels.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             <div>
               <Label htmlFor="notes">{t('stockEntries.form.notes')}</Label>
@@ -481,6 +547,16 @@ export default function StockEntryForm({
               />
             </div>
           </div>
+
+          {/* Barcode Scanner */}
+          <BarcodeScanField
+            value={scanner.scanValue}
+            onChange={scanner.setScanValue}
+            onScan={scanner.handleScan}
+            isScanning={scanner.isScanning}
+            error={scanner.error}
+            autoFocus={false}
+          />
 
           {/* Items */}
           <div>

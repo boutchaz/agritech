@@ -48,8 +48,9 @@ export interface StockEntry {
   purpose: string | null;
   notes: string | null;
 
-  // Crop Cycle Link for Cost Tracking
+  // Crop Cycle / Parcel Link for Cost Tracking
   crop_cycle_id: string | null;
+  parcel_id: string | null;
 
   // Journal Entry Reference (auto-generated)
   journal_entry_id: string | null;
@@ -158,8 +159,9 @@ export interface StockMovement {
   stock_entry_id: string | null;
   stock_entry_item_id: string | null;
 
-  // Crop Cycle Link for Cost Tracking
+  // Crop Cycle / Parcel Link for Cost Tracking
   crop_cycle_id: string | null;
+  parcel_id: string | null;
 
   // Batch/Serial
   batch_number: string | null;
@@ -206,6 +208,7 @@ export interface CreateStockEntryInput {
   reference_number?: string;
   purpose?: string;
   crop_cycle_id?: string;
+  parcel_id?: string;
   notes?: string;
   items: CreateStockEntryItemInput[];
 }
@@ -229,6 +232,7 @@ export interface CreateStockEntryItemInput {
   valuation_method?: ValuationMethod; // FIFO, LIFO, or Moving Average
   system_quantity?: number; // For reconciliation
   physical_quantity?: number; // For reconciliation
+  scanned_barcode?: string;
   notes?: string;
 }
 
@@ -239,6 +243,7 @@ export interface UpdateStockEntryInput {
   to_warehouse_id?: string;
   purpose?: string;
   crop_cycle_id?: string;
+  parcel_id?: string;
   notes?: string;
   status?: StockEntryStatus;
 }

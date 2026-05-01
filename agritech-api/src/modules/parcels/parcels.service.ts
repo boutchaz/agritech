@@ -22,6 +22,7 @@ import {
   SatelliteCacheService,
 } from "../satellite-indices/satellite-cache.service";
 import { NotificationsService } from "../notifications/notifications.service";
+import { NotificationsGateway } from "../notifications/notifications.gateway";
 import { NotificationType } from "../notifications/dto/notification.dto";
 
 const MAJOR_PARCEL_PROFILE_FIELDS = [
@@ -43,8 +44,31 @@ export class ParcelsService {
     private readonly subscriptionsService: SubscriptionsService,
     private readonly satelliteCacheService: SatelliteCacheService,
     private readonly notificationsService: NotificationsService,
+    @Inject(forwardRef(() => NotificationsGateway)) private readonly notificationsGateway: NotificationsGateway,
     @Inject(forwardRef(() => CalibrationService)) private readonly calibrationService: CalibrationService,
   ) {}
+
+  /**
+   * Broadcast a parcel ai_phase transition so the frontend can update
+   * buttons/steppers without polling. Mirrors the event the calibration
+   * state machine emits, so both paths speak the same language.
+   */
+  private emitPhaseChanged(
+    parcelId: string,
+    organizationId: string,
+    fromPhase: string | null,
+    toPhase: string,
+  ): void {
+    this.notificationsGateway.emitToOrganization(
+      organizationId,
+      "calibration:phase-changed",
+      {
+        parcel_id: parcelId,
+        from_phase: fromPhase,
+        to_phase: toPhase,
+      },
+    );
+  }
 
   /**
    * Archive a parcel (soft delete). Sets is_active=false instead of hard deleting.
@@ -776,6 +800,13 @@ export class ParcelsService {
                 `Parcel ${parcelId} transitioned to ready_calibration after satellite sync`,
               );
 
+              this.emitPhaseChanged(
+                parcelId,
+                organizationId,
+                "awaiting_data",
+                "ready_calibration",
+              );
+
               // Auto-start calibration now that satellite data is ready
               this.triggerAutoCalibration(parcelId, organizationId);
             }
@@ -827,11 +858,25 @@ export class ParcelsService {
     }
 
     // Reset to awaiting_data so the full flow runs
+    const { data: previousPhaseRow } = await this.databaseService.getAdminClient()
+      .from("parcels")
+      .select("ai_phase")
+      .eq("id", parcelId)
+      .eq("organization_id", organizationId)
+      .maybeSingle();
+
     await this.databaseService.getAdminClient()
       .from("parcels")
       .update({ ai_phase: "awaiting_data" })
       .eq("id", parcelId)
       .eq("organization_id", organizationId);
+
+    this.emitPhaseChanged(
+      parcelId,
+      organizationId,
+      (previousPhaseRow?.ai_phase as string | null) ?? null,
+      "awaiting_data",
+    );
 
     // Always sync at least 24 months for a complete dataset
     const startDate = new Date();
@@ -848,12 +893,22 @@ export class ParcelsService {
           `Full sync completed for parcel ${parcelId}: ${syncResult.totalPoints} points`,
         );
 
-        await this.databaseService.getAdminClient()
+        const { data: transitioned } = await this.databaseService.getAdminClient()
           .from("parcels")
           .update({ ai_phase: "ready_calibration" })
           .eq("id", parcelId)
           .eq("organization_id", organizationId)
-          .eq("ai_phase", "awaiting_data");
+          .eq("ai_phase", "awaiting_data")
+          .select("id");
+
+        if (transitioned?.length) {
+          this.emitPhaseChanged(
+            parcelId,
+            organizationId,
+            "awaiting_data",
+            "ready_calibration",
+          );
+        }
 
         this.triggerAutoCalibration(parcelId, organizationId);
       })

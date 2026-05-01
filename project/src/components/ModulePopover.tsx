@@ -1,9 +1,7 @@
 import React, { useState } from 'react';
-import { useTranslation } from 'react-i18next';
 import {
   Settings,
   Boxes,
-  X,
   Check,
   Lock,
   Loader2,
@@ -16,20 +14,13 @@ import {
 } from 'lucide-react';
 import { useModules, useUpdateModule } from '../hooks/useModules';
 import { useAddonsOverview } from '../hooks/useAddons';
-import { useModuleBasedDashboard } from '../hooks/useModuleBasedDashboard';
 import { useSubscription } from '../hooks/useSubscription';
 import { getPlanDetails, isModuleAvailableForPlan, CATEGORY_LABELS } from '../lib/polar';
 import { useNavigate } from '@tanstack/react-router';
-import type { OrganizationModule } from '../lib/api/modules';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from './ui/popover';
-import { Button } from './ui/button';
+import type { ModuleConfig } from '../lib/api/module-config';
+import { Button } from '@/components/ui/button';
 import { ScrollArea } from './ui/scroll-area';
 import { cn } from '../lib/utils';
-import { Button } from '@/components/ui/button';
 
 const CATEGORY_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   core: Boxes,
@@ -49,17 +40,16 @@ interface ModulePopoverProps {
   isCollapsed: boolean;
 }
 
-export const ModulePopover = ({ isCollapsed }: ModulePopoverProps) => {
-  const { t } = useTranslation();
+export const ModulePopover = ({ isCollapsed: _isCollapsed }: ModulePopoverProps) => {
   const { data: modules = [], isLoading } = useModules();
   const { data: subscription } = useSubscription();
-  const { data: addonsOverview, refetch: refetchAddons } = useAddonsOverview();
+  const { data: addonsOverview } = useAddonsOverview();
   const updateModule = useUpdateModule();
   const navigate = useNavigate();
   const [showAddons, setShowAddons] = useState(false);
 
   const modulesByCategory = React.useMemo(() => {
-    const grouped: Record<string, OrganizationModule[]> = {};
+    const grouped: Record<string, ModuleConfig[]> = {};
     modules.forEach((module) => {
       const category = module.category || 'general';
       if (!grouped[category]) {
@@ -166,7 +156,6 @@ export const ModulePopover = ({ isCollapsed }: ModulePopoverProps) => {
                   {addonsOverview.available_addons.map((addon) => (
                     <div key={addon.id} className="text-sm p-2 bg-gray-50 dark:bg-gray-800 rounded">
                       <span className="text-gray-700 dark:text-gray-300">{addon.name}</span>
-                      <span className="text-xs text-gray-500 dark:text-gray-400 ml-auto">{addon.priceMonthly}€/mo</span>
                     </div>
                   ))}
                 </div>
@@ -199,11 +188,11 @@ export const ModulePopover = ({ isCollapsed }: ModulePopoverProps) => {
                   return (
                     <Button
                       key={module.id}
-                      onClick={() => handleModuleToggle(module.id, module.is_active)}
-                      disabled={isLocked && !module.is_active}
+                      onClick={() => handleModuleToggle(module.id, !!module.isActive)}
+                      disabled={isLocked && !module.isActive}
                       className={cn(
                         "w-full flex items-center gap-2 p-2 rounded-md text-left transition-colors",
-                        isLocked && !module.is_active ? "opacity-50 cursor-not-allowed" : "hover:bg-gray-50 dark:hover:bg-gray-800",
+                        isLocked && !module.isActive ? "opacity-50 cursor-not-allowed" : "hover:bg-gray-50 dark:hover:bg-gray-800",
                         !isLocked && "cursor-pointer"
                       )}
                     >
@@ -211,18 +200,18 @@ export const ModulePopover = ({ isCollapsed }: ModulePopoverProps) => {
                         <div className="flex items-center gap-1">
                           <span className={cn(
                             "w-4 h-4 rounded border flex items-center justify-center flex-shrink-0",
-                            module.is_active
+                            module.isActive
                               ? "bg-green-500 border-green-500 text-white"
                               : "border-gray-300 dark:border-gray-600"
                           )}>
-                            {module.is_active && <Check className="h-3 w-3" />}
+                            {module.isActive && <Check className="h-3 w-3" />}
                           </span>
                           <span className="text-sm font-medium text-gray-700 dark:text-gray-300 truncate">
                             {module.name}
                           </span>
                         </div>
                       </div>
-                      {isLocked && !module.is_active && (
+                      {isLocked && !module.isActive && (
                         <Lock className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
                       )}
                     </Button>

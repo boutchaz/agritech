@@ -20,7 +20,9 @@ import {
   ApiQuery,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RequireModule } from '../../common/decorators/require-module.decorator';
 import { OrganizationGuard } from '../../common/guards/organization.guard';
+import { ModuleEntitlementGuard } from '../../common/guards/module-entitlement.guard';
 import { RequireRole } from '../../common/decorators/require-role.decorator';
 import { QualityControlService } from './quality-control.service';
 import { CreateQualityInspectionDto } from './dto/create-quality-inspection.dto';
@@ -30,7 +32,8 @@ import { InspectionStatus } from './dto/create-quality-inspection.dto';
 @ApiTags('Quality Control')
 @ApiBearerAuth()
 @Controller('quality-control')
-@UseGuards(JwtAuthGuard, OrganizationGuard)
+@RequireModule('production')
+@UseGuards(JwtAuthGuard, OrganizationGuard, ModuleEntitlementGuard)
 export class QualityControlController {
   constructor(private readonly qualityControlService: QualityControlService) {}
 

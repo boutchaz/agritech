@@ -40,6 +40,3 @@ Consolidate all profitability onto a single source of truth: `journal_entries/jo
 - Reworking the financial_transactions table
 - New UI features or dashboard changes
 - Pagination for crop_cycle_pnl
-
-## Timeline Constraint
-SIAM starts April 20 — this must be stable by April 16 (feature freeze).

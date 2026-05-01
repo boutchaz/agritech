@@ -16,6 +16,7 @@ export interface Structure {
   usage?: string;
   structure_details?: Record<string, unknown>;
   notes?: string;
+  photos?: string[];
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -38,6 +39,7 @@ export interface CreateStructureInput {
   usage?: string;
   structure_details?: Record<string, unknown>;
   notes?: string;
+  photos?: string[];
   is_active?: boolean;
 }
 
@@ -54,6 +56,7 @@ export interface UpdateStructureInput {
   usage?: string;
   structure_details?: Record<string, unknown>;
   notes?: string;
+  photos?: string[];
   is_active?: boolean;
 }
 

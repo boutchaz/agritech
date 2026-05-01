@@ -1,7 +1,9 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useState, useEffect, useRef, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/hooks/useAuth'
-import { BASE_MODULE_IDS, computeModularQuote } from '@/lib/polar'
+import { useSubscription } from '@/hooks/useSubscription'
+import { BASE_MODULE_IDS, ERP_MODULES, isSubscriptionValid } from '@/lib/polar'
 import { Check, Loader2 } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useOrganizationStore } from '@/stores/organizationStore'
@@ -14,26 +16,19 @@ import {
   trackTrialStartFailure,
   trackPageView,
 } from '@/lib/analytics'
-import { Button } from '@/components/ui/button';
-import SubscriptionModulePicker from '@/components/subscription/SubscriptionModulePicker';
-import HectarePricingCalculator from '@/components/subscription/HectarePricingCalculator';
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import { Input } from '@/components/ui/Input'
+import { Badge } from '@/components/ui/badge'
+import { cn } from '@/lib/utils'
 
 export const Route = createFileRoute('/(public)/onboarding/select-trial')({
   component: SelectTrialPage,
 })
 
-const SETUP_STEPS = [
-  { id: 'auth', label: 'Checking authentication...' },
-  { id: 'organization', label: 'Creating organization...' },
-  { id: 'subscription', label: 'Activating trial...' },
-  { id: 'complete', label: 'Complete!' },
-] as const
-
-type SetupStepId = typeof SETUP_STEPS[number]['id']
-
 const pollUntil = async <T,>(
   fn: () => Promise<T | null>,
-  options: { interval?: number; maxAttempts?: number; _label?: string } = {}
+  options: { interval?: number; maxAttempts?: number } = {}
 ): Promise<T | null> => {
   const { interval = 200, maxAttempts = 25 } = options
 
@@ -44,11 +39,36 @@ const pollUntil = async <T,>(
     }
     await new Promise(resolve => setTimeout(resolve, interval))
   }
-   return null
+  return null
+}
+
+function useSetupStepLabels() {
+  const { t } = useTranslation();
+  return useMemo(() => [
+    { id: 'auth' as const, label: t('onboarding.selectTrial.setupSteps.auth', 'Checking authentication...') },
+    { id: 'organization' as const, label: t('onboarding.selectTrial.setupSteps.organization', 'Creating organization...') },
+    { id: 'subscription' as const, label: t('onboarding.selectTrial.setupSteps.subscription', 'Activating trial...') },
+    { id: 'complete' as const, label: t('onboarding.selectTrial.setupSteps.complete', 'Complete!') },
+  ], [t]);
+}
+
+type SetupStepId = 'auth' | 'organization' | 'subscription' | 'complete'
+
+function AgroGinaLogo({ className }: { className?: string }) {
+  return (
+    <picture>
+      <source srcSet="/assets/logo.webp" type="image/webp" />
+      <img src="/assets/logo.png" alt="AgroGina" className={className} />
+    </picture>
+  )
 }
 
 function SelectTrialPage() {
+  const { t } = useTranslation();
+  const navigate = useNavigate()
   const { currentOrganization, user, loading, refreshUserData, organizations } = useAuth()
+  const orgForSub = currentOrganization || (organizations && organizations.length > 0 ? organizations[0] : null)
+  const { data: subscription, isFetched: subscriptionFetched } = useSubscription(orgForSub ? { id: orgForSub.id, name: orgForSub.name } : null)
   const [isCreating, setIsCreating] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isSettingUp, setIsSettingUp] = useState(false)
@@ -60,19 +80,20 @@ function SelectTrialPage() {
   const [selectedModules, setSelectedModules] = useState<string[]>(BASE_MODULE_IDS)
   const [modularHectares, setModularHectares] = useState<number>(50)
 
-  const modularQuote = useMemo(
-    () => computeModularQuote({
-      selectedModules,
-      hectares: modularHectares,
-      billingCycle: 'monthly',
-    }),
-    [selectedModules, modularHectares],
-  )
+  const SETUP_STEPS = useSetupStepLabels();
 
   useEffect(() => {
-    trackPageView({ title: 'Start Your Free Trial' })
+    trackPageView({ title: t('onboarding.selectTrial.pageTitle', 'Start Your Free Trial') })
     trackOnboardingStart()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Block already-onboarded users — redirect when valid subscription exists
+  useEffect(() => {
+    if (subscriptionFetched && isSubscriptionValid(subscription)) {
+      navigate({ to: '/' })
+    }
+  }, [subscription, subscriptionFetched, navigate])
 
   const hasOrganization = currentOrganization || (organizations && organizations.length > 0)
 
@@ -102,7 +123,7 @@ function SelectTrialPage() {
           )
 
           if (!accessToken) {
-            setError('Authentication required. Please try logging in again.')
+            setError(t('onboarding.selectTrial.errorAuthRequired', 'Authentication required. Please try logging in again.'))
             setupAttempted.current = false
             return
           }
@@ -125,13 +146,13 @@ function SelectTrialPage() {
 
           if (!response.ok) {
             const errorData = await response.json().catch(() => ({}))
-            setError(`Setup failed: ${errorData.message || `Error ${response.status}`}. Please try again or refresh the page.`)
+            setError(t('onboarding.selectTrial.errorSetupFailed', 'Setup failed: {{error}}. Please try again or refresh the page.', { error: errorData.message || `Error ${response.status}` }))
             setupAttempted.current = false
             return
           }
 
           setSetupStep('subscription')
-          const orgResult = await pollUntil(
+          await pollUntil(
             async () => {
               await refreshUserData()
               const orgs = useAuthStore.getState().organizations
@@ -140,15 +161,11 @@ function SelectTrialPage() {
             { interval: 300, maxAttempts: 20 }
           )
 
-          if (orgResult) {
-            // Organization found
-          }
-
           await refreshUserData()
 
           setSetupStep('complete')
-        } catch (error) {
-          setError(`Setup error: ${error instanceof Error ? error.message : 'Unknown error'}. Please try refreshing the page.`)
+        } catch (err) {
+          setError(t('onboarding.selectTrial.errorSetupError', 'Setup error: {{error}}. Please try refreshing the page.', { error: err instanceof Error ? err.message : 'Unknown error' }))
           setupAttempted.current = false
         } finally {
           setIsSettingUp(false)
@@ -157,27 +174,27 @@ function SelectTrialPage() {
     }
 
     setupUserIfNeeded()
-  }, [loading, user, hasOrganization, isSettingUp, refreshUserData])
+  }, [loading, user, hasOrganization, isSettingUp, refreshUserData, t])
 
   if (loading || isSettingUp) {
     const currentStepIndex = SETUP_STEPS.findIndex(s => s.id === setupStep)
     return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-lime-50 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4" data-testid="trial-loading">
+      <div className="h-[100dvh] bg-background flex items-center justify-center p-4 overflow-hidden" data-testid="trial-loading">
         <div className="text-center max-w-sm">
-          <Loader2 className="h-12 w-12 animate-spin text-green-600 mx-auto mb-6" data-testid="loading-spinner" />
-          <p className="text-gray-900 dark:text-white font-medium mb-4">
-            {isSettingUp ? 'Setting up your account...' : 'Loading your account...'}
+          <AgroGinaLogo className="h-10 mx-auto mb-6" />
+          <Loader2 className="h-7 w-7 animate-spin text-primary mx-auto mb-5" data-testid="loading-spinner" />
+          <p className="text-foreground font-medium text-sm mb-4">
+            {isSettingUp ? t('onboarding.selectTrial.settingUpAccount', 'Setting up your account...') : t('onboarding.selectTrial.loadingAccount', 'Loading your account...')}
           </p>
           {isSettingUp && (
-            <div className="space-y-2">
+            <div className="space-y-2 text-left inline-block">
               {SETUP_STEPS.map((step, index) => (
                 <div
                   key={step.id}
-                  className={`flex items-center gap-2 text-sm transition-opacity duration-200 ${
-                    index <= currentStepIndex
-                      ? 'text-green-600 dark:text-green-400'
-                      : 'text-gray-400 dark:text-gray-500 opacity-50'
-                  }`}
+                  className={cn(
+                    'flex items-center gap-2 text-sm transition-opacity',
+                    index <= currentStepIndex ? 'text-primary' : 'text-muted-foreground opacity-60',
+                  )}
                 >
                   {index < currentStepIndex ? (
                     <Check className="h-4 w-4" />
@@ -201,108 +218,84 @@ function SelectTrialPage() {
   if (!loading && !isSettingUp && (!user || !hasOrganization)) {
     if (user && !isEmailConfirmed) {
       return (
-        <div className="min-h-screen bg-gradient-to-br from-green-50 to-lime-50 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4">
-          <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8">
-            <div className="text-center mb-6">
-              <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                </svg>
-              </div>
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                Confirm Your Email
-              </h2>
-              <p className="text-gray-600 dark:text-gray-400 mb-4">
-                Your account has been created successfully, but you need to confirm your email address before you can activate your account.
-              </p>
-              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-4">
-                <p className="text-sm font-semibold text-blue-900 dark:text-blue-300 mb-2">
-                  Check Your Email
+        <div className="h-[100dvh] bg-background flex items-center justify-center p-4 overflow-hidden">
+          <Card className="max-w-md w-full">
+            <CardContent className="p-6">
+              <div className="text-center mb-5">
+                <AgroGinaLogo className="h-9 mx-auto mb-4" />
+                <h2 className="text-lg font-semibold text-foreground mb-1">
+                  {t('onboarding.selectTrial.confirmEmail.title', 'Confirm Your Email')}
+                </h2>
+                <p className="text-sm text-muted-foreground mb-4">
+                  {t('onboarding.selectTrial.confirmEmail.message', 'Your account has been created successfully, but you need to confirm your email address before you can activate your account.')}
                 </p>
-                <p className="text-sm text-blue-800 dark:text-blue-400 mb-3">
-                  We've sent a confirmation email to <strong>{user.email}</strong>. Please click the link in the email to confirm your account.
-                </p>
-                <p className="text-sm text-blue-800 dark:text-blue-400">
-                  After confirming, visit{' '}
-                  <a
-                    href="/select-trial"
-                    className="font-semibold underline hover:text-blue-600 dark:hover:text-blue-300"
-                    onClick={(e) => {
-                      e.preventDefault()
-                      window.location.href = '/select-trial'
-                    }}
-                  >
-                    {typeof window !== 'undefined' ? window.location.origin : ''}/select-trial
-                  </a>
-                  {' '}to activate your account and select your free trial plan.
-                </p>
-              </div>
-              <p className="text-xs text-gray-500 dark:text-gray-500 mb-4">
-                Make sure to check your spam folder if you don't see the email within a few minutes.
-              </p>
-              {error && (
-                <div className="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg text-xs text-yellow-700 dark:text-yellow-400 text-left">
-                  <strong>Note:</strong> {error}
+                <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 mb-3 text-left">
+                  <p className="text-xs font-medium text-foreground mb-1">
+                    {t('onboarding.selectTrial.confirmEmail.checkEmail', 'Check Your Email')}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {t('onboarding.selectTrial.confirmEmail.sentTo', "We've sent a confirmation email to <strong>{{email}}</strong>. Please click the link in the email to confirm your account.", { email: user.email })}
+                  </p>
                 </div>
-              )}
-            </div>
-            <div className="space-y-3">
-              <Button
-                onClick={() => window.location.href = '/register'}
-                className="w-full px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-semibold hover:bg-gray-300 dark:hover:bg-gray-600 transition-all"
-              >
-                Back to Registration
-              </Button>
-              <Button
-                onClick={() => window.location.reload()}
-                className="w-full px-6 py-3 bg-gradient-to-r from-green-600 to-lime-500 text-white rounded-xl font-semibold hover:from-green-700 hover:to-lime-600 transition-all"
-              >
-                Retry After Confirming Email
-              </Button>
-            </div>
-          </div>
+                <p className="text-xs text-muted-foreground mb-3">
+                  {t('onboarding.selectTrial.confirmEmail.spamNote', "Make sure to check your spam folder if you don't see the email within a few minutes.")}
+                </p>
+                {error && (
+                  <div className="mb-3 p-2.5 bg-destructive/10 rounded-lg text-xs text-destructive text-left">
+                    <strong>{t('onboarding.selectTrial.confirmEmail.noteLabel', 'Note:')}</strong> {error}
+                  </div>
+                )}
+              </div>
+              <div className="flex flex-col gap-2">
+                <Button onClick={() => window.location.reload()} className="w-full">
+                  {t('onboarding.selectTrial.confirmEmail.retryAfterConfirm', 'Retry After Confirming Email')}
+                </Button>
+                <Button variant="secondary" onClick={() => window.location.href = '/register'} className="w-full">
+                  {t('onboarding.selectTrial.confirmEmail.backToRegistration', 'Back to Registration')}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       )
     }
 
     return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-lime-50 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8">
-          <div className="text-center mb-6">
-            <div className="w-16 h-16 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
-              <span className="text-3xl">!</span>
+      <div className="h-[100dvh] bg-background flex items-center justify-center p-4 overflow-hidden">
+        <Card className="max-w-md w-full">
+          <CardContent className="p-6">
+            <div className="text-center mb-5">
+              <AgroGinaLogo className="h-9 mx-auto mb-4" />
+              <h2 className="text-lg font-semibold text-foreground mb-1">
+                {t('onboarding.selectTrial.accountSetupIssue.title', 'Account Setup Issue')}
+              </h2>
+              <p className="text-sm text-muted-foreground mb-3">
+                {t('onboarding.selectTrial.accountSetupIssue.message', "Your account or organization wasn't created properly. Please try registering again.")}
+              </p>
+              {error && (
+                <div className="mb-3 p-2.5 bg-destructive/10 rounded-lg text-xs text-destructive text-left">
+                  <strong>{t('onboarding.selectTrial.accountSetupIssue.errorLabel', 'Error:')}</strong> {error}
+                </div>
+              )}
             </div>
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-              Account Setup Issue
-            </h2>
-            <p className="text-gray-600 dark:text-gray-400 mb-4">
-              Your account or organization wasn't created properly. Please try registering again.
-            </p>
-            {error && (
-              <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg text-xs text-red-700 dark:text-red-400 text-left">
-                <strong>Error:</strong> {error}
-              </div>
-            )}
-            <div className="mb-4 text-xs text-gray-500 dark:text-gray-400">
-              Check the browser console (F12) for detailed error messages.
+            <div className="flex flex-col gap-2">
+              <Button onClick={() => window.location.href = '/register'} className="w-full">
+                {t('onboarding.selectTrial.accountSetupIssue.backToRegistration', 'Back to Registration')}
+              </Button>
+              <Button variant="secondary" onClick={() => window.location.reload()} className="w-full">
+                {t('onboarding.selectTrial.accountSetupIssue.retrySetup', 'Retry Setup')}
+              </Button>
             </div>
-          </div>
-          <div className="space-y-3">
-            <Button
-              onClick={() => window.location.href = '/register'}
-              className="w-full px-6 py-3 bg-gradient-to-r from-green-600 to-lime-500 text-white rounded-xl font-semibold hover:from-green-700 hover:to-lime-600 transition-all"
-            >
-              Back to Registration
-            </Button>
-            <Button
-              onClick={() => window.location.reload()}
-              className="w-full px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-semibold hover:bg-gray-300 dark:hover:bg-gray-600 transition-all"
-            >
-              Retry Setup
-            </Button>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </div>
+    )
+  }
+
+  const toggleModule = (moduleId: string) => {
+    if (BASE_MODULE_IDS.includes(moduleId)) return
+    setSelectedModules(prev =>
+      prev.includes(moduleId) ? prev.filter(id => id !== moduleId) : [...prev, moduleId]
     )
   }
 
@@ -310,7 +303,7 @@ function SelectTrialPage() {
     const orgToUse = currentOrganization || (organizations && organizations.length > 0 ? organizations[0] : null)
 
     if (!orgToUse?.id || !user?.id) {
-      setError('Organization or user not found. Please try again.')
+      setError(t('onboarding.selectTrial.errorOrgNotFound', 'Organization or user not found. Please try again.'))
       return
     }
 
@@ -376,20 +369,19 @@ function SelectTrialPage() {
         type: 'active'
       })
 
-      // Modules were already selected, save them and skip the modules onboarding step
       if (selectedModules.length > 0) {
         const moduleMap: Record<string, boolean> = {}
         selectedModules.forEach((id) => { moduleMap[id] = true })
         useOnboardingStore.getState().updateModuleSelection(moduleMap)
-        // Skip to step 5 (complete) since modules were already picked
         useOnboardingStore.getState().setCurrentStep(5)
+        useOnboardingStore.getState().persistState({ currentStep: 5 }).catch(() => {})
         window.location.href = '/onboarding/complete'
         return
       }
 
       window.location.href = '/onboarding'
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to create trial subscription'
+      const errorMessage = err instanceof Error ? err.message : t('onboarding.selectTrial.errorTrialFailed', 'Failed to create trial subscription')
       setError(errorMessage)
       trackTrialStartFailure('standard', errorMessage)
       setIsCreating(false)
@@ -397,84 +389,137 @@ function SelectTrialPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-lime-50 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4" data-testid="trial-selection-page">
-      <div className="max-w-6xl w-full">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2" data-testid="trial-page-title">
-            Start Your Free Trial
+    <div className="h-[100dvh] flex flex-col bg-background overflow-hidden" data-testid="trial-selection-page">
+      <header className="shrink-0 border-b border-border bg-card/80 backdrop-blur-xl">
+        <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
+          <AgroGinaLogo className="h-8" />
+          <Badge variant="secondary" className="text-xs font-medium bg-primary/10 text-primary border-transparent">
+            {t('onboarding.selectTrial.freeTrialBadge', '14-day FREE trial')}
+          </Badge>
+        </div>
+      </header>
+
+      <main className="flex-1 min-h-0 max-w-6xl mx-auto w-full px-6 py-4 flex flex-col gap-4">
+        <div className="shrink-0 text-center">
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground" data-testid="trial-page-title">
+            {t('onboarding.selectTrial.pageTitle', 'Start Your Free Trial')}
           </h1>
-          <p className="text-gray-600 dark:text-gray-400">
-            14-day free trial. No credit card required.
+          <p className="text-sm text-muted-foreground mt-0.5">
+            {t('onboarding.selectTrial.pageSubtitle', '14-day free trial. No credit card required.')}
           </p>
         </div>
 
         {error && (
-          <div className="mb-6 rounded-xl border border-red-200/70 bg-red-50/90 px-4 py-3 text-sm text-red-700">
+          <div className="shrink-0 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-2 text-sm text-destructive">
             {error}
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-8">
-          <div className="lg:col-span-7">
-            <SubscriptionModulePicker
-              selectedModules={selectedModules}
-              onChange={setSelectedModules}
-            />
+        <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-4">
+          <div className="lg:col-span-8 flex flex-col min-h-0">
+            <h3 className="text-sm font-semibold text-foreground mb-2">
+              {t('onboarding.selectTrial.modulesHeading', 'ERP Modules')}
+            </h3>
+            <div className="flex-1 min-h-0 grid grid-cols-2 md:grid-cols-3 gap-2 content-start">
+              {ERP_MODULES.map(mod => {
+                const isSelected = selectedModules.includes(mod.id)
+                const isBase = mod.isBase
+                return (
+                  <button
+                    type="button"
+                    key={mod.id}
+                    onClick={() => toggleModule(mod.id)}
+                    disabled={isBase}
+                    className={cn(
+                      'text-left rounded-lg border p-2.5 transition-all',
+                      isBase
+                        ? 'border-primary/30 bg-primary/5 cursor-default'
+                        : isSelected
+                          ? 'border-primary bg-primary/10'
+                          : 'border-border bg-card hover:border-primary/40 hover:bg-accent/40',
+                    )}
+                  >
+                    <div className="flex items-start gap-2">
+                      <div
+                        className={cn(
+                          'mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border',
+                          isSelected ? 'border-primary bg-primary text-primary-foreground' : 'border-muted-foreground/40',
+                        )}
+                      >
+                        {isSelected && <Check className="h-3 w-3" />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs font-semibold text-foreground leading-tight">{mod.name}</div>
+                        <p className="text-[11px] text-muted-foreground mt-0.5 leading-snug line-clamp-2">{mod.desc}</p>
+                        {isBase && (
+                          <span className="inline-block mt-1 text-[10px] font-medium text-primary">
+                            {t('onboarding.selectTrial.includedLabel', 'Included')}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
           </div>
-          <div className="lg:col-span-5 space-y-6">
-            <HectarePricingCalculator
-              hectares={modularHectares}
-              onChange={setModularHectares}
-            />
 
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
-                Your Trial Includes
-              </h3>
-              <div className="space-y-3 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">Modules</span>
-                  <span className="font-semibold text-gray-900 dark:text-white">{selectedModules.length} selected</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">Hectares</span>
-                  <span className="font-semibold text-gray-900 dark:text-white">{modularHectares} ha</span>
-                </div>
-                <div className="border-t border-gray-100 dark:border-gray-700 pt-3">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600 dark:text-gray-400">After trial (monthly)</span>
-                    <span className="font-semibold text-gray-900 dark:text-white">${modularQuote.cycleTtc.toLocaleString()} TTC</span>
+          <div className="lg:col-span-4 flex flex-col gap-3 min-h-0">
+            <Card>
+              <CardContent className="p-4 space-y-3">
+                <div>
+                  <label className="text-sm font-semibold text-foreground">
+                    {t('onboarding.selectTrial.hectaresLabel', 'Hectares')}
+                  </label>
+                  <div className="flex items-center gap-2 mt-1.5">
+                    <Input
+                      type="number"
+                      min={1}
+                      value={modularHectares}
+                      onChange={e => setModularHectares(Math.max(1, Number(e.target.value) || 1))}
+                      className="w-28"
+                    />
+                    <span className="text-sm text-muted-foreground">ha</span>
                   </div>
                 </div>
-              </div>
-              <div className="mt-4 rounded-lg bg-green-50 dark:bg-green-900/20 p-3 text-center">
-                <span className="text-sm font-bold text-green-700 dark:text-green-400">14-day FREE trial</span>
-              </div>
+                <div className="border-t border-border pt-3 space-y-1.5 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">{t('onboarding.selectTrial.modulesLabel', 'Modules')}</span>
+                    <span className="font-semibold text-foreground">
+                      {t('onboarding.selectTrial.modulesSelected', '{{count}} selected', { count: selectedModules.length })}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground pt-1">
+                    {t('onboarding.selectTrial.tailoredQuote', 'Pricing tailored to your farm size and modules — our team will contact you with a personalized quote.')}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <div className="mt-auto">
+              <Button
+                onClick={handleStartTrial}
+                disabled={isCreating}
+                size="lg"
+                data-testid="start-trial-button"
+                className="w-full"
+              >
+                {isCreating ? (
+                  <span className="flex items-center justify-center gap-2" data-testid="trial-creating">
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    <span>{t('onboarding.selectTrial.startingTrial', 'Starting your trial...')}</span>
+                  </span>
+                ) : (
+                  t('onboarding.selectTrial.startButton', 'Start Free 14-Day Trial')
+                )}
+              </Button>
+              <p className="text-xs text-muted-foreground mt-2 text-center">
+                {t('onboarding.selectTrial.noCreditCard', 'No credit card required. Cancel anytime.')}
+              </p>
             </div>
           </div>
         </div>
-
-        <div className="text-center">
-          <Button
-            onClick={handleStartTrial}
-            disabled={isCreating}
-            data-testid="start-trial-button"
-            className="px-8 py-3 bg-gradient-to-r from-green-600 to-lime-500 text-white rounded-xl font-semibold shadow-lg shadow-green-500/30 hover:from-green-700 hover:to-lime-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-          >
-            {isCreating ? (
-              <span className="flex items-center space-x-2" data-testid="trial-creating">
-                <Loader2 className="h-5 w-5 animate-spin" />
-                <span>Starting your trial...</span>
-              </span>
-            ) : (
-              'Start Free 14-Day Trial'
-            )}
-          </Button>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-3">
-            No credit card required. Cancel anytime.
-          </p>
-        </div>
-      </div>
+      </main>
     </div>
   )
 }

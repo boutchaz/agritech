@@ -18,6 +18,8 @@ export interface CreateTaxInput {
   is_compound?: boolean;
   is_active?: boolean;
   description?: string;
+  is_withholding?: boolean;
+  withholding_account_id?: string;
 }
 
 export type UpdateTaxInput = Partial<CreateTaxInput>;

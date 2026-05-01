@@ -55,6 +55,60 @@ import {
 } from '../ui/dropdown-menu';
 import { Checkbox } from '../ui/checkbox';
 import { EmptyState } from '@/components/ui/empty-state';
+import { cn } from '@/lib/utils';
+
+interface TaskStatCardProps {
+  borderClass: string;
+  labelClass: string;
+  valueClass: string;
+  iconBgClass: string;
+  label: string;
+  value: React.ReactNode;
+  icon: React.ReactNode;
+  footer?: React.ReactNode;
+}
+
+/** Stat tiles in a dense `lg:grid-cols-7` row: keep icon in-flow so it never clips past the card. */
+function TaskStatCard({
+  borderClass,
+  labelClass,
+  valueClass,
+  iconBgClass,
+  label,
+  value,
+  icon,
+  footer,
+}: TaskStatCardProps) {
+  return (
+    <div
+      className={cn(
+        'min-w-0 overflow-hidden rounded-lg border-l-4 bg-white p-2 shadow dark:bg-gray-800 sm:p-4',
+        borderClass,
+      )}
+    >
+      <div className="min-w-0">
+        <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+          <div className="min-w-0 flex-1">
+            <p className={cn('truncate text-xs uppercase tracking-wide', labelClass)}>{label}</p>
+            <div className={cn('truncate text-xl font-bold sm:text-2xl lg:text-lg xl:text-2xl', valueClass)}>
+              {value}
+            </div>
+          </div>
+          <div
+            className={cn(
+              'pointer-events-none flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-md sm:h-8 sm:w-8 sm:rounded-lg',
+              iconBgClass,
+            )}
+            aria-hidden
+          >
+            {icon}
+          </div>
+        </div>
+        {footer}
+      </div>
+    </div>
+  );
+}
 
 interface TasksListProps {
   organizationId: string;
@@ -729,96 +783,84 @@ const TasksList = ({
         />
       }
       stats={
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 sm:gap-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-2 sm:p-4 shadow border-l-4 border-gray-400">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide truncate">{t('tasks.stats.pending')}</p>
-                <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{stats.pending}</p>
-              </div>
-              <div className="p-1.5 sm:p-2 bg-gray-100 dark:bg-gray-700 rounded-lg hidden sm:block">
-                <Clock className="w-4 sm:w-5 h-4 sm:h-5 text-gray-500" />
-              </div>
-            </div>
-          </div>
+        <div className="grid min-w-0 grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 sm:gap-4">
+          <TaskStatCard
+            borderClass="border-gray-400"
+            labelClass="text-gray-500 dark:text-gray-400"
+            valueClass="text-gray-900 dark:text-white"
+            iconBgClass="bg-gray-100 dark:bg-gray-700"
+            label={t('tasks.stats.pending')}
+            value={stats.pending}
+            icon={<Clock className="h-4 w-4 shrink-0 text-gray-500 xl:h-5 xl:w-5" />}
+          />
 
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-2 sm:p-4 shadow border-l-4 border-blue-400">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-blue-500 dark:text-blue-400 uppercase tracking-wide truncate">{t('tasks.stats.assigned', 'Assigned')}</p>
-                <p className="text-xl sm:text-2xl font-bold text-blue-900 dark:text-blue-100">{stats.assigned}</p>
-              </div>
-              <div className="p-1.5 sm:p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg hidden sm:block">
-                <User className="w-4 sm:w-5 h-4 sm:h-5 text-blue-500" />
-              </div>
-            </div>
-          </div>
+          <TaskStatCard
+            borderClass="border-blue-400"
+            labelClass="text-blue-500 dark:text-blue-400"
+            valueClass="text-blue-900 dark:text-blue-100"
+            iconBgClass="bg-blue-100 dark:bg-blue-900/30"
+            label={t('tasks.stats.assigned', 'Assigned')}
+            value={stats.assigned}
+            icon={<User className="h-4 w-4 shrink-0 text-blue-500 xl:h-5 xl:w-5" />}
+          />
 
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-2 sm:p-4 shadow border-l-4 border-purple-500">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-purple-600 dark:text-purple-400 uppercase tracking-wide truncate">{t('tasks.stats.inProgress')}</p>
-                <p className="text-xl sm:text-2xl font-bold text-purple-900 dark:text-purple-100">{stats.in_progress}</p>
-              </div>
-              <div className="p-1.5 sm:p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg hidden sm:block">
-                <Play className="w-4 sm:w-5 h-4 sm:h-5 text-purple-600" />
-              </div>
-            </div>
-          </div>
+          <TaskStatCard
+            borderClass="border-purple-500"
+            labelClass="text-purple-600 dark:text-purple-400"
+            valueClass="text-purple-900 dark:text-purple-100"
+            iconBgClass="bg-purple-100 dark:bg-purple-900/30"
+            label={t('tasks.stats.inProgress')}
+            value={stats.in_progress}
+            icon={<Play className="h-4 w-4 shrink-0 text-purple-600 xl:h-5 xl:w-5" />}
+          />
 
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-2 sm:p-4 shadow border-l-4 border-green-500">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-green-600 dark:text-green-400 uppercase tracking-wide truncate">{t('tasks.stats.completed')}</p>
-                <p className="text-xl sm:text-2xl font-bold text-green-900 dark:text-green-100">{stats.completed}</p>
-              </div>
-              <div className="p-1.5 sm:p-2 bg-green-100 dark:bg-green-900/30 rounded-lg hidden sm:block">
-                <CheckCircle className="w-4 sm:w-5 h-4 sm:h-5 text-green-600" />
-              </div>
-            </div>
-          </div>
+          <TaskStatCard
+            borderClass="border-green-500"
+            labelClass="text-green-600 dark:text-green-400"
+            valueClass="text-green-900 dark:text-green-100"
+            iconBgClass="bg-green-100 dark:bg-green-900/30"
+            label={t('tasks.stats.completed')}
+            value={stats.completed}
+            icon={<CheckCircle className="h-4 w-4 shrink-0 text-green-600 xl:h-5 xl:w-5" />}
+          />
 
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-2 sm:p-4 shadow border-l-4 border-amber-500">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-amber-600 dark:text-amber-400 uppercase tracking-wide truncate">{t('tasks.stats.onHold', 'On Hold')}</p>
-                <p className="text-xl sm:text-2xl font-bold text-amber-900 dark:text-amber-100">{stats.on_hold}</p>
-              </div>
-              <div className="p-1.5 sm:p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg hidden sm:block">
-                <Pause className="w-4 sm:w-5 h-4 sm:h-5 text-amber-600" />
-              </div>
-            </div>
-          </div>
+          <TaskStatCard
+            borderClass="border-amber-500"
+            labelClass="text-amber-600 dark:text-amber-400"
+            valueClass="text-amber-900 dark:text-amber-100"
+            iconBgClass="bg-amber-100 dark:bg-amber-900/30"
+            label={t('tasks.stats.onHold', 'On Hold')}
+            value={stats.on_hold}
+            icon={<Pause className="h-4 w-4 shrink-0 text-amber-600 xl:h-5 xl:w-5" />}
+          />
 
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-2 sm:p-4 shadow border-l-4 border-red-500">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-red-600 dark:text-red-400 uppercase tracking-wide truncate">{t('tasks.stats.overdue')}</p>
-                <p className="text-xl sm:text-2xl font-bold text-red-900 dark:text-red-100">{stats.overdue}</p>
-              </div>
-              <div className="p-1.5 sm:p-2 bg-red-100 dark:bg-red-900/30 rounded-lg hidden sm:block">
-                <AlertCircle className="w-4 sm:w-5 h-4 sm:h-5 text-red-600" />
-              </div>
-            </div>
-          </div>
+          <TaskStatCard
+            borderClass="border-red-500"
+            labelClass="text-red-600 dark:text-red-400"
+            valueClass="text-red-900 dark:text-red-100"
+            iconBgClass="bg-red-100 dark:bg-red-900/30"
+            label={t('tasks.stats.overdue')}
+            value={stats.overdue}
+            icon={<AlertCircle className="h-4 w-4 shrink-0 text-red-600 xl:h-5 xl:w-5" />}
+          />
 
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-2 sm:p-4 shadow border-l-4 border-emerald-500">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-emerald-600 dark:text-emerald-400 uppercase tracking-wide truncate">{t('tasks.stats.completionRate', 'Completion')}</p>
-                <p className="text-xl sm:text-2xl font-bold text-emerald-900 dark:text-emerald-100">{stats.completionRate}%</p>
+          <TaskStatCard
+            borderClass="border-emerald-500"
+            labelClass="text-emerald-600 dark:text-emerald-400"
+            valueClass="text-emerald-900 dark:text-emerald-100"
+            iconBgClass="bg-emerald-100 dark:bg-emerald-900/30"
+            label={t('tasks.stats.completionRate', 'Completion')}
+            value={`${stats.completionRate}%`}
+            icon={<Target className="h-4 w-4 shrink-0 text-emerald-600 xl:h-5 xl:w-5" />}
+            footer={
+              <div className="mt-2 h-1.5 w-full min-w-0 rounded-full bg-gray-200 dark:bg-gray-700">
+                <div
+                  className="h-1.5 rounded-full bg-emerald-500 transition-all duration-300"
+                  style={{ width: `${stats.completionRate}%` }}
+                />
               </div>
-              <div className="p-1.5 sm:p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg hidden sm:block">
-                <Target className="w-4 sm:w-5 h-4 sm:h-5 text-emerald-600" />
-              </div>
-            </div>
-            <div className="mt-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
-              <div
-                className="bg-emerald-500 h-1.5 rounded-full transition-all duration-300"
-                style={{ width: `${stats.completionRate}%` }}
-              />
-            </div>
-          </div>
+            }
+          />
         </div>
       }
       filters={
@@ -984,7 +1026,7 @@ const TasksList = ({
                 {t('tasks.dueDate', 'Due date')}
               </th>
               <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                {t('common.actions', 'Actions')}
+                {t('common.actionsColumn', 'Actions')}
               </th>
             </tr>
           )}

@@ -2,107 +2,11 @@ import { Ability, AbilityBuilder } from '@casl/ability';
 import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '../../modules/database/database.service';
 import { Action } from './action.enum';
+import { Subject } from './subject.enum';
+import { RESOURCE_SUBJECT_MAP } from './resources';
 
-// Define subjects for all resources in the system
-export enum Subject {
-    // User & Organization management
-    USER = 'User',
-    ORGANIZATION = 'Organization',
-    ROLE = 'Role',
-    SUBSCRIPTION = 'Subscription',
-
-    // Physical resources
-    FARM = 'Farm',
-    PARCEL = 'Parcel',
-    WAREHOUSE = 'Warehouse',
-    INFRASTRUCTURE = 'Infrastructure',
-    STRUCTURE = 'Structure',
-    TREE = 'Tree',
-    FARM_HIERARCHY = 'FarmHierarchy',
-
-    // Financial resources
-    INVOICE = 'Invoice',
-    PAYMENT = 'Payment',
-    JOURNAL_ENTRY = 'JournalEntry',
-    ACCOUNT = 'Account',
-    CUSTOMER = 'Customer',
-    SUPPLIER = 'Supplier',
-    FINANCIAL_REPORT = 'FinancialReport',
-    COST_CENTER = 'CostCenter',
-    TAX = 'Tax',
-    BANK_ACCOUNT = 'BankAccount',
-    PERIOD = 'Period',
-    ACCOUNTING_REPORT = 'AccountingReport',
-    ACCOUNT_MAPPING = 'AccountMapping',
-
-    // People & Workforce
-    WORKER = 'Worker',
-    EMPLOYEE = 'Employee',
-    DAY_LABORER = 'DayLaborer',
-    TASK = 'Task',
-    PIECE_WORK = 'PieceWork',
-    WORK_UNIT = 'WorkUnit',
-
-    // Production
-    HARVEST = 'Harvest',
-    CROP_CYCLE = 'CropCycle',
-    CAMPAIGN = 'Campaign',
-    FISCAL_YEAR = 'FiscalYear',
-    PRODUCT_APPLICATION = 'ProductApplication',
-    ANALYSIS = 'Analysis',
-    SOIL_ANALYSIS = 'SoilAnalysis',
-    PLANT_ANALYSIS = 'PlantAnalysis',
-    WATER_ANALYSIS = 'WaterAnalysis',
-
-    // Inventory & Stock
-    PRODUCT = 'Product',
-    STOCK = 'Stock',
-    STOCK_ENTRY = 'StockEntry',
-    STOCK_ITEM = 'StockItem',
-    BIOLOGICAL_ASSET = 'BiologicalAsset',
-
-    // Sales & Purchasing
-    SALES_ORDER = 'SalesOrder',
-    PURCHASE_ORDER = 'PurchaseOrder',
-    QUOTE = 'Quote',
-    DELIVERY = 'Delivery',
-    RECEPTION_BATCH = 'ReceptionBatch',
-
-    // Quality & Lab
-    QUALITY_CONTROL = 'QualityControl',
-    LAB_SERVICE = 'LabService',
-
-    // Compliance
-    CERTIFICATION = 'Certification',
-    COMPLIANCE_CHECK = 'ComplianceCheck',
-
-    // Reporting & Analytics
-    REPORT = 'Report',
-    SATELLITE_ANALYSIS = 'SatelliteAnalysis',
-    SATELLITE_REPORT = 'SatelliteReport',
-    PRODUCTION_INTELLIGENCE = 'ProductionIntelligence',
-    DASHBOARD = 'Dashboard',
-    ANALYTICS = 'Analytics',
-    SENSOR = 'Sensor',
-
-    // Financial analytics
-    COST = 'Cost',
-    REVENUE = 'Revenue',
-    INVENTORY = 'Inventory',
-    UTILITY = 'Utility',
-
-    // Communication
-    CHAT = 'Chat',
-
-    // Settings & Configuration
-    SETTINGS = 'Settings',
-
-    // API
-    API = 'API',
-
-    // System
-    ALL = 'all',
-}
+// Re-export so existing `import { Subject } from '.../casl-ability.factory'` keeps working.
+export { Subject };
 
 // Allow both enum values and matching string literals for flexibility
 export type AppSubjects = typeof Subject[keyof typeof Subject] | 'all' | string;
@@ -141,7 +45,7 @@ export class CaslAbilityFactory {
         const client = this.databaseService.getAdminClient();
         const { data: orgUser, error } = await client
             .from('organization_users')
-            .select('role_id, roles(name, level)')
+            .select('role_id, roles(name, level, source)')
             .eq('user_id', user.id)
             .eq('organization_id', organizationId)
             .eq('is_active', true)
@@ -172,6 +76,41 @@ export class CaslAbilityFactory {
             roleLevel,
         });
 
+        // Dynamic role-permission model (source of truth for CUSTOM roles only).
+        // System roles keep the hardcoded grants below — DB rows for them are
+        // legacy seed data and intentionally narrower than the hardcoded set.
+        if (role?.source === 'custom') {
+            const { data: dynamicRolePermissions, error: dynamicRolePermissionsError } = await client
+                .from('role_permissions')
+                .select('permissions(action, resource)')
+                .eq('role_id', orgUser.role_id);
+
+            if (dynamicRolePermissionsError) {
+                console.warn('[CaslAbilityFactory] Failed to fetch dynamic role permissions:', dynamicRolePermissionsError.message);
+            } else {
+                for (const rp of dynamicRolePermissions as any[]) {
+                    const permission = rp.permissions;
+                    const action = permission?.action as Action | undefined;
+                    const resource = (permission?.resource || '').toString().toLowerCase();
+                    if (!action || !resource) continue;
+
+                    if (resource === 'all') {
+                        can(action, Subject.ALL as any);
+                        continue;
+                    }
+
+                    const subject = RESOURCE_SUBJECT_MAP[resource];
+                    if (!subject) continue;
+                    can(action, subject as any);
+                }
+            }
+
+            const ability = build({
+                detectSubjectType: (item: any) => item.constructor as any,
+            } as any);
+            return ability;
+        }
+
         // ============ SYSTEM ADMIN ============
         if (roleName === 'system_admin') {
             can(Action.Manage, Subject.ALL as any);
@@ -200,6 +139,7 @@ export class CaslAbilityFactory {
             can(Action.Manage, Subject.PRODUCT);
             can(Action.Manage, Subject.BIOLOGICAL_ASSET);
             can(Action.Manage, Subject.INVENTORY);
+            can(Action.Manage, Subject.EQUIPMENT);
             can(Action.Manage, Subject.ANALYSIS);
             can(Action.Manage, Subject.SOIL_ANALYSIS);
             can(Action.Manage, Subject.PLANT_ANALYSIS);
@@ -223,6 +163,35 @@ export class CaslAbilityFactory {
             can(Action.Manage, Subject.ROLE); // Can manage roles
             can(Action.Manage, Subject.CERTIFICATION);
             can(Action.Manage, Subject.COMPLIANCE_CHECK);
+            can(Action.Manage, Subject.HR_COMPLIANCE);
+            can(Action.Manage, Subject.LEAVE_TYPE);
+            can(Action.Manage, Subject.LEAVE_ALLOCATION);
+            can(Action.Manage, Subject.LEAVE_APPLICATION);
+            can(Action.Manage, Subject.HOLIDAY);
+            can(Action.Manage, Subject.SALARY_STRUCTURE);
+            can(Action.Manage, Subject.SALARY_SLIP);
+            can(Action.Manage, Subject.PAYROLL_RUN);
+            can(Action.Manage, Subject.WORKER_DOCUMENT);
+            can(Action.Manage, Subject.SHIFT);
+            can(Action.Manage, Subject.SHIFT_ASSIGNMENT);
+            can(Action.Manage, Subject.SHIFT_REQUEST);
+            can(Action.Manage, Subject.ONBOARDING);
+            can(Action.Manage, Subject.SEPARATION);
+            can(Action.Manage, Subject.EXPENSE_CLAIM);
+            can(Action.Manage, Subject.EXPENSE_CATEGORY);
+            can(Action.Manage, Subject.JOB_OPENING);
+            can(Action.Manage, Subject.JOB_APPLICANT);
+            can(Action.Manage, Subject.INTERVIEW);
+            can(Action.Manage, Subject.APPRAISAL_CYCLE);
+            can(Action.Manage, Subject.APPRAISAL);
+            can(Action.Manage, Subject.PERFORMANCE_FEEDBACK);
+            can(Action.Manage, Subject.SEASONAL_CAMPAIGN);
+            can(Action.Manage, Subject.WORKER_QUALIFICATION);
+            can(Action.Manage, Subject.SAFETY_INCIDENT);
+            can(Action.Manage, Subject.WORKER_TRANSPORT);
+            can(Action.Manage, Subject.GRIEVANCE);
+            can(Action.Manage, Subject.TRAINING_PROGRAM);
+            can(Action.Manage, Subject.TRAINING_ENROLLMENT);
             console.log('[CaslAbilityFactory] Organization admin - full org access granted');
         }
         // ============ FARM MANAGER ============
@@ -248,6 +217,7 @@ export class CaslAbilityFactory {
             can(Action.Manage, Subject.DELIVERY);
             can(Action.Manage, Subject.RECEPTION_BATCH);
             can(Action.Manage, Subject.QUALITY_CONTROL);
+            can(Action.Manage, Subject.EQUIPMENT);
 
             // Can create/view invoices and payments
             can(Action.Create, Subject.INVOICE);
@@ -288,6 +258,35 @@ export class CaslAbilityFactory {
             cannot(Action.Manage, Subject.ACCOUNT); // Cannot manage chart of accounts
             can(Action.Manage, Subject.CERTIFICATION);
             can(Action.Manage, Subject.COMPLIANCE_CHECK);
+            can(Action.Read, Subject.HR_COMPLIANCE);
+            can(Action.Read, Subject.LEAVE_TYPE);
+            can(Action.Manage, Subject.LEAVE_ALLOCATION);
+            can(Action.Manage, Subject.LEAVE_APPLICATION);
+            can(Action.Read, Subject.HOLIDAY);
+            can(Action.Read, Subject.SALARY_STRUCTURE);
+            can(Action.Read, Subject.SALARY_SLIP);
+            can(Action.Read, Subject.PAYROLL_RUN);
+            can(Action.Manage, Subject.WORKER_DOCUMENT);
+            can(Action.Manage, Subject.SHIFT);
+            can(Action.Manage, Subject.SHIFT_ASSIGNMENT);
+            can(Action.Manage, Subject.SHIFT_REQUEST);
+            can(Action.Manage, Subject.ONBOARDING);
+            can(Action.Read, Subject.SEPARATION);
+            can(Action.Manage, Subject.EXPENSE_CLAIM);
+            can(Action.Read, Subject.EXPENSE_CATEGORY);
+            can(Action.Manage, Subject.JOB_OPENING);
+            can(Action.Manage, Subject.JOB_APPLICANT);
+            can(Action.Manage, Subject.INTERVIEW);
+            can(Action.Read, Subject.APPRAISAL_CYCLE);
+            can(Action.Manage, Subject.APPRAISAL);
+            can(Action.Manage, Subject.PERFORMANCE_FEEDBACK);
+            can(Action.Manage, Subject.SEASONAL_CAMPAIGN);
+            can(Action.Manage, Subject.WORKER_QUALIFICATION);
+            can(Action.Manage, Subject.SAFETY_INCIDENT);
+            can(Action.Manage, Subject.WORKER_TRANSPORT);
+            can(Action.Read, Subject.GRIEVANCE);
+            can(Action.Read, Subject.TRAINING_PROGRAM);
+            can(Action.Manage, Subject.TRAINING_ENROLLMENT);
 
             console.log('[CaslAbilityFactory] Farm manager permissions granted');
         }
@@ -332,6 +331,8 @@ export class CaslAbilityFactory {
 
             can(Action.Read, Subject.QUALITY_CONTROL);
             can(Action.Create, Subject.QUALITY_CONTROL);
+            can(Action.Read, Subject.EQUIPMENT);
+            can(Action.Update, Subject.EQUIPMENT); // Can log maintenance
             can(Action.Read, Subject.DASHBOARD); // Can read dashboard
 
             // Cannot access financial operations
@@ -348,6 +349,28 @@ export class CaslAbilityFactory {
             cannot(Action.Create, Subject.SALES_ORDER);
             cannot(Action.Create, Subject.PURCHASE_ORDER);
             cannot(Action.Manage, Subject.FINANCIAL_REPORT);
+
+            // Self-service: read leave types/holidays/own applications/own allocations
+            can(Action.Read, Subject.LEAVE_TYPE);
+            can(Action.Read, Subject.HOLIDAY);
+            can(Action.Create, Subject.LEAVE_APPLICATION);
+            can(Action.Read, Subject.LEAVE_APPLICATION);
+            can(Action.Read, Subject.LEAVE_ALLOCATION);
+            can(Action.Read, Subject.SALARY_SLIP); // own slips only via self_read RLS
+            can(Action.Read, Subject.WORKER_DOCUMENT); // own docs only via self_read RLS
+            can(Action.Read, Subject.SHIFT);
+            can(Action.Read, Subject.SHIFT_ASSIGNMENT);
+            can(Action.Create, Subject.SHIFT_REQUEST);
+            can(Action.Read, Subject.SHIFT_REQUEST);
+            // Self-service P3+
+            can(Action.Create, Subject.EXPENSE_CLAIM);
+            can(Action.Read, Subject.EXPENSE_CLAIM); // own only via RLS
+            can(Action.Read, Subject.APPRAISAL); // own only via RLS
+            can(Action.Read, Subject.WORKER_QUALIFICATION); // own
+            can(Action.Create, Subject.GRIEVANCE);
+            can(Action.Read, Subject.GRIEVANCE); // own only via RLS
+            can(Action.Read, Subject.TRAINING_PROGRAM);
+            can(Action.Read, Subject.TRAINING_ENROLLMENT); // own
 
             console.log('[CaslAbilityFactory] Farm worker permissions granted');
         }
@@ -376,6 +399,17 @@ export class CaslAbilityFactory {
             cannot(Action.Manage, Subject.SUPPLIER);
             cannot(Action.Manage, Subject.WORKER);
             cannot(Action.Manage, Subject.FINANCIAL_REPORT);
+
+            // Self-service for day laborers
+            can(Action.Read, Subject.LEAVE_TYPE);
+            can(Action.Read, Subject.HOLIDAY);
+            can(Action.Create, Subject.LEAVE_APPLICATION);
+            can(Action.Read, Subject.LEAVE_APPLICATION);
+            can(Action.Read, Subject.LEAVE_ALLOCATION);
+            can(Action.Read, Subject.SALARY_SLIP);
+            can(Action.Read, Subject.WORKER_DOCUMENT);
+            can(Action.Read, Subject.SHIFT);
+            can(Action.Read, Subject.SHIFT_ASSIGNMENT);
 
             console.log('[CaslAbilityFactory] Day laborer permissions granted');
         }
@@ -412,6 +446,7 @@ export class CaslAbilityFactory {
             can(Action.Read, Subject.RECEPTION_BATCH);
             can(Action.Read, Subject.QUALITY_CONTROL);
             can(Action.Read, Subject.LAB_SERVICE);
+            can(Action.Read, Subject.EQUIPMENT);
             can(Action.Read, Subject.FINANCIAL_REPORT);
             can(Action.Read, Subject.REPORT);
             can(Action.Read, Subject.SATELLITE_ANALYSIS);
@@ -508,7 +543,7 @@ export class CaslAbilityFactory {
         // Fetch user's role in this organization
         const { data: orgUser, error } = await client
             .from('organization_users')
-            .select('role_id, roles(name, display_name, level)')
+            .select('role_id, roles(name, display_name, level, source)')
             .eq('user_id', user.id)
             .eq('organization_id', organizationId)
             .eq('is_active', true)
@@ -537,6 +572,42 @@ export class CaslAbilityFactory {
         const cannot = (action: Action, subject: Subject | string) => {
             abilities.push({ action, subject: subject as string, inverted: true });
         };
+
+        // Dynamic role-permission model (source of truth for CUSTOM roles only).
+        // System roles fall through to the hardcoded grants below.
+        if (role?.source === 'custom') {
+            const { data: dynamicRolePermissions, error: dynamicRolePermissionsError } = await client
+                .from('role_permissions')
+                .select('permissions(action, resource)')
+                .eq('role_id', orgUser.role_id);
+
+            if (!dynamicRolePermissionsError) {
+                for (const rp of dynamicRolePermissions as any[]) {
+                    const permission = rp.permissions;
+                    const action = permission?.action as Action | undefined;
+                    const resource = (permission?.resource || '').toString().toLowerCase();
+                    if (!action || !resource) continue;
+
+                    if (resource === 'all') {
+                        can(action, 'all');
+                        continue;
+                    }
+
+                    const subject = RESOURCE_SUBJECT_MAP[resource];
+                    if (!subject) continue;
+                    can(action, subject);
+                }
+            }
+
+            return {
+                role: {
+                    name: role?.name || '',
+                    display_name: role?.display_name || '',
+                    level: role?.level || 0,
+                },
+                abilities,
+            };
+        }
 
         // Build abilities based on role (same logic as createForUser)
         if (roleName === 'system_admin') {
@@ -595,6 +666,7 @@ export class CaslAbilityFactory {
             can(Action.Manage, Subject.SATELLITE_REPORT);
             can(Action.Manage, Subject.PRODUCTION_INTELLIGENCE);
             can(Action.Manage, Subject.UTILITY);
+            can(Action.Manage, Subject.EQUIPMENT);
             can(Action.Read, Subject.DASHBOARD);
             can(Action.Update, Subject.DASHBOARD);
             can(Action.Read, Subject.CHAT);
@@ -608,6 +680,35 @@ export class CaslAbilityFactory {
             can(Action.Manage, Subject.ROLE);
             can(Action.Manage, Subject.CERTIFICATION);
             can(Action.Manage, Subject.COMPLIANCE_CHECK);
+            can(Action.Manage, Subject.HR_COMPLIANCE);
+            can(Action.Manage, Subject.LEAVE_TYPE);
+            can(Action.Manage, Subject.LEAVE_ALLOCATION);
+            can(Action.Manage, Subject.LEAVE_APPLICATION);
+            can(Action.Manage, Subject.HOLIDAY);
+            can(Action.Manage, Subject.SALARY_STRUCTURE);
+            can(Action.Manage, Subject.SALARY_SLIP);
+            can(Action.Manage, Subject.PAYROLL_RUN);
+            can(Action.Manage, Subject.WORKER_DOCUMENT);
+            can(Action.Manage, Subject.SHIFT);
+            can(Action.Manage, Subject.SHIFT_ASSIGNMENT);
+            can(Action.Manage, Subject.SHIFT_REQUEST);
+            can(Action.Manage, Subject.ONBOARDING);
+            can(Action.Manage, Subject.SEPARATION);
+            can(Action.Manage, Subject.EXPENSE_CLAIM);
+            can(Action.Manage, Subject.EXPENSE_CATEGORY);
+            can(Action.Manage, Subject.JOB_OPENING);
+            can(Action.Manage, Subject.JOB_APPLICANT);
+            can(Action.Manage, Subject.INTERVIEW);
+            can(Action.Manage, Subject.APPRAISAL_CYCLE);
+            can(Action.Manage, Subject.APPRAISAL);
+            can(Action.Manage, Subject.PERFORMANCE_FEEDBACK);
+            can(Action.Manage, Subject.SEASONAL_CAMPAIGN);
+            can(Action.Manage, Subject.WORKER_QUALIFICATION);
+            can(Action.Manage, Subject.SAFETY_INCIDENT);
+            can(Action.Manage, Subject.WORKER_TRANSPORT);
+            can(Action.Manage, Subject.GRIEVANCE);
+            can(Action.Manage, Subject.TRAINING_PROGRAM);
+            can(Action.Manage, Subject.TRAINING_ENROLLMENT);
         } else if (roleName === 'farm_manager') {
             // Farm operations
             can(Action.Manage, Subject.FARM);
@@ -639,6 +740,7 @@ export class CaslAbilityFactory {
             can(Action.Manage, Subject.RECEPTION_BATCH);
             can(Action.Manage, Subject.QUALITY_CONTROL);
             can(Action.Manage, Subject.UTILITY);
+            can(Action.Manage, Subject.EQUIPMENT);
             can(Action.Read, Subject.CHAT);
             can(Action.Read, Subject.SETTINGS);
             can(Action.Update, Subject.SETTINGS);
@@ -682,6 +784,35 @@ export class CaslAbilityFactory {
             can(Action.Read, Subject.DASHBOARD);
             can(Action.Manage, Subject.CERTIFICATION);
             can(Action.Manage, Subject.COMPLIANCE_CHECK);
+            can(Action.Read, Subject.HR_COMPLIANCE);
+            can(Action.Read, Subject.LEAVE_TYPE);
+            can(Action.Manage, Subject.LEAVE_ALLOCATION);
+            can(Action.Manage, Subject.LEAVE_APPLICATION);
+            can(Action.Read, Subject.HOLIDAY);
+            can(Action.Read, Subject.SALARY_STRUCTURE);
+            can(Action.Read, Subject.SALARY_SLIP);
+            can(Action.Read, Subject.PAYROLL_RUN);
+            can(Action.Manage, Subject.WORKER_DOCUMENT);
+            can(Action.Manage, Subject.SHIFT);
+            can(Action.Manage, Subject.SHIFT_ASSIGNMENT);
+            can(Action.Manage, Subject.SHIFT_REQUEST);
+            can(Action.Manage, Subject.ONBOARDING);
+            can(Action.Read, Subject.SEPARATION);
+            can(Action.Manage, Subject.EXPENSE_CLAIM);
+            can(Action.Read, Subject.EXPENSE_CATEGORY);
+            can(Action.Manage, Subject.JOB_OPENING);
+            can(Action.Manage, Subject.JOB_APPLICANT);
+            can(Action.Manage, Subject.INTERVIEW);
+            can(Action.Read, Subject.APPRAISAL_CYCLE);
+            can(Action.Manage, Subject.APPRAISAL);
+            can(Action.Manage, Subject.PERFORMANCE_FEEDBACK);
+            can(Action.Manage, Subject.SEASONAL_CAMPAIGN);
+            can(Action.Manage, Subject.WORKER_QUALIFICATION);
+            can(Action.Manage, Subject.SAFETY_INCIDENT);
+            can(Action.Manage, Subject.WORKER_TRANSPORT);
+            can(Action.Read, Subject.GRIEVANCE);
+            can(Action.Read, Subject.TRAINING_PROGRAM);
+            can(Action.Manage, Subject.TRAINING_ENROLLMENT);
 
             cannot(Action.Delete, Subject.JOURNAL_ENTRY);
             cannot(Action.Manage, Subject.ACCOUNT);
@@ -752,6 +883,26 @@ export class CaslAbilityFactory {
             cannot(Action.Create, Subject.SALES_ORDER);
             cannot(Action.Create, Subject.PURCHASE_ORDER);
             cannot(Action.Manage, Subject.FINANCIAL_REPORT);
+
+            can(Action.Read, Subject.LEAVE_TYPE);
+            can(Action.Read, Subject.HOLIDAY);
+            can(Action.Create, Subject.LEAVE_APPLICATION);
+            can(Action.Read, Subject.LEAVE_APPLICATION);
+            can(Action.Read, Subject.LEAVE_ALLOCATION);
+            can(Action.Read, Subject.SALARY_SLIP);
+            can(Action.Read, Subject.WORKER_DOCUMENT);
+            can(Action.Read, Subject.SHIFT);
+            can(Action.Read, Subject.SHIFT_ASSIGNMENT);
+            can(Action.Create, Subject.SHIFT_REQUEST);
+            can(Action.Read, Subject.SHIFT_REQUEST);
+            can(Action.Create, Subject.EXPENSE_CLAIM);
+            can(Action.Read, Subject.EXPENSE_CLAIM);
+            can(Action.Read, Subject.APPRAISAL);
+            can(Action.Read, Subject.WORKER_QUALIFICATION);
+            can(Action.Create, Subject.GRIEVANCE);
+            can(Action.Read, Subject.GRIEVANCE);
+            can(Action.Read, Subject.TRAINING_PROGRAM);
+            can(Action.Read, Subject.TRAINING_ENROLLMENT);
         } else if (roleName === 'day_laborer') {
             can(Action.Read, Subject.TASK);
             can(Action.Update, Subject.TASK);
@@ -778,6 +929,16 @@ export class CaslAbilityFactory {
             cannot(Action.Manage, Subject.SUPPLIER);
             cannot(Action.Manage, Subject.WORKER);
             cannot(Action.Manage, Subject.FINANCIAL_REPORT);
+
+            can(Action.Read, Subject.LEAVE_TYPE);
+            can(Action.Read, Subject.HOLIDAY);
+            can(Action.Create, Subject.LEAVE_APPLICATION);
+            can(Action.Read, Subject.LEAVE_APPLICATION);
+            can(Action.Read, Subject.LEAVE_ALLOCATION);
+            can(Action.Read, Subject.SALARY_SLIP);
+            can(Action.Read, Subject.WORKER_DOCUMENT);
+            can(Action.Read, Subject.SHIFT);
+            can(Action.Read, Subject.SHIFT_ASSIGNMENT);
         } else if (roleName === 'viewer') {
             // Read-only access
             can(Action.Read, Subject.FARM);
@@ -823,6 +984,7 @@ export class CaslAbilityFactory {
             can(Action.Read, Subject.RECEPTION_BATCH);
             can(Action.Read, Subject.QUALITY_CONTROL);
             can(Action.Read, Subject.LAB_SERVICE);
+            can(Action.Read, Subject.EQUIPMENT);
             can(Action.Read, Subject.FINANCIAL_REPORT);
             can(Action.Read, Subject.REPORT);
             can(Action.Read, Subject.SATELLITE_ANALYSIS);

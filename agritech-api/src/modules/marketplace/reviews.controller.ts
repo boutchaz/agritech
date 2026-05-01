@@ -10,11 +10,14 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RequireModule } from '../../common/decorators/require-module.decorator';
+import { ModuleEntitlementGuard } from '../../common/guards/module-entitlement.guard';
 import { ReviewsService } from './reviews.service';
 import { CreateReviewDto } from './dto/create-review.dto';
 
 @Controller('marketplace/reviews')
-@UseGuards(JwtAuthGuard)
+@RequireModule('marketplace')
+@UseGuards(JwtAuthGuard, ModuleEntitlementGuard)
 export class ReviewsController {
   constructor(private readonly reviewsService: ReviewsService) {}
 

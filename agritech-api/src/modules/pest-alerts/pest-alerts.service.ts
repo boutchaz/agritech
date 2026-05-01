@@ -163,6 +163,8 @@ export class PestAlertsService {
         location: locationValue,
         notes: dto.notes,
         status: 'pending',
+        client_id: dto.client_id ?? null,
+        client_created_at: dto.client_created_at ?? null,
       })
       .select(`
         *,

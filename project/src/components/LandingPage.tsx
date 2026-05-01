@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import { useTranslation, Trans } from 'react-i18next';
 import { useHotkey } from '@tanstack/react-hotkeys';
@@ -17,19 +17,17 @@ import {
   Check,
   Play,
   X,
-  ArrowRight,
 } from 'lucide-react';
 import LanguageSwitcher from './LanguageSwitcher';
 import heroBg from '../assets/bg-360-day.webp';
 import { appConfig } from '@/config/app';
-import { toast } from 'sonner';
 import SupportedRegionsSection from './SupportedRegionsSection';
+import DemoRequestForm from './landing/DemoRequestForm';
 
 const LandingPage = () => {
   const { t } = useTranslation();
   const siteOrigin = typeof window !== 'undefined' ? window.location.origin : 'https://app.agritech.local';
   const [scrolled, setScrolled] = useState(false);
-  const [scrollProgress, setScrollProgress] = useState(0);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [videoModalOpen, setVideoModalOpen] = useState(false);
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
@@ -44,7 +42,7 @@ const LandingPage = () => {
     name: appConfig.name,
     url: `${siteOrigin}/`,
     description: t('landing.seo.description'),
-    image: `${siteOrigin}/og-image.png`,
+    image: `${siteOrigin}/assets/logo.png`,
     offers: { '@type': 'Offer', price: '25', priceCurrency: 'USD' },
   }), [siteOrigin, t]);
 
@@ -81,6 +79,22 @@ const LandingPage = () => {
     return () => { document.querySelector('script[data-landing-schema]')?.remove(); };
   }, [t, siteOrigin, structuredData]);
 
+  const faqStructuredData = useMemo(() => {
+    const faqItems = [1, 2, 3, 4, 5, 6].map((n) => ({
+      '@type': 'Question',
+      name: t(`landing.faq.q${n}`),
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: t(`landing.faq.a${n}`),
+      },
+    }));
+    return {
+      '@context': 'https://schema.org',
+      '@type': 'FAQPage',
+      mainEntity: faqItems,
+    };
+  }, [t]);
+
   // Sticky header & Scroll Progress
   useEffect(() => {
     const getScrollParent = (node: HTMLElement | null): HTMLElement | Window => {
@@ -98,15 +112,10 @@ const LandingPage = () => {
     const scrollParent = getScrollParent(containerRef.current);
     const getScrollTop = () =>
       scrollParent === window ? window.scrollY : (scrollParent as HTMLElement).scrollTop;
-    
-    const getScrollHeight = () =>
-      scrollParent === window ? document.documentElement.scrollHeight - window.innerHeight : (scrollParent as HTMLElement).scrollHeight - (scrollParent as HTMLElement).clientHeight;
 
     const onScroll = () => {
       const top = getScrollTop();
-      const height = getScrollHeight();
       setScrolled(top > 50);
-      setScrollProgress((top / height) * 100);
     };
     
     onScroll(); // sync initial state
@@ -198,38 +207,13 @@ const LandingPage = () => {
       style={{ scrollBehavior: 'smooth' }}
     >
       <style dangerouslySetInnerHTML={{ __html: `
-        @keyframes float {
-          0% { transform: translateY(0px) rotateX(2deg); }
-          50% { transform: translateY(-15px) rotateX(0deg); }
-          100% { transform: translateY(0px) rotateX(2deg); }
-        }
-        @keyframes blob-float {
-          0% { transform: translate(0, 0) scale(1); }
-          33% { transform: translate(30px, -50px) scale(1.1); }
-          66% { transform: translate(-20px, 20px) scale(0.9); }
-          100% { transform: translate(0, 0) scale(1); }
-        }
-        @keyframes pulse-sonar {
-          0% { transform: scale(1); opacity: 0.8; }
-          100% { transform: scale(1.5); opacity: 0; }
-        }
-        .animate-float { animation: float 6s ease-in-out infinite; }
-        .animate-blob { animation: blob-float 20s ease-in-out infinite; }
-        .sonar-effect::after {
-          content: '';
-          position: absolute;
-          inset: 0;
-          border-radius: 9999px;
-          background: currentColor;
-          animation: pulse-sonar 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+        .hero-underline {
+          background-image: linear-gradient(transparent 60%, hsl(var(--primary) / 0.35) 60%);
+          background-repeat: no-repeat;
+          background-size: 100% 100%;
+          padding: 0 0.15em;
         }
       `}} />
-
-      {/* SCROLL PROGRESS */}
-      <div 
-        className="fixed top-0 left-0 h-[3px] bg-primary z-[2000] transition-all duration-150 ease-out"
-        style={{ width: `${scrollProgress}%` }}
-      />
 
       {/* NAVBAR */}
       <header
@@ -255,12 +239,12 @@ const LandingPage = () => {
           </a>
 
 
-          <nav className="hidden md:flex gap-8">
+          <nav className="hidden lg:flex gap-6 xl:gap-8">
             {(['modules', 'how-it-works', 'faq'] as const).map((id) => (
               <button
                 key={id}
                 onClick={() => scrollTo(id)}
-                className={`bg-transparent border-none font-semibold text-[0.95rem] cursor-pointer transition-all duration-300 ${
+                className={`bg-transparent border-none font-semibold text-[0.9rem] xl:text-[0.95rem] cursor-pointer transition-all duration-300 whitespace-nowrap ${
                   scrolled ? 'text-foreground/80 hover:text-primary' : 'text-white/80 hover:text-white'
                 }`}
               >
@@ -269,7 +253,7 @@ const LandingPage = () => {
             ))}
             <Link
               to="/blog"
-              className={`font-semibold text-[0.95rem] transition-all duration-300 ${
+              className={`font-semibold text-[0.9rem] xl:text-[0.95rem] transition-all duration-300 whitespace-nowrap ${
                 scrolled ? 'text-foreground/80 hover:text-primary' : 'text-white/80 hover:text-white'
               }`}
             >
@@ -277,11 +261,11 @@ const LandingPage = () => {
             </Link>
           </nav>
 
-          <div className="hidden md:flex items-center gap-4">
+          <div className="hidden lg:flex items-center gap-3 xl:gap-4">
             <LanguageSwitcher />
             <Link
               to="/login"
-              className={`inline-block px-4 py-2 rounded-xl font-semibold text-[0.95rem] transition-all duration-300 ${
+              className={`inline-block px-3 xl:px-4 py-2 rounded-xl font-semibold text-[0.9rem] xl:text-[0.95rem] transition-all duration-300 whitespace-nowrap ${
                 scrolled
                   ? 'text-foreground hover:text-primary'
                   : 'text-white/90 hover:text-white'
@@ -291,7 +275,7 @@ const LandingPage = () => {
             </Link>
             <button
               onClick={() => scrollTo('contact')}
-              className="inline-block px-5 py-2.5 rounded-xl font-bold text-[0.95rem] bg-primary text-primary-foreground hover:bg-primary/90 hover:scale-105 active:scale-95 shadow-md hover:shadow-lg transition-all duration-300 cursor-pointer"
+              className="inline-block px-4 xl:px-5 py-2.5 rounded-xl font-bold text-[0.9rem] xl:text-[0.95rem] bg-primary text-primary-foreground hover:bg-primary/90 hover:scale-105 active:scale-95 shadow-md hover:shadow-lg transition-all duration-300 cursor-pointer whitespace-nowrap"
             >
               {t('landing.hero.ctaDemo', 'Commencer')}
             </button>
@@ -299,7 +283,7 @@ const LandingPage = () => {
 
           {/* Mobile menu button */}
           <button
-            className="md:hidden flex flex-col gap-[5px] bg-transparent border-none cursor-pointer p-2"
+            className="lg:hidden flex flex-col gap-[5px] bg-transparent border-none cursor-pointer p-2"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             aria-label="Menu"
           >
@@ -314,7 +298,7 @@ const LandingPage = () => {
       {/* Full-screen mobile menu — fixed overlay so content below is not visible / misaligned */}
       {mobileMenuOpen ? (
         <div
-          className="fixed inset-0 z-[1001] flex md:hidden flex-col bg-[#111] pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
+          className="fixed inset-0 z-[1001] flex lg:hidden flex-col bg-[#111] pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
           role="dialog"
           aria-modal="true"
           aria-label={t('landing.nav.menuAria')}
@@ -393,74 +377,56 @@ const LandingPage = () => {
 
       <main>
         {/* HERO */}
-        <section id="hero" className="relative min-h-screen pt-32 pb-20 flex items-center bg-gradient-to-br from-[#0a0a0a] to-[#1a1a1a] overflow-hidden">
-          {/* Animated Blobs */}
-          <div className="absolute top-1/4 -left-20 w-[400px] h-[400px] bg-primary/20 rounded-full blur-[100px] animate-blob z-[1] will-change-transform" />
-          <div className="absolute bottom-1/4 -right-20 w-[400px] h-[400px] bg-blue-500/10 rounded-full blur-[100px] animate-blob z-[1] will-change-transform" style={{ animationDelay: '-10s' }} />
-
-          {/* Background image */}
+        <section id="hero" className="relative min-h-screen pt-32 pb-16 flex items-center bg-[#0f0f10] overflow-hidden">
           <div
-            className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-30 z-[1]"
+            className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-20 z-[1]"
             style={{
               backgroundImage: `url(${heroBg})`,
-              maskImage: 'linear-gradient(to bottom, rgba(0,0,0,1) 50%, rgba(0,0,0,0) 100%)',
-              WebkitMaskImage: 'linear-gradient(to bottom, rgba(0,0,0,1) 50%, rgba(0,0,0,0) 100%)',
+              maskImage: 'linear-gradient(to bottom, rgba(0,0,0,1) 40%, rgba(0,0,0,0) 100%)',
+              WebkitMaskImage: 'linear-gradient(to bottom, rgba(0,0,0,1) 40%, rgba(0,0,0,0) 100%)',
             }}
           />
-          
-          <div className="relative z-[2] w-full max-w-[1200px] mx-auto px-6 flex flex-col items-center text-center">
-            <div className="reveal-on-scroll opacity-0 translate-y-[30px] transition-all duration-[1000ms] ease-[cubic-bezier(0.2,0.8,0.2,1)]">
-              <h1 className="font-[Montserrat,sans-serif] font-extrabold text-white text-[clamp(2.5rem,6vw,4.5rem)] mb-4 max-w-[1000px] leading-[1.1] tracking-tight">
+
+          <div className="relative z-[2] w-full max-w-[1200px] mx-auto px-6 grid gap-12 lg:grid-cols-[1.1fr_1fr] lg:gap-16 items-center">
+            <div className="reveal-on-scroll opacity-0 translate-y-[16px] transition-all duration-700 ease-out">
+              <h1 className="font-[Montserrat,sans-serif] font-extrabold text-white text-[clamp(2.25rem,5vw,4rem)] leading-[1.05] tracking-tight">
                 {t('landing.hero.title')}
               </h1>
-              <h2 className="bg-gradient-to-r from-primary-400 to-blue-400 bg-clip-text text-transparent text-[clamp(1.5rem,4vw,3rem)] mb-8 font-[Montserrat,sans-serif] font-bold">
-                {t('landing.hero.highlight')}
+              <h2 className="mt-3 text-white/90 text-[clamp(1.25rem,2.4vw,1.75rem)] font-[Montserrat,sans-serif] font-semibold">
+                <span className="hero-underline">{t('landing.hero.highlight')}</span>
               </h2>
-              <p className="text-gray-300 text-lg md:text-xl max-w-[800px] mx-auto mb-12 leading-relaxed opacity-90">
+              <p className="mt-6 text-gray-300/90 text-base md:text-lg max-w-[48ch] leading-relaxed">
                 {t('landing.hero.subtitle')}
               </p>
 
-              <div className="flex gap-5 justify-center mb-12 flex-wrap">
+              <div className="mt-8 flex gap-3 flex-wrap">
                 <button
                   onClick={() => scrollTo('contact')}
-                  className="px-10 py-4 rounded-2xl font-bold text-lg bg-primary text-primary-foreground hover:bg-primary/90 hover:scale-105 active:scale-95 shadow-[0_10px_20px_-5px_rgba(34,197,94,0.4)] transition-all duration-300 cursor-pointer"
+                  className="px-6 py-3 rounded-lg font-semibold text-base bg-primary text-primary-foreground hover:bg-primary/90 transition-colors duration-200 cursor-pointer"
                 >
                   {t('landing.hero.ctaDemo')}
                 </button>
                 <button
                   onClick={() => scrollTo('modules')}
-                  className="px-10 py-4 rounded-2xl font-bold text-lg bg-white/5 text-white border border-white/20 hover:bg-white/10 backdrop-blur-sm hover:scale-105 active:scale-95 transition-all duration-300 cursor-pointer"
+                  className="px-6 py-3 rounded-lg font-semibold text-base text-white/85 hover:text-white border border-white/15 hover:border-white/40 transition-colors duration-200 cursor-pointer"
                 >
                   {t('landing.hero.ctaDiscover')}
                 </button>
               </div>
-
-              <div className="flex gap-8 justify-center text-gray-400 text-sm font-medium flex-wrap">
-                {[1, 2, 3].map((n) => (
-                  <span key={n} className="flex items-center gap-2 px-4 py-2 bg-white/5 rounded-full border border-white/5">
-                    <Check className="w-4 h-4 text-primary" />
-                    {t(`landing.hero.badge${n}`)}
-                  </span>
-                ))}
-              </div>
             </div>
 
-            {/* Video thumbnail */}
-            <div className="mt-20 w-full max-w-[1000px] reveal-on-scroll opacity-0 translate-y-[40px] transition-all duration-[1000ms] ease-[cubic-bezier(0.2,0.8,0.2,1)] delay-300">
+            <div className="reveal-on-scroll opacity-0 translate-y-[16px] transition-all duration-700 ease-out delay-100">
               <div
                 onClick={openVideoModal}
-                className="relative rounded-2xl overflow-hidden border border-white/10 cursor-pointer aspect-video shadow-[0_40px_80px_-15px_rgba(0,0,0,0.7)] group animate-float will-change-transform"
+                className="relative rounded-lg overflow-hidden border border-white/10 cursor-pointer aspect-video group"
               >
                 <picture>
                   <source srcSet="/assets/video-thumbnail.webp" type="image/webp" />
-                  <img src="/assets/video-thumbnail.png" alt="Demo AGROGINA" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" loading="lazy" />
+                  <img src="/assets/video-thumbnail.png" alt="Demo AGROGINA" className="w-full h-full object-cover" loading="lazy" />
                 </picture>
-                <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors duration-300" />
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-20 bg-primary rounded-full flex items-center justify-center shadow-2xl group-hover:scale-110 transition-all duration-500 sonar-effect text-primary">
-                  <Play className="w-8 h-8 text-primary-foreground ml-1" fill="currentColor" />
-                </div>
-                <div className="absolute bottom-8 left-0 right-0 text-center font-bold text-white tracking-[4px] text-sm uppercase opacity-80 group-hover:opacity-100 transition-opacity">
-                  {t('landing.hero.demoInteractive', 'DÉMO INTERACTIVE')}
+                <div className="absolute inset-0 bg-black/30 group-hover:bg-black/15 transition-colors duration-200" />
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-14 h-14 bg-white/95 rounded-full flex items-center justify-center">
+                  <Play className="w-6 h-6 text-[#0f0f10] ml-0.5" fill="currentColor" />
                 </div>
               </div>
             </div>
@@ -469,42 +435,34 @@ const LandingPage = () => {
 
 
         {/* MODULES */}
-        <section id="modules" className="py-24 bg-background relative overflow-hidden">
-          <div className="max-w-[1200px] mx-auto px-6 relative z-10">
-            <div className="text-center max-w-[800px] mx-auto mb-16 reveal-on-scroll opacity-0 translate-y-[30px] transition-all duration-[1000ms] ease-[cubic-bezier(0.2,0.8,0.2,1)]">
-              <h2 className="font-[Montserrat,sans-serif] font-extrabold text-[clamp(2rem,4vw,2.75rem)] mb-6 text-foreground tracking-tight leading-tight">
+        <section id="modules" className="py-20 bg-background">
+          <div className="max-w-[1100px] mx-auto px-6">
+            <div className="max-w-[600px] mb-14 reveal-on-scroll opacity-0 translate-y-[16px] transition-all duration-500 ease-out">
+              <h2 className="font-[Montserrat,sans-serif] font-extrabold text-[clamp(1.75rem,3.5vw,2.5rem)] text-foreground tracking-tight leading-[1.15]">
                 {t('landing.modules.title')}
               </h2>
-              <p className="text-lg md:text-xl text-muted-foreground max-w-[600px] mx-auto">
+              <p className="mt-4 text-base md:text-lg text-muted-foreground">
                 {t('landing.modules.subtitle')}
               </p>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {modules.map(({ icon: Icon, key, color, isAi }) => (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-10">
+              {modules.map(({ icon: Icon, key, color }) => (
                 <div
                   key={key}
-                  className={`reveal-on-scroll opacity-0 translate-y-[30px] transition-all duration-[1000ms] ease-[cubic-bezier(0.2,0.8,0.2,1)] bg-card p-8 rounded-2xl border border-border shadow-sm hover:-translate-y-2 hover:shadow-xl hover:border-primary/50 transition-all duration-500 flex flex-col group ${
-                    isAi ? 'border-2 border-primary/40 bg-gradient-to-br from-card via-card to-primary/5 shadow-[0_0_20px_rgba(34,197,94,0.1)]' : ''
-                  }`}
+                  className="reveal-on-scroll opacity-0 translate-y-[12px] transition-all duration-500 ease-out flex gap-4"
                 >
-                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-8 transition-transform duration-500 group-hover:scale-110 ${color}`}>
-                    <Icon className="w-7 h-7" />
+                  <div className={`shrink-0 w-10 h-10 rounded-lg flex items-center justify-center ${color}`}>
+                    <Icon className="w-5 h-5" />
                   </div>
-                  <h3 className="font-[Montserrat,sans-serif] font-bold text-xl mb-4 text-foreground group-hover:text-primary transition-colors">
-                    {t(`landing.modules.${key}`)}
-                    {isAi && <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-primary/20 text-primary uppercase tracking-wider">AI Powered</span>}
-                  </h3>
-                  <p className="text-muted-foreground text-[0.95rem] leading-relaxed mb-6 flex-1">
-                    {t(`landing.modules.${key}Desc`)}
-                  </p>
-                  <button
-                    onClick={() => scrollTo('contact')}
-                    className="text-primary font-bold text-sm flex items-center gap-2 bg-transparent border-none cursor-pointer group/btn"
-                  >
-                    <span className="group-hover/btn:mr-1 transition-all duration-300">{t('landing.modules.learnMore')}</span>
-                    <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover/btn:translate-x-1" />
-                  </button>
+                  <div>
+                    <h3 className="font-[Montserrat,sans-serif] font-semibold text-[1.05rem] text-foreground">
+                      {t(`landing.modules.${key}`)}
+                    </h3>
+                    <p className="mt-1.5 text-muted-foreground text-[0.95rem] leading-relaxed">
+                      {t(`landing.modules.${key}Desc`)}
+                    </p>
+                  </div>
                 </div>
               ))}
             </div>
@@ -513,35 +471,32 @@ const LandingPage = () => {
 
 
         {/* HOW IT WORKS */}
-        <section id="how-it-works" className="py-24 bg-secondary/30 relative overflow-hidden">
-          <div className="max-w-[1200px] mx-auto px-6 relative z-10">
-            <div className="text-center max-w-[800px] mx-auto mb-20 reveal-on-scroll opacity-0 translate-y-[30px] transition-all duration-[1000ms] ease-[cubic-bezier(0.2,0.8,0.2,1)]">
-              <h2 className="font-[Montserrat,sans-serif] font-extrabold text-[clamp(2rem,4vw,2.75rem)] text-foreground tracking-tight">
-                {t('landing.steps.title')}
-              </h2>
-            </div>
+        <section id="how-it-works" className="py-20 bg-secondary/30 border-y border-border/50">
+          <div className="max-w-[900px] mx-auto px-6">
+            <h2 className="mb-12 font-[Montserrat,sans-serif] font-extrabold text-[clamp(1.75rem,3.5vw,2.5rem)] text-foreground tracking-tight">
+              {t('landing.steps.title')}
+            </h2>
 
-            <div className="relative mx-auto flex max-w-[1000px] flex-col items-center gap-12 md:flex-row md:items-start md:justify-between md:gap-0">
-              {[1, 2, 3].map((n, idx) => (
-                <React.Fragment key={n}>
-                  <div
-                    className={`w-full max-w-md text-center px-4 md:max-w-none md:flex-1 reveal-on-scroll opacity-0 translate-y-[30px] transition-all duration-[1000ms] ease-[cubic-bezier(0.2,0.8,0.2,1)] ${idx > 0 ? 'delay-200' : ''}`}
-                  >
-                    <div className="relative inline-block group mb-8">
-                      <div className="w-16 h-16 bg-background border-2 border-primary text-primary rounded-2xl flex items-center justify-center font-[Montserrat,sans-serif] text-2xl font-extrabold shadow-sm group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-500 transform group-hover:rotate-12">
-                        {n}
-                      </div>
-                      <div className="absolute -inset-2 bg-primary/20 rounded-2xl blur opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                    </div>
-                    <h3 className="font-[Montserrat,sans-serif] font-bold text-xl mb-4 text-foreground">{t(`landing.steps.step${n}Title`)}</h3>
-                    <p className="text-muted-foreground text-[0.95rem] leading-relaxed max-w-[250px] mx-auto">{t(`landing.steps.step${n}Desc`)}</p>
+            <ol className="space-y-10">
+              {[1, 2, 3].map((n) => (
+                <li
+                  key={n}
+                  className="reveal-on-scroll opacity-0 translate-y-[12px] transition-all duration-500 ease-out flex gap-5 md:gap-7"
+                >
+                  <span className="shrink-0 font-[Montserrat,sans-serif] text-4xl md:text-5xl font-extrabold text-primary/80 leading-none tabular-nums w-10 md:w-14">
+                    {String(n).padStart(2, '0')}
+                  </span>
+                  <div className="pt-1.5">
+                    <h3 className="font-[Montserrat,sans-serif] font-semibold text-lg md:text-xl text-foreground">
+                      {t(`landing.steps.step${n}Title`)}
+                    </h3>
+                    <p className="mt-2 text-muted-foreground leading-relaxed max-w-[55ch]">
+                      {t(`landing.steps.step${n}Desc`)}
+                    </p>
                   </div>
-                  {idx < 2 && (
-                    <div className="hidden md:block flex-1 h-[2px] bg-gradient-to-r from-primary/50 to-primary/10 mt-8 mx-4" />
-                  )}
-                </React.Fragment>
+                </li>
               ))}
-            </div>
+            </ol>
           </div>
         </section>
 
@@ -561,21 +516,21 @@ const LandingPage = () => {
                 { key: 'ai', icon: Brain, tint: 'blue' },
                 { key: 'morocco', icon: CheckCircle, tint: 'green' },
                 { key: 'simple', icon: Info, tint: 'orange' },
-              ] as const).map(({ key, icon: Icon, tint }, idx) => (
+              ] as const).map(({ key, icon: Icon, tint }) => (
                 <div
                   key={key}
-                  className={`flex gap-6 items-start p-8 rounded-2xl bg-secondary/20 border border-border/50 hover:bg-background hover:border-primary/30 hover:shadow-lg transition-all duration-500 reveal-on-scroll opacity-0 translate-y-[30px] transition-all duration-[1000ms] ease-[cubic-bezier(0.2,0.8,0.2,1)] ${idx % 2 !== 0 ? 'delay-200' : ''} group`}
+                  className="flex gap-5 items-start p-7 rounded-xl bg-secondary/20 border border-border/50 hover:border-primary/30 transition-colors duration-300 reveal-on-scroll opacity-0 translate-y-[16px] transition-all duration-500 ease-out"
                 >
-                  <div className={`shrink-0 w-16 h-16 rounded-2xl flex items-center justify-center transition-all duration-500 group-hover:scale-110 group-hover:rotate-6
+                  <div className={`shrink-0 w-12 h-12 rounded-xl flex items-center justify-center
                     ${tint === 'primary' ? 'bg-primary/10 text-primary' : ''}
                     ${tint === 'blue' ? 'bg-blue-500/10 text-blue-500' : ''}
                     ${tint === 'green' ? 'bg-emerald-500/10 text-emerald-500' : ''}
                     ${tint === 'orange' ? 'bg-orange-500/10 text-orange-500' : ''}
                   `}>
-                    <Icon className="w-8 h-8" />
+                    <Icon className="w-6 h-6" />
                   </div>
                   <div>
-                    <h3 className="font-[Montserrat,sans-serif] font-bold text-xl mb-3 text-foreground group-hover:text-primary transition-colors">
+                    <h3 className="font-[Montserrat,sans-serif] font-bold text-lg mb-2 text-foreground">
                       {t(`landing.why.${key}`)}
                     </h3>
                     <p className="text-muted-foreground leading-relaxed">
@@ -593,44 +548,28 @@ const LandingPage = () => {
         <SupportedRegionsSection />
 
         {/* PRICING */}
-        <section id="pricing" className="py-24 bg-secondary/50 text-center relative overflow-hidden">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[1px] bg-gradient-to-r from-transparent via-border to-transparent" />
-          
-          <div className="max-w-[1200px] mx-auto px-6 reveal-on-scroll opacity-0 translate-y-[30px] transition-all duration-[1000ms] ease-[cubic-bezier(0.2,0.8,0.2,1)]">
-            <h2 className="font-[Montserrat,sans-serif] font-extrabold text-[clamp(2rem,4vw,2.75rem)] mb-6 text-foreground tracking-tight leading-tight">
+        <section id="pricing" className="py-20 bg-secondary/40 border-t border-border/50">
+          <div className="max-w-[720px] mx-auto px-6 reveal-on-scroll opacity-0 translate-y-[12px] transition-all duration-500 ease-out">
+            <h2 className="font-[Montserrat,sans-serif] font-extrabold text-[clamp(1.75rem,3.5vw,2.5rem)] text-foreground tracking-tight">
               {t('landing.pricing.title')}
             </h2>
-            <p className="text-lg md:text-xl text-muted-foreground max-w-[600px] mx-auto mb-16">
+            <p className="mt-4 text-base md:text-lg text-muted-foreground">
               {t('landing.pricing.subtitle')}
             </p>
-
-            <div className="bg-card p-12 rounded-3xl border border-border/50 shadow-xl max-w-[700px] mx-auto mt-12 group hover:border-primary/30 transition-all duration-500 relative">
-              <div className="absolute top-0 right-10 -translate-y-1/2 bg-primary text-primary-foreground px-4 py-1 rounded-full text-xs font-bold uppercase tracking-widest">
-                Populaire
-              </div>
-              <div className="w-20 h-20 bg-primary/10 text-primary rounded-full flex items-center justify-center mx-auto mb-8 transition-transform duration-500 group-hover:scale-110 group-hover:rotate-12">
-                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                  <rect x="4" y="2" width="16" height="20" rx="2" ry="2" /><line x1="8" y1="6" x2="16" y2="6" /><line x1="8" y1="10" x2="16" y2="10" /><line x1="8" y1="14" x2="8.01" y2="14" /><line x1="12" y1="14" x2="12.01" y2="14" /><line x1="16" y1="14" x2="16.01" y2="14" /><line x1="8" y1="18" x2="8.01" y2="18" /><line x1="12" y1="18" x2="12.01" y2="18" /><line x1="16" y1="18" x2="16.01" y2="18" />
-                </svg>
-              </div>
-              <p className="text-xl md:text-2xl text-foreground mb-10 leading-relaxed font-medium tracking-tight">
-                {t('landing.pricing.text')}
-              </p>
-              <button
-                onClick={() => scrollTo('contact')}
-                className="px-10 py-4 rounded-2xl font-bold text-lg bg-primary text-primary-foreground hover:bg-primary/90 hover:scale-105 active:scale-95 shadow-lg transition-all duration-300 cursor-pointer"
-              >
-                {t('landing.pricing.cta')}
-              </button>
-            </div>
+            <p className="mt-8 text-foreground leading-relaxed">
+              {t('landing.pricing.text')}
+            </p>
+            <button
+              onClick={() => scrollTo('contact')}
+              className="mt-8 px-6 py-3 rounded-lg font-semibold text-base bg-primary text-primary-foreground hover:bg-primary/90 transition-colors duration-200 cursor-pointer"
+            >
+              {t('landing.pricing.cta')}
+            </button>
           </div>
         </section>
 
         {/* BUSINESS PLAN SIMULATOR */}
         <section id="business-plan" className="py-24 bg-primary relative overflow-hidden">
-          {/* Decorative background circle */}
-          <div className="absolute top-1/2 left-0 -translate-y-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-white/5 rounded-full blur-[100px]" />
-          
           <div className="max-w-[1200px] mx-auto px-6 relative z-10">
             <div className="grid grid-cols-1 md:grid-cols-[1fr_1.5fr] gap-16 items-center">
               <div className="reveal-on-scroll opacity-0 translate-y-[30px] transition-all duration-[1000ms] ease-[cubic-bezier(0.2,0.8,0.2,1)]">
@@ -651,14 +590,14 @@ const LandingPage = () => {
                 </Link>
               </div>
               <div className="reveal-on-scroll opacity-0 translate-y-[30px] transition-all duration-[1000ms] ease-[cubic-bezier(0.2,0.8,0.2,1)] delay-300">
-                <div className="bg-white/10 border border-white/20 rounded-3xl p-10 backdrop-blur-xl shadow-2xl group hover:bg-white/[0.15] transition-colors duration-500">
-                  <ul className="flex flex-col gap-6">
+                <div className="bg-white/10 border border-white/20 rounded-2xl p-8">
+                  <ul className="flex flex-col gap-5">
                     {[1, 2, 3].map((n) => (
-                      <li key={n} className="flex items-center gap-5 group/item">
-                        <div className="shrink-0 w-12 h-12 bg-background text-primary rounded-2xl flex items-center justify-center transition-all duration-500 group-hover/item:rotate-12 shadow-sm">
-                          <Check className="w-6 h-6" />
+                      <li key={n} className="flex items-center gap-4">
+                        <div className="shrink-0 w-10 h-10 bg-background text-primary rounded-lg flex items-center justify-center">
+                          <Check className="w-5 h-5" />
                         </div>
-                        <span className="text-xl font-bold text-primary-foreground">{t(`landing.bp.feature${n}`)}</span>
+                        <span className="text-lg font-semibold text-primary-foreground">{t(`landing.bp.feature${n}`)}</span>
                       </li>
                     ))}
                   </ul>
@@ -680,21 +619,19 @@ const LandingPage = () => {
 
             <div className="flex flex-col gap-4">
               {faqItems.map((n) => (
-                <div key={n} className={`border border-border/50 rounded-2xl overflow-hidden transition-all duration-300 ${activeFaq === n ? 'bg-secondary/20 shadow-md border-primary/20' : 'bg-background hover:border-primary/20'}`}>
+                <div key={n} className={`border border-border/60 rounded-xl overflow-hidden transition-colors duration-200 ${activeFaq === n ? 'border-primary/30' : 'hover:border-primary/20'}`}>
                   <button
-                    className="w-full px-8 py-6 flex justify-between items-center bg-transparent border-none text-lg font-bold text-foreground cursor-pointer text-left transition-all duration-300"
+                    className="w-full px-6 py-5 flex justify-between items-center gap-4 bg-transparent border-none text-base md:text-lg font-semibold text-foreground cursor-pointer text-left"
                     onClick={() => setActiveFaq(activeFaq === n ? null : n)}
                   >
                     <span>{t(`landing.faq.q${n}`)}</span>
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-500 ${activeFaq === n ? 'bg-primary text-primary-foreground rotate-45' : 'bg-secondary text-foreground'}`}>
-                      <span className="text-2xl leading-none">+</span>
-                    </div>
+                    <span className={`shrink-0 text-xl leading-none transition-transform duration-200 ${activeFaq === n ? 'rotate-45 text-primary' : 'text-muted-foreground'}`}>+</span>
                   </button>
-                  <div 
-                    className={`transition-all duration-500 ease-in-out ${activeFaq === n ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}`}
+                  <div
+                    className={`transition-all duration-300 ease-out ${activeFaq === n ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}`}
                     style={{ overflow: 'hidden' }}
                   >
-                    <div className="px-8 pb-8 text-muted-foreground leading-relaxed text-[1.05rem]">
+                    <div className="px-6 pb-6 text-muted-foreground leading-relaxed">
                       {t(`landing.faq.a${n}`)}
                     </div>
                   </div>
@@ -708,121 +645,23 @@ const LandingPage = () => {
         <section id="contact" className="w-full overflow-x-hidden bg-primary py-24 text-primary-foreground">
           <div className="mx-auto max-w-[1200px] px-6">
             <div className="grid grid-cols-1 items-center gap-16 md:grid-cols-2">
-              <div className="reveal-on-scroll translate-y-[30px] opacity-0 transition-all duration-[1000ms] ease-[cubic-bezier(0.2,0.8,0.2,1)]">
-                <h2 className="mb-6 font-[Montserrat,sans-serif] text-[clamp(2rem,5vw,3rem)] font-extrabold leading-[1.1] tracking-tight">
+              <div className="reveal-on-scroll translate-y-[12px] opacity-0 transition-all duration-500 ease-out">
+                <h2 className="mb-5 font-[Montserrat,sans-serif] text-[clamp(1.75rem,4vw,2.5rem)] font-extrabold leading-[1.1] tracking-tight">
                   {t('landing.contact.title')}
                 </h2>
-                <p className="text-lg md:text-xl opacity-90 leading-relaxed max-w-[500px]">
+                <p className="text-base md:text-lg opacity-90 leading-relaxed max-w-[50ch]">
                   {t('landing.contact.subtitle')}
                 </p>
-                <div className="mt-12 space-y-6">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center border border-white/20">
-                      <Check className="w-6 h-6" />
-                    </div>
-                    <span className="text-lg font-medium">Réponse en moins de 24h</span>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center border border-white/20">
-                      <Check className="w-6 h-6" />
-                    </div>
-                    <span className="text-lg font-medium">Accompagnement personnalisé</span>
-                  </div>
-                </div>
+                <a
+                  href="/rdv?source=siam-2026"
+                  className="mt-6 inline-flex items-center gap-2 rounded-xl border border-primary-foreground/30 bg-primary-foreground/10 px-4 py-2.5 text-sm font-semibold text-primary-foreground backdrop-blur transition-colors hover:bg-primary-foreground/20"
+                >
+                  {t('landing.contact.bookRdv', 'Book directly on /rdv')} →
+                </a>
               </div>
 
-              <div className="w-full min-w-0 rounded-3xl bg-background p-8 text-foreground shadow-2xl reveal-on-scroll translate-y-[30px] opacity-0 transition-all duration-[1000ms] ease-[cubic-bezier(0.2,0.8,0.2,1)] delay-200 md:p-12">
-                <form
-                  noValidate
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    const form = e.currentTarget;
-                    const formData = new FormData(form);
-                    const name = String(formData.get('name') ?? '').trim();
-                    const email = String(formData.get('email') ?? '').trim();
-                    const phone = String(formData.get('phone') ?? '').trim();
-                    const size = String(formData.get('size') ?? '');
-                    if (!name || !email || !phone || !size) {
-                      toast.error(t('landing.contact.validationRequired'));
-                      return;
-                    }
-                    const mailtoBody = `Name: ${name}%0AEmail: ${email}%0APhone: ${phone}%0AFarm Size: ${size}%0AMessage: ${formData.get('message')}`;
-                    window.location.href = `mailto:contact@agrogina.com?subject=Demo Request&body=${mailtoBody}`;
-                  }}
-                  className="space-y-6"
-                >
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                    <div>
-                      <label className="mb-2 block text-sm font-bold text-foreground uppercase tracking-wider" htmlFor="landing-contact-name">
-                        {t('landing.contact.formName')}
-                      </label>
-                      <input
-                        id="landing-contact-name"
-                        name="name"
-                        type="text"
-                        autoComplete="name"
-                        className="min-h-[50px] w-full rounded-xl border border-border bg-secondary/20 px-4 py-3 text-base text-foreground transition-all duration-300 focus:bg-background focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10"
-                      />
-                    </div>
-                    <div>
-                      <label className="mb-2 block text-sm font-bold text-foreground uppercase tracking-wider" htmlFor="landing-contact-email">
-                        {t('landing.contact.formEmail')}
-                      </label>
-                      <input
-                        id="landing-contact-email"
-                        name="email"
-                        type="email"
-                        className="min-h-[50px] w-full rounded-xl border border-border bg-secondary/20 px-4 py-3 text-base text-foreground transition-all duration-300 focus:bg-background focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10"
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                    <div>
-                      <label className="mb-2 block text-sm font-bold text-foreground uppercase tracking-wider" htmlFor="landing-contact-phone">
-                        {t('landing.contact.formPhone')}
-                      </label>
-                      <input
-                        id="landing-contact-phone"
-                        name="phone"
-                        type="tel"
-                        className="min-h-[50px] w-full rounded-xl border border-border bg-secondary/20 px-4 py-3 text-base text-foreground transition-all duration-300 focus:bg-background focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10"
-                      />
-                    </div>
-                    <div>
-                      <label className="mb-2 block text-sm font-bold text-foreground uppercase tracking-wider" htmlFor="landing-contact-size">
-                        {t('landing.contact.formSize')}
-                      </label>
-                      <select
-                        id="landing-contact-size"
-                        name="size"
-                        className="min-h-[50px] w-full rounded-xl border border-border bg-secondary/20 px-4 py-3 text-base text-foreground transition-all duration-300 focus:bg-background focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10 appearance-none"
-                      >
-                        <option value="">{t('landing.contact.formSizePlaceholder')}</option>
-                        <option value="1">{t('landing.contact.formSize1')}</option>
-                        <option value="2">{t('landing.contact.formSize2')}</option>
-                        <option value="3">{t('landing.contact.formSize3')}</option>
-                        <option value="4">{t('landing.contact.formSize4')}</option>
-                      </select>
-                    </div>
-                  </div>
-                  <div>
-                    <label className="mb-2 block text-sm font-bold text-foreground uppercase tracking-wider" htmlFor="landing-contact-message">
-                      {t('landing.contact.formMsg')}
-                    </label>
-                    <textarea
-                      id="landing-contact-message"
-                      name="message"
-                      rows={3}
-                      className="min-h-[120px] w-full resize-y rounded-xl border border-border bg-secondary/20 px-4 py-3 text-base text-foreground transition-all duration-300 focus:bg-background focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10"
-                    />
-                  </div>
-                  <button
-                    type="submit"
-                    className="min-h-[56px] w-full cursor-pointer rounded-2xl bg-primary text-primary-foreground py-4 text-lg font-bold shadow-lg shadow-primary/20 transition-all duration-300 hover:bg-primary/90 hover:scale-[1.02] active:scale-[0.98]"
-                  >
-                    {t('landing.contact.submit')}
-                  </button>
-                </form>
+              <div className="w-full min-w-0 rounded-3xl bg-background p-6 text-foreground shadow-2xl reveal-on-scroll translate-y-[30px] opacity-0 transition-all duration-[1000ms] ease-[cubic-bezier(0.2,0.8,0.2,1)] delay-200 md:p-10">
+                <DemoRequestForm />
               </div>
             </div>
           </div>
@@ -856,7 +695,7 @@ const LandingPage = () => {
                     href={social.link} 
                     target="_blank" 
                     rel="noopener noreferrer" 
-                    className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 border border-white/5 transition-all duration-300 hover:scale-110"
+                    className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 border border-white/5 transition-colors duration-200"
                   >
                     {social.isInsta ? (
                       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d={social.icon}/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
@@ -869,7 +708,7 @@ const LandingPage = () => {
             </div>
 
             <div>
-              <h4 className="text-white font-bold text-lg mb-8 uppercase tracking-widest">{t('landing.footer.product')}</h4>
+              <h4 className="text-white font-semibold text-sm mb-6">{t('landing.footer.product')}</h4>
               <ul className="space-y-4">
                 {['modules', 'pricing', 'faq'].map((item) => (
                   <li key={item}>
@@ -882,7 +721,7 @@ const LandingPage = () => {
             </div>
 
             <div>
-              <h4 className="text-white font-bold text-lg mb-8 uppercase tracking-widest">{t('landing.footer.company')}</h4>
+              <h4 className="text-white font-semibold text-sm mb-6">{t('landing.footer.company')}</h4>
               <ul className="space-y-4">
                 <li><a href="#" className="text-white/50 hover:text-primary font-bold transition-colors">{t('landing.footer.about')}</a></li>
                 <li><Link to="/blog" className="text-white/50 hover:text-primary font-bold transition-colors">{t('landing.footer.blog')}</Link></li>
@@ -891,7 +730,7 @@ const LandingPage = () => {
             </div>
 
             <div>
-              <h4 className="text-white font-bold text-lg mb-8 uppercase tracking-widest">{t('landing.footer.legal')}</h4>
+              <h4 className="text-white font-semibold text-sm mb-6">{t('landing.footer.legal')}</h4>
               <ul className="space-y-4">
                 <li><Link to="/terms-of-service" className="text-white/50 hover:text-primary font-bold transition-colors">{t('landing.footer.terms')}</Link></li>
                 <li><Link to="/privacy-policy" className="text-white/50 hover:text-primary font-bold transition-colors">{t('landing.footer.privacy')}</Link></li>
@@ -952,6 +791,10 @@ const LandingPage = () => {
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqStructuredData) }}
         />
       </div>
     </div>

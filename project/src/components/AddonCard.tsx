@@ -1,6 +1,7 @@
-import {  useState  } from "react";
+import { useState } from 'react';
 import { Check, Plus, Loader2, X, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 import { usePurchaseAddon, useCancelAddon } from '../hooks/useAddons';
 import type { AddonModule, OrganizationAddon } from '../lib/api/addons';
 import { Button } from '@/components/ui/button';
@@ -28,6 +29,7 @@ const AddonCard = ({
 }: AddonCardProps) => {
   const purchaseAddon = usePurchaseAddon();
   const cancelAddon = useCancelAddon();
+  const { t } = useTranslation();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmAction, setConfirmAction] = useState<ConfirmAction>({ title: '', onConfirm: () => {} });
   const showConfirm = (title: string, onConfirm: () => void, opts?: { description?: string; variant?: 'destructive' | 'default' }) => {
@@ -40,7 +42,7 @@ const AddonCard = ({
 
   const handlePurchase = async () => {
     if (!hasAvailableSlots) {
-      toast.error('Aucun emplacement addon disponible. Veuillez mettre à niveau votre plan.');
+      toast.error(t('addonCard.errors.noSlotsAvailable', 'No addon slots available. Please upgrade your plan.'));
       return;
     }
 
@@ -52,22 +54,22 @@ const AddonCard = ({
 
       if (result.checkout_url) {
         if (result.addon_id) {
-          toast.success('Addon activé avec succès!');
+          toast.success(t('addonCard.toast.purchaseSuccess', 'Addon activated successfully!'));
           onPurchaseSuccess?.();
         } else {
           window.location.href = result.checkout_url;
         }
       }
     } catch (error) {
-      toast.error('Erreur lors de l\'achat de l\'addon');
+      toast.error(t('addonCard.toast.purchaseError', 'Error purchasing addon'));
       console.error('Purchase error:', error);
     }
   };
 
   const handleCancel = async (immediately: boolean) => {
     const confirmMessage = immediately
-      ? 'Êtes-vous sûr de vouloir annuler immédiatement? Vous perdrez l\'accès à ce module.'
-      : 'L\'addon sera annulé à la fin de la période de facturation. Continuer?';
+      ? t('addonCard.confirm.immediate', 'Are you sure you want to cancel immediately? You will lose access to this module.')
+      : t('addonCard.confirm.endOfPeriod', 'The addon will be canceled at the end of the billing period. Continue?');
 
     showConfirm(confirmMessage, async () => {
       try {
@@ -77,11 +79,11 @@ const AddonCard = ({
         });
         toast.success(
           immediately
-            ? 'Addon annulé avec succès'
-            : 'L\'addon sera annulé à la fin de la période'
+            ? t('addonCard.toast.cancelImmediateSuccess', 'Addon canceled successfully')
+            : t('addonCard.toast.cancelEndSuccess', 'The addon will be canceled at the end of the period')
         );
       } catch (error) {
-        toast.error('Erreur lors de l\'annulation de l\'addon');
+        toast.error(t('addonCard.toast.cancelError', 'Error canceling addon'));
         console.error('Cancel error:', error);
       }
     }, {variant: "destructive"});
@@ -119,15 +121,15 @@ const AddonCard = ({
         </div>
 
         <p className="text-sm text-gray-600 dark:text-gray-300 min-h-[40px]">
-          {addon.description || 'Module supplémentaire pour votre organisation'}
+          {addon.description || t('addonCard.descriptionFallback', 'Additional module for your organization')}
         </p>
 
         <div className="flex items-baseline space-x-1">
           <span className="text-2xl font-bold text-gray-900 dark:text-white">
-            {addon.addon_price_monthly ? `$${addon.addon_price_monthly}` : 'Gratuit'}
+            {addon.addon_price_monthly ? `$${addon.addon_price_monthly}` : t('addonCard.free', 'Free')}
           </span>
           {addon.addon_price_monthly && (
-            <span className="text-sm text-gray-500 dark:text-gray-400">/mois</span>
+            <span className="text-sm text-gray-500 dark:text-gray-400">{t('addonCard.perMonth', '/month')}</span>
           )}
         </div>
 
@@ -136,14 +138,14 @@ const AddonCard = ({
             <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
               <Calendar className="h-4 w-4 mr-2" />
               <span>
-                {isCanceling ? 'Expire le: ' : 'Renouvellement: '}
+                {isCanceling ? t('addonCard.expiresAt', 'Expires: ') : t('addonCard.renewsAt', 'Renews: ')}
                 {formatDate(activeAddon.current_period_end)}
               </span>
             </div>
 
             {isCanceling ? (
               <div className="text-sm text-yellow-600 dark:text-yellow-400">
-                Annulation programmée
+                {t('addonCard.cancelScheduled', 'Cancellation scheduled')}
               </div>
             ) : (
               <div className="flex space-x-2 pt-2">
@@ -152,7 +154,7 @@ const AddonCard = ({
                   disabled={cancelAddon.isPending}
                   className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50"
                 >
-                  Annuler à la fin
+                  {t('addonCard.cancelAtEnd', 'Cancel at the end')}
                 </Button>
                 <Button
                   onClick={() => handleCancel(true)}
@@ -178,7 +180,7 @@ const AddonCard = ({
               <>
                 <Plus className="h-5 w-5" />
                 <span>
-                  {hasAvailableSlots ? 'Ajouter à mon plan' : 'Aucun emplacement disponible'}
+                   {hasAvailableSlots ? t('addonCard.addToPlan', 'Add to my plan') : t('addonCard.noSlotsAvailable', 'No slots available')}
                 </span>
               </>
             )}

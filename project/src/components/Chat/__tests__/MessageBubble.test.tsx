@@ -29,6 +29,7 @@ vi.mock('@tanstack/react-router', () => ({
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, fallback: string) => fallback || key,
+    i18n: { language: 'en' },
   }),
 }));
 

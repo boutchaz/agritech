@@ -12,8 +12,10 @@ import {
     PaginatedResponse,
     PaymentType,
     SortDirection,
+    CreateAdvanceDto,
+    ApplyAdvanceDto,
+    AdvancePartyKind,
 } from './dto';
-import { buildPaymentLedgerLines } from '../journal-entries/helpers/ledger.helper';
 
 @Injectable()
 export class PaymentsService {
@@ -124,6 +126,9 @@ export class PaymentsService {
                 throw new BadRequestException('Only draft payments can be allocated');
             }
 
+            // Block posting to closed fiscal periods
+            await this.accountingAutomationService.assertPeriodOpen(organizationId, payment.payment_date);
+
             // Validate total allocation equals payment amount
             const totalAllocated = dto.allocations.reduce((sum, alloc) => sum + alloc.amount, 0);
             const paymentAmount = Number(payment.amount);
@@ -138,7 +143,7 @@ export class PaymentsService {
             const invoiceIds = dto.allocations.map(a => a.invoice_id);
             const { data: invoices, error: invoicesError } = await supabaseClient
                 .from('invoices')
-                .select('id, invoice_type, outstanding_amount, status')
+                .select('id, invoice_number, invoice_type, outstanding_amount, status')
                 .in('id', invoiceIds)
                 .eq('organization_id', organizationId);
 
@@ -248,48 +253,62 @@ export class PaymentsService {
                 );
                 const journalEntryId = jeResult.rows[0].id;
 
-                // 4. Build and validate journal lines
-                const journalLines = buildPaymentLedgerLines(
-                    {
-                        id: payment.id,
-                        payment_number: payment.payment_number,
-                        payment_type: payment.payment_type,
-                        payment_method: payment.payment_method,
-                        payment_date: payment.payment_date,
-                        amount: totalAllocated,
-                        party_name: payment.party_name,
-                        bank_account_id: payment.bank_account_id,
-                    },
-                    journalEntryId,
-                    {
-                        cashAccountId: cashLedgerAccountId,
-                        accountsReceivableId: receivableAccountId,
-                        accountsPayableId: payableAccountId,
-                    }
+                // 4. Build journal lines: one cash line (aggregate) + one counter-party line per allocated invoice.
+                // Each counter-party line links to its invoice via reference_type/reference_id for sub-ledger reconciliation.
+                const fx = Number(payment.exchange_rate ?? 1) || 1;
+                const round2 = (x: number) => Math.round((x + Number.EPSILON) * 100) / 100;
+                const isReceive = payment.payment_type === PaymentType.RECEIVE;
+                const counterAccountId = isReceive ? receivableAccountId : payableAccountId;
+
+                const cashAmount = round2(totalAllocated * fx);
+                const cashDescription = `Payment ${isReceive ? 'received' : 'made'} via ${payment.payment_method}`;
+
+                // Insert cash/bank line
+                await pgClient.query(
+                    `INSERT INTO journal_items (journal_entry_id, account_id, description, debit, credit)
+                     VALUES ($1, $2, $3, $4, $5)`,
+                    [
+                        journalEntryId,
+                        cashLedgerAccountId,
+                        cashDescription,
+                        isReceive ? cashAmount : 0,
+                        isReceive ? 0 : cashAmount,
+                    ],
                 );
 
-                const totalDebit = journalLines.reduce((sum, line) => sum + line.debit, 0);
-                const totalCredit = journalLines.reduce((sum, line) => sum + line.credit, 0);
+                let counterTotal = 0;
+                for (const alloc of dto.allocations) {
+                    const inv = invoices.find(i => i.id === alloc.invoice_id);
+                    const lineAmount = round2(alloc.amount * fx);
+                    counterTotal += lineAmount;
+                    const desc = `${isReceive ? 'From' : 'To'} ${payment.party_name} — invoice ${inv?.invoice_number ?? alloc.invoice_id}`;
 
-                if (Math.abs(totalDebit - totalCredit) >= 0.01) {
-                    throw new BadRequestException(
-                        `Payment journal entry is not balanced: debits=${totalDebit}, credits=${totalCredit}`
-                    );
-                }
-
-                // 5. Insert journal items
-                for (const line of journalLines) {
                     await pgClient.query(
-                        `INSERT INTO journal_items (journal_entry_id, account_id, description, debit, credit, cost_center_id)
-                         VALUES ($1, $2, $3, $4, $5, $6)`,
-                        [line.journal_entry_id, line.account_id, line.description || null, line.debit, line.credit, line.cost_center_id || null],
+                        `INSERT INTO journal_items (journal_entry_id, account_id, description, debit, credit, reference_type, reference_id)
+                         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+                        [
+                            journalEntryId,
+                            counterAccountId,
+                            desc,
+                            isReceive ? 0 : lineAmount,
+                            isReceive ? lineAmount : 0,
+                            'invoice',
+                            alloc.invoice_id,
+                        ],
                     );
                 }
 
-                // 6. Post journal entry
+                // Double-entry validation after per-invoice splitting (rounding can accumulate)
+                if (Math.abs(cashAmount - round2(counterTotal)) >= 0.01) {
+                    throw new BadRequestException(
+                        `Payment journal entry not balanced after per-invoice split: cash=${cashAmount}, counter=${counterTotal}`,
+                    );
+                }
+
+                // 6. Post journal entry (set explicit totals — no DB trigger)
                 await pgClient.query(
-                    `UPDATE journal_entries SET status = 'posted', posted_by = $1, posted_at = $2 WHERE id = $3`,
-                    [userId, now, journalEntryId],
+                    `UPDATE journal_entries SET status = 'posted', posted_by = $1, posted_at = $2, total_debit = $3, total_credit = $4 WHERE id = $5`,
+                    [userId, now, cashAmount, cashAmount, journalEntryId],
                 );
 
                 // 7. Update payment status to submitted and link journal entry
@@ -297,6 +316,17 @@ export class PaymentsService {
                     `UPDATE accounting_payments SET status = 'submitted', journal_entry_id = $1, updated_at = $2 WHERE id = $3`,
                     [journalEntryId, now, paymentId],
                 );
+
+                // 8. Update bank account current_balance (receive adds, pay subtracts)
+                if (payment.bank_account_id) {
+                    const delta = payment.payment_type === PaymentType.RECEIVE ? totalAllocated : -totalAllocated;
+                    await pgClient.query(
+                        `UPDATE bank_accounts
+                         SET current_balance = COALESCE(current_balance, 0) + $1, updated_at = $2
+                         WHERE id = $3 AND organization_id = $4`,
+                        [delta, now, payment.bank_account_id, organizationId],
+                    );
+                }
 
                 return { journalEntryId };
             });
@@ -592,5 +622,409 @@ export class PaymentsService {
                 `Invalid status transition from ${currentStatus} to ${newStatus}`
             );
         }
+    }
+
+    /**
+     * Resolve the advance GL account for a party kind.
+     * Tries the org-level account_mappings first (mapping_type='advance',
+     * mapping_key='customer'/'supplier'); falls back to the Moroccan CGNC
+     * default codes (4421 = customer advances, 3421 = supplier advances).
+     */
+    private async resolveAdvanceAccount(
+        organizationId: string,
+        kind: AdvancePartyKind,
+    ): Promise<string | null> {
+        const mappingKey = kind === AdvancePartyKind.CUSTOMER ? 'customer' : 'supplier';
+        const mapped = await this.accountingAutomationService.resolveAccountId(
+            organizationId,
+            'advance',
+            mappingKey,
+        );
+        if (mapped) return mapped;
+
+        // Fallback: lookup by CGNC code
+        const code = kind === AdvancePartyKind.CUSTOMER ? '4421' : '3421';
+        const supabase = this.databaseService.getAdminClient();
+        const { data } = await supabase
+            .from('accounts')
+            .select('id')
+            .eq('organization_id', organizationId)
+            .eq('code', code)
+            .maybeSingle();
+        return data?.id ?? null;
+    }
+
+    /**
+     * Record an advance — a payment received from a customer (prepayment) or
+     * paid to a supplier (deposit) before the matching invoice exists. Posts
+     * to a dedicated CGNC advance account (4421/3421) instead of AR/AP. Use
+     * applyAdvance() later to allocate it against an invoice.
+     */
+    async recordAdvance(
+        dto: CreateAdvanceDto,
+        organizationId: string,
+        userId: string,
+    ): Promise<{ payment: any; journal_entry_id: string }> {
+        const isCustomer = dto.party_kind === AdvancePartyKind.CUSTOMER;
+        const paymentType = isCustomer ? PaymentType.RECEIVE : PaymentType.PAY;
+        const postingDate = dto.payment_date || new Date().toISOString().split('T')[0];
+
+        await this.accountingAutomationService.assertPeriodOpen(organizationId, postingDate);
+
+        const advanceAccountId = await this.resolveAdvanceAccount(organizationId, dto.party_kind);
+        if (!advanceAccountId) {
+            throw new BadRequestException(
+                isCustomer
+                    ? 'Customer advance account (CGNC 4421) missing — configure account_mappings or seed the CGNC chart'
+                    : 'Supplier advance account (CGNC 3421) missing — configure account_mappings or seed the CGNC chart',
+            );
+        }
+
+        const cashAccountId = await this.accountingAutomationService.resolveAccountId(
+            organizationId,
+            'cash',
+            'bank',
+        );
+        if (!cashAccountId) {
+            throw new BadRequestException('Account mapping missing for cash/bank.');
+        }
+
+        // Resolve bank-specific GL account if a bank account was chosen
+        const supabase = this.databaseService.getAdminClient();
+        let cashLedgerAccountId = cashAccountId;
+        if (dto.bank_account_id) {
+            const { data: bankAccount } = await supabase
+                .from('bank_accounts')
+                .select('gl_account_id')
+                .eq('id', dto.bank_account_id)
+                .eq('organization_id', organizationId)
+                .single();
+            if (bankAccount?.gl_account_id) {
+                cashLedgerAccountId = bankAccount.gl_account_id;
+            }
+        }
+
+        const paymentNumber = await this.sequencesService.generatePaymentNumber(organizationId);
+        const journalEntryNumber = await this.sequencesService.generateJournalEntryNumber(organizationId);
+        const fx = Number(dto.exchange_rate ?? 1) || 1;
+        const round2 = (x: number) => Math.round((x + Number.EPSILON) * 100) / 100;
+        const amount = round2(Number(dto.amount) * fx);
+        const now = new Date().toISOString();
+
+        const { paymentId, journalEntryId } = await this.databaseService.executeInPgTransaction(async (pgClient) => {
+            // 1. Insert advance payment row
+            const pRes = await pgClient.query(
+                `INSERT INTO accounting_payments (
+                    organization_id, payment_number, payment_type, payment_method,
+                    payment_date, amount, party_id, party_name, party_type,
+                    bank_account_id, reference_number, currency_code, exchange_rate,
+                    remarks, status, created_by,
+                    is_advance, advance_account_id
+                ) VALUES (
+                    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13,
+                    $14, 'submitted', $15, true, $16
+                ) RETURNING id`,
+                [
+                    organizationId,
+                    paymentNumber,
+                    paymentType,
+                    dto.payment_method || 'bank_transfer',
+                    postingDate,
+                    dto.amount,
+                    dto.party_id,
+                    dto.party_name,
+                    dto.party_kind, // 'customer' or 'supplier'
+                    dto.bank_account_id || null,
+                    dto.reference_number || null,
+                    dto.currency_code || 'MAD',
+                    fx,
+                    dto.notes || null,
+                    userId,
+                    advanceAccountId,
+                ],
+            );
+            const paymentId = pRes.rows[0].id;
+
+            // 2. Create journal entry
+            const jeRes = await pgClient.query(
+                `INSERT INTO journal_entries (organization_id, entry_number, entry_date, posting_date, reference_type, reference_number, reference_id, remarks, created_by, status)
+                 VALUES ($1, $2, $3, $3, $4, $5, $6, $7, $8, 'draft') RETURNING id`,
+                [
+                    organizationId,
+                    journalEntryNumber,
+                    postingDate,
+                    'Advance',
+                    paymentNumber,
+                    paymentId,
+                    `Advance ${isCustomer ? 'received from' : 'paid to'} ${dto.party_name}`,
+                    userId,
+                ],
+            );
+            const jeId = jeRes.rows[0].id;
+
+            // 3. JE lines:
+            //   Customer prepayment (receive):  DR Bank / CR Customer Advance (4421)
+            //   Supplier advance (paid):        DR Supplier Advance (3421) / CR Bank
+            const cashLine = isCustomer
+                ? { account: cashLedgerAccountId, debit: amount, credit: 0 }
+                : { account: cashLedgerAccountId, debit: 0, credit: amount };
+            const advanceLine = isCustomer
+                ? { account: advanceAccountId, debit: 0, credit: amount }
+                : { account: advanceAccountId, debit: amount, credit: 0 };
+
+            for (const line of [cashLine, advanceLine]) {
+                await pgClient.query(
+                    `INSERT INTO journal_items (journal_entry_id, account_id, description, debit, credit)
+                     VALUES ($1, $2, $3, $4, $5)`,
+                    [
+                        jeId,
+                        line.account,
+                        `Advance ${paymentNumber}: ${dto.party_name}`,
+                        line.debit,
+                        line.credit,
+                    ],
+                );
+            }
+
+            await pgClient.query(
+                `UPDATE journal_entries SET status='posted', posted_by=$1, posted_at=$2, total_debit=$3, total_credit=$3 WHERE id=$4`,
+                [userId, now, amount, jeId],
+            );
+
+            await pgClient.query(
+                `UPDATE accounting_payments SET journal_entry_id=$1 WHERE id=$2`,
+                [jeId, paymentId],
+            );
+
+            // Update bank balance
+            if (dto.bank_account_id) {
+                const delta = isCustomer ? Number(dto.amount) : -Number(dto.amount);
+                await pgClient.query(
+                    `UPDATE bank_accounts
+                     SET current_balance = COALESCE(current_balance, 0) + $1, updated_at = $2
+                     WHERE id = $3 AND organization_id = $4`,
+                    [delta, now, dto.bank_account_id, organizationId],
+                );
+            }
+
+            return { paymentId, journalEntryId: jeId };
+        });
+
+        const { data: payment } = await supabase
+            .from('accounting_payments')
+            .select('*')
+            .eq('id', paymentId)
+            .single();
+
+        this.logger.log(`Advance ${paymentNumber} recorded for ${dto.party_name} (${dto.party_kind})`);
+        return { payment, journal_entry_id: journalEntryId };
+    }
+
+    /**
+     * Apply an open advance to one or more invoices. Inserts payment_allocations
+     * and posts an internal-transfer JE moving the amount from the advance
+     * account to AR/AP, then updates each invoice's outstanding/paid/status.
+     */
+    async applyAdvance(
+        advanceId: string,
+        dto: ApplyAdvanceDto,
+        organizationId: string,
+        userId: string,
+    ): Promise<{ journal_entry_id: string; allocated_total: number }> {
+        const supabase = this.databaseService.getAdminClient();
+
+        const { data: advance, error: advErr } = await supabase
+            .from('accounting_payments')
+            .select('*, allocations:payment_allocations(allocated_amount)')
+            .eq('id', advanceId)
+            .eq('organization_id', organizationId)
+            .maybeSingle();
+
+        if (advErr || !advance) throw new NotFoundException('Advance not found');
+        if (!advance.is_advance) throw new BadRequestException('Payment is not an advance');
+        if (advance.status === 'cancelled') throw new BadRequestException('Cannot apply a cancelled advance');
+        if (!advance.advance_account_id) throw new BadRequestException('Advance has no advance_account_id — was it created via recordAdvance?');
+
+        const alreadyApplied = (advance.allocations || []).reduce(
+            (sum: number, a: { allocated_amount: number }) => sum + Number(a.allocated_amount),
+            0,
+        );
+        const remaining = Number(advance.amount) - alreadyApplied;
+        const totalRequest = dto.allocations.reduce((s, a) => s + Number(a.amount), 0);
+        if (totalRequest > remaining + 0.01) {
+            throw new BadRequestException(
+                `Allocation ${totalRequest} exceeds remaining advance balance ${remaining}`,
+            );
+        }
+
+        const isCustomer = advance.payment_type === PaymentType.RECEIVE;
+        const expectedInvoiceType = isCustomer ? 'sales' : 'purchase';
+
+        const invoiceIds = dto.allocations.map((a) => a.invoice_id);
+        const { data: invoices } = await supabase
+            .from('invoices')
+            .select('id, invoice_number, invoice_type, outstanding_amount, status, party_id')
+            .in('id', invoiceIds)
+            .eq('organization_id', organizationId);
+
+        if (!invoices || invoices.length !== invoiceIds.length) {
+            throw new BadRequestException('One or more invoices not found');
+        }
+        for (const inv of invoices) {
+            if (inv.invoice_type !== expectedInvoiceType) {
+                throw new BadRequestException(
+                    `Invoice ${inv.invoice_number} is ${inv.invoice_type}; advance is for ${expectedInvoiceType}`,
+                );
+            }
+            if (inv.party_id && advance.party_id && inv.party_id !== advance.party_id) {
+                throw new BadRequestException(
+                    `Invoice ${inv.invoice_number} party does not match the advance party`,
+                );
+            }
+        }
+        for (const a of dto.allocations) {
+            const inv = invoices.find((i) => i.id === a.invoice_id)!;
+            if (a.amount > Number(inv.outstanding_amount) + 0.01) {
+                throw new BadRequestException(
+                    `Allocation ${a.amount} exceeds outstanding ${inv.outstanding_amount} on ${inv.invoice_number}`,
+                );
+            }
+        }
+
+        const postingDate = dto.posting_date || new Date().toISOString().split('T')[0];
+        await this.accountingAutomationService.assertPeriodOpen(organizationId, postingDate);
+
+        const counterAccountId = await this.accountingAutomationService.resolveAccountId(
+            organizationId,
+            isCustomer ? 'receivable' : 'payable',
+            'trade',
+        );
+        if (!counterAccountId) {
+            throw new BadRequestException(
+                `Account mapping missing for ${isCustomer ? 'receivable' : 'payable'}/trade`,
+            );
+        }
+
+        const journalEntryNumber = await this.sequencesService.generateJournalEntryNumber(organizationId);
+        const fx = Number(advance.exchange_rate ?? 1) || 1;
+        const round2 = (x: number) => Math.round((x + Number.EPSILON) * 100) / 100;
+        const now = new Date().toISOString();
+
+        const journalEntryId = await this.databaseService.executeInPgTransaction(async (pgClient) => {
+            // 1. Insert allocations
+            for (const a of dto.allocations) {
+                await pgClient.query(
+                    `INSERT INTO payment_allocations (payment_id, invoice_id, allocated_amount) VALUES ($1, $2, $3)`,
+                    [advanceId, a.invoice_id, a.amount],
+                );
+            }
+
+            // 2. Update invoice outstanding/status
+            for (const a of dto.allocations) {
+                const inv = invoices.find((i) => i.id === a.invoice_id)!;
+                const newOutstanding = Math.max(0, Number(inv.outstanding_amount) - a.amount);
+                const newStatus = newOutstanding <= 0.01 ? 'paid' : 'partially_paid';
+                await pgClient.query(
+                    `UPDATE invoices
+                     SET outstanding_amount=$1, paid_amount=COALESCE(paid_amount,0)+$2, status=$3, updated_at=$4
+                     WHERE id=$5`,
+                    [newOutstanding, a.amount, newStatus, now, a.invoice_id],
+                );
+            }
+
+            // 3. Internal-transfer JE
+            //   Customer prepayment apply: DR Customer Advance / CR Receivable
+            //   Supplier advance apply:    DR Payable / CR Supplier Advance
+            const jeRes = await pgClient.query(
+                `INSERT INTO journal_entries (organization_id, entry_number, entry_date, posting_date, reference_type, reference_number, reference_id, remarks, created_by, status)
+                 VALUES ($1, $2, $3, $3, 'Advance Allocation', $4, $5, $6, $7, 'draft') RETURNING id`,
+                [
+                    organizationId,
+                    journalEntryNumber,
+                    postingDate,
+                    advance.payment_number,
+                    advanceId,
+                    `Apply advance ${advance.payment_number} for ${advance.party_name}`,
+                    userId,
+                ],
+            );
+            const jeId = jeRes.rows[0].id;
+
+            for (const a of dto.allocations) {
+                const inv = invoices.find((i) => i.id === a.invoice_id)!;
+                const lineAmount = round2(Number(a.amount) * fx);
+                const advLine = isCustomer
+                    ? { account: advance.advance_account_id, debit: lineAmount, credit: 0 }
+                    : { account: advance.advance_account_id, debit: 0, credit: lineAmount };
+                const counterLine = isCustomer
+                    ? { account: counterAccountId, debit: 0, credit: lineAmount }
+                    : { account: counterAccountId, debit: lineAmount, credit: 0 };
+
+                for (const line of [advLine, counterLine]) {
+                    await pgClient.query(
+                        `INSERT INTO journal_items (journal_entry_id, account_id, description, debit, credit, reference_type, reference_id)
+                         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+                        [
+                            jeId,
+                            line.account,
+                            `Apply advance to ${inv.invoice_number}`,
+                            line.debit,
+                            line.credit,
+                            'invoice',
+                            a.invoice_id,
+                        ],
+                    );
+                }
+            }
+
+            const totalDebit = round2(totalRequest * fx);
+            await pgClient.query(
+                `UPDATE journal_entries SET status='posted', posted_by=$1, posted_at=$2, total_debit=$3, total_credit=$3 WHERE id=$4`,
+                [userId, now, totalDebit, jeId],
+            );
+
+            return jeId;
+        });
+
+        this.logger.log(`Advance ${advance.payment_number} applied to ${dto.allocations.length} invoice(s)`);
+        return { journal_entry_id: journalEntryId, allocated_total: totalRequest };
+    }
+
+    /**
+     * List open advances (is_advance=true with remaining balance > 0).
+     * Optionally filter by party.
+     */
+    async listOpenAdvances(
+        organizationId: string,
+        partyId?: string,
+        partyType?: string,
+    ): Promise<any[]> {
+        const supabase = this.databaseService.getAdminClient();
+        let query = supabase
+            .from('accounting_payments')
+            .select(`
+                *,
+                allocations:payment_allocations(allocated_amount)
+            `)
+            .eq('organization_id', organizationId)
+            .eq('is_advance', true)
+            .neq('status', 'cancelled');
+
+        if (partyId) query = query.eq('party_id', partyId);
+        if (partyType) query = query.eq('party_type', partyType);
+
+        const { data, error } = await query.order('payment_date', { ascending: false });
+        if (error) throw new BadRequestException(`Failed to list advances: ${error.message}`);
+
+        return (data || [])
+            .map((adv: any) => {
+                const applied = (adv.allocations || []).reduce(
+                    (s: number, a: { allocated_amount: number }) => s + Number(a.allocated_amount),
+                    0,
+                );
+                const remaining = Number(adv.amount) - applied;
+                return { ...adv, applied_amount: applied, remaining_amount: remaining };
+            })
+            .filter((adv: { remaining_amount: number }) => adv.remaining_amount > 0.01);
     }
 }

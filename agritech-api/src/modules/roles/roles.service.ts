@@ -17,6 +17,7 @@ export class RolesService {
       .from('roles')
       .select('*')
       .eq('is_active', true)
+      .neq('name', 'internal_admin')
       .order('level', { ascending: true });
 
     if (error) {

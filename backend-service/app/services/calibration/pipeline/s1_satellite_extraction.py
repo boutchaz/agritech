@@ -28,6 +28,9 @@ SUPPORTED_INDICES = (
     "MCARI",
     "TCARI",
     "TCARI_OSAVI",
+    # EBI — required by AMANDIER referential for intensif/super_intensif.
+    # Computed by earth_engine.py from R/G/B Sentinel-2 bands (Chen et al. 2019).
+    "EBI",
 )
 
 

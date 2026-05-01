@@ -63,7 +63,9 @@ const getDefaultState = (userId: string, email: string): OnboardingState => ({
     currency: 'MAD',
     date_format: 'DD/MM/YYYY',
     use_demo_data: false,
-    enable_notifications: true
+    enable_notifications: true,
+    /** Default chart template so the complete step can submit without waiting on effects. */
+    accounting_template_country: 'MA',
   },
   existingOrgId: null,
   existingFarmId: null,
@@ -163,6 +165,13 @@ export const useOnboardingStore = create<OnboardingStore>()(
               ...(savedState?.preferences || {}),
             },
           };
+
+          if (!finalState.preferences.accounting_template_country?.trim()) {
+            finalState.preferences = {
+              ...finalState.preferences,
+              accounting_template_country: 'MA',
+            };
+          }
 
           // Always merge organization data from localStorage if it exists
           // This takes precedence over backend state for the organization created during signup

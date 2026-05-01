@@ -3,6 +3,7 @@ import {
   Logger,
   BadRequestException,
   InternalServerErrorException,
+  NotFoundException,
   Inject,
   forwardRef,
 } from '@nestjs/common';
@@ -36,6 +37,59 @@ import {
 import { OrganizationAISettingsService } from '../organization-ai-settings/organization-ai-settings.service';
 import { AIProviderType } from '../organization-ai-settings/dto';
 import { AiQuotaService } from '../ai-quota/ai-quota.service';
+import {
+  BaselineDataSchema,
+  DiagnosticDataSchema,
+  baselineToLegacyOutput,
+  parseJsonb,
+} from '../calibration/calibration-jsonb.schemas';
+import { AgronomyRagService } from '../agronomy-rag/agronomy-rag.service';
+import type { RetrievedChunk } from '../agronomy-rag/agronomy-rag.schemas';
+import { z } from 'zod';
+import type { PhenologyAiEnrichment } from '../calibration/dto/calibration-review.dto';
+
+const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+const PhenologyAiConfidenceSchema = z.enum(['ELEVEE', 'MODEREE', 'FAIBLE', 'TRES_FAIBLE']);
+
+const ImputedStageSchema = z.object({
+  stage: z.string().min(1),
+  date: z.union([z.string().regex(ISO_DATE_RE, 'date must be YYYY-MM-DD'), z.null()]),
+  confidence: PhenologyAiConfidenceSchema,
+  method: z.string().min(1),
+  rationale: z.string().min(1),
+});
+
+const PhaseNarrativeSchema = z.object({
+  phase: z.string().min(1),
+  year: z.number().int().nullable(),
+  summary: z.string().min(1),
+  referential_deviation_days: z.number().nullable(),
+});
+
+const PhenologyAiEnrichmentResponseSchema = z.object({
+  version: z.string().default('v1'),
+  degradation_reasons: z.array(z.string()).default([]),
+  imputed_stages: z.array(ImputedStageSchema).default([]),
+  phase_narratives: z.array(PhaseNarrativeSchema).default([]),
+  recommendations: z.array(z.string()).default([]),
+  summary: z.string().nullable().default(null),
+});
+
+/**
+ * Collapse multi-line LLM output to at most 2 lines and ~220 chars, targeting
+ * a small-farm-owner audience (Ahmed persona). Safety net — the prompt is the
+ * first line of defence, but providers drift.
+ */
+function clampTwoLines(raw: string): string {
+  const cleaned = raw
+    .replace(/\r\n?/g, '\n')
+    .replace(/[•·*]\s+/g, '') // strip bullet markers the model may inject
+    .trim();
+  const lines = cleaned.split('\n').map((l) => l.trim()).filter(Boolean);
+  const joined = lines.slice(0, 2).join(' ');
+  return joined.length > 220 ? `${joined.slice(0, 217).trimEnd()}…` : joined;
+}
 
 @Injectable()
 export class AIReportsService {
@@ -53,6 +107,7 @@ export class AIReportsService {
     private readonly aiSettingsService: OrganizationAISettingsService,
     private readonly weatherProvider: WeatherProvider,
     private readonly aiQuotaService: AiQuotaService,
+    private readonly agronomyRagService: AgronomyRagService,
   ) {
     this.providers = new Map<AIProvider, IAIProvider>();
     this.providers.set(AIProvider.OPENAI, openaiProvider);
@@ -117,6 +172,14 @@ export class AIReportsService {
 
     const reportPayload = await this.buildReportPayload(organizationId, dto);
 
+    // RAG: enrich system prompt with retrieved agronomy sources
+    const { enrichedSystemPrompt, ragChunks } = await this.enrichWithRAGSources(
+      reportPayload.systemPrompt,
+      reportPayload.dataSnapshot,
+      reportPayload.reportType,
+      organizationId,
+    );
+
     // 5. Generate AI response
     const config: AIProviderConfig = {
       provider: dto.provider,
@@ -127,7 +190,7 @@ export class AIReportsService {
 
     try {
         const response = await provider.generate({
-        systemPrompt: reportPayload.systemPrompt,
+        systemPrompt: enrichedSystemPrompt,
         userPrompt: reportPayload.userPrompt,
         config,
       });
@@ -146,6 +209,21 @@ export class AIReportsService {
         reportPayload.dataSnapshot,
         reportPayload.reportType,
       );
+
+      // RAG: materialize each LLM recommendation as an ai_recommendations row
+      // and attach per-rec citations scoped to that rec's text.
+      await this.storeReportRecommendations(
+        organizationId,
+        dto.parcel_id,
+        reportSections,
+        reportPayload.dataSnapshot,
+        ragChunks,
+        reportPayload.reportType,
+      ).catch((err) => {
+        this.logger.warn(
+          `Failed to store report recommendations: ${err instanceof Error ? err.message : err}`,
+        );
+      });
 
       return {
         success: true,
@@ -397,12 +475,8 @@ export class AIReportsService {
     },
   ): Promise<string | null> {
     try {
-      // 1. Quota check
-      const quotaResult = await this.aiQuotaService.checkAndConsume(
-        organizationId,
-        userId,
-        'calibration',
-      );
+      // 1. Quota check (consume after successful generation)
+      const quotaResult = await this.aiQuotaService.checkQuota(organizationId);
       if (!quotaResult.allowed) {
         this.logger.warn(`Calibration summary skipped — quota exceeded for org ${organizationId}`);
         return null;
@@ -451,7 +525,8 @@ export class AIReportsService {
         },
       });
 
-      // 5. Log usage (fire-and-forget)
+      // 5. Consume quota + log usage (fire-and-forget, only on success)
+      this.aiQuotaService.consumeOne(organizationId).catch(() => {});
       this.aiQuotaService.logUsage(
         organizationId,
         userId,
@@ -468,6 +543,183 @@ export class AIReportsService {
       this.logger.warn(`Failed to generate calibration summary: ${error.message}`);
       return null;
     }
+  }
+
+  /**
+   * Generate structured AI enrichment for step4 phenology output.
+   *
+   * Never overwrites deterministic fields — the returned object is meant to be
+   * attached at `phenology_dashboard.ai_enrichment`. Fails silently → null so
+   * that a provider/quota outage never blocks the calibration review screen.
+   *
+   * Counts against the 'calibration' AI quota.
+   */
+  async generatePhenologyEnrichment(
+    organizationId: string,
+    userId: string,
+    context: unknown,
+  ): Promise<PhenologyAiEnrichment | null> {
+    try {
+      const quotaResult = await this.aiQuotaService.checkQuota(organizationId);
+      if (!quotaResult.allowed) {
+        this.logger.warn(`Phenology enrichment skipped — quota exceeded for org ${organizationId}`);
+        return null;
+      }
+
+      const { provider: providerType, model } = await this.resolveProvider(organizationId);
+      const provider = this.providers.get(providerType);
+      if (!provider) return null;
+
+      const providerTypeForSettings = providerType as unknown as AIProviderType;
+      const apiKey = await this.aiSettingsService.getDecryptedApiKey(
+        organizationId,
+        providerTypeForSettings,
+      );
+      const envKeyMap: Record<string, string | undefined> = {
+        [AIProvider.OPENAI]: this.configService.get<string>('OPENAI_API_KEY'),
+        [AIProvider.GEMINI]: this.configService.get<string>('GOOGLE_AI_API_KEY'),
+        [AIProvider.GROQ]: this.configService.get<string>('GROQ_API_KEY'),
+        [AIProvider.ZAI]: this.configService.get<string>('ZAI_API_KEY'),
+      };
+      const effectiveApiKey = apiKey || envKeyMap[providerType];
+      if (!effectiveApiKey) {
+        this.logger.warn(`No API key available for ${providerType} — phenology enrichment skipped`);
+        return null;
+      }
+      provider.setApiKey(effectiveApiKey);
+
+      const systemPrompt = `Tu écris pour un petit agriculteur marocain sans formation technique (profil Ahmed : parle darija, zéro jargon).
+Tu reçois la sortie du calibrage phénologique (step4) + une coupe du référentiel de la culture. Tu produis un enrichissement qui EXPLIQUE simplement, sans rien contredire.
+
+Règles du calibrage à respecter (ne jamais contredire) :
+1. Les dates de "mean_dates", "yearly_stages" et les transitions de "phase_timeline" sont la vérité — tu ne les modifies jamais.
+2. Ordre obligatoire des stades : dormancy_exit → plateau_start → peak → decline_start → dormancy_entry.
+3. Pour chaque stade dans "missing_stages" (date null), tu peux proposer une date estimée à partir du "phase_timeline" et des mois/GDD du référentiel. Cette date est une estimation, pas une vérité — confiance = FAIBLE ou TRES_FAIBLE.
+4. Ne suggère jamais une date qui casse l'ordre ni qui sort de la fenêtre du référentiel.
+5. "status: degraded" signifie que le moteur manque de cycles ou de stades — tu l'expliques, tu ne le contestes pas.
+
+Règles d'écriture (TRÈS IMPORTANT) :
+- Langue : français simple, court, concret. Zéro jargon : pas de "GDD", "BBCH", "percentiles", "phénologie", "inter-annuelle". Dis plutôt "chaleur cumulée", "sortie des feuilles", "fleurs", "récolte", "année passée".
+- Chaque phrase : MAXIMUM 2 lignes (≈ 200 caractères). Une idée par phrase.
+- Parle comme à un voisin agriculteur : "Ta parcelle…", "On n'a qu'une seule saison de données, donc…", "Note la date à laquelle tu vois les premières fleurs l'an prochain."
+- Pas de listes dans une phrase, pas de tirets, pas de markdown.
+
+Champs :
+- degradation_reasons : 1 à 3 phrases, chacune ≤ 2 lignes, explique POURQUOI le résultat est fragile, en termes simples.
+- imputed_stages : uniquement pour les stades de "missing_stages". method = mot court en français simple ("estimé d'après le référentiel", "estimé par symétrie avec le pic", "estimé par l'année passée"). rationale = 1 phrase ≤ 2 lignes.
+- phase_narratives : 1 phrase par phase observée, ≤ 2 lignes, dit ce que ça veut dire pour l'agriculteur (ex : "La floraison est arrivée plus tard que d'habitude — garde un œil sur l'irrigation.").
+- recommendations : 2 à 4 actions concrètes, ≤ 2 lignes chacune, à la 2e personne ("Note sur papier…", "Vérifie…").
+- summary : 1 à 2 phrases courtes, résume la situation et l'action la plus importante.
+
+Réponds STRICTEMENT en JSON valide respectant le schéma — aucun texte hors JSON.`;
+
+      const schemaHint = `{
+  "version": "v1",
+  "degradation_reasons": ["phrase courte ≤ 2 lignes"],
+  "imputed_stages": [
+    { "stage": "decline_start", "date": "YYYY-MM-DD ou null si impossible", "confidence": "FAIBLE|TRES_FAIBLE", "method": "mot simple français", "rationale": "1 phrase ≤ 2 lignes" }
+  ],
+  "phase_narratives": [
+    { "phase": "FLORAISON", "year": 2026, "summary": "1 phrase ≤ 2 lignes, vocabulaire agriculteur", "referential_deviation_days": -3 }
+  ],
+  "recommendations": ["action concrète ≤ 2 lignes"],
+  "summary": "1 à 2 phrases, langage simple"
+}`;
+
+      const userPrompt = `Contexte step4 + référentiel :
+\`\`\`json
+${JSON.stringify(context, null, 2)}
+\`\`\`
+
+Schéma de sortie attendu :
+\`\`\`json
+${schemaHint}
+\`\`\`
+
+Produis le JSON d'enrichissement.`;
+
+      const response = await provider.generate({
+        systemPrompt,
+        userPrompt,
+        config: {
+          provider: providerType,
+          model,
+          temperature: 0.2,
+          maxTokens: 2048,
+        },
+      });
+
+      this.aiQuotaService.consumeOne(organizationId).catch(() => {});
+      this.aiQuotaService.logUsage(
+        organizationId,
+        userId,
+        'calibration',
+        providerType,
+        response.model,
+        response.tokensUsed,
+        quotaResult.isByok,
+      ).catch(() => {});
+
+      const parsed = this.parsePhenologyEnrichmentResponse(response.content);
+      if (!parsed) {
+        this.logger.warn(`Phenology enrichment response failed schema validation for org ${organizationId}`);
+        return null;
+      }
+
+      const enrichment: PhenologyAiEnrichment = {
+        version: parsed.version,
+        degradation_reasons: parsed.degradation_reasons.map(clampTwoLines),
+        imputed_stages: parsed.imputed_stages.map((s) => ({
+          stage: s.stage,
+          date: s.date ?? null,
+          confidence: s.confidence,
+          method: clampTwoLines(s.method),
+          rationale: clampTwoLines(s.rationale),
+        })),
+        phase_narratives: parsed.phase_narratives.map((p) => ({
+          phase: p.phase,
+          year: p.year,
+          summary: clampTwoLines(p.summary),
+          referential_deviation_days: p.referential_deviation_days,
+        })),
+        recommendations: parsed.recommendations.map(clampTwoLines),
+        summary: parsed.summary ? clampTwoLines(parsed.summary) : null,
+        provider: providerType,
+        model: response.model,
+        generated_at: new Date().toISOString(),
+      };
+      return enrichment;
+    } catch (error) {
+      if (error instanceof BadRequestException) throw error;
+      this.logger.warn(`Failed to generate phenology enrichment: ${(error as Error).message}`);
+      return null;
+    }
+  }
+
+  private parsePhenologyEnrichmentResponse(raw: string):
+    | z.infer<typeof PhenologyAiEnrichmentResponseSchema>
+    | null {
+    if (!raw) return null;
+    let json: unknown;
+    try {
+      json = JSON.parse(raw);
+    } catch {
+      // Some providers wrap JSON in ```json fences even in json_object mode.
+      const fenced = /```(?:json)?\s*([\s\S]+?)```/i.exec(raw);
+      if (!fenced) return null;
+      try {
+        json = JSON.parse(fenced[1]);
+      } catch {
+        return null;
+      }
+    }
+
+    const result = PhenologyAiEnrichmentResponseSchema.safeParse(json);
+    if (!result.success) {
+      this.logger.debug(`Enrichment schema errors: ${result.error.message}`);
+      return null;
+    }
+    return result.data;
   }
 
   /**
@@ -1061,6 +1313,188 @@ export class AIReportsService {
     return undefined;
   }
 
+  private buildRetrievalQueryFromSnapshot(dataSnapshot: unknown, reportType: AgromindReportType): string | null {
+    const snapshot = dataSnapshot as Record<string, unknown> | null;
+    if (!snapshot) return null;
+
+    const parcel = snapshot.parcel as Record<string, unknown> | undefined;
+    const cropType = parcel?.cropType ?? parcel?.treeType ?? 'olivier';
+
+    const parts: string[] = [cropType as string];
+
+    if (reportType === AgromindReportType.RECOMMENDATIONS || reportType === AgromindReportType.ANNUAL_PLAN) {
+      const satelliteHistory = snapshot.satelliteHistory as Record<string, unknown> | undefined;
+      const timeSeries = satelliteHistory?.timeSeries as Record<string, Array<{ date: string; value: number }>> | undefined;
+      if (timeSeries?.NDVI && timeSeries.NDVI.length > 0) {
+        const latest = timeSeries.NDVI[timeSeries.NDVI.length - 1];
+        parts.push(`NDVI ${latest.value.toFixed(3)}`);
+      }
+    }
+
+    if (reportType === AgromindReportType.RECOMMENDATIONS) {
+      parts.push('recommandation fertilisation irrigation traitement');
+    } else if (reportType === AgromindReportType.ANNUAL_PLAN) {
+      parts.push('plan annuel doses calendrier fertilisation');
+    } else if (reportType === AgromindReportType.RECALIBRATION) {
+      parts.push('recalibrage baseline profil parcelle');
+    }
+
+    return parts.join(' ');
+  }
+
+  private async enrichWithRAGSources(
+    systemPrompt: string,
+    dataSnapshot: unknown,
+    reportType: AgromindReportType,
+    organizationId: string,
+  ): Promise<{ enrichedSystemPrompt: string; ragChunks: RetrievedChunk[] }> {
+    const retrievalQuery = this.buildRetrievalQueryFromSnapshot(dataSnapshot, reportType);
+    if (!retrievalQuery) {
+      return { enrichedSystemPrompt: systemPrompt, ragChunks: [] };
+    }
+
+    try {
+      const chunks = await this.agronomyRagService.retrieveWithRerank(
+        { query: retrievalQuery, limit: 8 },
+        organizationId,
+      );
+
+      if (chunks.length === 0) {
+        return { enrichedSystemPrompt: systemPrompt, ragChunks: [] };
+      }
+
+      const sourceContext = this.agronomyRagService.buildSourceContext(chunks);
+      const citationInstruction = [
+        '',
+        sourceContext,
+        '',
+        'Règle stricte : chaque recommandation chiffrée DOIT citer ≥1 source via [S#].',
+        'Si aucune source ne justifie, écris "estimation à valider" plutôt que d\'inventer un chiffre.',
+        '',
+      ].join('\n');
+
+      const enrichedSystemPrompt = citationInstruction + systemPrompt;
+
+      return { enrichedSystemPrompt, ragChunks: chunks };
+    } catch (error) {
+      this.logger.warn(
+        `RAG retrieval failed, proceeding without sources: ${error instanceof Error ? error.message : error}`,
+      );
+      return { enrichedSystemPrompt: systemPrompt, ragChunks: [] };
+    }
+  }
+
+  private async storeReportRecommendations(
+    organizationId: string,
+    parcelId: string,
+    reportSections: Record<string, unknown>,
+    dataSnapshot: unknown,
+    ragChunks: RetrievedChunk[],
+    reportType: AgromindReportType,
+  ): Promise<void> {
+    const recs = Array.isArray(reportSections.recommendations)
+      ? reportSections.recommendations
+      : [];
+    if (recs.length === 0) return;
+
+    const supabase = this.databaseService.getAdminClient();
+
+    const snapshot = (dataSnapshot as Record<string, unknown> | null) ?? {};
+    const parcel = (snapshot.parcel as Record<string, unknown> | undefined) ?? {};
+    const cropType =
+      (typeof parcel.cropType === 'string' && parcel.cropType) ||
+      (typeof parcel.treeType === 'string' && parcel.treeType) ||
+      'unknown';
+
+    const categoryToType: Record<string, string> = {
+      fertilization: 'fertilisation',
+      irrigation: 'irrigation',
+      'pest-control': 'phytosanitary',
+      'plant-health': 'phytosanitary',
+      pruning: 'pruning',
+      'soil-amendment': 'other',
+      soil: 'other',
+      general: 'information',
+    };
+    const priorityMap: Record<string, string> = {
+      high: 'priority',
+      medium: 'vigilance',
+      low: 'info',
+    };
+
+    for (const rec of recs) {
+      if (!rec || typeof rec !== 'object') continue;
+      const r = rec as Record<string, unknown>;
+      const title = typeof r.title === 'string' ? r.title : '';
+      const description = typeof r.description === 'string' ? r.description : '';
+      if (!title && !description) continue;
+
+      const recText = `${title}\n${description}`;
+      const markers = this.agronomyRagService.parseCitationMarkers(recText);
+      const uniqueOrdinals = Array.from(new Set(markers.map((m) => m.ordinal)));
+
+      const categoryRaw = typeof r.category === 'string' ? r.category : 'general';
+      const priorityRaw = typeof r.priority === 'string' ? r.priority : 'medium';
+
+      const { data: insertedRec, error: recError } = await supabase
+        .from('ai_recommendations')
+        .insert({
+          parcel_id: parcelId,
+          organization_id: organizationId,
+          crop_type: cropType,
+          alert_code: `AI-REPORT-${reportType.toUpperCase()}`,
+          type: categoryToType[categoryRaw] ?? 'other',
+          recommendation_type:
+            reportType === AgromindReportType.ANNUAL_PLAN ? 'planned' : 'reactive',
+          priority: priorityMap[priorityRaw] ?? 'info',
+          status: 'proposed',
+          bloc_1_constat: { title },
+          bloc_3_action: {
+            description,
+            timing: typeof r.timing === 'string' ? r.timing : null,
+            estimated_cost: typeof r.estimatedCost === 'string' ? r.estimatedCost : null,
+            expected_roi: typeof r.expectedROI === 'string' ? r.expectedROI : null,
+          },
+        })
+        .select('id')
+        .single();
+
+      if (recError || !insertedRec) {
+        this.logger.warn(
+          `Failed to create ai_recommendation from report: ${recError?.message ?? 'no row returned'}`,
+        );
+        continue;
+      }
+
+      if (uniqueOrdinals.length === 0 || ragChunks.length === 0) continue;
+
+      const citationRows = uniqueOrdinals
+        .map((ordinal) => {
+          const chunk = ragChunks[ordinal - 1];
+          if (!chunk) return null;
+          return {
+            recommendation_id: insertedRec.id,
+            chunk_id: chunk.id,
+            excerpt: chunk.text.substring(0, 500),
+            source_ordinal: ordinal,
+          };
+        })
+        .filter((row): row is NonNullable<typeof row> => row !== null);
+
+      if (citationRows.length === 0) continue;
+
+      const { error: citationError } = await supabase
+        .from('ai_recommendation_citations')
+        .insert(citationRows);
+
+      if (citationError) {
+        this.logger.warn(
+          `Failed to persist citations for rec ${insertedRec.id}: ${citationError.message}`,
+        );
+      }
+    }
+  }
+
   private async buildReportPayload(organizationId: string, dto: GenerateAIReportDto): Promise<{
     reportType: AgromindReportType;
     systemPrompt: string;
@@ -1119,7 +1553,51 @@ export class AIReportsService {
             couverture_nuageuse_pct: 10,
           })),
           meteo_history: [],
-          analyses: {},
+          analyses: {
+            ...(calibrationData.soilAnalysis ? {
+              sol: {
+                pH: calibrationData.soilAnalysis.phLevel ?? undefined,
+                EC: calibrationData.soilAnalysis.ec ?? undefined,
+                MO_pct: calibrationData.soilAnalysis.organicMatter ?? undefined,
+                N_ppm: calibrationData.soilAnalysis.nitrogenPpm ?? undefined,
+                P_ppm: calibrationData.soilAnalysis.phosphorusPpm ?? undefined,
+                K_ppm: calibrationData.soilAnalysis.potassiumPpm ?? undefined,
+                Ca_ppm: calibrationData.soilAnalysis.calcium ?? undefined,
+                Mg_ppm: calibrationData.soilAnalysis.magnesium ?? undefined,
+                CEC: calibrationData.soilAnalysis.cec ?? undefined,
+                calcaire_total_pct: calibrationData.soilAnalysis.totalLimestone ?? undefined,
+                calcaire_actif_pct: calibrationData.soilAnalysis.activeLimestone ?? undefined,
+                texture: calibrationData.soilAnalysis.texture ?? undefined,
+              },
+            } : {}),
+            ...(calibrationData.waterAnalysis ? {
+              eau: {
+                pH: calibrationData.waterAnalysis.ph ?? undefined,
+                EC: calibrationData.waterAnalysis.ec ?? undefined,
+                SAR: calibrationData.waterAnalysis.sar ?? undefined,
+                Na_ppm: calibrationData.waterAnalysis.sodium ?? undefined,
+                Cl_ppm: calibrationData.waterAnalysis.chlorides ?? undefined,
+                HCO3_ppm: calibrationData.waterAnalysis.bicarbonates ?? undefined,
+                NO3_ppm: calibrationData.waterAnalysis.nitrates ?? undefined,
+                B_ppm: calibrationData.waterAnalysis.boron ?? undefined,
+                TDS_ppm: calibrationData.waterAnalysis.tds ?? undefined,
+              },
+            } : {}),
+            ...(calibrationData.plantAnalysis ? {
+              foliaire: {
+                N_pct: calibrationData.plantAnalysis.nitrogenPercent ?? undefined,
+                P_pct: calibrationData.plantAnalysis.phosphorusPercent ?? undefined,
+                K_pct: calibrationData.plantAnalysis.potassiumPercent ?? undefined,
+                Ca_pct: calibrationData.plantAnalysis.calcium ?? undefined,
+                Mg_pct: calibrationData.plantAnalysis.magnesium ?? undefined,
+                Fe_ppm: calibrationData.plantAnalysis.iron ?? undefined,
+                Zn_ppm: calibrationData.plantAnalysis.zinc ?? undefined,
+                Mn_ppm: calibrationData.plantAnalysis.manganese ?? undefined,
+                B_ppm: calibrationData.plantAnalysis.boron ?? undefined,
+                Cu_ppm: calibrationData.plantAnalysis.copper ?? undefined,
+              },
+            } : {}),
+          },
           historique_rendements: (calibrationData.yieldHistory ?? []).map((y: any) => ({
             annee: y.year,
             rendement_t_ha: y.yieldPerHa ?? 0,
@@ -1202,6 +1680,88 @@ export class AIReportsService {
           userPrompt: buildFollowUpPrompt(followUpData, language),
           parcelName: followUpData.parcel.name,
           dataSnapshot: followUpData,
+        };
+      }
+      case AgromindReportType.RECALIBRATION: {
+        // Recalibration reads the latest completed calibration row for this
+        // parcel — that's where annual-recalibration.service persists the
+        // campaign_bilan, previous_baseline, and current profile_snapshot.
+        const {
+          getLocalCropReference: getRecalRef,
+        } = await import('../../modules/calibration/crop-reference-loader');
+        const {
+          buildRecalibrageSystemPrompt,
+          buildRecalibragePartielUserPrompt,
+          buildRecalibrageCompletUserPrompt,
+        } = await import('../../libs/agromind-ia/prompts/recalibrage.prompt');
+
+        const client = this.databaseService.getAdminClient();
+        const { data: parcelRow } = await client
+          .from('parcels')
+          .select('id, name, crop_type, tree_type')
+          .eq('id', dto.parcel_id)
+          .eq('organization_id', organizationId)
+          .maybeSingle();
+
+        if (!parcelRow) {
+          throw new NotFoundException(
+            `Parcel ${dto.parcel_id} not found for recalibration report`,
+          );
+        }
+
+        const { data: calibrationRow } = await client
+          .from('calibrations')
+          .select(
+            'id, profile_snapshot, campaign_bilan, previous_baseline, mode_calibrage, recalibration_motif, updated_at, confidence_score',
+          )
+          .eq('parcel_id', dto.parcel_id)
+          .eq('organization_id', organizationId)
+          .order('updated_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        const cropType =
+          (parcelRow as any).crop_type ??
+          (parcelRow as any).tree_type ??
+          'olivier';
+        const referentiel = getRecalRef(cropType) ?? {};
+
+        const mode: 'F2_partiel' | 'F3_complet' =
+          dto.recalibrationMode ?? 'F3_complet';
+
+        // Build the RecalibrageInput shape. The prompts JSON.stringify the
+        // baseline verbatim so keeping a loose shape is fine.
+        const recalibrageInput = {
+          baseline_actuelle:
+            (calibrationRow as any)?.profile_snapshot ?? {},
+          type: mode,
+          ...(mode === 'F2_partiel' && dto.recalibrationChange
+            ? { changement: dto.recalibrationChange }
+            : {}),
+          ...(mode === 'F3_complet'
+            ? {
+                bilan_campagne: (calibrationRow as any)?.campaign_bilan ?? null,
+              }
+            : {}),
+        };
+
+        const systemPrompt = buildRecalibrageSystemPrompt(referentiel as object);
+        const userPrompt =
+          mode === 'F2_partiel'
+            ? buildRecalibragePartielUserPrompt(recalibrageInput as any)
+            : buildRecalibrageCompletUserPrompt(recalibrageInput as any);
+
+        return {
+          reportType,
+          systemPrompt,
+          userPrompt,
+          parcelName: (parcelRow as any).name ?? 'parcel',
+          dataSnapshot: {
+            parcel: parcelRow,
+            calibration: calibrationRow,
+            mode,
+            recalibrageInput,
+          },
         };
       }
       case AgromindReportType.GENERAL:
@@ -1455,27 +2015,29 @@ export class AIReportsService {
     const { data: calibration } = await supabase
       .from('calibrations')
       .select(
-        'calibration_data, health_score, confidence_score, yield_potential_min, yield_potential_max, maturity_phase',
+        'baseline_data, diagnostic_data, health_score, confidence_score, yield_potential_min, yield_potential_max, phase_age',
       )
       .eq('parcel_id', parcelId)
       .eq('organization_id', organizationId)
-      .eq('status', 'completed')
+      .in('status', ['validated', 'awaiting_validation'])
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle();
 
     if (!calibration) {
       throw new BadRequestException(
-        'No completed calibration found - recommendations require calibration first',
+        'No validated calibration found - recommendations require calibration first',
       );
     }
 
-    const calibrationData =
-      calibration.calibration_data &&
-      typeof calibration.calibration_data === 'object' &&
-      !Array.isArray(calibration.calibration_data)
-        ? (calibration.calibration_data as Record<string, unknown>)
-        : {};
+    // Schema split: the old monolithic `calibration_data` column is now
+    // `baseline_data` (the "output" blob) + `diagnostic_data` (ai_analysis).
+    // Wrap them back into the legacy shape the extractors expect so we
+    // don't have to rewrite every downstream call site.
+    const calibrationData = this.composeLegacyCalibrationData(
+      calibration.baseline_data,
+      calibration.diagnostic_data,
+    );
     const calibrationOutput = this.extractCalibrationOutput(calibrationData);
     const aiAnalysis = this.extractAiAnalysis(calibrationData);
     const baselinePercentiles = this.extractCalibrationPercentiles(calibrationOutput);
@@ -1614,7 +2176,7 @@ export class AIReportsService {
         calibrationOutput,
         cropType,
         (weatherRows ?? []) as Array<Record<string, unknown>>,
-        calibration.maturity_phase,
+        calibration.phase_age,
       ),
       recentOperations: ((recentTasks ?? []) as Array<Record<string, unknown>>).map((task) => ({
         date:
@@ -1674,27 +2236,25 @@ export class AIReportsService {
     const { data: calibration } = await supabase
       .from('calibrations')
       .select(
-        'calibration_data, health_score, confidence_score, yield_potential_min, yield_potential_max, maturity_phase',
+        'baseline_data, diagnostic_data, health_score, confidence_score, yield_potential_min, yield_potential_max, phase_age, target_yield_t_ha, target_yield_source',
       )
       .eq('parcel_id', parcelId)
       .eq('organization_id', organizationId)
-      .eq('status', 'completed')
+      .in('status', ['validated', 'awaiting_validation'])
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle();
 
     if (!calibration) {
       throw new BadRequestException(
-        'No completed calibration found - annual plan requires calibration first',
+        'No validated calibration found - annual plan requires calibration first',
       );
     }
 
-    const calibrationData =
-      calibration.calibration_data &&
-      typeof calibration.calibration_data === 'object' &&
-      !Array.isArray(calibration.calibration_data)
-        ? (calibration.calibration_data as Record<string, unknown>)
-        : null;
+    const calibrationData = this.composeLegacyCalibrationData(
+      calibration.baseline_data,
+      calibration.diagnostic_data,
+    );
 
     const v2Output =
       calibrationData?.output &&
@@ -1795,8 +2355,8 @@ export class AIReportsService {
       : [];
 
     const maturityPhase =
-      typeof calibration.maturity_phase === 'string' && calibration.maturity_phase.trim()
-        ? calibration.maturity_phase.trim()
+      typeof calibration.phase_age === 'string' && calibration.phase_age.trim()
+        ? calibration.phase_age.trim()
         : typeof v2Output.maturity_phase === 'string' && String(v2Output.maturity_phase).trim()
           ? String(v2Output.maturity_phase).trim()
           : undefined;
@@ -1904,6 +2464,17 @@ export class AIReportsService {
         }),
       ),
       calibrationFollowUp,
+      confirmedTargetYieldTHa:
+        typeof calibration.target_yield_t_ha === 'number'
+          ? calibration.target_yield_t_ha
+          : typeof calibration.target_yield_t_ha === 'string'
+            ? parseFloat(calibration.target_yield_t_ha) || null
+            : null,
+      confirmedTargetYieldSource:
+        calibration.target_yield_source === 'suggested' ||
+        calibration.target_yield_source === 'user_override'
+          ? calibration.target_yield_source
+          : null,
     };
   }
 
@@ -2475,16 +3046,53 @@ export class AIReportsService {
       .getAdminClient()
       .from('calibrations')
       .select(
-        'calibration_data, confidence_score, health_score, yield_potential_min, yield_potential_max, maturity_phase',
+        'baseline_data, diagnostic_data, confidence_score, health_score, yield_potential_min, yield_potential_max, phase_age',
       )
       .eq('parcel_id', parcelId)
       .eq('organization_id', organizationId)
-      .eq('status', 'completed')
+      .in('status', ['validated', 'awaiting_validation'])
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle();
 
-    return (data as Record<string, unknown> | null) ?? null;
+    if (!data) return null;
+
+    // Back-fill the legacy keys so downstream callers that still read
+    // `calibration_data` / `maturity_phase` keep working.
+    return {
+      ...data,
+      calibration_data: this.composeLegacyCalibrationData(
+        (data as Record<string, unknown>).baseline_data,
+        (data as Record<string, unknown>).diagnostic_data,
+      ),
+      maturity_phase: (data as Record<string, unknown>).phase_age ?? null,
+    };
+  }
+
+  /**
+   * Typed adapter between the post-split columns (baseline_data,
+   * diagnostic_data) and the legacy `{output: {step3,step4,step7,…},
+   * ai_analysis: …}` shape the ~20 downstream extractors were built
+   * against. parseJsonb validates the stored blob at the boundary so a
+   * silently-drifted column is caught in logs instead of producing an
+   * empty report.
+   */
+  private composeLegacyCalibrationData(
+    baselineData: unknown,
+    diagnosticData: unknown,
+  ): Record<string, unknown> {
+    const baseline = parseJsonb(BaselineDataSchema, baselineData, 'calibrations.baseline_data');
+    const diagnostic = parseJsonb(
+      DiagnosticDataSchema,
+      diagnosticData,
+      'calibrations.diagnostic_data',
+    );
+
+    const composed: Record<string, unknown> = {
+      output: baselineToLegacyOutput(baseline),
+    };
+    if (diagnostic) composed.ai_analysis = diagnostic;
+    return composed;
   }
 
   private async fetchSatelliteSnapshotBeforeDate(
@@ -3595,13 +4203,20 @@ export class AIReportsService {
       await updateProgress(50);
       const reportPayload = await this.buildReportPayload(organizationId, dto);
 
+      const { enrichedSystemPrompt, ragChunks } = await this.enrichWithRAGSources(
+        reportPayload.systemPrompt,
+        reportPayload.dataSnapshot,
+        reportPayload.reportType,
+        organizationId,
+      );
+
       await updateProgress(60);
       await updateProgress(70);
       const config: AIProviderConfig = { provider: dto.provider, model: dto.model, temperature: 0.7, maxTokens: 16384 };
       
       this.logger.log(`Job ${jobId}: Starting AI generation with ${dto.provider}`);
       const response = await provider.generate({
-        systemPrompt: reportPayload.systemPrompt,
+        systemPrompt: enrichedSystemPrompt,
         userPrompt: reportPayload.userPrompt,
         config,
       });
@@ -3624,6 +4239,19 @@ export class AIReportsService {
         reportPayload.dataSnapshot,
         reportPayload.reportType,
       );
+
+      await this.storeReportRecommendations(
+        organizationId,
+        dto.parcel_id,
+        reportSections,
+        reportPayload.dataSnapshot,
+        ragChunks,
+        reportPayload.reportType,
+      ).catch((err) => {
+        this.logger.warn(
+          `Job ${jobId}: Failed to store report recommendations: ${err instanceof Error ? err.message : err}`,
+        );
+      });
 
       const result = {
         success: true,

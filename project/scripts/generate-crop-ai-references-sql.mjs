@@ -1,12 +1,15 @@
 #!/usr/bin/env node
 /**
  * Prints SQL INSERT ... ON CONFLICT blocks for public.crop_ai_references
- * from repo referentials/DATA_*.json (same source as agritech-api/scripts/seed-ai-references.ts).
+ * from agritech-api/referentials/DATA_*.json (same source as agritech-api/scripts/seed-ai-references.ts).
  *
- * When referentials change, regenerate the block in
- * project/supabase/migrations/00000000000000_schema.sql (search for "Seed crop_ai_references"):
- *   node project/scripts/generate-crop-ai-references-sql.mjs > /tmp/crop_ai_seed.sql
- * Then replace the old seed section between the marker comments.
+ * When referentials change, regenerate the seed file:
+ *   node project/scripts/generate-crop-ai-references-sql.mjs > project/supabase/seed.sql.tmp
+ * Then merge into project/supabase/seed.sql (replace existing crop_ai_references block).
+ *
+ * Seed runs:
+ *   - dev: automatically via `npm run db:reset` (Supabase config.toml [db.seed])
+ *   - prod: manually via `npm run db:seed:remote` after `npm run db:push`
  */
 import * as fs from 'fs';
 import * as path from 'path';
@@ -14,7 +17,7 @@ import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..', '..');
-const referentialsDir = path.join(repoRoot, 'referentials');
+const referentialsDir = path.join(repoRoot, 'agritech-api', 'referentials');
 const pattern = /^DATA_(.+)\.json$/i;
 
 const files = fs

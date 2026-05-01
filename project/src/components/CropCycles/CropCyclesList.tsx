@@ -72,7 +72,7 @@ import {
 } from "@/hooks/useAgriculturalAccounting";
 import { useCropTemplates } from "@/hooks/useCropTemplates";
 import { useFarms, useParcelsByFarm } from "@/hooks/useParcelsQuery";
-import { useCrops } from "@/hooks/useCrops";
+// crops module removed — crop_cycles now standalone
 import type {
   CropCycle,
   CropCycleStatus,
@@ -199,10 +199,7 @@ export function CropCyclesList({ initialCampaignId }: CropCyclesListProps) {
   const { data: farms = [] } = useFarms(currentOrganization?.id);
   const { data: parcels = [] } = useParcelsByFarm(selectedFarmId || undefined);
   const { data: templates = [] } = useCropTemplates();
-  const { data: existingCrops = [] } = useCrops({
-    farmId: selectedFarmId || undefined,
-    enabled: !!selectedFarmId,
-  });
+  const existingCrops: unknown[] = []; // crops module removed
 
   const createMutation = useCreateCropCycle();
   const updateMutation = useUpdateCropCycle();
@@ -999,7 +996,7 @@ export function CropCyclesList({ initialCampaignId }: CropCyclesListProps) {
                 {t("cropCycles.table.pnl", "P&L")}
               </th>
               <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                {t("common.actions", "Actions")}
+                {t("common.actionsColumn", "Actions")}
               </th>
             </tr>
           }

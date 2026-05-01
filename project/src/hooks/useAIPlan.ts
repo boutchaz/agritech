@@ -10,7 +10,7 @@ import {
   type AIPlanSummary,
 } from '../lib/api/ai-plan';
 
-export function useAIPlan(parcelId: string) {
+export function useAIPlan(parcelId: string, options?: { refetchIntervalMs?: number | false }) {
   const { currentOrganization } = useAuth();
 
   return useQuery({
@@ -23,6 +23,7 @@ export function useAIPlan(parcelId: string) {
     },
     enabled: !!parcelId && !!currentOrganization?.id,
     staleTime: 5 * 60 * 1000,
+    refetchInterval: options?.refetchIntervalMs ?? false,
   });
 }
 
@@ -42,7 +43,11 @@ export function useAIPlanInterventions(parcelId: string) {
   });
 }
 
-export function useAIPlanSummary(parcelId: string, enabled = true) {
+export function useAIPlanSummary(
+  parcelId: string,
+  enabled = true,
+  options?: { refetchIntervalMs?: number | false },
+) {
   const { currentOrganization } = useAuth();
 
   return useQuery({
@@ -55,6 +60,7 @@ export function useAIPlanSummary(parcelId: string, enabled = true) {
     },
     enabled: enabled && !!parcelId && !!currentOrganization?.id,
     staleTime: 5 * 60 * 1000,
+    refetchInterval: options?.refetchIntervalMs ?? false,
   });
 }
 
@@ -148,10 +154,21 @@ export function useGenerateAIPlanReport(parcelId: string) {
       setProgressStatus('pending');
       // Step 1: Generate AI report
       await aiPlanApi.generateAIPlanReport(parcelId, currentOrganization.id, onProgress);
-      // Step 2: Regenerate plan to enrich from the AI report
+      // Step 2: enrichment path. regeneratePlan only works on drafts and
+      // would throw on validated/active plans, so try the data-only
+      // enrichment first. It backfills plan_data without touching
+      // status or interventions, which is what users with a confirmed
+      // calendar actually want. Fall back to regenerate only if enrich
+      // returns no plan (i.e. no plan exists yet for this parcel).
       setProgress(95);
       setProgressStatus('enriching');
-      const result = await aiPlanApi.regenerateAIPlan(parcelId, currentOrganization.id);
+      const enriched = await aiPlanApi.enrichPlanDataOnly(
+        parcelId,
+        currentOrganization.id,
+      );
+      const result = enriched.success
+        ? enriched.plan
+        : await aiPlanApi.regenerateAIPlan(parcelId, currentOrganization.id);
       setProgress(100);
       setProgressStatus('completed');
       return result;

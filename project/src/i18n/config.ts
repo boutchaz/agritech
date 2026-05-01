@@ -1,6 +1,7 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import LanguageDetector from 'i18next-browser-languagedetector';
+import { isRTLLocale } from '@/lib/is-rtl-locale';
 
 // Only import the detected/default language synchronously
 // Other languages load on demand
@@ -10,8 +11,10 @@ import enStock from '../locales/en/stock.json';
 import enCompliance from '../locales/en/compliance.json';
 import enAccounting from '../locales/en/accounting.json';
 import enSatellite from '../locales/en/satellite.json';
+import enProduction from '../locales/en/production.json';
 
-const NAMESPACES = ['common', 'ai', 'stock', 'compliance', 'accounting', 'satellite'] as const;
+export const SUPPORTED_LANGUAGES = ['en', 'fr', 'ar'] as const;
+const NAMESPACES = ['common', 'ai', 'stock', 'compliance', 'accounting', 'satellite', 'production'] as const;
 type Namespace = (typeof NAMESPACES)[number];
 type TranslationResource = Record<string, unknown>;
 type LanguageBundles = Record<Namespace, TranslationResource>;
@@ -19,39 +22,54 @@ type LanguageBundles = Record<Namespace, TranslationResource>;
 // Lazy loaders for non-default languages
 const lazyLanguageLoaders: Record<string, () => Promise<LanguageBundles>> = {
   fr: async () => {
-    const [common, ai, stock, compliance, accounting, satellite] = await Promise.all([
+    const [common, ai, stock, compliance, accounting, satellite, production] = await Promise.all([
       import('../locales/fr/common.json'),
       import('../locales/fr/ai.json'),
       import('../locales/fr/stock.json'),
       import('../locales/fr/compliance.json'),
       import('../locales/fr/accounting.json'),
       import('../locales/fr/satellite.json'),
+      import('../locales/fr/production.json'),
     ]);
-    return { common: common.default, ai: ai.default, stock: stock.default, compliance: compliance.default, accounting: accounting.default, satellite: satellite.default };
+    return { common: common.default, ai: ai.default, stock: stock.default, compliance: compliance.default, accounting: accounting.default, satellite: satellite.default, production: production.default };
   },
   ar: async () => {
-    const [common, ai, stock, compliance, accounting, satellite] = await Promise.all([
+    const [common, ai, stock, compliance, accounting, satellite, production] = await Promise.all([
       import('../locales/ar/common.json'),
       import('../locales/ar/ai.json'),
       import('../locales/ar/stock.json'),
       import('../locales/ar/compliance.json'),
       import('../locales/ar/accounting.json'),
       import('../locales/ar/satellite.json'),
+      import('../locales/ar/production.json'),
     ]);
-    return { common: common.default, ai: ai.default, stock: stock.default, compliance: compliance.default, accounting: accounting.default, satellite: satellite.default };
+    return { common: common.default, ai: ai.default, stock: stock.default, compliance: compliance.default, accounting: accounting.default, satellite: satellite.default, production: production.default };
   },
 };
 
 // Detect language before init
 const detectLanguage = (): string => {
+  const supported: readonly string[] = SUPPORTED_LANGUAGES;
   const stored = localStorage.getItem('i18nextLng');
-  if (stored && ['en', 'fr', 'ar'].includes(stored)) return stored;
+  if (stored && supported.includes(stored)) return stored;
   const nav = navigator.language?.split('-')[0];
-  if (nav && ['en', 'fr', 'ar'].includes(nav)) return nav;
+  if (nav && supported.includes(nav)) return nav;
   return 'en';
 };
 
 const detectedLng = detectLanguage();
+
+function applyDocumentLanguage(lng: string) {
+  if (typeof document === 'undefined') return;
+  const base = lng.split('-')[0] || lng;
+  if (isRTLLocale(lng)) {
+    document.documentElement.dir = 'rtl';
+    document.documentElement.lang = base;
+  } else {
+    document.documentElement.dir = 'ltr';
+    document.documentElement.lang = base;
+  }
+}
 
 // Build initial resources — always include English as fallback
 const initialResources: Record<string, LanguageBundles> = {
@@ -62,6 +80,7 @@ const initialResources: Record<string, LanguageBundles> = {
     compliance: enCompliance,
     accounting: enAccounting,
     satellite: enSatellite,
+    production: enProduction,
   },
 };
 
@@ -73,7 +92,7 @@ i18n
     lng: detectedLng === 'en' ? 'en' : undefined, // Let detector pick if not English
     fallbackLng: 'en',
     defaultNS: 'common',
-    ns: ['common', 'ai', 'stock', 'compliance', 'accounting', 'satellite'],
+    ns: ['common', 'ai', 'stock', 'compliance', 'accounting', 'satellite', 'production'],
 
     interpolation: {
       escapeValue: false,
@@ -90,6 +109,9 @@ i18n
     },
   });
 
+i18n.on('languageChanged', applyDocumentLanguage);
+applyDocumentLanguage(i18n.language || 'en');
+
 // Load non-English language resources after init
 if (detectedLng !== 'en' && lazyLanguageLoaders[detectedLng]) {
   lazyLanguageLoaders[detectedLng]().then((bundles) => {
@@ -104,20 +126,23 @@ if (detectedLng !== 'en' && lazyLanguageLoaders[detectedLng]) {
 
 // Export helper for runtime language switching
 export const loadLanguage = async (lng: string) => {
-  if (lng === 'en' || i18n.hasResourceBundle(lng, 'common')) {
-    i18n.changeLanguage(lng);
+  // Fall back to 'en' for unsupported languages
+  const safeLng = (SUPPORTED_LANGUAGES as readonly string[]).includes(lng) ? lng : 'en';
+
+  if (safeLng === 'en' || i18n.hasResourceBundle(safeLng, 'common')) {
+    i18n.changeLanguage(safeLng);
     return;
   }
-  const loader = lazyLanguageLoaders[lng];
+  const loader = lazyLanguageLoaders[safeLng];
   if (loader) {
     const bundles = await loader();
     for (const ns of NAMESPACES) {
       if (bundles[ns]) {
-        i18n.addResourceBundle(lng, ns, bundles[ns], true, true);
+        i18n.addResourceBundle(safeLng, ns, bundles[ns], true, true);
       }
     }
   }
-  i18n.changeLanguage(lng);
+  i18n.changeLanguage(safeLng);
 };
 
 export default i18n;

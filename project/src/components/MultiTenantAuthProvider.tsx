@@ -19,11 +19,13 @@ import {
 import type { OrganizationWithRole } from '../lib/api/users';
 
 import { useOrganizationStore } from '../stores/organizationStore';
+import { useFarmStore } from '../stores/farmStore';
 import { useAuthStore, waitForHydration } from '../stores/authStore';
 import { AuthContext, type AuthOrganization, type AuthFarm } from '../contexts/AuthContext';
 import {
   setAnalyticsUserProperties,
   trackSessionStart,
+  trackEvent,
   type AnalyticsUserProperties,
 } from '../lib/analytics';
 import { AuthenticatedLayoutSkeleton } from '@/components/AuthenticatedLayoutSkeleton';
@@ -53,7 +55,11 @@ export const MultiTenantAuthProvider = ({ children }: { children: React.ReactNod
   const queryClient = useQueryClient();
   const [user, setUser] = useState<User | null>(null);
   const [currentOrganization, setCurrentOrganization] = useState<Organization | null>(null);
-  const [currentFarm, setCurrentFarm] = useState<Farm | null>(null);
+  // currentFarm lives in Zustand (persisted) — single source of truth, no manual
+  // localStorage/useState dual-write that previously caused stale "Farm undefine" rows.
+  const currentFarm = useFarmStore((s) => s.currentFarm) as Farm | null;
+  const setCurrentFarm = useFarmStore((s) => s.setCurrentFarm);
+  const clearFarm = useFarmStore((s) => s.clearFarm);
   const [userRole, setUserRole] = useState<UserRole | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [showAuth, setShowAuth] = useState(false);
@@ -113,14 +119,10 @@ export const MultiTenantAuthProvider = ({ children }: { children: React.ReactNod
     waitingForOrganization;
 
 
-  // Calculate onboarding state - only redirect when we have POSITIVE evidence onboarding is incomplete.
-  // Never redirect based on missing/errored data (API failures should not trigger onboarding).
-  // KEY RULE: having at least one organization is definitive proof onboarding is done —
-  // never redirect to onboarding if the user already belongs to an org.
   const isSessionValid = !useAuthStore.getState().isTokenExpired() && !!useAuthStore.getState().getAccessToken();
   const hasCompletedOnboarding = profile?.onboarding_completed === true;
   const needsOnboarding = isSessionValid && !profileError && !orgsError && !!(
-    user && !loading && !hasCompletedOnboarding && organizations.length === 0
+    user && !loading && !hasCompletedOnboarding
   );
 
 
@@ -131,7 +133,7 @@ export const MultiTenantAuthProvider = ({ children }: { children: React.ReactNod
   // Handle organization change
   const handleSetCurrentOrganization = (org: Organization) => {
     setCurrentOrganization(org);
-    setCurrentFarm(null); // Clear current farm when switching organizations
+    clearFarm(); // Clear current farm when switching organizations
 
     // Clear all cached data when switching organizations to ensure fresh data
     queryClient.clear();
@@ -154,8 +156,8 @@ export const MultiTenantAuthProvider = ({ children }: { children: React.ReactNod
   // Handle farm change
   const handleSetCurrentFarm = (farm: Farm) => {
     setCurrentFarm(farm);
-    localStorage.setItem('currentFarm', JSON.stringify(farm));
-    
+
+
     // Invalidate farm-dependent queries to refresh dashboard and widgets.
     // IMPORTANT: Do NOT invalidate the 'farms' query itself — the list of farms
     // doesn't change when switching the active farm. Invalidating it causes a
@@ -398,51 +400,59 @@ export const MultiTenantAuthProvider = ({ children }: { children: React.ReactNod
     }
   }, [organizations, currentOrganization]);
 
-  // Set default farm when farms load
+  // Set default farm when farms load. Persisted selection (Zustand) survives
+  // reloads automatically; we only need to default when nothing is selected.
+  // Skip stale entries with missing/blank id (can leak in via persisted query cache
+  // from before useOrganizationFarms gained its id filter) — the store validator
+  // would otherwise silently reject them and we'd loop with currentFarm = null.
   useEffect(() => {
-    if (farms.length > 0 && !currentFarm) {
-      // Try to restore from localStorage first
-      const savedFarm = localStorage.getItem('currentFarm');
-      if (savedFarm) {
-        try {
-          const farm = JSON.parse(savedFarm);
-          // Verify the saved farm still exists in current organization
-          const validFarm = farms.find(f => f.id === farm.id);
-          if (validFarm) {
-            setCurrentFarm(validFarm);
-            return;
-          }
-        } catch (error) {
-          console.error('Error parsing saved farm:', error);
-        }
-      }
+    if (currentFarm) return;
+    const firstValid = farms.find(
+      (f) => typeof f?.id === 'string' && f.id.trim().length > 0,
+    );
+    if (firstValid) setCurrentFarm(firstValid);
+  }, [farms, currentFarm, setCurrentFarm]);
 
-      // Default to first farm
-      setCurrentFarm(farms[0]);
+  // Keep currentOrganization in sync with latest `organizations` list.
+  // Fixes stale approval_status / is_active / role after admin approval — without
+  // this, local state holds the cached org from session start and the gate in
+  // _authenticated.tsx keeps showing PendingApproval even when the API returns approved.
+  useEffect(() => {
+    if (organizations.length === 0) return;
+    if (!currentOrganization) return;
+
+    const match = organizations.find(o => o.id === currentOrganization.id);
+    if (!match) return;
+
+    const stale =
+      currentOrganization.approval_status !== match.approval_status ||
+      currentOrganization.is_active !== match.is_active ||
+      currentOrganization.role !== match.role ||
+      currentOrganization.name !== match.name;
+
+    if (stale) {
+      setCurrentOrganization(match);
+      localStorage.setItem('currentOrganization', JSON.stringify(match));
     }
-  }, [farms, currentFarm]);
+  }, [organizations, currentOrganization]);
 
-  // Keep currentFarm in sync with latest `farms` list (ids + parcel-derived total_area).
-  // Fixes empty Radix Select when `currentFarm.id` was missing from a transient [] or after refetch.
+  // Keep currentFarm in sync with latest `farms` list (refresh name + parcel-derived
+  // total_area, replace stale id when the persisted farm was deleted/reorganized,
+  // or clear it when the persisted selection belongs to a different account/org).
   useEffect(() => {
-    if (farms.length === 0) return;
+    if (farmsLoading) return; // wait for the fetch to settle before deciding
     if (!currentFarm) return;
 
     const match = farms.find(f => f.id === currentFarm.id);
     if (!match) {
-      let next = farms[0];
-      const raw = localStorage.getItem('currentFarm');
-      if (raw) {
-        try {
-          const parsed = JSON.parse(raw) as { id?: string };
-          const bySaved = parsed.id ? farms.find(f => f.id === parsed.id) : undefined;
-          if (bySaved) next = bySaved;
-        } catch {
-          /* ignore */
-        }
+      // Persisted selection no longer exists in this org/account — drop it instead
+      // of falling back to farms[0], so the onboarding "create your first farm"
+      // empty state actually appears for new users.
+      if (farms.length === 0) {
+        clearFarm();
+      } else {
+        setCurrentFarm(farms[0]);
       }
-      setCurrentFarm(next);
-      localStorage.setItem('currentFarm', JSON.stringify(next));
       return;
     }
 
@@ -450,9 +460,8 @@ export const MultiTenantAuthProvider = ({ children }: { children: React.ReactNod
     const matchTa = (match as { total_area?: number }).total_area;
     if (cur.total_area !== matchTa || cur.name !== match.name) {
       setCurrentFarm(match);
-      localStorage.setItem('currentFarm', JSON.stringify(match));
     }
-  }, [farms, currentFarm]);
+  }, [farms, currentFarm, farmsLoading, setCurrentFarm, clearFarm]);
 
   // Fetch user role when user or organization changes
   useEffect(() => {
@@ -483,7 +492,19 @@ export const MultiTenantAuthProvider = ({ children }: { children: React.ReactNod
     });
   }, [user?.id, currentOrganization?.id, userRole?.role_name, loading]);
 
-function getOrganizationSize(orgCount: number, farmCount: number): 'solo' | 'small' | 'medium' | 'large' {
+  const SESSION_HEARTBEAT_MS = 5 * 60 * 1000;
+
+  useEffect(() => {
+    if (!user) return;
+
+    const interval = setInterval(() => {
+      trackEvent({ action: 'session_heartbeat', category: 'Engagement' });
+    }, SESSION_HEARTBEAT_MS);
+
+    return () => clearInterval(interval);
+  }, [user?.id]);
+
+  function getOrganizationSize(orgCount: number, farmCount: number): 'solo' | 'small' | 'medium' | 'large' {
   if (orgCount === 1 && farmCount <= 1) return 'solo';
   if (orgCount <= 2 && farmCount <= 5) return 'small';
   if (orgCount <= 5 && farmCount <= 20) return 'medium';

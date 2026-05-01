@@ -32,8 +32,11 @@ const BASE_URL = '/api/v1/items';
 export interface PaginatedItemQuery extends PaginatedQuery {
   is_sales_item?: boolean;
   is_active?: boolean;
+  is_stock_item?: boolean;
   item_group_id?: string;
 }
+
+export interface PaginatedFarmStockLevelFilters extends FarmStockLevelFilters, PaginatedQuery {}
 
 export type {
   ItemStockLevelWarehouse,
@@ -71,6 +74,7 @@ export const itemsApi = {
     if (query.search) params.append('search', query.search);
     if (query.is_sales_item !== undefined) params.append('is_sales_item', String(query.is_sales_item));
     if (query.is_active !== undefined) params.append('is_active', String(query.is_active));
+    if (query.is_stock_item !== undefined) params.append('is_stock_item', String(query.is_stock_item));
     if (query.item_group_id) params.append('item_group_id', query.item_group_id);
 
     const queryString = params.toString();
@@ -178,13 +182,23 @@ export const itemsApi = {
     filters?: FarmStockLevelFilters,
     organizationId?: string,
   ): Promise<FarmStockLevelsByItem[]> {
+    const response = await this.getPaginatedFarmStockLevels(filters, organizationId);
+    return response.data;
+  },
+
+  async getPaginatedFarmStockLevels(
+    filters?: PaginatedFarmStockLevelFilters,
+    organizationId?: string,
+  ): Promise<PaginatedResponse<FarmStockLevelsByItem>> {
     const params = new URLSearchParams();
     if (filters?.farm_id) params.append('farm_id', filters.farm_id);
     if (filters?.item_id) params.append('item_id', filters.item_id);
     if (filters?.low_stock_only) params.append('low_stock_only', 'true');
+    if (filters?.page) params.append('page', String(filters.page));
+    if (filters?.pageSize) params.append('pageSize', String(filters.pageSize));
 
     const url = `${BASE_URL}/stock-levels/farm${params.toString() ? `?${params.toString()}` : ''}`;
-    return apiClient.get<FarmStockLevelsByItem[]>(url, {}, organizationId);
+    return apiClient.get<PaginatedResponse<FarmStockLevelsByItem>>(url, {}, organizationId);
   },
 
   /**

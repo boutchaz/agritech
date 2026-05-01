@@ -21,11 +21,14 @@ import {
 import { BankAccountsService } from './bank-accounts.service';
 import { CreateBankAccountDto, UpdateBankAccountDto } from './dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RequireModule } from '../../common/decorators/require-module.decorator';
 import { OrganizationGuard } from '../../common/guards/organization.guard';
+import { ModuleEntitlementGuard } from '../../common/guards/module-entitlement.guard';
 
 @ApiTags('bank-accounts')
 @Controller('bank-accounts')
-@UseGuards(JwtAuthGuard, OrganizationGuard)
+@RequireModule('accounting')
+@UseGuards(JwtAuthGuard, OrganizationGuard, ModuleEntitlementGuard)
 @ApiBearerAuth()
 export class BankAccountsController {
   constructor(private readonly bankAccountsService: BankAccountsService) {}
@@ -65,6 +68,7 @@ export class BankAccountsController {
     const organizationId = req.headers['x-organization-id'];
     dto.organization_id = organizationId;
     dto.created_by = req.user.sub;
+    delete (dto as any).current_balance;
     return this.bankAccountsService.create(dto);
   }
 

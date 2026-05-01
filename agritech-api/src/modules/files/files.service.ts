@@ -121,8 +121,35 @@ export class FilesService {
   /**
    * Upload a file to Supabase storage and return the public URL
    */
-  async uploadFile(file: Express.Multer.File, folder?: string, organizationId?: string) {
+  async uploadFile(
+    file: Express.Multer.File,
+    folder?: string,
+    organizationId?: string,
+    contentSha256?: string,
+  ) {
     const client = this.databaseService.getAdminClient();
+
+    // Idempotent dedupe by content hash, scoped per org.
+    if (organizationId && contentSha256) {
+      const { data: existing } = await client
+        .from('file_registry')
+        .select('*')
+        .eq('organization_id', organizationId)
+        .eq('content_sha256', contentSha256)
+        .maybeSingle();
+      if (existing) {
+        const supabaseUrl = process.env.SUPABASE_URL || '';
+        const encodedPath = (existing.file_path as string)
+          .split('/')
+          .map((seg) => encodeURIComponent(seg))
+          .join('/');
+        return {
+          url: `${supabaseUrl}/storage/v1/object/public/${existing.bucket_name}/${encodedPath}`,
+          path: existing.file_path,
+          deduplicated: true,
+        };
+      }
+    }
 
     // Generate unique filename
     const timestamp = Date.now();

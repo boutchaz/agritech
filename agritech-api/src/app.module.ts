@@ -1,7 +1,9 @@
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 import { ThrottlerModule } from "@nestjs/throttler";
-import { Reflector } from "@nestjs/core";
+import { Reflector, APP_INTERCEPTOR } from "@nestjs/core";
+import { OfflineInterceptor } from "./common/interceptors/offline.interceptor";
+import { SyncModule } from "./modules/sync/sync.module";
 import { SentryModule } from "@sentry/nestjs/setup";
 import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
@@ -19,6 +21,18 @@ import { ProductionIntelligenceModule } from "./modules/production-intelligence/
 import { HarvestsModule } from "./modules/harvests/harvests.module";
 import { TasksModule } from "./modules/tasks/tasks.module";
 import { WorkersModule } from "./modules/workers/workers.module";
+import { AttendanceModule } from "./modules/attendance/attendance.module";
+import { HrComplianceModule } from "./modules/hr-compliance/hr-compliance.module";
+import { LeaveManagementModule } from "./modules/leave-management/leave-management.module";
+import { PayrollModule } from "./modules/payroll/payroll.module";
+import { WorkerDocumentsModule } from "./modules/worker-documents/worker-documents.module";
+import { ShiftsModule } from "./modules/shifts/shifts.module";
+import { EmployeeLifecycleModule } from "./modules/employee-lifecycle/employee-lifecycle.module";
+import { AgroHrModule } from "./modules/agro-hr/agro-hr.module";
+import { ExpenseClaimsModule } from "./modules/expense-claims/expense-claims.module";
+import { RecruitmentModule } from "./modules/recruitment/recruitment.module";
+import { PerformanceModule } from "./modules/performance/performance.module";
+import { HrAdvancedModule } from "./modules/hr-advanced/hr-advanced.module";
 import { StockEntriesModule } from "./modules/stock-entries/stock-entries.module";
 import { ItemsModule } from "./modules/items/items.module";
 import { WarehousesModule } from "./modules/warehouses/warehouses.module";
@@ -31,6 +45,7 @@ import { UsersModule } from "./modules/users/users.module";
 import { OrganizationsModule } from "./modules/organizations/organizations.module";
 import { OrganizationModulesModule } from "./modules/organization-modules/organization-modules.module";
 import { StructuresModule } from "./modules/structures/structures.module";
+import { EquipmentModule } from "./modules/equipment/equipment.module";
 import { DashboardModule } from "./modules/dashboard/dashboard.module";
 import { ReceptionBatchesModule } from "./modules/reception-batches/reception-batches.module";
 import { BlogsModule } from "./modules/blogs/blogs.module";
@@ -53,6 +68,7 @@ import { DeliveriesModule } from "./modules/deliveries/deliveries.module";
 import { PaymentRecordsModule } from "./modules/payment-records/payment-records.module";
 import { CostCentersModule } from "./modules/cost-centers/cost-centers.module";
 import { BankAccountsModule } from "./modules/bank-accounts/bank-accounts.module";
+import { BankReconciliationModule } from "./modules/bank-reconciliation/bank-reconciliation.module";
 import { UtilitiesModule } from "./modules/utilities/utilities.module";
 import { ReportsModule } from "./modules/reports/reports.module";
 import { PieceWorkModule } from "./modules/piece-work/piece-work.module";
@@ -80,7 +96,6 @@ import { CropCyclesModule } from "./modules/crop-cycles/crop-cycles.module";
 import { CropCycleStagesModule } from "./modules/crop-cycle-stages/crop-cycle-stages.module";
 import { HarvestEventsModule } from "./modules/harvest-events/harvest-events.module";
 import { CropTemplatesModule } from "./modules/crop-templates/crop-templates.module";
-import { CropsModule } from "./modules/crops/crops.module";
 import { QualityControlModule } from "./modules/quality-control/quality-control.module";
 import { AdoptionModule } from "./modules/adoption/adoption.module";
 import { OnboardingModule } from "./modules/onboarding/onboarding.module";
@@ -108,6 +123,7 @@ import { AuditModule } from "./modules/audit/audit.module";
 import { AiQuotaModule } from "./modules/ai-quota/ai-quota.module";
 import { PublicRdvModule } from "./modules/public-rdv/public-rdv.module";
 import { EmailTemplatesModule } from "./modules/email-templates/email-templates.module";
+import { BarcodeModule } from "./modules/barcode/barcode.module";
 
 @Module({
   imports: [
@@ -160,6 +176,18 @@ import { EmailTemplatesModule } from "./modules/email-templates/email-templates.
     TasksModule,
     TaskAssignmentsModule,
     WorkersModule,
+    AttendanceModule,
+    HrComplianceModule,
+    LeaveManagementModule,
+    PayrollModule,
+    WorkerDocumentsModule,
+    ShiftsModule,
+    EmployeeLifecycleModule,
+    AgroHrModule,
+    ExpenseClaimsModule,
+    RecruitmentModule,
+    PerformanceModule,
+    HrAdvancedModule,
     WorkUnitsModule,
     BannersModule,
     ChangelogsModule,
@@ -167,6 +195,7 @@ import { EmailTemplatesModule } from "./modules/email-templates/email-templates.
     PaymentRecordsModule,
     StockEntriesModule,
     ItemsModule,
+    BarcodeModule,
     WarehousesModule,
     ReferenceDataModule,
     SubscriptionsModule,
@@ -177,11 +206,13 @@ import { EmailTemplatesModule } from "./modules/email-templates/email-templates.
     SoilAnalysesModule,
     AnalysesModule,
     StructuresModule,
+    EquipmentModule,
     DashboardModule,
     ReceptionBatchesModule,
     BlogsModule,
     CostCentersModule,
     BankAccountsModule,
+    BankReconciliationModule,
     UtilitiesModule,
     ReportsModule,
     ProfitabilityModule,
@@ -194,7 +225,6 @@ import { EmailTemplatesModule } from "./modules/email-templates/email-templates.
     CropCycleStagesModule,
     HarvestEventsModule,
     CropTemplatesModule,
-    CropsModule,
     QualityControlModule,
 
     DocumentTemplatesModule,
@@ -235,8 +265,13 @@ import { EmailTemplatesModule } from "./modules/email-templates/email-templates.
     MonitoringModule,
     PublicRdvModule,
     EmailTemplatesModule,
+    SyncModule,
   ],
   controllers: [AppController],
-  providers: [AppService, Reflector],
+  providers: [
+    AppService,
+    Reflector,
+    { provide: APP_INTERCEPTOR, useClass: OfflineInterceptor },
+  ],
 })
 export class AppModule {}

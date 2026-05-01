@@ -1,12 +1,14 @@
-import {  useState, useMemo, useRef, useEffect  } from "react";
+import {  useState, useMemo, useEffect  } from "react";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
+import { v4 as uuidv4 } from 'uuid';
 import { farmsService } from '../../services/farmsService';
 import { farmHierarchyApi } from '@/lib/api/farm-hierarchy';
+import { runOrQueue as runOrQueueOffline } from '@/lib/offline/runOrQueue';
 import { parcelsService } from '../../services/parcelsService';
 import FarmHierarchyHeader from './FarmHierarchyHeader';
 import FarmCard from './FarmCard';
@@ -15,7 +17,15 @@ import ParcelManagementModal from './ParcelManagementModal';
 import FarmDetailsModal from './FarmDetailsModal';
 import FarmImportDialog from './FarmImportDialog';
 import EditFarmManagerModal from './EditFarmManagerModal';
-import { X, Trash2, Building2 } from 'lucide-react';
+import { Trash2, Building2 } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from '@/components/ui/dialog';
 import { EmptyState } from '@/components/ui/empty-state';
 import {
   DataTablePagination,
@@ -55,6 +65,7 @@ interface ModernFarmHierarchyProps {
   onFarmSelect?: (farmId: string) => void;
   onAddParcel?: (farmId: string) => void;
   onManageFarm?: (farmId: string) => void;
+  onViewHeatmap?: (farmId: string) => void;
 }
 
 const flattenFarmNodes = (nodes: FarmNode[]): FarmNode[] => {
@@ -80,7 +91,8 @@ const ModernFarmHierarchy = ({
   organizationId,
   onFarmSelect: _onFarmSelect,
   onAddParcel: _onAddParcel,
-  onManageFarm
+  onManageFarm,
+  onViewHeatmap
 }: ModernFarmHierarchyProps) => {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
@@ -115,7 +127,6 @@ const ModernFarmHierarchy = ({
     manager_phone?: string;
   } | null>(null);
 
-  const addFormRef = useRef<HTMLDivElement>(null);
   // Debug: Log organization ID on mount and when it changes
   if (!organizationId) {
     console.error('❌ ModernFarmHierarchy: No organizationId provided!');
@@ -129,12 +140,6 @@ const ModernFarmHierarchy = ({
   } = useForm<FarmFormValues>({
     resolver: zodResolver(getFarmSchema(t)),
   });
-
-  useEffect(() => {
-    if (showAddForm) {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-  }, [showAddForm]);
 
   // Fetch organization using farmsService (apiClient)
   const { data: organization } = useQuery({
@@ -248,17 +253,44 @@ const ModernFarmHierarchy = ({
     enabled: !!organizationId
   });
 
-  // Create farm mutation using farmsService (apiClient)
+  // Create farm mutation — routed through the offline outbox so the call
+  // doesn't hang on the network in the field.
   const createFarmMutation = useMutation({
     mutationFn: async (formData: FarmFormValues) => {
-      return farmsService.createFarm({
+      if (!organizationId) {
+        throw new Error('No organization selected');
+      }
+      const cid = uuidv4();
+      const payload = {
         name: formData.name,
         is_active: true,
         status: 'active',
-      });
+        client_id: cid,
+      };
+      const outcome = await runOrQueueOffline(
+        {
+          organizationId,
+          resource: 'farm',
+          method: 'POST',
+          url: '/api/v1/farms',
+          payload,
+          clientId: cid,
+        },
+        () =>
+          farmsService.createFarm({
+            name: formData.name,
+            is_active: true,
+            status: 'active',
+          }),
+      );
+      if (outcome.status === 'queued') {
+        return { id: cid, _pending: true, name: formData.name } as never;
+      }
+      return outcome.result;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['farm-hierarchy', organizationId] });
+      queryClient.invalidateQueries({ queryKey: ['farms'] });
       reset();
       setShowAddForm(false);
     },
@@ -594,6 +626,7 @@ const ModernFarmHierarchy = ({
             manager_name: farm.manager_name,
           })}
           onViewParcels={() => setSelectedFarmForParcels({ id: farm.farm_id, name: farm.farm_name })}
+          onViewHeatmap={onViewHeatmap ? () => onViewHeatmap(farm.farm_id) : undefined}
           onDelete={() => handleDeleteFarmClick({ id: farm.farm_id, name: farm.farm_name })}
         />
         {farm.children && farm.children.length > 0 && (
@@ -631,6 +664,7 @@ const ModernFarmHierarchy = ({
           manager_name: farm.manager_name,
         })}
         onViewParcels={() => setSelectedFarmForParcels({ id: farm.farm_id, name: farm.farm_name })}
+        onViewHeatmap={onViewHeatmap ? () => onViewHeatmap(farm.farm_id) : undefined}
         onDelete={() => handleDeleteFarmClick({ id: farm.farm_id, name: farm.farm_name })}
       />
     ));
@@ -679,20 +713,21 @@ const ModernFarmHierarchy = ({
 
       </div>
 
-      {/* Add Farm Form Modal */}
-      {showAddForm && (
-        <div ref={addFormRef} data-testid="create-farm-form" className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-              {t('farmHierarchy.farm.createNew')}
-            </h3>
-            <Button
-              onClick={() => setShowAddForm(false)}
-              className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-            >
-              <X className="w-5 h-5" />
-            </Button>
-          </div>
+      {/* Add Farm Modal */}
+      <Dialog
+        open={showAddForm}
+        onOpenChange={(open) => {
+          setShowAddForm(open);
+          if (!open) reset();
+        }}
+      >
+        <DialogContent data-testid="create-farm-form" className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t('farmHierarchy.farm.createNew')}</DialogTitle>
+            <DialogDescription>
+              {t('farmHierarchy.farm.createNewDescription', 'Add a new farm to your organization.')}
+            </DialogDescription>
+          </DialogHeader>
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div>
@@ -704,6 +739,7 @@ const ModernFarmHierarchy = ({
                 id="farm-name"
                 data-testid="farm-name-input"
                 type="text"
+                autoFocus
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
                 placeholder={t('farmHierarchy.farm.namePlaceholder')}
               />
@@ -712,10 +748,7 @@ const ModernFarmHierarchy = ({
               )}
             </div>
 
-            <div className="flex items-center gap-3 pt-2">
-              <Button variant="green" type="submit" data-testid="farm-submit-button" disabled={createFarmMutation.isPending} className="flex-1 px-4 py-2 text-sm font-medium rounded-lg transition-colors" >
-                {createFarmMutation.isPending ? t('farmHierarchy.farm.creating') : t('farmHierarchy.farm.create')}
-              </Button>
+            <DialogFooter>
               <Button
                 type="button"
                 onClick={() => setShowAddForm(false)}
@@ -723,10 +756,19 @@ const ModernFarmHierarchy = ({
               >
                 {t('app.cancel')}
               </Button>
-            </div>
+              <Button
+                variant="green"
+                type="submit"
+                data-testid="farm-submit-button"
+                disabled={createFarmMutation.isPending}
+                className="px-4 py-2 text-sm font-medium rounded-lg transition-colors"
+              >
+                {createFarmMutation.isPending ? t('farmHierarchy.farm.creating') : t('farmHierarchy.farm.create')}
+              </Button>
+            </DialogFooter>
           </form>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
 
       {/* Multi-selection Action Bar */}
       {viewMode === 'list' && selectedFarmIds.size > 0 && (

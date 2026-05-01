@@ -1,4 +1,4 @@
-import {  useEffect, useRef, useState, Suspense  } from "react";
+import {  useEffect, useRef, useState, Suspense, useCallback  } from "react";
 import { Canvas, useFrame } from '@react-three/fiber';
 import { Stars, PerspectiveCamera, Sparkles, Points, PointMaterial } from '@react-three/drei';
 import { EffectComposer, Bloom, ChromaticAberration, Noise, Vignette } from '@react-three/postprocessing';
@@ -140,17 +140,47 @@ const OrbitalNode = () => {
 export const WowIntro = ({ onComplete }: { onComplete: () => void }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const textRef = useRef<HTMLDivElement>(null);
+  const timelineRef = useRef<gsap.core.Timeline | null>(null);
+  const hasDismissedRef = useRef(false);
   const [simProgress, setSimProgress] = useState(0);
   const [isDone, setIsDone] = useState(false);
+
+  const dismissIntro = useCallback((fast = true) => {
+    if (hasDismissedRef.current) return;
+    hasDismissedRef.current = true;
+
+    timelineRef.current?.kill();
+    const target = containerRef.current;
+    if (!target) {
+      setIsDone(true);
+      onComplete();
+      return;
+    }
+
+    gsap.to(target, {
+      opacity: 0,
+      duration: fast ? 0.35 : 1.2,
+      onComplete: () => {
+        setIsDone(true);
+        onComplete();
+      },
+    });
+  }, [onComplete]);
 
   useEffect(() => {
     if (!containerRef.current || !textRef.current) return;
 
     // 1. Text Layout
-    const font = '900 24px system-ui, -apple-system, sans-serif';
+    const viewportWidth = window.innerWidth;
+    const isMobile = viewportWidth < 640;
+    const isTablet = viewportWidth >= 640 && viewportWidth < 1024;
+    const featureFontSize = isMobile ? 14 : isTablet ? 18 : 24;
+    const featureLineHeight = isMobile ? 22 : isTablet ? 28 : 34;
+    const font = `900 ${featureFontSize}px system-ui, -apple-system, sans-serif`;
     const prepared = FEATURES.map(f => prepareWithSegments(f, font));
-    const containerWidth = textRef.current.clientWidth || 450;
-    const layouts = prepared.map(p => layoutWithLines(p, containerWidth, 34));
+    const fallbackWidth = isMobile ? 300 : isTablet ? 360 : 450;
+    const containerWidth = Math.max(260, textRef.current.clientWidth || fallbackWidth);
+    const layouts = prepared.map(p => layoutWithLines(p, containerWidth, featureLineHeight));
 
     textRef.current.innerHTML = '';
     const lineElements: HTMLElement[] = [];
@@ -162,7 +192,8 @@ export const WowIntro = ({ onComplete }: { onComplete: () => void }) => {
         const d = document.createElement('div');
         d.textContent = line.text;
         d.style.font = font;
-        d.className = 'text-emerald-400 font-sans tracking-tight leading-none uppercase italic';
+        d.className = 'text-emerald-400 font-sans tracking-tight uppercase italic';
+        d.style.lineHeight = `${featureLineHeight}px`;
         group.appendChild(d);
       });
       textRef.current?.appendChild(group);
@@ -172,24 +203,17 @@ export const WowIntro = ({ onComplete }: { onComplete: () => void }) => {
     // 2. Animation Timeline
     const tl = gsap.timeline({
       onComplete: () => {
-        gsap.to(containerRef.current, {
-          opacity: 0,
-          duration: 1.5,
-          delay: 2,
-          onComplete: () => {
-            setIsDone(true);
-            onComplete();
-          }
-        });
+        gsap.delayedCall(isMobile ? 0.9 : 2, () => dismissIntro(false));
       }
     });
+    timelineRef.current = tl;
 
     tl.to(containerRef.current, { opacity: 1, duration: 1.5 });
 
     const p = { val: 0 };
     tl.to(p, {
       val: 1,
-      duration: 6,
+      duration: isMobile ? 4.5 : 6,
       ease: 'expo.inOut',
       onUpdate: () => setSimProgress(p.val)
     }, 0.5);
@@ -203,7 +227,15 @@ export const WowIntro = ({ onComplete }: { onComplete: () => void }) => {
     }, 1.5);
 
     return () => { tl.kill(); };
-  }, [onComplete]);
+  }, [dismissIntro]);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') dismissIntro(true);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [dismissIntro]);
 
   if (isDone) return null;
 
@@ -239,23 +271,23 @@ export const WowIntro = ({ onComplete }: { onComplete: () => void }) => {
       </div>
 
       {/* Ultra-Modern Branding Overlay */}
-      <div className="relative z-10 w-full max-w-7xl px-20 flex flex-col md:flex-row items-center justify-between gap-16 pointer-events-none">
+      <div className="relative z-10 w-full max-w-7xl px-4 sm:px-6 md:px-10 lg:px-16 xl:px-20 flex flex-col md:flex-row items-center md:items-start justify-between gap-8 md:gap-12 lg:gap-16">
         {/* AgroGina Brand */}
-        <div className="flex flex-col items-center md:items-start text-center md:text-left">
+        <div className="pointer-events-none flex flex-col items-center md:items-start text-center md:text-left">
           <div className="mb-4 flex items-center gap-2">
             <div className="w-8 h-[2px] bg-emerald-500" />
-            <div className="text-emerald-500 text-[10px] font-mono tracking-[0.5em] uppercase">
+            <div className="text-emerald-500 text-[9px] sm:text-[10px] font-mono tracking-[0.35em] sm:tracking-[0.5em] uppercase">
               Neural Network V4
             </div>
           </div>
-          <h1 className="text-8xl font-semibold text-white tracking-tighter mb-4 leading-none">
+          <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-semibold text-white tracking-tighter mb-3 sm:mb-4 leading-none">
             AGRO<span className="text-emerald-500">GINA</span>
           </h1>
-          <p className="text-emerald-500/60 text-xl font-light tracking-[0.2em] max-w-md uppercase">
+          <p className="text-emerald-500/70 text-sm sm:text-base md:text-lg lg:text-xl font-light tracking-[0.12em] sm:tracking-[0.16em] lg:tracking-[0.2em] max-w-md uppercase">
             Agriculture <span className="text-white">Redefined</span>
           </p>
           
-          <div className="mt-16 flex flex-col gap-2">
+          <div className="mt-8 sm:mt-10 lg:mt-16 hidden sm:flex flex-col gap-2">
             {[ "Satellite Mesh: Active", "Field Topography: Scanned", "Neural Yield: Optimized" ].map((t, statIdx) => (
               <div key={"stat-" + statIdx} className="flex items-center gap-4 text-white font-mono text-[10px] uppercase tracking-[0.3em]">
                 <div className="w-1 h-1 bg-emerald-500 rounded-full animate-pulse" />
@@ -266,15 +298,32 @@ export const WowIntro = ({ onComplete }: { onComplete: () => void }) => {
         </div>
 
         {/* Feature List reveal */}
-        <div ref={textRef} className="w-full md:w-[450px]" />
+        <div ref={textRef} className="pointer-events-none w-full max-w-[20rem] sm:max-w-[24rem] md:w-[420px] md:max-w-none lg:w-[450px]" />
       </div>
 
+      {/* Dismiss controls */}
+      <button
+        type="button"
+        onClick={() => dismissIntro(true)}
+        aria-label="Skip intro"
+        className="absolute top-4 right-4 z-20 rounded-full border border-emerald-400/40 bg-slate-900/70 px-3 py-1.5 text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-emerald-200 shadow-lg backdrop-blur hover:bg-slate-800/80 transition-colors"
+      >
+        Skip
+      </button>
+      <button
+        type="button"
+        onClick={() => dismissIntro(true)}
+        className="absolute bottom-6 left-1/2 z-20 -translate-x-1/2 rounded-full border border-white/20 bg-slate-900/60 px-3 py-1.5 text-[10px] uppercase tracking-wider text-slate-200 backdrop-blur sm:hidden"
+      >
+        Tap to continue
+      </button>
+
       {/* Glitchy Border HUD */}
-      <div className="absolute inset-10 border border-emerald-500/10 pointer-events-none" />
-      <div className="absolute top-10 left-10 w-4 h-4 border-t-2 border-l-2 border-emerald-500" />
-      <div className="absolute top-10 right-10 w-4 h-4 border-t-2 border-r-2 border-emerald-500" />
-      <div className="absolute bottom-10 left-10 w-4 h-4 border-b-2 border-l-2 border-emerald-500" />
-      <div className="absolute bottom-10 right-10 w-4 h-4 border-b-2 border-r-2 border-emerald-500" />
+      <div className="absolute inset-3 sm:inset-6 md:inset-10 border border-emerald-500/10 pointer-events-none" />
+      <div className="absolute top-3 left-3 sm:top-6 sm:left-6 md:top-10 md:left-10 w-3 h-3 sm:w-4 sm:h-4 border-t-2 border-l-2 border-emerald-500/80" />
+      <div className="absolute top-3 right-3 sm:top-6 sm:right-6 md:top-10 md:right-10 w-3 h-3 sm:w-4 sm:h-4 border-t-2 border-r-2 border-emerald-500/80" />
+      <div className="absolute bottom-3 left-3 sm:bottom-6 sm:left-6 md:bottom-10 md:left-10 w-3 h-3 sm:w-4 sm:h-4 border-b-2 border-l-2 border-emerald-500/80" />
+      <div className="absolute bottom-3 right-3 sm:bottom-6 sm:right-6 md:bottom-10 md:right-10 w-3 h-3 sm:w-4 sm:h-4 border-b-2 border-r-2 border-emerald-500/80" />
     </div>
   );
 };

@@ -20,11 +20,14 @@ import {
 import { WarehousesService } from './warehouses.service';
 import { CreateWarehouseDto, UpdateWarehouseDto } from './dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RequireModule } from '../../common/decorators/require-module.decorator';
 import { OrganizationGuard } from '../../common/guards/organization.guard';
+import { ModuleEntitlementGuard } from '../../common/guards/module-entitlement.guard';
 
 @ApiTags('warehouses')
 @Controller('warehouses')
-@UseGuards(JwtAuthGuard, OrganizationGuard)
+@RequireModule('stock')
+@UseGuards(JwtAuthGuard, OrganizationGuard, ModuleEntitlementGuard)
 @ApiBearerAuth()
 export class WarehousesController {
   constructor(private readonly warehousesService: WarehousesService) {}
@@ -32,9 +35,13 @@ export class WarehousesController {
   @Get()
   @ApiOperation({ summary: 'Get all active warehouses' })
   @ApiResponse({ status: 200, description: 'Warehouses retrieved successfully' })
-  async findAll(@Req() req: any) {
+  async findAll(
+    @Req() req: any,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
+  ) {
     const organizationId = req.headers['x-organization-id'];
-    return this.warehousesService.findAll(organizationId);
+    return this.warehousesService.findAll(organizationId, Number(page) || 1, Number(pageSize) || 50);
   }
 
   @Get('inventory')

@@ -1,8 +1,10 @@
 import React from 'react';
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { useAuth } from '../hooks/useAuth';
+import { trackEntityCreate, trackEntityUpdate, trackEntityDelete } from '../lib/analytics';
 import { itemsApi, type PaginatedItemQuery } from '../lib/api/items';
 import type { PaginatedResponse } from '../lib/api/types';
+import { withOfflineQueue } from '../lib/offline/withOfflineQueue';
 import type {
   ItemGroupWithChildren,
   Item,
@@ -223,6 +225,7 @@ export function useCreateItemGroup() {
       return itemsApi.createGroup(input, currentOrganization.id);
     },
     onSuccess: () => {
+      trackEntityCreate('stock_item');
       // Use partial match to invalidate all item-groups queries regardless of filters
       queryClient.invalidateQueries({ queryKey: ['item-groups'] });
       queryClient.invalidateQueries({ queryKey: ['item-group-tree'] });
@@ -247,6 +250,7 @@ export function useCreateItemVariant() {
       return itemsApi.createVariant(itemId, input, currentOrganization.id);
     },
     onSuccess: (_, variables) => {
+      trackEntityCreate('stock_item');
       queryClient.invalidateQueries({ queryKey: ['item-variants', variables.itemId] });
     },
   });
@@ -265,6 +269,7 @@ export function useUpdateItemVariant() {
       return itemsApi.updateVariant(variantId, input, currentOrganization.id);
     },
     onSuccess: (_, variables) => {
+      trackEntityUpdate('stock_item');
       queryClient.invalidateQueries({ queryKey: ['item-variants'] });
       queryClient.invalidateQueries({ queryKey: ['item-variant', variables.variantId] });
     },
@@ -284,6 +289,7 @@ export function useDeleteItemVariant() {
       return itemsApi.deleteVariant(variantId, currentOrganization.id);
     },
     onSuccess: () => {
+      trackEntityDelete('stock_item');
       queryClient.invalidateQueries({ queryKey: ['item-variants'] });
     },
   });
@@ -305,6 +311,7 @@ export function useUpdateItemGroup() {
       return itemsApi.updateGroup(groupId, input, currentOrganization.id);
     },
     onSuccess: (_, variables) => {
+      trackEntityUpdate('stock_item');
       // Use partial match to invalidate all item-groups queries regardless of filters
       queryClient.invalidateQueries({ queryKey: ['item-groups'] });
       queryClient.invalidateQueries({ queryKey: ['item-group', variables.groupId] });
@@ -329,6 +336,7 @@ export function useDeleteItemGroup() {
       return itemsApi.deleteGroup(groupId, currentOrganization.id);
     },
     onSuccess: () => {
+      trackEntityDelete('stock_item');
       // Use partial match to invalidate all item-groups queries regardless of filters
       queryClient.invalidateQueries({ queryKey: ['item-groups'] });
       queryClient.invalidateQueries({ queryKey: ['item-group-tree'] });
@@ -352,10 +360,22 @@ export function useCreateItem() {
       if (!currentOrganization?.id) {
         throw new Error('No organization selected');
       }
-
-      return itemsApi.create(input, currentOrganization.id);
+      const queued = withOfflineQueue<CreateItemInput, Awaited<ReturnType<typeof itemsApi.create>>>(
+        {
+          organizationId: currentOrganization.id,
+          resource: 'item',
+          method: 'POST',
+          url: '/api/v1/items',
+          buildPayload: (payload, clientId) => ({ ...payload, client_id: clientId }),
+          buildOptimisticStub: (payload, clientId) =>
+            ({ id: clientId, _pending: true, ...payload }) as never,
+        },
+        (payload) => itemsApi.create(payload, currentOrganization.id),
+      );
+      return queued(input);
     },
     onSuccess: () => {
+      trackEntityCreate('stock_item');
       // Use partial match to invalidate all items queries regardless of filters
       queryClient.invalidateQueries({ queryKey: ['items'] });
       queryClient.invalidateQueries({ queryKey: ['item-selection'] });
@@ -375,10 +395,21 @@ export function useUpdateItem() {
       if (!currentOrganization?.id) {
         throw new Error('No organization selected');
       }
-
-      return itemsApi.update(itemId, input, currentOrganization.id);
+      const queued = withOfflineQueue<UpdateItemInput, Awaited<ReturnType<typeof itemsApi.update>>>(
+        {
+          organizationId: currentOrganization.id,
+          resource: 'item',
+          method: 'PATCH',
+          url: `/api/v1/items/${itemId}`,
+          buildOptimisticStub: (payload, clientId) =>
+            ({ id: itemId, _pending: true, ...payload, client_id: clientId }) as never,
+        },
+        (payload) => itemsApi.update(itemId, payload, currentOrganization.id),
+      );
+      return queued(input);
     },
     onSuccess: (_, variables) => {
+      trackEntityUpdate('stock_item');
       // Use partial match to invalidate all items queries regardless of filters
       queryClient.invalidateQueries({ queryKey: ['items'] });
       queryClient.invalidateQueries({ queryKey: ['item', variables.itemId] });
@@ -399,10 +430,19 @@ export function useDeleteItem() {
       if (!currentOrganization?.id) {
         throw new Error('No organization selected');
       }
-
-      return itemsApi.delete(itemId, currentOrganization.id);
+      const queued = withOfflineQueue<void, Awaited<ReturnType<typeof itemsApi.delete>>>(
+        {
+          organizationId: currentOrganization.id,
+          resource: 'item',
+          method: 'DELETE',
+          url: `/api/v1/items/${itemId}`,
+        },
+        () => itemsApi.delete(itemId, currentOrganization.id),
+      );
+      return queued();
     },
     onSuccess: () => {
+      trackEntityDelete('stock_item');
       // Use partial match to invalidate all items queries regardless of filters
       queryClient.invalidateQueries({ queryKey: ['items'] });
       queryClient.invalidateQueries({ queryKey: ['item-selection'] });

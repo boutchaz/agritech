@@ -224,6 +224,11 @@ DECLARE
 BEGIN
     RAISE NOTICE '=== Clearing Supabase storage ===';
 
+    IF to_regclass('storage.buckets') IS NULL OR to_regclass('storage.objects') IS NULL THEN
+        RAISE NOTICE 'Skipping: storage schema not present (non-Supabase Postgres target)';
+        RETURN;
+    END IF;
+
     -- Delete all objects from every bucket, then delete the buckets
     FOR bucket IN
         SELECT id, name FROM storage.buckets ORDER BY name

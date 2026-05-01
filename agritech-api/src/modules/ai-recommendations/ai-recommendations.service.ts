@@ -19,6 +19,13 @@ export const AI_RECOMMENDATION_STATUSES = [
 
 export type AiRecommendationStatus = (typeof AI_RECOMMENDATION_STATUSES)[number];
 
+export interface AiRecommendationCitation {
+  chunk_id: string;
+  excerpt: string;
+  page: number | null;
+  source_title: string;
+}
+
 export interface AiRecommendationRecord {
   id: string;
   parcel_id: string;
@@ -39,6 +46,46 @@ export interface AiRecommendationRecord {
   execution_notes: string | null;
   created_at: string;
   updated_at: string | null;
+  citations?: AiRecommendationCitation[];
+}
+
+interface RawCitationEmbed {
+  chunk_id: string;
+  excerpt: string;
+  source_ordinal: number;
+  chunk?: {
+    page: number | null;
+    source?: { title: string | null } | null;
+  } | null;
+}
+
+const CITATION_EMBED_SELECT =
+  '*, citations:ai_recommendation_citations(chunk_id, excerpt, source_ordinal, chunk:agronomy_chunks!chunk_id(page, source:agronomy_sources!source_id(title)))';
+
+function mapCitations(raw: unknown): AiRecommendationCitation[] | undefined {
+  if (!Array.isArray(raw)) return undefined;
+  const mapped = raw
+    .map((entry): AiRecommendationCitation | null => {
+      if (!entry || typeof entry !== 'object') return null;
+      const e = entry as RawCitationEmbed;
+      if (!e.chunk_id || !e.excerpt) return null;
+      return {
+        chunk_id: e.chunk_id,
+        excerpt: e.excerpt,
+        page: e.chunk?.page ?? null,
+        source_title: e.chunk?.source?.title ?? 'Source',
+      };
+    })
+    .filter((c): c is AiRecommendationCitation => c !== null);
+
+  return mapped.length > 0 ? mapped : undefined;
+}
+
+function withCitations(row: Record<string, unknown>): AiRecommendationRecord {
+  const { citations, ...rest } = row;
+  const base = rest as unknown as AiRecommendationRecord;
+  const mapped = mapCitations(citations);
+  return mapped ? { ...base, citations: mapped } : base;
 }
 
 export interface RecommendationProductApplicationRecord {
@@ -95,7 +142,7 @@ export class AiRecommendationsService {
     const supabase = this.databaseService.getAdminClient();
     const { data, error } = await supabase
       .from('ai_recommendations')
-      .select('*')
+      .select(CITATION_EMBED_SELECT)
       .eq('parcel_id', parcelId)
       .eq('organization_id', organizationId)
       .order('created_at', { ascending: false });
@@ -106,7 +153,7 @@ export class AiRecommendationsService {
       );
     }
 
-    return (data ?? []) as AiRecommendationRecord[];
+    return (data ?? []).map((row) => withCitations(row as Record<string, unknown>));
   }
 
   async getRecommendation(
@@ -267,7 +314,7 @@ export class AiRecommendationsService {
     const supabase = this.databaseService.getAdminClient();
     const { data, error } = await supabase
       .from('ai_recommendations')
-      .select('*')
+      .select(CITATION_EMBED_SELECT)
       .eq('id', id)
       .eq('organization_id', organizationId)
       .maybeSingle();
@@ -282,7 +329,7 @@ export class AiRecommendationsService {
       throw new NotFoundException('AI recommendation not found');
     }
 
-    return data as AiRecommendationRecord;
+    return withCitations(data as Record<string, unknown>);
   }
 
   private async updateRecommendationStatus(

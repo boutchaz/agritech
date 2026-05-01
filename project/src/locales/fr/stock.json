@@ -15,8 +15,15 @@
       "expiryAlerts": "Alertes d'expiration",
       "reorder": "Réapprovisionnement",
       "reception": "Réception Récoltes",
+      "deliveries": "Livraisons",
       "reports": "Rapports & Analyses",
       "more": "Plus"
+    },
+    "groups": {
+      "catalog": "Catalogue",
+      "movements": "Mouvements",
+      "operations": "Opérations",
+      "insights": "Analyses"
     },
     "lowStockAlerts": {
       "title": "Alertes de Stock Faible",
@@ -28,6 +35,7 @@
       "byFarm": "Par Ferme/Entrepôt",
       "addStock": "Ajouter du Stock",
       "viewItem": "Voir l'Article",
+      "viewItemAria": "Voir l'article {{name}}",
       "viewAll": "Voir les {{count}} articles en stock faible",
       "allOptimal": "Tous les niveaux de stock sont optimaux"
     },
@@ -1022,5 +1030,39 @@
     "unit": "Unité",
     "generatePO": "Générer BC",
     "generatePOPending": "Bientôt disponible"
+  },
+  "barcode": {
+    "scanPlaceholder": "Scanner ou saisir le code-barres...",
+    "itemAdded": "Article ajouté : {{itemName}}",
+    "qtyIncreased": "{{itemName}} : quantité +1",
+    "notFound": "Aucun article trouvé pour ce code-barres",
+    "warehouseSet": "Entrepôt {{name}} défini pour les prochains scans",
+    "scanFailed": "Échec du scan : {{error}}",
+    "manageBarcodes": "Gérer les codes-barres",
+    "addBarcode": "Ajouter un code-barres",
+    "editBarcode": "Modifier le code-barres",
+    "barcodeType": "Type de code-barres",
+    "primaryBarcode": "Code-barres principal",
+    "setPrimary": "Définir comme principal",
+    "noBarcodes": "Aucun code-barres configuré",
+    "duplicateBarcode": "Ce code-barres est déjà utilisé par un autre article",
+    "invalidBarcode": "Format de code-barres invalide pour {{type}}",
+    "toast": {
+      "created": "Code-barres ajouté",
+      "updated": "Code-barres modifié",
+      "deleted": "Code-barres supprimé",
+      "generated": "Code-barres EAN-13 généré",
+      "regenerated": "Code-barres régénéré"
+    },
+    "actions": {
+      "generate": "Générer EAN-13",
+      "regenerate": "Régénérer"
+    },
+    "dialog": {
+      "title": "Gérer les codes-barres",
+      "createTitle": "Ajouter un code-barres",
+      "editTitle": "Modifier le code-barres",
+      "description": "Chaque code-barres doit être unique au sein de votre organisation."
+    }
   }
 }

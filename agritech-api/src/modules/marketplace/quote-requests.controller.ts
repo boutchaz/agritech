@@ -12,11 +12,15 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RequireModule } from '../../common/decorators/require-module.decorator';
+import { ModuleEntitlementGuard } from '../../common/guards/module-entitlement.guard';
 import { QuoteRequestsService } from './quote-requests.service';
 import { CreateQuoteRequestDto } from './dto/create-quote-request.dto';
 import { UpdateQuoteRequestDto } from './dto/update-quote-request.dto';
 
 @Controller('marketplace/quote-requests')
+@RequireModule('marketplace')
+@UseGuards(JwtAuthGuard, ModuleEntitlementGuard)
 export class QuoteRequestsController {
   constructor(private readonly quoteRequestsService: QuoteRequestsService) {}
 
@@ -24,7 +28,6 @@ export class QuoteRequestsController {
    * Create a new quote request (authenticated users only)
    */
   @Post()
-  @UseGuards(JwtAuthGuard)
   async createQuoteRequest(
     @Body() dto: CreateQuoteRequestDto,
     @Request() req: any,
@@ -42,7 +45,6 @@ export class QuoteRequestsController {
    * Get quote requests sent by the current user (buyer)
    */
   @Get('sent')
-  @UseGuards(JwtAuthGuard)
   async getSentQuoteRequests(
     @Query('status') status: string,
     @Request() req: any,
@@ -60,7 +62,6 @@ export class QuoteRequestsController {
    * Get quote requests received by the current user (seller)
    */
   @Get('received')
-  @UseGuards(JwtAuthGuard)
   async getReceivedQuoteRequests(
     @Query('status') status: string,
     @Request() req: any,
@@ -78,7 +79,6 @@ export class QuoteRequestsController {
    * Get seller quote statistics
    */
   @Get('stats')
-  @UseGuards(JwtAuthGuard)
   async getSellerStats(@Request() req: any) {
     const organizationId = req.user?.organizationId;
 
@@ -93,7 +93,6 @@ export class QuoteRequestsController {
    * Get a specific quote request by ID
    */
   @Get(':id')
-  @UseGuards(JwtAuthGuard)
   async getQuoteRequest(@Param('id') id: string, @Request() req: any) {
     const organizationId = req.user?.organizationId;
 
@@ -108,7 +107,6 @@ export class QuoteRequestsController {
    * Update a quote request (seller responding or buyer accepting/cancelling)
    */
   @Patch(':id')
-  @UseGuards(JwtAuthGuard)
   async updateQuoteRequest(
     @Param('id') id: string,
     @Body() dto: UpdateQuoteRequestDto,

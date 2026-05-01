@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useState, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, Edit, Trash2, Mail, Phone, MapPin, Building2, Users } from 'lucide-react';
+import { Plus, Edit, Trash2, Mail, Phone, MapPin, Building2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -22,8 +22,6 @@ import {
   type Customer,
 } from '@/hooks/useCustomers';
 import { useAuth } from '@/hooks/useAuth';
-import { PageLayout } from '@/components/PageLayout';
-import ModernPageHeader from '@/components/ModernPageHeader';
 import { withRouteProtection } from '@/components/authorization/withRouteProtection';
 import { PageLoader } from '@/components/ui/loader';
 import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
@@ -253,19 +251,7 @@ function CustomersPage() {
   }
 
   return (
-    <PageLayout
-      activeModule="accounting"
-      header={
-        <ModernPageHeader
-          breadcrumbs={[
-            { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
-            { icon: Users, label: t('nav.customers', 'Customers'), isActive: true }
-          ]}
-          title={t('accountingModule.customers.title', 'Customers')}
-          subtitle={t('accountingModule.customers.subtitle', 'Manage your customers for sales invoices')}
-        />
-      }
-    >
+    <>
       <div className="p-6">
         <ListPageLayout
           header={
@@ -678,7 +664,7 @@ function CustomersPage() {
               </form>
           </ResponsiveDialog>
         </div>
-          <ConfirmDialog
+      <ConfirmDialog
         open={confirmOpen}
         onOpenChange={setConfirmOpen}
         title={confirmAction.title}
@@ -686,7 +672,7 @@ function CustomersPage() {
         variant={confirmAction.variant}
         onConfirm={confirmAction.onConfirm}
       />
-    </PageLayout>
+    </>
   );
 }
 

@@ -6,6 +6,41 @@
     "nom_scientifique": "Persea americana Mill.",
     "pays": "Maroc"
   },
+  "phenological_stages": [
+    {
+      "key": "winter",
+      "name_fr": "Hiver",
+      "name_en": "Winter",
+      "name_ar": "الشتاء",
+      "months": [12, 1, 2],
+      "thresholds": [
+        { "key": "frost_risk", "label_fr": "Risque de gel", "label_en": "Frost risk", "compare": "below", "value": 0, "unit": "h", "icon": "snowflake" },
+        { "key": "cold_stress", "label_fr": "Stress froid", "label_en": "Cold stress", "compare": "below", "value": 5, "unit": "h", "icon": "snowflake" }
+      ]
+    },
+    {
+      "key": "flowering",
+      "name_fr": "Floraison",
+      "name_en": "Flowering",
+      "name_ar": "الإزهار",
+      "months": [3, 4, 5],
+      "thresholds": [
+        { "key": "optimal_flowering", "label_fr": "Conditions optimales", "label_en": "Optimal conditions", "compare": "between", "value": 18, "upper": 26, "unit": "h", "icon": "leaf" },
+        { "key": "heat_stress", "label_fr": "Stress thermique", "label_en": "Heat stress", "compare": "above", "value": 33, "unit": "h", "icon": "flame" }
+      ]
+    },
+    {
+      "key": "fruit_growth",
+      "name_fr": "Grossissement des fruits",
+      "name_en": "Fruit growth",
+      "name_ar": "نمو الثمار",
+      "months": [6, 7, 8, 9, 10],
+      "thresholds": [
+        { "key": "growing_hours", "label_fr": "Heures de croissance", "label_en": "Growing hours", "compare": "above", "value": 12, "unit": "h", "icon": "sun" },
+        { "key": "extreme_heat", "label_fr": "Chaleur extrême", "label_en": "Extreme heat", "compare": "above", "value": 36, "unit": "h", "icon": "flame" }
+      ]
+    }
+  ],
   "phases_maturite_ans": {
     "juvenile": [
       0,
@@ -135,7 +170,7 @@
       ],
       "maturite_mois": [
         "Fev",
-        "Mar",
+        "mar",
         "Avr",
         "Mai",
         "Juin",
@@ -186,11 +221,11 @@
         20
       ],
       "maturite_mois": [
-        "Nov",
-        "Dec",
-        "Jan",
+        "nov",
+        "dec",
+        "jan",
         "Fev",
-        "Mar"
+        "mar"
       ],
       "alternance": "forte",
       "vigueur": "forte",
@@ -235,9 +270,9 @@
         15
       ],
       "maturite_mois": [
-        "Nov",
-        "Dec",
-        "Jan"
+        "nov",
+        "dec",
+        "jan"
       ],
       "alternance": "moderee",
       "vigueur": "forte",
@@ -282,9 +317,9 @@
         15
       ],
       "maturite_mois": [
-        "Oct",
-        "Nov",
-        "Dec"
+        "oct",
+        "nov",
+        "dec"
       ],
       "alternance": "faible",
       "vigueur": "tres_forte",
@@ -308,9 +343,9 @@
         22
       ],
       "maturite_mois": [
-        "Jan",
+        "jan",
         "Fev",
-        "Mar",
+        "mar",
         "Avr"
       ],
       "alternance": "faible",
@@ -359,7 +394,7 @@
         "Juil",
         "Aout",
         "Sept",
-        "Oct"
+        "oct"
       ],
       "alternance": "moderee",
       "vigueur": "moyenne",
@@ -382,9 +417,9 @@
         18
       ],
       "maturite_mois": [
-        "Oct",
-        "Nov",
-        "Dec"
+        "oct",
+        "nov",
+        "dec"
       ],
       "alternance": "moderee",
       "vigueur": "forte",
@@ -662,8 +697,8 @@
     {
       "nom": "Repos relatif",
       "mois": [
-        "Dec",
-        "Jan"
+        "dec",
+        "jan"
       ],
       "duree_sem": [
         6,
@@ -675,7 +710,7 @@
       "nom": "Flush végétatif 1",
       "mois": [
         "Fev",
-        "Mar"
+        "mar"
       ],
       "duree_sem": [
         4,
@@ -686,7 +721,7 @@
     {
       "nom": "Induction florale",
       "mois": [
-        "Jan",
+        "jan",
         "Fev"
       ],
       "duree_sem": [
@@ -699,7 +734,7 @@
       "nom": "Boutons floraux",
       "mois": [
         "Fev",
-        "Mar"
+        "mar"
       ],
       "duree_sem": [
         2,
@@ -710,7 +745,7 @@
     {
       "nom": "Floraison",
       "mois": [
-        "Mar",
+        "mar",
         "Avr",
         "Mai"
       ],
@@ -749,7 +784,7 @@
       "nom": "Grossissement",
       "mois": [
         "Juin",
-        "Dec"
+        "dec"
       ],
       "duree_mois": [
         5,
@@ -1789,8 +1824,8 @@
       "code": "00",
       "nom": "Repos végétatif",
       "mois": [
-        "Dec",
-        "Jan"
+        "dec",
+        "jan"
       ],
       "gdd_cumul": [
         0,
@@ -1803,8 +1838,8 @@
       "code": "01",
       "nom": "Gonflement bourgeons",
       "mois": [
-        "Jan",
-        "Feb"
+        "jan",
+        "feb"
       ],
       "gdd_cumul": [
         100,
@@ -1817,8 +1852,8 @@
       "code": "09",
       "nom": "Débourrement",
       "mois": [
-        "Feb",
-        "Mar"
+        "feb",
+        "mar"
       ],
       "gdd_cumul": [
         250,
@@ -1831,7 +1866,7 @@
       "code": "15",
       "nom": "Pousse végétative",
       "mois": [
-        "Mar"
+        "mar"
       ],
       "gdd_cumul": [
         450,
@@ -1844,8 +1879,8 @@
       "code": "51",
       "nom": "Inflorescences visibles",
       "mois": [
-        "Mar",
-        "Apr"
+        "mar",
+        "apr"
       ],
       "gdd_cumul": [
         700,
@@ -1858,7 +1893,7 @@
       "code": "60",
       "nom": "Début floraison",
       "mois": [
-        "Apr"
+        "apr"
       ],
       "gdd_cumul": [
         1000,
@@ -1871,8 +1906,8 @@
       "code": "65",
       "nom": "Pleine floraison",
       "mois": [
-        "Apr",
-        "May"
+        "apr",
+        "may"
       ],
       "gdd_cumul": [
         1300,
@@ -1885,8 +1920,8 @@
       "code": "69",
       "nom": "Nouaison",
       "mois": [
-        "May",
-        "Jun"
+        "may",
+        "jun"
       ],
       "gdd_cumul": [
         1600,
@@ -1899,8 +1934,8 @@
       "code": "75",
       "nom": "Grossissement fruit",
       "mois": [
-        "Jun",
-        "Aug"
+        "jun",
+        "aug"
       ],
       "gdd_cumul": [
         2000,
@@ -1913,8 +1948,8 @@
       "code": "79",
       "nom": "Fruit taille finale",
       "mois": [
-        "Aug",
-        "Oct"
+        "aug",
+        "oct"
       ],
       "gdd_cumul": [
         3000,
@@ -1927,8 +1962,8 @@
       "code": "85",
       "nom": "Maturation",
       "mois": [
-        "Oct",
-        "Nov"
+        "oct",
+        "nov"
       ],
       "gdd_cumul": [
         4000,
@@ -1941,8 +1976,8 @@
       "code": "89",
       "nom": "Maturité récolte",
       "mois": [
-        "Nov",
-        "Dec"
+        "nov",
+        "dec"
       ],
       "gdd_cumul": [
         4800,
@@ -1955,8 +1990,8 @@
       "code": "92",
       "nom": "Post-récolte",
       "mois": [
-        "Dec",
-        "Jan"
+        "dec",
+        "jan"
       ],
       "gdd_cumul": [
         5500,

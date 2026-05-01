@@ -7,6 +7,40 @@
     "famille": "Arecaceae",
     "pays": "Maroc"
   },
+  "phenological_stages": [
+    {
+      "key": "winter_rest",
+      "name_fr": "Repos hivernal",
+      "name_en": "Winter rest",
+      "name_ar": "الراحة الشتوية",
+      "months": [12, 1, 2],
+      "thresholds": [
+        { "key": "frost_risk", "label_fr": "Risque de gel", "label_en": "Frost risk", "compare": "below", "value": 0, "unit": "h", "icon": "snowflake" }
+      ]
+    },
+    {
+      "key": "pollination",
+      "name_fr": "Pollinisation",
+      "name_en": "Pollination",
+      "name_ar": "التلقيح",
+      "months": [3, 4, 5],
+      "thresholds": [
+        { "key": "optimal_pollination", "label_fr": "Conditions optimales", "label_en": "Optimal conditions", "compare": "between", "value": 25, "upper": 35, "unit": "h", "icon": "leaf" },
+        { "key": "cool_pollination", "label_fr": "Trop frais", "label_en": "Too cool", "compare": "below", "value": 18, "unit": "h", "icon": "snowflake" }
+      ]
+    },
+    {
+      "key": "fruit_development",
+      "name_fr": "Développement des fruits",
+      "name_en": "Fruit development",
+      "name_ar": "نمو الثمار",
+      "months": [6, 7, 8, 9, 10],
+      "thresholds": [
+        { "key": "growing_hours", "label_fr": "Heures de croissance", "label_en": "Growing hours", "compare": "above", "value": 18, "unit": "h", "icon": "sun" },
+        { "key": "extreme_heat", "label_fr": "Chaleur extrême", "label_en": "Extreme heat", "compare": "above", "value": 45, "unit": "h", "icon": "flame" }
+      ]
+    }
+  ],
   "phases_maturite_ans": {
     "juvenile": [
       0,
@@ -834,9 +868,9 @@
       "code": "00",
       "nom": "Repos hivernal",
       "mois": [
-        "Dec",
-        "Jan",
-        "Feb"
+        "dec",
+        "jan",
+        "feb"
       ],
       "gdd_cumul": [
         0,
@@ -849,8 +883,8 @@
       "code": "07",
       "nom": "Spathe visible",
       "mois": [
-        "Feb",
-        "Mar"
+        "feb",
+        "mar"
       ],
       "gdd_cumul": [
         30,
@@ -863,7 +897,7 @@
       "code": "51",
       "nom": "Émission inflorescence",
       "mois": [
-        "Mar"
+        "mar"
       ],
       "gdd_cumul": [
         80,
@@ -876,8 +910,8 @@
       "code": "60",
       "nom": "Début pollinisation",
       "mois": [
-        "Mar",
-        "Apr"
+        "mar",
+        "apr"
       ],
       "gdd_cumul": [
         180,
@@ -890,7 +924,7 @@
       "code": "65",
       "nom": "Pleine pollinisation",
       "mois": [
-        "Apr"
+        "apr"
       ],
       "gdd_cumul": [
         350,
@@ -903,8 +937,8 @@
       "code": "69",
       "nom": "Hababouk (nouaison)",
       "mois": [
-        "Apr",
-        "May"
+        "apr",
+        "may"
       ],
       "gdd_cumul": [
         500,
@@ -917,8 +951,8 @@
       "code": "71",
       "nom": "Kimri (fruit vert)",
       "mois": [
-        "May",
-        "Jun"
+        "may",
+        "jun"
       ],
       "gdd_cumul": [
         800,
@@ -931,8 +965,8 @@
       "code": "75",
       "nom": "Khalal (fruit jaune)",
       "mois": [
-        "Jun",
-        "Jul"
+        "jun",
+        "jul"
       ],
       "gdd_cumul": [
         1400,
@@ -945,8 +979,8 @@
       "code": "79",
       "nom": "Routab (ramollissement)",
       "mois": [
-        "Jul",
-        "Aug"
+        "jul",
+        "aug"
       ],
       "gdd_cumul": [
         2200,
@@ -959,8 +993,8 @@
       "code": "85",
       "nom": "Tamar début",
       "mois": [
-        "Aug",
-        "Sep"
+        "aug",
+        "sep"
       ],
       "gdd_cumul": [
         3000,
@@ -973,8 +1007,8 @@
       "code": "89",
       "nom": "Tamar maturité récolte",
       "mois": [
-        "Sep",
-        "Oct"
+        "sep",
+        "oct"
       ],
       "gdd_cumul": [
         3600,
@@ -987,9 +1021,9 @@
       "code": "92",
       "nom": "Post-récolte",
       "mois": [
-        "Oct",
-        "Nov",
-        "Dec"
+        "oct",
+        "nov",
+        "dec"
       ],
       "gdd_cumul": [
         4200,

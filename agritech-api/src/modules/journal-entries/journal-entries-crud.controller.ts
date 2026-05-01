@@ -20,7 +20,9 @@ import {
 } from '@nestjs/swagger';
 import { JournalEntriesService, CreateJournalEntryDto, UpdateJournalEntryDto } from './journal-entries.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RequireModule } from '../../common/decorators/require-module.decorator';
 import { OrganizationGuard } from '../../common/guards/organization.guard';
+import { ModuleEntitlementGuard } from '../../common/guards/module-entitlement.guard';
 import { PoliciesGuard } from '../casl/policies.guard';
 import {
   CanReadJournalEntries,
@@ -31,7 +33,8 @@ import {
 
 @ApiTags('journal-entries')
 @Controller('journal-entries')
-@UseGuards(JwtAuthGuard, OrganizationGuard, PoliciesGuard)
+@RequireModule('accounting')
+@UseGuards(JwtAuthGuard, OrganizationGuard, ModuleEntitlementGuard, PoliciesGuard)
 @ApiBearerAuth()
 export class JournalEntriesCrudController {
   constructor(private readonly journalEntriesService: JournalEntriesService) {}

@@ -26,5 +26,5 @@ export interface CreateBankAccountInput {
 export type UpdateBankAccountInput = Partial<CreateBankAccountInput>;
 
 export const bankAccountsApi = createCrudApi<BankAccount, CreateBankAccountInput, BankAccountFilters>(
-  '/bank-accounts'
+  '/api/v1/bank-accounts'
 );

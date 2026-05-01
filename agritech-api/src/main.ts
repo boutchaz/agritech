@@ -9,6 +9,9 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { IoAdapter } from '@nestjs/platform-socket.io';
 import { json, urlencoded } from 'express';
 import helmet from 'helmet';
+// cookie-parser is CommonJS — TS-style require keeps it callable
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+import cookieParser = require('cookie-parser');
 import { AppModule } from './app.module';
 
 // Global exception filter to log all 403 exceptions with stack traces
@@ -117,6 +120,41 @@ async function bootstrap() {
   app.use(urlencoded({ extended: true, limit: bodyJsonLimit }));
   logger.log(`JSON / urlencoded body size limit: ${bodyJsonLimit}`);
 
+  // Cookie parser — required for httpOnly auth cookies
+  app.use(cookieParser());
+
+  // CSRF defense — Origin check for state-changing methods.
+  // With cookie-based auth, attacker pages can trigger requests that auto-send
+  // cookies. We block requests whose Origin/Referer doesn't match an allowed
+  // origin. Cheap, deployable, and works with the existing CORS allowlist.
+  // Doesn't apply to GET/HEAD/OPTIONS, requests with no cookies (Bearer-only
+  // mobile clients), or whitelisted endpoints.
+  const csrfWhitelist = ['/api/v1/auth/oauth/callback']; // Public endpoints invoked from third parties
+  app.use((req, res, next) => {
+    const method = req.method.toUpperCase();
+    const stateChanging = method === 'POST' || method === 'PUT' || method === 'PATCH' || method === 'DELETE';
+    if (!stateChanging) return next();
+    if (csrfWhitelist.some(p => req.path.startsWith(p))) return next();
+
+    // No cookies = Bearer-only client (mobile / SDK) — let JWT auth handle it
+    const hasAuthCookie = !!(req as any).cookies?.agg_access || !!(req as any).cookies?.agg_refresh;
+    if (!hasAuthCookie) return next();
+
+    const origin = req.headers.origin || req.headers.referer || '';
+    const allowed = (configService.get('CORS_ORIGIN', 'http://localhost:5173') as string)
+      .split(',').map(s => s.trim());
+    const ok =
+      !origin // Same-origin requests have no Origin header — allow
+      || allowed.some(a => a === '*' || origin.startsWith(a))
+      || (process.env.NODE_ENV !== 'production' && origin.includes('localhost'));
+
+    if (!ok) {
+      logger.warn(`[CSRF] Blocked ${method} ${req.path} from origin ${origin}`);
+      return res.status(403).json({ statusCode: 403, message: 'CSRF: origin not allowed' });
+    }
+    next();
+  });
+
   // Configure WebSocket adapter for Socket.IO
   app.useWebSocketAdapter(new IoAdapter(app));
 
@@ -214,15 +252,6 @@ async function bootstrap() {
 
   logger.log(`CORS Origins configured: ${allowedOrigins.join(', ')}`);
 
-  const alwaysAllowedOrigins = [
-    'https://marketplace.thebzlab.online',
-    'https://dashboard.thebzlab.online',
-    'https://agritech.thebzlab.online',
-    'https://agritech-dashboard.thebzlab.online',
-    'https://agritech-api.thebzlab.online',
-    'https://agritech-marketplace.thebzlab.online',
-  ];
-
   app.enableCors({
     origin: (origin, callback) => {
       // Allow requests with no origin (like mobile apps, Postman, or curl)
@@ -233,12 +262,6 @@ async function bootstrap() {
 
       logger.debug(`CORS: Checking origin: ${origin}`);
 
-      // Check if origin is in always-allowed list
-      if (alwaysAllowedOrigins.includes(origin)) {
-        logger.debug(`CORS: Origin ${origin} is in always-allowed list`);
-        return callback(null, true);
-      }
-
       // Check if origin is in configured allowed list
       if (allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
         logger.debug(`CORS: Origin ${origin} is allowed`);
@@ -248,18 +271,6 @@ async function bootstrap() {
       // For development, allow localhost with any port
       if (process.env.NODE_ENV !== 'production' && origin.includes('localhost')) {
         logger.debug(`CORS: Allowing localhost origin in development: ${origin}`);
-        return callback(null, true);
-      }
-
-      // For thebzlab.online subdomains, only allow known app prefixes
-      // to prevent abuse via attacker-controlled subdomains
-      const ALLOWED_THEBZLAB_SUBDOMAINS = [
-        'marketplace', 'dashboard', 'agritech', 'agritech-dashboard',
-        'agritech-api', 'agritech-marketplace', 'agritech-satellite',
-      ];
-      const thebzlabMatch = origin.match(/^https:\/\/([a-z0-9-]+)\.thebzlab\.online$/);
-      if (thebzlabMatch && ALLOWED_THEBZLAB_SUBDOMAINS.includes(thebzlabMatch[1])) {
-        logger.debug(`CORS: Allowing thebzlab.online subdomain: ${origin}`);
         return callback(null, true);
       }
 

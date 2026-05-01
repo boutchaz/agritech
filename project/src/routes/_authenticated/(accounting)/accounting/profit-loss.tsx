@@ -1,10 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/hooks/useAuth';
-import { PageLayout } from '@/components/PageLayout';
-import ModernPageHeader from '@/components/ModernPageHeader';
-import { Building2, TrendingUp, TrendingDown, AlertCircle, Download, Calendar, Wheat, CalendarRange } from 'lucide-react';
+import { TrendingUp, TrendingDown, AlertCircle, Download, Calendar, Wheat, CalendarRange } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -91,27 +89,29 @@ const AppContent = () => {
   const { data: campaigns = [] } = useCampaigns();
   const { data: fiscalYears = [] } = useFiscalYears();
 
-  useEffect(() => {
-    if (selectedCampaign !== 'all') {
-      const campaign = campaigns.find(c => c.id === selectedCampaign);
+  const handleCampaignChange = (value: string) => {
+    setSelectedCampaign(value);
+    if (value !== 'all') {
+      const campaign = campaigns.find(c => c.id === value);
       if (campaign) {
         setStartDate(campaign.start_date);
         setEndDate(campaign.end_date);
         setSelectedFiscalYear('all');
       }
     }
-  }, [selectedCampaign, campaigns]);
+  };
 
-  useEffect(() => {
-    if (selectedFiscalYear !== 'all') {
-      const fiscalYear = fiscalYears.find(fy => fy.id === selectedFiscalYear);
+  const handleFiscalYearChange = (value: string) => {
+    setSelectedFiscalYear(value);
+    if (value !== 'all') {
+      const fiscalYear = fiscalYears.find(fy => fy.id === value);
       if (fiscalYear) {
         setStartDate(fiscalYear.start_date);
         setEndDate(fiscalYear.end_date);
         setSelectedCampaign('all');
       }
     }
-  }, [selectedFiscalYear, fiscalYears]);
+  };
 
   const activeFiscalYearId = selectedFiscalYear !== 'all' ? selectedFiscalYear : undefined;
   const { data: report, isLoading, error } = useProfitLoss(startDate, endDate, activeFiscalYearId);
@@ -125,19 +125,6 @@ const AppContent = () => {
   }
 
   return (
-    <PageLayout
-      activeModule="accounting"
-      header={
-        <ModernPageHeader
-          breadcrumbs={[
-            { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
-            { icon: TrendingUp, label: t('reportsModule.profitLoss.title', 'Profit & Loss'), isActive: true }
-          ]}
-          title={t('reportsModule.profitLoss.title', 'Profit & Loss Statement')}
-          subtitle={t('reportsModule.profitLoss.subtitle', 'Income statement showing revenue, expenses, and net income')}
-        />
-      }
-    >
       <div className="p-6 space-y-6">
         {/* Date Filter */}
         <Card>
@@ -151,7 +138,7 @@ const AppContent = () => {
                 <NativeSelect
                   id="campaign"
                   value={selectedCampaign}
-                  onChange={(e) => setSelectedCampaign(e.target.value)}
+                  onChange={(e) => handleCampaignChange(e.target.value)}
                   className="max-w-xs"
                 >
                   <option value="all">{t('reportsModule.profitLoss.allCampaigns', 'All Campaigns')}</option>
@@ -168,7 +155,7 @@ const AppContent = () => {
                 <NativeSelect
                   id="fiscal_year"
                   value={selectedFiscalYear}
-                  onChange={(e) => setSelectedFiscalYear(e.target.value)}
+                  onChange={(e) => handleFiscalYearChange(e.target.value)}
                   className="max-w-xs"
                 >
                   <option value="all">{t('reportsModule.profitLoss.allFiscalYears', 'All Fiscal Years')}</option>
@@ -338,7 +325,6 @@ const AppContent = () => {
           </Card>
         )}
       </div>
-    </PageLayout>
   );
 };
 

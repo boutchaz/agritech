@@ -64,6 +64,18 @@ export class ModuleConfigDto {
 
   @ApiProperty({ description: 'Translated feature list', type: [String] })
   features: string[];
+
+  @ApiProperty({
+    description: 'Whether this module is active for the organization (only present in org-scoped responses)',
+    required: false,
+  })
+  isActive?: boolean;
+
+  @ApiProperty({
+    description: 'Per-organization module settings (only present in org-scoped responses)',
+    required: false,
+  })
+  settings?: Record<string, unknown>;
 }
 
 export class SubscriptionPricingDto {

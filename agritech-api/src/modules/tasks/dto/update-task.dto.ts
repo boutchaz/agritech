@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsOptional, IsIn, IsNumber, IsDateString, IsUUID, IsArray, Min, Max } from 'class-validator';
+import { IsString, IsOptional, IsIn, IsNumber, IsDateString, IsUUID, IsArray, IsInt, IsISO8601, Min, Max } from 'class-validator';
 import { Transform } from 'class-transformer';
 import { CreateTaskDto } from './create-task.dto';
 
@@ -9,6 +9,22 @@ function EmptyStringToNull() {
 }
 
 export class UpdateTaskDto {
+  @ApiPropertyOptional({ description: 'Client-generated UUID for idempotent replay' })
+  @IsOptional()
+  @IsUUID()
+  client_id?: string;
+
+  @ApiPropertyOptional({ description: 'Row version for optimistic concurrency' })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  version?: number;
+
+  @ApiPropertyOptional({ description: 'Client wall-clock at action time (ISO 8601)' })
+  @IsOptional()
+  @IsISO8601()
+  client_created_at?: string;
+
   @ApiPropertyOptional({ description: 'Task title' })
   @IsOptional()
   @IsString()

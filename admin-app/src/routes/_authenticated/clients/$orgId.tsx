@@ -1,6 +1,9 @@
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useForm, useWatch } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import {
   ArrowLeft,
   RefreshCw,
@@ -11,12 +14,25 @@ import {
   HardDrive,
   Activity,
   Calendar,
+  CheckCircle2,
+  Clock,
+  Mail,
+  Phone,
+  XCircle,
   CreditCard,
   Database,
   Download,
   Upload,
   Trash2,
   Loader2,
+  Save,
+  Sliders,
+  Power,
+  PauseCircle,
+  PlayCircle,
+  Search,
+  CheckSquare,
+  Square,
 } from 'lucide-react';
 import { apiRequest } from '@/lib/api-client';
 import { supabase } from '@/lib/supabase';
@@ -40,6 +56,13 @@ interface OrgUsage {
   lastActivityAt: string;
   events7d: number;
   events30d: number;
+  approvalStatus?: 'pending' | 'approved' | 'rejected';
+  approvedAt?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  ownerName?: string | null;
+  ownerEmail?: string | null;
+  ownerPhone?: string | null;
 }
 
 interface OrgUser {
@@ -101,17 +124,36 @@ function OrgDetailPage() {
     },
   });
 
-  // Users
+  // Users — organization_users.user_id has no FK to user_profiles (both
+  // reference auth.users.id), so PostgREST can't embed user_profiles.
+  // Fetch separately and merge by user_id.
   const { data: users = [] } = useQuery({
     queryKey: ['admin-org-users', orgId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data: rows, error } = await supabase
         .from('organization_users')
-        .select('id, user_id, is_active, created_at, profiles(full_name, email), roles(name)')
+        .select('id, user_id, is_active, created_at, roles(name)')
         .eq('organization_id', orgId)
         .order('created_at', { ascending: false });
       if (error) throw error;
-      return (data ?? []) as unknown as OrgUser[];
+
+      const userIds = Array.from(new Set((rows ?? []).map((r: any) => r.user_id).filter(Boolean)));
+      const profileMap = new Map<string, { full_name: string | null; email: string | null }>();
+      if (userIds.length > 0) {
+        const { data: profiles, error: profilesError } = await supabase
+          .from('user_profiles')
+          .select('id, full_name, email')
+          .in('id', userIds);
+        if (profilesError) throw profilesError;
+        for (const p of profiles ?? []) {
+          profileMap.set(p.id as string, { full_name: p.full_name ?? null, email: p.email ?? null });
+        }
+      }
+
+      return (rows ?? []).map((r: any) => ({
+        ...r,
+        profiles: profileMap.get(r.user_id) ?? null,
+      })) as unknown as OrgUser[];
     },
     enabled: activeTab === 'users',
   });
@@ -138,6 +180,20 @@ function OrgDetailPage() {
     },
     onError: (err: Error) => toast.error(err.message),
   });
+
+  // Canonical modules list for the picker
+  const { data: modulesCatalog } = useQuery({
+    queryKey: ['admin-modules'],
+    queryFn: () => apiRequest<Array<{ id: string; slug: string; name: string; category: string | null; is_required?: boolean }>>('/api/v1/admin/modules'),
+  });
+
+  // Enabled modules for this org (organization_modules table — source of truth)
+  const { data: enabledModulesResp } = useQuery({
+    queryKey: ['admin-org-modules', orgId],
+    queryFn: () =>
+      apiRequest<{ enabled: string[] }>(`/api/v1/admin/orgs/${orgId}/modules`),
+  });
+  const enabledModuleSlugs = enabledModulesResp?.enabled ?? [];
 
   // Demo data mutations
   const seedMutation = useMutation({
@@ -268,6 +324,29 @@ function OrgDetailPage() {
         </div>
       </div>
 
+      {/* Approval + Contact */}
+      {usage && (
+        <div className="mb-6 grid gap-3 md:grid-cols-2">
+          <ApprovalCard
+            orgId={orgId}
+            status={usage.approvalStatus ?? 'pending'}
+            approvedAt={usage.approvedAt ?? null}
+            onChange={() => {
+              refetch();
+              queryClient.invalidateQueries({ queryKey: ['admin-org-detail', orgId] });
+              queryClient.invalidateQueries({ queryKey: ['admin-clients'] });
+            }}
+          />
+          <ContactCard
+            email={usage.email ?? org?.email ?? null}
+            phone={usage.phone ?? org?.phone ?? null}
+            ownerName={usage.ownerName ?? null}
+            ownerEmail={usage.ownerEmail ?? null}
+            ownerPhone={usage.ownerPhone ?? null}
+          />
+        </div>
+      )}
+
       {/* Usage Stats Cards */}
       {usage && (
         <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
@@ -308,28 +387,17 @@ function OrgDetailPage() {
         </div>
       ) : activeTab === 'overview' ? (
         <div className="grid gap-6 lg:grid-cols-2">
-          {/* Subscription Card */}
+          {/* Contract Card */}
           <div className="rounded-lg border border-gray-200 bg-white p-5">
             <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-4">
-              <CreditCard className="h-4 w-4" /> Subscription
+              <CreditCard className="h-4 w-4" /> Contract
             </h3>
             {subscription ? (
               <dl className="space-y-2.5 text-sm">
                 <Row label="Status">
                   <SubBadge status={subscription.status} />
                 </Row>
-                <Row label="Formula">
-                  <span className="capitalize font-medium">{subscription.formula ?? '—'}</span>
-                </Row>
-                <Row label="Billing">
-                  <span className="capitalize">{subscription.billing_cycle ?? '—'}</span>
-                </Row>
                 <Row label="Hectares">{subscription.contracted_hectares ?? '—'} ha</Row>
-                <Row label="Amount TTC">
-                  {subscription.amount_ttc
-                    ? `${subscription.amount_ttc} ${subscription.currency}`
-                    : '—'}
-                </Row>
                 <Row label="Period Start">
                   {subscription.current_period_start
                     ? new Date(subscription.current_period_start).toLocaleDateString('fr-FR')
@@ -343,17 +411,22 @@ function OrgDetailPage() {
                 <Row label="Limits">
                   {subscription.max_farms} farms / {subscription.max_users} users
                 </Row>
-                {subscription.selected_modules && (
-                  <Row label="Modules">
-                    <div className="flex flex-wrap gap-1">
-                      {(subscription.selected_modules as string[]).map((m: string) => (
+                <Row label={`Modules (${enabledModuleSlugs.length})`}>
+                  {enabledModuleSlugs.length > 0 ? (
+                    <div className="flex flex-wrap gap-1 justify-end">
+                      {enabledModuleSlugs.map((m) => (
                         <span key={m} className="rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-600">
                           {m}
                         </span>
                       ))}
                     </div>
-                  </Row>
-                )}
+                  ) : (
+                    <span className="text-xs text-gray-400">none enabled yet</span>
+                  )}
+                </Row>
+                <p className="pt-2 text-[11px] text-gray-400 border-t border-gray-100 mt-3">
+                  Pricing is negotiated per customer. Limits and modules are edited below.
+                </p>
               </dl>
             ) : (
               <p className="text-sm text-gray-400">No subscription</p>
@@ -405,6 +478,20 @@ function OrgDetailPage() {
             ) : (
               <p className="text-sm text-gray-400">Create a subscription first</p>
             )}
+          </div>
+
+          {/* Subscription quick actions */}
+          <div className="lg:col-span-2">
+            <SubscriptionActionsCard orgId={orgId} subscription={subscription} />
+          </div>
+
+          {/* Hard Limits & Modules (case-by-case) */}
+          <div className="lg:col-span-2">
+            <HardLimitsCard
+              orgId={orgId}
+              subscription={subscription}
+              modulesCatalog={modulesCatalog ?? []}
+            />
           </div>
 
           {/* Revenue Card */}
@@ -636,6 +723,493 @@ function SubBadge({ status }: { status: string }) {
   );
 }
 
+const limitsSchema = z.object({
+  max_farms: z.number().int().min(0).max(10000),
+  max_users: z.number().int().min(0).max(10000),
+  max_parcels: z.number().int().min(0).max(100000),
+  contracted_hectares: z.number().min(0).max(1_000_000),
+  selected_modules: z.array(z.string()),
+});
+
+type LimitsFormData = z.infer<typeof limitsSchema>;
+
+function HardLimitsCard({
+  orgId,
+  subscription,
+  modulesCatalog,
+}: {
+  orgId: string;
+  subscription: any;
+  modulesCatalog: Array<{ id: string; slug: string; name: string; category: string | null; is_required?: boolean }>;
+}) {
+  const queryClient = useQueryClient();
+
+  // Source of truth for enabled modules: organization_modules (populated at onboarding)
+  const { data: enabledModulesResp } = useQuery({
+    queryKey: ['admin-org-modules', orgId],
+    queryFn: () =>
+      apiRequest<{ enabled: string[] }>(`/api/v1/admin/orgs/${orgId}/modules`),
+    // Without this, window focus refetches return a new object ref, the reset
+    // effect below fires, and any in-progress checkbox toggles get wiped.
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
+  });
+  const enabledModules = enabledModulesResp?.enabled ?? [];
+
+  const defaultValues: LimitsFormData = {
+    max_farms: subscription?.max_farms ?? 0,
+    max_users: subscription?.max_users ?? 0,
+    max_parcels: subscription?.max_parcels ?? 0,
+    contracted_hectares: Number(subscription?.contracted_hectares ?? 0),
+    selected_modules: enabledModules,
+  };
+
+  const form = useForm<LimitsFormData>({
+    resolver: zodResolver(limitsSchema),
+    defaultValues,
+  });
+
+  // Re-sync defaults when subscription row / enabled modules arrive.
+  // keepDirtyValues preserves any field the user has already touched.
+  useEffect(() => {
+    form.reset(
+      {
+        max_farms: subscription?.max_farms ?? 0,
+        max_users: subscription?.max_users ?? 0,
+        max_parcels: subscription?.max_parcels ?? 0,
+        contracted_hectares: Number(subscription?.contracted_hectares ?? 0),
+        selected_modules: enabledModules,
+      },
+      { keepDirtyValues: true },
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [subscription?.id, enabledModulesResp]);
+
+  const requiredSlugs = useMemo(
+    () => new Set((modulesCatalog ?? []).filter((m) => m.is_required).map((m) => m.slug)),
+    [modulesCatalog],
+  );
+
+  const mutation = useMutation({
+    mutationFn: async (data: LimitsFormData) => {
+      const { selected_modules, ...limits } = data;
+
+      // Always include required slugs — the backend rejects payloads that
+      // omit them, and the UI disables the checkbox anyway.
+      const enabled = Array.from(new Set([...selected_modules, ...Array.from(requiredSlugs)]));
+
+      await apiRequest(`/api/v1/admin/orgs/${orgId}/contract`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          ...limits,
+          enabled,
+        }),
+      });
+
+      return { ...data, selected_modules: enabled };
+    },
+    onSuccess: (saved) => {
+      toast.success('Hard limits saved');
+      // Mark form clean using the values we just persisted, so the Save button
+      // disables until the user changes something else.
+      form.reset(saved);
+      queryClient.invalidateQueries({ queryKey: ['admin-org-subscription', orgId] });
+      queryClient.invalidateQueries({ queryKey: ['admin-org-usage', orgId] });
+      queryClient.invalidateQueries({ queryKey: ['admin-org-modules', orgId] });
+    },
+    onError: (err: Error) => toast.error(err.message || 'Failed to save'),
+  });
+
+  const selected = useWatch({ control: form.control, name: 'selected_modules' }) ?? [];
+  const [search, setSearch] = useState('');
+
+  const setSelected = (next: string[]) => {
+    // Always keep required slugs present.
+    const merged = Array.from(new Set([...next, ...Array.from(requiredSlugs)]));
+    form.setValue('selected_modules', merged, { shouldDirty: true });
+  };
+
+  const toggleModule = (slug: string) => {
+    if (requiredSlugs.has(slug)) return;
+    const next = selected.includes(slug)
+      ? selected.filter((s) => s !== slug)
+      : [...selected, slug];
+    setSelected(next);
+  };
+
+  const moduleKey = (mod: { slug: string; id: string }) => mod.slug || mod.id;
+  const matchesSearch = (mod: { slug: string; name: string; category: string | null }) => {
+    if (!search.trim()) return true;
+    const q = search.trim().toLowerCase();
+    return (
+      mod.name.toLowerCase().includes(q) ||
+      mod.slug.toLowerCase().includes(q) ||
+      (mod.category ?? '').toLowerCase().includes(q)
+    );
+  };
+
+  const filteredCatalog = useMemo(
+    () => (modulesCatalog ?? []).filter(matchesSearch),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [modulesCatalog, search],
+  );
+
+  // Group filtered modules by category for readability
+  const byCategory = filteredCatalog.reduce<Record<string, typeof modulesCatalog>>(
+    (acc, mod) => {
+      const key = mod.category || 'general';
+      if (!acc[key]) acc[key] = [];
+      acc[key].push(mod);
+      return acc;
+    },
+    {},
+  );
+
+  const togglableSlugs = (mods: typeof modulesCatalog) =>
+    mods.filter((m) => !m.is_required).map(moduleKey);
+
+  const selectAllVisible = () => {
+    const visibleTogglable = togglableSlugs(filteredCatalog);
+    setSelected(Array.from(new Set([...selected, ...visibleTogglable])));
+  };
+
+  const deselectAllVisible = () => {
+    const visibleTogglable = new Set(togglableSlugs(filteredCatalog));
+    setSelected(selected.filter((s) => !visibleTogglable.has(s)));
+  };
+
+  const toggleCategory = (mods: typeof modulesCatalog) => {
+    const slugs = togglableSlugs(mods);
+    const allOn = slugs.every((s) => selected.includes(s));
+    if (allOn) {
+      const off = new Set(slugs);
+      setSelected(selected.filter((s) => !off.has(s)));
+    } else {
+      setSelected(Array.from(new Set([...selected, ...slugs])));
+    }
+  };
+
+  return (
+    <div className="rounded-lg border border-gray-200 bg-white p-5">
+      <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-4">
+        <Sliders className="h-4 w-4" /> Hard Limits & Modules (case-by-case)
+      </h3>
+
+      <form
+        onSubmit={form.handleSubmit((data) => mutation.mutate(data))}
+        className="space-y-5"
+      >
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Max farms</label>
+            <input
+              type="number"
+              min={0}
+              {...form.register('max_farms', { valueAsNumber: true })}
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Max users</label>
+            <input
+              type="number"
+              min={0}
+              {...form.register('max_users', { valueAsNumber: true })}
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Max parcels</label>
+            <input
+              type="number"
+              min={0}
+              {...form.register('max_parcels', { valueAsNumber: true })}
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Contracted hectares</label>
+            <input
+              type="number"
+              min={0}
+              step="0.01"
+              {...form.register('contracted_hectares', { valueAsNumber: true })}
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            />
+          </div>
+        </div>
+
+        <div>
+          <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+              Enabled modules ({selected.length}
+              {modulesCatalog.length > 0 && ` / ${modulesCatalog.length}`})
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={selectAllVisible}
+                disabled={filteredCatalog.length === 0}
+                className="inline-flex items-center gap-1 rounded-md border border-gray-200 bg-white px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+              >
+                <CheckSquare className="h-3.5 w-3.5" />
+                {search.trim() ? 'Select visible' : 'Select all'}
+              </button>
+              <button
+                type="button"
+                onClick={deselectAllVisible}
+                disabled={filteredCatalog.length === 0}
+                className="inline-flex items-center gap-1 rounded-md border border-gray-200 bg-white px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+              >
+                <Square className="h-3.5 w-3.5" />
+                {search.trim() ? 'Deselect visible' : 'Deselect all'}
+              </button>
+            </div>
+          </div>
+
+          <div className="relative mb-3">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search modules by name, slug or category…"
+              className="w-full rounded-md border border-gray-300 pl-8 pr-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            />
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch('')}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-400 hover:text-gray-600"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+
+          {modulesCatalog.length === 0 ? (
+            <p className="text-sm text-gray-400">No module catalog loaded.</p>
+          ) : filteredCatalog.length === 0 ? (
+            <p className="text-sm text-gray-400">No modules match "{search}".</p>
+          ) : (
+            <div className="space-y-3">
+              {Object.entries(byCategory).map(([category, mods]) => {
+                const togglable = mods.filter((m) => !m.is_required);
+                const onCount = togglable.filter((m) => selected.includes(moduleKey(m))).length;
+                const allOn = togglable.length > 0 && onCount === togglable.length;
+                return (
+                  <div key={category}>
+                    <div className="mb-1.5 flex items-center justify-between">
+                      <p className="text-[11px] font-medium uppercase tracking-wide text-gray-400">
+                        {category}{' '}
+                        <span className="ml-1 normal-case text-gray-300">
+                          ({onCount}/{togglable.length})
+                        </span>
+                      </p>
+                      {togglable.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => toggleCategory(mods)}
+                          className="text-[11px] font-medium text-emerald-700 hover:underline"
+                        >
+                          {allOn ? 'Deselect all' : 'Select all'}
+                        </button>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-2 gap-1.5 md:grid-cols-3">
+                      {mods.map((mod) => {
+                        const key = moduleKey(mod);
+                        const isOn = selected.includes(key);
+                        const isRequired = !!mod.is_required;
+                        return (
+                          <label
+                            key={mod.id}
+                            title={isRequired ? 'Module requis — ne peut pas être désactivé' : undefined}
+                            className={clsx(
+                              'flex items-center gap-2 rounded-md border px-2.5 py-1.5 text-sm select-none',
+                              isRequired ? 'cursor-not-allowed' : 'cursor-pointer',
+                              isOn
+                                ? 'border-emerald-500 bg-emerald-50'
+                                : 'border-gray-200 bg-white hover:bg-gray-50',
+                            )}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isOn}
+                              disabled={isRequired}
+                              onChange={() => toggleModule(key)}
+                              className="h-4 w-4 text-emerald-600 disabled:opacity-60"
+                            />
+                            <span className="truncate">
+                              {mod.name}
+                              {isRequired && <span className="ml-1 text-[10px] text-gray-400">(requis)</span>}
+                            </span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center justify-between border-t border-gray-100 pt-3">
+          <p className="text-xs text-gray-500">
+            {subscription
+              ? 'Updates the existing subscription row.'
+              : 'No subscription yet — saving creates one (14-day trial).'}
+          </p>
+          <button
+            type="submit"
+            disabled={mutation.isPending || !form.formState.isDirty}
+            className="inline-flex items-center gap-2 rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
+          >
+            {mutation.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Save className="h-4 w-4" />
+            )}
+            Save limits
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+function ApprovalCard({
+  orgId,
+  status,
+  approvedAt,
+  onChange,
+}: {
+  orgId: string;
+  status: 'pending' | 'approved' | 'rejected';
+  approvedAt: string | null;
+  onChange: () => void;
+}) {
+  const [loading, setLoading] = useState<'approve' | 'reject' | null>(null);
+
+  const run = async (action: 'approve' | 'reject') => {
+    setLoading(action);
+    try {
+      await apiRequest(`/api/v1/admin/orgs/${orgId}/${action}`, { method: 'POST' });
+      toast.success(action === 'approve' ? 'Organization approved' : 'Organization rejected');
+      onChange();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed');
+    }
+    setLoading(null);
+  };
+
+  const badge = {
+    pending: { Icon: Clock, label: 'Pending', cls: 'bg-amber-50 text-amber-700 border-amber-200' },
+    approved: { Icon: CheckCircle2, label: 'Approved', cls: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+    rejected: { Icon: XCircle, label: 'Rejected', cls: 'bg-red-50 text-red-700 border-red-200' },
+  }[status];
+  const Badge = badge.Icon;
+
+  return (
+    <div className="rounded-lg border border-gray-200 bg-white p-5">
+      <h3 className="flex items-center justify-between gap-2 text-sm font-semibold text-gray-700 mb-3">
+        <span>Approval</span>
+        <span
+          className={clsx(
+            'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium',
+            badge.cls,
+          )}
+        >
+          <Badge className="h-3 w-3" />
+          {badge.label}
+        </span>
+      </h3>
+      {approvedAt && (
+        <p className="text-xs text-gray-500 mb-3">
+          Last decision: {new Date(approvedAt).toLocaleString('fr-FR')}
+        </p>
+      )}
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <button
+          type="button"
+          disabled={status === 'approved' || loading !== null}
+          onClick={() => run('approve')}
+          className="flex-1 rounded-md bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-40"
+        >
+          {loading === 'approve' ? 'Approving…' : 'Approve'}
+        </button>
+        <button
+          type="button"
+          disabled={status === 'rejected' || loading !== null}
+          onClick={() => run('reject')}
+          className="flex-1 rounded-md bg-red-600 px-3 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-40"
+        >
+          {loading === 'reject' ? 'Rejecting…' : 'Reject'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ContactCard({
+  email,
+  phone,
+  ownerName,
+  ownerEmail,
+  ownerPhone,
+}: {
+  email: string | null;
+  phone: string | null;
+  ownerName: string | null;
+  ownerEmail: string | null;
+  ownerPhone: string | null;
+}) {
+  const hasAny = email || phone || ownerName || ownerEmail || ownerPhone;
+  return (
+    <div className="rounded-lg border border-gray-200 bg-white p-5">
+      <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-3">
+        <Mail className="h-4 w-4" /> Contact
+      </h3>
+      {!hasAny ? (
+        <p className="text-sm text-gray-400">No contact info provided yet.</p>
+      ) : (
+        <div className="space-y-3 text-sm text-gray-700">
+          <div>
+            <p className="text-[11px] font-medium uppercase tracking-wide text-gray-400">Organization</p>
+            {email && (
+              <a href={`mailto:${email}`} className="flex items-center gap-2 hover:text-emerald-700">
+                <Mail className="h-3.5 w-3.5 text-gray-400" /> {email}
+              </a>
+            )}
+            {phone && (
+              <a href={`tel:${phone.replace(/\s+/g, '')}`} className="flex items-center gap-2 hover:text-emerald-700">
+                <Phone className="h-3.5 w-3.5 text-gray-400" /> {phone}
+              </a>
+            )}
+            {!email && !phone && <p className="text-gray-400">—</p>}
+          </div>
+          <div className="border-t pt-2">
+            <p className="text-[11px] font-medium uppercase tracking-wide text-gray-400">Owner</p>
+            {ownerName && <p className="font-medium">{ownerName}</p>}
+            {ownerEmail && (
+              <a href={`mailto:${ownerEmail}`} className="flex items-center gap-2 hover:text-emerald-700">
+                <Mail className="h-3.5 w-3.5 text-gray-400" /> {ownerEmail}
+              </a>
+            )}
+            {ownerPhone && (
+              <a href={`tel:${ownerPhone.replace(/\s+/g, '')}`} className="flex items-center gap-2 hover:text-emerald-700">
+                <Phone className="h-3.5 w-3.5 text-gray-400" /> {ownerPhone}
+              </a>
+            )}
+            {!ownerName && !ownerEmail && !ownerPhone && <p className="text-gray-400">—</p>}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function StatCard({
   icon: Icon,
   label,
@@ -697,6 +1271,96 @@ function DemoButton({
         <p className="text-xs text-gray-500 mt-0.5">{description}</p>
       </div>
     </button>
+  );
+}
+
+function SubscriptionActionsCard({
+  orgId,
+  subscription,
+}: {
+  orgId: string;
+  subscription: any;
+}) {
+  const queryClient = useQueryClient();
+
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: ['admin-org-subscription', orgId] });
+    queryClient.invalidateQueries({ queryKey: ['admin-org-usage', orgId] });
+  };
+
+  const updateStatus = useMutation({
+    mutationFn: (status: 'active' | 'suspended') =>
+      apiRequest(`/api/v1/admin/subscriptions/${orgId}`, {
+        method: 'PUT',
+        body: JSON.stringify({ status }),
+      }),
+    onSuccess: (_d, status) => {
+      toast.success(status === 'active' ? 'Subscription activated' : 'Subscription suspended');
+      invalidate();
+    },
+    onError: (err: Error) => toast.error(err.message || 'Failed'),
+  });
+
+  const createTrial = useMutation({
+    mutationFn: () =>
+      apiRequest(`/api/v1/admin/subscriptions/${orgId}/create`, {
+        method: 'POST',
+        body: JSON.stringify({
+          formula: 'starter',
+          billing_cycle: 'monthly',
+          contracted_hectares: 50,
+          days: 14,
+          status: 'trialing',
+        }),
+      }),
+    onSuccess: () => {
+      toast.success('Trial subscription created (14 days)');
+      invalidate();
+    },
+    onError: (err: Error) => toast.error(err.message || 'Failed'),
+  });
+
+  return (
+    <div className="rounded-lg border border-gray-200 bg-white p-5">
+      <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-4">
+        <Power className="h-4 w-4" /> Subscription Actions
+      </h3>
+      <div className="flex flex-wrap gap-2">
+        {!subscription && (
+          <button
+            type="button"
+            onClick={() => createTrial.mutate()}
+            disabled={createTrial.isPending}
+            className="inline-flex items-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+          >
+            {createTrial.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <PlayCircle className="h-4 w-4" />}
+            Create Trial (14 days)
+          </button>
+        )}
+        {subscription && subscription.status !== 'active' && (
+          <button
+            type="button"
+            onClick={() => updateStatus.mutate('active')}
+            disabled={updateStatus.isPending}
+            className="inline-flex items-center gap-2 rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
+          >
+            {updateStatus.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <PlayCircle className="h-4 w-4" />}
+            Activate
+          </button>
+        )}
+        {subscription && subscription.status === 'active' && (
+          <button
+            type="button"
+            onClick={() => updateStatus.mutate('suspended')}
+            disabled={updateStatus.isPending}
+            className="inline-flex items-center gap-2 rounded-md bg-amber-500 px-4 py-2 text-sm font-medium text-white hover:bg-amber-600 disabled:opacity-50"
+          >
+            {updateStatus.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <PauseCircle className="h-4 w-4" />}
+            Suspend
+          </button>
+        )}
+      </div>
+    </div>
   );
 }
 

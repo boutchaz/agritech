@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
-  useItems,
+  usePaginatedItems,
   useItemGroups,
   useCreateItem,
   useUpdateItem,
@@ -20,7 +20,14 @@ import { useCurrency } from '@/hooks/useCurrency';
 import { useFarms } from '@/hooks/useParcelsQuery';
 import { useFormErrors } from '@/hooks/useFormErrors';
 import { Button } from '@/components/ui/button';
-import { FilterBar, ListPageLayout, ListPageHeader, ResponsiveList } from '@/components/ui/data-table';
+import {
+  FilterBar,
+  ListPageLayout,
+  ListPageHeader,
+  ResponsiveList,
+  useServerTableState,
+  DataTablePagination,
+} from '@/components/ui/data-table';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/label';
@@ -52,21 +59,32 @@ import {
   DrawerDescription,
   DrawerFooter,
 } from '@/components/ui/drawer';
-import { Plus, Trash2, Pencil, Package, Loader2, ExternalLink, Eye, AlertTriangle, ShoppingBag, Layers, Clock3 } from 'lucide-react';
+import { Plus, Trash2, Pencil, Package, Loader2, ExternalLink, Eye, AlertTriangle, ShoppingBag, Layers, Clock3, ScanBarcode, Barcode } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from '@tanstack/react-router';
 import { itemsApi } from '@/lib/api/items';
 import { marketplaceCategoriesApi } from '@/lib/api/marketplace-categories';
 import { toast } from 'sonner';
-import type { Item, CreateItemInput, ProductVariant, ItemStockLevelsResponse } from '@/types/items';
+import type { Item, CreateItemInput, ProductVariant, ItemStockLevelsResponse, ItemGroup } from '@/types/items';
 import type { WorkUnit } from '@/types/work-units';
 import LowStockAlerts from './LowStockAlerts';
-import FarmStockLevels from './FarmStockLevels';
-import ItemFarmUsage from './ItemFarmUsage';
-import ProductImageUpload from './ProductImageUpload';
+import { PhotoUpload } from '@/components/ui/PhotoUpload';
 import ItemStockTimeline from './ItemStockTimeline';
 import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { EmptyState } from '@/components/ui/empty-state';
+import { ItemBarcodesManager } from './ItemBarcodesManager';
+
+// Stable empty array reference to avoid creating a new `[]` on every render
+// when the useItemGroups query data is undefined. Without this, the form's
+// effect deps churn each render and trigger a setValue/reset re-render loop.
+const EMPTY_ITEM_GROUPS: ItemGroup[] = [];
 
 // Zod schema for item form validation
 const itemFormSchema = z.object({
@@ -122,6 +140,7 @@ interface ItemVariantsDialogProps {
 
 function ItemGroupForm({ open, onOpenChange, onSuccess }: { open: boolean; onOpenChange: (open: boolean) => void; onSuccess?: () => void }) {
   const { t } = useTranslation('stock');
+  const { t: tCommon } = useTranslation('common');
   const { currentOrganization } = useAuth();
   const createItemGroup = useCreateItemGroup();
   const [groupName, setGroupName] = useState('');
@@ -149,7 +168,7 @@ function ItemGroupForm({ open, onOpenChange, onSuccess }: { open: boolean; onOpe
       setGroupDescription('');
       onOpenChange(false);
       onSuccess?.();
-    } catch (error: unknown) {
+    } catch (_error: unknown) {
       toast.error(t('items.itemGroup.createFailed'));
     }
   };
@@ -203,7 +222,7 @@ function ItemGroupForm({ open, onOpenChange, onSuccess }: { open: boolean; onOpe
             onClick={() => onOpenChange(false)}
             disabled={createItemGroup.isPending}
           >
-            {t('app.cancel')}
+            {tCommon('app.cancel', 'Cancel')}
           </Button>
           <Button
             type="submit"
@@ -227,10 +246,12 @@ function ItemGroupForm({ open, onOpenChange, onSuccess }: { open: boolean; onOpe
 
 function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
   const { t } = useTranslation('stock');
+  const { t: tCommon } = useTranslation('common');
   const { currentOrganization } = useAuth();
   const { format: formatCurrency } = useCurrency();
   const navigate = useNavigate();
-  const { data: itemGroups = [], refetch: refetchGroups } = useItemGroups({ is_active: true });
+  const { data: itemGroupsData, refetch: refetchGroups } = useItemGroups({ is_active: true });
+  const itemGroups = itemGroupsData ?? EMPTY_ITEM_GROUPS;
   const createItem = useCreateItem();
   const updateItem = useUpdateItem();
   const { handleFormError } = useFormErrors<ItemFormData>();
@@ -244,6 +265,7 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
     setError,
     watch,
     setValue,
+    getValues,
     formState: { errors, isSubmitting },
   } = useForm<ItemFormData>({
     resolver: zodResolver(itemFormSchema),
@@ -387,10 +409,10 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
   }, [item, firstItemGroupId, reset, itemGroups]);
 
   useEffect(() => {
-    if (!item && itemGroups.length > 0 && !watch('item_group_id')) {
-      setValue('item_group_id', itemGroups[0].id);
+    if (!item && firstItemGroupId && !getValues('item_group_id')) {
+      setValue('item_group_id', firstItemGroupId);
     }
-  }, [itemGroups, item, watch, setValue]);
+  }, [firstItemGroupId, item, getValues, setValue]);
 
   const handleGroupCreated = async () => {
     await new Promise((resolve) => setTimeout(resolve, 100));
@@ -737,12 +759,12 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
                     disabled={categoriesLoading}
                   >
                     <SelectTrigger className="mt-1">
-                      <SelectValue placeholder={categoriesLoading ? t('app.loading') : t('items.marketplace.selectCategory', 'Select a category')} />
+                      <SelectValue placeholder={categoriesLoading ? tCommon('app.loading', 'Loading...') : t('items.marketplace.selectCategory', 'Select a category')} />
                     </SelectTrigger>
                     <SelectContent>
                       {marketplaceCategories.length === 0 ? (
                         <div className="p-2 text-sm text-muted-foreground">
-                          {categoriesLoading ? t('app.loading') : 'No categories available. Check console for errors.'}
+                          {categoriesLoading ? tCommon('app.loading', 'Loading...') : 'No categories available. Check console for errors.'}
                         </div>
                       ) : (
                         marketplaceCategories.map((cat) => (
@@ -763,13 +785,17 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
                   <Label className="text-sm font-medium">
                     {t('items.marketplace.images', 'Product Images')}
                   </Label>
-                  <ProductImageUpload
-                    itemId={item?.id}
+                  <PhotoUpload
                     organizationId={currentOrganization?.id || ''}
-                    images={watch('images') || []}
-                    onImagesChange={(images) => setValue('images', images)}
-                    maxImages={5}
+                    photos={watch('images') || []}
+                    onChange={(images) => setValue('images', images)}
+                    bucket="products"
+                    entityType="stock-item"
+                    entityId={item?.id}
+                    fieldName="images"
+                    maxPhotos={5}
                     disabled={!currentOrganization?.id}
+                    showPrimary
                   />
                 </div>
 
@@ -905,7 +931,7 @@ function ItemForm({ item, open, onOpenChange }: ItemFormProps) {
                onClick={() => onOpenChange(false)}
                disabled={isSubmitting || createItem.isPending || updateItem.isPending}
              >
-               {t('app.cancel')}
+               {tCommon('app.cancel', 'Cancel')}
              </Button>
              <Button type="submit" disabled={isSubmitting || createItem.isPending || updateItem.isPending}>
                {isSubmitting || createItem.isPending || updateItem.isPending ? (
@@ -938,6 +964,9 @@ function ItemVariantsDialog({ item, open, onOpenChange }: ItemVariantsDialogProp
   const deleteVariant = useDeleteItemVariant();
   const [editingVariant, setEditingVariant] = useState<ProductVariant | null>(null);
   const [variantToDelete, setVariantToDelete] = useState<ProductVariant | null>(null);
+  const [skuManuallyEdited, setSkuManuallyEdited] = useState(false);
+  const [selectedVariantForBarcodes, setSelectedVariantForBarcodes] = useState<ProductVariant | null>(null);
+  const [showVariantBarcodes, setShowVariantBarcodes] = useState(false);
 
   // Fetch work units for unit selection
   const { data: workUnits = [], isLoading: workUnitsLoading } = useQuery({
@@ -972,10 +1001,19 @@ function ItemVariantsDialog({ item, open, onOpenChange }: ItemVariantsDialogProp
     },
   });
 
+  const watchedVariantName = form.watch('variant_name');
+
+  useEffect(() => {
+    if (!open || editingVariant || !watchedVariantName || skuManuallyEdited) return;
+    const sku = `${item?.item_code ?? ''}-${watchedVariantName}`.toUpperCase().replace(/\s+/g, '');
+    form.setValue('variant_sku', sku);
+  }, [watchedVariantName, open, editingVariant, item, skuManuallyEdited, form]);
+
   // Reset form when dialog opens/closes or when switching between create/edit mode
   useEffect(() => {
     if (!open) {
       setEditingVariant(null);
+      setSkuManuallyEdited(false);
       form.reset({
         variant_name: '',
         variant_sku: '',
@@ -1118,8 +1156,9 @@ function ItemVariantsDialog({ item, open, onOpenChange }: ItemVariantsDialogProp
               <Input
                 id="variant_sku"
                 {...form.register('variant_sku')}
-                placeholder={t('items.variants.skuPlaceholder', 'Optional')}
+                placeholder={t('items.variants.skuPlaceholder', 'Auto-generated')}
                 className="mt-1"
+                onChange={() => setSkuManuallyEdited(true)}
               />
               {form.formState.errors.variant_sku && (
                 <p className="text-sm text-red-600 mt-1">{form.formState.errors.variant_sku.message}</p>
@@ -1196,18 +1235,6 @@ function ItemVariantsDialog({ item, open, onOpenChange }: ItemVariantsDialogProp
               />
               {form.formState.errors.min_stock_level && (
                 <p className="text-sm text-red-600 mt-1">{form.formState.errors.min_stock_level.message}</p>
-              )}
-            </div>
-            <div>
-              <Label htmlFor="variant_barcode">{t('items.variants.barcode', 'Barcode')}</Label>
-              <Input
-                id="variant_barcode"
-                {...form.register('barcode')}
-                placeholder="Optional"
-                className="mt-1"
-              />
-              {form.formState.errors.barcode && (
-                <p className="text-sm text-red-600 mt-1">{form.formState.errors.barcode.message}</p>
               )}
             </div>
             <div className="flex items-center gap-2 pt-6">
@@ -1336,7 +1363,18 @@ function ItemVariantsDialog({ item, open, onOpenChange }: ItemVariantsDialogProp
                           </span>
                         </TableCell>
                         <TableCell className="px-4 py-2 text-right">
-                          <div className="flex items-center justify-end gap-2">
+                          <div className="flex items-center justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedVariantForBarcodes(variant);
+                                setShowVariantBarcodes(true);
+                              }}
+                              title={t('barcode.dialog.title', 'Manage barcodes')}
+                            >
+                              <Barcode className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                            </Button>
                             <Button
                               variant="ghost"
                               size="sm"
@@ -1372,7 +1410,7 @@ function ItemVariantsDialog({ item, open, onOpenChange }: ItemVariantsDialogProp
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>{t('app.cancel')}</AlertDialogCancel>
+            <AlertDialogCancel>{t('common.cancel', 'Cancel')}</AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmVariantDelete}
               className="bg-red-600 hover:bg-red-700 text-white"
@@ -1389,25 +1427,65 @@ function ItemVariantsDialog({ item, open, onOpenChange }: ItemVariantsDialogProp
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      {showVariantBarcodes && selectedVariantForBarcodes && (
+        <Dialog open={showVariantBarcodes} onOpenChange={setShowVariantBarcodes}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>
+                {t('barcode.dialog.title', 'Manage Barcodes')} — {selectedVariantForBarcodes.variant_name}
+              </DialogTitle>
+              <DialogDescription>
+                {t('barcode.dialog.description', 'Add, edit, or remove barcodes for this variant')}
+              </DialogDescription>
+            </DialogHeader>
+            <ItemBarcodesManager variantId={selectedVariantForBarcodes.id} />
+          </DialogContent>
+        </Dialog>
+      )}
     </ResponsiveDialog>
   );
 }
 
-interface ItemManagementProps {
-  selectedItemId?: string;
+function ItemBarcodesDialog({ item, open, onOpenChange }: ItemVariantsDialogProps) {
+  const { t } = useTranslation('stock');
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>
+            {t('barcode.manageBarcodes', 'Manage Barcodes')} — {item?.item_name ?? ''}
+          </DialogTitle>
+          <DialogDescription>
+            {t('barcode.dialog.description', 'Each barcode must be unique within your organization.')}
+          </DialogDescription>
+        </DialogHeader>
+        <ItemBarcodesManager itemId={item?.id} />
+      </DialogContent>
+    </Dialog>
+  );
 }
 
-export default function ItemManagement({ selectedItemId }: ItemManagementProps) {
+export default function ItemManagement() {
   const { t } = useTranslation('stock');
   const { currentOrganization } = useAuth();
   const { format: formatCurrency } = useCurrency();
   const navigate = useNavigate();
   const [selectedFarm, setSelectedFarm] = useState<string>('all');
   const [lowStockOnly, setLowStockOnly] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedItemForDetails, setSelectedItemForDetails] = useState<Item | null>(null);
-  
-  const { data: items = [], isLoading } = useItems({ is_active: true, is_stock_item: true });
+  const tableState = useServerTableState({
+    defaultPageSize: 10,
+    defaultSort: { key: 'created_at', direction: 'desc' },
+  });
+
+  const { data: paginatedData, isLoading, isFetching } = usePaginatedItems({
+    ...tableState.queryParams,
+    is_active: true,
+    is_stock_item: true,
+  });
+  const items = paginatedData?.data ?? [];
+  const totalItems = paginatedData?.total ?? 0;
+  const totalPages = paginatedData?.totalPages ?? 0;
   const { data: farms = [] } = useFarms(currentOrganization?.id);
   const deleteItem = useDeleteItem();
   const [showForm, setShowForm] = useState(false);
@@ -1417,6 +1495,8 @@ export default function ItemManagement({ selectedItemId }: ItemManagementProps) 
   const [showVariantsDialog, setShowVariantsDialog] = useState(false);
   const [variantsItem, setVariantsItem] = useState<Item | null>(null);
   const [timelineItem, setTimelineItem] = useState<Item | null>(null);
+  const [barcodesItem, setBarcodesItem] = useState<Item | null>(null);
+  const [showBarcodesDialog, setShowBarcodesDialog] = useState(false);
 
   // Fetch stock levels for items with farm context
   const { data: stockLevels = {} } = useQuery<ItemStockLevelsResponse>({
@@ -1439,8 +1519,8 @@ export default function ItemManagement({ selectedItemId }: ItemManagementProps) 
     let filtered = items;
 
     // Filter by search term
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase();
+    if (tableState.search) {
+      const term = tableState.search.toLowerCase();
       filtered = filtered.filter(
         (item) =>
           item.item_code.toLowerCase().includes(term) ||
@@ -1498,7 +1578,7 @@ export default function ItemManagement({ selectedItemId }: ItemManagementProps) 
     }
 
     return filtered;
-  }, [items, searchTerm, selectedFarm, lowStockOnly, stockLevels]);
+  }, [items, tableState.search, selectedFarm, lowStockOnly, stockLevels]);
 
   const handleEdit = (item: Item) => {
     setSelectedItem(item);
@@ -1513,6 +1593,11 @@ export default function ItemManagement({ selectedItemId }: ItemManagementProps) 
   const handleVariants = (item: Item) => {
     setVariantsItem(item);
     setShowVariantsDialog(true);
+  };
+
+  const handleBarcodes = (item: Item) => {
+    setBarcodesItem(item);
+    setShowBarcodesDialog(true);
   };
 
   const handleDelete = (item: Item) => {
@@ -1534,32 +1619,11 @@ export default function ItemManagement({ selectedItemId }: ItemManagementProps) 
   };
 
   const openItemDetails = (item: Item) => {
-    setSelectedItemForDetails(item);
     void navigate({
-      to: '/stock/items',
-      search: { itemId: item.id },
-      replace: true,
+      to: '/stock/items/$itemId',
+      params: { itemId: item.id },
     });
   };
-
-  const closeItemDetails = () => {
-    setSelectedItemForDetails(null);
-    void navigate({
-      to: '/stock/items',
-      search: () => ({}),
-      replace: true,
-    });
-  };
-
-  useEffect(() => {
-    if (!selectedItemId) {
-      setSelectedItemForDetails(null);
-      return;
-    }
-
-    const matchingItem = items.find((item) => item.id === selectedItemId) || null;
-    setSelectedItemForDetails(matchingItem);
-  }, [items, selectedItemId]);
 
   return (
     <>
@@ -1586,8 +1650,8 @@ export default function ItemManagement({ selectedItemId }: ItemManagementProps) 
                 <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:gap-4">
                   <div className="min-w-0 flex-1">
                     <FilterBar
-                      searchValue={searchTerm}
-                      onSearchChange={setSearchTerm}
+                      searchValue={tableState.search}
+                      onSearchChange={tableState.setSearch}
                       searchPlaceholder={t('items.searchPlaceholder', 'Search items...')}
                       className="w-full"
                     />
@@ -1613,10 +1677,9 @@ export default function ItemManagement({ selectedItemId }: ItemManagementProps) 
                     </Select>
                   </div>
 
-                  <button
-                    type="button"
+                  <label
+                    htmlFor="low-stock-only-switch"
                     className="flex cursor-pointer items-center justify-between gap-3 rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 transition-colors hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-900 dark:hover:bg-gray-800 sm:justify-start sm:px-3 sm:py-2"
-                    onClick={() => setLowStockOnly(!lowStockOnly)}
                   >
                     <div className="flex flex-1 items-center gap-2 sm:flex-initial">
                       <AlertTriangle className={`h-4 w-4 transition-colors ${lowStockOnly ? 'text-amber-600 dark:text-amber-400' : 'text-gray-400'}`} />
@@ -1625,11 +1688,11 @@ export default function ItemManagement({ selectedItemId }: ItemManagementProps) 
                       </span>
                     </div>
                     <Switch
+                      id="low-stock-only-switch"
                       checked={lowStockOnly}
                       onCheckedChange={setLowStockOnly}
-                      className="pointer-events-none"
                     />
-                  </button>
+                  </label>
                 </div>
               </CardContent>
             </Card>
@@ -1641,16 +1704,19 @@ export default function ItemManagement({ selectedItemId }: ItemManagementProps) 
             <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
           </div>
         ) : (
+          <>
           <ResponsiveList
             items={filteredItems}
             keyExtractor={(item) => item.id}
             emptyIcon={Package}
             emptyTitle={t('items.noItemsTitle', 'No items found')}
             emptyMessage={t('items.noItemsFound')}
-            emptyAction={!searchTerm && selectedFarm === 'all' && !lowStockOnly ? {
+            isFetching={isFetching}
+            emptyAction={!tableState.search && selectedFarm === 'all' && !lowStockOnly ? {
               label: t('items.createItem'),
               onClick: handleCreate,
             } : undefined}
+            onRowClick={openItemDetails}
             renderCard={(item) => {
               const stockLevel = stockLevels[item.id];
               const isLowStock = stockLevel?.is_low_stock ||
@@ -1709,6 +1775,18 @@ export default function ItemManagement({ selectedItemId }: ItemManagementProps) 
                         title={t('items.variants.title', 'Variants')}
                       >
                         <Layers className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          handleBarcodes(item);
+                        }}
+                        className="p-1 text-purple-600 hover:text-purple-700 sm:p-2"
+                        title={t('barcode.manage', 'Barcodes')}
+                      >
+                        <ScanBarcode className="w-4 h-4" />
                       </Button>
                       <Button
                         variant="ghost"
@@ -1843,7 +1921,10 @@ export default function ItemManagement({ selectedItemId }: ItemManagementProps) 
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => handleVariants(item)}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          handleVariants(item);
+                        }}
                         className="p-1 text-emerald-600 hover:text-emerald-700 sm:p-2"
                         title={t('items.variants.title', 'Variants')}
                       >
@@ -1852,7 +1933,22 @@ export default function ItemManagement({ selectedItemId }: ItemManagementProps) 
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => setTimelineItem(item)}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          handleBarcodes(item);
+                        }}
+                        className="p-1 text-purple-600 hover:text-purple-700 sm:p-2"
+                        title={t('barcode.manage', 'Barcodes')}
+                      >
+                        <ScanBarcode className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setTimelineItem(item);
+                        }}
                         className="p-1 text-sky-600 hover:text-sky-700 sm:p-2"
                         title={t('items.timeline.open', 'History')}
                       >
@@ -1861,19 +1957,33 @@ export default function ItemManagement({ selectedItemId }: ItemManagementProps) 
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => setSelectedItemForDetails(item)}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          openItemDetails(item);
+                        }}
                         className="p-1 text-blue-600 hover:text-blue-700 sm:p-2"
                         title={t('items.viewDetails', 'View Details')}
                       >
                         <Eye className="w-4 h-4" />
                       </Button>
-                      <Button variant="ghost" size="sm" onClick={() => handleEdit(item)} className="p-1 sm:p-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          handleEdit(item);
+                        }}
+                        className="p-1 sm:p-2"
+                      >
                         <Pencil className="w-4 h-4" />
                       </Button>
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => handleDelete(item)}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          handleDelete(item);
+                        }}
                         className="p-1 text-red-600 hover:text-red-700 sm:p-2"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -1884,6 +1994,18 @@ export default function ItemManagement({ selectedItemId }: ItemManagementProps) 
               );
             }}
           />
+
+          {totalItems > 0 && (
+            <DataTablePagination
+              page={tableState.page}
+              pageSize={tableState.pageSize}
+              totalItems={totalItems}
+              totalPages={totalPages}
+              onPageChange={tableState.setPage}
+              onPageSizeChange={tableState.setPageSize}
+            />
+          )}
+          </>
         )}
       </ListPageLayout>
 
@@ -1898,6 +2020,16 @@ export default function ItemManagement({ selectedItemId }: ItemManagementProps) 
           }
         }}
       />
+      <ItemBarcodesDialog
+        item={barcodesItem}
+        open={showBarcodesDialog}
+        onOpenChange={(open) => {
+          setShowBarcodesDialog(open);
+          if (!open) {
+            setBarcodesItem(null);
+          }
+        }}
+      />
 
       {timelineItem && (
         <ItemStockTimeline
@@ -1905,34 +2037,6 @@ export default function ItemManagement({ selectedItemId }: ItemManagementProps) 
           itemName={timelineItem.item_name}
           onClose={() => setTimelineItem(null)}
         />
-      )}
-
-      {/* Item Details Dialog */}
-      {selectedItemForDetails && (
-        <ResponsiveDialog
-          open={!!selectedItemForDetails}
-          onOpenChange={(open) => {
-            if (!open) closeItemDetails();
-          }}
-          title={selectedItemForDetails.item_name}
-          description={t('items.itemDetails', 'Item Details and Stock Information')}
-          size="4xl"
-          contentClassName="max-h-[90vh] overflow-y-auto"
-        >
-            <div className="space-y-6 mt-4">
-              {/* Stock Levels by Farm */}
-              <div>
-                <h3 className="text-lg font-semibold mb-3">{t('items.stockByFarm', 'Stock by Farm')}</h3>
-                <FarmStockLevels item_id={selectedItemForDetails.id} showWarehouseDetails={true} />
-              </div>
-
-              {/* Farm Usage */}
-              <div>
-                <h3 className="text-lg font-semibold mb-3">{t('items.farmUsage', 'Farm Usage')}</h3>
-                <ItemFarmUsage item_id={selectedItemForDetails.id} unit={selectedItemForDetails.default_unit} showDetails={true} />
-              </div>
-            </div>
-        </ResponsiveDialog>
       )}
 
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
@@ -1948,7 +2052,7 @@ export default function ItemManagement({ selectedItemId }: ItemManagementProps) 
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>{t('app.cancel')}</AlertDialogCancel>
+            <AlertDialogCancel>{t('common.cancel', 'Cancel')}</AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmDelete}
               className="bg-red-600 hover:bg-red-700 text-white"

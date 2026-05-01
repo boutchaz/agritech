@@ -1,6 +1,8 @@
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
+import { v4 as uuidv4 } from 'uuid';
 import { harvestsApi, type PaginatedHarvestQuery } from '../lib/api/harvests';
 import { deliveriesApi } from '../lib/api/deliveries';
+import { runOrQueue as runOrQueueOffline } from '../lib/offline/runOrQueue';
 import { useAuth } from '../hooks/useAuth';
 import type { PaginatedResponse } from '../lib/api/types';
 import type {
@@ -149,7 +151,25 @@ export function useCreateHarvest() {
 
   return useMutation({
     mutationFn: async ({ organizationId, data }: { organizationId: string; data: CreateHarvestRequest }) => {
-      return harvestsApi.create(data, organizationId);
+      const cid = uuidv4();
+      const payload = { ...data, client_id: cid } as CreateHarvestRequest & { client_id: string };
+      const outcome = await runOrQueueOffline(
+        {
+          organizationId,
+          resource: 'harvest',
+          method: 'POST',
+          url: `/api/v1/organizations/${organizationId}/harvests`,
+          payload,
+          clientId: cid,
+        },
+        () => harvestsApi.create(payload, organizationId),
+      );
+      if (outcome.status === 'queued') {
+        return { ...payload, id: cid, _pending: true } as unknown as Awaited<
+          ReturnType<typeof harvestsApi.create>
+        >;
+      }
+      return outcome.result;
     },
     onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['harvests', variables.organizationId] });
@@ -165,13 +185,33 @@ export function useUpdateHarvest() {
     mutationFn: async ({
       harvestId,
       organizationId,
-      updates
+      updates,
+      version,
     }: {
       harvestId: string;
       organizationId: string;
-      updates: Partial<HarvestRecord>
+      updates: Partial<HarvestRecord>;
+      version?: number;
     }) => {
-      return harvestsApi.update(harvestId, updates, organizationId);
+      const cid = uuidv4();
+      const outcome = await runOrQueueOffline(
+        {
+          organizationId,
+          resource: 'harvest',
+          method: 'PATCH',
+          url: `/api/v1/organizations/${organizationId}/harvests/${harvestId}`,
+          payload: updates,
+          ifMatchVersion: version ?? null,
+          clientId: cid,
+        },
+        () => harvestsApi.update(harvestId, updates, organizationId),
+      );
+      if (outcome.status === 'queued') {
+        return { id: harvestId, _pending: true, ...updates } as unknown as Awaited<
+          ReturnType<typeof harvestsApi.update>
+        >;
+      }
+      return outcome.result;
     },
     onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['harvest', variables.harvestId] });
@@ -185,7 +225,21 @@ export function useDeleteHarvest() {
 
   return useMutation({
     mutationFn: async ({ harvestId, organizationId }: { harvestId: string; organizationId: string }) => {
-      await harvestsApi.delete(harvestId, organizationId);
+      const cid = uuidv4();
+      await runOrQueueOffline(
+        {
+          organizationId,
+          resource: 'harvest',
+          method: 'DELETE',
+          url: `/api/v1/organizations/${organizationId}/harvests/${harvestId}`,
+          payload: {},
+          clientId: cid,
+        },
+        async () => {
+          await harvestsApi.delete(harvestId, organizationId);
+          return null as unknown;
+        },
+      );
       return { harvestId, organizationId };
     },
     onSuccess: (data) => {

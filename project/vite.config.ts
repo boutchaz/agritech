@@ -6,6 +6,17 @@ import { compression } from 'vite-plugin-compression2';
 import { VitePWA } from 'vite-plugin-pwa';
 import path from 'path';
 
+// vite-plugin-prerender uses require() which crashes on Node v25+ ESM — only load for production
+let prerender: typeof import('vite-plugin-prerender').default | undefined;
+if (process.env.NODE_ENV === 'production') {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    prerender = require('vite-plugin-prerender');
+  } catch {
+    // Node v25 ESM fallback — skip prerender
+  }
+}
+
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [
@@ -22,13 +33,13 @@ export default defineConfig({
     }),
     // Brotli compression — ~70% smaller than uncompressed
     compression({
-      algorithm: 'brotliCompress',
+      algorithms: ['brotliCompress'],
       exclude: [/\.(br)$/, /\.(gz)$/],
       threshold: 1024, // Only compress files > 1KB
     }),
     // Gzip fallback for older clients
     compression({
-      algorithm: 'gzip',
+      algorithms: ['gzip'],
       exclude: [/\.(br)$/, /\.(gz)$/],
       threshold: 1024,
     }),
@@ -58,14 +69,32 @@ export default defineConfig({
         // Runtime caching strategies
         runtimeCaching: [
           {
-            // API calls — network first, fall back to cache (offline support)
+            // Mutating API — Workbox Background Sync queue retries POST/PATCH/PUT/DELETE
+            // when SW is alive but app may be closed. App-level outbox is primary path.
+            urlPattern: ({ url, request }) =>
+              /^\/api\/(tasks|stock-entries|harvests|pest-alerts|files|sync)\b/.test(url.pathname) &&
+              ['POST', 'PATCH', 'PUT', 'DELETE'].includes(request.method),
+            handler: 'NetworkOnly',
+            method: 'POST',
+            options: {
+              backgroundSync: {
+                name: 'agrogina-mutations-queue',
+                options: {
+                  maxRetentionTime: 7 * 24 * 60, // 7 days in minutes
+                },
+              },
+            },
+          },
+          {
+            // Read API — NetworkFirst with 7-day fallback for offline reads.
+            // TanStack Query persister is primary; this is the SW-level safety net.
             urlPattern: /^\/api\//,
             handler: 'NetworkFirst',
             options: {
               cacheName: 'api-cache',
               expiration: {
-                maxEntries: 200,
-                maxAgeSeconds: 60 * 60, // 1 hour
+                maxEntries: 500,
+                maxAgeSeconds: 60 * 60 * 24 * 7, // 7 days
               },
               networkTimeoutSeconds: 10,
               cacheableResponse: {
@@ -135,6 +164,10 @@ export default defineConfig({
       devOptions: {
         enabled: false, // Don't run SW in dev — avoids confusion
       },
+    }),
+    prerender && prerender({
+      routes: ['/', '/login', '/register', '/terms-of-service', '/privacy-policy', '/rdv'],
+      staticDir: path.resolve(__dirname, 'dist'),
     }),
   ],
   // API proxy configuration

@@ -1,10 +1,16 @@
 import { createFileRoute, Navigate } from '@tanstack/react-router';
 import { useState } from 'react';
+import { z } from 'zod';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 
+const loginSearchSchema = z.object({
+  redirect: z.string().optional(),
+});
+
 function LoginPage() {
   const { user, isLoading, signIn } = useAuth();
+  const { redirect } = Route.useSearch();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -17,8 +23,10 @@ function LoginPage() {
     );
   }
 
+  // Only accept same-origin in-app paths — never trust external redirect URLs.
+  const safeRedirect = redirect && redirect.startsWith('/') && !redirect.startsWith('//') ? redirect : '/';
   if (user) {
-    return <Navigate to="/" />;
+    return <Navigate to={safeRedirect} />;
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -99,4 +107,5 @@ function LoginPage() {
 
 export const Route = createFileRoute('/login')({
   component: LoginPage,
+  validateSearch: loginSearchSchema,
 });

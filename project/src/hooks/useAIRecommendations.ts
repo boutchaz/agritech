@@ -2,7 +2,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from './useAuth';
 import { aiRecommendationsApi, type AIRecommendation } from '../lib/api/ai-recommendations';
 
-export function useAIRecommendations(parcelId: string) {
+export function useAIRecommendations(
+  parcelId: string,
+  options?: { refetchIntervalMs?: number | false },
+) {
   const { currentOrganization } = useAuth();
 
   return useQuery({
@@ -15,6 +18,7 @@ export function useAIRecommendations(parcelId: string) {
     },
     enabled: !!parcelId && !!currentOrganization?.id,
     staleTime: 5 * 60 * 1000,
+    refetchInterval: options?.refetchIntervalMs ?? false,
   });
 }
 

@@ -15,8 +15,15 @@
       "expiryAlerts": "Expiry Alerts",
       "reorder": "Reorder",
       "reception": "Harvest Reception",
+      "deliveries": "Deliveries",
       "reports": "Reports & Analytics",
       "more": "More"
+    },
+    "groups": {
+      "catalog": "Catalog",
+      "movements": "Movements",
+      "operations": "Operations",
+      "insights": "Insights"
     },
     "lowStockAlerts": {
       "title": "Low Stock Alerts",
@@ -28,6 +35,7 @@
       "byFarm": "By Farm/Warehouse",
       "addStock": "Add Stock",
       "viewItem": "View Item",
+      "viewItemAria": "View item {{name}}",
       "viewAll": "View all {{count}} low stock items",
       "allOptimal": "All stock levels are optimal"
     },
@@ -1072,5 +1080,39 @@
     "unit": "Unit",
     "generatePO": "Generate PO",
     "generatePOPending": "Coming soon"
+  },
+  "barcode": {
+    "scanPlaceholder": "Scan or type barcode...",
+    "itemAdded": "Item added: {{itemName}}",
+    "qtyIncreased": "{{itemName}}: quantity +1",
+    "notFound": "No item found for this barcode",
+    "warehouseSet": "Warehouse {{name}} set for next scans",
+    "scanFailed": "Scan failed: {{error}}",
+    "manageBarcodes": "Manage Barcodes",
+    "addBarcode": "Add Barcode",
+    "editBarcode": "Edit Barcode",
+    "barcodeType": "Barcode Type",
+    "primaryBarcode": "Primary Barcode",
+    "setPrimary": "Set as Primary",
+    "noBarcodes": "No barcodes configured",
+    "duplicateBarcode": "This barcode is already used by another item",
+    "invalidBarcode": "Invalid barcode format for {{type}}",
+    "toast": {
+      "created": "Barcode added",
+      "updated": "Barcode updated",
+      "deleted": "Barcode removed",
+      "generated": "EAN-13 barcode generated",
+      "regenerated": "Barcode regenerated"
+    },
+    "actions": {
+      "generate": "Generate EAN-13",
+      "regenerate": "Regenerate"
+    },
+    "dialog": {
+      "title": "Manage Barcodes",
+      "createTitle": "Add barcode",
+      "editTitle": "Edit barcode",
+      "description": "Each barcode must be unique within your organization."
+    }
   }
 }

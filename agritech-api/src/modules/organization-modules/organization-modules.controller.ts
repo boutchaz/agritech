@@ -1,5 +1,5 @@
-import { Controller, Get, Patch, Body, Param, Request, UseGuards, Logger } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { Controller, Get, Patch, Body, Param, Query, Request, UseGuards, Logger } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { OrganizationModulesService } from './organization-modules.service';
 import { UpdateModuleDto } from './dto/update-module.dto';
@@ -16,12 +16,21 @@ export class OrganizationModulesController {
   ) {}
 
   @Get()
-  @ApiOperation({ summary: 'Get all modules for an organization' })
-  @ApiResponse({ status: 200, description: 'Returns all modules with activation status' })
+  @ApiOperation({ summary: 'Get module catalog + pricing + widget map enriched with org activation state' })
+  @ApiQuery({ name: 'locale', required: false, description: 'Translation locale (en, fr, ar)' })
+  @ApiResponse({ status: 200, description: 'Org-scoped module config' })
   @ApiResponse({ status: 403, description: 'Access denied to this organization' })
-  async getModules(@Request() req, @Param('organizationId') organizationId: string) {
+  async getModules(
+    @Request() req,
+    @Param('organizationId') organizationId: string,
+    @Query('locale') locale?: string,
+  ) {
     this.logger.log(`User ${req.user.id} fetching modules for organization ${organizationId}`);
-    return this.organizationModulesService.getOrganizationModules(req.user.id, organizationId);
+    return this.organizationModulesService.getOrganizationModules(
+      req.user.id,
+      organizationId,
+      locale || 'en',
+    );
   }
 
   @Patch(':moduleId')

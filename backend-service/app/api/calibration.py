@@ -33,6 +33,17 @@ VALID_CROP_TYPES = {
     "agrumes",
     "avocatier",
     "palmier_dattier",
+    "vigne",
+    "rosacees",
+    "amandier",
+    "pistachier",
+    "caroubier",
+    "figuier",
+    "cereales",
+    "marichage",
+    "fourrage",
+    "canne_a_sucre",
+    "coton",
 }
 DEFAULT_CROP_TYPE = "olivier"
 CROP_TYPE_ALIASES = {
@@ -41,15 +52,63 @@ CROP_TYPE_ALIASES = {
     "olives": "olivier",
     "citrus": "agrumes",
     "agrumes": "agrumes",
+    "orange": "agrumes",
+    "mandarine": "agrumes",
+    "citron": "agrumes",
+    "pomelo": "agrumes",
     "avocado": "avocatier",
     "avocatier": "avocatier",
     "date_palm": "palmier_dattier",
     "palmier": "palmier_dattier",
     "palmier_dattier": "palmier_dattier",
+    "dattier": "palmier_dattier",
+    "vigne": "vigne",
+    "raisin": "vigne",
+    "vine": "vigne",
+    "grape": "vigne",
+    "rosacees": "rosacees",
+    "pommier": "rosacees",
+    "poirier": "rosacees",
+    "pecher": "rosacees",
+    "abricotier": "rosacees",
+    "cerisier": "rosacees",
+    "amandier": "amandier",
+    "almond": "amandier",
+    "pistachier": "pistachier",
+    "pistache": "pistachier",
+    "pistachio": "pistachier",
+    "caroubier": "caroubier",
+    "caroube": "caroubier",
+    "carob": "caroubier",
+    "figuier": "figuier",
+    "figue": "figuier",
+    "fig": "figuier",
+    "cereales": "cereales",
+    "ble": "cereales",
+    "orge": "cereales",
+    "mais": "cereales",
+    "wheat": "cereales",
+    "barley": "cereales",
+    "corn": "cereales",
+    "marichage": "marichage",
+    "tomate": "marichage",
+    "pomme_de_terre": "marichage",
+    "oignon": "marichage",
+    "legume": "marichage",
+    "vegetable": "marichage",
+    "market_garden": "marichage",
+    "fourrage": "fourrage",
+    "luzerne": "fourrage",
+    "bersim": "fourrage",
+    "fodder": "fourrage",
+    "alfalfa": "fourrage",
+    "canne_a_sucre": "canne_a_sucre",
+    "sugarcane": "canne_a_sucre",
+    "coton": "coton",
+    "cotton": "coton",
 }
 
 
-# TODO: Replace fallback with proper crop/system expansion once all types are defined
 def _normalize_crop_type(crop_type: str | None) -> str:
     """Accept any crop_type — map unknown ones to default with a log warning."""
     if not crop_type or not crop_type.strip():
@@ -265,6 +324,196 @@ PHENOLOGY_CONFIG: dict[str, list[PhenologyDefinition]] = {
             "stage": "post_recolte",
             "stage_code": "PR",
             "description": "Phase post-recolte et remise en reserve.",
+        },
+    ],
+    "vigne": [
+        {
+            "months": {1, 2},
+            "stage": "repos_hivernal",
+            "stage_code": "RH",
+            "description": "Repos hivernal de la vigne.",
+        },
+        {
+            "months": {3, 4},
+            "stage": "debourrement",
+            "stage_code": "DB",
+            "description": "Debourrement et croissance des rameaux.",
+        },
+        {
+            "months": {5, 6},
+            "stage": "floraison_nouaison",
+            "stage_code": "FN",
+            "description": "Floraison et nouaison des grappes.",
+        },
+        {
+            "months": {7, 8},
+            "stage": "grossissement",
+            "stage_code": "GR",
+            "description": "Grossissement des baies.",
+        },
+        {
+            "months": {9, 10},
+            "stage": "veraison_maturation",
+            "stage_code": "VM",
+            "description": "Veraison et maturation des raisins.",
+        },
+        {
+            "months": {11, 12},
+            "stage": "chute_feuilles",
+            "stage_code": "CF",
+            "description": "Chute des feuilles et entree en repos.",
+        },
+    ],
+    "amandier": [
+        {
+            "months": {1, 2},
+            "stage": "floraison",
+            "stage_code": "FL",
+            "description": "Floraison hivernale precoce de l amandier.",
+        },
+        {
+            "months": {3, 4},
+            "stage": "nouaison",
+            "stage_code": "NW",
+            "description": "Nouaison et debut croissance des fruits.",
+        },
+        {
+            "months": {5, 6},
+            "stage": "croissance",
+            "stage_code": "CR",
+            "description": "Croissance active des amandes.",
+        },
+        {
+            "months": {7, 8},
+            "stage": "durcissement",
+            "stage_code": "DU",
+            "description": "Durcissement de la coque.",
+        },
+        {
+            "months": {9, 10},
+            "stage": "maturation_recolte",
+            "stage_code": "MR",
+            "description": "Maturation et recolte des amandes.",
+        },
+        {
+            "months": {11, 12},
+            "stage": "repos",
+            "stage_code": "RP",
+            "description": "Repos vegetatif.",
+        },
+    ],
+    "cereales": [
+        {
+            "months": {11, 12, 1},
+            "stage": "semis_tallage",
+            "stage_code": "ST",
+            "description": "Semis et tallage des cereales d hiver.",
+        },
+        {
+            "months": {2, 3},
+            "stage": "montaison",
+            "stage_code": "MO",
+            "description": "Montaison et croissance active.",
+        },
+        {
+            "months": {4, 5},
+            "stage": "epiaison_floraison",
+            "stage_code": "EF",
+            "description": "Epiaison et floraison.",
+        },
+        {
+            "months": {5, 6},
+            "stage": "grossissement_grain",
+            "stage_code": "GG",
+            "description": "Grossissement et remplissage du grain.",
+        },
+        {
+            "months": {6, 7},
+            "stage": "maturation_recolte",
+            "stage_code": "MR",
+            "description": "Maturation et recolte.",
+        },
+        {
+            "months": {8, 9, 10},
+            "stage": "jachere_preparation",
+            "stage_code": "JP",
+            "description": "Jachere et preparation du sol.",
+        },
+    ],
+    "marichage": [
+        {
+            "months": {1, 2},
+            "stage": "plantation",
+            "stage_code": "PL",
+            "description": "Plantation des cultures maraicheres.",
+        },
+        {
+            "months": {3, 4},
+            "stage": "croissance",
+            "stage_code": "CR",
+            "description": "Croissance vegetative active.",
+        },
+        {
+            "months": {5, 6},
+            "stage": "floraison",
+            "stage_code": "FL",
+            "description": "Floraison et nouaison.",
+        },
+        {
+            "months": {7, 8},
+            "stage": "production",
+            "stage_code": "PR",
+            "description": "Production et recolte estivale.",
+        },
+        {
+            "months": {9, 10},
+            "stage": "recolte_fin",
+            "stage_code": "RF",
+            "description": "Fin de recolte et nettoyage.",
+        },
+        {
+            "months": {11, 12},
+            "stage": "preparation_hiver",
+            "stage_code": "PH",
+            "description": "Preparation des cultures d hiver.",
+        },
+    ],
+    "fourrage": [
+        {
+            "months": {1, 2},
+            "stage": "croissance_lente",
+            "stage_code": "CL",
+            "description": "Croissance ralentie par le froid.",
+        },
+        {
+            "months": {3, 4},
+            "stage": "reprise_printemps",
+            "stage_code": "RP",
+            "description": "Reprise de croissance printaniere.",
+        },
+        {
+            "months": {5, 6},
+            "stage": "floraison",
+            "stage_code": "FL",
+            "description": "Floraison et montaison.",
+        },
+        {
+            "months": {7, 8},
+            "stage": "production_estivale",
+            "stage_code": "PE",
+            "description": "Production estivale et fauches.",
+        },
+        {
+            "months": {9, 10},
+            "stage": "regrowth",
+            "stage_code": "RG",
+            "description": "Regrowth apres fauche et preparation automne.",
+        },
+        {
+            "months": {11, 12},
+            "stage": "repos_hivernal",
+            "stage_code": "RH",
+            "description": "Repos hivernal.",
         },
     ],
 }
@@ -511,7 +760,10 @@ async def extract_ndvi_raster(request: ExtractRasterRequest):
         ee_service.initialize()
     except Exception as exc:
         message = str(exc)
-        if "earthengine authenticate" in message.lower() or "authorize access" in message.lower():
+        if (
+            "earthengine authenticate" in message.lower()
+            or "authorize access" in message.lower()
+        ):
             raise HTTPException(
                 status_code=503,
                 detail="Earth Engine is not authenticated on this environment. Run 'earthengine authenticate' or configure service-account credentials.",

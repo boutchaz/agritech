@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import {
   Card,
   CardContent,
@@ -44,6 +45,7 @@ import { formatBytes } from '@/lib/utils';
 
 export function FileManagement() {
   const { currentOrganization } = useAuth();
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
 
   const [selectedBucket, setSelectedBucket] = useState<string>('all');
@@ -92,12 +94,20 @@ export function FileManagement() {
   const syncFilesMutation = useMutation({
     mutationFn: () => filesApi.syncExisting(currentOrganization?.id),
     onSuccess: (data) => {
-      toast.success(`${data.synced} fichiers synchronisés, ${data.skipped} ignorés`);
+      toast.success(
+        t('fileManagement.toast.syncSuccess', {
+          defaultValue: `${data.synced} files synchronized, ${data.skipped} skipped`,
+          synced: data.synced,
+          skipped: data.skipped,
+        }),
+      );
       queryClient.invalidateQueries({ queryKey: ['files'] });
       queryClient.invalidateQueries({ queryKey: ['file-stats'] });
     },
     onError: () => {
-      toast.error('Erreur lors de la synchronisation des fichiers');
+      toast.error(
+        t('fileManagement.toast.syncError', 'Error syncing files'),
+      );
     },
   });
 
@@ -105,13 +115,20 @@ export function FileManagement() {
   const markOrphanedMutation = useMutation({
     mutationFn: () => filesApi.markOrphaned(currentOrganization?.id),
     onSuccess: (data) => {
-      toast.success(`${data.marked_count} fichiers marqués comme orphelins`);
+      toast.success(
+        t('fileManagement.toast.markOrphanedSuccess', {
+          defaultValue: `${data.marked_count} files marked as orphaned`,
+          count: data.marked_count,
+        }),
+      );
       queryClient.invalidateQueries({ queryKey: ['files'] });
       queryClient.invalidateQueries({ queryKey: ['orphaned-files'] });
       refetchOrphans();
     },
     onError: () => {
-      toast.error('Erreur lors du marquage des fichiers orphelins');
+      toast.error(
+        t('fileManagement.toast.markOrphanedError', 'Error marking orphaned files'),
+      );
     },
   });
 
@@ -120,7 +137,11 @@ export function FileManagement() {
     mutationFn: () => filesApi.deleteOrphaned(currentOrganization?.id),
     onSuccess: (result) => {
       toast.success(
-        `${result.deleted} fichiers supprimés, ${result.failed} erreurs`,
+        t('fileManagement.toast.deleteOrphanedSuccess', {
+          defaultValue: `${result.deleted} files deleted, ${result.failed} errors`,
+          deleted: result.deleted,
+          failed: result.failed,
+        }),
       );
       if (result.errors.length > 0) {
         console.error('Erreurs de suppression:', result.errors);
@@ -130,7 +151,9 @@ export function FileManagement() {
       queryClient.invalidateQueries({ queryKey: ['orphaned-files'] });
     },
     onError: () => {
-      toast.error('Erreur lors de la suppression des fichiers orphelins');
+      toast.error(
+        t('fileManagement.toast.deleteOrphanedError', 'Error deleting orphaned files'),
+      );
     },
   });
 
@@ -139,14 +162,18 @@ export function FileManagement() {
     mutationFn: (fileId: string) =>
       filesApi.deletePermanently(fileId, currentOrganization?.id),
     onSuccess: () => {
-      toast.success('Fichier supprimé avec succès');
+      toast.success(
+        t('fileManagement.toast.deleteFileSuccess', 'File deleted successfully'),
+      );
       queryClient.invalidateQueries({ queryKey: ['files'] });
       queryClient.invalidateQueries({ queryKey: ['file-stats'] });
       setShowDeleteDialog(false);
       setFileToDelete(null);
     },
     onError: () => {
-      toast.error('Erreur lors de la suppression du fichier');
+      toast.error(
+        t('fileManagement.toast.deleteFileError', 'Error deleting file'),
+      );
     },
   });
 
@@ -213,13 +240,13 @@ export function FileManagement() {
                 <div className="flex flex-wrap items-center gap-2 mt-1">
                   <Badge variant="outline">{file.bucket_name}</Badge>
                   {file.is_orphan ? (
-                    <Badge variant="destructive">Orphelin</Badge>
+                    <Badge variant="destructive">{t('fileManagement.status.orphaned', 'Orphaned')}</Badge>
                   ) : file.marked_for_deletion ? (
                     <Badge variant="outline" className="text-orange-600">
-                      À supprimer
+                      {t('fileManagement.status.markedForDeletion', 'Marked for deletion')}
                     </Badge>
                   ) : (
-                    <Badge variant="secondary">Actif</Badge>
+                    <Badge variant="secondary">{t('fileManagement.status.active', 'Active')}</Badge>
                   )}
                 </div>
               </div>
@@ -233,7 +260,7 @@ export function FileManagement() {
                 onClick={() => {
                   if (fileUrl) window.open(fileUrl, '_blank', 'noopener,noreferrer');
                 }}
-                title={fileUrl ? undefined : 'URL publique indisponible (vérifiez la config API / bucket)'}
+                title={fileUrl ? undefined : t('fileManagement.publicUrlUnavailable', 'Public URL unavailable (check API / bucket config)')}
               >
                 <ExternalLink className="h-4 w-4" />
               </Button>
@@ -249,7 +276,7 @@ export function FileManagement() {
 
           <div className="grid grid-cols-2 gap-3 text-sm">
             <div>
-              <p className="text-muted-foreground">Entité</p>
+              <p className="text-muted-foreground">{t('fileManagement.labels.entity', 'Entity')}</p>
               {file.entity_type ? (
                 <div>
                   <p className="font-medium">{file.entity_type}</p>
@@ -262,15 +289,15 @@ export function FileManagement() {
               )}
             </div>
             <div>
-              <p className="text-muted-foreground">Taille</p>
+              <p className="text-muted-foreground">{t('fileManagement.labels.size', 'Size')}</p>
               <p>{formatBytes(file.file_size)}</p>
             </div>
             <div>
-              <p className="text-muted-foreground">Date d'upload</p>
+              <p className="text-muted-foreground">{t('fileManagement.labels.uploadedAt', 'Upload date')}</p>
               <p>{new Date(file.uploaded_at).toLocaleDateString('fr-FR')}</p>
             </div>
             <div>
-              <p className="text-muted-foreground">Type</p>
+              <p className="text-muted-foreground">{t('fileManagement.labels.type', 'Type')}</p>
               <p className="truncate">{file.mime_type}</p>
             </div>
           </div>
@@ -280,14 +307,14 @@ export function FileManagement() {
   };
 
   const renderTableHeader = (
-    <TableRow>
-      <TableHead>Fichier</TableHead>
-      <TableHead>Bucket</TableHead>
-      <TableHead>Entité</TableHead>
-      <TableHead>Taille</TableHead>
-      <TableHead>Date d'upload</TableHead>
-      <TableHead>Statut</TableHead>
-      <TableHead className="text-right">Actions</TableHead>
+      <TableRow>
+      <TableHead>{t('fileManagement.table.file', 'File')}</TableHead>
+      <TableHead>{t('fileManagement.table.bucket', 'Bucket')}</TableHead>
+      <TableHead>{t('fileManagement.table.entity', 'Entity')}</TableHead>
+      <TableHead>{t('fileManagement.table.size', 'Size')}</TableHead>
+      <TableHead>{t('fileManagement.table.uploadedAt', 'Upload date')}</TableHead>
+      <TableHead>{t('fileManagement.table.status', 'Status')}</TableHead>
+      <TableHead className="text-right">{t('fileManagement.table.actions', 'Actions')}</TableHead>
     </TableRow>
   );
 
@@ -373,9 +400,9 @@ export function FileManagement() {
     <ListPageLayout
       header={
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Gestion des fichiers</h2>
+          <h2 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">{t('fileManagement.title', 'File management')}</h2>
           <p className="text-gray-600 dark:text-gray-400">
-            Gérez tous les fichiers stockés dans vos buckets Supabase
+            {t('fileManagement.description', 'Manage all files stored in your Supabase buckets')}
           </p>
         </div>
       }
@@ -386,16 +413,16 @@ export function FileManagement() {
               <FilterBar
                 searchValue={searchQuery}
                 onSearchChange={setSearchQuery}
-                searchPlaceholder="Rechercher un fichier..."
+                searchPlaceholder={t('fileManagement.searchPlaceholder', 'Search files...')}
                 isSearching={filesLoading}
               />
             </div>
             <Select value={selectedBucket} onValueChange={setSelectedBucket}>
               <SelectTrigger className="w-full lg:w-[240px]">
-                <SelectValue placeholder="Sélectionner un bucket" />
+                <SelectValue placeholder={t('fileManagement.bucketPlaceholder', 'Select a bucket')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Tous les buckets</SelectItem>
+                <SelectItem value="all">{t('fileManagement.allBuckets', 'All buckets')}</SelectItem>
                 {stats.map((stat) => (
                   <SelectItem key={stat.bucket_name} value={stat.bucket_name}>
                     {stat.bucket_name} ({stat.file_count})
@@ -408,7 +435,7 @@ export function FileManagement() {
               onClick={() => setShowOrphansOnly(!showOrphansOnly)}
             >
               <AlertTriangle className="mr-2 h-4 w-4" />
-              Orphelins seulement
+              {t('fileManagement.orphansOnly', 'Orphans only')}
             </Button>
           </div>
         </div>
@@ -418,7 +445,7 @@ export function FileManagement() {
           <div className="grid gap-4 lg:grid-cols-4">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total fichiers</CardTitle>
+                <CardTitle className="text-sm font-medium">{t('fileManagement.stats.totalFiles', 'Total files')}</CardTitle>
                 <HardDrive className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
@@ -431,7 +458,7 @@ export function FileManagement() {
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Fichiers orphelins</CardTitle>
+                <CardTitle className="text-sm font-medium">{t('fileManagement.stats.orphanFiles', 'Orphan files')}</CardTitle>
                 <AlertTriangle className="h-4 w-4 text-orange-500" />
               </CardHeader>
               <CardContent>
@@ -439,7 +466,10 @@ export function FileManagement() {
                   {totalStats.orphan_count}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  {totalStats.orphan_size_mb.toFixed(2)} MB à nettoyer
+                  {t('fileManagement.stats.orphanCleanupCount', {
+                    defaultValue: `${totalStats.orphan_size_mb.toFixed(2)} MB to clean up`,
+                    count: totalStats.orphan_size_mb.toFixed(2),
+                  })}
                 </p>
               </CardContent>
             </Card>
@@ -466,11 +496,10 @@ export function FileManagement() {
             <CardHeader>
               <CardTitle className="text-orange-700 flex items-center gap-2">
                 <AlertTriangle className="h-5 w-5" />
-                Nettoyage des fichiers orphelins
+                {t('fileManagement.cleanup.title', 'Orphan file cleanup')}
               </CardTitle>
               <CardDescription>
-                Les fichiers orphelins ne sont liés à aucune entité (produits, factures,
-                etc.) et peuvent être supprimés en toute sécurité.
+                {t('fileManagement.cleanup.description', 'Orphan files are not linked to any entity (products, invoices, etc.) and can be safely deleted.')}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -482,7 +511,7 @@ export function FileManagement() {
                   disabled={syncFilesMutation.isPending}
                 >
                   <RefreshCw className="mr-2 h-4 w-4" />
-                  Synchroniser les fichiers
+                  {t('fileManagement.actions.syncFiles', 'Sync files')}
                 </Button>
                 <Button
                   variant="outline"
@@ -491,7 +520,7 @@ export function FileManagement() {
                   disabled={markOrphanedMutation.isPending}
                 >
                   <RefreshCw className="mr-2 h-4 w-4" />
-                  Détecter les orphelins
+                  {t('fileManagement.actions.detectOrphans', 'Detect orphans')}
                 </Button>
                 <Button
                   variant="outline"
@@ -499,7 +528,7 @@ export function FileManagement() {
                   onClick={() => markOrphanedMutation.mutate()}
                   disabled={markOrphanedMutation.isPending || orphanedFiles.length === 0}
                 >
-                  Marquer pour suppression
+                  {t('fileManagement.actions.markForDeletion', 'Mark for deletion')}
                 </Button>
                 <Button
                   variant="destructive"
@@ -508,12 +537,15 @@ export function FileManagement() {
                   disabled={deleteOrphanedMutation.isPending || totalStats.orphan_count === 0}
                 >
                   <Trash2 className="mr-2 h-4 w-4" />
-                  Supprimer tous les orphelins
+                  {t('fileManagement.actions.deleteAllOrphans', 'Delete all orphans')}
                 </Button>
               </div>
               {orphanedFiles.length > 0 && (
                 <p className="text-sm text-orange-600">
-                  {orphanedFiles.length} fichiers orphelins détectés
+                  {t('fileManagement.orphanedDetected', {
+                    defaultValue: `${orphanedFiles.length} orphan files detected`,
+                    count: orphanedFiles.length,
+                  })}
                 </p>
               )}
             </CardContent>
@@ -530,30 +562,31 @@ export function FileManagement() {
         renderTableHeader={renderTableHeader}
         renderTable={renderTable}
         emptyIcon={FileText}
-        emptyTitle="Aucun fichier trouvé"
+        emptyTitle={t('fileManagement.empty.title', 'No files found')}
         emptyMessage={searchQuery.trim() || selectedBucket !== 'all' || showOrphansOnly
-          ? 'Aucun fichier ne correspond aux filtres actuels.'
-          : 'Aucun fichier disponible pour le moment.'}
+          ? t('fileManagement.empty.filtered', 'No files match the current filters.')
+          : t('fileManagement.empty.default', 'No files available yet.')}
       />
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Confirmer la suppression</AlertDialogTitle>
+            <AlertDialogTitle>{t('fileManagement.deleteDialog.title', 'Confirm deletion')}</AlertDialogTitle>
             <AlertDialogDescription>
-              Êtes-vous sûr de vouloir supprimer définitivement le fichier{' '}
-              <strong>{fileToDelete?.file_name}</strong> ? Cette action est
-              irréversible.
+              {t('fileManagement.deleteDialog.description', {
+                defaultValue: 'Are you sure you want to permanently delete the file {{fileName}}? This action cannot be undone.',
+                fileName: fileToDelete?.file_name,
+              })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogCancel>{t('fileManagement.deleteDialog.cancel', 'Cancel')}</AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmDelete}
               className="bg-destructive text-destructive-foreground"
             >
-              Supprimer
+              {t('fileManagement.deleteDialog.confirm', 'Delete')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

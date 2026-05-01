@@ -4,12 +4,14 @@ import { useOnboardingStore } from '@/stores/onboardingStore';
 import { useAuth } from '@/hooks/useAuth';
 import { onboardingApi } from '@/lib/api/onboarding';
 import { useState, useCallback, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 
 export const Route = createFileRoute('/(public)/onboarding/farm')({
   component: FarmStepComponent,
 });
 
 function FarmStepComponent() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const navigate = useNavigate();
   const farmData = useOnboardingStore((state) => state.farmData);
@@ -48,12 +50,12 @@ function FarmStepComponent() {
 
       navigate({ to: '/onboarding/modules' });
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : 'Une erreur est survenue';
+      const errorMessage = err instanceof Error ? err.message : t('onboarding.errorGeneric', 'Une erreur est survenue');
       setError(errorMessage);
       setIsSubmitting(false);
       isSubmittingRef.current = false;
     }
-  }, [navigate, persistState, setExistingFarmId, existingFarmId, farmData]);
+  }, [navigate, persistState, setExistingFarmId, existingFarmId, farmData, t]);
 
   return (
     <>

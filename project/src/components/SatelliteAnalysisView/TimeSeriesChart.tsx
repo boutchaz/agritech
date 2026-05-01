@@ -68,7 +68,22 @@ function localCalendarISODate(): string {
   return `${y}-${m}-${day}`;
 }
 
- 
+/** Syncs with `document.documentElement.classList.toggle('dark', …)` from app layout. */
+function useIsDarkMode(): boolean {
+  const [dark, setDark] = useState(
+    () => typeof document !== 'undefined' && document.documentElement.classList.contains('dark'),
+  );
+  useEffect(() => {
+    const el = document.documentElement;
+    const sync = () => setDark(el.classList.contains('dark'));
+    sync();
+    const mo = new MutationObserver(sync);
+    mo.observe(el, { attributes: true, attributeFilter: ['class'] });
+    return () => mo.disconnect();
+  }, []);
+  return dark;
+}
+
 const CustomTooltip = ({ active, payload, label, showTemperature }: {
   active?: boolean;
   payload?: Array<{ dataKey?: string; name?: string; value: number; color?: string }>;
@@ -77,14 +92,14 @@ const CustomTooltip = ({ active, payload, label, showTemperature }: {
 }) => {
   if (active && payload && payload.length) {
     return (
-      <Card className="shadow-xl border-slate-200 min-w-[200px] overflow-hidden">
-        <div className="bg-slate-50 px-3 py-2 border-b border-slate-100 flex justify-between items-center">
-          <span className="font-semibold text-slate-700 text-sm flex items-center gap-1.5">
-            <CalendarIcon className="w-3.5 h-3.5" />
+      <Card className="min-w-[200px] overflow-hidden border-slate-200 bg-card shadow-xl dark:border-slate-700">
+        <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50 px-3 py-2 dark:border-slate-800 dark:bg-slate-900">
+          <span className="flex items-center gap-1.5 text-sm font-semibold text-slate-700 dark:text-slate-100">
+            <CalendarIcon className="h-3.5 w-3.5" />
             {label}
           </span>
         </div>
-        <CardContent className="p-3 space-y-2">
+        <CardContent className="space-y-2 p-3">
           {payload.map((entry) => {
             const isTemp = typeof entry.dataKey === 'string' && entry.dataKey.startsWith('temperature_');
             if (isTemp && !showTemperature) return null;
@@ -103,9 +118,9 @@ const CustomTooltip = ({ active, payload, label, showTemperature }: {
                       border: isTemp ? '1px dashed #f97316' : 'none' 
                     }} 
                   />
-                  <span className="text-slate-500 font-medium truncate max-w-[120px]">{entry.name}</span>
+                  <span className="max-w-[120px] truncate font-medium text-slate-500 dark:text-slate-400">{entry.name}</span>
                 </div>
-                <span className="font-bold text-slate-800 tabular-nums">{value}</span>
+                <span className="font-bold tabular-nums text-slate-800 dark:text-slate-100">{value}</span>
               </div>
             );
           })}
@@ -113,12 +128,12 @@ const CustomTooltip = ({ active, payload, label, showTemperature }: {
           {payload[0]?.payload?.temperature_min !== undefined && showTemperature && (
             <>
               <Separator className="my-1.5 opacity-50" />
-              <div className="flex justify-between text-[10px] text-slate-400 font-medium uppercase tracking-wider">
+              <div className="flex justify-between text-[10px] font-medium uppercase tracking-wider text-slate-400 dark:text-slate-500">
                 <span className="flex items-center gap-1">
-                  Min <span className="text-slate-600">{payload[0].payload.temperature_min.toFixed(1)}°C</span>
+                  Min <span className="text-slate-600 dark:text-slate-300">{payload[0].payload.temperature_min.toFixed(1)}°C</span>
                 </span>
                 <span className="flex items-center gap-1">
-                  Max <span className="text-slate-600">{payload[0].payload.temperature_max.toFixed(1)}°C</span>
+                  Max <span className="text-slate-600 dark:text-slate-300">{payload[0].payload.temperature_max.toFixed(1)}°C</span>
                 </span>
               </div>
             </>
@@ -177,6 +192,19 @@ const TimeSeriesChart = ({
   const { t } = useTranslation('satellite');
   const queryClient = useQueryClient();
   const organizationId = currentOrganization?.id;
+  const isDark = useIsDarkMode();
+
+  const chartPalette = useMemo(
+    () => ({
+      grid: isDark ? '#334155' : '#f1f5f9',
+      axisLine: isDark ? '#475569' : '#e2e8f0',
+      legendColor: isDark ? '#94a3b8' : '#64748b',
+      brushFill: isDark ? '#1e293b' : '#f8fafc',
+      brushStroke: isDark ? '#475569' : '#e2e8f0',
+      dotStroke: isDark ? '#0f172a' : '#ffffff',
+    }),
+    [isDark],
+  );
 
   const [selectedIndices, setSelectedIndices] = useState<TimeSeriesIndexType[]>([defaultIndex]);
   const cloudCoverage = DEFAULT_CLOUD_COVERAGE;
@@ -558,25 +586,25 @@ const TimeSeriesChart = ({
 
   return (
     <TooltipProvider>
-      <div className="flex flex-col gap-6 max-w-[1600px] mx-auto p-4 md:p-6 bg-slate-50/50 rounded-xl">
+      <div className="mx-auto flex max-w-[1600px] flex-col gap-6 rounded-xl border border-transparent bg-slate-50/50 p-4 md:p-6 dark:border-slate-800/80 dark:bg-slate-900/50">
         {/* Header Section */}
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
           <div className="space-y-1">
             <div className="flex items-center gap-2.5">
-              <div className="p-2 bg-blue-600 rounded-lg shadow-blue-200 shadow-lg">
-                <BarChart3 className="w-5 h-5 text-white" />
+              <div className="rounded-lg bg-blue-600 p-2 shadow-lg shadow-blue-200 dark:shadow-blue-950/40">
+                <BarChart3 className="h-5 w-5 text-white" />
               </div>
-              <h1 className="text-2xl font-bold text-slate-900 tracking-tight">{t('timeSeries.title')}</h1>
+              <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">{t('timeSeries.title')}</h1>
             </div>
-            <p className="text-slate-500 text-sm flex items-center gap-2 pl-1">
+            <p className="flex items-center gap-2 pl-1 text-sm text-slate-500 dark:text-slate-400">
               {parcelName ? t('timeSeries.subtitle', { name: parcelName }) : t('timeSeries.subtitleFallback', { id: parcelId })}
               {stats.total > 0 && (
-                <Badge variant="secondary" className="bg-blue-50 text-blue-700 border-blue-100 font-medium">
+                <Badge variant="secondary" className="border-blue-100 bg-blue-50 font-medium text-blue-700 dark:border-blue-800 dark:bg-blue-950/50 dark:text-blue-300">
                   {t('timeSeries.dataPoints', { count: stats.total })}
                 </Badge>
               )}
             </p>
-            <p className="text-xs text-slate-400 pl-1 max-w-3xl leading-relaxed">
+            <p className="max-w-3xl pl-1 text-xs leading-relaxed text-slate-400 dark:text-slate-500">
               {t('timeSeries.cacheVsHeatmapHint')}
             </p>
           </div>
@@ -587,7 +615,7 @@ const TimeSeriesChart = ({
               size="sm"
               onClick={() => refetchCache()}
               disabled={isLoading}
-              className="bg-white border-slate-200 hover:bg-slate-50 text-slate-700 font-medium shadow-sm transition-all"
+              className="border-slate-200 bg-white font-medium text-slate-700 shadow-sm transition-all hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
             >
               <RefreshCw className={cn("w-3.5 h-3.5 mr-2", isLoadingCache && "animate-spin")} />
               {t('timeSeries.actions.refreshCache')}
@@ -597,7 +625,7 @@ const TimeSeriesChart = ({
               size="sm"
               onClick={forceSync}
               disabled={isLoading || !boundary}
-              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-md shadow-blue-100 transition-all"
+              className="bg-blue-600 font-semibold text-white shadow-md shadow-blue-100 transition-all hover:bg-blue-700 dark:shadow-blue-950/40"
             >
               {isSyncing ? <Zap className="w-3.5 h-3.5 mr-2 animate-pulse" /> : <Satellite className="w-3.5 h-3.5 mr-2" />}
               {isSyncing && syncProgress
@@ -609,19 +637,19 @@ const TimeSeriesChart = ({
 
         {/* Sync Progress Bar */}
         {isSyncing && syncProgress && (
-          <div className="space-y-1.5 bg-blue-50/50 p-3 rounded-lg border border-blue-100">
-            <div className="flex justify-between text-xs font-semibold text-blue-700 uppercase tracking-wider">
+          <div className="space-y-1.5 rounded-lg border border-blue-100 bg-blue-50/50 p-3 dark:border-blue-900/50 dark:bg-blue-950/30">
+            <div className="flex justify-between text-xs font-semibold uppercase tracking-wider text-blue-700 dark:text-blue-300">
               <span>Syncing indices...</span>
               <span>{Math.round((syncProgress.completedIndices / syncProgress.totalIndices) * 100)}%</span>
             </div>
-            <Progress value={(syncProgress.completedIndices / syncProgress.totalIndices) * 100} className="h-2 bg-blue-100" />
+            <Progress value={(syncProgress.completedIndices / syncProgress.totalIndices) * 100} className="h-2 bg-blue-100 dark:bg-blue-900/60" />
           </div>
         )}
 
         {/* Calibration banner — shown for pre-calibration and in-progress phases */}
         {aiPhase && (aiPhase === 'awaiting_data' || aiPhase === 'ready_calibration') && (
-          <Alert className="bg-indigo-50 border-indigo-200 text-indigo-800">
-            <Zap className="h-4 w-4 text-indigo-600" />
+          <Alert className="border-indigo-200 bg-indigo-50 text-indigo-800 dark:border-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-100">
+            <Zap className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
             <AlertTitle className="text-sm font-bold">
               {aiPhase === 'awaiting_data'
                 ? t('timeSeries.calibration.awaitingDataTitle', 'Satellite data is being collected')
@@ -636,11 +664,12 @@ const TimeSeriesChart = ({
               <Button
                 size="sm"
                 variant="outline"
-                className="shrink-0 border-indigo-300 text-indigo-700 hover:bg-indigo-100"
+                className="shrink-0 border-indigo-300 text-indigo-700 hover:bg-indigo-100 dark:border-indigo-600 dark:text-indigo-200 dark:hover:bg-indigo-950/60"
                 onClick={triggerFullSync}
-                disabled={isSyncingAll}
+                disabled={isSyncingAll || aiPhase === 'awaiting_data'}
+                title={aiPhase === 'awaiting_data' ? t('timeSeries.calibration.alreadyRunning', 'Synchronisation déjà en cours. Patientez.') : undefined}
               >
-                {isSyncingAll ? (
+                {isSyncingAll || aiPhase === 'awaiting_data' ? (
                   <><RefreshCw className="w-3.5 h-3.5 mr-1.5 animate-spin" />{t('timeSeries.calibration.syncing', 'Syncing...')}</>
                 ) : (
                   <><Satellite className="w-3.5 h-3.5 mr-1.5" />{t('timeSeries.calibration.syncAll', 'Sync & Calibrate')}</>
@@ -651,8 +680,8 @@ const TimeSeriesChart = ({
         )}
 
         {aiPhase && aiPhase === 'calibrating' && (
-          <Alert className="bg-blue-50 border-blue-200 text-blue-800">
-            <RefreshCw className="h-4 w-4 text-blue-600 animate-spin" />
+          <Alert className="border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-100">
+            <RefreshCw className="h-4 w-4 animate-spin text-blue-600 dark:text-blue-400" />
             <AlertTitle className="text-sm font-bold">
               {t('timeSeries.calibration.calibratingTitle', 'Calibration in progress')}
             </AlertTitle>
@@ -665,14 +694,14 @@ const TimeSeriesChart = ({
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Main Chart Area */}
           <div className="lg:col-span-8 space-y-6">
-            <Card className="overflow-hidden border-slate-200 shadow-sm">
-              <CardHeader className="bg-white border-b border-slate-100 px-6 py-4 flex flex-row items-center justify-between space-y-0">
+            <Card className="overflow-hidden border-slate-200 shadow-sm dark:border-slate-700">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b border-slate-100 bg-white px-6 py-4 dark:border-slate-800 dark:bg-slate-950/80">
                 <div className="flex items-center gap-4">
                   <div className="flex items-center gap-2">
-                    <CalendarIcon className="w-4 h-4 text-slate-400" />
-                    <span className="text-sm font-semibold text-slate-700">{t('timeSeries.labels.startDate')} - {t('timeSeries.labels.endDate')}</span>
+                    <CalendarIcon className="h-4 w-4 text-slate-400 dark:text-slate-500" />
+                    <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">{t('timeSeries.labels.startDate')} - {t('timeSeries.labels.endDate')}</span>
                   </div>
-                  <div className="flex gap-1.5 p-1 bg-slate-100 rounded-lg">
+                  <div className="flex gap-1.5 rounded-lg bg-slate-100 p-1 dark:bg-slate-800/90">
                         {([
                           { label: '3m', days: 90 },
                           { label: '6m', days: 180 },
@@ -686,8 +715,10 @@ const TimeSeriesChart = ({
                           key={days}
                           onClick={() => { setStartDate(range.start_date); setEndDate(range.end_date); }}
                           className={cn(
-                            "px-2.5 py-1 text-[11px] font-bold rounded-md transition-all uppercase tracking-tight",
-                            active ? "bg-white text-blue-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                            "rounded-md px-2.5 py-1 text-[11px] font-bold uppercase tracking-tight transition-all",
+                            active
+                              ? "bg-white text-blue-600 shadow-sm dark:bg-slate-700 dark:text-blue-400"
+                              : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
                           )}
                         >
                           {label}
@@ -698,9 +729,9 @@ const TimeSeriesChart = ({
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-full border border-slate-200">
-                    <Thermometer className={cn("w-3.5 h-3.5", showTemperature ? "text-orange-500" : "text-slate-300")} />
-                    <Label htmlFor="temp-mode" className="text-[11px] font-bold text-slate-600 uppercase tracking-wider cursor-pointer">Temp.</Label>
+                  <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 dark:border-slate-600 dark:bg-slate-800/90">
+                    <Thermometer className={cn("h-3.5 w-3.5", showTemperature ? "text-orange-500" : "text-slate-300 dark:text-slate-500")} />
+                    <Label htmlFor="temp-mode" className="cursor-pointer text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">Temp.</Label>
                     <Switch
                       id="temp-mode"
                       checked={showTemperature}
@@ -713,8 +744,8 @@ const TimeSeriesChart = ({
               <CardContent className="p-6">
                 {/* Warnings */}
                 {dataIsSparse && !isLoading && (
-                  <Alert className="mb-6 bg-amber-50 border-amber-200 text-amber-800">
-                    <AlertTriangle className="h-4 w-4 text-amber-600" />
+                  <Alert className="mb-6 border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/35 dark:text-amber-100">
+                    <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
                     <AlertTitle className="text-sm font-bold">{t('timeSeries.warnings.sparseData')}</AlertTitle>
                     <AlertDescription className="text-xs">
                       {t('timeSeries.warnings.sparseDataDescription', { count: stats.total })}
@@ -723,8 +754,8 @@ const TimeSeriesChart = ({
                 )}
 
                 {showNoDataWarning && (
-                  <Alert variant="destructive" className="mb-6 bg-rose-50 border-rose-200 text-rose-800">
-                    <AlertTriangle className="h-4 w-4 text-rose-600" />
+                  <Alert variant="destructive" className="mb-6 border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-900/60 dark:bg-rose-950/40 dark:text-rose-100">
+                    <AlertTriangle className="h-4 w-4 text-rose-600 dark:text-rose-400" />
                     <AlertTitle className="text-sm font-bold">{t('timeSeries.warnings.noDataTitle')}</AlertTitle>
                     <AlertDescription className="text-xs">
                       {t('timeSeries.warnings.noDataHint')}
@@ -734,9 +765,9 @@ const TimeSeriesChart = ({
 
                 <div className="h-[450px] w-full mt-2">
                   {isLoading ? (
-                    <div className="flex flex-col items-center justify-center h-full gap-4 text-slate-400">
+                    <div className="flex h-full flex-col items-center justify-center gap-4 text-slate-400 dark:text-slate-500">
                       <SectionLoader />
-                      <span className="text-xs font-medium animate-pulse uppercase tracking-widest">Processing Satellite Data...</span>
+                      <span className="animate-pulse text-xs font-medium uppercase tracking-widest">Processing Satellite Data...</span>
                     </div>
                   ) : chartData.length > 0 ? (
                     <ResponsiveContainer width="100%" height="100%">
@@ -747,11 +778,11 @@ const TimeSeriesChart = ({
                             <stop offset="95%" stopColor="#f97316" stopOpacity={0}/>
                           </linearGradient>
                         </defs>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={chartPalette.grid} />
                         <XAxis 
                           dataKey="date" 
                           tick={{ fontSize: 10, fill: '#94a3b8', fontWeight: 600 }} 
-                          axisLine={{ stroke: '#e2e8f0' }}
+                          axisLine={{ stroke: chartPalette.axisLine }}
                           tickLine={false}
                           dy={10}
                         />
@@ -778,14 +809,14 @@ const TimeSeriesChart = ({
                           verticalAlign="top" 
                           align="right" 
                           iconType="circle"
-                          wrapperStyle={{ paddingBottom: 20, fontSize: 11, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.025em' }}
+                          wrapperStyle={{ paddingBottom: 20, fontSize: 11, fontWeight: 600, color: chartPalette.legendColor, textTransform: 'uppercase', letterSpacing: '0.025em' }}
                         />
                         
                         <Brush 
                           dataKey="date" 
                           height={40} 
-                          stroke="#e2e8f0"
-                          fill="#f8fafc"
+                          stroke={chartPalette.brushStroke}
+                          fill={chartPalette.brushFill}
                           gap={10}
                           travellerWidth={10}
                         >
@@ -833,7 +864,7 @@ const TimeSeriesChart = ({
                             name={vegIndex}
                             stroke={getIndexColor(vegIndex)}
                             strokeWidth={3}
-                            dot={{ r: 0, fill: getIndexColor(vegIndex), strokeWidth: 2, stroke: '#fff' }}
+                            dot={{ r: 0, fill: getIndexColor(vegIndex), strokeWidth: 2, stroke: chartPalette.dotStroke }}
                             activeDot={{ r: 6, strokeWidth: 0 }}
                             connectNulls
                           />
@@ -841,13 +872,13 @@ const TimeSeriesChart = ({
                       </ComposedChart>
                     </ResponsiveContainer>
                   ) : (
-                    <div className="flex flex-col items-center justify-center h-full text-slate-300 gap-4 bg-slate-50/50 rounded-xl border-2 border-dashed border-slate-100">
-                      <div className="p-4 bg-white rounded-full shadow-sm border border-slate-100">
-                        <BarChart3 className="w-10 h-10 text-slate-200" />
+                    <div className="flex h-full flex-col items-center justify-center gap-4 rounded-xl border-2 border-dashed border-slate-100 bg-slate-50/50 text-slate-300 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-500">
+                      <div className="rounded-full border border-slate-100 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+                        <BarChart3 className="h-10 w-10 text-slate-200 dark:text-slate-500" />
                       </div>
                       <div className="text-center">
-                        <p className="font-bold text-slate-400 uppercase tracking-widest text-xs mb-1">{t('timeSeries.chart.emptyState')}</p>
-                        <p className="text-[10px] text-slate-400">Select a wider range or fetch new data</p>
+                        <p className="mb-1 text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-400">{t('timeSeries.chart.emptyState')}</p>
+                        <p className="text-[10px] text-slate-400 dark:text-slate-500">Select a wider range or fetch new data</p>
                       </div>
                     </div>
                   )}
@@ -858,16 +889,16 @@ const TimeSeriesChart = ({
             {/* Index Descriptions Panel */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {selectedIndices.map(vegIndex => (
-                <Card key={vegIndex} className="border-slate-100 shadow-none bg-white">
+                <Card key={vegIndex} className="border-slate-100 bg-white shadow-none dark:border-slate-700 dark:bg-slate-950/50">
                   <CardHeader className="p-4 pb-2">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: getIndexColor(vegIndex) }} />
-                        <span className="text-sm font-bold text-slate-800">{vegIndex}</span>
+                        <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: getIndexColor(vegIndex) }} />
+                        <span className="text-sm font-bold text-slate-800 dark:text-slate-100">{vegIndex}</span>
                       </div>
                       <UITooltip>
                         <TooltipTrigger asChild>
-                          <Info className="w-3.5 h-3.5 text-slate-300 cursor-help" />
+                          <Info className="h-3.5 w-3.5 cursor-help text-slate-300 dark:text-slate-500" />
                         </TooltipTrigger>
                         <TooltipContent className="max-w-[300px] text-xs leading-relaxed">
                           {getIndexDescription(vegIndex)}
@@ -876,7 +907,7 @@ const TimeSeriesChart = ({
                     </div>
                   </CardHeader>
                   <CardContent className="p-4 pt-0">
-                    <p className="text-[11px] text-slate-500 line-clamp-2 leading-relaxed italic">
+                    <p className="line-clamp-2 text-[11px] italic leading-relaxed text-slate-500 dark:text-slate-400">
                       {getIndexDescription(vegIndex)}
                     </p>
                   </CardContent>
@@ -888,10 +919,10 @@ const TimeSeriesChart = ({
           {/* Sidebar: Controls & Stats */}
           <div className="lg:col-span-4 space-y-6">
             {/* Index Selection Card */}
-            <Card className="border-slate-200 shadow-sm overflow-hidden">
-              <CardHeader className="bg-slate-50 border-b border-slate-200 p-4 py-3 space-y-2">
+            <Card className="overflow-hidden border-slate-200 shadow-sm dark:border-slate-700">
+              <CardHeader className="space-y-2 border-b border-slate-200 bg-slate-50 p-4 py-3 dark:border-slate-700 dark:bg-slate-900/60">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <CardTitle className="text-xs font-bold text-slate-600 uppercase tracking-widest flex items-center gap-2">
+                  <CardTitle className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-slate-600 dark:text-slate-300">
                     <Layers className="w-3.5 h-3.5 shrink-0" />
                     {t('timeSeries.labels.vegetationIndices')}
                   </CardTitle>
@@ -909,14 +940,14 @@ const TimeSeriesChart = ({
                       type="button"
                       variant="ghost"
                       size="sm"
-                      className="h-7 px-2 text-[10px] font-semibold uppercase tracking-wide text-slate-600"
+                      className="h-7 px-2 text-[10px] font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-400"
                       onClick={clearAllVegetationIndices}
                     >
                       {t('timeSeries.actions.unselectAllIndices', 'Clear all')}
                     </Button>
                   </div>
                 </div>
-                <p className="text-[10px] font-medium text-slate-500">
+                <p className="text-[10px] font-medium text-slate-500 dark:text-slate-400">
                   {t('timeSeries.labels.indicesSelected', {
                     count: selectedIndices.length,
                   })}
@@ -933,22 +964,26 @@ const TimeSeriesChart = ({
                           key={vegIndex}
                           onClick={() => toggleIndex(vegIndex)}
                           className={cn(
-                            "w-full flex items-center justify-between p-2.5 rounded-lg transition-all text-left",
-                            isSelected ? "bg-blue-50/80 border border-blue-100" : "hover:bg-slate-100 border border-transparent"
+                            "flex w-full items-center justify-between rounded-lg p-2.5 text-left transition-all",
+                            isSelected
+                              ? "border border-blue-100 bg-blue-50/80 dark:border-blue-900/50 dark:bg-blue-950/40"
+                              : "border border-transparent hover:bg-slate-100 dark:hover:bg-slate-800/80"
                           )}
                         >
                           <div className="flex items-center gap-3">
                             <div 
                               className={cn(
                                 "w-4 h-4 rounded border flex items-center justify-center transition-all",
-                                isSelected ? "bg-blue-600 border-blue-600" : "bg-white border-slate-300"
+                                isSelected
+                                  ? "border-blue-600 bg-blue-600"
+                                  : "border-slate-300 bg-white dark:border-slate-600 dark:bg-slate-900"
                               )}
                             >
                               {isSelected && <Check className="w-2.5 h-2.5 text-white" />}
                             </div>
                             <span className={cn(
                               "text-xs font-semibold tracking-tight",
-                              isSelected ? "text-blue-700" : "text-slate-600"
+                              isSelected ? "text-blue-700 dark:text-blue-300" : "text-slate-600 dark:text-slate-300"
                             )}>
                               {vegIndex === 'TCARI_OSAVI' ? 'TCARI / OSAVI' : vegIndex}
                             </span>
@@ -963,33 +998,33 @@ const TimeSeriesChart = ({
             </Card>
 
             {/* Date Range Selection */}
-            <Card className="border-slate-200 shadow-sm">
-              <CardHeader className="p-4 py-3 border-b border-slate-100">
-                <CardTitle className="text-xs font-bold text-slate-600 uppercase tracking-widest flex items-center gap-2">
-                  <CalendarIcon className="w-3.5 h-3.5" />
+            <Card className="border-slate-200 shadow-sm dark:border-slate-700">
+              <CardHeader className="border-b border-slate-100 p-4 py-3 dark:border-slate-800">
+                <CardTitle className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-slate-600 dark:text-slate-300">
+                  <CalendarIcon className="h-3.5 w-3.5" />
                   Custom Range
                 </CardTitle>
               </CardHeader>
-              <CardContent className="p-4 space-y-3">
+              <CardContent className="space-y-3 p-4">
                 <div className="space-y-1">
-                  <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t('timeSeries.labels.startDate')}</Label>
+                  <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">{t('timeSeries.labels.startDate')}</Label>
                   <div className="relative">
                     <input
                       type="date"
                       value={startDate}
                       onChange={(e) => setStartDate(e.target.value)}
-                      className="w-full text-xs font-semibold p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none text-slate-700"
+                      className="w-full rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-xs font-semibold text-slate-700 outline-none transition-all focus:border-transparent focus:ring-2 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200 dark:focus:ring-blue-600"
                     />
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t('timeSeries.labels.endDate')}</Label>
+                  <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">{t('timeSeries.labels.endDate')}</Label>
                   <div className="relative">
                     <input
                       type="date"
                       value={endDate}
                       onChange={(e) => setEndDate(e.target.value)}
-                      className="w-full text-xs font-semibold p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none text-slate-700"
+                      className="w-full rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-xs font-semibold text-slate-700 outline-none transition-all focus:border-transparent focus:ring-2 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200 dark:focus:ring-blue-600"
                     />
                   </div>
                 </div>
@@ -997,51 +1032,51 @@ const TimeSeriesChart = ({
             </Card>
 
             {/* Statistics Section */}
-            <Card className="border-slate-200 shadow-sm">
-              <CardHeader className="p-4 py-3 border-b border-slate-100">
-                <CardTitle className="text-xs font-bold text-slate-600 uppercase tracking-widest flex items-center gap-2">
-                  <TrendingUp className="w-3.5 h-3.5" />
+            <Card className="border-slate-200 shadow-sm dark:border-slate-700">
+              <CardHeader className="border-b border-slate-100 p-4 py-3 dark:border-slate-800">
+                <CardTitle className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-slate-600 dark:text-slate-300">
+                  <TrendingUp className="h-3.5 w-3.5" />
                   Performance Metrics
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-0">
-                <div className="divide-y divide-slate-100">
+                <div className="divide-y divide-slate-100 dark:divide-slate-800">
                   {selectedIndices.map(vegIndex => {
                     const stats = calculateStatistics(vegIndex);
                     if (!stats) return (
-                      <div key={vegIndex} className="p-4 flex items-center justify-between opacity-40 grayscale">
-                        <span className="text-xs font-bold text-slate-500 uppercase">{vegIndex}</span>
+                      <div key={vegIndex} className="flex items-center justify-between p-4 opacity-40 grayscale">
+                        <span className="text-xs font-bold uppercase text-slate-500">{vegIndex}</span>
                         <span className="text-[10px] italic">No data</span>
                       </div>
                     );
                     return (
-                      <div key={vegIndex} className="p-4 space-y-2.5">
+                      <div key={vegIndex} className="space-y-2.5 p-4">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: getIndexColor(vegIndex) }} />
-                            <span className="text-xs font-bold text-slate-800 uppercase tracking-tight">{vegIndex}</span>
+                            <div className="h-2 w-2 rounded-full" style={{ backgroundColor: getIndexColor(vegIndex) }} />
+                            <span className="text-xs font-bold uppercase tracking-tight text-slate-800 dark:text-slate-100">{vegIndex}</span>
                           </div>
-                          <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-slate-50 border border-slate-100 shadow-sm">
-                            <span className="text-[10px] font-bold text-slate-600 uppercase">Trend</span>
+                          <div className="flex items-center gap-1.5 rounded-full border border-slate-100 bg-slate-50 px-2 py-0.5 shadow-sm dark:border-slate-700 dark:bg-slate-800/80">
+                            <span className="text-[10px] font-bold uppercase text-slate-600 dark:text-slate-300">Trend</span>
                             {getTrendIcon(vegIndex)}
                           </div>
                         </div>
                         <div className="grid grid-cols-2 gap-x-4 gap-y-2">
                           <div className="space-y-0.5">
-                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{t('timeSeries.table.mean')}</span>
-                            <div className="text-xs font-bold text-slate-800 tabular-nums">{stats.mean.toFixed(3)}</div>
+                            <span className="text-[9px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">{t('timeSeries.table.mean')}</span>
+                            <div className="text-xs font-bold tabular-nums text-slate-800 dark:text-slate-100">{stats.mean.toFixed(3)}</div>
                           </div>
                           <div className="space-y-0.5">
-                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{t('timeSeries.table.std')}</span>
-                            <div className="text-xs font-bold text-slate-800 tabular-nums">{stats.std.toFixed(3)}</div>
+                            <span className="text-[9px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">{t('timeSeries.table.std')}</span>
+                            <div className="text-xs font-bold tabular-nums text-slate-800 dark:text-slate-100">{stats.std.toFixed(3)}</div>
                           </div>
                           <div className="space-y-0.5">
-                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{t('timeSeries.table.min')}</span>
-                            <div className="text-xs font-semibold text-rose-600 tabular-nums">{stats.min.toFixed(3)}</div>
+                            <span className="text-[9px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">{t('timeSeries.table.min')}</span>
+                            <div className="text-xs font-semibold tabular-nums text-rose-600 dark:text-rose-400">{stats.min.toFixed(3)}</div>
                           </div>
                           <div className="space-y-0.5">
-                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{t('timeSeries.table.max')}</span>
-                            <div className="text-xs font-semibold text-emerald-600 tabular-nums">{stats.max.toFixed(3)}</div>
+                            <span className="text-[9px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">{t('timeSeries.table.max')}</span>
+                            <div className="text-xs font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">{stats.max.toFixed(3)}</div>
                           </div>
                         </div>
                       </div>
@@ -1049,21 +1084,21 @@ const TimeSeriesChart = ({
                   })}
                   
                       {showTemperature && weatherData && weatherData.length > 0 && (
-                        <div className="p-4 bg-orange-50/30 space-y-2.5 border-t border-orange-100">
+                        <div className="space-y-2.5 border-t border-orange-100 bg-orange-50/30 p-4 dark:border-orange-900/50 dark:bg-orange-950/25">
                       <div className="flex items-center gap-2">
-                        <Thermometer className="w-3.5 h-3.5 text-orange-500" />
-                        <span className="text-xs font-bold text-orange-700 uppercase tracking-tight">Temperature</span>
+                        <Thermometer className="h-3.5 w-3.5 text-orange-500" />
+                        <span className="text-xs font-bold uppercase tracking-tight text-orange-700 dark:text-orange-300">Temperature</span>
                       </div>
                       <div className="grid grid-cols-2 gap-x-4 gap-y-2">
                          <div className="space-y-0.5">
-                           <span className="text-[9px] font-bold text-orange-400 uppercase tracking-widest">Average</span>
-                           <div className="text-xs font-bold text-orange-700 tabular-nums">
+                           <span className="text-[9px] font-bold uppercase tracking-widest text-orange-400 dark:text-orange-500/90">Average</span>
+                           <div className="text-xs font-bold tabular-nums text-orange-700 dark:text-orange-300">
                              {(weatherData.reduce((acc, curr) => acc + curr.temperature_mean, 0) / weatherData.length).toFixed(1)} °C
                            </div>
                          </div>
                          <div className="space-y-0.5">
-                           <span className="text-[9px] font-bold text-orange-400 uppercase tracking-widest">Range</span>
-                           <div className="text-[10px] font-bold text-orange-700 tabular-nums">
+                           <span className="text-[9px] font-bold uppercase tracking-widest text-orange-400 dark:text-orange-500/90">Range</span>
+                           <div className="text-[10px] font-bold tabular-nums text-orange-700 dark:text-orange-300">
                              {Math.min(...weatherData.map(d => d.temperature_min)).toFixed(1)}° - {Math.max(...weatherData.map(d => d.temperature_max)).toFixed(1)}°C
                            </div>
                          </div>

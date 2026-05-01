@@ -1,10 +1,8 @@
-import { useState, useEffect } from "react";
-import { createFileRoute } from '@tanstack/react-router';
+import { useState, useEffect, useMemo } from "react";
+import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/hooks/useAuth';
-import { PageLayout } from '@/components/PageLayout';
-import ModernPageHeader from '@/components/ModernPageHeader';
-import { Building2, BookOpen, AlertCircle, Download, Calendar, CheckCircle2, XCircle } from 'lucide-react';
+import { BookOpen, AlertCircle, Download, Calendar, CheckCircle2, XCircle, Search, ArrowRight } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -42,25 +40,32 @@ const getAccountTypeColor = (accountType: string): string => {
 
 const AppContent = () => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { currentOrganization } = useAuth();
   const [asOfDate, setAsOfDate] = useState(new Date().toISOString().split('T')[0]);
   const [selectedFiscalYear, setSelectedFiscalYear] = useState<string>('all');
+  const [search, setSearch] = useState('');
+  const [typeFilter, setTypeFilter] = useState<string>('all');
 
   const { data: fiscalYears = [] } = useFiscalYears();
   const { data: currentFiscalYear } = useCurrentFiscalYear();
 
-  // Auto-select current fiscal year on mount
+  // Auto-select current fiscal year on mount.
   useEffect(() => {
     if (currentFiscalYear && selectedFiscalYear === 'all') {
+       
       setSelectedFiscalYear(currentFiscalYear.id);
+       
       setAsOfDate(currentFiscalYear.end_date);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentFiscalYear]);
 
   useEffect(() => {
     if (selectedFiscalYear !== 'all') {
       const fy = fiscalYears.find(f => f.id === selectedFiscalYear);
       if (fy) {
+         
         setAsOfDate(fy.end_date);
       }
     }
@@ -71,6 +76,30 @@ const AppContent = () => {
 
   const currencySymbol = currentOrganization?.currency_symbol || currentOrganization?.currency || 'MAD';
 
+  const filteredAccounts = useMemo(() => {
+    if (!report) return [];
+    const term = search.trim().toLowerCase();
+    return report.accounts.filter((a) => {
+      if (typeFilter !== 'all' && a.account_type.toLowerCase() !== typeFilter) return false;
+      if (!term) return true;
+      return (
+        a.account_code.toLowerCase().includes(term) ||
+        a.account_name.toLowerCase().includes(term)
+      );
+    });
+  }, [report, search, typeFilter]);
+
+  const filteredTotals = useMemo(() => {
+    return filteredAccounts.reduce(
+      (acc, a) => {
+        acc.debit += Number(a.debit_balance || 0);
+        acc.credit += Number(a.credit_balance || 0);
+        return acc;
+      },
+      { debit: 0, credit: 0 },
+    );
+  }, [filteredAccounts]);
+
   if (!currentOrganization) {
     return (
       <PageLoader />
@@ -78,19 +107,6 @@ const AppContent = () => {
   }
 
   return (
-    <PageLayout
-      activeModule="accounting"
-      header={
-        <ModernPageHeader
-          breadcrumbs={[
-            { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
-            { icon: BookOpen, label: t('reportsModule.trialBalance.title', 'Trial Balance'), isActive: true }
-          ]}
-          title={t('reportsModule.trialBalance.title', 'Trial Balance')}
-          subtitle={t('reportsModule.trialBalance.subtitle', 'List of all accounts with their debit and credit balances')}
-        />
-      }
-    >
       <div className="p-6 space-y-6">
           {/* Date Filter */}
           <Card>
@@ -162,8 +178,8 @@ const AppContent = () => {
             <>
               {/* Balance Status Card */}
               <Card className={report.totals.is_balanced ? 'border-green-200 bg-green-50 dark:bg-green-900/20' : 'border-red-200 bg-red-50 dark:bg-red-900/20'}>
-                <CardContent className="pt-6">
-                  <div className="flex items-center justify-between">
+                <CardContent className="pt-6 space-y-4">
+                  <div className="flex items-start justify-between gap-4 flex-wrap">
                     <div className="flex items-center gap-3">
                       {report.totals.is_balanced ? (
                         <CheckCircle2 className="h-8 w-8 text-green-600 dark:text-green-400" />
@@ -187,6 +203,27 @@ const AppContent = () => {
                       <div className="text-sm text-gray-500 dark:text-gray-400">{report.accounts.length} {t('reportsModule.trialBalance.accountsWithBalances', 'accounts with balances')}</div>
                     </div>
                   </div>
+                  {!report.totals.is_balanced && (
+                    <div className="rounded-md bg-white/60 dark:bg-gray-900/40 p-3 border border-red-200 dark:border-red-900">
+                      <p className="text-sm font-medium text-red-800 dark:text-red-200 mb-2">
+                        {t('reportsModule.trialBalance.rebalance.title', 'How to rebalance')}
+                      </p>
+                      <ol className="text-sm text-red-700 dark:text-red-300 list-decimal ml-5 space-y-1">
+                        <li>{t('reportsModule.trialBalance.rebalance.step1', 'Open the Journal and look for entries with unbalanced debits/credits.')}</li>
+                        <li>{t('reportsModule.trialBalance.rebalance.step2', 'Drill into suspicious accounts via the General Ledger to see the exact transactions.')}</li>
+                        <li>{t('reportsModule.trialBalance.rebalance.step3', 'Post a correcting journal entry or reverse the bad one — never edit a posted entry.')}</li>
+                      </ol>
+                      <div className="flex flex-wrap gap-2 mt-3">
+                        <Button size="sm" variant="destructive" onClick={() => navigate({ to: '/accounting/journal' })}>
+                          {t('reportsModule.trialBalance.rebalance.openJournal', 'Open Journal')}
+                          <ArrowRight className="h-3 w-3 ml-1" />
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => navigate({ to: '/accounting/general-ledger' })}>
+                          {t('reportsModule.trialBalance.rebalance.openGL', 'Open General Ledger')}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 
@@ -222,6 +259,28 @@ const AppContent = () => {
                     {t('reportsModule.trialBalance.accountDetails', 'Account Details')}
                   </CardTitle>
                 </CardHeader>
+                <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex flex-wrap items-center gap-3">
+                  <div className="relative flex-1 min-w-[200px]">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Input
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      placeholder={t('reportsModule.trialBalance.searchPlaceholder', 'Search by code or name...')}
+                      className="pl-9"
+                    />
+                  </div>
+                  <NativeSelect value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} className="w-48">
+                    <option value="all">{t('reportsModule.trialBalance.allTypes', 'All Types')}</option>
+                    <option value="asset">{t('reportsModule.trialBalance.types.asset', 'Asset')}</option>
+                    <option value="liability">{t('reportsModule.trialBalance.types.liability', 'Liability')}</option>
+                    <option value="equity">{t('reportsModule.trialBalance.types.equity', 'Equity')}</option>
+                    <option value="revenue">{t('reportsModule.trialBalance.types.revenue', 'Revenue')}</option>
+                    <option value="expense">{t('reportsModule.trialBalance.types.expense', 'Expense')}</option>
+                  </NativeSelect>
+                  <span className="text-sm text-gray-500 dark:text-gray-400">
+                    {filteredAccounts.length} / {report.accounts.length}
+                  </span>
+                </div>
                 <CardContent className="p-0">
                   {report.accounts.length === 0 ? (
                     <div className="p-8 text-center text-gray-500">
@@ -245,41 +304,63 @@ const AppContent = () => {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {report.accounts.map((account) => (
-                            <TableRow
-                              key={account.account_id}
-                              className="border-t border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
-                            >
-                              <TableCell className="px-4 py-3 text-sm font-mono text-gray-600 dark:text-gray-400">
-                                {account.account_code}
-                              </TableCell>
-                              <TableCell className="px-4 py-3 text-sm text-gray-900 dark:text-white">
-                                {account.account_name}
-                              </TableCell>
-                              <TableCell className="px-4 py-3 text-sm text-center">
-                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${getAccountTypeColor(account.account_type)}`}>
-                                  {account.account_type}
-                                </span>
-                              </TableCell>
-                              <TableCell className="px-4 py-3 text-sm text-right font-medium text-blue-600 dark:text-blue-400">
-                                {Number(account.debit_balance) > 0 ? formatCurrency(Number(account.debit_balance), currencySymbol) : '-'}
-                              </TableCell>
-                              <TableCell className="px-4 py-3 text-sm text-right font-medium text-purple-600 dark:text-purple-400">
-                                {Number(account.credit_balance) > 0 ? formatCurrency(Number(account.credit_balance), currencySymbol) : '-'}
+                          {filteredAccounts.length === 0 ? (
+                            <TableRow>
+                              <TableCell colSpan={5} className="px-4 py-6 text-center text-sm text-gray-500 dark:text-gray-400">
+                                {t('reportsModule.trialBalance.noFilterMatch', 'No accounts match your search.')}
                               </TableCell>
                             </TableRow>
-                          ))}
+                          ) : (
+                            filteredAccounts.map((account) => (
+                              <TableRow
+                                key={account.account_id}
+                                onClick={() =>
+                                  navigate({
+                                    to: '/accounting/general-ledger',
+                                    search: { account: account.account_id } as never,
+                                  })
+                                }
+                                className="border-t border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer"
+                              >
+                                <TableCell className="px-4 py-3 text-sm font-mono text-gray-600 dark:text-gray-400">
+                                  {account.account_code}
+                                </TableCell>
+                                <TableCell className="px-4 py-3 text-sm text-gray-900 dark:text-white">
+                                  {account.account_name}
+                                </TableCell>
+                                <TableCell className="px-4 py-3 text-sm text-center">
+                                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${getAccountTypeColor(account.account_type)}`}>
+                                    {account.account_type}
+                                  </span>
+                                </TableCell>
+                                <TableCell className="px-4 py-3 text-sm text-right font-medium text-blue-600 dark:text-blue-400">
+                                  {Number(account.debit_balance) > 0 ? formatCurrency(Number(account.debit_balance), currencySymbol) : '-'}
+                                </TableCell>
+                                <TableCell className="px-4 py-3 text-sm text-right font-medium text-purple-600 dark:text-purple-400">
+                                  {Number(account.credit_balance) > 0 ? formatCurrency(Number(account.credit_balance), currencySymbol) : '-'}
+                                </TableCell>
+                              </TableRow>
+                            ))
+                          )}
                         </TableBody>
                         <TableFooter className="bg-gray-100 dark:bg-gray-700 font-bold">
                           <TableRow>
                             <TableCell colSpan={3} className="px-4 py-3 text-sm text-gray-900 dark:text-white">
-                              {t('reportsModule.trialBalance.totals', 'TOTALS')}
+                              {search || typeFilter !== 'all'
+                                ? t('reportsModule.trialBalance.filteredTotals', 'FILTERED TOTALS')
+                                : t('reportsModule.trialBalance.totals', 'TOTALS')}
                             </TableCell>
                             <TableCell className="px-4 py-3 text-sm text-right text-blue-700 dark:text-blue-300">
-                              {formatCurrency(report.totals.total_debit, currencySymbol)}
+                              {formatCurrency(
+                                search || typeFilter !== 'all' ? filteredTotals.debit : report.totals.total_debit,
+                                currencySymbol,
+                              )}
                             </TableCell>
                             <TableCell className="px-4 py-3 text-sm text-right text-purple-700 dark:text-purple-300">
-                              {formatCurrency(report.totals.total_credit, currencySymbol)}
+                              {formatCurrency(
+                                search || typeFilter !== 'all' ? filteredTotals.credit : report.totals.total_credit,
+                                currencySymbol,
+                              )}
                             </TableCell>
                           </TableRow>
                         </TableFooter>
@@ -301,7 +382,6 @@ const AppContent = () => {
             </>
           )}
         </div>
-    </PageLayout>
   );
 };
 

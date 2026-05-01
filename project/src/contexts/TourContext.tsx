@@ -73,7 +73,7 @@ const TOUR_ROUTES: Record<TourId, string> = {
   'infrastructure': '/infrastructure',
   'billing': '/accounting/quotes',
   'accounting': '/accounting',
-  'satellite': '/satellite-analysis',
+  'satellite': '/production/satellite-analysis',
   'reports': '/reports',
   'settings': '/settings/account',
 };
@@ -542,11 +542,15 @@ export const getTourDefinitions = (t: TFunction): Record<TourId, Step[]> => ({
     },
   ],
   inventory: [
+    // Each step's `data.stockGroup` makes the Stock layout switch tab groups
+    // before that step renders, so sub-tabs are mounted in the DOM and
+    // Joyride can find them. See useEffect dispatcher in TourProvider and
+    // matching listener in routes/_authenticated/(inventory)/stock.tsx.
     {
       target: '[data-tour="stock-overview"]',
       title: t('tour.inventory.step1.title'),
       content: t('tour.inventory.step1.content'),
-      placement: 'right',
+      placement: 'bottom',
       skipBeacon: true,
     },
     {
@@ -555,49 +559,176 @@ export const getTourDefinitions = (t: TFunction): Record<TourId, Step[]> => ({
       content: t('tour.inventory.step2.content'),
       placement: 'bottom',
       skipBeacon: true,
+      data: { module: 'stock', tabGroup: 'catalog' },
     },
     {
-      target: '[data-tour="stock-warehouses"]',
+      target: '[data-tour="stock-suppliers"]',
       title: t('tour.inventory.step3.title'),
       content: t('tour.inventory.step3.content'),
-      placement: 'left',
+      placement: 'bottom',
       skipBeacon: true,
+      data: { module: 'stock', tabGroup: 'catalog' },
+    },
+    {
+      target: '[data-tour="stock-reception"]',
+      title: t('tour.inventory.step4.title'),
+      content: t('tour.inventory.step4.content'),
+      placement: 'bottom',
+      skipBeacon: true,
+      data: { module: 'stock', tabGroup: 'movements' },
+    },
+    {
+      target: '[data-tour="stock-quick"]',
+      title: t('tour.inventory.step5.title'),
+      content: t('tour.inventory.step5.content'),
+      placement: 'bottom',
+      skipBeacon: true,
+      data: { module: 'stock', tabGroup: 'movements' },
     },
     {
       target: '[data-tour="stock-movements"]',
-      title: t('tour.inventory.step4.title'),
-      content: t('tour.inventory.step4.content'),
-      placement: 'top',
+      title: t('tour.inventory.step6.title'),
+      content: t('tour.inventory.step6.content'),
+      placement: 'bottom',
+      skipBeacon: true,
+      data: { module: 'stock', tabGroup: 'movements' },
+    },
+    {
+      target: '[data-tour="stock-warehouses"]',
+      title: t('tour.inventory.step7.title'),
+      content: t('tour.inventory.step7.content'),
+      placement: 'bottom',
+      skipBeacon: true,
+      data: { module: 'stock', tabGroup: 'operations' },
+    },
+    {
+      target: '[data-tour="stock-take"]',
+      title: t('tour.inventory.step8.title'),
+      content: t('tour.inventory.step8.content'),
+      placement: 'bottom',
+      skipBeacon: true,
+      data: { module: 'stock', tabGroup: 'operations' },
+    },
+    {
+      target: '[data-tour="stock-expiry"]',
+      title: t('tour.inventory.step9.title'),
+      content: t('tour.inventory.step9.content'),
+      placement: 'bottom',
+      skipBeacon: true,
+      data: { module: 'stock', tabGroup: 'operations' },
+    },
+    {
+      target: '[data-tour="stock-aging"]',
+      title: t('tour.inventory.step10.title'),
+      content: t('tour.inventory.step10.content'),
+      placement: 'bottom',
+      skipBeacon: true,
+      data: { module: 'stock', tabGroup: 'insights' },
+    },
+    {
+      target: '[data-tour="stock-overview"]',
+      title: t('tour.inventory.step11.title'),
+      content: t('tour.inventory.step11.content'),
+      placement: 'bottom',
       skipBeacon: true,
     },
   ],
   accounting: [
+    // Same auto-group-switching pattern as the inventory tour: each step's
+    // data.module + data.tabGroup makes the Accounting layout switch its
+    // active group before the sub-tab is targeted.
     {
-      target: '[data-tour="accounting-overview"]',
+      target: '[data-tour="acc-overview"]',
       title: t('tour.accounting.step1.title'),
       content: t('tour.accounting.step1.content'),
-      placement: 'right',
-      skipBeacon: true,
-    },
-    {
-      target: '[data-tour="accounting-invoices"]',
-      title: t('tour.accounting.step2.title'),
-      content: t('tour.accounting.step2.content'),
       placement: 'bottom',
       skipBeacon: true,
     },
     {
-      target: '[data-tour="accounting-journal"]',
-      title: t('tour.accounting.step3.title'),
-      content: t('tour.accounting.step3.content'),
-      placement: 'left',
+      target: '[data-tour="acc-invoices"]',
+      title: t('tour.accounting.step2.title'),
+      content: t('tour.accounting.step2.content'),
+      placement: 'bottom',
       skipBeacon: true,
+      data: { module: 'accounting', tabGroup: 'billing' },
     },
     {
-      target: '[data-tour="accounting-reports"]',
+      target: '[data-tour="acc-quotes"]',
+      title: t('tour.accounting.step3.title'),
+      content: t('tour.accounting.step3.content'),
+      placement: 'bottom',
+      skipBeacon: true,
+      data: { module: 'accounting', tabGroup: 'billing' },
+    },
+    {
+      target: '[data-tour="acc-payments"]',
       title: t('tour.accounting.step4.title'),
       content: t('tour.accounting.step4.content'),
-      placement: 'top',
+      placement: 'bottom',
+      skipBeacon: true,
+      data: { module: 'accounting', tabGroup: 'billing' },
+    },
+    {
+      target: '[data-tour="acc-journal"]',
+      title: t('tour.accounting.step5.title'),
+      content: t('tour.accounting.step5.content'),
+      placement: 'bottom',
+      skipBeacon: true,
+      data: { module: 'accounting', tabGroup: 'records' },
+    },
+    {
+      target: '[data-tour="acc-accounts"]',
+      title: t('tour.accounting.step6.title'),
+      content: t('tour.accounting.step6.content'),
+      placement: 'bottom',
+      skipBeacon: true,
+      data: { module: 'accounting', tabGroup: 'records' },
+    },
+    {
+      target: '[data-tour="acc-bank-accounts"]',
+      title: t('tour.accounting.step7.title'),
+      content: t('tour.accounting.step7.content'),
+      placement: 'bottom',
+      skipBeacon: true,
+      data: { module: 'accounting', tabGroup: 'records' },
+    },
+    {
+      target: '[data-tour="acc-profit-loss"]',
+      title: t('tour.accounting.step8.title'),
+      content: t('tour.accounting.step8.content'),
+      placement: 'bottom',
+      skipBeacon: true,
+      data: { module: 'accounting', tabGroup: 'reports' },
+    },
+    {
+      target: '[data-tour="acc-balance-sheet"]',
+      title: t('tour.accounting.step9.title'),
+      content: t('tour.accounting.step9.content'),
+      placement: 'bottom',
+      skipBeacon: true,
+      data: { module: 'accounting', tabGroup: 'reports' },
+    },
+    {
+      target: '[data-tour="acc-aged-receivables"]',
+      title: t('tour.accounting.step10.title'),
+      content: t('tour.accounting.step10.content'),
+      placement: 'bottom',
+      skipBeacon: true,
+      data: { module: 'accounting', tabGroup: 'reports' },
+    },
+    {
+      target: '[data-tour="acc-fiscal-years"]',
+      title: t('tour.accounting.step11.title'),
+      content: t('tour.accounting.step11.content'),
+      placement: 'bottom',
+      skipBeacon: true,
+      data: { module: 'accounting', tabGroup: 'settings' },
+    },
+    {
+      target: '[data-tour="acc-overview"]',
+      title: t('tour.accounting.step12.title'),
+      content: t('tour.accounting.step12.content'),
+      placement: 'bottom',
       skipBeacon: true,
     },
   ],
@@ -648,33 +779,72 @@ export const getTourDefinitions = (t: TFunction): Record<TourId, Step[]> => ({
     },
   ],
   harvests: [
+    // Production walkthrough — anchored to sidebar nav. The Production
+    // section auto-expands on each step (data.sidebarSection: 'production')
+    // so all sub-nav items are mounted in the DOM.
     {
-      target: '[data-tour="harvest-stats"]',
+      target: '[data-tour="nav-production"]',
       title: t('tour.harvests.step1.title'),
       content: t('tour.harvests.step1.content'),
-      placement: 'bottom',
+      placement: 'right',
       skipBeacon: true,
+      data: { sidebarSection: 'production' },
     },
     {
-      target: '[data-tour="harvest-list"]',
+      target: '[data-tour="nav-campaigns"]',
       title: t('tour.harvests.step2.title'),
       content: t('tour.harvests.step2.content'),
       placement: 'right',
       skipBeacon: true,
+      data: { sidebarSection: 'production' },
     },
     {
-      target: '[data-tour="harvest-add"]',
+      target: '[data-tour="nav-crop-cycles"]',
       title: t('tour.harvests.step3.title'),
       content: t('tour.harvests.step3.content'),
-      placement: 'bottom',
+      placement: 'right',
       skipBeacon: true,
+      data: { sidebarSection: 'production' },
     },
     {
-      target: '[data-tour="harvest-filters"]',
+      target: '[data-tour="nav-harvests"]',
       title: t('tour.harvests.step4.title'),
       content: t('tour.harvests.step4.content'),
-      placement: 'left',
+      placement: 'right',
       skipBeacon: true,
+      data: { sidebarSection: 'production' },
+    },
+    {
+      target: '[data-tour="nav-reception-batches"]',
+      title: t('tour.harvests.step5.title'),
+      content: t('tour.harvests.step5.content'),
+      placement: 'right',
+      skipBeacon: true,
+      data: { sidebarSection: 'production' },
+    },
+    {
+      target: '[data-tour="nav-quality-control"]',
+      title: t('tour.harvests.step6.title'),
+      content: t('tour.harvests.step6.content'),
+      placement: 'right',
+      skipBeacon: true,
+      data: { sidebarSection: 'production' },
+    },
+    {
+      target: '[data-tour="nav-biological-assets"]',
+      title: t('tour.harvests.step7.title'),
+      content: t('tour.harvests.step7.content'),
+      placement: 'right',
+      skipBeacon: true,
+      data: { sidebarSection: 'production' },
+    },
+    {
+      target: '[data-tour="nav-product-applications"]',
+      title: t('tour.harvests.step8.title'),
+      content: t('tour.harvests.step8.content'),
+      placement: 'right',
+      skipBeacon: true,
+      data: { sidebarSection: 'production' },
     },
   ],
   infrastructure: [
@@ -1392,6 +1562,20 @@ export const TourProvider = ({ children }: TourProviderProps) => {
   // Do not filter steps here: a filtered array changes length/order vs. `stepIndex` and breaks
   // controlled mode. Missing targets are handled via EVENTS.TARGET_NOT_FOUND above.
   const shouldRun = tourState.isRunning && rawSteps.length > 0;
+
+  // Per-step side effects: when a step has data.tabGroup + data.module, dispatch
+  // a window event so the matching layout can switch its active tab group
+  // before the sub-tab step renders. Decouples tour from layout state.
+  useEffect(() => {
+    if (!tourState.isRunning || !tourState.currentTour) return;
+    const step = rawSteps[tourState.stepIndex];
+    const data = step?.data as { tabGroup?: string; module?: string } | undefined;
+    if (data?.tabGroup && data?.module) {
+      window.dispatchEvent(new CustomEvent('tour:set-tab-group', {
+        detail: { module: data.module, group: data.tabGroup },
+      }));
+    }
+  }, [tourState.currentTour, tourState.stepIndex, tourState.isRunning, rawSteps]);
 
   // ESC key listener to dismiss running tour
   useHotkey('Escape', endTour, {

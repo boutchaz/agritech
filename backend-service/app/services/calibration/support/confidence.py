@@ -10,6 +10,8 @@ class ConfidenceInput(BaseModel):
     soil_fields: dict[str, float | int | str | None] = Field(default_factory=dict)
     water_analysis_date: date | None = None
     water_fields: dict[str, float | int | str | None] = Field(default_factory=dict)
+    foliar_analysis_date: date | None = None
+    foliar_fields: dict[str, float | int | str | None] = Field(default_factory=dict)
     yield_years: int = Field(ge=0)
     crop_type: str | None = None
     variety: str | None = None
@@ -20,11 +22,12 @@ class ConfidenceInput(BaseModel):
     water_source: str | None = None
     has_boundary: bool = False
     coherence_level: str = "none"
+    cultural_history: dict[str, object] | None = None
     as_of: date = Field(default_factory=date.today)
 
 
 class ConfidenceOutput(BaseModel):
-    total_score: float = Field(ge=0, le=110)
+    total_score: float = Field(ge=0, le=115)
     normalized_score: float = Field(ge=0, le=1)
     components: dict[str, float]
 
@@ -44,6 +47,12 @@ WATER_REQUIRED_FIELDS = {
     "sar",
     "chloride_ppm",
     "sodium_ppm",
+}
+
+FOLIAR_REQUIRED_FIELDS = {
+    "nitrogen_percentage",
+    "phosphorus_percentage",
+    "potassium_percentage",
 }
 
 
@@ -107,6 +116,18 @@ def _water_score(input_data: ConfidenceInput) -> float:
     )
 
 
+def _foliar_score(input_data: ConfidenceInput) -> float:
+    if input_data.foliar_analysis_date is None:
+        return 0
+
+    return _analysis_completeness_score(
+        fields=input_data.foliar_fields,
+        required_fields=FOLIAR_REQUIRED_FIELDS,
+        full_points=5,
+        partial_points=2,
+    )
+
+
 def _yield_score(years: int) -> float:
     if years >= 5:
         return 20
@@ -124,7 +145,11 @@ def _profile_score(input_data: ConfidenceInput) -> float:
     points += 2.0 if input_data.planting_year else 0.0
     points += 2.0 if input_data.planting_system else 0.0
     points += 2.0 if input_data.has_boundary else 0.0
-    return points
+    if input_data.cultural_history:
+        points += 2.0 if input_data.cultural_history.get("pruning_type") else 0.0
+        points += 2.0 if input_data.cultural_history.get("past_fertilization") else 0.0
+        points += 2.0 if input_data.cultural_history.get("stress_events") else 0.0
+    return min(points, 10.0)
 
 
 def _irrigation_score(input_data: ConfidenceInput) -> float:
@@ -155,13 +180,24 @@ def calculate_confidence_score(input_data: ConfidenceInput) -> ConfidenceOutput:
     satellite = _satellite_score(input_data.satellite_months)
     soil = _soil_score(input_data)
     water = _water_score(input_data)
+    foliar = _foliar_score(input_data)
     yield_history = _yield_score(input_data.yield_years)
     profile = _profile_score(input_data)
     irrigation = _irrigation_score(input_data)
     coherence = _coherence_score(input_data.coherence_level)
 
-    total = satellite + soil + water + yield_history + profile + irrigation + coherence
-    normalized = round(total / 110, 4)
+    total = (
+        satellite
+        + soil
+        + water
+        + foliar
+        + yield_history
+        + profile
+        + irrigation
+        + coherence
+    )
+    max_possible = 115.0 if foliar > 0 else 110.0
+    normalized = round(total / max_possible, 4)
 
     return ConfidenceOutput(
         total_score=total,
@@ -170,6 +206,7 @@ def calculate_confidence_score(input_data: ConfidenceInput) -> ConfidenceOutput:
             "satellite": satellite,
             "soil": soil,
             "water": water,
+            "foliar": foliar,
             "yield": yield_history,
             "profile": profile,
             "irrigation": irrigation,

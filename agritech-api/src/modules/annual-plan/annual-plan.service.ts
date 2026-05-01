@@ -5,6 +5,13 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
+import { getCropReference } from '../calibration/crop-reference-loader';
+import {
+  PlanDataSchema,
+  type PlanData,
+  serializeJsonb,
+} from '../calibration/calibration-jsonb.schemas';
+/* eslint-disable @typescript-eslint/no-unused-vars */
 
 export const ANNUAL_PLAN_STATUSES = [
   'draft',
@@ -114,16 +121,22 @@ interface MonthlyPlanDefinition {
   components: Record<string, MonthlyPlanValue>;
 }
 
-/** AI prompt month keys differ from template keys (aou vs aout, sep vs sept, etc.) */
+/**
+ * Canonical month keys used everywhere in this service, referential JSON files,
+ * and AI prompts: lowercase English 3-letter (jan..dec). This matches the
+ * convention documented in DATA_*.json metadata and used by prompt v3.
+ * The canonicalMonthKey() helper below aliases French/English variants back to
+ * this canonical for legacy or user-authored data.
+ */
 const AI_MONTH_KEY_TO_NUMBER: Record<string, number> = {
   jan: 1,
-  fev: 2,
+  feb: 2,
   mar: 3,
-  avr: 4,
-  mai: 5,
+  apr: 4,
+  may: 5,
   jun: 6,
   jul: 7,
-  aou: 8,
+  aug: 8,
   sep: 9,
   oct: 10,
   nov: 11,
@@ -150,18 +163,79 @@ interface AIInterventionJson {
 
 const MONTH_KEY_TO_NUMBER: Record<string, number> = {
   jan: 1,
-  fev: 2,
+  feb: 2,
   mar: 3,
-  avr: 4,
-  mai: 5,
-  juin: 6,
-  juil: 7,
-  aout: 8,
-  sept: 9,
+  apr: 4,
+  may: 5,
+  jun: 6,
+  jul: 7,
+  aug: 8,
+  sep: 9,
   oct: 10,
   nov: 11,
   dec: 12,
 };
+
+/**
+ * Normalize any common month spelling (English or French, 3-letter or full
+ * name, case-insensitive, accents stripped) to the canonical lowercase English
+ * 3-letter key used by MONTH_KEY_TO_NUMBER. Returns null for anything that
+ * can't be identified as a month.
+ *
+ * Kept as a safety net for legacy data or hand-authored referentials; new
+ * content should already use the canonical form (jan..dec).
+ */
+function canonicalMonthKey(rawKey: string): string | null {
+  if (!rawKey) return null;
+  const normalized = rawKey
+    .toString()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // strip accents
+    .trim();
+
+  if (normalized in MONTH_KEY_TO_NUMBER) return normalized;
+
+  const aliases: Record<string, string> = {
+    // French short + long
+    fev: 'feb', fevrier: 'feb', février: 'feb',
+    avr: 'apr', avril: 'apr',
+    mai: 'may',
+    juin: 'jun',
+    juil: 'jul', juillet: 'jul',
+    aou: 'aug', aout: 'aug', août: 'aug',
+    sept: 'sep', septembre: 'sep',
+    octobre: 'oct',
+    novembre: 'nov',
+    decembre: 'dec', décembre: 'dec',
+    // English long
+    january: 'jan', february: 'feb', march: 'mar', april: 'apr',
+    june: 'jun', july: 'jul', august: 'aug', september: 'sep',
+    october: 'oct', november: 'nov', december: 'dec',
+    // Legacy French-3-letter (pre-formalization)
+    janvier: 'jan',
+    mars: 'mar',
+  };
+  return aliases[normalized] ?? null;
+}
+
+/**
+ * Turn an arbitrary month-keyed object into one whose keys are the canonical
+ * short-French codes. Supports referentials authored in English ("Jan", "Feb")
+ * or French ("Janvier", "fevrier"), with or without accents.
+ */
+function normalizeMonthlyObjectKeys(
+  value: Record<string, unknown>,
+): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(value)) {
+    const canonical = canonicalMonthKey(k);
+    if (canonical) {
+      out[canonical] = v;
+    }
+  }
+  return out;
+}
 
 const MONTH_NUMBER_TO_LABEL: Record<number, string> = {
   1: 'Janvier',
@@ -719,6 +793,93 @@ export class AnnualPlanService {
   }
 
   /**
+   * Update ONLY annual_plans.plan_data (doses, harvest forecast, costs…) from
+   * the latest AI annual_plan report, leaving interventions and status
+   * alone. This is the path to call on validated/active plans — users
+   * who've already confirmed their calendar still want the AI aggregate
+   * tiles backfilled without their calendar being wiped.
+   */
+  async enrichPlanDataOnlyFromLatestAIReport(
+    parcelId: string,
+    organizationId: string,
+  ): Promise<AnnualPlanRecord | null> {
+    const supabase = this.databaseService.getAdminClient();
+
+    const aiSections = await this.findLatestAIPlanSections(parcelId);
+    if (!aiSections) {
+      this.logger.warn(
+        `No AI annual_plan report found for parcel ${parcelId}; nothing to enrich`,
+      );
+      return null;
+    }
+
+    // Pick the most recent plan regardless of status.
+    const { data: plan, error: planError } = await supabase
+      .from('annual_plans')
+      .select('*')
+      .eq('parcel_id', parcelId)
+      .eq('organization_id', organizationId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (planError) {
+      throw new BadRequestException(
+        `Failed to load annual plan for enrichment: ${planError.message}`,
+      );
+    }
+
+    if (!plan) return null;
+
+    const nextPlanData = serializeJsonb(
+      PlanDataSchema,
+      {
+        source: 'ai',
+        generated_at:
+          typeof aiSections.generationDate === 'string'
+            ? aiSections.generationDate
+            : new Date().toISOString(),
+        ai_version: aiSections.version ?? null,
+        parameters: this.isRecord(aiSections.parameters) ? aiSections.parameters : null,
+        annualDoses: this.isRecord(aiSections.annualDoses)
+          ? (aiSections.annualDoses as PlanData['annualDoses'])
+          : null,
+        irrigation: this.isRecord(aiSections.irrigation) ? aiSections.irrigation : null,
+        pruning: this.isRecord(aiSections.pruning) ? aiSections.pruning : null,
+        harvestForecast: this.isRecord(aiSections.harvestForecast)
+          ? (aiSections.harvestForecast as PlanData['harvestForecast'])
+          : null,
+        economicEstimate: this.isRecord(aiSections.economicEstimate)
+          ? (aiSections.economicEstimate as PlanData['economicEstimate'])
+          : null,
+        planSummary:
+          typeof aiSections.planSummary === 'string' ? aiSections.planSummary : null,
+      },
+      `annual_plans.plan_data (parcel=${parcelId})`,
+    );
+
+    const { data: updated, error: updateError } = await supabase
+      .from('annual_plans')
+      .update({ plan_data: nextPlanData })
+      .eq('id', plan.id)
+      .eq('organization_id', organizationId)
+      .select('*')
+      .single();
+
+    if (updateError) {
+      throw new BadRequestException(
+        `Failed to update plan_data with AI aggregate: ${updateError.message}`,
+      );
+    }
+
+    this.logger.log(
+      `Backfilled plan_data on plan ${plan.id} (status=${plan.status}) from latest AI annual_plan report`,
+    );
+
+    return updated as AnnualPlanRecord;
+  }
+
+  /**
    * Replaces template plan_interventions with AI-generated ones that carry
    * real doses, products, BBCH stages, and application details.
    * Also updates annual_plans.plan_data with AI aggregate data.
@@ -792,24 +953,35 @@ export class AnnualPlanService {
     }
 
     // Update plan_data with AI aggregate data
-    const { error: updateError } = await supabase
-      .from('annual_plans')
-      .update({
-        plan_data: {
-          source: 'ai',
-          generated_at: typeof aiPlanJson.generationDate === 'string'
+    const enrichedPlanData = serializeJsonb(
+      PlanDataSchema,
+      {
+        source: 'ai',
+        generated_at:
+          typeof aiPlanJson.generationDate === 'string'
             ? aiPlanJson.generationDate
             : new Date().toISOString(),
-          ai_version: aiPlanJson.version ?? null,
-          parameters: this.isRecord(aiPlanJson.parameters) ? aiPlanJson.parameters : null,
-          annualDoses: this.isRecord(aiPlanJson.annualDoses) ? aiPlanJson.annualDoses : null,
-          irrigation: this.isRecord(aiPlanJson.irrigation) ? aiPlanJson.irrigation : null,
-          pruning: this.isRecord(aiPlanJson.pruning) ? aiPlanJson.pruning : null,
-          harvestForecast: this.isRecord(aiPlanJson.harvestForecast) ? aiPlanJson.harvestForecast : null,
-          economicEstimate: this.isRecord(aiPlanJson.economicEstimate) ? aiPlanJson.economicEstimate : null,
-          planSummary: typeof aiPlanJson.planSummary === 'string' ? aiPlanJson.planSummary : null,
-        },
-      })
+        ai_version: aiPlanJson.version ?? null,
+        parameters: this.isRecord(aiPlanJson.parameters) ? aiPlanJson.parameters : null,
+        annualDoses: this.isRecord(aiPlanJson.annualDoses)
+          ? (aiPlanJson.annualDoses as PlanData['annualDoses'])
+          : null,
+        irrigation: this.isRecord(aiPlanJson.irrigation) ? aiPlanJson.irrigation : null,
+        pruning: this.isRecord(aiPlanJson.pruning) ? aiPlanJson.pruning : null,
+        harvestForecast: this.isRecord(aiPlanJson.harvestForecast)
+          ? (aiPlanJson.harvestForecast as PlanData['harvestForecast'])
+          : null,
+        economicEstimate: this.isRecord(aiPlanJson.economicEstimate)
+          ? (aiPlanJson.economicEstimate as PlanData['economicEstimate'])
+          : null,
+        planSummary:
+          typeof aiPlanJson.planSummary === 'string' ? aiPlanJson.planSummary : null,
+      },
+      `annual_plans.plan_data (plan=${annualPlanId})`,
+    );
+    const { error: updateError } = await supabase
+      .from('annual_plans')
+      .update({ plan_data: enrichedPlanData })
       .eq('id', annualPlanId)
       .eq('organization_id', organizationId);
 
@@ -919,27 +1091,53 @@ export class AnnualPlanService {
   private async findCropReferenceOrThrow(
     cropType: string,
   ): Promise<Record<string, unknown>> {
-    const { data, error } = await this.databaseService
-      .getAdminClient()
-      .from('crop_ai_references')
-      .select('reference_data')
-      .eq('crop_type', cropType)
-      .maybeSingle();
+    // Source-of-truth is now local JSON files under agritech-api/referentials/
+    // (e.g. DATA_OLIVIER.json). The loader falls back to the crop_ai_references
+    // DB table if no file is found — so callers see a file-first, DB-fallback
+    // lookup without caring about the source.
+    const supabaseAdmin = this.databaseService.getAdminClient();
+    const normalized = this.normalizeCropType(cropType);
 
-    if (error) {
-      throw new BadRequestException(
-        `Failed to fetch crop AI references: ${error.message}`,
-      );
-    }
+    const reference = await getCropReference(normalized, supabaseAdmin);
 
-    if (!data || !this.hasReferenceData(data)) {
+    if (!reference) {
       throw new BadRequestException(
         `Référentiel agronomique non trouvé pour la culture "${cropType}". ` +
-          `Veuillez configurer le référentiel depuis l'application d'administration.`,
+          `Vérifiez le fichier agritech-api/referentials/DATA_${normalized.toUpperCase()}.json ` +
+          `ou publiez-le depuis l'application d'administration.`,
       );
     }
 
-    return data.reference_data;
+    return reference;
+  }
+
+  /**
+   * Map parcel crop_type values to the referential file key.
+   * Files are named DATA_<KEY>.json (loader lowercases the key internally).
+   * Common aliases are normalized so a parcel stored as "Olive" / "olives"
+   * still resolves to DATA_OLIVIER.json.
+   */
+  private normalizeCropType(cropType: string): string {
+    const trimmed = (cropType || '').trim().toLowerCase();
+    const aliases: Record<string, string> = {
+      olive: 'olivier',
+      olives: 'olivier',
+      olivier: 'olivier',
+      oliviers: 'olivier',
+      avocat: 'avocatier',
+      avocats: 'avocatier',
+      avocatier: 'avocatier',
+      avocatiers: 'avocatier',
+      agrume: 'agrumes',
+      agrumes: 'agrumes',
+      citrus: 'agrumes',
+      palmier: 'palmier_dattier',
+      dattier: 'palmier_dattier',
+      'palmier-dattier': 'palmier_dattier',
+      'palmier dattier': 'palmier_dattier',
+      palmier_dattier: 'palmier_dattier',
+    };
+    return aliases[trimmed] ?? trimmed;
   }
 
   private async findLatestPlan(
@@ -1110,15 +1308,22 @@ export class AnnualPlanService {
     for (const candidateKey of candidateKeys) {
       const candidate = planAnnual[candidateKey];
       if (this.hasMonthKeys(candidate)) {
-        return candidate;
+        // Normalize to canonical short-French keys so downstream extraction
+        // stops caring whether the file was authored in English ("Jan") or
+        // French ("Janvier").
+        return normalizeMonthlyObjectKeys(candidate as Record<string, unknown>);
       }
     }
 
     if (this.hasMonthKeys(planAnnual)) {
-      return planAnnual;
+      return normalizeMonthlyObjectKeys(planAnnual as unknown as Record<string, unknown>);
     }
 
-    throw new NotFoundException('No monthly annual plan calendar found in crop reference data');
+    throw new NotFoundException(
+      'No monthly annual plan calendar found in crop reference data. ' +
+        'Expected plan_annuel.calendrier_type_intensif (or calendrier_type / calendrier) ' +
+        'with one entry per month (Jan..Dec or janvier..decembre, accent-insensitive).',
+    );
   }
 
   private extractMonthComponents(rawMonth: unknown): Record<string, MonthlyPlanValue> {
@@ -1297,16 +1502,22 @@ export class AnnualPlanService {
     });
   }
 
-  private hasReferenceData(data: unknown): data is CropReferenceRow {
-    return this.isRecord(data) && this.isRecord(data.reference_data);
-  }
-
   private hasMonthKeys(value: unknown): value is Record<string, unknown> {
     if (!this.isRecord(value)) {
       return false;
     }
 
-    return Object.keys(MONTH_KEY_TO_NUMBER).every((monthKey) => monthKey in value);
+    // Accept any object whose keys canonicalize to all 12 months — English
+    // ("Jan".."Dec"), French ("janvier".."decembre"), or mixed. Case and
+    // accents are ignored.
+    const canonicalKeys = new Set<string>();
+    for (const rawKey of Object.keys(value)) {
+      const canonical = canonicalMonthKey(rawKey);
+      if (canonical) canonicalKeys.add(canonical);
+    }
+    return Object.keys(MONTH_KEY_TO_NUMBER).every((monthKey) =>
+      canonicalKeys.has(monthKey),
+    );
   }
 
   private isRecord(value: unknown): value is Record<string, unknown> {

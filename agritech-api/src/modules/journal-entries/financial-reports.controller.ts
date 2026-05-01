@@ -17,11 +17,14 @@ import {
 import { FinancialReportsService } from './financial-reports.service';
 import { FiscalYearsService } from '../fiscal-years/fiscal-years.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RequireModule } from '../../common/decorators/require-module.decorator';
 import { OrganizationGuard } from '../../common/guards/organization.guard';
+import { ModuleEntitlementGuard } from '../../common/guards/module-entitlement.guard';
 
 @ApiTags('financial-reports')
 @Controller('financial-reports')
-@UseGuards(JwtAuthGuard, OrganizationGuard)
+@RequireModule('accounting')
+@UseGuards(JwtAuthGuard, OrganizationGuard, ModuleEntitlementGuard)
 @ApiBearerAuth()
 export class FinancialReportsController {
   constructor(

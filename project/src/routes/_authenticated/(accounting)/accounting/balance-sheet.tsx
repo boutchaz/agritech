@@ -1,10 +1,8 @@
 import { useState, useEffect } from "react";
-import { createFileRoute } from '@tanstack/react-router';
+import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/hooks/useAuth';
-import { PageLayout } from '@/components/PageLayout';
-import ModernPageHeader from '@/components/ModernPageHeader';
-import { Building2, Scale, AlertCircle, Download, Calendar } from 'lucide-react';
+import { Scale, AlertCircle, Download, Calendar, BookOpen, Receipt, ArrowRight } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -76,6 +74,7 @@ const BalanceSheetSection = ({ title, accounts, total, currencySymbol, color }: 
 
 const AppContent = () => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { currentOrganization } = useAuth();
   const [asOfDate, setAsOfDate] = useState(new Date().toISOString().split('T')[0]);
   const [selectedFiscalYear, setSelectedFiscalYear] = useState<string>('all');
@@ -83,18 +82,22 @@ const AppContent = () => {
   const { data: fiscalYears = [] } = useFiscalYears();
   const { data: currentFiscalYear } = useCurrentFiscalYear();
 
-  // Auto-select current fiscal year on mount
+  // Auto-select current fiscal year on mount.
   useEffect(() => {
     if (currentFiscalYear && selectedFiscalYear === 'all') {
+       
       setSelectedFiscalYear(currentFiscalYear.id);
+       
       setAsOfDate(currentFiscalYear.end_date);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentFiscalYear]);
 
   useEffect(() => {
     if (selectedFiscalYear !== 'all') {
       const fy = fiscalYears.find(f => f.id === selectedFiscalYear);
       if (fy) {
+         
         setAsOfDate(fy.end_date);
       }
     }
@@ -112,19 +115,6 @@ const AppContent = () => {
   }
 
   return (
-    <PageLayout
-      activeModule="accounting"
-      header={
-        <ModernPageHeader
-          breadcrumbs={[
-            { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
-            { icon: Scale, label: t('reportsModule.balanceSheet.title', 'Balance Sheet'), isActive: true }
-          ]}
-          title={t('reportsModule.balanceSheet.title', 'Balance Sheet')}
-          subtitle={t('reportsModule.balanceSheet.subtitle', 'Financial position statement showing assets, liabilities, and equity')}
-        />
-      }
-    >
       <div className="p-6 space-y-6">
         {/* Date Filter */}
         <Card>
@@ -270,25 +260,30 @@ const AppContent = () => {
             {/* Accounting Equation */}
             <Card className="bg-gray-100 dark:bg-gray-800">
               <CardContent className="pt-6">
-                <div className="text-center">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">{t('reportsModule.balanceSheet.accountingEquation', 'Accounting Equation')}</h3>
-                  <div className="flex items-center justify-center gap-4 text-xl">
-                    <div className="text-blue-600 dark:text-blue-400">
-                      <div className="text-sm text-gray-500">{t('reportsModule.balanceSheet.assets', 'Assets')}</div>
-                      <div className="font-bold">{formatCurrency(report.totals.total_assets, currencySymbol)}</div>
-                    </div>
-                    <span className="text-gray-400">=</span>
-                    <div className="text-red-600 dark:text-red-400">
-                      <div className="text-sm text-gray-500">{t('reportsModule.balanceSheet.liabilities', 'Liabilities')}</div>
-                      <div className="font-bold">{formatCurrency(report.totals.total_liabilities, currencySymbol)}</div>
-                    </div>
-                    <span className="text-gray-400">+</span>
-                    <div className="text-green-600 dark:text-green-400">
-                      <div className="text-sm text-gray-500">{t('reportsModule.balanceSheet.equity', 'Equity')}</div>
-                      <div className="font-bold">{formatCurrency(report.totals.total_equity, currencySymbol)}</div>
-                    </div>
+                <h3 className="text-center text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                  {t('reportsModule.balanceSheet.accountingEquation', 'Accounting Equation')}
+                </h3>
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 text-base sm:text-xl">
+                  <div className="text-center text-blue-600 dark:text-blue-400">
+                    <div className="text-xs sm:text-sm text-gray-500">{t('reportsModule.balanceSheet.assets', 'Assets')}</div>
+                    <div className="font-bold break-all">{formatCurrency(report.totals.total_assets, currencySymbol)}</div>
+                  </div>
+                  <span className="text-gray-400 font-bold text-2xl sm:text-xl" aria-hidden>=</span>
+                  <div className="text-center text-red-600 dark:text-red-400">
+                    <div className="text-xs sm:text-sm text-gray-500">{t('reportsModule.balanceSheet.liabilities', 'Liabilities')}</div>
+                    <div className="font-bold break-all">{formatCurrency(report.totals.total_liabilities, currencySymbol)}</div>
+                  </div>
+                  <span className="text-gray-400 font-bold text-2xl sm:text-xl" aria-hidden>+</span>
+                  <div className="text-center text-green-600 dark:text-green-400">
+                    <div className="text-xs sm:text-sm text-gray-500">{t('reportsModule.balanceSheet.equity', 'Equity')}</div>
+                    <div className="font-bold break-all">{formatCurrency(report.totals.total_equity, currencySymbol)}</div>
                   </div>
                 </div>
+                <p className="text-center text-xs text-gray-500 dark:text-gray-400 mt-4">
+                  {Math.abs(report.totals.total_assets - (report.totals.total_liabilities + report.totals.total_equity)) < 0.01
+                    ? t('reportsModule.balanceSheet.equationBalanced', 'Equation is balanced — books are healthy.')
+                    : t('reportsModule.balanceSheet.equationNotBalanced', 'Equation does NOT balance — check Trial Balance for details.')}
+                </p>
               </CardContent>
             </Card>
           </>
@@ -298,18 +293,33 @@ const AppContent = () => {
         {!isLoading && !error && report && report.assets.length === 0 && report.liabilities.length === 0 && report.equity.length === 0 && (
           <Card>
             <CardContent className="pt-6">
-              <div className="text-center py-12">
+              <div className="text-center py-12 max-w-md mx-auto">
                 <Scale className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No Balance Sheet Data</h3>
-                <p className="text-gray-500 dark:text-gray-400">
-                  Post journal entries to see your balance sheet data.
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                  {t('reportsModule.balanceSheet.empty.title', 'No Balance Sheet Data Yet')}
+                </h3>
+                <p className="text-gray-500 dark:text-gray-400 mb-6">
+                  {t(
+                    'reportsModule.balanceSheet.empty.description',
+                    'A balance sheet needs posted journal entries. Start by setting up your chart of accounts and posting your first invoice or payment.',
+                  )}
                 </p>
+                <div className="flex flex-col sm:flex-row gap-2 justify-center">
+                  <Button onClick={() => navigate({ to: '/accounting/accounts' })}>
+                    <BookOpen className="h-4 w-4 mr-2" />
+                    {t('reportsModule.balanceSheet.empty.configureAccounts', 'Configure Chart of Accounts')}
+                  </Button>
+                  <Button variant="outline" onClick={() => navigate({ to: '/accounting/invoices' })}>
+                    <Receipt className="h-4 w-4 mr-2" />
+                    {t('reportsModule.balanceSheet.empty.createInvoice', 'Create First Invoice')}
+                    <ArrowRight className="h-3 w-3 ml-2" />
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
         )}
       </div>
-    </PageLayout>
   );
 };
 

@@ -2,6 +2,8 @@ import { Controller, Get, Post, Patch, Delete, Param, Query, Body, Req, Request,
 import { MarketplaceService } from './marketplace.service';
 import { StrapiService } from '../strapi/strapi.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RequireModule } from '../../common/decorators/require-module.decorator';
+import { ModuleEntitlementGuard } from '../../common/guards/module-entitlement.guard';
 import { GetProductsQueryDto } from './dto/get-products-query.dto';
 import { CreateListingDto, UpdateListingDto } from './dto/create-listing.dto';
 
@@ -62,7 +64,8 @@ export class MarketplaceController {
     // ==================== PROTECTED ENDPOINTS (auth required) ====================
 
     @Get('dashboard/stats')
-    @UseGuards(JwtAuthGuard)
+    @RequireModule('marketplace')
+    @UseGuards(JwtAuthGuard, ModuleEntitlementGuard)
     async getDashboardStats(@Request() req: any) {
         const token = req.headers.authorization?.substring(7);
         const organizationId = req.user?.organizationId || req.headers['x-organization-id'];
@@ -73,7 +76,8 @@ export class MarketplaceController {
      * Get seller's own listings
      */
     @Get('my-listings')
-    @UseGuards(JwtAuthGuard)
+    @RequireModule('marketplace')
+    @UseGuards(JwtAuthGuard, ModuleEntitlementGuard)
     async getMyListings(@Request() req: any) {
         const token = req.headers.authorization?.substring(7);
         try {
@@ -87,7 +91,8 @@ export class MarketplaceController {
      * Create a new listing
      */
     @Post('listings')
-    @UseGuards(JwtAuthGuard)
+    @RequireModule('marketplace')
+    @UseGuards(JwtAuthGuard, ModuleEntitlementGuard)
     async createListing(@Request() req: any, @Body() body: CreateListingDto) {
         const token = req.headers.authorization?.substring(7);
         try {
@@ -101,7 +106,8 @@ export class MarketplaceController {
      * Update a listing
      */
     @Patch('listings/:id')
-    @UseGuards(JwtAuthGuard)
+    @RequireModule('marketplace')
+    @UseGuards(JwtAuthGuard, ModuleEntitlementGuard)
     async updateListing(
         @Request() req: any,
         @Param('id') id: string,
@@ -122,7 +128,8 @@ export class MarketplaceController {
      * Delete a listing
      */
     @Delete('listings/:id')
-    @UseGuards(JwtAuthGuard)
+    @RequireModule('marketplace')
+    @UseGuards(JwtAuthGuard, ModuleEntitlementGuard)
     async deleteListing(@Request() req: any, @Param('id') id: string) {
         const token = req.headers.authorization?.substring(7);
         try {

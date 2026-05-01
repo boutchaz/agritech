@@ -1,0 +1,653 @@
+{
+  "metadata": {
+    "version": "1.0",
+    "date": "2026-04-26",
+    "culture": "amandier",
+    "nom_scientifique": "Prunus dulcis",
+    "code": "AMN",
+    "pays": "Maroc",
+    "zone_reference": "Fès-Meknès, Maroc",
+    "altitude_m": "400-600",
+    "systeme_irrigation": "goutte-à-goutte",
+    "source_satellite": "Sentinel-2",
+    "resolution_m": 10,
+    "revisite_jours": 5,
+    "api_meteo": "Open-Meteo (Penman-Monteith)",
+    "usage": "LLM_direct_read — no parser needed",
+    "conventions": {
+      "mois": "Lowercase English 3-letter: jan feb mar apr may jun jul aug sep oct nov dec",
+      "ranges": "Always [min, max] arrays — never single number when a range exists",
+      "doses": "Always {value: number, unit: string} — never freetext",
+      "conditions": "Always list of {field, operator, value} objects",
+      "nulls": "null = not applicable. Use 0 only for a real zero value.",
+      "phases_maturite": "phases_maturite_ans maps phase id -> [min_age, max_age) in years."
+    },
+    "client_reference": "Itto Group — Fès-Meknès",
+    "auteur": "AgromindIA — AGROGINA",
+    "statut": "pilote",
+    "note": "Référentiel v1.0 à affiner avec données terrain Itto Group sur 2-3 cycles. Premier référentiel amandier validé marché marocain.",
+    "cultures_connexes": ["OLI (Olivier)", "AVO (Avocat)", "AGR (Agrumes)", "PAL (Palmier dattier)"]
+  },
+
+  "phenological_stages": [
+    {
+      "key": "dormancy",
+      "name_fr": "Dormance",
+      "name_en": "Dormancy",
+      "name_ar": "السكون",
+      "months": [11, 12, 1],
+      "thresholds": [
+        { "key": "chill_hours", "label_fr": "Heures de froid", "label_en": "Chill hours", "compare": "below", "value": 7.2, "unit": "h", "icon": "snowflake" },
+        { "key": "frost_risk", "label_fr": "Risque de gel", "label_en": "Frost risk", "compare": "below", "value": 0, "unit": "h", "icon": "snowflake" }
+      ]
+    },
+    {
+      "key": "flowering",
+      "name_fr": "Floraison",
+      "name_en": "Flowering",
+      "name_ar": "الإزهار",
+      "months": [2, 3],
+      "thresholds": [
+        { "key": "frost_risk_critical", "label_fr": "Risque gel critique", "label_en": "Critical frost risk", "compare": "below", "value": -2, "unit": "°C", "icon": "snowflake" },
+        { "key": "rain_pollination", "label_fr": "Pluie pollinisation", "label_en": "Pollination rain", "compare": "above", "value": 15, "unit": "mm", "icon": "cloud-rain" }
+      ]
+    },
+    {
+      "key": "fruit_development",
+      "name_fr": "Grossissement / Durcissement",
+      "name_en": "Fruit development",
+      "name_ar": "نمو الثمار",
+      "months": [4, 5, 6, 7],
+      "thresholds": [
+        { "key": "growing_hours", "label_fr": "Heures de croissance", "label_en": "Growing hours", "compare": "above", "value": 10, "unit": "h", "icon": "sun" },
+        { "key": "extreme_heat", "label_fr": "Chaleur extrême", "label_en": "Extreme heat", "compare": "above", "value": 40, "unit": "°C", "icon": "flame" }
+      ]
+    },
+    {
+      "key": "harvest",
+      "name_fr": "Maturation / Récolte",
+      "name_en": "Maturation / Harvest",
+      "name_ar": "النضج والحصاد",
+      "months": [8, 9],
+      "thresholds": [
+        { "key": "aflatoxin_temp", "label_fr": "Température risque aflatoxines", "label_en": "Aflatoxin risk temp", "compare": "above", "value": 35, "unit": "°C", "icon": "flame" },
+        { "key": "aflatoxin_humidity", "label_fr": "HR risque aflatoxines", "label_en": "Aflatoxin risk humidity", "compare": "above", "value": 70, "unit": "%", "icon": "droplet" }
+      ]
+    }
+  ],
+
+  "phases_maturite_ans": {
+    "juvenile": [0, 4],
+    "entree_production": [4, 7],
+    "pleine_production": [7, 25],
+    "maturite_avancee": [25, 35],
+    "senescence": [35, 50]
+  },
+
+  "seuils_meteo": {
+    "gel": {
+      "threshold_c": -2,
+      "detection_months": [2, 3],
+      "severity": "critical",
+      "alerte_code": "AMN-02"
+    },
+    "canicule": {
+      "tmax_c": 40,
+      "consecutive_days": 2,
+      "detection_months": [7, 8],
+      "severity": "high",
+      "alerte_code": "AMN-10"
+    },
+    "stress_thermique": {
+      "tmax_c": 35,
+      "humidity_max_pct": 70,
+      "detection_months": [8, 9],
+      "severity": "critical",
+      "alerte_code": "AMN-09",
+      "note": "Risque Aspergillus / aflatoxines post-récolte"
+    },
+    "secheresse": {
+      "rain_mm_max_per_day": 5,
+      "dry_season_days": 60,
+      "severity": "medium"
+    },
+    "pluie_floraison": {
+      "rain_mm_min": 15,
+      "tmin_c_max": 5,
+      "detection_bbch": "60-69",
+      "severity": "medium",
+      "alerte_code": "AMN-11"
+    }
+  },
+
+  "capacites_calibrage": {
+    "supported": true,
+    "phenology_mode": "state_machine",
+    "subtypes": {
+      "intensif": {
+        "required_indices": ["NDVI", "NIRv", "NDMI", "NDRE", "EVI", "GCI", "EBI"]
+      },
+      "super_intensif": {
+        "required_indices": ["NDVI", "NIRv", "NDMI", "NDRE", "EVI", "GCI", "EBI"]
+      }
+    },
+    "min_observed_images": 10,
+    "min_history_days": 120,
+    "min_history_months_for_period_percentiles": 24,
+    "required_indices": ["NDVI", "NIRv", "NDMI", "NDRE", "EVI", "GCI", "EBI"]
+  },
+
+  "varietes": {
+    "mediterraneennes": {
+      "principales": ["Ferragnès", "Ferraduel"],
+      "pollinisation": "croisée obligatoire",
+      "floraison": "Mars",
+      "recolte": "Septembre"
+    },
+    "californiennes": {
+      "principales": ["Non Pareil", "Carmel", "Price"],
+      "pollinisation": "partielle auto-fertile",
+      "floraison": "Mi-Février",
+      "recolte": "Août"
+    }
+  },
+
+  "phenologie": [
+    {
+      "mois": 1,
+      "nom": "Janvier",
+      "stade": "Dormance profonde",
+      "code_bbch": "BBCH 00",
+      "variete_med": "Dormance",
+      "variete_calif": "Dormance",
+      "actions": ["Taille de formation", "Apport organique", "Analyse sol"],
+      "risques": ["Gel"],
+      "priorite": "faible"
+    },
+    {
+      "mois": 2,
+      "nom": "Février",
+      "stade": "Gonflement bourgeons / Floraison Calif.",
+      "code_bbch": "BBCH 51-65",
+      "variete_med": "Gonflement bourgeons",
+      "variete_calif": "Floraison pleine",
+      "actions": ["Traitement préventif tavelure", "Huile blanche", "Vérification ruches"],
+      "risques": ["Gel tardif", "Pluie floraison"],
+      "priorite": "critique"
+    },
+    {
+      "mois": 3,
+      "nom": "Mars",
+      "stade": "Floraison Médit. / Nouaison Calif.",
+      "code_bbch": "BBCH 65-71",
+      "variete_med": "Floraison pleine",
+      "variete_calif": "Nouaison",
+      "actions": ["NO traitement insecticide", "Folaire Bore 0.15%", "Folaire Zinc 0.3%", "Activation irrigation"],
+      "risques": ["Gel critique", "Moniliose", "Carence Bore"],
+      "priorite": "critique"
+    },
+    {
+      "mois": 4,
+      "nom": "Avril",
+      "stade": "Nouaison / Début grossissement",
+      "code_bbch": "BBCH 71-72",
+      "variete_med": "Nouaison",
+      "variete_calif": "Début grossissement",
+      "actions": ["Reprise irrigation pleine", "Fertigation N+K", "Folaire Bore si non fait"],
+      "risques": ["Chute physiologique", "Carence azotée"],
+      "priorite": "important"
+    },
+    {
+      "mois": 5,
+      "nom": "Mai",
+      "stade": "Grossissement actif",
+      "code_bbch": "BBCH 72-75",
+      "variete_med": "Grossissement actif",
+      "variete_calif": "Grossissement actif",
+      "actions": ["Irrigation maximale", "Fertigation hebdomadaire N+K", "Folaire Mg+Ca"],
+      "risques": ["Stress hydrique", "Acariens"],
+      "priorite": "critique"
+    },
+    {
+      "mois": 6,
+      "nom": "Juin",
+      "stade": "Grossissement max / Début durcissement",
+      "code_bbch": "BBCH 75-79",
+      "variete_med": "Grossissement max",
+      "variete_calif": "Durcissement noyau",
+      "actions": ["Irrigation au pic Kc=1.0", "Maintien K élevé", "Réduction progressive N"],
+      "risques": ["Stress hydrique sévère", "Stress thermique", "Acariens"],
+      "priorite": "critique"
+    },
+    {
+      "mois": 7,
+      "nom": "Juillet",
+      "stade": "Durcissement noyau / Pré-maturation",
+      "code_bbch": "BBCH 79-85",
+      "variete_med": "Durcissement noyau",
+      "variete_calif": "Pré-maturation",
+      "actions": ["Réduction irrigation progressive", "Arrêt N", "Maintien K", "Folaire Ca"],
+      "risques": ["Stress thermique >40°C", "Aspergillus début"],
+      "priorite": "critique"
+    },
+    {
+      "mois": 8,
+      "nom": "Août",
+      "stade": "Maturation / Récolte Calif.",
+      "code_bbch": "BBCH 85-89",
+      "variete_med": "Maturation",
+      "variete_calif": "Récolte",
+      "actions": ["Arrêt irrigation 3-4 semaines avant récolte", "Récolte mécanique Calif.", "Séchage rapide <8% H2O"],
+      "risques": ["Aflatoxines (Aspergillus flavus)", "Chaleur excessive"],
+      "priorite": "critique"
+    },
+    {
+      "mois": 9,
+      "nom": "Septembre",
+      "stade": "Récolte Médit. / Début repos",
+      "code_bbch": "BBCH 89-91",
+      "variete_med": "Récolte",
+      "variete_calif": "Repos végétatif",
+      "actions": ["Récolte mécanique Médit.", "Séchage contrôlé", "Bilan saison par secteur"],
+      "risques": ["Xanthomonas (premières pluies)", "Aspergillus stockage"],
+      "priorite": "important"
+    },
+    {
+      "mois": 10,
+      "nom": "Octobre",
+      "stade": "Repos végétatif",
+      "code_bbch": "BBCH 91-93",
+      "variete_med": "Repos",
+      "variete_calif": "Repos",
+      "actions": ["Apport organique (compost)", "Phosphore sol", "Traitement cuivre préventif"],
+      "risques": ["Xanthomonas (pluies automne)", "Bactériose"],
+      "priorite": "faible"
+    },
+    {
+      "mois": 11,
+      "nom": "Novembre",
+      "stade": "Repos / Préparation dormance",
+      "code_bbch": "BBCH 93-97",
+      "variete_med": "Pré-dormance",
+      "variete_calif": "Pré-dormance",
+      "actions": ["Rognage", "Enfouissement engrais de fond", "Préparation plan taille"],
+      "risques": ["Xanthomonas"],
+      "priorite": "faible"
+    },
+    {
+      "mois": 12,
+      "nom": "Décembre",
+      "stade": "Dormance profonde",
+      "code_bbch": "BBCH 00",
+      "variete_med": "Dormance",
+      "variete_calif": "Dormance",
+      "actions": ["Taille hiver", "Apport calcique si pH <6.5", "Planification intrants N+1"],
+      "risques": ["Gel"],
+      "priorite": "faible"
+    }
+  ],
+
+  "indices_satellitaires": {
+    "NDVI": {
+      "nom_complet": "Normalized Difference Vegetation Index",
+      "usage": "Biomasse végétale active, vigueur générale",
+      "seuils": {
+        "stress_severe": { "max": 0.30, "action": "Alerte AMN-03, diagnostic immédiat" },
+        "stress_modere": { "min": 0.30, "max": 0.45, "action": "Surveillance renforcée" },
+        "normal": { "min": 0.45, "max": 0.70, "action": "Monitoring standard" },
+        "vigueur_elevee": { "min": 0.70, "action": "Optimal" }
+      },
+      "cible_saison": { "min": 0.55, "max": 0.68, "periode": "Mai-Juillet" },
+      "alerte_delta": { "variation": -0.10, "periode_jours": 10, "code": "AMN-03" }
+    },
+    "EVI": {
+      "nom_complet": "Enhanced Vegetation Index",
+      "usage": "Vigueur canopée dense, comparaison inter-secteurs",
+      "seuils": {
+        "stress_severe": { "max": 0.20, "action": "Alerte AMN-03" },
+        "attention": { "min": 0.20, "max": 0.35, "action": "Surveillance" },
+        "normal": { "min": 0.35, "max": 0.55, "action": "OK" },
+        "excellent": { "min": 0.55, "action": "Optimal" }
+      },
+      "note": "Préférer EVI pour comparaison inter-secteurs (correction atmosphérique)"
+    },
+    "GCI": {
+      "nom_complet": "Green Chlorophyll Index",
+      "usage": "Teneur chlorophylle, statut azoté, détection chlorose",
+      "seuils": {
+        "carence_severe": { "max": 2.0, "action": "Alerte AMN-04, folaire N urgent" },
+        "deficit_modere": { "min": 2.0, "max": 3.5, "action": "Ajustement fertigation" },
+        "normal": { "min": 3.5, "max": 5.5, "action": "OK" },
+        "optimum": { "min": 5.5, "action": "Excellent" }
+      },
+      "cible_pilote": { "min": 4.0, "periode": "Mai-Juin" },
+      "alerte_code": "AMN-04"
+    },
+    "NDRE": {
+      "nom_complet": "Normalized Difference Red Edge",
+      "usage": "Carence N/Fe, chlorose ferrique (sols calcaires Fès-Meknès)",
+      "seuils": {
+        "carence": { "max": 0.15, "action": "Alerte AMN-04 + AMN-06, fer chélaté" },
+        "attention": { "min": 0.15, "max": 0.25, "action": "Surveillance" },
+        "normal": { "min": 0.25, "max": 0.40, "action": "OK" },
+        "vigoureux": { "min": 0.40, "action": "Optimal" }
+      },
+      "note": "Combinaison GCI+NDRE pour différencier carence N vs chlorose ferrique"
+    },
+    "NDMI": {
+      "nom_complet": "Normalized Difference Moisture Index",
+      "usage": "Contenu en eau couvert végétal, stress hydrique",
+      "seuils": {
+        "stress_severe": { "max": -0.10, "action": "Alerte AMN-01, irrigation urgente" },
+        "attention": { "min": -0.10, "max": 0.10, "action": "Augmenter dose irrigation" },
+        "correct": { "min": 0.10, "max": 0.30, "action": "OK" },
+        "bonne_hydratation": { "min": 0.30, "action": "Optimal" }
+      },
+      "priorite_periode": "Juin-Août",
+      "alerte_delta": { "variation": -0.05, "periode_jours": 5, "periode_mois": [6, 7, 8], "code": "AMN-01" }
+    },
+    "NIRv": {
+      "nom_complet": "Near-Infrared Reflectance of Vegetation",
+      "usage": "Productivité primaire brute, estimation rendement",
+      "seuils": {
+        "tres_faible": { "max": 0.05 },
+        "moyen": { "min": 0.05, "max": 0.12 },
+        "bon": { "min": 0.12, "max": 0.22 },
+        "excellent": { "min": 0.22 }
+      },
+      "usage_recolte": "Valeur NIRv juillet → estimation t/ha amande décortiquée",
+      "alerte_code": "AMN-12"
+    },
+    "EBI": {
+      "nom_complet": "Enhanced Bloom Index",
+      "usage": "Détection pic de floraison amandier (fleurs blanches sur canopée). INDICE PHÉNOLOGIQUE PRINCIPAL amandier — pas d'équivalent NIRvP olivier.",
+      "formule": "EBI = (R + G + B) / ((G/B) × (R - B + epsilon))",
+      "seuils": {
+        "pre_floraison": { "max": 50, "action": "Floraison non détectée — surveiller" },
+        "debut_floraison": { "min": 50, "max": 150, "action": "Début floraison, vérifier ruches" },
+        "pleine_floraison": { "min": 150, "max": 300, "action": "Pic floraison — fenêtre pollinisation critique" },
+        "fin_floraison": { "min": 300, "action": "Saturation — chute pétales imminente" }
+      },
+      "priorite_periode": "Février-Mars (mediterraneennes), Mi-Février (californiennes)",
+      "alerte_codes": ["AMN-02", "AMN-05", "AMN-11"],
+      "usage_phenologique": "Pic EBI horodate la floraison réelle par secteur — déclenche alertes gel (AMN-02), bore (AMN-05), pollinisation (AMN-11). Croiser avec NDVI pour confirmer densité fleurs.",
+      "note": "EBI exploite la signature blanche éphémère des fleurs d'amandier (R≈G≈B élevés, B max). Spécifique cultures à floraison blanche dense (amandier, cerisier, prunier)."
+    }
+  },
+
+  "irrigation": {
+    "formule": "ETc (mm/j) = Kc × ETP0 (Penman-Monteith Open-Meteo)",
+    "efficience_goutte_a_goutte": 0.92,
+    "besoin_annuel_mm": { "min": 700, "max": 900 },
+    "coefficients_kc": [
+      { "mois": 1, "nom": "Janvier", "stade": "Dormance", "kc_med": 0.30, "kc_calif": 0.30, "etp_ref_mm_j": 1.5, "besoin_mensuel_mm": 14, "priorite": "faible" },
+      { "mois": 2, "nom": "Février", "stade": "Floraison Calif.", "kc_med": 0.40, "kc_calif": 0.55, "etp_ref_mm_j": 2.0, "besoin_mensuel_mm_min": 22, "besoin_mensuel_mm_max": 31, "priorite": "modere" },
+      { "mois": 3, "nom": "Mars", "stade": "Floraison Médit. / Nouaison", "kc_med": 0.55, "kc_calif": 0.65, "etp_ref_mm_j": 3.0, "besoin_mensuel_mm_min": 51, "besoin_mensuel_mm_max": 60, "priorite": "modere" },
+      { "mois": 4, "nom": "Avril", "stade": "Nouaison / Début grossissement", "kc_med": 0.70, "kc_calif": 0.75, "etp_ref_mm_j": 4.5, "besoin_mensuel_mm_min": 95, "besoin_mensuel_mm_max": 101, "priorite": "important" },
+      { "mois": 5, "nom": "Mai", "stade": "Grossissement actif", "kc_med": 0.90, "kc_calif": 0.90, "etp_ref_mm_j": 6.0, "besoin_mensuel_mm": 167, "priorite": "critique" },
+      { "mois": 6, "nom": "Juin", "stade": "Grossissement max / Durcissement", "kc_med": 1.00, "kc_calif": 1.00, "etp_ref_mm_j": 7.5, "besoin_mensuel_mm": 225, "priorite": "critique" },
+      { "mois": 7, "nom": "Juillet", "stade": "Durcissement / Pré-maturation", "kc_med": 0.90, "kc_calif": 0.85, "etp_ref_mm_j": 7.8, "besoin_mensuel_mm_min": 205, "besoin_mensuel_mm_max": 217, "priorite": "critique" },
+      { "mois": 8, "nom": "Août", "stade": "Maturation / Récolte Calif.", "kc_med": 0.75, "kc_calif": 0.55, "etp_ref_mm_j": 7.2, "besoin_mensuel_mm_min": 123, "besoin_mensuel_mm_max": 167, "priorite": "important" },
+      { "mois": 9, "nom": "Septembre", "stade": "Récolte Médit. / Repos", "kc_med": 0.55, "kc_calif": 0.40, "etp_ref_mm_j": 5.5, "besoin_mensuel_mm_min": 66, "besoin_mensuel_mm_max": 91, "priorite": "faible" },
+      { "mois": 10, "nom": "Octobre", "stade": "Repos végétatif", "kc_med": 0.40, "kc_calif": 0.40, "etp_ref_mm_j": 3.5, "besoin_mensuel_mm": 43, "priorite": "faible" },
+      { "mois": 11, "nom": "Novembre", "stade": "Repos / Pré-dormance", "kc_med": 0.35, "kc_calif": 0.35, "etp_ref_mm_j": 2.0, "besoin_mensuel_mm": 21, "priorite": "tres_faible" },
+      { "mois": 12, "nom": "Décembre", "stade": "Dormance profonde", "kc_med": 0.30, "kc_calif": 0.30, "etp_ref_mm_j": 1.5, "besoin_mensuel_mm": 14, "priorite": "tres_faible" }
+    ],
+    "fenetre_critique": {
+      "periode": "Juin-Juillet",
+      "besoin_mm_2mois": 440,
+      "note": "50% du besoin annuel sur 2 mois. Sur 120 ha : ~528 000 m3/mois en pointe."
+    }
+  },
+
+  "nutrition": {
+    "equilibre_reference": { "N": 1, "P2O5": 0.3, "K2O": 1.2 },
+    "apports_annuels_u_ha": {
+      "N": { "min": 180, "max": 200 },
+      "P2O5": 60,
+      "K2O": 240
+    },
+    "programme_mensuel": [
+      {
+        "periode": "Janvier-Février",
+        "stade": "Dormance / Pré-floraison",
+        "N_u_ha": 60,
+        "P2O5_u_ha": 30,
+        "K2O_u_ha": 40,
+        "oligoelements": ["Fe chélaté EDTA 2-4 kg/ha", "Zn sulfate 3-5 kg/ha", "Mn"],
+        "mode": "Enfouissement sol",
+        "note": "60% du N total en pré-floraison pour stimuler la floraison"
+      },
+      {
+        "periode": "Mars-Avril",
+        "stade": "Floraison / Nouaison",
+        "N_u_ha": 20,
+        "P2O5_u_ha": 10,
+        "K2O_u_ha": 30,
+        "oligoelements": ["Bore 1.5-2 kg/ha B pur (folaire 0.15%)", "Zinc sulfate 0.3% folaire"],
+        "mode": "Fertigation + Folaire",
+        "note": "Bore CRITIQUE pour la nouaison. Ne pas traiter insecticide pendant floraison (abeilles)"
+      },
+      {
+        "periode": "Mai-Juin",
+        "stade": "Grossissement actif",
+        "N_u_ha": 60,
+        "P2O5_u_ha": 10,
+        "K2O_u_ha": 80,
+        "oligoelements": ["Mg folaire", "Ca folaire", "Zn"],
+        "mode": "Fertigation hebdomadaire",
+        "note": "Phase calibre. Ratio N:K = 1:1.3. K critique pour qualité amande"
+      },
+      {
+        "periode": "Juillet",
+        "stade": "Durcissement noyau",
+        "N_u_ha": 20,
+        "P2O5_u_ha": 0,
+        "K2O_u_ha": 50,
+        "oligoelements": ["Ca folaire"],
+        "mode": "Fertigation réduite",
+        "note": "Réduction N progressive. Risque excès végétation si N trop élevé"
+      },
+      {
+        "periode": "Août-Septembre",
+        "stade": "Maturation / Récolte",
+        "N_u_ha": 0,
+        "P2O5_u_ha": 0,
+        "K2O_u_ha": 20,
+        "oligoelements": [],
+        "mode": "Arrêt fertigation",
+        "note": "Arrêt 3-4 semaines avant récolte pour favoriser séchage naturel coque"
+      },
+      {
+        "periode": "Octobre-Novembre",
+        "stade": "Repos végétatif",
+        "N_u_ha": 20,
+        "P2O5_u_ha": 10,
+        "K2O_u_ha": 20,
+        "oligoelements": ["Compost organique (valorisation déchets internes)"],
+        "mode": "Enfouissement sol + organique",
+        "note": "Reconstitution réserves. Utiliser compost interne Itto Group"
+      }
+    ],
+    "oligoelements_prioritaires_fes_meknes": {
+      "Bore": { "dose": "1.5-2 kg/ha B pur", "periode": "Mars (avant BBCH 65)", "mode": "Folaire 0.15%", "risque": "Carence fréquente sols calcaires, chute nouaison" },
+      "Zinc": { "dose": "3-5 kg ZnSO4/ha", "periode": "Mars-Avril", "mode": "Sol ou folaire 0.3%", "risque": "Carence commune région Meknès" },
+      "Fer": { "dose": "2-4 kg Fe-EDTA/ha", "periode": "Janvier-Février", "mode": "Sol chélaté", "risque": "Chlorose ferrique sols alcalins pH>7.5" },
+      "Manganèse": { "mode": "Surveillance via NDRE", "risque": "Antagonisme Mn/Fe sur sols calcaires" }
+    }
+  },
+
+  "alertes": [
+    {
+      "code": "AMN-01",
+      "niveau": "CRITIQUE",
+      "titre": "Stress hydrique sévère — période grossissement",
+      "declenchement": { "indice": "NDMI", "operateur": "<", "valeur": -0.10, "condition_supplementaire": "ETP > 7 mm/j", "mois": [5, 6, 7] },
+      "action": "Augmentation immédiate dose irrigation, vérification débit goutte-à-goutte"
+    },
+    {
+      "code": "AMN-02",
+      "niveau": "CRITIQUE",
+      "titre": "Risque gel sur floraison",
+      "declenchement": { "meteo": "T_min", "operateur": "<", "valeur": -2, "bbch": "55-69", "mois": [2, 3] },
+      "action": "Alerte urgente, activation protection gel si disponible"
+    },
+    {
+      "code": "AMN-03",
+      "niveau": "URGENT",
+      "titre": "Baisse NDVI anormale — stress végétatif",
+      "declenchement": { "indice": "NDVI", "delta": -0.10, "periode_jours": 10, "exclusion_mois": [8, 9] },
+      "action": "Diagnostic terrain, vérification irrigation et état sanitaire"
+    },
+    {
+      "code": "AMN-04",
+      "niveau": "URGENT",
+      "titre": "Carence azotée détectée",
+      "declenchement": { "conditions": [{ "indice": "GCI", "operateur": "<", "valeur": 2.5 }, { "indice": "NDRE", "operateur": "<", "valeur": 0.18 }], "operateur_logique": "OR", "mois": [4, 5, 6] },
+      "action": "Ajustement fertigation azotée, folaire urée 3% si urgent"
+    },
+    {
+      "code": "AMN-05",
+      "niveau": "URGENT",
+      "titre": "Risque carence bore — chute nouaison",
+      "declenchement": { "condition": "Non-application Bore avant BBCH 65", "indice_confirmatoire": "GCI en baisse", "mois": [2, 3] },
+      "action": "Folaire Bore 0.15% immédiat avant fermeture fleurs"
+    },
+    {
+      "code": "AMN-06",
+      "niveau": "INFO",
+      "titre": "Chlorose ferrique suspectée",
+      "declenchement": { "indice": "NDRE", "operateur": "<", "valeur": 0.20, "condition_sol": "pH estimé > 7.5" },
+      "action": "Apport Fe-EDTA chélaté, vérification pH eau irrigation"
+    },
+    {
+      "code": "AMN-07",
+      "niveau": "URGENT",
+      "titre": "Hétérogénéité inter-secteurs anormale",
+      "declenchement": { "indice": "NDVI", "ecart_entre_secteurs": 0.15, "condition": "mêmes conditions météo" },
+      "action": "Audit secteur défaillant, vérification irrigation localisée et état sanitaire"
+    },
+    {
+      "code": "AMN-08",
+      "niveau": "INFO",
+      "titre": "Fenêtre optimale récolte",
+      "declenchement": { "conditions": [{ "indice": "EVI", "tendance": "déclin" }, { "indice": "NDMI", "operateur": ">", "valeur": 0.10 }, { "meteo": "T_moy", "operateur": ">", "valeur": 30 }], "mois": [8, 9] },
+      "action": "Planification récolte mécanique, préparation station cassage"
+    },
+    {
+      "code": "AMN-09",
+      "niveau": "CRITIQUE",
+      "titre": "Risque Aspergillus / aflatoxines post-récolte",
+      "declenchement": { "conditions": [{ "meteo": "T_max", "operateur": ">", "valeur": 35 }, { "meteo": "HR", "operateur": ">", "valeur": 70 }], "condition_pheno": "Post-déhiscence", "mois": [8, 9] },
+      "action": "Récolte urgente, séchage mécanique immédiat, stockage <8% H2O"
+    },
+    {
+      "code": "AMN-10",
+      "niveau": "URGENT",
+      "titre": "Stress thermique estival critique",
+      "declenchement": { "conditions": [{ "meteo": "T_max", "operateur": ">", "valeur": 40 }, { "indice": "NDMI", "operateur": "<", "valeur": 0.05 }], "mois": [7, 8] },
+      "action": "Irrigation de refroidissement, surveillance NDMI quotidienne"
+    },
+    {
+      "code": "AMN-11",
+      "niveau": "INFO",
+      "titre": "Conditions défavorables pollinisation",
+      "declenchement": { "conditions": [{ "meteo": "pluie_mm", "operateur": ">", "valeur": 15 }, { "meteo": "T_min", "operateur": "<", "valeur": 5 }], "operateur_logique": "OR", "bbch": "60-69" },
+      "action": "Surveillance nouaison, prévoir folaire Bore si conditions prolongées"
+    },
+    {
+      "code": "AMN-12",
+      "niveau": "INFO",
+      "titre": "Estimation rendement — prévision récolte",
+      "declenchement": { "indice": "NIRv", "periode": "Juillet", "calcul": "NIRv_moyen_secteur → estimation t/ha amande décortiquée" },
+      "action": "Rapport prévisionnel rendement par secteur, planification logistique station ONSSA"
+    }
+  ],
+
+  "ravageurs_maladies": [
+    {
+      "organisme": "Monilinia laxa",
+      "nom_commun": "Moniliose",
+      "type": "champignon",
+      "periode_risque_mois": [2, 3, 4],
+      "signal_satellite": "Baisse NDVI localisée + humidité élevée",
+      "seuil_intervention": "T° 15-22°C + HR >85% pendant floraison",
+      "solution_integree": ["Cuivre (si nécessaire)", "Aération canopée par taille", "Éviter blessures"]
+    },
+    {
+      "organisme": "Xanthomonas arboricola pv. juglandis",
+      "nom_commun": "Bactériose amandier",
+      "type": "bacterie",
+      "periode_risque_mois": [10, 11],
+      "signal_satellite": "Spots NDVI <0.35 après pluies automne",
+      "seuil_intervention": "Pluies >20mm + T° 20-28°C post-récolte",
+      "solution_integree": ["Cuivre préventif", "Couverture plaies de taille", "Taille en période sèche"]
+    },
+    {
+      "organisme": "Anarsia lineatella",
+      "nom_commun": "Zeuzère / Carpocapse amandes",
+      "type": "lepidoptere",
+      "periode_risque_mois": [4, 5, 6, 7, 8],
+      "signal_satellite": "Dégâts précoces détectables sur NIRv",
+      "seuil_intervention": "5 adultes/piège/semaine",
+      "solution_integree": ["Confusion sexuelle", "Bacillus thuringiensis (Bt)", "Insectes auxiliaires"]
+    },
+    {
+      "organisme": "Aspergillus flavus",
+      "nom_commun": "Aflatoxines",
+      "type": "mycotoxine",
+      "periode_risque_mois": [8, 9],
+      "signal_satellite": "AMN-09 (T° + HR post-déhiscence)",
+      "seuil_intervention": "T° >35°C + HR >70% amandes au sol",
+      "solution_integree": ["Récolte rapide", "Séchage mécanique", "Stockage <8% H2O", "Contrôle ONSSA"]
+    },
+    {
+      "organisme": "Eutetranychus orientalis",
+      "nom_commun": "Acarien rouge oriental",
+      "type": "acarien",
+      "periode_risque_mois": [5, 6, 7, 8],
+      "signal_satellite": "EVI baisse + NDRE chute localisée",
+      "seuil_intervention": "10 acariens/feuille active",
+      "solution_integree": ["Acaricides biologiques", "Phytoseiidae (acariens prédateurs)", "Surveillance hebdo"]
+    }
+  ],
+
+  "plan_annuel": {
+    "algorithme": "GENERATION_PLAN_ANNUEL_AMN",
+    "parametres_entree": ["surface_ha", "variete", "type_irrigation", "date_plantation", "historique_gci_evi"],
+    "fenetres_critiques": [
+      {
+        "id": 1,
+        "nom": "Floraison",
+        "periode_mois": [2, 3],
+        "indices_cles": ["EBI", "NDVI", "T_min"],
+        "alertes_actives": ["AMN-02", "AMN-05", "AMN-11"],
+        "kpi": "T_min > -2°C pendant BBCH 65 ; pic EBI horodaté par secteur"
+      },
+      {
+        "id": 2,
+        "nom": "Stress hydrique estival",
+        "periode_mois": [6, 7],
+        "indices_cles": ["NDMI", "ETP"],
+        "alertes_actives": ["AMN-01", "AMN-10", "AMN-07"],
+        "kpi": "NDMI > 0.10 en continu"
+      },
+      {
+        "id": 3,
+        "nom": "Récolte",
+        "periode_mois": [8, 9],
+        "indices_cles": ["NIRv", "NDMI"],
+        "alertes_actives": ["AMN-08", "AMN-09", "AMN-12"],
+        "kpi": "NIRv > 0.15 au pic + séchage <8% H2O"
+      },
+      {
+        "id": 4,
+        "nom": "Repos végétatif",
+        "periode_mois": [10, 11],
+        "indices_cles": ["EVI", "pluviometrie"],
+        "alertes_actives": ["AMN-06"],
+        "kpi": "EVI stable > 0.25 post-récolte"
+      }
+    ]
+  }
+}

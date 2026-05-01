@@ -19,6 +19,7 @@ import {
   ApiQuery,
   ApiParam
 } from '@nestjs/swagger';
+import { Idempotent, OptimisticLock } from '../../common/decorators/offline.decorators';
 import { StockEntriesService } from './stock-entries.service';
 import { CreateStockEntryDto } from './dto/create-stock-entry.dto';
 import { UpdateStockEntryDto } from './dto/update-stock-entry.dto';
@@ -27,13 +28,23 @@ import { CreateOpeningStockDto } from './dto/create-opening-stock.dto';
 import { UpdateOpeningStockDto } from './dto/update-opening-stock.dto';
 import { CreateStockAccountMappingDto, UpdateStockAccountMappingDto } from './dto/stock-account-mapping.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RequireModule } from '../../common/decorators/require-module.decorator';
 import { OrganizationGuard } from '../../common/guards/organization.guard';
+import { ModuleEntitlementGuard } from '../../common/guards/module-entitlement.guard';
+import { PoliciesGuard } from '../casl/policies.guard';
+import {
+  CanCreateStockEntry,
+  CanReadStockEntries,
+  CanUpdateStockEntry,
+  CanDeleteStockEntry,
+} from '../casl/permissions.decorator';
 import { StockReservationsService } from './stock-reservations.service';
 import { StockEntryApprovalsService } from './stock-entry-approvals.service';
 
 @ApiTags('stock-entries')
 @Controller('stock-entries')
-@UseGuards(JwtAuthGuard, OrganizationGuard)
+@RequireModule('stock')
+@UseGuards(JwtAuthGuard, OrganizationGuard, ModuleEntitlementGuard, PoliciesGuard)
 @ApiBearerAuth()
 export class StockEntriesController {
   constructor(
@@ -43,6 +54,7 @@ export class StockEntriesController {
   ) {}
 
   @Get()
+  @CanReadStockEntries()
   @ApiOperation({ summary: 'Get all stock entries with optional filters' })
   @ApiQuery({ name: 'entry_type', required: false })
   @ApiQuery({ name: 'status', required: false })
@@ -82,6 +94,7 @@ export class StockEntriesController {
   }
 
   @Get('movements/list')
+  @CanReadStockEntries()
   @ApiOperation({ summary: 'Get stock movements with filters' })
   @ApiQuery({ name: 'item_id', required: false })
   @ApiQuery({ name: 'warehouse_id', required: false })
@@ -227,6 +240,18 @@ export class StockEntriesController {
     );
   }
 
+  @Get('aging')
+  @ApiOperation({ summary: 'Get stock aging report bucketed by days in inventory' })
+  @ApiQuery({ name: 'warehouse_id', required: false })
+  @ApiResponse({ status: 200, description: 'Stock aging report retrieved successfully' })
+  async getStockAging(
+    @Req() req: any,
+    @Query('warehouse_id') warehouseId?: string,
+  ) {
+    const organizationId = req.headers['x-organization-id'];
+    return this.stockEntriesService.getStockAging(organizationId, warehouseId);
+  }
+
   @Get('fefo-suggestion')
   @ApiOperation({ summary: 'Get FEFO issue suggestion for item batches' })
   @ApiQuery({ name: 'item_id', required: true })
@@ -349,6 +374,30 @@ export class StockEntriesController {
     return this.stockEntriesService.deleteStockAccountMapping(id, organizationId);
   }
 
+  @Post('account-mappings/init-defaults')
+  @ApiOperation({
+    summary: 'Seed default stock account mappings using the Moroccan CGNC chart of accounts',
+    description:
+      'Idempotent: skips entry types with existing mappings. Requires the chart of accounts to already be seeded.',
+  })
+  @ApiResponse({ status: 201, description: 'Default mappings created' })
+  async initDefaultAccountMappings(@Req() req: any) {
+    const organizationId = req.headers['x-organization-id'];
+    return this.stockEntriesService.seedDefaultStockAccountMappings(organizationId);
+  }
+
+  @Get('gl-reconciliation')
+  @ApiOperation({
+    summary: 'Stock vs GL reconciliation report',
+    description:
+      'Compares physical stock value (sum of stock_valuation lots) against the inventory account GL balance from posted stock journal entries. Surfaces drift caused by missing mappings, manual GL postings, or rounding.',
+  })
+  @ApiResponse({ status: 200, description: 'Reconciliation report retrieved' })
+  async getGlReconciliation(@Req() req: any) {
+    const organizationId = req.headers['x-organization-id'];
+    return this.stockEntriesService.getStockGlReconciliation(organizationId);
+  }
+
   @Get('approvals/pending')
   @ApiOperation({ summary: 'Get pending stock entry approvals' })
   async getPendingApprovals(@Req() req: any) {
@@ -399,6 +448,8 @@ export class StockEntriesController {
   }
 
   @Post()
+  @CanCreateStockEntry()
+  @Idempotent({ table: 'stock_entries' })
   @ApiOperation({ summary: 'Create a new stock entry' })
   @ApiResponse({ status: 201, description: 'Stock entry created successfully' })
   @ApiResponse({ status: 400, description: 'Bad request' })
@@ -406,10 +457,28 @@ export class StockEntriesController {
     const organizationId = req.headers['x-organization-id'];
     createStockEntryDto.organization_id = organizationId;
     createStockEntryDto.created_by = req.user.sub;
-    return this.stockEntriesService.createStockEntry(createStockEntryDto);
+
+    const stockEntry = await this.stockEntriesService.createStockEntry(createStockEntryDto);
+
+    const totalValue = (stockEntry.items || []).reduce(
+      (sum: number, item: any) => sum + (item.quantity || 0) * (item.cost_per_unit || 0),
+      0,
+    );
+
+    const approvalResult = await this.stockEntryApprovalsService.autoRequestApprovalIfNeeded(
+      stockEntry.id,
+      organizationId,
+      req.user.sub,
+      createStockEntryDto.entry_type,
+      totalValue,
+    );
+
+    return { ...stockEntry, approval: approvalResult };
   }
 
   @Patch(':id')
+  @CanUpdateStockEntry()
+  @OptimisticLock({ table: 'stock_entries' })
   @ApiOperation({ summary: 'Update a draft stock entry' })
   @ApiParam({ name: 'id', description: 'Stock entry ID' })
   @ApiResponse({ status: 200, description: 'Stock entry updated successfully' })
@@ -426,6 +495,7 @@ export class StockEntriesController {
   }
 
   @Patch(':id/post')
+  @CanUpdateStockEntry()
   @ApiOperation({ summary: 'Post/finalize a stock entry' })
   @ApiParam({ name: 'id', description: 'Stock entry ID' })
   @ApiResponse({ status: 200, description: 'Stock entry posted successfully' })
@@ -436,6 +506,7 @@ export class StockEntriesController {
   }
 
   @Patch(':id/cancel')
+  @CanUpdateStockEntry()
   @ApiOperation({ summary: 'Cancel a stock entry' })
   @ApiParam({ name: 'id', description: 'Stock entry ID' })
   @ApiResponse({ status: 200, description: 'Stock entry cancelled successfully' })
@@ -447,6 +518,7 @@ export class StockEntriesController {
   }
 
   @Post(':id/reverse')
+  @CanUpdateStockEntry()
   @ApiOperation({ summary: 'Reverse a posted stock entry' })
   @ApiParam({ name: 'id', description: 'Stock entry ID' })
   @ApiResponse({ status: 200, description: 'Stock entry reversed successfully' })
@@ -459,6 +531,7 @@ export class StockEntriesController {
   }
 
   @Delete(':id')
+  @CanDeleteStockEntry()
   @ApiOperation({ summary: 'Delete a draft stock entry' })
   @ApiParam({ name: 'id', description: 'Stock entry ID' })
   @ApiResponse({ status: 200, description: 'Stock entry deleted successfully' })

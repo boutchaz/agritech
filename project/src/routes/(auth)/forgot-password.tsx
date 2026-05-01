@@ -1,5 +1,6 @@
 import { Link, createFileRoute } from '@tanstack/react-router'
 import React, { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { AuthLayout } from '@/components/AuthLayout'
 import { FormField } from '@/components/ui/FormField'
 import { Input } from '@/components/ui/Input'
@@ -12,6 +13,7 @@ export const Route = createFileRoute('/(auth)/forgot-password')({
 })
 
 function ForgotPasswordPage() {
+  const { t } = useTranslation()
   const [email, setEmail] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -21,7 +23,7 @@ function ForgotPasswordPage() {
     e.preventDefault()
 
     if (!email) {
-      setError('Please enter the email associated with your account.')
+      setError(t('auth.forgotPassword.errorEmailRequired'))
       return
     }
 
@@ -42,12 +44,12 @@ function ForgotPasswordPage() {
 
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.message || 'Failed to send reset email');
+        throw new Error(data.message || t('auth.forgotPassword.errorUnable'));
       }
 
       setIsSubmitted(true)
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'Unable to send a reset link right now. Please try again later.')
+      setError(error instanceof Error ? error.message : t('auth.forgotPassword.errorUnable'))
     } finally {
       setIsLoading(false)
     }
@@ -55,22 +57,22 @@ function ForgotPasswordPage() {
 
   return (
     <AuthLayout
-      title="Reset your password"
-      subtitle="We all forget sometimes"
-      helperText="Enter the email you use for AgroGina and we will send you a link to create a new password."
-      switchLabel="Remembered it?"
+      title={t('auth.forgotPassword.title')}
+      subtitle={t('auth.forgotPassword.subtitle')}
+      helperText={t('auth.forgotPassword.helperText')}
+      switchLabel={t('auth.forgotPassword.switchLabel')}
       switchHref="/login"
-      switchCta="Go back to sign in"
+      switchCta={t('auth.forgotPassword.switchCta')}
     >
       {isSubmitted ? (
-        <div className="space-y-6" role="status" aria-live="polite">
+        <div className="space-y-6" aria-live="polite">
           <div className="space-y-3 rounded-2xl border border-emerald-200/70 bg-gradient-to-br from-emerald-50/95 to-lime-50/90 px-5 py-5 text-sm text-emerald-900 shadow-lg shadow-emerald-500/10">
-            <p className="text-base font-semibold text-emerald-800">Check your inbox</p>
+            <p className="text-base font-semibold text-emerald-800">{t('auth.forgotPassword.successTitle')}</p>
             <p>
-              We sent a secure password reset link to <span className="font-semibold">{email}</span>. Follow the instructions within the next 24 hours to choose a new password.
+              {t('auth.forgotPassword.successMessage', { email })}
             </p>
             <p className="text-emerald-700/80">
-              Didn’t receive anything? Remember to check spam or request another email below.
+              {t('auth.forgotPassword.successNote')}
             </p>
           </div>
 
@@ -84,13 +86,14 @@ function ForgotPasswordPage() {
               }}
               className="w-full rounded-xl bg-gradient-to-r from-emerald-500 to-lime-400 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-500/30 transition hover:from-emerald-600 hover:to-lime-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500"
             >
-              Send another email
+              {t('auth.forgotPassword.sendAnother')}
             </Button>
             <Link
               to="/login"
+              search={{ redirect: undefined }}
               className="flex w-full items-center justify-center rounded-xl border border-emerald-500/30 bg-white/90 py-3 text-sm font-semibold text-emerald-700 shadow-sm transition hover:border-emerald-500 hover:text-emerald-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-400"
             >
-              Return to sign in
+              {t('auth.forgotPassword.returnToSignIn')}
             </Link>
           </div>
         </div>
@@ -98,9 +101,9 @@ function ForgotPasswordPage() {
         <form className="space-y-6" onSubmit={handleSubmit}>
           <div className="space-y-4">
             <FormField
-              label="Email address"
+              label={t('auth.emailAddress')}
               htmlFor="reset-email"
-              helper="Use the email connected to your AgroGina account."
+              helper={t('auth.forgotPassword.emailHelper')}
               required
             >
               <Input
@@ -109,7 +112,7 @@ function ForgotPasswordPage() {
                 type="email"
                 autoComplete="email"
                 required
-                placeholder="you@farm.co"
+                placeholder={t('auth.forgotPassword.placeholder')}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full rounded-xl border border-slate-200 bg-white/80 text-slate-900 placeholder:text-slate-400 shadow-sm transition focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200"
@@ -132,7 +135,7 @@ function ForgotPasswordPage() {
             disabled={isLoading}
             className="w-full rounded-xl bg-gradient-to-r from-emerald-500 to-lime-400 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-500/30 transition hover:from-emerald-600 hover:to-lime-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {isLoading ? 'Sending reset link...' : 'Send reset link'}
+            {isLoading ? t('auth.forgotPassword.sending') : t('auth.forgotPassword.submit')}
           </Button>
         </form>
       )}

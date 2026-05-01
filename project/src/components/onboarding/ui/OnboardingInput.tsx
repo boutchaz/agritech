@@ -17,34 +17,31 @@ export const OnboardingInput = forwardRef<HTMLInputElement, OnboardingInputProps
 
     return (
       <div className="relative">
-        {/* Input container with floating label */}
         <div
           className={`
-            relative rounded-2xl border-2 bg-white transition-all duration-300 overflow-hidden
-            ${isFocused 
-              ? 'border-emerald-500 shadow-lg shadow-emerald-500/10 ring-4 ring-emerald-500/5' 
-              : error 
-                ? 'border-red-300 bg-red-50/30' 
-                : success 
-                  ? 'border-emerald-400 bg-emerald-50/30' 
-                  : 'border-gray-200 hover:border-gray-300'
+            relative rounded-lg border bg-white dark:bg-slate-900 transition-all duration-200 overflow-hidden
+            ${isFocused
+              ? 'border-emerald-500 ring-2 ring-emerald-500/10'
+              : error
+                ? 'border-red-300 dark:border-red-800 bg-red-50/30 dark:bg-red-900/10'
+                : success
+                  ? 'border-emerald-400 dark:border-emerald-700'
+                  : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
             }
           `}
         >
-          {/* Icon - properly positioned */}
           {icon && (
-            <div 
+            <div
               className={`
-                absolute left-4 top-1/2 -translate-y-1/2 flex items-center justify-center
-                w-5 h-5 transition-colors duration-200 flex-shrink-0
-                ${isFocused ? 'text-emerald-500' : 'text-gray-400'}
+                absolute left-3 top-1/2 -translate-y-1/2 flex items-center justify-center
+                w-4 h-4 transition-colors duration-200 flex-shrink-0
+                ${isFocused ? 'text-emerald-500' : 'text-slate-400 dark:text-slate-500'}
               `}
             >
               {icon}
             </div>
           )}
 
-          {/* Input */}
           <input
             ref={ref}
             {...props}
@@ -58,64 +55,60 @@ export const OnboardingInput = forwardRef<HTMLInputElement, OnboardingInputProps
               props.onBlur?.(e);
             }}
             className={`
-              w-full bg-transparent text-gray-900 text-base font-medium
+              w-full bg-transparent text-slate-900 dark:text-white text-sm font-medium
               outline-none transition-all duration-200
-              ${icon ? 'pl-12 pr-12' : 'pl-4 pr-12'}
-              ${isFocused || hasValue ? 'pt-6 pb-2' : 'py-4'}
+              ${icon ? 'pl-10 pr-10' : 'pl-3 pr-10'}
+              ${isFocused || hasValue ? 'pt-6 pb-1.5' : 'py-3'}
               ${className || ''}
             `}
             placeholder={isFocused || hasValue ? props.placeholder : ''}
           />
 
-          {/* Floating label */}
           <label
             className={`
               absolute pointer-events-none transition-all duration-200 ease-out
-              ${icon ? 'left-12' : 'left-4'}
+              ${icon ? 'left-10' : 'left-3'}
               ${isFocused || hasValue
-                ? 'top-2 text-xs font-semibold tracking-wide'
-                : 'top-1/2 -translate-y-1/2 text-base font-medium'
+                ? 'top-1.5 text-[11px] font-medium tracking-wide'
+                : 'top-1/2 -translate-y-1/2 text-sm font-medium'
               }
-              ${isFocused 
-                ? 'text-emerald-600' 
-                : error 
-                  ? 'text-red-500' 
+              ${isFocused
+                ? 'text-emerald-600 dark:text-emerald-400'
+                : error
+                  ? 'text-red-500 dark:text-red-400'
                   : hasValue
-                    ? 'text-gray-500'
-                    : 'text-gray-400'
+                    ? 'text-slate-400 dark:text-slate-500'
+                    : 'text-slate-400 dark:text-slate-500'
               }
             `}
           >
             {label}
           </label>
 
-          {/* Status indicators - properly contained */}
-          <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center justify-center w-5 h-5">
+          <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center justify-center w-4 h-4">
             {isValidating && (
-              <Loader2 className="w-5 h-5 text-gray-400 animate-spin" />
+              <Loader2 className="w-4 h-4 text-slate-400 animate-spin" />
             )}
             {!isValidating && success && (
               <div className="animate-scale-in">
-                <Check className="w-5 h-5 text-emerald-500" />
+                <Check className="w-4 h-4 text-emerald-500" />
               </div>
             )}
             {!isValidating && error && (
-              <AlertCircle className="w-5 h-5 text-red-500" />
+              <AlertCircle className="w-4 h-4 text-red-500" />
             )}
           </div>
         </div>
 
-        {/* Error message */}
         {error && (
-          <div className="mt-2 flex items-start gap-2 animate-slide-down">
-            <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
-            <p className="text-sm text-red-600 font-medium">{error}</p>
+          <div className="mt-1.5 flex items-start gap-1.5 animate-slide-down">
+            <AlertCircle className="w-3 h-3 text-red-500 flex-shrink-0 mt-0.5" />
+            <p className="text-xs text-red-600 dark:text-red-400 font-medium">{error}</p>
           </div>
         )}
 
-        {/* Hint text */}
         {hint && !error && (
-          <p className="mt-2 text-sm text-gray-500 pl-1">{hint}</p>
+          <p className="mt-1.5 text-xs text-slate-400 dark:text-slate-500 pl-1">{hint}</p>
         )}
 
         <style>{`
@@ -124,18 +117,18 @@ export const OnboardingInput = forwardRef<HTMLInputElement, OnboardingInputProps
             50% { transform: scale(1.2); }
             100% { transform: scale(1); opacity: 1; }
           }
-          
+
           @keyframes slide-down {
-            0% { transform: translateY(-8px); opacity: 0; }
+            0% { transform: translateY(-4px); opacity: 0; }
             100% { transform: translateY(0); opacity: 1; }
           }
-          
+
           .animate-scale-in {
-            animation: scale-in 0.3s ease-out forwards;
+            animation: scale-in 0.2s ease-out forwards;
           }
-          
+
           .animate-slide-down {
-            animation: slide-down 0.2s ease-out forwards;
+            animation: slide-down 0.15s ease-out forwards;
           }
         `}</style>
       </div>

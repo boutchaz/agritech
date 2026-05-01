@@ -90,14 +90,35 @@ export interface StockAccountMapping {
   // Expanded relations
   debit_account?: {
     id: string;
-    account_number: string;
-    account_name: string;
+    code: string;
+    name: string;
   };
   credit_account?: {
     id: string;
-    account_number: string;
-    account_name: string;
+    code: string;
+    name: string;
   };
+}
+
+export interface StockGlReconciliation {
+  physical_value: number;
+  gl_balance: number;
+  drift: number;
+  drift_status: 'balanced' | 'no_mappings' | 'drift_detected';
+  inventory_accounts: Array<{
+    id: string;
+    code: string;
+    name: string;
+    debit: number;
+    credit: number;
+    balance: number;
+  }>;
+  physical_by_warehouse: Array<{ warehouse_id: string; value: number }>;
+}
+
+export interface InitDefaultMappingsResult {
+  created: number;
+  skipped: Array<{ entry_type: string; reason: string }>;
 }
 
 export interface CreateStockAccountMappingInput {

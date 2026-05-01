@@ -6,6 +6,7 @@ import { useAuth } from '../hooks/useAuth';
 import { usersApi } from '../lib/api/users';
 import { useQueryClient } from '@tanstack/react-query';
 import { isRTLLocale } from '@/lib/is-rtl-locale';
+import { loadLanguage } from '@/i18n/config';
 import { cn } from '@/lib/utils';
 import { headerToolbarIconTriggerClass, headerToolbarTextTriggerClass } from '@/lib/header-toolbar';
 import {
@@ -46,7 +47,7 @@ const LanguageSwitcher = ({ compact = false, elevatePopover = false }: LanguageS
   }, [i18n.language]);
 
   const changeLanguage = async (lng: string) => {
-    await i18n.changeLanguage(lng);
+    await loadLanguage(lng);
 
     if (isRTLLocale(lng)) {
       document.documentElement.dir = 'rtl';

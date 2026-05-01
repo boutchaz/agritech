@@ -140,11 +140,23 @@ EXCEPTION
   WHEN duplicate_object THEN null;
 END $$;
 
--- Invoice Type
+-- Invoice Type — direction (sales = outgoing, purchase = incoming)
 DO $$ BEGIN
   CREATE TYPE invoice_type AS ENUM (
     'sales',
     'purchase'
+  );
+EXCEPTION
+  WHEN duplicate_object THEN null;
+END $$;
+
+-- Invoice Document Type — orthogonal to direction.
+-- credit_note reverses an invoice (refund), debit_note adjusts an invoice upward.
+DO $$ BEGIN
+  CREATE TYPE invoice_document_type AS ENUM (
+    'invoice',
+    'credit_note',
+    'debit_note'
   );
 EXCEPTION
   WHEN duplicate_object THEN null;
@@ -248,6 +260,7 @@ CREATE TABLE IF NOT EXISTS organizations (
   phone VARCHAR(50),
   email VARCHAR(255),
   website VARCHAR(255),
+  contact_person VARCHAR(255),
   tax_id VARCHAR(100),
   currency_code VARCHAR(3) DEFAULT 'MAD',
   timezone VARCHAR(50) DEFAULT 'Africa/Casablanca',
@@ -258,13 +271,39 @@ CREATE TABLE IF NOT EXISTS organizations (
   accounting_settings JSONB DEFAULT '{}'::jsonb, -- Country-specific accounting configurations stored as JSONB
   fiscal_year_start_month INTEGER DEFAULT 1, -- Month when fiscal year starts (1=January, 4=April for UK, etc.)
   map_provider TEXT DEFAULT NULL, -- Map provider preference (e.g., 'google', 'mapbox', 'openstreetmap')
+  approval_status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (approval_status IN ('pending', 'approved', 'rejected')),
+  approved_at TIMESTAMPTZ,
+  approved_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Idempotent add for existing installations
+ALTER TABLE organizations
+  ADD COLUMN IF NOT EXISTS approval_status VARCHAR(20) NOT NULL DEFAULT 'pending',
+  ADD COLUMN IF NOT EXISTS approved_at TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS approved_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS contact_person VARCHAR(255);
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.table_constraints
+    WHERE table_name = 'organizations' AND constraint_name = 'organizations_approval_status_check'
+  ) THEN
+    ALTER TABLE organizations
+      ADD CONSTRAINT organizations_approval_status_check
+      CHECK (approval_status IN ('pending', 'approved', 'rejected'));
+  END IF;
+END $$;
+
+-- Backfill: all pre-existing organizations are considered approved
+UPDATE organizations SET approval_status = 'approved' WHERE approval_status = 'pending' AND created_at < NOW() - INTERVAL '1 minute';
+
 CREATE INDEX IF NOT EXISTS idx_organizations_slug ON organizations(slug);
 CREATE INDEX IF NOT EXISTS idx_organizations_country_code ON organizations(country_code);
 CREATE INDEX IF NOT EXISTS idx_organizations_accounting_standard ON organizations(accounting_standard);
+CREATE INDEX IF NOT EXISTS idx_organizations_approval_status ON organizations(approval_status);
 
 -- Organization Users
 CREATE TABLE IF NOT EXISTS organization_users (
@@ -277,6 +316,29 @@ CREATE TABLE IF NOT EXISTS organization_users (
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(organization_id, user_id)
 );
+
+-- Define is_organization_member() as early as possible so any RLS policy
+-- declared further down in this file can reference it. The canonical
+-- definition (with same body) is repeated near the RLS section to keep
+-- it visible to readers; CREATE OR REPLACE makes that idempotent.
+CREATE OR REPLACE FUNCTION is_organization_member(p_organization_id UUID)
+RETURNS BOOLEAN
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+SET search_path = public
+AS $$
+  SELECT CASE
+    WHEN p_organization_id IS NULL THEN false
+    ELSE EXISTS (
+      SELECT 1
+      FROM public.organization_users
+      WHERE user_id = auth.uid()
+        AND organization_id = p_organization_id
+        AND is_active = true
+    )
+  END;
+$$;
 
 CREATE INDEX IF NOT EXISTS idx_organization_users_org ON organization_users(organization_id);
 CREATE INDEX IF NOT EXISTS idx_organization_users_user ON organization_users(user_id);
@@ -811,336 +873,19 @@ COMMENT ON TABLE account_mappings IS 'Maps generic business operations to countr
 -- SEED ACCOUNT TEMPLATES FOR ALL COUNTRIES
 -- =====================================================
 
--- Morocco (CGNC - Plan Comptable des Établissements de Crédit adapted for agriculture)
-INSERT INTO account_templates (country_code, accounting_standard, template_name, account_code, account_name, account_type, is_group, display_order, description) VALUES
-  -- Class 1: Financement permanent
-  ('MA', 'CGNC', 'Financement permanent', '1', 'Financement permanent', 'equity', true, 10, 'Permanent financing'),
-  ('MA', 'CGNC', 'Capital social', '111', 'Capital social', 'equity', false, 11, 'Share capital'),
-  ('MA', 'CGNC', 'Réserves', '112', 'Réserves', 'equity', false, 12, 'Reserves'),
-  ('MA', 'CGNC', 'Report à nouveau', '116', 'Report à nouveau', 'equity', false, 13, 'Retained earnings'),
 
-  -- Class 2: Actif immobilisé
-  ('MA', 'CGNC', 'Actif immobilisé', '2', 'Actif immobilisé', 'asset', true, 20, 'Fixed assets'),
-  ('MA', 'CGNC', 'Terrains', '231', 'Terrains', 'asset', false, 21, 'Land'),
-  ('MA', 'CGNC', 'Constructions', '232', 'Constructions', 'asset', false, 22, 'Buildings'),
-  ('MA', 'CGNC', 'Matériel et outillage agricole', '233', 'Matériel et outillage agricole', 'asset', false, 23, 'Agricultural equipment and tools'),
-  ('MA', 'CGNC', 'Autres immobilisations corporelles', '238', 'Autres immobilisations corporelles', 'asset', false, 24, 'Other tangible fixed assets'),
 
-  -- Class 3: Actif circulant
-  ('MA', 'CGNC', 'Actif circulant', '3', 'Actif circulant', 'asset', true, 30, 'Current assets'),
-  ('MA', 'CGNC', 'Stocks de matières premières', '311', 'Stocks de matières premières', 'asset', false, 31, 'Raw materials inventory'),
-  ('MA', 'CGNC', 'Stocks de produits en cours', '313', 'Stocks de produits en cours', 'asset', false, 32, 'Work in progress inventory'),
-  ('MA', 'CGNC', 'Stocks de produits finis', '315', 'Stocks de produits finis', 'asset', false, 33, 'Finished goods inventory'),
-  ('MA', 'CGNC', 'Clients et comptes rattachés', '342', 'Clients et comptes rattachés', 'asset', false, 34, 'Accounts receivable'),
 
-  -- Class 4: Passif circulant
-  ('MA', 'CGNC', 'Passif circulant', '4', 'Passif circulant', 'liability', true, 40, 'Current liabilities'),
-  ('MA', 'CGNC', 'Fournisseurs et comptes rattachés', '441', 'Fournisseurs et comptes rattachés', 'liability', false, 41, 'Accounts payable'),
-  ('MA', 'CGNC', 'Organismes sociaux', '443', 'Organismes sociaux', 'liability', false, 42, 'Social security'),
-  ('MA', 'CGNC', 'État - Impôts et taxes', '445', 'État - Impôts et taxes', 'liability', false, 43, 'State - Taxes'),
-
-  -- Class 5: Trésorerie
-  ('MA', 'CGNC', 'Trésorerie', '5', 'Trésorerie', 'asset', true, 50, 'Cash and cash equivalents'),
-  ('MA', 'CGNC', 'Caisse', '511', 'Caisse', 'asset', false, 51, 'Cash'),
-  ('MA', 'CGNC', 'Banques', '514', 'Banques', 'asset', false, 52, 'Banks'),
-
-  -- Class 6: Charges
-  ('MA', 'CGNC', 'Charges', '6', 'Charges', 'expense', true, 60, 'Expenses'),
-  ('MA', 'CGNC', 'Achats de matières premières', '611', 'Achats de matières premières', 'expense', false, 61, 'Purchases of raw materials'),
-  ('MA', 'CGNC', 'Achats de fournitures', '612', 'Achats de fournitures', 'expense', false, 62, 'Purchases of supplies'),
-  ('MA', 'CGNC', 'Achats de produits agricoles', '613', 'Achats de produits agricoles', 'expense', false, 63, 'Purchases of agricultural products'),
-  ('MA', 'CGNC', 'Achats de matériel et outillage', '617', 'Achats de matériel et outillage', 'expense', false, 64, 'Purchases of equipment and tools'),
-  ('MA', 'CGNC', 'Autres achats', '618', 'Autres achats', 'expense', false, 65, 'Other purchases'),
-  ('MA', 'CGNC', 'Charges de personnel', '621', 'Charges de personnel', 'expense', false, 66, 'Staff costs'),
-  ('MA', 'CGNC', 'Cotisations sociales', '622', 'Cotisations sociales', 'expense', false, 67, 'Social security contributions'),
-  ('MA', 'CGNC', 'Impôts et taxes', '631', 'Impôts et taxes', 'expense', false, 68, 'Taxes'),
-  ('MA', 'CGNC', 'Charges d''intérêts', '641', 'Charges d''intérêts', 'expense', false, 69, 'Interest charges'),
-
-  -- Class 7: Produits
-  ('MA', 'CGNC', 'Produits', '7', 'Produits', 'revenue', true, 70, 'Revenue'),
-  ('MA', 'CGNC', 'Ventes de produits agricoles', '711', 'Ventes de produits agricoles', 'revenue', false, 71, 'Sales of agricultural products'),
-  ('MA', 'CGNC', 'Ventes de produits transformés', '712', 'Ventes de produits transformés', 'revenue', false, 72, 'Sales of processed products'),
-  ('MA', 'CGNC', 'Prestations de services', '713', 'Prestations de services', 'revenue', false, 73, 'Services'),
-  ('MA', 'CGNC', 'Autres produits d''exploitation', '718', 'Autres produits d''exploitation', 'revenue', false, 74, 'Other operating income'),
-  ('MA', 'CGNC', 'Subventions d''exploitation', '751', 'Subventions d''exploitation', 'revenue', false, 75, 'Operating subsidies')
-ON CONFLICT (country_code, accounting_standard, account_code) DO NOTHING;
-
--- Tunisia (PCN - Plan Comptable National)
-INSERT INTO account_templates (country_code, accounting_standard, template_name, account_code, account_name, account_type, is_group, display_order, description) VALUES
-  -- Class 1: Capitaux propres
-  ('TN', 'PCN', 'Capitaux propres', '1', 'Capitaux propres', 'equity', true, 10, 'Equity'),
-  ('TN', 'PCN', 'Capital social', '101', 'Capital social', 'equity', false, 11, 'Share capital'),
-  ('TN', 'PCN', 'Réserves', '106', 'Réserves', 'equity', false, 12, 'Reserves'),
-  ('TN', 'PCN', 'Report à nouveau', '110', 'Report à nouveau', 'equity', false, 13, 'Retained earnings'),
-
-  -- Class 2: Immobilisations
-  ('TN', 'PCN', 'Immobilisations', '2', 'Immobilisations', 'asset', true, 20, 'Fixed assets'),
-  ('TN', 'PCN', 'Terrains', '221', 'Terrains', 'asset', false, 21, 'Land'),
-  ('TN', 'PCN', 'Constructions', '223', 'Constructions', 'asset', false, 22, 'Buildings'),
-  ('TN', 'PCN', 'Autres immobilisations corporelles', '228', 'Autres immobilisations corporelles', 'asset', false, 23, 'Other tangible assets'),
-  ('TN', 'PCN', 'Matériel agricole', '231', 'Matériel agricole', 'asset', false, 24, 'Agricultural equipment'),
-
-  -- Class 3: Stocks
-  ('TN', 'PCN', 'Stocks', '3', 'Stocks', 'asset', true, 30, 'Inventory'),
-  ('TN', 'PCN', 'Matières premières', '31', 'Matières premières', 'asset', false, 31, 'Raw materials'),
-  ('TN', 'PCN', 'Autres approvisionnements', '32', 'Autres approvisionnements', 'asset', false, 32, 'Other supplies'),
-  ('TN', 'PCN', 'Stocks de produits finis', '35', 'Stocks de produits finis', 'asset', false, 33, 'Finished goods'),
-
-  -- Class 4: Tiers
-  ('TN', 'PCN', 'Tiers', '4', 'Tiers', 'asset', true, 40, 'Third parties'),
-  ('TN', 'PCN', 'Fournisseurs', '401', 'Fournisseurs', 'liability', false, 41, 'Suppliers'),
-  ('TN', 'PCN', 'Clients', '411', 'Clients', 'asset', false, 42, 'Customers'),
-  ('TN', 'PCN', 'Personnel', '421', 'Personnel', 'liability', false, 43, 'Personnel'),
-  ('TN', 'PCN', 'Sécurité sociale', '431', 'Sécurité sociale', 'liability', false, 44, 'Social security'),
-  ('TN', 'PCN', 'État', '441', 'État', 'liability', false, 45, 'State'),
-
-  -- Class 5: Financiers
-  ('TN', 'PCN', 'Financiers', '5', 'Financiers', 'asset', true, 50, 'Financial accounts'),
-  ('TN', 'PCN', 'Banques', '53', 'Banques', 'asset', false, 51, 'Banks'),
-
-  -- Class 6: Charges
-  ('TN', 'PCN', 'Charges', '6', 'Charges', 'expense', true, 60, 'Expenses'),
-  ('TN', 'PCN', 'Achats de marchandises', '601', 'Achats de marchandises', 'expense', false, 61, 'Purchases of goods'),
-  ('TN', 'PCN', 'Achats de fournitures', '604', 'Achats de fournitures', 'expense', false, 62, 'Purchases of supplies'),
-  ('TN', 'PCN', 'Autres achats', '608', 'Autres achats', 'expense', false, 63, 'Other purchases'),
-  ('TN', 'PCN', 'Frais de personnel', '621', 'Frais de personnel', 'expense', false, 64, 'Personnel costs'),
-  ('TN', 'PCN', 'Impôts et taxes', '635', 'Impôts et taxes', 'expense', false, 65, 'Taxes'),
-
-  -- Class 7: Produits
-  ('TN', 'PCN', 'Produits', '7', 'Produits', 'revenue', true, 70, 'Revenue'),
-  ('TN', 'PCN', 'Ventes de produits finis', '701', 'Ventes de produits finis', 'revenue', false, 71, 'Sales of finished products'),
-  ('TN', 'PCN', 'Autres produits', '708', 'Autres produits', 'revenue', false, 72, 'Other revenue'),
-  ('TN', 'PCN', 'Subventions d''exploitation', '74', 'Subventions d''exploitation', 'revenue', false, 73, 'Operating subsidies')
-ON CONFLICT (country_code, accounting_standard, account_code) DO NOTHING;
-
--- USA (GAAP - Generally Accepted Accounting Principles)
-INSERT INTO account_templates (country_code, accounting_standard, template_name, account_code, account_name, account_type, is_group, display_order, description) VALUES
-  -- Assets
-  ('US', 'GAAP', 'Cash', '1000', 'Cash and Cash Equivalents', 'asset', false, 10, 'Cash and cash equivalents'),
-  ('US', 'GAAP', 'Receivables', '1100', 'Accounts Receivable', 'asset', false, 11, 'Accounts receivable'),
-  ('US', 'GAAP', 'Inventory - Raw', '1200', 'Inventory - Raw Materials', 'asset', false, 12, 'Raw materials inventory'),
-  ('US', 'GAAP', 'Inventory - WIP', '1210', 'Inventory - Work in Progress', 'asset', false, 13, 'Work in progress inventory'),
-  ('US', 'GAAP', 'Inventory - Finished', '1220', 'Inventory - Finished Goods', 'asset', false, 14, 'Finished goods inventory'),
-  ('US', 'GAAP', 'Land', '1500', 'Land', 'asset', false, 15, 'Land'),
-  ('US', 'GAAP', 'Buildings', '1510', 'Buildings', 'asset', false, 16, 'Buildings'),
-  ('US', 'GAAP', 'Equipment', '1520', 'Equipment', 'asset', false, 17, 'Equipment'),
-  ('US', 'GAAP', 'Accumulated Depreciation', '1600', 'Accumulated Depreciation', 'asset', false, 18, 'Accumulated depreciation'),
-
-  -- Liabilities
-  ('US', 'GAAP', 'Accounts Payable', '2000', 'Accounts Payable', 'liability', false, 20, 'Accounts payable'),
-  ('US', 'GAAP', 'Accrued Expenses', '2100', 'Accrued Expenses', 'liability', false, 21, 'Accrued expenses'),
-  ('US', 'GAAP', 'Payroll Liabilities', '2200', 'Payroll Liabilities', 'liability', false, 22, 'Payroll liabilities'),
-  ('US', 'GAAP', 'Long-term Debt', '2500', 'Long-term Debt', 'liability', false, 23, 'Long-term debt'),
-
-  -- Equity
-  ('US', 'GAAP', 'Owner Capital', '3000', 'Owner''s Capital', 'equity', false, 30, 'Owner''s capital'),
-  ('US', 'GAAP', 'Retained Earnings', '3100', 'Retained Earnings', 'equity', false, 31, 'Retained earnings'),
-
-  -- Revenue
-  ('US', 'GAAP', 'Sales - Agricultural', '4000', 'Sales Revenue - Agricultural Products', 'revenue', false, 40, 'Sales of agricultural products'),
-  ('US', 'GAAP', 'Sales - Processed', '4100', 'Sales Revenue - Processed Products', 'revenue', false, 41, 'Sales of processed products'),
-  ('US', 'GAAP', 'Service Revenue', '4200', 'Service Revenue', 'revenue', false, 42, 'Service revenue'),
-  ('US', 'GAAP', 'Other Revenue', '4900', 'Other Revenue', 'revenue', false, 43, 'Other revenue'),
-  ('US', 'GAAP', 'Government Subsidies', '4950', 'Government Subsidies', 'revenue', false, 44, 'Government subsidies'),
-
-  -- COGS
-  ('US', 'GAAP', 'COGS', '5000', 'Cost of Goods Sold', 'expense', false, 50, 'Cost of goods sold'),
-
-  -- Expenses
-  ('US', 'GAAP', 'Wages', '6000', 'Wages and Salaries', 'expense', false, 60, 'Wages and salaries'),
-  ('US', 'GAAP', 'Payroll Taxes', '6100', 'Payroll Taxes', 'expense', false, 61, 'Payroll taxes'),
-  ('US', 'GAAP', 'Materials', '6200', 'Materials and Supplies', 'expense', false, 62, 'Materials and supplies'),
-  ('US', 'GAAP', 'Utilities', '6300', 'Utilities', 'expense', false, 63, 'Utilities'),
-  ('US', 'GAAP', 'Equipment Rental', '6400', 'Equipment Rental', 'expense', false, 64, 'Equipment rental'),
-  ('US', 'GAAP', 'Repairs', '6500', 'Repairs and Maintenance', 'expense', false, 65, 'Repairs and maintenance'),
-  ('US', 'GAAP', 'Other Expenses', '6900', 'Other Operating Expenses', 'expense', false, 66, 'Other operating expenses')
-ON CONFLICT (country_code, accounting_standard, account_code) DO NOTHING;
-
--- UK (FRS 102 - UK Generally Accepted Accounting Practice)
-INSERT INTO account_templates (country_code, accounting_standard, template_name, account_code, account_name, account_type, is_group, display_order, description) VALUES
-  -- Non-current Assets
-  ('GB', 'FRS102', 'Land and Buildings', '0010', 'Land and Buildings', 'asset', false, 10, 'Land and buildings'),
-  ('GB', 'FRS102', 'Plant and Machinery', '0020', 'Plant and Machinery', 'asset', false, 11, 'Plant and machinery'),
-  ('GB', 'FRS102', 'Motor Vehicles', '0030', 'Motor Vehicles', 'asset', false, 12, 'Motor vehicles'),
-  ('GB', 'FRS102', 'Office Equipment', '0040', 'Office Equipment', 'asset', false, 13, 'Office equipment'),
-
-  -- Current Assets
-  ('GB', 'FRS102', 'Stock - Raw', '1000', 'Stock - Raw Materials', 'asset', false, 20, 'Stock of raw materials'),
-  ('GB', 'FRS102', 'Stock - WIP', '1010', 'Stock - Work in Progress', 'asset', false, 21, 'Stock work in progress'),
-  ('GB', 'FRS102', 'Stock - Finished', '1020', 'Stock - Finished Goods', 'asset', false, 22, 'Stock of finished goods'),
-  ('GB', 'FRS102', 'Trade Debtors', '1100', 'Trade Debtors', 'asset', false, 23, 'Trade debtors'),
-  ('GB', 'FRS102', 'Bank Current', '1200', 'Bank Current Account', 'asset', false, 24, 'Bank current account'),
-  ('GB', 'FRS102', 'Bank Deposit', '1210', 'Bank Deposit Account', 'asset', false, 25, 'Bank deposit account'),
-  ('GB', 'FRS102', 'Cash', '1220', 'Cash in Hand', 'asset', false, 26, 'Cash in hand'),
-
-  -- Current Liabilities
-  ('GB', 'FRS102', 'Trade Creditors', '2100', 'Trade Creditors', 'liability', false, 30, 'Trade creditors'),
-  ('GB', 'FRS102', 'PAYE and NI', '2200', 'PAYE and NI', 'liability', false, 31, 'PAYE and National Insurance'),
-  ('GB', 'FRS102', 'VAT', '2210', 'VAT', 'liability', false, 32, 'VAT'),
-  ('GB', 'FRS102', 'Corporation Tax', '2300', 'Corporation Tax', 'liability', false, 33, 'Corporation tax'),
-
-  -- Long-term Liabilities
-  ('GB', 'FRS102', 'Bank Loans', '3000', 'Bank Loans', 'liability', false, 40, 'Bank loans'),
-
-  -- Capital and Reserves
-  ('GB', 'FRS102', 'Share Capital', '4000', 'Share Capital', 'equity', false, 50, 'Share capital'),
-  ('GB', 'FRS102', 'Retained Earnings', '4100', 'Retained Earnings', 'equity', false, 51, 'Retained earnings'),
-
-  -- Sales
-  ('GB', 'FRS102', 'Sales - Agricultural', '5000', 'Sales - Agricultural Products', 'revenue', false, 60, 'Sales of agricultural products'),
-  ('GB', 'FRS102', 'Sales - Processed', '5100', 'Sales - Processed Goods', 'revenue', false, 61, 'Sales of processed goods'),
-  ('GB', 'FRS102', 'Other Income', '5200', 'Other Income', 'revenue', false, 62, 'Other income'),
-  ('GB', 'FRS102', 'Government Grants', '5900', 'Government Grants', 'revenue', false, 63, 'Government grants'),
-
-  -- Direct Costs
-  ('GB', 'FRS102', 'Purchases - Raw', '6000', 'Purchases - Raw Materials', 'expense', false, 70, 'Purchases of raw materials'),
-  ('GB', 'FRS102', 'Purchases - Consumables', '6100', 'Purchases - Consumables', 'expense', false, 71, 'Purchases of consumables'),
-
-  -- Overheads
-  ('GB', 'FRS102', 'Wages', '7000', 'Wages and Salaries', 'expense', false, 80, 'Wages and salaries'),
-  ('GB', 'FRS102', 'Employer NI', '7100', 'Employer''s NI', 'expense', false, 81, 'Employer''s National Insurance'),
-  ('GB', 'FRS102', 'Rent and Rates', '7200', 'Rent and Rates', 'expense', false, 82, 'Rent and rates'),
-  ('GB', 'FRS102', 'Light and Heat', '7300', 'Light and Heat', 'expense', false, 83, 'Light and heat'),
-  ('GB', 'FRS102', 'Motor Expenses', '7400', 'Motor Expenses', 'expense', false, 84, 'Motor expenses'),
-  ('GB', 'FRS102', 'Repairs', '7500', 'Repairs and Renewals', 'expense', false, 85, 'Repairs and renewals'),
-  ('GB', 'FRS102', 'Sundry Expenses', '7900', 'Sundry Expenses', 'expense', false, 86, 'Sundry expenses')
-ON CONFLICT (country_code, accounting_standard, account_code) DO NOTHING;
 
 -- =====================================================
 -- SEED ACCOUNT MAPPINGS FOR ALL COUNTRIES
 -- =====================================================
 
--- Morocco (CGNC) Mappings
-INSERT INTO account_mappings (country_code, accounting_standard, mapping_type, mapping_key, account_code, description) VALUES
-  ('MA', 'CGNC', 'cost_type', 'labor', '621', 'Labor costs mapped to Personnel costs'),
-  ('MA', 'CGNC', 'cost_type', 'materials', '611', 'Materials mapped to Raw materials purchases'),
-  ('MA', 'CGNC', 'cost_type', 'utilities', '612', 'Utilities mapped to Supplies purchases'),
-  ('MA', 'CGNC', 'cost_type', 'equipment', '617', 'Equipment mapped to Equipment purchases'),
-  ('MA', 'CGNC', 'cost_type', 'product_application', '612', 'Product application mapped to Supplies'),
-  ('MA', 'CGNC', 'cost_type', 'other', '618', 'Other costs mapped to Other purchases'),
-  ('MA', 'CGNC', 'revenue_type', 'harvest', '711', 'Harvest revenue mapped to Agricultural product sales'),
-  ('MA', 'CGNC', 'revenue_type', 'subsidy', '751', 'Subsidy mapped to Operating subsidies'),
-  ('MA', 'CGNC', 'revenue_type', 'metayage', '711', 'Metayage (sharecropping) revenue mapped to Agricultural product sales'),
-  ('MA', 'CGNC', 'revenue_type', 'other', '718', 'Other revenue mapped to Other operating income'),
-  ('MA', 'CGNC', 'cash', 'bank', '5141', 'Bank account (Banque - Compte courant)'),
-  ('MA', 'CGNC', 'cash', 'cash', '5161', 'Cash account (Caisse principale)'),
-  ('MA', 'CGNC', 'receivable', 'trade', '3420', 'Trade receivables (Clients)'),
-  ('MA', 'CGNC', 'payable', 'trade', '4410', 'Trade payables (Fournisseurs)'),
-  ('MA', 'CGNC', 'tax', 'collected', '4457', 'TVA collectée'),
-  ('MA', 'CGNC', 'tax', 'deductible', '4456', 'TVA déductible'),
-  ('MA', 'CGNC', 'revenue', 'default', '7111', 'Default revenue account (Ventes fruits et légumes)'),
-  ('MA', 'CGNC', 'expense', 'default', '6111', 'Default expense account (Achats engrais)')
-ON CONFLICT DO NOTHING;
 
--- Tunisia (PCN) Mappings
-INSERT INTO account_mappings (country_code, accounting_standard, mapping_type, mapping_key, account_code, description) VALUES
-  ('TN', 'PCN', 'cost_type', 'labor', '621', 'Labor costs mapped to Personnel costs'),
-  ('TN', 'PCN', 'cost_type', 'materials', '601', 'Materials mapped to Goods purchases'),
-  ('TN', 'PCN', 'cost_type', 'utilities', '604', 'Utilities mapped to Supplies purchases'),
-  ('TN', 'PCN', 'cost_type', 'equipment', '604', 'Equipment mapped to Supplies purchases'),
-  ('TN', 'PCN', 'cost_type', 'product_application', '604', 'Product application mapped to Supplies'),
-  ('TN', 'PCN', 'cost_type', 'other', '608', 'Other costs mapped to Other purchases'),
-  ('TN', 'PCN', 'revenue_type', 'harvest', '701', 'Harvest revenue mapped to Finished product sales'),
-  ('TN', 'PCN', 'revenue_type', 'subsidy', '74', 'Subsidy mapped to Operating subsidies'),
-  ('TN', 'PCN', 'revenue_type', 'metayage', '701', 'Metayage (sharecropping) revenue mapped to Finished product sales'),
-  ('TN', 'PCN', 'revenue_type', 'other', '708', 'Other revenue mapped to Other revenue'),
-  ('TN', 'PCN', 'cash', 'bank', '52', 'Bank account (Banques)'),
-  ('TN', 'PCN', 'cash', 'cash', '511', 'Cash account (Caisse)'),
-  ('TN', 'PCN', 'receivable', 'trade', '411', 'Trade receivables (Clients)'),
-  ('TN', 'PCN', 'payable', 'trade', '401', 'Trade payables (Fournisseurs)'),
-  ('TN', 'PCN', 'tax', 'collected', '431', 'TVA à payer'),
-  ('TN', 'PCN', 'tax', 'deductible', '431', 'TVA déductible (à configurer manuellement)'),
-  ('TN', 'PCN', 'revenue', 'default', '701', 'Default revenue account (Ventes de céréales)'),
-  ('TN', 'PCN', 'expense', 'default', '601', 'Default expense account (Achats de matières premières)')
-ON CONFLICT DO NOTHING;
 
--- USA (GAAP) Mappings
-INSERT INTO account_mappings (country_code, accounting_standard, mapping_type, mapping_key, account_code, description) VALUES
-  ('US', 'GAAP', 'cost_type', 'labor', '6000', 'Labor costs mapped to Wages and Salaries'),
-  ('US', 'GAAP', 'cost_type', 'materials', '6200', 'Materials mapped to Materials and Supplies'),
-  ('US', 'GAAP', 'cost_type', 'utilities', '6300', 'Utilities mapped to Utilities'),
-  ('US', 'GAAP', 'cost_type', 'equipment', '6500', 'Equipment mapped to Repairs and Maintenance'),
-  ('US', 'GAAP', 'cost_type', 'product_application', '6200', 'Product application mapped to Materials and Supplies'),
-  ('US', 'GAAP', 'cost_type', 'other', '6900', 'Other costs mapped to Other Operating Expenses'),
-  ('US', 'GAAP', 'revenue_type', 'harvest', '4000', 'Harvest revenue mapped to Agricultural product sales'),
-  ('US', 'GAAP', 'revenue_type', 'subsidy', '4950', 'Subsidy mapped to Government Subsidies'),
-  ('US', 'GAAP', 'revenue_type', 'metayage', '4000', 'Metayage (sharecropping) revenue mapped to Agricultural product sales'),
-  ('US', 'GAAP', 'revenue_type', 'other', '4900', 'Other revenue mapped to Other Revenue'),
-  ('US', 'GAAP', 'cash', 'bank', '1000', 'Cash and Cash Equivalents'),
-  ('US', 'GAAP', 'cash', 'cash', '1000', 'Cash and Cash Equivalents'),
-  ('US', 'GAAP', 'receivable', 'trade', '1200', 'Accounts Receivable'),
-  ('US', 'GAAP', 'payable', 'trade', '2110', 'Trade Payables'),
-  ('US', 'GAAP', 'tax', 'collected', '2250', 'Sales Tax Payable'),
-  ('US', 'GAAP', 'tax', 'deductible', '2200', 'Taxes Payable (input tax)'),
-  ('US', 'GAAP', 'revenue', 'default', '4100', 'Default revenue account (Crop Sales)'),
-  ('US', 'GAAP', 'expense', 'default', '5100', 'Default expense account (Cost of Goods Sold)')
-ON CONFLICT DO NOTHING;
 
--- UK (FRS 102) Mappings
-INSERT INTO account_mappings (country_code, accounting_standard, mapping_type, mapping_key, account_code, description) VALUES
-  ('GB', 'FRS102', 'cost_type', 'labor', '7000', 'Labor costs mapped to Wages and Salaries'),
-  ('GB', 'FRS102', 'cost_type', 'materials', '6000', 'Materials mapped to Raw Materials purchases'),
-  ('GB', 'FRS102', 'cost_type', 'utilities', '7300', 'Utilities mapped to Light and Heat'),
-  ('GB', 'FRS102', 'cost_type', 'equipment', '7500', 'Equipment mapped to Repairs and Renewals'),
-  ('GB', 'FRS102', 'cost_type', 'product_application', '6100', 'Product application mapped to Consumables'),
-  ('GB', 'FRS102', 'cost_type', 'other', '7900', 'Other costs mapped to Sundry Expenses'),
-  ('GB', 'FRS102', 'revenue_type', 'harvest', '5000', 'Harvest revenue mapped to Agricultural product sales'),
-  ('GB', 'FRS102', 'revenue_type', 'subsidy', '5900', 'Subsidy mapped to Government Grants'),
-  ('GB', 'FRS102', 'revenue_type', 'metayage', '5000', 'Metayage (sharecropping) revenue mapped to Agricultural product sales'),
-  ('GB', 'FRS102', 'revenue_type', 'other', '5200', 'Other revenue mapped to Other Income'),
-  ('GB', 'FRS102', 'cash', 'bank', '232', 'Cash at Bank'),
-  ('GB', 'FRS102', 'cash', 'cash', '231', 'Cash in Hand'),
-  ('GB', 'FRS102', 'receivable', 'trade', '220', 'Trade Receivables'),
-  ('GB', 'FRS102', 'payable', 'trade', '360', 'Trade and Other Payables'),
-  ('GB', 'FRS102', 'tax', 'collected', '363', 'VAT Payable'),
-  ('GB', 'FRS102', 'tax', 'deductible', '224', 'Other Receivables (input VAT)'),
-  ('GB', 'FRS102', 'revenue', 'default', '511', 'Default revenue account (Agricultural Sales)'),
-  ('GB', 'FRS102', 'expense', 'default', '610', 'Default expense account (Raw Materials and Consumables)')
-ON CONFLICT DO NOTHING;
 
--- France (PCG) Mappings - Migrate existing hard-coded mappings
-INSERT INTO account_mappings (country_code, accounting_standard, mapping_type, mapping_key, account_code, description) VALUES
-  ('FR', 'PCG', 'cost_type', 'labor', '641', 'Labor costs mapped to Staff remuneration'),
-  ('FR', 'PCG', 'cost_type', 'materials', '601', 'Materials mapped to Raw materials purchases'),
-  ('FR', 'PCG', 'cost_type', 'utilities', '606', 'Utilities mapped to Non-stored materials and supplies'),
-  ('FR', 'PCG', 'cost_type', 'equipment', '615', 'Equipment mapped to Maintenance and repairs'),
-  ('FR', 'PCG', 'cost_type', 'product_application', '604', 'Product application mapped to Studies and services purchases'),
-  ('FR', 'PCG', 'cost_type', 'other', '628', 'Other costs mapped to Other external charges'),
-  ('FR', 'PCG', 'revenue_type', 'harvest', '701', 'Harvest revenue mapped to Finished product sales'),
-  ('FR', 'PCG', 'revenue_type', 'subsidy', '74', 'Subsidy mapped to Operating subsidies'),
-  ('FR', 'PCG', 'revenue_type', 'metayage', '701', 'Metayage (sharecropping) revenue mapped to Finished product sales'),
-  ('FR', 'PCG', 'revenue_type', 'other', '708', 'Other revenue mapped to Ancillary activities products'),
-  ('FR', 'PCG', 'cash', 'bank', '512', 'Banks'),
-  ('FR', 'PCG', 'cash', 'cash', '531', 'Cash'),
-  ('FR', 'PCG', 'receivable', 'trade', '411', 'Trade receivables (Clients)'),
-  ('FR', 'PCG', 'payable', 'trade', '401', 'Trade payables (Fournisseurs)'),
-  ('FR', 'PCG', 'tax', 'collected', '4437', 'TVA collectée'),
-  ('FR', 'PCG', 'tax', 'deductible', '4456', 'TVA déductible'),
-  ('FR', 'PCG', 'revenue', 'default', '701', 'Default revenue account (Ventes de produits agricoles)'),
-  ('FR', 'PCG', 'expense', 'default', '601', 'Default expense account (Achats de semences et plants)')
-ON CONFLICT DO NOTHING;
 
--- Germany (HGB) Mappings
-INSERT INTO account_mappings (country_code, accounting_standard, mapping_type, mapping_key, account_code, description) VALUES
-  ('DE', 'HGB', 'cost_type', 'labor', '6400', 'Labor costs mapped to Personnel costs'),
-  ('DE', 'HGB', 'cost_type', 'materials', '6100', 'Materials mapped to Cost of Materials'),
-  ('DE', 'HGB', 'cost_type', 'utilities', '6300', 'Utilities mapped to Energy costs'),
-  ('DE', 'HGB', 'cost_type', 'equipment', '6500', 'Equipment mapped to Maintenance costs'),
-  ('DE', 'HGB', 'cost_type', 'product_application', '6100', 'Product application mapped to Cost of Materials'),
-  ('DE', 'HGB', 'cost_type', 'other', '6900', 'Other costs mapped to Other operating expenses'),
-  ('DE', 'HGB', 'revenue_type', 'harvest', '5100', 'Harvest revenue mapped to Agricultural Sales'),
-  ('DE', 'HGB', 'revenue_type', 'subsidy', '5600', 'Subsidy mapped to Government subsidies'),
-  ('DE', 'HGB', 'revenue_type', 'metayage', '5100', 'Metayage (sharecropping) revenue mapped to Agricultural Sales'),
-  ('DE', 'HGB', 'revenue_type', 'other', '5900', 'Other revenue mapped to Other income'),
-  ('DE', 'HGB', 'cash', 'bank', '1200', 'Bank accounts'),
-  ('DE', 'HGB', 'cash', 'cash', '1000', 'Cash account (Kasse)'),
-  ('DE', 'HGB', 'receivable', 'trade', '1400', 'Trade receivables (Forderungen aus Lieferungen und Leistungen)'),
-  ('DE', 'HGB', 'payable', 'trade', '3100', 'Trade payables (Verbindlichkeiten aus Lieferungen und Leistungen)'),
-  ('DE', 'HGB', 'tax', 'collected', '3301', 'Umsatzsteuer (VAT Payable)'),
-  ('DE', 'HGB', 'tax', 'deductible', '3300', 'Vorsteuer (Input VAT) - to be configured'),
-  ('DE', 'HGB', 'revenue', 'default', '5100', 'Default revenue account (Agricultural Sales)'),
-  ('DE', 'HGB', 'expense', 'default', '6100', 'Default expense account (Cost of Materials)')
-ON CONFLICT DO NOTHING;
 
 -- Quotes
 CREATE TABLE IF NOT EXISTS quotes (
@@ -1511,7 +1256,26 @@ CREATE TABLE IF NOT EXISTS taxes (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Withholding tax support — Moroccan IGR (10% pro services) and supplier
+-- VAT withholding (1.75% on certain payments). When is_withholding=true,
+-- the GL helper splits the supplier credit: the supplier gets net-of-WHT,
+-- the state-WHT-payable account gets the WHT amount.
+ALTER TABLE taxes ADD COLUMN IF NOT EXISTS is_withholding BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE taxes ADD COLUMN IF NOT EXISTS withholding_account_id UUID;
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_taxes_withholding_account') THEN
+    ALTER TABLE taxes
+      ADD CONSTRAINT fk_taxes_withholding_account
+      FOREIGN KEY (withholding_account_id) REFERENCES accounts(id) ON DELETE SET NULL;
+  END IF;
+END $$;
+
 CREATE INDEX IF NOT EXISTS idx_taxes_org ON taxes(organization_id);
+CREATE INDEX IF NOT EXISTS idx_taxes_withholding ON taxes(organization_id) WHERE is_withholding = true;
+
+COMMENT ON COLUMN taxes.is_withholding IS 'True when this tax is withheld at source rather than added to the invoice total. Reduces what the supplier receives; the WHT amount goes to a state-payable account instead.';
+COMMENT ON COLUMN taxes.withholding_account_id IS 'GL account where the withheld amount accrues (state-WHT-payable). Falls back to the default tax payable mapping if NULL.';
 
 -- Bank Accounts
 CREATE TABLE IF NOT EXISTS bank_accounts (
@@ -1532,6 +1296,51 @@ CREATE TABLE IF NOT EXISTS bank_accounts (
 );
 
 CREATE INDEX IF NOT EXISTS idx_bank_accounts_org ON bank_accounts(organization_id);
+
+-- Bank Transactions (statement lines, for reconciliation against accounting_payments)
+-- Minimal cut: manual + future CSV/OFX import. Auto-matching engine to follow.
+CREATE TABLE IF NOT EXISTS bank_transactions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  bank_account_id UUID NOT NULL REFERENCES bank_accounts(id) ON DELETE CASCADE,
+  transaction_date DATE NOT NULL,
+  value_date DATE,
+  amount DECIMAL(15, 2) NOT NULL, -- Positive = inflow / Negative = outflow
+  currency_code VARCHAR(3) DEFAULT 'MAD' REFERENCES currencies(code),
+  description TEXT,
+  reference TEXT, -- Bank reference / cheque number / wire ref
+  balance_after DECIMAL(15, 2), -- Statement-reported running balance after this line
+  source TEXT NOT NULL DEFAULT 'manual' CHECK (source IN ('manual', 'csv', 'ofx', 'mt940', 'api')),
+  source_batch_id UUID, -- FK to bank_statement_imports when added
+  matched_payment_id UUID, -- FK to accounting_payments added after that table is created
+  reconciled_at TIMESTAMPTZ,
+  reconciled_by UUID REFERENCES auth.users(id),
+  notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  created_by UUID REFERENCES auth.users(id),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_bank_transactions_org ON bank_transactions(organization_id);
+CREATE INDEX IF NOT EXISTS idx_bank_transactions_account ON bank_transactions(bank_account_id);
+CREATE INDEX IF NOT EXISTS idx_bank_transactions_date ON bank_transactions(transaction_date DESC);
+CREATE INDEX IF NOT EXISTS idx_bank_transactions_unreconciled
+  ON bank_transactions(bank_account_id, transaction_date DESC)
+  WHERE reconciled_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_bank_transactions_match
+  ON bank_transactions(matched_payment_id)
+  WHERE matched_payment_id IS NOT NULL;
+
+ALTER TABLE bank_transactions ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_access_bank_transactions" ON bank_transactions;
+CREATE POLICY "org_access_bank_transactions" ON bank_transactions
+  FOR ALL USING (is_organization_member(organization_id));
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON bank_transactions TO authenticated;
+
+COMMENT ON TABLE bank_transactions IS 'Raw statement lines from a bank account, manually entered or CSV/OFX imported. Reconciled by linking matched_payment_id.';
+COMMENT ON COLUMN bank_transactions.amount IS 'Positive = inflow / Negative = outflow';
+COMMENT ON COLUMN bank_transactions.source IS 'manual / csv / ofx / mt940 / api — provenance of the line';
 
 -- Journal Entries
 CREATE TABLE IF NOT EXISTS journal_entries (
@@ -1623,10 +1432,78 @@ CREATE TABLE IF NOT EXISTS invoices (
   CHECK (grand_total >= 0)
 );
 
+-- Credit / Debit note support — added after initial invoices schema.
+-- document_type defaults to 'invoice'; credit_note rows reference the original
+-- invoice via original_invoice_id. credited_amount tracks how much has been
+-- credited against this invoice (sum of grand_total of related credit notes).
+ALTER TABLE invoices ADD COLUMN IF NOT EXISTS document_type invoice_document_type NOT NULL DEFAULT 'invoice';
+ALTER TABLE invoices ADD COLUMN IF NOT EXISTS original_invoice_id UUID;
+ALTER TABLE invoices ADD COLUMN IF NOT EXISTS credit_reason TEXT;
+ALTER TABLE invoices ADD COLUMN IF NOT EXISTS credited_amount DECIMAL(15, 2) DEFAULT 0;
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_invoices_original_invoice') THEN
+    ALTER TABLE invoices
+      ADD CONSTRAINT fk_invoices_original_invoice
+      FOREIGN KEY (original_invoice_id) REFERENCES invoices(id) ON DELETE SET NULL;
+  END IF;
+END $$;
+
 CREATE INDEX IF NOT EXISTS idx_invoices_org ON invoices(organization_id);
 CREATE INDEX IF NOT EXISTS idx_invoices_type ON invoices(invoice_type);
 CREATE INDEX IF NOT EXISTS idx_invoices_status ON invoices(status);
 CREATE INDEX IF NOT EXISTS idx_invoices_date ON invoices(invoice_date DESC);
+CREATE INDEX IF NOT EXISTS idx_invoices_document_type ON invoices(document_type);
+CREATE INDEX IF NOT EXISTS idx_invoices_original ON invoices(original_invoice_id) WHERE original_invoice_id IS NOT NULL;
+
+COMMENT ON COLUMN invoices.document_type IS 'Document kind: invoice (default), credit_note (reverses an invoice), debit_note (adjusts upward).';
+COMMENT ON COLUMN invoices.original_invoice_id IS 'For credit/debit notes: the invoice being adjusted.';
+COMMENT ON COLUMN invoices.credit_reason IS 'Free-text reason on credit/debit notes (return, damage, weight dispute, price adjustment, other).';
+COMMENT ON COLUMN invoices.credited_amount IS 'Sum of grand_total of credit notes that reference this invoice. Updated by trigger.';
+
+-- Keep invoices.credited_amount in sync with related credit notes.
+-- Fires on INSERT / UPDATE of grand_total / DELETE of credit_note rows.
+CREATE OR REPLACE FUNCTION sync_invoice_credited_amount()
+RETURNS TRIGGER AS $$
+DECLARE
+  v_target UUID;
+BEGIN
+  v_target := COALESCE(NEW.original_invoice_id, OLD.original_invoice_id);
+  IF v_target IS NULL THEN
+    RETURN COALESCE(NEW, OLD);
+  END IF;
+
+  UPDATE invoices
+  SET credited_amount = COALESCE((
+    SELECT SUM(grand_total)
+    FROM invoices
+    WHERE original_invoice_id = v_target
+      AND document_type = 'credit_note'
+      AND status NOT IN ('cancelled')
+  ), 0)
+  WHERE id = v_target;
+
+  RETURN COALESCE(NEW, OLD);
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger uses three flavors because TG_OP is not available in WHEN clauses.
+-- Each WHEN inspects only NEW (INSERT/UPDATE) or OLD (DELETE).
+DROP TRIGGER IF EXISTS trg_sync_invoice_credited_amount ON invoices;
+DROP TRIGGER IF EXISTS trg_sync_invoice_credited_amount_iu ON invoices;
+DROP TRIGGER IF EXISTS trg_sync_invoice_credited_amount_d ON invoices;
+CREATE TRIGGER trg_sync_invoice_credited_amount_iu
+  AFTER INSERT OR UPDATE OF grand_total, status, original_invoice_id, document_type
+  ON invoices
+  FOR EACH ROW
+  WHEN (NEW.document_type = 'credit_note' AND NEW.original_invoice_id IS NOT NULL)
+  EXECUTE FUNCTION sync_invoice_credited_amount();
+CREATE TRIGGER trg_sync_invoice_credited_amount_d
+  AFTER DELETE
+  ON invoices
+  FOR EACH ROW
+  WHEN (OLD.document_type = 'credit_note' AND OLD.original_invoice_id IS NOT NULL)
+  EXECUTE FUNCTION sync_invoice_credited_amount();
 
 -- Invoice Items
 CREATE TABLE IF NOT EXISTS invoice_items (
@@ -1699,6 +1576,45 @@ CREATE TABLE IF NOT EXISTS payment_allocations (
 
 CREATE INDEX IF NOT EXISTS idx_payment_allocations_payment ON payment_allocations(payment_id);
 CREATE INDEX IF NOT EXISTS idx_payment_allocations_invoice ON payment_allocations(invoice_id);
+
+-- Deferred FK: bank_transactions.matched_payment_id -> accounting_payments(id)
+-- Declared inline above as a plain UUID because accounting_payments is created
+-- later in this file. Wire the FK now that both tables exist.
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.table_constraints
+    WHERE table_schema = 'public'
+      AND table_name = 'bank_transactions'
+      AND constraint_name = 'bank_transactions_matched_payment_id_fkey'
+  ) THEN
+    ALTER TABLE bank_transactions
+      ADD CONSTRAINT bank_transactions_matched_payment_id_fkey
+      FOREIGN KEY (matched_payment_id) REFERENCES accounting_payments(id) ON DELETE SET NULL;
+  END IF;
+END $$;
+
+-- Advance payment support — added after initial accounting_payments schema.
+-- An advance is a payment received/paid before the matching invoice exists.
+-- Posts to a dedicated CGNC advance account (4421 customer advances /
+-- 3421 supplier advances) instead of receivable/payable. When later applied
+-- to an invoice via payment_allocations, an internal-transfer JE moves the
+-- amount from the advance account to AR/AP (handled in AdvancesService).
+ALTER TABLE accounting_payments ADD COLUMN IF NOT EXISTS is_advance BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE accounting_payments ADD COLUMN IF NOT EXISTS advance_account_id UUID;
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_accounting_payments_advance_account') THEN
+    ALTER TABLE accounting_payments
+      ADD CONSTRAINT fk_accounting_payments_advance_account
+      FOREIGN KEY (advance_account_id) REFERENCES accounts(id) ON DELETE SET NULL;
+  END IF;
+END $$;
+CREATE INDEX IF NOT EXISTS idx_accounting_payments_advance
+  ON accounting_payments(party_id, party_type, is_advance)
+  WHERE is_advance = true;
+COMMENT ON COLUMN accounting_payments.is_advance IS 'True when this payment is an advance (prepayment) not yet applied to any invoice. Allocations later transfer it to AR/AP.';
+COMMENT ON COLUMN accounting_payments.advance_account_id IS 'Liability (customer advance) or asset (supplier advance) account this payment hits at posting time.';
 
 -- =====================================================
 -- 10. RLS POLICIES
@@ -2358,18 +2274,57 @@ CREATE TABLE IF NOT EXISTS task_comments (
   comment TEXT NOT NULL,
   type TEXT DEFAULT 'comment',
   attachments JSONB,
+  edited_at TIMESTAMPTZ,
+  resolved_at TIMESTAMPTZ,
+  resolved_by UUID REFERENCES auth.users(id),
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   CHECK (type IN ('comment', 'status_update', 'completion_note', 'issue'))
 );
 
+-- Idempotent ALTERs so pre-existing databases pick up new columns without a reset
+ALTER TABLE task_comments ADD COLUMN IF NOT EXISTS edited_at TIMESTAMPTZ;
+ALTER TABLE task_comments ADD COLUMN IF NOT EXISTS resolved_at TIMESTAMPTZ;
+ALTER TABLE task_comments ADD COLUMN IF NOT EXISTS resolved_by UUID REFERENCES auth.users(id);
+
 CREATE INDEX IF NOT EXISTS idx_task_comments_task ON task_comments(task_id);
 CREATE INDEX IF NOT EXISTS idx_task_comments_user ON task_comments(user_id);
+CREATE INDEX IF NOT EXISTS idx_task_comments_unresolved ON task_comments(task_id) WHERE type = 'issue' AND resolved_at IS NULL;
 
 -- Explicit FK to user_profiles so PostgREST can resolve the join
 ALTER TABLE task_comments
   ADD CONSTRAINT task_comments_user_profile_fkey
   FOREIGN KEY (user_id) REFERENCES user_profiles(id) ON DELETE CASCADE;
+
+-- Task Watchers — users who want update notifications for a task they're not assigned to
+CREATE TABLE IF NOT EXISTS task_watchers (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  task_id UUID NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE (task_id, user_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_task_watchers_task ON task_watchers(task_id);
+CREATE INDEX IF NOT EXISTS idx_task_watchers_user ON task_watchers(user_id);
+CREATE INDEX IF NOT EXISTS idx_task_watchers_org ON task_watchers(organization_id);
+
+-- Task Mentions — persistent record of @mentions in comments for notifications and analytics
+CREATE TABLE IF NOT EXISTS task_mentions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  comment_id UUID NOT NULL REFERENCES task_comments(id) ON DELETE CASCADE,
+  task_id UUID NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+  mentioned_user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  mentioned_worker_id UUID REFERENCES workers(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  CHECK (mentioned_user_id IS NOT NULL OR mentioned_worker_id IS NOT NULL)
+);
+
+CREATE INDEX IF NOT EXISTS idx_task_mentions_comment ON task_mentions(comment_id);
+CREATE INDEX IF NOT EXISTS idx_task_mentions_task ON task_mentions(task_id);
+CREATE INDEX IF NOT EXISTS idx_task_mentions_mentioned_user ON task_mentions(mentioned_user_id);
+CREATE INDEX IF NOT EXISTS idx_task_mentions_mentioned_worker ON task_mentions(mentioned_worker_id);
 
 -- Task Time Logs
 CREATE TABLE IF NOT EXISTS task_time_logs (
@@ -2380,12 +2335,18 @@ CREATE TABLE IF NOT EXISTS task_time_logs (
   end_time TIMESTAMPTZ,
   break_duration INTEGER DEFAULT 0,
   total_hours NUMERIC DEFAULT 0, -- computed in service layer
+  units_completed NUMERIC, -- per-worker piece-work count at this clock-out
   notes TEXT,
+  photo_url TEXT, -- evidence photo uploaded on clock-out
   location_lat NUMERIC,
   location_lng NUMERIC,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Idempotent ALTERs for existing databases
+ALTER TABLE task_time_logs ADD COLUMN IF NOT EXISTS units_completed NUMERIC;
+ALTER TABLE task_time_logs ADD COLUMN IF NOT EXISTS photo_url TEXT;
 
 CREATE INDEX IF NOT EXISTS idx_task_time_logs_task ON task_time_logs(task_id);
 CREATE INDEX IF NOT EXISTS idx_task_time_logs_worker ON task_time_logs(worker_id);
@@ -2525,7 +2486,7 @@ CREATE TABLE IF NOT EXISTS payment_records (
   attachments JSONB,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
-  CHECK (payment_type IN ('daily_wage', 'monthly_salary', 'metayage_share', 'bonus', 'overtime', 'advance')),
+  CHECK (payment_type IN ('daily_wage', 'monthly_salary', 'metayage_share', 'bonus', 'overtime', 'advance', 'piece_work')),
   CHECK (status IN ('pending', 'approved', 'paid', 'disputed', 'cancelled')),
   CHECK (payment_method IN ('cash', 'bank_transfer', 'check', 'mobile_money'))
 );
@@ -3086,6 +3047,233 @@ EXECUTE FUNCTION update_product_variants_updated_at();
 
 GRANT SELECT, INSERT, UPDATE, DELETE ON product_variants TO authenticated;
 
+-- ====================================================================
+-- ITEM BARCODES (Multi-barcode per item — ERPNext parity)
+-- ====================================================================
+-- One item can have N barcodes, each with its own type and UOM.
+-- Primary barcode is synced to items.barcode via trigger.
+
+CREATE TABLE IF NOT EXISTS item_barcodes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  item_id UUID NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+  barcode TEXT NOT NULL,
+  barcode_type TEXT DEFAULT '' CHECK (barcode_type IN (
+    'EAN', 'EAN-8', 'EAN-13', 'UPC', 'UPC-A', 'CODE-39', 'CODE-128',
+    'GS1', 'GTIN', 'GTIN-14', 'ISBN', 'ISBN-10', 'ISBN-13',
+    'ISSN', 'JAN', 'PZN', 'QR', ''
+  )),
+  unit_id UUID REFERENCES work_units(id) ON DELETE SET NULL,
+  is_primary BOOLEAN DEFAULT false,
+  is_active BOOLEAN DEFAULT true,
+  deleted_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  created_by UUID REFERENCES auth.users(id),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_by UUID REFERENCES auth.users(id),
+  CHECK (barcode != '')
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_item_barcodes_unique
+  ON item_barcodes(organization_id, barcode)
+  WHERE deleted_at IS NULL;
+
+CREATE INDEX IF NOT EXISTS idx_item_barcodes_barcode
+  ON item_barcodes(barcode)
+  WHERE deleted_at IS NULL;
+
+CREATE INDEX IF NOT EXISTS idx_item_barcodes_item
+  ON item_barcodes(item_id)
+  WHERE deleted_at IS NULL;
+
+CREATE INDEX IF NOT EXISTS idx_item_barcodes_org
+  ON item_barcodes(organization_id)
+  WHERE deleted_at IS NULL;
+
+COMMENT ON TABLE item_barcodes IS 'Multiple barcodes per item (ERPNext-style). Primary barcode synced to items.barcode via trigger.';
+COMMENT ON COLUMN item_barcodes.barcode_type IS 'Barcode format: EAN, UPC-A, CODE-39, CODE-128, QR, etc.';
+COMMENT ON COLUMN item_barcodes.unit_id IS 'UOM associated with this barcode (e.g., 5L bottle has different barcode than 1L)';
+COMMENT ON COLUMN item_barcodes.is_primary IS 'If true, this barcode is synced to items.barcode for fast lookups';
+
+-- Trigger: auto-sync primary barcode to items.barcode (denormalized cache)
+CREATE OR REPLACE FUNCTION sync_primary_barcode_to_item()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.is_primary AND NEW.is_active AND (TG_OP = 'INSERT' OR TG_OP = 'UPDATE') THEN
+    UPDATE items SET barcode = NEW.barcode, updated_at = NOW()
+    WHERE id = NEW.item_id AND organization_id = NEW.organization_id;
+    -- Unset primary on other barcodes for same item
+    UPDATE item_barcodes SET is_primary = false, updated_at = NOW()
+    WHERE item_id = NEW.item_id AND organization_id = NEW.organization_id
+      AND id != NEW.id AND deleted_at IS NULL;
+  END IF;
+  IF (NOT NEW.is_active OR NEW.deleted_at IS NOT NULL) THEN
+    -- If this was the primary, find another barcode to promote
+    UPDATE items SET barcode = COALESCE(
+      (SELECT barcode FROM item_barcodes
+       WHERE item_id = NEW.item_id AND organization_id = NEW.organization_id
+         AND is_active = true AND deleted_at IS NULL AND id != NEW.id
+       ORDER BY created_at LIMIT 1),
+      NULL
+    ), updated_at = NOW()
+    WHERE id = NEW.item_id AND organization_id = NEW.organization_id
+      AND barcode = OLD.barcode;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_sync_primary_barcode
+  AFTER INSERT OR UPDATE OR DELETE ON item_barcodes
+  FOR EACH ROW EXECUTE FUNCTION sync_primary_barcode_to_item();
+
+-- Updated_at trigger
+CREATE OR REPLACE FUNCTION update_item_barcodes_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER item_barcodes_updated_at
+BEFORE UPDATE ON item_barcodes
+FOR EACH ROW EXECUTE FUNCTION update_item_barcodes_updated_at();
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON item_barcodes TO authenticated;
+
+-- One-time backfill: migrate existing items.barcode → item_barcodes (primary)
+-- and product_variants.barcode → item_barcodes (non-primary, with unit_id).
+-- Idempotent via ON CONFLICT DO NOTHING (unique on org_id, barcode where deleted_at IS NULL).
+DO $$
+BEGIN
+  -- Disable the sync trigger for this backfill so it doesn't recursively
+  -- update items.barcode (we're reading FROM items, would cause noise).
+  ALTER TABLE item_barcodes DISABLE TRIGGER trg_sync_primary_barcode;
+
+  INSERT INTO item_barcodes (organization_id, item_id, barcode, is_primary, created_at)
+  SELECT i.organization_id, i.id, i.barcode, true, COALESCE(i.created_at, NOW())
+  FROM items i
+  WHERE i.barcode IS NOT NULL AND i.barcode <> ''
+    AND i.deleted_at IS NULL
+  ON CONFLICT DO NOTHING;
+
+  INSERT INTO item_barcodes (organization_id, item_id, barcode, unit_id, is_primary, created_at)
+  SELECT pv.organization_id, pv.item_id, pv.barcode, pv.unit_id, false, COALESCE(pv.created_at, NOW())
+  FROM product_variants pv
+  WHERE pv.barcode IS NOT NULL AND pv.barcode <> ''
+    AND pv.deleted_at IS NULL
+  ON CONFLICT DO NOTHING;
+
+  ALTER TABLE item_barcodes ENABLE TRIGGER trg_sync_primary_barcode;
+END $$;
+
+-- =====================================================
+-- VARIANT BARCODES (multi-barcode per product variant)
+-- Mirrors item_barcodes structure, linked to product_variants
+-- =====================================================
+
+CREATE TABLE IF NOT EXISTS variant_barcodes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  variant_id UUID NOT NULL REFERENCES product_variants(id) ON DELETE CASCADE,
+  barcode TEXT NOT NULL,
+  barcode_type TEXT DEFAULT '' CHECK (barcode_type IN (
+    'EAN', 'EAN-8', 'EAN-13', 'UPC', 'UPC-A', 'CODE-39', 'CODE-128',
+    'GS1', 'GTIN', 'GTIN-14', 'ISBN', 'ISBN-10', 'ISBN-13',
+    'ISSN', 'JAN', 'PZN', 'QR', ''
+  )),
+  unit_id UUID REFERENCES work_units(id) ON DELETE SET NULL,
+  is_primary BOOLEAN DEFAULT false,
+  is_active BOOLEAN DEFAULT true,
+  deleted_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  created_by UUID REFERENCES auth.users(id),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_by UUID REFERENCES auth.users(id),
+  CHECK (barcode != '')
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_variant_barcodes_unique
+  ON variant_barcodes(organization_id, barcode)
+  WHERE deleted_at IS NULL;
+
+CREATE INDEX IF NOT EXISTS idx_variant_barcodes_barcode
+  ON variant_barcodes(barcode)
+  WHERE deleted_at IS NULL;
+
+CREATE INDEX IF NOT EXISTS idx_variant_barcodes_variant
+  ON variant_barcodes(variant_id)
+  WHERE deleted_at IS NULL;
+
+CREATE INDEX IF NOT EXISTS idx_variant_barcodes_org
+  ON variant_barcodes(organization_id)
+  WHERE deleted_at IS NULL;
+
+COMMENT ON TABLE variant_barcodes IS 'Multiple barcodes per product variant (e.g., 1L bottle vs 5L bottle each get a unique barcode). Primary barcode synced to product_variants.barcode via trigger.';
+COMMENT ON COLUMN variant_barcodes.barcode_type IS 'Barcode format: EAN, UPC-A, CODE-39, CODE-128, QR, etc.';
+COMMENT ON COLUMN variant_barcodes.unit_id IS 'UOM associated with this barcode';
+COMMENT ON COLUMN variant_barcodes.is_primary IS 'If true, this barcode is synced to product_variants.barcode for fast lookups';
+
+-- Trigger: auto-sync primary barcode to product_variants.barcode (denormalized cache)
+CREATE OR REPLACE FUNCTION sync_primary_barcode_to_variant()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.is_primary AND NEW.is_active AND (TG_OP = 'INSERT' OR TG_OP = 'UPDATE') THEN
+    UPDATE product_variants SET barcode = NEW.barcode, updated_at = NOW()
+    WHERE id = NEW.variant_id AND organization_id = NEW.organization_id;
+    UPDATE variant_barcodes SET is_primary = false, updated_at = NOW()
+    WHERE variant_id = NEW.variant_id AND organization_id = NEW.organization_id
+      AND id != NEW.id AND deleted_at IS NULL;
+  END IF;
+  IF (NOT NEW.is_active OR NEW.deleted_at IS NOT NULL) THEN
+    UPDATE product_variants SET barcode = COALESCE(
+      (SELECT barcode FROM variant_barcodes
+       WHERE variant_id = NEW.variant_id AND organization_id = NEW.organization_id
+         AND is_active = true AND deleted_at IS NULL AND id != NEW.id
+       ORDER BY created_at LIMIT 1),
+      NULL
+    ), updated_at = NOW()
+    WHERE id = NEW.variant_id AND organization_id = NEW.organization_id
+      AND barcode = OLD.barcode;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_sync_primary_barcode_variant
+  AFTER INSERT OR UPDATE OR DELETE ON variant_barcodes
+  FOR EACH ROW EXECUTE FUNCTION sync_primary_barcode_to_variant();
+
+CREATE OR REPLACE FUNCTION update_variant_barcodes_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER variant_barcodes_updated_at
+  BEFORE UPDATE ON variant_barcodes
+  FOR EACH ROW EXECUTE FUNCTION update_variant_barcodes_updated_at();
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON variant_barcodes TO authenticated;
+
+-- One-time backfill: migrate existing product_variants.barcode → variant_barcodes (primary)
+DO $$
+BEGIN
+  ALTER TABLE variant_barcodes DISABLE TRIGGER trg_sync_primary_barcode_variant;
+
+  INSERT INTO variant_barcodes (organization_id, variant_id, barcode, barcode_type, is_primary, created_by)
+  SELECT pv.organization_id, pv.id, pv.barcode, '', true, NULL
+  FROM product_variants pv
+  WHERE pv.barcode IS NOT NULL AND pv.barcode <> ''
+    AND pv.deleted_at IS NULL
+  ON CONFLICT DO NOTHING;
+
+  ALTER TABLE variant_barcodes ENABLE TRIGGER trg_sync_primary_barcode_variant;
+END $$;
+
 -- Add foreign key constraint to invoice_items (deferred because items table is created after invoice_items)
 ALTER TABLE invoice_items ADD CONSTRAINT fk_invoice_items_item_id FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE SET NULL;
 
@@ -3304,6 +3492,7 @@ CREATE TABLE IF NOT EXISTS stock_entries (
   journal_entry_id UUID REFERENCES journal_entries(id),
   reception_batch_id UUID,
   crop_cycle_id UUID,
+  parcel_id UUID,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   created_by UUID REFERENCES auth.users(id),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
@@ -3312,14 +3501,27 @@ CREATE TABLE IF NOT EXISTS stock_entries (
   CHECK (status IN ('Draft', 'Submitted', 'Posted', 'Cancelled', 'Reversed'))
 );
 
+ALTER TABLE stock_entries ADD COLUMN IF NOT EXISTS parcel_id UUID;
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_stock_entries_parcel_id') THEN
+    ALTER TABLE stock_entries
+      ADD CONSTRAINT fk_stock_entries_parcel_id
+      FOREIGN KEY (parcel_id) REFERENCES parcels(id) ON DELETE SET NULL;
+  END IF;
+END $$;
+
 CREATE INDEX IF NOT EXISTS idx_stock_entries_org ON stock_entries(organization_id);
 CREATE INDEX IF NOT EXISTS idx_stock_entries_type ON stock_entries(entry_type);
 CREATE INDEX IF NOT EXISTS idx_stock_entries_status ON stock_entries(status);
 CREATE INDEX IF NOT EXISTS idx_stock_entries_date ON stock_entries(entry_date DESC);
 CREATE INDEX IF NOT EXISTS idx_stock_entries_crop_cycle ON stock_entries(crop_cycle_id);
 CREATE INDEX IF NOT EXISTS idx_stock_entries_org_crop_cycle ON stock_entries(organization_id, crop_cycle_id);
+CREATE INDEX IF NOT EXISTS idx_stock_entries_parcel ON stock_entries(parcel_id);
+CREATE INDEX IF NOT EXISTS idx_stock_entries_org_parcel ON stock_entries(organization_id, parcel_id);
 
 COMMENT ON COLUMN stock_entries.crop_cycle_id IS 'Links the stock entry to a specific crop cycle for cost tracking and allocation';
+COMMENT ON COLUMN stock_entries.parcel_id IS 'Links the stock entry to a specific parcel for per-parcel cost allocation (fertilizer/pesticide use, harvest reception)';
 
 -- Stock Entry Items
 CREATE TABLE IF NOT EXISTS stock_entry_items (
@@ -3341,6 +3543,7 @@ CREATE TABLE IF NOT EXISTS stock_entry_items (
   physical_quantity NUMERIC,
   variance NUMERIC DEFAULT 0, -- computed in service layer
   variant_id UUID REFERENCES product_variants(id) ON DELETE SET NULL,
+  scanned_barcode TEXT,
   notes TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   CHECK (quantity > 0)
@@ -3371,11 +3574,22 @@ CREATE TABLE IF NOT EXISTS stock_movements (
   base_quantity_at_movement NUMERIC,
   variant_id UUID REFERENCES product_variants(id) ON DELETE SET NULL,
   crop_cycle_id UUID,
+  parcel_id UUID,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   created_by UUID REFERENCES auth.users(id),
   CHECK (movement_type IN ('IN', 'OUT', 'TRANSFER'))
 );
+
+ALTER TABLE stock_movements ADD COLUMN IF NOT EXISTS parcel_id UUID;
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_stock_movements_parcel_id') THEN
+    ALTER TABLE stock_movements
+      ADD CONSTRAINT fk_stock_movements_parcel_id
+      FOREIGN KEY (parcel_id) REFERENCES parcels(id) ON DELETE SET NULL;
+  END IF;
+END $$;
 
 CREATE INDEX IF NOT EXISTS idx_stock_movements_org ON stock_movements(organization_id);
 CREATE INDEX IF NOT EXISTS idx_stock_movements_item ON stock_movements(item_id);
@@ -3385,8 +3599,11 @@ CREATE INDEX IF NOT EXISTS idx_stock_movements_marketplace_listing ON stock_move
 CREATE INDEX IF NOT EXISTS idx_stock_movements_marketplace_order_item ON stock_movements(marketplace_order_item_id);
 CREATE INDEX IF NOT EXISTS idx_stock_movements_crop_cycle ON stock_movements(crop_cycle_id);
 CREATE INDEX IF NOT EXISTS idx_stock_movements_org_crop_cycle ON stock_movements(organization_id, crop_cycle_id);
+CREATE INDEX IF NOT EXISTS idx_stock_movements_parcel ON stock_movements(parcel_id);
+CREATE INDEX IF NOT EXISTS idx_stock_movements_org_parcel ON stock_movements(organization_id, parcel_id);
 
 COMMENT ON COLUMN stock_movements.crop_cycle_id IS 'Links the stock movement to a specific crop cycle for cost tracking and allocation';
+COMMENT ON COLUMN stock_movements.parcel_id IS 'Links the stock movement to a specific parcel for per-parcel cost allocation';
 
 -- =====================================================
 -- STOCK MOVEMENT TRIGGERS AND FUNCTIONS
@@ -3458,6 +3675,30 @@ CREATE TRIGGER trg_validate_stock_movement_unit
   EXECUTE FUNCTION validate_stock_movement_unit();
 
 COMMENT ON FUNCTION validate_stock_movement_unit() IS 'Validates that stock_movements.unit matches the variant''s unit from work_units with detailed error messaging';
+
+-- Auto-propagate parcel_id / crop_cycle_id from parent stock_entry to movement
+-- Avoids touching every INSERT site in service layer
+CREATE OR REPLACE FUNCTION propagate_stock_entry_context_to_movement()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.stock_entry_id IS NOT NULL AND (NEW.parcel_id IS NULL OR NEW.crop_cycle_id IS NULL) THEN
+    SELECT
+      COALESCE(NEW.parcel_id, se.parcel_id),
+      COALESCE(NEW.crop_cycle_id, se.crop_cycle_id)
+    INTO NEW.parcel_id, NEW.crop_cycle_id
+    FROM stock_entries se
+    WHERE se.id = NEW.stock_entry_id;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_propagate_stock_entry_context ON stock_movements;
+CREATE TRIGGER trg_propagate_stock_entry_context
+  BEFORE INSERT ON stock_movements
+  FOR EACH ROW
+  WHEN (NEW.stock_entry_id IS NOT NULL)
+  EXECUTE FUNCTION propagate_stock_entry_context_to_movement();
 
 CREATE OR REPLACE FUNCTION sync_variant_quantity_from_movements()
 RETURNS TRIGGER AS $$
@@ -3980,8 +4221,41 @@ CREATE TABLE IF NOT EXISTS satellite_indices_data (
   trend_duration_days INTEGER,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
-  CHECK (index_name IN ('NDVI', 'NDRE', 'NDMI', 'MNDWI', 'GCI', 'SAVI', 'OSAVI', 'MSAVI2', 'NIRv', 'EVI', 'MSI', 'MCARI', 'TCARI'))
+  CONSTRAINT satellite_indices_data_index_name_check CHECK (index_name IN (
+    'NDVI', 'NDRE', 'NDMI', 'MNDWI', 'GCI', 'SAVI', 'OSAVI', 'MSAVI2',
+    'NIRv', 'EVI', 'MSI', 'MCARI', 'TCARI', 'TCARI_OSAVI', 'EBI'
+  ))
 );
+
+-- Fixup for DBs created before EBI / TCARI_OSAVI were added (CREATE TABLE
+-- IF NOT EXISTS does not update existing tables). Drops any pre-existing
+-- CHECK constraint on index_name (whatever its auto-generated name) and
+-- recreates the widened version with a stable name.
+DO $satidx_check$
+DECLARE
+  v_conname text;
+BEGIN
+  FOR v_conname IN
+    SELECT conname
+    FROM pg_constraint
+    WHERE conrelid = 'public.satellite_indices_data'::regclass
+      AND contype = 'c'
+      AND pg_get_constraintdef(oid) ILIKE '%index_name%'
+  LOOP
+    EXECUTE format(
+      'ALTER TABLE public.satellite_indices_data DROP CONSTRAINT %I',
+      v_conname
+    );
+  END LOOP;
+
+  ALTER TABLE public.satellite_indices_data
+    ADD CONSTRAINT satellite_indices_data_index_name_check
+    CHECK (index_name IN (
+      'NDVI', 'NDRE', 'NDMI', 'MNDWI', 'GCI', 'SAVI', 'OSAVI', 'MSAVI2',
+      'NIRv', 'EVI', 'MSI', 'MCARI', 'TCARI', 'TCARI_OSAVI', 'EBI'
+    ));
+END
+$satidx_check$;
 
 CREATE INDEX IF NOT EXISTS idx_satellite_indices_data_org ON satellite_indices_data(organization_id);
 CREATE INDEX IF NOT EXISTS idx_satellite_indices_data_parcel ON satellite_indices_data(parcel_id);
@@ -4243,7 +4517,15 @@ DO $$ BEGIN
   ALTER TABLE crop_types ADD COLUMN IF NOT EXISTS chill_hours_min INTEGER;
   ALTER TABLE crop_types ADD COLUMN IF NOT EXISTS chill_hours_max INTEGER;
   ALTER TABLE crop_types ADD COLUMN IF NOT EXISTS is_system BOOLEAN DEFAULT false;
+  -- Stable global code (e.g. 'olivier', 'amandier'). Nullable for org-specific custom crops.
+  -- Used as FK target by crop_ai_references.crop_type — single source of truth across registries.
+  ALTER TABLE crop_types ADD COLUMN IF NOT EXISTS code TEXT;
 END $$;
+
+-- Global UNIQUE on code (multiple NULLs allowed for org-specific rows without a code).
+DO $$ BEGIN
+  ALTER TABLE crop_types ADD CONSTRAINT crop_types_code_unique UNIQUE (code);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 -- Crop Categories
 CREATE TABLE IF NOT EXISTS crop_categories (
@@ -4689,6 +4971,119 @@ CREATE INDEX IF NOT EXISTS idx_structures_org ON structures(organization_id);
 CREATE INDEX IF NOT EXISTS idx_structures_farm ON structures(farm_id);
 CREATE INDEX IF NOT EXISTS idx_structures_geom ON structures USING GIST(geom) WHERE geom IS NOT NULL;
 
+-- Equipment & Fleet Management
+CREATE TABLE IF NOT EXISTS equipment_assets (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  farm_id UUID REFERENCES farms(id) ON DELETE SET NULL,
+  name TEXT NOT NULL,
+  category TEXT NOT NULL,
+  brand TEXT,
+  model TEXT,
+  serial_number TEXT,
+  license_plate TEXT,
+  purchase_date DATE,
+  purchase_price NUMERIC(12,2),
+  current_value NUMERIC(12,2),
+  hour_meter_reading NUMERIC,
+  hour_meter_date DATE,
+  fuel_type TEXT,
+  status TEXT DEFAULT 'available',
+  assigned_to UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  insurance_expiry DATE,
+  registration_expiry DATE,
+  notes TEXT,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  CHECK (category IN ('tractor', 'harvester', 'sprayer', 'utility_vehicle', 'pump', 'small_tool', 'other')),
+  CHECK (fuel_type IS NULL OR fuel_type IN ('diesel', 'petrol', 'electric', 'other')),
+  CHECK (status IN ('available', 'in_use', 'maintenance', 'out_of_service'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_equipment_assets_org ON equipment_assets(organization_id);
+CREATE INDEX IF NOT EXISTS idx_equipment_assets_farm ON equipment_assets(farm_id);
+CREATE INDEX IF NOT EXISTS idx_equipment_assets_category ON equipment_assets(category);
+CREATE INDEX IF NOT EXISTS idx_equipment_assets_status ON equipment_assets(status);
+
+CREATE TRIGGER update_equipment_assets_updated_at
+  BEFORE UPDATE ON equipment_assets
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TABLE IF NOT EXISTS equipment_maintenance (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  equipment_id UUID NOT NULL REFERENCES equipment_assets(id) ON DELETE CASCADE,
+  type TEXT NOT NULL,
+  description TEXT,
+  cost NUMERIC(12,2),
+  maintenance_date DATE NOT NULL,
+  hour_meter_reading NUMERIC,
+  next_service_date DATE,
+  next_service_hours NUMERIC,
+  vendor TEXT,
+  vendor_invoice_number TEXT,
+  cost_center_id UUID REFERENCES cost_centers(id) ON DELETE SET NULL,
+  journal_entry_id UUID REFERENCES journal_entries(id) ON DELETE SET NULL,
+  performed_by_user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  notes TEXT,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  CHECK (type IN ('oil_change', 'repair', 'inspection', 'tire_replacement', 'battery', 'filter', 'fuel_fill', 'registration', 'insurance', 'other'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_equipment_maintenance_org ON equipment_maintenance(organization_id);
+CREATE INDEX IF NOT EXISTS idx_equipment_maintenance_equipment ON equipment_maintenance(equipment_id);
+CREATE INDEX IF NOT EXISTS idx_equipment_maintenance_date ON equipment_maintenance(maintenance_date);
+CREATE INDEX IF NOT EXISTS idx_equipment_maintenance_type ON equipment_maintenance(type);
+
+CREATE TRIGGER update_equipment_maintenance_updated_at
+  BEFORE UPDATE ON equipment_maintenance
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
+ALTER TABLE equipment_assets ENABLE ROW LEVEL SECURITY;
+ALTER TABLE equipment_maintenance ENABLE ROW LEVEL SECURITY;
+
+-- Photos for structures, equipment, workers (additive, idempotent)
+ALTER TABLE structures       ADD COLUMN IF NOT EXISTS photos JSONB DEFAULT '[]'::jsonb;
+ALTER TABLE equipment_assets ADD COLUMN IF NOT EXISTS photos JSONB DEFAULT '[]'::jsonb;
+ALTER TABLE workers          ADD COLUMN IF NOT EXISTS photos JSONB DEFAULT '[]'::jsonb;
+
+-- Public storage bucket for infrastructure & equipment photos
+DO $$
+BEGIN
+  EXECUTE $q$ INSERT INTO storage.buckets (id, name, "public") VALUES ('entity-photos', 'entity-photos', true) ON CONFLICT (id) DO UPDATE SET "public" = true $q$;
+  EXECUTE $q$ DROP POLICY IF EXISTS "Public read entity-photos" ON storage.objects $q$;
+  EXECUTE $q$ CREATE POLICY "Public read entity-photos" ON storage.objects FOR SELECT USING (bucket_id = 'entity-photos') $q$;
+  EXECUTE $q$ DROP POLICY IF EXISTS "Authenticated upload entity-photos" ON storage.objects $q$;
+  EXECUTE $q$ CREATE POLICY "Authenticated upload entity-photos" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'entity-photos' AND auth.role() = 'authenticated') $q$;
+  EXECUTE $q$ DROP POLICY IF EXISTS "Authenticated update entity-photos" ON storage.objects $q$;
+  EXECUTE $q$ CREATE POLICY "Authenticated update entity-photos" ON storage.objects FOR UPDATE USING (bucket_id = 'entity-photos' AND auth.role() = 'authenticated') WITH CHECK (bucket_id = 'entity-photos' AND auth.role() = 'authenticated') $q$;
+  EXECUTE $q$ DROP POLICY IF EXISTS "Authenticated delete entity-photos" ON storage.objects $q$;
+  EXECUTE $q$ CREATE POLICY "Authenticated delete entity-photos" ON storage.objects FOR DELETE USING (bucket_id = 'entity-photos' AND auth.role() = 'authenticated') $q$;
+EXCEPTION WHEN OTHERS THEN
+  RAISE NOTICE 'entity-photos bucket setup skipped: %', SQLERRM;
+END$$;
+
+-- Demo data tags: marks rows seeded by demo-data service so the selective
+-- "clear demo only" cleanup can delete them without touching client data.
+-- Internal table — admin client only (no RLS policies).
+CREATE TABLE IF NOT EXISTS demo_data_tags (
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  table_name TEXT NOT NULL,
+  row_id UUID NOT NULL,
+  seeded_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (organization_id, table_name, row_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_demo_data_tags_org_table
+  ON demo_data_tags(organization_id, table_name);
+
+ALTER TABLE demo_data_tags ENABLE ROW LEVEL SECURITY;
+
 -- Utilities
 CREATE TABLE IF NOT EXISTS utilities (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -4736,8 +5131,7 @@ CREATE TABLE IF NOT EXISTS roles (
   created_by UUID REFERENCES auth.users(id),
   updated_by UUID REFERENCES auth.users(id),
   created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW(),
-  CHECK (name IN ('internal_admin', 'system_admin', 'organization_admin', 'farm_manager', 'farm_worker', 'day_laborer', 'viewer'))
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- Permissions
@@ -5142,6 +5536,31 @@ CREATE POLICY "org_delete_harvest_records" ON harvest_records
     is_organization_member(organization_id)
   );
 
+ALTER TABLE variant_barcodes ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_read_variant_barcodes" ON variant_barcodes;
+CREATE POLICY "org_read_variant_barcodes" ON variant_barcodes
+  FOR SELECT USING (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_write_variant_barcodes" ON variant_barcodes;
+CREATE POLICY "org_write_variant_barcodes" ON variant_barcodes
+  FOR INSERT WITH CHECK (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_update_variant_barcodes" ON variant_barcodes;
+CREATE POLICY "org_update_variant_barcodes" ON variant_barcodes
+  FOR UPDATE USING (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_delete_variant_barcodes" ON variant_barcodes;
+CREATE POLICY "org_delete_variant_barcodes" ON variant_barcodes
+  FOR DELETE USING (
+    is_organization_member(organization_id)
+  );
+
 -- Deliveries Policies
 ALTER TABLE IF EXISTS deliveries ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "org_read_deliveries" ON deliveries;
@@ -5216,6 +5635,32 @@ CREATE POLICY "org_update_items" ON items
 
 DROP POLICY IF EXISTS "org_delete_items" ON items;
 CREATE POLICY "org_delete_items" ON items
+  FOR DELETE USING (
+    is_organization_member(organization_id)
+  );
+
+-- Item Barcodes Policies
+ALTER TABLE item_barcodes ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_read_item_barcodes" ON item_barcodes;
+CREATE POLICY "org_read_item_barcodes" ON item_barcodes
+  FOR SELECT USING (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_write_item_barcodes" ON item_barcodes;
+CREATE POLICY "org_write_item_barcodes" ON item_barcodes
+  FOR INSERT WITH CHECK (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_update_item_barcodes" ON item_barcodes;
+CREATE POLICY "org_update_item_barcodes" ON item_barcodes
+  FOR UPDATE USING (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_delete_item_barcodes" ON item_barcodes;
+CREATE POLICY "org_delete_item_barcodes" ON item_barcodes
   FOR DELETE USING (
     is_organization_member(organization_id)
   );
@@ -5300,6 +5745,8 @@ ALTER TABLE IF EXISTS task_comments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS task_time_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS task_dependencies ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS task_equipment ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS task_watchers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS task_mentions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS work_records ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS metayage_settlements ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS payment_records ENABLE ROW LEVEL SECURITY;
@@ -5831,6 +6278,42 @@ CREATE OR REPLACE FUNCTION sum_gdd_between(
     AND crop_type = p_crop AND date >= p_start AND date < p_end;
 $$ LANGUAGE sql STABLE;
 
+-- Weather hourly data: location-based hourly temperature cache (NOT org-scoped, shared geographically).
+-- Used as the source of truth for chill_hours and other phenological hour-counters.
+-- Quantization matches weather_daily_data convention (NUMERIC(7,2) ~ 1km grid).
+CREATE TABLE IF NOT EXISTS public.weather_hourly_data (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  latitude NUMERIC(7, 2) NOT NULL,
+  longitude NUMERIC(7, 2) NOT NULL,
+  recorded_at TIMESTAMPTZ NOT NULL,             -- 1h-resolution UTC datetime
+  temperature_2m NUMERIC(5, 2),                 -- °C
+  source TEXT NOT NULL DEFAULT 'open-meteo-archive',
+  fetched_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (latitude, longitude, recorded_at, source)
+);
+CREATE INDEX IF NOT EXISTS idx_whd_geo_time
+  ON public.weather_hourly_data (latitude, longitude, recorded_at);
+CREATE INDEX IF NOT EXISTS idx_whd_recorded_at
+  ON public.weather_hourly_data (recorded_at DESC);
+
+-- Weather threshold cache: precomputed hour-counters per (location, year, crop, stage, threshold).
+-- Hot-path layer on top of weather_hourly_data — avoids repeated counting of the same series.
+-- Cache invalidation: app-level — purge rows when underlying weather_hourly_data is updated.
+CREATE TABLE IF NOT EXISTS public.weather_threshold_cache (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  latitude NUMERIC(7, 2) NOT NULL,
+  longitude NUMERIC(7, 2) NOT NULL,
+  year INTEGER NOT NULL,
+  crop_type TEXT NOT NULL,
+  stage_key TEXT NOT NULL,
+  threshold_key TEXT NOT NULL,
+  count INTEGER NOT NULL,
+  computed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (latitude, longitude, year, crop_type, stage_key, threshold_key)
+);
+CREATE INDEX IF NOT EXISTS idx_wtc_lookup
+  ON public.weather_threshold_cache (latitude, longitude, year, crop_type);
+
 -- Weather derived data: per-parcel derived meteorological variables (ORG-scoped via parcel -> farm -> org)
 CREATE TABLE IF NOT EXISTS weather_derived_data (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -6072,160 +6555,25 @@ BEGIN
   UPDATE crop_types SET scientific_name = 'Prunus spp.', family = 'Rosaceae', tbase = 7.0, frost_threshold = -2.0, heat_threshold = 38.0, chill_hours_min = 400, chill_hours_max = 1000, is_system = true, name_fr = 'Fruits à noyau', name_ar = 'الفواكه ذات النواة' WHERE name = 'stone_fruit' AND organization_id IS NULL;
   UPDATE crop_types SET scientific_name = 'Phoenix dactylifera', family = 'Arecaceae', tbase = 18.0, frost_threshold = -5.0, heat_threshold = 50.0, chill_hours_min = 0, chill_hours_max = 0, is_system = true, name_fr = 'Palmier dattier', name_ar = 'النخيل' WHERE name = 'date_palm' AND organization_id IS NULL;
   UPDATE crop_types SET scientific_name = 'Juglans regia', family = 'Juglandaceae', tbase = 7.0, frost_threshold = -2.0, heat_threshold = 38.0, chill_hours_min = 400, chill_hours_max = 1000, is_system = true, name_fr = 'Noyer', name_ar = 'الجوز' WHERE name = 'walnut' AND organization_id IS NULL;
+
+  -- Backfill global code for AgromindIA-supported cultures (FR codes used by crop_ai_references).
+  -- Idempotent: only sets code where it's still NULL.
+  UPDATE crop_types SET code = 'olivier'
+    WHERE name = 'olive' AND organization_id IS NULL AND code IS NULL;
+  UPDATE crop_types SET code = 'avocatier'
+    WHERE name = 'avocado' AND organization_id IS NULL AND code IS NULL;
+  UPDATE crop_types SET code = 'agrumes'
+    WHERE name = 'citrus' AND organization_id IS NULL AND code IS NULL;
+  UPDATE crop_types SET code = 'amandier'
+    WHERE name = 'almond' AND organization_id IS NULL AND code IS NULL;
+  UPDATE crop_types SET code = 'palmier_dattier'
+    WHERE name = 'date_palm' AND organization_id IS NULL AND code IS NULL;
 END $$;
 
--- Seed phenological stages
-INSERT INTO phenological_stages (crop_type_name, stage_name, stage_name_fr, bbch_code, stage_order, gdd_threshold_min, gdd_threshold_max, typical_month_start, typical_month_end, description_fr)
-VALUES
-  ('olive', 'Dormancy', 'Repos végétatif', '00', 1, 0, 100, 1, 2, 'Période de dormance hivernale'),
-  ('olive', 'Bud break', 'Débourrement', '08', 2, 100, 200, 2, 3, 'Éclatement des bourgeons'),
-  ('olive', 'Shoot growth', 'Croissance végétative', '10', 3, 200, 400, 3, 4, 'Allongement des pousses'),
-  ('olive', 'Inflorescence emergence', 'Apparition des inflorescences', '51', 4, 400, 600, 4, 5, 'Formation des grappes florales'),
-  ('olive', 'Flowering', 'Floraison', '60', 5, 600, 800, 5, 6, 'Pleine floraison'),
-  ('olive', 'Fruit set', 'Nouaison', '71', 6, 800, 1000, 6, 6, 'Formation des fruits'),
-  ('olive', 'Fruit growth', 'Grossissement du fruit', '72', 7, 1000, 2000, 6, 9, 'Phase de croissance du fruit'),
-  ('olive', 'Veraison/Lipogenesis', 'Véraison/Lipogenèse', '81', 8, 2000, 2500, 9, 10, 'Changement de couleur et accumulation huile'),
-  ('olive', 'Maturation', 'Maturation', '86', 9, 2500, 3000, 10, 12, 'Maturation complète du fruit'),
-  ('olive', 'Harvest', 'Récolte', '89', 10, 3000, NULL, 11, 1, 'Période de récolte'),
-  ('avocado', 'Vegetative rest', 'Repos végétatif', '00', 1, 0, 100, 12, 1, 'Période de repos'),
-  ('avocado', 'Bud break', 'Débourrement', '08', 2, 100, 300, 1, 2, 'Éclatement des bourgeons'),
-  ('avocado', 'Flowering', 'Floraison', '60', 3, 300, 600, 2, 4, 'Pleine floraison (Type A ou B)'),
-  ('avocado', 'Fruit set', 'Nouaison', '71', 4, 600, 900, 4, 5, 'Formation des fruits'),
-  ('avocado', 'Fruit growth phase 1', 'Croissance fruit phase 1', '72', 5, 900, 1500, 5, 7, 'Division cellulaire rapide'),
-  ('avocado', 'Fruit growth phase 2', 'Croissance fruit phase 2', '75', 6, 1500, 2200, 7, 9, 'Accumulation lipidique'),
-  ('avocado', 'Maturation', 'Maturation', '86', 7, 2200, 2800, 9, 11, 'Maturation physiologique'),
-  ('avocado', 'Harvest', 'Récolte', '89', 8, 2800, NULL, 11, 3, 'Période de récolte')
-ON CONFLICT (crop_type_name, stage_order) DO UPDATE SET
-  stage_name = EXCLUDED.stage_name,
-  stage_name_fr = EXCLUDED.stage_name_fr,
-  bbch_code = EXCLUDED.bbch_code,
-  gdd_threshold_min = EXCLUDED.gdd_threshold_min,
-  gdd_threshold_max = EXCLUDED.gdd_threshold_max,
-  typical_month_start = EXCLUDED.typical_month_start,
-  typical_month_end = EXCLUDED.typical_month_end,
-  description_fr = EXCLUDED.description_fr;
 
--- Seed Kc coefficients
-INSERT INTO crop_kc_coefficients (crop_type_name, phenological_stage_name, kc_value, kc_min, kc_max)
-VALUES
-  ('olive', 'Dormancy', 0.45, 0.40, 0.50),
-  ('olive', 'Bud break', 0.50, 0.45, 0.55),
-  ('olive', 'Shoot growth', 0.55, 0.50, 0.60),
-  ('olive', 'Inflorescence emergence', 0.60, 0.55, 0.65),
-  ('olive', 'Flowering', 0.65, 0.60, 0.70),
-  ('olive', 'Fruit set', 0.65, 0.60, 0.70),
-  ('olive', 'Fruit growth', 0.70, 0.65, 0.75),
-  ('olive', 'Veraison/Lipogenesis', 0.65, 0.60, 0.70),
-  ('olive', 'Maturation', 0.55, 0.50, 0.60),
-  ('olive', 'Harvest', 0.50, 0.45, 0.55),
-  ('avocado', 'Vegetative rest', 0.60, 0.55, 0.65),
-  ('avocado', 'Bud break', 0.65, 0.60, 0.70),
-  ('avocado', 'Flowering', 0.75, 0.70, 0.80),
-  ('avocado', 'Fruit set', 0.80, 0.75, 0.85),
-  ('avocado', 'Fruit growth phase 1', 0.85, 0.80, 0.90),
-  ('avocado', 'Fruit growth phase 2', 0.85, 0.80, 0.90),
-  ('avocado', 'Maturation', 0.70, 0.65, 0.75),
-  ('avocado', 'Harvest', 0.65, 0.60, 0.70),
-  ('citrus', 'Dormancy', 0.50, 0.45, 0.55),
-  ('citrus', 'Flowering', 0.65, 0.60, 0.70),
-  ('citrus', 'Fruit growth', 0.70, 0.65, 0.75),
-  ('citrus', 'Maturation', 0.65, 0.60, 0.70),
-  ('vine', 'Dormancy', 0.30, 0.25, 0.35),
-  ('vine', 'Bud break', 0.40, 0.35, 0.45),
-  ('vine', 'Flowering', 0.60, 0.55, 0.65),
-  ('vine', 'Fruit growth', 0.70, 0.65, 0.80),
-  ('vine', 'Veraison', 0.65, 0.60, 0.70),
-  ('vine', 'Maturation', 0.55, 0.50, 0.60),
-  ('almond', 'Dormancy', 0.40, 0.35, 0.45),
-  ('almond', 'Flowering', 0.55, 0.50, 0.60),
-  ('almond', 'Fruit growth', 0.80, 0.75, 0.90),
-  ('almond', 'Maturation', 0.65, 0.60, 0.70)
-ON CONFLICT (crop_type_name, phenological_stage_name) DO UPDATE SET
-  kc_value = EXCLUDED.kc_value,
-  kc_min = EXCLUDED.kc_min,
-  kc_max = EXCLUDED.kc_max;
 
--- Seed mineral exports for all 11 crops
-INSERT INTO crop_mineral_exports (crop_type_name, product_type, n_kg_per_ton, p2o5_kg_per_ton, k2o_kg_per_ton, cao_kg_per_ton, mgo_kg_per_ton)
-VALUES
-  ('olive', 'fruit', 15.0, 4.0, 20.0, 5.0, 2.0),
-  ('olive', 'oil', 0.0, 0.0, 0.5, 0.0, 0.0),
-  ('avocado', 'fruit', 8.5, 2.5, 25.0, 3.0, 2.0),
-  ('citrus', 'fruit', 2.5, 0.8, 3.5, 2.0, 0.5),
-  ('almond', 'fruit', 50.0, 10.0, 12.0, 3.0, 4.0),
-  ('vine', 'fruit', 5.0, 2.0, 7.0, 3.0, 1.0),
-  ('pomegranate', 'fruit', 3.0, 1.0, 4.0, 2.0, 0.5),
-  ('fig', 'fruit', 4.0, 1.5, 5.0, 3.0, 1.0),
-  ('apple_pear', 'fruit', 3.5, 1.2, 4.5, 1.5, 0.5),
-  ('stone_fruit', 'fruit', 4.5, 1.5, 6.0, 2.0, 0.8),
-  ('date_palm', 'fruit', 6.0, 2.0, 12.0, 3.0, 2.0),
-  ('walnut', 'fruit', 30.0, 8.0, 10.0, 5.0, 3.0)
-ON CONFLICT (crop_type_name, product_type) DO UPDATE SET
-  n_kg_per_ton = EXCLUDED.n_kg_per_ton,
-  p2o5_kg_per_ton = EXCLUDED.p2o5_kg_per_ton,
-  k2o_kg_per_ton = EXCLUDED.k2o_kg_per_ton,
-  cao_kg_per_ton = EXCLUDED.cao_kg_per_ton,
-  mgo_kg_per_ton = EXCLUDED.mgo_kg_per_ton;
 
--- Seed crop diseases (olive and avocado priority)
-INSERT INTO crop_diseases (crop_type_name, disease_name, disease_name_fr, pathogen_name, disease_type, temperature_min, temperature_max, humidity_threshold, season, treatment_product, treatment_dose, treatment_timing, days_after_treatment, satellite_signal, severity)
-VALUES
-  ('olive', 'Peacock spot', 'Oeil de paon', 'Spilocaea oleagina', 'fungal', 15.0, 20.0, 80.0, 'spring', 'Copper hydroxide', '3-5 L/ha', 'Preventive autumn + spring', 21, 'NDVI drop, leaf spots visible in NDRE', 'high'),
-  ('olive', 'Verticillium wilt', 'Verticilliose', 'Verticillium dahliae', 'fungal', 20.0, 25.0, NULL, 'spring', 'No chemical cure', NULL, 'Resistant rootstocks, solarization', NULL, 'Asymmetric NDVI decline in canopy', 'critical'),
-  ('olive', 'Olive knot', 'Tuberculose', 'Pseudomonas savastanoi', 'bacterial', 15.0, 25.0, 90.0, 'year_round', 'Copper compounds', '5 L/ha', 'After pruning wounds', 14, 'Branch dieback in NIRv', 'medium'),
-  ('olive', 'Olive fruit fly', 'Mouche de l''olive', 'Bactrocera oleae', 'insect', 20.0, 30.0, NULL, 'autumn', 'Dimethoate or traps', '0.5-1 L/ha', 'When fruit starts coloring', 28, 'Not directly visible', 'high'),
-  ('olive', 'Black scale', 'Cochenille noire', 'Saissetia oleae', 'insect', 20.0, 30.0, 70.0, 'summer', 'Mineral oil', '10-15 L/ha', 'Crawler stage (May-Jun)', 7, 'Sooty mold reduces NDVI', 'medium'),
-  ('olive', 'Anthracnose', 'Dalmatica', 'Colletotrichum spp.', 'fungal', 15.0, 25.0, 85.0, 'autumn', 'Copper + mancozeb', '3-4 L/ha', 'Before rainy season', 21, 'Fruit damage, late NDVI drop', 'high'),
-  ('avocado', 'Phytophthora root rot', 'Pourriture des racines', 'Phytophthora cinnamomi', 'fungal', 20.0, 30.0, 90.0, 'year_round', 'Phosphonic acid (Fosetyl-Al)', '2-3 g/L trunk injection', 'Preventive in spring/autumn', 30, 'NDVI and NIRv progressive decline, canopy thinning', 'critical'),
-  ('avocado', 'Anthracnose', 'Anthracnose', 'Colletotrichum gloeosporioides', 'fungal', 25.0, 30.0, 85.0, 'summer', 'Copper hydroxide', '3-5 L/ha', 'Pre-harvest preventive', 14, 'Fruit spots, late NDVI impact', 'high'),
-  ('avocado', 'Scab', 'Gale', 'Sphaceloma perseae', 'fungal', 20.0, 28.0, 80.0, 'spring', 'Copper oxychloride', '4 L/ha', 'Spring flush protection', 21, 'Leaf lesions visible in NDRE', 'medium'),
-  ('avocado', 'Cercospora spot', 'Cercosporiose', 'Cercospora purpurea', 'fungal', 20.0, 28.0, 80.0, 'summer', 'Mancozeb', '2-3 kg/ha', 'Before symptoms appear', 14, 'Leaf spotting, NDVI decrease', 'medium')
-ON CONFLICT (crop_type_name, disease_name) DO UPDATE SET
-  disease_name_fr = EXCLUDED.disease_name_fr,
-  pathogen_name = EXCLUDED.pathogen_name,
-  disease_type = EXCLUDED.disease_type,
-  temperature_min = EXCLUDED.temperature_min,
-  temperature_max = EXCLUDED.temperature_max,
-  humidity_threshold = EXCLUDED.humidity_threshold,
-  season = EXCLUDED.season,
-  treatment_product = EXCLUDED.treatment_product,
-  treatment_dose = EXCLUDED.treatment_dose,
-  treatment_timing = EXCLUDED.treatment_timing,
-  days_after_treatment = EXCLUDED.days_after_treatment,
-  satellite_signal = EXCLUDED.satellite_signal,
-  severity = EXCLUDED.severity;
 
--- Seed index thresholds by crop and plantation system
-INSERT INTO crop_index_thresholds (crop_type_name, plantation_system_type, index_name, healthy_min, healthy_max, stress_low, critical_low, notes)
-VALUES
-  ('olive', 'traditional', 'NDVI', 0.300, 0.550, 0.250, 0.150, 'Traditional olive 100-200 trees/ha'),
-  ('olive', 'intensive', 'NDVI', 0.450, 0.700, 0.350, 0.250, 'Intensive olive 200-500 trees/ha'),
-  ('olive', 'super_intensive', 'NDVI', 0.550, 0.800, 0.400, 0.300, 'Super-intensive >1000 trees/ha'),
-  ('olive', 'traditional', 'NIRv', 0.100, 0.250, 0.080, 0.050, NULL),
-  ('olive', 'intensive', 'NIRv', 0.150, 0.350, 0.120, 0.080, NULL),
-  ('olive', 'super_intensive', 'NIRv', 0.200, 0.450, 0.150, 0.100, NULL),
-  ('olive', 'traditional', 'EVI', 0.200, 0.450, 0.150, 0.100, NULL),
-  ('olive', 'intensive', 'EVI', 0.300, 0.550, 0.250, 0.150, NULL),
-  ('olive', 'super_intensive', 'EVI', 0.400, 0.650, 0.300, 0.200, NULL),
-  ('olive', NULL, 'NDMI', 0.050, 0.300, 0.000, -0.100, 'Water stress indicator'),
-  ('olive', NULL, 'NDRE', 0.200, 0.500, 0.150, 0.100, 'Nitrogen status indicator'),
-  ('avocado', 'traditional', 'NDVI', 0.500, 0.800, 0.400, 0.300, 'Traditional avocado 100-200 trees/ha'),
-  ('avocado', 'intensive', 'NDVI', 0.600, 0.850, 0.500, 0.400, 'Intensive avocado 400-600 trees/ha'),
-  ('avocado', NULL, 'NDMI', 0.100, 0.400, 0.050, -0.050, 'Avocado is moisture-sensitive'),
-  ('avocado', NULL, 'NIRv', 0.200, 0.500, 0.150, 0.100, NULL),
-  ('avocado', NULL, 'EVI', 0.350, 0.700, 0.300, 0.200, NULL),
-  ('citrus', NULL, 'NDVI', 0.450, 0.750, 0.350, 0.250, 'Citrus orchards'),
-  ('citrus', NULL, 'NDMI', 0.100, 0.350, 0.050, -0.050, NULL),
-  ('vine', NULL, 'NDVI', 0.250, 0.600, 0.200, 0.120, 'Vineyard canopy varies by training system'),
-  ('vine', NULL, 'NDMI', 0.000, 0.250, -0.050, -0.150, 'Water stress common in viticulture'),
-  ('almond', NULL, 'NDVI', 0.350, 0.650, 0.280, 0.180, NULL),
-  ('date_palm', NULL, 'NDVI', 0.300, 0.600, 0.200, 0.120, 'Palm canopy structure differs')
-ON CONFLICT (crop_type_name, COALESCE(plantation_system_type, ''), index_name) DO UPDATE SET
-  healthy_min = EXCLUDED.healthy_min,
-  healthy_max = EXCLUDED.healthy_max,
-  stress_low = EXCLUDED.stress_low,
-  critical_low = EXCLUDED.critical_low,
-  notes = EXCLUDED.notes;
 
 -- =====================================================
 -- AI & OPERATIONAL ENGINE TABLES
@@ -6268,6 +6616,12 @@ CREATE TABLE IF NOT EXISTS public.calibrations (
   yield_potential_min DECIMAL(6,2),
   yield_potential_max DECIMAL(6,2),
   coefficient_etat_parcelle DECIMAL(4,2),
+
+  -- User-confirmed target yield (farmer override of LLM-computed rendement_cible)
+  target_yield_t_ha DECIMAL(6,2),
+  target_yield_source TEXT CHECK (target_yield_source IN ('suggested', 'user_override')),
+  target_yield_confirmed_at TIMESTAMPTZ,
+  target_yield_confirmed_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
 
   -- Anomaly count
   anomaly_count INTEGER DEFAULT 0,
@@ -6315,9 +6669,40 @@ COMMENT ON COLUMN calibrations.recalibration_motif IS 'Recalibration motif for F
 COMMENT ON COLUMN calibrations.previous_baseline IS 'Snapshot of validated baseline prior to recalibration';
 COMMENT ON COLUMN calibrations.campaign_bilan IS 'Computed post-campaign comparison payload used by F3_complete recalibration flow';
 
+-- Idempotent add for existing installations
+ALTER TABLE public.calibrations
+  ADD COLUMN IF NOT EXISTS target_yield_t_ha DECIMAL(6,2),
+  ADD COLUMN IF NOT EXISTS target_yield_source TEXT,
+  ADD COLUMN IF NOT EXISTS target_yield_confirmed_at TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS target_yield_confirmed_by UUID REFERENCES auth.users(id) ON DELETE SET NULL;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.table_constraints
+    WHERE table_name = 'calibrations' AND constraint_name = 'calibrations_target_yield_source_check'
+  ) THEN
+    ALTER TABLE public.calibrations ADD CONSTRAINT calibrations_target_yield_source_check
+      CHECK (target_yield_source IS NULL OR target_yield_source IN ('suggested', 'user_override'));
+  END IF;
+END $$;
+
+COMMENT ON COLUMN calibrations.target_yield_t_ha IS 'Farmer-confirmed target yield (t/ha). Overrides LLM-computed rendement_cible when set; NULL means LLM falls back to its ÉTAPE 2 computation.';
+COMMENT ON COLUMN calibrations.target_yield_source IS 'suggested = farmer accepted deterministic suggestion; user_override = farmer entered a custom value';
+
 CREATE INDEX IF NOT EXISTS idx_calibrations_parcel_id ON public.calibrations(parcel_id);
 CREATE INDEX IF NOT EXISTS idx_calibrations_organization_id ON public.calibrations(organization_id);
 CREATE INDEX IF NOT EXISTS idx_calibrations_status ON public.calibrations(status);
+
+-- Progress tracking: persisted so reload shows current step + % without
+-- relying on the ephemeral socket stream. Also enables the stale guard
+-- that marks zombie runs failed if no update for >5 minutes.
+ALTER TABLE public.calibrations ADD COLUMN IF NOT EXISTS progress_step INTEGER;
+ALTER TABLE public.calibrations ADD COLUMN IF NOT EXISTS progress_total_steps INTEGER;
+ALTER TABLE public.calibrations ADD COLUMN IF NOT EXISTS progress_step_key TEXT;
+ALTER TABLE public.calibrations ADD COLUMN IF NOT EXISTS progress_message TEXT;
+ALTER TABLE public.calibrations ADD COLUMN IF NOT EXISTS progress_percent INTEGER CHECK (progress_percent IS NULL OR (progress_percent BETWEEN 0 AND 100));
+ALTER TABLE public.calibrations ADD COLUMN IF NOT EXISTS progress_updated_at TIMESTAMPTZ;
 
 -- AI Diagnostic Sessions (one row per operational AI analysis run)
 CREATE TABLE IF NOT EXISTS public.ai_diagnostic_sessions (
@@ -6467,6 +6852,7 @@ CREATE TABLE IF NOT EXISTS public.annual_plans (
   budget_estimate_dh DECIMAL(10,2),
   verifications JSONB,               -- fractionnement_ok, doses_plausibles, etc.
   plan_summary TEXT,
+  plan_data JSONB,                   -- raw reference payload + AI aggregate enrichment
 
   -- Validation
   validated_by_user BOOLEAN NOT NULL DEFAULT FALSE,
@@ -6484,6 +6870,12 @@ CREATE TABLE IF NOT EXISTS public.annual_plans (
 COMMENT ON TABLE annual_plans IS 'V2 annual plan: deterministic 10-step assembly from calibration + referentiel';
 COMMENT ON COLUMN annual_plans.monthly_calendar IS 'Structured monthly breakdown: NPK, formes_engrais, microelements, biostimulants, phyto, irrigation, travaux';
 COMMENT ON COLUMN annual_plans.nutrition_option IS 'Auto-determined nutrition option: A (full data), B (incomplete data), C (salinity)';
+COMMENT ON COLUMN annual_plans.plan_data IS 'Raw reference payload (plan_data.source) + AI-aggregate enrichment overlayed by enrichPlanFromAI';
+
+-- Idempotent ALTERs so pre-existing databases pick up new column without a reset.
+-- Required: annual-plan.service writes plan_data on create and again after AI
+-- enrichment; without this column PostgREST returns PGRST204 / schema cache error.
+ALTER TABLE public.annual_plans ADD COLUMN IF NOT EXISTS plan_data JSONB;
 
 CREATE INDEX IF NOT EXISTS idx_annual_plans_parcel_id ON public.annual_plans(parcel_id);
 CREATE INDEX IF NOT EXISTS idx_annual_plans_organization_id ON public.annual_plans(organization_id);
@@ -6530,14 +6922,69 @@ CREATE INDEX IF NOT EXISTS idx_plan_interventions_status_date ON public.plan_int
 CREATE INDEX IF NOT EXISTS idx_plan_interventions_crop_cycle ON public.plan_interventions(crop_cycle_id);
 
 -- Crop AI References
+-- crop_type is the FR code (e.g. 'olivier', 'amandier'). Validation chain:
+--   1. FK to crop_types.code (this file, below) — DB-level referential integrity
+--   2. agritech-api/src/libs/agromind-ia/types.ts → Culture union — compile-time
+--   3. crop-reference-loader.ts → metadata.culture === filename — runtime load
+--   4. Trigger validate_crop_ai_reference (this file, below) — JSONB shape on write
+-- New crops require: a row in crop_types with the matching code (no DDL).
 CREATE TABLE IF NOT EXISTS public.crop_ai_references (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  crop_type TEXT NOT NULL UNIQUE CHECK (crop_type IN ('olivier', 'agrumes', 'avocatier', 'palmier_dattier')),
+  crop_type TEXT NOT NULL UNIQUE,
   version TEXT NOT NULL,
   reference_data JSONB NOT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+-- Drop legacy CHECK constraint on existing DBs (idempotent for fresh DBs).
+ALTER TABLE public.crop_ai_references
+  DROP CONSTRAINT IF EXISTS crop_ai_references_crop_type_check;
+
+-- FK to crop_types.code. NOT VALID first to avoid blocking deploy if existing
+-- prod data is inconsistent; VALIDATE runs the check.
+DO $$ BEGIN
+  ALTER TABLE public.crop_ai_references
+    ADD CONSTRAINT fk_crop_ai_references_crop_type
+    FOREIGN KEY (crop_type) REFERENCES public.crop_types(code) NOT VALID;
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN
+  ALTER TABLE public.crop_ai_references
+    VALIDATE CONSTRAINT fk_crop_ai_references_crop_type;
+EXCEPTION WHEN others THEN
+  RAISE NOTICE 'FK fk_crop_ai_references_crop_type left NOT VALID: %. Reconcile crop_types.code then run: ALTER TABLE public.crop_ai_references VALIDATE CONSTRAINT fk_crop_ai_references_crop_type;', SQLERRM;
+END $$;
+
+-- S2: JSONB shape validation. Ensures reference_data.metadata.culture matches
+-- crop_type and metadata.version is present. Defense in depth: app layer also checks.
+CREATE OR REPLACE FUNCTION public.validate_crop_ai_reference()
+RETURNS TRIGGER AS $$
+DECLARE
+  ref_culture TEXT;
+  ref_version TEXT;
+BEGIN
+  IF NEW.reference_data IS NULL THEN
+    RAISE EXCEPTION 'crop_ai_references.reference_data cannot be null';
+  END IF;
+  ref_culture := NEW.reference_data->'metadata'->>'culture';
+  ref_version := NEW.reference_data->'metadata'->>'version';
+  IF ref_culture IS NULL THEN
+    RAISE EXCEPTION 'reference_data.metadata.culture is required';
+  END IF;
+  IF ref_version IS NULL THEN
+    RAISE EXCEPTION 'reference_data.metadata.version is required';
+  END IF;
+  IF NEW.crop_type <> ref_culture THEN
+    RAISE EXCEPTION 'crop_type (%) must match reference_data.metadata.culture (%)',
+      NEW.crop_type, ref_culture;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_validate_crop_ai_reference ON public.crop_ai_references;
+CREATE TRIGGER trg_validate_crop_ai_reference
+  BEFORE INSERT OR UPDATE ON public.crop_ai_references
+  FOR EACH ROW EXECUTE FUNCTION public.validate_crop_ai_reference();
 
 -- Evenements Parcelle (parcel events that may trigger partial recalibration)
 CREATE TABLE IF NOT EXISTS evenements_parcelle (
@@ -6920,7451 +7367,6 @@ CREATE POLICY "delete_crop_ai_references" ON public.crop_ai_references
   FOR DELETE USING (auth.role() = 'service_role');
 
 
--- Seed crop_ai_references from repo referentials (DATA_*.json). Idempotent: upserts on crop_type.
--- Regenerate: node project/scripts/generate-crop-ai-references-sql.mjs
-
-INSERT INTO public.crop_ai_references (crop_type, version, reference_data)
-VALUES (
-  'agrumes',
-  '1.0',
-  $crop_ai_ref_agrumes${
-  "metadata": {
-    "version": "1.0",
-    "date": "2026-02",
-    "culture": "agrumes",
-    "famille": "Rutaceae",
-    "genre": "Citrus",
-    "pays": "Maroc"
-  },
-  "especes": {
-    "orange": {
-      "nom_scientifique": "Citrus sinensis",
-      "part_production_maroc": "60%",
-      "types": [
-        "Navel",
-        "Blonde",
-        "Sanguine"
-      ]
-    },
-    "petits_agrumes": {
-      "nom_scientifique": "Citrus reticulata",
-      "part_production_maroc": "25%",
-      "types": [
-        "Clémentine",
-        "Mandarine",
-        "Tangor"
-      ]
-    },
-    "citron": {
-      "nom_scientifique": "Citrus limon",
-      "part_production_maroc": "8%",
-      "types": [
-        "Eureka",
-        "Lisbon",
-        "Verna"
-      ]
-    },
-    "pomelo": {
-      "nom_scientifique": "Citrus paradisi",
-      "part_production_maroc": "3%",
-      "types": [
-        "Star Ruby",
-        "Marsh"
-      ]
-    }
-  },
-  "varietes": {
-    "oranges": [
-      {
-        "code": "NAVELINE",
-        "nom": "Naveline",
-        "type": "Navel",
-        "maturite": [
-          "Nov",
-          "Dec",
-          "Jan"
-        ],
-        "calibre": "gros",
-        "qualite": "excellente",
-        "export": true
-      },
-      {
-        "code": "WASH_NAVEL",
-        "nom": "Washington Navel",
-        "type": "Navel",
-        "maturite": [
-          "Dec",
-          "Jan",
-          "Fev"
-        ],
-        "calibre": "tres_gros",
-        "qualite": "excellente"
-      },
-      {
-        "code": "NAVELATE",
-        "nom": "Navelate",
-        "type": "Navel",
-        "maturite": [
-          "Jan",
-          "Fev",
-          "Mar"
-        ],
-        "calibre": "gros",
-        "qualite": "tres_bonne",
-        "tardive": true
-      },
-      {
-        "code": "SALUSTIANA",
-        "nom": "Salustiana",
-        "type": "Blonde",
-        "maturite": [
-          "Dec",
-          "Jan",
-          "Fev",
-          "Mar"
-        ],
-        "usage": "jus",
-        "qualite": "tres_bonne"
-      },
-      {
-        "code": "VALENCIA",
-        "nom": "Valencia Late",
-        "type": "Blonde",
-        "maturite": [
-          "Avr",
-          "Mai",
-          "Juin"
-        ],
-        "qualite": "excellente",
-        "tres_tardive": true
-      },
-      {
-        "code": "MAROC_LATE",
-        "nom": "Maroc Late",
-        "type": "Blonde",
-        "maturite": [
-          "Mar",
-          "Avr",
-          "Mai",
-          "Juin"
-        ],
-        "qualite": "excellente",
-        "specialite_maroc": true
-      },
-      {
-        "code": "SANGUINELLI",
-        "nom": "Sanguinelli",
-        "type": "Sanguine",
-        "maturite": [
-          "Jan",
-          "Fev",
-          "Mar"
-        ],
-        "niche": true
-      }
-    ],
-    "petits_agrumes": [
-      {
-        "code": "CLEM_COMMUNE",
-        "nom": "Clémentine Commune",
-        "type": "Clementine",
-        "maturite": [
-          "Oct",
-          "Nov",
-          "Dec"
-        ],
-        "pepins": [
-          0,
-          2
-        ],
-        "conservation": "moyenne"
-      },
-      {
-        "code": "NULES",
-        "nom": "Nules",
-        "type": "Clementine",
-        "maturite": [
-          "Nov",
-          "Dec"
-        ],
-        "pepins": [
-          0,
-          1
-        ],
-        "conservation": "bonne",
-        "export": true
-      },
-      {
-        "code": "MARISOL",
-        "nom": "Marisol",
-        "type": "Clementine",
-        "maturite": [
-          "Sept",
-          "Oct"
-        ],
-        "tres_precoce": true,
-        "conservation": "faible"
-      },
-      {
-        "code": "NOUR",
-        "nom": "Nour",
-        "type": "Clementine",
-        "maturite": [
-          "Jan",
-          "Fev",
-          "Mar"
-        ],
-        "tardive": true,
-        "origine": "Maroc"
-      },
-      {
-        "code": "NADORCOTT",
-        "nom": "Nadorcott/Afourer",
-        "type": "Mandarine",
-        "maturite": [
-          "Jan",
-          "Fev",
-          "Mar",
-          "Avr"
-        ],
-        "premium": true,
-        "conservation": "excellente"
-      },
-      {
-        "code": "ORTANIQUE",
-        "nom": "Ortanique",
-        "type": "Tangor",
-        "maturite": [
-          "Fev",
-          "Mar",
-          "Avr"
-        ],
-        "pepins": [
-          5,
-          15
-        ],
-        "hybride": "Orange x Tangerine"
-      },
-      {
-        "code": "NOVA",
-        "nom": "Nova",
-        "type": "Mandarine",
-        "maturite": [
-          "Nov",
-          "Dec",
-          "Jan"
-        ],
-        "arome": "intense"
-      }
-    ],
-    "citrons": [
-      {
-        "code": "EUREKA",
-        "nom": "Eureka",
-        "maturite": "toute_annee",
-        "acidite": "elevee",
-        "standard": true
-      },
-      {
-        "code": "LISBON",
-        "nom": "Lisbon",
-        "maturite": [
-          "Nov",
-          "Dec",
-          "Jan",
-          "Fev",
-          "Mar",
-          "Avr",
-          "Mai"
-        ],
-        "acidite": "elevee",
-        "rustique": true
-      },
-      {
-        "code": "VERNA",
-        "nom": "Verna",
-        "maturite": [
-          "Fev",
-          "Mar",
-          "Avr",
-          "Mai",
-          "Juin",
-          "Juil"
-        ],
-        "acidite": "moyenne",
-        "peu_pepins": true
-      },
-      {
-        "code": "MEYER",
-        "nom": "Meyer",
-        "maturite": [
-          "Nov",
-          "Dec",
-          "Jan",
-          "Fev",
-          "Mar"
-        ],
-        "acidite": "faible",
-        "hybride": true
-      }
-    ],
-    "pomelos": [
-      {
-        "code": "STAR_RUBY",
-        "nom": "Star Ruby",
-        "chair": "rouge",
-        "maturite": [
-          "Nov",
-          "Dec",
-          "Jan",
-          "Fev",
-          "Mar"
-        ],
-        "gout": "peu_amer",
-        "principal": true
-      },
-      {
-        "code": "RIO_RED",
-        "nom": "Rio Red",
-        "chair": "rouge",
-        "maturite": [
-          "Nov",
-          "Dec",
-          "Jan",
-          "Fev",
-          "Mar",
-          "Avr"
-        ],
-        "gout": "peu_amer"
-      },
-      {
-        "code": "MARSH",
-        "nom": "Marsh",
-        "chair": "blonde",
-        "maturite": [
-          "Nov",
-          "Dec",
-          "Jan",
-          "Fev",
-          "Mar",
-          "Avr"
-        ],
-        "gout": "legerement_amer"
-      }
-    ]
-  },
-  "porte_greffes": [
-    {
-      "code": "BIGARADIER",
-      "nom": "Bigaradier",
-      "vigueur": "forte",
-      "calcaire": "excellente",
-      "salinite": "bonne",
-      "phytophthora": "sensible",
-      "tristeza": "TRES_SENSIBLE",
-      "qualite_fruit": "excellente",
-      "exclusion_Cl": "bonne",
-      "note": "RISQUE Tristeza - éviter nouvelles plantations"
-    },
-    {
-      "code": "CARRIZO",
-      "nom": "Citrange Carrizo",
-      "vigueur": "moyenne_forte",
-      "calcaire": "moyenne",
-      "salinite": "faible",
-      "phytophthora": "tolerante",
-      "tristeza": "tolerante",
-      "qualite_fruit": "bonne",
-      "exclusion_Cl": "faible",
-      "recommande_si_tristeza": true
-    },
-    {
-      "code": "VOLKAMERIANA",
-      "nom": "Volkameriana",
-      "vigueur": "tres_forte",
-      "calcaire": "bonne",
-      "salinite": "bonne",
-      "phytophthora": "moyenne",
-      "tristeza": "tolerante",
-      "qualite_fruit": "moyenne",
-      "exclusion_Cl": "bonne",
-      "recommande_si_salin": true
-    },
-    {
-      "code": "MACROPHYLLA",
-      "nom": "Macrophylla",
-      "vigueur": "tres_forte",
-      "calcaire": "bonne",
-      "salinite": "bonne",
-      "phytophthora": "moyenne",
-      "tristeza": "tolerante",
-      "qualite_fruit": "faible",
-      "exclusion_Cl": "bonne"
-    },
-    {
-      "code": "CLEOPATRE",
-      "nom": "Mandarinier Cléopâtre",
-      "vigueur": "moyenne",
-      "calcaire": "excellente",
-      "salinite": "bonne",
-      "phytophthora": "sensible",
-      "tristeza": "tolerante",
-      "qualite_fruit": "excellente",
-      "exclusion_Cl": "bonne"
-    },
-    {
-      "code": "PONCIRUS",
-      "nom": "Poncirus trifoliata",
-      "vigueur": "nanisante",
-      "calcaire": "tres_faible",
-      "salinite": "faible",
-      "phytophthora": "tres_tolerante",
-      "tristeza": "tolerante",
-      "qualite_fruit": "excellente",
-      "note": "Éviter sol calcaire"
-    }
-  ],
-  "guide_choix_pg": {
-    "sol_calcaire_pH>7.5": {
-      "recommande": [
-        "Bigaradier",
-        "Mandarinier Cléopâtre"
-      ],
-      "eviter": [
-        "Poncirus",
-        "Citrange"
-      ]
-    },
-    "sol_salin_CE>2": {
-      "recommande": [
-        "Volkameriana",
-        "Macrophylla",
-        "Bigaradier"
-      ],
-      "eviter": [
-        "Citrange Carrizo"
-      ]
-    },
-    "sol_lourd_mal_draine": {
-      "recommande": [
-        "Citrange Carrizo",
-        "Poncirus"
-      ],
-      "eviter": [
-        "Bigaradier",
-        "Volkameriana"
-      ]
-    },
-    "presence_tristeza": {
-      "recommande": [
-        "Citrange",
-        "Volkameriana",
-        "Citrumelo"
-      ],
-      "interdit": [
-        "Bigaradier"
-      ]
-    }
-  },
-  "exigences_climatiques": {
-    "orange": {
-      "T_optimale": [
-        22,
-        28
-      ],
-      "T_min_croissance": 13,
-      "gel_feuilles": [
-        -3,
-        -5
-      ],
-      "gel_fruits": [
-        -2,
-        -3
-      ],
-      "gel_mortel": [
-        -8,
-        -10
-      ],
-      "heures_froid": [
-        200,
-        400
-      ]
-    },
-    "clementine": {
-      "T_optimale": [
-        20,
-        26
-      ],
-      "T_min_croissance": 13,
-      "gel_feuilles": [
-        -3,
-        -5
-      ],
-      "gel_fruits": -2,
-      "gel_mortel": -8,
-      "heures_froid": [
-        100,
-        200
-      ]
-    },
-    "citron": {
-      "T_optimale": [
-        20,
-        30
-      ],
-      "T_min_croissance": 15,
-      "gel_feuilles": [
-        -2,
-        -3
-      ],
-      "gel_fruits": [
-        -1,
-        -2
-      ],
-      "gel_mortel": [
-        -5,
-        -6
-      ],
-      "heures_froid": 0
-    },
-    "pomelo": {
-      "T_optimale": [
-        23,
-        30
-      ],
-      "T_min_croissance": 15,
-      "gel_feuilles": -2,
-      "gel_fruits": -1,
-      "gel_mortel": -4,
-      "heures_froid": 0
-    }
-  },
-  "exigences_sol": {
-    "pH_optimal": [
-      6.0,
-      7.0
-    ],
-    "pH_tolerance": [
-      5.5,
-      8.0
-    ],
-    "calcaire_actif_max_pct": 8,
-    "CE_sol_optimal_dS_m": 1.5,
-    "CE_sol_max_dS_m": 3.0,
-    "texture": "sablo_limoneux",
-    "drainage": "bon_a_excellent",
-    "profondeur_utile_min_cm": 60,
-    "nappe_phreatique_min_cm": 100
-  },
-  "systemes": {
-    "traditionnel": {
-      "densite_arbres_ha": [
-        200,
-        300
-      ],
-      "ecartement_m": "7×5 à 8×6",
-      "irrigation": "gravitaire",
-      "entree_production_annee": [
-        5,
-        6
-      ],
-      "pleine_production_annee": [
-        10,
-        12
-      ],
-      "duree_vie_ans": [
-        40,
-        50
-      ],
-      "rendement_pleine_prod_t_ha": [
-        20,
-        35
-      ]
-    },
-    "intensif": {
-      "densite_arbres_ha": [
-        400,
-        600
-      ],
-      "ecartement_m": "5×3 à 6×4",
-      "irrigation": "goutte_a_goutte",
-      "entree_production_annee": [
-        3,
-        4
-      ],
-      "pleine_production_annee": [
-        6,
-        8
-      ],
-      "duree_vie_ans": [
-        25,
-        35
-      ],
-      "rendement_pleine_prod_t_ha": [
-        40,
-        60
-      ]
-    },
-    "super_intensif": {
-      "densite_arbres_ha": [
-        800,
-        1200
-      ],
-      "ecartement_m": "4×2 à 5×2.5",
-      "irrigation": "gag_haute_frequence",
-      "entree_production_annee": [
-        2,
-        3
-      ],
-      "pleine_production_annee": [
-        5,
-        6
-      ],
-      "duree_vie_ans": [
-        15,
-        20
-      ],
-      "rendement_pleine_prod_t_ha": [
-        50,
-        80
-      ]
-    }
-  },
-  "seuils_satellite": {
-    "traditionnel": {
-      "NDVI": {
-        "optimal": [
-          0.5,
-          0.7
-        ],
-        "vigilance": 0.45,
-        "alerte": 0.4
-      },
-      "NIRv": {
-        "optimal": [
-          0.12,
-          0.28
-        ],
-        "vigilance": 0.1,
-        "alerte": 0.08
-      },
-      "NDMI": {
-        "optimal": [
-          0.18,
-          0.38
-        ],
-        "vigilance": 0.14,
-        "alerte": 0.1
-      }
-    },
-    "intensif": {
-      "NDVI": {
-        "optimal": [
-          0.6,
-          0.78
-        ],
-        "vigilance": 0.55,
-        "alerte": 0.5
-      },
-      "NIRv": {
-        "optimal": [
-          0.18,
-          0.35
-        ],
-        "vigilance": 0.15,
-        "alerte": 0.12
-      },
-      "NDMI": {
-        "optimal": [
-          0.22,
-          0.42
-        ],
-        "vigilance": 0.18,
-        "alerte": 0.14
-      }
-    },
-    "super_intensif": {
-      "NDVI": {
-        "optimal": [
-          0.68,
-          0.85
-        ],
-        "vigilance": 0.63,
-        "alerte": 0.58
-      },
-      "NIRv": {
-        "optimal": [
-          0.22,
-          0.42
-        ],
-        "vigilance": 0.2,
-        "alerte": 0.17
-      },
-      "NDMI": {
-        "optimal": [
-          0.28,
-          0.48
-        ],
-        "vigilance": 0.24,
-        "alerte": 0.2
-      }
-    }
-  },
-  "rendement_t_ha": {
-    "orange_navel": {
-      "3-4_ans": [
-        5,
-        15
-      ],
-      "5-7_ans": [
-        20,
-        35
-      ],
-      "8-12_ans": [
-        35,
-        50
-      ],
-      "13-20_ans": [
-        45,
-        60
-      ],
-      "plus_20_ans": [
-        40,
-        55
-      ]
-    },
-    "orange_valencia": {
-      "3-4_ans": [
-        5,
-        15
-      ],
-      "5-7_ans": [
-        25,
-        40
-      ],
-      "8-12_ans": [
-        40,
-        60
-      ],
-      "13-20_ans": [
-        55,
-        80
-      ],
-      "plus_20_ans": [
-        50,
-        70
-      ]
-    },
-    "clementine": {
-      "3-4_ans": [
-        5,
-        12
-      ],
-      "5-7_ans": [
-        18,
-        30
-      ],
-      "8-12_ans": [
-        30,
-        45
-      ],
-      "13-20_ans": [
-        40,
-        55
-      ],
-      "plus_20_ans": [
-        35,
-        50
-      ]
-    },
-    "citron": {
-      "3-4_ans": [
-        5,
-        10
-      ],
-      "5-7_ans": [
-        15,
-        30
-      ],
-      "8-12_ans": [
-        30,
-        50
-      ],
-      "13-20_ans": [
-        45,
-        70
-      ],
-      "plus_20_ans": [
-        40,
-        60
-      ]
-    },
-    "pomelo": {
-      "3-4_ans": [
-        5,
-        12
-      ],
-      "5-7_ans": [
-        20,
-        35
-      ],
-      "8-12_ans": [
-        40,
-        60
-      ],
-      "13-20_ans": [
-        55,
-        80
-      ],
-      "plus_20_ans": [
-        50,
-        70
-      ]
-    }
-  },
-  "stades_phenologiques": [
-    {
-      "nom": "Repos hivernal",
-      "mois": [
-        "Dec",
-        "Jan"
-      ],
-      "coef_nirvp": 0.7
-    },
-    {
-      "nom": "Flush printemps",
-      "mois": [
-        "Fev",
-        "Mar"
-      ],
-      "coef_nirvp": 1.0
-    },
-    {
-      "nom": "Floraison",
-      "mois": [
-        "Mar",
-        "Avr"
-      ],
-      "coef_nirvp": 0.95
-    },
-    {
-      "nom": "Nouaison",
-      "mois": [
-        "Avr",
-        "Mai"
-      ],
-      "coef_nirvp": 0.9
-    },
-    {
-      "nom": "Chute juin",
-      "mois": [
-        "Mai",
-        "Juin"
-      ],
-      "coef_nirvp": 0.85
-    },
-    {
-      "nom": "Grossissement I",
-      "mois": [
-        "Juin",
-        "Juil"
-      ],
-      "coef_nirvp": 0.95
-    },
-    {
-      "nom": "Flush été",
-      "mois": [
-        "Juil",
-        "Aout"
-      ],
-      "coef_nirvp": 1.0
-    },
-    {
-      "nom": "Grossissement II",
-      "mois": [
-        "Aout",
-        "Sept"
-      ],
-      "coef_nirvp": 0.95
-    },
-    {
-      "nom": "Véraison",
-      "mois": [
-        "Sept",
-        "Oct"
-      ],
-      "coef_nirvp": 0.9
-    },
-    {
-      "nom": "Maturation",
-      "mois": [
-        "Oct",
-        "Nov",
-        "Dec"
-      ],
-      "coef_nirvp": 0.85
-    },
-    {
-      "nom": "Flush automne",
-      "mois": [
-        "Oct",
-        "Nov"
-      ],
-      "coef_nirvp": 0.9
-    }
-  ],
-  "options_nutrition": {
-    "A": {
-      "nom": "Nutrition équilibrée",
-      "condition": "analyse_sol < 2 ans ET analyse_eau"
-    },
-    "B": {
-      "nom": "Nutrition foliaire prioritaire",
-      "condition": "PAS analyse_sol OU > 3 ans"
-    },
-    "C": {
-      "nom": "Gestion salinité",
-      "condition": "CE_eau > 1.5 dS/m OU CE_sol > 2 dS/m"
-    }
-  },
-  "export_kg_tonne": {
-    "orange": {
-      "N": [
-        1.8,
-        2.2
-      ],
-      "P2O5": [
-        0.4,
-        0.6
-      ],
-      "K2O": [
-        2.5,
-        3.5
-      ],
-      "CaO": [
-        0.8,
-        1.2
-      ],
-      "MgO": [
-        0.3,
-        0.5
-      ]
-    },
-    "clementine": {
-      "N": [
-        1.5,
-        2.0
-      ],
-      "P2O5": [
-        0.3,
-        0.5
-      ],
-      "K2O": [
-        2.0,
-        3.0
-      ],
-      "CaO": [
-        0.6,
-        1.0
-      ],
-      "MgO": [
-        0.2,
-        0.4
-      ]
-    },
-    "citron": {
-      "N": [
-        2.0,
-        2.5
-      ],
-      "P2O5": [
-        0.4,
-        0.6
-      ],
-      "K2O": [
-        3.0,
-        4.0
-      ],
-      "CaO": [
-        0.8,
-        1.2
-      ],
-      "MgO": [
-        0.3,
-        0.5
-      ]
-    },
-    "pomelo": {
-      "N": [
-        1.5,
-        2.0
-      ],
-      "P2O5": [
-        0.3,
-        0.5
-      ],
-      "K2O": [
-        2.5,
-        3.5
-      ],
-      "CaO": [
-        0.6,
-        1.0
-      ],
-      "MgO": [
-        0.2,
-        0.4
-      ]
-    }
-  },
-  "entretien_kg_ha": {
-    "jeune_1-3_ans": {
-      "N": [
-        40,
-        80
-      ],
-      "P2O5": [
-        20,
-        40
-      ],
-      "K2O": [
-        30,
-        60
-      ]
-    },
-    "entree_prod_4-6_ans": {
-      "N": [
-        100,
-        150
-      ],
-      "P2O5": [
-        40,
-        60
-      ],
-      "K2O": [
-        80,
-        120
-      ]
-    },
-    "intensif_pleine_prod": {
-      "N": [
-        180,
-        280
-      ],
-      "P2O5": [
-        60,
-        100
-      ],
-      "K2O": [
-        150,
-        250
-      ]
-    },
-    "super_intensif": {
-      "N": [
-        250,
-        400
-      ],
-      "P2O5": [
-        80,
-        120
-      ],
-      "K2O": [
-        200,
-        350
-      ]
-    }
-  },
-  "fractionnement_pct": {
-    "fev": {
-      "N": 15,
-      "P2O5": 40,
-      "K2O": 10,
-      "objectif": "Pré-floraison"
-    },
-    "mar_avr": {
-      "N": 25,
-      "P2O5": 30,
-      "K2O": 15,
-      "objectif": "Floraison-nouaison"
-    },
-    "mai_juin": {
-      "N": 20,
-      "P2O5": 15,
-      "K2O": 20,
-      "objectif": "Grossissement I"
-    },
-    "juil_aout": {
-      "N": 20,
-      "P2O5": 10,
-      "K2O": 25,
-      "objectif": "Grossissement II"
-    },
-    "sept_oct": {
-      "N": 10,
-      "P2O5": 5,
-      "K2O": 20,
-      "objectif": "Maturation"
-    },
-    "nov": {
-      "N": 10,
-      "P2O5": 0,
-      "K2O": 10,
-      "objectif": "Post-récolte"
-    }
-  },
-  "ajustement_espece": {
-    "orange_navel": {
-      "N": 1.0,
-      "K": 1.0,
-      "note": "Éviter excès N (éclatement)"
-    },
-    "orange_valencia": {
-      "N": 1.1,
-      "K": 1.0,
-      "note": "Production élevée"
-    },
-    "clementine": {
-      "N": 0.9,
-      "K": 1.0,
-      "note": "Éviter calibre excessif"
-    },
-    "citron": {
-      "N": 1.15,
-      "K": 1.1,
-      "note": "Remontant, besoins continus"
-    },
-    "pomelo": {
-      "N": 1.0,
-      "K": 1.1,
-      "note": "Gros fruits"
-    }
-  },
-  "formes_engrais": {
-    "N_recommande": [
-      "nitrate_calcium",
-      "nitrate_ammonium",
-      "uree_si_pH<7"
-    ],
-    "P_recommande": [
-      "MAP",
-      "acide_phosphorique"
-    ],
-    "K_recommande": [
-      "sulfate_potasse",
-      "nitrate_potasse"
-    ],
-    "K_conditionnel": "KCl acceptable si CE_eau < 1.0 ET Cl_eau < 100 mg/L",
-    "note": "Agrumes sensibles Cl mais moins que avocatier"
-  },
-  "seuils_foliaires": {
-    "periode_prelevement": "Août-Septembre, feuilles 4-6 mois",
-    "N": {
-      "unite": "%",
-      "carence": 2.2,
-      "suffisant": [
-        2.2,
-        2.4
-      ],
-      "optimal": [
-        2.4,
-        2.7
-      ],
-      "exces": 3.0
-    },
-    "P": {
-      "unite": "%",
-      "carence": 0.09,
-      "suffisant": [
-        0.09,
-        0.11
-      ],
-      "optimal": [
-        0.12,
-        0.17
-      ],
-      "exces": 0.2
-    },
-    "K": {
-      "unite": "%",
-      "carence": 0.7,
-      "suffisant": [
-        0.7,
-        1.0
-      ],
-      "optimal": [
-        1.0,
-        1.5
-      ],
-      "exces": 2.0
-    },
-    "Ca": {
-      "unite": "%",
-      "carence": 2.0,
-      "suffisant": [
-        2.0,
-        3.0
-      ],
-      "optimal": [
-        3.0,
-        5.0
-      ],
-      "exces": 6.0
-    },
-    "Mg": {
-      "unite": "%",
-      "carence": 0.2,
-      "suffisant": [
-        0.2,
-        0.3
-      ],
-      "optimal": [
-        0.3,
-        0.5
-      ],
-      "exces": 0.7
-    },
-    "Fe": {
-      "unite": "ppm",
-      "carence": 35,
-      "suffisant": [
-        35,
-        60
-      ],
-      "optimal": [
-        60,
-        120
-      ],
-      "exces": 200
-    },
-    "Zn": {
-      "unite": "ppm",
-      "carence": 18,
-      "suffisant": [
-        18,
-        25
-      ],
-      "optimal": [
-        25,
-        100
-      ],
-      "exces": 200
-    },
-    "Mn": {
-      "unite": "ppm",
-      "carence": 18,
-      "suffisant": [
-        18,
-        25
-      ],
-      "optimal": [
-        25,
-        100
-      ],
-      "exces": 500
-    },
-    "B": {
-      "unite": "ppm",
-      "carence": 20,
-      "suffisant": [
-        20,
-        35
-      ],
-      "optimal": [
-        35,
-        100
-      ],
-      "exces": 150
-    },
-    "Cu": {
-      "unite": "ppm",
-      "carence": 3,
-      "suffisant": [
-        3,
-        5
-      ],
-      "optimal": [
-        5,
-        15
-      ],
-      "exces": 20
-    },
-    "Cl": {
-      "unite": "%",
-      "toxique": 0.7
-    },
-    "Na": {
-      "unite": "%",
-      "toxique": 0.25
-    }
-  },
-  "salinite": {
-    "orange_mandarine": {
-      "CE_eau_optimal": 1.0,
-      "CE_eau_limite": 2.0,
-      "CE_sol_limite": 2.5,
-      "Cl_eau_limite_mg_L": 150,
-      "Cl_foliaire_toxique_pct": 0.7
-    },
-    "citron": {
-      "CE_eau_optimal": 0.8,
-      "CE_eau_limite": 1.5,
-      "CE_sol_limite": 2.0,
-      "Cl_eau_limite_mg_L": 100,
-      "Cl_foliaire_toxique_pct": 0.5
-    },
-    "pomelo": {
-      "CE_eau_optimal": 1.2,
-      "CE_eau_limite": 2.5,
-      "CE_sol_limite": 3.0,
-      "Cl_eau_limite_mg_L": 200,
-      "Cl_foliaire_toxique_pct": 0.8
-    }
-  },
-  "kc": {
-    "jeune": {
-      "jan_fev": 0.45,
-      "mar_avr": 0.55,
-      "mai_juin": 0.65,
-      "juil_aout": 0.7,
-      "sept_oct": 0.6,
-      "nov_dec": 0.5
-    },
-    "adulte": {
-      "jan_fev": 0.65,
-      "mar_avr": 0.75,
-      "mai_juin": 0.85,
-      "juil_aout": 0.9,
-      "sept_oct": 0.8,
-      "nov_dec": 0.7
-    }
-  },
-  "rdi": {
-    "floraison": {
-      "sensibilite": "tres_haute",
-      "rdi_possible": false,
-      "reduction": 0
-    },
-    "nouaison": {
-      "sensibilite": "haute",
-      "rdi_possible": false,
-      "reduction": 0
-    },
-    "grossissement_I": {
-      "sensibilite": "haute",
-      "rdi_possible": "prudence",
-      "reduction": [
-        0,
-        10
-      ]
-    },
-    "grossissement_II": {
-      "sensibilite": "moderee",
-      "rdi_possible": true,
-      "reduction": [
-        15,
-        25
-      ]
-    },
-    "maturation": {
-      "sensibilite": "faible",
-      "rdi_possible": true,
-      "reduction": [
-        25,
-        35
-      ]
-    },
-    "note": "RDI pré-récolte augmente °Brix +0.5-1.0 mais réduit calibre"
-  },
-  "phytosanitaire": {
-    "maladies": [
-      {
-        "nom": "Gommose",
-        "agent": "Phytophthora citrophthora, P. nicotianae",
-        "conditions": "sol_mal_draine_exces_eau",
-        "prevention": [
-          "drainage",
-          "PG_tolerant",
-          "point_greffe_haut"
-        ],
-        "traitement": [
-          "Phosphonate",
-          "Métalaxyl"
-        ]
-      },
-      {
-        "nom": "Tristeza",
-        "agent": "Citrus Tristeza Virus (CTV)",
-        "vecteur": "pucerons",
-        "prevention": "PG_tolerant_obligatoire",
-        "traitement": null,
-        "note": "AUCUN curatif - arrachage si sévère"
-      },
-      {
-        "nom": "Alternariose",
-        "agent": "Alternaria alternata",
-        "conditions": "HR > 80%, pluie",
-        "varietes_sensibles": [
-          "Minneola",
-          "Nova",
-          "Fortune"
-        ],
-        "traitement": [
-          "Cuivre",
-          "Mancozèbe",
-          "Difénoconazole"
-        ]
-      }
-    ],
-    "ravageurs": [
-      {
-        "nom": "Cératite",
-        "degats": "piqures_fruits",
-        "periode": "veraison_recolte",
-        "seuil": "2% fruits piqués",
-        "traitement": "Spinosad + piégeage"
-      },
-      {
-        "nom": "Cochenilles",
-        "degats": "fumagine",
-        "periode": "toute_annee",
-        "traitement": "Huile blanche, Spirotetramat"
-      },
-      {
-        "nom": "Pucerons",
-        "degats": "deformation_pousses_virus",
-        "periode": "printemps",
-        "traitement": "Imidaclopride, Spirotetramat"
-      },
-      {
-        "nom": "Mineuse",
-        "degats": "galeries_feuilles",
-        "periode": "flush",
-        "traitement": "Abamectine, Imidaclopride"
-      },
-      {
-        "nom": "Acariens",
-        "degats": "feuilles_bronze",
-        "periode": "ete_sec",
-        "traitement": "Abamectine, soufre"
-      },
-      {
-        "nom": "Thrips",
-        "degats": "cicatrices_fruits",
-        "periode": "floraison",
-        "traitement": "Spinosad"
-      }
-    ]
-  },
-  "calendrier_phyto_preventif": {
-    "jan": {
-      "cible": "Cochenilles",
-      "produit": "Huile blanche",
-      "dose": "15-20 L/ha"
-    },
-    "fev_mar": {
-      "cible": "Gommose",
-      "produit": "Phosphonate",
-      "dose": "5 mL/L foliaire",
-      "condition": "sol_humide"
-    },
-    "avr": {
-      "cible": "Pucerons",
-      "produit": "Imidaclopride",
-      "condition": "si_colonies"
-    },
-    "mai": {
-      "cible": "Mineuse",
-      "produit": "Abamectine",
-      "dose": "0.5 L/ha",
-      "condition": "si_presence"
-    },
-    "aout_oct": {
-      "cible": "Cératite",
-      "produit": "Spinosad + attractif",
-      "dose": "0.2 L/ha",
-      "condition": "piegeage + seuil"
-    },
-    "nov": {
-      "cible": "Cuivre hivernal",
-      "produit": "Cuivre",
-      "dose": "3 kg/ha"
-    }
-  },
-  "maturite_recolte": {
-    "orange_navel": {
-      "indice": "ratio_Brix_Acidite",
-      "min": 8,
-      "optimal": [
-        10,
-        14
-      ],
-      "autre": "couleur_80%"
-    },
-    "orange_valencia": {
-      "indice": "ratio_Brix_Acidite",
-      "min": 8,
-      "optimal": [
-        10,
-        16
-      ],
-      "autre": "Brix >= 10"
-    },
-    "clementine": {
-      "indice": "ratio_Brix_Acidite",
-      "min": 7,
-      "optimal": [
-        10,
-        14
-      ],
-      "autre": "couleur_100%"
-    },
-    "citron": {
-      "indice": "acidite_titrable",
-      "min_pct": 5,
-      "optimal_pct": [
-        5,
-        7
-      ],
-      "autre": "jus >= 25%"
-    },
-    "pomelo": {
-      "indice": "ratio_Brix_Acidite",
-      "min": 5.5,
-      "optimal": [
-        6,
-        8
-      ],
-      "autre": "Brix >= 9"
-    }
-  },
-  "defauts_qualite": {
-    "granulation": {
-      "cause": "recolte_tardive_K_faible",
-      "prevention": "recolter_a_temps_K_suffisant"
-    },
-    "eclatement": {
-      "cause": "exces_N_stress_hydrique",
-      "prevention": "equilibre_N_K_irrigation_reguliere"
-    },
-    "petit_calibre": {
-      "cause": "charge_excessive_stress_eau",
-      "prevention": "eclaircissage_irrigation"
-    },
-    "peau_epaisse": {
-      "cause": "exces_N",
-      "prevention": "reduire_N"
-    },
-    "reverdissement": {
-      "cause": "recolte_tardive_Valencia",
-      "prevention": "ethylene_si_necessaire"
-    },
-    "oleocellose": {
-      "cause": "recolte_humide_blessures",
-      "prevention": "recolter_sec_manipulation_douce"
-    }
-  },
-  "alertes": [
-    {
-      "code": "AGR-01",
-      "nom": "Stress hydrique",
-      "seuil": "NDMI < P15 (2 passages) + T > 30",
-      "priorite": "urgente"
-    },
-    {
-      "code": "AGR-02",
-      "nom": "Excès eau / Gommose",
-      "seuil": "NDMI > P95 + pluie > 40mm/sem",
-      "priorite": "urgente"
-    },
-    {
-      "code": "AGR-03",
-      "nom": "Risque gel",
-      "seuil": "Tmin prévue < 0°C",
-      "priorite": "urgente"
-    },
-    {
-      "code": "AGR-04",
-      "nom": "Gel avéré",
-      "seuil": "Tmin < -2°C (orange) ou < 0°C (citron)",
-      "priorite": "urgente"
-    },
-    {
-      "code": "AGR-05",
-      "nom": "Canicule",
-      "seuil": "Tmax > 40°C (3j) + HR < 30%",
-      "priorite": "prioritaire"
-    },
-    {
-      "code": "AGR-06",
-      "nom": "Vent chaud",
-      "seuil": "T > 38 + HR < 25% + vent > 30 km/h",
-      "priorite": "prioritaire"
-    },
-    {
-      "code": "AGR-07",
-      "nom": "Conditions Gommose",
-      "seuil": "Sol saturé > 48h + T 18-28",
-      "priorite": "urgente"
-    },
-    {
-      "code": "AGR-08",
-      "nom": "Risque Cératite",
-      "seuil": "Véraison + T 20-30 + piège positif",
-      "priorite": "prioritaire"
-    },
-    {
-      "code": "AGR-09",
-      "nom": "Pression pucerons",
-      "seuil": "Flush + T 18-28 + colonies",
-      "priorite": "prioritaire"
-    },
-    {
-      "code": "AGR-10",
-      "nom": "Risque Alternaria",
-      "seuil": "HR > 85% + pluie + variété sensible",
-      "priorite": "prioritaire"
-    },
-    {
-      "code": "AGR-11",
-      "nom": "Chlorose ferrique",
-      "seuil": "NDRE < P10 + GCI ↘ + pH sol > 7.5",
-      "priorite": "vigilance"
-    },
-    {
-      "code": "AGR-12",
-      "nom": "Carence Zn",
-      "seuil": "Feuilles petites mouchetées + flush",
-      "priorite": "vigilance"
-    },
-    {
-      "code": "AGR-13",
-      "nom": "Toxicité Cl",
-      "seuil": "Brûlures foliaires + CE eau > 2.5",
-      "priorite": "urgente"
-    },
-    {
-      "code": "AGR-14",
-      "nom": "Floraison faible",
-      "seuil": "Floraison < 50% attendue",
-      "priorite": "prioritaire"
-    },
-    {
-      "code": "AGR-15",
-      "nom": "Chute excessive",
-      "seuil": "Charge < 40% post-nouaison",
-      "priorite": "prioritaire"
-    },
-    {
-      "code": "AGR-16",
-      "nom": "Maturité récolte",
-      "seuil": "Ratio Brix/Acidité atteint + couleur",
-      "priorite": "info"
-    },
-    {
-      "code": "AGR-17",
-      "nom": "Année OFF probable",
-      "seuil": "N-1 très productif + flush faible",
-      "priorite": "prioritaire"
-    },
-    {
-      "code": "AGR-18",
-      "nom": "Risque granulation",
-      "seuil": "Récolte tardive + K foliaire bas",
-      "priorite": "prioritaire"
-    },
-    {
-      "code": "AGR-19",
-      "nom": "Dépérissement",
-      "seuil": "NIRv ↘ > 20% (4 passages)",
-      "priorite": "urgente"
-    },
-    {
-      "code": "AGR-20",
-      "nom": "Tristeza suspectée",
-      "seuil": "NDVI ↘ + PG bigaradier + déclin rapide",
-      "priorite": "urgente"
-    }
-  ],
-  "modele_predictif": {
-    "variables": [
-      {
-        "nom": "floraison",
-        "source": "satellite_terrain",
-        "poids": [
-          0.2,
-          0.3
-        ]
-      },
-      {
-        "nom": "alternance_N-1_N-2",
-        "source": "historique",
-        "poids": [
-          0.2,
-          0.3
-        ]
-      },
-      {
-        "nom": "conditions_floraison",
-        "source": "meteo",
-        "poids": [
-          0.15,
-          0.25
-        ]
-      },
-      {
-        "nom": "NIRv_cumule",
-        "source": "satellite",
-        "poids": [
-          0.15,
-          0.25
-        ]
-      },
-      {
-        "nom": "stress_hydrique",
-        "source": "bilan_hydrique",
-        "poids": [
-          0.1,
-          0.2
-        ]
-      },
-      {
-        "nom": "gel",
-        "source": "meteo",
-        "poids": "fort_si_1"
-      },
-      {
-        "nom": "age_verger",
-        "source": "profil",
-        "type": "ajustement"
-      }
-    ],
-    "precision_attendue": {
-      "traditionnel": {
-        "R2": [
-          0.4,
-          0.55
-        ],
-        "MAE_pct": [
-          30,
-          45
-        ]
-      },
-      "intensif": {
-        "R2": [
-          0.5,
-          0.65
-        ],
-        "MAE_pct": [
-          20,
-          35
-        ]
-      },
-      "super_intensif": {
-        "R2": [
-          0.55,
-          0.7
-        ],
-        "MAE_pct": [
-          15,
-          30
-        ]
-      }
-    },
-    "previsibilite_espece": {
-      "orange_navel": "moyenne",
-      "orange_valencia": "bonne",
-      "clementine": "moyenne",
-      "citron": "difficile_remontant",
-      "pomelo": "bonne"
-    }
-  },
-  "plan_annuel_type_orange_intensif_50T": {
-    "jan": {
-      "NPK": "N15+P20+K10",
-      "micro": "Fe-EDDHA",
-      "biostim": null,
-      "phyto": "Huile blanche",
-      "irrigation_L_sem": 50
-    },
-    "fev": {
-      "NPK": "N25+P15+K15",
-      "micro": null,
-      "biostim": "Humiques+Algues",
-      "phyto": "Phosphonate",
-      "irrigation_L_sem": 60
-    },
-    "mar": {
-      "NPK": "N30+K20",
-      "micro": "Zn+Mn foliaire",
-      "biostim": "Algues",
-      "phyto": null,
-      "irrigation_L_sem": 80
-    },
-    "avr": {
-      "NPK": "N25+P10+K15",
-      "micro": "B floraison",
-      "biostim": "Aminés",
-      "phyto": "Pucerons si présence",
-      "irrigation_L_sem": 100
-    },
-    "mai": {
-      "NPK": "N20+K25",
-      "micro": "Zn foliaire",
-      "biostim": "Humiques+Aminés",
-      "phyto": "Mineuse si présence",
-      "irrigation_L_sem": 130
-    },
-    "juin": {
-      "NPK": "N20+K30",
-      "micro": "Fe-EDDHA",
-      "biostim": null,
-      "phyto": null,
-      "irrigation_L_sem": 160
-    },
-    "juil": {
-      "NPK": "N15+K30",
-      "micro": "Zn+Mn foliaire",
-      "biostim": "Algues",
-      "phyto": null,
-      "irrigation_L_sem": 180
-    },
-    "aout": {
-      "NPK": "N15+K25",
-      "micro": null,
-      "biostim": null,
-      "phyto": "Cératite début",
-      "irrigation_L_sem": 180
-    },
-    "sept": {
-      "NPK": "N10+K20",
-      "micro": null,
-      "biostim": "Humiques",
-      "phyto": "Cératite",
-      "irrigation_L_sem": 140
-    },
-    "oct": {
-      "NPK": "N10+K15",
-      "micro": null,
-      "biostim": null,
-      "phyto": "Cératite",
-      "irrigation_L_sem": 100
-    },
-    "nov": {
-      "NPK": "N15",
-      "micro": null,
-      "biostim": "Humiques granulé",
-      "phyto": "Cuivre",
-      "irrigation_L_sem": 70
-    },
-    "dec": {
-      "NPK": null,
-      "micro": null,
-      "biostim": "Aminés",
-      "phyto": null,
-      "irrigation_L_sem": 50
-    }
-  }
-}$crop_ai_ref_agrumes$::jsonb
-)
-ON CONFLICT (crop_type) DO UPDATE SET
-  version = EXCLUDED.version,
-  reference_data = EXCLUDED.reference_data,
-  updated_at = NOW();
-
-INSERT INTO public.crop_ai_references (crop_type, version, reference_data)
-VALUES (
-  'avocatier',
-  '1.0',
-  $crop_ai_ref_avocatier${
-  "metadata": {
-    "version": "1.0",
-    "date": "2026-02",
-    "culture": "avocatier",
-    "nom_scientifique": "Persea americana Mill.",
-    "pays": "Maroc"
-  },
-  "varietes": [
-    {
-      "code": "HASS",
-      "nom": "Hass",
-      "race": "guatemalteque",
-      "type_floral": "A",
-      "peau": "rugueuse_noire",
-      "poids_g": [
-        170,
-        300
-      ],
-      "huile_pct": [
-        18,
-        25
-      ],
-      "maturite_mois": [
-        "Fev",
-        "Mar",
-        "Avr",
-        "Mai",
-        "Juin",
-        "Juil",
-        "Aout",
-        "Sept"
-      ],
-      "alternance": "moderee",
-      "vigueur": "moyenne",
-      "port": "etale",
-      "froid_min_C": -3,
-      "salinite": "sensible",
-      "rendement_kg_arbre": {
-        "3-4_ans": [
-          5,
-          15
-        ],
-        "5-7_ans": [
-          30,
-          60
-        ],
-        "8-12_ans": [
-          80,
-          150
-        ],
-        "13-20_ans": [
-          120,
-          200
-        ],
-        "plus_20_ans": [
-          100,
-          180
-        ]
-      }
-    },
-    {
-      "code": "FUERTE",
-      "nom": "Fuerte",
-      "race": "hybride_GM",
-      "type_floral": "B",
-      "peau": "lisse_verte",
-      "poids_g": [
-        200,
-        400
-      ],
-      "huile_pct": [
-        15,
-        20
-      ],
-      "maturite_mois": [
-        "Nov",
-        "Dec",
-        "Jan",
-        "Fev",
-        "Mar"
-      ],
-      "alternance": "forte",
-      "vigueur": "forte",
-      "port": "etale_large",
-      "froid_min_C": -4,
-      "salinite": "sensible",
-      "rendement_kg_arbre": {
-        "3-4_ans": [
-          5,
-          10
-        ],
-        "5-7_ans": [
-          25,
-          50
-        ],
-        "8-12_ans": [
-          60,
-          120
-        ],
-        "13-20_ans": [
-          100,
-          180
-        ],
-        "plus_20_ans": [
-          80,
-          150
-        ]
-      }
-    },
-    {
-      "code": "BACON",
-      "nom": "Bacon",
-      "race": "mexicaine",
-      "type_floral": "B",
-      "peau": "lisse_verte",
-      "poids_g": [
-        200,
-        350
-      ],
-      "huile_pct": [
-        12,
-        15
-      ],
-      "maturite_mois": [
-        "Nov",
-        "Dec",
-        "Jan"
-      ],
-      "alternance": "moderee",
-      "vigueur": "forte",
-      "port": "dresse",
-      "froid_min_C": -5,
-      "salinite": "moyenne",
-      "rendement_kg_arbre": {
-        "3-4_ans": [
-          3,
-          8
-        ],
-        "5-7_ans": [
-          20,
-          40
-        ],
-        "8-12_ans": [
-          50,
-          100
-        ],
-        "13-20_ans": [
-          80,
-          140
-        ],
-        "plus_20_ans": [
-          70,
-          120
-        ]
-      }
-    },
-    {
-      "code": "ZUTANO",
-      "nom": "Zutano",
-      "race": "mexicaine",
-      "type_floral": "B",
-      "peau": "lisse_vert_clair",
-      "poids_g": [
-        200,
-        400
-      ],
-      "huile_pct": [
-        10,
-        15
-      ],
-      "maturite_mois": [
-        "Oct",
-        "Nov",
-        "Dec"
-      ],
-      "alternance": "faible",
-      "vigueur": "tres_forte",
-      "port": "dresse",
-      "froid_min_C": -6,
-      "salinite": "moyenne",
-      "pollinisateur": true
-    },
-    {
-      "code": "PINKERTON",
-      "nom": "Pinkerton",
-      "race": "guatemalteque",
-      "type_floral": "A",
-      "peau": "rugueuse_verte",
-      "poids_g": [
-        250,
-        450
-      ],
-      "huile_pct": [
-        18,
-        22
-      ],
-      "maturite_mois": [
-        "Jan",
-        "Fev",
-        "Mar",
-        "Avr"
-      ],
-      "alternance": "faible",
-      "vigueur": "faible",
-      "port": "compact",
-      "froid_min_C": -2,
-      "salinite": "sensible",
-      "rendement_kg_arbre": {
-        "3-4_ans": [
-          8,
-          20
-        ],
-        "5-7_ans": [
-          40,
-          80
-        ],
-        "8-12_ans": [
-          100,
-          180
-        ],
-        "13-20_ans": [
-          150,
-          250
-        ],
-        "plus_20_ans": [
-          130,
-          220
-        ]
-      }
-    },
-    {
-      "code": "REED",
-      "nom": "Reed",
-      "race": "guatemalteque",
-      "type_floral": "A",
-      "peau": "epaisse_verte",
-      "poids_g": [
-        300,
-        500
-      ],
-      "huile_pct": [
-        18,
-        22
-      ],
-      "maturite_mois": [
-        "Juil",
-        "Aout",
-        "Sept",
-        "Oct"
-      ],
-      "alternance": "moderee",
-      "vigueur": "moyenne",
-      "port": "dresse",
-      "froid_min_C": -2,
-      "salinite": "sensible"
-    },
-    {
-      "code": "ETTINGER",
-      "nom": "Ettinger",
-      "race": "hybride_GM",
-      "type_floral": "B",
-      "peau": "lisse_vert_brillant",
-      "poids_g": [
-        250,
-        400
-      ],
-      "huile_pct": [
-        15,
-        18
-      ],
-      "maturite_mois": [
-        "Oct",
-        "Nov",
-        "Dec"
-      ],
-      "alternance": "moderee",
-      "vigueur": "forte",
-      "port": "etale",
-      "froid_min_C": -4,
-      "salinite": "moyenne",
-      "pollinisateur": true
-    },
-    {
-      "code": "LAMB_HASS",
-      "nom": "Lamb Hass",
-      "race": "guatemalteque",
-      "type_floral": "A",
-      "peau": "rugueuse_noire",
-      "poids_g": [
-        250,
-        400
-      ],
-      "huile_pct": [
-        18,
-        22
-      ],
-      "maturite_mois": [
-        "Avr",
-        "Mai",
-        "Juin",
-        "Juil",
-        "Aout"
-      ],
-      "alternance": "faible",
-      "vigueur": "moyenne",
-      "port": "compact",
-      "froid_min_C": -3,
-      "salinite": "sensible",
-      "rendement_kg_arbre": {
-        "3-4_ans": [
-          8,
-          18
-        ],
-        "5-7_ans": [
-          40,
-          75
-        ],
-        "8-12_ans": [
-          90,
-          170
-        ],
-        "13-20_ans": [
-          140,
-          230
-        ],
-        "plus_20_ans": [
-          120,
-          200
-        ]
-      }
-    }
-  ],
-  "types_floraux": {
-    "description": "Dichogamie protogyne synchrone",
-    "type_A": {
-      "jour_1_matin": "femelle_receptif",
-      "jour_1_apres_midi": "ferme",
-      "jour_2_matin": "ferme",
-      "jour_2_apres_midi": "male_pollen",
-      "varietes": [
-        "Hass",
-        "Pinkerton",
-        "Reed",
-        "Gwen",
-        "Lamb Hass"
-      ]
-    },
-    "type_B": {
-      "jour_1_matin": "ferme",
-      "jour_1_apres_midi": "femelle_receptif",
-      "jour_2_matin": "male_pollen",
-      "jour_2_apres_midi": "ferme",
-      "varietes": [
-        "Fuerte",
-        "Bacon",
-        "Zutano",
-        "Ettinger",
-        "Edranol"
-      ]
-    },
-    "ratio_pollinisateur": "1 type B pour 8-10 type A",
-    "ruches_ha": [
-      4,
-      6
-    ]
-  },
-  "systemes": {
-    "traditionnel": {
-      "densite_arbres_ha": [
-        100,
-        150
-      ],
-      "ecartement_m": "10×8 à 12×10",
-      "irrigation": "gravitaire_ou_gag",
-      "entree_production_annee": [
-        5,
-        6
-      ],
-      "pleine_production_annee": [
-        10,
-        12
-      ],
-      "duree_vie_ans": [
-        40,
-        50
-      ],
-      "rendement_pleine_prod_t_ha": [
-        8,
-        12
-      ]
-    },
-    "intensif": {
-      "densite_arbres_ha": [
-        200,
-        400
-      ],
-      "ecartement_m": "6×4 à 8×5",
-      "irrigation": "goutte_a_goutte",
-      "entree_production_annee": [
-        3,
-        4
-      ],
-      "pleine_production_annee": [
-        6,
-        8
-      ],
-      "duree_vie_ans": [
-        25,
-        35
-      ],
-      "rendement_pleine_prod_t_ha": [
-        12,
-        20
-      ]
-    },
-    "super_intensif": {
-      "densite_arbres_ha": [
-        800,
-        1200
-      ],
-      "ecartement_m": "4×2 à 5×2.5",
-      "irrigation": "gag_haute_frequence",
-      "entree_production_annee": [
-        2,
-        3
-      ],
-      "pleine_production_annee": [
-        4,
-        5
-      ],
-      "duree_vie_ans": [
-        15,
-        20
-      ],
-      "rendement_pleine_prod_t_ha": [
-        18,
-        30
-      ]
-    }
-  },
-  "seuils_satellite": {
-    "traditionnel": {
-      "NDVI": {
-        "optimal": [
-          0.55,
-          0.75
-        ],
-        "vigilance": 0.5,
-        "alerte": 0.45
-      },
-      "NIRv": {
-        "optimal": [
-          0.15,
-          0.3
-        ],
-        "vigilance": 0.12,
-        "alerte": 0.1
-      },
-      "NDMI": {
-        "optimal": [
-          0.2,
-          0.4
-        ],
-        "vigilance": 0.15,
-        "alerte": 0.12
-      },
-      "NDRE": {
-        "optimal": [
-          0.2,
-          0.35
-        ],
-        "vigilance": 0.17,
-        "alerte": 0.15
-      }
-    },
-    "intensif": {
-      "NDVI": {
-        "optimal": [
-          0.65,
-          0.82
-        ],
-        "vigilance": 0.6,
-        "alerte": 0.55
-      },
-      "NIRv": {
-        "optimal": [
-          0.2,
-          0.38
-        ],
-        "vigilance": 0.17,
-        "alerte": 0.15
-      },
-      "NDMI": {
-        "optimal": [
-          0.25,
-          0.45
-        ],
-        "vigilance": 0.2,
-        "alerte": 0.17
-      },
-      "NDRE": {
-        "optimal": [
-          0.25,
-          0.4
-        ],
-        "vigilance": 0.22,
-        "alerte": 0.2
-      }
-    },
-    "super_intensif": {
-      "NDVI": {
-        "optimal": [
-          0.7,
-          0.88
-        ],
-        "vigilance": 0.65,
-        "alerte": 0.6
-      },
-      "NIRv": {
-        "optimal": [
-          0.25,
-          0.45
-        ],
-        "vigilance": 0.22,
-        "alerte": 0.2
-      },
-      "NDMI": {
-        "optimal": [
-          0.3,
-          0.5
-        ],
-        "vigilance": 0.25,
-        "alerte": 0.22
-      },
-      "NDRE": {
-        "optimal": [
-          0.28,
-          0.45
-        ],
-        "vigilance": 0.25,
-        "alerte": 0.23
-      }
-    }
-  },
-  "stades_phenologiques": [
-    {
-      "nom": "Repos relatif",
-      "mois": [
-        "Dec",
-        "Jan"
-      ],
-      "duree_sem": [
-        6,
-        8
-      ],
-      "coef_nirvp": 0.7
-    },
-    {
-      "nom": "Flush végétatif 1",
-      "mois": [
-        "Fev",
-        "Mar"
-      ],
-      "duree_sem": [
-        4,
-        6
-      ],
-      "coef_nirvp": 1.0
-    },
-    {
-      "nom": "Induction florale",
-      "mois": [
-        "Jan",
-        "Fev"
-      ],
-      "duree_sem": [
-        4,
-        6
-      ],
-      "coef_nirvp": 0.8
-    },
-    {
-      "nom": "Boutons floraux",
-      "mois": [
-        "Fev",
-        "Mar"
-      ],
-      "duree_sem": [
-        2,
-        4
-      ],
-      "coef_nirvp": 0.85
-    },
-    {
-      "nom": "Floraison",
-      "mois": [
-        "Mar",
-        "Avr",
-        "Mai"
-      ],
-      "duree_sem": [
-        4,
-        8
-      ],
-      "coef_nirvp": 0.9
-    },
-    {
-      "nom": "Nouaison",
-      "mois": [
-        "Avr",
-        "Mai"
-      ],
-      "duree_sem": [
-        4,
-        6
-      ],
-      "coef_nirvp": 0.9
-    },
-    {
-      "nom": "Chute physiologique",
-      "mois": [
-        "Mai",
-        "Juin",
-        "Juil"
-      ],
-      "duree_sem": [
-        8,
-        12
-      ],
-      "coef_nirvp": 0.85
-    },
-    {
-      "nom": "Grossissement",
-      "mois": [
-        "Juin",
-        "Dec"
-      ],
-      "duree_mois": [
-        5,
-        8
-      ],
-      "coef_nirvp": 1.0
-    },
-    {
-      "nom": "Flush végétatif 2",
-      "mois": [
-        "Juil",
-        "Aout"
-      ],
-      "duree_sem": [
-        4,
-        6
-      ],
-      "coef_nirvp": 1.0
-    },
-    {
-      "nom": "Maturation",
-      "mois": "variable_variete",
-      "coef_nirvp": 0.85
-    }
-  ],
-  "exigences_climatiques": {
-    "temperature_optimale_C": [
-      20,
-      25
-    ],
-    "temperature_croissance_C": [
-      15,
-      30
-    ],
-    "temperature_stress_chaleur_C": 35,
-    "temperature_stress_froid_C": 10,
-    "gel_feuilles_hass_C": [
-      -2,
-      -3
-    ],
-    "gel_mortel_hass_C": [
-      -4,
-      -6
-    ],
-    "gel_race_mexicaine_C": [
-      -6,
-      -8
-    ],
-    "gel_race_antillaise_C": [
-      0,
-      -2
-    ],
-    "humidite_relative_optimale_pct": [
-      60,
-      80
-    ],
-    "humidite_relative_min_pct": 40,
-    "pluviometrie_optimale_mm": [
-      1200,
-      1800
-    ]
-  },
-  "exigences_sol": {
-    "pH_optimal": [
-      5.5,
-      6.5
-    ],
-    "pH_tolerance": [
-      5.0,
-      7.5
-    ],
-    "calcaire_actif_max_pct": 5,
-    "CE_sol_optimal_dS_m": 1.5,
-    "CE_sol_max_dS_m": 2.5,
-    "texture": "sablo_limoneux",
-    "drainage": "excellent_obligatoire",
-    "profondeur_utile_min_cm": 60,
-    "matiere_organique_min_pct": 2,
-    "nappe_phreatique_min_cm": 100,
-    "note": "TRÈS sensible asphyxie - Phytophthora si mal drainé"
-  },
-  "options_nutrition": {
-    "A": {
-      "nom": "Nutrition équilibrée",
-      "condition": "analyse_sol < 2 ans ET analyse_eau",
-      "description": "Programme complet sol + plante"
-    },
-    "B": {
-      "nom": "Nutrition foliaire prioritaire",
-      "condition": "PAS analyse_sol OU > 3 ans",
-      "description": "Foliaire renforcé"
-    },
-    "C": {
-      "nom": "Gestion salinité",
-      "condition": "CE_eau > 1.5 dS/m OU CE_sol > 2 dS/m",
-      "seuil_plus_bas_que_olivier": true,
-      "description": "Lessivage + engrais faible index salin"
-    }
-  },
-  "export_kg_tonne": {
-    "N": [
-      2.5,
-      3.5
-    ],
-    "P2O5": [
-      0.5,
-      0.8
-    ],
-    "K2O": [
-      4.0,
-      5.5
-    ],
-    "CaO": [
-      0.3,
-      0.5
-    ],
-    "MgO": [
-      0.4,
-      0.6
-    ],
-    "S": [
-      0.2,
-      0.3
-    ]
-  },
-  "entretien_kg_ha": {
-    "jeune_1-3_ans": {
-      "N": [
-        30,
-        60
-      ],
-      "P2O5": [
-        15,
-        30
-      ],
-      "K2O": [
-        20,
-        40
-      ]
-    },
-    "entree_prod_4-6_ans": {
-      "N": [
-        80,
-        120
-      ],
-      "P2O5": [
-        30,
-        50
-      ],
-      "K2O": [
-        60,
-        100
-      ]
-    },
-    "intensif_pleine_prod": {
-      "N": [
-        150,
-        250
-      ],
-      "P2O5": [
-        50,
-        80
-      ],
-      "K2O": [
-        150,
-        250
-      ]
-    },
-    "super_intensif": {
-      "N": [
-        200,
-        350
-      ],
-      "P2O5": [
-        60,
-        100
-      ],
-      "K2O": [
-        200,
-        350
-      ]
-    }
-  },
-  "fractionnement_pct": {
-    "jan_fev": {
-      "N": 15,
-      "P2O5": 30,
-      "K2O": 10,
-      "objectif": "Préparer floraison"
-    },
-    "mar_avr": {
-      "N": 20,
-      "P2O5": 30,
-      "K2O": 15,
-      "objectif": "Floraison-nouaison"
-    },
-    "mai_juin": {
-      "N": 20,
-      "P2O5": 20,
-      "K2O": 20,
-      "objectif": "Post-chute"
-    },
-    "juil_aout": {
-      "N": 20,
-      "P2O5": 10,
-      "K2O": 25,
-      "objectif": "Grossissement, flush 2"
-    },
-    "sept_oct": {
-      "N": 15,
-      "P2O5": 10,
-      "K2O": 20,
-      "objectif": "Maturation"
-    },
-    "nov_dec": {
-      "N": 10,
-      "P2O5": 0,
-      "K2O": 10,
-      "objectif": "Reconstitution"
-    }
-  },
-  "formes_engrais": {
-    "N_recommande": [
-      "nitrate_calcium",
-      "nitrate_ammonium",
-      "uree_si_pH<7"
-    ],
-    "N_eviter": [
-      "uree_si_pH>7"
-    ],
-    "P_recommande": [
-      "MAP",
-      "acide_phosphorique"
-    ],
-    "P_eviter": [
-      "DAP_haute_dose"
-    ],
-    "K_recommande": [
-      "sulfate_potasse"
-    ],
-    "K_interdit": [
-      "chlorure_potasse"
-    ],
-    "note_KCl": "STRICTEMENT INTERDIT - très sensible au chlore"
-  },
-  "seuils_foliaires": {
-    "periode_prelevement": "Août-Septembre, feuilles 5-7 mois",
-    "N": {
-      "unite": "%",
-      "carence": 1.6,
-      "suffisant": [
-        1.6,
-        1.8
-      ],
-      "optimal": [
-        1.8,
-        2.2
-      ],
-      "exces": 2.5
-    },
-    "P": {
-      "unite": "%",
-      "carence": 0.08,
-      "suffisant": [
-        0.08,
-        0.1
-      ],
-      "optimal": [
-        0.1,
-        0.25
-      ],
-      "exces": 0.3
-    },
-    "K": {
-      "unite": "%",
-      "carence": 0.75,
-      "suffisant": [
-        0.75,
-        1.0
-      ],
-      "optimal": [
-        1.0,
-        2.0
-      ],
-      "exces": 3.0
-    },
-    "Ca": {
-      "unite": "%",
-      "carence": 1.0,
-      "suffisant": [
-        1.0,
-        1.5
-      ],
-      "optimal": [
-        1.5,
-        3.0
-      ],
-      "exces": 4.0
-    },
-    "Mg": {
-      "unite": "%",
-      "carence": 0.25,
-      "suffisant": [
-        0.25,
-        0.4
-      ],
-      "optimal": [
-        0.4,
-        0.8
-      ],
-      "exces": 1.0
-    },
-    "Fe": {
-      "unite": "ppm",
-      "carence": 50,
-      "suffisant": [
-        50,
-        80
-      ],
-      "optimal": [
-        80,
-        200
-      ],
-      "exces": 300
-    },
-    "Zn": {
-      "unite": "ppm",
-      "carence": 30,
-      "suffisant": [
-        30,
-        50
-      ],
-      "optimal": [
-        50,
-        100
-      ],
-      "exces": 200
-    },
-    "Mn": {
-      "unite": "ppm",
-      "carence": 25,
-      "suffisant": [
-        25,
-        50
-      ],
-      "optimal": [
-        50,
-        200
-      ],
-      "exces": 500
-    },
-    "B": {
-      "unite": "ppm",
-      "carence": 30,
-      "suffisant": [
-        30,
-        50
-      ],
-      "optimal": [
-        50,
-        100
-      ],
-      "exces": 150
-    },
-    "Cu": {
-      "unite": "ppm",
-      "carence": 5,
-      "suffisant": [
-        5,
-        10
-      ],
-      "optimal": [
-        10,
-        25
-      ],
-      "exces": 40
-    },
-    "Cl": {
-      "unite": "%",
-      "toxique": 0.25
-    },
-    "Na": {
-      "unite": "%",
-      "toxique": 0.25
-    }
-  },
-  "seuils_eau_salinite": {
-    "CE_tolerance_dS_m": 1.0,
-    "CE_problematique_dS_m": 1.5,
-    "CE_deconseille_dS_m": 2.0,
-    "Cl_tolerance_mg_L": 50,
-    "Cl_toxique_mg_L": 100,
-    "Na_tolerance_mg_L": 50,
-    "Na_toxique_mg_L": 100,
-    "B_tolerance_mg_L": 0.5,
-    "B_toxique_mg_L": 1.0,
-    "SAR_max": 5,
-    "note": "2-3× plus sensible que olivier"
-  },
-  "kc": {
-    "jeune_1-3_ans": {
-      "jan_fev": 0.5,
-      "mar_avr": 0.55,
-      "mai_juin": 0.6,
-      "juil_aout": 0.65,
-      "sept_oct": 0.6,
-      "nov_dec": 0.55
-    },
-    "adulte_plus_6_ans": {
-      "jan_fev": 0.7,
-      "mar_avr": 0.75,
-      "mai_juin": 0.8,
-      "juil_aout": 0.85,
-      "sept_oct": 0.8,
-      "nov_dec": 0.75
-    }
-  },
-  "irrigation": {
-    "sensibilite": "elevee_stress_et_exces",
-    "note": "Ne tolère ni stress hydrique ni excès eau (Phytophthora)",
-    "frequence": "frequente_petites_doses",
-    "tensiometre_seuil_sol_leger_cbar": [
-      25,
-      30
-    ],
-    "tensiometre_seuil_sol_limoneux_cbar": [
-      35,
-      40
-    ]
-  },
-  "phytosanitaire": {
-    "maladies": [
-      {
-        "nom": "Phytophthora",
-        "agent": "Phytophthora cinnamomi",
-        "gravite": "maladie_n1_devastatrice",
-        "conditions": "sol_mal_draine_exces_eau_T_20-30",
-        "prevention": [
-          "drainage_excellent",
-          "porte_greffe_tolerant",
-          "jamais_saturer_sol"
-        ],
-        "traitement": {
-          "phosphonate_injection": {
-            "dose": "20-30 mL/L",
-            "frequence": "2-3x/an"
-          },
-          "phosphonate_foliaire": {
-            "dose": "5 mL/L",
-            "frequence": "4-6x/an"
-          },
-          "metalaxyl_sol": {
-            "dose": "2-3 g/m²",
-            "condition": "infection_active"
-          }
-        }
-      },
-      {
-        "nom": "Anthracnose",
-        "agent": "Colletotrichum gloeosporioides",
-        "conditions": "HR_elevee_pluie_T_20-25",
-        "traitement": {
-          "cuivre": {
-            "dose_kg_ha": 2,
-            "DAR_jours": 14
-          }
-        }
-      },
-      {
-        "nom": "Cercospora",
-        "agent": "Cercospora purpurea",
-        "traitement": {
-          "cuivre": {
-            "dose_kg_ha": [
-              2,
-              3
-            ],
-            "applications": [
-              2,
-              3
-            ]
-          }
-        }
-      }
-    ],
-    "ravageurs": [
-      {
-        "nom": "Thrips",
-        "periode": "floraison",
-        "traitement": "Spinosad 0.2 L/ha"
-      },
-      {
-        "nom": "Acariens",
-        "periode": "ete_sec",
-        "traitement": "Abamectine 0.5 L/ha"
-      },
-      {
-        "nom": "Cochenilles",
-        "periode": "toute_annee",
-        "traitement": "Huile blanche 15 L/ha"
-      },
-      {
-        "nom": "Scolytes",
-        "condition": "arbres_stresses",
-        "traitement": "eliminer_branches"
-      }
-    ]
-  },
-  "calendrier_phyto_preventif": {
-    "jan_fev": {
-      "cible": "Phosphonate préventif",
-      "produit": "Phosphonate K",
-      "dose": "5 mL/L foliaire"
-    },
-    "mars": {
-      "cible": "Anthracnose floraison",
-      "produit": "Cuivre",
-      "dose": "2 kg/ha",
-      "condition": "si_HR_elevee"
-    },
-    "avr_mai": {
-      "cible": "Thrips",
-      "produit": "Spinosad",
-      "dose": "0.2 L/ha",
-      "condition": "si_presence"
-    },
-    "juin": {
-      "cible": "Phosphonate",
-      "produit": "Phosphonate K",
-      "mode": "injection_tronc"
-    },
-    "aout_sept": {
-      "cible": "Anthracnose pré-récolte",
-      "produit": "Cuivre",
-      "dose": "2 kg/ha",
-      "DAR": "21j"
-    },
-    "nov": {
-      "cible": "Phosphonate",
-      "produit": "Phosphonate K",
-      "dose": "5 mL/L foliaire"
-    }
-  },
-  "maturite_recolte": {
-    "critere_principal": "matiere_seche_ou_huile",
-    "note": "Avocat ne mûrit PAS sur arbre - maturité physiologique",
-    "seuils_hass": {
-      "matiere_seche_min_pct": 21,
-      "huile_min_pct": 8
-    },
-    "seuils_fuerte": {
-      "matiere_seche_min_pct": 19,
-      "huile_min_pct": 8
-    },
-    "methodes": [
-      "sechage_etuve",
-      "extraction_soxhlet",
-      "flottaison",
-      "jours_floraison"
-    ],
-    "conservation_hass": {
-      "temperature_C": [
-        5,
-        7
-      ],
-      "duree_semaines": [
-        2,
-        4
-      ]
-    }
-  },
-  "alertes": [
-    {
-      "code": "AVO-01",
-      "nom": "Stress hydrique",
-      "seuil": "NDMI < P15 (2 passages) + T > 30",
-      "priorite": "urgente"
-    },
-    {
-      "code": "AVO-02",
-      "nom": "Excès eau / Phytophthora",
-      "seuil": "NDMI > P95 + pluie > 50mm/sem",
-      "priorite": "urgente"
-    },
-    {
-      "code": "AVO-03",
-      "nom": "Risque gel",
-      "seuil": "Tmin prévue < 2°C",
-      "priorite": "urgente"
-    },
-    {
-      "code": "AVO-04",
-      "nom": "Gel avéré",
-      "seuil": "Tmin mesurée < 0°C",
-      "priorite": "urgente"
-    },
-    {
-      "code": "AVO-05",
-      "nom": "Canicule",
-      "seuil": "Tmax > 38°C (3j) + HR < 30%",
-      "priorite": "prioritaire"
-    },
-    {
-      "code": "AVO-06",
-      "nom": "Vent chaud sec",
-      "seuil": "T > 35 + HR < 25% + vent > 25 km/h",
-      "priorite": "prioritaire"
-    },
-    {
-      "code": "AVO-07",
-      "nom": "Conditions Phytophthora",
-      "seuil": "Sol saturé > 48h + T 20-28",
-      "priorite": "urgente"
-    },
-    {
-      "code": "AVO-08",
-      "nom": "Symptômes Phytophthora",
-      "seuil": "NIRv ↘ progressif + feuilles pâles",
-      "priorite": "urgente"
-    },
-    {
-      "code": "AVO-09",
-      "nom": "Risque anthracnose",
-      "seuil": "HR > 85% + pluie + T 20-25 (floraison)",
-      "priorite": "prioritaire"
-    },
-    {
-      "code": "AVO-10",
-      "nom": "Pression thrips",
-      "seuil": "Floraison + T 20-28 + captures",
-      "priorite": "prioritaire"
-    },
-    {
-      "code": "AVO-11",
-      "nom": "Carence Zn probable",
-      "seuil": "NDRE < P10 + feuilles petites rondes",
-      "priorite": "vigilance"
-    },
-    {
-      "code": "AVO-12",
-      "nom": "Carence Fe",
-      "seuil": "NDRE < P10 + GCI ↘ + pH sol > 7.5",
-      "priorite": "vigilance"
-    },
-    {
-      "code": "AVO-13",
-      "nom": "Toxicité Cl/Na",
-      "seuil": "Brûlures foliaires + CE sol > 2.5",
-      "priorite": "urgente"
-    },
-    {
-      "code": "AVO-14",
-      "nom": "Floraison faible",
-      "seuil": "Floraison < 50% attendue",
-      "priorite": "prioritaire"
-    },
-    {
-      "code": "AVO-15",
-      "nom": "Chute excessive",
-      "seuil": "Charge < 30% post-nouaison",
-      "priorite": "prioritaire"
-    },
-    {
-      "code": "AVO-16",
-      "nom": "Maturité récolte",
-      "seuil": "MS ≥ 21% (Hass)",
-      "priorite": "info"
-    },
-    {
-      "code": "AVO-17",
-      "nom": "Année OFF probable",
-      "seuil": "N-1 très productif + flush faible",
-      "priorite": "prioritaire"
-    },
-    {
-      "code": "AVO-18",
-      "nom": "Dépérissement",
-      "seuil": "NIRv ↘ > 20% (4 passages)",
-      "priorite": "urgente"
-    },
-    {
-      "code": "AVO-19",
-      "nom": "Arbre mort",
-      "seuil": "NDVI < 0.30 persistant 3 mois",
-      "priorite": "urgente"
-    },
-    {
-      "code": "AVO-20",
-      "nom": "Croissance excessive",
-      "seuil": "NDVI ↗ > 15% + pas de fruits",
-      "priorite": "vigilance"
-    }
-  ],
-  "modele_predictif": {
-    "difficulte": "plus_difficile_que_olivier",
-    "raisons": [
-      "Floraison difficile à détecter par satellite",
-      "Chute physiologique très variable (80-99%)",
-      "Fruit reste longtemps sur arbre"
-    ],
-    "precision_attendue": {
-      "traditionnel": {
-        "R2": [
-          0.3,
-          0.5
-        ],
-        "MAE_pct": [
-          35,
-          50
-        ]
-      },
-      "intensif": {
-        "R2": [
-          0.4,
-          0.6
-        ],
-        "MAE_pct": [
-          25,
-          40
-        ]
-      },
-      "super_intensif": {
-        "R2": [
-          0.5,
-          0.7
-        ],
-        "MAE_pct": [
-          20,
-          35
-        ]
-      }
-    },
-    "recommandation": "Comptage fruits sur échantillon reste méthode la plus fiable"
-  },
-  "biostimulants": {
-    "calendrier": {
-      "jan": {
-        "algues": "3 L/ha",
-        "objectif": "Préparer floraison"
-      },
-      "fev_mar": {
-        "algues": "3 L/ha",
-        "amines": "4 L/ha foliaire",
-        "objectif": "Nouaison critique"
-      },
-      "avr_mai": {
-        "humiques": "4 L/ha",
-        "amines": "4 L/ha",
-        "objectif": "Limiter chute"
-      },
-      "juin_juil": {
-        "algues": "3 L/ha",
-        "objectif": "Stress chaleur"
-      },
-      "aout_sept": {
-        "humiques": "4 L/ha",
-        "amines": "4 L/ha",
-        "objectif": "Flush 2"
-      },
-      "nov_dec": {
-        "humiques_granule": "20 kg/ha",
-        "amines_fertig": "5 L/ha",
-        "objectif": "Reconstitution"
-      }
-    },
-    "focus_nouaison": "Période Mars-Mai critique - concentrer biostimulants"
-  },
-  "plan_annuel_type_intensif_hass_15T": {
-    "jan": {
-      "NPK": "N25+P15+K15",
-      "micro": "Zn foliaire",
-      "biostim": "Algues",
-      "phyto": "Phosphonate",
-      "irrigation_L_sem": 80
-    },
-    "fev": {
-      "NPK": "N25+K15",
-      "micro": null,
-      "biostim": null,
-      "phyto": null,
-      "irrigation_L_sem": 100
-    },
-    "mar": {
-      "NPK": "N30+P15+K20",
-      "micro": "B floraison",
-      "biostim": "Algues+Aminés",
-      "phyto": "Cuivre si pluie",
-      "irrigation_L_sem": 120
-    },
-    "avr": {
-      "NPK": "N25+K20",
-      "micro": "Zn foliaire",
-      "biostim": "Aminés",
-      "phyto": null,
-      "irrigation_L_sem": 150
-    },
-    "mai": {
-      "NPK": "N25+P10+K25",
-      "micro": null,
-      "biostim": null,
-      "phyto": "Spinosad si thrips",
-      "irrigation_L_sem": 170
-    },
-    "juin": {
-      "NPK": "N25+K30",
-      "micro": "Fe-EDDHA",
-      "biostim": "Humiques",
-      "phyto": "Phosphonate injection",
-      "irrigation_L_sem": 200
-    },
-    "juil": {
-      "NPK": "N20+K30",
-      "micro": "Zn foliaire",
-      "biostim": null,
-      "phyto": null,
-      "irrigation_L_sem": 200
-    },
-    "aout": {
-      "NPK": "N20+P10+K25",
-      "micro": null,
-      "biostim": "Algues",
-      "phyto": null,
-      "irrigation_L_sem": 180
-    },
-    "sept": {
-      "NPK": "N15+K20",
-      "micro": "Zn+Mn",
-      "biostim": "Aminés",
-      "phyto": "Cuivre pré-récolte",
-      "irrigation_L_sem": 150
-    },
-    "oct": {
-      "NPK": "N15+K15",
-      "micro": null,
-      "biostim": null,
-      "phyto": null,
-      "irrigation_L_sem": 120
-    },
-    "nov": {
-      "NPK": "N10+K10",
-      "micro": null,
-      "biostim": "Humiques",
-      "phyto": "Phosphonate foliaire",
-      "irrigation_L_sem": 80
-    },
-    "dec": {
-      "NPK": "N10",
-      "micro": null,
-      "biostim": "Aminés",
-      "phyto": null,
-      "irrigation_L_sem": 60
-    }
-  }
-}$crop_ai_ref_avocatier$::jsonb
-)
-ON CONFLICT (crop_type) DO UPDATE SET
-  version = EXCLUDED.version,
-  reference_data = EXCLUDED.reference_data,
-  updated_at = NOW();
-
-INSERT INTO public.crop_ai_references (crop_type, version, reference_data)
-VALUES (
-  'olivier',
-  '5.0',
-  $crop_ai_ref_olivier${
-  "metadata": {
-    "version": "5.0",
-    "date": "2026-03",
-    "culture": "olivier",
-    "pays": "Maroc",
-    "usage": "LLM_direct_read — no parser needed",
-    "conventions": {
-      "mois": "English 3-letter: Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec",
-      "ranges": "Always [min, max] arrays — never single number when a range exists",
-      "doses": "Always {value: number, unit: string} — never freetext",
-      "conditions": "Always list of {field, operator, value} objects",
-      "nulls": "null = not applicable. Use 0 only for a real zero value."
-    }
-  },
-  "varietes": [
-    {
-      "code": "PM",
-      "nom": "Picholine Marocaine",
-      "origine": "Maroc",
-      "usage": "double_fin",
-      "fruit_g": [
-        3.5,
-        5.0
-      ],
-      "huile_pct": [
-        16,
-        20
-      ],
-      "alternance_index": 0.35,
-      "systemes_compatibles": [
-        "traditionnel",
-        "intensif"
-      ],
-      "sensibilites": {
-        "oeil_paon": "sensible",
-        "verticilliose": "sensible",
-        "froid_min_c": -10,
-        "salinite": "moderee",
-        "secheresse": "bonne"
-      },
-      "heures_froid_requises": [
-        100,
-        200
-      ],
-      "duree_vie_economique_ans": null,
-      "rendement_kg_arbre": {
-        "ans_3_5": [
-          2,
-          5
-        ],
-        "ans_6_10": [
-          10,
-          25
-        ],
-        "ans_11_20": [
-          30,
-          50
-        ],
-        "ans_21_40": [
-          40,
-          70
-        ],
-        "ans_40_plus": [
-          30,
-          50
-        ]
-      }
-    },
-    {
-      "code": "HAO",
-      "nom": "Haouzia",
-      "origine": "INRA Maroc",
-      "usage": "double_fin",
-      "fruit_g": [
-        3.5,
-        4.5
-      ],
-      "huile_pct": [
-        22,
-        24
-      ],
-      "alternance_index": 0.22,
-      "systemes_compatibles": [
-        "traditionnel",
-        "intensif"
-      ],
-      "sensibilites": {
-        "oeil_paon": "resistante",
-        "verticilliose": "sensible",
-        "froid_min_c": -8,
-        "salinite": "bonne",
-        "secheresse": "tres_bonne"
-      },
-      "heures_froid_requises": [
-        100,
-        150
-      ],
-      "duree_vie_economique_ans": null,
-      "rendement_kg_arbre": {
-        "ans_3_5": [
-          3,
-          8
-        ],
-        "ans_6_10": [
-          15,
-          35
-        ],
-        "ans_11_20": [
-          40,
-          60
-        ],
-        "ans_21_40": [
-          50,
-          80
-        ],
-        "ans_40_plus": [
-          40,
-          60
-        ]
-      }
-    },
-    {
-      "code": "MEN",
-      "nom": "Menara",
-      "origine": "INRA Maroc",
-      "usage": "double_fin",
-      "fruit_g": [
-        2.5,
-        4.0
-      ],
-      "huile_pct": [
-        23,
-        24
-      ],
-      "alternance_index": 0.28,
-      "systemes_compatibles": [
-        "traditionnel",
-        "intensif"
-      ],
-      "sensibilites": {
-        "oeil_paon": "resistante",
-        "verticilliose": "sensible",
-        "froid_min_c": -8,
-        "salinite": "bonne",
-        "secheresse": "tres_bonne"
-      },
-      "heures_froid_requises": [
-        100,
-        150
-      ],
-      "duree_vie_economique_ans": null,
-      "rendement_kg_arbre": {
-        "ans_3_5": [
-          5,
-          12
-        ],
-        "ans_6_10": [
-          25,
-          45
-        ],
-        "ans_11_20": [
-          45,
-          65
-        ],
-        "ans_21_40": [
-          50,
-          70
-        ],
-        "ans_40_plus": [
-          40,
-          55
-        ]
-      }
-    },
-    {
-      "code": "ARB",
-      "nom": "Arbequina",
-      "origine": "Espagne",
-      "usage": "huile",
-      "fruit_g": [
-        1.2,
-        1.8
-      ],
-      "huile_pct": [
-        16,
-        20
-      ],
-      "alternance_index": 0.35,
-      "systemes_compatibles": [
-        "super_intensif"
-      ],
-      "sensibilites": {
-        "oeil_paon": "moyenne",
-        "verticilliose": "moyenne",
-        "froid_min_c": -5,
-        "salinite": "moyenne",
-        "secheresse": "moyenne"
-      },
-      "heures_froid_requises": [
-        200,
-        400
-      ],
-      "duree_vie_economique_ans": 15,
-      "rendement_kg_arbre": {
-        "ans_3_5": [
-          3,
-          6
-        ],
-        "ans_6_10": [
-          6,
-          10
-        ],
-        "ans_11_20": [
-          8,
-          12
-        ],
-        "ans_21_40": null,
-        "ans_40_plus": null
-      },
-      "note_rendement": "Declin economique apres 15 ans — arrachage recommande"
-    },
-    {
-      "code": "ARS",
-      "nom": "Arbosana",
-      "origine": "Espagne",
-      "usage": "huile",
-      "fruit_g": [
-        1.5,
-        2.5
-      ],
-      "huile_pct": [
-        19,
-        21
-      ],
-      "alternance_index": 0.18,
-      "systemes_compatibles": [
-        "super_intensif"
-      ],
-      "sensibilites": {
-        "oeil_paon": "tres_resistante",
-        "verticilliose": "bonne",
-        "froid_min_c": -5,
-        "salinite": "moyenne",
-        "secheresse": "moyenne"
-      },
-      "heures_froid_requises": [
-        200,
-        350
-      ],
-      "duree_vie_economique_ans": 18,
-      "rendement_kg_arbre": {
-        "ans_3_5": [
-          4,
-          7
-        ],
-        "ans_6_10": [
-          7,
-          12
-        ],
-        "ans_11_20": [
-          10,
-          15
-        ],
-        "ans_21_40": null,
-        "ans_40_plus": null
-      },
-      "note_rendement": "Declin economique apres 18 ans — arrachage recommande"
-    },
-    {
-      "code": "KOR",
-      "nom": "Koroneiki",
-      "origine": "Grece",
-      "usage": "huile",
-      "fruit_g": [
-        0.8,
-        1.5
-      ],
-      "huile_pct": [
-        20,
-        25
-      ],
-      "alternance_index": 0.15,
-      "systemes_compatibles": [
-        "super_intensif"
-      ],
-      "sensibilites": {
-        "oeil_paon": "moyenne",
-        "verticilliose": "moyenne",
-        "froid_min_c": -5,
-        "salinite": "bonne",
-        "secheresse": "bonne"
-      },
-      "heures_froid_requises": [
-        150,
-        300
-      ],
-      "duree_vie_economique_ans": 18,
-      "rendement_kg_arbre": {
-        "ans_3_5": [
-          3,
-          5
-        ],
-        "ans_6_10": [
-          5,
-          9
-        ],
-        "ans_11_20": [
-          7,
-          11
-        ],
-        "ans_21_40": null,
-        "ans_40_plus": null
-      },
-      "note_rendement": "Declin economique apres 18 ans — arrachage recommande"
-    },
-    {
-      "code": "PIC",
-      "nom": "Picual",
-      "origine": "Espagne",
-      "usage": "huile",
-      "fruit_g": [
-        3.0,
-        4.5
-      ],
-      "huile_pct": [
-        22,
-        27
-      ],
-      "alternance_index": 0.3,
-      "systemes_compatibles": [
-        "intensif"
-      ],
-      "sensibilites": {
-        "oeil_paon": "sensible",
-        "verticilliose": "tres_sensible",
-        "froid_min_c": -10,
-        "salinite": "moyenne",
-        "secheresse": "bonne"
-      },
-      "heures_froid_requises": [
-        400,
-        600
-      ],
-      "duree_vie_economique_ans": null,
-      "rendement_kg_arbre": {
-        "ans_3_5": [
-          5,
-          12
-        ],
-        "ans_6_10": [
-          25,
-          45
-        ],
-        "ans_11_20": [
-          40,
-          60
-        ],
-        "ans_21_40": [
-          45,
-          65
-        ],
-        "ans_40_plus": [
-          35,
-          50
-        ]
-      }
-    }
-  ],
-  "systemes": {
-    "traditionnel": {
-      "nom": "Traditionnel (Pluvial)",
-      "densite_arbres_ha": [
-        80,
-        200
-      ],
-      "surface_arbre_m2": [
-        50,
-        125
-      ],
-      "ecartement": {
-        "min": {
-          "rang_m": 8.0,
-          "arbre_m": 8.0
-        },
-        "max": {
-          "rang_m": 12.0,
-          "arbre_m": 12.0
-        }
-      },
-      "irrigation": "aucune",
-      "recolte": "manuelle_gaulage",
-      "entree_production_annee": [
-        5,
-        7
-      ],
-      "pleine_production_annee": [
-        12,
-        20
-      ],
-      "duree_vie_economique_ans": [
-        80,
-        100
-      ],
-      "rendement_pleine_prod_t_ha": [
-        1,
-        4
-      ],
-      "sol_visible_pct": [
-        60,
-        80
-      ],
-      "indice_satellite_cle": "MSAVI"
-    },
-    "intensif": {
-      "nom": "Intensif (Irrigue)",
-      "densite_arbres_ha": [
-        200,
-        600
-      ],
-      "surface_arbre_m2": [
-        17,
-        50
-      ],
-      "ecartement": {
-        "min": {
-          "rang_m": 6.0,
-          "arbre_m": 5.0
-        },
-        "max": {
-          "rang_m": 7.0,
-          "arbre_m": 7.0
-        }
-      },
-      "irrigation": "goutte_a_goutte",
-      "recolte": "vibreur_tronc",
-      "entree_production_annee": [
-        4,
-        5
-      ],
-      "pleine_production_annee": [
-        7,
-        10
-      ],
-      "duree_vie_economique_ans": [
-        50,
-        80
-      ],
-      "rendement_pleine_prod_t_ha": [
-        6,
-        12
-      ],
-      "sol_visible_pct": [
-        40,
-        60
-      ],
-      "indice_satellite_cle": "NIRv"
-    },
-    "super_intensif": {
-      "nom": "Super-intensif (Haie)",
-      "densite_arbres_ha": [
-        1200,
-        2000
-      ],
-      "surface_arbre_m2": [
-        2,
-        5
-      ],
-      "ecartement": {
-        "min": {
-          "rang_m": 3.75,
-          "arbre_m": 1.35
-        },
-        "max": {
-          "rang_m": 4.0,
-          "arbre_m": 1.5
-        }
-      },
-      "irrigation": "goutte_a_goutte_obligatoire",
-      "recolte": "enjambeur_mecanique",
-      "entree_production_annee": [
-        2,
-        3
-      ],
-      "pleine_production_annee": [
-        4,
-        6
-      ],
-      "duree_vie_economique_ans": [
-        15,
-        20
-      ],
-      "rendement_pleine_prod_t_ha": [
-        10,
-        20
-      ],
-      "sol_visible_pct": [
-        20,
-        40
-      ],
-      "indice_satellite_cle": "NDVI"
-    }
-  },
-  "seuils_satellite": {
-    "traditionnel": {
-      "NDVI": {
-        "optimal": [
-          0.3,
-          0.5
-        ],
-        "vigilance": 0.25,
-        "alerte": 0.2
-      },
-      "NIRv": {
-        "optimal": [
-          0.05,
-          0.15
-        ],
-        "vigilance": 0.04,
-        "alerte": 0.03
-      },
-      "NDMI": {
-        "optimal": [
-          0.05,
-          0.2
-        ],
-        "vigilance": 0.04,
-        "alerte": 0.03
-      },
-      "NDRE": {
-        "optimal": [
-          0.1,
-          0.25
-        ],
-        "vigilance": 0.08,
-        "alerte": 0.07
-      },
-      "MSI": {
-        "optimal": [
-          0.8,
-          1.5
-        ],
-        "vigilance": 1.8,
-        "alerte": 2.0
-      }
-    },
-    "intensif": {
-      "NDVI": {
-        "optimal": [
-          0.4,
-          0.6
-        ],
-        "vigilance": 0.35,
-        "alerte": 0.3
-      },
-      "NIRv": {
-        "optimal": [
-          0.08,
-          0.22
-        ],
-        "vigilance": 0.07,
-        "alerte": 0.06
-      },
-      "NDMI": {
-        "optimal": [
-          0.1,
-          0.3
-        ],
-        "vigilance": 0.08,
-        "alerte": 0.06
-      },
-      "NDRE": {
-        "optimal": [
-          0.15,
-          0.3
-        ],
-        "vigilance": 0.12,
-        "alerte": 0.1
-      },
-      "MSI": {
-        "optimal": [
-          0.6,
-          1.2
-        ],
-        "vigilance": 1.4,
-        "alerte": 1.6
-      }
-    },
-    "super_intensif": {
-      "NDVI": {
-        "optimal": [
-          0.55,
-          0.75
-        ],
-        "vigilance": 0.5,
-        "alerte": 0.45
-      },
-      "NIRv": {
-        "optimal": [
-          0.15,
-          0.35
-        ],
-        "vigilance": 0.12,
-        "alerte": 0.1
-      },
-      "NDMI": {
-        "optimal": [
-          0.2,
-          0.4
-        ],
-        "vigilance": 0.15,
-        "alerte": 0.12
-      },
-      "NDRE": {
-        "optimal": [
-          0.2,
-          0.38
-        ],
-        "vigilance": 0.17,
-        "alerte": 0.15
-      },
-      "MSI": {
-        "optimal": [
-          0.4,
-          0.9
-        ],
-        "vigilance": 1.1,
-        "alerte": 1.3
-      }
-    }
-  },
-  "stades_bbch": [
-    {
-      "code": "00",
-      "nom": "Dormance",
-      "mois": [
-        "Dec",
-        "Jan"
-      ],
-      "gdd_cumul": [
-        0,
-        30
-      ],
-      "coef_nirvp": 0.3,
-      "phase_kc": "repos"
-    },
-    {
-      "code": "01",
-      "nom": "Debut gonflement",
-      "mois": [
-        "Feb"
-      ],
-      "gdd_cumul": [
-        30,
-        80
-      ],
-      "coef_nirvp": 0.3,
-      "phase_kc": "debourrement"
-    },
-    {
-      "code": "09",
-      "nom": "Feuilles emergentes",
-      "mois": [
-        "Feb",
-        "Mar"
-      ],
-      "gdd_cumul": [
-        80,
-        200
-      ],
-      "coef_nirvp": 0.4,
-      "phase_kc": "debourrement"
-    },
-    {
-      "code": "15",
-      "nom": "5 paires feuilles",
-      "mois": [
-        "Mar",
-        "Apr"
-      ],
-      "gdd_cumul": [
-        200,
-        400
-      ],
-      "coef_nirvp": 0.6,
-      "phase_kc": "croissance"
-    },
-    {
-      "code": "37",
-      "nom": "Allongement avance",
-      "mois": [
-        "Apr"
-      ],
-      "gdd_cumul": [
-        400,
-        500
-      ],
-      "coef_nirvp": 0.6,
-      "phase_kc": "croissance"
-    },
-    {
-      "code": "51",
-      "nom": "Boutons floraux",
-      "mois": [
-        "Apr",
-        "May"
-      ],
-      "gdd_cumul": [
-        500,
-        600
-      ],
-      "coef_nirvp": 0.8,
-      "phase_kc": "floraison"
-    },
-    {
-      "code": "55",
-      "nom": "Boutons separes",
-      "mois": [
-        "May"
-      ],
-      "gdd_cumul": [
-        600,
-        700
-      ],
-      "coef_nirvp": 0.9,
-      "phase_kc": "floraison"
-    },
-    {
-      "code": "60",
-      "nom": "Debut floraison",
-      "mois": [
-        "May"
-      ],
-      "gdd_cumul": [
-        800,
-        900
-      ],
-      "coef_nirvp": 1.0,
-      "phase_kc": "floraison"
-    },
-    {
-      "code": "65",
-      "nom": "Pleine floraison",
-      "mois": [
-        "May"
-      ],
-      "gdd_cumul": [
-        900,
-        1000
-      ],
-      "coef_nirvp": 1.0,
-      "phase_kc": "floraison"
-    },
-    {
-      "code": "69",
-      "nom": "Nouaison",
-      "mois": [
-        "Jun"
-      ],
-      "gdd_cumul": [
-        1100,
-        1200
-      ],
-      "coef_nirvp": 1.0,
-      "phase_kc": "nouaison"
-    },
-    {
-      "code": "75",
-      "nom": "Fruit 50pct taille",
-      "mois": [
-        "Jul"
-      ],
-      "gdd_cumul": [
-        1400,
-        1800
-      ],
-      "coef_nirvp": 1.0,
-      "phase_kc": "grossissement"
-    },
-    {
-      "code": "79",
-      "nom": "Fruit taille finale",
-      "mois": [
-        "Aug",
-        "Sep"
-      ],
-      "gdd_cumul": [
-        1800,
-        2200
-      ],
-      "coef_nirvp": 0.9,
-      "phase_kc": "grossissement"
-    },
-    {
-      "code": "85",
-      "nom": "Veraison avancee",
-      "mois": [
-        "Oct"
-      ],
-      "gdd_cumul": [
-        2400,
-        2600
-      ],
-      "coef_nirvp": 0.8,
-      "phase_kc": "maturation"
-    },
-    {
-      "code": "89",
-      "nom": "Maturite recolte",
-      "mois": [
-        "Oct",
-        "Nov"
-      ],
-      "gdd_cumul": [
-        2600,
-        2800
-      ],
-      "coef_nirvp": 0.7,
-      "phase_kc": "maturation"
-    },
-    {
-      "code": "92",
-      "nom": "Post-recolte",
-      "mois": [
-        "Nov",
-        "Dec"
-      ],
-      "gdd_cumul": [
-        2800,
-        3000
-      ],
-      "coef_nirvp": 0.4,
-      "phase_kc": "post_recolte"
-    }
-  ],
-  "kc": {
-    "traditionnel": {
-      "repos": 0.4,
-      "debourrement": 0.45,
-      "croissance": 0.5,
-      "floraison": 0.55,
-      "nouaison": 0.6,
-      "grossissement": 0.65,
-      "maturation": 0.55,
-      "post_recolte": 0.45
-    },
-    "intensif": {
-      "repos": 0.5,
-      "debourrement": 0.55,
-      "croissance": 0.6,
-      "floraison": 0.65,
-      "nouaison": 0.75,
-      "grossissement": 0.8,
-      "maturation": 0.65,
-      "post_recolte": 0.55
-    },
-    "super_intensif": {
-      "repos": 0.55,
-      "debourrement": 0.6,
-      "croissance": 0.65,
-      "floraison": 0.7,
-      "nouaison": 0.8,
-      "grossissement": 0.9,
-      "maturation": 0.7,
-      "post_recolte": 0.6
-    }
-  },
-  "options_nutrition": {
-    "A": {
-      "nom": "Nutrition equilibree",
-      "conditions_requises": [
-        {
-          "champ": "analyse_sol_age_ans",
-          "operateur": "<=",
-          "valeur": 2
-        },
-        {
-          "champ": "analyse_eau_disponible",
-          "operateur": "==",
-          "valeur": true
-        }
-      ],
-      "fertigation_pct": 100,
-      "foliaire": "si_carence_detectee",
-      "biostimulants_pct": {
-        "humiques": 100,
-        "fulviques": 100,
-        "amines": 100,
-        "algues": 100
-      },
-      "description": "Programme complet sol + plante"
-    },
-    "B": {
-      "nom": "Nutrition foliaire prioritaire",
-      "conditions_requises": [
-        {
-          "champ": "analyse_sol_disponible",
-          "operateur": "==",
-          "valeur": false
-        },
-        {
-          "OU": {
-            "champ": "analyse_sol_age_ans",
-            "operateur": ">",
-            "valeur": 3
-          }
-        }
-      ],
-      "fertigation_pct": 70,
-      "foliaire": "programme_renforce",
-      "biostimulants_pct": {
-        "humiques": 60,
-        "fulviques": 60,
-        "amines": 150,
-        "algues": 100
-      },
-      "description": "Focus foliaire, fertigation reduite"
-    },
-    "C": {
-      "nom": "Gestion salinite",
-      "conditions_requises": [
-        {
-          "champ": "CE_eau_dS_m",
-          "operateur": ">",
-          "valeur": 2.5
-        },
-        {
-          "OU": {
-            "champ": "CE_sol_dS_m",
-            "operateur": ">",
-            "valeur": 3.0
-          }
-        }
-      ],
-      "fertigation": "engrais_faible_index_salin",
-      "foliaire": "standard",
-      "biostimulants_pct": {
-        "humiques": 100,
-        "fulviques": 100,
-        "amines": 120,
-        "algues": 150
-      },
-      "lessivage": true,
-      "acidification_si": {
-        "champ": "pH",
-        "operateur": ">",
-        "valeur": 7.5,
-        "ET": {
-          "champ": "HCO3_mg_L",
-          "operateur": ">",
-          "valeur": 500
-        }
-      },
-      "gypse_si": {
-        "champ": "SAR",
-        "operateur": ">",
-        "valeur": 6
-      },
-      "description": "Programme adapte eau/sol salin"
-    }
-  },
-  "export_npk_kg_par_tonne_fruit": {
-    "N": {
-      "valeur": 3.5,
-      "unite": "kg/t_fruit"
-    },
-    "P2O5": {
-      "valeur": 1.2,
-      "unite": "kg/t_fruit"
-    },
-    "K2O": {
-      "valeur": 6.0,
-      "unite": "kg/t_fruit"
-    },
-    "CaO": {
-      "valeur": 1.5,
-      "unite": "kg/t_fruit"
-    },
-    "MgO": {
-      "valeur": 2.5,
-      "unite": "kg/t_fruit"
-    },
-    "S": {
-      "valeur": 0.4,
-      "unite": "kg/t_fruit"
-    }
-  },
-  "entretien_kg_ha": {
-    "traditionnel": {
-      "N": [
-        15,
-        25
-      ],
-      "K2O": [
-        15,
-        25
-      ],
-      "P2O5": [
-        10,
-        15
-      ]
-    },
-    "intensif": {
-      "N": [
-        35,
-        50
-      ],
-      "K2O": [
-        35,
-        50
-      ],
-      "P2O5": [
-        15,
-        25
-      ]
-    },
-    "super_intensif": {
-      "N": [
-        50,
-        70
-      ],
-      "K2O": [
-        50,
-        70
-      ],
-      "P2O5": [
-        20,
-        30
-      ]
-    }
-  },
-  "fractionnement_pct": [
-    {
-      "mois": [
-        "Feb",
-        "Mar"
-      ],
-      "stade_bbch": [
-        "01",
-        "15"
-      ],
-      "N_pct": 25,
-      "P2O5_pct": 100,
-      "K2O_pct": 15
-    },
-    {
-      "mois": [
-        "Apr"
-      ],
-      "stade_bbch": [
-        "31",
-        "51"
-      ],
-      "N_pct": 25,
-      "P2O5_pct": 0,
-      "K2O_pct": 15
-    },
-    {
-      "mois": [
-        "May"
-      ],
-      "stade_bbch": [
-        "55",
-        "65"
-      ],
-      "N_pct": 15,
-      "P2O5_pct": 0,
-      "K2O_pct": 20
-    },
-    {
-      "mois": [
-        "Jun"
-      ],
-      "stade_bbch": [
-        "67",
-        "71"
-      ],
-      "N_pct": 15,
-      "P2O5_pct": 0,
-      "K2O_pct": 25
-    },
-    {
-      "mois": [
-        "Jul",
-        "Aug"
-      ],
-      "stade_bbch": [
-        "75",
-        "79"
-      ],
-      "N_pct": 10,
-      "P2O5_pct": 0,
-      "K2O_pct": 20
-    },
-    {
-      "mois": [
-        "Sep"
-      ],
-      "stade_bbch": [
-        "81",
-        "85"
-      ],
-      "N_pct": 5,
-      "P2O5_pct": 0,
-      "K2O_pct": 5
-    },
-    {
-      "mois": [
-        "Oct",
-        "Nov"
-      ],
-      "stade_bbch": [
-        "89",
-        "92"
-      ],
-      "N_pct": 5,
-      "P2O5_pct": 0,
-      "K2O_pct": 0
-    }
-  ],
-  "ajustement_alternance": {
-    "annee_ON": {
-      "N": 1.15,
-      "P": 1.0,
-      "K": 1.2,
-      "Mg": 1.0
-    },
-    "annee_OFF_sain": {
-      "N": 0.75,
-      "P": 1.2,
-      "K": 0.8,
-      "Mg": 1.25
-    },
-    "epuisement": {
-      "N": 0.85,
-      "P": 1.3,
-      "K": 0.7,
-      "Mg": 1.4
-    }
-  },
-  "ajustement_cible": {
-    "huile_qualite": {
-      "N": 1.0,
-      "K": 1.0,
-      "IM_cible": [
-        2.0,
-        3.5
-      ]
-    },
-    "olive_table": {
-      "N": 1.1,
-      "K": 1.2,
-      "IM_cible": [
-        1.0,
-        2.0
-      ]
-    },
-    "mixte": {
-      "N": 1.0,
-      "K": 1.1,
-      "IM_cible": [
-        2.5,
-        3.5
-      ]
-    }
-  },
-  "seuils_foliaires": {
-    "N": {
-      "unite": "%",
-      "carence": 1.4,
-      "suffisant": [
-        1.4,
-        1.6
-      ],
-      "optimal": [
-        1.6,
-        2.0
-      ],
-      "exces": 2.5
-    },
-    "P": {
-      "unite": "%",
-      "carence": 0.08,
-      "suffisant": [
-        0.08,
-        0.1
-      ],
-      "optimal": [
-        0.1,
-        0.3
-      ],
-      "exces": 0.35
-    },
-    "K": {
-      "unite": "%",
-      "carence": 0.4,
-      "suffisant": [
-        0.4,
-        0.8
-      ],
-      "optimal": [
-        0.8,
-        1.2
-      ],
-      "exces": 1.5
-    },
-    "Ca": {
-      "unite": "%",
-      "carence": 0.5,
-      "suffisant": [
-        0.5,
-        1.0
-      ],
-      "optimal": [
-        1.0,
-        2.0
-      ],
-      "exces": 3.0
-    },
-    "Mg": {
-      "unite": "%",
-      "carence": 0.08,
-      "suffisant": [
-        0.08,
-        0.1
-      ],
-      "optimal": [
-        0.1,
-        0.3
-      ],
-      "exces": 0.5
-    },
-    "Fe": {
-      "unite": "ppm",
-      "carence": 40,
-      "suffisant": [
-        40,
-        60
-      ],
-      "optimal": [
-        60,
-        150
-      ],
-      "exces": 300
-    },
-    "Zn": {
-      "unite": "ppm",
-      "carence": 10,
-      "suffisant": [
-        10,
-        15
-      ],
-      "optimal": [
-        15,
-        50
-      ],
-      "exces": 100
-    },
-    "Mn": {
-      "unite": "ppm",
-      "carence": 15,
-      "suffisant": [
-        15,
-        20
-      ],
-      "optimal": [
-        20,
-        80
-      ],
-      "exces": 200
-    },
-    "B": {
-      "unite": "ppm",
-      "carence": 14,
-      "suffisant": [
-        14,
-        19
-      ],
-      "optimal": [
-        19,
-        150
-      ],
-      "exces": 200
-    },
-    "Cu": {
-      "unite": "ppm",
-      "carence": 4,
-      "suffisant": [
-        4,
-        6
-      ],
-      "optimal": [
-        6,
-        15
-      ],
-      "exces": 25
-    },
-    "Na": {
-      "unite": "%",
-      "toxique": 0.5
-    },
-    "Cl": {
-      "unite": "%",
-      "toxique": 0.5
-    }
-  },
-  "seuils_eau": {
-    "CE": {
-      "unite": "dS/m",
-      "optimal": 0.75,
-      "acceptable": 2.5,
-      "problematique": 4.0,
-      "critique": 6.0
-    },
-    "pH": {
-      "optimal": [
-        6.5,
-        7.5
-      ],
-      "acceptable": [
-        6.0,
-        8.0
-      ],
-      "problematique": 8.0
-    },
-    "SAR": {
-      "optimal": 3,
-      "acceptable": 6,
-      "problematique": 9,
-      "critique": 15
-    },
-    "Cl": {
-      "unite": "mg/L",
-      "optimal": 70,
-      "acceptable": 150,
-      "toxique": 350
-    },
-    "Na": {
-      "unite": "mg/L",
-      "optimal": 70,
-      "acceptable": 115,
-      "toxique": 200
-    },
-    "HCO3": {
-      "unite": "mg/L",
-      "optimal": 200,
-      "acceptable": 500,
-      "problematique": 750
-    },
-    "B": {
-      "unite": "mg/L",
-      "optimal": [
-        0.5,
-        1.0
-      ],
-      "acceptable": 2.0,
-      "toxique": 3.0
-    },
-    "NO3": {
-      "unite": "mg/L",
-      "a_deduire": true,
-      "coefficient": 0.00226
-    }
-  },
-  "fraction_lessivage": {
-    "CE_sol_seuil_dS_m": 4.0,
-    "formule": "FL = CE_eau / (5 * CE_sol_seuil - CE_eau)",
-    "table_CE_eau_vers_FL": [
-      {
-        "CE_eau_dS_m": 1.5,
-        "FL": 0.08
-      },
-      {
-        "CE_eau_dS_m": 2.0,
-        "FL": 0.11
-      },
-      {
-        "CE_eau_dS_m": 2.5,
-        "FL": 0.14
-      },
-      {
-        "CE_eau_dS_m": 3.0,
-        "FL": 0.18
-      },
-      {
-        "CE_eau_dS_m": 3.5,
-        "FL": 0.21
-      },
-      {
-        "CE_eau_dS_m": 4.0,
-        "FL": 0.25
-      }
-    ]
-  },
-  "biostimulants": {
-    "humiques_liquide": {
-      "produit": "Humates de potasse 12-15%",
-      "dose": {
-        "valeur": [
-          3,
-          5
-        ],
-        "unite": "L/ha"
-      },
-      "frequence_par_an": 3,
-      "stades_application": [
-        "post_recolte",
-        "debourrement",
-        "nouaison",
-        "maturation"
-      ],
-      "mode": "fertigation"
-    },
-    "humiques_granule": {
-      "produit": "Humates de potasse 70-80%",
-      "dose": {
-        "valeur": [
-          20,
-          30
-        ],
-        "unite": "kg/ha"
-      },
-      "frequence_par_an": 1,
-      "stades_application": [
-        "post_recolte"
-      ],
-      "mode": "incorporation_sol"
-    },
-    "fulviques": {
-      "produit": "Acides fulviques 10-12%",
-      "dose": {
-        "valeur": [
-          1,
-          2
-        ],
-        "unite": "L/ha"
-      },
-      "frequence_par_an": 2,
-      "stades_application": [
-        "debourrement",
-        "nouaison"
-      ],
-      "mode": "fertigation",
-      "synergie_Fe": "reduction_dose_Fe_20_a_30_pct",
-      "note": "Toujours appliquer avec Fe-EDDHA"
-    },
-    "amines_foliaire": {
-      "produit": "Hydrolysat vegetal 15-20%",
-      "dose": {
-        "valeur": [
-          3,
-          5
-        ],
-        "unite": "L/ha"
-      },
-      "frequence_par_an": 2,
-      "stades_application": [
-        "debourrement",
-        "nouaison"
-      ],
-      "mode": "foliaire",
-      "conditions_application": {
-        "T_max_c": 28,
-        "HR_min_pct": 40
-      }
-    },
-    "amines_fertigation": {
-      "produit": "Hydrolysat vegetal 40-50%",
-      "dose": {
-        "valeur": [
-          5,
-          8
-        ],
-        "unite": "L/ha"
-      },
-      "frequence_par_an": 2,
-      "stades_application": [
-        "post_recolte",
-        "debourrement"
-      ],
-      "mode": "fertigation"
-    },
-    "algues": {
-      "produit": "Extrait Ascophyllum nodosum 4-6%",
-      "dose": {
-        "valeur": [
-          2,
-          4
-        ],
-        "unite": "L/ha"
-      },
-      "frequence_par_an": 3,
-      "stades_application": [
-        "debourrement",
-        "floraison",
-        "grossissement"
-      ],
-      "mode": "foliaire_ou_fertigation",
-      "effet_salinite": "osmoprotection"
-    }
-  },
-  "calendrier_biostimulants": [
-    {
-      "mois": [
-        "Nov",
-        "Dec"
-      ],
-      "applications": [
-        {
-          "produit": "humiques_granule",
-          "dose": {
-            "valeur": 25,
-            "unite": "kg/ha"
-          }
-        },
-        {
-          "produit": "amines_fertigation",
-          "dose": {
-            "valeur": 6,
-            "unite": "L/ha"
-          }
-        }
-      ]
-    },
-    {
-      "mois": [
-        "Feb",
-        "Mar"
-      ],
-      "applications": [
-        {
-          "produit": "humiques_liquide",
-          "dose": {
-            "valeur": 4,
-            "unite": "L/ha"
-          }
-        },
-        {
-          "produit": "fulviques",
-          "dose": {
-            "valeur": 1.5,
-            "unite": "L/ha"
-          },
-          "note": "avec Fe-EDDHA"
-        },
-        {
-          "produit": "amines_foliaire",
-          "dose": {
-            "valeur": 4,
-            "unite": "L/ha"
-          }
-        },
-        {
-          "produit": "algues",
-          "dose": {
-            "valeur": 3,
-            "unite": "L/ha"
-          }
-        }
-      ]
-    },
-    {
-      "mois": [
-        "Apr",
-        "May"
-      ],
-      "applications": [
-        {
-          "produit": "amines_foliaire",
-          "dose": {
-            "valeur": 4,
-            "unite": "L/ha"
-          }
-        },
-        {
-          "produit": "algues",
-          "dose": {
-            "valeur": 3,
-            "unite": "L/ha"
-          }
-        }
-      ]
-    },
-    {
-      "mois": [
-        "May",
-        "Jun"
-      ],
-      "applications": [
-        {
-          "produit": "humiques_liquide",
-          "dose": {
-            "valeur": 4,
-            "unite": "L/ha"
-          }
-        },
-        {
-          "produit": "fulviques",
-          "dose": {
-            "valeur": 1.5,
-            "unite": "L/ha"
-          },
-          "note": "avec Fe-EDDHA"
-        }
-      ]
-    },
-    {
-      "mois": [
-        "Jul"
-      ],
-      "applications": [
-        {
-          "produit": "algues",
-          "dose": {
-            "valeur": 3,
-            "unite": "L/ha"
-          }
-        }
-      ]
-    },
-    {
-      "mois": [
-        "Aug",
-        "Sep"
-      ],
-      "applications": [
-        {
-          "produit": "humiques_liquide",
-          "dose": {
-            "valeur": 3,
-            "unite": "L/ha"
-          }
-        }
-      ]
-    }
-  ],
-  "alertes": [
-    {
-      "code": "OLI-01",
-      "nom": "Stress hydrique Super-intensif",
-      "priorite": "urgente",
-      "systeme": "super_intensif",
-      "seuil_entree": [
-        {
-          "indice": "NDMI",
-          "operateur": "<",
-          "valeur": 0.12
-        },
-        {
-          "indice": "MSI",
-          "operateur": ">",
-          "valeur": 1.3
-        },
-        {
-          "indice": "jours_sans_pluie",
-          "operateur": ">",
-          "valeur": 10
-        }
-      ],
-      "seuil_sortie": [
-        {
-          "indice": "NDMI",
-          "operateur": ">",
-          "valeur": 0.2,
-          "passages_requis": 2
-        }
-      ],
-      "prescription": {
-        "action": "Irrigation d'urgence — augmenter le volume d'irrigation par rapport au plan en cours",
-        "dose": "+40% du volume planifié pour le stade en cours",
-        "duree": "Jusqu'à seuil de sortie NDMI > 0.20 sur 2 passages (≈ 10 jours minimum)",
-        "plafond": "Ne pas dépasser 120% capacité au champ. Si option C : maintenir FL dans le calcul majoré.",
-        "condition_blocage": "SI sol saturé (NDMI > 0.45 ou déclaration utilisateur) → NE PAS augmenter. Investiguer autre cause.",
-        "conditions_meteo": "Matin tôt ou soir. Éviter plein soleil midi.",
-        "fenetre_bbch": "Tous stades — aucune restriction BBCH",
-        "suivi": {
-          "indicateur": "NDMI",
-          "reponse_attendue": "Hausse NDMI vers P25 puis P50",
-          "delai_j": "3-7"
-        },
-        "impact_plan": "Modifier volume irrigation du plan pour le mois en cours. Rétablir volume initial quand seuil sortie atteint."
-      }
-    },
-    {
-      "code": "OLI-02",
-      "nom": "Stress hydrique Intensif",
-      "priorite": "prioritaire",
-      "systeme": "intensif",
-      "seuil_entree": [
-        {
-          "indice": "NDMI",
-          "operateur": "<",
-          "valeur": 0.06
-        },
-        {
-          "indice": "MSI",
-          "operateur": ">",
-          "valeur": 1.6
-        },
-        {
-          "indice": "jours_sans_pluie",
-          "operateur": ">",
-          "valeur": 15
-        }
-      ],
-      "seuil_sortie": [
-        {
-          "indice": "NDMI",
-          "operateur": ">",
-          "valeur": 0.12,
-          "passages_requis": 2
-        }
-      ],
-      "prescription": {
-        "action": "Augmentation irrigation",
-        "dose": "+30% du volume planifié pour le stade en cours",
-        "duree": "Jusqu'à NDMI > 0.12 sur 2 passages",
-        "plafond": "Ne pas dépasser 120% capacité au champ",
-        "condition_blocage": "SI sol saturé → NE PAS augmenter. Investiguer.",
-        "conditions_meteo": "Matin tôt ou soir.",
-        "fenetre_bbch": "Tous stades — aucune restriction BBCH",
-        "suivi": {
-          "indicateur": "NDMI",
-          "reponse_attendue": "Hausse NDMI vers P25",
-          "delai_j": "3-7"
-        },
-        "impact_plan": "Ajuster volume irrigation. Rétablir quand seuil sortie atteint."
-      }
-    },
-    {
-      "code": "OLI-03",
-      "nom": "Gel floraison",
-      "priorite": "urgente",
-      "systeme": "tous",
-      "seuil_entree": [
-        {
-          "indice": "Tmin_c",
-          "operateur": "<",
-          "valeur": -2
-        },
-        {
-          "indice": "BBCH_code",
-          "operateur": "between",
-          "valeur": [
-            55,
-            69
-          ]
-        }
-      ],
-      "seuil_sortie": [
-        {
-          "indice": "T_c",
-          "operateur": ">",
-          "valeur": 5,
-          "jours_consecutifs": 3
-        }
-      ],
-      "prescription": {
-        "action": "Post-gel : évaluation + ajustement plan",
-        "dose": "Acides aminés foliaires 4-5 L/ha (hydrolysat 15-20%) + Algues 3-4 L/ha — application unique post-gel",
-        "duree": "Application unique dans les 3-5 jours post-gel si T > 5°C confirmé",
-        "plafond": "N/A — application unique",
-        "condition_blocage": "SI gel < -5°C ET durée > 4h → perte totale floraison. NE PAS traiter — passer directement à révision rendement -80 à -100%.",
-        "conditions_meteo": "T > 5°C, pas de pluie dans les 6h, vent < 15 km/h, matin tôt.",
-        "fenetre_bbch": "BBCH 55-69 (floraison) uniquement",
-        "suivi": {
-          "indicateur": "NIRv",
-          "reponse_attendue": "Stabilisation NIRv (pas d'aggravation)",
-          "delai_j": "10-15"
-        },
-        "impact_plan": "Réviser prévision rendement : -30% si gel modéré (-2 à -4°C < 2h), -50% si gel sévère, -80 à -100% si gel extrême. Réduire N de 25%."
-      }
-    },
-    {
-      "code": "OLI-04",
-      "nom": "Risque oeil de paon",
-      "priorite": "prioritaire",
-      "systeme": "tous",
-      "seuil_entree": [
-        {
-          "indice": "T_c",
-          "operateur": "between",
-          "valeur": [
-            15,
-            20
-          ]
-        },
-        {
-          "indice": "HR_pct",
-          "operateur": ">",
-          "valeur": 80
-        },
-        {
-          "indice": "pluie",
-          "operateur": "==",
-          "valeur": true
-        }
-      ],
-      "seuil_sortie": [
-        {
-          "duree_sans_conditions_h": 72
-        }
-      ],
-      "prescription": {
-        "action": "Traitement cuivre préventif — Cuivre hydroxyde",
-        "dose": "2-3 kg/ha. Adjuvant mouillant si HR < 50%.",
-        "duree": "Application unique par épisode. Délai minimum 7 jours entre 2 traitements Cu (sauf OLI-18).",
-        "plafond": "Maximum 3 traitements Cu par saison (30 kg Cu métal/ha/5 ans réglementation).",
-        "condition_blocage": "SI traitement Cu < 7 jours → NE PAS retraiter (sauf OLI-18). SI BBCH 55-65 (pleine floraison) → reporter à BBCH 67+.",
-        "conditions_meteo": "T 15-25°C, HR > 60%, vent < 15 km/h, pas de pluie dans les 6h.",
-        "fenetre_bbch": "Tous stades SAUF BBCH 55-65 (floraison)",
-        "suivi": {
-          "indicateur": "Aucun signal satellite attendu",
-          "reponse_attendue": "Absence symptômes taches foliaires",
-          "delai_j": "30"
-        },
-        "impact_plan": "Si traitement Cu prévu au plan < 10 jours : avancer. Si > 10 jours : ajouter ce traitement, maintenir celui du plan."
-      }
-    },
-    {
-      "code": "OLI-05",
-      "nom": "Risque mouche olive",
-      "priorite": "prioritaire",
-      "systeme": "tous",
-      "seuil_entree": [
-        {
-          "indice": "T_c",
-          "operateur": "between",
-          "valeur": [
-            16,
-            28
-          ]
-        },
-        {
-          "indice": "HR_pct",
-          "operateur": ">",
-          "valeur": 60
-        },
-        {
-          "indice": "captures_piege_semaine",
-          "operateur": ">=",
-          "valeur": 5
-        }
-      ],
-      "seuil_sortie": [
-        {
-          "indice": "T_c",
-          "operateur": ">",
-          "valeur": 35,
-          "jours_consecutifs": 3
-        },
-        {
-          "indice": "recolte_declaree",
-          "operateur": "==",
-          "valeur": true
-        }
-      ],
-      "prescription": {
-        "action": "Traitement insecticide curatif",
-        "dose": "Deltaméthrine 0.5 L/ha OU Spinosad 0.2 L/ha. Choisir Spinosad si récolte < 14 jours (DAR plus court).",
-        "duree": "Application unique. Renouveler si captures persistent après 7 jours.",
-        "plafond": "Max 2 applications Deltaméthrine/saison. Max 3 applications Spinosad/saison.",
-        "condition_blocage": "SI récolte prévue < 7 jours → NE PAS traiter (DAR = 7j). Récolter immédiatement.",
-        "conditions_meteo": "T 15-25°C, vent < 15 km/h, pas de pluie dans les 6h.",
-        "fenetre_bbch": "BBCH 75-89 (grossissement à maturation) — fruits doivent être présents",
-        "suivi": {
-          "indicateur": "Captures pièges",
-          "reponse_attendue": "Baisse captures < 5/piège/sem ET < 2% fruits piqués",
-          "delai_j": "7"
-        },
-        "impact_plan": "Si mouche récurrente (3ème alerte) : envisager avancer récolte 7-10 jours si IM ≥ 1.5."
-      }
-    },
-    {
-      "code": "OLI-06",
-      "nom": "Verticilliose suspectee",
-      "priorite": "urgente",
-      "systeme": "tous",
-      "seuil_entree": [
-        {
-          "indice": "NIRv_pattern",
-          "operateur": "==",
-          "valeur": "declin_asymetrique_progressif"
-        }
-      ],
-      "seuil_sortie": null,
-      "note": "IRREVERSIBLE",
-      "prescription": {
-        "action": "Investigation terrain urgente + isolation",
-        "dose": "Aucun traitement curatif efficace. Si confirmée : arrachage + brûlage résidus. JAMAIS broyer in situ.",
-        "duree": "Continue — surveillance permanente.",
-        "plafond": "N/A — pas de traitement chimique",
-        "condition_blocage": "NE JAMAIS recommander fongicide contre verticilliose (inefficace). NE JAMAIS broyer résidus arbres atteints.",
-        "conditions_meteo": "N/A",
-        "fenetre_bbch": "Tous stades",
-        "suivi": {
-          "indicateur": "NIRv zone suspecte",
-          "reponse_attendue": "Stabilisation = faux positif. Aggravation = confirmation.",
-          "delai_j": "30-60"
-        },
-        "impact_plan": "Si confirmée : modifier AOI. Recalibrage partiel si > 10% surface affectée.",
-        "alerte_irreversible": true
-      }
-    },
-    {
-      "code": "OLI-07",
-      "nom": "Canicule",
-      "priorite": "prioritaire",
-      "systeme": "tous",
-      "seuil_entree": [
-        {
-          "indice": "Tmax_c",
-          "operateur": ">",
-          "valeur": 42,
-          "jours_consecutifs": 3
-        }
-      ],
-      "seuil_sortie": [
-        {
-          "indice": "Tmax_c",
-          "operateur": "<",
-          "valeur": 38,
-          "jours_consecutifs": 2
-        }
-      ],
-      "prescription": {
-        "action": "Irrigation de soutien + protection",
-        "dose": "Irrigation +25% volume planifié. Algues 3-4 L/ha foliaire (matin très tôt uniquement, avant 7h).",
-        "duree": "Pendant canicule + 3 jours après retour Tmax < 38°C.",
-        "plafond": "Volume irrigation : ne pas dépasser 130% ETc. Si option C : maintenir FL.",
-        "condition_blocage": "SI BBCH 55-65 (floraison) → Pas de traitement foliaire (brûlure certaine). Irrigation uniquement.",
-        "conditions_meteo": "Irrigation matin tôt ou nuit. Foliaire algues UNIQUEMENT avant 7h (T < 30°C).",
-        "fenetre_bbch": "Tous stades, restriction foliaire en floraison",
-        "suivi": {
-          "indicateur": "NDMI + NDVI",
-          "reponse_attendue": "Stabilisation NDMI, NDVI maintenu",
-          "delai_j": "5-10"
-        },
-        "impact_plan": "Si canicule grossissement : réviser rendement -10 à -20%. Si canicule floraison : réviser -20 à -40%. Suspendre RDI si actif."
-      }
-    },
-    {
-      "code": "OLI-08",
-      "nom": "Deficit heures froid",
-      "priorite": "prioritaire",
-      "systeme": "tous",
-      "seuil_entree": [
-        {
-          "indice": "heures_froid_cumulees",
-          "operateur": "<",
-          "valeur": 100
-        },
-        {
-          "indice": "date_evaluation",
-          "operateur": "==",
-          "valeur": "Feb-28"
-        }
-      ],
-      "seuil_sortie": null,
-      "prescription": {
-        "action": "Information + ajustement plan",
-        "dose": "Bore +50% dose floraison (1.5 kg/ha au lieu de 1 kg/ha). Algues floraison +50% (4.5 L/ha).",
-        "duree": "Application unique au stade BBCH 51-55 (pré-floraison).",
-        "plafond": "N/A",
-        "condition_blocage": "Aucune.",
-        "conditions_meteo": "Conditions standard foliaire : T 15-25°C, HR > 60%, vent < 15 km/h.",
-        "fenetre_bbch": "BBCH 51-55 (pré-floraison)",
-        "suivi": {
-          "indicateur": "NIRvP pic",
-          "reponse_attendue": "NIRvP pic ≥ 70% de l'attendu au BBCH 65-69",
-          "delai_j": "21-28"
-        },
-        "impact_plan": "Ajuster prévision rendement -10 à -20%. Éclaircissage inutile (charge naturellement faible)."
-      }
-    },
-    {
-      "code": "OLI-09",
-      "nom": "Annee OFF probable",
-      "priorite": "prioritaire",
-      "systeme": "tous",
-      "seuil_entree": [
-        {
-          "indice": "NIRvP_vs_N2_pct",
-          "operateur": "<",
-          "valeur": -30
-        },
-        {
-          "indice": "BBCH_code",
-          "operateur": "between",
-          "valeur": [
-            60,
-            69
-          ]
-        }
-      ],
-      "seuil_sortie": null,
-      "prescription": {
-        "action": "Ajustement plan annuel selon table alternance OFF",
-        "dose": "N: ×0.75 | P: ×1.20 | K: ×0.80 par rapport aux doses plan initial. Taille sévère renouvellement 25-35% en nov-déc.",
-        "duree": "Ajustement valable pour toute la saison restante.",
-        "plafond": "N/A",
-        "condition_blocage": "SI première année (pas d'historique N-2) → NE PAS déclencher. Confiance insuffisante.",
-        "conditions_meteo": "N/A — ajustement plan, pas d'application directe.",
-        "fenetre_bbch": "Détecté au stade floraison (BBCH 55-65). Ajustements appliqués immédiatement.",
-        "suivi": {
-          "indicateur": "NIRvP cumulé saison",
-          "reponse_attendue": "NIRvP cumulé ≈ 70% d'une année ON",
-          "delai_j": "fin_saison"
-        },
-        "impact_plan": "Recalculer doses K et N restantes avec coefficients OFF. Modifier recommandation taille. Réviser prévision rendement -40 à -60%."
-      }
-    },
-    {
-      "code": "OLI-10",
-      "nom": "Deperissement",
-      "priorite": "urgente",
-      "systeme": "tous",
-      "seuil_entree": [
-        {
-          "indice": "NIRv_variation_pct",
-          "operateur": "<",
-          "valeur": -25,
-          "passages_requis": 3
-        }
-      ],
-      "seuil_sortie": [
-        {
-          "indice": "NIRv_pattern",
-          "operateur": "==",
-          "valeur": "stable",
-          "passages_requis": 2
-        }
-      ],
-      "prescription": {
-        "action": "Investigation urgente multi-cause",
-        "dose": "Aminés foliaires 5 L/ha + Algues fertigation 4 L/ha + Humiques fertigation 5 L/ha — application de soutien en attendant diagnostic.",
-        "duree": "Biostimulants : application unique. Surveillance continue jusqu'à stabilisation NIRv.",
-        "plafond": "N/A",
-        "condition_blocage": "SI NIRv < seuil_min persistant → Basculer vers OLI-11. NE PAS continuer traitement arbre mort.",
-        "conditions_meteo": "Conditions standard fertigation/foliaire.",
-        "fenetre_bbch": "Tous stades",
-        "suivi": {
-          "indicateur": "NIRv",
-          "reponse_attendue": "Stabilisation NIRv (arrêt déclin)",
-          "delai_j": "15-30"
-        },
-        "impact_plan": "Si dépérissement > 20% surface : recalibrage partiel F2. Réviser rendement en conséquence."
-      }
-    },
-    {
-      "code": "OLI-11",
-      "nom": "Arbre mort",
-      "priorite": "urgente",
-      "systeme": "tous",
-      "seuil_entree": [
-        {
-          "indice": "NIRv",
-          "operateur": "<",
-          "valeur": "seuil_min_systeme",
-          "persistant": true
-        }
-      ],
-      "seuil_sortie": null,
-      "prescription": {
-        "action": "Constatation + mise à jour parcelle",
-        "dose": "Aucun intrant. Action administrative uniquement.",
-        "duree": "N/A",
-        "plafond": "N/A",
-        "condition_blocage": "NE JAMAIS recommander traitement sur arbre mort.",
-        "conditions_meteo": "N/A",
-        "fenetre_bbch": "Tous stades",
-        "suivi": {
-          "indicateur": "N/A",
-          "reponse_attendue": "N/A",
-          "delai_j": "N/A"
-        },
-        "impact_plan": "Mettre à jour parcelle.densite. Si > 10% arbres morts : recalibrage partiel F2 + modification AOI.",
-        "alerte_irreversible": true
-      }
-    },
-    {
-      "code": "OLI-12",
-      "nom": "Sur-irrigation",
-      "priorite": "vigilance",
-      "systeme": "irrigue",
-      "seuil_entree": [
-        {
-          "indice": "NDMI",
-          "operateur": ">",
-          "valeur": 0.45
-        },
-        {
-          "indice": "sol_sature",
-          "operateur": "==",
-          "valeur": true
-        }
-      ],
-      "seuil_sortie": [
-        {
-          "indice": "NDMI",
-          "operateur": "<",
-          "valeur": 0.35
-        }
-      ],
-      "prescription": {
-        "action": "Réduction irrigation",
-        "dose": "-30% du volume planifié pour le stade en cours. Volume minimum : ≥ 50% ETc.",
-        "duree": "Jusqu'à NDMI < 0.35 (1 passage suffit).",
-        "plafond": "Ne pas descendre sous 50% des besoins ETc du stade.",
-        "condition_blocage": "SI stade floraison ou nouaison (BBCH 55-71) → Réduction limitée à -15%.",
-        "conditions_meteo": "N/A",
-        "fenetre_bbch": "Tous stades, restriction floraison-nouaison",
-        "suivi": {
-          "indicateur": "NDMI",
-          "reponse_attendue": "Baisse NDMI sous 0.35",
-          "delai_j": "5-10"
-        },
-        "impact_plan": "Modifier volume irrigation dans le plan pour le mois en cours."
-      }
-    },
-    {
-      "code": "OLI-13",
-      "nom": "Floraison ratee",
-      "priorite": "prioritaire",
-      "systeme": "tous",
-      "seuil_entree": [
-        {
-          "indice": "NIRvP_vs_attendu_pct",
-          "operateur": "<",
-          "valeur": -30
-        },
-        {
-          "indice": "meteo_floraison",
-          "operateur": "==",
-          "valeur": "defavorable"
-        }
-      ],
-      "seuil_sortie": null,
-      "prescription": {
-        "action": "Ajustement plan post-floraison",
-        "dose": "K : -30% sur les mois restants. N : -15%. P : maintenir 100%. Biostimulants : maintenir 100%.",
-        "duree": "Ajustement valable pour le reste de la saison.",
-        "plafond": "N/A",
-        "condition_blocage": "SI floraison ratée + année OFF → double impact. Réviser rendement -60 à -80%.",
-        "conditions_meteo": "N/A — ajustement plan, pas d'application directe.",
-        "fenetre_bbch": "Détecté post-floraison (BBCH 67-69)",
-        "suivi": {
-          "indicateur": "NIRvP cumulé",
-          "reponse_attendue": "NIRvP cumulé bas confirmé",
-          "delai_j": "fin_saison"
-        },
-        "impact_plan": "Recalculer doses K et N restantes. Réviser prévision rendement -30 à -50%."
-      }
-    },
-    {
-      "code": "OLI-14",
-      "nom": "Recolte optimale",
-      "priorite": "info",
-      "systeme": "tous",
-      "seuil_entree": [
-        {
-          "indice": "NIRvP_tendance",
-          "operateur": "==",
-          "valeur": "declin"
-        },
-        {
-          "indice": "NDVI_tendance",
-          "operateur": "==",
-          "valeur": "stable"
-        },
-        {
-          "indice": "GDD_cumul",
-          "operateur": ">",
-          "valeur": 2800
-        }
-      ],
-      "seuil_sortie": [
-        {
-          "indice": "recolte_declaree",
-          "operateur": "==",
-          "valeur": true
-        }
-      ],
-      "prescription": {
-        "action": "Notification de récolte — fenêtre optimale ouverte",
-        "dose": "Aucun intrant. Message informatif avec IM cible rappelé.",
-        "duree": "Notification valable 15-20 jours (fenêtre de récolte).",
-        "plafond": "N/A",
-        "condition_blocage": "SI IM terrain > 4.0 → signaler dépassement optimal pour huile qualité.",
-        "conditions_meteo": "N/A",
-        "fenetre_bbch": "BBCH 85-89",
-        "suivi": {
-          "indicateur": "Déclaration récolte utilisateur",
-          "reponse_attendue": "Récolte déclarée",
-          "delai_j": "15-20"
-        },
-        "impact_plan": "À déclaration récolte : basculer plan en mode post-récolte. Déclencher F3 si conditions remplies."
-      }
-    },
-    {
-      "code": "OLI-15",
-      "nom": "Chergui",
-      "priorite": "urgente",
-      "systeme": "tous",
-      "seuil_entree": [
-        {
-          "indice": "T_c",
-          "operateur": ">",
-          "valeur": 40
-        },
-        {
-          "indice": "HR_pct",
-          "operateur": "<",
-          "valeur": 20
-        },
-        {
-          "indice": "vent_km_h",
-          "operateur": ">",
-          "valeur": 30
-        }
-      ],
-      "seuil_sortie": [
-        {
-          "indice": "T_c",
-          "operateur": "<",
-          "valeur": 38
-        },
-        {
-          "indice": "HR_pct",
-          "operateur": ">",
-          "valeur": 30
-        }
-      ],
-      "prescription": {
-        "action": "Irrigation d'urgence + suspension foliaire",
-        "dose": "Irrigation +50% volume planifié. Algues en fertigation 3-4 L/ha (osmoprotection racinaire).",
-        "duree": "Pendant épisode Chergui + 48h après fin conditions.",
-        "plafond": "Ne pas dépasser 150% ETc. Si option C : maintenir FL.",
-        "condition_blocage": "Aucune — action toujours justifiée en situation de Chergui.",
-        "conditions_meteo": "Irrigation immédiate, jour ou nuit. AUCUN foliaire pendant Chergui (brûlure certaine + dérive).",
-        "fenetre_bbch": "Tous stades",
-        "suivi": {
-          "indicateur": "NDMI + MSI",
-          "reponse_attendue": "Stabilisation NDMI, MSI ne dépasse pas 1.5",
-          "delai_j": "3-5"
-        },
-        "impact_plan": "Si Chergui floraison : réviser rendement -30 à -50%. Si grossissement : réviser -10 à -15%. Annuler RDI en cours."
-      }
-    },
-    {
-      "code": "OLI-16",
-      "nom": "Carence N",
-      "priorite": "vigilance",
-      "systeme": "intensif",
-      "seuil_entree": [
-        {
-          "indice": "NDRE",
-          "operateur": "<",
-          "valeur": "P10_parcelle"
-        },
-        {
-          "indice": "GCI_tendance",
-          "operateur": "==",
-          "valeur": "declin"
-        }
-      ],
-      "seuil_sortie": [
-        {
-          "indice": "NDRE",
-          "operateur": ">",
-          "valeur": "P30_parcelle",
-          "passages_requis": 2
-        }
-      ],
-      "prescription": {
-        "action": "Fertigation N corrective",
-        "dose": "15-20 kg N/ha en application corrective unique. Forme : Nitrate calcium si pH > 7.2, Ammonitrate si pH ≤ 7.2. Option B : ajouter N foliaire urée 0.5% à 8 kg/ha.",
-        "duree": "Application unique. Réévaluer à J+14 sur NDRE.",
-        "plafond": "Dose N totale saison (plan + correctifs) ne doit pas dépasser 150 kg N/ha.",
-        "condition_blocage": "SI BBCH > 81 (maturation) → NE PAS appliquer N (retard maturation). Reporter post-récolte. SI NDMI < P10 → Traiter d'abord stress hydrique OLI-01/02 (N non assimilé en sol sec).",
-        "conditions_meteo": "Sol humide (post-irrigation ou pluie). Pas de stress hydrique actif.",
-        "fenetre_bbch": "BBCH 01-79. INTERDIT après BBCH 81.",
-        "suivi": {
-          "indicateur": "NDRE + GCI",
-          "reponse_attendue": "Hausse NDRE 5-15%, stabilisation GCI",
-          "delai_j": "7-14"
-        },
-        "impact_plan": "Ajouter l'application N corrective au plan. Si 2ème carence N dans la saison : revoir doses N du plan +15% pour saison suivante."
-      }
-    },
-    {
-      "code": "OLI-17",
-      "nom": "Fin cycle Super-intensif",
-      "priorite": "vigilance",
-      "systeme": "super_intensif",
-      "seuil_entree": [
-        {
-          "indice": "NIRv_tendance",
-          "operateur": "==",
-          "valeur": "declin_2_saisons_consecutives"
-        }
-      ],
-      "seuil_sortie": null,
-      "prescription": {
-        "action": "Alerte stratégique — fin probable cycle productif super-intensif",
-        "dose": "Aucun intrant immédiat. Recommandation de consultation expert.",
-        "duree": "N/A — décision stratégique pluriannuelle.",
-        "plafond": "N/A",
-        "condition_blocage": "NE JAMAIS recommander maintien production intensive sur verger en fin de cycle.",
-        "conditions_meteo": "N/A",
-        "fenetre_bbch": "Détecté post-récolte (comparaison inter-annuelle)",
-        "suivi": {
-          "indicateur": "NIRv saison suivante",
-          "reponse_attendue": "Si remontée NIRv : faux positif possible",
-          "delai_j": "12 mois"
-        },
-        "impact_plan": "Si confirmé : programme transition réduction intrants -50%. Proposer analyse coût-bénéfice replantation vs maintien.",
-        "alerte_irreversible": true
-      }
-    },
-    {
-      "code": "OLI-18",
-      "nom": "Lessivage traitement",
-      "priorite": "prioritaire",
-      "systeme": "tous",
-      "seuil_entree": [
-        {
-          "indice": "pluie_apres_application_h",
-          "operateur": "<",
-          "valeur": 6
-        }
-      ],
-      "seuil_sortie": null,
-      "prescription": {
-        "action": "Renouvellement traitement lessivé",
-        "dose": "Même produit, même dose que le traitement original. Exception Cu : vérifier plafond saisonnier avant retraitement.",
-        "duree": "Renouveler dans les 48-72h si conditions météo favorables.",
-        "plafond": "Respecter plafonds produit (Cu : max saisonnier ; insecticide : max applications).",
-        "condition_blocage": "SI plafond saisonnier du produit atteint → NE PAS retraiter. Signaler gap, passer en surveillance renforcée.",
-        "conditions_meteo": "Conditions standard du produit à renouveler. Vérifier prévisions J+3 : pas de pluie prévue.",
-        "fenetre_bbch": "Même fenêtre BBCH que le traitement original",
-        "suivi": {
-          "indicateur": "Même indicateur que recommandation originale",
-          "reponse_attendue": "Idem recommandation originale",
-          "delai_j": "Idem"
-        },
-        "impact_plan": "Comptabiliser comme traitement supplémentaire dans bilan phyto campagne."
-      }
-    },
-    {
-      "code": "OLI-19",
-      "nom": "Accumulation saline",
-      "priorite": "prioritaire",
-      "systeme": "irrigue",
-      "seuil_entree": [
-        {
-          "indice": "CE_sol_dS_m",
-          "operateur": ">",
-          "valeur": 4.0
-        }
-      ],
-      "seuil_sortie": [
-        {
-          "indice": "CE_sol_dS_m",
-          "operateur": "<",
-          "valeur": 3.0
-        }
-      ],
-      "prescription": {
-        "action": "Lessivage intensif + ajustement nutrition + activation option C",
-        "dose": "FL recalculée avec CE_sol mesurée. Si FL calculée < 20% → appliquer minimum 20%. Algues ×1.50. Basculer vers engrais faible index salin.",
-        "duree": "Jusqu'à prochaine analyse sol (recommander analyse à 3 mois).",
-        "plafond": "Volume total irrigation (ETc + FL) ne doit pas saturer le sol.",
-        "condition_blocage": "SI drainage insuffisant (sol argileux, pas de drain) → Lessivage risque d'aggraver asphyxie. Demander avis expert.",
-        "conditions_meteo": "N/A — ajustement régime irrigation.",
-        "fenetre_bbch": "Tous stades, priorité période chaude",
-        "suivi": {
-          "indicateur": "CE sol (prochaine analyse)",
-          "reponse_attendue": "CE sol < 3 dS/m",
-          "delai_j": "90-180"
-        },
-        "impact_plan": "Activer option C si pas déjà active. Recalculer tous volumes irrigation avec FL majorée."
-      }
-    },
-    {
-      "code": "OLI-20",
-      "nom": "Toxicite Cl",
-      "priorite": "urgente",
-      "systeme": "tous",
-      "seuil_entree": [
-        {
-          "indice": "Cl_foliaire_pct",
-          "operateur": ">",
-          "valeur": 0.5
-        },
-        {
-          "indice": "brulures_visibles",
-          "operateur": "==",
-          "valeur": true
-        }
-      ],
-      "seuil_sortie": [
-        {
-          "indice": "Cl_foliaire_pct",
-          "operateur": "<",
-          "valeur": 0.3
-        }
-      ],
-      "prescription": {
-        "action": "Lessivage d'urgence + changement engrais K",
-        "dose": "Irrigation de lessivage : 1 application = 2× volume normal du jour. SOP remplacement immédiat de tout KCl. Algues 4 L/ha fertigation.",
-        "duree": "Lessivage : 1 application. Changement SOP : permanent pour la saison. Algues : 1 application puis maintenir calendrier.",
-        "plafond": "Ne pas saturer le sol (risque asphyxie).",
-        "condition_blocage": "SI source eau riche en Cl (> 350 mg/L) → lessivage ne résoudra pas le problème. Recommander changement source eau.",
-        "conditions_meteo": "Irrigation lessivage : matin tôt.",
-        "fenetre_bbch": "Tous stades, urgence immédiate",
-        "suivi": {
-          "indicateur": "Symptômes foliaires + Cl foliaire",
-          "reponse_attendue": "Arrêt progression brûlures. Cl < 0.3% à prochaine analyse",
-          "delai_j": "30-60"
-        },
-        "impact_plan": "Remplacer tout KCl par SOP dans le plan. Augmenter FL dans le plan."
-      }
-    }
-  ],
-  "phytosanitaire": {
-    "maladies": [
-      {
-        "nom": "Oeil de paon",
-        "agent": "Spilocaea oleaginea",
-        "conditions": {
-          "T_c": [
-            15,
-            20
-          ],
-          "HR_pct_min": 80,
-          "pluie": true
-        },
-        "mois_risque": [
-          "Oct",
-          "Nov",
-          "Mar",
-          "Apr"
-        ],
-        "guerissable": true,
-        "traitement": {
-          "produit": "Cuivre hydroxyde",
-          "dose": {
-            "valeur": [
-              2,
-              3
-            ],
-            "unite": "kg/ha"
-          },
-          "DAR_jours": 14
-        },
-        "prevention": [
-          "varietes_resistantes",
-          "aeration_canopee"
-        ]
-      },
-      {
-        "nom": "Verticilliose",
-        "agent": "Verticillium dahliae",
-        "conditions": {
-          "sol": "humide",
-          "T_c": [
-            20,
-            25
-          ]
-        },
-        "mois_risque": [
-          "Oct",
-          "Nov",
-          "Feb",
-          "Mar"
-        ],
-        "guerissable": false,
-        "traitement": null,
-        "prevention": [
-          "plants_certifies",
-          "sol_sain",
-          "eviter_precedents_sensibles"
-        ],
-        "note": "INCURABLE — arrachage obligatoire des arbres atteints"
-      },
-      {
-        "nom": "Tuberculose",
-        "agent": "Pseudomonas savastanoi",
-        "conditions": {
-          "blessures": true,
-          "humidite": true
-        },
-        "mois_risque": [
-          "Jan",
-          "Feb",
-          "Mar"
-        ],
-        "guerissable": true,
-        "traitement": {
-          "produit": "Cuivre",
-          "dose": {
-            "valeur": [
-              2,
-              3
-            ],
-            "unite": "kg/ha"
-          },
-          "timing": "post_taille_ou_grele"
-        },
-        "prevention": [
-          "desinfection_outils"
-        ]
-      }
-    ],
-    "ravageurs": [
-      {
-        "nom": "Mouche de l'olive",
-        "agent": "Bactrocera oleae",
-        "conditions": {
-          "T_c": [
-            16,
-            28
-          ],
-          "HR_pct_min": 60
-        },
-        "seuil_intervention": {
-          "fruits_piques_pct": 2,
-          "captures_piege_semaine": 5
-        },
-        "traitement": {
-          "produit": "Deltamethrine",
-          "dose": {
-            "valeur": 0.5,
-            "unite": "L/ha"
-          },
-          "DAR_jours": 7
-        },
-        "alternatives": [
-          "piegeage_massif",
-          "kaolin",
-          "Spinosad"
-        ]
-      },
-      {
-        "nom": "Cochenille noire",
-        "agent": "Saissetia oleae",
-        "mois_risque": [
-          "Mar",
-          "Apr",
-          "May"
-        ],
-        "traitement": {
-          "produit": "Huile blanche",
-          "dose": {
-            "valeur": [
-              15,
-              20
-            ],
-            "unite": "L/ha"
-          },
-          "mois_application": [
-            "Jan",
-            "Feb"
-          ],
-          "conditions_application": {
-            "T_min_c": 5,
-            "gel": false
-          },
-          "DAR_jours": 21
-        }
-      }
-    ]
-  },
-  "calendrier_phyto": [
-    {
-      "mois": [
-        "Oct",
-        "Nov"
-      ],
-      "cible": "oeil_paon",
-      "produit": "Cuivre hydroxyde",
-      "dose": {
-        "valeur": [
-          2,
-          3
-        ],
-        "unite": "kg/ha"
-      },
-      "condition_declenchement": "apres_premieres_pluies"
-    },
-    {
-      "mois": [
-        "Jan",
-        "Feb"
-      ],
-      "cible": "cochenille",
-      "produit": "Huile blanche",
-      "dose": {
-        "valeur": [
-          15,
-          20
-        ],
-        "unite": "L/ha"
-      },
-      "condition_declenchement": {
-        "T_min_c": 5,
-        "gel": false
-      }
-    },
-    {
-      "mois": [
-        "Mar"
-      ],
-      "cible": "oeil_paon",
-      "produit": "Cuivre",
-      "dose": {
-        "valeur": 2,
-        "unite": "kg/ha"
-      },
-      "condition_declenchement": "si_pluies_printanieres"
-    },
-    {
-      "mois": [
-        "May",
-        "Jun"
-      ],
-      "cible": "mouche",
-      "produit": "Deltamethrine",
-      "dose": {
-        "valeur": 0.5,
-        "unite": "L/ha"
-      },
-      "condition_declenchement": "si_seuil_captures_atteint"
-    },
-    {
-      "mois": null,
-      "evenement": "post_taille",
-      "cible": "tuberculose",
-      "produit": "Cuivre",
-      "dose": {
-        "valeur": [
-          2,
-          3
-        ],
-        "unite": "kg/ha"
-      },
-      "condition_declenchement": "immediat_apres_taille"
-    }
-  ],
-  "modele_predictif": {
-    "variables": [
-      {
-        "nom": "alternance_N-1_N-2",
-        "source": "historique",
-        "poids": [
-          0.25,
-          0.35
-        ],
-        "critique": true
-      },
-      {
-        "nom": "NIRvP_cumule_Apr_Sep",
-        "source": "satellite",
-        "poids": [
-          0.25,
-          0.35
-        ]
-      },
-      {
-        "nom": "deficit_hydrique_cumule",
-        "source": "bilan_hydrique",
-        "poids": [
-          0.1,
-          0.2
-        ]
-      },
-      {
-        "nom": "heures_froid_hiver",
-        "source": "meteo",
-        "poids": [
-          0.05,
-          0.1
-        ]
-      },
-      {
-        "nom": "gel_floraison_binaire",
-        "source": "meteo",
-        "poids": [
-          0.15,
-          0.3
-        ],
-        "binaire": true,
-        "note": "Poids fort si evenement = 1"
-      },
-      {
-        "nom": "precip_floraison",
-        "source": "meteo",
-        "poids": [
-          0.05,
-          0.1
-        ]
-      },
-      {
-        "nom": "age_verger_ans",
-        "source": "profil",
-        "poids": null,
-        "type": "ajustement_courbe"
-      },
-      {
-        "nom": "densite_arbres_ha",
-        "source": "profil",
-        "poids": null,
-        "type": "conversion_ha_vers_arbre"
-      }
-    ],
-    "precision_attendue": {
-      "traditionnel": {
-        "R2": [
-          0.4,
-          0.6
-        ],
-        "MAE_pct": [
-          30,
-          40
-        ]
-      },
-      "intensif": {
-        "R2": [
-          0.5,
-          0.7
-        ],
-        "MAE_pct": [
-          20,
-          30
-        ]
-      },
-      "super_intensif": {
-        "R2": [
-          0.6,
-          0.8
-        ],
-        "MAE_pct": [
-          15,
-          25
-        ]
-      }
-    },
-    "conditions_prevision": [
-      {
-        "champ": "calibrage_confiance_pct",
-        "operateur": ">=",
-        "valeur": 50
-      },
-      {
-        "champ": "historique_cycles_complets",
-        "operateur": ">=",
-        "valeur": 1
-      },
-      {
-        "champ": "meteo_saison_disponible",
-        "operateur": "==",
-        "valeur": true
-      },
-      {
-        "champ": "BBCH_code_actuel_int",
-        "operateur": ">=",
-        "valeur": 67
-      }
-    ],
-    "moments_prevision": {
-      "post_floraison": {
-        "BBCH": "67-69",
-        "precision": "±40%"
-      },
-      "post_nouaison": {
-        "BBCH": "71",
-        "precision": "±25%"
-      },
-      "pre_recolte": {
-        "BBCH": "85",
-        "precision": "±15-20%"
-      }
-    },
-    "limites_NIRvP": {
-      "detecte": [
-        "vigueur_vegetative",
-        "capacite_photosynthetique",
-        "stress_severe_prolonge",
-        "recuperation_post_intervention"
-      ],
-      "ne_detecte_pas": [
-        "qualite_pollinisation",
-        "taux_nouaison_reel",
-        "problemes_racinaires_precoces",
-        "charge_fruits",
-        "calibre_fruits"
-      ]
-    }
-  },
-  "plan_annuel": {
-    "composantes": [
-      "programme_NPK",
-      "programme_microelements",
-      "programme_biostimulants",
-      "programme_phyto_preventif",
-      "plan_irrigation",
-      "gestion_salinite",
-      "taille_prevue",
-      "prevision_recolte"
-    ],
-    "declenchement": "post_calibrage_validation",
-    "mise_a_jour": {
-      "NPK": "annuel + ajustements_alertes",
-      "microelements": "annuel",
-      "biostimulants": "annuel",
-      "phyto": "annuel + alertes",
-      "irrigation": "hebdomadaire_meteo",
-      "salinite": "si_option_C"
-    },
-    "calendrier_type_intensif": {
-      "Jan": {
-        "NPK": null,
-        "micro": null,
-        "biostim": null,
-        "phyto": "huile_blanche",
-        "irrigation": "faible"
-      },
-      "Feb": {
-        "NPK": "TSP_fond_N1",
-        "micro": "Fe-EDDHA",
-        "biostim": "humiques_amines",
-        "phyto": null,
-        "irrigation": "reprise"
-      },
-      "Mar": {
-        "NPK": "N2",
-        "micro": "Zn_Mn_foliaire",
-        "biostim": "algues",
-        "phyto": "Cu_si_taille",
-        "irrigation": "progressive"
-      },
-      "Apr": {
-        "NPK": "N3_K",
-        "micro": null,
-        "biostim": null,
-        "phyto": "Cu_si_pluie",
-        "irrigation": "croissante"
-      },
-      "May": {
-        "NPK": "K",
-        "micro": "B_floraison",
-        "biostim": "algues_amines",
-        "phyto": "mouche_si_seuil",
-        "irrigation": "croissante"
-      },
-      "Jun": {
-        "NPK": "K_N",
-        "micro": "Fe-EDDHA",
-        "biostim": "humiques",
-        "phyto": null,
-        "irrigation": "maximum"
-      },
-      "Jul": {
-        "NPK": "K",
-        "micro": null,
-        "biostim": "algues",
-        "phyto": "mouche_si_seuil",
-        "irrigation": "maximum"
-      },
-      "Aug": {
-        "NPK": "K_dernier",
-        "micro": null,
-        "biostim": null,
-        "phyto": null,
-        "irrigation": "maximum_ou_RDI"
-      },
-      "Sep": {
-        "NPK": null,
-        "micro": null,
-        "biostim": "humiques",
-        "phyto": null,
-        "irrigation": "reduction"
-      },
-      "Oct": {
-        "NPK": null,
-        "micro": null,
-        "biostim": null,
-        "phyto": "Cu_oeil_paon",
-        "irrigation": "reduction"
-      },
-      "Nov": {
-        "NPK": "N_reconstitution",
-        "micro": null,
-        "biostim": "humiques_granule",
-        "phyto": "Cu_oeil_paon",
-        "irrigation": "faible"
-      },
-      "Dec": {
-        "NPK": null,
-        "micro": null,
-        "biostim": "amines_post_recolte",
-        "phyto": null,
-        "irrigation": "tres_faible"
-      }
-    }
-  },
-  "couts_indicatifs_DH": {
-    "nitrate_calcium_kg": [
-      2.5,
-      3.5
-    ],
-    "MAP_kg": [
-      9,
-      12
-    ],
-    "sulfate_potasse_kg": [
-      8,
-      11
-    ],
-    "sulfate_magnesium_kg": [
-      3,
-      5
-    ],
-    "Fe_EDDHA_kg": [
-      45,
-      65
-    ],
-    "acides_humiques_L": [
-      35,
-      55
-    ],
-    "extraits_algues_L": [
-      60,
-      90
-    ],
-    "acides_amines_L": [
-      40,
-      70
-    ],
-    "cuivre_hydroxyde_kg": [
-      18,
-      25
-    ],
-    "deltamethrine_L": [
-      80,
-      120
-    ],
-    "huile_blanche_L": [
-      8,
-      12
-    ]
-  },
-  "gdd": {
-    "tbase_c": 7.5,
-    "plafond_c": 30,
-    "reference": "Moriondo et al. 2001",
-    "formule": "GDD_jour = max(0, (min(Tmax, 30) + max(Tmin, 7.5)) / 2 - 7.5)",
-    "activation_forcing": {
-      "condition_thermique": "Tmoy > 7.5",
-      "condition_satellite": "hausse_NIRv_ou_NIRvP >= 20pct_vs_passage_precedent",
-      "note": "Double condition obligatoire. Le GDD ne démarre pas à date fixe mais au point d'activation satellite + thermique confirmé."
-    },
-    "cumul_reset": "Remis à 0 quand dormance (Phase 0) se termine",
-    "seuils_chill_units_par_variete": {
-      "Picholine Marocaine": [
-        100,
-        200
-      ],
-      "Haouzia": [
-        100,
-        150
-      ],
-      "Menara": [
-        100,
-        150
-      ],
-      "Arbequina": [
-        200,
-        400
-      ],
-      "Arbosana": [
-        200,
-        350
-      ],
-      "Koroneiki": [
-        150,
-        300
-      ],
-      "Picual": [
-        400,
-        600
-      ]
-    },
-    "calcul_chill_unit": "SI 0 < T_horaire < 7.2 : CU += 1 | Estimation si horaire indisponible : CU = heures_nuit × (7.2 - Tmin) / 7.2 si Tmin < 7.2"
-  },
-  "kc_par_periode": [
-    {
-      "stade": "repos",
-      "mois": [
-        "Dec",
-        "Jan",
-        "Feb"
-      ],
-      "traditionnel": 0.4,
-      "intensif": 0.5,
-      "super_intensif": 0.55
-    },
-    {
-      "stade": "debourrement",
-      "mois": [
-        "Mar"
-      ],
-      "traditionnel": 0.45,
-      "intensif": 0.55,
-      "super_intensif": 0.6
-    },
-    {
-      "stade": "croissance",
-      "mois": [
-        "Apr"
-      ],
-      "traditionnel": 0.5,
-      "intensif": 0.6,
-      "super_intensif": 0.65
-    },
-    {
-      "stade": "floraison",
-      "mois": [
-        "May"
-      ],
-      "traditionnel": 0.55,
-      "intensif": 0.65,
-      "super_intensif": 0.7
-    },
-    {
-      "stade": "nouaison",
-      "mois": [
-        "Jun"
-      ],
-      "traditionnel": 0.6,
-      "intensif": 0.75,
-      "super_intensif": 0.8
-    },
-    {
-      "stade": "grossissement",
-      "mois": [
-        "Jul",
-        "Aug"
-      ],
-      "traditionnel": 0.65,
-      "intensif": 0.8,
-      "super_intensif": 0.9
-    },
-    {
-      "stade": "maturation",
-      "mois": [
-        "Sep",
-        "Oct"
-      ],
-      "traditionnel": 0.55,
-      "intensif": 0.65,
-      "super_intensif": 0.7
-    },
-    {
-      "stade": "post_recolte",
-      "mois": [
-        "Nov"
-      ],
-      "traditionnel": 0.45,
-      "intensif": 0.55,
-      "super_intensif": 0.6
-    }
-  ],
-  "formes_engrais": {
-    "N": {
-      "si_pH_sol_sup_7_2": [
-        "Nitrate de calcium 15.5-0-0",
-        "Ammonitrate 33.5%"
-      ],
-      "si_pH_sol_inf_7_2": [
-        "Uree 46%",
-        "Ammonitrate 33.5%"
-      ],
-      "si_option_C": [
-        "Nitrate de calcium 15.5-0-0"
-      ],
-      "interdit_si_pH_sup_7_2": [
-        "Uree 46%"
-      ],
-      "note": "Sur sol calcaire (pH > 7.2), urée = 50-60% pertes volatilisation. Formes nitrique ou ammoniacale stabilisée uniquement."
-    },
-    "P": {
-      "application_fond": [
-        "TSP 46%",
-        "MAP 12-61-0"
-      ],
-      "fertigation": [
-        "Acide phosphorique 75%"
-      ],
-      "si_option_C": {
-        "condition": "pH_eau > 7.5 ET HCO3 > 500 mg/L",
-        "produit": "Acide phosphorique (double effet: P + acidification)"
-      }
-    },
-    "K": {
-      "standard": [
-        "Sulfate de potasse SOP 0-0-50"
-      ],
-      "besoin_NK_simultane": [
-        "Nitrate de potasse NOP 13-0-46"
-      ],
-      "si_option_C": [
-        "SOP uniquement"
-      ],
-      "interdit_si_option_C": "KCl — apporte Cl toxique",
-      "note": "KCl interdit pour olivier (chlorures toxiques > 0.5%)"
-    },
-    "incompatibilite_cuve": "Ne JAMAIS mélanger Ca(NO3)2 avec phosphates ou sulfates dans la même cuve. Injecter séparément avec rinçage."
-  },
-  "microelements": {
-    "Fe": {
-      "condition_inclusion": "TOUJOURS si pH > 7.2 OU calcaire_actif > 5%",
-      "chelate_selection": [
-        {
-          "si": "calcaire_actif < 5%",
-          "forme": "Fe-EDTA ou Fe-DTPA"
-        },
-        {
-          "si": "calcaire_actif 5-10%",
-          "forme": "Fe-EDDHA 6%"
-        },
-        {
-          "si": "calcaire_actif > 10%",
-          "forme": "Fe-EDDHA 6% dose majorée ou fractionner en 3"
-        }
-      ],
-      "dose_option_A": {
-        "valeur": 10,
-        "unite": "kg/ha/an",
-        "mode": "fertigation"
-      },
-      "dose_option_B": {
-        "valeur": 1.5,
-        "unite": "kg/ha",
-        "mode": "foliaire"
-      },
-      "stades": [
-        "Mar",
-        "Jun"
-      ]
-    },
-    "Zn": {
-      "condition_inclusion": "TOUJOURS sur sol calcaire",
-      "forme": "Sulfate de zinc",
-      "dose_option_A": {
-        "valeur": 500,
-        "unite": "g/ha",
-        "mode": "foliaire"
-      },
-      "dose_option_B": {
-        "valeur": 750,
-        "unite": "g/ha",
-        "mode": "foliaire"
-      },
-      "stades": [
-        "Mar"
-      ]
-    },
-    "Mn": {
-      "condition_inclusion": "TOUJOURS sur sol calcaire",
-      "forme": "Sulfate de manganèse",
-      "dose_option_A": {
-        "valeur": 400,
-        "unite": "g/ha",
-        "mode": "foliaire"
-      },
-      "dose_option_B": {
-        "valeur": 600,
-        "unite": "g/ha",
-        "mode": "foliaire"
-      },
-      "stades": [
-        "Mar"
-      ]
-    },
-    "B": {
-      "condition_inclusion": "TOUJOURS — obligatoire floraison",
-      "forme": "Acide borique",
-      "dose_option_A": {
-        "valeur": 1,
-        "unite": "kg/ha",
-        "mode": "foliaire"
-      },
-      "dose_option_B": {
-        "valeur": 1.5,
-        "unite": "kg/ha",
-        "mode": "foliaire"
-      },
-      "stades": [
-        "May"
-      ],
-      "si_deficit_heures_froid": "+50% dose floraison"
-    },
-    "Mg": {
-      "condition_inclusion": "SI Mg_sol < 150 ppm OU analyse sol absente",
-      "forme": "Sulfate de magnésium",
-      "dose_option_A": {
-        "valeur": 5,
-        "unite": "kg/ha",
-        "mode": "foliaire"
-      },
-      "dose_option_B": {
-        "valeur": 7,
-        "unite": "kg/ha",
-        "mode": "foliaire"
-      },
-      "stades": [
-        "Apr",
-        "Jun"
-      ]
-    },
-    "note": "Fe, B, Zn, Mn et biostimulants de base sont des composantes OBLIGATOIRES sur sol calcaire — pas des options."
-  },
-  "rdi": {
-    "conditions_activation": [
-      "systeme IN ['intensif', 'super_intensif']",
-      "historique_satellite >= 24 mois",
-      "option_C == false"
-    ],
-    "periodes": [
-      {
-        "stade": "floraison_nouaison",
-        "bbch": "55-71",
-        "rdi_autorise": false,
-        "reduction_max_pct": 0,
-        "note": "JAMAIS de RDI floraison/nouaison — stade très sensible"
-      },
-      {
-        "stade": "grossissement_II",
-        "mois": "Aug",
-        "rdi_autorise": true,
-        "reduction_max_pct": 30
-      },
-      {
-        "stade": "maturation",
-        "mois": "Sep",
-        "rdi_autorise": true,
-        "reduction_max_pct": 40
-      },
-      {
-        "stade": "pre_recolte",
-        "mois": "Oct-Nov",
-        "rdi_autorise": true,
-        "reduction_max_pct": 50
-      }
-    ]
-  },
-  "co_occurrence": {
-    "_description": "Actions combinées quand deux alertes se déclenchent simultanément. Déterministe — l'IA applique cette matrice, elle ne décide pas.",
-    "regles": [
-      {
-        "alertes": [
-          "OLI-01",
-          "OLI-16"
-        ],
-        "lien": "Stress hydrique bloque absorption N même si N disponible.",
-        "action": "Traiter d'abord OLI-01 (irrigation). Attendre 7-10j. Réévaluer OLI-16."
-      },
-      {
-        "alertes": [
-          "OLI-02",
-          "OLI-16"
-        ],
-        "lien": "Idem OLI-01 + OLI-16.",
-        "action": "Traiter d'abord OLI-02 (irrigation). Attendre 7-10j. Réévaluer OLI-16."
-      },
-      {
-        "alertes": [
-          "OLI-01",
-          "OLI-07"
-        ],
-        "lien": "Canicule CAUSE le stress hydrique (ETP explose).",
-        "action": "Action combinée : +50% irrigation (prendre le max des deux). Algues fertigation."
-      },
-      {
-        "alertes": [
-          "OLI-02",
-          "OLI-07"
-        ],
-        "lien": "Canicule CAUSE stress hydrique.",
-        "action": "Action combinée : +50% irrigation. Algues fertigation."
-      },
-      {
-        "alertes": [
-          "OLI-01",
-          "OLI-15"
-        ],
-        "lien": "Chergui CAUSE stress hydrique aigu.",
-        "action": "Action combinée : +50% irrigation (Chergui prime). Suspendre tout foliaire."
-      },
-      {
-        "alertes": [
-          "OLI-04",
-          "OLI-07"
-        ],
-        "lien": "CONTRADICTOIRE — canicule tue le champignon œil de paon.",
-        "action": "Annuler OLI-04. Maintenir OLI-07 seul."
-      },
-      {
-        "alertes": [
-          "OLI-04",
-          "OLI-18"
-        ],
-        "lien": "Traitement Cu lessivé → œil de paon non traité.",
-        "action": "Renouveler Cu immédiatement (OLI-18 prime, même si délai < 7j)."
-      },
-      {
-        "alertes": [
-          "OLI-03",
-          "OLI-13"
-        ],
-        "lien": "Gel pendant floraison CAUSE floraison ratée.",
-        "action": "Appliquer OLI-03 (aminés récupération). OLI-13 s'applique ensuite (ajustement plan)."
-      },
-      {
-        "alertes": [
-          "OLI-09",
-          "OLI-13"
-        ],
-        "lien": "Année OFF + floraison ratée = double impact.",
-        "action": "Cumuler les deux ajustements. Rendement : -60 à -80%."
-      },
-      {
-        "alertes": [
-          "OLI-10",
-          "OLI-06"
-        ],
-        "lien": "Dépérissement peut ÊTRE la verticilliose.",
-        "action": "Appliquer OLI-06 (investigation). Si non confirmée, maintenir OLI-10."
-      },
-      {
-        "alertes": [
-          "OLI-16",
-          "OLI-12"
-        ],
-        "lien": "Sur-irrigation peut lessiver N → carence N induite.",
-        "action": "Traiter d'abord OLI-12 (réduire irrigation). Attendre 10j. Réévaluer OLI-16."
-      },
-      {
-        "alertes": [
-          "OLI-19",
-          "OLI-20"
-        ],
-        "lien": "Accumulation saline + toxicité Cl = même problème, stade avancé.",
-        "action": "Appliquer OLI-20 (urgence Cl). OLI-19 se résout en parallèle."
-      }
-    ],
-    "regle_defaut": "En cas de co-occurrence non listée : appliquer priorité standard 🔴 > 🟠 > 🟡 > 🟢. Traiter alertes séquentiellement, pas simultanément."
-  },
-  "protocole_phenologique": {
-    "_description": "Protocole phénologique Simo v2.0 — sous-module du calibrage uniquement. Exécuté sur l'historique satellite lors du calibrage pour : filtrer les données, classifier le signal, détecter les phases et produire des alertes de calibrage. NE PAS confondre avec les alertes OLI-XX qui sont pour le suivi opérationnel.",
-    "_scope": "CALIBRAGE UNIQUEMENT — pas de suivi opérationnel",
-    "_espece": "Olea europaea L.",
-    "filtrage": {
-      "_description": "Le filtrage se déroule en deux temps. L'IA ne refait pas le travail déjà fait.",
-      "fait_au_telechargement": {
-        "_quand": "Automatiquement à la création de la parcelle, avant tout calibrage",
-        "_qui": "Système de téléchargement satellite (pas l'IA calibrage)",
-        "masque_nuageux": "SCL pixel ∈ {4 (végétation), 5 (sol nu)} — dates avec 0 pixel valide exclues",
-        "seuil_pixels_minimum": "Dates avec < 5 pixels purs sur AOI exclues",
-        "buffer_negatif_m": 10,
-        "calcul_indices": "NDVI, EVI, NIRv, NIRvP, GCI, NDRE calculés et stockés en base de données",
-        "agregation": "MÉDIANE des pixels purs par date valide — valeur unique par indice par date stockée en DB",
-        "NIRvP_formule": "NIRv × PAR_jour (PAR = SSR × 0.48 / 1e6, source ERA5, unité MJ/m²)",
-        "resultat_en_db": "La DB contient la série temporelle propre : une ligne par date valide avec NDVI, NIRv, NDMI, NDRE, EVI, GCI, NIRvP"
-      },
-      "fait_au_calibrage": {
-        "_quand": "Quand l'utilisateur lance le calibrage — l'IA lit la série depuis la DB",
-        "_qui": "Moteur calibrage IA — opère sur les données déjà filtrées de la DB",
-        "plausibilite_temporelle": {
-          "condition_artefact": "|V(t) - V(t-1)| / V(t-1) > 0.30",
-          "confirmation": "Si dans les 10 jours suivants V revient à ±10% de V(t-1) → artefact confirmé",
-          "action": "Marquer la date comme suspecte et l'exclure de la série de calcul"
-        },
-        "filtre_annee_pluviometrique_extreme": {
-          "execution": "Annuelle — appliqué en fin de cycle sur l'historique complet",
-          "condition": "Précipitations annuelles > moyenne historique + 2σ",
-          "action": "Marquer le cycle comme hors_norme — exclure du calibrage adaptatif, conserver pour documentation"
-        },
-        "lissage": {
-          "execution": "Après accumulation de données suffisantes (série complète disponible)",
-          "methode_principale": "Whittaker lambda 10-100",
-          "methode_alternative": "Savitzky-Golay fenêtre 5-7 points polynôme ordre 2",
-          "applique_sur": "Chaque série temporelle d'indice après exclusion des artefacts"
-        }
-      }
-    },
-    "classification_signal": {
-      "_description": "Détermine si les indices sont interprétables pour l'olivier à cette date",
-      "mode_amorcage": {
-        "condition": "nombre_cycles_complets < 3",
-        "effet": {
-          "ELEVEE": "MODEREE",
-          "MODEREE": "FAIBLE",
-          "FAIBLE": "TRES_FAIBLE"
-        }
-      },
-      "references_adaptatives": {
-        "Ratio_NIRv_NDVI_ete": "médiane(NIRv/NDVI) sur juillet-septembre historique",
-        "NIRv_ete_moyen": "moyenne(NIRv) sur juillet-septembre historiques (hors hors_norme)",
-        "NIRv_ete_sigma": "écart-type(NIRv) sur juillet-septembre historiques",
-        "Tmoy_Q25": "percentile 25% de Tmoy sur historique annuel",
-        "NDVI_pic_habituel": "médiane des pics printaniers NDVI historiques",
-        "GCI_NIRvP_historique": "liste ratios GCI/NIRvP printaniers — pour quartiles diagnostic floraison"
-      },
-      "arbre_decision": [
-        {
-          "condition": "Tmax_30j_pct > 70 ET Precip_30j < 5",
-          "etat_signal": "SIGNAL_PUR",
-          "interpretation": "Indices absolus fiables. Fenêtre de calibrage principal."
-        },
-        {
-          "condition": "(NIRv/NDVI > Ratio_NIRv_NDVI_ete × 1.10) ET (NDVI > NDVI_pic_habituel)",
-          "etat_signal": "DOMINE_ADVENTICES",
-          "interpretation": "Indices absolus NON interprétables pour l'olivier. Diagnostic thermique uniquement."
-        },
-        {
-          "condition": "Precip_30j > 20 ET Tmoy > 10",
-          "etat_signal": "MIXTE_MODERE",
-          "interpretation": "Indices biaisés. Utiliser dérivées et ratios uniquement."
-        },
-        {
-          "condition": "defaut",
-          "etat_signal": "MIXTE_MODERE"
-        }
-      ],
-      "point_clarification": {
-        "condition": "etat_signal_precedent IN [MIXTE_MODERE, DOMINE_ADVENTICES] ET dNDVI_dt ≤ 0 ET Tmax_30j_pct > 70 ET Precip_30j < 5",
-        "action": "etat_signal = SIGNAL_PUR — les adventices ont séché"
-      }
-    },
-    "phases": {
-      "_note": "Machine à états sur l'historique. Chaque phase a conditions entrée, maintien et sortie. GDD calculé depuis referentiel.gdd (tbase 7.5°C, plafond 30°C).",
-      "calculs_preliminaires": {
-        "GDD_jour": "max(0, (min(Tmax, 30) + max(Tmin, 7.5)) / 2 - 7.5)",
-        "NIRvP_norm": "(NIRvP - NIRvP_min_hist) / (NIRvP_max_hist - NIRvP_min_hist)",
-        "dNDVI_dt": "(NDVI(t) - NDVI(t-1)) / jours_entre_acquisitions",
-        "dNIRv_dt": "(NIRv(t) - NIRv(t-1)) / jours_entre_acquisitions",
-        "Perte_NDVI": "(NDVI_pic_cycle - NDVI_actuel) / NDVI_pic_cycle",
-        "Perte_NIRv": "(NIRv_pic_cycle - NIRv_actuel) / NIRv_pic_cycle",
-        "Ratio_decouplage": "Perte_NIRv / max(Perte_NDVI, 0.01)"
-      },
-      "PHASE_0": {
-        "identifiant": "DORMANCE",
-        "nom": "Dormance hivernale",
-        "verification_prealable": "SI Tmoy_Q25 >= 15 → PAS_DE_DORMANCE_MARQUEE — passer directement à Phase 1",
-        "condition_entree": "Tmoy < Tmoy_Q25 ET NIRvP_norm < 0.15",
-        "condition_sortie": {
-          "vers": "PHASE_1",
-          "condition": "Tmoy > Tmoy_Q25 durablement (≥ 10 jours consécutifs)",
-          "action": "GDD_cumul = 0"
-        },
-        "confiance": "ELEVEE",
-        "surveillance": "Chill Units (CU) — lire referentiel.gdd.seuils_chill_units_par_variete"
-      },
-      "PHASE_1": {
-        "identifiant": "DEBOURREMENT",
-        "nom": "Débourrement",
-        "condition_maintien": "Tmoy > 15 pendant ≥ 15 jours sur les 20 derniers ET GDD_cumul > 50 ET Precip_30j > 20 OU irrigation ET dNIRv_dt > 0 soutenu",
-        "condition_sortie": {
-          "vers": "PHASE_2",
-          "condition": "GDD_cumul >= 350 ET Tmoy >= 18",
-          "action": "Phase = FLORAISON"
-        },
-        "discrimination_adventices": "ratio_derivees = dNDVI_dt / max(dNIRv_dt, 0.001) → si > 2.0 : adventices dominent",
-        "confiance": "MODEREE"
-      },
-      "PHASE_2": {
-        "identifiant": "FLORAISON",
-        "nom": "Floraison",
-        "condition_maintien": "GDD_cumul ∈ [350, 700] ET Tmoy ∈ [18, 25]",
-        "diagnostic_intensite": {
-          "priorite_1": "Input terrain si disponible (parcelle.terrain_disponible = oui)",
-          "priorite_2": "Alternance (floraison_N-1 forte → FAIBLE | faible → FORTE)",
-          "priorite_3": "Ratio GCI/NIRvP en quartiles (Q4 → floraison FAIBLE | Q1 → FORTE)"
-        },
-        "taille_rajeunissement": "Si annees_post_taille < 2 → intensite = ABSENTE",
-        "condition_sortie": {
-          "vers": "PHASE_3",
-          "condition": "GDD_cumul > 700 OU Tmoy > 25 durablement"
-        },
-        "confiance": "FAIBLE (spectral) / MODEREE (thermique + alternance)"
-      },
-      "PHASE_3": {
-        "identifiant": "NOUAISON",
-        "nom": "Nouaison / Clarification",
-        "condition_maintien": "GDD_cumul > seuil_floraison + 150 ET Clarification != ATTEINTE",
-        "clarification": "dNDVI_dt ≤ 0 ET Tmax_30j_pct > 70 ET Precip_30j < 5 → etat_signal = SIGNAL_PUR",
-        "condition_sortie": {
-          "vers": "PHASE_4",
-          "condition": "etat_signal = SIGNAL_PUR ET Tmax > 30 récurrent"
-        },
-        "confiance": "MODEREE"
-      },
-      "PHASE_4": {
-        "identifiant": "STRESS_ESTIVAL",
-        "nom": "Stress estival + Maturation",
-        "note": "FENÊTRE DE CALIBRAGE PRINCIPAL — indices absolus fiables ici",
-        "condition_maintien": "etat_signal = SIGNAL_PUR",
-        "diagnostic_severite": [
-          {
-            "condition": "NIRv_actuel > NIRv_ete_moyen - 0.5 × NIRv_ete_sigma",
-            "severite": "PAS_DE_STRESS"
-          },
-          {
-            "condition": "NIRv_actuel > NIRv_ete_moyen - 1.5 × NIRv_ete_sigma",
-            "severite": "STRESS_MODERE"
-          },
-          {
-            "condition": "defaut",
-            "severite": "STRESS_SEVERE"
-          }
-        ],
-        "diagnostic_type": [
-          {
-            "condition": "Ratio_decouplage > 1.3",
-            "type": "FONCTIONNEL"
-          },
-          {
-            "condition": "Ratio_decouplage > 0.9",
-            "type": "MIXTE"
-          },
-          {
-            "condition": "defaut",
-            "type": "STRUCTUREL"
-          }
-        ],
-        "diagnostic_tendance": {
-          "declin": "NIRv_ete_actuel < NIRv_ete_N-1 ET NIRv_ete_N-1 < NIRv_ete_N-2 → DÉCLIN 2 cycles consécutifs",
-          "recuperation": "NIRv_ete_actuel > NIRv_ete_N-1 → récupération en cours"
-        },
-        "condition_sortie_reprise": {
-          "vers": "PHASE_6",
-          "condition": "Precip_episode > 20 ET Tmoy < 25 ET dNIRv_dt > 0"
-        },
-        "condition_sortie_dormance": {
-          "vers": "PHASE_0",
-          "condition": "Tmoy < Tmoy_Q25 ET Tmoy_Q25 < 15 ET NIRvP_norm < 0.15 ET aucune_reprise",
-          "action": "GDD_cumul = 0"
-        },
-        "confiance": "ELEVEE (stress) / MODEREE (maturation)"
-      },
-      "PHASE_6": {
-        "identifiant": "REPRISE_AUTOMNALE",
-        "nom": "Reprise automnale",
-        "pre_condition": "Phase 4 doit avoir été détectée dans ce cycle — sinon passer directement à Phase 0",
-        "condition_maintien": "Precip_recentes > 20 ET Tmoy < 25 ET dNIRv_dt > 0",
-        "diagnostic_intensite": "Hausse_NIRv_pct = (NIRv_actuel - NIRv_plancher_ete) / NIRv_plancher_ete × 100 → < 10% = ABSENTE | < 25% = FAIBLE | < 50% = MODEREE | ≥ 50% = FORTE",
-        "condition_sortie": {
-          "vers": "PHASE_0",
-          "condition": "Tmoy < Tmoy_Q25 ET Tmoy_Q25 < 15 ET NIRvP_norm < 0.15",
-          "action": "GDD_cumul = 0"
-        },
-        "confiance": "MODEREE à ELEVEE"
-      }
-    },
-    "alertes_calibrage": {
-      "_description": "Alertes détectées PENDANT l'analyse historique du calibrage. Ce sont des constats sur l'historique de la parcelle. NE PAS confondre avec les alertes OLI-XX qui sont des alertes opérationnelles déclenchées pendant le suivi.",
-      "_difference_OLI_XX": "OLI-XX = alertes suivi opérationnel (temps réel). Ces alertes = constats historiques calibrage.",
-      "ALERTE_CAL_1": {
-        "nom": "Stress fonctionnel invisible dans l'historique",
-        "condition": "Phase STRESS_ESTIVAL ET Perte_NIRv > 0.40 ET Perte_NDVI < 0.20",
-        "message": "Stress fonctionnel masqué détecté : NIRv a chuté de {Perte_NIRv×100}% alors que NDVI ne baissait que de {Perte_NDVI×100}%. La parcelle souffrait mais la canopée paraissait intacte.",
-        "impact_calibrage": "Confirme stress hydrique chronique — renforce diagnostic explicatif",
-        "severite": "ATTENTION"
-      },
-      "ALERTE_CAL_2": {
-        "nom": "Canicule en fenêtre floraison/nouaison (historique)",
-        "condition": "GDD_cumul ∈ [350, 850] ET (Tmax > 40 pendant ≥ 1 jour OU Tmax > 35 pendant ≥ 2 jours consécutifs)",
-        "message_critique": "Canicule détectée pendant floraison/nouaison — risque chute fleurs et jeunes fruits cette saison-là",
-        "impact_calibrage": "Expliquer baisse rendement historique si détecté — exclure de la baseline si triple confirmation",
-        "severite": "CRITIQUE ou ATTENTION selon intensité"
-      },
-      "ALERTE_CAL_3": {
-        "nom": "Déclin progressif de la parcelle",
-        "condition": "NIRv_ete_actuel < NIRv_ete_N-1 ET NIRv_ete_N-1 < NIRv_ete_N-2",
-        "message": "Déclin détecté : le plancher estival du NIRv diminue pour la 2ème année consécutive.",
-        "impact_calibrage": "Coefficient_etat_parcelle → dégradé. Potentiel rendement ajusté à la baisse. Mentionner dans diagnostic explicatif.",
-        "severite": "ELEVEE"
-      },
-      "ALERTE_CAL_4": {
-        "nom": "Débourrement prématuré détecté (historique)",
-        "condition": "Phase DORMANCE ET Tmoy > 18 pendant > 5 jours ET hausse_NIRv > 10%",
-        "message": "Débourrement prématuré détecté cette saison — chilling possiblement insuffisant ({CU} CU accumulés).",
-        "impact_calibrage": "Expliquer floraison hétérogène ou précoce. Intégrer dans profil variétal.",
-        "severite": "ATTENTION"
-      },
-      "ALERTE_CAL_5": {
-        "nom": "Reprise automnale avortée (historique)",
-        "condition": "Phase STRESS_ESTIVAL ET mois ∈ [Nov, Dec] ET Precip_30j > 20 ET Hausse_NIRv_pct < 10",
-        "message": "Reprise automnale avortée malgré précipitations — réserves possiblement épuisées cette saison.",
-        "impact_calibrage": "Signal de stress chronique grave. Renforce coefficient dégradé.",
-        "severite": "ATTENTION"
-      },
-      "ALERTE_CAL_6": {
-        "nom": "Rupture spectrale détectée",
-        "condition": "NDVI_pic_actuel < NDVI_pic_N-1 × 0.60 ET Precip_annuelles dans la normale",
-        "message": "Rupture spectrale détectée cette saison — vérifier si un événement a eu lieu (taille, arrachage, maladie).",
-        "impact_calibrage": "Segmenter historique AVANT/APRÈS si rupture de régime confirmée. Sinon exclure si triple confirmation.",
-        "severite": "INFORMATION"
-      }
-    },
-    "sortie_par_saison": {
-      "_description": "Ce que le protocole produit pour CHAQUE saison dans l'historique",
-      "phase_detectee": "identifiant parmi DORMANCE/DEBOURREMENT/FLORAISON/NOUAISON/STRESS_ESTIVAL/REPRISE_AUTOMNALE",
-      "dates_transitions": "date_debut et date_fin de chaque phase",
-      "gdd_cumule_transitions": "GDD à chaque transition de phase",
-      "confiance_par_phase": "ELEVEE | MODEREE | FAIBLE | TRES_FAIBLE",
-      "etat_signal": "SIGNAL_PUR | MIXTE_MODERE | DOMINE_ADVENTICES",
-      "alertes_calibrage_detectees": "liste de ALERTE_CAL_X détectées cette saison",
-      "mode": "NORMAL | AMORCAGE"
-    }
-  }
-}$crop_ai_ref_olivier$::jsonb
-)
-ON CONFLICT (crop_type) DO UPDATE SET
-  version = EXCLUDED.version,
-  reference_data = EXCLUDED.reference_data,
-  updated_at = NOW();
-
-INSERT INTO public.crop_ai_references (crop_type, version, reference_data)
-VALUES (
-  'palmier_dattier',
-  '1.0',
-  $crop_ai_ref_palmier_dattier${
-  "metadata": {
-    "version": "1.0",
-    "date": "2026-02",
-    "culture": "palmier_dattier",
-    "nom_scientifique": "Phoenix dactylifera L.",
-    "famille": "Arecaceae",
-    "pays": "Maroc"
-  },
-  "caracteristiques_generales": {
-    "type": "monocotyledone_arborescente",
-    "origine": "Mesopotamie_Golfe_Persique",
-    "duree_vie_ans": [
-      100,
-      150
-    ],
-    "production_economique_ans": [
-      60,
-      80
-    ],
-    "hauteur_adulte_m": [
-      15,
-      25
-    ],
-    "systeme_racinaire": "fascicule_profond_6m",
-    "sexualite": "dioique",
-    "pollinisation": "manuelle_en_culture"
-  },
-  "exigences_climatiques": {
-    "temperature_optimale_C": [
-      32,
-      38
-    ],
-    "temperature_max_toleree_C": 50,
-    "temperature_min_vegetative_C": 7,
-    "gel_palmes_C": [
-      -5,
-      -7
-    ],
-    "gel_mortel_C": [
-      -10,
-      -12
-    ],
-    "GDD_floraison_recolte": 5000,
-    "HR_optimale_pct": 40,
-    "HR_critique_maturation_pct": 70
-  },
-  "tolerance_salinite": {
-    "CE_eau_sans_perte_dS_m": 4,
-    "CE_eau_perte_10pct_dS_m": 6,
-    "CE_eau_perte_25pct_dS_m": 10,
-    "CE_eau_perte_50pct_dS_m": 15,
-    "note": "PLUS TOLERANT salinité de toutes cultures fruitières - 8x plus que avocatier"
-  },
-  "varietes": [
-    {
-      "code": "MEJHOUL",
-      "nom": "Mejhoul",
-      "type": "molle",
-      "poids_g": [
-        15,
-        25
-      ],
-      "qualite": "premium_export",
-      "bayoud": "sensible",
-      "productivite_kg": [
-        80,
-        120
-      ]
-    },
-    {
-      "code": "BOUFEGGOUS",
-      "nom": "Boufeggous",
-      "type": "molle",
-      "poids_g": [
-        8,
-        12
-      ],
-      "qualite": "excellente",
-      "bayoud": "sensible",
-      "productivite_kg": [
-        60,
-        100
-      ]
-    },
-    {
-      "code": "JIHEL",
-      "nom": "Jihel",
-      "type": "semi_molle",
-      "poids_g": [
-        6,
-        10
-      ],
-      "qualite": "bonne",
-      "bayoud": "tolerante",
-      "productivite_kg": [
-        70,
-        100
-      ]
-    },
-    {
-      "code": "BOUSKRI",
-      "nom": "Bouskri",
-      "type": "semi_molle",
-      "poids_g": [
-        5,
-        8
-      ],
-      "qualite": "bonne",
-      "bayoud": "tolerante",
-      "productivite_kg": [
-        50,
-        80
-      ]
-    },
-    {
-      "code": "BOUSLIKHENE",
-      "nom": "Bouslikhène",
-      "type": "seche",
-      "poids_g": [
-        4,
-        7
-      ],
-      "qualite": "moyenne",
-      "bayoud": "resistante",
-      "productivite_kg": [
-        60,
-        90
-      ]
-    }
-  ],
-  "pollinisation": {
-    "type": "manuelle_obligatoire",
-    "ratio_males_pct": [
-      1,
-      2
-    ],
-    "fenetre_jours": [
-      1,
-      3
-    ],
-    "methode": "insertion_brins_ou_pulverisation",
-    "passages": [
-      2,
-      3
-    ],
-    "conservation_pollen": {
-      "frais": "1-2 jours",
-      "refrigere_4C": "2-4 semaines",
-      "congele": "6-12 mois"
-    }
-  },
-  "systemes": {
-    "traditionnel_oasien": {
-      "densite": [
-        80,
-        120
-      ],
-      "irrigation": "khettara_seguia",
-      "rendement_t_ha": [
-        3,
-        6
-      ]
-    },
-    "semi_intensif": {
-      "densite": [
-        120,
-        150
-      ],
-      "irrigation": "gravitaire_ameliore",
-      "rendement_t_ha": [
-        6,
-        10
-      ]
-    },
-    "intensif": {
-      "densite": [
-        150,
-        200
-      ],
-      "irrigation": "goutte_a_goutte",
-      "rendement_t_ha": [
-        10,
-        15
-      ]
-    }
-  },
-  "seuils_satellite": {
-    "traditionnel": {
-      "NDVI_optimal": [
-        0.35,
-        0.55
-      ],
-      "NDVI_alerte": 0.25,
-      "NDMI_optimal": [
-        0.05,
-        0.2
-      ]
-    },
-    "intensif": {
-      "NDVI_optimal": [
-        0.45,
-        0.65
-      ],
-      "NDVI_alerte": 0.35,
-      "NDMI_optimal": [
-        0.1,
-        0.28
-      ]
-    }
-  },
-  "nutrition": {
-    "export_kg_100kg_dattes": {
-      "N": [
-        0.8,
-        1.2
-      ],
-      "P2O5": [
-        0.2,
-        0.4
-      ],
-      "K2O": [
-        1.5,
-        2.5
-      ]
-    },
-    "besoins_intensif_Mejhoul_kg_arbre": {
-      "N": [
-        1.5,
-        2.5
-      ],
-      "P2O5": [
-        0.5,
-        0.8
-      ],
-      "K2O": [
-        2.5,
-        4.0
-      ]
-    },
-    "fractionnement": {
-      "jan_fev": {
-        "N": 20,
-        "P": 40,
-        "K": 10
-      },
-      "mar_avr": {
-        "N": 25,
-        "P": 30,
-        "K": 15
-      },
-      "mai_juin": {
-        "N": 25,
-        "P": 20,
-        "K": 25
-      },
-      "juil_aout": {
-        "N": 15,
-        "P": 10,
-        "K": 30
-      },
-      "sept_oct": {
-        "N": 5,
-        "P": 0,
-        "K": 15
-      },
-      "nov_dec": {
-        "N": 10,
-        "P": 0,
-        "K": 5
-      }
-    },
-    "note_K": "Potassium CRITIQUE pour qualité dattes"
-  },
-  "seuils_foliaires": {
-    "N_pct": {
-      "carence": 1.8,
-      "optimal": [
-        2.2,
-        2.8
-      ]
-    },
-    "P_pct": {
-      "carence": 0.1,
-      "optimal": [
-        0.14,
-        0.2
-      ]
-    },
-    "K_pct": {
-      "carence": 0.8,
-      "optimal": [
-        1.2,
-        1.8
-      ]
-    },
-    "Mg_pct": {
-      "carence": 0.15,
-      "optimal": [
-        0.25,
-        0.5
-      ]
-    }
-  },
-  "irrigation": {
-    "besoins_m3_arbre_an": {
-      "traditionnel": [
-        15,
-        25
-      ],
-      "intensif": [
-        12,
-        20
-      ]
-    },
-    "Kc": {
-      "hiver": 0.75,
-      "printemps": 0.8,
-      "ete": 1.0,
-      "automne": 0.85
-    },
-    "frequence_ete_gag": "3-4x/sem ou quotidien"
-  },
-  "phytosanitaire": {
-    "bayoud": {
-      "agent": "Fusarium oxysporum f. sp. albedinis",
-      "gravite": "MORTELLE_INCURABLE",
-      "traitement": "AUCUN",
-      "prevention": [
-        "plants_certifies",
-        "varietes_tolerantes",
-        "destruction_arbres_atteints"
-      ]
-    },
-    "autres_maladies": [
-      "Khamedj",
-      "Graphiola",
-      "Pourriture_coeur"
-    ],
-    "ravageurs": [
-      "Cochenille_blanche",
-      "Boufaroua",
-      "Pyrale_dattes",
-      "Charancon_rouge_MENACE"
-    ]
-  },
-  "stades_maturite": {
-    "Hababouk": "Fruit noué",
-    "Kimri": "Vert croissance",
-    "Khalal": "Jaune/rouge dur",
-    "Rutab": "Ramollissement partiel",
-    "Tamr": "Maturité complète"
-  },
-  "alertes": [
-    {
-      "code": "PAL-01",
-      "nom": "Stress hydrique",
-      "priorite": "urgente"
-    },
-    {
-      "code": "PAL-05",
-      "nom": "Pluie maturation",
-      "priorite": "urgente"
-    },
-    {
-      "code": "PAL-08",
-      "nom": "Suspicion Bayoud",
-      "priorite": "critique"
-    },
-    {
-      "code": "PAL-09",
-      "nom": "Bayoud confirmé",
-      "priorite": "critique"
-    },
-    {
-      "code": "PAL-13",
-      "nom": "Pollinisation requise",
-      "priorite": "urgente"
-    },
-    {
-      "code": "PAL-16",
-      "nom": "Maturité récolte",
-      "priorite": "info"
-    }
-  ],
-  "modele_predictif": {
-    "precision_intensif": {
-      "R2": [
-        0.5,
-        0.65
-      ],
-      "MAE_pct": [
-        25,
-        35
-      ]
-    },
-    "limite_majeure": "Pluie maturation imprévisible - peut détruire 30-80% récolte"
-  },
-  "plan_annuel_Mejhoul": {
-    "jan": {
-      "NPK": "N0.3+P0.3+K0.3",
-      "travaux": "Taille"
-    },
-    "fev": {
-      "NPK": "N0.4+P0.2+K0.2",
-      "phyto": "Cuivre spathes"
-    },
-    "mar": {
-      "NPK": "N0.4+K0.4",
-      "travaux": "POLLINISATION"
-    },
-    "avr": {
-      "NPK": "N0.3+P0.1+K0.5",
-      "travaux": "Attachage"
-    },
-    "mai": {
-      "NPK": "N0.3+K0.6",
-      "travaux": "Éclaircissage"
-    },
-    "juin": {
-      "NPK": "K0.8",
-      "phyto": "Soufre Boufaroua"
-    },
-    "juil": {
-      "NPK": "K0.8",
-      "travaux": "Protection régimes"
-    },
-    "aout": {
-      "NPK": "K0.5",
-      "travaux": "Surveillance"
-    },
-    "sept": {
-      "NPK": "K0.3",
-      "travaux": "Début récolte"
-    },
-    "oct": {
-      "travaux": "Récolte principale"
-    },
-    "nov": {
-      "NPK": "N0.2",
-      "phyto": "Huile cochenilles"
-    },
-    "dec": {
-      "amendement": "Fumier 40kg",
-      "travaux": "Entretien"
-    }
-  }
-}$crop_ai_ref_palmier_dattier$::jsonb
-)
-ON CONFLICT (crop_type) DO UPDATE SET
-  version = EXCLUDED.version,
-  reference_data = EXCLUDED.reference_data,
-  updated_at = NOW();
 
 -- Evenements Parcelle RLS
 CREATE POLICY "Users can view events in their organization" ON evenements_parcelle
@@ -14543,48 +7545,69 @@ ON CONFLICT (name) DO UPDATE SET
   is_active = EXCLUDED.is_active,
   updated_at = NOW();
 
--- Seed permissions
-INSERT INTO permissions (name, display_name, resource, action, description) VALUES
-  -- User management permissions
-  ('users.read', 'View Users', 'users', 'read', 'View users in the organization'),
-  ('users.create', 'Create Users', 'users', 'create', 'Invite new users to the organization'),
-  ('users.update', 'Update Users', 'users', 'update', 'Update user roles and information'),
-  ('users.delete', 'Delete Users', 'users', 'delete', 'Remove users from the organization'),
-  ('users.manage', 'Manage Users', 'users', 'manage', 'Full user management access'),
+-- Seed permissions: one row per (resource × action). Resources mirror the
+-- RESOURCE_SUBJECT_MAP keys in agritech-api/src/modules/casl/casl-ability.factory.ts
+-- so every CASL Subject is reachable from a custom role.
+DO $perms$
+DECLARE
+-- BEGIN GENERATED PERMISSION RESOURCES (do not edit by hand)
+  -- 98 resources × 5 actions = 490 permission rows
+  v_resources TEXT[] := ARRAY[
+    'users','organizations','roles','subscriptions',
+    'farms','parcels','warehouses','infrastructure',
+    'structures','trees','farm_hierarchy','invoices',
+    'payments','journal_entries','accounts','customers',
+    'suppliers','financial_reports','cost_centers','taxes',
+    'bank_accounts','periods','accounting_reports','account_mappings',
+    'workers','employees','day_laborers','tasks',
+    'piece_works','work_units','harvests','crop_cycles',
+    'campaigns','fiscal_years','product_applications','analyses',
+    'soil_analyses','plant_analyses','water_analyses','products',
+    'stock','stock_entries','stock_items','biological_assets',
+    'sales_orders','purchase_orders','quotes','deliveries',
+    'reception_batches','quality_controls','lab_services','certifications',
+    'compliance_checks','reports','satellite_analyses','satellite_reports',
+    'production_intelligence','dashboard','analytics','sensors',
+    'costs','revenues','inventory','utilities',
+    'equipment','agronomy_sources','chat','settings',
+    'api','hr_compliance','leave_types','leave_allocations',
+    'leave_applications','holidays','salary_structures','salary_slips',
+    'payroll_runs','worker_documents','shifts','shift_assignments',
+    'shift_requests','onboarding','separations','expense_claims',
+    'expense_categories','job_openings','job_applicants','interviews',
+    'appraisal_cycles','appraisals','performance_feedback','seasonal_campaigns',
+    'worker_qualifications','safety_incidents','worker_transport','grievances',
+    'training_programs','training_enrollments'
+  ];
+-- END GENERATED PERMISSION RESOURCES
+  v_actions TEXT[] := ARRAY['read','create','update','delete','manage'];
+  v_action_labels JSONB := '{"read":"View","create":"Create","update":"Update","delete":"Delete","manage":"Manage"}'::jsonb;
+  v_resource TEXT;
+  v_action TEXT;
+  v_display_resource TEXT;
+BEGIN
+  FOREACH v_resource IN ARRAY v_resources LOOP
+    -- "stock_entries" → "Stock Entries"
+    v_display_resource := initcap(replace(v_resource, '_', ' '));
 
-  -- Farm management permissions
-  ('farms.read', 'View Farms', 'farms', 'read', 'View farm information'),
-  ('farms.create', 'Create Farms', 'farms', 'create', 'Create new farms'),
-  ('farms.update', 'Update Farms', 'farms', 'update', 'Update farm information'),
-  ('farms.delete', 'Delete Farms', 'farms', 'delete', 'Delete farms'),
-  ('farms.manage', 'Manage Farms', 'farms', 'manage', 'Full farm management access'),
-
-  -- Parcel management permissions
-  ('parcels.read', 'View Parcels', 'parcels', 'read', 'View parcel information'),
-  ('parcels.create', 'Create Parcels', 'parcels', 'create', 'Create new parcels'),
-  ('parcels.update', 'Update Parcels', 'parcels', 'update', 'Update parcel information'),
-  ('parcels.delete', 'Delete Parcels', 'parcels', 'delete', 'Delete parcels'),
-  ('parcels.manage', 'Manage Parcels', 'parcels', 'manage', 'Full parcel management access'),
-
-  -- Stock management permissions
-  ('stock.read', 'View Stock', 'stock', 'read', 'View inventory and stock'),
-  ('stock.create', 'Create Stock Entries', 'stock', 'create', 'Create new stock entries'),
-  ('stock.update', 'Update Stock', 'stock', 'update', 'Update stock information'),
-  ('stock.delete', 'Delete Stock', 'stock', 'delete', 'Delete stock entries'),
-  ('stock.manage', 'Manage Stock', 'stock', 'manage', 'Full stock management access'),
-
-  -- Organization permissions
-  ('organizations.read', 'View Organization', 'organizations', 'read', 'View organization information'),
-  ('organizations.update', 'Update Organization', 'organizations', 'update', 'Update organization settings'),
-  ('organizations.manage', 'Manage Organization', 'organizations', 'manage', 'Full organization management'),
-
-  -- Report permissions
-  ('reports.read', 'View Reports', 'reports', 'read', 'View and generate reports')
-ON CONFLICT (name) DO UPDATE SET
-  display_name = EXCLUDED.display_name,
-  resource = EXCLUDED.resource,
-  action = EXCLUDED.action,
-  description = EXCLUDED.description;
+    FOREACH v_action IN ARRAY v_actions LOOP
+      INSERT INTO permissions (name, display_name, resource, action, description)
+      VALUES (
+        v_resource || '.' || v_action,
+        (v_action_labels->>v_action) || ' ' || v_display_resource,
+        v_resource,
+        v_action,
+        (v_action_labels->>v_action) || ' access for ' || v_display_resource
+      )
+      ON CONFLICT (name) DO UPDATE SET
+        display_name = EXCLUDED.display_name,
+        resource = EXCLUDED.resource,
+        action = EXCLUDED.action,
+        description = EXCLUDED.description;
+    END LOOP;
+  END LOOP;
+END
+$perms$;
 
 -- Seed role_permissions mapping
 -- This maps each role to their permissions
@@ -15264,6 +8287,57 @@ CREATE POLICY "org_delete_task_equipment" ON task_equipment
     EXISTS (
       SELECT 1 FROM tasks
       WHERE tasks.id = task_equipment.task_id
+        AND is_organization_member(tasks.organization_id)
+    )
+  );
+
+-- Task Watchers policies (any org member can watch/unwatch, must be themselves)
+DROP POLICY IF EXISTS "org_read_task_watchers" ON task_watchers;
+CREATE POLICY "org_read_task_watchers" ON task_watchers
+  FOR SELECT USING (is_organization_member(organization_id));
+
+DROP POLICY IF EXISTS "org_write_task_watchers" ON task_watchers;
+CREATE POLICY "org_write_task_watchers" ON task_watchers
+  FOR INSERT WITH CHECK (
+    auth.uid() IS NOT NULL AND
+    user_id = auth.uid() AND
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_delete_task_watchers" ON task_watchers;
+CREATE POLICY "org_delete_task_watchers" ON task_watchers
+  FOR DELETE USING (
+    user_id = auth.uid() AND is_organization_member(organization_id)
+  );
+
+-- Task Mentions policies (readable by org members; inserted by the comment author)
+DROP POLICY IF EXISTS "org_read_task_mentions" ON task_mentions;
+CREATE POLICY "org_read_task_mentions" ON task_mentions
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM tasks
+      WHERE tasks.id = task_mentions.task_id
+        AND is_organization_member(tasks.organization_id)
+    )
+  );
+
+DROP POLICY IF EXISTS "org_write_task_mentions" ON task_mentions;
+CREATE POLICY "org_write_task_mentions" ON task_mentions
+  FOR INSERT WITH CHECK (
+    auth.uid() IS NOT NULL AND
+    EXISTS (
+      SELECT 1 FROM tasks
+      WHERE tasks.id = task_mentions.task_id
+        AND is_organization_member(tasks.organization_id)
+    )
+  );
+
+DROP POLICY IF EXISTS "org_delete_task_mentions" ON task_mentions;
+CREATE POLICY "org_delete_task_mentions" ON task_mentions
+  FOR DELETE USING (
+    EXISTS (
+      SELECT 1 FROM tasks
+      WHERE tasks.id = task_mentions.task_id
         AND is_organization_member(tasks.organization_id)
     )
   );
@@ -16256,6 +9330,26 @@ CREATE POLICY "org_delete_structures" ON structures
     is_organization_member(organization_id)
   );
 
+-- Equipment Assets Policies
+DROP POLICY IF EXISTS "org_read_equipment_assets" ON equipment_assets;
+CREATE POLICY "org_read_equipment_assets" ON equipment_assets FOR SELECT USING (is_organization_member(organization_id));
+DROP POLICY IF EXISTS "org_write_equipment_assets" ON equipment_assets;
+CREATE POLICY "org_write_equipment_assets" ON equipment_assets FOR INSERT WITH CHECK (auth.uid() IS NOT NULL AND is_organization_member(organization_id));
+DROP POLICY IF EXISTS "org_update_equipment_assets" ON equipment_assets;
+CREATE POLICY "org_update_equipment_assets" ON equipment_assets FOR UPDATE USING (is_organization_member(organization_id));
+DROP POLICY IF EXISTS "org_delete_equipment_assets" ON equipment_assets;
+CREATE POLICY "org_delete_equipment_assets" ON equipment_assets FOR DELETE USING (is_organization_member(organization_id));
+
+-- Equipment Maintenance Policies
+DROP POLICY IF EXISTS "org_read_equipment_maintenance" ON equipment_maintenance;
+CREATE POLICY "org_read_equipment_maintenance" ON equipment_maintenance FOR SELECT USING (is_organization_member(organization_id));
+DROP POLICY IF EXISTS "org_write_equipment_maintenance" ON equipment_maintenance;
+CREATE POLICY "org_write_equipment_maintenance" ON equipment_maintenance FOR INSERT WITH CHECK (auth.uid() IS NOT NULL AND is_organization_member(organization_id));
+DROP POLICY IF EXISTS "org_update_equipment_maintenance" ON equipment_maintenance;
+CREATE POLICY "org_update_equipment_maintenance" ON equipment_maintenance FOR UPDATE USING (is_organization_member(organization_id));
+DROP POLICY IF EXISTS "org_delete_equipment_maintenance" ON equipment_maintenance;
+CREATE POLICY "org_delete_equipment_maintenance" ON equipment_maintenance FOR DELETE USING (is_organization_member(organization_id));
+
 -- Utilities Policies (using organization_id directly)
 DROP POLICY IF EXISTS "org_read_utilities" ON utilities;
 CREATE POLICY "org_read_utilities" ON utilities
@@ -16286,6 +9380,52 @@ CREATE POLICY "org_delete_utilities" ON utilities
 -- ROLES & PERMISSIONS TABLES
 -- =====================================================
 
+-- ============================================================================
+-- INTERNAL ADMIN TABLE & FUNCTION
+-- (declared early so role/permission RLS policies below can reference is_internal_admin())
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS internal_admins (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  created_by UUID REFERENCES auth.users(id),
+  notes TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_internal_admins_user ON internal_admins(user_id);
+
+COMMENT ON TABLE internal_admins IS 'Platform-level administrators with access to admin app and reference data management';
+
+ALTER TABLE internal_admins ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "service_manage_internal_admins" ON internal_admins;
+CREATE POLICY "service_manage_internal_admins" ON internal_admins
+  FOR ALL USING (
+    current_setting('role', true) = 'service_role'
+  );
+
+DROP POLICY IF EXISTS "users_read_own_internal_admin" ON internal_admins;
+CREATE POLICY "users_read_own_internal_admin" ON internal_admins
+  FOR SELECT USING (user_id = auth.uid());
+
+CREATE OR REPLACE FUNCTION is_internal_admin()
+RETURNS BOOLEAN
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM internal_admins
+    WHERE user_id = auth.uid()
+      AND is_active = true
+  );
+$$;
+
+COMMENT ON FUNCTION is_internal_admin() IS 'Check if the current authenticated user is an internal platform admin';
+
 -- Roles Policies (no organization_id - allow all authenticated users to read)
 DROP POLICY IF EXISTS "org_read_roles" ON roles;
 CREATE POLICY "org_read_roles" ON roles
@@ -16293,15 +9433,24 @@ CREATE POLICY "org_read_roles" ON roles
 
 DROP POLICY IF EXISTS "org_write_roles" ON roles;
 CREATE POLICY "org_write_roles" ON roles
-  FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+  FOR INSERT WITH CHECK (
+    current_setting('role', true) = 'service_role'
+    OR is_internal_admin()
+  );
 
 DROP POLICY IF EXISTS "org_update_roles" ON roles;
 CREATE POLICY "org_update_roles" ON roles
-  FOR UPDATE USING (auth.uid() IS NOT NULL);
+  FOR UPDATE USING (
+    current_setting('role', true) = 'service_role'
+    OR is_internal_admin()
+  );
 
 DROP POLICY IF EXISTS "org_delete_roles" ON roles;
 CREATE POLICY "org_delete_roles" ON roles
-  FOR DELETE USING (auth.uid() IS NOT NULL);
+  FOR DELETE USING (
+    current_setting('role', true) = 'service_role'
+    OR is_internal_admin()
+  );
 
 -- Permissions Policies (no organization_id - allow all authenticated users to read)
 DROP POLICY IF EXISTS "org_read_permissions" ON permissions;
@@ -16310,15 +9459,24 @@ CREATE POLICY "org_read_permissions" ON permissions
 
 DROP POLICY IF EXISTS "org_write_permissions" ON permissions;
 CREATE POLICY "org_write_permissions" ON permissions
-  FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+  FOR INSERT WITH CHECK (
+    current_setting('role', true) = 'service_role'
+    OR is_internal_admin()
+  );
 
 DROP POLICY IF EXISTS "org_update_permissions" ON permissions;
 CREATE POLICY "org_update_permissions" ON permissions
-  FOR UPDATE USING (auth.uid() IS NOT NULL);
+  FOR UPDATE USING (
+    current_setting('role', true) = 'service_role'
+    OR is_internal_admin()
+  );
 
 DROP POLICY IF EXISTS "org_delete_permissions" ON permissions;
 CREATE POLICY "org_delete_permissions" ON permissions
-  FOR DELETE USING (auth.uid() IS NOT NULL);
+  FOR DELETE USING (
+    current_setting('role', true) = 'service_role'
+    OR is_internal_admin()
+  );
 
 -- Role Permissions Policies (check through roles relationship)
 DROP POLICY IF EXISTS "org_read_role_permissions" ON role_permissions;
@@ -16327,15 +9485,24 @@ CREATE POLICY "org_read_role_permissions" ON role_permissions
 
 DROP POLICY IF EXISTS "org_write_role_permissions" ON role_permissions;
 CREATE POLICY "org_write_role_permissions" ON role_permissions
-  FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+  FOR INSERT WITH CHECK (
+    current_setting('role', true) = 'service_role'
+    OR is_internal_admin()
+  );
 
 DROP POLICY IF EXISTS "org_update_role_permissions" ON role_permissions;
 CREATE POLICY "org_update_role_permissions" ON role_permissions
-  FOR UPDATE USING (auth.uid() IS NOT NULL);
+  FOR UPDATE USING (
+    current_setting('role', true) = 'service_role'
+    OR is_internal_admin()
+  );
 
 DROP POLICY IF EXISTS "org_delete_role_permissions" ON role_permissions;
 CREATE POLICY "org_delete_role_permissions" ON role_permissions
-  FOR DELETE USING (auth.uid() IS NOT NULL);
+  FOR DELETE USING (
+    current_setting('role', true) = 'service_role'
+    OR is_internal_admin()
+  );
 
 -- Role Templates Policies
 DROP POLICY IF EXISTS "org_read_role_templates" ON role_templates;
@@ -16887,53 +10054,10 @@ ALTER TABLE admin_job_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE saas_metrics_daily ENABLE ROW LEVEL SECURITY;
 
 -- ============================================================================
--- ADMIN APP: INTERNAL ADMIN ROLE & RLS POLICIES
+-- ADMIN APP: INTERNAL ADMIN REFERENCE DATA RLS POLICIES
 -- ============================================================================
--- Purpose: Enable platform-wide admin access for reference data management and analytics
-
--- Internal admins table (platform-level, not organization-bound)
-CREATE TABLE IF NOT EXISTS internal_admins (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE,
-  is_active BOOLEAN DEFAULT true,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  created_by UUID REFERENCES auth.users(id),
-  notes TEXT
-);
-
-CREATE INDEX IF NOT EXISTS idx_internal_admins_user ON internal_admins(user_id);
-
-COMMENT ON TABLE internal_admins IS 'Platform-level administrators with access to admin app and reference data management';
-
--- Enable RLS on internal_admins
-ALTER TABLE internal_admins ENABLE ROW LEVEL SECURITY;
-
--- Only service_role can manage internal_admins
-CREATE POLICY "service_manage_internal_admins" ON internal_admins
-  FOR ALL USING (
-    current_setting('role', true) = 'service_role'
-  );
-
--- Allow users to check if they are internal admins (for auth check)
-CREATE POLICY "users_read_own_internal_admin" ON internal_admins
-  FOR SELECT USING (user_id = auth.uid());
-
--- Function to check if current user is internal_admin
-CREATE OR REPLACE FUNCTION is_internal_admin()
-RETURNS BOOLEAN
-LANGUAGE sql
-SECURITY DEFINER
-STABLE
-SET search_path = public
-AS $$
-  SELECT EXISTS (
-    SELECT 1 FROM internal_admins
-    WHERE user_id = auth.uid()
-      AND is_active = true
-  );
-$$;
-
-COMMENT ON FUNCTION is_internal_admin() IS 'Check if the current authenticated user is an internal platform admin';
+-- (internal_admins table + is_internal_admin() function are declared earlier,
+--  alongside the roles/permissions RLS that depends on them.)
 
 -- RLS Policies for reference data tables
 
@@ -17778,113 +10902,49 @@ COMMENT ON TABLE marketplace_reviews IS 'Reviews between buyers and sellers afte
 -- STORAGE BUCKETS
 -- =====================================================
 
--- Ensure storage.buckets has the "public" column (required for older Supabase setups)
-DO $$
+-- Guarded: skip entire storage setup if storage schema is absent (non-Supabase Postgres)
+DO $storage_setup$
 BEGIN
+  IF to_regclass('storage.buckets') IS NULL OR to_regclass('storage.objects') IS NULL THEN
+    RAISE NOTICE 'Skipping storage setup — storage schema not found';
+    RETURN;
+  END IF;
+
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.columns
     WHERE table_schema = 'storage' AND table_name = 'buckets' AND column_name = 'public'
   ) THEN
-    ALTER TABLE storage.buckets ADD COLUMN "public" boolean DEFAULT false;
+    EXECUTE 'ALTER TABLE storage.buckets ADD COLUMN "public" boolean DEFAULT false';
   END IF;
-END $$;
 
--- Create products storage bucket for marketplace images
-INSERT INTO storage.buckets (id, name, "public")
-VALUES ('products', 'products', true)
-ON CONFLICT (id) DO UPDATE SET "public" = true;
+  EXECUTE $q$ INSERT INTO storage.buckets (id, name, "public") VALUES ('products', 'products', true) ON CONFLICT (id) DO UPDATE SET "public" = true $q$;
 
--- Drop existing policies if they exist (cleanup for idempotency)
-DROP POLICY IF EXISTS "Public read access for products" ON storage.objects;
-DROP POLICY IF EXISTS "Authenticated upload for products" ON storage.objects;
-DROP POLICY IF EXISTS "Users can update own product images" ON storage.objects;
-DROP POLICY IF EXISTS "Users can delete own product images" ON storage.objects;
+  EXECUTE 'DROP POLICY IF EXISTS "Public read access for products" ON storage.objects';
+  EXECUTE 'DROP POLICY IF EXISTS "Authenticated upload for products" ON storage.objects';
+  EXECUTE 'DROP POLICY IF EXISTS "Users can update own product images" ON storage.objects';
+  EXECUTE 'DROP POLICY IF EXISTS "Users can delete own product images" ON storage.objects';
 
--- Policy: Public read access for products bucket
-CREATE POLICY "Public read access for products"
-ON storage.objects FOR SELECT
-USING (bucket_id = 'products');
+  EXECUTE $q$ CREATE POLICY "Public read access for products" ON storage.objects FOR SELECT USING (bucket_id = 'products') $q$;
+  EXECUTE $q$ CREATE POLICY "Authenticated upload for products" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'products' AND auth.role() = 'authenticated') $q$;
+  EXECUTE $q$ CREATE POLICY "Users can update own product images" ON storage.objects FOR UPDATE USING (bucket_id = 'products' AND auth.uid()::text = (storage.foldername(name))[1]) WITH CHECK (bucket_id = 'products' AND auth.uid()::text = (storage.foldername(name))[1]) $q$;
+  EXECUTE $q$ CREATE POLICY "Users can delete own product images" ON storage.objects FOR DELETE USING (bucket_id = 'products' AND auth.uid()::text = (storage.foldername(name))[1]) $q$;
 
--- Policy: Authenticated users can upload to products bucket
-CREATE POLICY "Authenticated upload for products"
-ON storage.objects FOR INSERT
-WITH CHECK (bucket_id = 'products' AND auth.role() = 'authenticated');
+  EXECUTE $q$ INSERT INTO storage.buckets (id, name, "public") VALUES ('avatars', 'avatars', true) ON CONFLICT (id) DO UPDATE SET "public" = true $q$;
 
--- Policy: Users can update their own product images
-CREATE POLICY "Users can update own product images"
-ON storage.objects FOR UPDATE
-USING (
-  bucket_id = 'products'
-  AND auth.uid()::text = (storage.foldername(name))[1]
-)
-WITH CHECK (
-  bucket_id = 'products'
-  AND auth.uid()::text = (storage.foldername(name))[1]
-);
+  EXECUTE 'DROP POLICY IF EXISTS "Public read access for avatars" ON storage.objects';
+  EXECUTE 'DROP POLICY IF EXISTS "Authenticated upload for avatars" ON storage.objects';
+  EXECUTE 'DROP POLICY IF EXISTS "Users can update own avatars" ON storage.objects';
+  EXECUTE 'DROP POLICY IF EXISTS "Users can delete own avatars" ON storage.objects';
 
--- Policy: Users can delete their own product images
-CREATE POLICY "Users can delete own product images"
-ON storage.objects FOR DELETE
-USING (
-  bucket_id = 'products'
-  AND auth.uid()::text = (storage.foldername(name))[1]
-);
+  EXECUTE $q$ CREATE POLICY "Public read access for avatars" ON storage.objects FOR SELECT TO public USING (bucket_id = 'avatars') $q$;
+  EXECUTE $q$ CREATE POLICY "Authenticated upload for avatars" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'avatars' AND auth.uid()::text = (storage.foldername(name))[1]) $q$;
+  EXECUTE $q$ CREATE POLICY "Users can update own avatars" ON storage.objects FOR UPDATE TO authenticated USING (bucket_id = 'avatars' AND auth.uid()::text = (storage.foldername(name))[1]) WITH CHECK (bucket_id = 'avatars' AND auth.uid()::text = (storage.foldername(name))[1]) $q$;
+  EXECUTE $q$ CREATE POLICY "Users can delete own avatars" ON storage.objects FOR DELETE TO authenticated USING (bucket_id = 'avatars' AND auth.uid()::text = (storage.foldername(name))[1]) $q$;
 
--- =====================================================
--- AVATARS STORAGE BUCKET
--- =====================================================
-
--- Create avatars storage bucket for user profile images
-INSERT INTO storage.buckets (id, name, "public")
-VALUES ('avatars', 'avatars', true)
-ON CONFLICT (id) DO UPDATE SET "public" = true;
-
--- Drop existing policies if they exist (cleanup for idempotency)
-DROP POLICY IF EXISTS "Public read access for avatars" ON storage.objects;
-DROP POLICY IF EXISTS "Authenticated upload for avatars" ON storage.objects;
-DROP POLICY IF EXISTS "Users can update own avatars" ON storage.objects;
-DROP POLICY IF EXISTS "Users can delete own avatars" ON storage.objects;
-
--- Policy: Public read access for avatars bucket
-CREATE POLICY "Public read access for avatars"
-ON storage.objects FOR SELECT
-TO public
-USING (bucket_id = 'avatars');
-
--- Policy: Authenticated users can upload to avatars bucket
-CREATE POLICY "Authenticated upload for avatars"
-ON storage.objects FOR INSERT
-TO authenticated
-WITH CHECK (
-  bucket_id = 'avatars'
-  AND auth.uid()::text = (storage.foldername(name))[1]
-);
-
--- Policy: Users can update their own avatars
-CREATE POLICY "Users can update own avatars"
-ON storage.objects FOR UPDATE
-TO authenticated
-USING (
-  bucket_id = 'avatars'
-  AND auth.uid()::text = (storage.foldername(name))[1]
-)
-WITH CHECK (
-  bucket_id = 'avatars'
-  AND auth.uid()::text = (storage.foldername(name))[1]
-);
-
--- Policy: Users can delete their own avatars
-CREATE POLICY "Users can delete own avatars"
-ON storage.objects FOR DELETE
-TO authenticated
-USING (
-  bucket_id = 'avatars'
-  AND auth.uid()::text = (storage.foldername(name))[1]
-);
-
--- Grant necessary permissions for storage
-GRANT ALL ON storage.objects TO authenticated;
-GRANT SELECT ON storage.objects TO anon;
+  EXECUTE 'GRANT ALL ON storage.objects TO authenticated';
+  EXECUTE 'GRANT SELECT ON storage.objects TO anon';
+END
+$storage_setup$;
 
 -- =====================================================
 -- FILE TRACKING SYSTEM
@@ -20048,6 +13108,20 @@ BEGIN
     ALTER TABLE farms ADD CONSTRAINT chk_farms_size_positive
       CHECK (size IS NULL OR size > 0);
   END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'chk_warehouse_stock_levels_qty_non_negative'
+  ) THEN
+    ALTER TABLE warehouse_stock_levels ADD CONSTRAINT chk_warehouse_stock_levels_qty_non_negative
+      CHECK (quantity >= 0);
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'chk_warehouse_stock_levels_reserved_non_negative'
+  ) THEN
+    ALTER TABLE warehouse_stock_levels ADD CONSTRAINT chk_warehouse_stock_levels_reserved_non_negative
+      CHECK (reserved_quantity >= 0);
+  END IF;
 END $$;
 
 -- =====================================================
@@ -21139,66 +14213,33 @@ USING (
 -- Note: This migration assumes the storage.products table exists
 -- If using Supabase storage, the bucket configuration should be done via dashboard or API
 
--- Create storage bucket if it doesn't exist (for local development)
--- In production, this should be configured via Supabase dashboard
-INSERT INTO storage.buckets (id, name, "public")
-VALUES ('products', 'products', false)
-ON CONFLICT (id) DO UPDATE SET "public" = false;
+-- Guarded: skip if storage schema absent
+DO $storage_products$
+BEGIN
+  IF to_regclass('storage.buckets') IS NULL OR to_regclass('storage.objects') IS NULL THEN
+    RAISE NOTICE 'Skipping products bucket setup — storage schema not found';
+    RETURN;
+  END IF;
 
--- Policy: Allow anyone to view products (images) but not list the bucket
-DROP POLICY IF EXISTS "Public read access for products" ON storage.objects;
-DROP POLICY IF EXISTS "Authenticated upload for products" ON storage.objects;
-DROP POLICY IF EXISTS "Users can update own product images" ON storage.objects;
-DROP POLICY IF EXISTS "Users can delete own product images" ON storage.objects;
-DROP POLICY IF EXISTS "allow_public_view_products" ON storage.objects;
-CREATE POLICY "allow_public_view_products"
-ON storage.objects FOR SELECT
-USING (bucket_id = 'products');
+  EXECUTE $q$ INSERT INTO storage.buckets (id, name, "public") VALUES ('products', 'products', false) ON CONFLICT (id) DO UPDATE SET "public" = false $q$;
 
--- Policy: Only authenticated users can upload products
-DROP POLICY IF EXISTS "allow_auth_upload_products" ON storage.objects;
-CREATE POLICY "allow_auth_upload_products"
-ON storage.objects FOR INSERT
-WITH CHECK (
-  bucket_id = 'products'
-  AND auth.role() = 'authenticated'
-);
+  EXECUTE 'DROP POLICY IF EXISTS "Public read access for products" ON storage.objects';
+  EXECUTE 'DROP POLICY IF EXISTS "Authenticated upload for products" ON storage.objects';
+  EXECUTE 'DROP POLICY IF EXISTS "Users can update own product images" ON storage.objects';
+  EXECUTE 'DROP POLICY IF EXISTS "Users can delete own product images" ON storage.objects';
+  EXECUTE 'DROP POLICY IF EXISTS "allow_public_view_products" ON storage.objects';
+  EXECUTE $q$ CREATE POLICY "allow_public_view_products" ON storage.objects FOR SELECT USING (bucket_id = 'products') $q$;
 
--- Policy: Only the uploader or admin can update product files
-DROP POLICY IF EXISTS "allow_owner_update_products" ON storage.objects;
-CREATE POLICY "allow_owner_update_products"
-ON storage.objects FOR UPDATE
-USING (
-  bucket_id = 'products'
-  AND (
-    auth.uid()::text = (storage.foldername(name))[1]
-    OR EXISTS (
-      SELECT 1 FROM organization_users ou
-      JOIN roles r ON ou.role_id = r.id
-      WHERE ou.user_id = auth.uid()
-        AND ou.is_active = true
-        AND r.name IN ('system_admin')
-    )
-  )
-);
+  EXECUTE 'DROP POLICY IF EXISTS "allow_auth_upload_products" ON storage.objects';
+  EXECUTE $q$ CREATE POLICY "allow_auth_upload_products" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'products' AND auth.role() = 'authenticated') $q$;
 
--- Policy: Only the uploader or admin can delete product files
-DROP POLICY IF EXISTS "allow_owner_delete_products" ON storage.objects;
-CREATE POLICY "allow_owner_delete_products"
-ON storage.objects FOR DELETE
-USING (
-  bucket_id = 'products'
-  AND (
-    auth.uid()::text = (storage.foldername(name))[1]
-    OR EXISTS (
-      SELECT 1 FROM organization_users ou
-      JOIN roles r ON ou.role_id = r.id
-      WHERE ou.user_id = auth.uid()
-        AND ou.is_active = true
-        AND r.name IN ('system_admin')
-    )
-  )
-);
+  EXECUTE 'DROP POLICY IF EXISTS "allow_owner_update_products" ON storage.objects';
+  EXECUTE $q$ CREATE POLICY "allow_owner_update_products" ON storage.objects FOR UPDATE USING (bucket_id = 'products' AND (auth.uid()::text = (storage.foldername(name))[1] OR EXISTS (SELECT 1 FROM organization_users ou JOIN roles r ON ou.role_id = r.id WHERE ou.user_id = auth.uid() AND ou.is_active = true AND r.name IN ('system_admin')))) $q$;
+
+  EXECUTE 'DROP POLICY IF EXISTS "allow_owner_delete_products" ON storage.objects';
+  EXECUTE $q$ CREATE POLICY "allow_owner_delete_products" ON storage.objects FOR DELETE USING (bucket_id = 'products' AND (auth.uid()::text = (storage.foldername(name))[1] OR EXISTS (SELECT 1 FROM organization_users ou JOIN roles r ON ou.role_id = r.id WHERE ou.user_id = auth.uid() AND ou.is_active = true AND r.name IN ('system_admin')))) $q$;
+END
+$storage_products$;
 
 -- =====================================================
 -- Migration: 20260129110000_add_crop_types_for_modules.sql
@@ -22067,6 +15108,26 @@ CREATE POLICY "org_update_structures" ON structures
 DROP POLICY IF EXISTS "org_delete_structures" ON structures;
 CREATE POLICY "org_delete_structures" ON structures
   FOR DELETE USING (is_organization_member(organization_id));
+
+-- RLS for equipment_assets
+DROP POLICY IF EXISTS "org_read_equipment_assets" ON equipment_assets;
+CREATE POLICY "org_read_equipment_assets" ON equipment_assets FOR SELECT USING (is_organization_member(organization_id));
+DROP POLICY IF EXISTS "org_write_equipment_assets" ON equipment_assets;
+CREATE POLICY "org_write_equipment_assets" ON equipment_assets FOR INSERT WITH CHECK (is_organization_member(organization_id));
+DROP POLICY IF EXISTS "org_update_equipment_assets" ON equipment_assets;
+CREATE POLICY "org_update_equipment_assets" ON equipment_assets FOR UPDATE USING (is_organization_member(organization_id));
+DROP POLICY IF EXISTS "org_delete_equipment_assets" ON equipment_assets;
+CREATE POLICY "org_delete_equipment_assets" ON equipment_assets FOR DELETE USING (is_organization_member(organization_id));
+
+-- RLS for equipment_maintenance
+DROP POLICY IF EXISTS "org_read_equipment_maintenance" ON equipment_maintenance;
+CREATE POLICY "org_read_equipment_maintenance" ON equipment_maintenance FOR SELECT USING (is_organization_member(organization_id));
+DROP POLICY IF EXISTS "org_write_equipment_maintenance" ON equipment_maintenance;
+CREATE POLICY "org_write_equipment_maintenance" ON equipment_maintenance FOR INSERT WITH CHECK (is_organization_member(organization_id));
+DROP POLICY IF EXISTS "org_update_equipment_maintenance" ON equipment_maintenance;
+CREATE POLICY "org_update_equipment_maintenance" ON equipment_maintenance FOR UPDATE USING (is_organization_member(organization_id));
+DROP POLICY IF EXISTS "org_delete_equipment_maintenance" ON equipment_maintenance;
+CREATE POLICY "org_delete_equipment_maintenance" ON equipment_maintenance FOR DELETE USING (is_organization_member(organization_id));
 
 -- RLS for payment_records
 DROP POLICY IF EXISTS "org_read_payment_records" ON payment_records;
@@ -23079,71 +16140,28 @@ COMMENT ON TABLE corrective_actions IS 'Corrective action plans linked to certif
 -- COMPLIANCE DOCUMENTS STORAGE BUCKET
 -- ============================================================================
 
-INSERT INTO storage.buckets (id, name, "public")
-VALUES ('compliance-documents', 'compliance-documents', false)
-ON CONFLICT (id) DO UPDATE SET "public" = false;
+DO $storage_compliance$
+BEGIN
+  IF to_regclass('storage.buckets') IS NULL OR to_regclass('storage.objects') IS NULL THEN
+    RAISE NOTICE 'Skipping compliance bucket setup — storage schema not found';
+    RETURN;
+  END IF;
 
-DROP POLICY IF EXISTS "Org members can read compliance documents" ON storage.objects;
-CREATE POLICY "Org members can read compliance documents"
-ON storage.objects FOR SELECT
-TO authenticated
-USING (
-  bucket_id = 'compliance-documents'
-  AND (storage.foldername(name))[1] IN (
-    SELECT organization_id::text
-    FROM organization_users
-    WHERE user_id = auth.uid()
-  )
-);
+  EXECUTE $q$ INSERT INTO storage.buckets (id, name, "public") VALUES ('compliance-documents', 'compliance-documents', false) ON CONFLICT (id) DO UPDATE SET "public" = false $q$;
 
-DROP POLICY IF EXISTS "Org members can upload compliance documents" ON storage.objects;
-CREATE POLICY "Org members can upload compliance documents"
-ON storage.objects FOR INSERT
-TO authenticated
-WITH CHECK (
-  bucket_id = 'compliance-documents'
-  AND (storage.foldername(name))[1] IN (
-    SELECT organization_id::text
-    FROM organization_users
-    WHERE user_id = auth.uid()
-  )
-);
+  EXECUTE 'DROP POLICY IF EXISTS "Org members can read compliance documents" ON storage.objects';
+  EXECUTE $q$ CREATE POLICY "Org members can read compliance documents" ON storage.objects FOR SELECT TO authenticated USING (bucket_id = 'compliance-documents' AND (storage.foldername(name))[1] IN (SELECT organization_id::text FROM organization_users WHERE user_id = auth.uid())) $q$;
 
-DROP POLICY IF EXISTS "Org members can update compliance documents" ON storage.objects;
-CREATE POLICY "Org members can update compliance documents"
-ON storage.objects FOR UPDATE
-TO authenticated
-USING (
-  bucket_id = 'compliance-documents'
-  AND (storage.foldername(name))[1] IN (
-    SELECT organization_id::text
-    FROM organization_users
-    WHERE user_id = auth.uid()
-  )
-)
-WITH CHECK (
-  bucket_id = 'compliance-documents'
-  AND (storage.foldername(name))[1] IN (
-    SELECT organization_id::text
-    FROM organization_users
-    WHERE user_id = auth.uid()
-  )
-);
+  EXECUTE 'DROP POLICY IF EXISTS "Org members can upload compliance documents" ON storage.objects';
+  EXECUTE $q$ CREATE POLICY "Org members can upload compliance documents" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'compliance-documents' AND (storage.foldername(name))[1] IN (SELECT organization_id::text FROM organization_users WHERE user_id = auth.uid())) $q$;
 
-DROP POLICY IF EXISTS "Org admins can delete compliance documents" ON storage.objects;
-CREATE POLICY "Org admins can delete compliance documents"
-ON storage.objects FOR DELETE
-TO authenticated
-USING (
-  bucket_id = 'compliance-documents'
-  AND (storage.foldername(name))[1] IN (
-    SELECT ou.organization_id::text
-    FROM organization_users ou
-    JOIN roles r ON r.id = ou.role_id
-    WHERE ou.user_id = auth.uid()
-    AND r.name IN ('organization_admin', 'farm_manager', 'system_admin')
-  )
-);
+  EXECUTE 'DROP POLICY IF EXISTS "Org members can update compliance documents" ON storage.objects';
+  EXECUTE $q$ CREATE POLICY "Org members can update compliance documents" ON storage.objects FOR UPDATE TO authenticated USING (bucket_id = 'compliance-documents' AND (storage.foldername(name))[1] IN (SELECT organization_id::text FROM organization_users WHERE user_id = auth.uid())) WITH CHECK (bucket_id = 'compliance-documents' AND (storage.foldername(name))[1] IN (SELECT organization_id::text FROM organization_users WHERE user_id = auth.uid())) $q$;
+
+  EXECUTE 'DROP POLICY IF EXISTS "Org admins can delete compliance documents" ON storage.objects';
+  EXECUTE $q$ CREATE POLICY "Org admins can delete compliance documents" ON storage.objects FOR DELETE TO authenticated USING (bucket_id = 'compliance-documents' AND (storage.foldername(name))[1] IN (SELECT ou.organization_id::text FROM organization_users ou JOIN roles r ON r.id = ou.role_id WHERE ou.user_id = auth.uid() AND r.name IN ('organization_admin', 'farm_manager', 'system_admin'))) $q$;
+END
+$storage_compliance$;
 
 -- ============================================================================
 -- COMPLIANCE REALTIME PUBLICATION
@@ -23171,200 +16189,8 @@ END $$;
 -- SEED COMPLIANCE REQUIREMENTS DATA
 -- ============================================================================
 
--- GlobalGAP Requirements (10 requirements)
-INSERT INTO compliance_requirements (certification_type, requirement_code, requirement_description, category, verification_method, frequency, is_critical)
-VALUES
-  (
-    'GlobalGAP',
-    'AF.1.1',
-    'Traceability system for all products from production to sale',
-    'Traceability',
-    'Document Review, System Inspection',
-    'Continuous',
-    true
-  ),
-  (
-    'GlobalGAP',
-    'AF.2.1',
-    'Record keeping for all farm activities including inputs, outputs, and labor',
-    'Record Keeping',
-    'Document Review',
-    'Per Activity',
-    true
-  ),
-  (
-    'GlobalGAP',
-    'CB.4.1',
-    'Fertilizer application records with dates, products, rates, and fields',
-    'Input Management',
-    'Document Review, Field Inspection',
-    'Per Application',
-    true
-  ),
-  (
-    'GlobalGAP',
-    'CB.5.1',
-    'Irrigation water quality testing and records',
-    'Water Management',
-    'Test Results, Document Review',
-    'Annual',
-    false
-  ),
-  (
-    'GlobalGAP',
-    'CB.7.1',
-    'Integrated pest management plan with pesticide records',
-    'Pest Management',
-    'Document Review, Field Inspection',
-    'Annual',
-    true
-  ),
-  (
-    'GlobalGAP',
-    'FV.5.1',
-    'Harvest hygiene procedures and worker training documentation',
-    'Harvest Management',
-    'Document Review, Worker Interview',
-    'Per Harvest',
-    true
-  ),
-  (
-    'GlobalGAP',
-    'FV.6.1',
-    'Post-harvest handling and storage procedures',
-    'Post-Harvest',
-    'Document Review, Facility Inspection',
-    'Annual',
-    false
-  ),
-  (
-    'GlobalGAP',
-    'SA.1.1',
-    'Worker safety training and incident records',
-    'Worker Safety',
-    'Document Review, Worker Interview',
-    'Annual',
-    true
-  ),
-  (
-    'GlobalGAP',
-    'SA.2.1',
-    'Personal protective equipment (PPE) provision and usage',
-    'Worker Safety',
-    'Facility Inspection, Worker Interview',
-    'Quarterly',
-    true
-  ),
-  (
-    'GlobalGAP',
-    'SA.3.1',
-    'Child labor and forced labor prevention policies',
-    'Labor Practices',
-    'Document Review, Worker Interview',
-    'Annual',
-    true
-  )
-ON CONFLICT (certification_type, requirement_code) DO NOTHING;
 
--- HACCP Requirements (5 requirements)
-INSERT INTO compliance_requirements (certification_type, requirement_code, requirement_description, category, verification_method, frequency, is_critical)
-VALUES
-  (
-    'HACCP',
-    'CCP1',
-    'Receiving raw materials inspection and acceptance criteria',
-    'Receiving',
-    'Inspection Records, Supplier Verification',
-    'Per Delivery',
-    true
-  ),
-  (
-    'HACCP',
-    'CCP2',
-    'Storage temperature monitoring and records for perishables',
-    'Storage',
-    'Temperature Records, Equipment Calibration',
-    'Continuous',
-    true
-  ),
-  (
-    'HACCP',
-    'CCP3',
-    'Processing temperature control and time records',
-    'Processing',
-    'Temperature Records, Process Logs',
-    'Per Batch',
-    true
-  ),
-  (
-    'HACCP',
-    'CCP4',
-    'Metal detection and foreign material prevention',
-    'Quality Control',
-    'Equipment Logs, Test Records',
-    'Per Batch',
-    true
-  ),
-  (
-    'HACCP',
-    'CCP5',
-    'Final product testing and microbiological analysis',
-    'Testing',
-    'Lab Test Results, Certificate of Analysis',
-    'Per Batch',
-    true
-  )
-ON CONFLICT (certification_type, requirement_code) DO NOTHING;
 
--- ISO 9001 Requirements (5 requirements)
-INSERT INTO compliance_requirements (certification_type, requirement_code, requirement_description, category, verification_method, frequency, is_critical)
-VALUES
-  (
-    'ISO9001',
-    'QMS.1',
-    'Quality management system documentation and procedures',
-    'Quality Management',
-    'Document Review, System Audit',
-    'Annual',
-    true
-  ),
-  (
-    'ISO9001',
-    'QMS.2',
-    'Management review and effectiveness evaluation',
-    'Management Review',
-    'Meeting Minutes, Performance Data',
-    'Annual',
-    false
-  ),
-  (
-    'ISO9001',
-    'QMS.3',
-    'Customer satisfaction monitoring and feedback management',
-    'Customer Focus',
-    'Survey Results, Complaint Records',
-    'Quarterly',
-    false
-  ),
-  (
-    'ISO9001',
-    'QMS.4',
-    'Internal audit program and corrective actions',
-    'Internal Audit',
-    'Audit Reports, Corrective Action Records',
-    'Annual',
-    true
-  ),
-  (
-    'ISO9001',
-    'QMS.5',
-    'Competence and training of personnel',
-    'Personnel',
-    'Training Records, Competency Assessment',
-    'Annual',
-    false
-  )
-ON CONFLICT (certification_type, requirement_code) DO NOTHING;
 
 -- ============================================================================
 -- ENSURE RLS IS ENABLED ON ALL TABLES
@@ -23861,69 +16687,42 @@ WHERE updated_at IS NULL;
 --          web TaskAttachments.tsx (task file attachments)
 -- =====================================================
 
-INSERT INTO storage.buckets (id, name, "public")
-VALUES ('files', 'files', false)
-ON CONFLICT (id) DO NOTHING;
+DO $storage_files_invoices$
+BEGIN
+  IF to_regclass('storage.buckets') IS NULL OR to_regclass('storage.objects') IS NULL THEN
+    RAISE NOTICE 'Skipping files/invoices bucket setup — storage schema not found';
+    RETURN;
+  END IF;
 
-DROP POLICY IF EXISTS "Authenticated read access for files" ON storage.objects;
-CREATE POLICY "Authenticated read access for files"
-ON storage.objects FOR SELECT
-TO authenticated
-USING (bucket_id = 'files');
+  EXECUTE $q$ INSERT INTO storage.buckets (id, name, "public") VALUES ('files', 'files', false) ON CONFLICT (id) DO NOTHING $q$;
 
-DROP POLICY IF EXISTS "Authenticated upload for files" ON storage.objects;
-CREATE POLICY "Authenticated upload for files"
-ON storage.objects FOR INSERT
-TO authenticated
-WITH CHECK (bucket_id = 'files');
+  EXECUTE 'DROP POLICY IF EXISTS "Authenticated read access for files" ON storage.objects';
+  EXECUTE $q$ CREATE POLICY "Authenticated read access for files" ON storage.objects FOR SELECT TO authenticated USING (bucket_id = 'files') $q$;
 
-DROP POLICY IF EXISTS "Authenticated update for files" ON storage.objects;
-CREATE POLICY "Authenticated update for files"
-ON storage.objects FOR UPDATE
-TO authenticated
-USING (bucket_id = 'files')
-WITH CHECK (bucket_id = 'files');
+  EXECUTE 'DROP POLICY IF EXISTS "Authenticated upload for files" ON storage.objects';
+  EXECUTE $q$ CREATE POLICY "Authenticated upload for files" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'files') $q$;
 
-DROP POLICY IF EXISTS "Authenticated delete for files" ON storage.objects;
-CREATE POLICY "Authenticated delete for files"
-ON storage.objects FOR DELETE
-TO authenticated
-USING (bucket_id = 'files');
+  EXECUTE 'DROP POLICY IF EXISTS "Authenticated update for files" ON storage.objects';
+  EXECUTE $q$ CREATE POLICY "Authenticated update for files" ON storage.objects FOR UPDATE TO authenticated USING (bucket_id = 'files') WITH CHECK (bucket_id = 'files') $q$;
 
--- =====================================================
--- INVOICES STORAGE BUCKET
--- Used by: web UtilitiesManagement.tsx (utility invoice uploads)
--- Private bucket, org-scoped via farm_id folder prefix
--- =====================================================
+  EXECUTE 'DROP POLICY IF EXISTS "Authenticated delete for files" ON storage.objects';
+  EXECUTE $q$ CREATE POLICY "Authenticated delete for files" ON storage.objects FOR DELETE TO authenticated USING (bucket_id = 'files') $q$;
 
-INSERT INTO storage.buckets (id, name, "public")
-VALUES ('invoices', 'invoices', false)
-ON CONFLICT (id) DO NOTHING;
+  EXECUTE $q$ INSERT INTO storage.buckets (id, name, "public") VALUES ('invoices', 'invoices', false) ON CONFLICT (id) DO NOTHING $q$;
 
-DROP POLICY IF EXISTS "Authenticated read access for invoices" ON storage.objects;
-CREATE POLICY "Authenticated read access for invoices"
-ON storage.objects FOR SELECT
-TO authenticated
-USING (bucket_id = 'invoices');
+  EXECUTE 'DROP POLICY IF EXISTS "Authenticated read access for invoices" ON storage.objects';
+  EXECUTE $q$ CREATE POLICY "Authenticated read access for invoices" ON storage.objects FOR SELECT TO authenticated USING (bucket_id = 'invoices') $q$;
 
-DROP POLICY IF EXISTS "Authenticated upload for invoices" ON storage.objects;
-CREATE POLICY "Authenticated upload for invoices"
-ON storage.objects FOR INSERT
-TO authenticated
-WITH CHECK (bucket_id = 'invoices');
+  EXECUTE 'DROP POLICY IF EXISTS "Authenticated upload for invoices" ON storage.objects';
+  EXECUTE $q$ CREATE POLICY "Authenticated upload for invoices" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'invoices') $q$;
 
-DROP POLICY IF EXISTS "Authenticated update for invoices" ON storage.objects;
-CREATE POLICY "Authenticated update for invoices"
-ON storage.objects FOR UPDATE
-TO authenticated
-USING (bucket_id = 'invoices')
-WITH CHECK (bucket_id = 'invoices');
+  EXECUTE 'DROP POLICY IF EXISTS "Authenticated update for invoices" ON storage.objects';
+  EXECUTE $q$ CREATE POLICY "Authenticated update for invoices" ON storage.objects FOR UPDATE TO authenticated USING (bucket_id = 'invoices') WITH CHECK (bucket_id = 'invoices') $q$;
 
-DROP POLICY IF EXISTS "Authenticated delete for invoices" ON storage.objects;
-CREATE POLICY "Authenticated delete for invoices"
-ON storage.objects FOR DELETE
-TO authenticated
-USING (bucket_id = 'invoices');
+  EXECUTE 'DROP POLICY IF EXISTS "Authenticated delete for invoices" ON storage.objects';
+  EXECUTE $q$ CREATE POLICY "Authenticated delete for invoices" ON storage.objects FOR DELETE TO authenticated USING (bucket_id = 'invoices') $q$;
+END
+$storage_files_invoices$;
 
 -- =====================================================
 -- AGRITECH-DOCUMENTS STORAGE BUCKET
@@ -23971,34 +16770,28 @@ CREATE POLICY "ai_quotas_org_access" ON ai_quotas
 
 -- =====================================================
 
-INSERT INTO storage.buckets (id, name, "public")
-VALUES ('agritech-documents', 'agritech-documents', false)
-ON CONFLICT (id) DO NOTHING;
+DO $storage_agritech_docs$
+BEGIN
+  IF to_regclass('storage.buckets') IS NULL OR to_regclass('storage.objects') IS NULL THEN
+    RAISE NOTICE 'Skipping agritech-documents bucket setup — storage schema not found';
+    RETURN;
+  END IF;
 
-DROP POLICY IF EXISTS "Authenticated read access for agritech-documents" ON storage.objects;
-CREATE POLICY "Authenticated read access for agritech-documents"
-ON storage.objects FOR SELECT
-TO authenticated
-USING (bucket_id = 'agritech-documents');
+  EXECUTE $q$ INSERT INTO storage.buckets (id, name, "public") VALUES ('agritech-documents', 'agritech-documents', false) ON CONFLICT (id) DO NOTHING $q$;
 
-DROP POLICY IF EXISTS "Authenticated upload for agritech-documents" ON storage.objects;
-CREATE POLICY "Authenticated upload for agritech-documents"
-ON storage.objects FOR INSERT
-TO authenticated
-WITH CHECK (bucket_id = 'agritech-documents');
+  EXECUTE 'DROP POLICY IF EXISTS "Authenticated read access for agritech-documents" ON storage.objects';
+  EXECUTE $q$ CREATE POLICY "Authenticated read access for agritech-documents" ON storage.objects FOR SELECT TO authenticated USING (bucket_id = 'agritech-documents') $q$;
 
-DROP POLICY IF EXISTS "Authenticated update for agritech-documents" ON storage.objects;
-CREATE POLICY "Authenticated update for agritech-documents"
-ON storage.objects FOR UPDATE
-TO authenticated
-USING (bucket_id = 'agritech-documents')
-WITH CHECK (bucket_id = 'agritech-documents');
+  EXECUTE 'DROP POLICY IF EXISTS "Authenticated upload for agritech-documents" ON storage.objects';
+  EXECUTE $q$ CREATE POLICY "Authenticated upload for agritech-documents" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'agritech-documents') $q$;
 
-DROP POLICY IF EXISTS "Authenticated delete for agritech-documents" ON storage.objects;
-CREATE POLICY "Authenticated delete for agritech-documents"
-ON storage.objects FOR DELETE
-TO authenticated
-USING (bucket_id = 'agritech-documents');
+  EXECUTE 'DROP POLICY IF EXISTS "Authenticated update for agritech-documents" ON storage.objects';
+  EXECUTE $q$ CREATE POLICY "Authenticated update for agritech-documents" ON storage.objects FOR UPDATE TO authenticated USING (bucket_id = 'agritech-documents') WITH CHECK (bucket_id = 'agritech-documents') $q$;
+
+  EXECUTE 'DROP POLICY IF EXISTS "Authenticated delete for agritech-documents" ON storage.objects';
+  EXECUTE $q$ CREATE POLICY "Authenticated delete for agritech-documents" ON storage.objects FOR DELETE TO authenticated USING (bucket_id = 'agritech-documents') $q$;
+END
+$storage_agritech_docs$;
 
 -- ==========================================
 -- Newsletter subscribers (public, no org scope)
@@ -24199,73 +16992,7 @@ CREATE TRIGGER set_email_templates_updated_at
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
 
--- =====================================================
--- SIAM RDV email templates (system-level, no org)
--- =====================================================
-INSERT INTO email_templates (organization_id, name, description, type, category, subject, html_body, text_body, variables, is_system, is_active)
-VALUES (
-  NULL,
-  'Confirmation RDV SIAM',
-  'Email sent to lead when their SIAM rendez-vous is confirmed by admin',
-  'siam_rdv_confirmation',
-  'general',
-  'Votre rendez-vous AgroGina au SIAM est confirmé — {{confirmed_slot}}',
-  '<div style="max-width:600px;margin:0 auto;font-family:system-ui,-apple-system,sans-serif;color:#1a1a1a;background:#f9f7f2;padding:24px;border-radius:12px">'
-    || '<div style="background:#1d6b3a;color:white;padding:24px;border-radius:8px 8px 0 0;text-align:center">'
-    || '<h1 style="margin:0;font-size:22px">Rendez-vous confirmé ✅</h1>'
-    || '</div>'
-    || '<div style="background:white;padding:24px;border-radius:0 0 8px 8px">'
-    || '<p style="font-size:16px">Bonjour <strong>{{nom}}</strong>,</p>'
-    || '<p style="font-size:15px">Votre demande de rendez-vous au Salon International de l''Agriculture (SIAM) à Meknès a été <strong>confirmée</strong>.</p>'
-    || '<div style="background:#e8f5ec;border:1px solid #1d6b3a;border-radius:8px;padding:16px;margin:16px 0;text-align:center">'
-    || '<p style="margin:0;font-size:13px;color:#666">Créneau confirmé</p>'
-    || '<p style="margin:4px 0 0;font-size:20px;font-weight:600;color:#1d6b3a">{{confirmed_slot}}</p>'
-    || '</div>'
-    || '<p style="font-size:14px;color:#555">Nous vous attendons sur le stand AgroGina. Notre équipe vous présentera la plateforme ERP + IA décisionnelle conçue pour les fermes marocaines.</p>'
-    || '<p style="font-size:14px;color:#555">En cas d''empêchement, contactez-nous à <a href="mailto:contact@agrogina.com" style="color:#1d6b3a">contact@agrogina.com</a> ou au <strong>{{contact_phone}}</strong>.</p>'
-    || '<hr style="border:none;border-top:1px solid #eee;margin:20px 0" />'
-    || '<p style="font-size:12px;color:#888;text-align:center">AgroGina — ERP agricole + Agronomie + AgromindIA<br/>Stand SIAM 2026, Meknès</p>'
-    || '</div>'
-    || '</div>',
-  E'Bonjour {{nom}}, votre rendez-vous au SIAM est confirmé pour le créneau {{confirmed_slot}}.\nNous vous attendons sur le stand AgroGina.\nEn cas d''empêchement, contactez-nous à contact@agrogina.com ou au {{contact_phone}}.',
-  '["nom","confirmed_slot","contact_phone"]'::jsonb,
-  true,
-  true
-) ON CONFLICT (type) WHERE organization_id IS NULL DO NOTHING;
 
-INSERT INTO email_templates (organization_id, name, description, type, category, subject, html_body, text_body, variables, is_system, is_active)
-VALUES (
-  NULL,
-  'Refus RDV SIAM',
-  'Email sent to lead when their SIAM rendez-vous slot is no longer available',
-  'siam_rdv_rejection',
-  'general',
-  'Mise à jour concernant votre demande de rendez-vous SIAM',
-  '<div style="max-width:600px;margin:0 auto;font-family:system-ui,-apple-system,sans-serif;color:#1a1a1a;background:#f9f7f2;padding:24px;border-radius:12px">'
-    || '<div style="background:#555;color:white;padding:24px;border-radius:8px 8px 0 0;text-align:center">'
-    || '<h1 style="margin:0;font-size:22px">Mise à jour de votre demande</h1>'
-    || '</div>'
-    || '<div style="background:white;padding:24px;border-radius:0 0 8px 8px">'
-    || '<p style="font-size:16px">Bonjour <strong>{{nom}}</strong>,</p>'
-    || '<p style="font-size:15px">Nous avons bien reçu votre demande de rendez-vous au SIAM, malheureusement le créneau demandé n''est plus disponible.</p>'
-    || '<div style="background:#fef3c7;border:1px solid #f59e0b;border-radius:8px;padding:16px;margin:16px 0">'
-    || '<p style="margin:0;font-size:14px;color:#92400e">{{rejection_reason}}</p>'
-    || '</div>'
-    || '<p style="font-size:14px;color:#555">Nous serions ravis de vous rencontrer ! Merci de nous contacter pour convenir d''un autre créneau :</p>'
-    || '<ul style="font-size:14px;color:#555">'
-    || '<li>📧 <a href="mailto:contact@agrogina.com" style="color:#1d6b3a">contact@agrogina.com</a></li>'
-    || '<li>📞 <strong>{{contact_phone}}</strong></li>'
-    || '<li>🌐 <a href="https://rdv.agrogina.ma/rdv-siam" style="color:#1d6b3a">rdv.agrogina.ma/rdv-siam</a></li>'
-    || '</ul>'
-    || '<hr style="border:none;border-top:1px solid #eee;margin:20px 0" />'
-    || '<p style="font-size:12px;color:#888;text-align:center">AgroGina — ERP agricole + Agronomie + AgromindIA<br/>Stand SIAM 2026, Meknès</p>'
-    || '</div>'
-    || '</div>',
-  E'Bonjour {{nom}}, votre demande de rendez-vous au SIAM n''a pas pu être confirmée.\nMotif : {{rejection_reason}}\nContactez-nous pour reprogrammer : contact@agrogina.com ou {{contact_phone}}.',
-  '["nom","rejection_reason","contact_phone"]'::jsonb,
-  true,
-  true
-) ON CONFLICT (type) WHERE organization_id IS NULL DO NOTHING;
 
 
 -- =====================================================
@@ -24286,8 +17013,9 @@ CREATE TABLE IF NOT EXISTS subscription_pricing_config (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- No RLS — admin-only access via service_role key
+-- Admin-only access via service_role key
 ALTER TABLE subscription_pricing_config ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "service_role_only" ON subscription_pricing_config;
 CREATE POLICY "service_role_only" ON subscription_pricing_config
   FOR ALL USING (auth.role() = 'service_role');
 
@@ -24314,6 +17042,7 @@ CREATE TABLE IF NOT EXISTS banners (
 
 ALTER TABLE banners ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "org_access" ON banners;
 CREATE POLICY "org_access" ON banners
   FOR ALL USING (organization_id IS NULL OR public.is_organization_member(organization_id));
 
@@ -24449,325 +17178,2570 @@ INSERT INTO supported_countries (country_code, country_name, region, enabled, di
 ON CONFLICT (country_code) DO NOTHING;
 
 
--- Add subscription_pricing_config table for admin-managed pricing model
-CREATE TABLE IF NOT EXISTS subscription_pricing_config (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  modules JSONB NOT NULL DEFAULT '[]',
-  ha_tiers JSONB NOT NULL DEFAULT '[]',
-  size_multipliers JSONB NOT NULL DEFAULT '[]',
-  default_discount_percent NUMERIC NOT NULL DEFAULT 10,
-  updated_by UUID REFERENCES user_profiles(id),
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+-- =====================================================
+-- AGRONOMY RAG — Sources, Chunks, Citations
+-- =====================================================
+-- RAG-grounded agronomy assistant for AgromindIA.
+-- Every AI recommendation ships with verifiable citations
+-- from a Moroccan agronomy corpus (FAO, IOC, ORMVA, INRA, etc.).
+
+-- pgvector for dense embedding similarity search
+CREATE EXTENSION IF NOT EXISTS vector;
+
+-- -----------------------------------------------------
+-- Agronomy Sources (PDFs, fiches techniques, bulletins)
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS agronomy_sources (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE, -- NULL = public corpus
+  title TEXT NOT NULL,
+  author TEXT,
+  publisher TEXT,
+  doc_type TEXT CHECK (doc_type IN ('fiche_technique','publication','bulletin','db_calibration','playbook')),
+  language TEXT CHECK (language IN ('fr','ar','en')),
+  region TEXT[],
+  crop_type TEXT[],
+  season TEXT[],
+  published_at DATE,
+  source_url TEXT,
+  storage_path TEXT,      -- path in Supabase Storage bucket "agronomy-corpus"
+  ingested_at TIMESTAMPTZ DEFAULT now(),
+  ingestion_status TEXT NOT NULL DEFAULT 'pending'
+    CHECK (ingestion_status IN ('pending','running','ready','failed')),
+  ingestion_error TEXT,
+  chunk_count INTEGER NOT NULL DEFAULT 0,
+  ingested_by UUID REFERENCES auth.users(id) ON DELETE SET NULL
 );
 
-ALTER TABLE subscription_pricing_config ENABLE ROW LEVEL SECURITY;
+COMMENT ON TABLE agronomy_sources IS 'RAG corpus: agronomic documents (PDFs, fiches techniques, bulletins) indexed for retrieval-augmented generation';
+COMMENT ON COLUMN agronomy_sources.organization_id IS 'NULL = public corpus readable by all; non-null = per-organization playbook';
+COMMENT ON COLUMN agronomy_sources.storage_path IS 'Path in Supabase Storage bucket "agronomy-corpus"';
 
-DROP POLICY IF EXISTS "service_role_only" ON subscription_pricing_config;
-CREATE POLICY "service_role_only" ON subscription_pricing_config
+-- -----------------------------------------------------
+-- Agronomy Chunks (embedded text segments)
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS agronomy_chunks (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  source_id UUID NOT NULL REFERENCES agronomy_sources(id) ON DELETE CASCADE,
+  chunk_index INTEGER NOT NULL,
+  page INTEGER,
+  text TEXT NOT NULL,
+  tsv tsvector GENERATED ALWAYS AS (to_tsvector('french', text)) STORED,
+  embedding vector(1024),   -- multilingual-e5-large dimension
+  UNIQUE (source_id, chunk_index)
+);
+
+COMMENT ON TABLE agronomy_chunks IS 'Chunked text segments from agronomy sources with dense embeddings and full-text search';
+COMMENT ON COLUMN agronomy_chunks.embedding IS 'Dense embedding from intfloat/multilingual-e5-large (1024 dimensions)';
+
+-- IVFFlat index for cosine similarity (created after initial data load; lists tuned to sqrt(rows))
+CREATE INDEX IF NOT EXISTS idx_agronomy_chunks_embedding
+  ON agronomy_chunks USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
+CREATE INDEX IF NOT EXISTS idx_agronomy_chunks_tsv ON agronomy_chunks USING gin (tsv);
+CREATE INDEX IF NOT EXISTS idx_agronomy_chunks_source ON agronomy_chunks (source_id);
+CREATE INDEX IF NOT EXISTS idx_agronomy_sources_org ON agronomy_sources (organization_id);
+
+-- -----------------------------------------------------
+-- AI Recommendation Citations (link recommendations → source chunks)
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS ai_recommendation_citations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  recommendation_id UUID NOT NULL REFERENCES ai_recommendations(id) ON DELETE CASCADE,
+  chunk_id UUID NOT NULL REFERENCES agronomy_chunks(id) ON DELETE CASCADE,
+  excerpt TEXT NOT NULL,
+  source_ordinal INTEGER NOT NULL,
+  UNIQUE (recommendation_id, chunk_id)
+);
+
+COMMENT ON TABLE ai_recommendation_citations IS 'Citations linking AI recommendations to specific agronomy source chunks for traceability';
+COMMENT ON COLUMN ai_recommendation_citations.source_ordinal IS 'Which source number [S#] this citation refers to (1-based, matching the [S1]..[S8] markers in the LLM output)';
+
+CREATE INDEX IF NOT EXISTS idx_ai_rec_citations_recommendation ON ai_recommendation_citations (recommendation_id);
+CREATE INDEX IF NOT EXISTS idx_ai_rec_citations_chunk ON ai_recommendation_citations (chunk_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_ai_rec_citations_unique ON ai_recommendation_citations (recommendation_id, chunk_id);
+
+-- -----------------------------------------------------
+-- RLS Policies
+-- -----------------------------------------------------
+ALTER TABLE agronomy_sources ENABLE ROW LEVEL SECURITY;
+ALTER TABLE agronomy_chunks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ai_recommendation_citations ENABLE ROW LEVEL SECURITY;
+
+-- Public corpus: readable by any authenticated user
+-- Per-org playbooks: readable only by org members
+CREATE POLICY "agronomy_sources_read" ON agronomy_sources
+  FOR SELECT USING (
+    organization_id IS NULL
+    OR public.is_organization_member(organization_id)
+  );
+
+CREATE POLICY "agronomy_sources_manage" ON agronomy_sources
+  FOR ALL USING (
+    -- system_admin can manage all; org members can manage their own playbooks
+    EXISTS (
+      SELECT 1 FROM public.organization_users ou
+      JOIN public.roles r ON r.id = ou.role_id
+      WHERE ou.user_id = auth.uid()
+        AND ou.is_active = true
+        AND (
+          r.name = 'system_admin'
+          OR (r.name IN ('organization_admin', 'farm_manager') AND ou.organization_id = agronomy_sources.organization_id)
+        )
+    )
+  );
+
+CREATE POLICY "agronomy_chunks_read" ON agronomy_chunks
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM agronomy_sources s
+      WHERE s.id = agronomy_chunks.source_id
+        AND (s.organization_id IS NULL OR public.is_organization_member(s.organization_id))
+    )
+  );
+
+CREATE POLICY "agronomy_chunks_manage" ON agronomy_chunks
+  FOR ALL USING (
+    EXISTS (
+      SELECT 1 FROM agronomy_sources s
+      WHERE s.id = agronomy_chunks.source_id
+        AND (
+          EXISTS (
+            SELECT 1 FROM public.organization_users ou
+            JOIN public.roles r ON r.id = ou.role_id
+            WHERE ou.user_id = auth.uid()
+              AND ou.is_active = true
+              AND (
+                r.name = 'system_admin'
+                OR (r.name IN ('organization_admin', 'farm_manager') AND ou.organization_id = s.organization_id)
+              )
+          )
+        )
+    )
+  );
+
+-- Citations follow the recommendation's org scoping
+CREATE POLICY "agronomy_citations_read" ON ai_recommendation_citations
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM ai_recommendations r
+      WHERE r.id = ai_recommendation_citations.recommendation_id
+        AND public.is_organization_member(r.organization_id)
+    )
+  );
+
+CREATE POLICY "agronomy_citations_manage" ON ai_recommendation_citations
+  FOR ALL USING (
+    EXISTS (
+      SELECT 1 FROM ai_recommendations r
+      WHERE r.id = ai_recommendation_citations.recommendation_id
+        AND public.is_organization_member(r.organization_id)
+    )
+  );
+
+-- -----------------------------------------------------
+-- Storage Bucket: agronomy-corpus
+-- -----------------------------------------------------
+-- Private bucket for agronomic PDFs and documents used by the RAG pipeline.
+-- Read access: any authenticated user (RLS on agronomy_sources handles org scoping).
+-- Upload/manage: system_admin and organization_admin/farm_manager only.
+-- The FastAPI ML sidecar writes here via the service_role key.
+-- -----------------------------------------------------
+
+DO $storage_agronomy_corpus$
+BEGIN
+  IF to_regclass('storage.buckets') IS NULL OR to_regclass('storage.objects') IS NULL THEN
+    RAISE NOTICE 'Skipping agronomy-corpus bucket setup — storage schema not found';
+    RETURN;
+  END IF;
+
+  EXECUTE $q$ INSERT INTO storage.buckets (id, name, "public") VALUES ('agronomy-corpus', 'agronomy-corpus', false) ON CONFLICT (id) DO NOTHING $q$;
+
+  EXECUTE 'DROP POLICY IF EXISTS "Authenticated read access for agronomy-corpus" ON storage.objects';
+  EXECUTE $q$ CREATE POLICY "Authenticated read access for agronomy-corpus" ON storage.objects FOR SELECT TO authenticated USING (bucket_id = 'agronomy-corpus') $q$;
+
+  EXECUTE 'DROP POLICY IF EXISTS "System admin upload for agronomy-corpus" ON storage.objects';
+  EXECUTE $q$ CREATE POLICY "System admin upload for agronomy-corpus" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'agronomy-corpus' AND (EXISTS (SELECT 1 FROM public.organization_users ou JOIN public.roles r ON r.id = ou.role_id WHERE ou.user_id = auth.uid() AND ou.is_active = true AND r.name = 'system_admin') OR EXISTS (SELECT 1 FROM public.internal_admins ia WHERE ia.user_id = auth.uid() AND ia.is_active = true))) $q$;
+
+  EXECUTE 'DROP POLICY IF EXISTS "System admin update for agronomy-corpus" ON storage.objects';
+  EXECUTE $q$ CREATE POLICY "System admin update for agronomy-corpus" ON storage.objects FOR UPDATE TO authenticated USING (bucket_id = 'agronomy-corpus' AND (EXISTS (SELECT 1 FROM public.organization_users ou JOIN public.roles r ON r.id = ou.role_id WHERE ou.user_id = auth.uid() AND ou.is_active = true AND r.name = 'system_admin') OR EXISTS (SELECT 1 FROM public.internal_admins ia WHERE ia.user_id = auth.uid() AND ia.is_active = true))) WITH CHECK (bucket_id = 'agronomy-corpus' AND (EXISTS (SELECT 1 FROM public.organization_users ou JOIN public.roles r ON r.id = ou.role_id WHERE ou.user_id = auth.uid() AND ou.is_active = true AND r.name = 'system_admin') OR EXISTS (SELECT 1 FROM public.internal_admins ia WHERE ia.user_id = auth.uid() AND ia.is_active = true))) $q$;
+
+  EXECUTE 'DROP POLICY IF EXISTS "System admin delete for agronomy-corpus" ON storage.objects';
+  EXECUTE $q$ CREATE POLICY "System admin delete for agronomy-corpus" ON storage.objects FOR DELETE TO authenticated USING (bucket_id = 'agronomy-corpus' AND (EXISTS (SELECT 1 FROM public.organization_users ou JOIN public.roles r ON r.id = ou.role_id WHERE ou.user_id = auth.uid() AND ou.is_active = true AND r.name = 'system_admin') OR EXISTS (SELECT 1 FROM public.internal_admins ia WHERE ia.user_id = auth.uid() AND ia.is_active = true))) $q$;
+
+  EXECUTE 'DROP POLICY IF EXISTS "Service role full access for agronomy-corpus" ON storage.objects';
+  EXECUTE $q$ CREATE POLICY "Service role full access for agronomy-corpus" ON storage.objects FOR ALL TO service_role USING (bucket_id = 'agronomy-corpus') WITH CHECK (bucket_id = 'agronomy-corpus') $q$;
+END
+$storage_agronomy_corpus$;
+
+-- ============================================================================
+-- Migration: 20260419000000_fix_db_linter_errors.sql
+-- ============================================================================
+-- Addresses Supabase db-linter ERROR-level findings:
+--   - 0010_security_definer_view: subscription_legacy_compat
+--   - 0013_rls_disabled_in_public: 12 public tables
+-- ============================================================================
+
+-- Fix SECURITY DEFINER view -> SECURITY INVOKER
+DROP VIEW IF EXISTS public.subscription_legacy_compat;
+CREATE VIEW public.subscription_legacy_compat WITH (security_invoker = true) AS
+SELECT
+  s.id,
+  s.organization_id,
+  s.formula,
+  CASE
+    WHEN s.formula = 'starter' THEN 'essential'
+    WHEN s.formula = 'standard' THEN 'professional'
+    WHEN s.formula = 'premium' THEN 'enterprise'
+    WHEN s.formula = 'enterprise' THEN 'enterprise'
+    ELSE s.plan_type
+  END AS legacy_plan_type,
+  s.billing_cycle,
+  s.billing_interval,
+  s.status,
+  s.current_period_start,
+  s.current_period_end,
+  s.migration_effective_at,
+  s.pending_formula,
+  s.pending_billing_cycle
+FROM public.subscriptions s;
+
+-- ---------------------------------------------------------------------------
+-- Org-scoped table: warehouse_stock_levels
+-- ---------------------------------------------------------------------------
+ALTER TABLE public.warehouse_stock_levels ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "org_access" ON public.warehouse_stock_levels;
+CREATE POLICY "org_access" ON public.warehouse_stock_levels
+  FOR ALL USING (public.is_organization_member(organization_id))
+  WITH CHECK (public.is_organization_member(organization_id));
+
+-- ---------------------------------------------------------------------------
+-- Shared location caches (weather): RLS on, read for authenticated,
+-- writes restricted to service_role (FastAPI sidecar uses service_role).
+-- ---------------------------------------------------------------------------
+ALTER TABLE public.weather_daily_data ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "authenticated_read" ON public.weather_daily_data;
+CREATE POLICY "authenticated_read" ON public.weather_daily_data
+  FOR SELECT TO authenticated USING (true);
+DROP POLICY IF EXISTS "service_role_write" ON public.weather_daily_data;
+CREATE POLICY "service_role_write" ON public.weather_daily_data
+  FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+ALTER TABLE public.weather_gdd_daily ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "authenticated_read" ON public.weather_gdd_daily;
+CREATE POLICY "authenticated_read" ON public.weather_gdd_daily
+  FOR SELECT TO authenticated USING (true);
+DROP POLICY IF EXISTS "service_role_write" ON public.weather_gdd_daily;
+CREATE POLICY "service_role_write" ON public.weather_gdd_daily
+  FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+ALTER TABLE public.weather_forecasts ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "authenticated_read" ON public.weather_forecasts;
+CREATE POLICY "authenticated_read" ON public.weather_forecasts
+  FOR SELECT TO authenticated USING (true);
+DROP POLICY IF EXISTS "service_role_write" ON public.weather_forecasts;
+CREATE POLICY "service_role_write" ON public.weather_forecasts
+  FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+-- ---------------------------------------------------------------------------
+-- Global agronomic reference tables: read-only for authenticated,
+-- writes restricted to service_role.
+-- ---------------------------------------------------------------------------
+ALTER TABLE public.phenological_stages ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "authenticated_read" ON public.phenological_stages;
+CREATE POLICY "authenticated_read" ON public.phenological_stages
+  FOR SELECT TO authenticated USING (true);
+DROP POLICY IF EXISTS "service_role_write" ON public.phenological_stages;
+CREATE POLICY "service_role_write" ON public.phenological_stages
+  FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+ALTER TABLE public.crop_kc_coefficients ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "authenticated_read" ON public.crop_kc_coefficients;
+CREATE POLICY "authenticated_read" ON public.crop_kc_coefficients
+  FOR SELECT TO authenticated USING (true);
+DROP POLICY IF EXISTS "service_role_write" ON public.crop_kc_coefficients;
+CREATE POLICY "service_role_write" ON public.crop_kc_coefficients
+  FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+ALTER TABLE public.crop_mineral_exports ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "authenticated_read" ON public.crop_mineral_exports;
+CREATE POLICY "authenticated_read" ON public.crop_mineral_exports
+  FOR SELECT TO authenticated USING (true);
+DROP POLICY IF EXISTS "service_role_write" ON public.crop_mineral_exports;
+CREATE POLICY "service_role_write" ON public.crop_mineral_exports
+  FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+ALTER TABLE public.crop_diseases ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "authenticated_read" ON public.crop_diseases;
+CREATE POLICY "authenticated_read" ON public.crop_diseases
+  FOR SELECT TO authenticated USING (true);
+DROP POLICY IF EXISTS "service_role_write" ON public.crop_diseases;
+CREATE POLICY "service_role_write" ON public.crop_diseases
+  FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+ALTER TABLE public.crop_index_thresholds ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "authenticated_read" ON public.crop_index_thresholds;
+CREATE POLICY "authenticated_read" ON public.crop_index_thresholds
+  FOR SELECT TO authenticated USING (true);
+DROP POLICY IF EXISTS "service_role_write" ON public.crop_index_thresholds;
+CREATE POLICY "service_role_write" ON public.crop_index_thresholds
+  FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+-- ---------------------------------------------------------------------------
+-- newsletter_subscribers: service_role-only (NestJS newsletter.service.ts
+-- uses the admin client; anon/authenticated clients never touch this table).
+-- Matches siam_rdv_leads policy pattern.
+-- ---------------------------------------------------------------------------
+ALTER TABLE public.newsletter_subscribers ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "service_role_only" ON public.newsletter_subscribers;
+CREATE POLICY "service_role_only" ON public.newsletter_subscribers
   FOR ALL USING (auth.role() = 'service_role');
 
--- Also make banners.organization_id nullable (global banners)
-ALTER TABLE banners ALTER COLUMN organization_id DROP NOT NULL;
-
--- Update banners RLS to allow global banners
-DROP POLICY IF EXISTS "org_access" ON banners;
-CREATE POLICY "org_access" ON banners
-  FOR ALL USING (organization_id IS NULL OR public.is_organization_member(organization_id));
-
--- =====================================================
--- Stock Reservations, Warehouse Stock Levels, and Stock Entry Approvals
--- Required by Stock Management Production Readiness (Sprints 2, 3, 4)
--- =====================================================
-
--- Stock Reservations
-CREATE TABLE IF NOT EXISTS stock_reservations (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
-  item_id UUID NOT NULL REFERENCES items(id) ON DELETE CASCADE,
-  variant_id UUID REFERENCES product_variants(id) ON DELETE SET NULL,
-  warehouse_id UUID NOT NULL REFERENCES warehouses(id) ON DELETE CASCADE,
-  quantity NUMERIC NOT NULL CHECK (quantity > 0),
-  reserved_by UUID NOT NULL REFERENCES auth.users(id),
-  reserved_at TIMESTAMPTZ DEFAULT NOW(),
-  expires_at TIMESTAMPTZ NOT NULL,
-  status TEXT DEFAULT 'active' CHECK (status IN ('active', 'released', 'fulfilled', 'expired')),
-  reference_type TEXT,
-  reference_id UUID,
-  notes TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE INDEX IF NOT EXISTS idx_stock_reservations_org ON stock_reservations(organization_id);
-CREATE INDEX IF NOT EXISTS idx_stock_reservations_item ON stock_reservations(item_id);
-CREATE INDEX IF NOT EXISTS idx_stock_reservations_variant ON stock_reservations(variant_id) WHERE variant_id IS NOT NULL;
-CREATE INDEX IF NOT EXISTS idx_stock_reservations_status ON stock_reservations(status) WHERE status = 'active';
-CREATE INDEX IF NOT EXISTS idx_stock_reservations_expires ON stock_reservations(expires_at) WHERE status = 'active';
-
--- Warehouse Stock Levels (denormalized for O(1) balance queries)
-CREATE TABLE IF NOT EXISTS warehouse_stock_levels (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
-  item_id UUID NOT NULL REFERENCES items(id) ON DELETE CASCADE,
-  variant_id UUID REFERENCES product_variants(id) ON DELETE SET NULL,
-  warehouse_id UUID NOT NULL REFERENCES warehouses(id) ON DELETE CASCADE,
-  quantity NUMERIC NOT NULL DEFAULT 0,
-  reserved_quantity NUMERIC NOT NULL DEFAULT 0,
-  available_quantity NUMERIC GENERATED ALWAYS AS (quantity - reserved_quantity) STORED,
-  last_movement_at TIMESTAMPTZ,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE INDEX IF NOT EXISTS idx_warehouse_stock_levels_org ON warehouse_stock_levels(organization_id);
-CREATE INDEX IF NOT EXISTS idx_warehouse_stock_levels_item ON warehouse_stock_levels(item_id);
-CREATE INDEX IF NOT EXISTS idx_warehouse_stock_levels_warehouse ON warehouse_stock_levels(warehouse_id);
-CREATE UNIQUE INDEX IF NOT EXISTS idx_warehouse_stock_levels_unique
-  ON warehouse_stock_levels (organization_id, item_id, warehouse_id)
-  WHERE variant_id IS NULL;
-CREATE UNIQUE INDEX IF NOT EXISTS idx_warehouse_stock_levels_unique_var
-  ON warehouse_stock_levels (organization_id, item_id, variant_id, warehouse_id)
-  WHERE variant_id IS NOT NULL;
-
--- Trigger: update warehouse_stock_levels on stock_movements change
-CREATE OR REPLACE FUNCTION update_warehouse_stock_levels()
-RETURNS TRIGGER AS $$
-DECLARE
-  v_variant_id UUID;
-  v_warehouse_id UUID;
-  v_item_id UUID;
-  v_org_id UUID;
-  v_existing_id UUID;
-  v_qty NUMERIC;
+-- ---------------------------------------------------------------------------
+-- PostGIS system table: read-only for everyone. Owned by supabase_admin on
+-- hosted Supabase; wrap in DO block so missing privileges do not abort.
+-- ---------------------------------------------------------------------------
+DO $$
 BEGIN
-  v_variant_id := COALESCE(NEW.variant_id, OLD.variant_id);
-  v_warehouse_id := COALESCE(NEW.warehouse_id, OLD.warehouse_id);
-  v_item_id := COALESCE(NEW.item_id, OLD.item_id);
-  v_org_id := COALESCE(NEW.organization_id, OLD.organization_id);
+  EXECUTE 'ALTER TABLE public.spatial_ref_sys ENABLE ROW LEVEL SECURITY';
+  EXECUTE 'DROP POLICY IF EXISTS "public_read" ON public.spatial_ref_sys';
+  EXECUTE 'CREATE POLICY "public_read" ON public.spatial_ref_sys FOR SELECT USING (true)';
+EXCEPTION WHEN insufficient_privilege THEN
+  RAISE NOTICE 'Skipped RLS on spatial_ref_sys (insufficient privilege - expected on hosted Supabase)';
+END $$;
 
-  SELECT COALESCE(SUM(quantity), 0) INTO v_qty
-  FROM stock_movements
-  WHERE organization_id = v_org_id
-    AND item_id = v_item_id
-    AND warehouse_id = v_warehouse_id
-    AND (variant_id = v_variant_id OR (v_variant_id IS NULL AND variant_id IS NULL));
+-- ============================================================================
+-- Migration: 20260419010000_fix_db_linter_warnings.sql
+-- ============================================================================
+-- Addresses Supabase db-linter WARN-level findings:
+--   - 0011_function_search_path_mutable: 18 functions missing search_path
+--   - 0016_materialized_view_in_api: 2 MVs exposed via PostgREST
+--   - 0024_permissive_rls_policy: 8 RLS policies with USING/WITH CHECK true
+-- NOT addressed here (deferred — too risky pre-/during-SIAM):
+--   - 0014_extension_in_public: postgis + vector live in public schema.
+--     Moving them via ALTER EXTENSION ... SET SCHEMA requires auditing every
+--     geometry / vector column reference and touching generated types.
+--     Schedule post-SIAM (after 2026-04-26).
+-- ============================================================================
 
-  SELECT id INTO v_existing_id
-  FROM warehouse_stock_levels
-  WHERE organization_id = v_org_id
-    AND item_id = v_item_id
-    AND warehouse_id = v_warehouse_id
-    AND (variant_id = v_variant_id OR (v_variant_id IS NULL AND variant_id IS NULL))
-  LIMIT 1;
+-- ---------------------------------------------------------------------------
+-- Pin search_path on all flagged functions (prevents search_path injection).
+-- ---------------------------------------------------------------------------
+ALTER FUNCTION public.update_updated_at_column()                  SET search_path = public, pg_catalog;
+ALTER FUNCTION public.capture_base_quantity_at_movement()         SET search_path = public, pg_catalog;
+ALTER FUNCTION public.update_document_templates_timestamp()       SET search_path = public, pg_catalog;
+ALTER FUNCTION public.audit_trigger_func()                        SET search_path = public, pg_catalog;
+ALTER FUNCTION public.sync_farm_geometry()                        SET search_path = public, pg_catalog;
+ALTER FUNCTION public.update_product_variants_updated_at()        SET search_path = public, pg_catalog;
+ALTER FUNCTION public.ensure_single_default_template()            SET search_path = public, pg_catalog;
+ALTER FUNCTION public.validate_stock_movement_unit()              SET search_path = public, pg_catalog;
+ALTER FUNCTION public.sum_gdd_between(numeric, numeric, text, date, date)
+                                                                  SET search_path = public, pg_catalog;
+ALTER FUNCTION public.update_warehouse_stock_reserved()           SET search_path = public, pg_catalog;
+ALTER FUNCTION public.sync_variant_quantity_from_movements()      SET search_path = public, pg_catalog;
+ALTER FUNCTION public.update_quote_request_updated_at()           SET search_path = public, pg_catalog;
+ALTER FUNCTION public.update_quality_inspections_updated_at()     SET search_path = public, pg_catalog;
+ALTER FUNCTION public.sync_parcel_geometry()                      SET search_path = public, pg_catalog;
+ALTER FUNCTION public.update_warehouse_stock_levels()             SET search_path = public, pg_catalog;
+ALTER FUNCTION public.update_campaigns_updated_at()               SET search_path = public, pg_catalog;
+ALTER FUNCTION public.ensure_single_current_fiscal_year()         SET search_path = public, pg_catalog;
+ALTER FUNCTION public.update_account_mappings_updated_at()        SET search_path = public, pg_catalog;
 
-  IF v_existing_id IS NOT NULL THEN
-    UPDATE warehouse_stock_levels
-    SET quantity = v_qty,
-        last_movement_at = NOW(),
-        updated_at = NOW()
-    WHERE id = v_existing_id;
-  ELSE
-    INSERT INTO warehouse_stock_levels (
-      organization_id,
-      item_id,
-      variant_id,
-      warehouse_id,
-      quantity,
-      last_movement_at
+-- ---------------------------------------------------------------------------
+-- Remove materialized views from the PostgREST API surface.
+-- Refresh + admin reads still work via service_role (which bypasses grants).
+-- ---------------------------------------------------------------------------
+REVOKE SELECT ON public.admin_org_summary FROM anon, authenticated;
+REVOKE SELECT ON public.mv_stock_levels   FROM anon, authenticated;
+
+-- ---------------------------------------------------------------------------
+-- Tighten permissive RLS policies (USING (true) / WITH CHECK (true))
+-- on UPDATE / DELETE / INSERT / ALL commands.
+-- ---------------------------------------------------------------------------
+
+-- notifications: INSERT is a server-side operation (NestJS admin client).
+-- Restrict to service_role to remove WITH CHECK (true).
+DROP POLICY IF EXISTS "Service role can insert notifications" ON public.notifications;
+CREATE POLICY "Service role can insert notifications"
+  ON public.notifications
+  FOR INSERT
+  TO service_role
+  WITH CHECK (true);
+
+-- ai_report_jobs: backend updates job status. Restrict to service_role.
+DROP POLICY IF EXISTS "Service role can update ai report jobs" ON public.ai_report_jobs;
+CREATE POLICY "Service role can update ai report jobs"
+  ON public.ai_report_jobs
+  FOR UPDATE
+  TO service_role
+  USING (true)
+  WITH CHECK (true);
+
+-- abstract_entities: FOR ALL needs matching USING clause.
+DROP POLICY IF EXISTS "org_write_abstract_entities" ON public.abstract_entities;
+CREATE POLICY "org_write_abstract_entities"
+  ON public.abstract_entities
+  FOR ALL
+  USING (
+    organization_id IN (
+      SELECT organization_id FROM public.organization_users
+      WHERE user_id = auth.uid() AND is_active = true
     )
-    VALUES (v_org_id, v_item_id, v_variant_id, v_warehouse_id, v_qty, NOW());
-  END IF;
+  )
+  WITH CHECK (
+    organization_id IN (
+      SELECT organization_id FROM public.organization_users
+      WHERE user_id = auth.uid() AND is_active = true
+    )
+  );
 
-  RETURN COALESCE(NEW, OLD);
-END;
-$$ LANGUAGE plpgsql;
+-- entity_relationships: FOR ALL needs matching USING clause.
+DROP POLICY IF EXISTS "org_write_entity_relationships" ON public.entity_relationships;
+CREATE POLICY "org_write_entity_relationships"
+  ON public.entity_relationships
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.abstract_entities ae
+      WHERE ae.entity_type = entity_relationships.parent_entity_type
+        AND ae.entity_id = entity_relationships.parent_entity_id
+        AND ae.organization_id IN (
+          SELECT organization_id FROM public.organization_users
+          WHERE user_id = auth.uid() AND is_active = true
+        )
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.abstract_entities ae
+      WHERE ae.entity_type = entity_relationships.parent_entity_type
+        AND ae.entity_id = entity_relationships.parent_entity_id
+        AND ae.organization_id IN (
+          SELECT organization_id FROM public.organization_users
+          WHERE user_id = auth.uid() AND is_active = true
+        )
+    )
+  );
 
-DROP TRIGGER IF EXISTS trg_update_warehouse_stock_levels ON stock_movements;
-CREATE TRIGGER trg_update_warehouse_stock_levels
-  AFTER INSERT OR DELETE ON stock_movements
-  FOR EACH ROW
-  EXECUTE FUNCTION update_warehouse_stock_levels();
+-- module_translations / modules / polar_subscriptions / polar_webhooks:
+-- FOR ALL system_admin write. USING must also enforce the admin check.
+DROP POLICY IF EXISTS "admin_write_module_translations" ON public.module_translations;
+CREATE POLICY "admin_write_module_translations"
+  ON public.module_translations
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.organization_users ou
+      JOIN public.roles r ON ou.role_id = r.id
+      WHERE ou.user_id = auth.uid()
+        AND ou.is_active = true
+        AND r.name = 'system_admin'
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.organization_users ou
+      JOIN public.roles r ON ou.role_id = r.id
+      WHERE ou.user_id = auth.uid()
+        AND ou.is_active = true
+        AND r.name = 'system_admin'
+    )
+  );
 
--- Trigger: update reserved_quantity on stock_reservations change
-CREATE OR REPLACE FUNCTION update_warehouse_stock_reserved()
+DROP POLICY IF EXISTS "admin_write_modules" ON public.modules;
+CREATE POLICY "admin_write_modules"
+  ON public.modules
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.organization_users ou
+      JOIN public.roles r ON ou.role_id = r.id
+      WHERE ou.user_id = auth.uid()
+        AND ou.is_active = true
+        AND r.name = 'system_admin'
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.organization_users ou
+      JOIN public.roles r ON ou.role_id = r.id
+      WHERE ou.user_id = auth.uid()
+        AND ou.is_active = true
+        AND r.name = 'system_admin'
+    )
+  );
+
+DROP POLICY IF EXISTS "admin_write_polar_subscriptions" ON public.polar_subscriptions;
+CREATE POLICY "admin_write_polar_subscriptions"
+  ON public.polar_subscriptions
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.organization_users ou
+      JOIN public.roles r ON ou.role_id = r.id
+      WHERE ou.user_id = auth.uid()
+        AND ou.is_active = true
+        AND r.name = 'system_admin'
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.organization_users ou
+      JOIN public.roles r ON ou.role_id = r.id
+      WHERE ou.user_id = auth.uid()
+        AND ou.is_active = true
+        AND r.name = 'system_admin'
+    )
+  );
+
+DROP POLICY IF EXISTS "admin_write_polar_webhooks" ON public.polar_webhooks;
+CREATE POLICY "admin_write_polar_webhooks"
+  ON public.polar_webhooks
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.organization_users ou
+      JOIN public.roles r ON ou.role_id = r.id
+      WHERE ou.user_id = auth.uid()
+        AND ou.is_active = true
+        AND r.name = 'system_admin'
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.organization_users ou
+      JOIN public.roles r ON ou.role_id = r.id
+      WHERE ou.user_id = auth.uid()
+        AND ou.is_active = true
+        AND r.name = 'system_admin'
+    )
+  );
+
+-- ============================================================================
+-- Migration: 20260419020000_fix_weather_cache_rls.sql
+-- ============================================================================
+-- Follow-up to 20260419000000: two additional weather location caches
+-- flagged by db-linter (0013_rls_disabled_in_public). Same pattern as
+-- weather_daily_data / weather_gdd_daily / weather_forecasts:
+-- shared geographic cache, authenticated read, service_role write.
+-- ============================================================================
+
+ALTER TABLE public.weather_hourly_data ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "authenticated_read" ON public.weather_hourly_data;
+CREATE POLICY "authenticated_read" ON public.weather_hourly_data
+  FOR SELECT TO authenticated USING (true);
+DROP POLICY IF EXISTS "service_role_write" ON public.weather_hourly_data;
+CREATE POLICY "service_role_write" ON public.weather_hourly_data
+  FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+ALTER TABLE public.weather_threshold_cache ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "authenticated_read" ON public.weather_threshold_cache;
+CREATE POLICY "authenticated_read" ON public.weather_threshold_cache
+  FOR SELECT TO authenticated USING (true);
+DROP POLICY IF EXISTS "service_role_write" ON public.weather_threshold_cache;
+CREATE POLICY "service_role_write" ON public.weather_threshold_cache
+  FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+-- ============================================================================
+-- Migration: 20260419030000_fix_rls_enabled_no_policy.sql
+-- ============================================================================
+-- Addresses db-linter 0008_rls_enabled_no_policy: 8 tables had RLS enabled
+-- but no policies, making them unreadable via PostgREST for all users except
+-- service_role. Adds appropriate org-scoped policies per table shape.
+-- ============================================================================
+
+-- ---------------------------------------------------------------------------
+-- product_variants: org-scoped (organization_id NOT NULL).
+-- ---------------------------------------------------------------------------
+DROP POLICY IF EXISTS "org_access" ON public.product_variants;
+CREATE POLICY "org_access" ON public.product_variants
+  FOR ALL
+  USING (public.is_organization_member(organization_id))
+  WITH CHECK (public.is_organization_member(organization_id));
+
+-- ---------------------------------------------------------------------------
+-- Reference tables with org-overridable rows (organization_id NULLable):
+-- read = own org OR global (NULL), write = own org only.
+-- ---------------------------------------------------------------------------
+DROP POLICY IF EXISTS "read_org_or_global" ON public.soil_types;
+CREATE POLICY "read_org_or_global" ON public.soil_types
+  FOR SELECT TO authenticated
+  USING (organization_id IS NULL OR public.is_organization_member(organization_id));
+DROP POLICY IF EXISTS "write_org" ON public.soil_types;
+CREATE POLICY "write_org" ON public.soil_types
+  FOR INSERT TO authenticated
+  WITH CHECK (public.is_organization_member(organization_id));
+DROP POLICY IF EXISTS "update_org" ON public.soil_types;
+CREATE POLICY "update_org" ON public.soil_types
+  FOR UPDATE TO authenticated
+  USING (public.is_organization_member(organization_id))
+  WITH CHECK (public.is_organization_member(organization_id));
+DROP POLICY IF EXISTS "delete_org" ON public.soil_types;
+CREATE POLICY "delete_org" ON public.soil_types
+  FOR DELETE TO authenticated
+  USING (public.is_organization_member(organization_id));
+
+DROP POLICY IF EXISTS "read_org_or_global" ON public.irrigation_types;
+CREATE POLICY "read_org_or_global" ON public.irrigation_types
+  FOR SELECT TO authenticated
+  USING (organization_id IS NULL OR public.is_organization_member(organization_id));
+DROP POLICY IF EXISTS "write_org" ON public.irrigation_types;
+CREATE POLICY "write_org" ON public.irrigation_types
+  FOR INSERT TO authenticated
+  WITH CHECK (public.is_organization_member(organization_id));
+DROP POLICY IF EXISTS "update_org" ON public.irrigation_types;
+CREATE POLICY "update_org" ON public.irrigation_types
+  FOR UPDATE TO authenticated
+  USING (public.is_organization_member(organization_id))
+  WITH CHECK (public.is_organization_member(organization_id));
+DROP POLICY IF EXISTS "delete_org" ON public.irrigation_types;
+CREATE POLICY "delete_org" ON public.irrigation_types
+  FOR DELETE TO authenticated
+  USING (public.is_organization_member(organization_id));
+
+DROP POLICY IF EXISTS "read_org_or_global" ON public.rootstocks;
+CREATE POLICY "read_org_or_global" ON public.rootstocks
+  FOR SELECT TO authenticated
+  USING (organization_id IS NULL OR public.is_organization_member(organization_id));
+DROP POLICY IF EXISTS "write_org" ON public.rootstocks;
+CREATE POLICY "write_org" ON public.rootstocks
+  FOR INSERT TO authenticated
+  WITH CHECK (public.is_organization_member(organization_id));
+DROP POLICY IF EXISTS "update_org" ON public.rootstocks;
+CREATE POLICY "update_org" ON public.rootstocks
+  FOR UPDATE TO authenticated
+  USING (public.is_organization_member(organization_id))
+  WITH CHECK (public.is_organization_member(organization_id));
+DROP POLICY IF EXISTS "delete_org" ON public.rootstocks;
+CREATE POLICY "delete_org" ON public.rootstocks
+  FOR DELETE TO authenticated
+  USING (public.is_organization_member(organization_id));
+
+DROP POLICY IF EXISTS "read_org_or_global" ON public.plantation_systems;
+CREATE POLICY "read_org_or_global" ON public.plantation_systems
+  FOR SELECT TO authenticated
+  USING (organization_id IS NULL OR public.is_organization_member(organization_id));
+DROP POLICY IF EXISTS "write_org" ON public.plantation_systems;
+CREATE POLICY "write_org" ON public.plantation_systems
+  FOR INSERT TO authenticated
+  WITH CHECK (public.is_organization_member(organization_id));
+DROP POLICY IF EXISTS "update_org" ON public.plantation_systems;
+CREATE POLICY "update_org" ON public.plantation_systems
+  FOR UPDATE TO authenticated
+  USING (public.is_organization_member(organization_id))
+  WITH CHECK (public.is_organization_member(organization_id));
+DROP POLICY IF EXISTS "delete_org" ON public.plantation_systems;
+CREATE POLICY "delete_org" ON public.plantation_systems
+  FOR DELETE TO authenticated
+  USING (public.is_organization_member(organization_id));
+
+-- ---------------------------------------------------------------------------
+-- tax_configurations: country-default (org_id NULL, country_code set) OR
+-- org-override. Readable by anyone authenticated, writable only by org owner.
+-- ---------------------------------------------------------------------------
+DROP POLICY IF EXISTS "read_global_or_org" ON public.tax_configurations;
+CREATE POLICY "read_global_or_org" ON public.tax_configurations
+  FOR SELECT TO authenticated
+  USING (organization_id IS NULL OR public.is_organization_member(organization_id));
+DROP POLICY IF EXISTS "write_org" ON public.tax_configurations;
+CREATE POLICY "write_org" ON public.tax_configurations
+  FOR INSERT TO authenticated
+  WITH CHECK (public.is_organization_member(organization_id));
+DROP POLICY IF EXISTS "update_org" ON public.tax_configurations;
+CREATE POLICY "update_org" ON public.tax_configurations
+  FOR UPDATE TO authenticated
+  USING (public.is_organization_member(organization_id))
+  WITH CHECK (public.is_organization_member(organization_id));
+DROP POLICY IF EXISTS "delete_org" ON public.tax_configurations;
+CREATE POLICY "delete_org" ON public.tax_configurations
+  FOR DELETE TO authenticated
+  USING (public.is_organization_member(organization_id));
+
+-- ---------------------------------------------------------------------------
+-- cost_center_budgets: no direct organization_id; scope via cost_centers.
+-- ---------------------------------------------------------------------------
+DROP POLICY IF EXISTS "org_access" ON public.cost_center_budgets;
+CREATE POLICY "org_access" ON public.cost_center_budgets
+  FOR ALL TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.cost_centers cc
+      WHERE cc.id = cost_center_budgets.cost_center_id
+        AND public.is_organization_member(cc.organization_id)
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.cost_centers cc
+      WHERE cc.id = cost_center_budgets.cost_center_id
+        AND public.is_organization_member(cc.organization_id)
+    )
+  );
+
+-- ---------------------------------------------------------------------------
+-- account_translations: no direct organization_id; scope via accounts.
+-- ---------------------------------------------------------------------------
+DROP POLICY IF EXISTS "org_access" ON public.account_translations;
+CREATE POLICY "org_access" ON public.account_translations
+  FOR ALL TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.accounts a
+      WHERE a.id = account_translations.account_id
+        AND public.is_organization_member(a.organization_id)
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.accounts a
+      WHERE a.id = account_translations.account_id
+        AND public.is_organization_member(a.organization_id)
+    )
+  );
+
+
+
+-- =====================================================================
+-- Migration: 20260424000000_align_modules_catalog.sql
+-- =====================================================================
+-- Reconciles the modules catalog to the 12-SKU coarse licensing model
+-- agreed on 2026-04-24 (see reespec/decisions.md). This migration is
+-- idempotent and safe to re-run.
+--
+-- What it does:
+--   1. Upserts 12 canonical modules by slug (core + 11 sellable SKUs).
+--   2. Seeds module_translations for fr / en / ar per module.
+--   3. Marks all non-canonical modules is_available = false.
+--   4. Remaps organization_modules rows from legacy slugs to canonical
+--      slugs (OR-ing is_active when multiple legacy rows collapse to
+--      one canonical row).
+--   5. Guarantees every organization has `core` is_active = true.
+--   6. Cleans up organization_modules rows pointing to unavailable
+--      (legacy) modules.
+
+BEGIN;
+
+-- 1. Upsert 12 canonical modules ------------------------------------
+INSERT INTO modules (
+  slug, name, icon, color, category, description,
+  display_order, price_monthly, is_required, is_recommended,
+  is_available, navigation_items, dashboard_widgets
+) VALUES
+  ('core',             'core',             'Home',          '#10b981', 'core',       'Core features available to every organization', 1,  0,   true,  true,  true,
+    '["/dashboard","/settings","/farm-hierarchy","/parcels","/notifications"]'::jsonb, '[]'::jsonb),
+  ('chat_advisor',     'chat_advisor',     'Bot',           '#10b981', 'analytics',  'Conversational AgromindIA assistant',             2,  0,   true,  true,  true,
+    '["/chat"]'::jsonb, '[]'::jsonb),
+  ('agromind_advisor', 'agromind_advisor', 'Sparkles',      '#7c3aed', 'analytics',  'AI advisor per parcel: calibration, diagnostics, recommendations, annual plan', 3, 0, false, false, true,
+    '["/parcels/$parcelId/ai"]'::jsonb, '[]'::jsonb),
+  ('satellite',        'satellite',        'Satellite',     '#06b6d4', 'analytics',  'Satellite imagery, vegetation indices, weather',  4,  0,   false, false, true,
+    '["/satellite-analysis","/production/satellite-analysis","/parcels/$parcelId/satellite","/parcels/$parcelId/weather"]'::jsonb, '[]'::jsonb),
+  ('personnel',        'personnel',        'Users',         '#3b82f6', 'hr',         'Workers and tasks',                               5,  0,   false, false, true,
+    '["/workers","/tasks","/workforce/payments","/workforce/workers/piece-work"]'::jsonb, '[]'::jsonb),
+  ('stock',            'stock',            'Package',       '#10b981', 'inventory',  'Inventory and infrastructure',                    6,  0,   false, false, true,
+    '["/stock","/infrastructure"]'::jsonb, '[]'::jsonb),
+  ('production',       'production',       'Wheat',         '#f59e0b', 'production', 'Campaigns, crop cycles, harvests, quality',       7,  0,   false, false, true,
+    '["/campaigns","/crop-cycles","/harvests","/reception-batches","/quality-control","/biological-assets","/product-applications"]'::jsonb, '[]'::jsonb),
+  ('fruit_trees',      'fruit_trees',      'TreeDeciduous', '#10b981', 'agriculture','Trees, orchards, pruning',                        8,  0,   false, false, true,
+    '["/trees","/orchards","/pruning"]'::jsonb, '[]'::jsonb),
+  ('compliance',       'compliance',       'ShieldCheck',   '#a855f7', 'operations', 'Compliance and certifications',                   9,  0,   false, false, true,
+    '["/compliance"]'::jsonb, '[]'::jsonb),
+  ('sales_purchasing', 'sales_purchasing', 'ShoppingCart',  '#f43f5e', 'sales',      'Quotes, sales orders, purchase orders',           10, 0,   false, false, true,
+    '["/accounting/quotes","/accounting/sales-orders","/accounting/purchase-orders","/accounting/customers","/stock/suppliers"]'::jsonb, '[]'::jsonb),
+  ('accounting',       'accounting',       'BookOpen',      '#6366f1', 'accounting', 'Invoices, payments, journal, reports',            11, 0,   false, false, true,
+    '["/accounting","/utilities"]'::jsonb, '[]'::jsonb),
+  ('marketplace',      'marketplace',      'ShoppingBag',   '#f97316', 'sales',      'B2B quote marketplace',                           12, 0,   false, false, true,
+    '["/marketplace"]'::jsonb, '[]'::jsonb)
+ON CONFLICT (slug) DO UPDATE SET
+  icon              = EXCLUDED.icon,
+  color             = EXCLUDED.color,
+  category          = EXCLUDED.category,
+  description       = EXCLUDED.description,
+  display_order     = EXCLUDED.display_order,
+  price_monthly     = EXCLUDED.price_monthly,
+  is_required       = EXCLUDED.is_required,
+  is_recommended    = EXCLUDED.is_recommended,
+  is_available      = EXCLUDED.is_available,
+  navigation_items  = EXCLUDED.navigation_items,
+  dashboard_widgets = EXCLUDED.dashboard_widgets,
+  updated_at        = NOW();
+
+-- 2. Seed module_translations (fr / en / ar) ------------------------
+INSERT INTO module_translations (module_id, locale, name, description)
+SELECT m.id, v.locale, v.name, v.description
+FROM modules m
+JOIN (VALUES
+  ('core',             'fr', 'Cœur',                'Fonctionnalités de base pour toute organisation'),
+  ('core',             'en', 'Core',                'Core features available to every organization'),
+  ('core',             'ar', 'الأساس',              'الميزات الأساسية المتاحة لكل مؤسسة'),
+  ('chat_advisor',     'fr', 'Conseiller Chat',     'Assistant conversationnel AgromindIA'),
+  ('chat_advisor',     'en', 'Chat Advisor',        'Conversational AgromindIA assistant'),
+  ('chat_advisor',     'ar', 'المستشار الحواري',   'مساعد AgromindIA التفاعلي'),
+  ('agromind_advisor', 'fr', 'Conseiller AgroMind', 'Conseiller IA par parcelle: calibrage, diagnostics, recommandations, plan annuel'),
+  ('agromind_advisor', 'en', 'AgroMind Advisor',    'AI advisor per parcel: calibration, diagnostics, recommendations, annual plan'),
+  ('agromind_advisor', 'ar', 'مستشار أغرومايند',    'مستشار ذكاء اصطناعي لكل قطعة: المعايرة، التشخيص، التوصيات، الخطة السنوية'),
+  ('satellite',        'fr', 'Satellite',           'Imagerie satellite, indices de végétation, météo'),
+  ('satellite',        'en', 'Satellite',           'Satellite imagery, vegetation indices, weather'),
+  ('satellite',        'ar', 'الأقمار الصناعية',   'صور الأقمار الصناعية ومؤشرات الغطاء النباتي والطقس'),
+  ('personnel',        'fr', 'Personnel',           'Ouvriers et tâches'),
+  ('personnel',        'en', 'Personnel',           'Workers and tasks'),
+  ('personnel',        'ar', 'الموظفون',            'العمال والمهام'),
+  ('stock',            'fr', 'Stock',               'Inventaire et infrastructure'),
+  ('stock',            'en', 'Stock',               'Inventory and infrastructure'),
+  ('stock',            'ar', 'المخزون',            'المخزون والبنية التحتية'),
+  ('production',       'fr', 'Production',          'Campagnes, cycles culturaux, récoltes, qualité'),
+  ('production',       'en', 'Production',          'Campaigns, crop cycles, harvests, quality'),
+  ('production',       'ar', 'الإنتاج',             'الحملات ودورات المحاصيل والحصاد والجودة'),
+  ('fruit_trees',      'fr', 'Arbres Fruitiers',    'Arbres, vergers, taille'),
+  ('fruit_trees',      'en', 'Fruit Trees',         'Trees, orchards, pruning'),
+  ('fruit_trees',      'ar', 'الأشجار المثمرة',    'الأشجار والبساتين والتقليم'),
+  ('compliance',       'fr', 'Conformité',          'Conformité et certifications'),
+  ('compliance',       'en', 'Compliance',          'Compliance and certifications'),
+  ('compliance',       'ar', 'الامتثال',            'الامتثال والشهادات'),
+  ('sales_purchasing', 'fr', 'Ventes & Achats',     'Devis, commandes clients, commandes fournisseurs'),
+  ('sales_purchasing', 'en', 'Sales & Purchasing',  'Quotes, sales orders, purchase orders'),
+  ('sales_purchasing', 'ar', 'المبيعات والمشتريات', 'العروض وطلبات البيع وطلبات الشراء'),
+  ('accounting',       'fr', 'Comptabilité',        'Factures, paiements, journal, rapports'),
+  ('accounting',       'en', 'Accounting',          'Invoices, payments, journal, reports'),
+  ('accounting',       'ar', 'المحاسبة',            'الفواتير والمدفوعات والدفتر والتقارير'),
+  ('marketplace',      'fr', 'Place de Marché',     'Marketplace B2B de demandes de devis'),
+  ('marketplace',      'en', 'Marketplace',         'B2B quote marketplace'),
+  ('marketplace',      'ar', 'السوق',               'سوق عروض B2B')
+) AS v(slug, locale, name, description) ON v.slug = m.slug
+ON CONFLICT (module_id, locale) DO UPDATE SET
+  name        = EXCLUDED.name,
+  description = EXCLUDED.description,
+  updated_at  = NOW();
+
+-- 3. Mark all non-canonical modules as unavailable -------------------
+UPDATE modules
+SET is_available = false,
+    updated_at   = NOW()
+WHERE slug NOT IN (
+  'core','chat_advisor','agromind_advisor','satellite','personnel','stock',
+  'production','fruit_trees','compliance','sales_purchasing','accounting','marketplace'
+);
+
+-- 4. Remap organization_modules rows from legacy slugs to canonical --
+WITH legacy_map(legacy_slug, canonical_slug) AS (
+  VALUES
+    ('dashboard',       'core'),
+    ('farms',           'core'),
+    ('farm_management', 'core'),
+    ('harvests',        'production'),
+    ('tasks',           'personnel'),
+    ('workers',         'personnel'),
+    ('hr',              'personnel'),
+    ('stock',           'stock'),
+    ('inventory',       'stock'),
+    ('customers',       'sales_purchasing'),
+    ('suppliers',       'sales_purchasing'),
+    ('quotes',          'sales_purchasing'),
+    ('sales_orders',    'sales_purchasing'),
+    ('sales',           'sales_purchasing'),
+    ('purchase_orders', 'sales_purchasing'),
+    ('procurement',     'sales_purchasing'),
+    ('invoices',        'accounting'),
+    ('reports',         'accounting'),
+    ('analytics',       'satellite'),
+    ('chat',            'chat_advisor'),
+    ('certifications',  'compliance'),
+    ('arbres_fruitiers','fruit_trees')
+),
+id_map AS (
+  SELECT
+    old_m.id  AS old_module_id,
+    new_m.id  AS new_module_id
+  FROM legacy_map
+  JOIN modules old_m ON old_m.slug = legacy_map.legacy_slug
+  JOIN modules new_m ON new_m.slug = legacy_map.canonical_slug
+  WHERE old_m.id <> new_m.id
+),
+collapsed AS (
+  SELECT
+    om.organization_id,
+    id_map.new_module_id,
+    bool_or(om.is_active) AS is_active
+  FROM organization_modules om
+  JOIN id_map ON om.module_id = id_map.old_module_id
+  GROUP BY om.organization_id, id_map.new_module_id
+)
+INSERT INTO organization_modules (organization_id, module_id, is_active)
+SELECT organization_id, new_module_id, is_active
+FROM collapsed
+ON CONFLICT (organization_id, module_id) DO UPDATE SET
+  is_active  = organization_modules.is_active OR EXCLUDED.is_active,
+  updated_at = NOW();
+
+-- 5. Delete organization_modules rows pointing to unavailable modules -
+DELETE FROM organization_modules om
+USING modules m
+WHERE om.module_id = m.id
+  AND m.is_available = false;
+
+-- 6. Guarantee every organization has core active --------------------
+INSERT INTO organization_modules (organization_id, module_id, is_active)
+SELECT o.id, m.id, true
+FROM organizations o
+CROSS JOIN modules m
+WHERE m.slug = 'core'
+ON CONFLICT (organization_id, module_id) DO UPDATE SET
+  is_active  = true,
+  updated_at = NOW();
+
+COMMIT;
+
+-- Audit helper (commented; run manually for verification) ------------
+-- SELECT m.slug, COUNT(om.*) FILTER (WHERE om.is_active) AS active_orgs
+-- FROM modules m LEFT JOIN organization_modules om ON om.module_id = m.id
+-- WHERE m.is_available = true
+-- GROUP BY m.slug ORDER BY m.slug;
+
+
+-- =====================================================================
+-- Migration: 20260424000001_seed_required_modules_trigger.sql
+-- =====================================================================
+-- When a new organization is created, automatically activate all
+-- modules marked is_required = true. Companion to the preceding
+-- catalog alignment migration.
+
+CREATE OR REPLACE FUNCTION seed_required_modules_for_new_org()
 RETURNS TRIGGER AS $$
-DECLARE
-  v_item_id UUID;
-  v_variant_id UUID;
-  v_warehouse_id UUID;
-  v_org_id UUID;
-  v_existing_id UUID;
-  v_reserved NUMERIC;
 BEGIN
-  v_item_id := COALESCE(NEW.item_id, OLD.item_id);
-  v_variant_id := COALESCE(NEW.variant_id, OLD.variant_id);
-  v_warehouse_id := COALESCE(NEW.warehouse_id, OLD.warehouse_id);
-  v_org_id := COALESCE(NEW.organization_id, OLD.organization_id);
-
-  SELECT COALESCE(SUM(quantity), 0) INTO v_reserved
-  FROM stock_reservations
-  WHERE organization_id = v_org_id
-    AND item_id = v_item_id
-    AND warehouse_id = v_warehouse_id
-    AND status = 'active'
-    AND expires_at > NOW()
-    AND (variant_id = v_variant_id OR (v_variant_id IS NULL AND variant_id IS NULL));
-
-  SELECT id INTO v_existing_id
-  FROM warehouse_stock_levels
-  WHERE organization_id = v_org_id
-    AND item_id = v_item_id
-    AND warehouse_id = v_warehouse_id
-    AND (variant_id = v_variant_id OR (v_variant_id IS NULL AND variant_id IS NULL))
-  LIMIT 1;
-
-  IF v_existing_id IS NOT NULL THEN
-    UPDATE warehouse_stock_levels
-    SET reserved_quantity = v_reserved,
-        updated_at = NOW()
-    WHERE id = v_existing_id;
-  END IF;
-
-  RETURN COALESCE(NEW, OLD);
+  INSERT INTO organization_modules (organization_id, module_id, is_active)
+  SELECT NEW.id, m.id, true
+  FROM modules m
+  WHERE m.is_required = true
+  ON CONFLICT (organization_id, module_id) DO UPDATE SET
+    is_active  = true,
+    updated_at = NOW();
+  RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
-DROP TRIGGER IF EXISTS trg_update_warehouse_stock_reserved ON stock_reservations;
-CREATE TRIGGER trg_update_warehouse_stock_reserved
-  AFTER INSERT OR UPDATE OF status OR DELETE ON stock_reservations
-  FOR EACH ROW
-  EXECUTE FUNCTION update_warehouse_stock_reserved();
+DROP TRIGGER IF EXISTS trg_seed_required_modules ON organizations;
+CREATE TRIGGER trg_seed_required_modules
+AFTER INSERT ON organizations
+FOR EACH ROW EXECUTE FUNCTION seed_required_modules_for_new_org();
 
--- One-time backfill for existing data
+COMMENT ON FUNCTION seed_required_modules_for_new_org IS
+  'Auto-activates all modules.is_required=true for newly created organizations.';
+
+-- ============================================================================
+-- OFFLINE-FIRST SUPPORT: client_id (idempotency) + version (optimistic lock) +
+-- client_created_at (skew-tolerant ordering). Phase 2 of offline-first plan.
+-- All columns are nullable and additive — safe to apply without backfill.
+-- ============================================================================
+
+-- Helper: bump version on UPDATE so optimistic lock works.
+CREATE OR REPLACE FUNCTION offline_bump_version()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.version IS NULL THEN
+    NEW.version := COALESCE(OLD.version, 1) + 1;
+  ELSIF NEW.version = OLD.version THEN
+    NEW.version := OLD.version + 1;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
 DO $$
 DECLARE
-  v_record RECORD;
-  v_existing_id UUID;
-  v_reserved NUMERIC;
+  t TEXT;
+  tables TEXT[] := ARRAY[
+    'tasks', 'task_comments', 'work_records',
+    'stock_entries', 'stock_entry_items',
+    'harvest_records', 'pest_disease_reports'
+  ];
 BEGIN
-  FOR v_record IN
-    SELECT
-      sm.organization_id,
-      sm.item_id,
-      sm.variant_id,
-      sm.warehouse_id,
-      SUM(sm.quantity) AS quantity,
-      MAX(sm.created_at) AS last_movement_at
-    FROM stock_movements sm
-    GROUP BY sm.organization_id, sm.item_id, sm.variant_id, sm.warehouse_id
-  LOOP
-    SELECT COALESCE(SUM(quantity), 0) INTO v_reserved
-    FROM stock_reservations sr
-    WHERE sr.organization_id = v_record.organization_id
-      AND sr.item_id = v_record.item_id
-      AND sr.warehouse_id = v_record.warehouse_id
-      AND sr.status = 'active'
-      AND sr.expires_at > NOW()
-      AND (sr.variant_id = v_record.variant_id OR (v_record.variant_id IS NULL AND sr.variant_id IS NULL));
-
-    SELECT id INTO v_existing_id
-    FROM warehouse_stock_levels wsl
-    WHERE wsl.organization_id = v_record.organization_id
-      AND wsl.item_id = v_record.item_id
-      AND wsl.warehouse_id = v_record.warehouse_id
-      AND (wsl.variant_id = v_record.variant_id OR (v_record.variant_id IS NULL AND wsl.variant_id IS NULL))
-    LIMIT 1;
-
-    IF v_existing_id IS NOT NULL THEN
-      UPDATE warehouse_stock_levels
-      SET quantity = v_record.quantity,
-          reserved_quantity = v_reserved,
-          last_movement_at = v_record.last_movement_at,
-          updated_at = NOW()
-      WHERE id = v_existing_id;
-    ELSE
-      INSERT INTO warehouse_stock_levels (
-        organization_id,
-        item_id,
-        variant_id,
-        warehouse_id,
-        quantity,
-        reserved_quantity,
-        last_movement_at
-      )
-      VALUES (
-        v_record.organization_id,
-        v_record.item_id,
-        v_record.variant_id,
-        v_record.warehouse_id,
-        v_record.quantity,
-        v_reserved,
-        v_record.last_movement_at
+  FOREACH t IN ARRAY tables LOOP
+    -- Skip tables that don't exist in this branch
+    IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = t) THEN
+      CONTINUE;
+    END IF;
+    EXECUTE format('ALTER TABLE %I ADD COLUMN IF NOT EXISTS client_id UUID', t);
+    EXECUTE format('ALTER TABLE %I ADD COLUMN IF NOT EXISTS version INTEGER NOT NULL DEFAULT 1', t);
+    EXECUTE format('ALTER TABLE %I ADD COLUMN IF NOT EXISTS client_created_at TIMESTAMPTZ', t);
+    -- Idempotency unique index, scoped per organization, partial on non-null client_id.
+    -- Only create if the table has organization_id (all listed do).
+    IF EXISTS (
+      SELECT 1 FROM information_schema.columns
+      WHERE table_schema = 'public' AND table_name = t AND column_name = 'organization_id'
+    ) THEN
+      EXECUTE format(
+        'CREATE UNIQUE INDEX IF NOT EXISTS %I ON %I (organization_id, client_id) WHERE client_id IS NOT NULL',
+        t || '_org_client_id_uidx', t
       );
     END IF;
+    -- Version bump trigger
+    EXECUTE format('DROP TRIGGER IF EXISTS trg_offline_bump_version ON %I', t);
+    EXECUTE format(
+      'CREATE TRIGGER trg_offline_bump_version BEFORE UPDATE ON %I FOR EACH ROW EXECUTE FUNCTION offline_bump_version()',
+      t
+    );
   END LOOP;
 END $$;
 
--- Stock Entry Approvals
-CREATE TABLE IF NOT EXISTS stock_entry_approvals (
+-- Files SHA-256 dedupe (per organization).
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'file_registry') THEN
+    EXECUTE 'ALTER TABLE file_registry ADD COLUMN IF NOT EXISTS content_sha256 TEXT';
+    EXECUTE 'CREATE UNIQUE INDEX IF NOT EXISTS file_registry_org_sha256_uidx ON file_registry (organization_id, content_sha256) WHERE content_sha256 IS NOT NULL';
+  END IF;
+END $$;
+
+-- =====================================================================
+-- HR Module — Phase 0: Attendance Foundation
+-- =====================================================================
+-- Per-ping attendance model: each check-in/check-out is one row.
+-- Geofences are point + radius (matches attendance.service.ts in agritech-api).
+
+CREATE TABLE IF NOT EXISTS farm_geofences (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  stock_entry_id UUID NOT NULL REFERENCES stock_entries(id) ON DELETE CASCADE,
-  requested_by UUID NOT NULL REFERENCES auth.users(id),
-  approved_by UUID REFERENCES auth.users(id),
-  approved_at TIMESTAMPTZ,
-  rejected_by UUID REFERENCES auth.users(id),
-  rejected_at TIMESTAMPTZ,
-  rejection_reason TEXT,
-  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  farm_id UUID REFERENCES farms(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  lat NUMERIC NOT NULL CHECK (lat BETWEEN -90 AND 90),
+  lng NUMERIC NOT NULL CHECK (lng BETWEEN -180 AND 180),
+  radius_m INTEGER NOT NULL DEFAULT 250 CHECK (radius_m BETWEEN 10 AND 50000),
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (organization_id, farm_id, name)
 );
 
-CREATE INDEX IF NOT EXISTS idx_stock_entry_approvals_entry ON stock_entry_approvals(stock_entry_id);
-CREATE INDEX IF NOT EXISTS idx_stock_entry_approvals_status ON stock_entry_approvals(status) WHERE status = 'pending';
+CREATE INDEX IF NOT EXISTS idx_farm_geofences_org ON farm_geofences(organization_id);
+CREATE INDEX IF NOT EXISTS idx_farm_geofences_farm ON farm_geofences(farm_id);
+CREATE INDEX IF NOT EXISTS idx_farm_geofences_active ON farm_geofences(organization_id, is_active);
 
--- =====================================================
--- RLS Policies
--- =====================================================
+ALTER TABLE farm_geofences ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_access_farm_geofences" ON farm_geofences;
+CREATE POLICY "org_access_farm_geofences" ON farm_geofences
+  FOR ALL USING (is_organization_member(organization_id))
+  WITH CHECK (is_organization_member(organization_id));
 
--- Stock Reservations Policies
-ALTER TABLE stock_reservations ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS "org_read_stock_reservations" ON stock_reservations;
-CREATE POLICY "org_read_stock_reservations" ON stock_reservations
-  FOR SELECT USING (is_organization_member(organization_id));
-DROP POLICY IF EXISTS "org_write_stock_reservations" ON stock_reservations;
-CREATE POLICY "org_write_stock_reservations" ON stock_reservations
-  FOR INSERT WITH CHECK (auth.uid() IS NOT NULL AND is_organization_member(organization_id));
-DROP POLICY IF EXISTS "org_update_stock_reservations" ON stock_reservations;
-CREATE POLICY "org_update_stock_reservations" ON stock_reservations
-  FOR UPDATE USING (is_organization_member(organization_id));
-DROP POLICY IF EXISTS "org_delete_stock_reservations" ON stock_reservations;
-CREATE POLICY "org_delete_stock_reservations" ON stock_reservations
-  FOR DELETE USING (is_organization_member(organization_id));
+DROP TRIGGER IF EXISTS set_farm_geofences_updated_at ON farm_geofences;
+CREATE TRIGGER set_farm_geofences_updated_at
+  BEFORE UPDATE ON farm_geofences
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
--- Warehouse Stock Levels Policies (read-only for org members, writes via triggers)
-ALTER TABLE warehouse_stock_levels ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS "org_read_warehouse_stock_levels" ON warehouse_stock_levels;
-CREATE POLICY "org_read_warehouse_stock_levels" ON warehouse_stock_levels
-  FOR SELECT USING (is_organization_member(organization_id));
+CREATE TABLE IF NOT EXISTS attendance_records (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  worker_id UUID NOT NULL REFERENCES workers(id) ON DELETE CASCADE,
+  farm_id UUID REFERENCES farms(id) ON DELETE SET NULL,
+  geofence_id UUID REFERENCES farm_geofences(id) ON DELETE SET NULL,
 
--- Stock Entry Approvals Policies
-ALTER TABLE stock_entry_approvals ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS "org_read_stock_entry_approvals" ON stock_entry_approvals;
-CREATE POLICY "org_read_stock_entry_approvals" ON stock_entry_approvals
+  type TEXT NOT NULL CHECK (type IN ('check_in', 'check_out')),
+  occurred_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+  lat NUMERIC CHECK (lat IS NULL OR lat BETWEEN -90 AND 90),
+  lng NUMERIC CHECK (lng IS NULL OR lng BETWEEN -180 AND 180),
+  accuracy_m NUMERIC,
+  distance_m NUMERIC,
+  within_geofence BOOLEAN,
+
+  source TEXT NOT NULL DEFAULT 'mobile'
+    CHECK (source IN ('mobile', 'manual', 'admin', 'biometric')),
+  notes TEXT,
+
+  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_attendance_records_org ON attendance_records(organization_id);
+CREATE INDEX IF NOT EXISTS idx_attendance_records_worker ON attendance_records(worker_id);
+CREATE INDEX IF NOT EXISTS idx_attendance_records_farm ON attendance_records(farm_id);
+CREATE INDEX IF NOT EXISTS idx_attendance_records_occurred_at ON attendance_records(occurred_at DESC);
+CREATE INDEX IF NOT EXISTS idx_attendance_records_worker_occurred ON attendance_records(worker_id, occurred_at DESC);
+
+ALTER TABLE attendance_records ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_access_attendance_records" ON attendance_records;
+CREATE POLICY "org_access_attendance_records" ON attendance_records
+  FOR ALL USING (is_organization_member(organization_id))
+  WITH CHECK (is_organization_member(organization_id));
+
+DROP TRIGGER IF EXISTS set_attendance_records_updated_at ON attendance_records;
+CREATE TRIGGER set_attendance_records_updated_at
+  BEFORE UPDATE ON attendance_records
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- =====================================================================
+-- HR Module — Phase 1.0: Compliance Settings (Configuration Layer)
+-- =====================================================================
+-- One row per organization. Every payroll/leave module reads this first.
+-- When a flag is OFF, the corresponding calculation is skipped entirely.
+
+CREATE TABLE IF NOT EXISTS hr_compliance_settings (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE UNIQUE,
+
+  -- Country / preset
+  compliance_country TEXT NOT NULL DEFAULT 'MA',
+  compliance_preset TEXT NOT NULL DEFAULT 'morocco_none'
+    CHECK (compliance_preset IN ('morocco_standard', 'morocco_basic', 'morocco_none', 'custom')),
+
+  -- CNSS
+  cnss_enabled BOOLEAN NOT NULL DEFAULT false,
+  cnss_employee_rate NUMERIC(5,2) NOT NULL DEFAULT 0,
+  cnss_employer_rate NUMERIC(5,2) NOT NULL DEFAULT 0,
+  cnss_salary_cap NUMERIC,
+  cnss_auto_declare BOOLEAN NOT NULL DEFAULT false,
+  cnss_declaration_frequency TEXT
+    CHECK (cnss_declaration_frequency IS NULL OR cnss_declaration_frequency IN ('monthly', 'quarterly')),
+
+  -- AMO
+  amo_enabled BOOLEAN NOT NULL DEFAULT false,
+  amo_employee_rate NUMERIC(5,2) NOT NULL DEFAULT 0,
+  amo_employer_rate NUMERIC(5,2) NOT NULL DEFAULT 0,
+  amo_salary_cap NUMERIC,
+
+  -- CIS / RCAR
+  cis_enabled BOOLEAN NOT NULL DEFAULT false,
+  cis_employee_rate NUMERIC(5,2) NOT NULL DEFAULT 0,
+  cis_employer_rate NUMERIC(5,2) NOT NULL DEFAULT 0,
+  cis_salary_cap NUMERIC,
+
+  -- Income Tax (IR)
+  income_tax_enabled BOOLEAN NOT NULL DEFAULT false,
+  income_tax_config_id UUID,
+  professional_expenses_deduction_enabled BOOLEAN NOT NULL DEFAULT false,
+  professional_expenses_rate NUMERIC(5,2) NOT NULL DEFAULT 20,
+  professional_expenses_cap NUMERIC,
+  family_deduction_enabled BOOLEAN NOT NULL DEFAULT false,
+  family_deduction_per_child NUMERIC NOT NULL DEFAULT 0,
+  family_deduction_max_children INTEGER NOT NULL DEFAULT 0,
+
+  -- Leave compliance
+  leave_compliance_mode TEXT NOT NULL DEFAULT 'custom'
+    CHECK (leave_compliance_mode IN ('morocco_legal', 'custom')),
+  enforce_minimum_leave BOOLEAN NOT NULL DEFAULT false,
+  auto_allocate_annual_leave BOOLEAN NOT NULL DEFAULT false,
+  annual_leave_days_per_month NUMERIC NOT NULL DEFAULT 1.5,
+  sick_leave_days INTEGER NOT NULL DEFAULT 4,
+  maternity_leave_weeks INTEGER NOT NULL DEFAULT 14,
+  paternity_leave_days INTEGER NOT NULL DEFAULT 3,
+
+  -- Minimum wage
+  minimum_wage_check_enabled BOOLEAN NOT NULL DEFAULT false,
+  minimum_daily_wage NUMERIC,
+  minimum_monthly_wage NUMERIC,
+
+  -- Payroll behavior
+  default_pay_frequency TEXT NOT NULL DEFAULT 'monthly'
+    CHECK (default_pay_frequency IN ('daily', 'weekly', 'biweekly', 'monthly')),
+  default_currency TEXT NOT NULL DEFAULT 'MAD',
+  round_net_pay BOOLEAN NOT NULL DEFAULT true,
+  auto_generate_slips_on_payroll_run BOOLEAN NOT NULL DEFAULT true,
+  password_protect_payslips BOOLEAN NOT NULL DEFAULT false,
+
+  -- Overtime
+  overtime_enabled BOOLEAN NOT NULL DEFAULT false,
+  standard_working_hours NUMERIC NOT NULL DEFAULT 8,
+  overtime_rate_multiplier NUMERIC NOT NULL DEFAULT 1.5,
+  overtime_rate_multiplier_weekend NUMERIC NOT NULL DEFAULT 2,
+
+  last_updated_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_hr_compliance_settings_org ON hr_compliance_settings(organization_id);
+
+ALTER TABLE hr_compliance_settings ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_access_hr_compliance" ON hr_compliance_settings;
+CREATE POLICY "org_access_hr_compliance" ON hr_compliance_settings
+  FOR ALL USING (is_organization_member(organization_id))
+  WITH CHECK (is_organization_member(organization_id));
+
+DROP TRIGGER IF EXISTS update_hr_compliance_settings_updated_at ON hr_compliance_settings;
+CREATE TRIGGER update_hr_compliance_settings_updated_at
+  BEFORE UPDATE ON hr_compliance_settings
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Auto-create empty (morocco_none) settings row whenever an organization is created.
+CREATE OR REPLACE FUNCTION create_default_hr_compliance_settings()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO hr_compliance_settings (organization_id)
+  VALUES (NEW.id)
+  ON CONFLICT (organization_id) DO NOTHING;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_create_hr_compliance_settings ON organizations;
+CREATE TRIGGER trg_create_hr_compliance_settings
+  AFTER INSERT ON organizations
+  FOR EACH ROW EXECUTE FUNCTION create_default_hr_compliance_settings();
+
+-- Backfill: ensure every existing organization has a settings row.
+INSERT INTO hr_compliance_settings (organization_id)
+SELECT id FROM organizations
+ON CONFLICT (organization_id) DO NOTHING;
+
+-- =====================================================================
+-- HR Module — Phase 1.A: Leave Management
+-- =====================================================================
+
+-- Leave Types (per org)
+CREATE TABLE IF NOT EXISTS leave_types (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  name_fr TEXT,
+  name_ar TEXT,
+  description TEXT,
+
+  annual_allocation NUMERIC NOT NULL DEFAULT 0,
+  is_carry_forward BOOLEAN NOT NULL DEFAULT false,
+  maximum_carry_forward_days NUMERIC NOT NULL DEFAULT 0,
+  carry_forward_expiry_months INTEGER NOT NULL DEFAULT 3,
+  is_encashable BOOLEAN NOT NULL DEFAULT false,
+  encashment_amount_per_day NUMERIC,
+
+  applicable_worker_types TEXT[] NOT NULL DEFAULT ARRAY['fixed_salary', 'daily_worker', 'metayage'],
+  is_paid BOOLEAN NOT NULL DEFAULT true,
+  requires_approval BOOLEAN NOT NULL DEFAULT true,
+  maximum_consecutive_days INTEGER,
+  minimum_advance_notice_days INTEGER NOT NULL DEFAULT 1,
+
+  is_earned_leave BOOLEAN NOT NULL DEFAULT false,
+  earned_leave_frequency TEXT
+    CHECK (earned_leave_frequency IS NULL OR earned_leave_frequency IN ('monthly', 'quarterly', 'biannual', 'annual')),
+  earned_leave_days_per_period NUMERIC,
+
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(organization_id, name)
+);
+
+CREATE INDEX IF NOT EXISTS idx_leave_types_org ON leave_types(organization_id);
+
+ALTER TABLE leave_types ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_access_leave_types" ON leave_types;
+CREATE POLICY "org_access_leave_types" ON leave_types
+  FOR ALL USING (is_organization_member(organization_id))
+  WITH CHECK (is_organization_member(organization_id));
+
+DROP TRIGGER IF EXISTS update_leave_types_updated_at ON leave_types;
+CREATE TRIGGER update_leave_types_updated_at
+  BEFORE UPDATE ON leave_types
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Holiday Lists
+CREATE TABLE IF NOT EXISTS holiday_lists (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  year INTEGER NOT NULL,
+  description TEXT,
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(organization_id, name)
+);
+
+CREATE INDEX IF NOT EXISTS idx_holiday_lists_org ON holiday_lists(organization_id);
+CREATE INDEX IF NOT EXISTS idx_holiday_lists_year ON holiday_lists(organization_id, year);
+
+ALTER TABLE holiday_lists ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_access_holiday_lists" ON holiday_lists;
+CREATE POLICY "org_access_holiday_lists" ON holiday_lists
+  FOR ALL USING (is_organization_member(organization_id))
+  WITH CHECK (is_organization_member(organization_id));
+
+DROP TRIGGER IF EXISTS update_holiday_lists_updated_at ON holiday_lists;
+CREATE TRIGGER update_holiday_lists_updated_at
+  BEFORE UPDATE ON holiday_lists
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Holidays (in a list)
+CREATE TABLE IF NOT EXISTS holidays (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  holiday_list_id UUID NOT NULL REFERENCES holiday_lists(id) ON DELETE CASCADE,
+  date DATE NOT NULL,
+  name TEXT NOT NULL,
+  name_fr TEXT,
+  name_ar TEXT,
+  holiday_type TEXT NOT NULL DEFAULT 'public'
+    CHECK (holiday_type IN ('public', 'optional', 'weekly_off')),
+  description TEXT,
+  UNIQUE(holiday_list_id, date)
+);
+
+CREATE INDEX IF NOT EXISTS idx_holidays_list ON holidays(holiday_list_id);
+CREATE INDEX IF NOT EXISTS idx_holidays_date ON holidays(date);
+
+ALTER TABLE holidays ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_access_holidays" ON holidays;
+CREATE POLICY "org_access_holidays" ON holidays
+  FOR ALL USING (
+    is_organization_member((SELECT organization_id FROM holiday_lists WHERE id = holiday_list_id))
+  ) WITH CHECK (
+    is_organization_member((SELECT organization_id FROM holiday_lists WHERE id = holiday_list_id))
+  );
+
+-- Leave Allocations (worker x leave_type x period)
+CREATE TABLE IF NOT EXISTS leave_allocations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  worker_id UUID NOT NULL REFERENCES workers(id) ON DELETE CASCADE,
+  leave_type_id UUID NOT NULL REFERENCES leave_types(id) ON DELETE CASCADE,
+
+  total_days NUMERIC NOT NULL DEFAULT 0,
+  used_days NUMERIC NOT NULL DEFAULT 0,
+  expired_days NUMERIC NOT NULL DEFAULT 0,
+  carry_forwarded_days NUMERIC NOT NULL DEFAULT 0,
+  encashed_days NUMERIC NOT NULL DEFAULT 0,
+  remaining_days NUMERIC GENERATED ALWAYS AS (
+    total_days - used_days - expired_days - encashed_days
+  ) STORED,
+
+  period_start DATE NOT NULL,
+  period_end DATE NOT NULL,
+
+  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+  UNIQUE(worker_id, leave_type_id, period_start)
+);
+
+CREATE INDEX IF NOT EXISTS idx_leave_allocations_org ON leave_allocations(organization_id);
+CREATE INDEX IF NOT EXISTS idx_leave_allocations_worker ON leave_allocations(worker_id);
+CREATE INDEX IF NOT EXISTS idx_leave_allocations_type ON leave_allocations(leave_type_id);
+
+ALTER TABLE leave_allocations ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_access_leave_allocations" ON leave_allocations;
+CREATE POLICY "org_access_leave_allocations" ON leave_allocations
+  FOR ALL USING (is_organization_member(organization_id))
+  WITH CHECK (is_organization_member(organization_id));
+
+DROP TRIGGER IF EXISTS update_leave_allocations_updated_at ON leave_allocations;
+CREATE TRIGGER update_leave_allocations_updated_at
+  BEFORE UPDATE ON leave_allocations
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Leave Applications
+CREATE TABLE IF NOT EXISTS leave_applications (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  worker_id UUID NOT NULL REFERENCES workers(id) ON DELETE CASCADE,
+  leave_type_id UUID NOT NULL REFERENCES leave_types(id) ON DELETE CASCADE,
+
+  from_date DATE NOT NULL,
+  to_date DATE NOT NULL,
+  total_days NUMERIC NOT NULL,
+  half_day BOOLEAN NOT NULL DEFAULT false,
+  half_day_period TEXT
+    CHECK (half_day_period IS NULL OR half_day_period IN ('first_half', 'second_half')),
+
+  reason TEXT NOT NULL,
+  attachment_urls TEXT[],
+
+  status TEXT NOT NULL DEFAULT 'pending'
+    CHECK (status IN ('pending', 'approved', 'rejected', 'cancelled')),
+  approved_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  approved_at TIMESTAMPTZ,
+  rejection_reason TEXT,
+
+  is_block_day BOOLEAN NOT NULL DEFAULT false,
+
+  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+  CHECK (to_date >= from_date)
+);
+
+CREATE INDEX IF NOT EXISTS idx_leave_applications_org ON leave_applications(organization_id);
+CREATE INDEX IF NOT EXISTS idx_leave_applications_worker ON leave_applications(worker_id);
+CREATE INDEX IF NOT EXISTS idx_leave_applications_status ON leave_applications(organization_id, status);
+CREATE INDEX IF NOT EXISTS idx_leave_applications_dates ON leave_applications(from_date, to_date);
+
+ALTER TABLE leave_applications ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_access_leave_applications" ON leave_applications;
+CREATE POLICY "org_access_leave_applications" ON leave_applications
+  FOR ALL USING (is_organization_member(organization_id))
+  WITH CHECK (is_organization_member(organization_id));
+
+DROP TRIGGER IF EXISTS update_leave_applications_updated_at ON leave_applications;
+CREATE TRIGGER update_leave_applications_updated_at
+  BEFORE UPDATE ON leave_applications
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Leave Block Dates (e.g. harvest blackout)
+CREATE TABLE IF NOT EXISTS leave_block_dates (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  block_date DATE NOT NULL,
+  reason TEXT NOT NULL,
+  applies_to TEXT[] NOT NULL DEFAULT ARRAY['all'],
+  allowed_approvers UUID[],
+  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(organization_id, block_date)
+);
+
+CREATE INDEX IF NOT EXISTS idx_leave_block_dates_org_date ON leave_block_dates(organization_id, block_date);
+
+ALTER TABLE leave_block_dates ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_access_leave_block_dates" ON leave_block_dates;
+CREATE POLICY "org_access_leave_block_dates" ON leave_block_dates
+  FOR ALL USING (is_organization_member(organization_id))
+  WITH CHECK (is_organization_member(organization_id));
+
+-- Leave Encashments
+CREATE TABLE IF NOT EXISTS leave_encashments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  worker_id UUID NOT NULL REFERENCES workers(id) ON DELETE CASCADE,
+  leave_type_id UUID NOT NULL REFERENCES leave_types(id) ON DELETE CASCADE,
+  leave_allocation_id UUID NOT NULL REFERENCES leave_allocations(id) ON DELETE CASCADE,
+
+  days_encashed NUMERIC NOT NULL CHECK (days_encashed > 0),
+  amount_per_day NUMERIC NOT NULL CHECK (amount_per_day >= 0),
+  total_amount NUMERIC NOT NULL CHECK (total_amount >= 0),
+  status TEXT NOT NULL DEFAULT 'pending'
+    CHECK (status IN ('pending', 'approved', 'paid', 'cancelled')),
+
+  approved_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  approved_at TIMESTAMPTZ,
+  paid_at TIMESTAMPTZ,
+
+  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_leave_encashments_org ON leave_encashments(organization_id);
+CREATE INDEX IF NOT EXISTS idx_leave_encashments_worker ON leave_encashments(worker_id);
+
+ALTER TABLE leave_encashments ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_access_leave_encashments" ON leave_encashments;
+CREATE POLICY "org_access_leave_encashments" ON leave_encashments
+  FOR ALL USING (is_organization_member(organization_id))
+  WITH CHECK (is_organization_member(organization_id));
+
+-- =====================================================================
+-- HR Module — Phase 1.B: Payroll Processing
+-- =====================================================================
+
+-- Progressive income tax brackets (separate from tax_configurations which is
+-- flat-rate VAT-style). Used by the payroll calc engine when compliance
+-- settings income_tax_enabled = true.
+CREATE TABLE IF NOT EXISTS income_tax_brackets (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  country_code VARCHAR(2),
+  -- NULL country_code AND non-null org_id = org override; non-null country_code
+  -- AND null org_id = system default for that country.
+  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+
+  bracket_set_name TEXT NOT NULL,         -- e.g. 'morocco_ir_annual_2026'
+  period TEXT NOT NULL DEFAULT 'annual'
+    CHECK (period IN ('annual', 'monthly')),
+  currency TEXT NOT NULL DEFAULT 'MAD',
+
+  lower_bound NUMERIC NOT NULL,           -- inclusive
+  upper_bound NUMERIC,                    -- exclusive; NULL = no upper bound
+  rate NUMERIC(5,2) NOT NULL,             -- % (0–100)
+  quick_deduction NUMERIC NOT NULL DEFAULT 0, -- "somme à déduire" (optional)
+  effective_date DATE NOT NULL DEFAULT CURRENT_DATE,
+  expiry_date DATE,
+
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+  CHECK (organization_id IS NULL OR country_code IS NULL),
+  CHECK (upper_bound IS NULL OR upper_bound > lower_bound)
+);
+
+CREATE INDEX IF NOT EXISTS idx_income_tax_brackets_country ON income_tax_brackets(country_code, bracket_set_name) WHERE organization_id IS NULL;
+CREATE INDEX IF NOT EXISTS idx_income_tax_brackets_org ON income_tax_brackets(organization_id, bracket_set_name) WHERE organization_id IS NOT NULL;
+
+ALTER TABLE income_tax_brackets ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "income_tax_brackets_read" ON income_tax_brackets;
+CREATE POLICY "income_tax_brackets_read" ON income_tax_brackets
   FOR SELECT USING (
-    stock_entry_id IN (
-      SELECT id FROM stock_entries WHERE is_organization_member(organization_id)
-    )
+    organization_id IS NULL OR is_organization_member(organization_id)
   );
-DROP POLICY IF EXISTS "org_write_stock_entry_approvals" ON stock_entry_approvals;
-CREATE POLICY "org_write_stock_entry_approvals" ON stock_entry_approvals
-  FOR INSERT WITH CHECK (
-    stock_entry_id IN (
-      SELECT id FROM stock_entries WHERE is_organization_member(organization_id)
-    )
-  );
-DROP POLICY IF EXISTS "org_update_stock_entry_approvals" ON stock_entry_approvals;
-CREATE POLICY "org_update_stock_entry_approvals" ON stock_entry_approvals
-  FOR UPDATE USING (
-    stock_entry_id IN (
-      SELECT id FROM stock_entries WHERE is_organization_member(organization_id)
-    )
+DROP POLICY IF EXISTS "income_tax_brackets_write_org" ON income_tax_brackets;
+CREATE POLICY "income_tax_brackets_write_org" ON income_tax_brackets
+  FOR ALL USING (
+    organization_id IS NOT NULL AND is_organization_member(organization_id)
+  ) WITH CHECK (
+    organization_id IS NOT NULL AND is_organization_member(organization_id)
   );
 
+-- Seed Moroccan IR (annual brackets, 2026 reference)
+INSERT INTO income_tax_brackets (country_code, bracket_set_name, period, currency, lower_bound, upper_bound, rate, quick_deduction)
+VALUES
+  ('MA', 'morocco_ir_annual_2026', 'annual', 'MAD',      0,   30000,  0,     0),
+  ('MA', 'morocco_ir_annual_2026', 'annual', 'MAD',  30000,   50000, 10,  3000),
+  ('MA', 'morocco_ir_annual_2026', 'annual', 'MAD',  50000,   60000, 20,  8000),
+  ('MA', 'morocco_ir_annual_2026', 'annual', 'MAD',  60000,   80000, 30, 14000),
+  ('MA', 'morocco_ir_annual_2026', 'annual', 'MAD',  80000,  180000, 34, 17200),
+  ('MA', 'morocco_ir_annual_2026', 'annual', 'MAD', 180000,    NULL, 38, 24400)
+ON CONFLICT DO NOTHING;
+
+-- Salary Structures
+CREATE TABLE IF NOT EXISTS salary_structures (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  description TEXT,
+  applicable_worker_types TEXT[] NOT NULL DEFAULT ARRAY['fixed_salary'],
+  is_default BOOLEAN NOT NULL DEFAULT false,
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  currency TEXT NOT NULL DEFAULT 'MAD',
+  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(organization_id, name)
+);
+
+CREATE INDEX IF NOT EXISTS idx_salary_structures_org ON salary_structures(organization_id);
+
+ALTER TABLE salary_structures ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_access_salary_structures" ON salary_structures;
+CREATE POLICY "org_access_salary_structures" ON salary_structures
+  FOR ALL USING (is_organization_member(organization_id))
+  WITH CHECK (is_organization_member(organization_id));
+
+DROP TRIGGER IF EXISTS update_salary_structures_updated_at ON salary_structures;
+CREATE TRIGGER update_salary_structures_updated_at
+  BEFORE UPDATE ON salary_structures
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Salary Components (earnings + deductions on a structure)
+CREATE TABLE IF NOT EXISTS salary_components (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  salary_structure_id UUID NOT NULL REFERENCES salary_structures(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  name_fr TEXT,
+  name_ar TEXT,
+  component_type TEXT NOT NULL CHECK (component_type IN ('earning', 'deduction')),
+  category TEXT NOT NULL CHECK (category IN (
+    'basic_salary', 'housing_allowance', 'transport_allowance', 'family_allowance',
+    'overtime', 'bonus', 'commission', 'other_earning',
+    'cnss_employee', 'cnss_employer', 'amo_employee', 'amo_employer',
+    'cis_employee', 'cis_employer',
+    'income_tax', 'professional_tax',
+    'advance_deduction', 'loan_deduction', 'other_deduction'
+  )),
+  calculation_type TEXT NOT NULL CHECK (calculation_type IN ('fixed', 'percentage_of_basic', 'formula')),
+  amount NUMERIC,
+  percentage NUMERIC,
+  formula TEXT,
+  is_statutory BOOLEAN NOT NULL DEFAULT false,
+  is_taxable BOOLEAN NOT NULL DEFAULT true,
+  depends_on_payment_days BOOLEAN NOT NULL DEFAULT true,
+  condition_formula TEXT,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_salary_components_structure ON salary_components(salary_structure_id);
+
+ALTER TABLE salary_components ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_access_salary_components" ON salary_components;
+CREATE POLICY "org_access_salary_components" ON salary_components
+  FOR ALL USING (
+    is_organization_member((SELECT organization_id FROM salary_structures WHERE id = salary_structure_id))
+  ) WITH CHECK (
+    is_organization_member((SELECT organization_id FROM salary_structures WHERE id = salary_structure_id))
+  );
+
+-- Salary Structure Assignments (worker → structure with effective dates)
+CREATE TABLE IF NOT EXISTS salary_structure_assignments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  worker_id UUID NOT NULL REFERENCES workers(id) ON DELETE CASCADE,
+  salary_structure_id UUID NOT NULL REFERENCES salary_structures(id) ON DELETE CASCADE,
+  base_amount NUMERIC NOT NULL CHECK (base_amount >= 0),
+  variable_amount NUMERIC NOT NULL DEFAULT 0,
+  cost_center_farm_id UUID REFERENCES farms(id) ON DELETE SET NULL,
+  cost_center_split JSONB,
+  effective_from DATE NOT NULL,
+  effective_to DATE,
+  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(worker_id, effective_from)
+);
+
+CREATE INDEX IF NOT EXISTS idx_ssa_org ON salary_structure_assignments(organization_id);
+CREATE INDEX IF NOT EXISTS idx_ssa_worker ON salary_structure_assignments(worker_id);
+CREATE INDEX IF NOT EXISTS idx_ssa_effective ON salary_structure_assignments(worker_id, effective_from DESC);
+
+ALTER TABLE salary_structure_assignments ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_access_ssa" ON salary_structure_assignments;
+CREATE POLICY "org_access_ssa" ON salary_structure_assignments
+  FOR ALL USING (is_organization_member(organization_id))
+  WITH CHECK (is_organization_member(organization_id));
+
+-- Payroll Runs (batch processing record)
+CREATE TABLE IF NOT EXISTS payroll_runs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  pay_period_start DATE NOT NULL,
+  pay_period_end DATE NOT NULL,
+  pay_frequency TEXT NOT NULL CHECK (pay_frequency IN ('monthly', 'biweekly', 'weekly', 'daily')),
+  posting_date DATE NOT NULL DEFAULT CURRENT_DATE,
+  farm_id UUID REFERENCES farms(id) ON DELETE SET NULL,
+  worker_type TEXT,
+  total_workers INTEGER NOT NULL DEFAULT 0,
+  total_gross_pay NUMERIC NOT NULL DEFAULT 0,
+  total_deductions NUMERIC NOT NULL DEFAULT 0,
+  total_net_pay NUMERIC NOT NULL DEFAULT 0,
+  total_employer_contributions NUMERIC NOT NULL DEFAULT 0,
+  status TEXT NOT NULL DEFAULT 'draft'
+    CHECK (status IN ('draft', 'processing', 'submitted', 'paid', 'cancelled')),
+  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  submitted_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  submitted_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CHECK (pay_period_end >= pay_period_start)
+);
+
+CREATE INDEX IF NOT EXISTS idx_payroll_runs_org ON payroll_runs(organization_id);
+CREATE INDEX IF NOT EXISTS idx_payroll_runs_period ON payroll_runs(organization_id, pay_period_start DESC);
+
+ALTER TABLE payroll_runs ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_access_payroll_runs" ON payroll_runs;
+CREATE POLICY "org_access_payroll_runs" ON payroll_runs
+  FOR ALL USING (is_organization_member(organization_id))
+  WITH CHECK (is_organization_member(organization_id));
+
+DROP TRIGGER IF EXISTS update_payroll_runs_updated_at ON payroll_runs;
+CREATE TRIGGER update_payroll_runs_updated_at
+  BEFORE UPDATE ON payroll_runs
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Salary Slips (per worker per pay period)
+CREATE TABLE IF NOT EXISTS salary_slips (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  farm_id UUID REFERENCES farms(id) ON DELETE SET NULL,
+  worker_id UUID NOT NULL REFERENCES workers(id) ON DELETE CASCADE,
+  salary_structure_assignment_id UUID REFERENCES salary_structure_assignments(id) ON DELETE SET NULL,
+  payroll_run_id UUID REFERENCES payroll_runs(id) ON DELETE SET NULL,
+
+  pay_period_start DATE NOT NULL,
+  pay_period_end DATE NOT NULL,
+  pay_frequency TEXT NOT NULL CHECK (pay_frequency IN ('monthly', 'biweekly', 'weekly', 'daily')),
+
+  working_days INTEGER NOT NULL DEFAULT 0,
+  present_days NUMERIC NOT NULL DEFAULT 0,
+  absent_days NUMERIC NOT NULL DEFAULT 0,
+  leave_days NUMERIC NOT NULL DEFAULT 0,
+  holiday_days NUMERIC NOT NULL DEFAULT 0,
+  payment_days NUMERIC NOT NULL DEFAULT 0,
+
+  gross_pay NUMERIC NOT NULL DEFAULT 0,
+  earnings JSONB NOT NULL DEFAULT '[]'::jsonb,
+  total_deductions NUMERIC NOT NULL DEFAULT 0,
+  deductions JSONB NOT NULL DEFAULT '[]'::jsonb,
+  employer_contributions JSONB NOT NULL DEFAULT '[]'::jsonb,
+  net_pay NUMERIC NOT NULL DEFAULT 0,
+
+  taxable_income NUMERIC,
+  income_tax NUMERIC,
+  tax_deduction_amount NUMERIC,
+  tax_regime TEXT CHECK (tax_regime IS NULL OR tax_regime IN ('standard', 'simplified')),
+
+  status TEXT NOT NULL DEFAULT 'draft'
+    CHECK (status IN ('draft', 'submitted', 'paid', 'cancelled')),
+
+  journal_entry_id UUID,
+  cost_center JSONB,
+
+  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+  UNIQUE(worker_id, pay_period_start, pay_period_end)
+);
+
+CREATE INDEX IF NOT EXISTS idx_salary_slips_org ON salary_slips(organization_id);
+CREATE INDEX IF NOT EXISTS idx_salary_slips_worker ON salary_slips(worker_id);
+CREATE INDEX IF NOT EXISTS idx_salary_slips_run ON salary_slips(payroll_run_id);
+CREATE INDEX IF NOT EXISTS idx_salary_slips_period ON salary_slips(organization_id, pay_period_start DESC);
+
+ALTER TABLE salary_slips ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_access_salary_slips" ON salary_slips;
+CREATE POLICY "org_access_salary_slips" ON salary_slips
+  FOR ALL USING (is_organization_member(organization_id))
+  WITH CHECK (is_organization_member(organization_id));
+
+DROP TRIGGER IF EXISTS update_salary_slips_updated_at ON salary_slips;
+CREATE TRIGGER update_salary_slips_updated_at
+  BEFORE UPDATE ON salary_slips
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Self-service: workers may read their own salary slips through workers.user_id.
+DROP POLICY IF EXISTS "self_read_salary_slips" ON salary_slips;
+CREATE POLICY "self_read_salary_slips" ON salary_slips
+  FOR SELECT USING (
+    worker_id IN (SELECT id FROM workers WHERE user_id = auth.uid())
+  );
+
+-- =====================================================================
+-- HR Module — Phase 1.C: Enhanced Worker Profile
+-- =====================================================================
+
+-- Personal
+ALTER TABLE workers ADD COLUMN IF NOT EXISTS employment_type TEXT
+  CHECK (employment_type IS NULL OR employment_type IN ('full_time', 'part_time', 'intern', 'contract', 'seasonal', 'probation'));
+ALTER TABLE workers ADD COLUMN IF NOT EXISTS gender TEXT
+  CHECK (gender IS NULL OR gender IN ('male', 'female'));
+ALTER TABLE workers ADD COLUMN IF NOT EXISTS marital_status TEXT
+  CHECK (marital_status IS NULL OR marital_status IN ('single', 'married', 'divorced', 'widowed'));
+ALTER TABLE workers ADD COLUMN IF NOT EXISTS number_of_children INTEGER NOT NULL DEFAULT 0
+  CHECK (number_of_children >= 0);
+ALTER TABLE workers ADD COLUMN IF NOT EXISTS nationality TEXT;
+ALTER TABLE workers ADD COLUMN IF NOT EXISTS cin_issue_date DATE;
+ALTER TABLE workers ADD COLUMN IF NOT EXISTS cin_issue_place TEXT;
+
+-- Emergency contact
+ALTER TABLE workers ADD COLUMN IF NOT EXISTS emergency_contact_name TEXT;
+ALTER TABLE workers ADD COLUMN IF NOT EXISTS emergency_contact_phone TEXT;
+ALTER TABLE workers ADD COLUMN IF NOT EXISTS emergency_contact_relation TEXT;
+
+-- Health
+ALTER TABLE workers ADD COLUMN IF NOT EXISTS health_insurance_provider TEXT;
+ALTER TABLE workers ADD COLUMN IF NOT EXISTS health_insurance_number TEXT;
+ALTER TABLE workers ADD COLUMN IF NOT EXISTS blood_type TEXT
+  CHECK (blood_type IS NULL OR blood_type IN ('A+','A-','B+','B-','AB+','AB-','O+','O-'));
+
+-- Contract
+ALTER TABLE workers ADD COLUMN IF NOT EXISTS contract_start_date DATE;
+ALTER TABLE workers ADD COLUMN IF NOT EXISTS contract_end_date DATE;
+ALTER TABLE workers ADD COLUMN IF NOT EXISTS probation_end_date DATE;
+ALTER TABLE workers ADD COLUMN IF NOT EXISTS notice_period_days INTEGER NOT NULL DEFAULT 30
+  CHECK (notice_period_days >= 0);
+ALTER TABLE workers ADD COLUMN IF NOT EXISTS confirmation_date DATE;
+ALTER TABLE workers ADD COLUMN IF NOT EXISTS reporting_to UUID REFERENCES workers(id) ON DELETE SET NULL;
+
+-- Profile / address
+ALTER TABLE workers ADD COLUMN IF NOT EXISTS photo_url TEXT;
+ALTER TABLE workers ADD COLUMN IF NOT EXISTS personal_email TEXT;
+ALTER TABLE workers ADD COLUMN IF NOT EXISTS permanent_address TEXT;
+ALTER TABLE workers ADD COLUMN IF NOT EXISTS current_address TEXT;
+ALTER TABLE workers ADD COLUMN IF NOT EXISTS educational_qualification TEXT;
+ALTER TABLE workers ADD COLUMN IF NOT EXISTS previous_work_experience JSONB NOT NULL DEFAULT '[]'::jsonb;
+
+-- HR FK pointers (nullable; set by admin)
+ALTER TABLE workers ADD COLUMN IF NOT EXISTS holiday_list_id UUID REFERENCES holiday_lists(id) ON DELETE SET NULL;
+ALTER TABLE workers ADD COLUMN IF NOT EXISTS salary_structure_assignment_id UUID REFERENCES salary_structure_assignments(id) ON DELETE SET NULL;
+
+-- Banking / tax
+ALTER TABLE workers ADD COLUMN IF NOT EXISTS bank_name TEXT;
+ALTER TABLE workers ADD COLUMN IF NOT EXISTS bank_rib TEXT;
+ALTER TABLE workers ADD COLUMN IF NOT EXISTS tax_identification_number TEXT;
+
+-- Status (employment lifecycle)
+ALTER TABLE workers ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'active'
+  CHECK (status IN ('active', 'inactive', 'on_leave', 'terminated', 'probation'));
+
+CREATE INDEX IF NOT EXISTS idx_workers_status ON workers(organization_id, status);
+CREATE INDEX IF NOT EXISTS idx_workers_reporting_to ON workers(reporting_to) WHERE reporting_to IS NOT NULL;
+
+-- Worker Documents
+CREATE TABLE IF NOT EXISTS worker_documents (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  worker_id UUID NOT NULL REFERENCES workers(id) ON DELETE CASCADE,
+
+  document_type TEXT NOT NULL CHECK (document_type IN (
+    'cin', 'passport', 'work_permit', 'contract', 'cnss_card', 'medical_certificate',
+    'driving_license', 'pesticide_certification', 'training_certificate',
+    'bank_details', 'tax_document', 'photo', 'other'
+  )),
+  document_name TEXT NOT NULL,
+  file_url TEXT NOT NULL,
+  file_size INTEGER,
+  mime_type TEXT,
+  expiry_date DATE,
+  is_verified BOOLEAN NOT NULL DEFAULT false,
+  verified_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  verified_at TIMESTAMPTZ,
+  notes TEXT,
+
+  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+  UNIQUE(worker_id, document_type)
+);
+
+CREATE INDEX IF NOT EXISTS idx_worker_documents_org ON worker_documents(organization_id);
+CREATE INDEX IF NOT EXISTS idx_worker_documents_worker ON worker_documents(worker_id);
+CREATE INDEX IF NOT EXISTS idx_worker_documents_expiry ON worker_documents(expiry_date) WHERE expiry_date IS NOT NULL;
+
+ALTER TABLE worker_documents ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_access_worker_documents" ON worker_documents;
+CREATE POLICY "org_access_worker_documents" ON worker_documents
+  FOR ALL USING (is_organization_member(organization_id))
+  WITH CHECK (is_organization_member(organization_id));
+
+DROP POLICY IF EXISTS "self_read_worker_documents" ON worker_documents;
+CREATE POLICY "self_read_worker_documents" ON worker_documents
+  FOR SELECT USING (
+    worker_id IN (SELECT id FROM workers WHERE user_id = auth.uid())
+  );
+
+DROP TRIGGER IF EXISTS update_worker_documents_updated_at ON worker_documents;
+CREATE TRIGGER update_worker_documents_updated_at
+  BEFORE UPDATE ON worker_documents
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- =====================================================================
+-- HR Module — Phase 2: Operational HR
+-- =====================================================================
+
+-- Shifts
+CREATE TABLE IF NOT EXISTS shifts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  description TEXT,
+  start_time TIME NOT NULL,
+  end_time TIME NOT NULL,
+  grace_period_minutes INTEGER NOT NULL DEFAULT 15,
+  -- Stored compute: handles end-time-after-midnight by adding 24h.
+  working_hours NUMERIC GENERATED ALWAYS AS (
+    CASE
+      WHEN end_time > start_time THEN
+        EXTRACT(EPOCH FROM (end_time - start_time)) / 3600
+      ELSE
+        EXTRACT(EPOCH FROM ((end_time + INTERVAL '24 hours') - start_time)) / 3600
+    END
+  ) STORED,
+  enable_auto_attendance BOOLEAN NOT NULL DEFAULT false,
+  mark_late_after_minutes INTEGER,
+  early_exit_before_minutes INTEGER,
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  color TEXT NOT NULL DEFAULT '#3B82F6',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(organization_id, name)
+);
+CREATE INDEX IF NOT EXISTS idx_shifts_org ON shifts(organization_id);
+
+ALTER TABLE shifts ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_access_shifts" ON shifts;
+CREATE POLICY "org_access_shifts" ON shifts FOR ALL
+  USING (is_organization_member(organization_id))
+  WITH CHECK (is_organization_member(organization_id));
+
+DROP TRIGGER IF EXISTS update_shifts_updated_at ON shifts;
+CREATE TRIGGER update_shifts_updated_at
+  BEFORE UPDATE ON shifts
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Shift Assignments
+CREATE TABLE IF NOT EXISTS shift_assignments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  worker_id UUID NOT NULL REFERENCES workers(id) ON DELETE CASCADE,
+  shift_id UUID NOT NULL REFERENCES shifts(id) ON DELETE CASCADE,
+  effective_from DATE NOT NULL,
+  effective_to DATE,
+  is_recurring BOOLEAN NOT NULL DEFAULT false,
+  recurring_days INTEGER[] NOT NULL DEFAULT ARRAY[1,2,3,4,5],
+  status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'inactive')),
+  assigned_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_shift_assignments_org ON shift_assignments(organization_id);
+CREATE INDEX IF NOT EXISTS idx_shift_assignments_worker ON shift_assignments(worker_id, effective_from DESC);
+CREATE INDEX IF NOT EXISTS idx_shift_assignments_shift ON shift_assignments(shift_id);
+
+ALTER TABLE shift_assignments ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_access_shift_assignments" ON shift_assignments;
+CREATE POLICY "org_access_shift_assignments" ON shift_assignments FOR ALL
+  USING (is_organization_member(organization_id))
+  WITH CHECK (is_organization_member(organization_id));
+
+-- Shift Requests
+CREATE TABLE IF NOT EXISTS shift_requests (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  worker_id UUID NOT NULL REFERENCES workers(id) ON DELETE CASCADE,
+  requested_shift_id UUID NOT NULL REFERENCES shifts(id) ON DELETE CASCADE,
+  current_shift_id UUID REFERENCES shifts(id) ON DELETE SET NULL,
+  date DATE NOT NULL,
+  reason TEXT,
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
+  approved_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  approved_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_shift_requests_org_status ON shift_requests(organization_id, status);
+
+ALTER TABLE shift_requests ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_access_shift_requests" ON shift_requests;
+CREATE POLICY "org_access_shift_requests" ON shift_requests FOR ALL
+  USING (is_organization_member(organization_id))
+  WITH CHECK (is_organization_member(organization_id));
+
+-- Onboarding Templates
+CREATE TABLE IF NOT EXISTS onboarding_templates (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  description TEXT,
+  department TEXT,
+  designation TEXT,
+  activities JSONB NOT NULL DEFAULT '[]'::jsonb,
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(organization_id, name)
+);
+CREATE INDEX IF NOT EXISTS idx_onboarding_templates_org ON onboarding_templates(organization_id);
+
+ALTER TABLE onboarding_templates ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_access_onboarding_templates" ON onboarding_templates;
+CREATE POLICY "org_access_onboarding_templates" ON onboarding_templates FOR ALL
+  USING (is_organization_member(organization_id))
+  WITH CHECK (is_organization_member(organization_id));
+
+DROP TRIGGER IF EXISTS update_onboarding_templates_updated_at ON onboarding_templates;
+CREATE TRIGGER update_onboarding_templates_updated_at
+  BEFORE UPDATE ON onboarding_templates
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Onboarding Records (per worker)
+CREATE TABLE IF NOT EXISTS onboarding_records (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  worker_id UUID NOT NULL REFERENCES workers(id) ON DELETE CASCADE,
+  template_id UUID NOT NULL REFERENCES onboarding_templates(id) ON DELETE RESTRICT,
+  status TEXT NOT NULL DEFAULT 'in_progress'
+    CHECK (status IN ('pending', 'in_progress', 'completed', 'overdue')),
+  activities JSONB NOT NULL DEFAULT '[]'::jsonb,
+  started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  completed_at TIMESTAMPTZ,
+  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_onboarding_records_org ON onboarding_records(organization_id);
+CREATE INDEX IF NOT EXISTS idx_onboarding_records_worker ON onboarding_records(worker_id);
+CREATE INDEX IF NOT EXISTS idx_onboarding_records_status ON onboarding_records(organization_id, status);
+
+ALTER TABLE onboarding_records ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_access_onboarding_records" ON onboarding_records;
+CREATE POLICY "org_access_onboarding_records" ON onboarding_records FOR ALL
+  USING (is_organization_member(organization_id))
+  WITH CHECK (is_organization_member(organization_id));
+
+DROP TRIGGER IF EXISTS update_onboarding_records_updated_at ON onboarding_records;
+CREATE TRIGGER update_onboarding_records_updated_at
+  BEFORE UPDATE ON onboarding_records
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Separations (offboarding + FnF)
+CREATE TABLE IF NOT EXISTS separations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  worker_id UUID NOT NULL REFERENCES workers(id) ON DELETE CASCADE,
+  separation_type TEXT NOT NULL CHECK (separation_type IN (
+    'resignation', 'termination', 'end_of_contract', 'retirement', 'death', 'dismissal'
+  )),
+  notice_date DATE NOT NULL,
+  relieving_date DATE NOT NULL,
+  exit_interview_conducted BOOLEAN NOT NULL DEFAULT false,
+  exit_interview_notes TEXT,
+  exit_feedback JSONB,
+  fnf_status TEXT NOT NULL DEFAULT 'pending'
+    CHECK (fnf_status IN ('pending', 'processing', 'settled')),
+  fnf_payables JSONB NOT NULL DEFAULT '[]'::jsonb,
+  fnf_receivables JSONB NOT NULL DEFAULT '[]'::jsonb,
+  fnf_assets JSONB NOT NULL DEFAULT '[]'::jsonb,
+  fnf_total_payable NUMERIC NOT NULL DEFAULT 0,
+  fnf_total_receivable NUMERIC NOT NULL DEFAULT 0,
+  fnf_net_amount NUMERIC NOT NULL DEFAULT 0,
+  fnf_settled_at TIMESTAMPTZ,
+  status TEXT NOT NULL DEFAULT 'pending'
+    CHECK (status IN ('pending', 'notice_period', 'relieved', 'settled')),
+  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CHECK (relieving_date >= notice_date)
+);
+CREATE INDEX IF NOT EXISTS idx_separations_org ON separations(organization_id);
+CREATE INDEX IF NOT EXISTS idx_separations_worker ON separations(worker_id);
+CREATE INDEX IF NOT EXISTS idx_separations_status ON separations(organization_id, status);
+
+ALTER TABLE separations ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_access_separations" ON separations;
+CREATE POLICY "org_access_separations" ON separations FOR ALL
+  USING (is_organization_member(organization_id))
+  WITH CHECK (is_organization_member(organization_id));
+
+DROP TRIGGER IF EXISTS update_separations_updated_at ON separations;
+CREATE TRIGGER update_separations_updated_at
+  BEFORE UPDATE ON separations
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- =====================================================================
+-- HR Module — Phase 3: Administrative HR
+-- =====================================================================
+
+-- Expense Claim Categories
+CREATE TABLE IF NOT EXISTS expense_categories (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  description TEXT,
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(organization_id, name)
+);
+CREATE INDEX IF NOT EXISTS idx_expense_categories_org ON expense_categories(organization_id);
+ALTER TABLE expense_categories ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_access_expense_categories" ON expense_categories;
+CREATE POLICY "org_access_expense_categories" ON expense_categories FOR ALL
+  USING (is_organization_member(organization_id))
+  WITH CHECK (is_organization_member(organization_id));
+
+-- Expense Claims
+CREATE TABLE IF NOT EXISTS expense_claims (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  worker_id UUID NOT NULL REFERENCES workers(id) ON DELETE CASCADE,
+  farm_id UUID REFERENCES farms(id) ON DELETE SET NULL,
+
+  title TEXT NOT NULL,
+  description TEXT,
+  expense_date DATE NOT NULL,
+  items JSONB NOT NULL DEFAULT '[]'::jsonb,
+  total_amount NUMERIC NOT NULL DEFAULT 0,
+  total_tax NUMERIC NOT NULL DEFAULT 0,
+  grand_total NUMERIC NOT NULL DEFAULT 0,
+
+  advance_id UUID REFERENCES payment_advances(id) ON DELETE SET NULL,
+  advance_amount_allocated NUMERIC NOT NULL DEFAULT 0,
+
+  status TEXT NOT NULL DEFAULT 'pending'
+    CHECK (status IN ('pending', 'approved', 'partially_approved', 'rejected', 'paid', 'cancelled')),
+  approved_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  approved_at TIMESTAMPTZ,
+  rejection_reason TEXT,
+  approval_history JSONB NOT NULL DEFAULT '[]'::jsonb,
+
+  journal_entry_id UUID,
+  cost_center JSONB,
+
+  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_expense_claims_org ON expense_claims(organization_id);
+CREATE INDEX IF NOT EXISTS idx_expense_claims_worker ON expense_claims(worker_id);
+CREATE INDEX IF NOT EXISTS idx_expense_claims_status ON expense_claims(organization_id, status);
+
+ALTER TABLE expense_claims ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_access_expense_claims" ON expense_claims;
+CREATE POLICY "org_access_expense_claims" ON expense_claims FOR ALL
+  USING (is_organization_member(organization_id))
+  WITH CHECK (is_organization_member(organization_id));
+DROP POLICY IF EXISTS "self_read_expense_claims" ON expense_claims;
+CREATE POLICY "self_read_expense_claims" ON expense_claims FOR SELECT USING (
+  worker_id IN (SELECT id FROM workers WHERE user_id = auth.uid())
+);
+DROP TRIGGER IF EXISTS update_expense_claims_updated_at ON expense_claims;
+CREATE TRIGGER update_expense_claims_updated_at
+  BEFORE UPDATE ON expense_claims
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Recruitment: Job Openings
+CREATE TABLE IF NOT EXISTS job_openings (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  farm_id UUID REFERENCES farms(id) ON DELETE SET NULL,
+
+  title TEXT NOT NULL,
+  description TEXT NOT NULL,
+  designation TEXT,
+  department TEXT,
+  employment_type TEXT
+    CHECK (employment_type IS NULL OR employment_type IN ('full_time', 'part_time', 'contract', 'seasonal')),
+  worker_type worker_type,
+
+  vacancies INTEGER NOT NULL DEFAULT 1 CHECK (vacancies >= 1),
+  salary_range_min NUMERIC,
+  salary_range_max NUMERIC,
+  currency TEXT NOT NULL DEFAULT 'MAD',
+
+  publish_date DATE,
+  closing_date DATE,
+  status TEXT NOT NULL DEFAULT 'draft'
+    CHECK (status IN ('draft', 'open', 'on_hold', 'closed', 'cancelled')),
+  is_published BOOLEAN NOT NULL DEFAULT false,
+  application_count INTEGER NOT NULL DEFAULT 0,
+
+  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_job_openings_org_status ON job_openings(organization_id, status);
+
+ALTER TABLE job_openings ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_access_job_openings" ON job_openings;
+CREATE POLICY "org_access_job_openings" ON job_openings FOR ALL
+  USING (is_organization_member(organization_id))
+  WITH CHECK (is_organization_member(organization_id));
+DROP TRIGGER IF EXISTS update_job_openings_updated_at ON job_openings;
+CREATE TRIGGER update_job_openings_updated_at
+  BEFORE UPDATE ON job_openings
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Recruitment: Job Applicants
+CREATE TABLE IF NOT EXISTS job_applicants (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  job_opening_id UUID NOT NULL REFERENCES job_openings(id) ON DELETE CASCADE,
+
+  first_name TEXT NOT NULL,
+  last_name TEXT NOT NULL,
+  email TEXT,
+  phone TEXT,
+  cin TEXT,
+  resume_url TEXT,
+  cover_letter_url TEXT,
+
+  source TEXT NOT NULL DEFAULT 'direct'
+    CHECK (source IN ('direct', 'referral', 'website', 'agency', 'other')),
+  referred_by_worker_id UUID REFERENCES workers(id) ON DELETE SET NULL,
+
+  status TEXT NOT NULL DEFAULT 'applied'
+    CHECK (status IN ('applied', 'screening', 'interview_scheduled', 'interviewed', 'offered', 'hired', 'rejected', 'withdrawn')),
+  rating INTEGER CHECK (rating IS NULL OR (rating BETWEEN 1 AND 5)),
+  notes TEXT,
+  tags TEXT[],
+
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_job_applicants_opening ON job_applicants(job_opening_id);
+CREATE INDEX IF NOT EXISTS idx_job_applicants_status ON job_applicants(organization_id, status);
+
+ALTER TABLE job_applicants ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_access_job_applicants" ON job_applicants;
+CREATE POLICY "org_access_job_applicants" ON job_applicants FOR ALL
+  USING (is_organization_member(organization_id))
+  WITH CHECK (is_organization_member(organization_id));
+DROP TRIGGER IF EXISTS update_job_applicants_updated_at ON job_applicants;
+CREATE TRIGGER update_job_applicants_updated_at
+  BEFORE UPDATE ON job_applicants
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Recruitment: Interviews
+CREATE TABLE IF NOT EXISTS interviews (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  applicant_id UUID NOT NULL REFERENCES job_applicants(id) ON DELETE CASCADE,
+  job_opening_id UUID NOT NULL REFERENCES job_openings(id) ON DELETE CASCADE,
+
+  round INTEGER NOT NULL DEFAULT 1,
+  interview_type TEXT NOT NULL DEFAULT 'in_person'
+    CHECK (interview_type IN ('phone', 'video', 'in_person')),
+  scheduled_at TIMESTAMPTZ NOT NULL,
+  duration_minutes INTEGER NOT NULL DEFAULT 60,
+  location TEXT,
+
+  interviewer_ids UUID[] NOT NULL DEFAULT ARRAY[]::UUID[],
+  feedback JSONB NOT NULL DEFAULT '[]'::jsonb,
+  average_rating NUMERIC,
+
+  status TEXT NOT NULL DEFAULT 'scheduled'
+    CHECK (status IN ('scheduled', 'completed', 'cancelled', 'no_show')),
+
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_interviews_applicant ON interviews(applicant_id);
+ALTER TABLE interviews ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_access_interviews" ON interviews;
+CREATE POLICY "org_access_interviews" ON interviews FOR ALL
+  USING (is_organization_member(organization_id))
+  WITH CHECK (is_organization_member(organization_id));
+
+-- Performance: Appraisal Cycles
+CREATE TABLE IF NOT EXISTS appraisal_cycles (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  description TEXT,
+  start_date DATE NOT NULL,
+  end_date DATE NOT NULL,
+  self_assessment_deadline DATE,
+  manager_assessment_deadline DATE,
+  status TEXT NOT NULL DEFAULT 'draft'
+    CHECK (status IN ('draft', 'self_assessment', 'manager_review', 'calibration', 'completed')),
+  applicable_worker_types TEXT[] NOT NULL DEFAULT ARRAY['fixed_salary'],
+  applicable_farm_ids UUID[],
+  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CHECK (end_date >= start_date)
+);
+ALTER TABLE appraisal_cycles ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_access_appraisal_cycles" ON appraisal_cycles;
+CREATE POLICY "org_access_appraisal_cycles" ON appraisal_cycles FOR ALL
+  USING (is_organization_member(organization_id))
+  WITH CHECK (is_organization_member(organization_id));
+DROP TRIGGER IF EXISTS update_appraisal_cycles_updated_at ON appraisal_cycles;
+CREATE TRIGGER update_appraisal_cycles_updated_at
+  BEFORE UPDATE ON appraisal_cycles
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Performance: Appraisals
+CREATE TABLE IF NOT EXISTS appraisals (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  worker_id UUID NOT NULL REFERENCES workers(id) ON DELETE CASCADE,
+  cycle_id UUID NOT NULL REFERENCES appraisal_cycles(id) ON DELETE CASCADE,
+
+  self_rating NUMERIC,
+  self_reflections TEXT,
+
+  manager_id UUID REFERENCES workers(id) ON DELETE SET NULL,
+  manager_rating NUMERIC,
+  manager_feedback TEXT,
+
+  kra_scores JSONB NOT NULL DEFAULT '[]'::jsonb,
+  goals JSONB NOT NULL DEFAULT '[]'::jsonb,
+
+  final_score NUMERIC,
+  final_feedback TEXT,
+  status TEXT NOT NULL DEFAULT 'pending'
+    CHECK (status IN ('pending', 'self_assessment', 'manager_review', 'completed')),
+
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(worker_id, cycle_id)
+);
+CREATE INDEX IF NOT EXISTS idx_appraisals_cycle ON appraisals(cycle_id);
+ALTER TABLE appraisals ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_access_appraisals" ON appraisals;
+CREATE POLICY "org_access_appraisals" ON appraisals FOR ALL
+  USING (is_organization_member(organization_id))
+  WITH CHECK (is_organization_member(organization_id));
+DROP POLICY IF EXISTS "self_read_appraisals" ON appraisals;
+CREATE POLICY "self_read_appraisals" ON appraisals FOR SELECT USING (
+  worker_id IN (SELECT id FROM workers WHERE user_id = auth.uid())
+);
+DROP TRIGGER IF EXISTS update_appraisals_updated_at ON appraisals;
+CREATE TRIGGER update_appraisals_updated_at
+  BEFORE UPDATE ON appraisals
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Performance: Continuous Feedback
+CREATE TABLE IF NOT EXISTS performance_feedback (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  worker_id UUID NOT NULL REFERENCES workers(id) ON DELETE CASCADE,
+  reviewer_id UUID NOT NULL REFERENCES workers(id) ON DELETE CASCADE,
+  feedback_type TEXT NOT NULL CHECK (feedback_type IN ('peer', 'manager', 'subordinate', 'external')),
+  review_period TEXT,
+  rating INTEGER CHECK (rating IS NULL OR (rating BETWEEN 1 AND 5)),
+  strengths TEXT,
+  improvements TEXT,
+  notes TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_perf_feedback_worker ON performance_feedback(worker_id);
+ALTER TABLE performance_feedback ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_access_perf_feedback" ON performance_feedback;
+CREATE POLICY "org_access_perf_feedback" ON performance_feedback FOR ALL
+  USING (is_organization_member(organization_id))
+  WITH CHECK (is_organization_member(organization_id));
+
+-- =====================================================================
+-- HR Module — Phase 4: Agricultural Differentiators
+-- =====================================================================
+
+-- Seasonal Campaigns
+CREATE TABLE IF NOT EXISTS seasonal_campaigns (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  farm_id UUID NOT NULL REFERENCES farms(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  season_type TEXT NOT NULL CHECK (season_type IN ('planting', 'harvest', 'pruning', 'treatment', 'other')),
+  crop_type TEXT,
+  start_date DATE NOT NULL,
+  end_date DATE NOT NULL,
+  target_worker_count INTEGER,
+  estimated_labor_budget NUMERIC,
+  actual_labor_cost NUMERIC NOT NULL DEFAULT 0,
+  status TEXT NOT NULL DEFAULT 'planning'
+    CHECK (status IN ('planning', 'recruiting', 'active', 'completed', 'cancelled')),
+  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CHECK (end_date >= start_date)
+);
+CREATE INDEX IF NOT EXISTS idx_seasonal_campaigns_org ON seasonal_campaigns(organization_id);
+CREATE INDEX IF NOT EXISTS idx_seasonal_campaigns_status ON seasonal_campaigns(organization_id, status);
+ALTER TABLE seasonal_campaigns ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_access_seasonal_campaigns" ON seasonal_campaigns;
+CREATE POLICY "org_access_seasonal_campaigns" ON seasonal_campaigns FOR ALL
+  USING (is_organization_member(organization_id))
+  WITH CHECK (is_organization_member(organization_id));
+DROP TRIGGER IF EXISTS update_seasonal_campaigns_updated_at ON seasonal_campaigns;
+CREATE TRIGGER update_seasonal_campaigns_updated_at
+  BEFORE UPDATE ON seasonal_campaigns
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Worker Qualifications (training matrix)
+CREATE TABLE IF NOT EXISTS worker_qualifications (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  worker_id UUID NOT NULL REFERENCES workers(id) ON DELETE CASCADE,
+  qualification_type TEXT NOT NULL CHECK (qualification_type IN (
+    'tractor_operation', 'pesticide_handling', 'first_aid', 'forklift',
+    'irrigation_system', 'pruning', 'harvesting_technique', 'food_safety',
+    'fire_safety', 'electrical', 'other'
+  )),
+  qualification_name TEXT NOT NULL,
+  issued_date DATE NOT NULL,
+  expiry_date DATE,
+  issuing_authority TEXT,
+  certificate_url TEXT,
+  is_valid BOOLEAN NOT NULL DEFAULT true,
+  verified_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  verified_at TIMESTAMPTZ,
+  notes TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(worker_id, qualification_type)
+);
+CREATE INDEX IF NOT EXISTS idx_worker_qualifications_org ON worker_qualifications(organization_id);
+CREATE INDEX IF NOT EXISTS idx_worker_qualifications_expiry ON worker_qualifications(expiry_date) WHERE expiry_date IS NOT NULL;
+ALTER TABLE worker_qualifications ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_access_worker_qualifications" ON worker_qualifications;
+CREATE POLICY "org_access_worker_qualifications" ON worker_qualifications FOR ALL
+  USING (is_organization_member(organization_id))
+  WITH CHECK (is_organization_member(organization_id));
+DROP TRIGGER IF EXISTS update_worker_qualifications_updated_at ON worker_qualifications;
+CREATE TRIGGER update_worker_qualifications_updated_at
+  BEFORE UPDATE ON worker_qualifications
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Safety Incidents
+CREATE TABLE IF NOT EXISTS safety_incidents (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  farm_id UUID NOT NULL REFERENCES farms(id) ON DELETE CASCADE,
+  parcel_id UUID REFERENCES parcels(id) ON DELETE SET NULL,
+  incident_date TIMESTAMPTZ NOT NULL,
+  incident_type TEXT NOT NULL CHECK (incident_type IN (
+    'injury', 'near_miss', 'chemical_exposure', 'equipment_damage', 'fire', 'environmental', 'other'
+  )),
+  severity TEXT NOT NULL CHECK (severity IN ('minor', 'moderate', 'serious', 'fatal')),
+  worker_ids UUID[] NOT NULL DEFAULT ARRAY[]::UUID[],
+  supervisor_id UUID REFERENCES workers(id) ON DELETE SET NULL,
+  description TEXT NOT NULL,
+  location_description TEXT,
+  root_cause TEXT,
+  corrective_actions JSONB NOT NULL DEFAULT '[]'::jsonb,
+  preventive_measures TEXT,
+  reported_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  reported_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  cnss_declaration BOOLEAN NOT NULL DEFAULT false,
+  cnss_declaration_date DATE,
+  cnss_declaration_reference TEXT,
+  status TEXT NOT NULL DEFAULT 'reported'
+    CHECK (status IN ('reported', 'investigating', 'resolved', 'closed')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_safety_incidents_org_date ON safety_incidents(organization_id, incident_date DESC);
+ALTER TABLE safety_incidents ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_access_safety_incidents" ON safety_incidents;
+CREATE POLICY "org_access_safety_incidents" ON safety_incidents FOR ALL
+  USING (is_organization_member(organization_id))
+  WITH CHECK (is_organization_member(organization_id));
+DROP TRIGGER IF EXISTS update_safety_incidents_updated_at ON safety_incidents;
+CREATE TRIGGER update_safety_incidents_updated_at
+  BEFORE UPDATE ON safety_incidents
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Worker Transport
+CREATE TABLE IF NOT EXISTS worker_transport (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  farm_id UUID NOT NULL REFERENCES farms(id) ON DELETE CASCADE,
+  date DATE NOT NULL,
+  vehicle_id TEXT,
+  driver_worker_id UUID REFERENCES workers(id) ON DELETE SET NULL,
+  pickup_location TEXT NOT NULL,
+  pickup_time TIME NOT NULL,
+  destination TEXT NOT NULL,
+  worker_ids UUID[] NOT NULL DEFAULT ARRAY[]::UUID[],
+  capacity INTEGER,
+  actual_count INTEGER,
+  notes TEXT,
+  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_worker_transport_org_date ON worker_transport(organization_id, date DESC);
+ALTER TABLE worker_transport ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_access_worker_transport" ON worker_transport;
+CREATE POLICY "org_access_worker_transport" ON worker_transport FOR ALL
+  USING (is_organization_member(organization_id))
+  WITH CHECK (is_organization_member(organization_id));
+
+-- =====================================================================
+-- HR Module — Phase 5: Advanced HR
+-- =====================================================================
+
+-- Grievances
+CREATE TABLE IF NOT EXISTS grievances (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  raised_by_worker_id UUID NOT NULL REFERENCES workers(id) ON DELETE CASCADE,
+  against_worker_id UUID REFERENCES workers(id) ON DELETE SET NULL,
+  against_department TEXT,
+  subject TEXT NOT NULL,
+  description TEXT NOT NULL,
+  grievance_type TEXT NOT NULL CHECK (grievance_type IN (
+    'workplace', 'colleague', 'department', 'policy', 'harassment', 'safety', 'other'
+  )),
+  priority TEXT NOT NULL DEFAULT 'medium'
+    CHECK (priority IN ('low', 'medium', 'high', 'urgent')),
+  is_anonymous BOOLEAN NOT NULL DEFAULT false,
+  resolution TEXT,
+  resolution_date DATE,
+  resolved_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  status TEXT NOT NULL DEFAULT 'submitted'
+    CHECK (status IN ('submitted', 'acknowledged', 'investigating', 'resolved', 'escalated', 'closed')),
+  attachments TEXT[],
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_grievances_org_status ON grievances(organization_id, status);
+ALTER TABLE grievances ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_access_grievances" ON grievances;
+CREATE POLICY "org_access_grievances" ON grievances FOR ALL
+  USING (is_organization_member(organization_id))
+  WITH CHECK (is_organization_member(organization_id));
+DROP POLICY IF EXISTS "self_read_grievances" ON grievances;
+CREATE POLICY "self_read_grievances" ON grievances FOR SELECT USING (
+  raised_by_worker_id IN (SELECT id FROM workers WHERE user_id = auth.uid())
+);
+DROP TRIGGER IF EXISTS update_grievances_updated_at ON grievances;
+CREATE TRIGGER update_grievances_updated_at
+  BEFORE UPDATE ON grievances
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Training Programs
+CREATE TABLE IF NOT EXISTS training_programs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  description TEXT,
+  training_type TEXT
+    CHECK (training_type IS NULL OR training_type IN ('safety', 'technical', 'certification', 'onboarding', 'other')),
+  provider TEXT,
+  duration_hours NUMERIC,
+  cost_per_participant NUMERIC,
+  is_mandatory BOOLEAN NOT NULL DEFAULT false,
+  recurrence TEXT
+    CHECK (recurrence IS NULL OR recurrence IN ('annual', 'biannual', 'one_time')),
+  applicable_worker_types TEXT[],
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE training_programs ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_access_training_programs" ON training_programs;
+CREATE POLICY "org_access_training_programs" ON training_programs FOR ALL
+  USING (is_organization_member(organization_id))
+  WITH CHECK (is_organization_member(organization_id));
+DROP TRIGGER IF EXISTS update_training_programs_updated_at ON training_programs;
+CREATE TRIGGER update_training_programs_updated_at
+  BEFORE UPDATE ON training_programs
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Training Enrollments
+CREATE TABLE IF NOT EXISTS training_enrollments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  program_id UUID NOT NULL REFERENCES training_programs(id) ON DELETE CASCADE,
+  worker_id UUID NOT NULL REFERENCES workers(id) ON DELETE CASCADE,
+  enrolled_date DATE NOT NULL,
+  completion_date DATE,
+  status TEXT NOT NULL DEFAULT 'enrolled'
+    CHECK (status IN ('enrolled', 'in_progress', 'completed', 'failed', 'cancelled')),
+  score NUMERIC,
+  certificate_url TEXT,
+  feedback TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(program_id, worker_id)
+);
+CREATE INDEX IF NOT EXISTS idx_training_enrollments_worker ON training_enrollments(worker_id);
+ALTER TABLE training_enrollments ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_access_training_enrollments" ON training_enrollments;
+CREATE POLICY "org_access_training_enrollments" ON training_enrollments FOR ALL
+  USING (is_organization_member(organization_id))
+  WITH CHECK (is_organization_member(organization_id));
+
+-- =====================================================================
+-- HR Module — Analytics Views
+-- =====================================================================
+
+DROP VIEW IF EXISTS workforce_summary CASCADE;
+CREATE VIEW workforce_summary WITH (security_invoker = true) AS
+SELECT
+  organization_id,
+  farm_id,
+  COUNT(*) FILTER (WHERE worker_type = 'fixed_salary' AND is_active) AS fixed_salary_count,
+  COUNT(*) FILTER (WHERE worker_type = 'daily_worker' AND is_active) AS daily_worker_count,
+  COUNT(*) FILTER (WHERE worker_type = 'metayage' AND is_active) AS metayage_count,
+  COUNT(*) FILTER (WHERE gender = 'female' AND is_active) AS female_count,
+  COUNT(*) FILTER (WHERE is_cnss_declared AND is_active) AS cnss_covered_count,
+  AVG(daily_rate) FILTER (WHERE worker_type = 'daily_worker') AS avg_daily_rate,
+  AVG(monthly_salary) FILTER (WHERE worker_type = 'fixed_salary') AS avg_monthly_salary
+FROM workers
+WHERE deleted_at IS NULL
+GROUP BY organization_id, farm_id;
+
+CREATE OR REPLACE VIEW leave_balance_summary WITH (security_invoker = true) AS
+SELECT
+  la.organization_id,
+  la.worker_id,
+  w.first_name,
+  w.last_name,
+  lt.name AS leave_type,
+  la.total_days,
+  la.used_days,
+  la.remaining_days,
+  la.period_start,
+  la.period_end
+FROM leave_allocations la
+JOIN workers w ON w.id = la.worker_id
+JOIN leave_types lt ON lt.id = la.leave_type_id
+WHERE la.period_end >= CURRENT_DATE;
+
+CREATE OR REPLACE VIEW payroll_cost_summary WITH (security_invoker = true) AS
+SELECT
+  organization_id,
+  farm_id,
+  DATE_TRUNC('month', pay_period_start) AS month,
+  COUNT(DISTINCT worker_id) AS workers_paid,
+  SUM(gross_pay) AS total_gross,
+  SUM(total_deductions) AS total_deductions,
+  SUM(net_pay) AS total_net
+FROM salary_slips
+WHERE status != 'cancelled'
+GROUP BY organization_id, farm_id, DATE_TRUNC('month', pay_period_start);

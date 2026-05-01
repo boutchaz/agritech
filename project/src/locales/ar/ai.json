@@ -330,6 +330,18 @@
       "notes": "ملاحظات",
       "excludedCycles": "الدورات المستبعدة"
     },
+    "phenology": {
+      "aiEnrichment": {
+        "title": "شرح مبسّط",
+        "fragileStatus": "نتيجة تحتاج حذر",
+        "degradationReasons": "لماذا يجب الحذر",
+        "imputedStages": "تواريخ تقديرية",
+        "missing": "للتأكد",
+        "phaseNarratives": "ما معنى ذلك",
+        "recommendations": "ما العمل الآن",
+        "disclaimer": "ملخّص بمساعدة الذكاء الاصطناعي — تأكد دائمًا في الحقل."
+      }
+    },
     "spectral": {
       "title": "العتبات الطيفية",
       "noData": "لا تتوفر بيانات طيفية",
@@ -385,6 +397,18 @@
       "downloading": "جارٍ تجهيز التصدير…",
       "error": "فشل التصدير",
       "success": "تم التصدير بنجاح بصيغة {{format}}"
+    },
+    "chill": {
+      "title": "ساعات البرودة",
+      "unit": "س",
+      "referenceLabel": "المرجع",
+      "fallbackBadge": "مرجع افتراضي",
+      "bands": {
+        "green": "كافٍ",
+        "yellow": "مقبول",
+        "red": "غير كافٍ",
+        "critique": "نقص حرج"
+      }
     },
     "blockA": {
       "healthScore": "درجة الصحة",
@@ -600,10 +624,31 @@
     "calibrationValidated": "تم التحقق من خط الأساس للمعايرة",
     "calibrationValidateError": "تعذر التحقق من المعايرة",
     "nutritionConfirmed": "تم تأكيد خيار التغذية",
-    "nutritionConfirmError": "تعذر تأكيد خيار التغذية"
+    "nutritionConfirmError": "تعذر تأكيد خيار التغذية",
+    "targetYieldConfirmed": "تم تأكيد المردود المستهدف",
+    "targetYieldConfirmedWithDrift": "تم تحديث المردود المستهدف — فكر في إعادة إنشاء الخطة",
+    "targetYieldConfirmError": "تعذر تأكيد المردود المستهدف"
   },
   "errors": {
     "invalidPlanPayload": "أعاد الخادم خطة موسم غير صالحة."
+  },
+  "usage": {
+    "tokenChart": "استخدام الرموز",
+    "noData": "لا توجد بيانات استخدام لهذه الفترة",
+    "recentActivity": "النشاط الأخير",
+    "export": "تصدير CSV",
+    "date": "التاريخ",
+    "feature": "النوع",
+    "model": "النموذج",
+    "tokens": "الرموز",
+    "noEntries": "لا يوجد سجل لاستخدام الذكاء الاصطناعي بعد",
+    "showLess": "عرض أقل",
+    "showAll": "عرض الكل ({{count}})",
+    "totalTokens": "إجمالي الرموز",
+    "totalRequests": "إجمالي الطلبات",
+    "requests": "الطلبات",
+    "loadFailedTitle": "تعذر تحميل تفاصيل الاستخدام",
+    "loadFailedDescription": "تحقق من الاتصال وحاول مرة أخرى."
   },
   "settings": {
     "title": "إعدادات الذكاء الاصطناعي",
@@ -629,5 +674,45 @@
     "exceededDescription": "لقد استخدمت {{used}} من أصل {{limit}} طلب ذكاء اصطناعي هذا الشهر. ستتم إعادة تعيين حصتك في {{resetDate}}.",
     "upgradeAction": "ترقية الخطة",
     "byokAction": "أضف مفتاحك الخاص"
+  },
+  "weather": {
+    "pageTitle": "تحليل الطقس بالذكاء الاصطناعي",
+    "pageSubtitle": "تحليلات الطقس واتجاهات التوقعات وإشارات المخاطر الزراعية لهذه القطعة.",
+    "riskUnavailable": "تحليل المخاطر غير متاح",
+    "riskUnavailableDescription": "تبقى تحليلات الطقس متاحة، لكن تعذر تحميل نموذج مخاطر أمراض المحصول لهذه القطعة.",
+    "riskBriefTitle": "ملخص مخاطر الطقس بالذكاء الاصطناعي",
+    "riskBriefDescription": "تقدير تعرض المحصول للأمراض بناءً على أحدث ظروف الطقس في القطعة.",
+    "crop": "المحصول: {{crop}}",
+    "unknown": "غير معروف",
+    "activeRisks": "المخاطر النشطة",
+    "activeRisksDescription": "الظروف الحالية تطابق حالياً واحداً أو أكثر من أنماط الأمراض.",
+    "noActiveRisks": "لا توجد إشارات مرضية نشطة في أحدث قراءة للطقس.",
+    "latestTemperature": "أحدث درجة حرارة",
+    "measuredOn": "تم القياس في {{date}}",
+    "noRecentReading": "لا توجد قراءة طقس حديثة لهذه القطعة.",
+    "latestHumidity": "أحدث نسبة رطوبة",
+    "humidityDescription": "تُستخدم لتقييم حدود الرطوبة الخاصة بالمحصول.",
+    "noDiseaseModels": "لا توجد نماذج أمراض مهيأة بعد لهذا المحصول، لذلك تُعرض فقط تحليلات الطقس أدناه.",
+    "noActiveProfiles": "درجة الحرارة والرطوبة الحاليتان لا تُفعّلان أي ملف مخاطر أمراض مُعدّ لهذا المحصول.",
+    "temperatureWindow": "نطاق الحرارة: من {{min}}°م إلى {{max}}°م",
+    "humidityThreshold": "حد الرطوبة: {{value}}%",
+    "suggestedTreatment": "العلاج المقترح: {{treatment}}",
+    "timing": "التوقيت: {{timing}}",
+    "notAvailable": "غير متاح",
+    "noBoundary": "بيانات موقع القطعة مطلوبة لتحليل الطقس.",
+    "noBoundaryHint": "أضف أو صحّح حدود القطعة لتفعيل التوقعات والتحليل المناخي وتحليل المخاطر.",
+    "severity": {
+      "critical": "حرج",
+      "high": "مرتفع",
+      "medium": "متوسط",
+      "low": "منخفض",
+      "unknown": "غير معروف"
+    }
+  },
+  "alerts": {
+    "title": "تنبيهات الذكاء الاصطناعي",
+    "subtitle": "راجع وأدر المخاطر التي اكتشفها نموذج الذكاء الاصطناعي.",
+    "noAlerts": "لا توجد تنبيهات نشطة",
+    "noAlertsMessage": "لم يكتشف نموذج الذكاء الاصطناعي أي مخاطر مهمة لهذه القطعة."
   }
 }

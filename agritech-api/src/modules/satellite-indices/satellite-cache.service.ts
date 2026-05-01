@@ -57,6 +57,10 @@ export const CALIBRATION_SATELLITE_INDICES = [
   "MCARI",
   "TCARI",
   "TCARI_OSAVI",
+  // EBI (Enhanced Bloom Index) — required by AMANDIER calibration referential
+  // for intensive/super-intensive planting systems (almond bloom detection).
+  // Without it, calibration fails with "requires observed EBI series".
+  "EBI",
 ] as const;
 
 /** Default list for parcel sync (UI warmup, full sync, calibration gap-fill). */

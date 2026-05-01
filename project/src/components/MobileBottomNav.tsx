@@ -24,6 +24,11 @@ import {
   CalendarRange,
   PackageCheck,
   Wrench,
+  Boxes,
+  Layers,
+  Warehouse,
+  Truck,
+  UserCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -93,8 +98,8 @@ const moreMenuItems: MoreMenuItem[] = [
   },
   {
     id: "infrastructure",
-    labelKey: "nav.infrastructure",
-    fallback: "Infrastructure",
+    labelKey: "nav.infrastructureEquipment",
+    fallback: "Infrastructure & Equipment",
     icon: Building2,
     path: "/infrastructure",
   },
@@ -105,6 +110,42 @@ const moreMenuItems: MoreMenuItem[] = [
     fallback: "Workers",
     icon: Users,
     path: "/workers",
+  },
+  // Stock (parity with desktop sidebar Stock section)
+  {
+    id: "stock-items",
+    labelKey: "nav.items",
+    fallback: "Items",
+    icon: Boxes,
+    path: "/stock/items",
+  },
+  {
+    id: "stock-inventory",
+    labelKey: "nav.inventory",
+    fallback: "Inventory",
+    icon: Layers,
+    path: "/stock/inventory",
+  },
+  {
+    id: "stock-warehouses",
+    labelKey: "nav.warehouses",
+    fallback: "Warehouses",
+    icon: Warehouse,
+    path: "/stock/warehouses",
+  },
+  {
+    id: "stock-suppliers",
+    labelKey: "nav.suppliers",
+    fallback: "Suppliers",
+    icon: Truck,
+    path: "/stock/suppliers",
+  },
+  {
+    id: "accounting-customers",
+    labelKey: "nav.customers",
+    fallback: "Customers",
+    icon: UserCircle,
+    path: "/accounting/customers",
   },
   // Production
   {
@@ -343,7 +384,7 @@ const MobileBottomNav = () => {
       </nav>
 
       <Drawer open={isMoreOpen} onOpenChange={setIsMoreOpen}>
-        <DrawerContent side="bottom" hideClose className="max-h-[70vh] rounded-t-2xl p-0">
+        <DrawerContent side="bottom" hideClose className="max-h-[80vh] rounded-t-2xl p-0">
           <DrawerHeader className="shrink-0 border-b border-slate-200 dark:border-slate-800 px-4 py-3">
             <div className="flex items-center justify-between">
               <DrawerTitle className="text-base font-semibold">

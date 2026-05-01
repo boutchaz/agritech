@@ -4,6 +4,7 @@ import { FormField } from './ui/FormField';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { Textarea } from './ui/Textarea';
+import { PhotoUpload } from './ui/PhotoUpload';
 import { useAuth } from '../hooks/useAuth';
 import { useStructures, useCreateStructure, useUpdateStructure, useDeleteStructure } from '../hooks/useStructures';
 import { useFarms } from '../hooks/useParcelsQuery';
@@ -814,6 +815,25 @@ const InfrastructureManagement = () => {
 
         {renderStructureSummary(structure)}
       </div>
+
+      {structure.photos && structure.photos.length > 0 && (
+        <div className="mt-3 flex gap-1 overflow-x-auto">
+          {structure.photos.slice(0, 4).map((url) => (
+            <img
+              key={url}
+              src={url}
+              alt=""
+              className="h-14 w-14 flex-none rounded object-cover border border-gray-200 dark:border-gray-700"
+              loading="lazy"
+            />
+          ))}
+          {structure.photos.length > 4 && (
+            <div className="h-14 w-14 flex-none rounded border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 flex items-center justify-center text-xs text-gray-500 dark:text-gray-400">
+              +{structure.photos.length - 4}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 
@@ -1328,6 +1348,32 @@ const InfrastructureManagement = () => {
               </h3>
               {renderStructureFields()}
             </div>
+
+            {/* Photos */}
+            {currentOrganization?.id && (
+              <div>
+                <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">
+                  {t('infrastructure.sections.photos', 'Photos')}
+                </h3>
+                <PhotoUpload
+                  organizationId={currentOrganization.id}
+                  photos={(editingStructure?.photos as string[] | undefined) ?? newStructure.photos ?? []}
+                  onChange={(photos) => {
+                    if (editingStructure) {
+                      setEditingStructure({ ...editingStructure, photos });
+                    } else {
+                      setNewStructure({ ...newStructure, photos });
+                    }
+                  }}
+                  bucket="entity-photos"
+                  entityType="structure"
+                  entityId={editingStructure?.id}
+                  folder={editingStructure?.id || `new-structure-${Date.now()}`}
+                  fieldName="photos"
+                  showPrimary
+                />
+              </div>
+            )}
           </div>
       </ResponsiveDialog>
       <ConfirmDialog

@@ -13,6 +13,7 @@ import { useCustomers } from '@/hooks/useCustomers';
 import { useSuppliers } from '@/hooks/useSuppliers';
 import { Loader2 } from 'lucide-react';
 import { getLocalDate } from '@/utils/date';
+import { toast } from 'sonner';
 
 const getPaymentSchema = (t: (key: string) => string) => z.object({
   payment_type: z.enum(['receive', 'pay']),
@@ -91,6 +92,8 @@ export const PaymentForm = ({ payment, onSuccess, onCancel }: PaymentFormProps) 
       }
       onSuccess?.();
     } catch (error) {
+      const message = error instanceof Error ? error.message : t('payments.form.errors.saveFailed');
+      toast.error(message);
       console.error(t('payments.form.errors.saveFailed'), error);
     }
   };

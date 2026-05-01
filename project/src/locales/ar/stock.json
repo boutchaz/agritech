@@ -15,8 +15,15 @@
       "expiryAlerts": "تنبيهات الانتهاء",
       "reorder": "إعادة التعبئة",
       "reception": "استلام المحاصيل",
+      "deliveries": "التوصيلات",
       "reports": "التقارير والتحليلات",
       "more": "المزيد"
+    },
+    "groups": {
+      "catalog": "الكتالوج",
+      "movements": "الحركات",
+      "operations": "العمليات",
+      "insights": "التحليلات"
     },
     "lowStockAlerts": {
       "title": "تنبيهات انخفاض المخزون",
@@ -28,6 +35,7 @@
       "byFarm": "حسب المزرعة/المستودع",
       "addStock": "إضافة مخزون",
       "viewItem": "عرض المادة",
+      "viewItemAria": "عرض المادة {{name}}",
       "viewAll": "عرض جميع {{count}} مواد منخفضة المخزون",
       "allOptimal": "جميع مستويات المخزون في الحالة المثلى"
     },
@@ -1022,5 +1030,39 @@
     "unit": "الوحدة",
     "generatePO": "إنشاء أمر شراء",
     "generatePOPending": "قريباً"
+  },
+  "barcode": {
+    "scanPlaceholder": "امسح أو أدخل الباركود...",
+    "itemAdded": "تمت إضافة: {{itemName}}",
+    "qtyIncreased": "{{itemName}}: الكمية +1",
+    "notFound": "لم يتم العثور على مادة بهذا الباركود",
+    "warehouseSet": "تم تحديد المستودع {{name}} للعمليات القادمة",
+    "scanFailed": "فشل المسح: {{error}}",
+    "manageBarcodes": "إدارة الباركودات",
+    "addBarcode": "إضافة باركود",
+    "editBarcode": "تعديل الباركود",
+    "barcodeType": "نوع الباركود",
+    "primaryBarcode": "الباركود الرئيسي",
+    "setPrimary": "تعيين كرئيسي",
+    "noBarcodes": "لا توجد باركودات مضافة",
+    "duplicateBarcode": "هذا الباركود مستخدم من قبل مادة أخرى",
+    "invalidBarcode": "تنسيق باركود غير صالح لـ {{type}}",
+    "toast": {
+      "created": "تمت إضافة الباركود",
+      "updated": "تم تعديل الباركود",
+      "deleted": "تم حذف الباركود",
+      "generated": "تم إنشاء باركود EAN-13",
+      "regenerated": "تم إعادة إنشاء الباركود"
+    },
+    "actions": {
+      "generate": "إنشاء EAN-13",
+      "regenerate": "إعادة إنشاء"
+    },
+    "dialog": {
+      "title": "إدارة الباركودات",
+      "createTitle": "إضافة باركود",
+      "editTitle": "تعديل الباركود",
+      "description": "يجب أن يكون كل باركود فريداً داخل مؤسستك."
+    }
   }
 }

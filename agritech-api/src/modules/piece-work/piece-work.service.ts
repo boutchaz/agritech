@@ -4,6 +4,7 @@ import { NotificationsService, OPERATIONAL_ROLES } from '../notifications/notifi
 import { NotificationType } from '../notifications/dto/notification.dto';
 import { CreatePieceWorkDto, UpdatePieceWorkDto, PieceWorkFiltersDto } from './dto';
 import { sanitizeSearch } from '../../common/utils/sanitize-search';
+import { PaymentRecordsService } from '../payment-records/payment-records.service';
 
 @Injectable()
 export class PieceWorkService {
@@ -12,6 +13,7 @@ export class PieceWorkService {
   constructor(
     private readonly databaseService: DatabaseService,
     private readonly notificationsService: NotificationsService,
+    private readonly paymentRecordsService: PaymentRecordsService,
   ) {}
 
   /**
@@ -308,9 +310,15 @@ export class PieceWorkService {
   }
 
   /**
-   * Generate a payment record for an approved piece-work record
+   * Generate a payment record for an approved piece-work record, mark it paid, and post
+   * the worker-payment journal entry (same path as HR payment processing) so labor hits P&L.
    */
-  async generatePayment(organizationId: string, farmId: string, pieceWorkId: string): Promise<any> {
+  async generatePayment(
+    organizationId: string,
+    farmId: string,
+    pieceWorkId: string,
+    userId: string,
+  ): Promise<any> {
     const client = this.databaseService.getAdminClient();
 
     // Find the piece-work record
@@ -323,8 +331,10 @@ export class PieceWorkService {
       );
     }
 
+    const nowIso = new Date().toISOString();
+
     try {
-      // Create payment record
+      // Pre-approved: process() requires status === 'approved' before it will post GL + paid.
       const { data: paymentRecord, error: paymentError } = await client
         .from('payment_records')
         .insert({
@@ -334,7 +344,10 @@ export class PieceWorkService {
           payment_type: 'piece_work',
           base_amount: record.total_amount,
           net_amount: record.total_amount,
-          status: 'pending',
+          status: 'approved',
+          approved_by: userId,
+          approved_at: nowIso,
+          calculated_by: userId,
           period_start: record.work_date,
           period_end: record.work_date,
         })
@@ -346,7 +359,18 @@ export class PieceWorkService {
         throw new BadRequestException(`Failed to create payment record: ${paymentError.message}`);
       }
 
-      // Update piece-work record payment status
+      let finalizedPayment: typeof paymentRecord;
+      try {
+        finalizedPayment = await this.paymentRecordsService.process(userId, organizationId, paymentRecord.id, {
+          payment_method: 'cash',
+          notes: `Piece work settlement (record ${pieceWorkId})`,
+        });
+      } catch (processErr) {
+        await client.from('payment_records').delete().eq('id', paymentRecord.id).eq('organization_id', organizationId);
+        this.logger.error(`Piece work payment process failed: ${processErr}`);
+        throw processErr;
+      }
+
       const { error: updateError } = await client
         .from('piece_work_records')
         .update({ payment_status: 'paid' })
@@ -358,7 +382,7 @@ export class PieceWorkService {
         throw new BadRequestException(`Failed to update piece work payment status: ${updateError.message}`);
       }
 
-      return paymentRecord;
+      return finalizedPayment;
     } catch (error) {
       this.logger.error('Error generating payment:', error);
       throw error;
@@ -368,12 +392,17 @@ export class PieceWorkService {
   /**
    * Bulk generate payments for multiple approved piece-work records
    */
-  async bulkGeneratePayments(organizationId: string, farmId: string, ids: string[]): Promise<any[]> {
+  async bulkGeneratePayments(
+    organizationId: string,
+    farmId: string,
+    ids: string[],
+    userId: string,
+  ): Promise<any[]> {
     const results: any[] = [];
 
     for (const id of ids) {
       try {
-        const paymentRecord = await this.generatePayment(organizationId, farmId, id);
+        const paymentRecord = await this.generatePayment(organizationId, farmId, id, userId);
         results.push({ id, success: true, paymentRecord });
       } catch (error) {
         results.push({ id, success: false, error: error.message });

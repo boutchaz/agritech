@@ -15,6 +15,7 @@ import {
   Thermometer,
 } from 'lucide-react';
 import { SectionLoader } from '@/components/ui/loader';
+import { useTranslation } from 'react-i18next';
 
 const WeatherAnalyticsView = lazy(() => import('../../../components/WeatherAnalytics/WeatherAnalyticsView'));
 
@@ -32,6 +33,7 @@ const DiseaseRiskPanel = ({
   parcelId: string;
   organizationId: string | null;
 }) => {
+  const { t } = useTranslation('ai');
   const { data, isLoading, error } = useDiseaseRisk(organizationId, parcelId);
 
   if (isLoading) {
@@ -50,10 +52,10 @@ const DiseaseRiskPanel = ({
         <div className="flex items-start gap-3">
           <AlertTriangle className="mt-0.5 h-5 w-5 text-amber-600 dark:text-amber-400" />
           <div>
-            <h3 className="font-semibold text-amber-900 dark:text-amber-100">Risk analysis unavailable</h3>
-            <p className="mt-1 text-sm text-amber-700 dark:text-amber-300">
-              Weather analytics remain available, but the crop disease risk model could not be loaded for this parcel.
-            </p>
+              <h3 className="font-semibold text-amber-900 dark:text-amber-100">{t('weather.riskUnavailable')}</h3>
+              <p className="mt-1 text-sm text-amber-700 dark:text-amber-300">
+                {t('weather.riskUnavailableDescription')}
+              </p>
           </div>
         </div>
       </div>
@@ -74,14 +76,16 @@ const DiseaseRiskPanel = ({
         <div>
           <h3 className="flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-white">
             <Shield className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-            AI Weather Risk Brief
+            {t('weather.riskBriefTitle')}
           </h3>
           <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-            Crop-specific disease exposure inferred from the latest parcel weather conditions.
+            {t('weather.riskBriefDescription')}
           </p>
         </div>
         <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-200">
-          Crop: {data.crop_type || 'Unknown'}
+          {t('weather.crop', {
+            crop: data.crop_type || t('weather.unknown'),
+          })}
         </span>
       </div>
 
@@ -89,48 +93,48 @@ const DiseaseRiskPanel = ({
         <div className="rounded-lg bg-gray-50 p-4 dark:bg-gray-900/50">
           <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
             <Activity className="h-4 w-4 text-red-500" />
-            Active Risks
+            {t('weather.activeRisks')}
           </div>
           <div className="mt-2 text-3xl font-bold text-gray-900 dark:text-white">{activeRisks.length}</div>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            {activeRisks.length > 0 ? 'Conditions currently match one or more disease profiles.' : 'No active disease signals from the latest weather sample.'}
+            {activeRisks.length > 0 ? t('weather.activeRisksDescription') : t('weather.noActiveRisks')}
           </p>
         </div>
 
         <div className="rounded-lg bg-gray-50 p-4 dark:bg-gray-900/50">
           <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
             <Thermometer className="h-4 w-4 text-orange-500" />
-            Latest Temperature
+            {t('weather.latestTemperature')}
           </div>
           <div className="mt-2 text-3xl font-bold text-gray-900 dark:text-white">
-            {currentTemperature != null ? `${currentTemperature.toFixed(1)}°C` : 'N/A'}
+            {currentTemperature != null ? `${currentTemperature.toFixed(1)}°C` : t('weather.notAvailable')}
           </div>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            {data.weather.date ? `Measured on ${data.weather.date}` : 'No recent parcel weather reading.'}
+            {data.weather.date ? t('weather.measuredOn', { date: data.weather.date }) : t('weather.noRecentReading')}
           </p>
         </div>
 
         <div className="rounded-lg bg-gray-50 p-4 dark:bg-gray-900/50">
           <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
             <Droplets className="h-4 w-4 text-cyan-500" />
-            Latest Humidity
+            {t('weather.latestHumidity')}
           </div>
           <div className="mt-2 text-3xl font-bold text-gray-900 dark:text-white">
-            {currentHumidity != null ? `${currentHumidity.toFixed(0)}%` : 'N/A'}
+            {currentHumidity != null ? `${currentHumidity.toFixed(0)}%` : t('weather.notAvailable')}
           </div>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            Used to evaluate crop-specific humidity thresholds.
+            {t('weather.humidityDescription')}
           </p>
         </div>
       </div>
 
       {data.risks.length === 0 ? (
         <div className="rounded-lg border border-dashed border-gray-300 p-4 text-sm text-gray-600 dark:border-gray-600 dark:text-gray-300">
-          No disease models are configured yet for this crop, so only weather analytics are shown below.
+          {t('weather.noDiseaseModels')}
         </div>
       ) : activeRisks.length === 0 ? (
         <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800 dark:border-emerald-800/30 dark:bg-emerald-900/20 dark:text-emerald-200">
-          Current temperature and humidity do not activate any configured disease risk profile for this crop.
+          {t('weather.noActiveProfiles')}
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
@@ -149,21 +153,26 @@ const DiseaseRiskPanel = ({
                   )}
                 </div>
                 <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${SEVERITY_STYLES[risk.severity ?? ''] ?? 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200'}`}>
-                  {risk.severity ?? 'unknown'}
+                  {t(`weather.severity.${risk.severity ?? 'unknown'}`)}
                 </span>
               </div>
 
               <div className="mt-3 grid grid-cols-1 gap-2 text-sm text-gray-700 dark:text-gray-300">
                 <p>
-                  Temperature window: {risk.temperature_range.min ?? 'N/A'}°C to {risk.temperature_range.max ?? 'N/A'}°C
+                  {t('weather.temperatureWindow', {
+                    min: risk.temperature_range.min ?? t('weather.notAvailable'),
+                    max: risk.temperature_range.max ?? t('weather.notAvailable'),
+                  })}
                 </p>
                 <p>
-                  Humidity threshold: {risk.humidity_threshold != null ? `${risk.humidity_threshold}%` : 'N/A'}
+                  {t('weather.humidityThreshold', {
+                    value: risk.humidity_threshold != null ? `${risk.humidity_threshold}` : t('weather.notAvailable'),
+                  })}
                 </p>
                 {risk.treatment_product && (
-                  <p>Suggested treatment: {risk.treatment_product}{risk.treatment_dose ? ` • ${risk.treatment_dose}` : ''}</p>
+                  <p>{t('weather.suggestedTreatment', { treatment: `${risk.treatment_product}${risk.treatment_dose ? ` • ${risk.treatment_dose}` : ''}` })}</p>
                 )}
-                {risk.treatment_timing && <p>Timing: {risk.treatment_timing}</p>}
+                {risk.treatment_timing && <p>{t('weather.timing', { timing: risk.treatment_timing })}</p>}
               </div>
             </div>
           ))}
@@ -174,6 +183,7 @@ const DiseaseRiskPanel = ({
 };
 
 const AIWeatherPage = () => {
+  const { t } = useTranslation('ai');
   const { parcelId } = Route.useParams();
   const { currentOrganization } = useAuth();
   const { data: parcel, isLoading } = useParcelById(parcelId);
@@ -187,13 +197,14 @@ const AIWeatherPage = () => {
   }
 
   const hasBoundary = Array.isArray(parcel.boundary) && parcel.boundary.length > 0;
+  const parcelBoundary = Array.isArray(parcel.boundary) ? parcel.boundary : [];
 
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-bold text-gray-900 dark:text-white">AI Weather Analysis</h2>
+        <h2 className="text-xl font-bold text-gray-900 dark:text-white">{t('weather.pageTitle')}</h2>
         <p className="text-sm text-gray-600 dark:text-gray-400">
-          Weather analytics, forecast trends, and crop risk signals for this parcel.
+          {t('weather.pageSubtitle')}
         </p>
       </div>
 
@@ -209,7 +220,7 @@ const AIWeatherPage = () => {
           >
             <WeatherAnalyticsView
               parcelId={parcelId}
-              parcelBoundary={parcel.boundary}
+              parcelBoundary={parcelBoundary}
               parcelName={parcel.name}
               cropType={parcel.planting_type}
               treeType={parcel.tree_type}
@@ -221,10 +232,10 @@ const AIWeatherPage = () => {
         <div className="rounded-xl bg-white py-12 text-center dark:bg-gray-800">
           <Cloud className="mx-auto mb-4 h-16 w-16 text-gray-400" />
           <p className="mb-2 text-gray-600 dark:text-gray-400">
-            Parcel location data is required for weather analysis.
+            {t('weather.noBoundary')}
           </p>
           <p className="text-sm text-gray-500 dark:text-gray-500">
-            Add or correct the parcel boundary to enable forecast, climate, and risk analysis.
+            {t('weather.noBoundaryHint')}
           </p>
         </div>
       )}

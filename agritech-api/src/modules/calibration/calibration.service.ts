@@ -129,6 +129,29 @@ export class CalibrationService {
     stepKey: string,
     message: string,
   ): void {
+    const percent = Math.round((step / totalSteps) * 100);
+
+    // Persist so page reload / socket gap still shows current state.
+    // Fire-and-forget — socket event is authoritative while connected.
+    void this.databaseService.getAdminClient()
+      .from("calibrations")
+      .update({
+        progress_step: step,
+        progress_total_steps: totalSteps,
+        progress_step_key: stepKey,
+        progress_message: message,
+        progress_percent: percent,
+        progress_updated_at: new Date().toISOString(),
+      })
+      .eq("id", calibrationId)
+      .then(({ error }) => {
+        if (error) {
+          this.logger.warn(
+            `Failed to persist calibration progress for ${calibrationId}: ${error.message}`,
+          );
+        }
+      });
+
     this.notificationsGateway.emitToOrganization(
       organizationId,
       "calibration:progress",
@@ -139,7 +162,7 @@ export class CalibrationService {
         total_steps: totalSteps,
         step_key: stepKey,
         message,
-        percent: Math.round((step / totalSteps) * 100),
+        percent,
       },
     );
   }
@@ -1063,7 +1086,7 @@ export class CalibrationService {
         .update(bilingualUpdate)
         .eq("id", calibrationId)
         .eq("organization_id", organizationId)
-        .eq("status", "completed");
+        .in("status", ["awaiting_validation", "validated"]);
 
       if (aiUpdateError) {
         this.logger.warn(
@@ -1345,6 +1368,12 @@ export class CalibrationService {
 
     emitProgress(5, "calibration_engine", "Exécution du moteur de calibration V2...");
 
+    if (weatherRows.length === 0) {
+      this.logger.warn(
+        `Calibration ${calibrationId} parcel ${parcelId}: weather_rows is empty before V2 run — /calibration/v2/run will reject. Ensure satellite /api/weather/historical returns data and weather_daily_data is populated for the parcel centroid grid.`,
+      );
+    }
+
     const calibrationInput = {
       parcel_id: parcelId,
       organization_id: organizationId,
@@ -1564,7 +1593,7 @@ export class CalibrationService {
         .update(bilingualUpdate)
         .eq("id", calibrationId)
         .eq("organization_id", organizationId)
-        .eq("status", "completed");
+        .in("status", ["awaiting_validation", "validated"]);
 
       if (aiUpdateError) {
         this.logger.warn(
@@ -1788,6 +1817,128 @@ export class CalibrationService {
     return this.dataService.mapCalibrationHistoryRows(data ?? []);
   }
 
+  /**
+   * Returns the latest in_progress calibration's persisted progress so
+   * the UI can restore the stepper + percent after a page reload. Also
+   * runs the stale guard: any in_progress run with no progress update
+   * for STALE_THRESHOLD_MS is force-failed and phase is recovered. That
+   * unblocks parcels whose calibration process died mid-run (server
+   * restart, crashed worker, etc.).
+   */
+  async getCurrentCalibrationProgress(
+    parcelId: string,
+    organizationId: string,
+  ): Promise<{
+    calibration_id: string;
+    status: string;
+    started_at: string | null;
+    progress: {
+      step: number;
+      total_steps: number;
+      step_key: string | null;
+      message: string | null;
+      percent: number;
+      updated_at: string;
+    } | null;
+    stale: boolean;
+  } | null> {
+    const STALE_THRESHOLD_MS = 5 * 60 * 1000;
+    const supabase = this.databaseService.getAdminClient();
+
+    const { data: run, error } = await supabase
+      .from("calibrations")
+      .select(
+        "id, status, started_at, progress_step, progress_total_steps, progress_step_key, progress_message, progress_percent, progress_updated_at, profile_snapshot",
+      )
+      .eq("parcel_id", parcelId)
+      .eq("organization_id", organizationId)
+      .eq("status", "in_progress")
+      .order("started_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error) {
+      this.logger.warn(
+        `Failed to read current calibration progress for parcel ${parcelId}: ${error.message}`,
+      );
+      return null;
+    }
+
+    if (!run) return null;
+
+    const lastTick = run.progress_updated_at
+      ? new Date(run.progress_updated_at as string).getTime()
+      : run.started_at
+        ? new Date(run.started_at as string).getTime()
+        : Date.now();
+    const ageMs = Date.now() - lastTick;
+    const stale = ageMs > STALE_THRESHOLD_MS;
+
+    if (stale) {
+      // Zombie run: mark failed, emit phase recovery, let caller see it.
+      const { data: failed } = await supabase
+        .from("calibrations")
+        .update({
+          status: "failed",
+          completed_at: new Date().toISOString(),
+          error_message: "Run timed out with no progress update (worker likely died).",
+        })
+        .eq("id", run.id)
+        .eq("status", "in_progress")
+        .select("id")
+        .maybeSingle();
+
+      if (failed) {
+        this.notificationsGateway.emitToOrganization(
+          organizationId,
+          "calibration:failed",
+          {
+            parcel_id: parcelId,
+            calibration_id: run.id,
+            error_message: "Run timed out",
+          },
+        );
+        await this.restoreParcelPhaseAfterCalibrationFailure(
+          run.id as string,
+          parcelId,
+          organizationId,
+        ).catch((err: unknown) => {
+          this.logger.warn(
+            `Stale-run phase recovery failed for ${run.id}: ${err instanceof Error ? err.message : String(err)}`,
+          );
+        });
+        return {
+          calibration_id: run.id as string,
+          status: "failed",
+          started_at: (run.started_at as string | null) ?? null,
+          progress: null,
+          stale: true,
+        };
+      }
+    }
+
+    const step = (run.progress_step as number | null) ?? 0;
+    const totalSteps = (run.progress_total_steps as number | null) ?? 0;
+
+    return {
+      calibration_id: run.id as string,
+      status: run.status as string,
+      started_at: (run.started_at as string | null) ?? null,
+      progress:
+        run.progress_updated_at != null && totalSteps > 0
+          ? {
+              step,
+              total_steps: totalSteps,
+              step_key: (run.progress_step_key as string | null) ?? null,
+              message: (run.progress_message as string | null) ?? null,
+              percent: (run.progress_percent as number | null) ?? 0,
+              updated_at: run.progress_updated_at as string,
+            }
+          : null,
+      stale: false,
+    };
+  }
+
   async getRecalibrationHistory(
     parcelId: string,
     organizationId: string,
@@ -1959,7 +2110,7 @@ export class CalibrationService {
 
     const { data: parcelRow, error: parcelError } = await supabase
       .from("parcels")
-      .select("planting_year, crop_type, boundary")
+      .select("planting_year, crop_type, variety, boundary")
       .eq("id", parcelId)
       .eq("organization_id", organizationId)
       .maybeSingle();
@@ -1977,6 +2128,10 @@ export class CalibrationService {
     const cropType =
       parcelRow && typeof (parcelRow as { crop_type?: unknown }).crop_type === "string"
         ? (parcelRow as { crop_type: string }).crop_type
+        : null;
+    const variety =
+      parcelRow && typeof (parcelRow as { variety?: unknown }).variety === "string"
+        ? (parcelRow as { variety: string }).variety
         : null;
 
     // Recalculate GDD for phase transitions from actual weather data
@@ -2016,6 +2171,7 @@ export class CalibrationService {
       organization_id: record.organization_id,
       crop_type: cropType,
       planting_year: plantingYear,
+      variety,
       calibration_history: history.map((item) => ({
         id: item.id,
         date: item.completed_at ?? item.created_at,
@@ -2040,7 +2196,41 @@ export class CalibrationService {
           review.block_a.summary_narrative = aiNarrative;
         }
       } catch (err) {
-        this.logger.warn(`AI summary enrichment failed, using fallback: ${err.message}`);
+        this.logger.warn(`AI summary enrichment failed, using fallback: ${(err as Error).message}`);
+      }
+    }
+
+    // Enrich phenology dashboard with AI (imputed stages, narratives, reasons).
+    // Gated on degraded status OR missing stages — don't burn quota on clean outputs.
+    if (userId && review.block_b.phenology_dashboard) {
+      const dashboard = review.block_b.phenology_dashboard;
+      const needsEnrichment =
+        dashboard.status === 'degraded' || dashboard.missing_stages.length > 0;
+      if (needsEnrichment) {
+        try {
+          const step4Raw =
+            outputAny.step4 && typeof outputAny.step4 === 'object' && !Array.isArray(outputAny.step4)
+              ? (outputAny.step4 as Record<string, unknown>)
+              : {};
+          const context = this.calibrationReviewAdapter.buildPhenologyEnrichmentContext(
+            step4Raw,
+            cropType,
+          );
+          if (context) {
+            const enrichment = await this.aiReportsService.generatePhenologyEnrichment(
+              organizationId,
+              userId,
+              context,
+            );
+            if (enrichment) {
+              dashboard.ai_enrichment = enrichment;
+            }
+          }
+        } catch (err) {
+          this.logger.warn(
+            `Phenology AI enrichment failed: ${(err as Error).message}`,
+          );
+        }
       }
     }
 

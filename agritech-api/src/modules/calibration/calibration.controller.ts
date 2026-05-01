@@ -22,9 +22,13 @@ import {
 import { Request } from "express";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { OrganizationGuard } from "../../common/guards/organization.guard";
+import { PoliciesGuard } from "../casl/policies.guard";
+import { CanManageParcels } from "../casl/permissions.decorator";
 import { CalibrationService } from "./calibration.service";
+import { TargetYieldService } from "./target-yield.service";
 import { StartCalibrationDto } from "./dto/start-calibration.dto";
 import { ConfirmNutritionOptionDto } from "./dto/confirm-nutrition-option.dto";
+import { ConfirmTargetYieldDto } from "./dto/confirm-target-yield.dto";
 import { AnnualRecalibrationService } from "./annual-recalibration.service";
 import { AnnualSnoozeDto } from "./dto/annual-snooze.dto";
 import { ResolveAnnualMissingTasksDto } from "./dto/resolve-annual-missing-tasks.dto";
@@ -37,11 +41,13 @@ import {
 @ApiTags("calibration")
 @ApiBearerAuth()
 @Controller("parcels/:parcelId/calibration")
-@UseGuards(JwtAuthGuard, OrganizationGuard)
+@UseGuards(JwtAuthGuard, OrganizationGuard, PoliciesGuard)
+@CanManageParcels()
 export class CalibrationController {
   constructor(
     private readonly calibrationService: CalibrationService,
     private readonly annualRecalibrationService: AnnualRecalibrationService,
+    private readonly targetYieldService: TargetYieldService,
   ) {}
 
   @Post("start")
@@ -109,6 +115,23 @@ export class CalibrationController {
   ) {
     const organizationId = this.getOrganizationId(req);
     return this.calibrationService.getLatestCalibration(
+      parcelId,
+      organizationId,
+    );
+  }
+
+  @Get("progress")
+  @ApiOperation({
+    summary:
+      "Get current calibration run progress (persisted). Returns null when no run is in_progress. Runs the stale-guard that auto-fails zombie runs.",
+  })
+  @ApiResponse({ status: 200, description: "Progress fetched (may be null)" })
+  async getCalibrationProgress(
+    @Param("parcelId") parcelId: string,
+    @Req() req: Request,
+  ) {
+    const organizationId = this.getOrganizationId(req);
+    return this.calibrationService.getCurrentCalibrationProgress(
       parcelId,
       organizationId,
     );
@@ -287,6 +310,46 @@ export class CalibrationController {
       calibrationId,
       organizationId,
       dto.option,
+    );
+  }
+
+  @Get(":calibrationId/target-yield-suggestion")
+  @ApiOperation({
+    summary: "Get deterministic target yield suggestion + validation envelope",
+  })
+  @ApiResponse({ status: 200 })
+  async getTargetYieldSuggestion(
+    @Param("parcelId") parcelId: string,
+    @Param("calibrationId") calibrationId: string,
+    @Req() req: Request,
+  ) {
+    const organizationId = this.getOrganizationId(req);
+    return this.targetYieldService.getSuggestion(
+      parcelId,
+      calibrationId,
+      organizationId,
+    );
+  }
+
+  @Post(":calibrationId/target-yield")
+  @ApiOperation({
+    summary: "Confirm or override farmer target yield for a calibration",
+  })
+  @ApiResponse({ status: 200 })
+  async confirmTargetYield(
+    @Param("parcelId") parcelId: string,
+    @Param("calibrationId") calibrationId: string,
+    @Body() dto: ConfirmTargetYieldDto,
+    @Req() req: Request,
+  ) {
+    const organizationId = this.getOrganizationId(req);
+    const userId = (req as any).user?.id;
+    return this.targetYieldService.confirm(
+      parcelId,
+      calibrationId,
+      organizationId,
+      userId,
+      { target_yield_t_ha: dto.target_yield_t_ha, source: dto.source },
     );
   }
 

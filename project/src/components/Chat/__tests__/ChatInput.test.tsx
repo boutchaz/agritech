@@ -19,10 +19,11 @@ describe('ChatInput', () => {
         voiceMode={false}
         isListening={false}
         isVoiceSupported={false}
+        onImageChange={vi.fn()}
       />
     );
     expect(screen.getByPlaceholderText(/Ask about your farm/)).toBeInTheDocument();
-    expect(screen.getByRole('button')).toBeInTheDocument();
+    expect(screen.getAllByRole('button').length).toBeGreaterThanOrEqual(1);
   });
 
   it('calls onSend on Enter key', () => {
@@ -36,6 +37,7 @@ describe('ChatInput', () => {
         voiceMode={false}
         isListening={false}
         isVoiceSupported={false}
+        onImageChange={vi.fn()}
       />
     );
     fireEvent.keyDown(screen.getByPlaceholderText(/Ask about your farm/), { key: 'Enter' });
@@ -52,9 +54,10 @@ describe('ChatInput', () => {
         voiceMode={false}
         isListening={false}
         isVoiceSupported={false}
+        onImageChange={vi.fn()}
       />
     );
-    const sendBtn = screen.getByRole('button');
+    const sendBtn = screen.getAllByRole('button').at(-1)!; // Send button is always last
     expect(sendBtn).toBeDisabled();
   });
 });

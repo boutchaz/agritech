@@ -26,7 +26,7 @@ const DashboardHome = () => {
 
   const stats = [
     {
-      title: 'Parcelles totales',
+      title: t('dashboard.totalParcelsTitle', 'Parcelles totales'),
       value: summary?.parcels.total ?? 0,
       change: `${summary?.parcels.totalArea?.toFixed(1) ?? 0} ha`,
       trend: 'up',
@@ -34,7 +34,7 @@ const DashboardHome = () => {
       color: 'green'
     },
     {
-      title: 'Tâches en cours',
+      title: t('dashboard.ongoingTasksTitle', 'Tâches en cours'),
       value: summary?.tasks.inProgress ?? 0,
       change: `${summary?.tasks.upcoming ?? 0} à venir`,
       trend: (summary?.tasks.inProgress ?? 0) > 0 ? 'warning' : 'up',
@@ -42,7 +42,7 @@ const DashboardHome = () => {
       color: 'yellow'
     },
     {
-      title: 'Tâches complétées',
+      title: t('dashboard.completedTasksTitle', 'Tâches complétées'),
       value: summary?.tasks.completed ?? 0,
       change: `${summary?.tasks.total ?? 0} total`,
       trend: 'up',
@@ -50,7 +50,7 @@ const DashboardHome = () => {
       color: 'blue'
     },
     {
-      title: 'Travailleurs actifs',
+      title: t('dashboard.activeWorkersTitle', 'Travailleurs actifs'),
       value: summary?.workers.active ?? 0,
       change: `${summary?.workers.workingToday ?? 0} aujourd'hui`,
       trend: 'up',
@@ -58,7 +58,7 @@ const DashboardHome = () => {
       color: 'purple'
     },
     {
-      title: 'Récoltes ce mois',
+      title: t('dashboard.thisMonthHarvestsTitle', 'Récoltes ce mois'),
       value: summary?.harvests.thisMonth ?? 0,
       change: `${summary?.harvests.thisMonthQuantity?.toFixed(0) ?? 0} kg`,
       trend: 'up',
@@ -66,7 +66,7 @@ const DashboardHome = () => {
       color: 'emerald'
     },
     {
-      title: 'Stock faible',
+      title: t('dashboard.lowStockTitle', 'Stock faible'),
       value: summary?.inventory.lowStock ?? 0,
       change: `${summary?.inventory.total ?? 0} articles total`,
       trend: (summary?.inventory.lowStock ?? 0) > 0 ? 'warning' : 'up',
@@ -77,27 +77,27 @@ const DashboardHome = () => {
 
   const quickActions = [
     {
-      title: 'Nouvelle analyse de sol',
-      description: 'Enregistrer une nouvelle analyse',
+      title: t('dashboard.newSoilAnalysisTitle', 'Nouvelle analyse de sol'),
+      description: t('dashboard.newSoilAnalysisDescription', 'Enregistrer une nouvelle analyse'),
       icon: Beaker,
       onClick: () => {
         navigate({ to: '/analytics' });
       },
     },
     {
-      title: 'Ajouter une parcelle',
-      description: 'Créer une nouvelle parcelle',
+      title: t('dashboard.addParcelTitle', 'Ajouter une parcelle'),
+      description: t('dashboard.addParcelDescription', 'Créer une nouvelle parcelle'),
       icon: MapPin,
       onClick: () => {
-        navigate({ to: '/parcels' });
+        navigate({ to: '/parcels', search: {} as never });
       },
     },
     {
-      title: 'Nouvelle tâche',
-      description: 'Créer une nouvelle tâche',
+      title: t('dashboard.newTaskTitle', 'Nouvelle tâche'),
+      description: t('dashboard.newTaskDescription', 'Créer une nouvelle tâche'),
       icon: CheckSquare,
       onClick: () => {
-        navigate({ to: '/tasks' });
+        navigate({ to: '/tasks', search: {} as never });
       },
     },
   ];
@@ -119,7 +119,7 @@ const DashboardHome = () => {
       {isLoading && (
         <div className="flex items-center justify-center py-12">
           <Loader2 className="w-8 h-8 animate-spin text-green-600" />
-          <span className="ml-2 text-gray-600 dark:text-gray-400">Chargement des données...</span>
+          <span className="ml-2 text-gray-600 dark:text-gray-400">{t('dashboard.loadingData', 'Chargement des données...')}</span>
         </div>
       )}
 
@@ -127,7 +127,7 @@ const DashboardHome = () => {
       {error && (
         <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 flex items-center justify-between">
           <p className="text-red-600 dark:text-red-400">
-            Erreur lors du chargement des données du tableau de bord.
+            {t('dashboard.loadError', 'Erreur lors du chargement des données du tableau de bord.')}
           </p>
           <Button
             variant="outline"

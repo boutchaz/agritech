@@ -13,9 +13,12 @@ import {
 } from '@/components/ui/radix-select';
 import { useAuth } from '@/hooks/useAuth';
 import { useCreateStockEntry } from '@/hooks/useStockEntries';
+import { useBarcodeScanner } from '@/hooks/useBarcodeScanner';
 import { stockEntriesApi } from '@/lib/api/stock';
 import type { ItemSelectionOption } from '@/types/items';
 import { itemsApi } from '@/lib/api/items';
+import BarcodeScanField from '@/components/Stock/BarcodeScanField';
+import type { ScanResult } from '@/types/barcode';
 import { CheckCircle, ChevronLeft, ChevronRight, Send } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -42,6 +45,7 @@ export default function StockTakeWizard() {
     queryFn: async () => {
       if (!currentOrganization?.id) throw new Error('No organization');
       const res = await fetch('/api/v1/warehouses', {
+        credentials: 'include',
         headers: { 'X-Organization-Id': currentOrganization.id },
       });
       const data = await res.json();
@@ -60,6 +64,18 @@ export default function StockTakeWizard() {
   });
 
   const createEntry = useCreateStockEntry();
+
+  const scanner = useBarcodeScanner({
+    items: stockTakeItems.map((item) => ({ item_id: item.item.id, quantity: parseFloat(item.physicalQuantity) || 0 })),
+    warehouseId,
+    onItemFound: (result: ScanResult) => {
+      const idx = stockTakeItems.findIndex((item) => item.item.id === result.item_id);
+      if (idx >= 0) {
+        const current = parseFloat(stockTakeItems[idx].physicalQuantity) || 0;
+        updatePhysicalQty(idx, String(current + 1));
+      }
+    },
+  });
 
   const toggleItem = (item: ItemSelectionOption) => {
     setSelectedItems((prev) =>
@@ -284,6 +300,19 @@ export default function StockTakeWizard() {
             <CardTitle>{t('stockTake.step2', 'Enter Physical Quantities')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            <div className="mb-4">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">
+                {t('barcode.scanPlaceholder', 'Scan or type barcode...')}
+              </label>
+              <BarcodeScanField
+                value={scanner.scanValue}
+                onChange={scanner.setScanValue}
+                onScan={scanner.handleScan}
+                isScanning={scanner.isScanning}
+                error={scanner.error}
+                autoFocus={false}
+              />
+            </div>
             <div className="space-y-3">
               {stockTakeItems.map((item, idx) => (
                 <div

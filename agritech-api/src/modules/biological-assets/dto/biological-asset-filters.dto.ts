@@ -34,27 +34,15 @@ export class BiologicalAssetFiltersDto {
   @IsUUID()
   parcel_id?: string;
 
-  @ApiPropertyOptional({ description: 'Filter by minimum age (years)' })
-  @IsOptional()
-  @Type(() => Number)
-  @IsNumber()
-  min_age_years?: number;
-
-  @ApiPropertyOptional({ description: 'Filter by maximum age (years)' })
-  @IsOptional()
-  @Type(() => Number)
-  @IsNumber()
-  max_age_years?: number;
-
-  @ApiPropertyOptional({ description: 'Filter by planting date from' })
+  @ApiPropertyOptional({ description: 'Filter by acquisition date from' })
   @IsOptional()
   @IsString()
-  planting_date_from?: string;
+  date_from?: string;
 
-  @ApiPropertyOptional({ description: 'Filter by planting date to' })
+  @ApiPropertyOptional({ description: 'Filter by acquisition date to' })
   @IsOptional()
   @IsString()
-  planting_date_to?: string;
+  date_to?: string;
 
   @ApiPropertyOptional({ description: 'Search by name or notes' })
   @IsOptional()

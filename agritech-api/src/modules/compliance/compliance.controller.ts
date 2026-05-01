@@ -25,6 +25,8 @@ import { Response } from 'express';
 import { ComplianceService } from './compliance.service';
 import { ComplianceReportsService } from './compliance-reports.service';
 import { CorrectiveActionsService } from './corrective-actions.service';
+import { RequireModule } from '../../common/decorators/require-module.decorator';
+import { ModuleEntitlementGuard } from '../../common/guards/module-entitlement.guard';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { OrganizationGuard } from '../../common/guards/organization.guard';
 import { PoliciesGuard } from '../casl/policies.guard';
@@ -39,7 +41,8 @@ import { CreateEvidenceDto } from './dto/create-evidence.dto';
 
 @ApiTags('compliance')
 @Controller('compliance')
-@UseGuards(JwtAuthGuard, OrganizationGuard)
+@RequireModule('compliance')
+@UseGuards(JwtAuthGuard, OrganizationGuard, ModuleEntitlementGuard)
 @ApiBearerAuth()
 export class ComplianceController {
   constructor(

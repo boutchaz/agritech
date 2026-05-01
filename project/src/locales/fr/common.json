@@ -41,349 +41,36 @@
     "unknownError": "Erreur inconnue",
     "none": "Aucun"
   },
-  "farmSwitcher": {
-    "selectFarm": "Sélectionner une ferme",
-    "noFarmsAvailable": "Aucune ferme disponible",
-    "addFarm": "Ajouter une ferme"
-  },
-  "common": {
-    "views": {
-      "map": "Vue carte",
-      "list": "Vue liste",
-      "grid": "Vue grille",
-      "cards": "Vue cartes",
-      "grouped": "Vue groupée",
-      "dashboard": "Vue tableau de bord"
-    },
-    "actions": {
-      "refresh": "Actualiser",
-      "download": "Télécharger",
-      "edit": "Modifier",
-      "delete": "Supprimer",
-      "manage": "Gérer",
-      "manageRoles": "Gérer les rôles",
-      "editFarm": "Modifier la ferme",
-      "deleteFarm": "Supprimer la ferme",
-      "editRole": "Modifier le rôle",
-      "removeRole": "Supprimer le rôle",
-      "createReceptionBatch": "Créer un lot de réception",
-      "viewDetails": "Voir les détails",
-      "payWage": "Payer le salaire",
-      "deactivate": "Désactiver",
-      "editToEnableAccess": "Modifier pour activer l'accès",
-      "downloadReport": "Télécharger le rapport",
-      "downloadInvoice": "Télécharger la facture",
-      "downloadMap": "Télécharger la carte",
-      "filtersAndSort": "Filtres et tri",
-      "goToMyLocation": "Aller à ma position",
-      "searchLocation": "Rechercher un lieu",
-      "exitFullscreen": "Quitter le plein écran (Échap)",
-      "addNewAccount": "Ajouter un nouveau compte",
-      "addNewTax": "Ajouter une nouvelle taxe",
-      "changeLanguage": "Changer de langue"
-    },
-    "actionsColumn": "Actions",
-    "active": "Actif",
-    "inactive": "Inactif",
-    "save": "Enregistrer",
-    "cancel": "Annuler",
-    "delete": "Supprimer",
-    "loading": "Chargement...",
-    "saving": "Enregistrement...",
-    "creating": "Création...",
-    "deleting": "Suppression...",
-    "create": "Créer",
-    "selectOption": "Sélectionner une option",
-    "statusColumn": "Statut",
-    "placeholders": {
-      "searchLocation": "Rechercher un lieu au Maroc...",
-      "parcelName": "Nom de la parcelle",
-      "cropType": "Ex : Tomates",
-      "rootstock": "Ex : GF677",
-      "search": "Rechercher...",
-      "selectDate": "Sélectionner une date avec données satellite",
-      "searchArticles": "Rechercher des articles...",
-      "searchFiles": "Rechercher un fichier...",
-      "selectBucket": "Sélectionner un bucket",
-      "typeOrganizationName": "Tapez le nom de l'organisation",
-      "additionalNotes": "Notes supplémentaires..."
-    },
-    "form": {
-      "name": "Nom",
-      "description": "Description",
-      "area": "Surface",
-      "unit": "Unité",
-      "soilType": "Type de sol",
-      "irrigationType": "Type d'irrigation",
-      "variety": "Variété",
-      "plantingDate": "Date de plantation",
-      "plantingType": "Type de plantation"
-    },
-    "satellite": {
-      "refreshData": "Actualiser les données",
-      "showTemperature": "Afficher la température au moment du passage satellite (11h)"
-    },
-    "roiCalculator": {
-      "title": "Calculez votre retour sur investissement",
-      "subtitle": "Découvrez en 30 secondes combien AgroGina peut vous faire économiser chaque année. Recevez un rapport personnalisé par email.",
-      "calculatorTitle": "Calculateur ROI",
-      "calculatorSubtitle": "Découvrez combien vous pourriez économiser avec AgroGina",
-      "farmSize": "Surface agricole (hectares)",
-      "farmSizeUnit": "ha",
-      "currentYield": "Rendement actuel (tonnes/ha)",
-      "currentYieldUnit": "t/ha",
-      "cropType": "Type de culture",
-      "laborCost": "Coût main d'œuvre (MAD/an)",
-      "fertilizerCost": "Coût engrais (MAD/an)",
-      "waterCost": "Coût eau/irrigation (MAD/an)",
-      "results": "Résultats estimés",
-      "yieldIncrease": "Augmentation de rendement",
-      "laborSavings": "Économies main d'œuvre",
-      "inputSavings": "Économies intrants",
-      "totalAnnualSavings": "Total économies annuelles",
-      "perYear": "/an",
-      "roi": "ROI",
-      "paybackPeriod": "Seuil de rentabilité",
-      "months": "mois",
-      "lessThan1Month": "< 1 mois",
-      "receiveReport": "Recevoir mon rapport détaillé",
-      "emailReportTitle": "Recevez votre rapport ROI détaillé",
-      "emailReportSubtitle": "Obtenez une analyse personnalisée de votre retour sur investissement par email",
-      "estimatedAnnualSavings": "Économies annuelles estimées",
-      "emailLabel": "Adresse email professionnelle",
-      "emailPlaceholder": "votre@email.com",
-      "planOfInterest": "Plan d'intérêt",
-      "receiveFreeReport": "Recevoir mon rapport gratuit",
-      "noCommitment": "Sans engagement. Votre email ne sera jamais partagé.",
-      "backToCalculator": "← Retour au calculateur",
-      "calculateNewRoi": "Calculer un nouveau ROI",
-      "thankYouTitle": "Merci pour votre demande !",
-      "thankYouMessage": "Votre rapport ROI personnalisé a été envoyé à <strong>{{email}}</strong>. Notre équipe vous contactera sous 24h.",
-      "disclaimer": "*Estimations basées sur des moyennes sectorielles. Résultats réels variables.",
-      "crops": {
-        "vegetables": "Légumes",
-        "fruits": "Fruits",
-        "cereals": "Céréales",
-        "citrus": "Agrumes",
-        "olives": "Oliviers"
-      },
-      "plans": {
-        "starter": "Starter",
-        "professional": "Professional",
-        "enterprise": "Enterprise"
-      }
+  "utilities": {
+    "title": "Gestion des Utilités",
+    "subtitle": "Suivez et gérez la consommation d'eau et d'électricité de vos fermes",
+    "loading": "Chargement de l'organisation...",
+    "loadingDashboard": "Chargement du tableau de bord...",
+    "accountNotFoundError": "Compte comptable de type \"{{accountType}}\"{{subtypeMsg}} introuvable. Veuillez créer ce compte dans le plan comptable.",
+    "selectFarmToAddCharge": "Sélectionnez une ferme pour ajouter une charge.",
+    "fileUploadError": "Erreur lors du téléchargement du fichier",
+    "journalEntryMissingAccountHelp": "✓ Charge enregistrée avec succès.\n\n⚠️ L'écriture comptable n'a pas pu être créée automatiquement.\n\nRaison: {{errorMessage}}\n\n→ Veuillez configurer le plan comptable dans la section Comptabilité > Plan Comptable.\n→ Comptes requis: Charges d'exploitation, Trésorerie, Dettes fournisseurs.",
+    "journalEntryCreatedWithError": "Charge enregistrée, mais l'écriture comptable n'a pas été créée: {{errorMessage}}",
+    "selectFarmToEditCharge": "Sélectionnez une ferme pour modifier une charge.",
+    "utilityTypes": {
+      "electricity": "Électricité",
+      "water": "Eau",
+      "diesel": "Diesel",
+      "gas": "Gaz",
+      "internet": "Internet",
+      "phone": "Téléphone",
+      "other": "Autre"
     }
   },
-  "liveDashboard": {
-    "title": "Tableau de bord en direct",
-    "pageTitle": "Tableau de bord en direct",
-    "subtitle": "Surveillance en temps réel des utilisateurs connectés, des opérations actives et des activités agricoles",
-    "live": "En direct",
-    "autoRefresh": "Actualisation automatique activée",
-    "refresh": "Actualiser",
-    "lastUpdated": "Dernière mise à jour",
-    "pages": {
-      "dashboard": "Tableau de bord",
-      "tasks": "Tâches",
-      "parcels": "Parcelles",
-      "harvests": "Récoltes",
-      "inventory": "Inventaire",
-      "workers": "Ouvriers",
-      "analytics": "Analytique"
-    },
-    "summary": {
-      "concurrentUsers": "Utilisateurs en ligne",
-      "activeOperations": "Opérations actives",
-      "activeFarms": "Fermes actives",
-      "activitiesLast24h": "Activités (24h)",
-      "peakUsage": "Pic d'utilisation",
-      "mostActiveFeature": "Fonctionnalité la plus active"
-    },
-    "concurrentUsers": {
-      "title": "Utilisateurs connectés",
-      "online": "En ligne maintenant",
-      "activeNow": "Utilisateurs actifs",
-      "activeUsers": "Utilisateurs actifs",
-      "noUsers": "Aucun utilisateur actuellement en ligne"
-    },
-    "operations": {
-      "title": "Opérations actives",
-      "active": "actives",
-      "currentOperations": "Opérations en cours",
-      "noOperations": "Aucune opération active",
-      "types": {
-        "task": "Tâches",
-        "harvest": "Récoltes",
-        "inventory": "Inventaire",
-        "irrigation": "Irrigation",
-        "maintenance": "Maintenance"
-      },
-      "status": {
-        "in_progress": "En cours",
-        "pending": "En attente",
-        "paused": "En pause"
-      }
-    },
-    "activities": {
-      "title": "Activités agricoles",
-      "recentActivities": "Activités récentes",
-      "lastHour": "Dans la dernière heure",
-      "perFarm": "moy. par ferme",
-      "activityFeed": "Fil d'activités",
-      "noActivities": "Aucune activité récente"
-    },
-    "featureUsage": {
-      "title": "Utilisation des fonctionnalités",
-      "realTime": "Temps réel",
-      "mostPopular": "Plus populaire",
-      "usages": "utilisations"
-    },
-    "heatmap": {
-      "title": "Carte thermique des activités",
-      "subtitle": "Distribution géographique des activités agricoles",
-      "legend": "Légende",
-      "intensity": "Intensité",
-      "low": "Faible",
-      "high": "Élevée",
-      "activities": "Activités",
-      "heatmapLayer": "Couche thermique",
-      "satellite": "Satellite",
-      "street": "Rue",
-      "all": "Tous",
-      "totalPoints": "Points totaux",
-      "activeLocations": "Emplacements actifs",
-      "activeFarm": "Ferme Active",
-      "activeFarms": "Fermes actives",
-      "noFarms": "Aucune parcelle localisée",
-      "noFarmsHint": "Dessinez les limites de vos parcelles sur la carte pour les voir ici"
-    }
-  },
-  "nav": {
-    "dashboard": "Tableau de bord",
-    "liveDashboard": "Tableau de bord en direct",
-    "analyses": "Analyses",
-    "soilAnalysis": "Analyses de Sol",
-    "parcels": "Parcelles",
-    "crops": "Cultures",
-    "monitoring": "Surveillance",
-    "inventory": "Inventaire",
-    "employees": "Salariés",
-    "dayLaborers": "Journaliers",
-    "utilities": "Services publics",
-    "profitability": "Rentabilité",
-    "reports": "Rapports",
-    "settings": "Paramètres",
-    "stock": "Gestion des stocks",
-    "infrastructure": "Infrastructure",
-    "farmHierarchy": "Gestion des Fermes",
-    "productApplications": "Applications de produits",
-    "expenses": "Charges",
-    "personnel": "Personnel",
-    "workers": "Ouvriers",
-    "tasks": "Tâches",
-    "production": "Production",
-    "productionIntelligence": "Intelligence de Production",
-    "accounting": "Comptabilité",
-    "accountingBilling": "Comptabilité & Facturation",
-    "chartOfAccounts": "Plan Comptable",
-    "overview": "Vue d'ensemble",
-    "salesProcess": "Processus de Vente",
-    "salesPurchasing": "Ventes & Achats",
-    "quotes": "Devis",
-    "salesOrders": "Commandes de Vente",
-    "purchaseOrders": "Commandes d'Achat",
-    "financialRecords": "Documents Financiers",
-    "invoices": "Factures",
-    "payments": "Paiements",
-    "journal": "Journal",
-    "setupReports": "Configuration & Rapports",
-    "configuration": "Configuration",
-    "customers": "Clients",
-    "agriculture": "Agriculture",
-    "elevage": "Élevage",
-    "alerts": "Alertes",
-    "suppliers": "Fournisseurs",
-    "warehouses": "Entrepôts",
-    "items": "Articles",
-    "harvestReception": "Récolte & Réception",
-    "harvests": "Récoltes",
-    "receptionBatches": "Lots de Réception",
-    "qualityControl": "Contrôle Qualité",
-    "campaigns": "Campagnes",
-    "cropCycles": "Cycles de Culture",
-    "chat": "Assistant IA",
-    "biologicalAssets": "Actifs Biologiques",
-    "compliance": "Conformité",
-    "certifications": "Certifications",
-    "correctiveActions": "Actions correctives",
-    "marketplace": "Marketplace",
-    "receivedRequests": "Demandes reçues",
-    "sentRequests": "Demandes envoyées",
-    "viewMarketplace": "Voir la marketplace",
-    "paymentRecords": "Paiements",
-    "bankAccounts": "Comptes bancaires"
-  },
-  "sidebar": {
-    "collapse": "Réduire",
-    "expand": "Développer la barre latérale"
-  },
-  "orgSwitcher": {
-    "organizations": "Organisations",
-    "orgSettings": "Paramètres de l'organisation",
-    "manageTeam": "Gérer l'équipe",
-    "signOut": "Se déconnecter",
-    "backToOrganizations": "← Retour aux organisations",
-    "farms": "Fermes - {{orgName}}",
-    "manager": "Gestionnaire: {{name}}",
-    "noFarms": "Aucune ferme trouvée",
-    "createFirstFarm": "Créez votre première ferme",
-    "roles": {
-      "owner": "Propriétaire",
-      "admin": "Administrateur",
-      "manager": "Gestionnaire",
-      "member": "Membre",
-      "viewer": "Lecteur"
-    }
-  },
-  "stock": {
-    "title": "Gestion des Stocks",
-    "subtitle": "Gestion complète de l'inventaire, des entrées et des entrepôts",
-    "tabs": {
-      "items": "Articles",
-      "groups": "Groupes d'Articles",
-      "inventory": "Inventaire & Achats",
-      "entries": "Entrées de Stock",
-      "reception": "Lots de Réception",
-      "reports": "Rapports & Analyses"
-    },
-    "lowStockAlerts": {
-      "title": "Alertes de Stock Faible",
-      "itemsBelowMinimum": "article(s) sous le niveau de stock minimum",
-      "createEntry": "Créer une Entrée de Stock",
-      "currentStock": "Stock Actuel",
-      "minimumLevel": "Niveau Minimum",
-      "totalValue": "Valeur Totale",
-      "byFarm": "Par Ferme/Entrepôt",
-      "addStock": "Ajouter du Stock",
-      "viewItem": "Voir l'Article",
-      "viewAll": "Voir les {{count}} articles en stock faible",
-      "allOptimal": "Tous les niveaux de stock sont optimaux"
-    },
-    "itemFarmUsage": {
-      "noUsage": "Aucune donnée d'utilisation trouvée pour cet article",
-      "totalUsage": "Utilisation Totale",
-      "totalQuantity": "Quantité Totale Utilisée",
-      "lastUsed": "Dernière Utilisation",
-      "never": "Jamais",
-      "byFarm": "Utilisation par Ferme",
-      "usageEvents": "événement(s) d'utilisation",
-      "quantityUsed": "Quantité Utilisée",
-      "parcel": "Parcelle",
-      "relatedTasks": "Tâches Connexes",
-      "viewTask": "Voir la Tâche",
-      "viewFarm": "Voir la Ferme",
-      "more": "plus"
-    }
+  "parcelCard": {
+    "soil": "sol",
+    "plant": "plante",
+    "water": "eau",
+    "noAnalysisRecorded": "Aucune analyse de {{analysisType}} enregistrée",
+    "addFirstAnalysis": "Ajouter une première analyse",
+    "defineBoundarySatellite": "Veuillez définir les limites de la parcelle pour accéder aux fonctionnalités d'imagerie satellite.",
+    "loadingWeatherAnalysis": "Chargement des analyses météo...",
+    "defineBoundaryWeather": "Veuillez définir les limites de la parcelle pour accéder aux analyses météo & climatiques."
   },
   "dashboard": {
     "title": "Tableau de bord",
@@ -733,6 +420,836 @@
       "userOrOrgNotFound": "Utilisateur ou organisation non trouvé"
     }
   },
+  "aiReport": {
+    "title": "Rapport IA Intelligent",
+    "subtitle": "Analyse approfondie de votre parcelle par intelligence artificielle",
+    "loadingProviders": "Chargement des fournisseurs IA...",
+    "noProvidersTitle": "Aucun fournisseur IA configuré",
+    "noProvidersDescription": "Pour générer des rapports IA, veuillez configurer au moins un fournisseur (OpenAI ou Google Gemini) dans les paramètres de votre organisation.",
+    "dateRange": "Période d'analyse",
+    "startDate": "Date de début",
+    "endDate": "Date de fin",
+    "errorTitle": "Erreur de génération",
+    "errorGeneric": "Une erreur est survenue. Veuillez réessayer.",
+    "generating": "Analyse en cours...",
+    "generateButton": "Générer le rapport IA",
+    "generatingHint": "L'IA analyse vos données satellites, analyses de sol et autres informations...",
+    "providersLoadError": "Erreur lors du chargement des fournisseurs IA",
+    "noProvidersAvailable": "Aucun fournisseur IA disponible",
+    "configureApiKeys": "Veuillez configurer les clés API OpenAI ou Gemini dans les paramètres du serveur.",
+    "analysisPeriod": "Période d'analyse",
+    "analysisBlocked": "Analysis blocked: Missing critical data. Please recalibrate and fetch missing data.",
+    "generationErrorFallback": "Erreur lors de la génération du rapport",
+    "generateNewReport": "← Générer un nouveau rapport",
+    "generatingShort": "Génération en cours...",
+    "generateReport": "Générer le Rapport IA",
+    "generatedWith": "Généré avec",
+    "regenerate": "Régénérer",
+    "exportPdf": "Exporter PDF",
+    "sections": {
+      "executiveSummary": "Résumé Exécutif",
+      "healthAssessment": "Évaluation de Santé",
+      "riskAlerts": "Alertes",
+      "recommendations": "Recommandations",
+      "actionItems": "Actions à Entreprendre"
+    },
+    "health": {
+      "soil": "Sol",
+      "vegetation": "Végétation",
+      "water": "Eau",
+      "notEvaluated": "Non évalué"
+    },
+    "priority": {
+      "high": "Priorité haute",
+      "medium": "Priorité moyenne",
+      "low": "Priorité basse"
+    },
+    "providers": {
+      "openai": {
+        "name": "OpenAI GPT-4",
+        "description": "Modèle avancé pour des analyses détaillées"
+      },
+      "gemini": {
+        "name": "Google Gemini",
+        "description": "IA multimodale de Google"
+      }
+    },
+    "configureProviders": "Configurer les fournisseurs IA",
+    "securityNote": "Vos clés API sont chiffrées et stockées de manière sécurisée.",
+    "dataAvailability": {
+      "title": "Données disponibles",
+      "loading": "Vérification des données...",
+      "statusExcellent": "Excellente couverture",
+      "statusGood": "Bonne couverture",
+      "statusBasic": "Couverture de base",
+      "statusInsufficient": "Données insuffisantes",
+      "statusPartial": "Couverture partielle",
+      "statusLimited": "Couverture limitée",
+      "requiredSection": "Requis",
+      "optionalSection": "Optionnel (améliore la précision)",
+      "optional": "optionnel",
+      "satellite": "Données satellites",
+      "satelliteDetail": "{{count}} points",
+      "soil": "Analyse de sol",
+      "water": "Analyse d'eau",
+      "plant": "Analyse végétale",
+      "weather": "Données météo",
+      "canGenerateBasic": "Vous pouvez générer un rapport de base. Ajoutez des analyses pour plus de précision.",
+      "cannotGenerate": "Les données satellites et météo sont requises pour générer un rapport.",
+      "lowCoverageWarning": "Le rapport IA sera moins précis avec peu de données. Ajoutez des analyses pour de meilleurs résultats.",
+      "addAnalysis": "Ajouter"
+    },
+    "generatedOn": "Généré le"
+  },
+  "farmImport": {
+    "title": "Importer des fermes",
+    "description": "Sélectionnez un fichier JSON d'export pour restaurer des fermes avec leurs parcelles et AOI.",
+    "fileLabel": "Fichier JSON d'export",
+    "filePlaceholder": "Cliquez pour sélectionner un fichier JSON",
+    "skipDuplicates": "Ignorer les doublons (par nom)",
+    "errorTitle": "Erreur",
+    "successTitle": "Succès",
+    "cancel": "Annuler",
+    "import": "Importer",
+    "importing": "Import en cours...",
+    "selectJsonFile": "Veuillez sélectionner un fichier JSON",
+    "invalidFormat": "Format de fichier invalide: array \"farms\" manquant",
+    "importSuccess": "Import réussi!",
+    "farmsImported": "{{count}} ferme(s) importée(s)",
+    "parcelsImported": "{{count}} parcelle(s) importée(s)",
+    "aoisImported": "{{count}} AOI(s) importée(s)",
+    "warnings": "Avertissements",
+    "importError": "Erreur lors de l'import"
+  },
+  "soilAnalysisForm": {
+    "title": "Nouvelle Analyse de Sol",
+    "cancel": "Annuler",
+    "selectedParcel": "Parcelle sélectionnée",
+    "soilType": "Type de sol",
+    "analysisDate": "Date d'analyse",
+    "laboratory": "Laboratoire (optionnel)",
+    "laboratoryPlaceholder": "Nom du laboratoire",
+    "samplingDepth": "Profondeur de prélèvement (optionnel)",
+    "selectPlaceholder": "Sélectionner...",
+    "parametersTitle": "Paramètres analyses",
+    "chooseParameters": "Choisir les paramètres testés",
+    "notes": "Notes (optionnel)",
+    "notesPlaceholder": "Observations supplémentaires...",
+    "formErrors": "Veuillez corriger les erreurs dans le formulaire",
+    "save": "Enregistrer",
+    "saving": "Enregistrement...",
+    "titleDetailed": "Analyse du Sol",
+    "parcelInfoTitle": "Parcelle sélectionnée",
+    "parcelSoilType": "Type de sol",
+    "testTypeLabel": "Type d'analyse",
+    "testTypes": {
+      "basic": "Analyse de base",
+      "complete": "Analyse complète",
+      "specialized": "Analyse spécialisée arboriculture"
+    },
+    "physicalProperties": "Propriétés Physiques",
+    "chemicalProperties": "Propriétés Chimiques",
+    "biologicalProperties": "Propriétés Biologiques",
+    "soilTypeLabel": "Type de sol",
+    "soilTypeFromParcel": "depuis la parcelle",
+    "soilTypePlaceholder": "Ex: Sols calci-magnésique, carbonatés...",
+    "textureLabel": "Texture du Sol",
+    "textureOptions": {
+      "silty": "Limoneuse",
+      "clayey": "Argileuse",
+      "sandy": "Sableuse",
+      "siltyClay": "Argilo-limoneuse",
+      "sandySilty": "Limono-sableuse",
+      "sandyClay": "Argilo-sableuse"
+    },
+    "phLabel": "pH",
+    "moistureLabel": "Humidité (%)",
+    "phosphorusLabel": "Phosphore assimilable (mg/kg P2O5)",
+    "potassiumLabel": "Potassium (mg/kg K2O)",
+    "nitrogenLabel": "Azote total (g/kg N)",
+    "microbialActivityLabel": "Activité Microbienne",
+    "microbialActivityOptions": {
+      "low": "Faible",
+      "medium": "Moyenne",
+      "high": "Élevée"
+    },
+    "earthwormCountLabel": "Nombre de Vers de Terre (par m²)",
+    "specializedNotice": "Cette analyse est spécialement adaptée pour l'arboriculture. Des recommandations spécifiques pour la gestion des vergers seront générées en fonction des résultats.",
+    "categories": {
+      "physical": "Propriétés physiques",
+      "generalChemical": "Propriétés chimiques générales",
+      "nitrogen": "Azote",
+      "phosphorus": "Phosphore",
+      "exchangeableCations": "Cations échangeables",
+      "anions": "Anions",
+      "micronutrients": "Oligo-éléments",
+      "heavyMetals": "Métaux lourds",
+      "traceElements": "Éléments traces",
+      "rareElements": "Éléments rares"
+    },
+    "parameters": {
+      "sand": "Sable",
+      "silt": "Limon",
+      "clay": "Argile",
+      "fineSandFraction": "Granulométrie fractions",
+      "ph": "pH",
+      "electricalConductivity": "Conductivité électrique (CE)",
+      "organicMatter": "Matière organique",
+      "totalLimestone": "Calcaire total",
+      "activeLimestone": "Calcaire actif",
+      "cec": "CEC",
+      "ammoniumNitrogen": "Azote ammoniacal (N-NH4)",
+      "nitrateNitrogen": "Azote nitrique (N-NO3)",
+      "totalMineralNitrogen": "Azote minéral total",
+      "availablePhosphorus": "Phosphore assimilable (P2O5 Olsen)",
+      "calcium": "Calcium (Ca)",
+      "magnesium": "Magnésium (Mg)",
+      "potassium": "Potassium (K)",
+      "sodium": "Sodium (Na)",
+      "sulfates": "Sulfates (SO4)",
+      "boron": "Bore (B)",
+      "copper": "Cuivre (Cu)",
+      "iron": "Fer (Fe)",
+      "manganese": "Manganèse (Mn)",
+      "zinc": "Zinc (Zn)",
+      "cadmium": "Cadmium (Cd)",
+      "lead": "Plomb (Pb)",
+      "nickel": "Nickel (Ni)",
+      "chromium": "Chrome (Cr)",
+      "arsenic": "Arsenic (As)",
+      "mercury": "Mercure (Hg)",
+      "silicon": "Silicium (Si)",
+      "selenium": "Sélénium (Se)",
+      "lithium": "Lithium (Li)",
+      "aluminum": "Aluminium (Al)",
+      "gold": "Or (Au)",
+      "antimony": "Antimoine (Sb)",
+      "bismuth": "Bismuth (Bi)"
+    },
+    "texture": {
+      "sand": "Sable",
+      "loamySand": "Sable limoneux",
+      "sandyLoam": "Limon sableux",
+      "loam": "Limon",
+      "siltLoam": "Limon argileux",
+      "silt": "Silt",
+      "clayLoam": "Argile limoneuse",
+      "siltyClayLoam": "Argile silteuse limoneuse",
+      "sandyClay": "Argile sableuse",
+      "siltyClay": "Argile silteuse",
+      "clay": "Argile"
+    },
+    "depths": {
+      "0to30": "0 – 30 cm",
+      "30to60": "30 – 60 cm",
+      "60to90": "60 – 90 cm",
+      "90to120": "90 – 120 cm",
+      "fullProfile": "Profil complet"
+    }
+  },
+  "soilAnalysisPage": {
+    "selectParcelFirst": "Veuillez sélectionner une parcelle avant d'ajouter une analyse de sol.",
+    "saveError": "Erreur lors de l'enregistrement de l'analyse de sol.",
+    "parcelLabel": "Parcelle",
+    "loadingParcels": "Chargement des parcelles...",
+    "allParcels": "Toutes les parcelles",
+    "analysesCount": "{{count}} analyse(s) pour cette parcelle",
+    "title": "Analyses de Sol",
+    "cardViewTitle": "Vue carte",
+    "listViewTitle": "Vue liste",
+    "addAnalysisDisabledTitle": "Sélectionnez une parcelle pour ajouter une analyse",
+    "addAnalysisTitle": "Ajouter une nouvelle analyse",
+    "addAnalysis": "Nouvelle Analyse",
+    "noAnalysesTitle": "Aucune analyse enregistrée",
+    "noAnalysesSubtitle": "Commencez par ajouter une nouvelle analyse de sol",
+    "analysisDate": "Analyse du {{date}}",
+    "unknownParcel": "Parcelle inconnue",
+    "na": "N/A",
+    "physicalProperties": "Propriétés Physiques",
+    "chemicalProperties": "Propriétés Chimiques",
+    "biologicalProperties": "Propriétés Biologiques",
+    "texture": "Texture",
+    "texturePrefix": "Texture",
+    "ph": "pH",
+    "moisture": "Humidité",
+    "phosphorus": "Phosphore",
+    "potassium": "Potassium",
+    "nitrogen": "Azote",
+    "microbialActivity": "Activité microbienne",
+    "earthworms": "Vers de terre",
+    "notes": "Notes"
+  },
+  "soilAnalysis": {
+    "title": "Analyse du Sol",
+    "physicalProperties": "Propriétés Physiques",
+    "chemicalProperties": "Propriétés Chimiques (mg/kg)",
+    "biologicalProperties": "Propriétés Biologiques",
+    "textureLabel": "Texture du Sol",
+    "selectPlaceholder": "Sélectionner...",
+    "textureOptions": {
+      "sandy": "Sableuse",
+      "silty": "Limoneuse",
+      "clayey": "Argileuse",
+      "sandySilty": "Limono-sableuse",
+      "siltyClay": "Argilo-limoneuse"
+    },
+    "phLabel": "pH",
+    "organicMatterLabel": "Matière Organique (%)",
+    "densityLabel": "Densité Apparente (g/cm³)",
+    "waterRetentionLabel": "Rétention d'eau (%)",
+    "nitrogenLabel": "Azote (N)",
+    "phosphorusLabel": "Phosphore (P)",
+    "potassiumLabel": "Potassium (K)",
+    "calciumLabel": "Calcium (Ca)",
+    "magnesiumLabel": "Magnésium (Mg)",
+    "sulfurLabel": "Soufre (S)",
+    "ironLabel": "Fer (Fe)",
+    "manganeseLabel": "Manganèse (Mn)",
+    "zincLabel": "Zinc (Zn)",
+    "copperLabel": "Cuivre (Cu)",
+    "boronLabel": "Bore (B)",
+    "microorganismsLabel": "Microorganismes (UFC/g)",
+    "earthwormsLabel": "Vers de terre (nb/m²)",
+    "organicActivityLabel": "Activité Organique (%)",
+    "cancel": "Annuler",
+    "save": "Enregistrer",
+    "validation": {
+      "textureRequired": "Texture is required",
+      "saveError": "Failed to save soil analysis"
+    }
+  },
+  "pestReport": {
+    "title": "Signaler un Ravageur ou une Maladie",
+    "description": "Remplissez le formulaire ci-dessous pour créer un nouveau rapport.",
+    "newReportButton": "Nouveau Signalement",
+    "farmLabel": "Ferme",
+    "selectFarmPlaceholder": "Sélectionner une ferme",
+    "parcelLabel": "Parcelle",
+    "selectParcelPlaceholder": "Sélectionner une parcelle",
+    "pestDiseaseLabel": "Ravageur / Maladie (Optionnel)",
+    "identifyIfKnown": "Identifier si connu",
+    "type": {
+      "pest": "Ravageur",
+      "disease": "Maladie"
+    },
+    "severityLabel": "Sévérité",
+    "severityPlaceholder": "Niveau de sévérité",
+    "severityOptions": {
+      "low": "Faible",
+      "medium": "Moyenne",
+      "high": "Élevée",
+      "critical": "Critique"
+    },
+    "detectionMethodLabel": "Méthode de détection",
+    "detectionMethodPlaceholder": "Méthode",
+    "detectionMethodOptions": {
+      "visualInspection": "Inspection visuelle",
+      "trapMonitoring": "Piégeage",
+      "labTest": "Test laboratoire",
+      "fieldScout": "Scoutisme",
+      "automatedSensor": "Capteur",
+      "workerReport": "Signalement ouvrier"
+    },
+    "affectedAreaLabel": "Surface affectée (%)",
+    "notesLabel": "Notes / Observations",
+    "notesPlaceholder": "Décrivez les symptômes, la localisation précise, etc.",
+    "photoUploadLabel": "Photos",
+    "clickToAddPhotos": "Cliquez pour ajouter des photos",
+    "photoFormats": "JPG, PNG jusqu'à 5MB",
+    "cancel": "Annuler",
+    "createReport": "Créer le rapport",
+    "validation": {
+      "farmRequired": "La ferme est requise",
+      "parcelRequired": "La parcelle est requise"
+    }
+  },
+  "datePicker": {
+    "placeholder": "Sélectionner une date",
+    "loadingDates": "Chargement des dates...",
+    "availableSatelliteImagery": "Images satellites disponibles",
+    "close": "Fermer le calendrier"
+  },
+  "fileManagement": {
+    "title": "Gestion des fichiers",
+    "description": "Gérez tous les fichiers stockés dans vos buckets Supabase",
+    "searchPlaceholder": "Rechercher des fichiers...",
+    "bucketPlaceholder": "Sélectionner un bucket",
+    "allBuckets": "Tous les buckets",
+    "orphansOnly": "Orphelins seulement",
+    "labels": {
+      "entity": "Entité",
+      "size": "Taille",
+      "uploadedAt": "Date d'upload",
+      "type": "Type"
+    },
+    "table": {
+      "file": "Fichier",
+      "bucket": "Bucket",
+      "entity": "Entité",
+      "size": "Taille",
+      "uploadedAt": "Date d'upload",
+      "status": "Statut",
+      "actions": "Actions"
+    },
+    "status": {
+      "orphaned": "Orphelin",
+      "markedForDeletion": "Marqué pour suppression",
+      "active": "Actif"
+    },
+    "publicUrlUnavailable": "URL publique indisponible (vérifiez la config API / bucket)",
+    "stats": {
+      "totalFiles": "Total fichiers",
+      "orphanFiles": "Fichiers orphelins",
+      "orphanCleanupCount": "{{count}} MB à nettoyer"
+    },
+    "cleanup": {
+      "title": "Nettoyage des fichiers orphelins",
+      "description": "Les fichiers orphelins ne sont liés à aucune entité (produits, factures, etc.) et peuvent être supprimés en toute sécurité."
+    },
+    "actions": {
+      "syncFiles": "Synchroniser les fichiers",
+      "detectOrphans": "Détecter les orphelins",
+      "markForDeletion": "Marquer pour suppression",
+      "deleteAllOrphans": "Supprimer tous les orphelins"
+    },
+    "orphanedDetected": "{{count}} fichiers orphelins détectés",
+    "empty": {
+      "title": "Aucun fichier trouvé",
+      "filtered": "Aucun fichier ne correspond aux filtres actuels.",
+      "default": "Aucun fichier disponible pour le moment."
+    },
+    "deleteDialog": {
+      "title": "Confirmer la suppression",
+      "description": "Êtes-vous sûr de vouloir supprimer définitivement le fichier {{fileName}} ? Cette action est irréversible.",
+      "cancel": "Annuler",
+      "confirm": "Supprimer"
+    },
+    "toast": {
+      "syncSuccess": "{{synced}} fichiers synchronisés, {{skipped}} ignorés",
+      "syncError": "Erreur lors de la synchronisation des fichiers",
+      "markOrphanedSuccess": "{{count}} fichiers marqués comme orphelins",
+      "markOrphanedError": "Erreur lors du marquage des fichiers orphelins",
+      "deleteOrphanedSuccess": "{{deleted}} fichiers supprimés, {{failed}} erreurs",
+      "deleteOrphanedError": "Erreur lors de la suppression des fichiers orphelins",
+      "deleteFileSuccess": "Fichier supprimé avec succès",
+      "deleteFileError": "Erreur lors de la suppression du fichier"
+    }
+  },
+  "addonCard": {
+    "errors": {
+      "noSlotsAvailable": "Aucun emplacement addon disponible. Veuillez mettre à niveau votre plan."
+    },
+    "toast": {
+      "purchaseSuccess": "Addon activé avec succès !",
+      "purchaseError": "Erreur lors de l'achat de l'addon",
+      "cancelImmediateSuccess": "Addon annulé avec succès",
+      "cancelEndSuccess": "L'addon sera annulé à la fin de la période",
+      "cancelError": "Erreur lors de l'annulation de l'addon"
+    },
+    "confirm": {
+      "immediate": "Êtes-vous sûr de vouloir annuler immédiatement ? Vous perdrez l'accès à ce module.",
+      "endOfPeriod": "L'addon sera annulé à la fin de la période de facturation. Continuer ?"
+    },
+    "descriptionFallback": "Module supplémentaire pour votre organisation",
+    "free": "Gratuit",
+    "perMonth": "/mois",
+    "expiresAt": "Expire le : ",
+    "renewsAt": "Renouvellement : ",
+    "cancelScheduled": "Annulation programmée",
+    "cancelAtEnd": "Annuler à la fin",
+    "addToPlan": "Ajouter à mon plan",
+    "noSlotsAvailable": "Aucun emplacement disponible"
+  },
+  "farmHierarchyTree": {
+    "validation": {
+      "nameTooShort": "Le nom de la ferme doit contenir au moins 2 caractères"
+    },
+    "actions": {
+      "manageRoles": "Gérer les rôles",
+      "editParcel": "Modifier",
+      "deleteParcel": "Supprimer",
+      "addParcel": "Ajouter une parcelle",
+      "creating": "Création...",
+      "add": "Ajouter",
+      "cancel": "Annuler"
+    },
+    "fallback": {
+      "upgradePlan": "Passez à une offre supérieure pour ajouter plus de parcelles"
+    },
+    "errors": {
+      "loadHierarchy": "Impossible de charger la hiérarchie des fermes",
+      "createFarm": "Impossible de créer la ferme"
+    },
+    "organizationFallback": "Organisation",
+    "organizationRoot": "Racine de l'organisation",
+    "empty": {
+      "noFarms": "Aucune ferme trouvée. Créez votre première ferme pour commencer."
+    },
+    "placeholders": {
+      "newFarmName": "Nom de la nouvelle ferme"
+    },
+    "noDescription": "Aucune description"
+  },
+  "farmSwitcher": {
+    "selectFarm": "Sélectionner une ferme",
+    "noFarmsAvailable": "Aucune ferme disponible",
+    "addFarm": "Ajouter une ferme"
+  },
+  "marketplace": {
+    "orders": {
+      "status": {
+        "pending": "En attente",
+        "confirmed": "Confirmée",
+        "shipped": "Expédiée",
+        "delivered": "Livrée",
+        "cancelled": "Annulée"
+      }
+    }
+  },
+  "common": {
+    "views": {
+      "map": "Vue carte",
+      "list": "Vue liste",
+      "grid": "Vue grille",
+      "cards": "Vue cartes",
+      "grouped": "Vue groupée",
+      "dashboard": "Vue tableau de bord"
+    },
+    "actions": {
+      "refresh": "Actualiser",
+      "download": "Télécharger",
+      "edit": "Modifier",
+      "delete": "Supprimer",
+      "manage": "Gérer",
+      "manageRoles": "Gérer les rôles",
+      "editFarm": "Modifier la ferme",
+      "deleteFarm": "Supprimer la ferme",
+      "editRole": "Modifier le rôle",
+      "removeRole": "Supprimer le rôle",
+      "createReceptionBatch": "Créer un lot de réception",
+      "viewDetails": "Voir les détails",
+      "payWage": "Payer le salaire",
+      "deactivate": "Désactiver",
+      "editToEnableAccess": "Modifier pour activer l'accès",
+      "downloadReport": "Télécharger le rapport",
+      "downloadInvoice": "Télécharger la facture",
+      "downloadMap": "Télécharger la carte",
+      "filtersAndSort": "Filtres et tri",
+      "goToMyLocation": "Aller à ma position",
+      "searchLocation": "Rechercher un lieu",
+      "exitFullscreen": "Quitter le plein écran (Échap)",
+      "addNewAccount": "Ajouter un nouveau compte",
+      "addNewTax": "Ajouter une nouvelle taxe",
+      "changeLanguage": "Changer de langue"
+    },
+    "actionsColumn": "Actions",
+    "active": "Actif",
+    "inactive": "Inactif",
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "confirm": "Confirmer",
+    "delete": "Supprimer",
+    "loading": "Chargement...",
+    "processing": "En cours...",
+    "saving": "Enregistrement...",
+    "creating": "Création...",
+    "deleting": "Suppression...",
+    "create": "Créer",
+    "selectOption": "Sélectionner une option",
+    "noChartOfAccountsConfigured": "Aucun plan comptable n'est configuré. Veuillez le configurer avant de créer un paiement.",
+    "statusColumn": "Statut",
+    "placeholders": {
+      "searchLocation": "Rechercher un lieu au Maroc...",
+      "parcelName": "Nom de la parcelle",
+      "cropType": "Ex : Tomates",
+      "rootstock": "Ex : GF677",
+      "search": "Rechercher...",
+      "selectDate": "Sélectionner une date avec données satellite",
+      "searchArticles": "Rechercher des articles...",
+      "searchFiles": "Rechercher un fichier...",
+      "selectBucket": "Sélectionner un bucket",
+      "typeOrganizationName": "Tapez le nom de l'organisation",
+      "additionalNotes": "Notes supplémentaires..."
+    },
+    "form": {
+      "name": "Nom",
+      "description": "Description",
+      "area": "Surface",
+      "unit": "Unité",
+      "soilType": "Type de sol",
+      "irrigationType": "Type d'irrigation",
+      "variety": "Variété",
+      "plantingDate": "Date de plantation",
+      "plantingType": "Type de plantation"
+    },
+    "satellite": {
+      "refreshData": "Actualiser les données",
+      "showTemperature": "Afficher la température au moment du passage satellite (11h)"
+    },
+    "roiCalculator": {
+      "title": "Calculez votre retour sur investissement",
+      "subtitle": "Découvrez en 30 secondes combien AgroGina peut vous faire économiser chaque année. Recevez un rapport personnalisé par email.",
+      "calculatorTitle": "Calculateur ROI",
+      "calculatorSubtitle": "Découvrez combien vous pourriez économiser avec AgroGina",
+      "farmSize": "Surface agricole (hectares)",
+      "farmSizeUnit": "ha",
+      "currentYield": "Rendement actuel (tonnes/ha)",
+      "currentYieldUnit": "t/ha",
+      "cropType": "Type de culture",
+      "laborCost": "Coût main d'œuvre (MAD/an)",
+      "fertilizerCost": "Coût engrais (MAD/an)",
+      "waterCost": "Coût eau/irrigation (MAD/an)",
+      "results": "Résultats estimés",
+      "yieldIncrease": "Augmentation de rendement",
+      "laborSavings": "Économies main d'œuvre",
+      "inputSavings": "Économies intrants",
+      "totalAnnualSavings": "Total économies annuelles",
+      "perYear": "/an",
+      "roi": "ROI",
+      "paybackPeriod": "Seuil de rentabilité",
+      "months": "mois",
+      "lessThan1Month": "< 1 mois",
+      "receiveReport": "Recevoir mon rapport détaillé",
+      "emailReportTitle": "Recevez votre rapport ROI détaillé",
+      "emailReportSubtitle": "Obtenez une analyse personnalisée de votre retour sur investissement par email",
+      "estimatedAnnualSavings": "Économies annuelles estimées",
+      "emailLabel": "Adresse email professionnelle",
+      "emailPlaceholder": "votre@email.com",
+      "planOfInterest": "Plan d'intérêt",
+      "receiveFreeReport": "Recevoir mon rapport gratuit",
+      "noCommitment": "Sans engagement. Votre email ne sera jamais partagé.",
+      "backToCalculator": "← Retour au calculateur",
+      "calculateNewRoi": "Calculer un nouveau ROI",
+      "thankYouTitle": "Merci pour votre demande !",
+      "thankYouMessage": "Votre rapport ROI personnalisé a été envoyé à <strong>{{email}}</strong>. Notre équipe vous contactera sous 24h.",
+      "disclaimer": "*Estimations basées sur des moyennes sectorielles. Résultats réels variables.",
+      "crops": {
+        "vegetables": "Légumes",
+        "fruits": "Fruits",
+        "cereals": "Céréales",
+        "citrus": "Agrumes",
+        "olives": "Oliviers"
+      },
+      "plans": {
+        "starter": "Starter",
+        "professional": "Professional",
+        "enterprise": "Enterprise"
+      }
+    }
+  },
+  "liveDashboard": {
+    "title": "Tableau de bord en direct",
+    "pageTitle": "Tableau de bord en direct",
+    "subtitle": "Surveillance en temps réel des utilisateurs connectés, des opérations actives et des activités agricoles",
+    "live": "En direct",
+    "autoRefresh": "Actualisation automatique activée",
+    "refresh": "Actualiser",
+    "lastUpdated": "Dernière mise à jour",
+    "pages": {
+      "dashboard": "Tableau de bord",
+      "tasks": "Tâches",
+      "parcels": "Parcelles",
+      "harvests": "Récoltes",
+      "inventory": "Inventaire",
+      "workers": "Ouvriers",
+      "analytics": "Analytique"
+    },
+    "summary": {
+      "concurrentUsers": "Utilisateurs en ligne",
+      "activeOperations": "Opérations actives",
+      "activeFarms": "Fermes actives",
+      "activitiesLast24h": "Activités (24h)",
+      "peakUsage": "Pic d'utilisation",
+      "mostActiveFeature": "Fonctionnalité la plus active"
+    },
+    "concurrentUsers": {
+      "title": "Utilisateurs connectés",
+      "online": "En ligne maintenant",
+      "activeNow": "Utilisateurs actifs",
+      "activeUsers": "Utilisateurs actifs",
+      "noUsers": "Aucun utilisateur actuellement en ligne"
+    },
+    "operations": {
+      "title": "Opérations actives",
+      "active": "actives",
+      "currentOperations": "Opérations en cours",
+      "noOperations": "Aucune opération active",
+      "types": {
+        "task": "Tâches",
+        "harvest": "Récoltes",
+        "inventory": "Inventaire",
+        "irrigation": "Irrigation",
+        "maintenance": "Maintenance"
+      },
+      "status": {
+        "in_progress": "En cours",
+        "pending": "En attente",
+        "paused": "En pause"
+      }
+    },
+    "activities": {
+      "title": "Activités agricoles",
+      "recentActivities": "Activités récentes",
+      "lastHour": "Dans la dernière heure",
+      "perFarm": "moy. par ferme",
+      "activityFeed": "Fil d'activités",
+      "noActivities": "Aucune activité récente"
+    },
+    "featureUsage": {
+      "title": "Utilisation des fonctionnalités",
+      "realTime": "Temps réel",
+      "mostPopular": "Plus populaire",
+      "usages": "utilisations"
+    },
+    "heatmap": {
+      "title": "Carte thermique des activités",
+      "subtitle": "Distribution géographique des activités agricoles",
+      "legend": "Légende",
+      "intensity": "Intensité",
+      "low": "Faible",
+      "high": "Élevée",
+      "activities": "Activités",
+      "heatmapLayer": "Couche thermique",
+      "satellite": "Satellite",
+      "street": "Rue",
+      "all": "Tous",
+      "totalPoints": "Points totaux",
+      "activeLocations": "Emplacements actifs",
+      "activeFarm": "Ferme Active",
+      "activeFarms": "Fermes actives",
+      "noFarms": "Aucune parcelle localisée",
+      "noFarmsHint": "Dessinez les limites de vos parcelles sur la carte pour les voir ici"
+    }
+  },
+  "nav": {
+    "dashboard": "Tableau de bord",
+    "liveDashboard": "Tableau de bord en direct",
+    "analyses": "Analyses",
+    "soilAnalysis": "Analyses de Sol",
+    "parcels": "Parcelles",
+    "crops": "Cultures",
+    "monitoring": "Surveillance",
+    "inventory": "Inventaire",
+    "employees": "Salariés",
+    "dayLaborers": "Journaliers",
+    "utilities": "Services publics",
+    "profitability": "Rentabilité",
+    "reports": "Rapports",
+    "settings": "Paramètres",
+    "stock": "Gestion des stocks",
+    "infrastructure": "Infrastructure",
+    "equipment": "Équipement",
+    "farmHierarchy": "Gestion des Fermes",
+    "productApplications": "Applications de produits",
+    "expenses": "Charges",
+    "personnel": "Personnel",
+    "workers": "Ouvriers",
+    "tasks": "Tâches",
+    "production": "Production",
+    "productionIntelligence": "Intelligence de Production",
+    "accounting": "Comptabilité",
+    "accountingBilling": "Comptabilité & Facturation",
+    "chartOfAccounts": "Plan Comptable",
+    "overview": "Vue d'ensemble",
+    "salesProcess": "Processus de Vente",
+    "salesPurchasing": "Ventes & Achats",
+    "quotes": "Devis",
+    "salesOrders": "Commandes de Vente",
+    "purchaseOrders": "Commandes d'Achat",
+    "financialRecords": "Documents Financiers",
+    "invoices": "Factures",
+    "payments": "Paiements",
+    "journal": "Journal",
+    "setupReports": "Configuration & Rapports",
+    "configuration": "Configuration",
+    "customers": "Clients",
+    "agriculture": "Agriculture",
+    "elevage": "Élevage",
+    "alerts": "Alertes",
+    "suppliers": "Fournisseurs",
+    "warehouses": "Entrepôts",
+    "items": "Articles",
+    "harvestReception": "Récolte & Réception",
+    "harvests": "Récoltes",
+    "receptionBatches": "Lots de Réception",
+    "qualityControl": "Contrôle Qualité",
+    "campaigns": "Campagnes",
+    "cropCycles": "Cycles de Culture",
+    "chat": "Assistant IA",
+    "biologicalAssets": "Actifs Biologiques",
+    "compliance": "Conformité",
+    "certifications": "Certifications",
+    "correctiveActions": "Actions correctives",
+    "marketplace": "Marketplace",
+    "receivedRequests": "Demandes reçues",
+    "sentRequests": "Demandes envoyées",
+    "viewMarketplace": "Voir la marketplace",
+    "paymentRecords": "Paiements",
+    "bankAccounts": "Comptes bancaires",
+    "infrastructureEquipment": "Infrastructure & Équipement"
+  },
+  "sidebar": {
+    "collapse": "Réduire",
+    "expand": "Développer la barre latérale"
+  },
+  "orgSwitcher": {
+    "organizations": "Organisations",
+    "orgSettings": "Paramètres de l'organisation",
+    "manageTeam": "Gérer l'équipe",
+    "signOut": "Se déconnecter",
+    "backToOrganizations": "← Retour aux organisations",
+    "farms": "Fermes - {{orgName}}",
+    "manager": "Gestionnaire: {{name}}",
+    "noFarms": "Aucune ferme trouvée",
+    "createFirstFarm": "Créez votre première ferme",
+    "roles": {
+      "owner": "Propriétaire",
+      "admin": "Administrateur",
+      "manager": "Gestionnaire",
+      "member": "Membre",
+      "viewer": "Lecteur"
+    }
+  },
+  "stock": {
+    "title": "Gestion des Stocks",
+    "subtitle": "Gestion complète de l'inventaire, des entrées et des entrepôts",
+    "tabs": {
+      "items": "Articles",
+      "groups": "Groupes d'Articles",
+      "inventory": "Inventaire & Achats",
+      "entries": "Entrées de Stock",
+      "reception": "Lots de Réception",
+      "reports": "Rapports & Analyses"
+    },
+    "lowStockAlerts": {
+      "title": "Alertes de Stock Faible",
+      "itemsBelowMinimum": "article(s) sous le niveau de stock minimum",
+      "createEntry": "Créer une Entrée de Stock",
+      "currentStock": "Stock Actuel",
+      "minimumLevel": "Niveau Minimum",
+      "totalValue": "Valeur Totale",
+      "byFarm": "Par Ferme/Entrepôt",
+      "addStock": "Ajouter du Stock",
+      "viewItem": "Voir l'Article",
+      "viewAll": "Voir les {{count}} articles en stock faible",
+      "allOptimal": "Tous les niveaux de stock sont optimaux"
+    },
+    "itemFarmUsage": {
+      "noUsage": "Aucune donnée d'utilisation trouvée pour cet article",
+      "totalUsage": "Utilisation Totale",
+      "totalQuantity": "Quantité Totale Utilisée",
+      "lastUsed": "Dernière Utilisation",
+      "never": "Jamais",
+      "byFarm": "Utilisation par Ferme",
+      "usageEvents": "événement(s) d'utilisation",
+      "quantityUsed": "Quantité Utilisée",
+      "parcel": "Parcelle",
+      "relatedTasks": "Tâches Connexes",
+      "viewTask": "Voir la Tâche",
+      "viewFarm": "Voir la Ferme",
+      "more": "plus"
+    }
+  },
   "profitability": {
     "title": "Rentabilité",
     "loading": "Chargement de la rentabilité...",
@@ -876,15 +1393,60 @@
     "logout": "Déconnexion",
     "email": "Email",
     "password": "Mot de passe",
-    "forgotPassword": "Mot de passe oublié ?",
+    "forgotPasswordLegacy": "Mot de passe oublié ?",
+    "forgotPassword": {
+      "title": "Réinitialiser votre mot de passe",
+      "subtitle": "On oublie tous parfois",
+      "helperText": "Entrez l'email que vous utilisez pour AgroGina et nous vous enverrons un lien pour créer un nouveau mot de passe.",
+      "switchLabel": "Vous vous en souvenez ?",
+      "switchCta": "Retour à la connexion",
+      "successTitle": "Vérifiez votre boîte de réception",
+      "successMessage": "Nous avons envoyé un lien de réinitialisation sécurisé à {{email}}. Suivez les instructions dans les 24 heures pour choisir un nouveau mot de passe.",
+      "successNote": "Vous n'avez rien reçu ? Pensez à vérifier vos spams ou demandez un autre email ci-dessous.",
+      "sendAnother": "Envoyer un autre email",
+      "returnToSignIn": "Retour à la connexion",
+      "emailHelper": "Utilisez l'email lié à votre compte AgroGina.",
+      "placeholder": "vous@ferme.ma",
+      "errorEmailRequired": "Veuillez entrer l'email associé à votre compte.",
+      "errorUnable": "Impossible d'envoyer un lien de réinitialisation pour le moment. Veuillez réessayer plus tard.",
+      "sending": "Envoi du lien...",
+      "submit": "Envoyer le lien"
+    },
     "signUp": "S'inscrire",
     "signIn": {
-        "title": "Connectez-vous à AgroGina",
+      "title": "Connectez-vous à AgroGina",
       "subtitle": "Bon retour",
       "helperText": "Accédez à vos données satellite, tableau de bord d'exploitation et collaborateurs depuis un espace sécurisé.",
       "noAccount": "Vous n'avez pas encore de compte ?",
       "createAccount": "Créer un compte",
       "button": "Se connecter"
+    },
+    "register": {
+      "title": "Créez votre compte AgroGina",
+      "subtitle": "Commencez en quelques minutes",
+      "helperText": "Configurez un espace de travail pour votre organisation et invitez votre équipe une fois à l'intérieur.",
+      "orgName": "Nom de l'organisation",
+      "orgNameHelper": "Utilisez le nom que votre équipe connaît (ex : ferme, coopérative ou agroentreprise).",
+      "orgNamePlaceholder": "Coopérative Vertes Acres",
+      "emailPlaceholder": "vous@ferme.ma",
+      "passwordHelper": "Utilisez au moins 8 caractères avec un mélange de lettres et de chiffres.",
+      "passwordPlaceholder": "Créez un mot de passe fort",
+      "confirmPassword": "Confirmer le mot de passe",
+      "confirmPasswordPlaceholder": "Entrez à nouveau votre mot de passe",
+      "demoDataLabel": "Créer avec des données de démonstration pour explorer les fonctionnalités",
+      "demoDataDescription": "Pré-remplissez votre compte avec des fermes, parcelles, tâches et factures d'exemple pour découvrir rapidement la plateforme.",
+      "tosLabel": "J'accepte les <terms>Conditions Générales d'Utilisation</terms> et la <privacy>Politique de Confidentialité</privacy>.",
+      "tosLink": "Conditions Générales d'Utilisation",
+      "privacyLink": "Politique de Confidentialité",
+      "creating": "Création du compte...",
+      "submit": "S'inscrire",
+      "errorTosRequired": "Vous devez accepter les Conditions Générales d'Utilisation et la Politique de Confidentialité",
+      "errorPasswordMismatch": "Les mots de passe ne correspondent pas",
+      "errorEmailExists": "Un utilisateur avec cet email existe déjà",
+      "errorEmailExistsTitle": "Cet email est déjà enregistré.",
+      "errorEmailExistsAction": "Connectez-vous à votre compte existant et créez une nouvelle organisation.",
+      "signInToCreateOrg": "Se connecter & créer l'organisation",
+      "errorGeneric": "Une erreur est survenue lors de l'inscription"
     },
     "createAccount": "Créer un compte",
     "alreadyHaveAccount": "Vous avez déjà un compte ?",
@@ -896,10 +1458,351 @@
     "continueWithGitHub": "Continuer avec GitHub",
     "orContinueWith": "ou continuer par email",
     "backToLanding": "Retour à l'accueil",
+    "forgotPasswordPage": {
+      "title": "Réinitialiser votre mot de passe",
+      "subtitle": "On oublie tous parfois",
+      "helperText": "Entrez l'email que vous utilisez pour AgroGina et nous vous enverrons un lien pour créer un nouveau mot de passe.",
+      "switchLabel": "Vous vous en souvenez ?",
+      "switchCta": "Retour à la connexion",
+      "emailHelper": "Utilisez l'email lié à votre compte AgroGina.",
+      "emailPlaceholder": "vous@ferme.ma",
+      "errorEmptyEmail": "Veuillez entrer l'email associé à votre compte.",
+      "errorSendEmail": "Échec de l'envoi de l'email de réinitialisation",
+      "errorGeneric": "Impossible d'envoyer un lien de réinitialisation pour le moment. Veuillez réessayer plus tard.",
+      "successTitle": "Vérifiez votre boîte de réception",
+      "successMessage": "Nous avons envoyé un lien de réinitialisation sécurisé à {{email}}. Suivez les instructions dans les 24 heures pour choisir un nouveau mot de passe.",
+      "successSpamNote": "Vous n'avez rien reçu ? Pensez à vérifier vos spams ou demandez un autre email ci-dessous.",
+      "sendAnotherEmail": "Envoyer un autre email",
+      "returnToSignIn": "Retour à la connexion",
+      "sendResetLink": "Envoyer le lien",
+      "sendingResetLink": "Envoi du lien..."
+    },
+    "registerPage": {
+      "title": "Créez votre compte AgroGina",
+      "subtitle": "Commencez en quelques minutes",
+      "helperText": "Configurez un espace de travail pour votre organisation et invitez votre équipe une fois à l'intérieur.",
+      "switchLabel": "Vous avez déjà un compte ?",
+      "switchCta": "Se connecter",
+      "organizationLabel": "Nom de l'organisation",
+      "organizationHelper": "Utilisez le nom que votre équipe connaît (ex : ferme, coopérative ou agroentreprise).",
+      "organizationPlaceholder": "Coopérative Vertes Acres",
+      "passwordHelper": "Utilisez au moins 8 caractères avec un mélange de lettres et de chiffres.",
+      "passwordPlaceholder": "Créez un mot de passe fort",
+      "confirmPasswordLabel": "Confirmer le mot de passe",
+      "confirmPasswordPlaceholder": "Entrez à nouveau votre mot de passe",
+      "demoDataLabel": "Créer avec des données de démonstration pour explorer les fonctionnalités",
+      "demoDataHelper": "Pré-remplissez votre compte avec des fermes, parcelles, tâches et factures d'exemple pour découvrir rapidement la plateforme.",
+      "tosLabel": "J'accepte les {{terms}} et la {{privacy}}",
+      "termsLink": "Conditions Générales d'Utilisation",
+      "privacyLink": "Politique de Confidentialité",
+      "errorTosRequired": "Vous devez accepter les Conditions Générales d'Utilisation et la Politique de Confidentialité",
+      "errorPasswordMismatch": "Les mots de passe ne correspondent pas",
+      "errorEmailExists": "Un utilisateur avec cet email existe déjà",
+      "errorEmailExistsTitle": "Cet email est déjà enregistré.",
+      "errorEmailExistsAction": "Connectez-vous à votre compte existant et créez une nouvelle organisation.",
+      "signInToCreateOrg": "Se connecter & créer l'organisation",
+      "errorGeneric": "Une erreur est survenue lors de l'inscription",
+      "submitButton": "S'inscrire",
+      "submitting": "Création du compte..."
+    },
+    "setPasswordPage": {
+      "title": "Définir votre mot de passe",
+      "description": "Créez un mot de passe sécurisé pour protéger votre compte",
+      "newPasswordLabel": "Nouveau mot de passe",
+      "newPasswordPlaceholder": "Entrez votre mot de passe",
+      "confirmPasswordLabel": "Confirmer le mot de passe",
+      "confirmPasswordPlaceholder": "Confirmez votre mot de passe",
+      "strengthWeak": "Faible",
+      "strengthMedium": "Moyen",
+      "strengthStrong": "Fort",
+      "requirements": "Exigences :",
+      "reqMinLength": "Au moins 8 caractères",
+      "reqUpperLower": "Lettres majuscules et minuscules",
+      "reqNumber": "Au moins un chiffre",
+      "reqSpecial": "Caractère spécial (optionnel, renforce la sécurité)",
+      "errorMinLength": "Le mot de passe doit contenir au moins 8 caractères",
+      "errorMismatch": "Les mots de passe ne correspondent pas",
+      "errorWeak": "Veuillez choisir un mot de passe plus fort",
+      "errorUpdateFailed": "Échec de la mise à jour du mot de passe",
+      "errorGeneric": "Une erreur est survenue lors de la configuration du mot de passe",
+      "submitButton": "Définir le mot de passe",
+      "submitting": "Configuration en cours...",
+      "footer": "Vous serez redirigé vers le tableau de bord après avoir défini votre mot de passe",
+      "copyright": "© 2024 AgroGina Platform. Tous droits réservés.",
+      "mismatchInline": "Les mots de passe ne correspondent pas"
+    },
+    "callbackPage": {
+      "loadingTitle": "Validation du lien…",
+      "loadingMessage": "Nous vérifions votre lien sécurisé Supabase. Merci de patienter.",
+      "errorTitle": "Lien invalide ou expiré",
+      "errorDefault": "Le lien n'est plus valide. Veuillez générer un nouvel e-mail depuis la page de connexion.",
+      "errorMissingCode": "Code d'authentification manquant. Veuillez demander un nouveau lien.",
+      "backToLogin": "Retour à la connexion",
+      "verifiedTitle": "Lien vérifié",
+      "verifiedMessage": "Votre session est prête. Redirection en cours…",
+      "continueButton": "Continuer",
+      "recoveryTitle": "Créer un nouveau mot de passe",
+      "recoveryMessage": "Choisissez un mot de passe sécurisé pour protéger votre compte.",
+      "newPasswordLabel": "Nouveau mot de passe",
+      "confirmPasswordLabel": "Confirmez le mot de passe",
+      "passwordPlaceholder": "••••••••",
+      "updateButton": "Mettre à jour le mot de passe",
+      "updating": "Mise à jour…",
+      "updatedTitle": "Mot de passe mis à jour",
+      "updatedMessage": "Vous allez être redirigé automatiquement. Si la page ne change pas, cliquez ci-dessous.",
+      "errorInvalidOAuth": "Réponse OAuth invalide. Veuillez réessayer depuis la page de connexion.",
+      "errorOAuthUnavailable": "Le point d'authentification OAuth est indisponible. Veuillez contacter le support ou réessayer plus tard.",
+      "errorSessionExpired": "Session expirée. Veuillez vous reconnecter.",
+      "errorPasswordMinLength": "Le mot de passe doit contenir au moins 8 caractères.",
+      "errorPasswordMismatch": "Les mots de passe ne correspondent pas.",
+      "errorPasswordUpdate": "Une erreur est survenue lors de la mise à jour du mot de passe.",
+      "errorVerifyLink": "Impossible de vérifier le lien d'authentification."
+    },
     "errors": {
       "generic": "Une erreur est survenue lors de la connexion",
       "invalidCredentials": "Email ou mot de passe incorrect",
       "oauthFailed": "L'authentification OAuth a échoué"
+    }
+  },
+  "onboarding": {
+    "loading": "Chargement...",
+    "header": {
+      "step": "Étape {{current}} sur {{total}}"
+    },
+    "errorGeneric": "Une erreur est survenue",
+    "welcome": {
+      "back": "Retour",
+      "continue": "Continuer",
+      "nextStep": "Étape suivante",
+      "greetingPrefix": "Bienvenue sur",
+      "greetingBrand": "AgroGina",
+      "greetingTagline": "Cultivez votre succès avec intelligence",
+      "nameTitle": "Comment vous appelez-vous ?",
+      "nameSubtitle": "Nous personnaliserons votre expérience",
+      "firstName": "Prénom",
+      "lastName": "Nom",
+      "languageHello": "Bonjour, {{name}}",
+      "languagePickSubtitle": "Quelle langue préférez-vous ?",
+      "timezoneTitle": "Votre fuseau horaire",
+      "timezoneSubtitle": "Pour synchroniser vos tâches et rappels",
+      "languages": {
+        "fr": { "name": "Français", "description": "Interface en français" },
+        "en": { "name": "English", "description": "Interface en anglais" },
+        "ar": { "name": "العربية", "description": "واجهة عربية" }
+      },
+      "timezones": {
+        "Africa/Casablanca": { "city": "Casablanca", "offset": "GMT+1" },
+        "Europe/Paris": { "city": "Paris", "offset": "GMT+1/+2" },
+        "Europe/London": { "city": "Londres", "offset": "GMT+0/+1" },
+        "UTC": { "city": "UTC", "offset": "GMT+0" }
+      },
+      "phoneTitle": "Votre numéro de mobile",
+      "phoneSubtitle": "Pour WhatsApp, les SMS et les messages importants concernant votre compte.",
+      "phoneLabel": "Numéro de téléphone",
+      "phoneHint": "Choisissez le pays, puis saisissez votre numéro au format international.",
+      "phoneInvalid": "Veuillez saisir un numéro valide pour le pays sélectionné."
+    },
+    "organization": {
+      "accountTypeTitle": "Quel type de compte ?",
+      "accountTypeSubtitle": "Nous adapterons les fonctionnalités à vos besoins",
+      "accountTypes": {
+        "individual": { "name": "Particulier", "description": "Petit producteur ou jardinier" },
+        "farm": { "name": "Exploitation agricole", "description": "Ferme professionnelle", "badge": "Populaire" },
+        "business": { "name": "Entreprise", "description": "Coopérative ou grande exploitation" }
+      },
+      "orgNameTitleFarm": "Nommez votre exploitation",
+      "orgNameTitleOrg": "Nommez votre organisation",
+      "orgNameSubtitle": "Ce nom apparaîtra sur vos rapports et factures",
+      "orgNameLabel": "Nom de l'organisation",
+      "slugLabel": "Identifiant unique (slug)",
+      "slugTaken": "Ce slug est déjà pris",
+      "slugHint": "Votre URL : agrogina.ma/{{slug}}",
+      "slugPlaceholder": "votre-slug",
+      "slugSuggest": "Utiliser « {{suggestion}} » à la place",
+      "previewLabel": "Aperçu",
+      "contactTitle": "Contact & localisation",
+      "contactSubtitle": "Pour les factures et communications",
+      "emailLabel": "Email professionnel",
+      "addressOptional": "Adresse (optionnel)",
+      "cityLabel": "Ville",
+      "countryLabel": "Pays",
+      "saving": "Enregistrement...",
+      "countries": {
+        "MA": "Maroc",
+        "FR": "France",
+        "ES": "Espagne",
+        "DZ": "Algérie",
+        "TN": "Tunisie"
+      },
+      "phoneLabel": "Téléphone de l'organisation (optionnel)",
+      "phoneHint": "Pour les factures et le support. Laissez vide si identique au vôtre.",
+      "phoneInvalid": "Ce numéro ne semble pas valide pour le pays sélectionné.",
+      "reuseProfilePhone": "Utiliser le même numéro que sur mon profil",
+      "sameAsProfilePhone": "C'est le même numéro que sur votre profil."
+    },
+    "farm": {
+      "locationLabel": "Localisation",
+      "locationPlaceholder": "Rechercher un lieu…",
+      "locationPlaceholderMA": "Rechercher au Maroc…",
+      "locationSearching": "Recherche…",
+      "locationNoResults": "Aucun lieu trouvé.",
+      "locationHelp": "Recherchez sur OpenStreetMap et choisissez un résultat pour enregistrer des coordonnées précises (cartes et parcelles).",
+      "locationChange": "Modifier"
+    },
+    "selectTrial": {
+      "setupSteps": {
+        "auth": "Vérification de l'authentification...",
+        "organization": "Création de l'organisation...",
+        "subscription": "Activation de l'essai...",
+        "complete": "Terminé !"
+      },
+      "loadingAccount": "Chargement de votre compte...",
+      "settingUpAccount": "Configuration de votre compte...",
+      "errorAuthRequired": "Authentification requise. Veuillez vous reconnecter.",
+      "errorSetupFailed": "Échec de la configuration : {{error}}. Veuillez réessayer ou actualiser la page.",
+      "errorSetupError": "Erreur de configuration : {{error}}. Veuillez actualiser la page.",
+      "confirmEmail": {
+        "title": "Confirmez votre email",
+        "message": "Votre compte a été créé avec succès, mais vous devez confirmer votre adresse email avant de pouvoir activer votre compte.",
+        "checkEmail": "Vérifiez votre email",
+        "sentTo": "Nous avons envoyé un email de confirmation à <strong>{{email}}</strong>. Veuillez cliquer sur le lien pour confirmer votre compte.",
+        "afterConfirm": "Après confirmation, visitez {{link}} pour activer votre compte et sélectionner votre essai gratuit.",
+        "spamNote": "Pensez à vérifier votre dossier spam si vous ne voyez pas l'email dans quelques minutes.",
+        "noteLabel": "Note :",
+        "backToRegistration": "Retour à l'inscription",
+        "retryAfterConfirm": "Réessayer après confirmation"
+      },
+      "accountSetupIssue": {
+        "title": "Problème de configuration du compte",
+        "message": "Votre compte ou organisation n'a pas été créé correctement. Veuillez réessayer de vous inscrire.",
+        "errorLabel": "Erreur :",
+        "consoleHint": "Consultez la console du navigateur (F12) pour plus de détails.",
+        "backToRegistration": "Retour à l'inscription",
+        "retrySetup": "Réessayer la configuration"
+      },
+      "errorOrgNotFound": "Organisation ou utilisateur introuvable. Veuillez réessayer.",
+      "pageTitle": "Commencez votre essai gratuit",
+      "pageSubtitle": "Essai gratuit de 14 jours. Aucune carte bancaire requise.",
+      "trialIncludes": "Votre essai inclut",
+      "modulesLabel": "Modules",
+      "modulesSelected": "{{count}} sélectionnés",
+      "hectaresLabel": "Hectares",
+      "afterTrialMonthly": "Après l'essai (mensuel)",
+      "freeTrialBadge": "Essai GRATUIT de 14 jours",
+      "startButton": "Commencer l'essai gratuit de 14 jours",
+      "startingTrial": "Démarrage de votre essai...",
+      "noCreditCard": "Aucune carte bancaire requise. Annulez à tout moment.",
+      "errorTrialFailed": "Échec de la création de l'abonnement d'essai"
+    },
+    "settings": {
+      "title": "Derniers réglages",
+      "subtitle": "Devise, format des dates et plan comptable (pays) sont nécessaires pour enregistrer correctement coûts, stock et paie.",
+      "chartTitle": "Plan comptable (pays)",
+      "chartHelp": "Nous installons le plan de comptes et les mappings par défaut pour ce pays. Vous pourrez les affiner dans Comptabilité.",
+      "chart": {
+        "ma": "Maroc (CGNC)",
+        "fr": "France (PCG)",
+        "tn": "Tunisie (PCN)",
+        "us": "États-Unis (US GAAP)",
+        "gb": "Royaume-Uni (FRS 102)",
+        "de": "Allemagne (HGB)"
+      },
+      "currency": "Devise",
+      "currencyNames": {
+        "mad": "Dirham marocain",
+        "eur": "Euro",
+        "usd": "Dollar US"
+      },
+      "dateFormat": "Format de date",
+      "dateFormatLabels": {
+        "eu": "31/12/2024 (Europe)",
+        "us": "12/31/2024 (États-Unis)",
+        "iso": "2024-12-31 (ISO)"
+      },
+      "demoTitle": "Données de démonstration",
+      "demoDesc": "Uniquement si vous n’avez pas encore de ferme — sinon ignoré pour conserver votre ferme et vos parcelles.",
+      "notificationsTitle": "Notifications",
+      "notificationsDesc": "Alertes importantes par e-mail",
+      "modulesLine": "{{count}} modules",
+      "launching": "Configuration…",
+      "launch": "Ouvrir mon espace",
+      "incomplete": "Choisissez un pays de plan comptable, une devise et un format de date pour continuer."
+    }
+  },
+  "public": {
+    "rdv": {
+      "badge": "Rendez-vous · Démo",
+      "title": "Réservez une démonstration d'AGROGINA",
+      "subtitle": "Dites-nous ce que vous cultivez et choisissez un créneau. Notre équipe vous recontacte rapidement pour confirmer."
+    },
+    "terms": {
+      "title": "Conditions Générales d'Utilisation",
+      "lastUpdated": "30 mars 2026",
+      "kicker": "CGU",
+      "description": "Le cadre contractuel d'utilisation d'AgroGina : compte, services, responsabilités et contenus.",
+      "toc": {
+        "objet": "Objet",
+        "definitions": "Définitions",
+        "compte": "Compte",
+        "services": "Services",
+        "donnees": "Données",
+        "obligations": "Obligations",
+        "pi": "PI",
+        "abonnements": "Abonnements",
+        "responsabilite": "Responsabilité",
+        "donneesPerso": "Données perso",
+        "resiliation": "Résiliation",
+        "droitApplicable": "Droit applicable",
+        "contact": "Contact"
+      }
+    },
+    "privacy": {
+      "title": "Politique de Confidentialité",
+      "lastUpdated": "30 mars 2026",
+      "kicker": "Confidentialité",
+      "description": "Vos données, vos droits, et nos engagements de conformité au Maroc (loi 09-08 / CNDP).",
+      "toc": {
+        "responsable": "Responsable",
+        "cadreJuridique": "Loi 09-08 & CNDP",
+        "donneesCollectees": "Données collectées",
+        "finalites": "Finalités",
+        "baseLegale": "Fondements légaux",
+        "conservation": "Conservation",
+        "destinataires": "Destinataires",
+        "transfert": "Transferts",
+        "securite": "Sécurité",
+        "droits": "Vos droits",
+        "violation": "Violations",
+        "cookies": "Cookies",
+        "automatisation": "Profilage",
+        "mineurs": "Mineurs",
+        "modifications": "Évolution",
+        "contact": "Contact"
+      }
+    },
+    "checkout": {
+      "activating": "Activation de votre abonnement...",
+      "success": "Paiement réussi !",
+      "activatingMessage": "Nous configurons votre abonnement. Cela prend généralement quelques secondes.",
+      "checkingStatus": "Vérification du statut... ({{count}}/15)",
+      "subscribedTo": "Merci de vous être abonné au plan {{plan}} !",
+      "accountUpgraded": "Votre compte a été mis à niveau et toutes les fonctionnalités sont disponibles.",
+      "paymentSuccessful": "Votre paiement a été réussi ! Votre abonnement est en cours de traitement et sera activé sous peu.",
+      "refreshOrContact": "S'il ne s'active pas automatiquement, veuillez actualiser la page ou contacter le support.",
+      "subscriptionDetails": "Détails de l'abonnement",
+      "planLabel": "Plan :",
+      "statusLabel": "Statut :",
+      "renewsOn": "Renouvellement le :",
+      "limitsLabel": "Limites :",
+      "users": "utilisateurs",
+      "farms": "fermes",
+      "parcels": "parcelles",
+      "pleaseWait": "Veuillez patienter...",
+      "continueToDashboard": "Continuer vers le tableau de bord",
+      "viewSubscription": "Voir les détails de l'abonnement",
+      "needHelp": "Besoin d'aide ?",
+      "contactSupport": "Contacter le support",
+      "confirmationEmail": "Un email de confirmation a été envoyé à votre adresse email."
     }
   },
   "currency": {
@@ -1242,6 +2145,23 @@
       }
     }
   },
+  "seo": {
+    "login": {
+      "description": "Connectez-vous à votre espace AgroGina pour gérer votre exploitation agricole. Accédez à vos parcelles, stocks et analyses satellite."
+    },
+    "register": {
+      "description": "Créez votre compte AgroGina gratuitement et découvrez la plateforme de gestion agricole tout-en-un pour le Maroc."
+    },
+    "terms": {
+      "description": "Consultez les conditions générales d'utilisation d'AgroGina : compte, services, responsabilités et contenus."
+    },
+    "privacy": {
+      "description": "Politique de confidentialité AgroGina : protection des données personnelles, conformité loi 09-08 et CNDP au Maroc."
+    },
+    "rdv": {
+      "description": "Réservez une démonstration gratuite d'AgroGina. Découvrez comment notre plateforme de gestion agricole peut optimiser votre exploitation."
+    }
+  },
   "landing": {
     "nav": {
       "features": "Fonctionnalités",
@@ -1350,7 +2270,22 @@
       "formSize4": "Plus de 500 ha",
       "formMsg": "Message (optionnel)",
       "formSizePlaceholder": "Choisir la taille",
+      "formSlot": "Créneau de démo préféré",
+      "formSlotHelper": "Facultatif — ou réservez directement via /rdv",
+      "bookRdv": "Réserver directement sur /rdv",
+      "slotNotChosen": "Sans préférence",
       "validationRequired": "Veuillez remplir tous les champs obligatoires.",
+      "success": "Demande envoyée. Nous revenons vers vous très vite.",
+      "validation": {
+        "name": "Saisissez votre nom complet",
+        "emailRequired": "Email requis",
+        "emailInvalid": "Email invalide",
+        "phoneRequired": "Téléphone requis",
+        "phoneInvalid": "Numéro de téléphone invalide",
+        "sizeRequired": "Sélectionnez la taille"
+      },
+      "slotPickDay": "Choisir un jour",
+      "slotPickTime": "Choisir une heure",
       "submit": "Envoyer la demande"
     },
     "footer": {
@@ -1372,7 +2307,7 @@
     "seo": {
       "title": "AGROGINA - La Suite de Gestion Agricole Tout-en-Un | Maroc",
       "description": "AGROGINA révolutionne l'agriculture au Maroc. Une plateforme unique pour piloter production, finance, RH, stocks et commercialisation. Agriculture de précision et gestion d'exploitation simplifiée.",
-    "keywords": "gestion agricole, logiciel agriculture maroc, erp agricole, parcelles, NDVI, analyse satellite, comptabilité agricole, gestion ferme, agriculture de précision, marketplace agricole, contrôle qualité fruit, gestion main d'oeuvre agricole, agrogina"
+      "keywords": "gestion agricole, logiciel agriculture maroc, erp agricole, parcelles, NDVI, analyse satellite, comptabilité agricole, gestion ferme, agriculture de précision, marketplace agricole, contrôle qualité fruit, gestion main d'oeuvre agricole, agrogina"
     }
   },
   "suppliers": {
@@ -2290,6 +3225,9 @@
       "title": "Aucun modèle pour le moment",
       "description": "Créez votre premier modèle pour personnaliser les en-têtes et pieds de page des documents"
     },
+    "editor": {
+      "preview": "Aperçu"
+    },
     "actions": {
       "preview": "Aperçu",
       "setDefault": "Définir par défaut",
@@ -2306,6 +3244,40 @@
     "setDefault": {
       "success": "Modèle par défaut mis à jour",
       "failed": "Échec de la définition du modèle par défaut"
+    },
+    "preview": {
+      "title": "Aperçu : {{name}}",
+      "loadingTitle": "Aperçu du modèle",
+      "notFound": "Impossible de charger le modèle.",
+      "draftHint": "Vous visualisez des modifications non enregistrées depuis l’éditeur.",
+      "sampleCompany": "Raison sociale",
+      "sampleAddress": "123 rue du Commerce",
+      "sampleCity": "Ville, pays",
+      "sampleEmail": "contact@exemple.com",
+      "sampleInvoiceTitle": "Facture n° INV-2024-001",
+      "sampleQuoteTitle": "Devis n° QUO-2024-001",
+      "sampleSalesOrderTitle": "Commande de vente n° SO-2024-001",
+      "samplePurchaseOrderTitle": "Bon de commande n° PO-2024-001",
+      "sampleReportTitle": "Titre du rapport",
+      "sampleGeneralTitle": "Titre du document",
+      "sampleDate": "Date : {{date}}",
+      "sampleCustomer": "Nom du client",
+      "sampleCustomerStreet": "456 avenue Client",
+      "sampleCustomerCity": "Ville, pays",
+      "colDescription": "Description",
+      "colQty": "Qté",
+      "colUnitPrice": "Prix unitaire",
+      "colAmount": "Montant",
+      "line1": "Produit exemple A",
+      "line2": "Produit exemple B",
+      "total": "Total",
+      "reportSample1": "Cet exemple illustre le rendu d’un rapport avec vos marges et typographie.",
+      "reportSample2": "Le texte et les chiffres définitifs viendront des rapports générés.",
+      "generalSample": "Cet exemple illustre la mise en page générale de vos documents.",
+      "footerContactLine": "Adresse · Téléphone · E-mail (exemple)",
+      "pageOf": "Page 1 sur 3",
+      "contentHeight": "Hauteur utile du contenu : {{mm}} mm",
+      "note": "Contenu d’exemple uniquement. Les documents générés utiliseront les données réelles."
     }
   },
   "network": {
@@ -3171,7 +4143,7 @@
   },
   "authPages": {
     "login": {
-        "title": "Connectez-vous à AgroGina",
+      "title": "Connectez-vous à AgroGina",
       "subtitle": "Bon retour",
       "emailLabel": "Adresse email",
       "passwordLabel": "Mot de passe",
@@ -3320,7 +4292,9 @@
       "pumpType": "Type de pompe",
       "pumpPower": "Puissance pompe",
       "pump": "Pompe"
-    }
+    },
+    "tabInfra": "Infrastructures",
+    "tabEquipment": "Équipement"
   },
   "parcels": {
     "title": "Gestion des Parcelles",
@@ -4846,38 +5820,98 @@
     },
     "inventory": {
       "step1": {
-        "title": "Aperçu du Stock",
-        "content": "Votre tableau de bord stock : valeur totale, alertes de stock bas et mouvements récents. Le stock est consommé à la complétion des tâches."
+        "title": "Bienvenue dans Stock 📦",
+        "content": "Ce module gère tout ce que vous stockez : semences, engrais, phytosanitaires, emballages, récoltes. Les quatre groupes (Catalogue → Mouvements → Opérations → Insights) suivent votre flux quotidien. On parcourt chaque écran — environ 90 secondes."
       },
       "step2": {
-        "title": "Catalogue d'Articles",
-        "content": "Tous vos produits : semences, engrais, phytosanitaires, équipement. Chaque article suit la quantité actuelle, seuil minimum et coût."
+        "title": "Articles — Votre catalogue produits",
+        "content": "Chaque produit que vous stockez vit ici (ex. \"Urée 46%\", \"Mancozèbe 80%\", \"Caisse 10kg\"). Chaque article a une unité, un seuil de réapprovisionnement optionnel, une méthode de valorisation FIFO/LIFO, et un ou plusieurs codes-barres. Rien ne fonctionne sans articles — commencez ici."
       },
       "step3": {
-        "title": "Entrepôts",
-        "content": "Organisez le stock par emplacement. Transférez entre entrepôts et suivez ce qui est stocké où."
+        "title": "Fournisseurs — Chez qui vous achetez",
+        "content": "Enregistrez vos vendeurs avec leur ICE, conditions de paiement, devise par défaut. Lors d'une réception, le fournisseur se relie automatiquement à la facture et à l'écriture comptable au compte fournisseur."
       },
       "step4": {
-        "title": "Mouvements de Stock",
-        "content": "Chaque entrée et sortie est enregistrée : livraisons fournisseurs, consommation terrain, transferts. Traçabilité complète pour la conformité."
+        "title": "Réception — Saisir les achats entrants",
+        "content": "L'écran le plus utilisé. Choisissez un fournisseur, sélectionnez les articles (ou scannez), entrez qté + coût + lot + péremption → poste un Bon de Réception qui augmente le stock et crée le brouillon de facture fournisseur. 80% de la donnée stock entre par ici."
+      },
+      "step5": {
+        "title": "Saisie Rapide — Mobile pour le terrain",
+        "content": "Pour les ouvriers de terrain et la consommation quotidienne. Scanner un code-barres → saisir qté → valider. Évite le formulaire complet. Parfait pour la sortie quotidienne d'engrais vers une parcelle."
+      },
+      "step6": {
+        "title": "Entrées de Stock — Journal complet",
+        "content": "Chaque IN, OUT et TRANSFERT vit ici avec son écriture comptable, lot, parcelle, cycle de culture. Filtrez par date, type, entrepôt, article. Source de vérité pour les audits de conformité et la traçabilité."
+      },
+      "step7": {
+        "title": "Inventaire — Stock en direct par entrepôt",
+        "content": "Ce que vous avez, où, maintenant. Cliquez un article pour voir la décomposition par lot, les plus anciens, les réservations, et les allocations par parcelle. Utilisez avant un traitement ou avant une commande."
+      },
+      "step8": {
+        "title": "Inventaire Physique — Réconciliation mensuelle",
+        "content": "À faire chaque mois. L'assistant liste la qté attendue par article, vous saisissez la qté comptée, et il crée automatiquement une écriture de Réconciliation pour chaque écart — pas de calcul manuel, audit complet."
+      },
+      "step9": {
+        "title": "Alertes Péremption — Conformité + anti-gaspi",
+        "content": "Affiche chaque lot proche ou dépassé de péremption, regroupé par urgence (critique / avertissement / attention). Critique pour la conformité phyto — utiliser un produit expiré vous fait perdre la certification GlobalGAP / Bio."
+      },
+      "step10": {
+        "title": "Vieillissement — Où dort votre argent",
+        "content": "Vue par tranches de la valeur du stock restant : 0-30 / 31-60 / 61-90 / 90+ jours. La tranche 90+ est où vous trouvez la bouteille de pesticide à 800 DH qui prend la poussière depuis la dernière campagne. Libérez de la trésorerie."
+      },
+      "step11": {
+        "title": "Prêt à démarrer 🚀",
+        "content": "Première action : ouvrez **Catalogue → Articles** et créez vos 5–10 principaux intrants. Puis **Catalogue → Fournisseurs** pour vos vendeurs principaux. Puis **Mouvements → Réception** pour votre premier achat. Rejouez ce tour à tout moment via le bouton ? (en haut à droite)."
       }
     },
     "accounting": {
       "step1": {
-        "title": "Centre Comptable",
-        "content": "Votre vue d'ensemble financière : factures en cours, paiements récents et activité du journal. Tout connecté à vos ventes et production."
+        "title": "Bienvenue dans Comptabilité 📊",
+        "content": "Comptabilité en partie double adaptée à l'agriculture marocaine (plan CGNC, MAD, exercices fiscaux). Les cinq groupes (Aperçu → Facturation → Enregistrements → Rapports → Paramètres) couvrent le cycle complet d'audit. ~2 minutes pour la visite complète."
       },
       "step2": {
-        "title": "Factures",
-        "content": "Factures clients et fournisseurs. Créées depuis les commandes ou manuellement. Suivez les paiements et envoyez des relances."
+        "title": "Factures — Ventes et achats",
+        "content": "Factures clients et fournisseurs. Valider une facture crée automatiquement une écriture équilibrée et met à jour AR/AP. Inclut les avoirs (notes de crédit) pour les remboursements et retours — visibles directement sur chaque facture postée."
       },
       "step3": {
-        "title": "Écritures Comptables",
-        "content": "Comptabilité en partie double avec le plan comptable agricole marocain. Les paiements et mouvements de stock génèrent des écritures automatiquement."
+        "title": "Devis — Offres pré-vente",
+        "content": "Envoyez des devis aux clients. Convertissez en commande client en un clic à l'acceptation, puis en facture à la livraison. Très utilisé pour les pré-ventes de récolte aux mareyeurs/courtiers."
       },
       "step4": {
-        "title": "Rapports Financiers",
-        "content": "Bilan, compte de résultat, balance, analyse de rentabilité. Exportez pour votre comptable ou pour les banques."
+        "title": "Paiements — Cash entrant et sortant",
+        "content": "Enregistrez les paiements reçus des clients et payés aux fournisseurs. Allouez un paiement sur plusieurs factures. Lié à un compte bancaire ; met à jour AR/AP et le solde cash en même temps."
+      },
+      "step5": {
+        "title": "Journal — Toutes les écritures",
+        "content": "Le journal général complet. La plupart des écritures sont auto-générées par factures, paiements, mouvements de stock, récoltes. Les écritures manuelles (corrections, provisions, amortissements) vivent ici aussi. Les périodes clôturées sont en lecture seule."
+      },
+      "step6": {
+        "title": "Plan de Comptes — Votre PCG",
+        "content": "Plan CGNC hiérarchique pré-rempli pour le Maroc (311 Marchandises, 612 Achats consommés, 441 Fournisseurs, etc.). Ajoutez vos propres sous-comptes. Chaque ligne d'écriture référence un compte."
+      },
+      "step7": {
+        "title": "Comptes Bancaires — Positions cash",
+        "content": "Chaque banque ou caisse avec sa devise et son solde en direct. Les paiements y sont liés. La réconciliation contre les relevés bancaires (phase 4 prévue) utilisera cette liste."
+      },
+      "step8": {
+        "title": "Compte de Résultat — Comment ça va",
+        "content": "Compte de résultat sur n'importe quelle période : produits moins charges par compte. Filtrez par exercice, par ferme/parcelle, ou par cycle de culture. Vue spécifique agri : P&L par parcelle via les centres de coût."
+      },
+      "step9": {
+        "title": "Bilan — Ce que vous possédez et devez",
+        "content": "Photo à une date : actifs (stock, cash, créances, actifs biologiques en juste valeur), passifs (dettes, emprunts), capitaux propres. Requis pour les dossiers bancaires et les audits SIAM."
+      },
+      "step10": {
+        "title": "Créances Vieillies — Qui vous doit",
+        "content": "Clients regroupés par retard : 0-30 / 31-60 / 61-90 / 90+ jours. Le panier 90+ = votre liste de relances prioritaire. Idem pour les Dettes Fournisseurs (ce que vous devez, par âge)."
+      },
+      "step11": {
+        "title": "Paramètres — Câblage initial",
+        "content": "**Mappings de Comptes** indiquent quels comptes débiter/créditer pour chaque type de transaction (auto-rempli pour le Maroc). **Centres de Coût** allouent les coûts aux fermes/parcelles/cycles. **Exercices Fiscaux** ouvrent/clôturent l'année et verrouillent les périodes."
+      },
+      "step12": {
+        "title": "Premiers pas 🚀",
+        "content": "Si votre PCG est vide, lancez d'abord **Paramètres → Mappings de Comptes → Seed defaults**. Puis **Facturation → Factures → Créer** pour votre première vente. Voyez l'écriture comptable apparaître automatiquement. Rejouez ce tour à tout moment via ? (en haut à droite)."
       }
     },
     "satellite": {
@@ -4910,20 +5944,36 @@
     },
     "harvests": {
       "step1": {
-        "title": "Tableau de Bord Récoltes",
-        "content": "Quantités totales, revenus estimés et répartition par culture. C'est le résultat de toute votre chaîne de production."
+        "title": "Bienvenue dans Production 🌾",
+        "content": "Cette section transforme parcelles + tâches + intrants en données de production réelles. Les 7 sous-pages suivent l'ordre temporel : Campagnes posent la saison → Cycles de Culture plantent + cultivent → Récolte sort le fruit → Réception/Qualité notent la marchandise → Actifs Biologiques valorisent les arbres → Applications de Produits suivent les intrants utilisés. ~90 secondes."
       },
       "step2": {
-        "title": "Historique des Récoltes",
-        "content": "Chaque enregistrement est lié à une parcelle avec quantité, grade de qualité et date. Les données qualité alimentent les rapports de conformité."
+        "title": "Campagnes — Le conteneur de saison",
+        "content": "Une campagne regroupe tout pour une saison de culture (ex. \"Agrumes 2026-2027\"). Peut couvrir 1-2 exercices fiscaux et lier fermes, parcelles, coûts, revenus. Ouvrez pour voir surface totale, production prévue vs réelle et budgets par cycle."
       },
       "step3": {
-        "title": "Enregistrer une Récolte",
-        "content": "Saisissez une récolte : sélectionnez la parcelle, entrez quantité et qualité. Cela met à jour vos stats et peut déclencher une commande de vente."
+        "title": "Cycles de Culture — De la plantation à la récolte",
+        "content": "Chaque cycle = une plantation sur une parcelle dans une campagne. Suivez date de plantation, dates de récolte prévue/réelle, statut (planifié → préparation → croissance → récolte → terminé) et méthode d'évaluation IFRS-41. Le pont entre agronomie et comptabilité."
       },
       "step4": {
-        "title": "Filtrer & Analyser",
-        "content": "Filtrez par période, culture ou ferme pour comparer les rendements. Quelles parcelles sont les plus performantes ? Quelles cultures les plus rentables ?"
+        "title": "Récoltes — Saisissez ce qui sort",
+        "content": "Enregistrez les événements de récolte : parcelle + culture + quantité + grade qualité + revenus estimés. Chaque enregistrement met à jour vos stats et démarre la traçabilité — chaque récolte reçoit un numéro de lot."
+      },
+      "step5": {
+        "title": "Lots de Réception — À la station",
+        "content": "Quand la récolte arrive à la station de conditionnement : pesage, tri, attribution de numéros de lot. Suit la défurca, le calibrage, et le lien aux pistes d'audit (GlobalGAP, Bio l'exigent)."
+      },
+      "step6": {
+        "title": "Contrôle Qualité — Notation par lot",
+        "content": "Inspections qualité par lot : défauts, calibrage, conformité certification. Une inspection échouée peut déclasser un lot ou déclencher une action corrective. Toutes les notes alimentent le module conformité."
+      },
+      "step7": {
+        "title": "Actifs Biologiques — Arbres, élevage, plantes",
+        "content": "Suivi à la juste valeur IFRS 41 pour les actifs productifs : plantes porteuses (agrumes, olivier, amandier), élevage. Enregistre acquisition, maturité, amortissement, et gains/pertes non réalisés sur réévaluation. Requis pour des bilans agricoles corrects."
+      },
+      "step8": {
+        "title": "Applications de Produits — Quoi, où, quand",
+        "content": "Chaque engrais, pesticide ou traitement appliqué à une parcelle : produit, dose, surface, date, ouvrier. Tire du stock (décrémente l'inventaire), alimente la conformité (registres PPP), et contribue au coût par parcelle. Rejouez ce tour à tout moment via ? (en haut à droite)."
       }
     },
     "infrastructure": {
@@ -5055,78 +6105,6 @@
       }
     }
   },
-  "aiReport": {
-    "title": "Rapport IA Intelligent",
-    "subtitle": "Analyse approfondie de votre parcelle par intelligence artificielle",
-    "loadingProviders": "Chargement des fournisseurs IA...",
-    "noProvidersTitle": "Aucun fournisseur IA configuré",
-    "noProvidersDescription": "Pour générer des rapports IA, veuillez configurer au moins un fournisseur (OpenAI ou Google Gemini) dans les paramètres de votre organisation.",
-    "dateRange": "Période d'analyse",
-    "startDate": "Date de début",
-    "endDate": "Date de fin",
-    "errorTitle": "Erreur de génération",
-    "errorGeneric": "Une erreur est survenue. Veuillez réessayer.",
-    "generating": "Analyse en cours...",
-    "generateButton": "Générer le rapport IA",
-    "generatingHint": "L'IA analyse vos données satellites, analyses de sol et autres informations...",
-    "generatedWith": "Généré avec",
-    "regenerate": "Régénérer",
-    "exportPdf": "Exporter PDF",
-    "sections": {
-      "executiveSummary": "Résumé Exécutif",
-      "healthAssessment": "Évaluation de Santé",
-      "riskAlerts": "Alertes",
-      "recommendations": "Recommandations",
-      "actionItems": "Actions à Entreprendre"
-    },
-    "health": {
-      "soil": "Sol",
-      "vegetation": "Végétation",
-      "water": "Eau",
-      "notEvaluated": "Non évalué"
-    },
-    "priority": {
-      "high": "Priorité haute",
-      "medium": "Priorité moyenne",
-      "low": "Priorité basse"
-    },
-    "providers": {
-      "openai": {
-        "name": "OpenAI GPT-4",
-        "description": "Modèle avancé pour des analyses détaillées"
-      },
-      "gemini": {
-        "name": "Google Gemini",
-        "description": "IA multimodale de Google"
-      }
-    },
-    "configureProviders": "Configurer les fournisseurs IA",
-    "securityNote": "Vos clés API sont chiffrées et stockées de manière sécurisée.",
-    "dataAvailability": {
-      "title": "Données disponibles",
-      "loading": "Vérification des données...",
-      "statusExcellent": "Excellente couverture",
-      "statusGood": "Bonne couverture",
-      "statusBasic": "Couverture de base",
-      "statusInsufficient": "Données insuffisantes",
-      "statusPartial": "Couverture partielle",
-      "statusLimited": "Couverture limitée",
-      "requiredSection": "Requis",
-      "optionalSection": "Optionnel (améliore la précision)",
-      "optional": "optionnel",
-      "satellite": "Données satellites",
-      "satelliteDetail": "{{count}} points",
-      "soil": "Analyse de sol",
-      "water": "Analyse d'eau",
-      "plant": "Analyse végétale",
-      "weather": "Données météo",
-      "canGenerateBasic": "Vous pouvez générer un rapport de base. Ajoutez des analyses pour plus de précision.",
-      "cannotGenerate": "Les données satellites et météo sont requises pour générer un rapport.",
-      "lowCoverageWarning": "Le rapport IA sera moins précis avec peu de données. Ajoutez des analyses pour de meilleurs résultats.",
-      "addAnalysis": "Ajouter"
-    },
-    "generatedOn": "Généré le"
-  },
   "dataTransparency": {
     "modalTitle": "Transparence des Données Sources",
     "modalDescription": "Consultez et vérifiez les sources de données utilisées pour générer ce rapport IA.",
@@ -5224,7 +6202,80 @@
     },
     "dateRangeStart": "Début de la Période",
     "dateRangeEnd": "Fin de la Période",
-    "lastUpdated": "Dernière Mise à Jour"
+    "lastUpdated": "Dernière Mise à Jour",
+    "detail": {
+      "errors": {
+        "rateRequired": "Veuillez entrer le tarif par unité",
+        "unitsRequired": "Veuillez entrer le nombre d'unités complétées",
+        "workerUnitsRequired": "Veuillez entrer le nombre d'unités pour au moins un travailleur",
+        "completeFailed": "Erreur lors de la complétion de la tâche",
+        "cropRequired": "Veuillez sélectionner une culture",
+        "quantityRequired": "Veuillez entrer une quantité valide",
+        "lotNumberRequired": "Veuillez entrer un numéro de lot",
+        "harvestCompleteFailed": "Erreur lors de la complétion de la récolte"
+      }
+    },
+    "paymentTypes": {
+      "perUnit": "A l'unité",
+      "daily": "Journalier",
+      "monthly": "Mensuel",
+      "metayage": "Métayage"
+    },
+    "harvestForm": {
+      "title": "Enregistrer la récolte",
+      "completionType": "Type de complétion",
+      "completeFull": "Terminer complètement",
+      "completeFullDesc": "Marquer la tâche comme terminée",
+      "partial": "Récolte partielle",
+      "partialDesc": "Continuer la tâche après",
+      "lotNumber": "Numéro de lot *",
+      "lotPlaceholder": "Ex: P1FM1-0012025",
+      "cropHarvested": "Culture récoltée *",
+      "selectCrop": "Sélectionner une culture",
+      "selectCropPlaceholder": "Sélectionner une culture...",
+      "harvestDate": "Date de récolte *",
+      "quantityHarvested": "Quantité récoltée *",
+      "quantityPlaceholder": "Ex: 500",
+      "unit": "Unité",
+      "select": "Sélectionner",
+      "units": {
+        "kg": "Kilogrammes (kg)",
+        "tons": "Tonnes",
+        "units": "Unités",
+        "boxes": "Caisses",
+        "crates": "Cagettes",
+        "liters": "Litres"
+      },
+      "qualityGrade": "Grade de qualité",
+      "grades": {
+        "extra": "Extra",
+        "a": "Grade A",
+        "first": "Première qualité",
+        "b": "Grade B",
+        "second": "Deuxième qualité",
+        "c": "Grade C",
+        "third": "Troisième qualité"
+      },
+      "perUnitPayment": "Paiement à l'unité",
+      "ratePerUnit": "Tarif par unité (MAD) :",
+      "ratePlaceholder": "Ex: 30",
+      "enterWorkerUnits": "Indiquez le nombre d'unités accomplies par chaque travailleur.",
+      "totalPayments": "Total paiements :",
+      "notes": "Notes",
+      "notesPlaceholder": "Notes sur la récolte...",
+      "savePartial": "Enregistrer récolte partielle",
+      "completeAndSave": "Terminer et enregistrer"
+    },
+    "perUnitForm": {
+      "ratePerUnit": "Tarif par unité (MAD) *",
+      "ratePlaceholder": "Ex: 5.00",
+      "unitsPerWorker": "Unités par travailleur",
+      "unitsCompleted": "Unités complétées *",
+      "unitsPlaceholder": "Ex: 100",
+      "total": "Total",
+      "notes": "Notes",
+      "notesPlaceholder": "Notes sur le travail effectué..."
+    }
   },
   "aiSettings": {
     "title": "Fournisseurs IA",
@@ -5376,6 +6427,15 @@
     }
   },
   "weather": {
+    "counters": {
+      "title": "Compteurs phénologiques",
+      "subtitle": "Année {{year}} — données horaires réelles",
+      "hours": "h",
+      "noteLabel": "Note",
+      "note": "Les compteurs sont calculés à partir des températures horaires réelles (Open-Meteo Archive). Les seuils par stade sont définis dans le référentiel de la culture.",
+      "errorTitle": "Compteurs météo indisponibles",
+      "error": "Les données météo horaires sont temporairement indisponibles. Réessayez plus tard."
+    },
     "loading": "Chargement des analyses météorologiques...",
     "loadingFallback": "Chargement des analyses météo...",
     "errorTitle": "Erreur de chargement",
@@ -5604,12 +6664,6 @@
       "viewDetails": "Voir les détails",
       "createReception": "Créer lot de réception"
     }
-  },
-  "utilities": {
-    "title": "Gestion des Utilités",
-    "subtitle": "Suivez et gérez la consommation d'eau et d'électricité de vos fermes",
-    "loading": "Chargement de l'organisation...",
-    "loadingDashboard": "Chargement du tableau de bord..."
   },
   "receptionBatches": {
     "title": "Lots de Réception",
@@ -6103,14 +7157,6 @@
       "clearFilters": "Effacer les filtres"
     }
   },
-  "onboarding": {
-    "setup": {
-      "checkingAuth": "Vérification de l'authentification...",
-      "creatingOrg": "Création de l'organisation...",
-      "activatingTrial": "Activation de l'essai...",
-      "complete": "Terminé!"
-    }
-  },
   "modulesSettings": {
     "title": "Modules",
     "subtitle": "Activez ou désactivez les modules selon vos besoins. Les modules désactivés n'apparaîtront pas dans la navigation.",
@@ -6435,5 +7481,759 @@
   "dragHandle": "Glisser pour réorganiser",
   "toggleSatellite": "Basculer vue satellite",
   "fullscreen": "Plein écran",
-  "exitFullscreen": "Quitter le plein écran"
+  "exitFullscreen": "Quitter le plein écran",
+  "crops": {
+    "pageTitle": "Cultures",
+    "description": "Gérez vos cultures et suivez leur croissance.",
+    "addCrop": "Ajouter une culture",
+    "noCrops": "Aucune culture",
+    "noCropsDescription": "Commencez par ajouter votre première culture.",
+    "farm": "Ferme",
+    "parcel": "Parcelle",
+    "area": "Surface",
+    "plantingDate": "Plantation",
+    "expectedHarvest": "Récolte prévue"
+  },
+  "bankAccounts": {
+    "pageTitle": "Comptes bancaires",
+    "description": "Gérez les comptes bancaires de votre organisation.",
+    "addAccount": "Ajouter un compte",
+    "noAccounts": "Aucun compte bancaire",
+    "noAccountsDescription": "Commencez par ajouter votre premier compte bancaire.",
+    "bankName": "Banque",
+    "accountNumber": "N° de compte",
+    "currency": "Devise",
+    "confirmDelete": "Supprimer le compte bancaire",
+    "confirmDeleteDescription": "Êtes-vous sûr de vouloir supprimer ce compte bancaire ?",
+    "deleteSuccess": "Compte bancaire supprimé avec succès",
+    "deleteError": "Échec de la suppression du compte bancaire"
+  },
+  "deliveries": {
+    "pageTitle": "Livraisons",
+    "description": "Suivez et gérez vos livraisons de produits.",
+    "addDelivery": "Nouvelle livraison",
+    "noDeliveries": "Aucune livraison",
+    "noDeliveriesDescription": "Créez votre première livraison pour commencer le suivi.",
+    "date": "Date",
+    "type": "Type",
+    "cancelSuccess": "Livraison annulée",
+    "cancelError": "Échec de l'annulation de la livraison"
+  },
+  "payments": {
+    "pageTitle": "Paiements",
+    "description": "Suivez les paiements, avances et approbations des travailleurs.",
+    "newPayment": "Nouveau paiement",
+    "noPayments": "Aucun paiement",
+    "noPaymentsDescription": "Les paiements apparaîtront ici une fois créés.",
+    "type": "Type",
+    "period": "Période",
+    "approve": "Approuver",
+    "process": "Traiter",
+    "approveSuccess": "Paiement approuvé",
+    "approveError": "Échec de l'approbation du paiement",
+    "processSuccess": "Paiement traité",
+    "processError": "Échec du traitement du paiement"
+  },
+  "productApplications": {
+    "pageTitle": "Applications de produits",
+    "description": "Suivez les traitements et l'utilisation des produits depuis le stock.",
+    "addApplication": "Enregistrer une application",
+    "noApplications": "Aucune application de produit",
+    "noApplicationsDescription": "Enregistrez votre première application de produit.",
+    "date": "Date",
+    "quantityUsed": "Quantité",
+    "areaTreated": "Surface traitée",
+    "areaTreatedValue": "Surface traitée: {{count}} ha",
+    "title": "Applications de produits",
+    "addNew": "Nouvelle application",
+    "emptyTitle": "Aucune application enregistrée",
+    "emptyDescription": "Commencez par enregistrer une nouvelle application",
+    "areaTreatedFull": "Surface traitée: {{count}} ha",
+    "modalTitle": "Nouvelle application",
+    "product": "Produit",
+    "selectProduct": "Sélectionner un produit",
+    "available": "disponible",
+    "applicationDate": "Date d'application",
+    "treatedArea": "Surface traitée (ha)",
+    "parcel": "Parcelle",
+    "selectParcel": "Sélectionner une parcelle",
+    "costLabel": "Coût ({{currency}})",
+    "costPlaceholder": "Coût total de l'application en {{currency}}",
+    "notes": "Notes",
+    "notesPlaceholder": "Conditions d'application, observations...",
+    "cancel": "Annuler",
+    "save": "Enregistrer"
+  },
+  "modules": {
+    "title": "Modules",
+    "subtitle": "Accédez à toutes les fonctionnalités selon votre rôle et permissions",
+    "accessible": "accessibles",
+    "rolesLegend": "Rôles",
+    "sections": {
+      "main": "Principal"
+    },
+    "marketplace": {
+      "received": "Demandes reçues",
+      "sent": "Demandes envoyées"
+    },
+    "desc": {
+      "dashboard": "Vue d'ensemble de l'activité, métriques et alertes",
+      "farmHierarchy": "Gérer les fermes, secteurs et structure organisationnelle",
+      "parcels": "Consulter et gérer les parcelles agricoles et cartes",
+      "stock": "Suivre l'inventaire, produits et mouvements d'entrepôt",
+      "infrastructure": "Gérer les bâtiments, équipements et structures",
+      "chat": "Demandez des recommandations intelligentes à AgromindIA",
+      "workers": "Gérer les employés, journaliers et affectations d'équipe",
+      "tasks": "Créer, assigner et suivre les tâches terrain et opérationnelles",
+      "campaigns": "Planifier et suivre les campagnes de production saisonnières",
+      "cropCycles": "Suivre le cycle de culture du semis à la récolte",
+      "harvests": "Enregistrer et gérer les opérations de récolte et rendements",
+      "receptionBatches": "Gérer la réception et le lotissement des produits",
+      "qualityControl": "Contrôles qualité, classement et tests de conformité",
+      "trees": "Inventaire et suivi des plantations d'arbres fruitiers",
+      "orchards": "Gérer les blocs vergers, variétés et plans de plantation",
+      "pruning": "Planifier et suivre les opérations de taille",
+      "compliance": "Suivi de conformité réglementaire et préparation aux audits",
+      "certifications": "Gérer les certifications (GlobalGAP, bio, etc.)",
+      "quotes": "Créer et gérer les devis",
+      "salesOrders": "Traiter les bons de commande clients",
+      "purchaseOrders": "Gérer les bons de commande fournisseurs",
+      "accounting": "Vue d'ensemble financière et tableau de bord comptable",
+      "invoices": "Créer et gérer les factures",
+      "payments": "Suivre les paiements et règlements",
+      "journal": "Écritures comptables et grand livre",
+      "reports": "Rapports financiers, compte de résultat et bilan",
+      "marketplaceReceived": "Consulter et répondre aux demandes de devis reçues",
+      "marketplaceSent": "Suivre les demandes de devis envoyées"
+    }
+  },
+  "ai": {
+    "alerts": {
+      "title": "Alertes IA",
+      "subtitle": "Examinez et gérez les risques détectés par le modèle IA.",
+      "noAlerts": "Aucune alerte active",
+      "noAlertsMessage": "Le modèle IA n'a détecté aucun risque significatif pour cette parcelle."
+    },
+    "weather": {
+      "pageTitle": "Analyse météo IA",
+      "pageSubtitle": "Analyse météo, tendances de prévision et signaux de risque pour cette parcelle.",
+      "riskBriefTitle": "Bulletin de risque météo IA",
+      "riskBriefDescription": "Exposition aux maladies spécifiques aux cultures déduite des dernières conditions météo de la parcelle.",
+      "crop": "Culture : {{crop}}",
+      "riskUnavailable": "Analyse de risque indisponible",
+      "riskUnavailableDescription": "Les analyses météo restent disponibles, mais le modèle de risque de maladies n'a pas pu être chargé pour cette parcelle.",
+      "activeRisks": "Risques actifs",
+      "activeRisksDescription": "Les conditions correspondent actuellement à un ou plusieurs profils de maladies.",
+      "noActiveRisks": "Aucun signal de maladie actif dans les dernières données météo.",
+      "latestTemperature": "Dernière température",
+      "latestHumidity": "Dernière humidité",
+      "humidityDescription": "Utilisée pour évaluer les seuils d'humidité spécifiques aux cultures.",
+      "measuredOn": "Mesurée le {{date}}",
+      "noRecentReading": "Aucune lecture météo récente pour la parcelle.",
+      "noDiseaseModels": "Aucun modèle de maladie configuré pour cette culture, seules les analyses météo sont affichées ci-dessous.",
+      "noActiveProfiles": "La température et l'humidité actuelles n'activent aucun profil de risque de maladie configuré pour cette culture.",
+      "temperatureWindow": "Plage de température : {{min}}°C à {{max}}°C",
+      "humidityThreshold": "Seuil d'humidité : {{value}}%",
+      "suggestedTreatment": "Traitement suggéré : {{treatment}}",
+      "timing": "Calendrier : {{timing}}",
+      "noBoundary": "Les données de localisation de la parcelle sont requises pour l'analyse météo.",
+      "noBoundaryHint": "Ajoutez ou corrigez les limites de la parcelle pour activer les prévisions, le climat et l'analyse des risques."
+    },
+    "pestAlerts": {
+      "activeAlerts": "Alertes Actives",
+      "needAttention": "Nécessitent une attention",
+      "critical": "Critiques",
+      "immediatePriority": "Priorité immédiate",
+      "resolved30d": "Résolus (30j)",
+      "treatedSuccessfully": "Traités avec succès",
+      "searchPlaceholder": "Rechercher par ravageur, ferme, parcelle...",
+      "severity": "Sévérité",
+      "allSeverities": "Toutes sévérités",
+      "low": "Faible",
+      "medium": "Moyenne",
+      "high": "Élevée",
+      "criticalSeverity": "Critique",
+      "status": "Statut",
+      "allStatuses": "Tous statuts",
+      "pending": "En attente",
+      "verified": "Vérifié",
+      "treated": "Traité",
+      "resolved": "Résolu",
+      "reportNotFound": "Rapport non trouvé",
+      "backToList": "Retour à la liste",
+      "unidentifiedPest": "Ravageur non identifié",
+      "reportedOn": "Signalé le {{date}}",
+      "changeStatus": "Changer le statut",
+      "dismissed": "Rejeté",
+      "escalate": "Escalader",
+      "escalateTitle": "Escalader en alerte critique ?",
+      "escalateDescription": "Cette action va créer une alerte de performance critique pour toute l'organisation et notifier les administrateurs.",
+      "cancel": "Annuler",
+      "confirmEscalation": "Confirmer l'escalade",
+      "reportDetails": "Détails du signalement",
+      "farm": "Ferme",
+      "parcel": "Parcelle",
+      "detectionMethod": "Méthode de détection",
+      "affectedArea": "Surface affectée",
+      "reportedBy": "Signalé par",
+      "notSpecified": "Non spécifié",
+      "notesObservations": "Notes / Observations",
+      "noNotes": "Aucune note",
+      "photos": "Photos ({{count}})",
+      "evidence": "Preuve",
+      "noPhotos": "Aucune photo jointe",
+      "diseaseInfo": "Info Maladie",
+      "pestInfo": "Info Ravageur",
+      "symptoms": "Symptômes :",
+      "recommendedTreatment": "Traitement recommandé :",
+      "prevention": "Prévention :",
+      "history": "Historique",
+      "reportCreated": "Signalement créé",
+      "verifiedBy": "Vérifié par {{name}}",
+      "treatmentApplied": "Traitement appliqué"
+    }
+  },
+  "stockManagement": {
+    "defaults": {
+      "country": "Maroc"
+    },
+    "securityLevels": {
+      "basic": "Basique",
+      "standard": "Standard",
+      "high": "Élevé",
+      "maximum": "Maximum"
+    }
+  },
+  "satelliteIndices": {
+    "title": "Indices Satellites",
+    "errors": {
+      "noBoundaryDetailed": "Cette parcelle n'a pas de limites géographiques définies. Veuillez d'abord définir les limites sur la carte.",
+      "noBoundaryShort": "Cette parcelle n'a pas de limites géographiques définies.",
+      "loadTimeSeriesFirst": "Veuillez d'abord charger les données de la série temporelle.",
+      "maxIndices": "Maximum 5 indices peuvent être affichés simultanément"
+    },
+    "empty": {
+      "noBoundariesTitle": "Limites géographiques non définies",
+      "noBoundariesDescription": "Veuillez d'abord définir les limites de cette parcelle sur la carte pour accéder aux données satellites."
+    },
+    "actions": {
+      "importTifTitle": "Importer image TIF depuis drone",
+      "replaceTif": "Remplacer TIF",
+      "importTif": "Importer TIF",
+      "refresh": "Actualiser",
+      "openFullscreen": "Ouvrir en plein écran",
+      "deleteImage": "Supprimer la capture",
+      "calculate": "Calculer",
+      "selectIndices": "Sélectionner les indices",
+      "temperatureTitle": "Afficher la température au moment du passage satellite (11h)",
+      "hide": "Masquer",
+      "show": "Afficher",
+      "loadSeries": "Charger Série"
+    },
+    "tabs": {
+      "currentValues": "Valeurs Actuelles",
+      "timeSeries": "Série Temporelle"
+    },
+    "droneImage": {
+      "title": "Capture Drone",
+      "subtitle": "Capture orthomosaïque GeoTIFF",
+      "alt": "Capture drone de la parcelle",
+      "notAvailable": "Indisponible",
+      "uploading": "Importation en cours..."
+    },
+    "labels": {
+      "displayMode": "Mode d'affichage",
+      "period": "Période",
+      "index": "Indice",
+      "indicesCount": "Indices ({{count}}/5)",
+      "temperature": "Température"
+    },
+    "chartModes": {
+      "single": "Indice unique",
+      "multi": "Multi-indices"
+    },
+    "periods": {
+      "30d": "30 derniers jours",
+      "90d": "3 derniers mois",
+      "6m": "6 derniers mois",
+      "1y": "1 dernière année",
+      "2y": "2 dernières années"
+    },
+    "confirm": {
+      "deleteImage": "Êtes-vous sûr de vouloir supprimer cette capture ?"
+    }
+  },
+  "employeeManagement": {
+    "title": "Gestion des Salariés",
+    "validation": {
+      "firstNameRequired": "Prénom requis",
+      "lastNameRequired": "Nom requis",
+      "cinInvalid": "CIN invalide",
+      "hireDateRequired": "Date d'embauche requise",
+      "positionRequired": "Poste requis",
+      "salaryInvalid": "Salaire invalide"
+    },
+    "errors": {
+      "selectFarm": "Aucune ferme sélectionnée.",
+      "selectFarmDetailed": "Aucune ferme sélectionnée. Veuillez sélectionner une ferme.",
+      "selectFarmToAdd": "Sélectionnez une ferme pour ajouter un salarié",
+      "selectFarmToManage": "Sélectionnez une ferme pour gérer les salariés.",
+      "loadFailed": "Impossible de charger les salariés."
+    },
+    "confirm": {
+      "delete": "Êtes-vous sûr de vouloir supprimer cet employé ?"
+    },
+    "fields": {
+      "firstName": "Prénom",
+      "lastName": "Nom",
+      "cin": "CIN",
+      "phone": "Téléphone",
+      "address": "Adresse",
+      "hireDate": "Date d'embauche",
+      "position": "Poste",
+      "salary": "Salaire",
+      "salaryWithCurrency": "Salaire ({{currency}})",
+      "salaryPlaceholder": "Salaire en {{currency}}",
+      "status": "Statut"
+    },
+    "status": {
+      "active": "Actif",
+      "inactive": "Inactif"
+    },
+    "actions": {
+      "newEmployee": "Nouveau Salarié",
+      "addFirst": "Ajouter votre premier salarié",
+      "update": "Mettre à jour"
+    },
+    "searchPlaceholder": "Rechercher un salarié...",
+    "table": {
+      "employee": "Salarié",
+      "actions": "Actions"
+    },
+    "empty": {
+      "noFarmTitle": "Aucune ferme sélectionnée",
+      "noEmployeesTitle": "Aucun salarié",
+      "search": "Aucun salarié ne correspond à votre recherche.",
+      "default": "Aucun salarié pour l’instant."
+    },
+    "modal": {
+      "editTitle": "Modifier le Salarié",
+      "newTitle": "Nouveau Salarié"
+    }
+  },
+  "utilitiesManagement": {
+    "title": "Gestion des charges fixes",
+    "subtitle": "Suivez les charges fixes, la consommation et les écritures comptables liées.",
+    "selectFarmMessage": "Sélectionnez une ferme pour gérer les charges fixes.",
+    "utilityTypes": {
+      "electricity": "Électricité",
+      "water": "Eau",
+      "diesel": "Diesel",
+      "gas": "Gaz",
+      "internet": "Internet",
+      "phone": "Téléphone",
+      "other": "Autre"
+    },
+    "paymentStatus": {
+      "paid": "Payé",
+      "pending": "En attente",
+      "overdue": "En retard"
+    },
+    "views": {
+      "grouped": "Vue groupée",
+      "cards": "Vue cartes",
+      "list": "Vue liste",
+      "dashboard": "Vue tableau de bord"
+    },
+    "actions": {
+      "resetFilters": "Réinitialiser les filtres",
+      "addUtility": "Ajouter une charge",
+      "downloadInvoice": "Télécharger la facture",
+      "accountingJournal": "Journal comptable",
+      "selectFarmToAdd": "Sélectionnez une ferme pour ajouter une charge",
+      "newUtility": "Nouvelle charge",
+      "advancedFilters": "Filtres avancés",
+      "filters": "Filtres",
+      "openChartOfAccounts": "Ouvrir le plan comptable",
+      "cancel": "Annuler",
+      "uploading": "Téléchargement...",
+      "update": "Mettre à jour",
+      "add": "Ajouter",
+      "chooseFile": "Choisir un fichier"
+    },
+    "placeholders": {
+      "search": "Rechercher par type, montant, note ou date...",
+      "consumption": "ex: 500",
+      "selectUnit": "Sélectionner une unité"
+    },
+    "filters": {
+      "allStatuses": "Tous les statuts",
+      "allTypes": "Tous les types",
+      "allRecurring": "Toutes",
+      "recurring": "Récurrentes",
+      "nonRecurring": "Non récurrentes",
+      "startDate": "Date début",
+      "endDate": "Date fin",
+      "sortBy": "Trier par",
+      "order": "Ordre",
+      "descending": "Décroissant",
+      "ascending": "Croissant"
+    },
+    "columns": {
+      "date": "Date",
+      "amount": "Montant",
+      "type": "Type"
+    },
+    "stats": {
+      "totalExpenses": "Total des charges",
+      "recurringExpenses": "Charges récurrentes",
+      "pending": "En attente",
+      "totalCount": "Nombre total"
+    },
+    "dashboardAccess": {
+      "title": "Accès limité au tableau de bord",
+      "description": "Votre rôle ne permet pas d'accéder aux analyses financières détaillées."
+    },
+    "dialog": {
+      "editTitle": "Modifier la charge",
+      "newTitle": "Nouvelle charge",
+      "editDescription": "Modifiez les détails de cette charge. Les modifications seront automatiquement synchronisées avec le livre comptable.",
+      "newDescription": "Ajoutez une nouvelle charge. Une écriture comptable sera automatiquement créée dans le livre."
+    },
+    "fields": {
+      "utilityType": "Type de charge",
+      "consumptionDetails": "Détails de consommation (optionnel)",
+      "leaveBlankIfUnavailable": "Laissez vide si non disponible",
+      "consumption": "Consommation",
+      "unit": "Unité",
+      "unitCost": "Coût unitaire:",
+      "date": "Date",
+      "recurringExpense": "Charge récurrente",
+      "frequency": "Fréquence",
+      "notes": "Notes",
+      "invoice": "Facture (PDF, Image)",
+      "invoiceAttached": "Facture attachée"
+    },
+    "frequency": {
+      "monthly": "Mensuelle",
+      "quarterly": "Trimestrielle",
+      "yearly": "Annuelle"
+    },
+    "empty": {
+      "noResultsTitle": "Aucun résultat trouvé",
+      "noUtilitiesTitle": "Aucune charge fixe",
+      "noResultsMessage": "Aucune charge ne correspond aux filtres sélectionnés. Essayez de modifier vos critères de recherche.",
+      "noUtilitiesMessage": "Commencez par ajouter vos premières charges fixes (électricité, eau, etc.)."
+    }
+  },
+  "taskDetail": {
+    "timeline": {
+      "taskCreated": "Tâche créée",
+      "workStarted": "Travail démarré",
+      "workEnded": "Travail terminé",
+      "taskApproved": "Tâche approuvée",
+      "taskCompleted": "Tâche terminée",
+      "issueReported": "Problème signalé",
+      "statusUpdate": "Mise à jour de statut",
+      "comment": "Commentaire",
+      "clockedIn": "Pointage d'entrée",
+      "clockedOut": "Pointage de sortie · {{hours}}h"
+    },
+    "fields": {
+      "taskType": "Type de tâche",
+      "farm": "Ferme",
+      "parcel": "Parcelle",
+      "assignedTo": "Assigné à",
+      "estimatedDuration": "Durée estimée",
+      "estimatedDurationValue": "{{hours}} heures",
+      "scheduledDate": "Date prévue",
+      "dueDate": "Date limite",
+      "description": "Description",
+      "notes": "Notes",
+      "progress": "Progression"
+    },
+    "payment": {
+      "title": "Informations de paiement",
+      "type": "Type de paiement",
+      "estimatedUnits": "Unités estimées",
+      "estimatedUnitsValue": "Unités estimées: {{count}}",
+      "ratePerUnit": "Tarif par unité",
+      "types": {
+        "perUnit": "À l'unité",
+        "daily": "Journalier",
+        "monthly": "Mensuel",
+        "metayage": "Métayage"
+      }
+    },
+    "perUnitForm": {
+      "title": "Paiement à l'unité",
+      "ratePerUnit": "Tarif par unité (MAD) *",
+      "ratePlaceholder": "Ex: 5.00",
+      "unitsPerWorker": "Unités par travailleur",
+      "unitsCompleted": "Unités complétées *",
+      "unitsPlaceholder": "Ex: 100",
+      "totalPayment": "Paiement total",
+      "notesPlaceholder": "Notes sur le travail effectué..."
+    },
+    "harvestForm": {
+      "title": "Enregistrer la récolte",
+      "completionType": "Type de complétion",
+      "completeFull": "Terminer complètement",
+      "completeFullDesc": "Marquer la tâche comme terminée",
+      "partial": "Récolte partielle",
+      "partialDesc": "Continuer la tâche après",
+      "lotNumber": "Numéro de lot *",
+      "lotPlaceholder": "Ex: P1FM1-0012025",
+      "cropHarvested": "Culture récoltée *",
+      "selectCrop": "Sélectionner une culture",
+      "selectCropPlaceholder": "Sélectionner une culture...",
+      "harvestDate": "Date de récolte *",
+      "quantityHarvested": "Quantité récoltée *",
+      "quantityPlaceholder": "Ex: 500",
+      "unit": "Unité",
+      "select": "Sélectionner",
+      "qualityGrade": "Grade de qualité",
+      "notesPlaceholder": "Notes sur la récolte...",
+      "units": {
+        "kg": "Kilogrammes (kg)",
+        "tons": "Tonnes",
+        "units": "Unités",
+        "boxes": "Caisses",
+        "crates": "Cagettes",
+        "liters": "Litres"
+      },
+      "grades": {
+        "extra": "Extra",
+        "a": "Grade A",
+        "first": "Première qualité",
+        "b": "Grade B",
+        "second": "Deuxième qualité",
+        "c": "Grade C",
+        "third": "Troisième qualité"
+      }
+    },
+    "actions": {
+      "close": "Fermer",
+      "start": "Démarrer",
+      "pause": "Pause",
+      "resume": "Reprendre",
+      "completeWithHarvest": "Terminer avec récolte",
+      "complete": "Terminer",
+      "cancel": "Annuler",
+      "saving": "Enregistrement...",
+      "completeAndPay": "Terminer et payer",
+      "savePartialHarvest": "Enregistrer récolte partielle",
+      "completeAndSave": "Terminer et enregistrer"
+    }
+  },
+  "treeManagement": {
+    "tabs": {
+      "trees": "Types d'arbres",
+      "plantations": "Types de plantation"
+    },
+    "headers": {
+      "treesTitle": "Types d'arbres",
+      "treesSubtitle": "Gérez les catégories et les arbres disponibles.",
+      "plantationsTitle": "Types de plantation",
+      "plantationsSubtitle": "Gérez les densités et espacements de plantation.",
+      "addPlantationType": "Ajouter un type de plantation"
+    },
+    "actions": {
+      "clearSearch": "Effacer la recherche",
+      "addThisCategory": "Ajouter cette catégorie",
+      "addThisType": "Ajouter ce type",
+      "addCategory": "Ajouter catégorie",
+      "add": "Ajouter"
+    },
+    "columns": {
+      "category": "Catégorie",
+      "trees": "Arbres",
+      "actions": "Actions",
+      "type": "Type",
+      "spacing": "Espacement",
+      "treesPerHa": "Arbres/ha"
+    },
+    "fields": {
+      "type": "Type",
+      "spacing": "Espacement",
+      "treesPerHa": "Arbres/ha",
+      "spacingLabel": "Espacement:",
+      "treesPerHaLabel": "Arbres/ha:"
+    },
+    "placeholders": {
+      "addTree": "Ajouter un arbre...",
+      "searchTrees": "Rechercher une catégorie ou un arbre...",
+      "newCategory": "Nouvelle catégorie...",
+      "searchPlantations": "Rechercher un type, un espacement ou une densité...",
+      "plantationType": "Type (ex: Super intensif)",
+      "plantationSpacing": "Espacement (ex: 4x1,5)",
+      "plantationTreesPerHa": "Arbres/ha"
+    },
+    "empty": {
+      "noResults": "Aucun résultat",
+      "noCategories": "Aucune catégorie",
+      "noTreeMatches": "Aucune catégorie ni aucun arbre ne correspond à votre recherche.",
+      "addFirstCategory": "Ajoutez votre première catégorie d'arbres pour commencer.",
+      "noPlantationTypes": "Aucun type de plantation",
+      "noPlantationMatches": "Aucun type de plantation ne correspond à votre recherche.",
+      "addFirstPlantationType": "Ajoutez votre premier type de plantation pour commencer."
+    },
+    "confirm": {
+      "deleteCategory": "Êtes-vous sûr de vouloir supprimer cette catégorie?",
+      "deletePlantationType": "Êtes-vous sûr de vouloir supprimer ce type de plantation?"
+    },
+    "errors": {
+      "unknown": "Erreur inconnue",
+      "addCategory": "Error adding category",
+      "deleteCategory": "Error deleting category",
+      "updateCategory": "Error updating category",
+      "addTree": "Error adding tree",
+      "deleteTree": "Error deleting tree",
+      "updateTree": "Error updating tree",
+      "addPlantationType": "Error adding plantation type",
+      "deletePlantationType": "Error deleting plantation type",
+      "updatePlantationType": "Error updating plantation type"
+    },
+    "errorState": "Erreur",
+    "treeCount": "{{count}} arbre",
+    "treeCount_plural": "{{count}} arbres"
+  },
+  "satelliteAnalysisView": {
+    "indicesCalculator": {
+      "selectDateRangeAndIndices": "Veuillez sélectionner une plage de dates et au moins un indice de végétation.",
+      "startDateTooOld": "La date de début est trop ancienne. Veuillez sélectionner une date dans les 3 dernières années."
+    }
+  },
+  "onboardingFlow": {
+    "requiredFields": "Veuillez remplir tous les champs obligatoires."
+  },
+  "waterAnalysisForm": {
+    "cancel": "Annuler",
+    "save": "Enregistrer"
+  },
+  "plantAnalysisForm": {
+    "cancel": "Annuler",
+    "save": "Enregistrer",
+    "saving": "Enregistrement...",
+    "saveError": "Échec de l'enregistrement de l'analyse de plante"
+  },
+  "modulesStep": {
+    "loadError": "Erreur lors du chargement des modules. Veuillez réessayer."
+  },
+  "annualNewAnalysesStep": {
+    "addNow": "Ajouter maintenant"
+  },
+  "annualMissingTasksStep": {
+    "saveEntry": "Enregistrer cette saisie"
+  },
+  "recalibrationValidationStep": {
+    "cancel": "Annuler"
+  },
+  "harvestHistoryStep": {
+    "add": "Ajouter"
+  },
+  "culturalHistoryStep": {
+    "addStress": "Ajouter un stress"
+  },
+  "pendingApproval": {
+    "pendingTitle": "Compte en cours de validation",
+    "pendingMessage": "Merci pour votre inscription. Notre équipe vous contactera prochainement avec une solution adaptée à vos besoins et activera votre compte.",
+    "rejectedTitle": "Compte non approuvé",
+    "rejectedMessage": "Notre équipe a examiné votre demande et ne peut pas activer votre compte pour le moment. Merci de nous contacter pour discuter de la suite.",
+    "organizationLabel": "Organisation",
+    "needHelp": "Besoin d'aide ?",
+    "signOut": "Se déconnecter"
+  },
+  "equipment": {
+    "title": "Équipement",
+    "subtitle": "Gérez votre flotte et équipements",
+    "add": "Ajouter un équipement",
+    "edit": "Modifier l'équipement",
+    "addFirst": "Ajouter votre premier équipement",
+    "empty": "Aucun équipement trouvé",
+    "search": "Rechercher un équipement...",
+    "name": "Nom",
+    "brand": "Marque",
+    "model": "Modèle",
+    "serialNumber": "Numéro de série",
+    "licensePlate": "Plaque d'immatriculation",
+    "purchaseDate": "Date d'achat",
+    "purchasePrice": "Prix d'achat",
+    "currentValue": "Valeur actuelle",
+    "hourMeter": "Compteur horaire",
+    "fuel": "Carburant",
+    "farm": "Ferme",
+    "hours": "Heures",
+    "noModel": "Pas de modèle",
+    "noFarm": "Aucune ferme assignée",
+    "notes": "Notes",
+    "insuranceExpiry": "Expiration assurance",
+    "registrationExpiry": "Expiration immatriculation",
+    "description": "Description",
+    "cost": "Coût (MAD)",
+    "vendor": "Fournisseur",
+    "maintenanceDate": "Date",
+    "nextServiceDate": "Prochaine révision",
+    "allCategories": "Toutes les catégories",
+    "allStatuses": "Tous les statuts",
+    "allFarms": "Toutes les fermes",
+    "validation": {
+      "nameRequired": "Le nom est requis"
+    },
+    "updated": "Équipement mis à jour",
+    "created": "Équipement créé",
+    "deleted": "Équipement supprimé",
+    "saveFailed": "Échec de la sauvegarde",
+    "deleteConfirm": "Supprimer l'équipement ?",
+    "deleteConfirmDesc": "Êtes-vous sûr de vouloir supprimer cet équipement ?",
+    "deleteFailed": "Échec de la suppression",
+    "loadFailed": "Échec du chargement",
+    "maintenance": "Maintenance",
+    "maintenanceTitle": "Historique de maintenance",
+    "maintenanceCreated": "Enregistrement de maintenance créé",
+    "maintenanceCreateFailed": "Échec de la création",
+    "maintenanceDeleted": "Enregistrement supprimé",
+    "maintenanceDeleteFailed": "Échec de la suppression",
+    "deleteMaintenance": "Supprimer cet enregistrement ?",
+    "logMaintenance": "Enregistrer maintenance",
+    "ytdCost": "Total annuel",
+    "noMaintenance": "Aucun enregistrement de maintenance",
+    "category": {
+      "tractor": "Tracteur",
+      "harvester": "Moissonneuse",
+      "sprayer": "Pulvérisateur",
+      "utility_vehicle": "Véhicule utilitaire",
+      "pump": "Pompe",
+      "small_tool": "Petit outil",
+      "other": "Autre",
+      "label": "Catégorie"
+    },
+    "status": {
+      "available": "Disponible",
+      "in_use": "En utilisation",
+      "maintenance": "En maintenance",
+      "out_of_service": "Hors service",
+      "label": "Statut"
+    },
+    "fuelType": {
+      "diesel": "Diesel",
+      "petrol": "Essence",
+      "electric": "Électrique",
+      "other": "Autre",
+      "label": "Type de carburant"
+    },
+    "maintenanceType": {
+      "oil_change": "Vidange",
+      "repair": "Réparation",
+      "inspection": "Inspection",
+      "tire_replacement": "Remplacement pneus",
+      "battery": "Batterie",
+      "filter": "Filtre",
+      "fuel_fill": "Plein de carburant",
+      "registration": "Immatriculation",
+      "insurance": "Assurance",
+      "other": "Autre",
+      "label": "Type"
+    }
+  }
 }

@@ -1,16 +1,16 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useSuppliers, useCreateSupplier, useUpdateSupplier, useDeleteSupplier } from '@/hooks/useSuppliers';
+import { usePaginatedSuppliers, useCreateSupplier, useUpdateSupplier, useDeleteSupplier } from '@/hooks/useSuppliers';
 import { useAuth } from '@/hooks/useAuth';
 import { useFormErrors } from '@/hooks/useFormErrors';
 import { Button } from '@/components/ui/button';
 import { TableCell, TableHead } from '@/components/ui/table';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/label';
-import { FilterBar, ListPageLayout, ListPageHeader, ResponsiveList } from '@/components/ui/data-table';
+import { DataTablePagination, FilterBar, ListPageLayout, ListPageHeader, ResponsiveList, useServerTableState } from '@/components/ui/data-table';
 import { EmptyState } from '@/components/ui/empty-state';
 import {
   DialogHeader,
@@ -32,16 +32,27 @@ import { Plus, Trash2, Pencil, Loader2, Building2 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Supplier } from '@/hooks/useSuppliers';
 
+const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const isValidUrl = (value: string) => {
+  try {
+    new URL(value);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
 const supplierSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   contact_person: z.string().optional(),
-  email: z.string().email('Invalid email format').optional().or(z.literal('')),
+  email: z.string().optional().refine((value) => !value || emailPattern.test(value), 'Invalid email format'),
   phone: z.string().optional(),
   address: z.string().optional(),
   city: z.string().optional(),
   postal_code: z.string().optional(),
   country: z.string().optional(),
-  website: z.string().url('Invalid URL format').optional().or(z.literal('')),
+  website: z.string().optional().refine((value) => !value || isValidUrl(value), 'Invalid URL format'),
   tax_id: z.string().optional(),
   payment_terms: z.string().optional(),
   notes: z.string().optional(),
@@ -51,45 +62,23 @@ type SupplierFormData = z.infer<typeof supplierSchema>;
 
 export default function SupplierManagement() {
   const { t } = useTranslation('stock');
+  const { t: tCommon } = useTranslation('common');
   const { currentOrganization } = useAuth();
-  const { data: suppliers = [], isLoading, error, refetch } = useSuppliers();
+  const tableState = useServerTableState({ defaultPageSize: 20, defaultSort: { key: 'name', direction: 'asc' as const } });
+  const { data, isLoading, isFetching, error, refetch } = usePaginatedSuppliers(tableState.queryParams);
   const createSupplier = useCreateSupplier();
   const updateSupplier = useUpdateSupplier();
   const deleteSupplier = useDeleteSupplier();
   const { handleFormError } = useFormErrors<SupplierFormData>();
+  const suppliers = data?.data ?? [];
+  const totalItems = data?.total ?? 0;
+  const totalPages = data?.totalPages ?? 0;
+  const hasSearch = tableState.search.trim().length > 0;
   const [showForm, setShowForm] = useState(false);
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [supplierToDelete, setSupplierToDelete] = useState<Supplier | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-
-  const filteredSuppliers = useMemo(() => {
-    const query = searchTerm.trim().toLowerCase();
-
-    if (!query) {
-      return suppliers;
-    }
-
-    return suppliers.filter((supplier) => {
-      const searchableFields = [
-        supplier.name,
-        supplier.contact_person,
-        supplier.email,
-        supplier.phone,
-        supplier.address,
-        supplier.city,
-        supplier.postal_code,
-        supplier.country,
-        supplier.website,
-        supplier.tax_id,
-        supplier.payment_terms,
-        supplier.notes,
-      ];
-
-      return searchableFields.some((value) => value?.toLowerCase().includes(query));
-    });
-  }, [suppliers, searchTerm]);
 
   const {
     register,
@@ -251,8 +240,8 @@ export default function SupplierManagement() {
       }
       filters={
         <FilterBar
-          searchValue={searchTerm}
-          onSearchChange={setSearchTerm}
+          searchValue={tableState.search}
+          onSearchChange={tableState.setSearch}
           searchPlaceholder={t('suppliers.searchPlaceholder', 'Search suppliers...')}
         />
       }
@@ -263,7 +252,7 @@ export default function SupplierManagement() {
             {t('suppliers.loadError', { error: error instanceof Error ? error.message : t('suppliers.unknownError') })}
           </p>
           <Button onClick={() => refetch()}>
-            {t('app.retry')}
+            {tCommon('app.retry')}
           </Button>
         </div>
       ) : isLoading ? (
@@ -271,123 +260,146 @@ export default function SupplierManagement() {
           <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
         </div>
       ) : (
-        <ResponsiveList
-          items={filteredSuppliers}
-          keyExtractor={(supplier) => supplier.id}
-          emptyIcon={Building2}
-          emptyTitle={
-            suppliers.length === 0
-              ? t('suppliers.noSuppliersTitle', 'No suppliers yet')
-              : t('suppliers.noSearchResults', 'No suppliers found')
-          }
-          emptyMessage={
-            suppliers.length === 0
-              ? t('suppliers.noSuppliers')
-              : t('suppliers.noSearchResultsDescription', 'Try adjusting your search.')
-          }
-          emptyAction={
-            suppliers.length === 0
-              ? {
-                  label: t('suppliers.create'),
-                  onClick: handleCreate,
-                }
-              : undefined
-          }
-          emptyExtra={
-            suppliers.length > 0 && filteredSuppliers.length === 0 ? (
-              <EmptyState
-                variant="inline"
-                description={t('suppliers.noSearchResultsDescription', 'Try adjusting your search.')}
-              />
-            ) : undefined
-          }
-          renderCard={(supplier) => (
-            <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <h3 className="text-sm font-medium text-gray-900 dark:text-white">{supplier.name}</h3>
-                  <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-                    {supplier.contact_person || '-'}
-                  </p>
-                </div>
-                <div className="flex gap-2">
-                  <Button variant="ghost" size="sm" onClick={() => handleEdit(supplier)}>
-                    <Pencil className="w-4 h-4" />
-                  </Button>
-                  <Button variant="ghost" size="sm" onClick={() => handleDelete(supplier)}>
-                    <Trash2 className="w-4 h-4 text-red-600" />
-                  </Button>
-                </div>
-              </div>
+        <>
+          <>
+            <ResponsiveList
+              items={suppliers}
+              isLoading={isFetching}
+              keyExtractor={(supplier) => supplier.id}
+              emptyIcon={Building2}
+              emptyTitle={
+                totalItems === 0 && !hasSearch
+                  ? t('suppliers.noSuppliersTitle', 'No suppliers yet')
+                  : t('suppliers.noSearchResults', 'No suppliers found')
+              }
+              emptyMessage={
+                totalItems === 0 && !hasSearch
+                  ? t('suppliers.noSuppliers')
+                  : t('suppliers.noSearchResultsDescription', 'Try adjusting your search.')
+              }
+              emptyAction={
+                totalItems === 0 && !hasSearch
+                  ? {
+                      label: t('suppliers.create'),
+                      onClick: handleCreate,
+                    }
+                  : undefined
+              }
+              emptyExtra={
+                hasSearch && suppliers.length === 0 ? (
+                  <EmptyState
+                    variant="inline"
+                    description={t('suppliers.noSearchResultsDescription', 'Try adjusting your search.')}
+                  />
+                ) : undefined
+              }
+              renderCard={(supplier) => (
+                <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <h3 className="text-sm font-medium text-gray-900 dark:text-white">{supplier.name}</h3>
+                      <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                        {supplier.contact_person || '-'}
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEdit(supplier)}
+                        className="text-slate-700 dark:text-slate-100"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => handleDelete(supplier)}>
+                        <Trash2 className="w-4 h-4 text-red-600" />
+                      </Button>
+                    </div>
+                  </div>
 
-              <div className="mt-4 grid gap-2 text-sm text-gray-600 dark:text-gray-400">
-                <div className="flex justify-between gap-3">
-                  <span className="font-medium text-gray-900 dark:text-white">{t('suppliers.email')}</span>
-                  <span>{supplier.email || '-'}</span>
+                  <div className="mt-4 grid gap-2 text-sm text-gray-600 dark:text-gray-400">
+                    <div className="flex justify-between gap-3">
+                      <span className="font-medium text-gray-900 dark:text-white">{t('suppliers.email')}</span>
+                      <span>{supplier.email || '-'}</span>
+                    </div>
+                    <div className="flex justify-between gap-3">
+                      <span className="font-medium text-gray-900 dark:text-white">{t('suppliers.phone')}</span>
+                      <span>{supplier.phone || '-'}</span>
+                    </div>
+                    <div className="flex justify-between gap-3">
+                      <span className="font-medium text-gray-900 dark:text-white">{t('suppliers.city')}</span>
+                      <span>{supplier.city || '-'}</span>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex justify-between gap-3">
-                  <span className="font-medium text-gray-900 dark:text-white">{t('suppliers.phone')}</span>
-                  <span>{supplier.phone || '-'}</span>
-                </div>
-                <div className="flex justify-between gap-3">
-                  <span className="font-medium text-gray-900 dark:text-white">{t('suppliers.city')}</span>
-                  <span>{supplier.city || '-'}</span>
-                </div>
-              </div>
-            </div>
-          )}
-          renderTableHeader={
-            <tr>
-              <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                {t('suppliers.name')}
-              </TableHead>
-              <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                {t('suppliers.contact')}
-              </TableHead>
-              <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                {t('suppliers.email')}
-              </TableHead>
-              <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                {t('suppliers.phone')}
-              </TableHead>
-              <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                {t('suppliers.city')}
-              </TableHead>
-              <TableHead className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                {t('suppliers.actions')}
-              </TableHead>
-            </tr>
-          }
-          renderTable={(supplier) => (
-            <>
-              <TableCell className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">
-                {supplier.name}
-              </TableCell>
-              <TableCell className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
-                {supplier.contact_person || '-'}
-              </TableCell>
-              <TableCell className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
-                {supplier.email || '-'}
-              </TableCell>
-              <TableCell className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
-                {supplier.phone || '-'}
-              </TableCell>
-              <TableCell className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
-                {supplier.city || '-'}
-              </TableCell>
-              <TableCell className="px-4 py-3 text-sm text-right">
-                <div className="flex justify-end space-x-2">
-                  <Button variant="ghost" size="sm" onClick={() => handleEdit(supplier)}>
-                    <Pencil className="w-4 h-4" />
-                  </Button>
-                  <Button variant="ghost" size="sm" onClick={() => handleDelete(supplier)}>
-                    <Trash2 className="w-4 h-4 text-red-600" />
-                  </Button>
-                </div>
-              </TableCell>
-            </>
-          )}
-        />
+              )}
+              renderTableHeader={
+                <tr>
+                  <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    {t('suppliers.name')}
+                  </TableHead>
+                  <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    {t('suppliers.contact')}
+                  </TableHead>
+                  <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    {t('suppliers.email')}
+                  </TableHead>
+                  <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    {t('suppliers.phone')}
+                  </TableHead>
+                  <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    {t('suppliers.city')}
+                  </TableHead>
+                  <TableHead className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    {t('suppliers.actions')}
+                  </TableHead>
+                </tr>
+              }
+              renderTable={(supplier) => (
+                <>
+                  <TableCell className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">
+                    {supplier.name}
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
+                    {supplier.contact_person || '-'}
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
+                    {supplier.email || '-'}
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
+                    {supplier.phone || '-'}
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
+                    {supplier.city || '-'}
+                  </TableCell>
+                  <TableCell className="px-4 py-3 text-sm text-right">
+                    <div className="flex justify-end space-x-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEdit(supplier)}
+                        className="text-slate-700 dark:text-slate-100"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => handleDelete(supplier)}>
+                        <Trash2 className="w-4 h-4 text-red-600" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </>
+              )}
+            />
+            <DataTablePagination
+              page={tableState.page}
+              pageSize={tableState.pageSize}
+              totalItems={totalItems}
+              totalPages={totalPages}
+              onPageChange={tableState.setPage}
+              onPageSizeChange={tableState.setPageSize}
+            />
+          </>
+        </>
       )}
 
       {/* Form Dialog */}
@@ -577,7 +589,7 @@ export default function SupplierManagement() {
                 onClick={() => setShowForm(false)}
                 disabled={isSubmitting}
               >
-                {t('app.cancel')}
+                {tCommon('app.cancel')}
               </Button>
               <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting ? (
@@ -607,7 +619,7 @@ export default function SupplierManagement() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>{t('app.cancel')}</AlertDialogCancel>
+            <AlertDialogCancel>{tCommon('app.cancel')}</AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmDelete}
               className="bg-red-600 hover:bg-red-700 text-white"

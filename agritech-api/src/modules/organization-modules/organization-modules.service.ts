@@ -5,20 +5,31 @@ import {
   isFormulaAtLeast,
   normalizeFormula,
 } from '../subscriptions/subscription-domain';
+import { ModuleConfigService } from '../module-config/module-config.service';
+import { ModuleConfigResponseDto } from '../module-config/dto/module-config.dto';
 
 @Injectable()
 export class OrganizationModulesService {
   private readonly logger = new Logger(OrganizationModulesService.name);
 
-  constructor(private readonly databaseService: DatabaseService) {}
+  constructor(
+    private readonly databaseService: DatabaseService,
+    private readonly moduleConfigService: ModuleConfigService,
+  ) {}
 
   /**
-   * Get all modules with activation status for an organization
+   * Get the full module config (catalog metadata + pricing + widget map)
+   * enriched with per-organization activation state. Single source of truth
+   * for authenticated UI — replaces the public /module-config endpoint for
+   * org-scoped consumers.
    */
-  async getOrganizationModules(userId: string, organizationId: string) {
+  async getOrganizationModules(
+    userId: string,
+    organizationId: string,
+    locale: string = 'en',
+  ): Promise<ModuleConfigResponseDto> {
     const client = this.databaseService.getAdminClient();
 
-    // Verify user has access to this organization
     const { data: orgUser, error: orgError } = await client
       .from('organization_users')
       .select('organization_id')
@@ -31,20 +42,8 @@ export class OrganizationModulesService {
       throw new ForbiddenException('You do not have access to this organization');
     }
 
-    // Get all available modules
-    const { data: allModules, error: modulesError } = await client
-      .from('modules')
-      .select('id, name, icon, category, description, required_plan')
-      .eq('is_available', true)
-      .order('category')
-      .order('name');
+    const baseConfig = await this.moduleConfigService.getModuleConfig(locale);
 
-    if (modulesError) {
-      this.logger.error(`Failed to fetch modules: ${modulesError.message}`);
-      throw new InternalServerErrorException('Failed to fetch modules');
-    }
-
-    // Get organization's module activations
     const { data: orgModules, error: orgModulesError } = await client
       .from('organization_modules')
       .select('module_id, is_active, settings')
@@ -55,27 +54,24 @@ export class OrganizationModulesService {
       throw new InternalServerErrorException('Failed to fetch organization modules');
     }
 
-    // Create a map of module_id -> activation status
-    const activationMap = new Map(
-      (orgModules || []).map((om: any) => [om.module_id, { is_active: om.is_active, settings: om.settings }])
+    const activationMap = new Map<string, { is_active: boolean; settings: Record<string, unknown> }>(
+      (orgModules || []).map((om: any) => [
+        om.module_id,
+        { is_active: !!om.is_active, settings: (om.settings as Record<string, unknown>) || {} },
+      ]),
     );
 
-    // Transform the response to include activation status
-    const transformedModules = (allModules || []).map((module: any) => {
-      const activation = activationMap.get(module.id);
-      return {
-        id: module.id,
-        name: module.name,
-        icon: module.icon,
-        category: module.category,
-        description: module.description,
-        required_plan: module.required_plan,
-        is_active: activation?.is_active || false,
-        settings: activation?.settings || {},
-      };
-    });
-
-    return transformedModules;
+    return {
+      ...baseConfig,
+      modules: baseConfig.modules.map((m) => {
+        const activation = activationMap.get(m.id);
+        return {
+          ...m,
+          isActive: activation?.is_active ?? m.isRequired ?? false,
+          settings: activation?.settings ?? {},
+        };
+      }),
+    };
   }
 
   /**
@@ -108,20 +104,29 @@ export class OrganizationModulesService {
     // Role is returned as array by Supabase foreign key join
     const role = Array.isArray(orgUser.role) ? orgUser.role[0] : orgUser.role;
     const roleName = role?.name;
-    if (roleName !== 'system_admin' && roleName !== 'organization_admin') {
-      throw new ForbiddenException('You do not have permission to update modules');
+    if (roleName !== 'system_admin') {
+      throw new ForbiddenException(
+        'Module activation is managed by system administrators. Please contact sales to enable additional modules.',
+      );
     }
 
     // Verify module exists and get full details
     const { data: module, error: moduleError } = await client
       .from('modules')
-      .select('id, name, icon, category, description, required_plan')
+      .select('id, slug, name, icon, category, description, required_plan, is_required')
       .eq('id', moduleId)
       .eq('is_available', true)
       .maybeSingle();
 
     if (moduleError || !module) {
       throw new NotFoundException('Module not found');
+    }
+
+    // Block deactivation of required modules (e.g. core)
+    if (updateDto.is_active === false && module.is_required) {
+      throw new ForbiddenException(
+        `Module '${module.slug}' is required and cannot be deactivated.`,
+      );
     }
 
     // If trying to activate a premium module, check subscription
@@ -171,11 +176,13 @@ export class OrganizationModulesService {
 
     return {
       id: module.id,
+      slug: module.slug,
       name: module.name || '',
       icon: module.icon || '',
       category: module.category || '',
       description: module.description || '',
       required_plan: module.required_plan,
+      is_required: module.is_required || false,
       is_active: upsertedModule.is_active,
       settings: upsertedModule.settings,
     };

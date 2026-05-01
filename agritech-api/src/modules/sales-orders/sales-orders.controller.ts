@@ -22,7 +22,9 @@ import {
   ApiQuery,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RequireModule } from '../../common/decorators/require-module.decorator';
 import { OrganizationGuard } from '../../common/guards/organization.guard';
+import { ModuleEntitlementGuard } from '../../common/guards/module-entitlement.guard';
 import { SalesOrdersService } from './sales-orders.service';
 import {
   CreateSalesOrderDto,
@@ -35,7 +37,8 @@ import {
 @ApiTags('sales-orders')
 @ApiBearerAuth()
 @Controller('sales-orders')
-@UseGuards(JwtAuthGuard, OrganizationGuard)
+@RequireModule('sales_purchasing')
+@UseGuards(JwtAuthGuard, OrganizationGuard, ModuleEntitlementGuard)
 export class SalesOrdersController {
   constructor(private readonly salesOrdersService: SalesOrdersService) {}
 

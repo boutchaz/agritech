@@ -19,6 +19,7 @@ import { Button } from '@/components/ui/button';
 import { FilterBar, ListPageLayout, ResponsiveList } from '@/components/ui/data-table';
 import { TableCell, TableHead, TableRow } from '@/components/ui/table';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { useTranslation } from 'react-i18next';
 
 interface TreeManagementProps {
   onDataChange?: () => void;
@@ -44,6 +45,7 @@ interface PlantationTypeItem {
 
 const TreeManagement = ({ onDataChange }: TreeManagementProps) => {
   const { currentOrganization } = useAuth();
+  const { t } = useTranslation();
 
   // Use the hooks to fetch data from the backend
   const {
@@ -164,18 +166,18 @@ const TreeManagement = ({ onDataChange }: TreeManagementProps) => {
         setNewCategoryName("");
         onDataChange?.();
       } catch (error: unknown) {
-        toast.error("Error adding category: " + (error instanceof Error ? error.message : 'Unknown error'));
+        toast.error(`${t('treeManagement.errors.addCategory', 'Error adding category')}: ${error instanceof Error ? error.message : t('treeManagement.errors.unknown', 'Unknown error')}`);
       }
     }
   };
 
   const handleDeleteCategory = (categoryId: string) => {
-    showConfirm("Êtes-vous sûr de vouloir supprimer cette catégorie?", async () => {
+    showConfirm(t('treeManagement.confirm.deleteCategory', 'Are you sure you want to delete this category?'), async () => {
       try {
         await deleteCategory(categoryId);
         onDataChange?.();
       } catch (error: unknown) {
-        toast.error("Error deleting category: " + (error instanceof Error ? error.message : 'Unknown error'));
+        toast.error(`${t('treeManagement.errors.deleteCategory', 'Error deleting category')}: ${error instanceof Error ? error.message : t('treeManagement.errors.unknown', 'Unknown error')}`);
       }
     }, {variant: "destructive"});
   };
@@ -194,7 +196,7 @@ const TreeManagement = ({ onDataChange }: TreeManagementProps) => {
       setEditingCategory(null);
       onDataChange?.();
     } catch (error: unknown) {
-      toast.error("Error updating category: " + (error instanceof Error ? error.message : 'Unknown error'));
+      toast.error(`${t('treeManagement.errors.updateCategory', 'Error updating category')}: ${error instanceof Error ? error.message : t('treeManagement.errors.unknown', 'Unknown error')}`);
     }
   };
 
@@ -205,7 +207,7 @@ const TreeManagement = ({ onDataChange }: TreeManagementProps) => {
         setNewTreeName("");
         onDataChange?.();
       } catch (error: unknown) {
-        toast.error("Error adding tree: " + (error instanceof Error ? error.message : 'Unknown error'));
+        toast.error(`${t('treeManagement.errors.addTree', 'Error adding tree')}: ${error instanceof Error ? error.message : t('treeManagement.errors.unknown', 'Unknown error')}`);
       }
     }
   };
@@ -215,7 +217,7 @@ const TreeManagement = ({ onDataChange }: TreeManagementProps) => {
       await deleteTree(treeId);
       onDataChange?.();
     } catch (error: unknown) {
-      toast.error("Error deleting tree: " + (error instanceof Error ? error.message : 'Unknown error'));
+      toast.error(`${t('treeManagement.errors.deleteTree', 'Error deleting tree')}: ${error instanceof Error ? error.message : t('treeManagement.errors.unknown', 'Unknown error')}`);
     }
   };
 
@@ -234,7 +236,7 @@ const TreeManagement = ({ onDataChange }: TreeManagementProps) => {
       setEditingTree(null);
       onDataChange?.();
     } catch (error: unknown) {
-      toast.error("Error updating tree: " + (error instanceof Error ? error.message : 'Unknown error'));
+      toast.error(`${t('treeManagement.errors.updateTree', 'Error updating tree')}: ${error instanceof Error ? error.message : t('treeManagement.errors.unknown', 'Unknown error')}`);
     }
   };
 
@@ -250,18 +252,18 @@ const TreeManagement = ({ onDataChange }: TreeManagementProps) => {
         setNewPlantationType({ type: "", spacing: "", treesPerHa: 0 });
         onDataChange?.();
       } catch (error: unknown) {
-        toast.error("Error adding plantation type: " + (error instanceof Error ? error.message : 'Unknown error'));
+        toast.error(`${t('treeManagement.errors.addPlantationType', 'Error adding plantation type')}: ${error instanceof Error ? error.message : t('treeManagement.errors.unknown', 'Unknown error')}`);
       }
     }
   };
 
   const handleDeletePlantationType = (id: string) => {
-    showConfirm("Êtes-vous sûr de vouloir supprimer ce type de plantation?", async () => {
+    showConfirm(t('treeManagement.confirm.deletePlantationType', 'Are you sure you want to delete this plantation type?'), async () => {
       try {
         await deletePlantationType(id);
         onDataChange?.();
       } catch (error: unknown) {
-        toast.error("Error deleting plantation type: " + (error instanceof Error ? error.message : 'Unknown error'));
+        toast.error(`${t('treeManagement.errors.deletePlantationType', 'Error deleting plantation type')}: ${error instanceof Error ? error.message : t('treeManagement.errors.unknown', 'Unknown error')}`);
       }
     }, {variant: "destructive"});
   };
@@ -289,7 +291,7 @@ const TreeManagement = ({ onDataChange }: TreeManagementProps) => {
       setEditingPlantation(null);
       onDataChange?.();
     } catch (error: unknown) {
-      toast.error("Error updating plantation type: " + (error instanceof Error ? error.message : 'Unknown error'));
+      toast.error(`${t('treeManagement.errors.updatePlantationType', 'Error updating plantation type')}: ${error instanceof Error ? error.message : t('treeManagement.errors.unknown', 'Unknown error')}`);
     }
   };
 
@@ -298,7 +300,7 @@ const TreeManagement = ({ onDataChange }: TreeManagementProps) => {
     return (
       <div className="flex items-center justify-center py-12 text-red-600">
         <AlertCircle className="h-6 w-6 mr-2" />
-        <span>Erreur: {categoriesError || plantationError}</span>
+          <span>{t('treeManagement.errorState', 'Error')}: {categoriesError || plantationError}</span>
       </div>
     );
   }
@@ -333,13 +335,13 @@ const TreeManagement = ({ onDataChange }: TreeManagementProps) => {
 
   const treeEmptyAction = treeSearchTerm
     ? {
-        label: "Effacer la recherche",
+        label: t('treeManagement.actions.clearSearch', 'Clear search'),
         onClick: () => setTreeSearchTerm(""),
         variant: "outline" as const,
       }
     : newCategoryName.trim()
       ? {
-          label: "Ajouter cette catégorie",
+          label: t('treeManagement.actions.addThisCategory', 'Add this category'),
           onClick: handleAddCategory,
           variant: "default" as const,
         }
@@ -347,13 +349,13 @@ const TreeManagement = ({ onDataChange }: TreeManagementProps) => {
 
   const plantationEmptyAction = plantationSearchTerm
     ? {
-        label: "Effacer la recherche",
+        label: t('treeManagement.actions.clearSearch', 'Clear search'),
         onClick: () => setPlantationSearchTerm(""),
         variant: "outline" as const,
       }
     : newPlantationType.type.trim() && newPlantationType.spacing.trim()
       ? {
-          label: "Ajouter ce type",
+          label: t('treeManagement.actions.addThisType', 'Add this type'),
           onClick: handleAddPlantationType,
           variant: "default" as const,
         }
@@ -390,7 +392,7 @@ const TreeManagement = ({ onDataChange }: TreeManagementProps) => {
                 {category.category}
               </h3>
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                {category.trees.length} arbre{category.trees.length > 1 ? 's' : ''}
+                {t('treeManagement.treeCount', '{{count}} tree', { count: category.trees.length, defaultValue_plural: '{{count}} trees' })}
               </p>
             </div>
             <div className="flex items-center space-x-2">
@@ -418,7 +420,7 @@ const TreeManagement = ({ onDataChange }: TreeManagementProps) => {
             value={newTreeName}
             onChange={(e) => setNewTreeName(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleAddTree(category.id)}
-            placeholder="Ajouter un arbre..."
+            placeholder={t('treeManagement.placeholders.addTree', 'Add a tree...')}
             className="flex-1 px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
           />
           <Button
@@ -497,7 +499,7 @@ const TreeManagement = ({ onDataChange }: TreeManagementProps) => {
           <div>
             <div className="font-semibold">{category.category}</div>
             <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-              {category.trees.length} arbre{category.trees.length > 1 ? 's' : ''}
+              {t('treeManagement.treeCount', '{{count}} tree', { count: category.trees.length, defaultValue_plural: '{{count}} trees' })}
             </div>
           </div>
         )}
@@ -510,7 +512,7 @@ const TreeManagement = ({ onDataChange }: TreeManagementProps) => {
               value={newTreeName}
               onChange={(e) => setNewTreeName(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleAddTree(category.id)}
-              placeholder="Ajouter un arbre..."
+              placeholder={t('treeManagement.placeholders.addTree', 'Add a tree...')}
               className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             />
             <Button
@@ -615,7 +617,7 @@ const TreeManagement = ({ onDataChange }: TreeManagementProps) => {
         <div className="space-y-3">
           <div>
             <label htmlFor={`plantation-type-${plantation.id}`} className="text-xs text-gray-500 dark:text-gray-400">
-              Type
+              {t('treeManagement.fields.type', 'Type')}
             </label>
             <input
               id={`plantation-type-${plantation.id}`}
@@ -632,7 +634,7 @@ const TreeManagement = ({ onDataChange }: TreeManagementProps) => {
           </div>
           <div>
             <label htmlFor={`plantation-spacing-${plantation.id}`} className="text-xs text-gray-500 dark:text-gray-400">
-              Espacement
+              {t('treeManagement.fields.spacing', 'Spacing')}
             </label>
             <input
               id={`plantation-spacing-${plantation.id}`}
@@ -649,7 +651,7 @@ const TreeManagement = ({ onDataChange }: TreeManagementProps) => {
           </div>
           <div>
             <label htmlFor={`plantation-trees-${plantation.id}`} className="text-xs text-gray-500 dark:text-gray-400">
-              Arbres/ha
+              {t('treeManagement.fields.treesPerHa', 'Trees/ha')}
             </label>
             <input
               id={`plantation-trees-${plantation.id}`}
@@ -702,13 +704,13 @@ const TreeManagement = ({ onDataChange }: TreeManagementProps) => {
           </div>
           <div className="grid grid-cols-2 gap-2 text-sm">
             <div>
-              <span className="text-gray-500 dark:text-gray-400">Espacement:</span>
+              <span className="text-gray-500 dark:text-gray-400">{t('treeManagement.fields.spacingLabel', 'Spacing:')}</span>
               <span className="ml-2 text-gray-900 dark:text-white font-medium">
                 {plantation.spacing}
               </span>
             </div>
             <div>
-              <span className="text-gray-500 dark:text-gray-400">Arbres/ha:</span>
+              <span className="text-gray-500 dark:text-gray-400">{t('treeManagement.fields.treesPerHaLabel', 'Trees/ha:')}</span>
               <span className="ml-2 text-gray-900 dark:text-white font-medium">
                 {plantation.trees_per_ha}
               </span>
@@ -820,7 +822,7 @@ const TreeManagement = ({ onDataChange }: TreeManagementProps) => {
           }`}
         >
           <TreeDeciduous className="inline h-4 w-4 mr-2" />
-          Types d'arbres
+          {t('treeManagement.tabs.trees', 'Tree types')}
         </Button>
         <Button
           onClick={() => setActiveTab("plantations")}
@@ -831,7 +833,7 @@ const TreeManagement = ({ onDataChange }: TreeManagementProps) => {
           }`}
         >
           <Sprout className="inline h-4 w-4 mr-2" />
-          Types de plantation
+          {t('treeManagement.tabs.plantations', 'Plantation types')}
         </Button>
       </div>
 
@@ -845,10 +847,10 @@ const TreeManagement = ({ onDataChange }: TreeManagementProps) => {
               </div>
               <div>
                 <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                  Types d'arbres
+                  {t('treeManagement.headers.treesTitle', 'Tree types')}
                 </h2>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Gérez les catégories et les arbres disponibles.
+                  {t('treeManagement.headers.treesSubtitle', 'Manage categories and available trees.')}
                 </p>
               </div>
             </div>
@@ -857,7 +859,7 @@ const TreeManagement = ({ onDataChange }: TreeManagementProps) => {
             <FilterBar
               searchValue={treeSearchTerm}
               onSearchChange={setTreeSearchTerm}
-              searchPlaceholder="Rechercher une catégorie ou un arbre..."
+               searchPlaceholder={t('treeManagement.placeholders.searchTrees', 'Search for a category or tree...')}
               onClear={() => setTreeSearchTerm("")}
             />
           }
@@ -869,12 +871,12 @@ const TreeManagement = ({ onDataChange }: TreeManagementProps) => {
                 value={newCategoryName}
                 onChange={(e) => setNewCategoryName(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleAddCategory()}
-                placeholder="Nouvelle catégorie..."
+                placeholder={t('treeManagement.placeholders.newCategory', 'New category...')}
                 className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               />
               <Button variant="green" onClick={handleAddCategory} className="px-4 py-2 rounded-lg transition-colors flex items-center space-x-2" >
                 <Plus className="h-4 w-4" />
-                <span>Ajouter catégorie</span>
+                <span>{t('treeManagement.actions.addCategory', 'Add category')}</span>
               </Button>
             </div>
 
@@ -887,22 +889,22 @@ const TreeManagement = ({ onDataChange }: TreeManagementProps) => {
               renderTableHeader={
                 <TableRow>
                   <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Catégorie
+                    {t('treeManagement.columns.category', 'Category')}
                   </TableHead>
                   <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Arbres
+                    {t('treeManagement.columns.trees', 'Trees')}
                   </TableHead>
                   <TableHead className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Actions
+                    {t('treeManagement.columns.actions', 'Actions')}
                   </TableHead>
                 </TableRow>
               }
               emptyIcon={TreeDeciduous}
-              emptyTitle={treeSearchTerm ? "Aucun résultat" : "Aucune catégorie"}
+              emptyTitle={treeSearchTerm ? t('treeManagement.empty.noResults', 'No results') : t('treeManagement.empty.noCategories', 'No categories')}
               emptyMessage={
                 treeSearchTerm
-                  ? "Aucune catégorie ni aucun arbre ne correspond à votre recherche."
-                  : "Ajoutez votre première catégorie d'arbres pour commencer."
+                  ? t('treeManagement.empty.noTreeMatches', 'No category or tree matches your search.')
+                  : t('treeManagement.empty.addFirstCategory', 'Add your first tree category to get started.')
               }
               emptyAction={treeEmptyAction}
             />
@@ -920,10 +922,10 @@ const TreeManagement = ({ onDataChange }: TreeManagementProps) => {
               </div>
               <div>
                 <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                  Types de plantation
+                  {t('treeManagement.headers.plantationsTitle', 'Plantation types')}
                 </h2>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Gérez les densités et espacements de plantation.
+                  {t('treeManagement.headers.plantationsSubtitle', 'Manage plantation densities and spacing.')}
                 </p>
               </div>
             </div>
@@ -932,7 +934,7 @@ const TreeManagement = ({ onDataChange }: TreeManagementProps) => {
             <FilterBar
               searchValue={plantationSearchTerm}
               onSearchChange={setPlantationSearchTerm}
-              searchPlaceholder="Rechercher un type, un espacement ou une densité..."
+               searchPlaceholder={t('treeManagement.placeholders.searchPlantations', 'Search for a type, spacing, or density...')}
               onClear={() => setPlantationSearchTerm("")}
             />
           }
@@ -940,7 +942,7 @@ const TreeManagement = ({ onDataChange }: TreeManagementProps) => {
           <div className="space-y-4">
             <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-700">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
-                Ajouter un type de plantation
+                {t('treeManagement.headers.addPlantationType', 'Add a plantation type')}
               </h3>
               <div className="grid grid-cols-1 lg:grid-cols-4 gap-3">
                 <input
@@ -952,7 +954,7 @@ const TreeManagement = ({ onDataChange }: TreeManagementProps) => {
                       type: e.target.value,
                     })
                   }
-                  placeholder="Type (ex: Super intensif)"
+                  placeholder={t('treeManagement.placeholders.plantationType', 'Type (e.g. Super intensive)')}
                   className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                 />
                 <input
@@ -964,7 +966,7 @@ const TreeManagement = ({ onDataChange }: TreeManagementProps) => {
                       spacing: e.target.value,
                     })
                   }
-                  placeholder="Espacement (ex: 4x1,5)"
+                  placeholder={t('treeManagement.placeholders.plantationSpacing', 'Spacing (e.g. 4x1.5)')}
                   className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                 />
                 <input
@@ -976,12 +978,12 @@ const TreeManagement = ({ onDataChange }: TreeManagementProps) => {
                       treesPerHa: parseInt(e.target.value) || 0,
                     })
                   }
-                  placeholder="Arbres/ha"
+                  placeholder={t('treeManagement.placeholders.plantationTreesPerHa', 'Trees/ha')}
                   className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                 />
                 <Button variant="green" onClick={handleAddPlantationType} className="px-4 py-2 rounded-lg transition-colors flex items-center justify-center space-x-2" >
                   <Plus className="h-4 w-4" />
-                  <span>Ajouter</span>
+                  <span>{t('treeManagement.actions.add', 'Add')}</span>
                 </Button>
               </div>
             </div>
@@ -995,25 +997,25 @@ const TreeManagement = ({ onDataChange }: TreeManagementProps) => {
               renderTableHeader={
                 <TableRow>
                   <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Type
+                    {t('treeManagement.columns.type', 'Type')}
                   </TableHead>
                   <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Espacement
+                    {t('treeManagement.columns.spacing', 'Spacing')}
                   </TableHead>
                   <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Arbres/ha
+                    {t('treeManagement.columns.treesPerHa', 'Trees/ha')}
                   </TableHead>
                   <TableHead className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Actions
+                    {t('treeManagement.columns.actions', 'Actions')}
                   </TableHead>
                 </TableRow>
               }
               emptyIcon={Sprout}
-              emptyTitle={plantationSearchTerm ? "Aucun résultat" : "Aucun type de plantation"}
+              emptyTitle={plantationSearchTerm ? t('treeManagement.empty.noResults', 'No results') : t('treeManagement.empty.noPlantationTypes', 'No plantation types')}
               emptyMessage={
                 plantationSearchTerm
-                  ? "Aucun type de plantation ne correspond à votre recherche."
-                  : "Ajoutez votre premier type de plantation pour commencer."
+                  ? t('treeManagement.empty.noPlantationMatches', 'No plantation type matches your search.')
+                  : t('treeManagement.empty.addFirstPlantationType', 'Add your first plantation type to get started.')
               }
               emptyAction={plantationEmptyAction}
             />

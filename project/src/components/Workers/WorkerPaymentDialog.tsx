@@ -182,7 +182,7 @@ const WorkerPaymentDialog = ({
       setError(
         t(
           "dialogs.workerPayment.noChartOfAccountsBlocking",
-          "Aucun plan comptable n'est configuré. Veuillez configurer le plan comptable avant de créer un paiement.",
+          t('common.noChartOfAccountsConfigured'),
         ),
       );
       return;

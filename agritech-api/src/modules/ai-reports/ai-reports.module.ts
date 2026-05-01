@@ -10,6 +10,7 @@ import { ZaiProvider } from './providers/zai.provider';
 import { DatabaseModule } from '../database/database.module';
 import { OrganizationAISettingsModule } from '../organization-ai-settings/organization-ai-settings.module';
 import { ChatModule } from '../chat/chat.module';
+import { AgronomyRagModule } from '../agronomy-rag/agronomy-rag.module';
 
 @Module({
   imports: [
@@ -17,7 +18,8 @@ import { ChatModule } from '../chat/chat.module';
     DatabaseModule,
     ConfigModule,
     forwardRef(() => OrganizationAISettingsModule),
-    forwardRef(() => ChatModule), // forwardRef to break circular: ChatModule → CalibrationModule → AIReportsModule → ChatModule
+    forwardRef(() => ChatModule),
+    AgronomyRagModule,
   ],
   controllers: [AIReportsController],
   providers: [AIReportsService, OpenAIProvider, GeminiProvider, GroqProvider, ZaiProvider],

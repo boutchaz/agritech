@@ -1,14 +1,14 @@
-
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useStockEntry } from '@/hooks/useStockEntries';
 import { useCurrency } from '@/hooks/useCurrency';
+import { DataTablePagination } from '@/components/ui/data-table';
 import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import {
   Table,
@@ -18,8 +18,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Loader2, Package, Warehouse, Calendar, FileText, User } from 'lucide-react';
-import type { StockEntry } from '@/types/stock-entries';
+import { Loader2, Package, Warehouse, Calendar, FileText } from 'lucide-react';
 import { STOCK_ENTRY_TYPES, STOCK_ENTRY_STATUS_COLORS } from '@/types/stock-entries';
 
 interface StockEntryDetailProps {
@@ -32,6 +31,8 @@ export default function StockEntryDetail({ entryId, open, onOpenChange }: StockE
   const { t } = useTranslation('stock');
   const { data: entry, isLoading } = useStockEntry(entryId);
   const { format: formatCurrency } = useCurrency();
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   if (!open) return null;
 
@@ -64,6 +65,9 @@ export default function StockEntryDetail({ entryId, open, onOpenChange }: StockE
 
   const typeConfig = STOCK_ENTRY_TYPES[entry.entry_type];
   const totalCost = entry.items?.reduce((sum, item) => sum + (item.quantity * (item.cost_per_unit || 0)), 0) || 0;
+  const totalItems = entry.items?.length ?? 0;
+  const totalPages = Math.ceil(totalItems / pageSize);
+  const paginatedItems = entry.items?.slice((page - 1) * pageSize, page * pageSize) ?? [];
 
   return (
     <ResponsiveDialog
@@ -185,17 +189,12 @@ export default function StockEntryDetail({ entryId, open, onOpenChange }: StockE
                 </TableHeader>
                 <TableBody>
                   {entry.items && entry.items.length > 0 ? (
-                    entry.items.map((item, index) => (
+                    paginatedItems.map((item, index) => (
                       <TableRow key={item.id}>
-                        <TableCell className="font-medium">{index + 1}</TableCell>
+                        <TableCell className="font-medium">{(page - 1) * pageSize + index + 1}</TableCell>
                         <TableCell>
                           <div>
                             <p className="font-medium">{item.item_name}</p>
-                            {item.item?.item_code && (
-                              <p className="text-xs text-gray-500">
-                                {t('stockEntries.detail.code')}: {item.item.item_code}
-                              </p>
-                            )}
                             {item.variant?.variant_name && (
                               <p className="text-xs text-gray-500">
                                 {t('stockEntries.detail.variant', 'Variant')}: {item.variant.variant_name}
@@ -235,6 +234,21 @@ export default function StockEntryDetail({ entryId, open, onOpenChange }: StockE
                   )}
                 </TableBody>
               </Table>
+              {totalItems > 0 ? (
+                <div className="border-t px-4">
+                  <DataTablePagination
+                    page={page}
+                    totalPages={totalPages}
+                    pageSize={pageSize}
+                    totalItems={totalItems}
+                    onPageChange={setPage}
+                    onPageSizeChange={(size) => {
+                      setPageSize(size);
+                      setPage(1);
+                    }}
+                  />
+                </div>
+              ) : null}
             </div>
 
             {/* Total */}

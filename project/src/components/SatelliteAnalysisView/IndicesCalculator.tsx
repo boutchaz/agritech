@@ -1,6 +1,7 @@
 import {  useState, useEffect, useCallback  } from "react";
 import { AlertCircle, Satellite, Download, Database, RefreshCw, Calculator, Calendar, Layers, Activity, Zap, Info, Check } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import {
   satelliteApi,
   VegetationIndexType,
@@ -45,6 +46,7 @@ const IndicesCalculator = ({
 }: IndicesCalculatorProps) => {
   const CLOUD_COVERAGE_FIXED = 10;
   const { currentOrganization } = useAuth();
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const organizationId = currentOrganization?.id;
 
@@ -149,7 +151,7 @@ const IndicesCalculator = ({
 
   const handleCalculate = async () => {
     if (!boundary || !startDate || !endDate || selectedIndices.length === 0 || !organizationId) {
-      setError('Veuillez sélectionner une plage de dates et au moins un indice de végétation');
+      setError(t('satelliteAnalysisView.indicesCalculator.selectDateRangeAndIndices'));
       return;
     }
 
@@ -178,7 +180,7 @@ const IndicesCalculator = ({
     threeYearsAgo.setFullYear(threeYearsAgo.getFullYear() - 3);
 
     if (start < threeYearsAgo) {
-      setError('La date de début est trop ancienne. Veuillez sélectionner une date dans les 3 dernières années.');
+      setError(t('satelliteAnalysisView.indicesCalculator.startDateTooOld'));
       return;
     }
 

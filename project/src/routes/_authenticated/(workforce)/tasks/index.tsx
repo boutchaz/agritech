@@ -18,7 +18,9 @@ function TasksListPage() {
   const search = Route.useSearch() as { editTaskId?: string };
   useEffect(() => {
     if (search.editTaskId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSelectedTaskId(search.editTaskId);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setShowTaskForm(true);
     }
   }, [search.editTaskId]);

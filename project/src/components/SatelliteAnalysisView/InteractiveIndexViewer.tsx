@@ -412,8 +412,11 @@ const InteractiveIndexViewer = ({
         }
       }
     } catch (err) {
+      const detail = (err as Error & { detail?: { code?: string } })?.detail;
       const errorMessage = err instanceof Error ? err.message : t('satellite:heatmap.warnings.failedToGenerate');
-      if (errorMessage.includes('No images found')) {
+      if (detail?.code === 'no_satellite_imagery') {
+        setError(t('satellite:heatmap.warnings.noImagesForDate', { date: selectedDate }));
+      } else if (errorMessage.includes('No images found')) {
         setError(t('satellite:heatmap.warnings.noImagesForDate', { date: selectedDate }));
       } else if (errorMessage.includes('cloud coverage')) {
         setError(t('satellite:heatmap.warnings.cloudCoverageError'));
@@ -429,7 +432,7 @@ const InteractiveIndexViewer = ({
     const colors: Record<VegetationIndexType, string> = {
       NDVI: '#22c55e', NDRE: '#10b981', NDMI: '#3b82f6', MNDWI: '#06b6d4',
       GCI: '#84cc16', SAVI: '#eab308', OSAVI: '#f59e0b', MSAVI2: '#f97316',
-      NIRv: '#ef4444', EVI: '#0ea5e9', MSI: '#8b5cf6', MCARI: '#ec4899', TCARI: '#f43f5e'
+      NIRv: '#ef4444', EVI: '#0ea5e9', EBI: '#fb7185', MSI: '#8b5cf6', MCARI: '#ec4899', TCARI: '#f43f5e'
     };
     return colors[index] || '#64748b';
   };
@@ -515,28 +518,35 @@ const InteractiveIndexViewer = ({
         {/* Sidebar: Configuration */}
         <div className="lg:col-span-4 space-y-6">
           {/* View Mode Selection */}
-          <Card className="border-slate-200 shadow-sm overflow-hidden">
-            <CardHeader className="bg-slate-50 border-b border-slate-200 p-4 py-3">
-              <CardTitle className="text-xs font-bold text-slate-600 uppercase tracking-widest flex items-center gap-2">
+          <Card className="overflow-hidden border-slate-200 shadow-sm dark:border-slate-700/80 dark:bg-slate-900/90">
+            <CardHeader className="border-b border-slate-200 bg-slate-50 p-4 py-3 dark:border-slate-700/80 dark:bg-slate-800/80">
+              <CardTitle className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-slate-600 dark:text-slate-100">
                 <LayoutGrid className="w-3.5 h-3.5" />
                 {t('satellite:heatmap.labels.visualizationType')}
               </CardTitle>
             </CardHeader>
-            <CardContent className="p-2">
-              <div className="grid grid-cols-2 gap-1.5">
+            <CardContent className="p-2 dark:bg-slate-950/40">
+              <div className="grid grid-cols-2 gap-1.5 rounded-xl bg-slate-100/80 p-1.5 dark:bg-slate-900/70">
                 {viewModes.map((mode) => (
                   <button
                     type="button"
                     key={mode.id}
                     onClick={() => setViewMode(mode.id)}
                     className={cn(
-                      "flex flex-col items-center justify-center p-3 rounded-lg border transition-all gap-1.5",
+                      "flex flex-col items-center justify-center gap-1.5 rounded-xl border p-3 transition-all duration-200",
                       viewMode === mode.id 
-                        ? "bg-emerald-50 border-emerald-200 text-emerald-700 shadow-sm" 
-                        : "bg-white border-transparent text-slate-500 hover:bg-slate-50"
+                        ? "border-emerald-200 bg-emerald-50 text-emerald-700 shadow-sm shadow-emerald-100/80 dark:border-emerald-500/40 dark:bg-emerald-500/15 dark:text-emerald-300 dark:shadow-black/20"
+                        : "border-transparent bg-white text-slate-500 hover:border-slate-200 hover:bg-slate-50 hover:text-slate-700 dark:bg-slate-800/80 dark:text-slate-400 dark:hover:border-slate-600/70 dark:hover:bg-slate-800 dark:hover:text-slate-200"
                     )}
                   >
-                    <mode.icon className={cn("w-4 h-4", viewMode === mode.id ? "text-emerald-600" : "text-slate-400")} />
+                    <mode.icon
+                      className={cn(
+                        "w-4 h-4 transition-colors",
+                        viewMode === mode.id
+                          ? "text-emerald-600 dark:text-emerald-300"
+                          : "text-slate-400 dark:text-slate-500"
+                      )}
+                    />
                     <span className="text-[10px] font-bold uppercase tracking-tight">{mode.label}</span>
                   </button>
                 ))}
@@ -545,14 +555,14 @@ const InteractiveIndexViewer = ({
           </Card>
 
           {/* Data & Layer Configuration */}
-          <Card className="border-slate-200 shadow-sm">
-            <CardHeader className="p-4 py-3 border-b border-slate-100">
-              <CardTitle className="text-xs font-bold text-slate-600 uppercase tracking-widest flex items-center gap-2">
+          <Card className="border-slate-200 shadow-sm dark:border-slate-700/80 dark:bg-slate-900/90">
+            <CardHeader className="border-b border-slate-200 bg-slate-50 p-4 py-3 dark:border-slate-700/80 dark:bg-slate-800/80">
+              <CardTitle className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-slate-600 dark:text-slate-100">
                 <Settings2 className="w-3.5 h-3.5" />
                 {t('satellite:heatmap.configuration')}
               </CardTitle>
             </CardHeader>
-            <CardContent className="p-4 space-y-5">
+            <CardContent className="space-y-5 p-4 dark:bg-slate-950/30">
               {/* Common Configuration: Date & Base Layer */}
               <div className="space-y-4">
                 <div className="space-y-1.5">
@@ -1247,7 +1257,7 @@ function getDefaultPaletteForIndex(index: VegetationIndexType): ColorPalette {
   const paletteMap: Record<VegetationIndexType, ColorPalette> = {
     NDVI: 'red-green', NDRE: 'viridis', NDMI: 'blue-red', MNDWI: 'blue-red',
     GCI: 'terrain', SAVI: 'red-green', OSAVI: 'red-green', MSAVI2: 'red-green',
-    NIRv: 'red-green', EVI: 'viridis', MSI: 'blue-red', MCARI: 'viridis', TCARI: 'viridis'
+    NIRv: 'red-green', EVI: 'viridis', EBI: 'viridis', MSI: 'blue-red', MCARI: 'viridis', TCARI: 'viridis'
   };
   return paletteMap[index] || 'red-green';
 }

@@ -2,7 +2,9 @@ import { useOrganizationStore } from "../stores/organizationStore";
 import { useAuthStore } from "../stores/authStore";
 import { ErrorHandlers } from "./errors";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
+// Empty default → relative URLs (use Vite proxy in dev, same-origin in prod).
+// Set VITE_API_URL only when API is on a different domain in production.
+const API_URL = import.meta.env.VITE_API_URL ?? "";
 
 // Flag to prevent multiple redirects to login
 let isRedirectingToLogin = false;
@@ -203,6 +205,8 @@ export async function apiRequest<T>(
 
   const response = await fetchWithRetry(fullUrl, {
     ...options,
+    // Send httpOnly auth cookies on every request (cookie-based auth)
+    credentials: 'include',
     headers: {
       ...headers,
       ...options.headers,
@@ -247,8 +251,28 @@ export async function apiRequest<T>(
     }
 
     if (response.status === 404) {
-      const msg = (error?.message as string) || (error?.error as string);
-      throw new Error(msg || "The requested resource was not found.");
+      // FastAPI returns { detail: string } for plain HTTPException, or
+      // { detail: { code, message, ... } } when the handler raises a structured payload.
+      const detail = error?.detail as
+        | string
+        | { code?: string; message?: string; [k: string]: unknown }
+        | undefined;
+      const detailObj =
+        detail && typeof detail === "object" ? detail : undefined;
+      const detailMsg =
+        typeof detail === "string"
+          ? detail
+          : (detailObj?.message as string | undefined);
+      const msg =
+        detailMsg ||
+        (error?.message as string) ||
+        (error?.error as string);
+      const err404 = new Error(msg || "The requested resource was not found.");
+      // Attach structured detail so callers can branch on `err.detail.code`
+      if (detailObj) {
+        (err404 as Error & { detail?: typeof detailObj }).detail = detailObj;
+      }
+      throw err404;
     }
 
     const errorMessage =

@@ -43,9 +43,9 @@ RUN mkdir -p /tmp/satellite-data
 ENV PYTHONPATH=/app
 ENV PYTHONUNBUFFERED=1
 
-# Health check
+# Health check (use python stdlib — curl is not installed in python:3.11-slim)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:8000/api/health || exit 1
+  CMD python -c "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/api/health/').status==200 else 1)" || exit 1
 
 # Expose port
 EXPOSE 8000

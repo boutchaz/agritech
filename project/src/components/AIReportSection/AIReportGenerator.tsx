@@ -1,4 +1,5 @@
 import {  useState, useEffect  } from "react";
+import { createPortal } from "react-dom";
 import {
   Bot,
   Loader2,
@@ -101,7 +102,7 @@ export const AIReportGenerator = ({
   const { data: providers = [], isLoading: loadingProviders } = useAIProviders();
   const generateMutation = useGenerateAIReport();
   const { job, report, isProcessing, isFailed, isCompleted } = useAIReportJob(currentJobId);
-  const { data: calibrationStatus, isLoading: isLoadingCalibration } = useCalibrationStatus(
+  const { data: calibrationStatus } = useCalibrationStatus(
     parcelId,
     dateRange.start,
     dateRange.end,
@@ -125,11 +126,12 @@ export const AIReportGenerator = ({
     if (providers.length > 0 && !selectedProvider) {
       const platformAI = providers.find((p) => p.provider === 'zai' && p.available);
       if (platformAI) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setSelectedProvider('zai');
       } else {
-        // Fallback to first available provider
         const firstAvailable = providers.find((p) => p.available);
         if (firstAvailable) {
+           
           setSelectedProvider(firstAvailable.provider);
         }
       }
@@ -138,11 +140,13 @@ export const AIReportGenerator = ({
 
   useEffect(() => {
     if (isCompleted && report) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setGeneratedReport({
         sections: report.sections,
         generatedAt: report.generated_at,
         provider: report.provider,
       });
+       
       setCurrentJobId(null);
     }
   }, [isCompleted, report]);
@@ -507,7 +511,7 @@ export const AIReportGenerator = ({
       )}
 
       {/* Full Preview Modal */}
-      {showFullPreview && generatedReport && (
+      {showFullPreview && generatedReport && createPortal(
         <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 backdrop-blur-sm">
           <div className="min-h-screen px-4 py-8">
             <div className="relative max-w-5xl mx-auto bg-white dark:bg-gray-900 rounded-2xl shadow-2xl">
@@ -549,7 +553,7 @@ export const AIReportGenerator = ({
             </div>
           </div>
         </div>
-      )}
+      , document.body)}
     </div>
   );
 };

@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException, InternalServerErrorException } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { sanitizeSearch } from '../../common/utils/sanitize-search';
 import {
@@ -272,11 +272,41 @@ export class AdminService {
         }
       }
 
+      // After CoA is seeded, wire up default stock account mappings.
+      // Errors here are non-fatal — admins can run "Seed defaults" from the
+      // Stock Accounting settings page later if this skips.
+      let stockMappingsCreated = 0;
+      try {
+        stockMappingsCreated = await this.seedDefaultStockAccountMappings(
+          client,
+          dto.organizationId,
+        );
+      } catch (mappingErr: any) {
+        // Log to job log but don't fail the whole seed.
+        // eslint-disable-next-line no-console
+        console.warn(
+          `[seedAccounts] stock mapping seed skipped: ${mappingErr?.message || mappingErr}`,
+        );
+      }
+
+      // Seed default Moroccan tax rates (VAT 20/10/7, IGR 10% WHT, supplier WHT 1.75%)
+      let taxesCreated = 0;
+      if (dto.chartType === ChartOfAccountsType.MOROCCAN) {
+        try {
+          taxesCreated = await this.seedDefaultMoroccanTaxes(client, dto.organizationId);
+        } catch (taxErr: any) {
+          // eslint-disable-next-line no-console
+          console.warn(
+            `[seedAccounts] tax seed skipped: ${taxErr?.message || taxErr}`,
+          );
+        }
+      }
+
       // Update job log
       if (job) {
         await client.from('admin_job_logs').update({
           status: 'completed',
-          result_data: { accountsCreated },
+          result_data: { accountsCreated, stockMappingsCreated, taxesCreated },
           records_created: accountsCreated,
           completed_at: new Date().toISOString(),
         }).eq('id', job.id);
@@ -287,7 +317,7 @@ export class AdminService {
         organizationId: dto.organizationId,
         chartType: dto.chartType,
         accountsCreated,
-        message: `Successfully seeded ${accountsCreated} accounts`,
+        message: `Successfully seeded ${accountsCreated} accounts (${stockMappingsCreated} stock GL mappings, ${taxesCreated} taxes)`,
         jobId: job?.id,
       };
     } catch (error: any) {
@@ -403,43 +433,90 @@ export class AdminService {
     const limit = parseInt(query.limit || '50', 10);
     const offset = parseInt(query.offset || '0', 10);
 
-    // Try to use materialized view first, fall back to direct query
-    let queryBuilder = client
-      .from('admin_org_summary')
-      .select('*', { count: 'exact' });
+    // Try materialized view first; bail to direct query when approvalStatus filter is used
+    // or when the view is missing/stale relative to new columns.
+    let mvRows: any[] | null = null;
+    let mvCount: number | null = null;
 
-    if (query.planType) {
-      queryBuilder = queryBuilder.eq('plan_type', query.planType);
+    if (!query.approvalStatus) {
+      let queryBuilder = client
+        .from('admin_org_summary')
+        .select('*', { count: 'exact' });
+
+      if (query.planType) {
+        queryBuilder = queryBuilder.eq('plan_type', query.planType);
+      }
+      if (query.status) {
+        queryBuilder = queryBuilder.eq('subscription_status', query.status);
+      }
+      if (query.search) {
+        const s = sanitizeSearch(query.search);
+        if (s) queryBuilder = queryBuilder.ilike('name', `%${s}%`);
+      }
+
+      const sortBy = query.sortBy || 'created_at';
+      const sortOrder = query.sortOrder === 'asc';
+      queryBuilder = queryBuilder.order(sortBy, { ascending: sortOrder });
+      queryBuilder = queryBuilder.range(offset, offset + limit - 1);
+
+      const { data, error, count } = await queryBuilder;
+      if (!error) {
+        mvRows = data || [];
+        mvCount = count || 0;
+      }
     }
-    if (query.status) {
-      queryBuilder = queryBuilder.eq('subscription_status', query.status);
-    }
-    if (query.search) {
-      const s = sanitizeSearch(query.search);
-      if (s) queryBuilder = queryBuilder.ilike('name', `%${s}%`);
-    }
 
-    const sortBy = query.sortBy || 'created_at';
-    const sortOrder = query.sortOrder === 'asc';
-    queryBuilder = queryBuilder.order(sortBy, { ascending: sortOrder });
-    queryBuilder = queryBuilder.range(offset, offset + limit - 1);
+    let baseRows: any[];
+    let baseCount: number;
 
-    const { data, error, count } = await queryBuilder;
-
-    if (error) {
-      // Materialized view might not exist yet, fall back to direct query
-      console.warn('Falling back to direct query:', error.message);
-
-      const { data: orgs, count: orgCount } = await client
+    if (mvRows) {
+      baseRows = mvRows.map((row: any) => ({
+        id: row.id,
+        name: row.name,
+        countryCode: row.country_code,
+        createdAt: row.created_at,
+        isActive: row.is_active,
+        planType: row.plan_type,
+        subscriptionStatus: row.subscription_status,
+        mrr: row.mrr || 0,
+        arr: row.arr || 0,
+        farmsCount: row.farms_count || 0,
+        parcelsCount: row.parcels_count || 0,
+        usersCount: row.users_count || 0,
+        storageUsedMb: row.storage_used_mb || 0,
+        lastActivityAt: row.last_activity_at,
+        events7d: row.events_7d || 0,
+        events30d: row.events_30d || 0,
+      }));
+      baseCount = mvCount || 0;
+    } else {
+      let directQuery = client
         .from('organizations')
-        .select(`
+        .select(
+          `
           id, name, country_code, created_at, is_active,
           subscriptions(plan_type, status),
           subscription_usage(mrr, arr, farms_count, parcels_count, users_count, storage_used_mb, last_activity_at)
-        `, { count: 'exact' })
-        .range(offset, offset + limit - 1);
+        `,
+          { count: 'exact' },
+        );
 
-      const mappedData = (orgs || []).map((org: any) => ({
+      if (query.approvalStatus) {
+        directQuery = directQuery.eq('approval_status', query.approvalStatus);
+      }
+      if (query.search) {
+        const s = sanitizeSearch(query.search);
+        if (s) directQuery = directQuery.ilike('name', `%${s}%`);
+      }
+
+      const sortBy = query.sortBy || 'created_at';
+      const sortOrder = query.sortOrder === 'asc';
+      directQuery = directQuery.order(sortBy, { ascending: sortOrder });
+      directQuery = directQuery.range(offset, offset + limit - 1);
+
+      const { data: orgs, count: orgCount } = await directQuery;
+
+      baseRows = (orgs || []).map((org: any) => ({
         id: org.id,
         name: org.name,
         countryCode: org.country_code,
@@ -457,30 +534,250 @@ export class AdminService {
         events7d: 0,
         events30d: 0,
       }));
-
-      return { data: mappedData, total: orgCount || 0 };
+      baseCount = orgCount || 0;
     }
 
-    const mappedData = (data || []).map((row: any) => ({
-      id: row.id,
-      name: row.name,
-      countryCode: row.country_code,
-      createdAt: row.created_at,
-      isActive: row.is_active,
-      planType: row.plan_type,
-      subscriptionStatus: row.subscription_status,
-      mrr: row.mrr || 0,
-      arr: row.arr || 0,
-      farmsCount: row.farms_count || 0,
-      parcelsCount: row.parcels_count || 0,
-      usersCount: row.users_count || 0,
-      storageUsedMb: row.storage_used_mb || 0,
-      lastActivityAt: row.last_activity_at,
-      events7d: row.events_7d || 0,
-      events30d: row.events_30d || 0,
-    }));
+    if (baseRows.length === 0) {
+      return { data: baseRows as OrgUsageDto[], total: baseCount };
+    }
 
-    return { data: mappedData, total: count || 0 };
+    const orgIds = baseRows.map((r) => r.id);
+
+    // Contact + approval info
+    const { data: contactRows } = await client
+      .from('organizations')
+      .select('id, email, phone, city, country, approval_status, approved_at')
+      .in('id', orgIds);
+    const contactMap = new Map(
+      (contactRows || []).map((row: any) => [row.id, row]),
+    );
+
+    // Owner (organization_admin) info — one row per org (first admin found)
+    const { data: adminRows } = await client
+      .from('organization_users')
+      .select(
+        `
+        organization_id,
+        user_id,
+        role:roles!inner(name)
+      `,
+      )
+      .in('organization_id', orgIds)
+      .eq('is_active', true)
+      .eq('role.name', 'organization_admin');
+
+    const ownerByOrg = new Map<string, string>();
+    for (const row of (adminRows || []) as any[]) {
+      if (!ownerByOrg.has(row.organization_id)) {
+        ownerByOrg.set(row.organization_id, row.user_id);
+      }
+    }
+
+    const ownerUserIds = Array.from(new Set(ownerByOrg.values()));
+    const ownerById = new Map<string, any>();
+    if (ownerUserIds.length > 0) {
+      const { data: profiles } = await client
+        .from('user_profiles')
+        .select('id, first_name, last_name, email, phone')
+        .in('id', ownerUserIds);
+      for (const p of (profiles || []) as any[]) {
+        ownerById.set(p.id, p);
+      }
+    }
+
+    const data: OrgUsageDto[] = baseRows.map((row) => {
+      const contact = contactMap.get(row.id) as any;
+      const ownerId = ownerByOrg.get(row.id);
+      const owner = ownerId ? ownerById.get(ownerId) : null;
+      const ownerName = owner
+        ? [owner.first_name, owner.last_name].filter(Boolean).join(' ').trim() || null
+        : null;
+      return {
+        ...row,
+        email: contact?.email ?? null,
+        phone: contact?.phone ?? null,
+        city: contact?.city ?? null,
+        country: contact?.country ?? null,
+        approvalStatus: contact?.approval_status ?? 'pending',
+        approvedAt: contact?.approved_at ?? null,
+        ownerName: ownerName || null,
+        ownerEmail: owner?.email ?? null,
+        ownerPhone: owner?.phone ?? null,
+      };
+    });
+
+    return { data, total: baseCount };
+  }
+
+  /**
+   * Mark an organization as approved. Internal admin only.
+   */
+  async approveOrganization(orgId: string, approverUserId: string): Promise<OrgUsageDto> {
+    const client = this.databaseService.getAdminClient();
+    const { error } = await client
+      .from('organizations')
+      .update({
+        approval_status: 'approved',
+        approved_at: new Date().toISOString(),
+        approved_by: approverUserId,
+      })
+      .eq('id', orgId);
+
+    if (error) {
+      throw new InternalServerErrorException(
+        `Failed to approve organization: ${error.message}`,
+      );
+    }
+
+    return this.getOrgUsageById(orgId);
+  }
+
+  /**
+   * Mark an organization as rejected. Internal admin only.
+   */
+  async rejectOrganization(orgId: string, approverUserId: string): Promise<OrgUsageDto> {
+    const client = this.databaseService.getAdminClient();
+    const { error } = await client
+      .from('organizations')
+      .update({
+        approval_status: 'rejected',
+        approved_at: new Date().toISOString(),
+        approved_by: approverUserId,
+      })
+      .eq('id', orgId);
+
+    if (error) {
+      throw new InternalServerErrorException(
+        `Failed to reject organization: ${error.message}`,
+      );
+    }
+
+    return this.getOrgUsageById(orgId);
+  }
+
+  /**
+   * List enabled modules for an organization (source of truth: organization_modules)
+   */
+  async getOrgEnabledModules(orgId: string): Promise<string[]> {
+    const client = this.databaseService.getAdminClient();
+    const { data, error } = await client
+      .from('organization_modules')
+      .select('modules!inner(slug)')
+      .eq('organization_id', orgId)
+      .eq('is_active', true);
+
+    if (error) {
+      throw new InternalServerErrorException(
+        `Failed to load enabled modules: ${error.message}`,
+      );
+    }
+
+    const active = (data || [])
+      .map((row: any) => row.modules?.slug as string | undefined)
+      .filter((slug): slug is string => !!slug);
+
+    const { data: requiredModules, error: requiredError } = await client
+      .from('modules')
+      .select('slug')
+      .eq('is_required', true)
+      .eq('is_available', true);
+
+    if (requiredError) {
+      throw new InternalServerErrorException(
+        `Failed to load required modules: ${requiredError.message}`,
+      );
+    }
+
+    return Array.from(
+      new Set([
+        ...active,
+        ...((requiredModules || [])
+          .map((row: any) => row.slug as string | undefined)
+          .filter((slug): slug is string => !!slug)),
+      ]),
+    );
+  }
+
+  /**
+   * Replace the set of enabled modules for an organization.
+   * Missing rows are inserted active; extra rows are deactivated.
+   */
+  async setOrgEnabledModules(orgId: string, slugs: string[]): Promise<{ enabled: string[] }> {
+    const client = this.databaseService.getAdminClient();
+    const normalized = Array.from(new Set(slugs.map((s) => s.trim()).filter(Boolean)));
+
+    const { data: catalog, error: catalogError } = await client
+      .from('modules')
+      .select('id, slug, is_required');
+    if (catalogError) {
+      throw new InternalServerErrorException(
+        `Failed to load module catalog: ${catalogError.message}`,
+      );
+    }
+
+    const bySlug = new Map<string, string>();
+    const requiredSlugs: string[] = [];
+    for (const row of (catalog || []) as any[]) {
+      if (row.slug) bySlug.set(row.slug, row.id);
+      if (row.is_required && row.slug) requiredSlugs.push(row.slug);
+    }
+
+    // Required modules must always be in the enabled set. Reject attempts
+    // to save an enabled array that omits any required slug.
+    const requestedSet = new Set(normalized);
+    const missingRequired = requiredSlugs.filter((s) => !requestedSet.has(s));
+    if (missingRequired.length > 0) {
+      throw new BadRequestException(
+        `Cannot deactivate required modules: ${missingRequired.join(', ')}`,
+      );
+    }
+
+    const rows = normalized
+      .map((slug) => {
+        const moduleId = bySlug.get(slug);
+        if (!moduleId) return null;
+        return {
+          organization_id: orgId,
+          module_id: moduleId,
+          is_active: true,
+        };
+      })
+      .filter((r): r is { organization_id: string; module_id: string; is_active: boolean } => !!r);
+
+    const activeModuleIds = rows.map((r) => r.module_id);
+
+    // Upsert active rows
+    if (rows.length > 0) {
+      const { error: upsertError } = await client
+        .from('organization_modules')
+        .upsert(rows, { onConflict: 'organization_id,module_id' });
+      if (upsertError) {
+        throw new InternalServerErrorException(
+          `Failed to enable modules: ${upsertError.message}`,
+        );
+      }
+    }
+
+    // Deactivate everything else for this org
+    let deactivateQuery = client
+      .from('organization_modules')
+      .update({ is_active: false })
+      .eq('organization_id', orgId);
+    if (activeModuleIds.length > 0) {
+      deactivateQuery = deactivateQuery.not(
+        'module_id',
+        'in',
+        `(${activeModuleIds.map((id) => `"${id}"`).join(',')})`,
+      );
+    }
+    const { error: deactivateError } = await deactivateQuery;
+    if (deactivateError) {
+      throw new InternalServerErrorException(
+        `Failed to deactivate modules: ${deactivateError.message}`,
+      );
+    }
+
+    return { enabled: await this.getOrgEnabledModules(orgId) };
   }
 
   /**
@@ -493,8 +790,9 @@ export class AdminService {
       .from('organizations')
       .select(`
         id, name, country_code, created_at, is_active,
+        email, phone, city, country, approval_status, approved_at,
         subscriptions(plan_type, status, current_period_start, current_period_end),
-        subscription_usage(mrr, arr, farms_count, parcels_count, users_count, storage_used_mb, last_activity_at)
+        subscription_usage(mrr, arr, storage_used_mb, last_activity_at)
       `)
       .eq('id', orgId)
       .single();
@@ -502,6 +800,50 @@ export class AdminService {
     if (error || !org) {
       throw new NotFoundException(`Organization ${orgId} not found`);
     }
+
+    // Count live from source tables — subscription_usage is a denormalized
+    // cache that may be stale or absent for new orgs.
+    const [farmsRes, parcelsRes, usersRes] = await Promise.all([
+      client
+        .from('farms')
+        .select('*', { count: 'exact', head: true })
+        .eq('organization_id', orgId),
+      client
+        .from('parcels')
+        .select('*', { count: 'exact', head: true })
+        .eq('organization_id', orgId),
+      client
+        .from('organization_users')
+        .select('*', { count: 'exact', head: true })
+        .eq('organization_id', orgId)
+        .eq('is_active', true),
+    ]);
+    const farmsCount = farmsRes.count ?? 0;
+    const parcelsCount = parcelsRes.count ?? 0;
+    const usersCount = usersRes.count ?? 0;
+
+    // Fetch owner (first organization_admin) contact
+    const { data: adminRow } = await client
+      .from('organization_users')
+      .select('user_id, role:roles!inner(name)')
+      .eq('organization_id', orgId)
+      .eq('is_active', true)
+      .eq('role.name', 'organization_admin')
+      .limit(1)
+      .maybeSingle();
+
+    let owner: any = null;
+    if (adminRow?.user_id) {
+      const { data: profile } = await client
+        .from('user_profiles')
+        .select('first_name, last_name, email, phone')
+        .eq('id', adminRow.user_id)
+        .maybeSingle();
+      owner = profile || null;
+    }
+    const ownerName = owner
+      ? [owner.first_name, owner.last_name].filter(Boolean).join(' ').trim() || null
+      : null;
 
     // Get event counts
     const sevenDaysAgo = new Date();
@@ -522,22 +864,31 @@ export class AdminService {
       .gte('occurred_at', thirtyDaysAgo.toISOString());
 
     return {
-      id: org.id,
-      name: org.name,
-      countryCode: org.country_code,
-      createdAt: org.created_at,
-      isActive: org.is_active,
+      id: (org as any).id,
+      name: (org as any).name,
+      countryCode: (org as any).country_code,
+      createdAt: (org as any).created_at,
+      isActive: (org as any).is_active,
       planType: (org.subscriptions as any)?.[0]?.plan_type,
       subscriptionStatus: (org.subscriptions as any)?.[0]?.status,
       mrr: (org.subscription_usage as any)?.[0]?.mrr || 0,
       arr: (org.subscription_usage as any)?.[0]?.arr || 0,
-      farmsCount: (org.subscription_usage as any)?.[0]?.farms_count || 0,
-      parcelsCount: (org.subscription_usage as any)?.[0]?.parcels_count || 0,
-      usersCount: (org.subscription_usage as any)?.[0]?.users_count || 0,
+      farmsCount,
+      parcelsCount,
+      usersCount,
       storageUsedMb: (org.subscription_usage as any)?.[0]?.storage_used_mb || 0,
       lastActivityAt: (org.subscription_usage as any)?.[0]?.last_activity_at,
       events7d: events7d || 0,
       events30d: events30d || 0,
+      email: (org as any).email ?? null,
+      phone: (org as any).phone ?? null,
+      city: (org as any).city ?? null,
+      country: (org as any).country ?? null,
+      approvalStatus: (org as any).approval_status ?? 'pending',
+      approvedAt: (org as any).approved_at ?? null,
+      ownerName,
+      ownerEmail: owner?.email ?? null,
+      ownerPhone: owner?.phone ?? null,
     };
   }
 
@@ -715,6 +1066,134 @@ export class AdminService {
       }
     }
 
+    return created;
+  }
+
+  /**
+   * Seed default Moroccan CGNC stock account mappings. Idempotent.
+   * Mirrors StockEntriesService.seedDefaultStockAccountMappings — duplicated
+   * here to avoid pulling the entire StockEntriesModule into AdminModule.
+   *
+   * Default GL flow:
+   *   Material Receipt:     DR 312 (Matières) / CR 441 (Fournisseurs)
+   *   Material Issue:       DR 612 (Achats consommés) / CR 312
+   *   Stock Reconciliation: DR 612 / CR 312
+   *   Opening Stock:        DR 312 / CR 312 (no GL impact, opens balance)
+   */
+  private async seedDefaultStockAccountMappings(
+    client: ReturnType<DatabaseService['getAdminClient']>,
+    organizationId: string,
+  ): Promise<number> {
+    const { data: accounts } = await client
+      .from('accounts')
+      .select('id, code')
+      .eq('organization_id', organizationId)
+      .in('code', ['312', '441', '612']);
+
+    const byCode = new Map<string, string>();
+    for (const a of accounts || []) byCode.set(a.code, a.id);
+    if (byCode.size === 0) return 0;
+
+    const inv = byCode.get('312');
+    const ap = byCode.get('441');
+    const cogs = byCode.get('612');
+
+    const desired = [
+      { entry_type: 'Material Receipt', debit_account_id: inv, credit_account_id: ap },
+      { entry_type: 'Material Issue', debit_account_id: cogs, credit_account_id: inv },
+      { entry_type: 'Stock Reconciliation', debit_account_id: cogs, credit_account_id: inv },
+      { entry_type: 'Opening Stock', debit_account_id: inv, credit_account_id: inv },
+    ];
+
+    const { data: existing } = await client
+      .from('stock_account_mappings')
+      .select('entry_type')
+      .eq('organization_id', organizationId);
+
+    const existingTypes = new Set((existing || []).map((m) => m.entry_type));
+    let created = 0;
+
+    for (const m of desired) {
+      if (existingTypes.has(m.entry_type)) continue;
+      if (!m.debit_account_id || !m.credit_account_id) continue;
+      const { error } = await client.from('stock_account_mappings').insert({
+        organization_id: organizationId,
+        entry_type: m.entry_type,
+        debit_account_id: m.debit_account_id,
+        credit_account_id: m.credit_account_id,
+      });
+      if (!error) created++;
+    }
+
+    return created;
+  }
+
+  /**
+   * Seed default Moroccan tax rates: VAT (20/10/7%), IGR withholding (10%
+   * on professional services), supplier VAT withholding (1.75%). Idempotent:
+   * skips taxes that already exist by name.
+   */
+  private async seedDefaultMoroccanTaxes(
+    client: ReturnType<DatabaseService['getAdminClient']>,
+    organizationId: string,
+  ): Promise<number> {
+    // Look up needed accounts by CGNC code
+    const { data: accounts } = await client
+      .from('accounts')
+      .select('id, code')
+      .eq('organization_id', organizationId)
+      .in('code', ['4455', '3455', '445']);
+
+    const byCode = new Map<string, string>();
+    for (const a of accounts || []) byCode.set(a.code, a.id);
+
+    // 4455 = Etat - TVA facturée (collected); 3455 = Etat - TVA récupérable (deductible);
+    // 445 = État - créditeur (used as fallback for WHT-payable)
+    const tvaCollected = byCode.get('4455') || byCode.get('445');
+    const tvaDeductible = byCode.get('3455') || byCode.get('445');
+    const whtPayable = byCode.get('445') || byCode.get('4455');
+
+    const desired: Array<{
+      name: string;
+      rate: number;
+      tax_type: 'sales' | 'purchase' | 'both';
+      is_withholding: boolean;
+      account_id?: string;
+      withholding_account_id?: string;
+    }> = [
+      // Standard VAT
+      { name: 'TVA 20% (vente)', rate: 20, tax_type: 'sales', is_withholding: false, account_id: tvaCollected },
+      { name: 'TVA 20% (achat)', rate: 20, tax_type: 'purchase', is_withholding: false, account_id: tvaDeductible },
+      { name: 'TVA 10% (vente)', rate: 10, tax_type: 'sales', is_withholding: false, account_id: tvaCollected },
+      { name: 'TVA 10% (achat)', rate: 10, tax_type: 'purchase', is_withholding: false, account_id: tvaDeductible },
+      { name: 'TVA 7% (alim.)', rate: 7, tax_type: 'both', is_withholding: false, account_id: tvaCollected },
+      // Withholding
+      { name: 'IGR Honoraires 10%', rate: 10, tax_type: 'purchase', is_withholding: true, withholding_account_id: whtPayable },
+      { name: 'TVA Retenue 1.75%', rate: 1.75, tax_type: 'purchase', is_withholding: true, withholding_account_id: whtPayable },
+    ];
+
+    // Check what's already there to avoid duplicates
+    const { data: existing } = await client
+      .from('taxes')
+      .select('name')
+      .eq('organization_id', organizationId);
+    const existingNames = new Set((existing || []).map((t) => t.name));
+
+    let created = 0;
+    for (const tax of desired) {
+      if (existingNames.has(tax.name)) continue;
+      const { error } = await client.from('taxes').insert({
+        organization_id: organizationId,
+        name: tax.name,
+        rate: tax.rate,
+        tax_type: tax.tax_type,
+        is_withholding: tax.is_withholding,
+        account_id: tax.account_id || null,
+        withholding_account_id: tax.withholding_account_id || null,
+        is_active: true,
+      });
+      if (!error) created++;
+    }
     return created;
   }
 
@@ -910,6 +1389,207 @@ export class AdminService {
     return { success: true, subscriptionId: data.id };
   }
 
+  async saveOrgContract(
+    orgId: string,
+    dto: {
+      contracted_hectares: number;
+      max_farms: number;
+      max_users: number;
+      max_parcels: number;
+      enabled: string[];
+    },
+    adminUserId: string,
+  ) {
+    const normalized = Array.from(
+      new Set((dto.enabled || []).map((slug) => slug.trim()).filter(Boolean)),
+    );
+
+    return this.databaseService.executeInPgTransaction(async (pgClient) => {
+      const catalogRes = await pgClient.query<{
+        id: string;
+        slug: string | null;
+        is_required: boolean;
+        is_available: boolean;
+      }>(
+        `SELECT id, slug, is_required, is_available
+         FROM modules`,
+      );
+
+      // Admin can enable any module that exists in the catalog — `is_available`
+      // is a UI flag for end-user discoverability, not an admin-side gate.
+      // Accept both slugs and UUIDs in the payload (the picker falls back to
+      // mod.id when slug is null).
+      const moduleByKey = new Map<string, { id: string; slug: string | null }>();
+      const requiredSlugs: string[] = [];
+      for (const row of catalogRes.rows) {
+        moduleByKey.set(row.id, { id: row.id, slug: row.slug });
+        if (row.slug) moduleByKey.set(row.slug, { id: row.id, slug: row.slug });
+        if (row.is_required && row.slug) {
+          requiredSlugs.push(row.slug);
+        }
+      }
+
+      const unknown = normalized.filter((key) => !moduleByKey.has(key));
+      if (unknown.length > 0) {
+        throw new BadRequestException(
+          `Unknown modules in enabled[]: ${unknown.join(', ')}`,
+        );
+      }
+
+      const requestedSlugs = new Set(
+        normalized
+          .map((key) => moduleByKey.get(key)?.slug)
+          .filter((slug): slug is string => !!slug),
+      );
+      const missingRequired = requiredSlugs.filter((slug) => !requestedSlugs.has(slug));
+      if (missingRequired.length > 0) {
+        throw new BadRequestException(
+          `Cannot deactivate required modules: ${missingRequired.join(', ')}`,
+        );
+      }
+
+      const activeModuleIds = Array.from(
+        new Set(
+          [...normalized, ...requiredSlugs]
+            .map((key) => moduleByKey.get(key)?.id)
+            .filter((id): id is string => !!id),
+        ),
+      );
+      // For the response + selected_modules jsonb, prefer slugs but fall back
+      // to ids for catalog rows missing a slug.
+      const enabled = activeModuleIds.map((id) => {
+        const row = moduleByKey.get(id);
+        return row?.slug || id;
+      });
+
+      const subscriptionRes = await pgClient.query<{ id: string }>(
+        `SELECT id
+         FROM subscriptions
+         WHERE organization_id = $1
+         ORDER BY created_at DESC
+         LIMIT 1
+         FOR UPDATE`,
+        [orgId],
+      );
+
+      const now = new Date();
+      const enabledJson = JSON.stringify(enabled);
+      let subscriptionId: string;
+      let eventType: 'admin_create' | 'admin_update';
+
+      if (subscriptionRes.rows[0]?.id) {
+        subscriptionId = subscriptionRes.rows[0].id;
+        eventType = 'admin_update';
+
+        await pgClient.query(
+          `UPDATE subscriptions
+           SET max_farms = $2,
+               max_users = $3,
+               max_parcels = $4,
+               contracted_hectares = $5,
+               selected_modules = $6::jsonb,
+               updated_at = NOW()
+           WHERE id = $1`,
+          [
+            subscriptionId,
+            dto.max_farms,
+            dto.max_users,
+            dto.max_parcels,
+            dto.contracted_hectares,
+            enabledJson,
+          ],
+        );
+      } else {
+        eventType = 'admin_create';
+        const end = new Date(now);
+        end.setDate(end.getDate() + 14);
+
+        const insertRes = await pgClient.query<{ id: string }>(
+          `INSERT INTO subscriptions (
+             organization_id,
+             formula,
+             billing_cycle,
+             contracted_hectares,
+             status,
+             current_period_start,
+             current_period_end,
+             contract_start_at,
+             contract_end_at,
+             selected_modules,
+             discount_pct,
+             currency,
+             vat_rate,
+             max_farms,
+             max_users,
+             max_parcels
+           ) VALUES (
+             $1, 'starter', 'monthly', $2, 'trialing',
+             $3, $4, $3, $4, $5::jsonb, 10, 'MAD', 0.20, $6, $7, $8
+           )
+           RETURNING id`,
+          [
+            orgId,
+            dto.contracted_hectares,
+            now.toISOString(),
+            end.toISOString(),
+            enabledJson,
+            dto.max_farms,
+            dto.max_users,
+            dto.max_parcels,
+          ],
+        );
+
+        subscriptionId = insertRes.rows[0].id;
+      }
+
+      await pgClient.query(
+        `INSERT INTO subscription_events (
+           organization_id,
+           subscription_id,
+           event_type,
+           actor_type,
+           actor_id,
+           payload
+         ) VALUES ($1, $2, $3, 'admin', $4, $5::jsonb)`,
+        [
+          orgId,
+          subscriptionId,
+          eventType,
+          adminUserId,
+          JSON.stringify({
+            max_farms: dto.max_farms,
+            max_users: dto.max_users,
+            max_parcels: dto.max_parcels,
+            contracted_hectares: dto.contracted_hectares,
+            enabled,
+          }),
+        ],
+      );
+
+      if (activeModuleIds.length > 0) {
+        await pgClient.query(
+          `INSERT INTO organization_modules (organization_id, module_id, is_active)
+           SELECT $1, unnest($2::uuid[]), true
+           ON CONFLICT (organization_id, module_id) DO UPDATE SET
+             is_active = true,
+             updated_at = NOW()`,
+          [orgId, activeModuleIds],
+        );
+      }
+
+      await pgClient.query(
+        `UPDATE organization_modules
+         SET is_active = false,
+             updated_at = NOW()
+         WHERE organization_id = $1
+           AND NOT (module_id = ANY($2::uuid[]))`,
+        [orgId, activeModuleIds],
+      );
+
+      return { success: true, subscriptionId, enabled };
+    });
+  }
+
   // ============================================
   // Banner Admin Methods (cross-org)
   // ============================================
@@ -961,5 +1641,625 @@ export class AdminService {
 
     if (error) throw error;
     return { success: true };
+  }
+
+  // ============================================
+  // Module Management
+  // ============================================
+
+  async getModules() {
+    const client = this.databaseService.getAdminClient();
+    const { data, error } = await client
+      .from('modules')
+      .select('*, module_translations(*)')
+      .order('display_order', { ascending: true });
+
+    if (error) throw error;
+    return data || [];
+  }
+
+  async getModule(id: string) {
+    const client = this.databaseService.getAdminClient();
+    const { data, error } = await client
+      .from('modules')
+      .select('*, module_translations(*)')
+      .eq('id', id)
+      .single();
+
+    if (error) throw new NotFoundException('Module not found');
+    return data;
+  }
+
+  async createModule(input: Record<string, unknown>) {
+    const client = this.databaseService.getAdminClient();
+
+    // Validate nav_items against route manifest (if available)
+    if ('navigation_items' in input) {
+      const { routes: manifest } = this.readManifest();
+      const unknown = this.validateNavItemsAgainstManifest(input.navigation_items, manifest);
+      if (unknown.length > 0) {
+        throw new BadRequestException(
+          `Unknown routes in navigation_items: ${unknown.join(', ')}. Run 'npm run gen:manifest' after adding new routes.`,
+        );
+      }
+    }
+
+    // Check slug uniqueness
+    if (input.slug) {
+      const { data: existing } = await client
+        .from('modules')
+        .select('id')
+        .eq('slug', input.slug as string)
+        .maybeSingle();
+
+      if (existing) {
+        throw new BadRequestException(`Module with slug "${input.slug}" already exists`);
+      }
+    }
+
+    const { data, error } = await client
+      .from('modules')
+      .insert({
+        name: input.name || input.slug,
+        slug: input.slug,
+        icon: input.icon || null,
+        color: input.color || null,
+        category: input.category || 'other',
+        description: input.description || null,
+        display_order: input.display_order || 0,
+        price_monthly: input.price_monthly || 0,
+        is_required: input.is_required || false,
+        is_recommended: input.is_recommended || false,
+        is_addon_eligible: input.is_addon_eligible || false,
+        is_available: input.is_available !== false,
+        required_plan: input.required_plan || null,
+        dashboard_widgets: input.dashboard_widgets || [],
+        navigation_items: input.navigation_items || [],
+        features: input.features || [],
+      })
+      .select('*, module_translations(*)')
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  async updateModule(id: string, input: Record<string, unknown>) {
+    const client = this.databaseService.getAdminClient();
+
+    // Validate nav_items against route manifest (if available)
+    if ('navigation_items' in input) {
+      const { routes: manifest } = this.readManifest();
+      const unknown = this.validateNavItemsAgainstManifest(input.navigation_items, manifest);
+      if (unknown.length > 0) {
+        throw new BadRequestException(
+          `Unknown routes in navigation_items: ${unknown.join(', ')}. Run 'npm run gen:manifest' after adding new routes.`,
+        );
+      }
+    }
+
+    // Check module exists
+    const { data: existing } = await client
+      .from('modules')
+      .select('id')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (!existing) throw new NotFoundException('Module not found');
+
+    // Build update payload — only include provided fields
+    const update: Record<string, unknown> = { updated_at: new Date().toISOString() };
+    const allowedFields = [
+      'name', 'slug', 'icon', 'color', 'category', 'description',
+      'display_order', 'price_monthly', 'is_required', 'is_recommended',
+      'is_addon_eligible', 'is_available', 'required_plan',
+      'dashboard_widgets', 'navigation_items', 'features',
+    ];
+    for (const field of allowedFields) {
+      if (field in input) {
+        update[field] = input[field];
+      }
+    }
+
+    const { data, error } = await client
+      .from('modules')
+      .update(update)
+      .eq('id', id)
+      .select('*, module_translations(*)')
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  async deleteModule(id: string) {
+    const client = this.databaseService.getAdminClient();
+
+    // Verify the module exists + check if it's required (protected).
+    const { data: existing, error: fetchError } = await client
+      .from('modules')
+      .select('id, slug, is_required')
+      .eq('id', id)
+      .maybeSingle();
+    if (fetchError) {
+      throw new InternalServerErrorException(`Failed to load module: ${fetchError.message}`);
+    }
+    if (!existing) {
+      throw new NotFoundException('Module not found');
+    }
+    if (existing.is_required) {
+      throw new BadRequestException(
+        `Module '${existing.slug}' is required and cannot be deleted. Mark it unavailable instead.`,
+      );
+    }
+
+    // Hard delete. organization_modules and module_translations both have
+    // ON DELETE CASCADE, so per-org activations + i18n rows are cleaned up
+    // automatically.
+    const { error } = await client
+      .from('modules')
+      .delete()
+      .eq('id', id);
+    if (error) {
+      throw new InternalServerErrorException(`Failed to delete module: ${error.message}`);
+    }
+    return { id, slug: existing.slug, deleted: true };
+  }
+
+  async upsertModuleTranslation(
+    moduleId: string,
+    locale: string,
+    input: { name?: string; description?: string; features?: string[] },
+  ) {
+    const client = this.databaseService.getAdminClient();
+
+    const { data, error } = await client
+      .from('module_translations')
+      .upsert(
+        {
+          module_id: moduleId,
+          locale,
+          name: input.name,
+          description: input.description,
+          features: input.features,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'module_id,locale' },
+      )
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  // ============================================
+  // Frontoffice Access Control (Roles/Permissions)
+  // ============================================
+
+  async getAccessControlRoles() {
+    const client = this.databaseService.getAdminClient();
+    const { data, error } = await client
+      .from('roles')
+      .select('*')
+      .order('level', { ascending: true });
+    if (error) throw error;
+    return data || [];
+  }
+
+  // Custom roles must sit strictly below organization_admin (level 80) so they
+  // cannot be used to escalate above tenant admins via level-based checks.
+  private static readonly CUSTOM_ROLE_MAX_LEVEL = 79;
+
+  private async loadRoleOrThrow(roleId: string) {
+    const client = this.databaseService.getAdminClient();
+    const { data, error } = await client
+      .from('roles')
+      .select('id,name,source')
+      .eq('id', roleId)
+      .maybeSingle();
+    if (error) throw error;
+    if (!data) throw new NotFoundException('Role not found');
+    return data as { id: string; name: string; source: string | null };
+  }
+
+  private assertRoleMutable(role: { name: string; source: string | null }) {
+    if (role.name === 'internal_admin') {
+      throw new BadRequestException('internal_admin role cannot be modified');
+    }
+    if (role.source === 'system') {
+      throw new BadRequestException('System roles cannot be modified');
+    }
+  }
+
+  async createAccessControlRole(input: {
+    name?: string;
+    display_name?: string;
+    description?: string;
+    level?: number;
+    is_active?: boolean;
+  }, userId: string) {
+    const name = (input.name || '').trim();
+    const displayName = (input.display_name || '').trim();
+
+    if (!name) throw new BadRequestException('Role name is required');
+    if (!displayName) throw new BadRequestException('Role display_name is required');
+    if (name === 'internal_admin') {
+      throw new BadRequestException('internal_admin is a reserved role name');
+    }
+
+    const requestedLevel = input.level ?? 50;
+    if (requestedLevel < 1 || requestedLevel > AdminService.CUSTOM_ROLE_MAX_LEVEL) {
+      throw new BadRequestException(
+        `Custom role level must be between 1 and ${AdminService.CUSTOM_ROLE_MAX_LEVEL}`,
+      );
+    }
+
+    const client = this.databaseService.getAdminClient();
+    const { data, error } = await client
+      .from('roles')
+      .insert({
+        name,
+        display_name: displayName,
+        description: input.description || null,
+        level: requestedLevel,
+        is_active: input.is_active ?? true,
+        source: 'custom',
+        created_by: userId,
+        updated_by: userId,
+        updated_at: new Date().toISOString(),
+      })
+      .select('*')
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  async updateAccessControlRole(
+    roleId: string,
+    input: {
+      display_name?: string;
+      description?: string;
+      level?: number;
+      is_active?: boolean;
+    },
+    userId: string,
+  ) {
+    const role = await this.loadRoleOrThrow(roleId);
+    this.assertRoleMutable(role);
+
+    if (
+      input.level !== undefined &&
+      (input.level < 1 || input.level > AdminService.CUSTOM_ROLE_MAX_LEVEL)
+    ) {
+      throw new BadRequestException(
+        `Custom role level must be between 1 and ${AdminService.CUSTOM_ROLE_MAX_LEVEL}`,
+      );
+    }
+
+    const client = this.databaseService.getAdminClient();
+    const payload: Record<string, unknown> = {
+      updated_by: userId,
+      updated_at: new Date().toISOString(),
+    };
+
+    if (input.display_name !== undefined) payload.display_name = input.display_name;
+    if (input.description !== undefined) payload.description = input.description;
+    if (input.level !== undefined) payload.level = input.level;
+    if (input.is_active !== undefined) payload.is_active = input.is_active;
+
+    const { data, error } = await client
+      .from('roles')
+      .update(payload)
+      .eq('id', roleId)
+      .select('*')
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  async deleteAccessControlRole(roleId: string, userId: string) {
+    const role = await this.loadRoleOrThrow(roleId);
+    this.assertRoleMutable(role);
+
+    const client = this.databaseService.getAdminClient();
+    // soft delete for safety/auditability
+    const { data, error } = await client
+      .from('roles')
+      .update({
+        is_active: false,
+        updated_by: userId,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', roleId)
+      .select('*')
+      .single();
+    if (error) throw error;
+    return data;
+  }
+
+  async getAccessControlPermissions() {
+    const client = this.databaseService.getAdminClient();
+    const { data, error } = await client
+      .from('permissions')
+      .select('*')
+      .order('resource', { ascending: true })
+      .order('action', { ascending: true });
+    if (error) throw error;
+    return data || [];
+  }
+
+  async getRolePermissionIds(roleId: string): Promise<string[]> {
+    const client = this.databaseService.getAdminClient();
+    const { data, error } = await client
+      .from('role_permissions')
+      .select('permission_id')
+      .eq('role_id', roleId);
+    if (error) throw error;
+    return (data || []).map((row: { permission_id: string }) => row.permission_id);
+  }
+
+  async replaceRolePermissions(roleId: string, permissionIds: string[]) {
+    const role = await this.loadRoleOrThrow(roleId);
+    this.assertRoleMutable(role);
+
+    const uniquePermissionIds = Array.from(new Set(permissionIds.filter(Boolean)));
+
+    await this.databaseService.executeInPgTransaction(async (txClient) => {
+      await txClient.query('DELETE FROM role_permissions WHERE role_id = $1', [roleId]);
+
+      if (uniquePermissionIds.length > 0) {
+        await txClient.query(
+          'INSERT INTO role_permissions (role_id, permission_id) SELECT $1, unnest($2::uuid[])',
+          [roleId, uniquePermissionIds],
+        );
+      }
+    });
+
+    return { role_id: roleId, permission_ids: uniquePermissionIds };
+  }
+
+  // ============================================
+  // Route Manifest
+  // ============================================
+
+  private cachedManifest: { mtimeMs: number; routes: string[] } | null = null;
+
+  private readManifest(): { routes: string[]; generated_at: string | null } {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const fs = require('node:fs');
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const path = require('node:path');
+    // Preferred location: bundled inside agritech-api (copied to dist/data/
+    // by nest-cli.json assets config). Falls back to monorepo-local paths
+    // in dev and to project/ sources if someone runs the compiled code
+    // straight from the repo.
+    const candidates = [
+      // dist/data/route-manifest.json (production in container)
+      path.resolve(__dirname, '../../data/route-manifest.json'),
+      // src/data/route-manifest.json (running ts-node in dev)
+      path.resolve(__dirname, '../../../src/data/route-manifest.json'),
+      path.resolve(process.cwd(), 'src/data/route-manifest.json'),
+      // monorepo fallbacks
+      path.resolve(process.cwd(), '../project/src/generated/route-manifest.json'),
+      path.resolve(process.cwd(), 'project/src/generated/route-manifest.json'),
+      path.resolve(process.cwd(), '../../project/src/generated/route-manifest.json'),
+    ];
+    for (const p of candidates) {
+      if (fs.existsSync(p)) {
+        const stat = fs.statSync(p);
+        if (this.cachedManifest && this.cachedManifest.mtimeMs === stat.mtimeMs) {
+          return { routes: this.cachedManifest.routes, generated_at: null };
+        }
+        const raw = fs.readFileSync(p, 'utf8');
+        const parsed = JSON.parse(raw) as { routes?: string[]; generated_at?: string };
+        const routes = Array.isArray(parsed.routes) ? parsed.routes : [];
+        this.cachedManifest = { mtimeMs: stat.mtimeMs, routes };
+        return { routes, generated_at: parsed.generated_at ?? null };
+      }
+    }
+    // No manifest found — fail soft with empty array. Frontend / validation
+    // treats this as "no manifest available" and skips validation rather
+    // than blocking module saves.
+    this.cachedManifest = null;
+    return { routes: [], generated_at: null };
+  }
+
+  async getRouteManifest(): Promise<{ routes: string[]; generated_at: string | null; count: number }> {
+    const { routes, generated_at } = this.readManifest();
+    return { routes, generated_at, count: routes.length };
+  }
+
+  /**
+   * Validate that each nav_item is either in the manifest or a literal
+   * prefix of something in the manifest. Returns the list of offending
+   * entries. Empty array = all valid.
+   */
+  private validateNavItemsAgainstManifest(
+    navItems: unknown,
+    manifest: string[],
+  ): string[] {
+    if (!Array.isArray(navItems) || manifest.length === 0) return [];
+    const manifestSet = new Set(manifest);
+
+    const unknown: string[] = [];
+    for (const item of navItems) {
+      const to = typeof item === 'string'
+        ? item
+        : item && typeof item === 'object' && typeof (item as { to?: unknown }).to === 'string'
+          ? (item as { to: string }).to
+          : null;
+      if (!to) continue;
+      // Accept an exact match, or accept the entry as a prefix of a real
+      // route (so `/parcels/$parcelId/ai` matches a module that wants to
+      // claim the whole subtree).
+      if (manifestSet.has(to)) continue;
+      if (manifest.some((m) => m === to || m.startsWith(`${to}/`))) continue;
+      unknown.push(to);
+    }
+    return unknown;
+  }
+
+  /**
+   * Re-seed the canonical 12-SKU catalog and deactivate everything else.
+   * Same contract as the 20260424000000 migration — safe to re-run.
+   * Returns counts so the UI can toast "seeded N, deactivated M".
+   */
+  async loadDefaultModules(): Promise<{
+    seeded: number;
+    deactivated: number;
+    translationsSeeded: number;
+  }> {
+    const client = this.databaseService.getAdminClient();
+
+    const CANONICAL: Array<{
+      slug: string;
+      name: string;
+      icon: string;
+      color: string;
+      category: string;
+      description: string;
+      display_order: number;
+      price_monthly: number;
+      is_required: boolean;
+      is_recommended: boolean;
+      is_available: boolean;
+      navigation_items: string[];
+    }> = [
+      { slug: 'core', name: 'core', icon: 'Home', color: '#10b981', category: 'core', description: 'Core features available to every organization', display_order: 1, price_monthly: 0, is_required: true, is_recommended: true, is_available: true, navigation_items: ['/dashboard','/settings','/farm-hierarchy','/parcels','/notifications','/analytics','/live-dashboard','/referentiels','/reports','/pest-alerts'] },
+      { slug: 'chat_advisor', name: 'chat_advisor', icon: 'Bot', color: '#10b981', category: 'analytics', description: 'Conversational AgromindIA assistant', display_order: 2, price_monthly: 0, is_required: true, is_recommended: true, is_available: true, navigation_items: ['/chat'] },
+      { slug: 'agromind_advisor', name: 'agromind_advisor', icon: 'Sparkles', color: '#7c3aed', category: 'analytics', description: 'AI advisor per parcel: calibration, diagnostics, recommendations, annual plan', display_order: 3, price_monthly: 0, is_required: false, is_recommended: false, is_available: true, navigation_items: ['/parcels/$parcelId/ai'] },
+      { slug: 'satellite', name: 'satellite', icon: 'Satellite', color: '#06b6d4', category: 'analytics', description: 'Satellite imagery, vegetation indices, weather', display_order: 4, price_monthly: 0, is_required: false, is_recommended: false, is_available: true, navigation_items: ['/satellite-analysis','/production/satellite-analysis','/parcels/$parcelId/satellite','/parcels/$parcelId/weather','/production/soil-analysis'] },
+      { slug: 'personnel', name: 'personnel', icon: 'Users', color: '#3b82f6', category: 'hr', description: 'Workers and tasks', display_order: 5, price_monthly: 0, is_required: false, is_recommended: false, is_available: true, navigation_items: ['/workers','/tasks','/workforce/payments','/workforce/workers/piece-work','/workforce/day-laborers','/workforce/employees','/workforce/tasks'] },
+      { slug: 'stock', name: 'stock', icon: 'Package', color: '#10b981', category: 'inventory', description: 'Inventory and infrastructure', display_order: 6, price_monthly: 0, is_required: false, is_recommended: false, is_available: true, navigation_items: ['/stock','/infrastructure','/inventory'] },
+      { slug: 'production', name: 'production', icon: 'Wheat', color: '#f59e0b', category: 'production', description: 'Campaigns, crop cycles, harvests, quality', display_order: 7, price_monthly: 0, is_required: false, is_recommended: false, is_available: true, navigation_items: ['/campaigns','/crop-cycles','/harvests','/reception-batches','/quality-control','/biological-assets','/product-applications','/production/crop-cycles','/production/intelligence','/production/profitability','/production/quality-control'] },
+      { slug: 'fruit_trees', name: 'fruit_trees', icon: 'TreeDeciduous', color: '#10b981', category: 'agriculture', description: 'Trees, orchards, pruning', display_order: 8, price_monthly: 0, is_required: false, is_recommended: false, is_available: true, navigation_items: ['/trees','/orchards','/pruning'] },
+      { slug: 'compliance', name: 'compliance', icon: 'ShieldCheck', color: '#a855f7', category: 'operations', description: 'Compliance and certifications', display_order: 9, price_monthly: 0, is_required: false, is_recommended: false, is_available: true, navigation_items: ['/compliance'] },
+      { slug: 'sales_purchasing', name: 'sales_purchasing', icon: 'ShoppingCart', color: '#f43f5e', category: 'sales', description: 'Quotes, sales orders, purchase orders', display_order: 10, price_monthly: 0, is_required: false, is_recommended: false, is_available: true, navigation_items: ['/accounting/quotes','/accounting/sales-orders','/accounting/purchase-orders','/accounting/customers','/stock/suppliers'] },
+      { slug: 'accounting', name: 'accounting', icon: 'BookOpen', color: '#6366f1', category: 'accounting', description: 'Invoices, payments, journal, reports', display_order: 11, price_monthly: 0, is_required: false, is_recommended: false, is_available: true, navigation_items: ['/accounting','/utilities'] },
+      { slug: 'marketplace', name: 'marketplace', icon: 'ShoppingBag', color: '#f97316', category: 'sales', description: 'B2B quote marketplace', display_order: 12, price_monthly: 0, is_required: false, is_recommended: false, is_available: true, navigation_items: ['/marketplace'] },
+      { slug: 'lab_services', name: 'lab_services', icon: 'FlaskConical', color: '#8b5cf6', category: 'operations', description: 'Lab services, soil and tissue analysis marketplace', display_order: 13, price_monthly: 0, is_required: false, is_recommended: false, is_available: true, navigation_items: ['/lab-services'] },
+    ];
+
+    // Upsert catalog rows
+    const rows = CANONICAL.map((m) => ({
+      ...m,
+      dashboard_widgets: [],
+    }));
+    const { error: upsertError } = await client
+      .from('modules')
+      .upsert(rows, { onConflict: 'slug' });
+    if (upsertError) {
+      throw new InternalServerErrorException(
+        `Failed to upsert default modules: ${upsertError.message}`,
+      );
+    }
+
+    // Deactivate everything else
+    const { data: deactivatedRows, error: deactError } = await client
+      .from('modules')
+      .update({ is_available: false, updated_at: new Date().toISOString() })
+      .not('slug', 'in', `(${CANONICAL.map((m) => `"${m.slug}"`).join(',')})`)
+      .select('id');
+    if (deactError) {
+      throw new InternalServerErrorException(
+        `Failed to deactivate non-canonical modules: ${deactError.message}`,
+      );
+    }
+
+    // Seed translations (fr/en/ar)
+    const T: Record<string, Record<'fr' | 'en' | 'ar', { name: string; description: string }>> = {
+      core: { fr: { name: 'Cœur', description: 'Fonctionnalités de base pour toute organisation' }, en: { name: 'Core', description: 'Core features available to every organization' }, ar: { name: 'الأساس', description: 'الميزات الأساسية المتاحة لكل مؤسسة' } },
+      chat_advisor: { fr: { name: 'Conseiller Chat', description: 'Assistant conversationnel AgromindIA' }, en: { name: 'Chat Advisor', description: 'Conversational AgromindIA assistant' }, ar: { name: 'المستشار الحواري', description: 'مساعد AgromindIA التفاعلي' } },
+      agromind_advisor: { fr: { name: 'Conseiller AgroMind', description: 'Conseiller IA par parcelle: calibrage, diagnostics, recommandations, plan annuel' }, en: { name: 'AgroMind Advisor', description: 'AI advisor per parcel: calibration, diagnostics, recommendations, annual plan' }, ar: { name: 'مستشار أغرومايند', description: 'مستشار ذكاء اصطناعي لكل قطعة' } },
+      satellite: { fr: { name: 'Satellite', description: 'Imagerie satellite, indices de végétation, météo' }, en: { name: 'Satellite', description: 'Satellite imagery, vegetation indices, weather' }, ar: { name: 'الأقمار الصناعية', description: 'صور الأقمار الصناعية' } },
+      personnel: { fr: { name: 'Personnel', description: 'Ouvriers et tâches' }, en: { name: 'Personnel', description: 'Workers and tasks' }, ar: { name: 'الموظفون', description: 'العمال والمهام' } },
+      stock: { fr: { name: 'Stock', description: 'Inventaire et infrastructure' }, en: { name: 'Stock', description: 'Inventory and infrastructure' }, ar: { name: 'المخزون', description: 'المخزون والبنية التحتية' } },
+      production: { fr: { name: 'Production', description: 'Campagnes, cycles culturaux, récoltes, qualité' }, en: { name: 'Production', description: 'Campaigns, crop cycles, harvests, quality' }, ar: { name: 'الإنتاج', description: 'الحملات ودورات المحاصيل والحصاد' } },
+      fruit_trees: { fr: { name: 'Arbres Fruitiers', description: 'Arbres, vergers, taille' }, en: { name: 'Fruit Trees', description: 'Trees, orchards, pruning' }, ar: { name: 'الأشجار المثمرة', description: 'الأشجار والبساتين' } },
+      compliance: { fr: { name: 'Conformité', description: 'Conformité et certifications' }, en: { name: 'Compliance', description: 'Compliance and certifications' }, ar: { name: 'الامتثال', description: 'الامتثال والشهادات' } },
+      sales_purchasing: { fr: { name: 'Ventes & Achats', description: 'Devis, commandes clients, commandes fournisseurs' }, en: { name: 'Sales & Purchasing', description: 'Quotes, sales orders, purchase orders' }, ar: { name: 'المبيعات والمشتريات', description: 'العروض وطلبات البيع' } },
+      accounting: { fr: { name: 'Comptabilité', description: 'Factures, paiements, journal, rapports' }, en: { name: 'Accounting', description: 'Invoices, payments, journal, reports' }, ar: { name: 'المحاسبة', description: 'الفواتير والمدفوعات والدفتر' } },
+      marketplace: { fr: { name: 'Place de Marché', description: 'Marketplace B2B de demandes de devis' }, en: { name: 'Marketplace', description: 'B2B quote marketplace' }, ar: { name: 'السوق', description: 'سوق عروض B2B' } },
+    };
+
+    const { data: seededModules } = await client
+      .from('modules')
+      .select('id, slug')
+      .in('slug', CANONICAL.map((m) => m.slug));
+    const slugToId = new Map<string, string>(
+      ((seededModules || []) as Array<{ id: string; slug: string }>).map((r) => [r.slug, r.id]),
+    );
+
+    const translationRows: Array<{ module_id: string; locale: string; name: string; description: string }> = [];
+    for (const [slug, locales] of Object.entries(T)) {
+      const moduleId = slugToId.get(slug);
+      if (!moduleId) continue;
+      for (const [locale, t] of Object.entries(locales)) {
+        translationRows.push({ module_id: moduleId, locale, name: t.name, description: t.description });
+      }
+    }
+    const { error: tError } = await client
+      .from('module_translations')
+      .upsert(translationRows, { onConflict: 'module_id,locale' });
+    if (tError) {
+      throw new InternalServerErrorException(
+        `Failed to seed translations: ${tError.message}`,
+      );
+    }
+
+    return {
+      seeded: CANONICAL.length,
+      deactivated: (deactivatedRows || []).length,
+      translationsSeeded: translationRows.length,
+    };
+  }
+
+  async getOrphanRoutes(): Promise<{ orphans: string[]; count: number }> {
+    const client = this.databaseService.getAdminClient();
+    const { routes } = this.readManifest();
+    if (routes.length === 0) return { orphans: [], count: 0 };
+
+    const { data: modules } = await client
+      .from('modules')
+      .select('slug, navigation_items, is_available')
+      .eq('is_available', true);
+
+    const claimed = new Set<string>();
+    for (const m of (modules || []) as any[]) {
+      const items = Array.isArray(m.navigation_items) ? m.navigation_items : [];
+      for (const item of items) {
+        const to = typeof item === 'string' ? item : item?.to;
+        if (typeof to !== 'string') continue;
+        // Mark the nav entry as "covering" any manifest route that starts
+        // with it. This is the longest-prefix model from module-gating.ts
+        // — if /parcels covers /parcels/abc, /parcels/abc is not orphan.
+        for (const route of routes) {
+          if (route === to || route.startsWith(`${to}/`)) claimed.add(route);
+        }
+      }
+    }
+    // Exclude meta routes that should never need a module
+    // (authentication, onboarding, public marketing, etc.).
+    const nonGated = (r: string) =>
+      r.startsWith('/login') ||
+      r.startsWith('/register') ||
+      r.startsWith('/forgot-password') ||
+      r.startsWith('/set-password') ||
+      r.startsWith('/auth/') ||
+      r.startsWith('/onboarding') ||
+      r.startsWith('/checkout-success') ||
+      r.startsWith('/privacy-policy') ||
+      r.startsWith('/terms-of-service') ||
+      r.startsWith('/pitch-deck') ||
+      r.startsWith('/rdv') ||
+      r.startsWith('/import-data') ||
+      r.startsWith('/setup') ||
+      r === '/';
+
+    const orphans = routes.filter((r) => !claimed.has(r) && !nonGated(r));
+    return { orphans, count: orphans.length };
   }
 }

@@ -21,11 +21,14 @@ import {
 import { CostCentersService } from './cost-centers.service';
 import { CreateCostCenterDto, UpdateCostCenterDto } from './dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RequireModule } from '../../common/decorators/require-module.decorator';
 import { OrganizationGuard } from '../../common/guards/organization.guard';
+import { ModuleEntitlementGuard } from '../../common/guards/module-entitlement.guard';
 
 @ApiTags('cost-centers')
 @Controller('cost-centers')
-@UseGuards(JwtAuthGuard, OrganizationGuard)
+@RequireModule('accounting')
+@UseGuards(JwtAuthGuard, OrganizationGuard, ModuleEntitlementGuard)
 @ApiBearerAuth()
 export class CostCentersController {
   constructor(private readonly costCentersService: CostCentersService) {}

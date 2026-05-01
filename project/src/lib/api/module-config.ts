@@ -18,6 +18,9 @@ export interface ModuleConfig {
   name: string;
   description: string;
   features: string[];
+  // Present only on org-scoped responses
+  isActive?: boolean;
+  settings?: Record<string, unknown>;
 }
 
 export interface SubscriptionPricing {
@@ -45,6 +48,17 @@ export const moduleConfigApi = {
   async getConfig(locale?: string): Promise<ModuleConfigResponse> {
     const params = locale ? `?locale=${locale}` : '';
     return apiClient.get<ModuleConfigResponse>(`${BASE_URL}${params}`);
+  },
+
+  /**
+   * Org-scoped variant: same shape as getConfig but each module includes
+   * `isActive` and `settings` reflecting the organization's activation state.
+   */
+  async getOrgConfig(organizationId: string, locale?: string): Promise<ModuleConfigResponse> {
+    const params = locale ? `?locale=${locale}` : '';
+    return apiClient.get<ModuleConfigResponse>(
+      `/api/v1/organizations/${organizationId}/modules${params}`,
+    );
   },
 
   async calculatePrice(moduleSlugs: string[]): Promise<CalculatePriceResponse> {

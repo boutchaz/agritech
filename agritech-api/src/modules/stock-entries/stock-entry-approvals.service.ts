@@ -132,10 +132,7 @@ export class StockEntryApprovalsService {
   }
 
   async getPendingApprovals(organizationId: string, filters?: any): Promise<any> {
-    const pool = this.databaseService.getPgPool();
-    const client = await pool.connect();
-
-    try {
+    return this.databaseService.executeInPgTransaction(async (client) => {
       const values: any[] = [organizationId];
       const conditions = [`se.organization_id = $1`, `sea.status = 'pending'`];
 
@@ -180,9 +177,7 @@ export class StockEntryApprovalsService {
         status: row.status,
         requestedAt: row.created_at,
       }));
-    } finally {
-      client.release();
-    }
+    });
   }
 
   async requiresApproval(userRole: string, entryType: string, totalValue: number): Promise<boolean> {
@@ -201,6 +196,50 @@ export class StockEntryApprovalsService {
     }
 
     return true;
+  }
+
+  async resolveUserRole(userId: string, organizationId: string): Promise<string | null> {
+    const client = this.databaseService.getAdminClient();
+
+    const { data, error } = await client
+      .from('organization_users')
+      .select('roles(name)')
+      .eq('user_id', userId)
+      .eq('organization_id', organizationId)
+      .eq('is_active', true)
+      .single();
+
+    if (error || !data) {
+      this.logger.warn(`Could not resolve role for user ${userId} in org ${organizationId}: ${error?.message}`);
+      return null;
+    }
+
+    return (data.roles as any)?.name ?? null;
+  }
+
+  async autoRequestApprovalIfNeeded(
+    stockEntryId: string,
+    organizationId: string,
+    userId: string,
+    entryType: string,
+    totalValue: number,
+  ): Promise<{ approvalRequested: boolean; approvalId?: string }> {
+    const userRole = await this.resolveUserRole(userId, organizationId);
+
+    if (!userRole) {
+      this.logger.warn(`No role found for user ${userId}, skipping auto-approval check`);
+      return { approvalRequested: false };
+    }
+
+    const needsApproval = await this.requiresApproval(userRole, entryType, totalValue);
+
+    if (!needsApproval) {
+      return { approvalRequested: false };
+    }
+
+    const approval = await this.requestApproval(stockEntryId, organizationId, userId);
+
+    return { approvalRequested: true, approvalId: approval.id };
   }
 
   async assertApprovedForPosting(

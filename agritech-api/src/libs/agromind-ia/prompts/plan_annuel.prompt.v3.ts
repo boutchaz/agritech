@@ -11,6 +11,48 @@
 
 import type { PlanAnnuelInput, PlanAnnuelOutput } from '../types';
 
+// Subset of referentiel keys consumed by the 10-step plan annuel algorithm.
+// Full referentiel (e.g. DATA_OLIVIER.json ~88KB) contains alertes,
+// phenological_stages, co_occurrence, etc. that plan_annuel never reads;
+// trimming cuts ~70KB / ~18K tokens per call on olivier.
+const PLAN_ANNUEL_REF_KEYS = [
+  'metadata',
+  'options_nutrition',
+  'export_npk_kg_par_tonne_fruit',
+  'export_kg_tonne',
+  'entretien_kg_ha',
+  'seuils_foliaires',
+  'seuils_eau',
+  'seuils_eau_salinite',
+  'salinite',
+  'tolerance_salinite',
+  'ajustement_cible',
+  'ajustement_alternance',
+  'ajustement_espece',
+  'fractionnement_pct',
+  'formes_engrais',
+  'microelements',
+  'biostimulants',
+  'calendrier_biostimulants',
+  'calendrier_phyto',
+  'calendrier_phyto_preventif',
+  'kc',
+  'kc_par_periode',
+  'fraction_lessivage',
+  'rdi',
+  'nutrition',
+] as const;
+
+function pickPlanAnnuelReferentiel(
+  referentiel: Record<string, any>,
+): Record<string, any> {
+  const picked: Record<string, any> = {};
+  for (const key of PLAN_ANNUEL_REF_KEYS) {
+    if (referentiel[key] !== undefined) picked[key] = referentiel[key];
+  }
+  return picked;
+}
+
 export function buildPlanAnnuelSystemPrompt(
   moteurConfig: Record<string, any>,
   referentiel: Record<string, any>
@@ -19,6 +61,7 @@ export function buildPlanAnnuelSystemPrompt(
   const culture    = referentiel.metadata?.culture ?? 'inconnue';
   const navPlan    = moteurConfig.navigation_plan_annuel ?? {};
   const gouvernance= moteurConfig.gouvernance_recommandations ?? {};
+  const refTrimmed = pickPlanAnnuelReferentiel(referentiel);
 
   return `
 Tu es AgromindIA, moteur d'assemblage du plan annuel post-calibrage.
@@ -32,9 +75,9 @@ Il est déclenché automatiquement par la transition vers la phase opérationnel
 → Voir Moteur Calibrage : Conditions de sortie du calibrage
 
 ════════════════════════════════════════════════════════════
-RÉFÉRENTIEL CULTURE
+RÉFÉRENTIEL CULTURE (sous-ensemble plan annuel)
 ════════════════════════════════════════════════════════════
-${JSON.stringify(referentiel, null, 2)}
+${JSON.stringify(refTrimmed, null, 2)}
 
 ════════════════════════════════════════════════════════════
 NAVIGATION RÉFÉRENTIEL (depuis moteur_config)
@@ -59,6 +102,13 @@ Note : Option C est CUMULATIVE avec A ou B (lire referentiel.options_nutrition.C
 
 ÉTAPE 2 — RENDEMENT CIBLE
 ──────────────────────────
+PRIORITÉ ABSOLUE : SI l'input contient un champ \`confirmedTargetYieldTHa\` non-nul
+→ rendement_cible = confirmedTargetYieldTHa (VERBATIM, ne PAS recalculer).
+→ parameters.targetYieldTHa = confirmedTargetYieldTHa
+→ parameters.yieldMethod = (confirmedTargetYieldSource === 'user_override' ? 'user_override' : 'user_confirmed_suggestion')
+→ Sauter le reste de l'étape 2, passer à l'étape 3.
+
+SINON (pas de confirmation utilisateur) :
 • SI historique rendements ≥ 3 ans disponibles :
   rendement_cible = moyenne(3_meilleures_années) × 0.95 (coefficient sécurité)
 • SINON :
@@ -181,72 +231,106 @@ OPTIONS DE VALIDATION PRÉSENTÉES
 FORMAT DE SORTIE — JSON STRICT
 ════════════════════════════════════════════════════════════
 Réponds UNIQUEMENT avec un objet JSON valide. Aucun texte avant/après. Aucun markdown.
+IMPORTANT : utilise EXACTEMENT les clés ci-dessous (camelCase anglais). Ne pas traduire les clés.
+Le CONTENU des strings reste en français (produits, notes, résumé).
 
 {
-  "plan_id": "uuid-string",
-  "parcelle_id": "string",
-  "saison": "YYYY",
-  "date_generation": "YYYY-MM-DD",
+  "generationDate": "YYYY-MM-DD",
+  "version": "3.0",
   "culture": "${culture}",
-  "variete": "string",
-  "systeme": "string",
+  "season": "YYYY",
 
-  "parametres_calcul": {
-    "rendement_cible_t_ha": 0.0,
-    "methode_rendement": "historique | satellite_model",
-    "option_nutrition": "A | B | C",
-    "option_nutrition_raison": "string — pourquoi cette option a été déterminée automatiquement",
-    "annee_cycle": "ON | OFF | indefini | NA",
-    "cible_production": "huile_qualite | olive_table | mixte | autre"
+  "parameters": {
+    "targetYieldTHa": 0.0,
+    "yieldMethod": "historique | satellite_model | user_override | user_confirmed_suggestion",
+    "nutritionOption": "A | B | C",
+    "nutritionOptionReason": "string — pourquoi cette option a été déterminée automatiquement",
+    "cycleYear": "ON | OFF | indefini | NA",
+    "productionTarget": "huile_qualite | olive_table | mixte | autre"
   },
 
-  "doses_annuelles_kg_ha": {
-    "N": 0, "P2O5": 0, "K2O": 0, "MgO": 0
-  },
-
-  "calendrier_mensuel": {
-    "Jan": {
-      "NPK": {"N_kg_ha": 0, "P2O5_kg_ha": 0, "K2O_kg_ha": 0},
-      "formes_engrais": [{"element": "string", "produit": "string", "quantite": {"valeur": 0, "unite": "string"}}],
-      "microelements": [{"element": "string", "produit": "string", "dose": {"valeur": 0, "unite": "string"}, "mode": "foliaire|fertigation"}],
-      "biostimulants": [{"produit": "string", "dose": {"valeur": 0, "unite": "string"}, "mode": "string"}],
-      "phyto": [{"cible": "string", "produit": "string", "dose": {"valeur": 0, "unite": "string"}, "conditions": "string"}],
-      "irrigation": {"volume_reference_L_arbre_j": 0, "kc": 0, "eto_moyen_mm": 0, "FL": 0},
-      "travaux": ["string"]
+  "annualDoses": {
+    "N_kg_ha": 0,
+    "P2O5_kg_ha": 0,
+    "K2O_kg_ha": 0,
+    "MgO_kg_ha": 0,
+    "calculationDetails": {
+      "export": {"N": 0, "P2O5": 0, "K2O": 0, "MgO": 0},
+      "entretien": {"N": 0, "P2O5": 0, "K2O": 0, "MgO": 0},
+      "soilCorrection": {"N": 0, "P2O5": 0, "K2O": 0, "MgO": 0},
+      "waterCorrection": {"N": 0}
     }
   },
 
-  "plan_irrigation_annuel": {
-    "volume_total_m3_ha": 0,
-    "detail_mensuel": [
-      {"mois": "string", "kc": 0, "eto_mm": 0, "etc_mm": 0, "FL": 0, "volume_L_arbre_j": 0}
+  "interventions": [
+    {
+      "type": "fertilisation | irrigation | phyto | biostimulant | microelement | taille | travail_sol",
+      "category": "NPK | formes_engrais | microelements | biostimulants | phyto | irrigation | travaux",
+      "month": "jan | feb | mar | apr | may | jun | jul | aug | sep | oct | nov | dec",
+      "week": null,
+      "stageBBCH": "string (code BBCH)",
+      "product": "string (nom produit)",
+      "dose": 0,
+      "doseUnit": "kg/ha | L/ha | g/arbre | L/arbre | mm",
+      "nutrientContent": {"N_kg_ha": 0, "P2O5_kg_ha": 0, "K2O_kg_ha": 0},
+      "applicationMethod": "fertigation | foliaire | sol | pulverisation",
+      "applicationConditions": "string (conditions meteo, timing)",
+      "priority": "high | medium | low",
+      "status": "planned",
+      "notes": "string (français)"
+    }
+  ],
+
+  "irrigation": {
+    "totalVolumeM3Ha": 0,
+    "monthly": [
+      {"month": "jan", "kc": 0, "etoMm": 0, "etcMm": 0, "FL": 0, "volumeLTreeDay": 0}
+    ],
+    "rdiActive": false,
+    "rdiWindow": null
+  },
+
+  "pruning": {
+    "operations": [
+      {"type": "string", "month": "string", "notes": "string"}
     ]
   },
 
-  "prevision_recolte": {
-    "fenetre": {"debut": "YYYY-MM-DD", "fin": "YYYY-MM-DD"},
-    "rendement_estime_t_ha": [0.0, 0.0],
-    "im_cible": [0.0, 0.0]
+  "harvestForecast": {
+    "harvestWindow": {"start": "YYYY-MM-DD", "end": "YYYY-MM-DD"},
+    "yieldForecast": {"low": 0.0, "central": 0.0, "high": 0.0},
+    "productionTarget": "string",
+    "imTarget": [0.0, 0.0]
   },
 
-  "budget_indicatif_dh_ha": {
-    "engrais_fertigation": 0,
-    "microelements": 0,
-    "biostimulants": 0,
-    "phyto": 0,
-    "total_estime": 0
+  "economicEstimate": {
+    "totalInputCostDhHa": 0,
+    "breakdown": {
+      "fertigation": 0,
+      "microelements": 0,
+      "biostimulants": 0,
+      "phyto": 0
+    }
   },
 
   "verifications": {
-    "fractionnement_ok": true,
-    "doses_plausibles": true,
-    "volumes_plausibles": true,
-    "incompatibilites_cuve": "aucune | [liste]",
+    "fractionnementOk": true,
+    "dosesPlausibles": true,
+    "volumesPlausibles": true,
+    "incompatibilitesCuve": "aucune | [liste]",
     "anomalies": ["string"]
   },
 
-  "resume": "string — 5-7 lignes, les points essentiels du plan en langage simple"
+  "planSummary": "string — 5-7 lignes en français, les points essentiels du plan en langage simple"
 }
+
+NOTES DE FORMAT :
+- "interventions" est un TABLEAU PLAT (pas imbriqué par mois). Une ligne par intervention.
+- Chaque intervention DOIT avoir un "month" parmi: jan, feb, mar, apr, may, jun, jul, aug, sep, oct, nov, dec.
+- Pour le fractionnement NPK mensuel, créer une intervention par mois avec type="fertilisation", category="NPK".
+- Pour les formes d'engrais, microelements, biostimulants, phyto, irrigation, travaux → une intervention par occurrence.
+- nutrientContent obligatoire UNIQUEMENT pour category="NPK" ou "formes_engrais".
+- Toutes les clés JSON sont en camelCase anglais. Le contenu textuel (notes, produits) reste en français.
 `.trim();
 }
 

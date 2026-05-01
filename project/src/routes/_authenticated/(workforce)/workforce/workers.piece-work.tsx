@@ -1,166 +1,129 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useState } from 'react';
-import { Calendar, Filter, Package } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { Calendar, Filter, Package, Building2 } from 'lucide-react';
 import { PieceWorkEntry, PieceWorkList } from '@/components/Workers/PieceWorkEntry';
 import { useAuth } from '@/hooks/useAuth';
+import ModernPageHeader from '@/components/ModernPageHeader';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/Input';
-import { Select } from '@/components/ui/Select';
-import { withRouteProtection } from '@/components/authorization/withRouteProtection';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/radix-select';
+import { PageLoader } from '@/components/ui/loader';
+import { withLicensedRouteProtection } from '@/components/authorization/withLicensedRouteProtection';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 
-/**
- * Piece-Work Management Page
- *
- * View and manage all piece-work records for the farm.
- * Allows recording new work, viewing history, and filtering.
- *
- * Access: Farm managers and admins
- * Route: /workers/piece-work
- */
 function PieceWorkPage() {
-  const { currentFarm } = useAuth();
+  const { t } = useTranslation();
+  const { currentOrganization, currentFarm } = useAuth();
 
-  // Date filter state
   const [startDate, setStartDate] = useState(format(startOfMonth(new Date()), 'yyyy-MM-dd'));
   const [endDate, setEndDate] = useState(format(endOfMonth(new Date()), 'yyyy-MM-dd'));
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
-  // Build filters object
   const filters = {
     startDate,
     endDate,
     ...(statusFilter !== 'all' && { status: statusFilter }),
   };
 
+  if (!currentOrganization) return <PageLoader />;
+
   if (!currentFarm) {
     return (
-      <div className="container mx-auto py-6 px-4">
-        <Card className="p-6">
-          <p className="text-center text-muted-foreground">
-            Please select a farm to view piece-work records
-          </p>
-        </Card>
-      </div>
+      <>
+        <ModernPageHeader
+          breadcrumbs={[
+            { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
+            { icon: Package, label: t('workers.pieceWork.title', 'Travail à la pièce'), isActive: true },
+          ]}
+          title={t('workers.pieceWork.title', 'Travail à la pièce')}
+          subtitle={t('workers.pieceWork.description', 'Suivi du travail par unités (arbres, caisses, kg...)')}
+        />
+        <div className="p-6">
+          <Card className="p-6 text-center">
+            <p className="text-gray-500">{t('workers.pieceWork.selectFarm', 'Veuillez sélectionner une ferme pour voir les enregistrements.')}</p>
+          </Card>
+        </div>
+      </>
     );
   }
 
   return (
-    <div className="container mx-auto py-6 px-4 max-w-7xl space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-3">
-            <Package className="h-8 w-8" />
-            Piece-Work Records
-          </h1>
-          <p className="text-muted-foreground mt-2">
-            Track work completed by units (trees, boxes, kg, etc.)
-          </p>
-        </div>
-        <PieceWorkEntry />
-      </div>
+    <>
+      <ModernPageHeader
+        breadcrumbs={[
+          { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
+          { icon: Package, label: t('workers.pieceWork.title', 'Travail à la pièce'), isActive: true },
+        ]}
+        title={t('workers.pieceWork.title', 'Travail à la pièce')}
+        subtitle={t('workers.pieceWork.description', 'Suivi du travail par unités (arbres, caisses, kg...)')}
+        actions={<PieceWorkEntry />}
+      />
 
-      {/* Filters */}
-      <Card className="p-4">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <Filter className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm font-medium">Filters:</span>
-          </div>
-
-          <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Start Date */}
-            <div>
-              <label className="text-sm text-muted-foreground mb-1 block">
-                Start Date
-              </label>
-              <Input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-              />
+      <div className="p-3 sm:p-4 md:p-6 pb-20 md:pb-6 space-y-6">
+        {/* Filters */}
+        <Card className="p-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+            <div className="flex items-center gap-2 shrink-0">
+              <Filter className="h-4 w-4 text-gray-500" />
+              <span className="text-sm font-medium">{t('common.filters', 'Filtres')} :</span>
             </div>
 
-            {/* End Date */}
-            <div>
-              <label className="text-sm text-muted-foreground mb-1 block">
-                End Date
-              </label>
-              <Input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-              />
+            <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-4 w-full">
+              <div>
+                <label className="text-sm text-gray-500 mb-1 block">{t('workers.pieceWork.startDate', 'Date début')}</label>
+                <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+              </div>
+              <div>
+                <label className="text-sm text-gray-500 mb-1 block">{t('workers.pieceWork.endDate', 'Date fin')}</label>
+                <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+              </div>
+              <div>
+                <label className="text-sm text-gray-500 mb-1 block">{t('workers.pieceWork.paymentStatus', 'Statut paiement')}</label>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger>
+                    <SelectValue placeholder={t('workers.pieceWork.allStatuses', 'Tous les statuts')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">{t('workers.pieceWork.allStatuses', 'Tous les statuts')}</SelectItem>
+                    <SelectItem value="pending">{t('workers.pieceWork.status.pending', 'En attente')}</SelectItem>
+                    <SelectItem value="approved">{t('workers.pieceWork.status.approved', 'Approuvé')}</SelectItem>
+                    <SelectItem value="paid">{t('workers.pieceWork.status.paid', 'Payé')}</SelectItem>
+                    <SelectItem value="disputed">{t('workers.pieceWork.status.disputed', 'Contesté')}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
-            {/* Status Filter */}
-            <div>
-              <label className="text-sm text-muted-foreground mb-1 block">
-                Payment Status
-              </label>
-              <Select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-              >
-                <option value="all">All Statuses</option>
-                <option value="pending">Pending</option>
-                <option value="approved">Approved</option>
-                <option value="paid">Paid</option>
-                <option value="disputed">Disputed</option>
-              </Select>
-            </div>
-          </div>
-
-          {/* Quick Date Filters */}
-          <div className="flex gap-2">
             <Button
               variant="outline"
               size="sm"
+              className="shrink-0"
               onClick={() => {
                 setStartDate(format(startOfMonth(new Date()), 'yyyy-MM-dd'));
                 setEndDate(format(endOfMonth(new Date()), 'yyyy-MM-dd'));
               }}
             >
               <Calendar className="h-4 w-4 mr-1" />
-              This Month
+              {t('workers.pieceWork.thisMonth', 'Ce mois')}
             </Button>
           </div>
-        </div>
-      </Card>
+        </Card>
 
-      {/* Statistics Cards (optional) */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-        <Card className="p-4">
-          <div className="text-sm text-muted-foreground">Total Records</div>
-          <div className="text-2xl font-bold mt-1">-</div>
-        </Card>
-        <Card className="p-4">
-          <div className="text-sm text-muted-foreground">Pending</div>
-          <div className="text-2xl font-bold mt-1">-</div>
-        </Card>
-        <Card className="p-4">
-          <div className="text-sm text-muted-foreground">Total Amount</div>
-          <div className="text-2xl font-bold mt-1">-</div>
-        </Card>
-        <Card className="p-4">
-          <div className="text-sm text-muted-foreground">Workers</div>
-          <div className="text-2xl font-bold mt-1">-</div>
-        </Card>
+        {/* List */}
+        <PieceWorkList filters={filters} />
       </div>
-
-      {/* Piece-Work List */}
-      <PieceWorkList filters={filters} />
-    </div>
+    </>
   );
 }
 
-// Protect route - require farm manager or admin
 export const Route = createFileRoute('/_authenticated/(workforce)/workforce/workers/piece-work')({
-  component: withRouteProtection(
-    PieceWorkPage,
-    'read', // action
-    'Worker' // resource
-  ),
+  component: withLicensedRouteProtection(PieceWorkPage, 'read', 'Worker'),
 });

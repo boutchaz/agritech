@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/hooks/useAuth';
@@ -21,9 +21,13 @@ function ReceptionBatchesPage() {
   const search = Route.useSearch();
   const defaultHarvestId = search.harvest_id;
 
-  if (defaultHarvestId && !showForm) {
-    setShowForm(true);
-  }
+  // Auto-open form when harvest_id is in URL (from harvest page link)
+  useEffect(() => {
+    if (defaultHarvestId && !showForm) {
+      setShowForm(true);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [defaultHarvestId]);
 
   const handleViewBatch = (batch: ReceptionBatch) => {
     setSelectedBatch(batch);

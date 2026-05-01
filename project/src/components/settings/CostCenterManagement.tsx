@@ -414,7 +414,7 @@ export function CostCenterManagement() {
                 {t('costCenters.description', 'Manage cost centers for expense tracking and profitability analysis.')}
               </p>
             </div>
-            <Button onClick={() => handleOpenDialog()}>
+            <Button type="button" variant="default" onClick={() => handleOpenDialog()}>
               <Plus className="h-4 w-4 mr-2" />
               {t('costCenters.addNew', 'Add Cost Center')}
             </Button>

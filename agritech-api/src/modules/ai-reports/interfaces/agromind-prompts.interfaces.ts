@@ -296,6 +296,10 @@ export interface AnnualPlanInput {
   activeRecommendations?: ActiveRecommendation[];
   /** Maturity phase, report recs, and data-quality flags from calibration v2 output. */
   calibrationFollowUp?: AnnualPlanCalibrationFollowUp;
+  /** Farmer-confirmed target yield (t/ha). When present, the prompt skips ÉTAPE 2 and uses this value verbatim. */
+  confirmedTargetYieldTHa?: number | null;
+  /** Metadata for traceability — which source produced the confirmed value. */
+  confirmedTargetYieldSource?: 'suggested' | 'user_override' | null;
 }
 
 // ── 4. Follow-Up Prompt Input ──────────────────────────────
@@ -387,4 +391,10 @@ export enum AgromindReportType {
   ANNUAL_PLAN = 'annual_plan',
   /** Phase 2c — Follow-Up: Post-recommendation evaluation */
   FOLLOWUP = 'followup',
+  /**
+   * Phase 3 — Recalibration (F2 partial / F3 complete).
+   * Partial = user-declared change (water source swap, heavy pruning, new analysis...).
+   * Complete = post-campaign annual re-baselining with actual yield.
+   */
+  RECALIBRATION = 'recalibration',
 }

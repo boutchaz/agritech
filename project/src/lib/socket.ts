@@ -28,10 +28,9 @@ class SocketManager {
   private socket: Socket | null = null;
   private status: SocketStatus = 'disconnected';
   private organizationId: string | null = null;
-  private reconnectAttempts = 0;
-  private maxReconnectAttempts = 5;
   private eventHandlers: Map<string, Set<SocketEventHandler>> = new Map();
   private statusHandlers: Set<(status: SocketStatus) => void> = new Set();
+  private visibilityHandlerAttached = false;
 
   async connect(organizationId: string): Promise<void> {
     // Disconnect existing connection if any
@@ -64,26 +63,36 @@ class SocketManager {
         },
         transports: ['websocket', 'polling'],
         reconnection: true,
-        reconnectionAttempts: this.maxReconnectAttempts,
+        reconnectionAttempts: Infinity,
         reconnectionDelay: 1000,
-        reconnectionDelayMax: 5000,
+        reconnectionDelayMax: 30000,
         timeout: 10000,
-        // Add path explicitly if needed
-        // path: '/socket.io',
       });
 
       this.setupEventListeners();
+      this.attachVisibilityListener();
     } catch (error) {
       console.error('[Socket] Connection error:', error);
       this.setStatus('error');
     }
   }
 
+  /** Reconnect when tab becomes visible after being hidden (mobile backgrounding, laptop sleep) */
+  private attachVisibilityListener(): void {
+    if (this.visibilityHandlerAttached) return;
+    this.visibilityHandlerAttached = true;
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && this.organizationId && !this.socket?.connected) {
+        void this.connect(this.organizationId);
+      }
+    });
+  }
+
   private setupEventListeners(): void {
     if (!this.socket) return;
 
     this.socket.on('connect', () => {
-      this.reconnectAttempts = 0;
       this.setStatus('connected');
     });
 
@@ -96,11 +105,7 @@ class SocketManager {
 
     this.socket.on('connect_error', (error) => {
       console.error('[Socket] Connection error:', error.message);
-      this.reconnectAttempts++;
-
-      if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-        this.setStatus('error');
-      }
+      this.setStatus('error');
     });
 
     // Handle notification events

@@ -26,7 +26,7 @@ describe('CalibrationCard', () => {
   it('renders calibration data correctly', () => {
     render(<CalibrationCard calibration={mockCalibration} />);
 
-    expect(screen.getByText('85.0%')).toBeDefined();
+    expect(screen.getByText('85%')).toBeDefined();
     expect(screen.getByText('optimal')).toBeDefined();
     expect(screen.getByText('Completed')).toBeDefined();
 

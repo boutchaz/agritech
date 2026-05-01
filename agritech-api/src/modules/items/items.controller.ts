@@ -26,11 +26,14 @@ import { UpdateItemDto } from './dto/update-item.dto';
 import { CreateItemGroupDto, UpdateItemGroupDto } from './dto/create-item-group.dto';
 import { CreateProductVariantDto, UpdateProductVariantDto } from './dto/product-variant.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RequireModule } from '../../common/decorators/require-module.decorator';
 import { OrganizationGuard } from '../../common/guards/organization.guard';
+import { ModuleEntitlementGuard } from '../../common/guards/module-entitlement.guard';
 
 @ApiTags('items')
 @Controller('items')
-@UseGuards(JwtAuthGuard, OrganizationGuard)
+@RequireModule('stock')
+@UseGuards(JwtAuthGuard, OrganizationGuard, ModuleEntitlementGuard)
 @ApiBearerAuth()
 export class ItemsController {
   constructor(private readonly itemsService: ItemsService) { }
@@ -204,18 +207,24 @@ export class ItemsController {
   @ApiQuery({ name: 'farm_id', required: false, description: 'Filter by farm ID' })
   @ApiQuery({ name: 'item_id', required: false, description: 'Filter by item ID' })
   @ApiQuery({ name: 'low_stock_only', required: false, description: 'Show only low stock items' })
+  @ApiQuery({ name: 'page', required: false, description: 'Page number', example: 1 })
+  @ApiQuery({ name: 'pageSize', required: false, description: 'Items per page', example: 100 })
   @ApiResponse({ status: 200, description: 'Farm stock levels retrieved successfully' })
   async getFarmStockLevels(
     @Req() req: any,
     @Query('farm_id') farmId?: string,
     @Query('item_id') itemId?: string,
     @Query('low_stock_only') lowStockOnly?: string,
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page?: number,
+    @Query('pageSize', new DefaultValuePipe(100), ParseIntPipe) pageSize?: number,
   ) {
     const organizationId = req.headers['x-organization-id'];
     return this.itemsService.getFarmStockLevels(organizationId, {
       farm_id: farmId,
       item_id: itemId,
       low_stock_only: lowStockOnly === 'true',
+      page,
+      pageSize,
     });
   }
 

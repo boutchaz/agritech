@@ -36,6 +36,13 @@ export class OrdersService {
         private readonly configService: ConfigService,
     ) {}
 
+    private getMarketplaceUrl(): string {
+        return (
+            this.configService.get<string>('MARKETPLACE_URL') ||
+            'https://marketplace.thebzlab.online'
+        );
+    }
+
     private async resolveUserOrg(token: string): Promise<{ userId: string; organizationId: string | null }> {
         const secret = this.configService.get<string>('SUPABASE_JWT_SECRET') || this.configService.get<string>('JWT_SECRET');
         const payload = await this.jwtService.verifyAsync<{ sub: string }>(token, { secret });
@@ -319,7 +326,7 @@ export class OrdersService {
                         unit: item.unit
                     })),
                     shippingAddress,
-                    orderUrl: `https://marketplace.thebzlab.online/orders/${order.id}`
+                    orderUrl: `${this.getMarketplaceUrl()}/orders/${order.id}`
                 };
 
                 // Send confirmation email to buyer
@@ -511,7 +518,7 @@ export class OrdersService {
                     unit: item.unit
                 })) || [],
                 shippingAddress,
-                orderUrl: `https://marketplace.thebzlab.online/orders/${updated.id}`,
+                orderUrl: `${this.getMarketplaceUrl()}/orders/${updated.id}`,
                 status: dto.status
             };
 
@@ -706,7 +713,7 @@ export class OrdersService {
                     unit: item.unit
                 })) || [],
                 shippingAddress,
-                orderUrl: `https://marketplace.thebzlab.online/orders/${updated.id}`,
+                orderUrl: `${this.getMarketplaceUrl()}/orders/${updated.id}`,
                 status: 'cancelled'
             };
 

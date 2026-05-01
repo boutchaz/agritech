@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/hooks/useAuth';
 import { useAutoStartTour } from '@/contexts/TourContext';
 import ModernPageHeader from '@/components/ModernPageHeader';
+import { ProductionTabs } from '@/components/Production/ProductionTabs';
 
 import { Package, Plus, Download, Building2, LayoutGrid, List } from 'lucide-react';
 import { usePaginatedHarvests, useHarvests, useHarvestStatistics, useDeleteHarvest } from '@/hooks/useHarvests';
@@ -162,6 +163,7 @@ function HarvestsPage() {
         />
 
       <div className="p-3 sm:p-4 md:p-6 pb-20 md:pb-6">
+        <ProductionTabs />
         {/* Mobile Add Button - Only visible on mobile */}
         <div className="md:hidden">
           <Button variant="green" onClick={handleAddHarvest} className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg shadow-md font-medium" >

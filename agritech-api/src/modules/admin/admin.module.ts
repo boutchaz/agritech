@@ -19,6 +19,6 @@ import { SubscriptionPricingService } from '../subscriptions/subscription-pricin
   imports: [DatabaseModule, ScheduleModule.forRoot()],
   controllers: [AdminController, CronJobsController, SupportedCountriesController, PolarProductsController, PricingConfigController],
   providers: [AdminService, ReferentialService, CronRegistryService, SupportedCountriesService, InternalAdminGuard, PolarProductsService, PricingConfigService, SubscriptionPricingService],
-  exports: [AdminService, ReferentialService, CronRegistryService, SupportedCountriesService, PricingConfigService],
+  exports: [AdminService, ReferentialService, CronRegistryService, SupportedCountriesService, PricingConfigService, InternalAdminGuard],
 })
 export class AdminModule {}

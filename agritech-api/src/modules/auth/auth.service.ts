@@ -21,14 +21,6 @@ import { TrialPlanInput } from '../subscriptions/dto/create-trial-subscription.d
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
-  private readonly alwaysAllowedRedirectOrigins = [
-    'https://marketplace.thebzlab.online',
-    'https://dashboard.thebzlab.online',
-    'https://agritech.thebzlab.online',
-    'https://agritech-dashboard.thebzlab.online',
-    'https://agritech-api.thebzlab.online',
-    'https://agritech-marketplace.thebzlab.online',
-  ];
 
   constructor(
     private databaseService: DatabaseService,
@@ -52,9 +44,7 @@ export class AuthService {
       .map((value) => value.trim())
       .filter(Boolean);
 
-    return Array.from(
-      new Set([...configuredOrigins, ...this.alwaysAllowedRedirectOrigins]),
-    );
+    return Array.from(new Set(configuredOrigins));
   }
 
   private validateRedirectTo(redirectTo: string): string {

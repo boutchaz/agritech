@@ -8,7 +8,8 @@ import {
   ChevronRight,
   Leaf,
   Trash2,
-  Edit
+  Edit,
+  Satellite
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -29,10 +30,11 @@ interface FarmCardProps {
   onManage?: () => void;
   onEditManager?: () => void;
   onViewParcels?: () => void;
+  onViewHeatmap?: () => void;
   onDelete?: () => void;
 }
 
-const FarmCard = ({ farm, onSelect, onManage, onEditManager, onViewParcels, onDelete }: FarmCardProps) => {
+const FarmCard = ({ farm, onSelect, onManage, onEditManager, onViewParcels, onViewHeatmap, onDelete }: FarmCardProps) => {
   const { t } = useTranslation();
   const [showMenu, setShowMenu] = useState(false);
 
@@ -157,6 +159,16 @@ const FarmCard = ({ farm, onSelect, onManage, onEditManager, onViewParcels, onDe
             <Leaf className="w-4 h-4" />
             <span>{t('farmHierarchy.farm.parcels')}</span>
           </Button>
+
+          {onViewHeatmap && (
+            <Button
+              onClick={onViewHeatmap}
+              className="flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 rounded-lg transition-colors"
+              title={t('farmHierarchy.farm.viewHeatmap', 'View satellite heatmap')}
+            >
+              <Satellite className="w-4 h-4" />
+            </Button>
+          )}
 
           <Button variant="green" onClick={onSelect} className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-colors" >
             <span>{t('farmHierarchy.farm.viewDetails')}</span>

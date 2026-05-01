@@ -1,8 +1,10 @@
 # Build stage
 FROM node:20-alpine as builder
 
-# Install pnpm
 RUN corepack enable && corepack prepare pnpm@latest --activate
+
+RUN apk add --no-cache chromium \
+    && export CHROME_PATH=/usr/bin/chromium-browser
 
 WORKDIR /app
 
@@ -20,6 +22,7 @@ ARG VITE_POLAR_ESSENTIAL_PRODUCT_ID
 ARG VITE_POLAR_PROFESSIONAL_PRODUCT_ID
 ARG VITE_POLAR_ENTERPRISE_PRODUCT_ID
 ARG VITE_APP_URL
+ARG VITE_MARKETPLACE_URL
 
 # Set environment variables for the build
 ENV VITE_SUPABASE_URL=$VITE_SUPABASE_URL
@@ -35,9 +38,12 @@ ENV VITE_POLAR_ESSENTIAL_PRODUCT_ID=$VITE_POLAR_ESSENTIAL_PRODUCT_ID
 ENV VITE_POLAR_PROFESSIONAL_PRODUCT_ID=$VITE_POLAR_PROFESSIONAL_PRODUCT_ID
 ENV VITE_POLAR_ENTERPRISE_PRODUCT_ID=$VITE_POLAR_ENTERPRISE_PRODUCT_ID
 ENV VITE_APP_URL=$VITE_APP_URL
+ENV VITE_MARKETPLACE_URL=$VITE_MARKETPLACE_URL
 
 # Prevent Playwright from downloading browsers during install to keep builds fast
 ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+ENV CHROMIUM_PATH=/usr/bin/chromium-browser
 
 # Copy package files
 COPY package.json ./

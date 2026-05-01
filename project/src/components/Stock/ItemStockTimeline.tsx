@@ -1,7 +1,9 @@
+import type { TFunction } from 'i18next';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { DataTablePagination } from '@/components/ui/data-table';
 import { Card, CardContent } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Input } from '@/components/ui/Input';
@@ -57,7 +59,7 @@ const formatNumber = (value: number) =>
     maximumFractionDigits: 3,
   }).format(value);
 
-const getWarehouseLabel = (movement: StockMovementWithDetails, t: (key: string, fallback?: string) => string) => {
+const getWarehouseLabel = (movement: StockMovementWithDetails, t: TFunction) => {
   const warehouseName = movement.warehouse?.name || '—';
 
   if (movement.movement_type === 'TRANSFER') {
@@ -79,10 +81,13 @@ const getMovementQuantityClass = (quantity: number) => {
 
 export default function ItemStockTimeline({ itemId, itemName, onClose }: ItemStockTimelineProps) {
   const { t } = useTranslation('stock');
+  const { t: tCommon } = useTranslation('common');
   const isMobile = useIsMobile();
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   const [movementType, setMovementType] = useState<MovementFilterValue>('all');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
 
   const filters = useMemo(
     () => ({
@@ -94,27 +99,30 @@ export default function ItemStockTimeline({ itemId, itemName, onClose }: ItemSto
   );
 
   const {
-    data: movements = [],
+    data: movementResponse,
     isLoading,
     isFetching,
     error,
     refetch,
-  } = useStockMovements(itemId, filters);
+  } = useStockMovements(itemId, filters, page, pageSize);
+
+  const movements = movementResponse?.data ?? [];
+  const totalMovements = movementResponse?.total ?? 0;
+  const totalPages = Math.ceil(totalMovements / pageSize);
 
   const timelineMovements = useMemo<TimelineMovement[]>(() => {
     const ascending = [...movements].sort(
       (a, b) => new Date(a.movement_date).getTime() - new Date(b.movement_date).getTime(),
     );
 
-    let runningBalance = 0;
-
-    const withBalance = ascending.map((movement) => {
-      runningBalance += Number(movement.quantity || 0);
-      return {
+    const withBalance = ascending.reduce<TimelineMovement[]>((acc, movement) => {
+      const prevBalance = acc.length > 0 ? acc[acc.length - 1].runningBalance : 0;
+      acc.push({
         ...movement,
-        runningBalance,
-      };
-    });
+        runningBalance: prevBalance + Number(movement.quantity || 0),
+      });
+      return acc;
+    }, []);
 
     return withBalance.reverse();
   }, [movements]);
@@ -135,7 +143,7 @@ export default function ItemStockTimeline({ itemId, itemName, onClose }: ItemSto
     );
   }, [timelineMovements]);
 
-  const unit = timelineMovements[0]?.unit || movements[0]?.item?.default_unit || '';
+  const unit = timelineMovements[0]?.unit || (movements[0]?.item as Record<string, unknown>)?.default_unit as string || '';
 
   return (
     <ResponsiveDialog
@@ -284,6 +292,22 @@ export default function ItemStockTimeline({ itemId, itemName, onClose }: ItemSto
                   </CardContent>
                 </Card>
               ))}
+              <div className="space-y-3 pt-2">
+                <p className="text-xs text-muted-foreground">
+                  {t('items.timeline.runningBalancePageNote', 'Running balance is calculated for the current page only.')}
+                </p>
+                <DataTablePagination
+                  page={page}
+                  totalPages={totalPages}
+                  pageSize={pageSize}
+                  totalItems={totalMovements}
+                  onPageChange={setPage}
+                  onPageSizeChange={(size) => {
+                    setPageSize(size);
+                    setPage(1);
+                  }}
+                />
+              </div>
             </div>
           ) : (
             <div className="h-full overflow-auto">
@@ -341,6 +365,22 @@ export default function ItemStockTimeline({ itemId, itemName, onClose }: ItemSto
                   ))}
                 </TableBody>
               </Table>
+              <div className="border-t px-4">
+                <p className="pt-4 text-xs text-muted-foreground">
+                  {t('items.timeline.runningBalancePageNote', 'Running balance is calculated for the current page only.')}
+                </p>
+                <DataTablePagination
+                  page={page}
+                  totalPages={totalPages}
+                  pageSize={pageSize}
+                  totalItems={totalMovements}
+                  onPageChange={setPage}
+                  onPageSizeChange={(size) => {
+                    setPageSize(size);
+                    setPage(1);
+                  }}
+                />
+              </div>
             </div>
           )}
         </div>
@@ -348,7 +388,7 @@ export default function ItemStockTimeline({ itemId, itemName, onClose }: ItemSto
         <div className="flex items-center justify-between gap-3 border-t pt-3">
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <Clock3 className="h-4 w-4" />
-            <span>{t('items.timeline.count', { count: timelineMovements.length, defaultValue: '{{count}} movement(s)' })}</span>
+            <span>{t('items.timeline.count', { count: totalMovements, defaultValue: '{{count}} movement(s)' })}</span>
             {isFetching && !isLoading ? (
               <span className="inline-flex items-center gap-1">
                 <RefreshCcw className="h-3.5 w-3.5 animate-spin" />
@@ -357,7 +397,7 @@ export default function ItemStockTimeline({ itemId, itemName, onClose }: ItemSto
             ) : null}
           </div>
           <Button variant="outline" onClick={onClose}>
-            {t('app.close', 'Close')}
+            {tCommon('app.close', 'Close')}
           </Button>
         </div>
       </div>

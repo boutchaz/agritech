@@ -8,7 +8,7 @@
 // TYPES COMMUNS
 // ---------------------------------------------------------------------------
 
-export type Culture = 'olivier' | 'agrumes' | 'avocatier' | 'palmier_dattier';
+export type Culture = 'olivier' | 'agrumes' | 'avocatier' | 'palmier_dattier' | 'amandier';
 export type Systeme = 'traditionnel' | 'traditionnel_oasien' | 'semi_intensif' | 'intensif' | 'super_intensif';
 export type AnneeCycle = 'ON' | 'OFF' | 'indefini' | 'NA';
 export type OptionNutrition = 'A' | 'B' | 'C';

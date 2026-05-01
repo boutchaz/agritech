@@ -1,14 +1,15 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { useQuery } from '@tanstack/react-query';
 import { useState, useMemo } from 'react';
-import { Plus, TreePine } from 'lucide-react';
+import { Building2, Plus, TreePine } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { cropsApi } from '@/lib/api/crops';
 import { useAuth } from '@/hooks/useAuth';
+import { useParcelsByOrganization } from '@/hooks/useParcelsQuery';
 import { useTranslation } from 'react-i18next';
 import { Badge } from '@/components/ui/badge';
 import { FilterBar, ResponsiveList, ListPageLayout } from '@/components/ui/data-table';
 import { TableCell, TableHead } from '@/components/ui/table';
+import ModernPageHeader from '@/components/ModernPageHeader';
+import { ProductionTabs } from '@/components/Production/ProductionTabs';
 
 export const Route = createFileRoute('/_authenticated/(production)/orchards')({
   component: Orchards,
@@ -16,15 +17,13 @@ export const Route = createFileRoute('/_authenticated/(production)/orchards')({
 
 function Orchards() {
   const { t } = useTranslation();
-  const { organizationId } = useAuth();
+  const { currentOrganization } = useAuth();
+  const organizationId = currentOrganization?.id;
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Use crops API with module filter for fruit-trees
-  const { data: orchards, isLoading } = useQuery({
-    queryKey: ['crops', organizationId, 'fruit-trees'],
-    queryFn: () => cropsApi.getAll(organizationId!, { module: 'fruit-trees' }),
-    enabled: !!organizationId,
-  });
+  // Use parcels with tree_type as orchards
+  const { data: allParcels = [], isLoading } = useParcelsByOrganization(organizationId || undefined);
+  const orchards = useMemo(() => allParcels.filter((p) => p.tree_type), [allParcels]);
 
   const filteredOrchards = useMemo(() => {
     if (!searchTerm.trim()) return orchards;
@@ -39,23 +38,26 @@ function Orchards() {
   }, [orchards, searchTerm]);
 
   return (
-    <ListPageLayout
-      header={
-        <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">
-              {t('orchards.title', 'Orchards')}
-            </h1>
-            <p className="text-muted-foreground">
-              {t('orchards.description', 'Manage your fruit tree orchards')}
-            </p>
+    <>
+      <ModernPageHeader
+        breadcrumbs={[
+          ...(currentOrganization
+            ? [{ icon: Building2, label: currentOrganization.name, path: '/dashboard' } as const]
+            : []),
+          { icon: TreePine, label: t('orchards.title', 'Orchards'), isActive: true },
+        ]}
+        title={t('orchards.title', 'Orchards')}
+        subtitle={t('orchards.description', 'Manage your fruit tree orchards')}
+      />
+      <ListPageLayout
+        header={
+          <div className="flex justify-end">
+            <Button>
+              <Plus className="mr-2 h-4 w-4" />
+              {t('orchards.new', 'New Orchard')}
+            </Button>
           </div>
-          <Button>
-            <Plus className="mr-2 h-4 w-4" />
-            {t('orchards.new', 'New Orchard')}
-          </Button>
-        </div>
-      }
+        }
       filters={
         <FilterBar
           searchValue={searchTerm}
@@ -64,6 +66,7 @@ function Orchards() {
         />
       }
     >
+      <ProductionTabs />
       <ResponsiveList
         items={filteredOrchards ?? []}
         isLoading={isLoading}
@@ -148,6 +151,7 @@ function Orchards() {
           </>
         )}
       />
-    </ListPageLayout>
+      </ListPageLayout>
+    </>
   );
 }

@@ -104,27 +104,42 @@ export class HealthCronService implements OnModuleInit, OnModuleDestroy {
       const downSince = state.downSince ?? new Date();
       this.serviceStates.set(name, { status: 'down', downSince });
 
-      await this.alertService.notify({
-        service: name,
-        status: 'down',
-        severity: 'critical',
-        error: check.error,
-        responseTimeMs: check.responseTimeMs,
-        url: this.serviceUrls[name],
-        downSince,
-        message: `${name} is unreachable: ${check.error ?? 'unknown error'}`,
-      });
+      // Only fire on state transition (up/degraded/unknown → down).
+      // Repeated probes while stuck down do NOT re-alert — caller got the first one.
+      if (prev.status !== 'down') {
+        await this.alertService.notify({
+          service: name,
+          status: 'down',
+          severity: 'critical',
+          error: check.error,
+          responseTimeMs: check.responseTimeMs,
+          url: this.serviceUrls[name],
+          downSince,
+          message: `${name} is unreachable: ${check.error ?? 'unknown error'}`,
+        });
+      }
     } else if (check.status === 'degraded') {
       this.serviceStates.set(name, { status: 'degraded', downSince: prev.downSince });
 
-      await this.alertService.notify({
-        service: name,
-        status: 'degraded',
-        severity: 'warning',
-        responseTimeMs: check.responseTimeMs,
-        url: this.serviceUrls[name],
-        message: `${name} is responding slowly (${check.responseTimeMs}ms)`,
-      });
+      // Only fire on state transition (up/unknown → degraded, or down → degraded).
+      if (prev.status !== 'degraded') {
+        const details = check.details
+          ? Object.entries(check.details).map(([k, v]) => `${k}=${v}`).join(', ')
+          : '';
+        const message = check.responseTimeMs > 0
+          ? `${name} is responding slowly (${check.responseTimeMs}ms)`
+          : `${name} is degraded${details ? `: ${details}` : ''}`;
+
+        await this.alertService.notify({
+          service: name,
+          status: 'degraded',
+          severity: 'warning',
+          responseTimeMs: check.responseTimeMs,
+          url: this.serviceUrls[name],
+          error: check.error,
+          message,
+        });
+      }
     }
   }
 

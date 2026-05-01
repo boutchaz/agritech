@@ -4,6 +4,7 @@ import reactHooks from 'eslint-plugin-react-hooks';
 import reactRefresh from 'eslint-plugin-react-refresh';
 import tsParser from '@typescript-eslint/parser';
 import tsPlugin from '@typescript-eslint/eslint-plugin';
+import noVoidInSubmit from './eslint-rules/no-void-in-submit.js';
 
 export default [
   {
@@ -24,6 +25,8 @@ export default [
       '**/__tests__/**',
       '**/*.test.ts',
       '**/*.test.tsx',
+      '**/generated/**',
+      '**/types/database.types.ts',
     ],
   },
   js.configs.recommended,
@@ -42,10 +45,12 @@ export default [
       '@typescript-eslint': tsPlugin,
       'react-hooks': reactHooks,
       'react-refresh': reactRefresh,
+      'local': { rules: { 'no-void-in-submit': noVoidInSubmit } },
     },
     rules: {
       ...tsPlugin.configs.recommended.rules,
       ...reactHooks.configs.recommended.rules,
+      'local/no-void-in-submit': 'error',
       'react-refresh/only-export-components': [
         'warn',
         { allowConstantExport: true },

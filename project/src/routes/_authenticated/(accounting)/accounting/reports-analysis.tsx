@@ -2,8 +2,6 @@ import {  useState, useMemo  } from "react";
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/hooks/useAuth';
-import { PageLayout } from '@/components/PageLayout';
-import ModernPageHeader from '@/components/ModernPageHeader';
 import { withRouteProtection } from '@/components/authorization/withRouteProtection';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -16,7 +14,6 @@ import {
   SelectValue,
 } from '@/components/ui/radix-select';
 import {
-  Building2,
   FileSpreadsheet,
   TrendingUp,
   TrendingDown,
@@ -109,19 +106,6 @@ const AppContent = () => {
     v >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400';
 
   return (
-    <PageLayout
-      header={
-        <ModernPageHeader
-          breadcrumbs={[
-            { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
-            { icon: FileSpreadsheet, label: t('reports.title', 'Financial Reports'), path: '/accounting/reports' },
-            { icon: BarChart3, label: t('reports.analysis.title', 'Analyse Multi-Filtres'), isActive: true },
-          ]}
-          title={t('reports.analysis.title', 'Analyse Financière Multi-Filtres')}
-          subtitle={t('reports.analysis.subtitle', 'Analysez coûts et revenus par organisation, ferme, parcelle, culture ou variété')}
-        />
-      }
-    >
       <div className="p-6 space-y-6">
         {/* Back button */}
         <Button
@@ -499,7 +483,6 @@ const AppContent = () => {
           </div>
         )}
       </div>
-    </PageLayout>
   );
 };
 

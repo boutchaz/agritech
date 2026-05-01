@@ -65,6 +65,41 @@ export function useUpdateInspectionStatus() {
   });
 }
 
+export function useCreateInspection() {
+  const queryClient = useQueryClient();
+  const { currentOrganization } = useAuth();
+
+  return useMutation({
+    mutationFn: async (data: Partial<import('@/lib/api/quality-control').QualityInspection>) => {
+      if (!currentOrganization?.id) throw new Error('Organization required');
+      return qualityControlApi.create(currentOrganization.id, {
+        ...data,
+        organization_id: currentOrganization.id,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['quality-inspections'] });
+      queryClient.invalidateQueries({ queryKey: ['quality-control-stats'] });
+    },
+  });
+}
+
+export function useUpdateInspection() {
+  const queryClient = useQueryClient();
+  const { currentOrganization } = useAuth();
+
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: Partial<import('@/lib/api/quality-control').QualityInspection> }) => {
+      if (!currentOrganization?.id) throw new Error('Organization required');
+      return qualityControlApi.update(currentOrganization.id, id, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['quality-inspections'] });
+      queryClient.invalidateQueries({ queryKey: ['quality-control-stats'] });
+    },
+  });
+}
+
 export function useDeleteInspection() {
   const queryClient = useQueryClient();
   const { currentOrganization } = useAuth();

@@ -19,6 +19,7 @@ import {
   ToggleRight,
   Download,
   AlertCircle,
+  ExternalLink,
 } from 'lucide-react';
 
 import { useAuth } from '@/hooks/useAuth';
@@ -51,6 +52,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useTranslation } from 'react-i18next';
+import { Link } from '@tanstack/react-router';
 import { toast } from 'sonner';
 import {
   useAccountMappings,
@@ -252,9 +254,13 @@ export function AccountMappingsManagement() {
     const countryCode = 'MA';
     try {
       const result = await initializeMutation.mutateAsync(countryCode);
-      toast.success(
-        t('accountMappings.initialize.success', 'Initialized {{count}} default mappings', { count: result.count })
-      );
+      // Backend returns a precise message describing what happened (added vs already-existed
+      // vs skipped because chart-of-accounts doesn't include the code). Surface it directly.
+      const message =
+        result.message ||
+        t('accountMappings.initialize.success', 'Initialized {{count}} default mappings', { count: result.count });
+      if (result.count > 0) toast.success(message);
+      else toast.info(message);
     } catch (error: unknown) {
       toast.error((error instanceof Error ? error.message : undefined) || t('accountMappings.initialize.failed', 'Failed to initialize default mappings'));
     }
@@ -443,7 +449,7 @@ export function AccountMappingsManagement() {
         header={
           <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
             <div>
-              <h2 className="text-2xl font-bold tracking-tight">
+              <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
                 {t('accountMappings.title', 'Account Mappings')}
               </h2>
               <p className="text-muted-foreground">
@@ -451,11 +457,11 @@ export function AccountMappingsManagement() {
               </p>
             </div>
             <div className="flex gap-2">
-              <Button variant="outline" onClick={handleInitializeDefaults} disabled={initializeMutation.isPending}>
+              <Button variant="outline" onClick={handleInitializeDefaults} disabled={initializeMutation.isPending || accounts.length === 0}>
                 <Download className="h-4 w-4 mr-2" />
                 {t('accountMappings.initializeDefaults', 'Initialize Defaults')}
               </Button>
-              <Button onClick={() => handleOpenDialog()}>
+              <Button type="button" variant="default" onClick={() => handleOpenDialog()}>
                 <Plus className="h-4 w-4 mr-2" />
                 {t('accountMappings.addNew', 'Add Mapping')}
               </Button>
@@ -464,13 +470,27 @@ export function AccountMappingsManagement() {
         }
         filters={
           <>
-            <Alert>
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>{t('accountMappings.infoTitle', 'How Account Mappings Work')}</AlertTitle>
-              <AlertDescription>
-                {t('accountMappings.infoDescription', 'Account mappings link business events (like task completion or harvest sales) to specific GL accounts. When a task is completed or a harvest is sold, the system automatically creates journal entries using these mappings.')}
-              </AlertDescription>
-            </Alert>
+            {accounts.length === 0 ? (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>{t('accountMappings.noAccounts.title', 'Chart of Accounts Required')}</AlertTitle>
+                <AlertDescription className="flex items-center gap-2">
+                  {t('accountMappings.noAccounts.description', 'You need to set up your chart of accounts before initializing mappings.')}
+                  <Link to="/accounting/accounts" className="inline-flex items-center gap-1 font-medium underline underline-offset-4">
+                    {t('accountMappings.noAccounts.link', 'Go to Accounts')}
+                    <ExternalLink className="h-3 w-3" />
+                  </Link>
+                </AlertDescription>
+              </Alert>
+            ) : (
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>{t('accountMappings.infoTitle', 'How Account Mappings Work')}</AlertTitle>
+                <AlertDescription>
+                  {t('accountMappings.infoDescription', 'Account mappings link business events (like task completion or harvest sales) to specific GL accounts. When a task is completed or a harvest is sold, the system automatically creates journal entries using these mappings.')}
+                </AlertDescription>
+              </Alert>
+            )}
 
             <FilterBar
               searchValue={searchTerm}

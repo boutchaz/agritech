@@ -1,13 +1,15 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useWarehouses, type Warehouse } from '@/hooks/useWarehouses';
+import { usePaginatedWarehouses, type Warehouse } from '@/hooks/useWarehouses';
 import { useFarms } from '@/hooks/useParcelsQuery';
 import { useAuth } from '@/hooks/useAuth';
 import { warehousesApi, type CreateWarehouseInput } from '@/lib/api/warehouses';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { withOfflineQueue } from '@/lib/offline/withOfflineQueue';
+import { v4 as uuidv4 } from 'uuid';
 import { useFormErrors } from '@/hooks/useFormErrors';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -31,8 +33,7 @@ import {
   TableCell,
   TableHead,
 } from '@/components/ui/table';
-import { FilterBar, ListPageLayout, ResponsiveList } from '@/components/ui/data-table';
-import { EmptyState } from '@/components/ui/empty-state';
+import { DataTablePagination, FilterBar, ListPageLayout, ResponsiveList, useServerTableState } from '@/components/ui/data-table';
 import { Plus, Edit, Trash2, Loader2, AlertCircle, Warehouse as WarehouseIcon } from 'lucide-react';
 
 const warehouseSchema = z.object({
@@ -64,6 +65,7 @@ interface WarehouseFormProps {
 
 function WarehouseForm({ warehouse, open, onOpenChange }: WarehouseFormProps) {
   const { t } = useTranslation('stock');
+  const { t: tCommon } = useTranslation('common');
   const { currentOrganization } = useAuth();
   const queryClient = useQueryClient();
   const { data: farms = [] } = useFarms(currentOrganization?.id);
@@ -158,7 +160,17 @@ function WarehouseForm({ warehouse, open, onOpenChange }: WarehouseFormProps) {
       };
 
       if (warehouse) {
-        await warehousesApi.update(warehouse.id, cleanedData, currentOrganization.id);
+        const cid = uuidv4();
+        await withOfflineQueue<typeof cleanedData, unknown>(
+          {
+            organizationId: currentOrganization.id,
+            resource: 'warehouse',
+            method: 'PATCH',
+            url: `/api/v1/warehouses/${warehouse.id}`,
+          },
+          (input) => warehousesApi.update(warehouse.id, input, currentOrganization.id),
+        )(cleanedData);
+        void cid;
         toast.success(t('warehouses.warehouseUpdated'));
       } else {
         const createInput: CreateWarehouseInput = {
@@ -178,7 +190,16 @@ function WarehouseForm({ warehouse, open, onOpenChange }: WarehouseFormProps) {
           farm_id: cleanedData.farm_id,
           is_active: cleanedData.is_active ?? true,
         };
-        await warehousesApi.create(createInput, currentOrganization.id);
+        await withOfflineQueue<CreateWarehouseInput, unknown>(
+          {
+            organizationId: currentOrganization.id,
+            resource: 'warehouse',
+            method: 'POST',
+            url: '/api/v1/warehouses',
+            buildPayload: (input, clientId) => ({ ...input, client_id: clientId }),
+          },
+          (input) => warehousesApi.create(input, currentOrganization.id),
+        )(createInput);
         toast.success(t('warehouses.warehouseCreated'));
       }
 
@@ -429,7 +450,7 @@ function WarehouseForm({ warehouse, open, onOpenChange }: WarehouseFormProps) {
               onClick={() => onOpenChange(false)}
               disabled={isSubmitting}
             >
-              {t('app.cancel')}
+              {tCommon('app.cancel')}
             </Button>
             <Button type="submit" disabled={isSubmitting}>
               {isSubmitting ? (
@@ -449,40 +470,22 @@ function WarehouseForm({ warehouse, open, onOpenChange }: WarehouseFormProps) {
 
 export default function WarehouseManagement() {
   const { t } = useTranslation('stock');
+  const { t: tCommon } = useTranslation('common');
   const { currentOrganization } = useAuth();
   const queryClient = useQueryClient();
-  const { data: warehouses = [], isLoading, error, refetch } = useWarehouses();
+  const tableState = useServerTableState({
+    defaultPageSize: 20,
+    defaultSort: { key: 'name', direction: 'asc' as const },
+  });
+  const { data, isLoading, isFetching, error, refetch } = usePaginatedWarehouses(tableState.queryParams);
+  const warehouses = data?.data ?? [];
+  const totalItems = data?.total ?? 0;
+  const totalPages = data?.totalPages ?? 0;
 
   const [showForm, setShowForm] = useState(false);
   const [selectedWarehouse, setSelectedWarehouse] = useState<Warehouse | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [warehouseToDelete, setWarehouseToDelete] = useState<Warehouse | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
-
-  const filteredWarehouses = useMemo(() => {
-    const query = searchTerm.trim().toLowerCase();
-
-    if (!query) {
-      return warehouses;
-    }
-
-    return warehouses.filter((warehouse) => {
-      const searchableFields = [
-        warehouse.name,
-        warehouse.description,
-        warehouse.location,
-        warehouse.address,
-        warehouse.city,
-        warehouse.postal_code,
-        warehouse.capacity_unit,
-        warehouse.security_level,
-        warehouse.manager_name,
-        warehouse.manager_phone,
-      ];
-
-      return searchableFields.some((value) => value?.toLowerCase().includes(query));
-    });
-  }, [warehouses, searchTerm]);
 
   const deleteMutation = useMutation({
     mutationFn: async (warehouseId: string) => {
@@ -534,7 +537,7 @@ export default function WarehouseManagement() {
         <AlertCircle className="w-12 h-12 mx-auto text-red-500 mb-4" />
         <p className="text-red-600 dark:text-red-400 mb-4">{t('warehouses.loadError')}</p>
         <Button onClick={() => refetch()} variant="outline">
-          {t('app.retry')}
+          {tCommon('app.retry')}
         </Button>
       </div>
     );
@@ -561,8 +564,8 @@ export default function WarehouseManagement() {
       }
       filters={
         <FilterBar
-          searchValue={searchTerm}
-          onSearchChange={setSearchTerm}
+          searchValue={tableState.search}
+          onSearchChange={tableState.setSearch}
           searchPlaceholder={t('warehouses.searchPlaceholder', 'Search warehouses...')}
         />
       }
@@ -573,35 +576,29 @@ export default function WarehouseManagement() {
           <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
         </div>
       ) : (
+        <>
         <ResponsiveList
-          items={filteredWarehouses}
+          items={warehouses}
+          isLoading={isFetching}
           keyExtractor={(warehouse) => warehouse.id}
           emptyIcon={WarehouseIcon}
           emptyTitle={
-            warehouses.length === 0
+            totalItems === 0
               ? t('warehouses.noWarehouses')
               : t('warehouses.noSearchResults', 'No warehouses found')
           }
           emptyMessage={
-            warehouses.length === 0
+            totalItems === 0
               ? t('warehouses.noWarehousesDescription')
               : t('warehouses.noSearchResultsDescription', 'Try adjusting your search.')
           }
           emptyAction={
-            warehouses.length === 0
+            totalItems === 0
               ? {
                   label: t('warehouses.createFirstWarehouse'),
                   onClick: handleCreate,
                 }
               : undefined
-          }
-          emptyExtra={
-            warehouses.length > 0 && filteredWarehouses.length === 0 ? (
-              <EmptyState
-                variant="inline"
-                description={t('warehouses.noSearchResultsDescription', 'Try adjusting your search.')}
-              />
-            ) : undefined
           }
           renderCard={(warehouse) => (
             <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
@@ -619,7 +616,7 @@ export default function WarehouseManagement() {
                       : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
                   }`}
                 >
-                  {warehouse.is_active ? t('app.active') : t('app.inactive')}
+                  {warehouse.is_active ? tCommon('app.active') : tCommon('app.inactive')}
                 </span>
               </div>
 
@@ -662,7 +659,12 @@ export default function WarehouseManagement() {
               </div>
 
               <div className="mt-4 flex justify-end gap-2">
-                <Button variant="ghost" size="sm" onClick={() => handleEdit(warehouse)}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleEdit(warehouse)}
+                  className="text-slate-700 dark:text-slate-100"
+                >
                   <Edit className="w-4 h-4" />
                 </Button>
                 <Button
@@ -730,12 +732,17 @@ export default function WarehouseManagement() {
                       : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
                   }`}
                 >
-                  {warehouse.is_active ? t('app.active') : t('app.inactive')}
+                  {warehouse.is_active ? tCommon('app.active') : tCommon('app.inactive')}
                 </span>
               </TableCell>
               <TableCell className="text-right">
                 <div className="flex justify-end gap-2">
-                  <Button variant="ghost" size="sm" onClick={() => handleEdit(warehouse)}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleEdit(warehouse)}
+                    className="text-slate-700 dark:text-slate-100"
+                  >
                     <Edit className="w-4 h-4" />
                   </Button>
                   <Button
@@ -751,6 +758,15 @@ export default function WarehouseManagement() {
             </>
           )}
         />
+        <DataTablePagination
+          page={tableState.page}
+          pageSize={tableState.pageSize}
+          totalItems={totalItems}
+          totalPages={totalPages}
+          onPageChange={tableState.setPage}
+          onPageSizeChange={tableState.setPageSize}
+        />
+        </>
       )}
 
       <WarehouseForm
@@ -775,7 +791,7 @@ export default function WarehouseManagement() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>{t('app.cancel')}</AlertDialogCancel>
+            <AlertDialogCancel>{tCommon('app.cancel')}</AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmDelete}
               className="bg-red-600 hover:bg-red-700 text-white"

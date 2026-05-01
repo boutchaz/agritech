@@ -681,6 +681,91 @@
           "donnees_manquantes"
         ]
       }
+    },
+    "amandier": {
+      "fichier_referentiel": "DATA_AMANDIER.json",
+      "prefixe_alertes": "AMN",
+      "langue_rapport_defaut": "fr",
+      "phenomenologie": {
+        "type": "stades_bbch",
+        "section": "phenologie",
+        "identifiant_stade": "code_bbch",
+        "champ_mois": "mois",
+        "gdd_tbase_c": 7.0,
+        "gdd_plafond_c": 30,
+        "heures_froid": true,
+        "indice_phenologique_principal": "EBI",
+        "note": "Amandier (Prunus dulcis) : floraison Février-Mars critique (gel + pluie). Variétés méditerranéennes (Ferragnès/Ferraduel) vs californiennes (Non Pareil/Carmel/Price) — phénologie décalée ~3 semaines. EBI (Enhanced Bloom Index) horodate le pic floraison par secteur — déclenche les alertes AMN-02/05/11."
+      },
+      "indices_satellites": {
+        "indices_calculer": [
+          "NDVI",
+          "NIRv",
+          "NDMI",
+          "NDRE",
+          "EVI",
+          "GCI",
+          "EBI"
+        ],
+        "roles": {
+          "NDVI": "Vigueur végétative — premier signal stress",
+          "NIRv": "Productivité photosynthétique — base estimation rendement (alerte AMN-12)",
+          "NDMI": "Stress hydrique foliaire — critique Juin-Août",
+          "NDRE": "Statut N + chlorose ferrique sols calcaires Fès-Meknès",
+          "EVI": "Vigueur canopée dense — comparaison inter-secteurs",
+          "GCI": "Chlorophylle / azote — confirmation NDRE",
+          "EBI": "Enhanced Bloom Index — INDICE PHÉNOLOGIQUE PRINCIPAL amandier. Détecte pic floraison (fleurs blanches Feb-Mars). Horodate alertes gel (AMN-02), bore (AMN-05), pollinisation (AMN-11)."
+        },
+        "specificites_culture": {
+          "EBI_indice_cle_floraison": "Amandier = floraison blanche dense — EBI principal indicateur phénologique (équivalent NIRvP pour olivier). Pic EBI = fenêtre pollinisation critique.",
+          "chlorose_ferrique_sols_calcaires": "Sols Fès-Meknès pH > 7.5 fréquent — surveiller NDRE + GCI conjointement (alerte AMN-06)",
+          "estimation_rendement_NIRv_juillet": "NIRv moyen secteur en juillet → estimation t/ha amande décortiquée (alerte AMN-12)"
+        }
+      },
+      "calcul_rendement": {
+        "section_export": "nutrition.equilibre_reference",
+        "unite_export": "u_par_ha",
+        "section_entretien": "nutrition.apports_annuels_u_ha",
+        "note": "Amandier piloté par apports annuels fixes (180-200 u N, 60 u P2O5, 240 u K2O) répartis selon programme_mensuel"
+      },
+      "specificites": {
+        "alternance": false,
+        "porte_greffe": false,
+        "pollinisation_manuelle": false,
+        "pollinisation_croisee_obligatoire_med": true,
+        "pollinisation_partielle_auto_calif": true,
+        "salinite_seuil_option_C_CE_eau": 2.0,
+        "bayoud": false,
+        "tristeza": false,
+        "phytophthora_critique": false,
+        "kcl_tolere": false,
+        "signal_satellite_mixte": false,
+        "aflatoxines_critiques": true,
+        "aflatoxines_note": "Aspergillus flavus post-récolte (Août-Septembre) — alerte AMN-09 priorité critique. Stockage <8% H2O obligatoire."
+      },
+      "rapport_agriculteur": {
+        "score_sante_labels": {
+          "80_100": { "fr": "Excellente", "ar": "ممتازة" },
+          "60_80": { "fr": "Bonne", "ar": "جيدة" },
+          "40_60": { "fr": "Moyenne", "ar": "متوسطة" },
+          "20_40": { "fr": "Faible", "ar": "ضعيفة" },
+          "0_20": { "fr": "Critique", "ar": "حرجة" }
+        },
+        "icone_score": {
+          "80_100": "🌰🌰🌰",
+          "60_80": "🌰🌰",
+          "40_60": "🌰",
+          "20_40": "⚠️",
+          "0_20": "🔴"
+        },
+        "sections_rapport": [
+          "score_global",
+          "points_forts",
+          "points_attention",
+          "prevision_rendement",
+          "donnees_manquantes"
+        ]
+      }
     }
   },
   "regles_moteur": {

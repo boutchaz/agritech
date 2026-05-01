@@ -721,7 +721,11 @@ export class CalibrationDataService {
       );
     }
 
-    return data as WeatherDailyRow[];
+    const rows = (data ?? []) as WeatherDailyRow[];
+    this.logger.log(
+      `[weather] fetchWeatherRows parcel=${parcel.id} orgGrid=(lat=${roundedLatitude}, lon=${roundedLongitude}) since=${effectiveSince} rowCount=${rows.length}`,
+    );
+    return rows;
   }
 
   async syncWeatherData(
@@ -741,6 +745,10 @@ export class CalibrationDataService {
     const roundedLongitude = this.roundCoordinate(longitude, 2);
     const startDate = sinceDate ?? getCalibrationLookbackDate(parcel.plantingYear, parcel.cropType, parcel.system);
     const endDate = new Date().toISOString().split("T")[0];
+
+    this.logger.log(
+      `[weather] syncWeatherData parcel=${parcel.id} → satellite GET /weather/historical grid=(lat=${roundedLatitude}, lon=${roundedLongitude}) range=${startDate}..${endDate}`,
+    );
 
     const body = await this.satelliteProxy.proxy("GET", "/weather/historical", {
       query: {
@@ -762,10 +770,12 @@ export class CalibrationDataService {
     // persists weather to weather_daily_data with pre-computed GDD columns.
     // No secondary upsert needed here — that would overwrite GDD columns with NULL.
     if (!body.data?.length) {
-      this.logger.warn(`Weather sync returned no data for parcel ${parcel.id}`);
+      this.logger.warn(
+        `[weather] sync returned 0 rows parcel=${parcel.id} grid=(lat=${roundedLatitude}, lon=${roundedLongitude}) range=${startDate}..${endDate} — satellite/Open-Meteo/Supabase cache path; parcel /weather page uses Nest→Open-Meteo and may still show charts`,
+      );
     } else {
       this.logger.log(
-        `Weather sync triggered for parcel ${parcel.id}: ${body.data.length} rows cached via FastAPI`,
+        `Weather sync triggered for parcel ${parcel.id}: ${body.data.length} rows from satellite historical`,
       );
     }
   }
@@ -867,7 +877,7 @@ export class CalibrationDataService {
       .select("*")
       .eq("parcel_id", parcelId)
       .eq("organization_id", organizationId)
-      .eq("status", "completed")
+      .in("status", ["validated", "awaiting_validation"])
       .order("completed_at", { ascending: false })
       .order("created_at", { ascending: false })
       .limit(1)

@@ -1,5 +1,5 @@
 # AgroGina - Robots.txt
-# https://agritech-dashboard.thebzlab.online
+# https://agrogina.com
 
 User-agent: *
 Allow: /
@@ -26,7 +26,7 @@ Allow: /register$
 Allow: /login$
 
 # Sitemap location
-Sitemap: https://agritech-dashboard.thebzlab.online/sitemap.xml
+Sitemap: https://agrogina.com/sitemap.xml
 
 # Crawl delay for respectful crawling
 Crawl-delay: 1

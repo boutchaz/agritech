@@ -1,16 +1,27 @@
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { moduleConfigApi, type ModuleConfig, type ModuleConfigResponse } from '@/lib/api/module-config';
+import { useAuth } from './useAuth';
 
 export const MODULE_CONFIG_QUERY_KEY = ['moduleConfig'];
 
+/**
+ * Returns the module catalog. When an organization is selected, the response
+ * is enriched with per-module `isActive` and `settings` from that org's
+ * activation state — no separate /modules call needed.
+ */
 export function useModuleConfig() {
   const { i18n } = useTranslation();
   const locale = i18n.language || 'en';
+  const { currentOrganization } = useAuth();
+  const orgId = currentOrganization?.id ?? null;
 
   return useQuery<ModuleConfigResponse>({
-    queryKey: [...MODULE_CONFIG_QUERY_KEY, locale],
-    queryFn: () => moduleConfigApi.getConfig(locale),
+    queryKey: [...MODULE_CONFIG_QUERY_KEY, locale, orgId ?? 'public'],
+    queryFn: () =>
+      orgId
+        ? moduleConfigApi.getOrgConfig(orgId, locale)
+        : moduleConfigApi.getConfig(locale),
     staleTime: 5 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
     retry: 2,

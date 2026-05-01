@@ -30,6 +30,14 @@ export type Subject =
   | 'Harvest' | 'ReceptionBatch' | 'QualityControl'
   // Compliance subjects
   | 'Certification' | 'ComplianceCheck'
+  // HR subjects
+  | 'HrCompliance' | 'LeaveType' | 'LeaveAllocation' | 'LeaveApplication' | 'Holiday'
+  | 'SalaryStructure' | 'SalarySlip' | 'PayrollRun' | 'WorkerDocument'
+  | 'Shift' | 'ShiftAssignment' | 'ShiftRequest' | 'Onboarding' | 'Separation'
+  | 'SeasonalCampaign' | 'WorkerQualification' | 'SafetyIncident' | 'WorkerTransport'
+  | 'ExpenseClaim' | 'ExpenseCategory' | 'JobOpening' | 'JobApplicant' | 'Interview'
+  | 'AppraisalCycle' | 'Appraisal' | 'PerformanceFeedback'
+  | 'Grievance' | 'TrainingProgram' | 'TrainingEnrollment'
   | 'all';
 
 // Define ability type

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   useStockEntries,
@@ -71,6 +71,27 @@ import {
   STOCK_ENTRY_STATUS_COLORS,
 } from '@/types/stock-entries';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
+
+/** Full class names so Tailwind generates them; dynamic `bg-${color}-100` is not picked up by JIT. */
+const STOCK_ENTRY_STAT_ICON: Record<string, { bg: string; fg: string }> = {
+  green: {
+    bg: 'bg-green-100 dark:bg-green-950/70',
+    fg: 'text-green-600 dark:text-green-400',
+  },
+  orange: {
+    bg: 'bg-orange-100 dark:bg-orange-950/70',
+    fg: 'text-orange-600 dark:text-orange-400',
+  },
+  blue: {
+    bg: 'bg-blue-100 dark:bg-blue-950/70',
+    fg: 'text-blue-600 dark:text-blue-400',
+  },
+  purple: {
+    bg: 'bg-purple-100 dark:bg-purple-950/70',
+    fg: 'text-purple-600 dark:text-purple-400',
+  },
+};
 
 interface StockEntryListProps {
   onCreateClick: () => void;
@@ -126,16 +147,11 @@ export default function StockEntryList({ onCreateClick, onViewClick }: StockEntr
 
   const totalItems = filteredEntries.length;
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  const effectivePage = page > totalPages ? totalPages : page;
   const paginatedEntries = useMemo(
-    () => filteredEntries.slice((page - 1) * pageSize, page * pageSize),
-    [filteredEntries, page, pageSize],
+    () => filteredEntries.slice((effectivePage - 1) * pageSize, effectivePage * pageSize),
+    [filteredEntries, effectivePage, pageSize],
   );
-
-  useEffect(() => {
-    if (page > totalPages) {
-      setPage(totalPages);
-    }
-  }, [page, totalPages]);
 
   const handlePost = async (entryId: string) => {
     try {
@@ -335,7 +351,7 @@ export default function StockEntryList({ onCreateClick, onViewClick }: StockEntr
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{t('stockEntries.title')}</h2>
               <p className="text-gray-600 dark:text-gray-400">{t('stockEntries.subtitle')}</p>
             </div>
-            <Button onClick={onCreateClick}>
+            <Button variant="default" onClick={onCreateClick}>
               <Plus className="w-4 h-4 mr-2" />
               {t('stockEntries.newEntry')}
             </Button>
@@ -410,15 +426,24 @@ export default function StockEntryList({ onCreateClick, onViewClick }: StockEntr
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
             {Object.values(STOCK_ENTRY_TYPES).map((type) => {
               const count = entries.filter((e) => e.entry_type === type.type).length;
+              const icon = STOCK_ENTRY_STAT_ICON[type.color] ?? STOCK_ENTRY_STAT_ICON.green;
               return (
-                <div key={type.type} className="rounded-lg border bg-white p-4 shadow-sm">
+                <div
+                  key={type.type}
+                  className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800"
+                >
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-gray-600">{type.label}</p>
-                      <p className="mt-1 text-2xl font-bold">{count}</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">{type.label}</p>
+                      <p className="mt-1 text-2xl font-bold text-gray-900 dark:text-white">{count}</p>
                     </div>
-                    <div className={`flex h-12 w-12 items-center justify-center rounded-full bg-${type.color}-100`}>
-                      <Package className={`h-6 w-6 text-${type.color}-600`} />
+                    <div
+                      className={cn(
+                        'flex h-12 w-12 items-center justify-center rounded-full',
+                        icon.bg,
+                      )}
+                    >
+                      <Package className={cn('h-6 w-6', icon.fg)} />
                     </div>
                   </div>
                 </div>

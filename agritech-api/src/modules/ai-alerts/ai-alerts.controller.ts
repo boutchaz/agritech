@@ -14,6 +14,8 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { Request } from 'express';
+import { RequireModule } from '../../common/decorators/require-module.decorator';
+import { ModuleEntitlementGuard } from '../../common/guards/module-entitlement.guard';
 import { OrganizationGuard } from '../../common/guards/organization.guard';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import {
@@ -24,7 +26,8 @@ import {
 @ApiTags('ai-alerts')
 @ApiBearerAuth()
 @Controller()
-@UseGuards(JwtAuthGuard, OrganizationGuard)
+@RequireModule('agromind_advisor')
+@UseGuards(JwtAuthGuard, OrganizationGuard, ModuleEntitlementGuard)
 export class AiAlertsController {
   constructor(private readonly aiAlertsService: AiAlertsService) {}
 

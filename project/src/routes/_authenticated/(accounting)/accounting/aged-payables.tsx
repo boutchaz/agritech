@@ -3,9 +3,7 @@ import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
-import { PageLayout } from '@/components/PageLayout';
-import ModernPageHeader from '@/components/ModernPageHeader';
-import { Building2, Truck, AlertCircle, Download, Calendar, DollarSign } from 'lucide-react';
+import { Truck, AlertCircle, Download, Calendar, DollarSign } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -64,19 +62,6 @@ function AppContent() {
   }
 
   return (
-    <PageLayout
-      activeModule="accounting"
-      header={
-        <ModernPageHeader
-          breadcrumbs={[
-            { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
-            { icon: Truck, label: t('reportsModule.agedPayables.title', 'Aged Payables'), isActive: true }
-          ]}
-          title={t('reportsModule.agedPayables.title', 'Aged Payables')}
-          subtitle={t('reportsModule.agedPayables.subtitle', 'Analysis of outstanding supplier invoices by age')}
-        />
-      }
-    >
       <div className="p-6 space-y-6">
         <Card>
           <CardContent className="pt-6">
@@ -263,6 +248,5 @@ function AppContent() {
           </>
         )}
       </div>
-    </PageLayout>
   );
 }

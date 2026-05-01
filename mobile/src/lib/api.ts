@@ -257,6 +257,13 @@ class ApiClient {
     });
   }
 
+  async put<T>(endpoint: string, data?: unknown): Promise<T> {
+    return this.request<T>(endpoint, {
+      method: 'PUT',
+      body: data ? JSON.stringify(data) : undefined,
+    });
+  }
+
   async patch<T>(endpoint: string, data?: unknown): Promise<T> {
     return this.request<T>(endpoint, {
       method: 'PATCH',
@@ -269,6 +276,32 @@ class ApiClient {
       method: 'DELETE',
       body: data ? JSON.stringify(data) : undefined,
     });
+  }
+
+  async downloadBlob(endpoint: string): Promise<Blob> {
+    const url = `${this.baseUrl}${endpoint}`;
+    const analyticsHeaders = await getAnalyticsHeaders();
+
+    const headers: HeadersInit = {
+      ...analyticsHeaders,
+    };
+
+    if (this.accessToken) {
+      (headers as Record<string, string>)['Authorization'] = `Bearer ${this.accessToken}`;
+    }
+
+    const orgId = this.organizationId || resolveOrganizationId();
+    if (orgId) {
+      (headers as Record<string, string>)['x-organization-id'] = orgId;
+    }
+
+    const response = await fetch(url, { method: 'GET', headers });
+
+    if (!response.ok) {
+      throw new Error(`Download failed: ${response.status} ${response.statusText}`);
+    }
+
+    return response.blob();
   }
 
   async uploadFile<T = { url: string }>(

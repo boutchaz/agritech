@@ -1,8 +1,10 @@
 import {
   BadRequestException,
+  Inject,
   Injectable,
   Logger,
   NotFoundException,
+  forwardRef,
 } from "@nestjs/common";
 import {
   CalibrationRecord,
@@ -10,6 +12,8 @@ import {
 } from "./calibration.service";
 import { StartCalibrationDto } from "./dto/start-calibration.dto";
 import { DatabaseService } from "../database/database.service";
+import { AIReportsService } from "../ai-reports/ai-reports.service";
+import { AgromindReportType } from "../ai-reports/interfaces";
 
 type JsonObject = Record<string, unknown>;
 
@@ -89,6 +93,8 @@ export class AnnualRecalibrationService {
   constructor(
     private readonly databaseService: DatabaseService,
     private readonly calibrationService: CalibrationService,
+    @Inject(forwardRef(() => AIReportsService))
+    private readonly aiReportsService: AIReportsService,
   ) {}
 
   async checkEligibility(
@@ -649,6 +655,49 @@ export class AnnualRecalibrationService {
       );
     }
 
+    // Fire the F3 post-campaign recalibration prompt against the LLM to get the
+    // updated percentiles, phenology, potential, confidence, and campaign
+    // lessons. The baseline + campaign_bilan + previous_baseline we just
+    // persisted are what the prompt reads. Failures are logged but do not
+    // block the flow — the deterministic recalibration context has already
+    // been saved on the calibration row above.
+    try {
+      const { provider, model } =
+        await this.aiReportsService.resolveProvider(organizationId);
+      const dataEnd = new Date().toISOString().split("T")[0];
+      // Look back 2 years so the prompt has the just-closed campaign plus the
+      // prior baseline to compare against.
+      const dataStartDate = new Date();
+      dataStartDate.setFullYear(dataStartDate.getFullYear() - 2);
+      const dataStart = dataStartDate.toISOString().split("T")[0];
+
+      const aiResult = await this.aiReportsService.generateReport(
+        organizationId,
+        "system",
+        {
+          parcel_id: parcelId,
+          provider,
+          model,
+          reportType: AgromindReportType.RECALIBRATION,
+          recalibrationMode: "F3_complet",
+          data_start_date: dataStart,
+          data_end_date: dataEnd,
+        } as any,
+      );
+
+      if (aiResult?.sections) {
+        this.logger.log(
+          `Annual recalibration AI output produced for parcel ${parcelId}`,
+        );
+      }
+    } catch (error) {
+      this.logger.warn(
+        `Annual recalibration AI call failed for parcel ${parcelId}: ${
+          error instanceof Error ? error.message : "unknown error"
+        }. Keeping deterministic context.`,
+      );
+    }
+
     return updatedCalibration as CalibrationRecord;
   }
 
@@ -737,7 +786,7 @@ export class AnnualRecalibrationService {
       )
       .eq("parcel_id", parcelId)
       .eq("organization_id", organizationId)
-      .eq("status", "completed")
+      .in("status", ["validated", "awaiting_validation"])
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -812,7 +861,7 @@ export class AnnualRecalibrationService {
       .select("health_score")
       .eq("organization_id", organizationId)
       .eq("parcel_id", parcelId)
-      .eq("status", "completed")
+      .in("status", ["validated", "awaiting_validation"])
       .order("created_at", { ascending: true });
 
     if (error) {

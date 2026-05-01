@@ -58,6 +58,7 @@ export interface OrganizationWithRole {
   currency_code: string;
   timezone: string;
   is_active: boolean;
+  approval_status?: 'pending' | 'approved' | 'rejected';
   role: string;
   role_display_name: string;
   role_level: number;

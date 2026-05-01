@@ -17,12 +17,15 @@ import { SatelliteProxyService } from './satellite-proxy.service';
 import { SatelliteCacheService } from './satellite-cache.service';
 import { SatelliteSyncService } from './satellite-sync.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RequireModule } from '../../common/decorators/require-module.decorator';
 import { OrganizationGuard } from '../../common/guards/organization.guard';
+import { ModuleEntitlementGuard } from '../../common/guards/module-entitlement.guard';
 
 @ApiTags('satellite-proxy')
 @ApiBearerAuth()
 @Controller('satellite-proxy')
-@UseGuards(JwtAuthGuard, OrganizationGuard)
+@RequireModule('satellite')
+@UseGuards(JwtAuthGuard, OrganizationGuard, ModuleEntitlementGuard)
 @UsePipes(new ValidationPipe({ transform: false, whitelist: false, forbidNonWhitelisted: false }))
 export class SatelliteProxyController {
   constructor(

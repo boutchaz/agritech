@@ -1,12 +1,15 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { useAuth } from '@/hooks/useAuth';
-import { useBankAccounts, useDeleteBankAccount } from '@/hooks/useBankAccounts';
-import ModernPageHeader from '@/components/ModernPageHeader';
+import { useBankAccounts, useCreateBankAccount, useDeleteBankAccount } from '@/hooks/useBankAccounts';
 import { PageLoader } from '@/components/ui/loader';
 import { Button } from '@/components/ui/button';
-import { Landmark, Plus, Building2 } from 'lucide-react';
+import { Input } from '@/components/ui/Input';
+import { Landmark, Plus } from 'lucide-react';
 import { withRouteProtection } from '@/components/authorization/withRouteProtection';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -21,7 +24,66 @@ function BankAccountsPage() {
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
   const { data: accounts = [], isLoading, isError } = useBankAccounts();
+  const createAccount = useCreateBankAccount();
   const deleteMutation = useDeleteBankAccount();
+
+  const createSchema = useMemo(() => {
+    const requiredMessage = t('validation.required', 'Required');
+    const optionalNumber = z.preprocess(
+      (value) => value === '' || value === null ? undefined : value,
+      z.coerce.number().optional(),
+    );
+
+    return z.object({
+      account_name: z.string().min(1, requiredMessage),
+      bank_name: z.string().optional(),
+      account_number: z.string().optional(),
+      currency_code: z.string().optional(),
+      opening_balance: optionalNumber,
+      branch_name: z.string().optional(),
+      iban: z.string().optional(),
+      swift_code: z.string().optional(),
+    });
+  }, [t]);
+
+  type FormData = z.input<typeof createSchema>;
+  type SubmitData = z.output<typeof createSchema>;
+
+  const form = useForm<FormData, unknown, SubmitData>({
+    resolver: zodResolver(createSchema),
+    defaultValues: {
+      account_name: '',
+      bank_name: '',
+      account_number: '',
+      currency_code: 'MAD',
+      opening_balance: undefined,
+      branch_name: '',
+      iban: '',
+      swift_code: '',
+    },
+  });
+
+  const onSubmit = async (data: SubmitData) => {
+    try {
+      await createAccount.mutateAsync({
+        account_name: data.account_name,
+        bank_name: data.bank_name || undefined,
+        account_number: data.account_number || undefined,
+        currency_code: data.currency_code || 'MAD',
+        opening_balance: data.opening_balance,
+        current_balance: data.opening_balance,
+        branch_name: data.branch_name || undefined,
+        iban: data.iban || undefined,
+        swift_code: data.swift_code || undefined,
+        is_active: true,
+      });
+      toast.success(t('bankAccounts.createSuccess', 'Bank account created successfully'));
+      setShowForm(false);
+      form.reset();
+    } catch {
+      toast.error(t('bankAccounts.createError', 'Failed to create bank account'));
+    }
+  };
 
   const handleDelete = (id: string) => {
     setDeleteTarget(id);
@@ -46,21 +108,6 @@ function BankAccountsPage() {
 
   return (
     <>
-      <ModernPageHeader
-        breadcrumbs={[
-          { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
-          { icon: Landmark, label: t('bankAccounts.pageTitle', 'Bank Accounts'), isActive: true },
-        ]}
-        title={t('bankAccounts.pageTitle', 'Bank Accounts')}
-        subtitle={t('bankAccounts.description', 'Manage your organization bank accounts.')}
-        actions={
-          <Button variant="green" onClick={() => setShowForm(true)} className="flex items-center gap-2">
-            <Plus className="h-4 w-4" />
-            {t('bankAccounts.addAccount', 'Add Account')}
-          </Button>
-        }
-      />
-
       <div className="p-3 sm:p-4 md:p-6 pb-20 md:pb-6">
         {isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -111,7 +158,7 @@ function BankAccountsPage() {
                     )}
                     {account.current_balance !== null && account.current_balance !== undefined && (
                       <p className="text-lg font-bold text-gray-900 dark:text-white">
-                        {Number(account.current_balance).toLocaleString()} {account.currency_code || 'MAD'}
+                        {Number(account.current_balance).toLocaleString()} {account.currency_code || t('common.mad', 'MAD')}
                       </p>
                     )}
                   </div>
@@ -131,14 +178,127 @@ function BankAccountsPage() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-gray-800 rounded-xl p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto">
             <h2 className="text-lg font-semibold mb-4">{t('bankAccounts.addAccount', 'Add Bank Account')}</h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-              {t('bankAccounts.formComingSoon', 'Full bank account form coming soon.')}
-            </p>
-            <div className="flex justify-end gap-3">
-              <Button variant="outline" onClick={() => setShowForm(false)}>
-                {t('common.cancel', 'Cancel')}
-              </Button>
-            </div>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <div>
+                <label htmlFor="bank-account-name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  {t('bankAccounts.accountName', 'Account Name')}
+                </label>
+                <Input
+                  id="bank-account-name"
+                  {...form.register('account_name')}
+                  placeholder={t('bankAccounts.accountNamePlaceholder', 'Enter account name')}
+                  className={form.formState.errors.account_name ? 'border-red-400' : ''}
+                />
+                {form.formState.errors.account_name && (
+                  <p className="text-sm text-red-500 mt-1">{form.formState.errors.account_name.message}</p>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="bank-bank-name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    {t('bankAccounts.bankName', 'Bank Name')}
+                  </label>
+                  <Input
+                    id="bank-bank-name"
+                    {...form.register('bank_name')}
+                    placeholder={t('bankAccounts.bankNamePlaceholder', 'Enter bank name')}
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="bank-account-number" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    {t('bankAccounts.accountNumber', 'Account Number')}
+                  </label>
+                  <Input
+                    id="bank-account-number"
+                    {...form.register('account_number')}
+                    placeholder={t('bankAccounts.accountNumberPlaceholder', 'Enter account number')}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="bank-currency-code" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    {t('bankAccounts.currency', 'Currency Code')}
+                  </label>
+                  <Input
+                    id="bank-currency-code"
+                    {...form.register('currency_code')}
+                    placeholder={t('bankAccounts.currencyPlaceholder', 'MAD')}
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="bank-opening-balance" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    {t('bankAccounts.openingBalance', 'Opening Balance')}
+                  </label>
+                  <Input
+                    id="bank-opening-balance"
+                    {...form.register('opening_balance')}
+                    type="number"
+                    step="0.01"
+                    placeholder={t('bankAccounts.openingBalancePlaceholder', 'Enter opening balance')}
+                    className={form.formState.errors.opening_balance ? 'border-red-400' : ''}
+                  />
+                  {form.formState.errors.opening_balance && (
+                    <p className="text-sm text-red-500 mt-1">{form.formState.errors.opening_balance.message}</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="bank-branch-name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    {t('bankAccounts.branchName', 'Branch Name')}
+                  </label>
+                  <Input
+                    id="bank-branch-name"
+                    {...form.register('branch_name')}
+                    placeholder={t('bankAccounts.branchNamePlaceholder', 'Enter branch name')}
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="bank-iban" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    {t('bankAccounts.iban', 'IBAN')}
+                  </label>
+                  <Input
+                    id="bank-iban"
+                    {...form.register('iban')}
+                    placeholder={t('bankAccounts.ibanPlaceholder', 'Enter IBAN')}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="bank-swift-code" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  {t('bankAccounts.swiftCode', 'SWIFT Code')}
+                </label>
+                <Input
+                  id="bank-swift-code"
+                  {...form.register('swift_code')}
+                  placeholder={t('bankAccounts.swiftCodePlaceholder', 'Enter SWIFT code')}
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setShowForm(false);
+                    form.reset();
+                  }}
+                >
+                  {t('common.cancel', 'Cancel')}
+                </Button>
+                <Button type="submit" variant="green" disabled={createAccount.isPending}>
+                  {createAccount.isPending ? t('common.creating', 'Creating...') : t('common.create', 'Create')}
+                </Button>
+              </div>
+            </form>
           </div>
         </div>
       )}

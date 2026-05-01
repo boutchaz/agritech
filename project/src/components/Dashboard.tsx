@@ -1,9 +1,10 @@
 
-import { Activity, AlertTriangle, MapPin } from 'lucide-react';
+import { Activity, AlertTriangle, MapPin, Package, Wheat, ShoppingCart, BookOpen, Users, Satellite } from 'lucide-react';
 import type { SensorData, DashboardSettings } from '../types';
 import { useSensorData } from '../hooks/useSensorData';
 import { useAuth } from '../hooks/useAuth';
 import { useDashboardSummary } from '../hooks/useDashboardSummary';
+import { useFarms } from '../hooks/useParcelsQuery';
 import { useNavigate } from '@tanstack/react-router';
 import UpcomingTasksWidget from './Dashboard/UpcomingTasksWidget';
 import ParcelsOverviewWidget from './Dashboard/ParcelsOverviewWidget';
@@ -14,6 +15,8 @@ import HarvestSummaryWidget from './Dashboard/HarvestSummaryWidget';
 import SalesOverviewWidget from './Dashboard/SalesOverviewWidget';
 import AccountingWidget from './Dashboard/AccountingWidget';
 import CostPerParcelWidget from './Dashboard/CostPerParcelWidget';
+import FirstRunOnboarding from './Dashboard/FirstRunOnboarding';
+import { ModuleGatedWidget } from './Dashboard/ModuleGatedWidget';
 import InlineFarmSelector from './InlineFarmSelector';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
@@ -27,10 +30,18 @@ interface DashboardProps {
 const Dashboard = ({ sensorData: _sensorData, settings }: DashboardProps) => {
   const { t } = useTranslation();
   const { latestReadings } = useSensorData();
-  const { currentFarm } = useAuth();
+  const { currentFarm, currentOrganization, user } = useAuth();
   const farmId = currentFarm?.id ?? null;
   const { data: dashboardData, isLoading: dashboardLoading } = useDashboardSummary(farmId || undefined);
+  const { data: farms = [], isLoading: farmsLoading } = useFarms(currentOrganization?.id);
   const navigate = useNavigate();
+
+  const hasFarm = farms.length > 0;
+  const hasParcel = (dashboardData?.parcels.total ?? 0) > 0;
+  const hasStock = (dashboardData?.inventory.total ?? 0) > 0;
+  const hasHarvest = (dashboardData?.harvests.total ?? 0) > 0;
+  const isEmpty = !hasFarm && !hasParcel && !hasStock && !hasHarvest;
+  const showOnboarding = !farmsLoading && !dashboardLoading && isEmpty;
 
   const getSensorValue = (type: string) => {
     return latestReadings[type]?.value.toFixed(1) || '0';
@@ -171,12 +182,30 @@ const Dashboard = ({ sensorData: _sensorData, settings }: DashboardProps) => {
     }
   };
 
+  if (showOnboarding) {
+    const u = user as { user_metadata?: { full_name?: string }; email?: string } | null;
+    const userName = u?.user_metadata?.full_name?.split(' ')[0]
+      || u?.email?.split('@')[0]
+      || null;
+    return (
+      <div className="space-y-6">
+        <FirstRunOnboarding
+          hasFarm={hasFarm}
+          hasParcel={hasParcel}
+          hasStock={hasStock}
+          userName={userName}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
-      {/* Farm Selection Context */}
-      <div className="bg-white dark:bg-slate-800 rounded-3xl p-1 shadow-sm border border-slate-100 dark:border-slate-700">
-        <InlineFarmSelector message={t('dashboard.widgets.noFarmSelected')} />
-      </div>
+      {hasFarm && (
+        <div className="bg-white dark:bg-slate-800 rounded-2xl p-1 shadow-sm border border-slate-100 dark:border-slate-700">
+          <InlineFarmSelector message={t('dashboard.widgets.noFarmSelected')} />
+        </div>
+      )}
 
       {/* Primary KPI Tier: Critical Business Metrics */}
       <div data-tour="dashboard-stats" className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-6">
@@ -184,13 +213,19 @@ const Dashboard = ({ sensorData: _sensorData, settings }: DashboardProps) => {
           <ParcelsOverviewWidget />
         </div>
         <div className="h-full">
-          <StockAlertsWidget />
+          <ModuleGatedWidget moduleSlug="stock" title={t('dashboard.widgets.stock.title', 'Stock')} icon={Package}>
+            <StockAlertsWidget />
+          </ModuleGatedWidget>
         </div>
         <div className="h-full">
-          <HarvestSummaryWidget />
+          <ModuleGatedWidget moduleSlug="production" title={t('dashboard.widgets.harvests.title', 'Harvests')} icon={Wheat}>
+            <HarvestSummaryWidget />
+          </ModuleGatedWidget>
         </div>
         <div className="h-full">
-          <SalesOverviewWidget />
+          <ModuleGatedWidget moduleSlug="sales_purchasing" title={t('dashboard.widgets.sales.title', 'Sales')} icon={ShoppingCart}>
+            <SalesOverviewWidget />
+          </ModuleGatedWidget>
         </div>
       </div>
 
@@ -199,26 +234,36 @@ const Dashboard = ({ sensorData: _sensorData, settings }: DashboardProps) => {
         {/* Left Column: Tasks & Workforce */}
         <div className="lg:col-span-7 space-y-6">
           <div data-tour="dashboard-tasks" className="bg-white dark:bg-slate-800 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
-            <UpcomingTasksWidget />
+            <ModuleGatedWidget moduleSlug="personnel" title={t('dashboard.widgets.tasks.title', 'Tasks')} icon={Activity}>
+              <UpcomingTasksWidget />
+            </ModuleGatedWidget>
           </div>
-          
+
           <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
-            <WorkersActivityWidget />
+            <ModuleGatedWidget moduleSlug="personnel" title={t('dashboard.widgets.workers.title', 'Workers')} icon={Users}>
+              <WorkersActivityWidget />
+            </ModuleGatedWidget>
           </div>
         </div>
 
         {/* Right Column: Financials & Data Analysis */}
         <div className="lg:col-span-5 space-y-6">
           <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
-            <AccountingWidget />
+            <ModuleGatedWidget moduleSlug="accounting" title={t('dashboard.widgets.accounting.title', 'Accounting')} icon={BookOpen}>
+              <AccountingWidget />
+            </ModuleGatedWidget>
           </div>
 
           <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
-            <CostPerParcelWidget />
+            <ModuleGatedWidget moduleSlug="accounting" title={t('dashboard.widgets.costs.title', 'Costs')} icon={BookOpen}>
+              <CostPerParcelWidget />
+            </ModuleGatedWidget>
           </div>
 
           <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
-            <AnalysisWidget />
+            <ModuleGatedWidget moduleSlug="satellite" title={t('dashboard.widgets.satellite.title', 'Satellite')} icon={Satellite}>
+              <AnalysisWidget />
+            </ModuleGatedWidget>
           </div>
         </div>
       </div>

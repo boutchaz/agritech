@@ -1,6 +1,7 @@
 import { useMemo, useCallback } from 'react';
 import { useModules } from './useModules';
 import { useModuleConfig, useWidgetToModuleMap } from './useModuleConfig';
+import { findOwningModuleSlug, isPathEnabled, type ModuleNavInfo } from '../lib/module-gating';
 import type { DashboardSettings } from '../types';
 
 export interface ModuleBasedDashboardConfig {
@@ -10,39 +11,9 @@ export interface ModuleBasedDashboardConfig {
   availableNavigationSet: Set<string>;
   isWidgetEnabled: (widgetId: string) => boolean;
   isNavigationEnabled: (path: string) => boolean;
+  findOwningModule: (path: string) => string | null;
   isLoading: boolean;
 }
-
-// Mapping from old module names to new module slugs
-const LEGACY_MODULE_MAPPING: Record<string, string> = {
-  'dashboard': 'dashboard',
-  'farms': 'farm_management',
-  'parcels': 'farm_management',
-  'harvests': 'farm_management',
-  'tasks': 'farm_management',
-  'workers': 'hr',
-  'stock': 'inventory',
-  'items': 'inventory',
-  'warehouses': 'inventory',
-  'customers': 'sales',
-  'quotes': 'sales',
-  'sales_orders': 'sales',
-  'invoices': 'accounting',
-  'payments': 'accounting',
-  'accounts': 'accounting',
-  'journal': 'accounting',
-  'utilities': 'accounting',
-  'reports': 'analytics',
-  'satellite': 'analytics',
-  'soil': 'analytics',
-  'suppliers': 'procurement',
-  'purchase_orders': 'procurement',
-  'marketplace': 'marketplace',
-  'chat': 'analytics',
-  'compliance': 'compliance',
-  'certifications': 'compliance',
-  'settings': 'core',
-};
 
 export function useModuleBasedDashboard(): ModuleBasedDashboardConfig {
   const { data: orgModules = [], isLoading: orgModulesLoading } = useModules();
@@ -51,33 +22,34 @@ export function useModuleBasedDashboard(): ModuleBasedDashboardConfig {
 
   const isLoading = orgModulesLoading || configLoading;
 
+  // Active module slugs: anything active in organization_modules, plus every
+  // is_required module from the catalog (defense in depth — the DB trigger
+  // should already have inserted a row, but fail-safe).
   const activeModuleSlugs = useMemo(() => {
-    if (!config) return [];
-
-    const active = orgModules
-      .filter(m => m.is_active)
-      .map(m => {
-        // First try direct name/slug matching
-        let moduleConfig = config.modules.find(cfg =>
-          cfg.name.toLowerCase() === m.name.toLowerCase() ||
-          cfg.slug === m.name.toLowerCase().replace(/\s+/g, '_') ||
-          m.name.toLowerCase().includes(cfg.slug.replace('_', ''))
-        );
-
-        // If no match found, try the legacy mapping
-        if (!moduleConfig) {
-          const legacySlug = LEGACY_MODULE_MAPPING[m.name.toLowerCase()];
-          if (legacySlug) {
-            moduleConfig = config.modules.find(cfg => cfg.slug === legacySlug);
-          }
-        }
-
-        const slug = moduleConfig?.slug || LEGACY_MODULE_MAPPING[m.name.toLowerCase()] || m.name.toLowerCase().replace(/\s+/g, '_');
-        return slug;
-      });
-
-    return active;
+    const active = new Set<string>();
+    for (const m of orgModules) {
+      if (m.isActive && m.slug) active.add(m.slug);
+    }
+    if (config) {
+      for (const m of config.modules) {
+        if (m.isRequired) active.add(m.slug);
+      }
+    }
+    return Array.from(active);
   }, [orgModules, config]);
+
+  const activeSlugSet = useMemo(() => new Set(activeModuleSlugs), [activeModuleSlugs]);
+
+  // Full catalog view for gating (active + inactive) — needed so that
+  // isNavigationEnabled can detect when a path is owned by an inactive
+  // module and correctly block it.
+  const catalogNavInfo: ModuleNavInfo[] = useMemo(() => {
+    if (!config) return [];
+    return config.modules.map((m) => ({
+      slug: m.slug,
+      navigationItems: m.navigationItems || [],
+    }));
+  }, [config]);
 
   const availableWidgets = useMemo(() => {
     if (!config) return [];
@@ -85,7 +57,7 @@ export function useModuleBasedDashboard(): ModuleBasedDashboardConfig {
     const widgets = new Set<string>();
 
     for (const slug of activeModuleSlugs) {
-      const moduleConfig = config.modules.find(m => m.slug === slug);
+      const moduleConfig = config.modules.find((m) => m.slug === slug);
       if (moduleConfig) {
         for (const widget of moduleConfig.dashboardWidgets) {
           widgets.add(widget);
@@ -93,7 +65,7 @@ export function useModuleBasedDashboard(): ModuleBasedDashboardConfig {
       }
     }
 
-    Object.entries(widgetToModuleMap).forEach(([widgetId, requiredModule]) => {
+    Object.entries(widgetToModuleMap || {}).forEach(([widgetId, requiredModule]) => {
       if (activeModuleSlugs.includes(requiredModule)) {
         widgets.add(widgetId);
       }
@@ -106,16 +78,14 @@ export function useModuleBasedDashboard(): ModuleBasedDashboardConfig {
     if (!config) return new Set<string>();
 
     const navItems = new Set<string>();
-
     for (const slug of activeModuleSlugs) {
-      const moduleConfig = config.modules.find(m => m.slug === slug);
+      const moduleConfig = config.modules.find((m) => m.slug === slug);
       if (moduleConfig) {
         for (const nav of moduleConfig.navigationItems) {
           navItems.add(nav);
         }
       }
     }
-
     return navItems;
   }, [activeModuleSlugs, config]);
 
@@ -123,21 +93,28 @@ export function useModuleBasedDashboard(): ModuleBasedDashboardConfig {
     return Array.from(availableNavigationSet);
   }, [availableNavigationSet]);
 
-  const isWidgetEnabled = useCallback((widgetId: string): boolean => {
-    const requiredModule = widgetToModuleMap?.[widgetId];
-    if (!requiredModule) return true;
-    return activeModuleSlugs.includes(requiredModule);
-  }, [widgetToModuleMap, activeModuleSlugs]);
+  const isWidgetEnabled = useCallback(
+    (widgetId: string): boolean => {
+      const requiredModule = widgetToModuleMap?.[widgetId];
+      if (!requiredModule) return true;
+      return activeModuleSlugs.includes(requiredModule);
+    },
+    [widgetToModuleMap, activeModuleSlugs],
+  );
 
-  const isNavigationEnabled = useCallback((path: string): boolean => {
-    // Check if path starts with any available navigation path
-    for (const nav of availableNavigationSet) {
-      if (path.startsWith(nav)) {
-        return true;
-      }
-    }
-    return false;
-  }, [availableNavigationSet]);
+  const isNavigationEnabled = useCallback(
+    (path: string): boolean => {
+      return isPathEnabled(path, catalogNavInfo, activeSlugSet);
+    },
+    [catalogNavInfo, activeSlugSet],
+  );
+
+  const findOwningModule = useCallback(
+    (path: string): string | null => {
+      return findOwningModuleSlug(path, catalogNavInfo);
+    },
+    [catalogNavInfo],
+  );
 
   return {
     activeModules: activeModuleSlugs,
@@ -146,28 +123,33 @@ export function useModuleBasedDashboard(): ModuleBasedDashboardConfig {
     availableNavigationSet,
     isWidgetEnabled,
     isNavigationEnabled,
+    findOwningModule,
     isLoading,
   };
 }
 
 export function convertToModuleBasedSettings(
   activeModuleIds: string[],
-  existingSettings?: Partial<DashboardSettings>
+  existingSettings?: Partial<DashboardSettings>,
 ): DashboardSettings {
-  const hasInventory = activeModuleIds.includes('inventory');
-  const hasFarmManagement = activeModuleIds.includes('farm_management');
-  const hasAnalytics = activeModuleIds.includes('analytics');
+  const hasInventory = activeModuleIds.includes('stock');
+  const hasProduction = activeModuleIds.includes('production');
+  const hasFruitTrees = activeModuleIds.includes('fruit_trees');
+  const hasAnalytics =
+    activeModuleIds.includes('satellite') ||
+    activeModuleIds.includes('agromind_advisor');
   const hasAccounting = activeModuleIds.includes('accounting');
+  const hasPersonnel = activeModuleIds.includes('personnel');
 
   return {
     showSoilData: hasAnalytics,
     showClimateData: hasAnalytics,
-    showIrrigationData: hasFarmManagement,
-    showMaintenanceData: hasFarmManagement,
-    showProductionData: hasFarmManagement || hasAnalytics,
+    showIrrigationData: hasProduction,
+    showMaintenanceData: hasFruitTrees || hasProduction,
+    showProductionData: hasProduction || hasAnalytics,
     showFinancialData: hasAccounting,
     showStockAlerts: hasInventory,
-    showTaskAlerts: hasFarmManagement,
+    showTaskAlerts: hasPersonnel,
     layout: existingSettings?.layout || {
       topRow: [],
       middleRow: [],

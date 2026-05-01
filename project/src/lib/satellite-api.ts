@@ -9,6 +9,7 @@ export const DEFAULT_CLOUD_COVERAGE = 10;
 export interface VegetationIndex {
   NIRv: "NIRv";
   EVI: "EVI";
+  EBI: "EBI";
   NDRE: "NDRE";
   NDMI: "NDMI";
   NDVI: "NDVI";
@@ -44,6 +45,12 @@ export const INDEX_METADATA: Record<TimeSeriesIndexType, IndexMetadata> = {
     reliability: 'fiable',
     priority: 2,
     description: 'Végétation améliorée — réduit l\'effet sol/atmosphère, moins de saturation que NDVI',
+  },
+  EBI: {
+    reliability: 'utile',
+    priority: 2.5,
+    description: 'Indice de floraison amélioré (Chen 2019) — détecte les fleurs blanches (amandiers) en isolant brillance vs verdure/sol',
+    shortWarning: 'ε=1 calibré pour Sentinel-2 ; recalibrer pour drones',
   },
   NDRE: {
     reliability: 'fiable',
@@ -698,6 +705,40 @@ export const convertBoundaryToGeoJSON = (boundary: number[][]): GeoJSONGeometry 
   };
 };
 
+// Build a MultiPolygon GeoJSON from multiple parcel boundaries.
+// Each boundary is normalized via the same WGS84/Mercator detection as
+// convertBoundaryToGeoJSON so callers can mix parcels from different sources.
+export const convertBoundariesToMultiPolygon = (boundaries: number[][][]): GeoJSONGeometry => {
+  const validRings = boundaries
+    .filter((b) => b && b.length >= 3)
+    .map((boundary) => {
+      const ring = boundary.map((coord) => {
+        const [x, y] = coord;
+        if (Math.abs(x) > 180 || Math.abs(y) > 90) {
+          const lon = (x / 20037508.34) * 180;
+          const lat = (Math.atan(Math.exp((y / 20037508.34) * Math.PI)) * 360 / Math.PI) - 90;
+          return [lon, lat];
+        }
+        return [x, y];
+      });
+      const first = ring[0];
+      const last = ring[ring.length - 1];
+      if (first[0] !== last[0] || first[1] !== last[1]) {
+        ring.push([first[0], first[1]]);
+      }
+      return [ring];
+    });
+
+  if (validRings.length === 0) {
+    throw new Error('No valid parcel boundaries provided');
+  }
+
+  return {
+    type: 'MultiPolygon',
+    coordinates: validRings as unknown as number[][][],
+  };
+};
+
 export const formatDateForAPI = (date: Date): string => {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -718,7 +759,7 @@ export const getDateRangeLastNDays = (days: number): DateRangeRequest => {
 
 // Ordered by audit priority: fiable → utile → prudence → inutile
 export const VEGETATION_INDICES: VegetationIndexType[] = [
-  'NIRv', 'EVI', 'NDRE', 'NDMI', 'NDVI', 'GCI', 'SAVI', 'MSAVI2', 'OSAVI', 'MSI', 'MNDWI', 'MCARI', 'TCARI'
+  'NIRv', 'EVI', 'EBI', 'NDRE', 'NDMI', 'NDVI', 'GCI', 'SAVI', 'MSAVI2', 'OSAVI', 'MSI', 'MNDWI', 'MCARI', 'TCARI'
 ];
 
 export const TIME_SERIES_INDICES: TimeSeriesIndexType[] = [...VEGETATION_INDICES, 'TCARI_OSAVI', 'NIRvP'];
@@ -726,6 +767,7 @@ export const TIME_SERIES_INDICES: TimeSeriesIndexType[] = [...VEGETATION_INDICES
 export const VEGETATION_INDEX_DESCRIPTIONS: Record<VegetationIndexType, string> = {
   NIRv: 'NIRv — Verdure fonctionnelle (isole végétation du sol)',
   EVI: 'EVI — Végétation améliorée (corrige sol et atmosphère)',
+  EBI: 'EBI — Floraison améliorée (détection fleurs, ε=1 sat / recalibrer drone)',
   NDRE: 'NDRE — Chlorophylle/azote (détection précoce stress azoté)',
   NDMI: 'NDMI — Contenu en eau foliaire (alerte sécheresse)',
   NDVI: 'NDVI — Verdure globale (référence historique)',

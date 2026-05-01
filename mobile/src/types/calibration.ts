@@ -306,3 +306,106 @@ export interface PartialRecalibrationDto {
     ai_recommendation?: 'partial' | 'full';
   };
 }
+
+// Draft
+export interface CalibrationDraftResponse {
+  id: string;
+  parcel_id: string;
+  current_step: number;
+  form_data: Record<string, unknown>;
+  updated_at: string;
+}
+
+// Review Blocks A-H
+export type HealthLabel = 'excellent' | 'bon' | 'moyen' | 'faible' | 'critique';
+export type ConfidenceLevel = 'eleve' | 'moyen' | 'faible' | 'minimal';
+export type ConcernSeverity = 'critique' | 'vigilance';
+
+export interface StrengthItem {
+  component: string;
+  phrase: string;
+}
+
+export interface ConcernItem {
+  component: string;
+  phrase: string;
+  severity: ConcernSeverity;
+  target_block: string;
+}
+
+export interface BlockASynthese {
+  health_score: number;
+  health_label: HealthLabel;
+  health_narrative: string;
+  confidence_score: number;
+  confidence_level: ConfidenceLevel;
+  confidence_narrative: string;
+  yield_range: { min: number; max: number; unit: string; wide_range_warning: boolean } | null;
+  strengths: StrengthItem[];
+  concerns: ConcernItem[];
+  summary_narrative: string | null;
+}
+
+export interface AnomalyItem {
+  period: string;
+  type: string;
+  icon: string;
+  impact: string;
+  sources: string[];
+}
+
+export interface BlockCAnomalies {
+  anomalies: AnomalyItem[];
+  ruptures: Array<{ type: string; date: string; detail: string }>;
+  total_excluded_percent: number;
+  calibrage_limite: boolean;
+}
+
+export interface BlockDAmeliorer {
+  current_confidence: number;
+  projected_confidence: number;
+  available_data: Array<{ type: string; label: string }>;
+  missing_data: Array<{ type: string; label: string; gain_points: number; message: string }>;
+}
+
+export type AlternanceLabel = 'faible' | 'moderee' | 'marquee' | 'forte';
+
+export interface BlockFAlternance {
+  indice: number;
+  label: AlternanceLabel;
+  interpretation: string;
+  next_season: { badge: string; color: string; phrase: string };
+  variety_reference: { variety: string; indice_ref: number } | null;
+}
+
+export interface BlockGMetadonnees {
+  generated_at_formatted: string;
+  calibration_version: string;
+}
+
+export interface CalibrationReviewView {
+  calibration_id: string;
+  parcel_id: string;
+  generated_at: string;
+  planting_year: number | null;
+  status: string;
+  block_a: BlockASynthese;
+  block_b: Record<string, unknown>;
+  block_c: BlockCAnomalies | null;
+  block_d: BlockDAmeliorer;
+  block_f: BlockFAlternance | null;
+  block_g: BlockGMetadonnees;
+  block_h_enabled: boolean;
+  export: {
+    available_formats: ('json' | 'csv' | 'zip')[];
+    calibration_id: string;
+  };
+}
+
+// Annual Missing Task Resolution
+export interface AnnualMissingTaskResolution {
+  task_id: string;
+  resolution: 'completed' | 'not_done' | 'unconfirmed';
+  execution_date?: string;
+  notes?: string;
+}

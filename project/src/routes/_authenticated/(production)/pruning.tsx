@@ -9,6 +9,7 @@ import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { FilterBar, ResponsiveList, ListPageLayout } from '@/components/ui/data-table';
 import { TableCell, TableHead } from '@/components/ui/table';
+import { ProductionTabs } from '@/components/Production/ProductionTabs';
 
 export const Route = createFileRoute('/_authenticated/(production)/pruning')({
   component: Pruning,
@@ -16,13 +17,17 @@ export const Route = createFileRoute('/_authenticated/(production)/pruning')({
 
 function Pruning() {
   const { t } = useTranslation();
-  const { organizationId } = useAuth();
+  const { currentOrganization } = useAuth();
+  const organizationId = currentOrganization?.id;
   const [searchTerm, setSearchTerm] = useState('');
 
   // Use existing tasks API - filter for pruning tasks
   const { data: allTasks, isLoading } = useQuery({
     queryKey: ['tasks', organizationId],
-    queryFn: () => tasksApi.list(organizationId!),
+    queryFn: async () => {
+      const res = await tasksApi.getAll(organizationId!);
+      return res.data;
+    },
     enabled: !!organizationId,
   });
 
@@ -48,11 +53,11 @@ function Pruning() {
     pruningTasks
       .filter(task =>
         task.status === 'pending' &&
-        task.scheduled_date &&
-        new Date(task.scheduled_date) >= new Date()
+        task.scheduled_start &&
+        new Date(task.scheduled_start) >= new Date()
       )
       .sort((a, b) =>
-        new Date(a.scheduled_date || 0).getTime() - new Date(b.scheduled_date || 0).getTime()
+        new Date(a.scheduled_start || 0).getTime() - new Date(b.scheduled_start || 0).getTime()
       )
       .slice(0, 5),
     [pruningTasks]
@@ -86,6 +91,7 @@ function Pruning() {
         />
       }
     >
+      <ProductionTabs />
       {/* Upcoming Pruning */}
       {upcomingPruning.length > 0 && (
         <div className="mb-6 rounded-lg border bg-card p-4">
@@ -107,8 +113,8 @@ function Pruning() {
                 </div>
                 <div className="text-right">
                   <div className="font-medium">
-                    {task.scheduled_date
-                      ? format(new Date(task.scheduled_date), 'MMM dd, yyyy')
+                    {task.scheduled_start
+                      ? format(new Date(task.scheduled_start), 'MMM dd, yyyy')
                       : t('pruning.notScheduled', 'Not scheduled')}
                   </div>
                   <div className="text-sm text-muted-foreground">
@@ -138,8 +144,8 @@ function Pruning() {
                 <div className="space-y-2 flex-1">
                   <div className="font-semibold">{task.title}</div>
                   <div className="text-sm text-muted-foreground">
-                    {task.scheduled_date
-                      ? format(new Date(task.scheduled_date), 'MMM dd, yyyy')
+                    {task.scheduled_start
+                      ? format(new Date(task.scheduled_start), 'MMM dd, yyyy')
                       : t('pruning.noDate', 'No date')}
                   </div>
                   {task.description && (
@@ -166,8 +172,8 @@ function Pruning() {
             <>
               <TableCell className="font-medium">{task.title}</TableCell>
               <TableCell>
-                {task.scheduled_date
-                  ? format(new Date(task.scheduled_date), 'MMM dd, yyyy')
+                {task.scheduled_start
+                  ? format(new Date(task.scheduled_start), 'MMM dd, yyyy')
                   : '-'}
               </TableCell>
               <TableCell>{task.farm_name || '-'}</TableCell>

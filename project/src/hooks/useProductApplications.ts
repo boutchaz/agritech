@@ -34,3 +34,19 @@ export function useCreateProductApplication() {
     },
   });
 }
+
+export function useDeleteProductApplication() {
+  const queryClient = useQueryClient();
+  const { currentOrganization } = useAuth();
+
+  return useMutation({
+    mutationFn: (id: string) => {
+      const orgId = currentOrganization?.id;
+      if (!orgId) throw new Error('No organization selected');
+      return productApplicationsApi.delete(id, orgId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['product-applications'] });
+    },
+  });
+}

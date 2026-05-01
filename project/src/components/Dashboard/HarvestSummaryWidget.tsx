@@ -93,14 +93,12 @@ const HarvestSummaryWidget = () => {
   }
 
   return (
-    <div className="group bg-white dark:bg-slate-800 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-700 p-6 hover:shadow-xl hover:shadow-orange-500/5 transition-all duration-500 flex flex-col h-full">
+    <div className="group bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 p-4 sm:p-5 hover:shadow-md transition-all duration-300 flex flex-col h-full min-h-[200px]">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 bg-orange-50 dark:bg-orange-900/30 rounded-2xl group-hover:scale-110 transition-transform duration-500">
-            <PackageIcon className="h-5 w-5 text-orange-600 dark:text-orange-400" />
-          </div>
-          <h3 className="text-lg font-semibold text-slate-900 dark:text-white tracking-tight uppercase">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2.5">
+          <PackageIcon className="h-4 w-4 text-orange-600 dark:text-orange-400" strokeWidth={1.75} />
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
             {t('dashboard.widgets.harvests.title')}
           </h3>
         </div>
@@ -117,28 +115,26 @@ const HarvestSummaryWidget = () => {
       {stats.total > 0 ? (
         <>
           {/* Stats Grid */}
-          <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-6 min-w-0">
-            <div className="relative min-w-0 bg-slate-50 dark:bg-slate-900/50 rounded-2xl p-3 sm:p-4 overflow-hidden group/card">
-              <div className="absolute top-0 right-0 w-16 h-16 bg-orange-500/5 rounded-full -mr-8 -mt-8 group-hover/card:scale-150 transition-transform duration-700"></div>
-              <div className="relative min-w-0">
-                <span className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wide sm:tracking-wider leading-tight break-words hyphens-auto">{t('dashboard.widgets.harvests.thisMonth')}</span>
-                <div className="text-3xl font-bold text-slate-900 dark:text-white tabular-nums mt-1">
+          <div className="grid grid-cols-2 gap-3 mb-4 min-w-0">
+            <div className="min-w-0 bg-slate-50 dark:bg-slate-900/50 rounded-xl p-3">
+              <span className="text-xs text-slate-500 dark:text-slate-400">{t('dashboard.widgets.harvests.thisMonth')}</span>
+              <div className="flex items-baseline gap-1.5 mt-1">
+                <div className="text-2xl font-semibold text-slate-900 dark:text-white tabular-nums leading-none">
                   {stats.thisMonth}
                 </div>
-                <div className="text-[10px] font-bold text-orange-600 dark:text-orange-400 mt-1 uppercase tracking-tight leading-tight break-words">
+                <div className="text-xs text-slate-500 dark:text-slate-400">
                   {t('dashboard.widgets.harvests.harvests')}
                 </div>
               </div>
             </div>
 
-            <div className="relative min-w-0 bg-slate-50 dark:bg-slate-900/50 rounded-2xl p-3 sm:p-4 overflow-hidden group/card">
-              <div className="absolute top-0 right-0 w-16 h-16 bg-emerald-500/5 rounded-full -mr-8 -mt-8 group-hover/card:scale-150 transition-transform duration-700"></div>
-              <div className="relative min-w-0">
-                <span className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wide sm:tracking-wider leading-tight break-words hyphens-auto">{t('dashboard.widgets.harvests.quantity')}</span>
-                <div className="text-3xl font-bold text-slate-900 dark:text-white tabular-nums mt-1">
+            <div className="min-w-0 bg-slate-50 dark:bg-slate-900/50 rounded-xl p-3">
+              <span className="text-xs text-slate-500 dark:text-slate-400">{t('dashboard.widgets.harvests.quantity')}</span>
+              <div className="flex items-baseline gap-1.5 mt-1">
+                <div className="text-2xl font-semibold text-slate-900 dark:text-white tabular-nums leading-none">
                   {stats.thisMonthQuantity.toFixed(0)}
                 </div>
-                <div className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 mt-1 uppercase tracking-tight leading-tight break-words">
+                <div className="text-xs text-slate-500 dark:text-slate-400">
                   {t('dashboard.widgets.harvests.kgThisMonth')}
                 </div>
               </div>
@@ -148,61 +144,47 @@ const HarvestSummaryWidget = () => {
           {/* Latest Harvest */}
           {stats.lastHarvest && (
             <div className="mt-auto">
-              <div className="flex items-center justify-between mb-3 px-1">
-                <h4 className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-widest">
-                  {t('dashboard.widgets.harvests.lastHarvest')}
-                </h4>
-                <div className="h-px flex-1 bg-slate-100 dark:bg-slate-800 mx-3"></div>
-              </div>
-              <div className="p-4 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700/50 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-all duration-300 shadow-sm hover:shadow group/item">
+              <h4 className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
+                {t('dashboard.widgets.harvests.lastHarvest')}
+              </h4>
+              <div className="p-3 bg-slate-50 dark:bg-slate-900/40 rounded-xl">
                 <div className="flex items-start justify-between">
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-semibold text-slate-900 dark:text-white truncate uppercase tracking-tight">
+                    <p className="text-sm font-medium text-slate-900 dark:text-white truncate">
                       {stats.lastHarvest.parcel_name || t('dashboard.widgets.harvests.parcel')}
                     </p>
-                    <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase mt-0.5">
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                       {format(parseISO(stats.lastHarvest.harvest_date), 'dd MMM yyyy', { locale: getLocale() })}
                     </p>
                   </div>
                   <div className="text-right ml-3 flex-shrink-0">
-                    <div className="text-lg font-semibold text-orange-600 dark:text-orange-400 tabular-nums leading-none">
-                      {stats.lastHarvest.quantity?.toFixed(0) || 0}
+                    <div className="text-base font-medium text-orange-600 dark:text-orange-400 tabular-nums leading-none">
+                      {stats.lastHarvest.quantity?.toFixed(0) || 0} <span className="text-xs text-slate-500 dark:text-slate-400 font-normal">{stats.lastHarvest.unit || t('dashboard.widgets.harvests.kg')}</span>
                     </div>
-                    <div className="text-[9px] font-medium text-slate-400 uppercase tracking-widest mt-1">
-                      {stats.lastHarvest.unit || t('dashboard.widgets.harvests.kg')}
-                    </div>
+                    {stats.lastHarvest.quality_grade && (
+                      <Badge className="mt-1.5 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border-none">
+                        {stats.lastHarvest.quality_grade}
+                      </Badge>
+                    )}
                   </div>
                 </div>
-
-                {stats.lastHarvest.quality_grade && (
-                  <div className="mt-3 flex items-center justify-between">
-                    <span className="text-[9px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-widest">{t('dashboard.widgets.harvests.quality')}</span>
-                    <Badge className="bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border-none font-semibold text-[9px] tracking-widest px-2 py-0.5">
-                      {stats.lastHarvest.quality_grade}
-                    </Badge>
-                  </div>
-                )}
               </div>
             </div>
           )}
 
           {/* Total Footer */}
-          <div className="mt-6 pt-4 border-t border-slate-50 dark:border-slate-700/50 flex items-center justify-between">
-            <span className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-widest">{t('dashboard.widgets.harvests.totalHarvests')}</span>
-            <span className="text-sm font-semibold text-slate-900 dark:text-white tabular-nums bg-slate-100 dark:bg-slate-900 px-2 py-0.5 rounded-lg">{stats.total}</span>
+          <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-700/50 flex items-center justify-between">
+            <span className="text-xs text-slate-500 dark:text-slate-400">{t('dashboard.widgets.harvests.totalHarvests')}</span>
+            <span className="text-sm font-medium text-slate-900 dark:text-white tabular-nums">{stats.total}</span>
           </div>
         </>
       ) : (
-        <div className="text-center py-8 bg-slate-50 dark:bg-slate-900/30 rounded-2xl border-2 border-dashed border-slate-100 dark:border-slate-800 mt-auto">
-          <PackageIcon className="h-8 w-8 text-slate-300 dark:text-slate-700 mx-auto mb-3" />
-          <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-4">
+        <div className="text-center py-6 bg-slate-50 dark:bg-slate-900/30 rounded-xl border border-dashed border-slate-200 dark:border-slate-700 mt-auto">
+          <PackageIcon className="h-7 w-7 text-slate-300 dark:text-slate-600 mx-auto mb-2" strokeWidth={1.75} />
+          <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
             {t('dashboard.widgets.harvests.empty')}
           </p>
-          <Button
-            size="sm"
-            onClick={handleViewHarvests}
-            className="bg-orange-600 hover:bg-orange-700 text-white font-bold text-[10px] uppercase tracking-widest rounded-xl px-4"
-          >
+          <Button type="button" variant="orange" size="sm" onClick={handleViewHarvests}>
             {t('dashboard.widgets.harvests.record')}
           </Button>
         </div>

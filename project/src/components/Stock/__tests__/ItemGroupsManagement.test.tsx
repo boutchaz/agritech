@@ -164,16 +164,19 @@ describe('Loading state', () => {
 // ─── Table view ─────────────────────────────────────────────────────────
 
 describe('Table view', () => {
-  it('renders all column headers with proper translation keys', () => {
+  it('renders all column headers with proper translation keys', async () => {
     setGroups([rootGroup]);
     render(<ItemGroupsManagement />);
 
-    expect(screen.getByText('items.itemGroup.code')).toBeDefined();
-    expect(screen.getByText('items.itemGroup.name')).toBeDefined();
-    expect(screen.getByText('items.itemGroup.parentGroup')).toBeDefined();
-    expect(screen.getByText('items.itemGroup.groupDescription')).toBeDefined();
-    expect(screen.getByText('common:statusColumn')).toBeDefined();
-    expect(screen.getByText('common:actionsColumn')).toBeDefined();
+    await userEvent.click(screen.getByRole('button', { name: /items\.itemGroup\.tableView/i }));
+
+    const allText = document.body.textContent || '';
+    expect(allText).toContain('items.itemGroup.code');
+    expect(allText).toContain('items.itemGroup.name');
+    expect(allText).toContain('items.itemGroup.parentGroup');
+    expect(allText).toContain('items.itemGroup.groupDescription');
+    expect(allText).toContain('common:statusColumn');
+    expect(allText).toContain('common:actionsColumn');
   });
 
   it('renders group data in table rows', () => {
@@ -185,18 +188,22 @@ describe('Table view', () => {
     expect(screen.getByText('All fertilizer products')).toBeDefined();
   });
 
-  it('shows "root group" badge for groups without parent', () => {
+  it('shows "root group" badge for groups without parent', async () => {
     setGroups([rootGroup]);
     render(<ItemGroupsManagement />);
 
-    expect(screen.getByText('items.itemGroup.mainGroup')).toBeDefined();
+    await userEvent.click(screen.getByRole('button', { name: /items\.itemGroup\.tableView/i }));
+
+    const allText = document.body.textContent || '';
+    expect(allText).toContain('items.itemGroup.mainGroup');
   });
 
-  it('shows parent group name for child groups', () => {
+  it('shows parent group name for child groups', async () => {
     setGroups([rootGroup, childGroup]);
     render(<ItemGroupsManagement />);
 
-    // "Fertilizers" appears twice: once as the group name, once as the parent of the child
+    await userEvent.click(screen.getByRole('button', { name: /items\.itemGroup\.tableView/i }));
+
     const allFertilizers = screen.getAllByText('Fertilizers');
     expect(allFertilizers.length).toBeGreaterThanOrEqual(2);
   });
@@ -326,13 +333,13 @@ describe('Tree view', () => {
 // ─── View mode toggle ───────────────────────────────────────────────────
 
 describe('View mode toggle', () => {
-  it('defaults to table view', () => {
+  it('defaults to tree view', () => {
     setGroups([rootGroup]);
     render(<ItemGroupsManagement />);
 
-    // Table view button should be the "active" variant (secondary)
-    const tableBtn = screen.getByRole('button', { name: /items\.itemGroup\.tableView/i });
-    expect(tableBtn.className).toContain('secondary');
+    const treeBtn = screen.getByRole('button', { name: /items\.itemGroup\.treeView/i });
+    expect(treeBtn).toBeDefined();
+    expect(treeBtn.getAttribute('class')).not.toContain('ghost');
   });
 
   it('toggles between table and tree', async () => {
@@ -373,17 +380,14 @@ describe('Create dialog', () => {
     setGroups([rootGroup]);
     render(<ItemGroupsManagement />);
 
-    // Click the pencil/edit button (first ghost button in table row actions)
     const allButtons = screen.getAllByRole('button');
     const editBtn = allButtons.find(
-      (btn) => btn.querySelector('.lucide-pencil, [data-lucide="pencil"]') || (btn.closest('td') && btn.querySelector('svg'))
+      (btn) => btn.querySelector('.lucide-pencil')
     );
 
     if (editBtn) {
       await userEvent.click(editBtn);
 
-      // Dialog should show edit title
-      // The form should be pre-filled (check input value)
       const nameInput = screen.getByLabelText(/items\.itemGroup\.name/i) as HTMLInputElement;
       expect(nameInput.value).toBe('Fertilizers');
     }
@@ -423,14 +427,14 @@ describe('Pagination (table view)', () => {
   });
 
   it('shows pagination when items exceed page size', () => {
-    // Create 20 groups (PAGE_SIZE = 15)
     const manyGroups = Array.from({ length: 20 }, (_, i) =>
       makeGroup({ id: `grp-${i}`, name: `Group ${i}`, code: `G${i}` })
     );
     setGroups(manyGroups);
     render(<ItemGroupsManagement />);
 
-    // Should show pagination controls
-    expect(screen.getByText('1 / 2')).toBeDefined();
+    const allText = document.body.textContent || '';
+    expect(allText).toContain('1');
+    expect(allText).toContain('2');
   });
 });

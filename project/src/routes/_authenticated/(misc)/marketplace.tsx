@@ -36,8 +36,18 @@ import {
   TrendingUp,
 } from 'lucide-react';
 
+import { ModuleGate } from '@/components/authorization/ModuleGate';
+
+function MarketplaceGuarded() {
+  return (
+    <ModuleGate>
+      <MarketplacePage />
+    </ModuleGate>
+  );
+}
+
 export const Route = createFileRoute('/_authenticated/(misc)/marketplace')({
-  component: MarketplacePage,
+  component: MarketplaceGuarded,
 });
 
 type ViewMode = 'responsive' | 'grid' | 'list';

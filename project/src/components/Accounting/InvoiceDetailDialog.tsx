@@ -1,13 +1,14 @@
 import {  useState  } from "react";
 import { useTranslation } from 'react-i18next';
 import {
-  Dialog,
   DialogHeader,
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
 import { useInvoice, useUpdateInvoiceStatus, usePostInvoice } from '@/hooks/useInvoices';
-import { Receipt, Calendar, User, FileText, CheckCircle2, XCircle, Mail, Loader2, DollarSign, Send, MapPin, Building2 } from 'lucide-react';
+import { Receipt, Calendar, User, FileText, CheckCircle2, XCircle, Mail, Loader2, DollarSign, Send, MapPin, Building2, Ban, RotateCcw, Coins } from 'lucide-react';
+import { CreditNoteDialog } from './CreditNoteDialog';
+import { ApplyAdvanceDialog } from './ApplyAdvanceDialog';
 import { useAuth } from '@/hooks/useAuth';
 import { useFarms } from '@/hooks/useParcelsQuery';
 import { useParcelById } from '@/hooks/useParcelsQuery';
@@ -46,6 +47,8 @@ export const InvoiceDetailDialog = ({
   };
 
   const [isSendingEmail, setIsSendingEmail] = useState(false);
+  const [creditNoteOpen, setCreditNoteOpen] = useState(false);
+  const [applyAdvanceOpen, setApplyAdvanceOpen] = useState(false);
   const updateInvoiceStatus = useUpdateInvoiceStatus();
   const postInvoice = usePostInvoice();
   
@@ -96,6 +99,50 @@ export const InvoiceDetailDialog = ({
 
   const canMarkAsPaid = invoice && (invoice.status === 'submitted' || invoice.status === 'partially_paid' || invoice.status === 'overdue');
   const canSubmit = invoice && invoice.status === 'draft';
+  const canCancel = invoice && (invoice.status === 'submitted' || invoice.status === 'overdue' || invoice.status === 'partially_paid');
+  const isCreditNote = invoice && (invoice as { document_type?: string }).document_type === 'credit_note';
+  const uncreditedBalance = invoice
+    ? Number(invoice.grand_total) - (Number((invoice as { credited_amount?: number }).credited_amount) || 0)
+    : 0;
+  const canCredit = invoice
+    && !isCreditNote
+    && ['submitted', 'partially_paid', 'paid', 'overdue'].includes(invoice.status as string)
+    && uncreditedBalance > 0.01;
+
+  const handleCancelInvoice = () => {
+    if (!invoiceId || !invoice) return;
+    showConfirm(
+      t('invoices.cancel.confirmTitle', 'Void this invoice?'),
+      async () => {
+        try {
+          const result = await updateInvoiceStatus.mutateAsync({
+            invoice_id: invoiceId,
+            status: 'cancelled',
+            remarks: invoice.remarks || undefined,
+          });
+          const reversalId = (result as { reversal_entry_id?: string } | undefined)?.reversal_entry_id;
+          toast.success(
+            reversalId
+              ? t('invoices.cancel.successWithReversal', `Invoice voided. Reversing journal entry created.`)
+              : t('invoices.cancel.success', 'Invoice voided successfully'),
+          );
+          queryClient.invalidateQueries({ queryKey: ['invoice', invoiceId] });
+          queryClient.invalidateQueries({ queryKey: ['invoices', currentOrganization?.id] });
+          queryClient.invalidateQueries({ queryKey: ['journal_entries'] });
+        } catch (err) {
+          console.error('Error cancelling invoice:', err);
+          toast.error(err instanceof Error ? err.message : t('invoices.cancel.error', 'Failed to void invoice'));
+        }
+      },
+      {
+        variant: 'destructive',
+        description: t(
+          'invoices.cancel.confirmDescription',
+          'Voiding a posted invoice will create a reversing journal entry in the General Ledger. This cannot be undone.',
+        ),
+      },
+    );
+  };
 
   const handleSubmitInvoice = async () => {
     if (!invoiceId || !invoice) return;
@@ -402,6 +449,38 @@ export const InvoiceDetailDialog = ({
                   )}
                   {t('invoices.actions.sendEmail', 'Send Email')}
                 </Button>
+                {canCredit && (
+                  <Button
+                    variant="outline"
+                    onClick={() => setCreditNoteOpen(true)}
+                  >
+                    <RotateCcw className="h-4 w-4 mr-2" />
+                    {t('invoices.creditNote.button', 'Create Credit Note')}
+                  </Button>
+                )}
+                {canMarkAsPaid && invoice && Number(invoice.outstanding_amount) > 0.01 && (
+                  <Button
+                    variant="outline"
+                    onClick={() => setApplyAdvanceOpen(true)}
+                  >
+                    <Coins className="h-4 w-4 mr-2" />
+                    {t('invoices.applyAdvance.button', 'Apply Advance')}
+                  </Button>
+                )}
+                {canCancel && (
+                  <Button
+                    variant="destructive"
+                    onClick={handleCancelInvoice}
+                    disabled={updateInvoiceStatus.isPending}
+                  >
+                    {updateInvoiceStatus.isPending ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Ban className="h-4 w-4 mr-2" />
+                    )}
+                    {t('invoices.cancel.button', 'Void / Cancel')}
+                  </Button>
+                )}
               </div>
             </DialogFooter>
           </div>
@@ -414,6 +493,20 @@ export const InvoiceDetailDialog = ({
         variant={confirmAction.variant}
         onConfirm={confirmAction.onConfirm}
       />
+      {invoice && creditNoteOpen && (
+        <CreditNoteDialog
+          open={creditNoteOpen}
+          onOpenChange={setCreditNoteOpen}
+          invoice={invoice}
+        />
+      )}
+      {invoice && applyAdvanceOpen && (
+        <ApplyAdvanceDialog
+          open={applyAdvanceOpen}
+          onOpenChange={setApplyAdvanceOpen}
+          invoice={invoice}
+        />
+      )}
     </ResponsiveDialog>
   );
 };

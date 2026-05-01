@@ -7,6 +7,35 @@ export class DemoDataService {
 
   constructor(private readonly databaseService: DatabaseService) {}
 
+  /**
+   * Tag rows as demo-seeded so clearDemoDataOnly can delete them safely.
+   * Idempotent — duplicates are ignored via PK conflict.
+   */
+  private async tagDemoRows(
+    organizationId: string,
+    tableName: string,
+    rowIds: Array<string | null | undefined>,
+  ): Promise<void> {
+    const ids = rowIds.filter((id): id is string => typeof id === "string" && id.length > 0);
+    if (ids.length === 0) return;
+    const client = this.databaseService.getAdminClient();
+    const { error } = await client
+      .from("demo_data_tags")
+      .upsert(
+        ids.map((id) => ({
+          organization_id: organizationId,
+          table_name: tableName,
+          row_id: id,
+        })),
+        { onConflict: "organization_id,table_name,row_id", ignoreDuplicates: true },
+      );
+    if (error) {
+      this.logger.warn(
+        `Failed to tag demo rows for ${tableName}: ${error.message}`,
+      );
+    }
+  }
+
   /** Parse Supabase public object URL → bucket + object path for storage.download */
   private static parseSupabasePublicStorageUrl(
     publicUrl: string | null | undefined,
@@ -405,7 +434,7 @@ export class DemoDataService {
       this.logger.log(`✅ Created demo task equipment`);
 
       // 34e. Seed Task Templates (linked to task categories)
-      await this.createDemoTaskTemplates(taskCategories);
+      await this.createDemoTaskTemplates(organizationId, taskCategories);
       this.logger.log(`✅ Created demo task templates`);
 
       // 35. Seed Worker Payment Records
@@ -3690,7 +3719,14 @@ export class DemoDataService {
       },
     ];
 
-    await client.from("costs").insert(costs);
+    {
+      const { data, error } = await client.from("costs").insert(costs).select("id");
+      if (error) {
+        this.logger.error(`Failed to create demo costs: ${error.message}`);
+      } else {
+        await this.tagDemoRows(organizationId, "costs", (data || []).map((r) => r.id));
+      }
+    }
 
     // Revenues per parcel — realistic Moroccan market prices
     const revenues = [
@@ -3744,7 +3780,14 @@ export class DemoDataService {
       },
     ];
 
-    await client.from("revenues").insert(revenues);
+    {
+      const { data, error } = await client.from("revenues").insert(revenues).select("id");
+      if (error) {
+        this.logger.error(`Failed to create demo revenues: ${error.message}`);
+      } else {
+        await this.tagDemoRows(organizationId, "revenues", (data || []).map((r) => r.id));
+      }
+    }
   }
 
   /**
@@ -4698,23 +4741,29 @@ export class DemoDataService {
     ];
 
     // Insert organization-level structures
-    const { error: orgError } = await client
+    const { data: orgRows, error: orgError } = await client
       .from("structures")
-      .insert(organizationStructures);
+      .insert(organizationStructures)
+      .select("id");
     if (orgError) {
       this.logger.error(
         `Failed to create organization structures: ${orgError.message}`,
       );
+    } else {
+      await this.tagDemoRows(organizationId, "structures", (orgRows || []).map((r) => r.id));
     }
 
     // Insert farm-level structures
-    const { error: farmError } = await client
+    const { data: farmRows, error: farmError } = await client
       .from("structures")
-      .insert(farmStructures);
+      .insert(farmStructures)
+      .select("id");
     if (farmError) {
       this.logger.error(
         `Failed to create farm structures: ${farmError.message}`,
       );
+    } else {
+      await this.tagDemoRows(organizationId, "structures", (farmRows || []).map((r) => r.id));
     }
   }
 
@@ -4864,6 +4913,7 @@ export class DemoDataService {
     ];
 
     const { data: createdCategories } = await client.from("task_categories").insert(categories).select();
+    await this.tagDemoRows(organizationId, "task_categories", (createdCategories || []).map((r) => r.id));
 
     // Create task time logs for recent tasks
     const now = new Date();
@@ -5042,6 +5092,9 @@ export class DemoDataService {
     ];
 
     const { data: createdRecords, error } = await client.from("payment_records").insert(records).select();
+    if (createdRecords) {
+      await this.tagDemoRows(organizationId, "payment_records", createdRecords.map((r) => r.id));
+    }
     if (error) {
       this.logger.error(
         `Failed to create demo payment records: ${error.message}`,
@@ -5141,7 +5194,10 @@ export class DemoDataService {
       },
     ];
 
-    const { error } = await client.from("harvest_forecasts").insert(forecasts);
+    const { data, error } = await client.from("harvest_forecasts").insert(forecasts).select("id");
+    if (!error) {
+      await this.tagDemoRows(organizationId, "harvest_forecasts", (data || []).map((r) => r.id));
+    }
     if (error) {
       this.logger.error(
         `Failed to create demo harvest forecasts: ${error.message}`,
@@ -5489,7 +5545,7 @@ export class DemoDataService {
   /**
    * Create demo task templates linked to task categories
    */
-  private async createDemoTaskTemplates(taskCategories: any[]): Promise<void> {
+  private async createDemoTaskTemplates(organizationId: string, taskCategories: any[]): Promise<void> {
     if (!taskCategories?.length) return;
 
     const client = this.databaseService.getAdminClient();
@@ -5530,9 +5586,11 @@ export class DemoDataService {
     }
 
     if (templates.length > 0) {
-      const { error } = await client.from('task_templates').insert(templates);
+      const { data, error } = await client.from('task_templates').insert(templates).select("id");
       if (error) {
         this.logger.error(`Failed to create demo task templates: ${error.message}`);
+      } else {
+        await this.tagDemoRows(organizationId, "task_templates", (data || []).map((r) => r.id));
       }
     }
   }
@@ -5610,7 +5668,10 @@ export class DemoDataService {
       },
     ];
 
-    const { error } = await client.from('crop_templates').insert(templates);
+    const { data, error } = await client.from('crop_templates').insert(templates).select("id");
+    if (!error) {
+      await this.tagDemoRows(organizationId, "crop_templates", (data || []).map((r) => r.id));
+    }
     if (error) {
       this.logger.error(`Failed to create demo crop templates: ${error.message}`);
     }
@@ -5846,7 +5907,10 @@ export class DemoDataService {
       },
     ];
 
-    const { error } = await client.from('inventory_batches').insert(batches);
+    const { data, error } = await client.from('inventory_batches').insert(batches).select("id");
+    if (!error) {
+      await this.tagDemoRows(organizationId, "inventory_batches", (data || []).map((r) => r.id));
+    }
     if (error) {
       this.logger.error(`Failed to create demo inventory batches: ${error.message}`);
     }
@@ -5902,7 +5966,10 @@ export class DemoDataService {
       },
     ];
 
-    const { error } = await client.from('payment_advances').insert(advances);
+    const { data, error } = await client.from('payment_advances').insert(advances).select("id");
+    if (!error) {
+      await this.tagDemoRows(organizationId, "payment_advances", (data || []).map((r) => r.id));
+    }
     if (error) {
       this.logger.error(`Failed to create demo payment advances: ${error.message}`);
     }
@@ -6142,7 +6209,10 @@ export class DemoDataService {
       });
     }
 
-    const { error } = await client.from('metayage_settlements').insert(settlements);
+    const { data, error } = await client.from('metayage_settlements').insert(settlements).select("id");
+    if (!error) {
+      await this.tagDemoRows(organizationId, "metayage_settlements", (data || []).map((r) => r.id));
+    }
     if (error) {
       this.logger.error(`Failed to create demo metayage settlements: ${error.message}`);
     }
@@ -6276,7 +6346,10 @@ export class DemoDataService {
       },
     ];
 
-    const { error } = await client.from('pest_disease_reports').insert(reports);
+    const { data, error } = await client.from('pest_disease_reports').insert(reports).select("id");
+    if (!error) {
+      await this.tagDemoRows(organizationId, "pest_disease_reports", (data || []).map((r) => r.id));
+    }
     if (error) {
       this.logger.error(`Failed to create demo pest reports: ${error.message}`);
     }
@@ -6409,6 +6482,7 @@ export class DemoDataService {
       this.logger.error(`Failed to create demo calibrations: ${error.message}`);
       return;
     }
+    await this.tagDemoRows(organizationId, "calibrations", (createdCals || []).map((r) => r.id));
 
     // Update parcels with calibration reference and ai_phase
     if (createdCals?.length) {
@@ -6530,7 +6604,10 @@ export class DemoDataService {
       }),
     );
 
-    const { error } = await client.from("satellite_indices_data").insert(rows);
+    const { data, error } = await client.from("satellite_indices_data").insert(rows).select("id");
+    if (!error) {
+      await this.tagDemoRows(organizationId, "satellite_indices_data", (data || []).map((r) => r.id));
+    }
 
     if (error) {
       this.logger.error(
@@ -7568,9 +7645,14 @@ export class DemoDataService {
       },
     ];
 
-    const { error } = await client.from("chat_conversations").insert(messages);
+    const { data, error } = await client
+      .from("chat_conversations")
+      .insert(messages)
+      .select("id");
     if (error) {
       this.logger.error(`Failed to create demo chat history: ${error.message}`);
+    } else {
+      await this.tagDemoRows(organizationId, "chat_conversations", (data || []).map((r) => r.id));
     }
   }
 
@@ -7580,16 +7662,21 @@ export class DemoDataService {
     const periodStart = new Date(now.getFullYear(), now.getMonth(), 1);
     const periodEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
 
-    const { error } = await client.from("ai_quotas").insert({
-      organization_id: organizationId,
-      monthly_limit: 1200,
-      current_count: 186,
-      period_start: periodStart.toISOString(),
-      period_end: periodEnd.toISOString(),
-    });
+    const { data, error } = await client
+      .from("ai_quotas")
+      .insert({
+        organization_id: organizationId,
+        monthly_limit: 1200,
+        current_count: 186,
+        period_start: periodStart.toISOString(),
+        period_end: periodEnd.toISOString(),
+      })
+      .select("id");
 
     if (error) {
       this.logger.error(`Failed to create demo AI quota: ${error.message}`);
+    } else {
+      await this.tagDemoRows(organizationId, "ai_quotas", (data || []).map((r) => r.id));
     }
   }
 
@@ -8001,7 +8088,10 @@ export class DemoDataService {
       }));
     });
 
-    const { error } = await client.from("monitoring_analyses").insert(rows);
+    const { data, error } = await client.from("monitoring_analyses").insert(rows).select("id");
+    if (!error) {
+      await this.tagDemoRows(organizationId, "monitoring_analyses", (data || []).map((r) => r.id));
+    }
     if (error) {
       this.logger.error(`Failed to create demo monitoring analyses: ${error.message}`);
     }
@@ -8063,7 +8153,10 @@ export class DemoDataService {
       created_by: userId,
     }));
 
-    const { error } = await client.from("suivis_saison").insert(rows);
+    const { data, error } = await client.from("suivis_saison").insert(rows).select("id");
+    if (!error) {
+      await this.tagDemoRows(organizationId, "suivis_saison", (data || []).map((r) => r.id));
+    }
     if (error) {
       this.logger.error(`Failed to create demo season tracking: ${error.message}`);
     }
@@ -8718,6 +8811,7 @@ export class DemoDataService {
       await this.clearDemoData(organizationId);
       this.logger.log("✅ Existing data cleared");
 
+      // --- SIAM farms & parcels (3 farms, 17 parcels in Meknès) ---
       const { farms, parcels } = await this.createSiamFarmsAndParcels(
         organizationId,
       );
@@ -8725,6 +8819,19 @@ export class DemoDataService {
         `✅ Created ${farms.length} SIAM farms and ${parcels.length} SIAM parcels`,
       );
 
+      // Use first farm as primary for methods that expect a single farm
+      const primaryFarm = farms[0];
+      const primaryFarmId = primaryFarm?.id;
+      if (!primaryFarmId) throw new Error("No SIAM farm created");
+
+      // --- Satellite & Weather data ---
+      await this.createDemoSatelliteIndicesData(organizationId, primaryFarmId, parcels);
+      this.logger.log(`✅ Created SIAM satellite indices data`);
+
+      await this.createDemoWeatherData(organizationId, parcels);
+      this.logger.log(`✅ Created SIAM weather data`);
+
+      // --- SIAM-specific agronomist data ---
       const calibrations = await this.createSiamCalibrations(
         organizationId,
         parcels,
@@ -8732,28 +8839,417 @@ export class DemoDataService {
       );
       this.logger.log(`✅ Created ${calibrations.length} SIAM calibrations`);
 
-      const recommendations = await this.createSiamRecommendations(
+      const siamRecommendations = await this.createSiamRecommendations(
         organizationId,
         parcels,
       );
       this.logger.log(
-        `✅ Created ${recommendations.length} SIAM AI recommendations`,
-      );
-
-      const harvestRecords = await this.createSiamHarvestRecords(
-        organizationId,
-        parcels,
-        userId,
-      );
-      this.logger.log(
-        `✅ Created ${harvestRecords.length} SIAM harvest records`,
+        `✅ Created ${siamRecommendations.length} SIAM AI recommendations`,
       );
 
       const analyses = await this.createSiamAnalyses(organizationId, parcels);
       this.logger.log(`✅ Created ${analyses.length} SIAM analyses`);
 
+      // --- Workers ---
+      const workers = await this.createDemoWorkers(
+        organizationId,
+        primaryFarmId,
+        userId,
+      );
+      this.logger.log(`✅ Created ${workers.length} SIAM workers`);
+
+      // --- Cost Centers ---
+      await this.createDemoCostCenters(organizationId, parcels);
+      this.logger.log(`✅ Created SIAM cost centers`);
+
+      // --- Chart of Accounts ---
+      const accounts = await this.createDemoChartOfAccounts(
+        organizationId,
+        userId,
+      );
+      this.logger.log(`✅ Created ${accounts.length} SIAM accounts`);
+
+      // --- Tasks ---
+      const tasks = await this.createDemoTasks(
+        organizationId,
+        primaryFarmId,
+        parcels,
+        workers,
+        userId,
+      );
+      this.logger.log(`✅ Created ${tasks.length} SIAM tasks`);
+
+      // --- Infrastructure ---
+      await this.createDemoStructures(organizationId, primaryFarmId, userId);
+      this.logger.log(`✅ Created SIAM infrastructure`);
+
+      // --- Items & Warehouses ---
+      const { warehouse, finishedGoodsWarehouse, items } =
+        await this.createDemoItems(organizationId, primaryFarmId, userId);
+      this.logger.log(`✅ Created SIAM items and warehouses`);
+
+      // --- Stock Entries ---
+      await this.createDemoStockEntries(
+        organizationId,
+        warehouse,
+        finishedGoodsWarehouse,
+        items,
+        userId,
+      );
+      this.logger.log(`✅ Created SIAM stock entries`);
+
+      // --- Marketplace ---
+      await this.createDemoMarketplaceData(organizationId, items, userId);
+      this.logger.log(`✅ Created SIAM marketplace data`);
+
+      // --- Customers & Suppliers ---
+      const { customers, suppliers } = await this.createDemoParties(
+        organizationId,
+        userId,
+      );
+      this.logger.log(`✅ Created SIAM customers/suppliers`);
+
+      // --- Quotes ---
+      const quotes = await this.createDemoQuotes(
+        organizationId,
+        customers,
+        items,
+        userId,
+      );
+      this.logger.log(`✅ Created ${quotes.length} SIAM quotes`);
+
+      // --- Sales Orders ---
+      const salesOrders = await this.createDemoSalesOrders(
+        organizationId,
+        customers,
+        items,
+        userId,
+      );
+      this.logger.log(`✅ Created ${salesOrders.length} SIAM sales orders`);
+
+      await this.linkQuotesToSalesOrders(organizationId, quotes, salesOrders);
+      this.logger.log(`✅ Linked SIAM quotes to sales orders`);
+
+      // --- Purchase Orders ---
+      const purchaseOrders = await this.createDemoPurchaseOrders(
+        organizationId,
+        suppliers,
+        items,
+        userId,
+      );
+      this.logger.log(`✅ Created ${purchaseOrders.length} SIAM purchase orders`);
+
+      // --- Invoices ---
+      const invoices = await this.createDemoInvoices(
+        organizationId,
+        parcels,
+        customers,
+        suppliers,
+        items,
+        salesOrders,
+        purchaseOrders,
+        userId,
+      );
+      this.logger.log(`✅ Created ${invoices.length} SIAM invoices`);
+
+      // --- Bank Accounts ---
+      const bankAccounts = await this.createDemoBankAccounts(
+        organizationId,
+        userId,
+      );
+      this.logger.log(`✅ Created ${bankAccounts.length} SIAM bank accounts`);
+
+      // --- Payments ---
+      const payments = await this.createDemoPayments(
+        organizationId,
+        customers,
+        suppliers,
+        invoices,
+        bankAccounts,
+        userId,
+      );
+      this.logger.log(`✅ Created ${payments.length} SIAM payments`);
+
+      // --- Journal Entries ---
+      const journalEntries = await this.createDemoJournalEntries(
+        organizationId,
+        parcels,
+        userId,
+      );
+      this.logger.log(`✅ Created ${journalEntries.length} SIAM journal entries`);
+
+      // --- Harvests (SIAM version — richer data) ---
+      const harvests = await this.createSiamHarvestRecords(
+        organizationId,
+        parcels,
+        userId,
+      );
+      this.logger.log(`✅ Created ${harvests.length} SIAM harvest records`);
+
+      // --- Reception Batches ---
+      await this.createDemoReceptionBatches(
+        organizationId,
+        primaryFarmId,
+        parcels,
+        workers,
+        harvests,
+        userId,
+      );
+      this.logger.log(`✅ Created SIAM reception batches`);
+
+      // --- Financial Data ---
+      await this.createDemoFinancialData(
+        organizationId,
+        primaryFarmId,
+        parcels,
+        harvests,
+        userId,
+      );
+      this.logger.log(`✅ Created SIAM financial data`);
+
+      // --- Utilities ---
+      const utilities = await this.createDemoUtilities(
+        organizationId,
+        primaryFarmId,
+        parcels,
+      );
+      this.logger.log(`✅ Created ${utilities.length} SIAM utilities`);
+
+      // --- Fiscal Years ---
+      await this.createDemoFiscalYears(organizationId, userId);
+      this.logger.log(`✅ Created SIAM fiscal years`);
+
+      // --- Taxes ---
+      const taxes = await this.createDemoTaxes(organizationId, userId);
+      this.logger.log(`✅ Created ${taxes.length} SIAM taxes`);
+
+      // --- Task Assignments ---
+      await this.createDemoTaskAssignments(organizationId, tasks, workers);
+      this.logger.log(`✅ Created SIAM task assignments`);
+
+      // --- Deliveries ---
+      const deliveries = await this.createDemoDeliveries(
+        organizationId,
+        primaryFarmId,
+        customers,
+        workers,
+        harvests,
+        userId,
+      );
+      this.logger.log(`✅ Created ${deliveries.length} SIAM deliveries`);
+
+      await this.createDemoDeliveryTracking(deliveries, userId);
+      this.logger.log(`✅ Created SIAM delivery tracking`);
+
+      // --- Product Applications ---
+      const applications = await this.createDemoProductApplications(
+        organizationId,
+        primaryFarmId,
+        parcels,
+        items,
+        tasks,
+        userId,
+      );
+      this.logger.log(`✅ Created ${applications.length} SIAM product applications`);
+
+      // --- Soil Analyses ---
+      const soilAnalyses = await this.createDemoSoilAnalyses(
+        organizationId,
+        parcels,
+        userId,
+      );
+      this.logger.log(`✅ Created ${soilAnalyses.length} SIAM soil analyses`);
+
+      // --- Work Records ---
+      const workRecords = await this.createDemoWorkRecords(
+        organizationId,
+        primaryFarmId,
+        workers,
+        tasks,
+        userId,
+      );
+      this.logger.log(`✅ Created ${workRecords.length} SIAM work records`);
+
+      // --- Campaigns ---
+      const campaigns = await this.createDemoCampaigns(
+        organizationId,
+        primaryFarmId,
+        parcels,
+        userId,
+      );
+      this.logger.log(`✅ Created ${campaigns.length} SIAM campaigns`);
+
+      // --- Biological Assets ---
+      const biologicalAssets = await this.createDemoBiologicalAssets(
+        organizationId,
+        primaryFarmId,
+        parcels,
+        userId,
+      );
+      this.logger.log(`✅ Created ${biologicalAssets.length} SIAM biological assets`);
+
+      // --- Notifications ---
+      await this.createDemoNotifications(organizationId, userId);
+      this.logger.log(`✅ Created SIAM notifications`);
+
+      // --- Analysis Recommendations ---
+      const analysisRecommendations =
+        await this.createDemoAnalysisRecommendations(analyses);
       this.logger.log(
-        `SIAM demo data seeding completed successfully for organization ${organizationId}`,
+        `✅ Created ${analysisRecommendations.length} SIAM analysis recommendations`,
+      );
+
+      // --- Certifications ---
+      const certifications = await this.createDemoCertifications(
+        organizationId,
+        userId,
+      );
+      this.logger.log(`✅ Created ${certifications.length} SIAM certifications`);
+
+      // --- Compliance Checks ---
+      const complianceChecks = await this.createDemoComplianceChecks(
+        organizationId,
+        certifications,
+      );
+      this.logger.log(`✅ Created ${complianceChecks.length} SIAM compliance checks`);
+
+      // --- Corrective Actions ---
+      const correctiveActions = await this.createDemoCorrectiveActions(
+        organizationId,
+        certifications,
+        complianceChecks,
+        userId,
+      );
+      this.logger.log(`✅ Created ${correctiveActions.length} SIAM corrective actions`);
+
+      // --- Crop Cycles ---
+      const cropCycles = await this.createDemoCropCycles(
+        organizationId,
+        primaryFarmId,
+        parcels,
+        campaigns,
+        userId,
+      );
+      this.logger.log(`✅ Created ${cropCycles.length} SIAM crop cycles`);
+
+      await this.createDemoCropCycleStages(cropCycles);
+      this.logger.log(`✅ Created SIAM crop cycle stages`);
+
+      await this.createDemoHarvestEvents(cropCycles);
+      this.logger.log(`✅ Created SIAM harvest events`);
+
+      await this.createDemoCropTemplates(organizationId);
+      this.logger.log(`✅ Created SIAM crop templates`);
+
+      // --- Quality Inspections ---
+      await this.createDemoQualityInspections(
+        organizationId,
+        primaryFarmId,
+        parcels,
+        cropCycles,
+        userId,
+      );
+      this.logger.log(`✅ Created SIAM quality inspections`);
+
+      // --- Task Extras ---
+      const { categories: taskCategories } = await this.createDemoTaskExtras(
+        organizationId,
+        tasks,
+        workers,
+      );
+      this.logger.log(`✅ Created SIAM task categories and time logs`);
+
+      await this.createDemoTaskComments(tasks, workers, userId);
+      this.logger.log(`✅ Created SIAM task comments`);
+
+      await this.createDemoTaskDependencies(tasks);
+      this.logger.log(`✅ Created SIAM task dependencies`);
+
+      await this.createDemoTaskEquipment(tasks);
+      this.logger.log(`✅ Created SIAM task equipment`);
+
+      await this.createDemoTaskTemplates(organizationId, taskCategories);
+      this.logger.log(`✅ Created SIAM task templates`);
+
+      // --- Worker Payment Records ---
+      const paymentRecords = await this.createDemoPaymentRecords(
+        organizationId,
+        primaryFarmId,
+        workers,
+        userId,
+      );
+      this.logger.log(`✅ Created ${paymentRecords.length} SIAM payment records`);
+
+      // --- Harvest Forecasts ---
+      await this.createDemoHarvestForecasts(
+        organizationId,
+        primaryFarmId,
+        parcels,
+        userId,
+      );
+      this.logger.log(`✅ Created SIAM harvest forecasts`);
+
+      // --- Cost Center Budgets ---
+      await this.createDemoCostCenterBudgets(organizationId);
+      this.logger.log(`✅ Created SIAM cost center budgets`);
+
+      // --- Stock Movements ---
+      await this.createDemoStockMovements(organizationId, warehouse, finishedGoodsWarehouse, items, userId);
+      this.logger.log(`✅ Created SIAM stock movements`);
+
+      // --- Inventory Batches ---
+      await this.createDemoInventoryBatches(organizationId, items, suppliers, purchaseOrders);
+      this.logger.log(`✅ Created SIAM inventory batches`);
+
+      // --- Payment Advances ---
+      await this.createDemoPaymentAdvances(organizationId, primaryFarmId, workers, userId);
+      this.logger.log(`✅ Created SIAM payment advances`);
+
+      // --- Payment Bonuses & Deductions ---
+      await this.createDemoPaymentBonusesAndDeductions(paymentRecords);
+      this.logger.log(`✅ Created SIAM payment bonuses and deductions`);
+
+      // --- Métayage Settlements ---
+      await this.createDemoMetayage(organizationId, primaryFarmId, workers, parcels, harvests, userId);
+      this.logger.log(`✅ Created SIAM metayage settlements`);
+
+      // --- Biological Asset Valuations ---
+      await this.createDemoBioAssetValuations(organizationId, biologicalAssets);
+      this.logger.log(`✅ Created SIAM biological asset valuations`);
+
+      // --- Pest/Disease Reports ---
+      await this.createDemoPestReports(organizationId, primaryFarmId, parcels, userId);
+      this.logger.log(`✅ Created SIAM pest/disease reports`);
+
+      // --- AI features ---
+      await this.createDemoAnnualPlans(organizationId, parcels);
+      this.logger.log(`✅ Created SIAM annual plans`);
+
+      await this.createDemoMonitoringAnalyses(organizationId, parcels);
+      this.logger.log(`✅ Created SIAM monitoring analyses`);
+
+      await this.createDemoSeasonTracking(organizationId, parcels, userId);
+      this.logger.log(`✅ Created SIAM season tracking`);
+
+      await this.createDemoChatHistory(organizationId, userId);
+      this.logger.log(`✅ Created SIAM chat history`);
+
+      await this.createDemoAIQuota(organizationId);
+      this.logger.log(`✅ Created SIAM AI quota`);
+
+      // --- Piece Work Records ---
+      const pieceWorkRecords = await this.createDemoPieceWorkRecords(
+        organizationId,
+        primaryFarmId,
+        parcels,
+        workers,
+        tasks,
+        userId,
+      );
+      this.logger.log(`✅ Created ${pieceWorkRecords.length} SIAM piece work records`);
+
+      this.logger.log(
+        `✅ SIAM demo data seeding completed successfully for organization ${organizationId}`,
       );
     } catch (error) {
       this.logger.error(
@@ -9663,6 +10159,65 @@ export class DemoDataService {
     ];
 
     try {
+      // -- Tag-driven cleanup -----------------------------------------------
+      // Delete rows tagged at seed time in demo_data_tags. This is the safe
+      // cleanup path: only rows the seed actually inserted get removed,
+      // even when seeded in tables that have user-created rows.
+      const { data: tags } = await client
+        .from("demo_data_tags")
+        .select("table_name, row_id")
+        .eq("organization_id", organizationId);
+
+      const idsByTable: Record<string, string[]> = {};
+      for (const tag of tags || []) {
+        (idsByTable[tag.table_name] ||= []).push(tag.row_id);
+      }
+
+      // Children before parents (FK-aware). Leaf tables can be in any order.
+      const taggedDeletionOrder = [
+        "ai_quotas",
+        "chat_conversations",
+        "costs",
+        "revenues",
+        "crop_templates",
+        "harvest_forecasts",
+        "inventory_batches",
+        "metayage_settlements",
+        "monitoring_analyses",
+        "payment_advances",
+        "pest_disease_reports",
+        "satellite_indices_data",
+        "suivis_saison",
+        "structures",
+        "calibrations",
+        "task_templates", // FK -> task_categories
+        "task_categories",
+        "payment_records", // children deleted later via prIds
+      ];
+
+      for (const tableName of taggedDeletionOrder) {
+        const ids = idsByTable[tableName];
+        if (!ids?.length) continue;
+        const { count, error } = await client
+          .from(tableName)
+          .delete({ count: "exact" })
+          .eq("organization_id", organizationId)
+          .in("id", ids);
+        if (error) {
+          this.logger.warn(
+            `Tag-driven delete failed for ${tableName}: ${error.message}`,
+          );
+        }
+        deletedCounts[tableName] =
+          (deletedCounts[tableName] || 0) + (count || 0);
+      }
+
+      // Wipe the tag rows themselves (cascade-safe; org delete also clears).
+      await client
+        .from("demo_data_tags")
+        .delete()
+        .eq("organization_id", organizationId);
+
       const { data: demoFarms } = await client
         .from("farms")
         .select("id")
@@ -10182,14 +10737,7 @@ export class DemoDataService {
         : { count: 0 };
       deletedCounts["warehouses"] = warehousesCount || 0;
 
-      const { count: structuresCount } = farmIds.length
-        ? await client
-            .from("structures")
-            .delete({ count: "exact" })
-            .eq("organization_id", organizationId)
-            .in("farm_id", farmIds)
-        : { count: 0 };
-      deletedCounts["structures"] = structuresCount || 0;
+      // structures handled by tag-driven cleanup at top of try-block.
 
       const { count: tasksCount } = taskIds.length
         ? await client

@@ -8,6 +8,7 @@ export interface AuthOrganization {
   role: string;
   role_id?: string;
   is_active: boolean;
+  approval_status?: 'pending' | 'approved' | 'rejected';
   onboarding_completed?: boolean;
   currency?: string;
   currency_code?: string;

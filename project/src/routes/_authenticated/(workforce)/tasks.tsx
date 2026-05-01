@@ -3,7 +3,7 @@ import { CheckSquare, Calendar, Building2, Columns3 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useAutoStartTour } from '@/contexts/TourContext';
 import ModernPageHeader from '@/components/ModernPageHeader';
-import { withRouteProtection } from '@/components/authorization/withRouteProtection';
+import { withLicensedRouteProtection } from '@/components/authorization/withLicensedRouteProtection';
 import { useTranslation } from 'react-i18next';
 import { PageLoader } from '@/components/ui/loader';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -55,16 +55,26 @@ function TasksLayout() {
 
   return (
     <>
-      {!isTaskDetailPage && (
-        <ModernPageHeader
-          breadcrumbs={[
-            { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
-            { icon: CheckSquare, label: t('nav.tasks'), isActive: true }
-          ]}
-          title={t('tasks.title')}
-          subtitle={t('tasks.subtitle')}
-        />
-      )}
+      <ModernPageHeader
+        breadcrumbs={
+          isTaskDetailPage
+            ? [
+                { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
+                { icon: CheckSquare, label: t('nav.tasks'), path: '/tasks' },
+                { label: t('tasks.detail.breadcrumb', 'Détail'), isActive: true },
+              ]
+            : [
+                { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
+                { icon: CheckSquare, label: t('nav.tasks'), isActive: true },
+              ]
+        }
+        title={isTaskDetailPage ? t('tasks.detail.title', 'Tâche') : t('tasks.title')}
+        subtitle={
+          isTaskDetailPage
+            ? t('tasks.detail.subtitle', 'Suivi et activité de la tâche')
+            : t('tasks.subtitle')
+        }
+      />
 
       <div className="p-3 sm:p-4 lg:p-6">
         {/* Navigation Tabs - hide on task detail page */}
@@ -96,5 +106,5 @@ function TasksLayout() {
 }
 
 export const Route = createFileRoute('/_authenticated/(workforce)/tasks')({
-  component: withRouteProtection(TasksLayout, 'read', 'Task'),
+  component: withLicensedRouteProtection(TasksLayout, 'read', 'Task'),
 });

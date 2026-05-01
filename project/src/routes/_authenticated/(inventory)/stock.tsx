@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import { createFileRoute, Outlet, useRouter, useRouterState } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/hooks/useAuth';
@@ -6,16 +6,9 @@ import { useAutoStartTour } from '@/contexts/TourContext';
 import { PageLayout } from '@/components/PageLayout';
 import ModernPageHeader from '@/components/ModernPageHeader';
 
-import { Building2, Package, ChevronDown, Check } from 'lucide-react';
+import { Building2, Package } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Button } from '@/components/ui/button';
-import { withRouteProtection } from '@/components/authorization/withRouteProtection';
+import { withLicensedRouteProtection } from '@/components/authorization/withLicensedRouteProtection';
 import { cn } from '@/lib/utils';
 import { isRTLLocale } from '@/lib/is-rtl-locale';
 import { PageLoader } from '@/components/ui/loader';
@@ -24,60 +17,108 @@ const AppContent = () => {
   const { t, i18n } = useTranslation('stock');
   const { currentOrganization } = useAuth();
   const router = useRouter();
-  const [moreOpen, setMoreOpen] = useState(false);
 
   useAutoStartTour('inventory', 1500);
   const { location } = useRouterState();
   const isRTL = isRTLLocale(i18n.language);
 
-  const tabs = useMemo<{ value: string; label: string; to: string; primary?: boolean; tourId?: string }[]>(
+  type TabDef = { value: string; label: string; to: string; tourId?: string };
+  type GroupDef = { value: string; label: string; tabs: TabDef[] };
+
+  const groups = useMemo<GroupDef[]>(
     () => [
-      { value: 'items', label: t('stock.tabs.items'), to: '/stock/items', primary: true, tourId: 'stock-items' },
-      { value: 'inventory', label: t('stock.tabs.inventory'), to: '/stock/inventory', primary: true, tourId: 'stock-warehouses' },
-      { value: 'entries', label: t('stock.tabs.entries'), to: '/stock/entries', primary: true, tourId: 'stock-movements' },
-      { value: 'reception', label: t('stock.tabs.reception'), to: '/stock/reception', primary: true },
-      { value: 'deliveries', label: t('stock.tabs.deliveries', 'Deliveries'), to: '/stock/deliveries', primary: true },
-      { value: 'reports', label: t('stock.tabs.reports'), to: '/stock/reports', primary: true },
-      // Overflow tabs — inside "More" dropdown
-      { value: 'dashboard', label: t('stock.tabs.dashboard', 'Dashboard'), to: '/stock/dashboard' },
-      { value: 'groups', label: t('stock.tabs.groups'), to: '/stock/groups' },
-      { value: 'suppliers', label: t('stock.tabs.suppliers', 'Suppliers'), to: '/stock/suppliers' },
-      { value: 'batches', label: t('stock.tabs.batches', 'Batches'), to: '/stock/batches' },
-      { value: 'approvals', label: t('stock.tabs.approvals', 'Approvals'), to: '/stock/approvals' },
-      { value: 'stock-take', label: t('stock.tabs.stockTake', 'Stock Take'), to: '/stock/stock-take' },
-      { value: 'quick-stock', label: t('stock.tabs.quickStock', 'Quick Entry'), to: '/stock/quick-stock' },
-      { value: 'expiry-alerts', label: t('stock.tabs.expiryAlerts', 'Expiry Alerts'), to: '/stock/expiry-alerts' },
-      { value: 'reorder', label: t('stock.tabs.reorder', 'Reorder'), to: '/stock/reorder-suggestions' },
+      {
+        value: 'catalog',
+        label: t('stock.groups.catalog', 'Catalog'),
+        tabs: [
+          { value: 'items', label: t('stock.tabs.items'), to: '/stock/items', tourId: 'stock-items' },
+          { value: 'groups', label: t('stock.tabs.groups'), to: '/stock/groups' },
+          { value: 'suppliers', label: t('stock.tabs.suppliers', 'Suppliers'), to: '/stock/suppliers', tourId: 'stock-suppliers' },
+          { value: 'batches', label: t('stock.tabs.batches', 'Batches'), to: '/stock/batches' },
+        ],
+      },
+      {
+        value: 'movements',
+        label: t('stock.groups.movements', 'Movements'),
+        tabs: [
+          { value: 'reception', label: t('stock.tabs.reception'), to: '/stock/reception', tourId: 'stock-reception' },
+          { value: 'deliveries', label: t('stock.tabs.deliveries', 'Deliveries'), to: '/stock/deliveries' },
+          { value: 'entries', label: t('stock.tabs.entries'), to: '/stock/entries', tourId: 'stock-movements' },
+          { value: 'quick-stock', label: t('stock.tabs.quickStock', 'Quick Entry'), to: '/stock/quick-stock', tourId: 'stock-quick' },
+          { value: 'approvals', label: t('stock.tabs.approvals', 'Approvals'), to: '/stock/approvals' },
+        ],
+      },
+      {
+        value: 'operations',
+        label: t('stock.groups.operations', 'Operations'),
+        tabs: [
+          { value: 'inventory', label: t('stock.tabs.inventory'), to: '/stock/inventory', tourId: 'stock-warehouses' },
+          { value: 'stock-take', label: t('stock.tabs.stockTake', 'Stock Take'), to: '/stock/stock-take', tourId: 'stock-take' },
+          { value: 'expiry-alerts', label: t('stock.tabs.expiryAlerts', 'Expiry Alerts'), to: '/stock/expiry-alerts', tourId: 'stock-expiry' },
+          { value: 'reorder', label: t('stock.tabs.reorder', 'Reorder'), to: '/stock/reorder-suggestions', tourId: 'stock-reorder' },
+        ],
+      },
+      {
+        value: 'insights',
+        label: t('stock.groups.insights', 'Insights'),
+        tabs: [
+          { value: 'dashboard', label: t('stock.tabs.dashboard', 'Dashboard'), to: '/stock/dashboard', tourId: 'stock-dashboard' },
+          { value: 'reports', label: t('stock.tabs.reports'), to: '/stock/reports' },
+          { value: 'aging', label: t('stock.tabs.aging', 'Aging'), to: '/stock/aging', tourId: 'stock-aging' },
+        ],
+      },
     ],
     [t],
   );
 
-  const primaryTabs = useMemo(() => tabs.filter(tab => tab.primary), [tabs]);
-  const overflowTabs = useMemo(() => tabs.filter(tab => !tab.primary), [tabs]);
-
-  const activeTab = useMemo(() => {
-    if (!location) return 'items';
-    const path = location.pathname;
-    // Match longest prefix first
-    const match = tabs
-      .slice()
-      .sort((a, b) => b.to.length - a.to.length)
-      .find(tab => path.startsWith(tab.to));
-    return match?.value ?? 'items';
-  }, [location, tabs]);
-
-  const isOverflowActive = useMemo(
-    () => overflowTabs.some(tab => tab.value === activeTab),
-    [overflowTabs, activeTab],
+  const allTabs = useMemo(
+    () => groups.flatMap((g) => g.tabs.map((tab) => ({ ...tab, group: g.value }))),
+    [groups],
   );
 
-  const activeOverflowLabel = useMemo(() => {
-    if (!isOverflowActive) return null;
-    return overflowTabs.find(tab => tab.value === activeTab)?.label;
-  }, [isOverflowActive, overflowTabs, activeTab]);
+  const activeTab = useMemo(() => {
+    if (!location) return allTabs[0]?.value ?? 'items';
+    const path = location.pathname;
+    const match = allTabs
+      .slice()
+      .sort((a, b) => b.to.length - a.to.length)
+      .find((tab) => path.startsWith(tab.to));
+    return match?.value ?? allTabs[0]?.value ?? 'items';
+  }, [location, allTabs]);
+
+  const activeGroupValue = useMemo(() => {
+    return allTabs.find((tab) => tab.value === activeTab)?.group ?? groups[0]?.value ?? 'catalog';
+  }, [allTabs, activeTab, groups]);
+
+  const activeGroupTabs = useMemo(
+    () => groups.find((g) => g.value === activeGroupValue)?.tabs ?? [],
+    [groups, activeGroupValue],
+  );
+
+  const handleGroupChange = (value: string) => {
+    const target = groups.find((g) => g.value === value);
+    if (!target || target.tabs.length === 0) return;
+    router.navigate({ to: target.tabs[0].to });
+  };
+
+  // Tour integration: switch tab groups when the inventory tour advances to
+  // a step that targets a sub-tab in another group. The tour fires this event
+  // before the step renders so the target element is mounted.
+  useEffect(() => {
+    const onTourGroup = (e: Event) => {
+      const ce = e as CustomEvent<{ module?: string; group?: string }>;
+      if (ce.detail?.module === 'stock' && ce.detail.group) {
+        handleGroupChange(ce.detail.group);
+      }
+    };
+    window.addEventListener('tour:set-tab-group', onTourGroup);
+    return () => window.removeEventListener('tour:set-tab-group', onTourGroup);
+    // handleGroupChange closes over groups + router; safe — they're stable per render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [groups]);
 
   const handleTabChange = (value: string) => {
-    const target = tabs.find((tab) => tab.value === value);
+    const target = allTabs.find((tab) => tab.value === value);
     if (!target) return;
     router.navigate({ to: target.to });
   };
@@ -102,9 +143,10 @@ const AppContent = () => {
         />
       }
     >
-      <div className="p-3 sm:p-4 md:p-6 pb-20 md:pb-6">
-        {/* Tabs */}
-        <Tabs value={isOverflowActive ? '__none__' : activeTab} onValueChange={handleTabChange} className="space-y-6" data-tour="stock-overview">
+      {/* pt-0: avoid a gray strip between ModernPageHeader and the tab row (main bg shows through padding). */}
+      <div className="px-3 pb-20 pt-0 sm:px-4 md:px-6 md:pb-6">
+        {/* Group tabs (top row) */}
+        <Tabs value={activeGroupValue} onValueChange={handleGroupChange} data-tour="stock-overview">
           <div
             className={cn(
               'relative flex w-full min-w-0 items-center gap-1',
@@ -113,9 +155,35 @@ const AppContent = () => {
           >
             <TabsList
               dir={isRTL ? 'rtl' : 'ltr'}
-              className="w-max max-w-full min-w-0 justify-start overflow-x-auto whitespace-nowrap rounded-lg [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+              className="w-full min-w-0 justify-start overflow-x-auto whitespace-nowrap rounded-lg [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
             >
-              {primaryTabs.map((tab) => (
+              {groups.map((g) => (
+                <TabsTrigger
+                  key={g.value}
+                  value={g.value}
+                  className="shrink-0 font-semibold"
+                  data-tour={`stock-group-${g.value}`}
+                >
+                  {g.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </div>
+        </Tabs>
+
+        {/* Sub-tabs (children of active group) */}
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="mt-2">
+          <div
+            className={cn(
+              'relative flex w-full min-w-0 items-center gap-1',
+              isRTL ? 'justify-end' : 'justify-start',
+            )}
+          >
+            <TabsList
+              dir={isRTL ? 'rtl' : 'ltr'}
+              className="w-full min-w-0 justify-start overflow-x-auto whitespace-nowrap rounded-md bg-muted/50 [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            >
+              {activeGroupTabs.map((tab) => (
                 <TabsTrigger
                   key={tab.value}
                   value={tab.value}
@@ -126,47 +194,10 @@ const AppContent = () => {
                 </TabsTrigger>
               ))}
             </TabsList>
-
-            {/* More dropdown for overflow tabs */}
-            <DropdownMenu open={moreOpen} onOpenChange={setMoreOpen}>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant={isOverflowActive ? 'default' : 'ghost'}
-                  size="sm"
-                  className={cn(
-                    'shrink-0 gap-1 text-sm font-medium',
-                    isOverflowActive
-                      ? 'bg-green-600 text-white hover:bg-green-700'
-                      : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100'
-                  )}
-                >
-                  {activeOverflowLabel || t('stock.tabs.more', 'Plus')}
-                  <ChevronDown className="w-3.5 h-3.5" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align={isRTL ? 'start' : 'end'} className="w-56">
-                {overflowTabs.map((tab) => (
-                  <DropdownMenuItem
-                    key={tab.value}
-                    onClick={() => {
-                      handleTabChange(tab.value);
-                      setMoreOpen(false);
-                    }}
-                    className={cn(
-                      'flex items-center justify-between',
-                      tab.value === activeTab && 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400'
-                    )}
-                  >
-                    {tab.label}
-                    {tab.value === activeTab && <Check className="w-4 h-4" />}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
           </div>
         </Tabs>
 
-        <div className="mt-6">
+        <div className="mt-4 sm:mt-6">
           <Outlet />
         </div>
       </div>
@@ -175,5 +206,5 @@ const AppContent = () => {
 };
 
 export const Route = createFileRoute('/_authenticated/(inventory)/stock')({
-  component: withRouteProtection(AppContent, 'read', 'Stock'),
+  component: withLicensedRouteProtection(AppContent, 'read', 'Stock'),
 });
