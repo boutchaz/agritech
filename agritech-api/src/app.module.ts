@@ -29,6 +29,9 @@ import { WorkerDocumentsModule } from "./modules/worker-documents/worker-documen
 import { ShiftsModule } from "./modules/shifts/shifts.module";
 import { EmployeeLifecycleModule } from "./modules/employee-lifecycle/employee-lifecycle.module";
 import { AgroHrModule } from "./modules/agro-hr/agro-hr.module";
+import { ExpenseClaimsModule } from "./modules/expense-claims/expense-claims.module";
+import { RecruitmentModule } from "./modules/recruitment/recruitment.module";
+import { PerformanceModule } from "./modules/performance/performance.module";
 import { StockEntriesModule } from "./modules/stock-entries/stock-entries.module";
 import { ItemsModule } from "./modules/items/items.module";
 import { WarehousesModule } from "./modules/warehouses/warehouses.module";
@@ -180,6 +183,9 @@ import { BarcodeModule } from "./modules/barcode/barcode.module";
     ShiftsModule,
     EmployeeLifecycleModule,
     AgroHrModule,
+    ExpenseClaimsModule,
+    RecruitmentModule,
+    PerformanceModule,
     WorkUnitsModule,
     BannersModule,
     ChangelogsModule,

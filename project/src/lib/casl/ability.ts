@@ -35,6 +35,8 @@ export type Subject =
   | 'SalaryStructure' | 'SalarySlip' | 'PayrollRun' | 'WorkerDocument'
   | 'Shift' | 'ShiftAssignment' | 'ShiftRequest' | 'Onboarding' | 'Separation'
   | 'SeasonalCampaign' | 'WorkerQualification' | 'SafetyIncident' | 'WorkerTransport'
+  | 'ExpenseClaim' | 'ExpenseCategory' | 'JobOpening' | 'JobApplicant' | 'Interview'
+  | 'AppraisalCycle' | 'Appraisal' | 'PerformanceFeedback'
   | 'all';
 
 // Define ability type
