@@ -965,6 +965,34 @@ const Sidebar = ({
                         isActive={currentPath.startsWith("/workforce/separations")}
                       />
                     </ProtectedNavItem>
+                    <ProtectedNavItem action="manage" subject="SeasonalCampaign">
+                      <PopoverNavItem onNavigate={handleNavigation}
+                        path="/workforce/seasonal-campaigns"
+                        label={t("nav.seasonalCampaigns", "Seasonal Campaigns")}
+                        isActive={currentPath === "/workforce/seasonal-campaigns"}
+                      />
+                    </ProtectedNavItem>
+                    <ProtectedNavItem action="manage" subject="WorkerQualification">
+                      <PopoverNavItem onNavigate={handleNavigation}
+                        path="/workforce/qualifications"
+                        label={t("nav.qualifications", "Qualifications")}
+                        isActive={currentPath === "/workforce/qualifications"}
+                      />
+                    </ProtectedNavItem>
+                    <ProtectedNavItem action="manage" subject="SafetyIncident">
+                      <PopoverNavItem onNavigate={handleNavigation}
+                        path="/workforce/safety-incidents"
+                        label={t("nav.safetyIncidents", "Safety Incidents")}
+                        isActive={currentPath === "/workforce/safety-incidents"}
+                      />
+                    </ProtectedNavItem>
+                    <ProtectedNavItem action="manage" subject="WorkerTransport">
+                      <PopoverNavItem onNavigate={handleNavigation}
+                        path="/workforce/worker-transport"
+                        label={t("nav.workerTransport", "Worker Transport")}
+                        isActive={currentPath === "/workforce/worker-transport"}
+                      />
+                    </ProtectedNavItem>
                   </CollapsedSectionPopover>
                 </div>
               ) : (
@@ -1139,6 +1167,50 @@ const Sidebar = ({
                           onClick={(e) => handleNavigation("/workforce/separations", e)}
                         >
                           {renderText(t("nav.separations", "Separations"))}
+                        </Button>
+                      </ProtectedNavItem>
+                      <ProtectedNavItem action="manage" subject="SeasonalCampaign">
+                        <Button
+                          variant="ghost"
+                          className={getSubItemClassName(
+                            currentPath === "/workforce/seasonal-campaigns",
+                          )}
+                          onClick={(e) => handleNavigation("/workforce/seasonal-campaigns", e)}
+                        >
+                          {renderText(t("nav.seasonalCampaigns", "Seasonal Campaigns"))}
+                        </Button>
+                      </ProtectedNavItem>
+                      <ProtectedNavItem action="manage" subject="WorkerQualification">
+                        <Button
+                          variant="ghost"
+                          className={getSubItemClassName(
+                            currentPath === "/workforce/qualifications",
+                          )}
+                          onClick={(e) => handleNavigation("/workforce/qualifications", e)}
+                        >
+                          {renderText(t("nav.qualifications", "Qualifications"))}
+                        </Button>
+                      </ProtectedNavItem>
+                      <ProtectedNavItem action="manage" subject="SafetyIncident">
+                        <Button
+                          variant="ghost"
+                          className={getSubItemClassName(
+                            currentPath === "/workforce/safety-incidents",
+                          )}
+                          onClick={(e) => handleNavigation("/workforce/safety-incidents", e)}
+                        >
+                          {renderText(t("nav.safetyIncidents", "Safety Incidents"))}
+                        </Button>
+                      </ProtectedNavItem>
+                      <ProtectedNavItem action="manage" subject="WorkerTransport">
+                        <Button
+                          variant="ghost"
+                          className={getSubItemClassName(
+                            currentPath === "/workforce/worker-transport",
+                          )}
+                          onClick={(e) => handleNavigation("/workforce/worker-transport", e)}
+                        >
+                          {renderText(t("nav.workerTransport", "Worker Transport"))}
                         </Button>
                       </ProtectedNavItem>
                     </>
