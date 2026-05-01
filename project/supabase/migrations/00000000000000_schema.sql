@@ -7551,7 +7551,7 @@ ON CONFLICT (name) DO UPDATE SET
 DO $perms$
 DECLARE
 -- BEGIN GENERATED PERMISSION RESOURCES (do not edit by hand)
-  -- 78 resources × 5 actions = 390 permission rows
+  -- 83 resources × 5 actions = 415 permission rows
   v_resources TEXT[] := ARRAY[
     'users','organizations','roles','subscriptions',
     'farms','parcels','warehouses','infrastructure',
@@ -7572,7 +7572,8 @@ DECLARE
     'equipment','agronomy_sources','chat','settings',
     'api','hr_compliance','leave_types','leave_allocations',
     'leave_applications','holidays','salary_structures','salary_slips',
-    'payroll_runs','worker_documents'
+    'payroll_runs','worker_documents','shifts','shift_assignments',
+    'shift_requests','onboarding','separations'
   ];
 -- END GENERATED PERMISSION RESOURCES
   v_actions TEXT[] := ARRAY['read','create','update','delete','manage'];
@@ -18994,4 +18995,195 @@ CREATE POLICY "self_read_worker_documents" ON worker_documents
 DROP TRIGGER IF EXISTS update_worker_documents_updated_at ON worker_documents;
 CREATE TRIGGER update_worker_documents_updated_at
   BEFORE UPDATE ON worker_documents
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- =====================================================================
+-- HR Module — Phase 2: Operational HR
+-- =====================================================================
+
+-- Shifts
+CREATE TABLE IF NOT EXISTS shifts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  description TEXT,
+  start_time TIME NOT NULL,
+  end_time TIME NOT NULL,
+  grace_period_minutes INTEGER NOT NULL DEFAULT 15,
+  -- Stored compute: handles end-time-after-midnight by adding 24h.
+  working_hours NUMERIC GENERATED ALWAYS AS (
+    CASE
+      WHEN end_time > start_time THEN
+        EXTRACT(EPOCH FROM (end_time - start_time)) / 3600
+      ELSE
+        EXTRACT(EPOCH FROM ((end_time + INTERVAL '24 hours') - start_time)) / 3600
+    END
+  ) STORED,
+  enable_auto_attendance BOOLEAN NOT NULL DEFAULT false,
+  mark_late_after_minutes INTEGER,
+  early_exit_before_minutes INTEGER,
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  color TEXT NOT NULL DEFAULT '#3B82F6',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(organization_id, name)
+);
+CREATE INDEX IF NOT EXISTS idx_shifts_org ON shifts(organization_id);
+
+ALTER TABLE shifts ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_access_shifts" ON shifts;
+CREATE POLICY "org_access_shifts" ON shifts FOR ALL
+  USING (is_organization_member(organization_id))
+  WITH CHECK (is_organization_member(organization_id));
+
+DROP TRIGGER IF EXISTS update_shifts_updated_at ON shifts;
+CREATE TRIGGER update_shifts_updated_at
+  BEFORE UPDATE ON shifts
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Shift Assignments
+CREATE TABLE IF NOT EXISTS shift_assignments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  worker_id UUID NOT NULL REFERENCES workers(id) ON DELETE CASCADE,
+  shift_id UUID NOT NULL REFERENCES shifts(id) ON DELETE CASCADE,
+  effective_from DATE NOT NULL,
+  effective_to DATE,
+  is_recurring BOOLEAN NOT NULL DEFAULT false,
+  recurring_days INTEGER[] NOT NULL DEFAULT ARRAY[1,2,3,4,5],
+  status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'inactive')),
+  assigned_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_shift_assignments_org ON shift_assignments(organization_id);
+CREATE INDEX IF NOT EXISTS idx_shift_assignments_worker ON shift_assignments(worker_id, effective_from DESC);
+CREATE INDEX IF NOT EXISTS idx_shift_assignments_shift ON shift_assignments(shift_id);
+
+ALTER TABLE shift_assignments ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_access_shift_assignments" ON shift_assignments;
+CREATE POLICY "org_access_shift_assignments" ON shift_assignments FOR ALL
+  USING (is_organization_member(organization_id))
+  WITH CHECK (is_organization_member(organization_id));
+
+-- Shift Requests
+CREATE TABLE IF NOT EXISTS shift_requests (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  worker_id UUID NOT NULL REFERENCES workers(id) ON DELETE CASCADE,
+  requested_shift_id UUID NOT NULL REFERENCES shifts(id) ON DELETE CASCADE,
+  current_shift_id UUID REFERENCES shifts(id) ON DELETE SET NULL,
+  date DATE NOT NULL,
+  reason TEXT,
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
+  approved_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  approved_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_shift_requests_org_status ON shift_requests(organization_id, status);
+
+ALTER TABLE shift_requests ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_access_shift_requests" ON shift_requests;
+CREATE POLICY "org_access_shift_requests" ON shift_requests FOR ALL
+  USING (is_organization_member(organization_id))
+  WITH CHECK (is_organization_member(organization_id));
+
+-- Onboarding Templates
+CREATE TABLE IF NOT EXISTS onboarding_templates (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  description TEXT,
+  department TEXT,
+  designation TEXT,
+  activities JSONB NOT NULL DEFAULT '[]'::jsonb,
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(organization_id, name)
+);
+CREATE INDEX IF NOT EXISTS idx_onboarding_templates_org ON onboarding_templates(organization_id);
+
+ALTER TABLE onboarding_templates ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_access_onboarding_templates" ON onboarding_templates;
+CREATE POLICY "org_access_onboarding_templates" ON onboarding_templates FOR ALL
+  USING (is_organization_member(organization_id))
+  WITH CHECK (is_organization_member(organization_id));
+
+DROP TRIGGER IF EXISTS update_onboarding_templates_updated_at ON onboarding_templates;
+CREATE TRIGGER update_onboarding_templates_updated_at
+  BEFORE UPDATE ON onboarding_templates
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Onboarding Records (per worker)
+CREATE TABLE IF NOT EXISTS onboarding_records (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  worker_id UUID NOT NULL REFERENCES workers(id) ON DELETE CASCADE,
+  template_id UUID NOT NULL REFERENCES onboarding_templates(id) ON DELETE RESTRICT,
+  status TEXT NOT NULL DEFAULT 'in_progress'
+    CHECK (status IN ('pending', 'in_progress', 'completed', 'overdue')),
+  activities JSONB NOT NULL DEFAULT '[]'::jsonb,
+  started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  completed_at TIMESTAMPTZ,
+  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_onboarding_records_org ON onboarding_records(organization_id);
+CREATE INDEX IF NOT EXISTS idx_onboarding_records_worker ON onboarding_records(worker_id);
+CREATE INDEX IF NOT EXISTS idx_onboarding_records_status ON onboarding_records(organization_id, status);
+
+ALTER TABLE onboarding_records ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_access_onboarding_records" ON onboarding_records;
+CREATE POLICY "org_access_onboarding_records" ON onboarding_records FOR ALL
+  USING (is_organization_member(organization_id))
+  WITH CHECK (is_organization_member(organization_id));
+
+DROP TRIGGER IF EXISTS update_onboarding_records_updated_at ON onboarding_records;
+CREATE TRIGGER update_onboarding_records_updated_at
+  BEFORE UPDATE ON onboarding_records
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Separations (offboarding + FnF)
+CREATE TABLE IF NOT EXISTS separations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  worker_id UUID NOT NULL REFERENCES workers(id) ON DELETE CASCADE,
+  separation_type TEXT NOT NULL CHECK (separation_type IN (
+    'resignation', 'termination', 'end_of_contract', 'retirement', 'death', 'dismissal'
+  )),
+  notice_date DATE NOT NULL,
+  relieving_date DATE NOT NULL,
+  exit_interview_conducted BOOLEAN NOT NULL DEFAULT false,
+  exit_interview_notes TEXT,
+  exit_feedback JSONB,
+  fnf_status TEXT NOT NULL DEFAULT 'pending'
+    CHECK (fnf_status IN ('pending', 'processing', 'settled')),
+  fnf_payables JSONB NOT NULL DEFAULT '[]'::jsonb,
+  fnf_receivables JSONB NOT NULL DEFAULT '[]'::jsonb,
+  fnf_assets JSONB NOT NULL DEFAULT '[]'::jsonb,
+  fnf_total_payable NUMERIC NOT NULL DEFAULT 0,
+  fnf_total_receivable NUMERIC NOT NULL DEFAULT 0,
+  fnf_net_amount NUMERIC NOT NULL DEFAULT 0,
+  fnf_settled_at TIMESTAMPTZ,
+  status TEXT NOT NULL DEFAULT 'pending'
+    CHECK (status IN ('pending', 'notice_period', 'relieved', 'settled')),
+  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CHECK (relieving_date >= notice_date)
+);
+CREATE INDEX IF NOT EXISTS idx_separations_org ON separations(organization_id);
+CREATE INDEX IF NOT EXISTS idx_separations_worker ON separations(worker_id);
+CREATE INDEX IF NOT EXISTS idx_separations_status ON separations(organization_id, status);
+
+ALTER TABLE separations ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_access_separations" ON separations;
+CREATE POLICY "org_access_separations" ON separations FOR ALL
+  USING (is_organization_member(organization_id))
+  WITH CHECK (is_organization_member(organization_id));
+
+DROP TRIGGER IF EXISTS update_separations_updated_at ON separations;
+CREATE TRIGGER update_separations_updated_at
+  BEFORE UPDATE ON separations
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();

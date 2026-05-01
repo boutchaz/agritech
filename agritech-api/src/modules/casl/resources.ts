@@ -128,6 +128,11 @@ export const RESOURCES: readonly ResourceDef[] = [
     { key: 'salary_slips', subject: Subject.SALARY_SLIP, displayName: 'Salary Slips' },
     { key: 'payroll_runs', subject: Subject.PAYROLL_RUN, displayName: 'Payroll Runs' },
     { key: 'worker_documents', subject: Subject.WORKER_DOCUMENT, displayName: 'Worker Documents' },
+    { key: 'shifts', subject: Subject.SHIFT, displayName: 'Shifts' },
+    { key: 'shift_assignments', subject: Subject.SHIFT_ASSIGNMENT, displayName: 'Shift Assignments' },
+    { key: 'shift_requests', subject: Subject.SHIFT_REQUEST, displayName: 'Shift Requests' },
+    { key: 'onboarding', subject: Subject.ONBOARDING, displayName: 'Onboarding' },
+    { key: 'separations', subject: Subject.SEPARATION, displayName: 'Separations' },
 ];
 
 export const RESOURCE_SUBJECT_MAP: Record<string, Subject> = Object.freeze(

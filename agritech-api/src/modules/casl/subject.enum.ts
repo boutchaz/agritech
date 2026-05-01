@@ -110,6 +110,11 @@ export enum Subject {
     SALARY_SLIP = 'SalarySlip',
     PAYROLL_RUN = 'PayrollRun',
     WORKER_DOCUMENT = 'WorkerDocument',
+    SHIFT = 'Shift',
+    SHIFT_ASSIGNMENT = 'ShiftAssignment',
+    SHIFT_REQUEST = 'ShiftRequest',
+    ONBOARDING = 'Onboarding',
+    SEPARATION = 'Separation',
 
     // API
     API = 'API',

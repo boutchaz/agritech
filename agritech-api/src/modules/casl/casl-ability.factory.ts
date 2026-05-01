@@ -172,6 +172,11 @@ export class CaslAbilityFactory {
             can(Action.Manage, Subject.SALARY_SLIP);
             can(Action.Manage, Subject.PAYROLL_RUN);
             can(Action.Manage, Subject.WORKER_DOCUMENT);
+            can(Action.Manage, Subject.SHIFT);
+            can(Action.Manage, Subject.SHIFT_ASSIGNMENT);
+            can(Action.Manage, Subject.SHIFT_REQUEST);
+            can(Action.Manage, Subject.ONBOARDING);
+            can(Action.Manage, Subject.SEPARATION);
             console.log('[CaslAbilityFactory] Organization admin - full org access granted');
         }
         // ============ FARM MANAGER ============
@@ -247,6 +252,11 @@ export class CaslAbilityFactory {
             can(Action.Read, Subject.SALARY_SLIP);
             can(Action.Read, Subject.PAYROLL_RUN);
             can(Action.Manage, Subject.WORKER_DOCUMENT);
+            can(Action.Manage, Subject.SHIFT);
+            can(Action.Manage, Subject.SHIFT_ASSIGNMENT);
+            can(Action.Manage, Subject.SHIFT_REQUEST);
+            can(Action.Manage, Subject.ONBOARDING);
+            can(Action.Read, Subject.SEPARATION);
 
             console.log('[CaslAbilityFactory] Farm manager permissions granted');
         }
@@ -318,6 +328,10 @@ export class CaslAbilityFactory {
             can(Action.Read, Subject.LEAVE_ALLOCATION);
             can(Action.Read, Subject.SALARY_SLIP); // own slips only via self_read RLS
             can(Action.Read, Subject.WORKER_DOCUMENT); // own docs only via self_read RLS
+            can(Action.Read, Subject.SHIFT);
+            can(Action.Read, Subject.SHIFT_ASSIGNMENT);
+            can(Action.Create, Subject.SHIFT_REQUEST);
+            can(Action.Read, Subject.SHIFT_REQUEST);
 
             console.log('[CaslAbilityFactory] Farm worker permissions granted');
         }
@@ -355,6 +369,8 @@ export class CaslAbilityFactory {
             can(Action.Read, Subject.LEAVE_ALLOCATION);
             can(Action.Read, Subject.SALARY_SLIP);
             can(Action.Read, Subject.WORKER_DOCUMENT);
+            can(Action.Read, Subject.SHIFT);
+            can(Action.Read, Subject.SHIFT_ASSIGNMENT);
 
             console.log('[CaslAbilityFactory] Day laborer permissions granted');
         }
@@ -634,6 +650,11 @@ export class CaslAbilityFactory {
             can(Action.Manage, Subject.SALARY_SLIP);
             can(Action.Manage, Subject.PAYROLL_RUN);
             can(Action.Manage, Subject.WORKER_DOCUMENT);
+            can(Action.Manage, Subject.SHIFT);
+            can(Action.Manage, Subject.SHIFT_ASSIGNMENT);
+            can(Action.Manage, Subject.SHIFT_REQUEST);
+            can(Action.Manage, Subject.ONBOARDING);
+            can(Action.Manage, Subject.SEPARATION);
         } else if (roleName === 'farm_manager') {
             // Farm operations
             can(Action.Manage, Subject.FARM);
@@ -718,6 +739,11 @@ export class CaslAbilityFactory {
             can(Action.Read, Subject.SALARY_SLIP);
             can(Action.Read, Subject.PAYROLL_RUN);
             can(Action.Manage, Subject.WORKER_DOCUMENT);
+            can(Action.Manage, Subject.SHIFT);
+            can(Action.Manage, Subject.SHIFT_ASSIGNMENT);
+            can(Action.Manage, Subject.SHIFT_REQUEST);
+            can(Action.Manage, Subject.ONBOARDING);
+            can(Action.Read, Subject.SEPARATION);
 
             cannot(Action.Delete, Subject.JOURNAL_ENTRY);
             cannot(Action.Manage, Subject.ACCOUNT);
@@ -796,6 +822,10 @@ export class CaslAbilityFactory {
             can(Action.Read, Subject.LEAVE_ALLOCATION);
             can(Action.Read, Subject.SALARY_SLIP);
             can(Action.Read, Subject.WORKER_DOCUMENT);
+            can(Action.Read, Subject.SHIFT);
+            can(Action.Read, Subject.SHIFT_ASSIGNMENT);
+            can(Action.Create, Subject.SHIFT_REQUEST);
+            can(Action.Read, Subject.SHIFT_REQUEST);
         } else if (roleName === 'day_laborer') {
             can(Action.Read, Subject.TASK);
             can(Action.Update, Subject.TASK);
@@ -830,6 +860,8 @@ export class CaslAbilityFactory {
             can(Action.Read, Subject.LEAVE_ALLOCATION);
             can(Action.Read, Subject.SALARY_SLIP);
             can(Action.Read, Subject.WORKER_DOCUMENT);
+            can(Action.Read, Subject.SHIFT);
+            can(Action.Read, Subject.SHIFT_ASSIGNMENT);
         } else if (roleName === 'viewer') {
             // Read-only access
             can(Action.Read, Subject.FARM);
