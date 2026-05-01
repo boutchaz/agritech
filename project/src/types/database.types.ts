@@ -150,13 +150,6 @@ export type Database = {
             referencedRelation: "v_production_summary"
             referencedColumns: ["organization_id"]
           },
-          {
-            foreignKeyName: "abstract_entities_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
         ]
       }
       account_mappings: {
@@ -318,13 +311,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "account_mappings_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
           },
           {
@@ -632,13 +618,6 @@ export type Database = {
             referencedColumns: ["organization_id"]
           },
           {
-            foreignKeyName: "accounting_payments_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
             foreignKeyName: "fk_accounting_payments_advance_account"
             columns: ["advance_account_id"]
             isOneToOne: false
@@ -792,13 +771,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "accounts_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
           },
           {
@@ -1017,13 +989,6 @@ export type Database = {
             referencedColumns: ["organization_id"]
           },
           {
-            foreignKeyName: "agricultural_campaigns_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
             foreignKeyName: "agricultural_campaigns_primary_fiscal_year_id_fkey"
             columns: ["primary_fiscal_year_id"]
             isOneToOne: false
@@ -1237,13 +1202,6 @@ export type Database = {
             referencedRelation: "v_production_summary"
             referencedColumns: ["organization_id"]
           },
-          {
-            foreignKeyName: "agronomy_sources_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
         ]
       }
       ai_diagnostic_sessions: {
@@ -1376,13 +1334,6 @@ export type Database = {
             referencedColumns: ["organization_id"]
           },
           {
-            foreignKeyName: "ai_diagnostic_sessions_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
             foreignKeyName: "fk_diagnostic_sessions_parcel_org"
             columns: ["parcel_id", "organization_id"]
             isOneToOne: false
@@ -1502,13 +1453,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: true
             referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "ai_quotas_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: true
-            referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
           },
         ]
@@ -1739,13 +1683,6 @@ export type Database = {
             referencedColumns: ["organization_id"]
           },
           {
-            foreignKeyName: "ai_recommendations_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
             foreignKeyName: "ai_recommendations_session_id_fkey"
             columns: ["session_id"]
             isOneToOne: false
@@ -1912,13 +1849,6 @@ export type Database = {
             referencedColumns: ["organization_id"]
           },
           {
-            foreignKeyName: "ai_report_jobs_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
             foreignKeyName: "ai_report_jobs_parcel_id_fkey"
             columns: ["parcel_id"]
             isOneToOne: false
@@ -2053,13 +1983,6 @@ export type Database = {
             referencedRelation: "v_production_summary"
             referencedColumns: ["organization_id"]
           },
-          {
-            foreignKeyName: "ai_usage_log_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
         ]
       }
       analyses: {
@@ -2182,13 +2105,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "analyses_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
           },
           {
@@ -2431,13 +2347,6 @@ export type Database = {
             referencedColumns: ["organization_id"]
           },
           {
-            foreignKeyName: "annual_plans_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
             foreignKeyName: "fk_annual_plans_calibration_org"
             columns: ["calibration_id", "organization_id"]
             isOneToOne: false
@@ -2450,6 +2359,347 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "parcels"
             referencedColumns: ["id", "organization_id"]
+          },
+        ]
+      }
+      appraisal_cycles: {
+        Row: {
+          applicable_farm_ids: string[] | null
+          applicable_worker_types: string[]
+          created_at: string
+          created_by: string | null
+          description: string | null
+          end_date: string
+          id: string
+          manager_assessment_deadline: string | null
+          name: string
+          organization_id: string
+          self_assessment_deadline: string | null
+          start_date: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          applicable_farm_ids?: string[] | null
+          applicable_worker_types?: string[]
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          end_date: string
+          id?: string
+          manager_assessment_deadline?: string | null
+          name: string
+          organization_id: string
+          self_assessment_deadline?: string | null
+          start_date: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          applicable_farm_ids?: string[] | null
+          applicable_worker_types?: string[]
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          end_date?: string
+          id?: string
+          manager_assessment_deadline?: string | null
+          name?: string
+          organization_id?: string
+          self_assessment_deadline?: string | null
+          start_date?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appraisal_cycles_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "accounting_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "appraisal_cycles_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_churn_risk"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appraisal_cycles_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_org_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appraisal_cycles_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_top_orgs_by_activity"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appraisal_cycles_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "dashboard_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "appraisal_cycles_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "financial_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "appraisal_cycles_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appraisal_cycles_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "production_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "appraisal_cycles_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "sales_analytics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "appraisal_cycles_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "task_completion"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "appraisal_cycles_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_organization_financial_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "appraisal_cycles_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_production_summary"
+            referencedColumns: ["organization_id"]
+          },
+        ]
+      }
+      appraisals: {
+        Row: {
+          created_at: string
+          cycle_id: string
+          final_feedback: string | null
+          final_score: number | null
+          goals: Json
+          id: string
+          kra_scores: Json
+          manager_feedback: string | null
+          manager_id: string | null
+          manager_rating: number | null
+          organization_id: string
+          self_rating: number | null
+          self_reflections: string | null
+          status: string
+          updated_at: string
+          worker_id: string
+        }
+        Insert: {
+          created_at?: string
+          cycle_id: string
+          final_feedback?: string | null
+          final_score?: number | null
+          goals?: Json
+          id?: string
+          kra_scores?: Json
+          manager_feedback?: string | null
+          manager_id?: string | null
+          manager_rating?: number | null
+          organization_id: string
+          self_rating?: number | null
+          self_reflections?: string | null
+          status?: string
+          updated_at?: string
+          worker_id: string
+        }
+        Update: {
+          created_at?: string
+          cycle_id?: string
+          final_feedback?: string | null
+          final_score?: number | null
+          goals?: Json
+          id?: string
+          kra_scores?: Json
+          manager_feedback?: string | null
+          manager_id?: string | null
+          manager_rating?: number | null
+          organization_id?: string
+          self_rating?: number | null
+          self_reflections?: string | null
+          status?: string
+          updated_at?: string
+          worker_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appraisals_cycle_id_fkey"
+            columns: ["cycle_id"]
+            isOneToOne: false
+            referencedRelation: "appraisal_cycles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appraisals_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "assignable_users"
+            referencedColumns: ["worker_id"]
+          },
+          {
+            foreignKeyName: "appraisals_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "v_active_workers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appraisals_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "worker_assignments"
+            referencedColumns: ["worker_id"]
+          },
+          {
+            foreignKeyName: "appraisals_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appraisals_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "accounting_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "appraisals_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_churn_risk"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appraisals_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_org_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appraisals_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_top_orgs_by_activity"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appraisals_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "dashboard_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "appraisals_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "financial_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "appraisals_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appraisals_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "production_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "appraisals_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "sales_analytics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "appraisals_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "task_completion"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "appraisals_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_organization_financial_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "appraisals_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_production_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "appraisals_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "assignable_users"
+            referencedColumns: ["worker_id"]
+          },
+          {
+            foreignKeyName: "appraisals_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "v_active_workers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appraisals_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "worker_assignments"
+            referencedColumns: ["worker_id"]
+          },
+          {
+            foreignKeyName: "appraisals_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -2611,13 +2861,6 @@ export type Database = {
             referencedColumns: ["organization_id"]
           },
           {
-            foreignKeyName: "attendance_records_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
             foreignKeyName: "attendance_records_worker_id_fkey"
             columns: ["worker_id"]
             isOneToOne: false
@@ -2775,13 +3018,6 @@ export type Database = {
             referencedRelation: "v_production_summary"
             referencedColumns: ["organization_id"]
           },
-          {
-            foreignKeyName: "audit_logs_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
         ]
       }
       audit_reminders: {
@@ -2915,13 +3151,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "audit_reminders_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
           },
         ]
@@ -3065,13 +3294,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "bank_accounts_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
           },
         ]
@@ -3244,13 +3466,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "bank_transactions_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
           },
         ]
@@ -3444,13 +3659,6 @@ export type Database = {
             referencedRelation: "v_production_summary"
             referencedColumns: ["organization_id"]
           },
-          {
-            foreignKeyName: "banners_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
         ]
       }
       billing_documents: {
@@ -3594,13 +3802,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "billing_documents_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
           },
           {
@@ -3825,13 +4026,6 @@ export type Database = {
             referencedRelation: "v_production_summary"
             referencedColumns: ["organization_id"]
           },
-          {
-            foreignKeyName: "biological_asset_valuations_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
         ]
       }
       biological_assets: {
@@ -4033,13 +4227,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "biological_assets_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
           },
           {
@@ -4326,13 +4513,6 @@ export type Database = {
             referencedColumns: ["organization_id"]
           },
           {
-            foreignKeyName: "calibrations_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
             foreignKeyName: "fk_calibrations_parcel_org"
             columns: ["parcel_id", "organization_id"]
             isOneToOne: false
@@ -4487,13 +4667,6 @@ export type Database = {
             referencedRelation: "v_production_summary"
             referencedColumns: ["organization_id"]
           },
-          {
-            foreignKeyName: "campaigns_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
         ]
       }
       certifications: {
@@ -4625,13 +4798,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "certifications_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
           },
         ]
@@ -4768,13 +4934,6 @@ export type Database = {
             referencedRelation: "v_production_summary"
             referencedColumns: ["organization_id"]
           },
-          {
-            foreignKeyName: "changelogs_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
         ]
       }
       chat_conversations: {
@@ -4893,13 +5052,6 @@ export type Database = {
             referencedRelation: "v_production_summary"
             referencedColumns: ["organization_id"]
           },
-          {
-            foreignKeyName: "chat_conversations_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
         ]
       }
       chat_pending_actions: {
@@ -5016,13 +5168,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "chat_pending_actions_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
           },
         ]
@@ -5191,13 +5336,6 @@ export type Database = {
             referencedColumns: ["organization_id"]
           },
           {
-            foreignKeyName: "cloud_coverage_checks_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
             foreignKeyName: "cloud_coverage_checks_parcel_id_fkey"
             columns: ["parcel_id"]
             isOneToOne: false
@@ -5342,13 +5480,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "compliance_checks_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
           },
         ]
@@ -5617,13 +5748,6 @@ export type Database = {
             referencedColumns: ["organization_id"]
           },
           {
-            foreignKeyName: "corrective_actions_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
             foreignKeyName: "corrective_actions_updated_by_fkey"
             columns: ["updated_by"]
             isOneToOne: false
@@ -5753,13 +5877,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "cost_categories_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
           },
         ]
@@ -5972,13 +6089,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "cost_centers_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
           },
           {
@@ -6210,13 +6320,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "costs_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
           },
           {
@@ -6508,13 +6611,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "crop_cycle_allocations_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
           },
         ]
@@ -6884,13 +6980,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "crop_cycles_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
           },
           {
@@ -7276,13 +7365,6 @@ export type Database = {
             referencedRelation: "v_production_summary"
             referencedColumns: ["organization_id"]
           },
-          {
-            foreignKeyName: "crop_templates_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
         ]
       }
       crop_types: {
@@ -7435,13 +7517,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "crop_types_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
           },
         ]
@@ -7677,13 +7752,6 @@ export type Database = {
             referencedColumns: ["organization_id"]
           },
           {
-            foreignKeyName: "crops_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
             foreignKeyName: "crops_parcel_id_fkey"
             columns: ["parcel_id"]
             isOneToOne: false
@@ -7899,13 +7967,6 @@ export type Database = {
             referencedRelation: "v_production_summary"
             referencedColumns: ["organization_id"]
           },
-          {
-            foreignKeyName: "customers_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
         ]
       }
       dashboard_settings: {
@@ -8040,13 +8101,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "dashboard_settings_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
           },
         ]
@@ -8283,13 +8337,6 @@ export type Database = {
             referencedRelation: "v_production_summary"
             referencedColumns: ["organization_id"]
           },
-          {
-            foreignKeyName: "deliveries_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
         ]
       }
       delivery_items: {
@@ -8498,13 +8545,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "demo_data_tags_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
           },
         ]
@@ -8781,13 +8821,6 @@ export type Database = {
             referencedRelation: "v_production_summary"
             referencedColumns: ["organization_id"]
           },
-          {
-            foreignKeyName: "document_templates_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
         ]
       }
       email_templates: {
@@ -8934,13 +8967,6 @@ export type Database = {
             referencedRelation: "v_production_summary"
             referencedColumns: ["organization_id"]
           },
-          {
-            foreignKeyName: "email_templates_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
         ]
       }
       entity_events: {
@@ -9057,13 +9083,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "entity_events_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
           },
         ]
@@ -9320,13 +9339,6 @@ export type Database = {
             referencedRelation: "v_production_summary"
             referencedColumns: ["organization_id"]
           },
-          {
-            foreignKeyName: "equipment_assets_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
         ]
       }
       equipment_maintenance: {
@@ -9499,13 +9511,6 @@ export type Database = {
             referencedRelation: "v_production_summary"
             referencedColumns: ["organization_id"]
           },
-          {
-            foreignKeyName: "equipment_maintenance_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
         ]
       }
       evenements_parcelle: {
@@ -9634,13 +9639,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "evenements_parcelle_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
           },
           {
@@ -9781,12 +9779,322 @@ export type Database = {
             referencedRelation: "v_production_summary"
             referencedColumns: ["organization_id"]
           },
+        ]
+      }
+      expense_categories: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          organization_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          organization_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          organization_id?: string
+        }
+        Relationships: [
           {
-            foreignKeyName: "events_organization_id_fkey"
+            foreignKeyName: "expense_categories_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "workforce_summary"
+            referencedRelation: "accounting_summary"
             referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "expense_categories_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_churn_risk"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expense_categories_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_org_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expense_categories_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_top_orgs_by_activity"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expense_categories_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "dashboard_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "expense_categories_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "financial_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "expense_categories_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expense_categories_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "production_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "expense_categories_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "sales_analytics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "expense_categories_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "task_completion"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "expense_categories_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_organization_financial_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "expense_categories_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_production_summary"
+            referencedColumns: ["organization_id"]
+          },
+        ]
+      }
+      expense_claims: {
+        Row: {
+          advance_amount_allocated: number
+          advance_id: string | null
+          approval_history: Json
+          approved_at: string | null
+          approved_by: string | null
+          cost_center: Json | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          expense_date: string
+          farm_id: string | null
+          grand_total: number
+          id: string
+          items: Json
+          journal_entry_id: string | null
+          organization_id: string
+          rejection_reason: string | null
+          status: string
+          title: string
+          total_amount: number
+          total_tax: number
+          updated_at: string
+          worker_id: string
+        }
+        Insert: {
+          advance_amount_allocated?: number
+          advance_id?: string | null
+          approval_history?: Json
+          approved_at?: string | null
+          approved_by?: string | null
+          cost_center?: Json | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          expense_date: string
+          farm_id?: string | null
+          grand_total?: number
+          id?: string
+          items?: Json
+          journal_entry_id?: string | null
+          organization_id: string
+          rejection_reason?: string | null
+          status?: string
+          title: string
+          total_amount?: number
+          total_tax?: number
+          updated_at?: string
+          worker_id: string
+        }
+        Update: {
+          advance_amount_allocated?: number
+          advance_id?: string | null
+          approval_history?: Json
+          approved_at?: string | null
+          approved_by?: string | null
+          cost_center?: Json | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          expense_date?: string
+          farm_id?: string | null
+          grand_total?: number
+          id?: string
+          items?: Json
+          journal_entry_id?: string | null
+          organization_id?: string
+          rejection_reason?: string | null
+          status?: string
+          title?: string
+          total_amount?: number
+          total_tax?: number
+          updated_at?: string
+          worker_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expense_claims_advance_id_fkey"
+            columns: ["advance_id"]
+            isOneToOne: false
+            referencedRelation: "payment_advances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expense_claims_farm_id_fkey"
+            columns: ["farm_id"]
+            isOneToOne: false
+            referencedRelation: "farms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expense_claims_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "accounting_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "expense_claims_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_churn_risk"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expense_claims_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_org_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expense_claims_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_top_orgs_by_activity"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expense_claims_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "dashboard_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "expense_claims_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "financial_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "expense_claims_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expense_claims_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "production_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "expense_claims_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "sales_analytics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "expense_claims_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "task_completion"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "expense_claims_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_organization_financial_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "expense_claims_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_production_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "expense_claims_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "assignable_users"
+            referencedColumns: ["worker_id"]
+          },
+          {
+            foreignKeyName: "expense_claims_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "v_active_workers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expense_claims_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "worker_assignments"
+            referencedColumns: ["worker_id"]
+          },
+          {
+            foreignKeyName: "expense_claims_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -9917,13 +10225,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "farm_geofences_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
           },
         ]
@@ -10149,13 +10450,6 @@ export type Database = {
             referencedRelation: "v_production_summary"
             referencedColumns: ["organization_id"]
           },
-          {
-            foreignKeyName: "farms_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
         ]
       }
       file_registry: {
@@ -10304,13 +10598,6 @@ export type Database = {
             referencedRelation: "v_production_summary"
             referencedColumns: ["organization_id"]
           },
-          {
-            foreignKeyName: "file_registry_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
         ]
       }
       financial_transactions: {
@@ -10457,13 +10744,6 @@ export type Database = {
             referencedRelation: "v_production_summary"
             referencedColumns: ["organization_id"]
           },
-          {
-            foreignKeyName: "financial_transactions_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
         ]
       }
       fiscal_periods: {
@@ -10608,13 +10888,6 @@ export type Database = {
             referencedRelation: "v_production_summary"
             referencedColumns: ["organization_id"]
           },
-          {
-            foreignKeyName: "fiscal_periods_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
         ]
       }
       fiscal_years: {
@@ -10754,12 +11027,206 @@ export type Database = {
             referencedRelation: "v_production_summary"
             referencedColumns: ["organization_id"]
           },
+        ]
+      }
+      grievances: {
+        Row: {
+          against_department: string | null
+          against_worker_id: string | null
+          attachments: string[] | null
+          created_at: string
+          description: string
+          grievance_type: string
+          id: string
+          is_anonymous: boolean
+          organization_id: string
+          priority: string
+          raised_by_worker_id: string
+          resolution: string | null
+          resolution_date: string | null
+          resolved_by: string | null
+          status: string
+          subject: string
+          updated_at: string
+        }
+        Insert: {
+          against_department?: string | null
+          against_worker_id?: string | null
+          attachments?: string[] | null
+          created_at?: string
+          description: string
+          grievance_type: string
+          id?: string
+          is_anonymous?: boolean
+          organization_id: string
+          priority?: string
+          raised_by_worker_id: string
+          resolution?: string | null
+          resolution_date?: string | null
+          resolved_by?: string | null
+          status?: string
+          subject: string
+          updated_at?: string
+        }
+        Update: {
+          against_department?: string | null
+          against_worker_id?: string | null
+          attachments?: string[] | null
+          created_at?: string
+          description?: string
+          grievance_type?: string
+          id?: string
+          is_anonymous?: boolean
+          organization_id?: string
+          priority?: string
+          raised_by_worker_id?: string
+          resolution?: string | null
+          resolution_date?: string | null
+          resolved_by?: string | null
+          status?: string
+          subject?: string
+          updated_at?: string
+        }
+        Relationships: [
           {
-            foreignKeyName: "fiscal_years_organization_id_fkey"
+            foreignKeyName: "grievances_against_worker_id_fkey"
+            columns: ["against_worker_id"]
+            isOneToOne: false
+            referencedRelation: "assignable_users"
+            referencedColumns: ["worker_id"]
+          },
+          {
+            foreignKeyName: "grievances_against_worker_id_fkey"
+            columns: ["against_worker_id"]
+            isOneToOne: false
+            referencedRelation: "v_active_workers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grievances_against_worker_id_fkey"
+            columns: ["against_worker_id"]
+            isOneToOne: false
+            referencedRelation: "worker_assignments"
+            referencedColumns: ["worker_id"]
+          },
+          {
+            foreignKeyName: "grievances_against_worker_id_fkey"
+            columns: ["against_worker_id"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grievances_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "workforce_summary"
+            referencedRelation: "accounting_summary"
             referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "grievances_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_churn_risk"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grievances_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_org_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grievances_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_top_orgs_by_activity"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grievances_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "dashboard_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "grievances_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "financial_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "grievances_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grievances_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "production_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "grievances_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "sales_analytics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "grievances_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "task_completion"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "grievances_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_organization_financial_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "grievances_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_production_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "grievances_raised_by_worker_id_fkey"
+            columns: ["raised_by_worker_id"]
+            isOneToOne: false
+            referencedRelation: "assignable_users"
+            referencedColumns: ["worker_id"]
+          },
+          {
+            foreignKeyName: "grievances_raised_by_worker_id_fkey"
+            columns: ["raised_by_worker_id"]
+            isOneToOne: false
+            referencedRelation: "v_active_workers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grievances_raised_by_worker_id_fkey"
+            columns: ["raised_by_worker_id"]
+            isOneToOne: false
+            referencedRelation: "worker_assignments"
+            referencedColumns: ["worker_id"]
+          },
+          {
+            foreignKeyName: "grievances_raised_by_worker_id_fkey"
+            columns: ["raised_by_worker_id"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -10999,13 +11466,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "harvest_forecasts_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
           },
           {
@@ -11284,13 +11744,6 @@ export type Database = {
             referencedColumns: ["organization_id"]
           },
           {
-            foreignKeyName: "harvest_records_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
             foreignKeyName: "harvest_records_parcel_id_fkey"
             columns: ["parcel_id"]
             isOneToOne: false
@@ -11448,13 +11901,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "holiday_lists_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
           },
         ]
@@ -11736,13 +12182,6 @@ export type Database = {
             referencedRelation: "v_production_summary"
             referencedColumns: ["organization_id"]
           },
-          {
-            foreignKeyName: "hr_compliance_settings_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: true
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
         ]
       }
       income_tax_brackets: {
@@ -11879,13 +12318,6 @@ export type Database = {
             referencedRelation: "v_production_summary"
             referencedColumns: ["organization_id"]
           },
-          {
-            foreignKeyName: "income_tax_brackets_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
         ]
       }
       internal_admins: {
@@ -11914,6 +12346,156 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      interviews: {
+        Row: {
+          applicant_id: string
+          average_rating: number | null
+          created_at: string
+          duration_minutes: number
+          feedback: Json
+          id: string
+          interview_type: string
+          interviewer_ids: string[]
+          job_opening_id: string
+          location: string | null
+          organization_id: string
+          round: number
+          scheduled_at: string
+          status: string
+        }
+        Insert: {
+          applicant_id: string
+          average_rating?: number | null
+          created_at?: string
+          duration_minutes?: number
+          feedback?: Json
+          id?: string
+          interview_type?: string
+          interviewer_ids?: string[]
+          job_opening_id: string
+          location?: string | null
+          organization_id: string
+          round?: number
+          scheduled_at: string
+          status?: string
+        }
+        Update: {
+          applicant_id?: string
+          average_rating?: number | null
+          created_at?: string
+          duration_minutes?: number
+          feedback?: Json
+          id?: string
+          interview_type?: string
+          interviewer_ids?: string[]
+          job_opening_id?: string
+          location?: string | null
+          organization_id?: string
+          round?: number
+          scheduled_at?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "interviews_applicant_id_fkey"
+            columns: ["applicant_id"]
+            isOneToOne: false
+            referencedRelation: "job_applicants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "interviews_job_opening_id_fkey"
+            columns: ["job_opening_id"]
+            isOneToOne: false
+            referencedRelation: "job_openings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "interviews_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "accounting_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "interviews_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_churn_risk"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "interviews_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_org_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "interviews_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_top_orgs_by_activity"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "interviews_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "dashboard_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "interviews_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "financial_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "interviews_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "interviews_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "production_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "interviews_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "sales_analytics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "interviews_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "task_completion"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "interviews_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_organization_financial_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "interviews_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_production_summary"
+            referencedColumns: ["organization_id"]
+          },
+        ]
       }
       inventory: {
         Row: {
@@ -12118,13 +12700,6 @@ export type Database = {
             referencedColumns: ["organization_id"]
           },
           {
-            foreignKeyName: "inventory_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
             foreignKeyName: "inventory_subcategory_id_fkey"
             columns: ["subcategory_id"]
             isOneToOne: false
@@ -12292,13 +12867,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "inventory_batches_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
           },
           {
@@ -12473,13 +13041,6 @@ export type Database = {
             referencedRelation: "v_production_summary"
             referencedColumns: ["organization_id"]
           },
-          {
-            foreignKeyName: "inventory_items_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
         ]
       }
       inventory_serial_numbers: {
@@ -12627,13 +13188,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "inventory_serial_numbers_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
           },
           {
@@ -12971,13 +13525,6 @@ export type Database = {
             referencedColumns: ["organization_id"]
           },
           {
-            foreignKeyName: "invoices_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
             foreignKeyName: "invoices_parcel_id_fkey"
             columns: ["parcel_id"]
             isOneToOne: false
@@ -13131,13 +13678,6 @@ export type Database = {
             referencedRelation: "v_production_summary"
             referencedColumns: ["organization_id"]
           },
-          {
-            foreignKeyName: "irrigation_types_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
         ]
       }
       item_barcodes: {
@@ -13276,13 +13816,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "item_barcodes_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
           },
           {
@@ -13479,13 +14012,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "item_groups_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
           },
           {
@@ -13792,11 +14318,351 @@ export type Database = {
             referencedRelation: "v_production_summary"
             referencedColumns: ["organization_id"]
           },
+        ]
+      }
+      job_applicants: {
+        Row: {
+          cin: string | null
+          cover_letter_url: string | null
+          created_at: string
+          email: string | null
+          first_name: string
+          id: string
+          job_opening_id: string
+          last_name: string
+          notes: string | null
+          organization_id: string
+          phone: string | null
+          rating: number | null
+          referred_by_worker_id: string | null
+          resume_url: string | null
+          source: string
+          status: string
+          tags: string[] | null
+          updated_at: string
+        }
+        Insert: {
+          cin?: string | null
+          cover_letter_url?: string | null
+          created_at?: string
+          email?: string | null
+          first_name: string
+          id?: string
+          job_opening_id: string
+          last_name: string
+          notes?: string | null
+          organization_id: string
+          phone?: string | null
+          rating?: number | null
+          referred_by_worker_id?: string | null
+          resume_url?: string | null
+          source?: string
+          status?: string
+          tags?: string[] | null
+          updated_at?: string
+        }
+        Update: {
+          cin?: string | null
+          cover_letter_url?: string | null
+          created_at?: string
+          email?: string | null
+          first_name?: string
+          id?: string
+          job_opening_id?: string
+          last_name?: string
+          notes?: string | null
+          organization_id?: string
+          phone?: string | null
+          rating?: number | null
+          referred_by_worker_id?: string | null
+          resume_url?: string | null
+          source?: string
+          status?: string
+          tags?: string[] | null
+          updated_at?: string
+        }
+        Relationships: [
           {
-            foreignKeyName: "items_organization_id_fkey"
+            foreignKeyName: "job_applicants_job_opening_id_fkey"
+            columns: ["job_opening_id"]
+            isOneToOne: false
+            referencedRelation: "job_openings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_applicants_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "workforce_summary"
+            referencedRelation: "accounting_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "job_applicants_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_churn_risk"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_applicants_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_org_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_applicants_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_top_orgs_by_activity"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_applicants_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "dashboard_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "job_applicants_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "financial_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "job_applicants_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_applicants_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "production_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "job_applicants_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "sales_analytics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "job_applicants_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "task_completion"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "job_applicants_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_organization_financial_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "job_applicants_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_production_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "job_applicants_referred_by_worker_id_fkey"
+            columns: ["referred_by_worker_id"]
+            isOneToOne: false
+            referencedRelation: "assignable_users"
+            referencedColumns: ["worker_id"]
+          },
+          {
+            foreignKeyName: "job_applicants_referred_by_worker_id_fkey"
+            columns: ["referred_by_worker_id"]
+            isOneToOne: false
+            referencedRelation: "v_active_workers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_applicants_referred_by_worker_id_fkey"
+            columns: ["referred_by_worker_id"]
+            isOneToOne: false
+            referencedRelation: "worker_assignments"
+            referencedColumns: ["worker_id"]
+          },
+          {
+            foreignKeyName: "job_applicants_referred_by_worker_id_fkey"
+            columns: ["referred_by_worker_id"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      job_openings: {
+        Row: {
+          application_count: number
+          closing_date: string | null
+          created_at: string
+          created_by: string | null
+          currency: string
+          department: string | null
+          description: string
+          designation: string | null
+          employment_type: string | null
+          farm_id: string | null
+          id: string
+          is_published: boolean
+          organization_id: string
+          publish_date: string | null
+          salary_range_max: number | null
+          salary_range_min: number | null
+          status: string
+          title: string
+          updated_at: string
+          vacancies: number
+          worker_type: Database["public"]["Enums"]["worker_type"] | null
+        }
+        Insert: {
+          application_count?: number
+          closing_date?: string | null
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          department?: string | null
+          description: string
+          designation?: string | null
+          employment_type?: string | null
+          farm_id?: string | null
+          id?: string
+          is_published?: boolean
+          organization_id: string
+          publish_date?: string | null
+          salary_range_max?: number | null
+          salary_range_min?: number | null
+          status?: string
+          title: string
+          updated_at?: string
+          vacancies?: number
+          worker_type?: Database["public"]["Enums"]["worker_type"] | null
+        }
+        Update: {
+          application_count?: number
+          closing_date?: string | null
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          department?: string | null
+          description?: string
+          designation?: string | null
+          employment_type?: string | null
+          farm_id?: string | null
+          id?: string
+          is_published?: boolean
+          organization_id?: string
+          publish_date?: string | null
+          salary_range_max?: number | null
+          salary_range_min?: number | null
+          status?: string
+          title?: string
+          updated_at?: string
+          vacancies?: number
+          worker_type?: Database["public"]["Enums"]["worker_type"] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_openings_farm_id_fkey"
+            columns: ["farm_id"]
+            isOneToOne: false
+            referencedRelation: "farms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_openings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "accounting_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "job_openings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_churn_risk"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_openings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_org_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_openings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_top_orgs_by_activity"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_openings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "dashboard_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "job_openings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "financial_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "job_openings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_openings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "production_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "job_openings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "sales_analytics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "job_openings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "task_completion"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "job_openings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_organization_financial_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "job_openings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_production_summary"
             referencedColumns: ["organization_id"]
           },
         ]
@@ -13945,13 +14811,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "journal_entries_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
           },
         ]
@@ -14267,13 +15126,6 @@ export type Database = {
             referencedColumns: ["organization_id"]
           },
           {
-            foreignKeyName: "leave_allocations_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
             foreignKeyName: "leave_allocations_worker_id_fkey"
             columns: ["worker_id"]
             isOneToOne: false
@@ -14460,13 +15312,6 @@ export type Database = {
             referencedColumns: ["organization_id"]
           },
           {
-            foreignKeyName: "leave_applications_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
             foreignKeyName: "leave_applications_worker_id_fkey"
             columns: ["worker_id"]
             isOneToOne: false
@@ -14610,13 +15455,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "leave_block_dates_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
           },
         ]
@@ -14767,13 +15605,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "leave_encashments_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
           },
           {
@@ -14967,13 +15798,6 @@ export type Database = {
             referencedRelation: "v_production_summary"
             referencedColumns: ["organization_id"]
           },
-          {
-            foreignKeyName: "leave_types_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
         ]
       }
       livestock: {
@@ -15115,13 +15939,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "livestock_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
           },
         ]
@@ -15275,13 +16092,6 @@ export type Database = {
             referencedRelation: "v_production_summary"
             referencedColumns: ["organization_id"]
           },
-          {
-            foreignKeyName: "marketplace_cart_items_seller_organization_id_fkey"
-            columns: ["seller_organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
         ]
       }
       marketplace_carts: {
@@ -15392,13 +16202,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "marketplace_carts_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
           },
         ]
@@ -15559,13 +16362,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "marketplace_listings_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
           },
           {
@@ -15801,13 +16597,6 @@ export type Database = {
             referencedColumns: ["organization_id"]
           },
           {
-            foreignKeyName: "marketplace_orders_buyer_organization_id_fkey"
-            columns: ["buyer_organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
             foreignKeyName: "marketplace_orders_seller_organization_id_fkey"
             columns: ["seller_organization_id"]
             isOneToOne: false
@@ -15889,13 +16678,6 @@ export type Database = {
             columns: ["seller_organization_id"]
             isOneToOne: false
             referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "marketplace_orders_seller_organization_id_fkey"
-            columns: ["seller_organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
           },
         ]
@@ -16073,13 +16855,6 @@ export type Database = {
             referencedColumns: ["organization_id"]
           },
           {
-            foreignKeyName: "marketplace_quote_requests_requester_organization_id_fkey"
-            columns: ["requester_organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
             foreignKeyName: "marketplace_quote_requests_seller_organization_id_fkey"
             columns: ["seller_organization_id"]
             isOneToOne: false
@@ -16161,13 +16936,6 @@ export type Database = {
             columns: ["seller_organization_id"]
             isOneToOne: false
             referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "marketplace_quote_requests_seller_organization_id_fkey"
-            columns: ["seller_organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
           },
         ]
@@ -16293,13 +17061,6 @@ export type Database = {
             referencedColumns: ["organization_id"]
           },
           {
-            foreignKeyName: "marketplace_reviews_reviewee_organization_id_fkey"
-            columns: ["reviewee_organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
             foreignKeyName: "marketplace_reviews_reviewer_organization_id_fkey"
             columns: ["reviewer_organization_id"]
             isOneToOne: false
@@ -16381,13 +17142,6 @@ export type Database = {
             columns: ["reviewer_organization_id"]
             isOneToOne: false
             referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "marketplace_reviews_reviewer_organization_id_fkey"
-            columns: ["reviewer_organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
           },
         ]
@@ -16558,13 +17312,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "metayage_settlements_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
           },
           {
@@ -16920,13 +17667,6 @@ export type Database = {
             referencedRelation: "v_production_summary"
             referencedColumns: ["organization_id"]
           },
-          {
-            foreignKeyName: "monitoring_analyses_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
         ]
       }
       newsletter_subscribers: {
@@ -17078,13 +17818,6 @@ export type Database = {
             referencedRelation: "v_production_summary"
             referencedColumns: ["organization_id"]
           },
-          {
-            foreignKeyName: "notifications_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
         ]
       }
       onboarding_records: {
@@ -17210,13 +17943,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "onboarding_records_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
           },
           {
@@ -17376,13 +18102,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "onboarding_templates_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
           },
         ]
@@ -17548,13 +18267,6 @@ export type Database = {
             referencedColumns: ["organization_id"]
           },
           {
-            foreignKeyName: "opening_stock_balances_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
             foreignKeyName: "opening_stock_balances_warehouse_id_fkey"
             columns: ["warehouse_id"]
             isOneToOne: false
@@ -17704,13 +18416,6 @@ export type Database = {
             referencedRelation: "v_production_summary"
             referencedColumns: ["organization_id"]
           },
-          {
-            foreignKeyName: "organization_addons_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
         ]
       }
       organization_ai_settings: {
@@ -17824,13 +18529,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "organization_ai_settings_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
           },
         ]
@@ -17953,13 +18651,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "organization_modules_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
           },
         ]
@@ -18098,13 +18789,6 @@ export type Database = {
             referencedRelation: "v_production_summary"
             referencedColumns: ["organization_id"]
           },
-          {
-            foreignKeyName: "organization_usage_daily_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
         ]
       }
       organization_users: {
@@ -18218,13 +18902,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "organization_users_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
           },
           {
@@ -18465,13 +19142,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "parcel_reports_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
           },
           {
@@ -18743,13 +19413,6 @@ export type Database = {
             referencedRelation: "v_production_summary"
             referencedColumns: ["organization_id"]
           },
-          {
-            foreignKeyName: "parcels_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
         ]
       }
       payment_advances: {
@@ -18903,13 +19566,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "payment_advances_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
           },
           {
@@ -19273,13 +19929,6 @@ export type Database = {
             referencedColumns: ["organization_id"]
           },
           {
-            foreignKeyName: "payment_records_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
             foreignKeyName: "payment_records_worker_id_fkey"
             columns: ["worker_id"]
             isOneToOne: false
@@ -19466,13 +20115,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "payroll_runs_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
           },
         ]
@@ -19690,17 +20332,193 @@ export type Database = {
             referencedColumns: ["organization_id"]
           },
           {
-            foreignKeyName: "performance_alerts_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
             foreignKeyName: "performance_alerts_parcel_id_fkey"
             columns: ["parcel_id"]
             isOneToOne: false
             referencedRelation: "parcels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      performance_feedback: {
+        Row: {
+          created_at: string
+          feedback_type: string
+          id: string
+          improvements: string | null
+          notes: string | null
+          organization_id: string
+          rating: number | null
+          review_period: string | null
+          reviewer_id: string
+          strengths: string | null
+          worker_id: string
+        }
+        Insert: {
+          created_at?: string
+          feedback_type: string
+          id?: string
+          improvements?: string | null
+          notes?: string | null
+          organization_id: string
+          rating?: number | null
+          review_period?: string | null
+          reviewer_id: string
+          strengths?: string | null
+          worker_id: string
+        }
+        Update: {
+          created_at?: string
+          feedback_type?: string
+          id?: string
+          improvements?: string | null
+          notes?: string | null
+          organization_id?: string
+          rating?: number | null
+          review_period?: string | null
+          reviewer_id?: string
+          strengths?: string | null
+          worker_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "performance_feedback_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "accounting_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "performance_feedback_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_churn_risk"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "performance_feedback_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_org_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "performance_feedback_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_top_orgs_by_activity"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "performance_feedback_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "dashboard_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "performance_feedback_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "financial_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "performance_feedback_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "performance_feedback_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "production_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "performance_feedback_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "sales_analytics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "performance_feedback_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "task_completion"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "performance_feedback_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_organization_financial_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "performance_feedback_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_production_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "performance_feedback_reviewer_id_fkey"
+            columns: ["reviewer_id"]
+            isOneToOne: false
+            referencedRelation: "assignable_users"
+            referencedColumns: ["worker_id"]
+          },
+          {
+            foreignKeyName: "performance_feedback_reviewer_id_fkey"
+            columns: ["reviewer_id"]
+            isOneToOne: false
+            referencedRelation: "v_active_workers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "performance_feedback_reviewer_id_fkey"
+            columns: ["reviewer_id"]
+            isOneToOne: false
+            referencedRelation: "worker_assignments"
+            referencedColumns: ["worker_id"]
+          },
+          {
+            foreignKeyName: "performance_feedback_reviewer_id_fkey"
+            columns: ["reviewer_id"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "performance_feedback_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "assignable_users"
+            referencedColumns: ["worker_id"]
+          },
+          {
+            foreignKeyName: "performance_feedback_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "v_active_workers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "performance_feedback_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "worker_assignments"
+            referencedColumns: ["worker_id"]
+          },
+          {
+            foreignKeyName: "performance_feedback_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "workers"
             referencedColumns: ["id"]
           },
         ]
@@ -19973,13 +20791,6 @@ export type Database = {
             referencedColumns: ["organization_id"]
           },
           {
-            foreignKeyName: "pest_disease_reports_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
             foreignKeyName: "pest_disease_reports_parcel_id_fkey"
             columns: ["parcel_id"]
             isOneToOne: false
@@ -20241,13 +21052,6 @@ export type Database = {
             referencedColumns: ["organization_id"]
           },
           {
-            foreignKeyName: "piece_work_records_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
             foreignKeyName: "piece_work_records_parcel_id_fkey"
             columns: ["parcel_id"]
             isOneToOne: false
@@ -20495,13 +21299,6 @@ export type Database = {
             referencedRelation: "v_production_summary"
             referencedColumns: ["organization_id"]
           },
-          {
-            foreignKeyName: "plan_interventions_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
         ]
       }
       plantation_systems: {
@@ -20668,13 +21465,6 @@ export type Database = {
             referencedRelation: "v_production_summary"
             referencedColumns: ["organization_id"]
           },
-          {
-            foreignKeyName: "plantation_systems_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
         ]
       }
       plantation_types: {
@@ -20791,13 +21581,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "plantation_types_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
           },
         ]
@@ -20934,13 +21717,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "polar_subscriptions_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
           },
         ]
@@ -21140,13 +21916,6 @@ export type Database = {
             referencedColumns: ["organization_id"]
           },
           {
-            foreignKeyName: "product_applications_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
             foreignKeyName: "product_applications_parcel_id_fkey"
             columns: ["parcel_id"]
             isOneToOne: false
@@ -21296,13 +22065,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "product_categories_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
           },
         ]
@@ -21496,13 +22258,6 @@ export type Database = {
             referencedColumns: ["organization_id"]
           },
           {
-            foreignKeyName: "product_variants_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
             foreignKeyName: "product_variants_unit_id_fkey"
             columns: ["unit_id"]
             isOneToOne: false
@@ -21653,13 +22408,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "profitability_snapshots_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
           },
           {
@@ -21901,13 +22649,6 @@ export type Database = {
             referencedColumns: ["organization_id"]
           },
           {
-            foreignKeyName: "purchase_orders_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
             foreignKeyName: "purchase_orders_supplier_id_fkey"
             columns: ["supplier_id"]
             isOneToOne: false
@@ -22085,13 +22826,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "quality_inspections_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
           },
           {
@@ -22387,13 +23121,6 @@ export type Database = {
             referencedColumns: ["organization_id"]
           },
           {
-            foreignKeyName: "quotes_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
             foreignKeyName: "quotes_parcel_id_fkey"
             columns: ["parcel_id"]
             isOneToOne: false
@@ -22633,13 +23360,6 @@ export type Database = {
             referencedColumns: ["organization_id"]
           },
           {
-            foreignKeyName: "reception_batches_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
             foreignKeyName: "reception_batches_parcel_id_fkey"
             columns: ["parcel_id"]
             isOneToOne: false
@@ -22849,13 +23569,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "recommendation_events_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
           },
           {
@@ -23103,13 +23816,6 @@ export type Database = {
             referencedColumns: ["organization_id"]
           },
           {
-            foreignKeyName: "revenues_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
             foreignKeyName: "revenues_parcel_id_fkey"
             columns: ["parcel_id"]
             isOneToOne: false
@@ -23249,13 +23955,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "role_assignments_audit_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
           },
         ]
@@ -23416,13 +24115,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "role_templates_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
           },
         ]
@@ -23603,13 +24295,6 @@ export type Database = {
             referencedRelation: "v_production_summary"
             referencedColumns: ["organization_id"]
           },
-          {
-            foreignKeyName: "rootstocks_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
         ]
       }
       saas_metrics_daily: {
@@ -23671,6 +24356,208 @@ export type Database = {
           wau?: number | null
         }
         Relationships: []
+      }
+      safety_incidents: {
+        Row: {
+          cnss_declaration: boolean
+          cnss_declaration_date: string | null
+          cnss_declaration_reference: string | null
+          corrective_actions: Json
+          created_at: string
+          description: string
+          farm_id: string
+          id: string
+          incident_date: string
+          incident_type: string
+          location_description: string | null
+          organization_id: string
+          parcel_id: string | null
+          preventive_measures: string | null
+          reported_at: string
+          reported_by: string | null
+          root_cause: string | null
+          severity: string
+          status: string
+          supervisor_id: string | null
+          updated_at: string
+          worker_ids: string[]
+        }
+        Insert: {
+          cnss_declaration?: boolean
+          cnss_declaration_date?: string | null
+          cnss_declaration_reference?: string | null
+          corrective_actions?: Json
+          created_at?: string
+          description: string
+          farm_id: string
+          id?: string
+          incident_date: string
+          incident_type: string
+          location_description?: string | null
+          organization_id: string
+          parcel_id?: string | null
+          preventive_measures?: string | null
+          reported_at?: string
+          reported_by?: string | null
+          root_cause?: string | null
+          severity: string
+          status?: string
+          supervisor_id?: string | null
+          updated_at?: string
+          worker_ids?: string[]
+        }
+        Update: {
+          cnss_declaration?: boolean
+          cnss_declaration_date?: string | null
+          cnss_declaration_reference?: string | null
+          corrective_actions?: Json
+          created_at?: string
+          description?: string
+          farm_id?: string
+          id?: string
+          incident_date?: string
+          incident_type?: string
+          location_description?: string | null
+          organization_id?: string
+          parcel_id?: string | null
+          preventive_measures?: string | null
+          reported_at?: string
+          reported_by?: string | null
+          root_cause?: string | null
+          severity?: string
+          status?: string
+          supervisor_id?: string | null
+          updated_at?: string
+          worker_ids?: string[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "safety_incidents_farm_id_fkey"
+            columns: ["farm_id"]
+            isOneToOne: false
+            referencedRelation: "farms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "safety_incidents_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "accounting_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "safety_incidents_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_churn_risk"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "safety_incidents_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_org_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "safety_incidents_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_top_orgs_by_activity"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "safety_incidents_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "dashboard_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "safety_incidents_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "financial_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "safety_incidents_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "safety_incidents_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "production_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "safety_incidents_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "sales_analytics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "safety_incidents_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "task_completion"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "safety_incidents_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_organization_financial_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "safety_incidents_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_production_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "safety_incidents_parcel_id_fkey"
+            columns: ["parcel_id"]
+            isOneToOne: false
+            referencedRelation: "parcels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "safety_incidents_supervisor_id_fkey"
+            columns: ["supervisor_id"]
+            isOneToOne: false
+            referencedRelation: "assignable_users"
+            referencedColumns: ["worker_id"]
+          },
+          {
+            foreignKeyName: "safety_incidents_supervisor_id_fkey"
+            columns: ["supervisor_id"]
+            isOneToOne: false
+            referencedRelation: "v_active_workers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "safety_incidents_supervisor_id_fkey"
+            columns: ["supervisor_id"]
+            isOneToOne: false
+            referencedRelation: "worker_assignments"
+            referencedColumns: ["worker_id"]
+          },
+          {
+            foreignKeyName: "safety_incidents_supervisor_id_fkey"
+            columns: ["supervisor_id"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       salary_components: {
         Row: {
@@ -23933,13 +24820,6 @@ export type Database = {
             referencedColumns: ["organization_id"]
           },
           {
-            foreignKeyName: "salary_slips_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
             foreignKeyName: "salary_slips_payroll_run_id_fkey"
             columns: ["payroll_run_id"]
             isOneToOne: false
@@ -24119,13 +24999,6 @@ export type Database = {
             referencedColumns: ["organization_id"]
           },
           {
-            foreignKeyName: "salary_structure_assignments_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
             foreignKeyName: "salary_structure_assignments_salary_structure_id_fkey"
             columns: ["salary_structure_id"]
             isOneToOne: false
@@ -24285,13 +25158,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "salary_structures_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
           },
         ]
@@ -24541,13 +25407,6 @@ export type Database = {
             referencedRelation: "v_production_summary"
             referencedColumns: ["organization_id"]
           },
-          {
-            foreignKeyName: "sales_orders_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
         ]
       }
       satellite_aois: {
@@ -24680,13 +25539,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "satellite_aois_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
           },
           {
@@ -24824,13 +25676,6 @@ export type Database = {
             referencedColumns: ["organization_id"]
           },
           {
-            foreignKeyName: "satellite_files_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
             foreignKeyName: "satellite_files_parcel_id_fkey"
             columns: ["parcel_id"]
             isOneToOne: false
@@ -24956,13 +25801,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "satellite_heatmap_cache_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
           },
           {
@@ -25155,13 +25993,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "satellite_indices_data_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
           },
           {
@@ -25369,13 +26200,6 @@ export type Database = {
             referencedColumns: ["organization_id"]
           },
           {
-            foreignKeyName: "satellite_processing_jobs_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
             foreignKeyName: "satellite_processing_jobs_parcel_id_fkey"
             columns: ["parcel_id"]
             isOneToOne: false
@@ -25557,13 +26381,6 @@ export type Database = {
             referencedColumns: ["organization_id"]
           },
           {
-            foreignKeyName: "satellite_processing_tasks_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
             foreignKeyName: "satellite_processing_tasks_parcel_id_fkey"
             columns: ["parcel_id"]
             isOneToOne: false
@@ -25576,6 +26393,152 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "satellite_processing_jobs"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      seasonal_campaigns: {
+        Row: {
+          actual_labor_cost: number
+          created_at: string
+          created_by: string | null
+          crop_type: string | null
+          end_date: string
+          estimated_labor_budget: number | null
+          farm_id: string
+          id: string
+          name: string
+          organization_id: string
+          season_type: string
+          start_date: string
+          status: string
+          target_worker_count: number | null
+          updated_at: string
+        }
+        Insert: {
+          actual_labor_cost?: number
+          created_at?: string
+          created_by?: string | null
+          crop_type?: string | null
+          end_date: string
+          estimated_labor_budget?: number | null
+          farm_id: string
+          id?: string
+          name: string
+          organization_id: string
+          season_type: string
+          start_date: string
+          status?: string
+          target_worker_count?: number | null
+          updated_at?: string
+        }
+        Update: {
+          actual_labor_cost?: number
+          created_at?: string
+          created_by?: string | null
+          crop_type?: string | null
+          end_date?: string
+          estimated_labor_budget?: number | null
+          farm_id?: string
+          id?: string
+          name?: string
+          organization_id?: string
+          season_type?: string
+          start_date?: string
+          status?: string
+          target_worker_count?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "seasonal_campaigns_farm_id_fkey"
+            columns: ["farm_id"]
+            isOneToOne: false
+            referencedRelation: "farms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "seasonal_campaigns_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "accounting_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "seasonal_campaigns_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_churn_risk"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "seasonal_campaigns_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_org_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "seasonal_campaigns_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_top_orgs_by_activity"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "seasonal_campaigns_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "dashboard_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "seasonal_campaigns_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "financial_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "seasonal_campaigns_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "seasonal_campaigns_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "production_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "seasonal_campaigns_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "sales_analytics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "seasonal_campaigns_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "task_completion"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "seasonal_campaigns_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_organization_financial_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "seasonal_campaigns_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_production_summary"
+            referencedColumns: ["organization_id"]
           },
         ]
       }
@@ -25735,13 +26698,6 @@ export type Database = {
             referencedColumns: ["organization_id"]
           },
           {
-            foreignKeyName: "separations_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
             foreignKeyName: "separations_worker_id_fkey"
             columns: ["worker_id"]
             isOneToOne: false
@@ -25894,13 +26850,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "shift_assignments_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
           },
           {
@@ -26070,13 +27019,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "shift_requests_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
           },
           {
@@ -26251,13 +27193,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "shifts_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
           },
         ]
@@ -26451,13 +27386,6 @@ export type Database = {
             referencedColumns: ["organization_id"]
           },
           {
-            foreignKeyName: "soil_analyses_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
             foreignKeyName: "soil_analyses_parcel_id_fkey"
             columns: ["parcel_id"]
             isOneToOne: false
@@ -26592,13 +27520,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "soil_types_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
           },
         ]
@@ -26757,13 +27678,6 @@ export type Database = {
             referencedRelation: "v_production_summary"
             referencedColumns: ["organization_id"]
           },
-          {
-            foreignKeyName: "stock_account_mappings_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
         ]
       }
       stock_closing_entries: {
@@ -26898,13 +27812,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "stock_closing_entries_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
           },
         ]
@@ -27184,13 +28091,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "stock_entries_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
           },
           {
@@ -27583,13 +28483,6 @@ export type Database = {
             referencedColumns: ["organization_id"]
           },
           {
-            foreignKeyName: "stock_movements_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
             foreignKeyName: "stock_movements_stock_entry_id_fkey"
             columns: ["stock_entry_id"]
             isOneToOne: false
@@ -27764,13 +28657,6 @@ export type Database = {
             referencedColumns: ["organization_id"]
           },
           {
-            foreignKeyName: "stock_reservations_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
             foreignKeyName: "stock_reservations_variant_id_fkey"
             columns: ["variant_id"]
             isOneToOne: false
@@ -27928,13 +28814,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "stock_valuation_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
           },
           {
@@ -28107,13 +28986,6 @@ export type Database = {
             referencedRelation: "v_production_summary"
             referencedColumns: ["organization_id"]
           },
-          {
-            foreignKeyName: "structures_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
         ]
       }
       subscription_contracts: {
@@ -28242,13 +29114,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "subscription_contracts_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
           },
           {
@@ -28388,13 +29253,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "subscription_events_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
           },
           {
@@ -28635,13 +29493,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "subscription_usage_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
           },
           {
@@ -28906,13 +29757,6 @@ export type Database = {
             referencedRelation: "v_production_summary"
             referencedColumns: ["organization_id"]
           },
-          {
-            foreignKeyName: "subscriptions_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
         ]
       }
       suivis_saison: {
@@ -29053,13 +29897,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "suivis_saison_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
           },
           {
@@ -29240,13 +30077,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "suppliers_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
           },
         ]
@@ -29431,13 +30261,6 @@ export type Database = {
             referencedColumns: ["organization_id"]
           },
           {
-            foreignKeyName: "task_assignments_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
             foreignKeyName: "task_assignments_task_id_fkey"
             columns: ["task_id"]
             isOneToOne: false
@@ -29604,13 +30427,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "task_categories_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
           },
         ]
@@ -30153,13 +30969,6 @@ export type Database = {
             referencedColumns: ["organization_id"]
           },
           {
-            foreignKeyName: "task_watchers_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
             foreignKeyName: "task_watchers_task_id_fkey"
             columns: ["task_id"]
             isOneToOne: false
@@ -30507,13 +31316,6 @@ export type Database = {
             referencedColumns: ["organization_id"]
           },
           {
-            foreignKeyName: "tasks_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
             foreignKeyName: "tasks_parcel_id_fkey"
             columns: ["parcel_id"]
             isOneToOne: false
@@ -30724,13 +31526,6 @@ export type Database = {
             referencedRelation: "v_production_summary"
             referencedColumns: ["organization_id"]
           },
-          {
-            foreignKeyName: "tax_configurations_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
         ]
       }
       taxes: {
@@ -30872,13 +31667,6 @@ export type Database = {
             referencedRelation: "v_production_summary"
             referencedColumns: ["organization_id"]
           },
-          {
-            foreignKeyName: "taxes_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
         ]
       }
       test_types: {
@@ -30910,6 +31698,304 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      training_enrollments: {
+        Row: {
+          certificate_url: string | null
+          completion_date: string | null
+          created_at: string
+          enrolled_date: string
+          feedback: string | null
+          id: string
+          organization_id: string
+          program_id: string
+          score: number | null
+          status: string
+          worker_id: string
+        }
+        Insert: {
+          certificate_url?: string | null
+          completion_date?: string | null
+          created_at?: string
+          enrolled_date: string
+          feedback?: string | null
+          id?: string
+          organization_id: string
+          program_id: string
+          score?: number | null
+          status?: string
+          worker_id: string
+        }
+        Update: {
+          certificate_url?: string | null
+          completion_date?: string | null
+          created_at?: string
+          enrolled_date?: string
+          feedback?: string | null
+          id?: string
+          organization_id?: string
+          program_id?: string
+          score?: number | null
+          status?: string
+          worker_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_enrollments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "accounting_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "training_enrollments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_churn_risk"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_enrollments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_org_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_enrollments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_top_orgs_by_activity"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_enrollments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "dashboard_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "training_enrollments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "financial_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "training_enrollments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_enrollments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "production_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "training_enrollments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "sales_analytics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "training_enrollments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "task_completion"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "training_enrollments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_organization_financial_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "training_enrollments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_production_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "training_enrollments_program_id_fkey"
+            columns: ["program_id"]
+            isOneToOne: false
+            referencedRelation: "training_programs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_enrollments_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "assignable_users"
+            referencedColumns: ["worker_id"]
+          },
+          {
+            foreignKeyName: "training_enrollments_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "v_active_workers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_enrollments_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "worker_assignments"
+            referencedColumns: ["worker_id"]
+          },
+          {
+            foreignKeyName: "training_enrollments_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      training_programs: {
+        Row: {
+          applicable_worker_types: string[] | null
+          cost_per_participant: number | null
+          created_at: string
+          description: string | null
+          duration_hours: number | null
+          id: string
+          is_active: boolean
+          is_mandatory: boolean
+          name: string
+          organization_id: string
+          provider: string | null
+          recurrence: string | null
+          training_type: string | null
+          updated_at: string
+        }
+        Insert: {
+          applicable_worker_types?: string[] | null
+          cost_per_participant?: number | null
+          created_at?: string
+          description?: string | null
+          duration_hours?: number | null
+          id?: string
+          is_active?: boolean
+          is_mandatory?: boolean
+          name: string
+          organization_id: string
+          provider?: string | null
+          recurrence?: string | null
+          training_type?: string | null
+          updated_at?: string
+        }
+        Update: {
+          applicable_worker_types?: string[] | null
+          cost_per_participant?: number | null
+          created_at?: string
+          description?: string | null
+          duration_hours?: number | null
+          id?: string
+          is_active?: boolean
+          is_mandatory?: boolean
+          name?: string
+          organization_id?: string
+          provider?: string | null
+          recurrence?: string | null
+          training_type?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_programs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "accounting_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "training_programs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_churn_risk"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_programs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_org_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_programs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_top_orgs_by_activity"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_programs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "dashboard_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "training_programs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "financial_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "training_programs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_programs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "production_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "training_programs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "sales_analytics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "training_programs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "task_completion"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "training_programs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_organization_financial_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "training_programs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_production_summary"
+            referencedColumns: ["organization_id"]
+          },
+        ]
       }
       tree_categories: {
         Row: {
@@ -31025,13 +32111,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "tree_categories_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
           },
         ]
@@ -31154,13 +32233,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "trees_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
           },
         ]
@@ -31403,13 +32475,6 @@ export type Database = {
             referencedColumns: ["organization_id"]
           },
           {
-            foreignKeyName: "utilities_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
             foreignKeyName: "utilities_parcel_id_fkey"
             columns: ["parcel_id"]
             isOneToOne: false
@@ -31547,13 +32612,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "variant_barcodes_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
           },
           {
@@ -31702,13 +32760,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "warehouse_stock_levels_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
           },
           {
@@ -31898,13 +32949,6 @@ export type Database = {
             referencedRelation: "v_production_summary"
             referencedColumns: ["organization_id"]
           },
-          {
-            foreignKeyName: "warehouses_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
         ]
       }
       weather_daily: {
@@ -32049,13 +33093,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "weather_daily_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
           },
         ]
@@ -32279,13 +33316,6 @@ export type Database = {
             referencedColumns: ["organization_id"]
           },
           {
-            foreignKeyName: "weather_derived_data_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
             foreignKeyName: "weather_derived_data_parcel_id_fkey"
             columns: ["parcel_id"]
             isOneToOne: false
@@ -32421,13 +33451,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "weather_forecast_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
           },
         ]
@@ -32763,13 +33786,6 @@ export type Database = {
             referencedColumns: ["organization_id"]
           },
           {
-            foreignKeyName: "work_records_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
             foreignKeyName: "work_records_task_id_fkey"
             columns: ["task_id"]
             isOneToOne: false
@@ -32969,13 +33985,6 @@ export type Database = {
             referencedRelation: "v_production_summary"
             referencedColumns: ["organization_id"]
           },
-          {
-            foreignKeyName: "work_units_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
         ]
       }
       worker_documents: {
@@ -33119,13 +34128,6 @@ export type Database = {
             referencedColumns: ["organization_id"]
           },
           {
-            foreignKeyName: "worker_documents_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
             foreignKeyName: "worker_documents_worker_id_fkey"
             columns: ["worker_id"]
             isOneToOne: false
@@ -33152,6 +34154,347 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "workers"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      worker_qualifications: {
+        Row: {
+          certificate_url: string | null
+          created_at: string
+          expiry_date: string | null
+          id: string
+          is_valid: boolean
+          issued_date: string
+          issuing_authority: string | null
+          notes: string | null
+          organization_id: string
+          qualification_name: string
+          qualification_type: string
+          updated_at: string
+          verified_at: string | null
+          verified_by: string | null
+          worker_id: string
+        }
+        Insert: {
+          certificate_url?: string | null
+          created_at?: string
+          expiry_date?: string | null
+          id?: string
+          is_valid?: boolean
+          issued_date: string
+          issuing_authority?: string | null
+          notes?: string | null
+          organization_id: string
+          qualification_name: string
+          qualification_type: string
+          updated_at?: string
+          verified_at?: string | null
+          verified_by?: string | null
+          worker_id: string
+        }
+        Update: {
+          certificate_url?: string | null
+          created_at?: string
+          expiry_date?: string | null
+          id?: string
+          is_valid?: boolean
+          issued_date?: string
+          issuing_authority?: string | null
+          notes?: string | null
+          organization_id?: string
+          qualification_name?: string
+          qualification_type?: string
+          updated_at?: string
+          verified_at?: string | null
+          verified_by?: string | null
+          worker_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worker_qualifications_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "accounting_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "worker_qualifications_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_churn_risk"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_qualifications_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_org_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_qualifications_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_top_orgs_by_activity"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_qualifications_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "dashboard_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "worker_qualifications_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "financial_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "worker_qualifications_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_qualifications_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "production_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "worker_qualifications_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "sales_analytics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "worker_qualifications_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "task_completion"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "worker_qualifications_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_organization_financial_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "worker_qualifications_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_production_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "worker_qualifications_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "assignable_users"
+            referencedColumns: ["worker_id"]
+          },
+          {
+            foreignKeyName: "worker_qualifications_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "v_active_workers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_qualifications_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "worker_assignments"
+            referencedColumns: ["worker_id"]
+          },
+          {
+            foreignKeyName: "worker_qualifications_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      worker_transport: {
+        Row: {
+          actual_count: number | null
+          capacity: number | null
+          created_at: string
+          created_by: string | null
+          date: string
+          destination: string
+          driver_worker_id: string | null
+          farm_id: string
+          id: string
+          notes: string | null
+          organization_id: string
+          pickup_location: string
+          pickup_time: string
+          vehicle_id: string | null
+          worker_ids: string[]
+        }
+        Insert: {
+          actual_count?: number | null
+          capacity?: number | null
+          created_at?: string
+          created_by?: string | null
+          date: string
+          destination: string
+          driver_worker_id?: string | null
+          farm_id: string
+          id?: string
+          notes?: string | null
+          organization_id: string
+          pickup_location: string
+          pickup_time: string
+          vehicle_id?: string | null
+          worker_ids?: string[]
+        }
+        Update: {
+          actual_count?: number | null
+          capacity?: number | null
+          created_at?: string
+          created_by?: string | null
+          date?: string
+          destination?: string
+          driver_worker_id?: string | null
+          farm_id?: string
+          id?: string
+          notes?: string | null
+          organization_id?: string
+          pickup_location?: string
+          pickup_time?: string
+          vehicle_id?: string | null
+          worker_ids?: string[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worker_transport_driver_worker_id_fkey"
+            columns: ["driver_worker_id"]
+            isOneToOne: false
+            referencedRelation: "assignable_users"
+            referencedColumns: ["worker_id"]
+          },
+          {
+            foreignKeyName: "worker_transport_driver_worker_id_fkey"
+            columns: ["driver_worker_id"]
+            isOneToOne: false
+            referencedRelation: "v_active_workers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_transport_driver_worker_id_fkey"
+            columns: ["driver_worker_id"]
+            isOneToOne: false
+            referencedRelation: "worker_assignments"
+            referencedColumns: ["worker_id"]
+          },
+          {
+            foreignKeyName: "worker_transport_driver_worker_id_fkey"
+            columns: ["driver_worker_id"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_transport_farm_id_fkey"
+            columns: ["farm_id"]
+            isOneToOne: false
+            referencedRelation: "farms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_transport_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "accounting_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "worker_transport_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_churn_risk"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_transport_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_org_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_transport_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_top_orgs_by_activity"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_transport_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "dashboard_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "worker_transport_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "financial_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "worker_transport_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_transport_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "production_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "worker_transport_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "sales_analytics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "worker_transport_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "task_completion"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "worker_transport_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_organization_financial_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "worker_transport_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_production_summary"
+            referencedColumns: ["organization_id"]
           },
         ]
       }
@@ -33487,13 +34830,6 @@ export type Database = {
             referencedColumns: ["organization_id"]
           },
           {
-            foreignKeyName: "workers_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
             foreignKeyName: "workers_reporting_to_fkey"
             columns: ["reporting_to"]
             isOneToOne: false
@@ -33663,13 +34999,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "yield_forecasts_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
           },
         ]
@@ -33899,13 +35228,6 @@ export type Database = {
             referencedColumns: ["organization_id"]
           },
           {
-            foreignKeyName: "organization_users_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
             foreignKeyName: "organization_users_user_profile_fkey"
             columns: ["user_id"]
             isOneToOne: false
@@ -34010,13 +35332,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "organization_users_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
           },
           {
@@ -34127,13 +35442,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "agricultural_campaigns_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
           },
         ]
@@ -34298,13 +35606,6 @@ export type Database = {
             referencedColumns: ["organization_id"]
           },
           {
-            foreignKeyName: "crop_cycles_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
             foreignKeyName: "crop_cycles_parcel_id_fkey"
             columns: ["parcel_id"]
             isOneToOne: false
@@ -34439,13 +35740,6 @@ export type Database = {
             referencedRelation: "v_production_summary"
             referencedColumns: ["organization_id"]
           },
-          {
-            foreignKeyName: "file_registry_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
         ]
       }
       financial_metrics: {
@@ -34567,13 +35861,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "fiscal_years_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
           },
         ]
@@ -34718,17 +36005,138 @@ export type Database = {
             referencedColumns: ["organization_id"]
           },
           {
-            foreignKeyName: "inventory_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
             foreignKeyName: "inventory_warehouse_id_fkey"
             columns: ["warehouse_id"]
             isOneToOne: false
             referencedRelation: "warehouses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leave_balance_summary: {
+        Row: {
+          first_name: string | null
+          last_name: string | null
+          leave_type: string | null
+          organization_id: string | null
+          period_end: string | null
+          period_start: string | null
+          remaining_days: number | null
+          total_days: number | null
+          used_days: number | null
+          worker_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leave_allocations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "accounting_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "leave_allocations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_churn_risk"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leave_allocations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_org_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leave_allocations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_top_orgs_by_activity"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leave_allocations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "dashboard_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "leave_allocations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "financial_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "leave_allocations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leave_allocations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "production_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "leave_allocations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "sales_analytics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "leave_allocations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "task_completion"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "leave_allocations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_organization_financial_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "leave_allocations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_production_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "leave_allocations_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "assignable_users"
+            referencedColumns: ["worker_id"]
+          },
+          {
+            foreignKeyName: "leave_allocations_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "v_active_workers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leave_allocations_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "worker_assignments"
+            referencedColumns: ["worker_id"]
+          },
+          {
+            foreignKeyName: "leave_allocations_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "workers"
             referencedColumns: ["id"]
           },
         ]
@@ -34834,13 +36242,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "stock_movements_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
           },
           {
@@ -35000,13 +36401,6 @@ export type Database = {
             referencedColumns: ["organization_id"]
           },
           {
-            foreignKeyName: "payment_records_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
             foreignKeyName: "payment_records_worker_id_fkey"
             columns: ["worker_id"]
             isOneToOne: false
@@ -35033,6 +36427,110 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "workers"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      payroll_cost_summary: {
+        Row: {
+          farm_id: string | null
+          month: string | null
+          organization_id: string | null
+          total_deductions: number | null
+          total_gross: number | null
+          total_net: number | null
+          workers_paid: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "salary_slips_farm_id_fkey"
+            columns: ["farm_id"]
+            isOneToOne: false
+            referencedRelation: "farms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "salary_slips_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "accounting_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "salary_slips_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_churn_risk"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "salary_slips_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_org_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "salary_slips_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_top_orgs_by_activity"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "salary_slips_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "dashboard_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "salary_slips_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "financial_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "salary_slips_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "salary_slips_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "production_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "salary_slips_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "sales_analytics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "salary_slips_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "task_completion"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "salary_slips_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_organization_financial_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "salary_slips_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_production_summary"
+            referencedColumns: ["organization_id"]
           },
         ]
       }
@@ -35169,13 +36667,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "tasks_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
           },
         ]
@@ -35327,13 +36818,6 @@ export type Database = {
             referencedRelation: "v_production_summary"
             referencedColumns: ["organization_id"]
           },
-          {
-            foreignKeyName: "subscriptions_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
         ]
       }
       subscription_legacy_compat: {
@@ -35462,13 +36946,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "subscriptions_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
           },
         ]
@@ -35607,13 +37084,6 @@ export type Database = {
             referencedColumns: ["organization_id"]
           },
           {
-            foreignKeyName: "crop_cycles_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
             foreignKeyName: "crop_cycles_parcel_id_fkey"
             columns: ["parcel_id"]
             isOneToOne: false
@@ -35719,13 +37189,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "workers_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
           },
         ]
@@ -35856,13 +37319,6 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "v_production_summary"
-            referencedColumns: ["organization_id"]
-          },
-          {
-            foreignKeyName: "product_applications_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
             referencedColumns: ["organization_id"]
           },
           {
@@ -36003,38 +37459,113 @@ export type Database = {
             referencedRelation: "v_production_summary"
             referencedColumns: ["organization_id"]
           },
-          {
-            foreignKeyName: "workers_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "workforce_summary"
-            referencedColumns: ["organization_id"]
-          },
         ]
       }
       workforce_summary: {
         Row: {
-          active_daily_workers: number | null
-          active_fixed_salary: number | null
-          active_metayage: number | null
+          avg_daily_rate: number | null
+          avg_monthly_salary: number | null
+          cnss_covered_count: number | null
+          daily_worker_count: number | null
+          farm_id: string | null
+          female_count: number | null
+          fixed_salary_count: number | null
+          metayage_count: number | null
           organization_id: string | null
-          tasks_in_progress: number | null
         }
-        Insert: {
-          active_daily_workers?: never
-          active_fixed_salary?: never
-          active_metayage?: never
-          organization_id?: string | null
-          tasks_in_progress?: never
-        }
-        Update: {
-          active_daily_workers?: never
-          active_fixed_salary?: never
-          active_metayage?: never
-          organization_id?: string | null
-          tasks_in_progress?: never
-        }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "workers_farm_id_fkey"
+            columns: ["farm_id"]
+            isOneToOne: false
+            referencedRelation: "farms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workers_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "accounting_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "workers_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_churn_risk"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workers_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_org_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workers_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_top_orgs_by_activity"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workers_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "dashboard_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "workers_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "financial_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "workers_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workers_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "production_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "workers_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "sales_analytics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "workers_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "task_completion"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "workers_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_organization_financial_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "workers_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_production_summary"
+            referencedColumns: ["organization_id"]
+          },
+        ]
       }
     }
     Functions: {

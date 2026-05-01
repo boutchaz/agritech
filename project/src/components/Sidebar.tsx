@@ -937,6 +937,34 @@ const Sidebar = ({
                         isActive={currentPath === "/workforce/salary-slips"}
                       />
                     </ProtectedNavItem>
+                    <ProtectedNavItem action="manage" subject="Shift">
+                      <PopoverNavItem onNavigate={handleNavigation}
+                        path="/workforce/shifts"
+                        label={t("nav.shifts", "Shifts")}
+                        isActive={currentPath === "/workforce/shifts"}
+                      />
+                    </ProtectedNavItem>
+                    <ProtectedNavItem action="manage" subject="ShiftAssignment">
+                      <PopoverNavItem onNavigate={handleNavigation}
+                        path="/workforce/roster"
+                        label={t("nav.roster", "Roster")}
+                        isActive={currentPath === "/workforce/roster"}
+                      />
+                    </ProtectedNavItem>
+                    <ProtectedNavItem action="manage" subject="Onboarding">
+                      <PopoverNavItem onNavigate={handleNavigation}
+                        path="/workforce/onboarding"
+                        label={t("nav.onboarding", "Onboarding")}
+                        isActive={currentPath === "/workforce/onboarding"}
+                      />
+                    </ProtectedNavItem>
+                    <ProtectedNavItem action="manage" subject="Separation">
+                      <PopoverNavItem onNavigate={handleNavigation}
+                        path="/workforce/separations"
+                        label={t("nav.separations", "Separations")}
+                        isActive={currentPath.startsWith("/workforce/separations")}
+                      />
+                    </ProtectedNavItem>
                   </CollapsedSectionPopover>
                 </div>
               ) : (
@@ -1067,6 +1095,50 @@ const Sidebar = ({
                           onClick={(e) => handleNavigation("/workforce/salary-slips", e)}
                         >
                           {renderText(t("nav.salarySlips", "Salary Slips"))}
+                        </Button>
+                      </ProtectedNavItem>
+                      <ProtectedNavItem action="manage" subject="Shift">
+                        <Button
+                          variant="ghost"
+                          className={getSubItemClassName(
+                            currentPath === "/workforce/shifts",
+                          )}
+                          onClick={(e) => handleNavigation("/workforce/shifts", e)}
+                        >
+                          {renderText(t("nav.shifts", "Shifts"))}
+                        </Button>
+                      </ProtectedNavItem>
+                      <ProtectedNavItem action="manage" subject="ShiftAssignment">
+                        <Button
+                          variant="ghost"
+                          className={getSubItemClassName(
+                            currentPath === "/workforce/roster",
+                          )}
+                          onClick={(e) => handleNavigation("/workforce/roster", e)}
+                        >
+                          {renderText(t("nav.roster", "Roster"))}
+                        </Button>
+                      </ProtectedNavItem>
+                      <ProtectedNavItem action="manage" subject="Onboarding">
+                        <Button
+                          variant="ghost"
+                          className={getSubItemClassName(
+                            currentPath === "/workforce/onboarding",
+                          )}
+                          onClick={(e) => handleNavigation("/workforce/onboarding", e)}
+                        >
+                          {renderText(t("nav.onboarding", "Onboarding"))}
+                        </Button>
+                      </ProtectedNavItem>
+                      <ProtectedNavItem action="manage" subject="Separation">
+                        <Button
+                          variant="ghost"
+                          className={getSubItemClassName(
+                            currentPath.startsWith("/workforce/separations"),
+                          )}
+                          onClick={(e) => handleNavigation("/workforce/separations", e)}
+                        >
+                          {renderText(t("nav.separations", "Separations"))}
                         </Button>
                       </ProtectedNavItem>
                     </>

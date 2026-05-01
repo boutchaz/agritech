@@ -7551,7 +7551,7 @@ ON CONFLICT (name) DO UPDATE SET
 DO $perms$
 DECLARE
 -- BEGIN GENERATED PERMISSION RESOURCES (do not edit by hand)
-  -- 83 resources × 5 actions = 415 permission rows
+  -- 98 resources × 5 actions = 490 permission rows
   v_resources TEXT[] := ARRAY[
     'users','organizations','roles','subscriptions',
     'farms','parcels','warehouses','infrastructure',
@@ -7573,7 +7573,11 @@ DECLARE
     'api','hr_compliance','leave_types','leave_allocations',
     'leave_applications','holidays','salary_structures','salary_slips',
     'payroll_runs','worker_documents','shifts','shift_assignments',
-    'shift_requests','onboarding','separations'
+    'shift_requests','onboarding','separations','expense_claims',
+    'expense_categories','job_openings','job_applicants','interviews',
+    'appraisal_cycles','appraisals','performance_feedback','seasonal_campaigns',
+    'worker_qualifications','safety_incidents','worker_transport','grievances',
+    'training_programs','training_enrollments'
   ];
 -- END GENERATED PERMISSION RESOURCES
   v_actions TEXT[] := ARRAY['read','create','update','delete','manage'];
@@ -19187,3 +19191,557 @@ DROP TRIGGER IF EXISTS update_separations_updated_at ON separations;
 CREATE TRIGGER update_separations_updated_at
   BEFORE UPDATE ON separations
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- =====================================================================
+-- HR Module — Phase 3: Administrative HR
+-- =====================================================================
+
+-- Expense Claim Categories
+CREATE TABLE IF NOT EXISTS expense_categories (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  description TEXT,
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(organization_id, name)
+);
+CREATE INDEX IF NOT EXISTS idx_expense_categories_org ON expense_categories(organization_id);
+ALTER TABLE expense_categories ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_access_expense_categories" ON expense_categories;
+CREATE POLICY "org_access_expense_categories" ON expense_categories FOR ALL
+  USING (is_organization_member(organization_id))
+  WITH CHECK (is_organization_member(organization_id));
+
+-- Expense Claims
+CREATE TABLE IF NOT EXISTS expense_claims (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  worker_id UUID NOT NULL REFERENCES workers(id) ON DELETE CASCADE,
+  farm_id UUID REFERENCES farms(id) ON DELETE SET NULL,
+
+  title TEXT NOT NULL,
+  description TEXT,
+  expense_date DATE NOT NULL,
+  items JSONB NOT NULL DEFAULT '[]'::jsonb,
+  total_amount NUMERIC NOT NULL DEFAULT 0,
+  total_tax NUMERIC NOT NULL DEFAULT 0,
+  grand_total NUMERIC NOT NULL DEFAULT 0,
+
+  advance_id UUID REFERENCES payment_advances(id) ON DELETE SET NULL,
+  advance_amount_allocated NUMERIC NOT NULL DEFAULT 0,
+
+  status TEXT NOT NULL DEFAULT 'pending'
+    CHECK (status IN ('pending', 'approved', 'partially_approved', 'rejected', 'paid', 'cancelled')),
+  approved_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  approved_at TIMESTAMPTZ,
+  rejection_reason TEXT,
+  approval_history JSONB NOT NULL DEFAULT '[]'::jsonb,
+
+  journal_entry_id UUID,
+  cost_center JSONB,
+
+  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_expense_claims_org ON expense_claims(organization_id);
+CREATE INDEX IF NOT EXISTS idx_expense_claims_worker ON expense_claims(worker_id);
+CREATE INDEX IF NOT EXISTS idx_expense_claims_status ON expense_claims(organization_id, status);
+
+ALTER TABLE expense_claims ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_access_expense_claims" ON expense_claims;
+CREATE POLICY "org_access_expense_claims" ON expense_claims FOR ALL
+  USING (is_organization_member(organization_id))
+  WITH CHECK (is_organization_member(organization_id));
+DROP POLICY IF EXISTS "self_read_expense_claims" ON expense_claims;
+CREATE POLICY "self_read_expense_claims" ON expense_claims FOR SELECT USING (
+  worker_id IN (SELECT id FROM workers WHERE user_id = auth.uid())
+);
+DROP TRIGGER IF EXISTS update_expense_claims_updated_at ON expense_claims;
+CREATE TRIGGER update_expense_claims_updated_at
+  BEFORE UPDATE ON expense_claims
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Recruitment: Job Openings
+CREATE TABLE IF NOT EXISTS job_openings (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  farm_id UUID REFERENCES farms(id) ON DELETE SET NULL,
+
+  title TEXT NOT NULL,
+  description TEXT NOT NULL,
+  designation TEXT,
+  department TEXT,
+  employment_type TEXT
+    CHECK (employment_type IS NULL OR employment_type IN ('full_time', 'part_time', 'contract', 'seasonal')),
+  worker_type worker_type,
+
+  vacancies INTEGER NOT NULL DEFAULT 1 CHECK (vacancies >= 1),
+  salary_range_min NUMERIC,
+  salary_range_max NUMERIC,
+  currency TEXT NOT NULL DEFAULT 'MAD',
+
+  publish_date DATE,
+  closing_date DATE,
+  status TEXT NOT NULL DEFAULT 'draft'
+    CHECK (status IN ('draft', 'open', 'on_hold', 'closed', 'cancelled')),
+  is_published BOOLEAN NOT NULL DEFAULT false,
+  application_count INTEGER NOT NULL DEFAULT 0,
+
+  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_job_openings_org_status ON job_openings(organization_id, status);
+
+ALTER TABLE job_openings ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_access_job_openings" ON job_openings;
+CREATE POLICY "org_access_job_openings" ON job_openings FOR ALL
+  USING (is_organization_member(organization_id))
+  WITH CHECK (is_organization_member(organization_id));
+DROP TRIGGER IF EXISTS update_job_openings_updated_at ON job_openings;
+CREATE TRIGGER update_job_openings_updated_at
+  BEFORE UPDATE ON job_openings
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Recruitment: Job Applicants
+CREATE TABLE IF NOT EXISTS job_applicants (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  job_opening_id UUID NOT NULL REFERENCES job_openings(id) ON DELETE CASCADE,
+
+  first_name TEXT NOT NULL,
+  last_name TEXT NOT NULL,
+  email TEXT,
+  phone TEXT,
+  cin TEXT,
+  resume_url TEXT,
+  cover_letter_url TEXT,
+
+  source TEXT NOT NULL DEFAULT 'direct'
+    CHECK (source IN ('direct', 'referral', 'website', 'agency', 'other')),
+  referred_by_worker_id UUID REFERENCES workers(id) ON DELETE SET NULL,
+
+  status TEXT NOT NULL DEFAULT 'applied'
+    CHECK (status IN ('applied', 'screening', 'interview_scheduled', 'interviewed', 'offered', 'hired', 'rejected', 'withdrawn')),
+  rating INTEGER CHECK (rating IS NULL OR (rating BETWEEN 1 AND 5)),
+  notes TEXT,
+  tags TEXT[],
+
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_job_applicants_opening ON job_applicants(job_opening_id);
+CREATE INDEX IF NOT EXISTS idx_job_applicants_status ON job_applicants(organization_id, status);
+
+ALTER TABLE job_applicants ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_access_job_applicants" ON job_applicants;
+CREATE POLICY "org_access_job_applicants" ON job_applicants FOR ALL
+  USING (is_organization_member(organization_id))
+  WITH CHECK (is_organization_member(organization_id));
+DROP TRIGGER IF EXISTS update_job_applicants_updated_at ON job_applicants;
+CREATE TRIGGER update_job_applicants_updated_at
+  BEFORE UPDATE ON job_applicants
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Recruitment: Interviews
+CREATE TABLE IF NOT EXISTS interviews (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  applicant_id UUID NOT NULL REFERENCES job_applicants(id) ON DELETE CASCADE,
+  job_opening_id UUID NOT NULL REFERENCES job_openings(id) ON DELETE CASCADE,
+
+  round INTEGER NOT NULL DEFAULT 1,
+  interview_type TEXT NOT NULL DEFAULT 'in_person'
+    CHECK (interview_type IN ('phone', 'video', 'in_person')),
+  scheduled_at TIMESTAMPTZ NOT NULL,
+  duration_minutes INTEGER NOT NULL DEFAULT 60,
+  location TEXT,
+
+  interviewer_ids UUID[] NOT NULL DEFAULT ARRAY[]::UUID[],
+  feedback JSONB NOT NULL DEFAULT '[]'::jsonb,
+  average_rating NUMERIC,
+
+  status TEXT NOT NULL DEFAULT 'scheduled'
+    CHECK (status IN ('scheduled', 'completed', 'cancelled', 'no_show')),
+
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_interviews_applicant ON interviews(applicant_id);
+ALTER TABLE interviews ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_access_interviews" ON interviews;
+CREATE POLICY "org_access_interviews" ON interviews FOR ALL
+  USING (is_organization_member(organization_id))
+  WITH CHECK (is_organization_member(organization_id));
+
+-- Performance: Appraisal Cycles
+CREATE TABLE IF NOT EXISTS appraisal_cycles (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  description TEXT,
+  start_date DATE NOT NULL,
+  end_date DATE NOT NULL,
+  self_assessment_deadline DATE,
+  manager_assessment_deadline DATE,
+  status TEXT NOT NULL DEFAULT 'draft'
+    CHECK (status IN ('draft', 'self_assessment', 'manager_review', 'calibration', 'completed')),
+  applicable_worker_types TEXT[] NOT NULL DEFAULT ARRAY['fixed_salary'],
+  applicable_farm_ids UUID[],
+  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CHECK (end_date >= start_date)
+);
+ALTER TABLE appraisal_cycles ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_access_appraisal_cycles" ON appraisal_cycles;
+CREATE POLICY "org_access_appraisal_cycles" ON appraisal_cycles FOR ALL
+  USING (is_organization_member(organization_id))
+  WITH CHECK (is_organization_member(organization_id));
+DROP TRIGGER IF EXISTS update_appraisal_cycles_updated_at ON appraisal_cycles;
+CREATE TRIGGER update_appraisal_cycles_updated_at
+  BEFORE UPDATE ON appraisal_cycles
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Performance: Appraisals
+CREATE TABLE IF NOT EXISTS appraisals (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  worker_id UUID NOT NULL REFERENCES workers(id) ON DELETE CASCADE,
+  cycle_id UUID NOT NULL REFERENCES appraisal_cycles(id) ON DELETE CASCADE,
+
+  self_rating NUMERIC,
+  self_reflections TEXT,
+
+  manager_id UUID REFERENCES workers(id) ON DELETE SET NULL,
+  manager_rating NUMERIC,
+  manager_feedback TEXT,
+
+  kra_scores JSONB NOT NULL DEFAULT '[]'::jsonb,
+  goals JSONB NOT NULL DEFAULT '[]'::jsonb,
+
+  final_score NUMERIC,
+  final_feedback TEXT,
+  status TEXT NOT NULL DEFAULT 'pending'
+    CHECK (status IN ('pending', 'self_assessment', 'manager_review', 'completed')),
+
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(worker_id, cycle_id)
+);
+CREATE INDEX IF NOT EXISTS idx_appraisals_cycle ON appraisals(cycle_id);
+ALTER TABLE appraisals ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_access_appraisals" ON appraisals;
+CREATE POLICY "org_access_appraisals" ON appraisals FOR ALL
+  USING (is_organization_member(organization_id))
+  WITH CHECK (is_organization_member(organization_id));
+DROP POLICY IF EXISTS "self_read_appraisals" ON appraisals;
+CREATE POLICY "self_read_appraisals" ON appraisals FOR SELECT USING (
+  worker_id IN (SELECT id FROM workers WHERE user_id = auth.uid())
+);
+DROP TRIGGER IF EXISTS update_appraisals_updated_at ON appraisals;
+CREATE TRIGGER update_appraisals_updated_at
+  BEFORE UPDATE ON appraisals
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Performance: Continuous Feedback
+CREATE TABLE IF NOT EXISTS performance_feedback (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  worker_id UUID NOT NULL REFERENCES workers(id) ON DELETE CASCADE,
+  reviewer_id UUID NOT NULL REFERENCES workers(id) ON DELETE CASCADE,
+  feedback_type TEXT NOT NULL CHECK (feedback_type IN ('peer', 'manager', 'subordinate', 'external')),
+  review_period TEXT,
+  rating INTEGER CHECK (rating IS NULL OR (rating BETWEEN 1 AND 5)),
+  strengths TEXT,
+  improvements TEXT,
+  notes TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_perf_feedback_worker ON performance_feedback(worker_id);
+ALTER TABLE performance_feedback ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_access_perf_feedback" ON performance_feedback;
+CREATE POLICY "org_access_perf_feedback" ON performance_feedback FOR ALL
+  USING (is_organization_member(organization_id))
+  WITH CHECK (is_organization_member(organization_id));
+
+-- =====================================================================
+-- HR Module — Phase 4: Agricultural Differentiators
+-- =====================================================================
+
+-- Seasonal Campaigns
+CREATE TABLE IF NOT EXISTS seasonal_campaigns (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  farm_id UUID NOT NULL REFERENCES farms(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  season_type TEXT NOT NULL CHECK (season_type IN ('planting', 'harvest', 'pruning', 'treatment', 'other')),
+  crop_type TEXT,
+  start_date DATE NOT NULL,
+  end_date DATE NOT NULL,
+  target_worker_count INTEGER,
+  estimated_labor_budget NUMERIC,
+  actual_labor_cost NUMERIC NOT NULL DEFAULT 0,
+  status TEXT NOT NULL DEFAULT 'planning'
+    CHECK (status IN ('planning', 'recruiting', 'active', 'completed', 'cancelled')),
+  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CHECK (end_date >= start_date)
+);
+CREATE INDEX IF NOT EXISTS idx_seasonal_campaigns_org ON seasonal_campaigns(organization_id);
+CREATE INDEX IF NOT EXISTS idx_seasonal_campaigns_status ON seasonal_campaigns(organization_id, status);
+ALTER TABLE seasonal_campaigns ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_access_seasonal_campaigns" ON seasonal_campaigns;
+CREATE POLICY "org_access_seasonal_campaigns" ON seasonal_campaigns FOR ALL
+  USING (is_organization_member(organization_id))
+  WITH CHECK (is_organization_member(organization_id));
+DROP TRIGGER IF EXISTS update_seasonal_campaigns_updated_at ON seasonal_campaigns;
+CREATE TRIGGER update_seasonal_campaigns_updated_at
+  BEFORE UPDATE ON seasonal_campaigns
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Worker Qualifications (training matrix)
+CREATE TABLE IF NOT EXISTS worker_qualifications (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  worker_id UUID NOT NULL REFERENCES workers(id) ON DELETE CASCADE,
+  qualification_type TEXT NOT NULL CHECK (qualification_type IN (
+    'tractor_operation', 'pesticide_handling', 'first_aid', 'forklift',
+    'irrigation_system', 'pruning', 'harvesting_technique', 'food_safety',
+    'fire_safety', 'electrical', 'other'
+  )),
+  qualification_name TEXT NOT NULL,
+  issued_date DATE NOT NULL,
+  expiry_date DATE,
+  issuing_authority TEXT,
+  certificate_url TEXT,
+  is_valid BOOLEAN NOT NULL DEFAULT true,
+  verified_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  verified_at TIMESTAMPTZ,
+  notes TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(worker_id, qualification_type)
+);
+CREATE INDEX IF NOT EXISTS idx_worker_qualifications_org ON worker_qualifications(organization_id);
+CREATE INDEX IF NOT EXISTS idx_worker_qualifications_expiry ON worker_qualifications(expiry_date) WHERE expiry_date IS NOT NULL;
+ALTER TABLE worker_qualifications ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_access_worker_qualifications" ON worker_qualifications;
+CREATE POLICY "org_access_worker_qualifications" ON worker_qualifications FOR ALL
+  USING (is_organization_member(organization_id))
+  WITH CHECK (is_organization_member(organization_id));
+DROP TRIGGER IF EXISTS update_worker_qualifications_updated_at ON worker_qualifications;
+CREATE TRIGGER update_worker_qualifications_updated_at
+  BEFORE UPDATE ON worker_qualifications
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Safety Incidents
+CREATE TABLE IF NOT EXISTS safety_incidents (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  farm_id UUID NOT NULL REFERENCES farms(id) ON DELETE CASCADE,
+  parcel_id UUID REFERENCES parcels(id) ON DELETE SET NULL,
+  incident_date TIMESTAMPTZ NOT NULL,
+  incident_type TEXT NOT NULL CHECK (incident_type IN (
+    'injury', 'near_miss', 'chemical_exposure', 'equipment_damage', 'fire', 'environmental', 'other'
+  )),
+  severity TEXT NOT NULL CHECK (severity IN ('minor', 'moderate', 'serious', 'fatal')),
+  worker_ids UUID[] NOT NULL DEFAULT ARRAY[]::UUID[],
+  supervisor_id UUID REFERENCES workers(id) ON DELETE SET NULL,
+  description TEXT NOT NULL,
+  location_description TEXT,
+  root_cause TEXT,
+  corrective_actions JSONB NOT NULL DEFAULT '[]'::jsonb,
+  preventive_measures TEXT,
+  reported_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  reported_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  cnss_declaration BOOLEAN NOT NULL DEFAULT false,
+  cnss_declaration_date DATE,
+  cnss_declaration_reference TEXT,
+  status TEXT NOT NULL DEFAULT 'reported'
+    CHECK (status IN ('reported', 'investigating', 'resolved', 'closed')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_safety_incidents_org_date ON safety_incidents(organization_id, incident_date DESC);
+ALTER TABLE safety_incidents ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_access_safety_incidents" ON safety_incidents;
+CREATE POLICY "org_access_safety_incidents" ON safety_incidents FOR ALL
+  USING (is_organization_member(organization_id))
+  WITH CHECK (is_organization_member(organization_id));
+DROP TRIGGER IF EXISTS update_safety_incidents_updated_at ON safety_incidents;
+CREATE TRIGGER update_safety_incidents_updated_at
+  BEFORE UPDATE ON safety_incidents
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Worker Transport
+CREATE TABLE IF NOT EXISTS worker_transport (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  farm_id UUID NOT NULL REFERENCES farms(id) ON DELETE CASCADE,
+  date DATE NOT NULL,
+  vehicle_id TEXT,
+  driver_worker_id UUID REFERENCES workers(id) ON DELETE SET NULL,
+  pickup_location TEXT NOT NULL,
+  pickup_time TIME NOT NULL,
+  destination TEXT NOT NULL,
+  worker_ids UUID[] NOT NULL DEFAULT ARRAY[]::UUID[],
+  capacity INTEGER,
+  actual_count INTEGER,
+  notes TEXT,
+  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_worker_transport_org_date ON worker_transport(organization_id, date DESC);
+ALTER TABLE worker_transport ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_access_worker_transport" ON worker_transport;
+CREATE POLICY "org_access_worker_transport" ON worker_transport FOR ALL
+  USING (is_organization_member(organization_id))
+  WITH CHECK (is_organization_member(organization_id));
+
+-- =====================================================================
+-- HR Module — Phase 5: Advanced HR
+-- =====================================================================
+
+-- Grievances
+CREATE TABLE IF NOT EXISTS grievances (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  raised_by_worker_id UUID NOT NULL REFERENCES workers(id) ON DELETE CASCADE,
+  against_worker_id UUID REFERENCES workers(id) ON DELETE SET NULL,
+  against_department TEXT,
+  subject TEXT NOT NULL,
+  description TEXT NOT NULL,
+  grievance_type TEXT NOT NULL CHECK (grievance_type IN (
+    'workplace', 'colleague', 'department', 'policy', 'harassment', 'safety', 'other'
+  )),
+  priority TEXT NOT NULL DEFAULT 'medium'
+    CHECK (priority IN ('low', 'medium', 'high', 'urgent')),
+  is_anonymous BOOLEAN NOT NULL DEFAULT false,
+  resolution TEXT,
+  resolution_date DATE,
+  resolved_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  status TEXT NOT NULL DEFAULT 'submitted'
+    CHECK (status IN ('submitted', 'acknowledged', 'investigating', 'resolved', 'escalated', 'closed')),
+  attachments TEXT[],
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_grievances_org_status ON grievances(organization_id, status);
+ALTER TABLE grievances ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_access_grievances" ON grievances;
+CREATE POLICY "org_access_grievances" ON grievances FOR ALL
+  USING (is_organization_member(organization_id))
+  WITH CHECK (is_organization_member(organization_id));
+DROP POLICY IF EXISTS "self_read_grievances" ON grievances;
+CREATE POLICY "self_read_grievances" ON grievances FOR SELECT USING (
+  raised_by_worker_id IN (SELECT id FROM workers WHERE user_id = auth.uid())
+);
+DROP TRIGGER IF EXISTS update_grievances_updated_at ON grievances;
+CREATE TRIGGER update_grievances_updated_at
+  BEFORE UPDATE ON grievances
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Training Programs
+CREATE TABLE IF NOT EXISTS training_programs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  description TEXT,
+  training_type TEXT
+    CHECK (training_type IS NULL OR training_type IN ('safety', 'technical', 'certification', 'onboarding', 'other')),
+  provider TEXT,
+  duration_hours NUMERIC,
+  cost_per_participant NUMERIC,
+  is_mandatory BOOLEAN NOT NULL DEFAULT false,
+  recurrence TEXT
+    CHECK (recurrence IS NULL OR recurrence IN ('annual', 'biannual', 'one_time')),
+  applicable_worker_types TEXT[],
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ALTER TABLE training_programs ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_access_training_programs" ON training_programs;
+CREATE POLICY "org_access_training_programs" ON training_programs FOR ALL
+  USING (is_organization_member(organization_id))
+  WITH CHECK (is_organization_member(organization_id));
+DROP TRIGGER IF EXISTS update_training_programs_updated_at ON training_programs;
+CREATE TRIGGER update_training_programs_updated_at
+  BEFORE UPDATE ON training_programs
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Training Enrollments
+CREATE TABLE IF NOT EXISTS training_enrollments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  program_id UUID NOT NULL REFERENCES training_programs(id) ON DELETE CASCADE,
+  worker_id UUID NOT NULL REFERENCES workers(id) ON DELETE CASCADE,
+  enrolled_date DATE NOT NULL,
+  completion_date DATE,
+  status TEXT NOT NULL DEFAULT 'enrolled'
+    CHECK (status IN ('enrolled', 'in_progress', 'completed', 'failed', 'cancelled')),
+  score NUMERIC,
+  certificate_url TEXT,
+  feedback TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(program_id, worker_id)
+);
+CREATE INDEX IF NOT EXISTS idx_training_enrollments_worker ON training_enrollments(worker_id);
+ALTER TABLE training_enrollments ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_access_training_enrollments" ON training_enrollments;
+CREATE POLICY "org_access_training_enrollments" ON training_enrollments FOR ALL
+  USING (is_organization_member(organization_id))
+  WITH CHECK (is_organization_member(organization_id));
+
+-- =====================================================================
+-- HR Module — Analytics Views
+-- =====================================================================
+
+DROP VIEW IF EXISTS workforce_summary CASCADE;
+CREATE VIEW workforce_summary WITH (security_invoker = true) AS
+SELECT
+  organization_id,
+  farm_id,
+  COUNT(*) FILTER (WHERE worker_type = 'fixed_salary' AND is_active) AS fixed_salary_count,
+  COUNT(*) FILTER (WHERE worker_type = 'daily_worker' AND is_active) AS daily_worker_count,
+  COUNT(*) FILTER (WHERE worker_type = 'metayage' AND is_active) AS metayage_count,
+  COUNT(*) FILTER (WHERE gender = 'female' AND is_active) AS female_count,
+  COUNT(*) FILTER (WHERE is_cnss_declared AND is_active) AS cnss_covered_count,
+  AVG(daily_rate) FILTER (WHERE worker_type = 'daily_worker') AS avg_daily_rate,
+  AVG(monthly_salary) FILTER (WHERE worker_type = 'fixed_salary') AS avg_monthly_salary
+FROM workers
+WHERE deleted_at IS NULL
+GROUP BY organization_id, farm_id;
+
+CREATE OR REPLACE VIEW leave_balance_summary WITH (security_invoker = true) AS
+SELECT
+  la.organization_id,
+  la.worker_id,
+  w.first_name,
+  w.last_name,
+  lt.name AS leave_type,
+  la.total_days,
+  la.used_days,
+  la.remaining_days,
+  la.period_start,
+  la.period_end
+FROM leave_allocations la
+JOIN workers w ON w.id = la.worker_id
+JOIN leave_types lt ON lt.id = la.leave_type_id
+WHERE la.period_end >= CURRENT_DATE;
+
+CREATE OR REPLACE VIEW payroll_cost_summary WITH (security_invoker = true) AS
+SELECT
+  organization_id,
+  farm_id,
+  DATE_TRUNC('month', pay_period_start) AS month,
+  COUNT(DISTINCT worker_id) AS workers_paid,
+  SUM(gross_pay) AS total_gross,
+  SUM(total_deductions) AS total_deductions,
+  SUM(net_pay) AS total_net
+FROM salary_slips
+WHERE status != 'cancelled'
+GROUP BY organization_id, farm_id, DATE_TRUNC('month', pay_period_start);

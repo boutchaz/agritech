@@ -33,6 +33,7 @@ export type Subject =
   // HR subjects
   | 'HrCompliance' | 'LeaveType' | 'LeaveAllocation' | 'LeaveApplication' | 'Holiday'
   | 'SalaryStructure' | 'SalarySlip' | 'PayrollRun' | 'WorkerDocument'
+  | 'Shift' | 'ShiftAssignment' | 'ShiftRequest' | 'Onboarding' | 'Separation'
   | 'all';
 
 // Define ability type
