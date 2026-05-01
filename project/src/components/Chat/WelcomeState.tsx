@@ -16,7 +16,7 @@ export function WelcomeState({ onSend, disabled }: WelcomeStateProps) {
     <div className="flex flex-col items-center justify-center py-8 space-y-6">
       <Bot className="w-12 h-12 opacity-50" />
       <p className="text-muted-foreground text-center">
-        {t('chat.welcome', "Hello! I'm your AgriTech assistant. How can I help you today?")}
+        {t('chat.welcome', "Hello! I'm your AgroGina assistant. How can I help you today?")}
       </p>
       <div className="grid grid-cols-2 gap-2 w-full max-w-md">
         {SUGGESTION_CHIPS.map((chip) => (

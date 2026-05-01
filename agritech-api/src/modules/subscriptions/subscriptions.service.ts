@@ -8,7 +8,6 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Cron } from '@nestjs/schedule';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { createHmac, timingSafeEqual } from 'crypto';
 
 import { CheckSubscriptionDto } from './dto/check-subscription.dto';
@@ -44,6 +43,8 @@ import {
   QuoteBreakdown,
   SubscriptionPricingService,
 } from './subscription-pricing.service';
+import { PolarCheckoutService } from './polar-checkout.service';
+import { DatabaseService } from '../database/database.service';
 
 export interface UsageCounts {
   farms_count: number;
@@ -101,7 +102,6 @@ export interface SubscriptionRecord {
 
 @Injectable()
 export class SubscriptionsService {
-  private readonly supabaseAdmin: SupabaseClient;
   private readonly logger = new Logger(SubscriptionsService.name);
 
   /**
@@ -111,24 +111,10 @@ export class SubscriptionsService {
 
   constructor(
     private readonly configService: ConfigService,
+    private readonly databaseService: DatabaseService,
     private readonly pricingService: SubscriptionPricingService,
-  ) {
-    const supabaseUrl = this.configService.get<string>('SUPABASE_URL');
-    const supabaseServiceKey = this.configService.get<string>(
-      'SUPABASE_SERVICE_ROLE_KEY',
-    );
-
-    if (!supabaseUrl || !supabaseServiceKey) {
-      throw new Error('Missing Supabase configuration');
-    }
-
-    this.supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    });
-  }
+    private readonly polarCheckout: PolarCheckoutService,
+  ) {}
 
   async getSubscriptionCatalog() {
     const formulas = Object.values(SubscriptionFormula).map((formula) => {
@@ -182,7 +168,7 @@ export class SubscriptionsService {
   ): Promise<ModularQuoteBreakdown> {
     const selectedModules = this.normalizeSelectedModuleIds(dto.selectedModules);
 
-    return this.pricingService.createModularQuote({
+    return this.pricingService.createModularQuoteAsync({
       selectedModules,
       contractedHectares: dto.contractedHectares,
       billingCycle: dto.billingCycle,
@@ -204,40 +190,18 @@ export class SubscriptionsService {
     if (selectedModules.length > 0) {
       const billingCycle = normalizeBillingCycle(checkoutDto.billingInterval);
       const contractedHectares = Math.max(checkoutDto.contractedHectares || 1, 1);
-      const quote = this.pricingService.createModularQuote({
+      const quote = await this.pricingService.createModularQuoteAsync({
         selectedModules,
         contractedHectares,
         billingCycle,
         discountPercent: checkoutDto.discountPercent,
       });
-      const checkoutBaseUrl = this.configService.get<string>('POLAR_CHECKOUT_URL');
-      if (!checkoutBaseUrl) {
-        throw new BadRequestException('POLAR_CHECKOUT_URL is not configured');
-      }
 
-      const productId = this.getModularCheckoutProductId(billingCycle);
+      const productId = await this.polarCheckout.resolveModularProductId(billingCycle);
       if (!productId) {
         throw new BadRequestException(
-          `Polar product ID is not configured for modular pricing (${billingCycle})`,
+          `No Polar product found for modular pricing (${billingCycle}). Sync products from admin first, or set POLAR_MODULAR_${billingCycle.toUpperCase()}_PRODUCT_ID env var.`,
         );
-      }
-
-      const frontendUrl = this.configService.get<string>('FRONTEND_URL') || '';
-      const successUrl = frontendUrl
-        ? `${frontendUrl}/checkout-success`
-        : undefined;
-      const cancelUrl = frontendUrl
-        ? `${frontendUrl}/settings/subscription`
-        : undefined;
-
-      const checkoutUrl = new URL(checkoutBaseUrl);
-      checkoutUrl.searchParams.set('product_id', productId);
-
-      if (successUrl) {
-        checkoutUrl.searchParams.set('success_url', successUrl);
-      }
-      if (cancelUrl) {
-        checkoutUrl.searchParams.set('cancel_url', cancelUrl);
       }
 
       const fallbackFormula = this.resolveFormulaForHectares(
@@ -245,35 +209,32 @@ export class SubscriptionsService {
         contractedHectares,
       );
 
-      checkoutUrl.searchParams.set('metadata[organization_id]', organizationId);
-      checkoutUrl.searchParams.set('metadata[formula]', fallbackFormula);
-      checkoutUrl.searchParams.set('metadata[billing_cycle]', billingCycle);
-      checkoutUrl.searchParams.set(
-        'metadata[contracted_hectares]',
-        String(contractedHectares),
-      );
-      checkoutUrl.searchParams.set(
-        'metadata[selected_modules]',
-        JSON.stringify(selectedModules),
-      );
-      checkoutUrl.searchParams.set(
-        'metadata[quote_amount_ht]',
-        String(quote.cycleAmountHt),
-      );
-      checkoutUrl.searchParams.set(
-        'metadata[quote_amount_ttc]',
-        String(quote.cycleAmountTtc),
-      );
-      checkoutUrl.searchParams.set(
-        'metadata[discount_percent]',
-        String(quote.discountPercent),
-      );
-      checkoutUrl.searchParams.set(
-        'metadata[size_multiplier]',
-        String(quote.sizeMultiplier),
+      const frontendUrl = this.configService.get<string>('FRONTEND_URL') || '';
+      const successUrl = frontendUrl
+        ? `${frontendUrl}/checkout-success`
+        : undefined;
+
+      const metadata: Record<string, string> = {
+        organization_id: organizationId,
+        formula: fallbackFormula,
+        billing_cycle: billingCycle,
+        contracted_hectares: String(contractedHectares),
+        selected_modules: JSON.stringify(selectedModules),
+        quote_amount_ht: String(quote.cycleAmountHt),
+        quote_amount_ttc: String(quote.cycleAmountTtc),
+        discount_percent: String(quote.discountPercent),
+        size_multiplier: String(quote.sizeMultiplier),
+      };
+
+      const dynamicPriceCents = Math.round(quote.cycleAmountTtc * 100);
+      const checkoutResult = await this.createPolarCheckoutUrl(
+        productId,
+        successUrl,
+        metadata,
+        dynamicPriceCents,
       );
 
-      const { data: existingSubscription } = await this.supabaseAdmin
+      const { data: existingSubscription } = await this.databaseService.getAdminClient()
         .from('subscriptions')
         .select('id, current_period_end')
         .eq('organization_id', organizationId)
@@ -309,13 +270,13 @@ export class SubscriptionsService {
       };
 
       if (existingSubscription?.id) {
-        await this.supabaseAdmin
+        await this.databaseService.getAdminClient()
           .from('subscriptions')
           .update(pendingPayload)
           .eq('id', existingSubscription.id);
       } else {
         const legacyPlan = mapFormulaToLegacyPlanType(fallbackFormula);
-        await this.supabaseAdmin.from('subscriptions').insert({
+        await this.databaseService.getAdminClient().from('subscriptions').insert({
           organization_id: organizationId,
           status: SubscriptionLifecycleStatus.PENDING_RENEWAL,
           formula: fallbackFormula,
@@ -338,7 +299,7 @@ export class SubscriptionsService {
       }
 
       return {
-        checkoutUrl: checkoutUrl.toString(),
+        checkoutUrl: checkoutResult,
         formula: fallbackFormula,
         billingCycle,
         quoteSnapshot: quote,
@@ -370,15 +331,10 @@ export class SubscriptionsService {
       billingCycle,
     });
 
-    const checkoutBaseUrl = this.configService.get<string>('POLAR_CHECKOUT_URL');
-    if (!checkoutBaseUrl) {
-      throw new BadRequestException('POLAR_CHECKOUT_URL is not configured');
-    }
-
-    const productId = this.getCheckoutProductId(resolvedFormula, billingCycle);
+    const productId = await this.polarCheckout.resolveProductId(resolvedFormula, billingCycle);
     if (!productId) {
       throw new BadRequestException(
-        `Polar product ID is not configured for ${resolvedFormula} (${billingCycle})`,
+        `No Polar product found for ${resolvedFormula} (${billingCycle}). Sync products from admin first, or set POLAR_${resolvedFormula.toUpperCase()}_${billingCycle.toUpperCase()}_PRODUCT_ID env var.`,
       );
     }
 
@@ -386,29 +342,23 @@ export class SubscriptionsService {
     const successUrl = frontendUrl
       ? `${frontendUrl}/checkout-success`
       : undefined;
-    const cancelUrl = frontendUrl
-      ? `${frontendUrl}/settings/subscription`
-      : undefined;
 
-    const checkoutUrl = new URL(checkoutBaseUrl);
-    checkoutUrl.searchParams.set('product_id', productId);
+    const metadata: Record<string, string> = {
+      organization_id: organizationId,
+      formula: resolvedFormula,
+      billing_cycle: billingCycle,
+      contracted_hectares: String(contractedHectares),
+    };
 
-    if (successUrl) {
-      checkoutUrl.searchParams.set('success_url', successUrl);
-    }
-    if (cancelUrl) {
-      checkoutUrl.searchParams.set('cancel_url', cancelUrl);
-    }
-
-    checkoutUrl.searchParams.set('metadata[organization_id]', organizationId);
-    checkoutUrl.searchParams.set('metadata[formula]', resolvedFormula);
-    checkoutUrl.searchParams.set('metadata[billing_cycle]', billingCycle);
-    checkoutUrl.searchParams.set(
-      'metadata[contracted_hectares]',
-      String(contractedHectares),
+    const dynamicPriceCents = Math.round(quote.cycleAmountTtc * 100);
+    const checkoutResult = await this.createPolarCheckoutUrl(
+      productId,
+      successUrl,
+      metadata,
+      dynamicPriceCents,
     );
 
-    const { data: existingSubscription } = await this.supabaseAdmin
+    const { data: existingSubscription } = await this.databaseService.getAdminClient()
       .from('subscriptions')
       .select('id, current_period_end')
       .eq('organization_id', organizationId)
@@ -439,14 +389,14 @@ export class SubscriptionsService {
     };
 
     if (existingSubscription?.id) {
-      await this.supabaseAdmin
+      await this.databaseService.getAdminClient()
         .from('subscriptions')
         .update(pendingPayload)
         .eq('id', existingSubscription.id);
     } else {
       const legacyPlan = mapFormulaToLegacyPlanType(resolvedFormula);
       const legacyLimits = this.getLegacyResourceLimits(resolvedFormula);
-      await this.supabaseAdmin.from('subscriptions').insert({
+      await this.databaseService.getAdminClient().from('subscriptions').insert({
         organization_id: organizationId,
         status: SubscriptionLifecycleStatus.PENDING_RENEWAL,
         formula: resolvedFormula,
@@ -469,7 +419,7 @@ export class SubscriptionsService {
     }
 
     return {
-      checkoutUrl: checkoutUrl.toString(),
+      checkoutUrl: checkoutResult,
       formula: resolvedFormula,
       billingCycle,
       quoteSnapshot: quote,
@@ -491,7 +441,7 @@ export class SubscriptionsService {
     const formula = parsedFormula;
 
     const { data: existingSubscription, error: existingError } =
-      await this.supabaseAdmin
+      await this.databaseService.getAdminClient()
         .from('subscriptions')
         .select('*')
         .eq('organization_id', organization_id)
@@ -567,13 +517,13 @@ export class SubscriptionsService {
     };
 
     const upsertResult = existingSubscription?.id
-      ? await this.supabaseAdmin
+      ? await this.databaseService.getAdminClient()
           .from('subscriptions')
           .update(payload)
           .eq('id', existingSubscription.id)
           .select()
           .single()
-      : await this.supabaseAdmin
+      : await this.databaseService.getAdminClient()
           .from('subscriptions')
           .insert(payload)
           .select()
@@ -610,7 +560,7 @@ export class SubscriptionsService {
       return null;
     }
 
-    const { data: subscription, error } = await this.supabaseAdmin
+    const { data: subscription, error } = await this.databaseService.getAdminClient()
       .from('subscriptions')
       .select(
         'id, organization_id, status, plan_id, plan_type, formula, billing_interval, billing_cycle, current_period_start, current_period_end, cancel_at_period_end, max_farms, max_parcels, max_users, max_satellite_reports, contracted_hectares, included_users, selected_modules, ha_pricing_mode, discount_pct, size_multiplier, contract_start_at, contract_end_at, renewal_notice_days, payment_terms_days, next_billing_at, grace_period_ends_at, suspended_at, terminated_at, pending_formula, pending_billing_cycle, pending_pricing_snapshot, migration_effective_at, amount_ht, amount_tva, amount_ttc, currency, vat_rate, price_ht_per_ha_year, last_payment_notice_at, overdue_grace_days, suspension_notice_days, export_window_days, created_at, updated_at',
@@ -735,7 +685,7 @@ export class SubscriptionsService {
   }
 
   async hasValidSubscription(organizationId: string): Promise<boolean> {
-    const { data: subscription, error } = await this.supabaseAdmin
+    const { data: subscription, error } = await this.databaseService.getAdminClient()
       .from('subscriptions')
       .select('status, current_period_end, grace_period_ends_at')
       .eq('organization_id', organizationId)
@@ -773,7 +723,7 @@ export class SubscriptionsService {
   async registerRenewalNotice(userId: string, dto: RenewalNoticeDto) {
     await this.ensureOrganizationMembership(userId, dto.organizationId);
 
-    const { data: subscription, error } = await this.supabaseAdmin
+    const { data: subscription, error } = await this.databaseService.getAdminClient()
       .from('subscriptions')
       .select('id, status')
       .eq('organization_id', dto.organizationId)
@@ -783,7 +733,7 @@ export class SubscriptionsService {
       throw new NotFoundException('Subscription not found');
     }
 
-    await this.supabaseAdmin
+    await this.databaseService.getAdminClient()
       .from('subscriptions')
       .update({
         status: SubscriptionLifecycleStatus.PENDING_RENEWAL,
@@ -806,7 +756,7 @@ export class SubscriptionsService {
   async terminateSubscription(userId: string, dto: TerminateSubscriptionDto) {
     await this.ensureOrganizationMembership(userId, dto.organizationId);
 
-    const { data: subscription, error } = await this.supabaseAdmin
+    const { data: subscription, error } = await this.databaseService.getAdminClient()
       .from('subscriptions')
       .select('id, export_window_days')
       .eq('organization_id', dto.organizationId)
@@ -821,7 +771,7 @@ export class SubscriptionsService {
     const exportDeadline = new Date(terminatedAt);
     exportDeadline.setDate(exportDeadline.getDate() + exportWindowDays);
 
-    await this.supabaseAdmin
+    await this.databaseService.getAdminClient()
       .from('subscriptions')
       .update({
         status: SubscriptionLifecycleStatus.TERMINATED,
@@ -888,7 +838,7 @@ export class SubscriptionsService {
       );
     }
 
-    const existingWebhook = await this.supabaseAdmin
+    const existingWebhook = await this.databaseService.getAdminClient()
       .from('polar_webhooks')
       .select('id')
       .eq('event_id', eventId)
@@ -904,7 +854,7 @@ export class SubscriptionsService {
       subscriptionData,
     );
 
-    await this.supabaseAdmin.from('polar_webhooks').insert({
+    await this.databaseService.getAdminClient().from('polar_webhooks').insert({
       event_id: eventId,
       event_type: eventType,
       payload: webhookPayload,
@@ -948,7 +898,7 @@ export class SubscriptionsService {
   }
 
   private async ensureOrganizationMembership(userId: string, organizationId: string) {
-    const { data: orgUser, error } = await this.supabaseAdmin
+    const { data: orgUser, error } = await this.databaseService.getAdminClient()
       .from('organization_users')
       .select('organization_id')
       .eq('user_id', userId)
@@ -962,7 +912,7 @@ export class SubscriptionsService {
   }
 
   private async hasOrganizationMembership(userId: string, organizationId: string) {
-    const { data: orgUser } = await this.supabaseAdmin
+    const { data: orgUser } = await this.databaseService.getAdminClient()
       .from('organization_users')
       .select('organization_id')
       .eq('user_id', userId)
@@ -1100,15 +1050,51 @@ export class SubscriptionsService {
     );
   }
 
-  private getModularCheckoutProductId(
-    billingCycle: BillingCycle,
-  ): string | undefined {
-    const cycleKey = billingCycle.toUpperCase();
+  /**
+   * Create a Polar checkout URL using SDK (preferred) or manual URL fallback.
+   *
+   * When `dynamicPriceCents` is provided, the checkout session overrides the
+   * catalog price with the exact amount computed from the subscription model
+   * (modules, hectares, multiplier, discount). This lets a single Polar
+   * product serve every farm-size / module combination.
+   */
+  private async createPolarCheckoutUrl(
+    productId: string,
+    successUrl: string | undefined,
+    metadata: Record<string, string>,
+    dynamicPriceCents?: number,
+  ): Promise<string> {
+    // Try SDK checkout session first (supports dynamic pricing)
+    const session = await this.polarCheckout.createCheckoutSession({
+      productId,
+      successUrl,
+      metadata,
+      dynamicPriceCents,
+    });
 
-    return (
-      this.configService.get<string>(`POLAR_MODULAR_${cycleKey}_PRODUCT_ID`) ||
-      this.configService.get<string>(`POLAR_STANDARD_${cycleKey}_PRODUCT_ID`) ||
-      this.getCheckoutProductId(SubscriptionFormula.STANDARD, billingCycle)
+    if (session) {
+      return session.checkoutUrl;
+    }
+
+    // Fallback to manual URL construction (no dynamic pricing support)
+    const frontendUrl = this.configService.get<string>('FRONTEND_URL') || '';
+    const cancelUrl = frontendUrl
+      ? `${frontendUrl}/settings/subscription`
+      : undefined;
+
+    const manualUrl = this.polarCheckout.buildManualCheckoutUrl({
+      productId,
+      successUrl,
+      cancelUrl,
+      metadata,
+    });
+
+    if (manualUrl) {
+      return manualUrl;
+    }
+
+    throw new BadRequestException(
+      'Unable to create checkout URL. Configure POLAR_ACCESS_TOKEN or POLAR_CHECKOUT_URL.',
     );
   }
 
@@ -1335,7 +1321,7 @@ export class SubscriptionsService {
           : null,
     };
 
-    const { data: polarSub, error: polarError } = await this.supabaseAdmin
+    const { data: polarSub, error: polarError } = await this.databaseService.getAdminClient()
       .from('polar_subscriptions')
       .upsert(polarUpdateData, {
         onConflict: 'polar_subscription_id',
@@ -1350,7 +1336,7 @@ export class SubscriptionsService {
       );
     }
 
-    const { data: existingSubscription } = await this.supabaseAdmin
+    const { data: existingSubscription } = await this.databaseService.getAdminClient()
       .from('subscriptions')
       .select('*')
       .eq('organization_id', organizationId)
@@ -1427,7 +1413,7 @@ export class SubscriptionsService {
 
     let mainSubscriptionResult: Record<string, unknown>;
     if (existingSubscription?.id) {
-      const { data, error } = await this.supabaseAdmin
+      const { data, error } = await this.databaseService.getAdminClient()
         .from('subscriptions')
         .update(updatePayload)
         .eq('id', existingSubscription.id)
@@ -1440,7 +1426,7 @@ export class SubscriptionsService {
         mainSubscriptionResult = data as Record<string, unknown>;
       }
     } else {
-      const { data, error } = await this.supabaseAdmin
+      const { data, error } = await this.databaseService.getAdminClient()
         .from('subscriptions')
         .insert({
           ...updatePayload,
@@ -1478,12 +1464,12 @@ export class SubscriptionsService {
   }
 
   private async getUsageCountsInternal(organizationId: string): Promise<UsageCounts> {
-    const { count: farmsCount } = await this.supabaseAdmin
+    const { count: farmsCount } = await this.databaseService.getAdminClient()
       .from('farms')
       .select('*', { count: 'exact', head: true })
       .eq('organization_id', organizationId);
 
-    const { data: parcels, count: parcelsCount } = await this.supabaseAdmin
+    const { data: parcels, count: parcelsCount } = await this.databaseService.getAdminClient()
       .from('parcels')
       .select('area', { count: 'exact' })
       .eq('organization_id', organizationId);
@@ -1493,7 +1479,7 @@ export class SubscriptionsService {
       return sum + (Number.isFinite(area) ? area : 0);
     }, 0);
 
-    const { count: usersCount } = await this.supabaseAdmin
+    const { count: usersCount } = await this.databaseService.getAdminClient()
       .from('organization_users')
       .select('*', { count: 'exact', head: true })
       .eq('organization_id', organizationId)
@@ -1515,7 +1501,7 @@ export class SubscriptionsService {
   ) {
     const normalizedFeature = featureName.trim().toLowerCase();
 
-    const { data: module, error: moduleError } = await this.supabaseAdmin
+    const { data: module, error: moduleError } = await this.databaseService.getAdminClient()
       .from('modules')
       .select('id, required_plan, is_active, is_available, is_required, slug, name')
       .or(`slug.eq.${normalizedFeature.replace(/[,.()'"]/g, '')},name.eq.${normalizedFeature.replace(/[,.()'"]/g, '')}`)
@@ -1525,7 +1511,7 @@ export class SubscriptionsService {
       return false;
     }
 
-    const { data: subscription } = await this.supabaseAdmin
+    const { data: subscription } = await this.databaseService.getAdminClient()
       .from('subscriptions')
       .select('selected_modules, formula')
       .eq('organization_id', organizationId)
@@ -1571,7 +1557,7 @@ export class SubscriptionsService {
       return true;
     }
 
-    const { data: orgModule } = await this.supabaseAdmin
+    const { data: orgModule } = await this.databaseService.getAdminClient()
       .from('organization_modules')
       .select('is_active')
       .eq('organization_id', organizationId)
@@ -1589,7 +1575,7 @@ export class SubscriptionsService {
     actorId: string;
     payload: Record<string, unknown>;
   }) {
-    await this.supabaseAdmin.from('subscription_events').insert({
+    await this.databaseService.getAdminClient().from('subscription_events').insert({
       organization_id: params.organizationId,
       subscription_id: params.subscriptionId,
       event_type: params.eventType,
@@ -1600,7 +1586,7 @@ export class SubscriptionsService {
   }
 
   private async processRenewalNotices() {
-    const { data: subscriptions } = await this.supabaseAdmin
+    const { data: subscriptions } = await this.databaseService.getAdminClient()
       .from('subscriptions')
       .select('id, organization_id, status, contract_end_at, renewal_notice_days')
       .in('status', [
@@ -1619,7 +1605,7 @@ export class SubscriptionsService {
         continue;
       }
 
-      await this.supabaseAdmin
+      await this.databaseService.getAdminClient()
         .from('subscriptions')
         .update({
           status: SubscriptionLifecycleStatus.PENDING_RENEWAL,
@@ -1644,7 +1630,7 @@ export class SubscriptionsService {
   private async processPendingMigrations() {
     const nowIso = new Date().toISOString();
 
-    const { data: subscriptions } = await this.supabaseAdmin
+    const { data: subscriptions } = await this.databaseService.getAdminClient()
       .from('subscriptions')
       .select(
         'id, organization_id, pending_formula, pending_billing_cycle, migration_effective_at, pending_pricing_snapshot',
@@ -1664,7 +1650,7 @@ export class SubscriptionsService {
       const legacyPlan = mapFormulaToLegacyPlanType(targetFormula);
       const legacyLimits = this.getLegacyResourceLimits(targetFormula);
 
-      await this.supabaseAdmin
+      await this.databaseService.getAdminClient()
         .from('subscriptions')
         .update({
           formula: targetFormula,
@@ -1703,7 +1689,7 @@ export class SubscriptionsService {
     const overdueThreshold = new Date();
     overdueThreshold.setDate(overdueThreshold.getDate() - 30);
 
-    const { data: documents } = await this.supabaseAdmin
+    const { data: documents } = await this.databaseService.getAdminClient()
       .from('billing_documents')
       .select('id, organization_id, subscription_id, due_at, status')
       .in('status', ['issued', 'overdue'])
@@ -1712,7 +1698,7 @@ export class SubscriptionsService {
 
     for (const doc of documents || []) {
       if (doc.status !== 'overdue') {
-        await this.supabaseAdmin
+        await this.databaseService.getAdminClient()
           .from('billing_documents')
           .update({ status: 'overdue', updated_at: new Date().toISOString() })
           .eq('id', doc.id);
@@ -1722,7 +1708,7 @@ export class SubscriptionsService {
         continue;
       }
 
-      await this.supabaseAdmin
+      await this.databaseService.getAdminClient()
         .from('subscriptions')
         .update({
           status: SubscriptionLifecycleStatus.PAST_DUE,
@@ -1746,7 +1732,7 @@ export class SubscriptionsService {
   }
 
   private async processSuspensions() {
-    const { data: subscriptions } = await this.supabaseAdmin
+    const { data: subscriptions } = await this.databaseService.getAdminClient()
       .from('subscriptions')
       .select('id, organization_id, last_payment_notice_at, suspension_notice_days')
       .eq('status', SubscriptionLifecycleStatus.PAST_DUE)
@@ -1762,7 +1748,7 @@ export class SubscriptionsService {
         continue;
       }
 
-      await this.supabaseAdmin
+      await this.databaseService.getAdminClient()
         .from('subscriptions')
         .update({
           status: SubscriptionLifecycleStatus.SUSPENDED,
@@ -1785,7 +1771,7 @@ export class SubscriptionsService {
   }
 
   private async processTerminationWindows() {
-    const { data: subscriptions } = await this.supabaseAdmin
+    const { data: subscriptions } = await this.databaseService.getAdminClient()
       .from('subscriptions')
       .select('id, organization_id, terminated_at, export_window_days')
       .eq('status', SubscriptionLifecycleStatus.TERMINATED)

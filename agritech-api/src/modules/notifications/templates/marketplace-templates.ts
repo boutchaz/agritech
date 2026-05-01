@@ -7,7 +7,7 @@ export const marketplaceEmailTemplates = {
     total: number;
     items: Array<{ title: string; quantity: number }>;
   }) => ({
-    subject: `Nouvelle commande #${data.orderId.slice(0, 8)} sur AgriTech Market`,
+    subject: `Nouvelle commande #${data.orderId.slice(0, 8)} sur AgroGina Market`,
     html: `
       <h1>Nouvelle commande recue !</h1>
       <p>Bonjour ${data.sellerName},</p>

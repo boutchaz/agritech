@@ -479,19 +479,19 @@ const OnboardingFlow = ({ user, onComplete }: OnboardingFlowProps) => {
                       type="text"
                       value={organizationData.name}
                       onChange={(e) => handleOrganizationNameChange(e.target.value)}
-                      placeholder="Ma Ferme AgriTech"
+                      placeholder="Ma Ferme AgroGina"
                       data-testid="onboarding-org-name"
                     />
                   </FormField>
                 </div>
                 <div>
-                  <FormField label="Identifiant URL" htmlFor="onb_org_slug" helper={`Sera utilisé dans l'URL: agritech.app/org/${organizationData.slug}`}>
+                  <FormField label="Identifiant URL" htmlFor="onb_org_slug" helper={`Sera utilisé dans l'URL: agrogina.app/org/${organizationData.slug}`}>
                     <Input
                       id="onb_org_slug"
                       type="text"
                       value={organizationData.slug}
                       onChange={(e) => setOrganizationData(prev => ({ ...prev, slug: e.target.value }))}
-                      placeholder="ma-ferme-agritech"
+                      placeholder="ma-ferme-agrogina"
                     />
                   </FormField>
                   {/* helper moved into FormField */}

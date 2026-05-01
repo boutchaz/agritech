@@ -121,7 +121,7 @@ function SetPasswordPage() {
               <Leaf className="w-8 h-8 text-white" />
             </div>
             <h1 className="text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
-              AgriTech
+              AgroGina
             </h1>
           </div>
         </div>
@@ -298,7 +298,7 @@ function SetPasswordPage() {
 
         {/* Footer */}
         <p className="text-center text-xs text-muted-foreground mt-6">
-          © 2024 AgriTech Platform. Tous droits réservés.
+          © 2024 AgroGina Platform. Tous droits réservés.
         </p>
       </div>
     </div>

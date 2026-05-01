@@ -39,6 +39,7 @@ def _gee_ts_item_to_point(item: Dict[str, Any]) -> TimeSeriesPoint:
         "max_value",
         "std_value",
         "median_value",
+        "percentile_10",
         "percentile_25",
         "percentile_75",
         "percentile_90",

@@ -66,7 +66,7 @@ export default function DashboardPage() {
                     <div className="flex items-center justify-between h-16">
                         <Link href="/" className="flex items-center space-x-2">
                             <span className="text-2xl">🌱</span>
-                            <span className="text-xl font-bold text-green-700">AgriTech Market</span>
+                            <span className="text-xl font-bold text-green-700">AgroGina Market</span>
                         </Link>
                         <div className="flex items-center space-x-4">
                             <Link href="/products" className="text-gray-700 hover:text-green-700">
@@ -76,6 +76,7 @@ export default function DashboardPage() {
                                 {user?.email}
                             </div>
                             <button
+                                type="button"
                                 onClick={handleLogout}
                                 className="flex items-center space-x-1 text-gray-700 hover:text-red-600"
                             >

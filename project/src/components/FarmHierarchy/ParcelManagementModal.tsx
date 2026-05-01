@@ -1,7 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { Edit, Leaf, MapPin, Plus, Sprout, Trash2 } from "lucide-react";
+import { Edit, Leaf, MapPin, Plus, Sparkles, Sprout, Trash2 } from "lucide-react";
 import {  useEffect, useState  } from "react";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
@@ -50,6 +50,7 @@ import {
 } from "../ui/radix-select";
 import { Textarea } from "../ui/Textarea";
 import { SectionLoader } from '@/components/ui/loader';
+import { useSupportedCrops } from '@/hooks/useAgromindSupport';
 
 
 // Parcel interface is now imported from parcelsService
@@ -150,6 +151,8 @@ const ParcelManagementModal = ({
     },
   });
 
+  const { isCropSupported, isVarietySupported, getSupportedVarieties } = useSupportedCrops();
+
   // Watch form values for dynamic updates
   const selectedCategory = watch("crop_category") as CropCategory | undefined;
   const selectedCropType = watch("crop_type");
@@ -161,10 +164,16 @@ const ParcelManagementModal = ({
     ? getCropTypesByCategory(selectedCategory)
     : [];
 
-  // Get available varieties based on crop type
-  const availableVarieties = selectedCropType
+  // Get available varieties: static list first, then referential varieties as fallback.
+  // Each item has { value, label } — value is the code stored in DB, label is displayed.
+  const staticVarietyNames = selectedCropType
     ? getVarietiesByCropType(selectedCropType)
     : [];
+  const availableVarieties: { value: string; label: string }[] = staticVarietyNames.length > 0
+    ? staticVarietyNames.map((name) => ({ value: name, label: name }))
+    : (selectedCropType
+        ? getSupportedVarieties(selectedCropType).map((v) => ({ value: v.code, label: v.nom }))
+        : []);
 
   // Get available planting systems based on category
   const availablePlantingSystems = selectedCategory
@@ -506,9 +515,10 @@ const ParcelManagementModal = ({
                           {availableCropTypes.length > 0 ? (
                             <Select
                               value={watch("crop_type") || undefined}
-                              onValueChange={(value) =>
-                                setValue("crop_type", value)
-                              }
+                              onValueChange={(value) => {
+                                setValue("crop_type", value);
+                                setValue("variety", "");
+                              }}
                             >
                               <SelectTrigger id="crop_type">
                                 <SelectValue
@@ -518,7 +528,12 @@ const ParcelManagementModal = ({
                               <SelectContent>
                                 {availableCropTypes.map((crop) => (
                                   <SelectItem key={crop} value={crop}>
-                                    {crop}
+                                    <span className="flex items-center gap-1.5">
+                                      {crop}
+                                      {isCropSupported(crop) && (
+                                        <Sparkles className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                                      )}
+                                    </span>
                                   </SelectItem>
                                 ))}
                               </SelectContent>
@@ -531,6 +546,12 @@ const ParcelManagementModal = ({
                                 "farmHierarchy.parcel.cropTypePlaceholder",
                               )}
                             />
+                          )}
+                          {isCropSupported(selectedCropType) && (
+                            <p className="flex items-center gap-1 text-[11px] text-amber-600 dark:text-amber-400 mt-1">
+                              <Sparkles className="w-3 h-3 shrink-0" />
+                              {t('farmHierarchy.parcel.agromindSupported', 'Supporté par AgromindIA')}
+                            </p>
                           )}
                         </FormField>
 
@@ -552,9 +573,14 @@ const ParcelManagementModal = ({
                                   />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  {availableVarieties.map((variety) => (
-                                    <SelectItem key={variety} value={variety}>
-                                      {variety}
+                                  {availableVarieties.map((v) => (
+                                    <SelectItem key={v.value} value={v.value}>
+                                      <span className="flex items-center gap-1.5">
+                                        {v.label}
+                                        {isVarietySupported(selectedCropType, v.value) && (
+                                          <Sparkles className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                                        )}
+                                      </span>
                                     </SelectItem>
                                   ))}
                                 </SelectContent>
@@ -644,11 +670,22 @@ const ParcelManagementModal = ({
                               />
                             </SelectTrigger>
                             <SelectContent>
-                              {availablePlantingSystems.map((system) => (
-                                <SelectItem key={system.type} value={system.type}>
-                                  {system.type} ({system.spacing})
-                                </SelectItem>
-                              ))}
+                              {availablePlantingSystems.map((system) => {
+                                const uniqueValue = `${system.type} (${system.spacing})`;
+                                return (
+                                  <SelectItem key={uniqueValue} value={uniqueValue}>
+                                    {system.type} ({system.spacing}) — {
+                                      "treesPerHectare" in system
+                                        ? `${system.treesPerHectare} arb/ha`
+                                        : "plantsPerHectare" in system
+                                          ? `${(system as { plantsPerHectare: number }).plantsPerHectare} plants/ha`
+                                          : "seedsPerHectare" in system
+                                            ? `${(system as { seedingRate: string }).seedingRate}`
+                                            : ""
+                                    }
+                                  </SelectItem>
+                                );
+                              })}
                             </SelectContent>
                           </Select>
                         </FormField>

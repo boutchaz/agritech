@@ -30,8 +30,8 @@ import {
   getVarietiesByCropType,
   type CropCategory as StaticCropCategory,
 } from '../lib/plantingSystemData';
-import { useSoilTypes, useIrrigationTypes, useCropCategories, useCropTypes, useVarieties } from '../hooks/useReferenceData';
-import type { CropCategory as CropCategoryApi, CropType, Variety } from '../lib/api/reference-data';
+import { useSoilTypes, useIrrigationTypes } from '../hooks/useReferenceData';
+import { useSupportedCrops } from '../hooks/useAgromindSupport';
 import { Button } from './ui/button';
 import { toast } from 'sonner';
 import { ButtonLoader } from '@/components/ui/loader';
@@ -147,109 +147,38 @@ const MapComponent = ({
     rootstock: ''
   });
 
-  // Fetch reference data from Strapi CMS
-  const { data: soilTypesFromApi = [] } = useSoilTypes();
-  const { data: irrigationTypesFromApi = [] } = useIrrigationTypes();
-  const { data: cropCategories = [] } = useCropCategories();
-  
-  // Find the selected category by value (e.g., "trees", "cereals", "vegetables", "other")
-  // This matches the values used in the static data
-  const selectedCategory = parcelDetails.crop_category
-    ? (cropCategories as unknown as CropCategoryApi[]).find(cat => {
-        // Match by value first (most reliable), then by name or id
-        const catValue = cat.value?.toLowerCase();
-        const parcelValue = parcelDetails.crop_category?.toLowerCase();
-        return catValue === parcelValue || 
-               cat.id === parcelDetails.crop_category ||
-               cat.name?.toLowerCase() === parcelValue ||
-               cat.name_fr?.toLowerCase() === parcelValue;
-      })
-    : undefined;
-  
-  // Get crop types from the selected category (already populated from Strapi controller)
-  const cropTypesFromCategory: CropType[] = selectedCategory?.crop_types || [];
-  
-  // Fallback: fetch crop types by category ID if not populated in category
-  const selectedCategoryId = selectedCategory?.id;
-  const { data: cropTypesFromStrapi = [] } = useCropTypes(selectedCategoryId);
-  
-  // Use crop types from category if available, otherwise from hook
-  const allCropTypesFromStrapi: CropType[] = cropTypesFromCategory.length > 0 
-    ? cropTypesFromCategory 
-    : (cropTypesFromStrapi as unknown as CropType[]);
-  
-  // Find the selected crop type by value or name (e.g., "Olivier", "Pommier")
-  const selectedCropType = parcelDetails.crop_type && allCropTypesFromStrapi.length > 0
-    ? allCropTypesFromStrapi.find(ct => {
-        // Match by value, name, or name_fr
-        const ctValue = ct.value?.toLowerCase();
-        const ctName = ct.name?.toLowerCase();
-        const ctNameFr = ct.name_fr?.toLowerCase();
-        const parcelValue = parcelDetails.crop_type?.toLowerCase();
-        return ctValue === parcelValue || 
-               ct.id === parcelDetails.crop_type ||
-               ctName === parcelValue ||
-               ctNameFr === parcelValue;
-      })
-    : undefined;
-  
-  // Get varieties from the selected crop type (already populated from Strapi controller)
-  const varietiesFromCropType: Variety[] = selectedCropType?.varieties || [];
-  
-  // Fallback: fetch varieties by crop type ID if not populated in crop type
-  const selectedCropTypeId = selectedCropType?.id;
-  const { data: varietiesFromStrapi = [] } = useVarieties(selectedCropTypeId);
-  
-  // Use varieties from crop type if available, otherwise from hook
-  const allVarietiesFromStrapi: Variety[] = varietiesFromCropType.length > 0 
-    ? varietiesFromCropType 
-    : (varietiesFromStrapi as unknown as Variety[]);
+  // Reference data from NestJS
+  const { data: soilTypes = [] } = useSoilTypes();
+  const { data: irrigationTypes = [] } = useIrrigationTypes();
+  const { isCropSupported, isVarietySupported, getSupportedVarieties } = useSupportedCrops();
 
-  const soilTypes = soilTypesFromApi;
-  const irrigationTypes = irrigationTypesFromApi;
-
-  // Static fallback categories used when CMS returns nothing
-  const STATIC_CROP_CATEGORIES = [
-    { id: 'trees', value: 'trees', name: 'Fruit trees', name_fr: 'Arbres fruitiers' },
-    { id: 'cereals', value: 'cereals', name: 'Cereals', name_fr: 'Céréales' },
-    { id: 'vegetables', value: 'vegetables', name: 'Vegetables', name_fr: 'Légumes' },
-    { id: 'legumes', value: 'legumes', name: 'Legumes', name_fr: 'Légumineuses' },
-    { id: 'fourrages', value: 'fourrages', name: 'Forage crops', name_fr: 'Cultures fourragères' },
-    { id: 'industrielles', value: 'industrielles', name: 'Industrial crops', name_fr: 'Cultures industrielles' },
-    { id: 'aromatiques', value: 'aromatiques', name: 'Aromatic plants', name_fr: 'Plantes aromatiques' },
-    { id: 'other', value: 'other', name: 'Other', name_fr: 'Autre' },
+  // Crop categories — static list is the source of truth
+  const availableCropCategories = [
+    { value: 'trees', label: t('farmHierarchy.parcel.categories.trees', 'Arbres fruitiers') },
+    { value: 'cereals', label: t('farmHierarchy.parcel.categories.cereals', 'Céréales') },
+    { value: 'vegetables', label: t('farmHierarchy.parcel.categories.vegetables', 'Légumes') },
+    { value: 'legumes', label: t('farmHierarchy.parcel.categories.legumes', 'Légumineuses') },
+    { value: 'fourrages', label: t('farmHierarchy.parcel.categories.fourrages', 'Cultures fourragères') },
+    { value: 'industrielles', label: t('farmHierarchy.parcel.categories.industrielles', 'Cultures industrielles') },
+    { value: 'aromatiques', label: t('farmHierarchy.parcel.categories.aromatiques', 'Plantes aromatiques') },
+    { value: 'other', label: t('farmHierarchy.parcel.categories.other', 'Autre') },
   ];
 
-  // Always use the static list (fully controlled) — the static list is the source of truth
-  const availableCropCategories = STATIC_CROP_CATEGORIES;
-
-  // For other static-only categories: use static list (no CMS data)
-  // For cereals/vegetables: use CMS if available, then static
-  const staticOnlyCategories = ['legumes', 'fourrages', 'industrielles', 'aromatiques'];
-  const availableCropTypes: (CropType | string)[] = parcelDetails.crop_category
-    ? parcelDetails.crop_category === 'trees'
-      ? allCropTypesFromStrapi.length > 0
-          ? allCropTypesFromStrapi
-          : getCropTypesByCategory('trees')
-      : staticOnlyCategories.includes(parcelDetails.crop_category)
-        ? getCropTypesByCategory(parcelDetails.crop_category as StaticCropCategory)
-        : allCropTypesFromStrapi.length > 0
-          ? allCropTypesFromStrapi
-          : getCropTypesByCategory(parcelDetails.crop_category as StaticCropCategory)
+  // Crop types from static data
+  const availableCropTypes: string[] = parcelDetails.crop_category
+    ? getCropTypesByCategory(parcelDetails.crop_category as StaticCropCategory)
     : [];
 
-  // Strapi varieties first, then static fallback (e.g. olive varieties from plantingSystemData)
-  const staticVarieties: string[] = parcelDetails.crop_type
+  // Varieties: static first, then referential fallback (code as value, nom as label)
+  const staticVarietyNames = parcelDetails.crop_type
     ? getVarietiesByCropType(parcelDetails.crop_type)
     : [];
-  const availableVarieties: (Variety | string)[] = parcelDetails.crop_type
-    ? allVarietiesFromStrapi.length > 0
-      ? allVarietiesFromStrapi
-      : staticVarieties
-    : [];
+  const availableVarieties: { value: string; label: string }[] = staticVarietyNames.length > 0
+    ? staticVarietyNames.map((name) => ({ value: name, label: name }))
+    : (parcelDetails.crop_type
+        ? getSupportedVarieties(parcelDetails.crop_type).map((v) => ({ value: v.code, label: v.nom }))
+        : []);
 
-  // Planting systems — use static PLANTING_SYSTEMS (tree systems) as default fallback
-  // TODO: Replace with CMS data when available
   const availablePlantingSystems: Array<{ type: string; spacing: string; treesPerHectare?: number; plantsPerHectare?: number; seedsPerHectare?: number }> = PLANTING_SYSTEMS;
   const [mapType, setMapType] = useState<'osm' | 'satellite'>('satellite');
   const [_showGeolocPrompt, setShowGeolocPrompt] = useState(false);
@@ -1546,15 +1475,9 @@ const MapComponent = ({
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white"
                     >
                       <option value="">{t('map.select')}</option>
-                      {availableCropCategories.map(category => {
-                        const cat = category as { id?: string; value?: string; name?: string; name_fr?: string };
-                        const key = cat.id || cat.value || '';
-                        const value = cat.value || '';
-                        const label = cat.name_fr || cat.name || cat.value || '';
-                        return (
-                          <option key={key} value={value}>{label}</option>
-                        );
-                      })}
+                      {availableCropCategories.map(cat => (
+                        <option key={cat.value} value={cat.value}>{cat.label}</option>
+                      ))}
                     </select>
                   </div>
 
@@ -1574,24 +1497,11 @@ const MapComponent = ({
                           className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white"
                         >
                           <option value="">{t('map.select')}</option>
-                          {availableCropTypes.map(crop => {
-                            if (typeof crop === 'string') {
-                              return (
-                                <option key={crop} value={crop}>
-                                  {crop}
-                                </option>
-                              );
-                            }
-                            const cropType = crop as CropType;
-                            const key = cropType.id;
-                            const value = cropType.value;
-                            const label = cropType.name || cropType.name_fr || cropType.value;
-                            return (
-                              <option key={key} value={value}>
-                                {label}
-                              </option>
-                            );
-                          })}
+                          {availableCropTypes.map(crop => (
+                            <option key={crop} value={crop}>
+                              {crop}{isCropSupported(crop) ? ' ✦' : ''}
+                            </option>
+                          ))}
                         </select>
                       ) : (
                         <input
@@ -1604,6 +1514,11 @@ const MapComponent = ({
                           className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white"
                           placeholder={t('map.cropTypePlaceholder')}
                         />
+                      )}
+                      {isCropSupported(parcelDetails.crop_type) && (
+                        <p className="flex items-center gap-1 text-[11px] text-amber-600 dark:text-amber-400 mt-1">
+                          ✦ {t('farmHierarchy.parcel.agromindSupported', 'Supporté par AgromindIA')}
+                        </p>
                       )}
                     </div>
                   )}
@@ -1623,21 +1538,11 @@ const MapComponent = ({
                           className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-800 dark:text-white"
                         >
                           <option value="">{t('map.select')}</option>
-                          {availableVarieties.map(variety => {
-                            if (typeof variety === 'string') {
-                              return (
-                                <option key={variety} value={variety}>
-                                  {variety}
-                                </option>
-                              );
-                            }
-                            const varietyObj = variety as Variety;
-                            return (
-                              <option key={varietyObj.id} value={varietyObj.value}>
-                                {varietyObj.name || varietyObj.name_fr || varietyObj.value}
-                              </option>
-                            );
-                          })}
+                          {availableVarieties.map(v => (
+                            <option key={v.value} value={v.value}>
+                              {v.label}{isVarietySupported(parcelDetails.crop_type, v.value) ? ' ✦' : ''}
+                            </option>
+                          ))}
                         </select>
                       ) : (
                         <input

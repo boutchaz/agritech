@@ -147,13 +147,13 @@ const SubscriptionPlans = ({ onSelectPlan }: SubscriptionPlansProps) => {
 
                 <div className="mb-6">
                   <span className="text-3xl font-bold text-gray-900 dark:text-white">
-                    {estimate.cycleTtc.toLocaleString()} MAD
+                    ${estimate.cycleTtc.toLocaleString()}
                   </span>
                   <span className="text-gray-500 dark:text-gray-400 ml-2 text-sm">
                     / {intervalLabel} TTC
                   </span>
                   <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                    {estimate.cycleHt.toLocaleString()} MAD HT + {estimate.cycleTva.toLocaleString()} MAD TVA
+                    ${estimate.cycleHt.toLocaleString()} HT + ${estimate.cycleTva.toLocaleString()} TVA
                   </div>
                 </div>
 

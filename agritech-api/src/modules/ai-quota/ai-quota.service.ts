@@ -21,6 +21,32 @@ export interface QuotaStatus {
   is_unlimited: boolean;
 }
 
+export interface UsageLogEntry {
+  id: string;
+  created_at: string;
+  feature: string;
+  provider: string;
+  model: string | null;
+  tokens_used: number | null;
+  is_byok: boolean | null;
+}
+
+export interface DailyTokenAggregate {
+  date: string;
+  total_tokens: number;
+  request_count: number;
+  by_model: Record<string, number>;
+}
+
+export interface UsageLogResponse {
+  daily_aggregates: DailyTokenAggregate[];
+  recent_entries: UsageLogEntry[];
+  total_tokens: number;
+  total_requests: number;
+  period_start: string;
+  period_end: string;
+}
+
 @Injectable()
 export class AiQuotaService {
   private readonly logger = new Logger(AiQuotaService.name);
@@ -203,6 +229,77 @@ export class AiQuotaService {
       period_end: quota.period_end,
       is_byok: isByok,
       is_unlimited: quota.monthly_limit === UNLIMITED || isByok,
+    };
+  }
+
+  /**
+   * Get detailed usage log with daily token aggregates for the current period.
+   */
+  async getUsageLog(organizationId: string): Promise<UsageLogResponse> {
+    const quota = await this.getOrCreateQuota(organizationId);
+    const supabase = this.databaseService.getAdminClient();
+
+    // Fetch all usage entries for current period
+    const { data: entries, error } = await supabase
+      .from('ai_usage_log')
+      .select('id, created_at, feature, provider, model, tokens_used, is_byok')
+      .eq('organization_id', organizationId)
+      .gte('created_at', quota.period_start)
+      .lte('created_at', quota.period_end)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      this.logger.error(`Failed to fetch usage log: ${error.message}`);
+      return {
+        daily_aggregates: [],
+        recent_entries: [],
+        total_tokens: 0,
+        total_requests: 0,
+        period_start: quota.period_start,
+        period_end: quota.period_end,
+      };
+    }
+
+    const allEntries = entries || [];
+
+    // Aggregate by day
+    const dayMap = new Map<string, { total_tokens: number; request_count: number; by_model: Record<string, number> }>();
+
+    let totalTokens = 0;
+
+    for (const entry of allEntries) {
+      const date = entry.created_at.substring(0, 10); // YYYY-MM-DD
+      const tokens = entry.tokens_used || 0;
+      totalTokens += tokens;
+
+      if (!dayMap.has(date)) {
+        dayMap.set(date, { total_tokens: 0, request_count: 0, by_model: {} });
+      }
+      const day = dayMap.get(date)!;
+      day.total_tokens += tokens;
+      day.request_count += 1;
+
+      const modelKey = entry.model || 'unknown';
+      day.by_model[modelKey] = (day.by_model[modelKey] || 0) + tokens;
+    }
+
+    // Sort daily aggregates chronologically
+    const dailyAggregates: DailyTokenAggregate[] = Array.from(dayMap.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, data]) => ({
+        date,
+        total_tokens: data.total_tokens,
+        request_count: data.request_count,
+        by_model: data.by_model,
+      }));
+
+    return {
+      daily_aggregates: dailyAggregates,
+      recent_entries: allEntries.slice(0, 30), // Last 30 entries
+      total_tokens: totalTokens,
+      total_requests: allEntries.length,
+      period_start: quota.period_start,
+      period_end: quota.period_end,
     };
   }
 

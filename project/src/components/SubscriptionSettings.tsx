@@ -354,13 +354,13 @@ const SubscriptionSettings = () => {
 
                 <div className="mt-4">
                   <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                    {estimate.cycleTtc.toLocaleString()} MAD
+                    ${estimate.cycleTtc.toLocaleString()}
                   </p>
                   <p className="text-xs text-gray-500 dark:text-gray-400">
                     {estimate.cycleHt.toLocaleString()} HT + {estimate.cycleTva.toLocaleString()} TVA
                   </p>
                   <p className="text-xs text-gray-500 dark:text-gray-400">
-                    {plan.pricePerHaYearHt} MAD/ha/year (HT)
+                    ${plan.pricePerHaYearHt}/ha/year (HT)
                   </p>
                 </div>
 
@@ -534,7 +534,7 @@ const SubscriptionSettings = () => {
                       </div>
                       <div className="text-right">
                         <div className="text-3xl font-bold text-emerald-600 dark:text-emerald-400 tabular-nums leading-none">
-                          {modularPricing.cycleTtc.toLocaleString()} <span className="text-sm font-bold">MAD</span>
+                          {modularPricing.cycleTtc.toLocaleString()} <span className="text-sm font-bold">USD</span>
                         </div>
                         <p className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-2">
                           {t('subscription.billedCycle', {
@@ -622,7 +622,7 @@ const SubscriptionSettings = () => {
                     {pricingPreview && (
                       <div className="text-right">
                         <div className="text-3xl font-bold text-emerald-600 dark:text-emerald-400 tabular-nums leading-none">
-                          {pricingPreview.cycleTtc.toLocaleString()} <span className="text-sm font-bold">MAD</span>
+                          {pricingPreview.cycleTtc.toLocaleString()} <span className="text-sm font-bold">USD</span>
                         </div>
                         <p className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-2">
                           {t('subscription.billedCycle', { cycle: t(`subscription.billingCycles.${effectiveCycle}`) })}

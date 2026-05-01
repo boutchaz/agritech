@@ -7,6 +7,8 @@ import {
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import {
   Loader2,
   Package,
@@ -23,6 +25,9 @@ import {
   Star,
   AlertTriangle,
   Clock,
+  CheckCircle2,
+  Circle,
+  XCircle,
 } from 'lucide-react';
 import type {
   ReceptionBatchStatus,
@@ -56,13 +61,23 @@ const QUALITY_GRADE_COLORS: Record<QualityGrade, string> = {
   Third: 'bg-orange-100 text-orange-800',
 };
 
+const WORKFLOW_STEPS = ['received', 'quality_checked', 'decision_made', 'processed'] as const;
+
+function getStepIndex(status: ReceptionBatchStatus): number {
+  const idx = WORKFLOW_STEPS.indexOf(status as typeof WORKFLOW_STEPS[number]);
+  return idx >= 0 ? idx : -1;
+}
+
 interface ReceptionBatchDetailProps {
   batchId: string | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onQualityCheck?: (batchId: string) => void;
+  onMakeDecision?: (batchId: string) => void;
+  onProcess?: (batchId: string) => void;
 }
 
-export default function ReceptionBatchDetail({ batchId, open, onOpenChange }: ReceptionBatchDetailProps) {
+export default function ReceptionBatchDetail({ batchId, open, onOpenChange, onQualityCheck, onMakeDecision, onProcess }: ReceptionBatchDetailProps) {
   const { t } = useTranslation('stock');
   const { data: batch, isLoading } = useReceptionBatch(batchId ?? undefined);
 
@@ -113,6 +128,114 @@ export default function ReceptionBatchDetail({ batchId, open, onOpenChange }: Re
       </DialogHeader>
 
       <div className="mt-6 space-y-6 px-6 pb-6">
+        {/* Workflow Stepper */}
+        {batch.status !== 'cancelled' && (
+          <div className="bg-gradient-to-r from-blue-50 to-green-50 dark:from-blue-900/20 dark:to-green-900/20 rounded-lg p-4">
+            <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-3">
+              {t('receptionBatches.detail.workflow.title', 'Progress')}
+            </p>
+            <div className="flex items-center justify-between">
+              {WORKFLOW_STEPS.map((step, idx) => {
+                const currentIdx = getStepIndex(batch.status);
+                const isDone = idx <= currentIdx;
+                const isCurrent = idx === currentIdx;
+                const isLast = idx === WORKFLOW_STEPS.length - 1;
+
+                return (
+                  <div key={step} className="flex items-center flex-1">
+                    <div className="flex flex-col items-center">
+                      <div className={cn(
+                        'flex items-center justify-center w-8 h-8 rounded-full border-2 transition-colors',
+                        isDone
+                          ? 'bg-green-500 border-green-500 text-white'
+                          : isCurrent
+                            ? 'border-blue-500 text-blue-500 bg-blue-50 dark:bg-blue-900/30'
+                            : 'border-gray-300 text-gray-300 dark:border-gray-600'
+                      )}>
+                        {isDone ? (
+                          <CheckCircle2 className="w-5 h-5" />
+                        ) : (
+                          <Circle className="w-5 h-5" />
+                        )}
+                      </div>
+                      <span className={cn(
+                        'text-xs mt-1 text-center max-w-[80px]',
+                        isDone ? 'text-green-700 dark:text-green-400 font-medium' :
+                        isCurrent ? 'text-blue-700 dark:text-blue-400 font-medium' :
+                        'text-gray-400 dark:text-gray-500'
+                      )}>
+                        {t(`receptionBatches.detail.workflow.${
+                          step === 'quality_checked' ? 'qualityChecked' :
+                          step === 'decision_made' ? 'decisionMade' :
+                          step
+                        }`, step)}
+                      </span>
+                    </div>
+                    {!isLast && (
+                      <div className={cn(
+                        'flex-1 h-0.5 mx-2 mt-[-20px]',
+                        idx < currentIdx ? 'bg-green-500' : 'bg-gray-200 dark:bg-gray-700'
+                      )} />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Next action button */}
+            <div className="mt-4 flex justify-center">
+              {batch.status === 'received' && onQualityCheck && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="border-blue-300 text-blue-700 hover:bg-blue-50"
+                  onClick={() => onQualityCheck(batch.id)}
+                >
+                  <ClipboardCheck className="w-4 h-4 mr-2" />
+                  {t('receptionBatches.detail.workflow.addQualityCheck', 'Add quality check')}
+                </Button>
+              )}
+              {batch.status === 'quality_checked' && onMakeDecision && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="border-orange-300 text-orange-700 hover:bg-orange-50"
+                  onClick={() => onMakeDecision(batch.id)}
+                >
+                  <AlertTriangle className="w-4 h-4 mr-2" />
+                  {t('receptionBatches.detail.workflow.makeDecision', 'Make a decision')}
+                </Button>
+              )}
+              {batch.status === 'decision_made' && onProcess && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="border-green-300 text-green-700 hover:bg-green-50"
+                  onClick={() => onProcess(batch.id)}
+                >
+                  <CheckCircle2 className="w-4 h-4 mr-2" />
+                  {t('receptionBatches.detail.workflow.processBatch', 'Process batch')}
+                </Button>
+              )}
+              {batch.status === 'processed' && (
+                <p className="text-sm text-green-600 dark:text-green-400 font-medium flex items-center gap-1">
+                  <CheckCircle2 className="w-4 h-4" />
+                  {t('receptionBatches.detail.workflow.processed', 'Processed')}
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {batch.status === 'cancelled' && (
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 flex items-center gap-3 border border-gray-200 dark:border-gray-700">
+            <XCircle className="w-5 h-5 text-gray-400" />
+            <span className="text-sm text-gray-500 font-medium">
+              {t('receptionBatches.detail.workflow.cancelled', 'Cancelled')}
+            </span>
+          </div>
+        )}
+
         {/* General Info */}
         <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 space-y-3">
           <div className="flex items-center justify-between">

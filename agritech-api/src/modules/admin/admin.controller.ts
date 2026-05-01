@@ -3,6 +3,8 @@ import {
   Get,
   Post,
   Put,
+  Patch,
+  Delete,
   Param,
   Body,
   Query,
@@ -13,6 +15,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { InternalAdminGuard } from './guards/internal-admin.guard';
 import { AdminService } from './admin.service';
 import { ReferentialService } from './referential.service';
+import { SupportedCountriesService, CreateSupportedCountryDto, UpdateSupportedCountryDto } from './supported-countries.service';
 import {
   ReferenceDataTable,
   ImportReferenceDataDto,
@@ -29,6 +32,7 @@ export class AdminController {
   constructor(
     private readonly adminService: AdminService,
     private readonly referentialService: ReferentialService,
+    private readonly supportedCountriesService: SupportedCountriesService,
   ) {}
 
   // ============================================
@@ -147,6 +151,22 @@ export class AdminController {
     return this.referentialService.getOne(crop);
   }
 
+  @Put('referentials/:crop')
+  async updateReferential(
+    @Param('crop') crop: string,
+    @Body() body: any,
+  ) {
+    return this.referentialService.updateReferential(crop, body);
+  }
+
+  @Post('referentials/:crop/validate')
+  async validateReferential(
+    @Param('crop') crop: string,
+    @Body() body: any,
+  ) {
+    return this.referentialService.validateReferential(crop, body);
+  }
+
   @Get('referentials/:crop/:section')
   async getReferentialSection(
     @Param('crop') crop: string,
@@ -217,5 +237,64 @@ export class AdminController {
     @Request() req: any,
   ) {
     return this.adminService.createSubscription(orgId, body, req.user.id);
+  }
+
+  // ============================================
+  // Banners (cross-org admin management)
+  // ============================================
+
+  @Get('banners')
+  async getAllBanners() {
+    return this.adminService.getAllBanners();
+  }
+
+  @Post('banners')
+  async createBanner(@Body() body: any, @Request() req: any) {
+    return this.adminService.createBanner(body, req.user.id);
+  }
+
+  @Patch('banners/:id')
+  async updateBanner(@Param('id') id: string, @Body() body: any) {
+    return this.adminService.updateBanner(id, body);
+  }
+
+  @Delete('banners/:id')
+  async deleteBanner(@Param('id') id: string) {
+    return this.adminService.deleteBanner(id);
+  }
+
+  // ============================================
+  // Supported Countries Endpoints
+  // ============================================
+
+  @Get('supported-countries')
+  async getSupportedCountries() {
+    return this.supportedCountriesService.findAll();
+  }
+
+  @Post('supported-countries')
+  async createSupportedCountry(@Body() dto: CreateSupportedCountryDto) {
+    return this.supportedCountriesService.create(dto);
+  }
+
+  @Put('supported-countries/:id')
+  async updateSupportedCountry(
+    @Param('id') id: string,
+    @Body() dto: UpdateSupportedCountryDto,
+  ) {
+    return this.supportedCountriesService.update(id, dto);
+  }
+
+  @Delete('supported-countries/:id')
+  async deleteSupportedCountry(@Param('id') id: string) {
+    return this.supportedCountriesService.delete(id);
+  }
+
+  @Put('supported-countries/:id/toggle')
+  async toggleSupportedCountry(
+    @Param('id') id: string,
+    @Body() body: { enabled: boolean },
+  ) {
+    return this.supportedCountriesService.toggleEnabled(id, body.enabled);
   }
 }

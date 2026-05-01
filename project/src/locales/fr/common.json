@@ -125,9 +125,9 @@
     },
     "roiCalculator": {
       "title": "Calculez votre retour sur investissement",
-      "subtitle": "Découvrez en 30 secondes combien AgriTech peut vous faire économiser chaque année. Recevez un rapport personnalisé par email.",
+      "subtitle": "Découvrez en 30 secondes combien AgroGina peut vous faire économiser chaque année. Recevez un rapport personnalisé par email.",
       "calculatorTitle": "Calculateur ROI",
-      "calculatorSubtitle": "Découvrez combien vous pourriez économiser avec AgriTech",
+      "calculatorSubtitle": "Découvrez combien vous pourriez économiser avec AgroGina",
       "farmSize": "Surface agricole (hectares)",
       "farmSizeUnit": "ha",
       "currentYield": "Rendement actuel (tonnes/ha)",
@@ -319,7 +319,9 @@
     "marketplace": "Marketplace",
     "receivedRequests": "Demandes reçues",
     "sentRequests": "Demandes envoyées",
-    "viewMarketplace": "Voir la marketplace"
+    "viewMarketplace": "Voir la marketplace",
+    "paymentRecords": "Paiements",
+    "bankAccounts": "Comptes bancaires"
   },
   "sidebar": {
     "collapse": "Réduire",
@@ -877,7 +879,7 @@
     "forgotPassword": "Mot de passe oublié ?",
     "signUp": "S'inscrire",
     "signIn": {
-      "title": "Connectez-vous à Agritech",
+        "title": "Connectez-vous à AgroGina",
       "subtitle": "Bon retour",
       "helperText": "Accédez à vos données satellite, tableau de bord d'exploitation et collaborateurs depuis un espace sécurisé.",
       "noAccount": "Vous n'avez pas encore de compte ?",
@@ -1065,6 +1067,8 @@
       "cropCategory": "Catégorie de culture",
       "cropType": "Type de culture",
       "variety": "Variété",
+      "agromindSupported": "Supporté par AgromindIA",
+      "agromindVarietySupported": "Variété référencée AgromindIA",
       "plantingSystem": "Système de plantation",
       "spacing": "Espacement",
       "spacingPlaceholder": "Ex: 4x1.5",
@@ -1299,6 +1303,10 @@
       "simple": "Simple et accessible",
       "simpleDesc": "Interface évolutive : mode avancé pour ingénieurs, intermédiaire, ou basique pour une prise en main immédiate."
     },
+    "regions": {
+      "title": "Régions Agricoles Supportées",
+      "subtitle": "Notre plateforme est disponible pour les terres agricoles dans les pays suivants :"
+    },
     "pricing": {
       "title": "Tarification sur mesure",
       "subtitle": "Chaque exploitation est unique. Contactez-nous pour un devis adapté à vos besoins.",
@@ -1353,7 +1361,7 @@
       "legal": "Légal",
       "terms": "Mentions légales",
       "privacy": "Politique de confidentialité",
-      "madeIn": "Made with 🌱 in Morocco",
+      "madeInCredit": "Fait avec amour au Maroc par <codelovers>CodeLovers</codelovers>",
       "copyright": "Tous droits réservés.",
       "features": "Fonctionnalités",
       "pricing": "Tarifs",
@@ -1364,7 +1372,7 @@
     "seo": {
       "title": "AGROGINA - La Suite de Gestion Agricole Tout-en-Un | Maroc",
       "description": "AGROGINA révolutionne l'agriculture au Maroc. Une plateforme unique pour piloter production, finance, RH, stocks et commercialisation. Agriculture de précision et gestion d'exploitation simplifiée.",
-      "keywords": "gestion agricole, logiciel agriculture maroc, erp agricole, parcelles, NDVI, analyse satellite, comptabilité agricole, gestion ferme, agriculture de précision, marketplace agricole, contrôle qualité fruit, gestion main d'oeuvre agricole, agrogina, agritech"
+    "keywords": "gestion agricole, logiciel agriculture maroc, erp agricole, parcelles, NDVI, analyse satellite, comptabilité agricole, gestion ferme, agriculture de précision, marketplace agricole, contrôle qualité fruit, gestion main d'oeuvre agricole, agrogina"
     }
   },
   "suppliers": {
@@ -1659,6 +1667,12 @@
       "dangerZoneDescription": "Gérer les données de démo et actions critiques",
       "legal": "Mentions Légales",
       "legalDescription": "CGU et politique de confidentialité",
+      "banners": "Bannières",
+      "bannersDescription": "Annonces dans l'application",
+      "billing": "Facturation & Factures",
+      "billingDescription": "Gérer la facturation et consulter les factures",
+      "changelog": "Journal des modifications",
+      "changelogDescription": "Historique des changements produit",
       "sections": {
         "personal": "Personnel",
         "organization": "Organisation",
@@ -1668,6 +1682,17 @@
         "system": "Système"
       }
     }
+  },
+  "banners": {
+    "title": "Bannières",
+    "description": "Messages temporaires dans l'application pour votre organisation",
+    "empty": "Aucune bannière. Créez-en une pour informer votre équipe.",
+    "dismissible": "Masquable"
+  },
+  "changelog": {
+    "title": "Journal des modifications",
+    "description": "Historique public des changements produit",
+    "empty": "Aucune entrée. Documentez votre première version."
   },
   "emailTemplates": {
     "title": "Templates d'Emails",
@@ -3146,14 +3171,14 @@
   },
   "authPages": {
     "login": {
-      "title": "Connectez-vous à Agritech",
+        "title": "Connectez-vous à AgroGina",
       "subtitle": "Bon retour",
       "emailLabel": "Adresse email",
       "passwordLabel": "Mot de passe",
       "passwordPlaceholder": "Entrez votre mot de passe"
     },
     "register": {
-      "title": "Créez votre compte Agritech",
+      "title": "Créez votre compte AgroGina",
       "subtitle": "Démarrez en quelques minutes",
       "organizationLabel": "Nom de l'organisation",
       "organizationPlaceholder": "Coopérative Agricole Verte",
@@ -6028,7 +6053,7 @@
       "title": "Assistant IA",
       "subtitle": "Posez des questions sur votre ferme, vos travailleurs, votre comptabilité et plus encore",
       "placeholder": "Demandez des informations sur votre ferme, vos travailleurs, votre comptabilité, votre stock...",
-      "welcome": "Bonjour! Je suis votre assistant AgriTech. Comment puis-je vous aider aujourd'hui?",
+      "welcome": "Bonjour! Je suis votre assistant AgroGina. Comment puis-je vous aider aujourd'hui?",
       "listening": "Écoute...",
       "voiceNotSupported": "La saisie vocale n'est pas prise en charge dans ce navigateur",
       "clear": "Effacer",
@@ -6338,7 +6363,7 @@
     "hero": {
       "badge": "SIAM 2026 · Meknes",
       "title": "Reservez votre rendez-vous avec AGROGINA",
-      "subtitle": "Decouvrez comment notre plateforme AgriTech transforme la gestion de vos exploitations. Demonstration personnalisee sur notre stand."
+      "subtitle": "Decouvrez comment notre plateforme AgroGina transforme la gestion de vos exploitations. Demonstration personnalisee sur notre stand."
     },
     "sections": {
       "info": "Vos informations",

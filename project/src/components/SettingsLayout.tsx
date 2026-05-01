@@ -23,6 +23,7 @@ import {
   PanelLeft,
   ChevronDown,
   Home,
+  Receipt,
 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import { useTranslation } from "react-i18next";
@@ -162,6 +163,14 @@ const SettingsLayout = ({ children }: SettingsLayoutProps) => {
             icon: CreditCard,
             path: "/settings/subscription",
             description: t("settings.menu.subscriptionDescription"),
+            roles: ADMIN_ROLES,
+          },
+          {
+            id: "billing",
+            name: t("settings.menu.billing", "Billing & Invoices"),
+            icon: Receipt,
+            path: "/settings/billing",
+            description: t("settings.menu.billingDescription", "Manage billing and view invoices"),
             roles: ADMIN_ROLES,
           },
           {

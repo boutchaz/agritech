@@ -91,7 +91,7 @@ app.listen(PORT, () => {
   console.log(`
 ╔════════════════════════════════════════════════════════════╗
 ║                                                            ║
-║  🔧 AgriTech Pricing Admin Tool                           ║
+║  🔧 AgroGina Pricing Admin Tool                           ║
 ║                                                            ║
 ║  URL:  http://localhost:${PORT}                            ║
 ║  Auth: Password (check .env)                              ║

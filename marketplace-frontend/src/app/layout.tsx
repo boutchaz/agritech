@@ -22,7 +22,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://market.agritech.ma'),
-  title: "AgriTech Marketplace - Produits Agricoles du Maroc",
+  title: "AgroGina Marketplace - Produits Agricoles du Maroc",
   description: "Achetez et vendez des produits agricoles locaux. Fruits, legumes, cereales, machines agricoles et plus.",
 };
 

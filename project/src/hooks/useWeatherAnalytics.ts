@@ -1,4 +1,3 @@
-import { useState, useEffect } from 'react';
 import {
   weatherClimateService,
   type WeatherAnalyticsData,
@@ -9,6 +8,7 @@ import {
   type ParcelForecastDay,
 } from '../services/weatherClimateService';
 import { apiRequest } from '../lib/api-client';
+import { useQuery } from '@tanstack/react-query';
 
 interface WeatherApiForecastDay {
   date?: string;
@@ -81,23 +81,14 @@ export function useWeatherAnalytics({
   customStartDate,
   customEndDate,
 }: UseWeatherAnalyticsOptions) {
-  const [data, setData] = useState<WeatherAnalyticsData | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const hasBoundary = !!parcelBoundary && parcelBoundary.length > 0;
+  const { startDate, endDate } = hasBoundary
+    ? calculateDateRange(timeRange, customStartDate, customEndDate)
+    : { startDate: '', endDate: '' };
 
-  useEffect(() => {
-    if (!parcelBoundary || parcelBoundary.length === 0) {
-      setData(null);
-      setError(null);
-      return;
-    }
-
-    const fetchData = async () => {
-      setLoading(true);
-      setError(null);
-
-      const { startDate, endDate } = calculateDateRange(timeRange, customStartDate, customEndDate);
-
+  const { data = null, isLoading: loading, error: queryError } = useQuery<WeatherAnalyticsData | null>({
+    queryKey: ['weather-analytics', parcelId, timeRange, startDate, endDate],
+    queryFn: async (): Promise<WeatherAnalyticsData | null> => {
       // Try NestJS first if parcelId is available
       if (parcelId) {
         try {
@@ -111,18 +102,16 @@ export function useWeatherAnalytics({
               result.temperature_series?.length ||
               result.daily?.length)
           ) {
-            setData({
-              temperature_series: result.temperature_series ?? mapDailyToTempSeries(result.daily),
+            return {
+              temperature_series: result.temperature_series ?? mapDailyToTempSeries(result.daily ?? []),
               monthly_precipitation: result.monthly?.map(mapMonthlyToWeatherData) ?? [],
-              evapotranspiration_series: result.evapotranspiration_series ?? mapDailyToETSeries(result.daily),
+              evapotranspiration_series: result.evapotranspiration_series ?? mapDailyToETSeries(result.daily ?? []),
               monthly_evapotranspiration: result.monthly_evapotranspiration ?? [],
               start_date: startDate,
               end_date: endDate,
-              location: result.location ?? { latitude: 0, longitude: 0 },
+              location: { latitude: result.location?.latitude ?? 0, longitude: result.location?.longitude ?? 0 },
               forecast: normalizeApiForecast(result.forecast),
-            });
-            setLoading(false);
-            return;
+            };
           }
         } catch {
           // NestJS not available — fall through to client-side
@@ -130,24 +119,17 @@ export function useWeatherAnalytics({
       }
 
       // Fallback: client-side Open-Meteo (original approach)
-      try {
-        const analyticsData = await weatherClimateService.getWeatherAnalytics(
-          parcelBoundary,
-          startDate,
-          endDate,
-        );
-        setData(analyticsData);
-      } catch (err) {
-        console.error('Error fetching weather analytics:', err);
-        setError(err instanceof Error ? err.message : 'Failed to fetch weather analytics');
-        setData(null);
-      } finally {
-        setLoading(false);
-      }
-    };
+      return weatherClimateService.getWeatherAnalytics(
+        parcelBoundary!,
+        startDate,
+        endDate,
+      );
+    },
+    enabled: hasBoundary,
+    staleTime: 30 * 60 * 1000, // 30 min — weather history changes slowly
+  });
 
-    fetchData();
-  }, [parcelId, parcelBoundary, timeRange, customStartDate, customEndDate]);
+  const error = queryError ? (queryError instanceof Error ? queryError.message : 'Failed to fetch weather analytics') : null;
 
   return { data, loading, error };
 }

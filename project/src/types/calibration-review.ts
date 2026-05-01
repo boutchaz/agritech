@@ -179,6 +179,8 @@ export interface PhenologyDashboardData {
     decline_start: string;
     dormancy_entry: string;
   }>;
+  /** GDD entry thresholds from referentiel stades_bbch, keyed by phase_kc */
+  referentiel_gdd?: Record<string, number> | null;
 }
 
 // ── Block C — Anomalies (Phase 2) ──

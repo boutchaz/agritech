@@ -63,7 +63,7 @@ export const WelcomeStep = ({
         </div>
 
         <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4 animate-slide-up">
-          Bienvenue sur <span className="bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">AgriTech</span>
+          Bienvenue sur <span className="bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">AgroGina</span>
         </h1>
         
         <p className="text-lg md:text-xl text-gray-600 max-w-md animate-slide-up px-4" style={{ animationDelay: '0.2s' }}>

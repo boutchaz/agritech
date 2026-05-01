@@ -9,7 +9,27 @@ import type {
 
 const BASE_URL = '/api/v1/ai/references';
 
+export interface SupportedVariety {
+  code: string;
+  nom: string;
+}
+
+export interface SupportedCrop {
+  code: string;
+  label: string;
+  varieties: SupportedVariety[];
+  varietyGroups?: Record<string, SupportedVariety[]>;
+}
+
+export interface SupportedCropsResponse {
+  crops: SupportedCrop[];
+}
+
 export const aiReferencesApi = {
+  async getSupportedCrops(organizationId?: string): Promise<SupportedCropsResponse> {
+    return apiClient.get<SupportedCropsResponse>(`${BASE_URL}/supported-crops`, {}, organizationId);
+  },
+
   async getAIReference(cropType: string, organizationId?: string): Promise<CropAIReference> {
     return apiClient.get<CropAIReference>(`${BASE_URL}/${cropType}`, {}, organizationId);
   },

@@ -10,8 +10,10 @@ export enum StockEntryType {
 
 export enum StockEntryStatus {
   DRAFT = 'Draft',
+  SUBMITTED = 'Submitted',
   POSTED = 'Posted',
   CANCELLED = 'Cancelled',
+  REVERSED = 'Reversed',
 }
 
 export enum ValuationMethod {

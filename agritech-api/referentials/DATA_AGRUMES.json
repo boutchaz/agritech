@@ -65,15 +65,58 @@
   },
   "capacites_calibrage": {
     "supported": true,
-    "phenology_mode": "legacy",
+    "phenology_mode": "state_machine",
+    "subtypes": {
+      "traditionnel": {
+        "required_indices": [
+          "NDVI",
+          "NIRv",
+          "NDMI",
+          "NDRE",
+          "EVI",
+          "MSAVI",
+          "MSI",
+          "GCI"
+        ]
+      },
+      "intensif": {
+        "required_indices": [
+          "NDVI",
+          "NIRv",
+          "NDMI",
+          "NDRE",
+          "EVI",
+          "MSAVI",
+          "MSI",
+          "GCI"
+        ]
+      },
+      "super_intensif": {
+        "required_indices": [
+          "NDVI",
+          "NIRv",
+          "NDMI",
+          "NDRE",
+          "EVI",
+          "MSAVI",
+          "MSI",
+          "GCI"
+        ]
+      }
+    },
+    "min_observed_images": 10,
+    "min_history_days": 120,
+    "min_history_months_for_period_percentiles": 24,
     "required_indices": [
       "NDVI",
       "NIRv",
-      "NDMI"
-    ],
-    "min_observed_images": 10,
-    "min_history_days": 120,
-    "min_history_months_for_period_percentiles": 24
+      "NDMI",
+      "NDRE",
+      "EVI",
+      "MSAVI",
+      "MSI",
+      "GCI"
+    ]
   },
   "especes": {
     "orange": {
@@ -1990,6 +2033,409 @@
       "biostim": "Aminés",
       "phyto": null,
       "irrigation_L_sem": 50
+    }
+  },
+  "protocole_phenologique": {
+    "phases_par_maturite": {
+      "juvenile": [
+        "repos",
+        "debourrement",
+        "croissance",
+        "floraison",
+        "post_recolte"
+      ],
+      "entree_production": null,
+      "pleine_production": null,
+      "senescence": null
+    },
+    "phases": {
+      "_note": "Machine à états sur l'historique. Chaque phase a conditions entrée et sortie structurées. GDD calculé depuis referentiel.gdd.",
+      "calculs_preliminaires": {
+        "GDD_jour": "max(0, (min(Tmax, Tplafond) + max(Tmin, Tbase)) / 2 - Tbase)",
+        "NIRvP_norm": "(NIRvP - NIRvP_min_hist) / (NIRvP_max_hist - NIRvP_min_hist)",
+        "dNDVI_dt": "(NDVI(t) - NDVI(t-1)) / jours_entre_acquisitions",
+        "dNIRv_dt": "(NIRv(t) - NIRv(t-1)) / jours_entre_acquisitions",
+        "Perte_NDVI": "(NDVI_pic_cycle - NDVI_actuel) / NDVI_pic_cycle",
+        "Perte_NIRv": "(NIRv_pic_cycle - NIRv_actuel) / NIRv_pic_cycle",
+        "Ratio_decouplage": "Perte_NIRv / max(Perte_NDVI, 0.01)"
+      },
+      "DORMANCE": {
+        "nom": "Dormance hivernale",
+        "skip_when": {
+          "var": "Tmoy_Q25",
+          "gte": 15
+        },
+        "entry": {
+          "when": {
+            "and": [
+              {
+                "var": "Tmoy",
+                "lt_var": "Tmoy_Q25"
+              },
+              {
+                "var": "NIRv_norm",
+                "lte": 0.15
+              }
+            ]
+          }
+        },
+        "exit": [
+          {
+            "target": "DEBOURREMENT",
+            "when": {
+              "and": [
+                {
+                  "var": "chill_satisfied",
+                  "eq": true
+                },
+                {
+                  "var": "warm_streak",
+                  "gte": 10
+                }
+              ]
+            },
+            "on_enter": {
+              "reset": [
+                "GDD_cumul"
+              ]
+            },
+            "confidence": "MODEREE"
+          }
+        ]
+      },
+      "DEBOURREMENT": {
+        "nom": "Débourrement",
+        "entry": {},
+        "exit": [
+          {
+            "target": "FLORAISON",
+            "when": {
+              "and": [
+                {
+                  "var": "GDD_cumul",
+                  "gte": 350
+                },
+                {
+                  "var": "Tmoy",
+                  "gte": 18
+                }
+              ]
+            },
+            "confidence": "MODEREE"
+          }
+        ]
+      },
+      "FLORAISON": {
+        "nom": "Floraison",
+        "entry": {},
+        "exit": [
+          {
+            "target": "NOUAISON",
+            "when": {
+              "or": [
+                {
+                  "var": "GDD_cumul",
+                  "gt": 700
+                },
+                {
+                  "var": "hot_streak",
+                  "gte": 5
+                }
+              ]
+            },
+            "confidence": "MODEREE"
+          }
+        ]
+      },
+      "NOUAISON": {
+        "nom": "Nouaison / Clarification",
+        "entry": {},
+        "exit": [
+          {
+            "target": "STRESS_ESTIVAL",
+            "when": {
+              "var": "hot_dry_streak",
+              "gte": 3
+            },
+            "confidence": "ELEVEE"
+          }
+        ]
+      },
+      "STRESS_ESTIVAL": {
+        "nom": "Stress estival + Maturation",
+        "entry": {},
+        "exit": [
+          {
+            "target": "REPRISE_AUTOMNALE",
+            "when": {
+              "and": [
+                {
+                  "var": "precip_30j",
+                  "gt": 20
+                },
+                {
+                  "var": "Tmoy",
+                  "lt": 25
+                },
+                {
+                  "var": "d_nirv_dt",
+                  "gt": 0
+                }
+              ]
+            },
+            "confidence": "MODEREE"
+          },
+          {
+            "target": "DORMANCE",
+            "when": {
+              "var": "cold_streak",
+              "gte": 10
+            },
+            "confidence": "ELEVEE"
+          }
+        ]
+      },
+      "REPRISE_AUTOMNALE": {
+        "nom": "Reprise automnale",
+        "entry": {},
+        "exit": [
+          {
+            "target": "DORMANCE",
+            "when": {
+              "var": "cold_streak",
+              "gte": 10
+            },
+            "on_enter": {
+              "reset": [
+                "GDD_cumul"
+              ]
+            },
+            "confidence": "ELEVEE"
+          }
+        ]
+      }
+    }
+  },
+  "stades_bbch": [
+    {
+      "code": "00",
+      "nom": "Repos hivernal",
+      "mois": [
+        "Dec",
+        "Jan"
+      ],
+      "gdd_cumul": [
+        0,
+        50
+      ],
+      "coef_nirvp": 0.3,
+      "phase_kc": "repos"
+    },
+    {
+      "code": "01",
+      "nom": "Gonflement bourgeons",
+      "mois": [
+        "Feb"
+      ],
+      "gdd_cumul": [
+        50,
+        150
+      ],
+      "coef_nirvp": 0.3,
+      "phase_kc": "debourrement"
+    },
+    {
+      "code": "09",
+      "nom": "Pointes vertes",
+      "mois": [
+        "Feb",
+        "Mar"
+      ],
+      "gdd_cumul": [
+        150,
+        300
+      ],
+      "coef_nirvp": 0.4,
+      "phase_kc": "debourrement"
+    },
+    {
+      "code": "15",
+      "nom": "Pousse printanière",
+      "mois": [
+        "Mar",
+        "Apr"
+      ],
+      "gdd_cumul": [
+        300,
+        500
+      ],
+      "coef_nirvp": 0.5,
+      "phase_kc": "croissance"
+    },
+    {
+      "code": "51",
+      "nom": "Boutons floraux",
+      "mois": [
+        "Apr"
+      ],
+      "gdd_cumul": [
+        500,
+        700
+      ],
+      "coef_nirvp": 0.6,
+      "phase_kc": "floraison"
+    },
+    {
+      "code": "60",
+      "nom": "Début floraison",
+      "mois": [
+        "Apr",
+        "May"
+      ],
+      "gdd_cumul": [
+        700,
+        900
+      ],
+      "coef_nirvp": 0.7,
+      "phase_kc": "floraison"
+    },
+    {
+      "code": "65",
+      "nom": "Pleine floraison",
+      "mois": [
+        "May"
+      ],
+      "gdd_cumul": [
+        900,
+        1100
+      ],
+      "coef_nirvp": 0.8,
+      "phase_kc": "floraison"
+    },
+    {
+      "code": "69",
+      "nom": "Nouaison",
+      "mois": [
+        "May",
+        "Jun"
+      ],
+      "gdd_cumul": [
+        1100,
+        1400
+      ],
+      "coef_nirvp": 0.9,
+      "phase_kc": "nouaison"
+    },
+    {
+      "code": "71",
+      "nom": "Chute physiologique",
+      "mois": [
+        "Jun",
+        "Jul"
+      ],
+      "gdd_cumul": [
+        1400,
+        1800
+      ],
+      "coef_nirvp": 0.9,
+      "phase_kc": "grossissement"
+    },
+    {
+      "code": "75",
+      "nom": "Grossissement fruit",
+      "mois": [
+        "Jul",
+        "Aug"
+      ],
+      "gdd_cumul": [
+        1800,
+        2500
+      ],
+      "coef_nirvp": 1.0,
+      "phase_kc": "grossissement"
+    },
+    {
+      "code": "79",
+      "nom": "Fruit taille finale",
+      "mois": [
+        "Sep",
+        "Oct"
+      ],
+      "gdd_cumul": [
+        2500,
+        3200
+      ],
+      "coef_nirvp": 1.0,
+      "phase_kc": "grossissement"
+    },
+    {
+      "code": "85",
+      "nom": "Début coloration",
+      "mois": [
+        "Oct",
+        "Nov"
+      ],
+      "gdd_cumul": [
+        3200,
+        3800
+      ],
+      "coef_nirvp": 0.9,
+      "phase_kc": "maturation"
+    },
+    {
+      "code": "89",
+      "nom": "Maturité récolte",
+      "mois": [
+        "Nov",
+        "Dec"
+      ],
+      "gdd_cumul": [
+        3800,
+        4200
+      ],
+      "coef_nirvp": 0.7,
+      "phase_kc": "maturation"
+    },
+    {
+      "code": "92",
+      "nom": "Post-récolte",
+      "mois": [
+        "Dec"
+      ],
+      "gdd_cumul": [
+        4200,
+        4500
+      ],
+      "coef_nirvp": 0.4,
+      "phase_kc": "post_recolte"
+    }
+  ],
+  "signaux": {
+    "streaks": {
+      "warm_streak": {
+        "var": "Tmoy",
+        "gt_var": "Tmoy_Q25"
+      },
+      "cold_streak": {
+        "var": "Tmoy",
+        "lt_var": "Tmoy_Q25"
+      },
+      "hot_streak": {
+        "var": "Tmoy",
+        "gt": 30
+      },
+      "hot_dry_streak": {
+        "and": [
+          {
+            "var": "Tmax",
+            "gt": 30
+          },
+          {
+            "var": "precip_30j",
+            "lt": 5
+          }
+        ]
+      }
     }
   }
 }

@@ -247,4 +247,17 @@ export const itemsApi = {
   async getItemPrices(itemId: string, organizationId?: string): Promise<ItemPrice[]> {
     return apiClient.get<ItemPrice[]>(`${BASE_URL}/${itemId}/prices`, {}, organizationId);
   },
+
+  async getByBarcode(barcode: string, organizationId?: string): Promise<ItemWithDetails & { variantId?: string }> {
+    type BarcodeResponse = { type: 'item'; item: ItemWithDetails } | { type: 'variant'; item: ItemWithDetails; variant: { id: string } };
+    const response = await apiClient.get<BarcodeResponse>(
+      `${BASE_URL}/by-barcode/${barcode}`,
+      {},
+      organizationId,
+    );
+    if (response.type === 'variant' && response.variant) {
+      return { ...response.item, variantId: response.variant.id };
+    }
+    return response.item;
+  },
 };

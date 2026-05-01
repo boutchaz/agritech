@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -112,6 +112,7 @@ interface StockEntryFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   defaultType?: StockEntryType;
+  prefilledItemId?: string;
   referenceType?: string;
   referenceId?: string;
   referenceNumber?: string;
@@ -121,6 +122,7 @@ export default function StockEntryForm({
   open,
   onOpenChange,
   defaultType = 'Material Receipt',
+  prefilledItemId,
   referenceType,
   referenceId,
   referenceNumber,
@@ -182,6 +184,31 @@ export default function StockEntryForm({
 
   const config = STOCK_ENTRY_TYPES[selectedType];
 
+  const applySelectedItem = useCallback(
+    async (index: number, itemId: string) => {
+      const selectedItem = items.find(item => item.id === itemId);
+      if (!selectedItem) return;
+
+      form.setValue(`items.${index}.item_id`, itemId, { shouldValidate: true });
+      form.setValue(`items.${index}.item_name`, selectedItem.item_name, { shouldValidate: true });
+      form.setValue(`items.${index}.unit`, selectedItem.default_unit, { shouldValidate: true });
+      form.setValue(`items.${index}.variant_id`, '', { shouldValidate: false });
+
+      if (!variantOptionsByItemId[itemId] && currentOrganization?.id) {
+        setVariantLoadingByItemId((prev) => ({ ...prev, [itemId]: true }));
+        try {
+          const variants = await itemsApi.getVariants(itemId, currentOrganization?.id);
+          setVariantOptionsByItemId((prev) => ({ ...prev, [itemId]: variants }));
+        } catch (error) {
+          console.error('Failed to load variants', error);
+        } finally {
+          setVariantLoadingByItemId((prev) => ({ ...prev, [itemId]: false }));
+        }
+      }
+    },
+    [currentOrganization?.id, form, items, variantOptionsByItemId],
+  );
+
   useEffect(() => {
     if (open) {
       setSelectedType(defaultType);
@@ -194,7 +221,7 @@ export default function StockEntryForm({
         notes: '',
         items: [
           {
-            item_id: '',
+            item_id: prefilledItemId || '',
             item_name: '',
             variant_id: '',
             quantity: 1,
@@ -205,7 +232,12 @@ export default function StockEntryForm({
         ],
       });
     }
-  }, [open, defaultType, form]);
+  }, [open, defaultType, form, prefilledItemId]);
+
+  useEffect(() => {
+    if (!open || !prefilledItemId || items.length === 0) return;
+    void applySelectedItem(0, prefilledItemId);
+  }, [applySelectedItem, items.length, open, prefilledItemId]);
 
   // Update resolver when type changes and reset warehouse fields
   useEffect(() => {
@@ -497,26 +529,8 @@ export default function StockEntryForm({
                       <Label>{t('stockEntries.form.item')} {t('stockEntries.form.required')}</Label>
                       <Select
                         value={form.watch(`items.${index}.item_id`) || ''}
-                        onValueChange={async (itemId) => {
-                          const selectedItem = items.find(item => item.id === itemId);
-                          if (selectedItem) {
-                            form.setValue(`items.${index}.item_id`, itemId, { shouldValidate: true });
-                            form.setValue(`items.${index}.item_name`, selectedItem.item_name, { shouldValidate: true });
-                            form.setValue(`items.${index}.unit`, selectedItem.default_unit, { shouldValidate: true });
-                            form.setValue(`items.${index}.variant_id`, '', { shouldValidate: false });
-
-                            if (!variantOptionsByItemId[itemId] && currentOrganization?.id) {
-                              setVariantLoadingByItemId((prev) => ({ ...prev, [itemId]: true }));
-                              try {
-                                const variants = await itemsApi.getVariants(itemId, currentOrganization?.id);
-                                setVariantOptionsByItemId((prev) => ({ ...prev, [itemId]: variants }));
-                              } catch (error) {
-                                console.error('Failed to load variants', error);
-                              } finally {
-                                setVariantLoadingByItemId((prev) => ({ ...prev, [itemId]: false }));
-                              }
-                            }
-                          }
+                        onValueChange={(itemId) => {
+                          void applySelectedItem(index, itemId);
                         }}
                       >
                         <SelectTrigger className="mt-1">

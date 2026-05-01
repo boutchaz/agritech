@@ -23,7 +23,8 @@ import { detectPhaseAgeFromReferentiel } from "./phase-age-detector";
  * Max lookback days — must stay within FastAPI weather endpoint limit (365*3 = 1095 days).
  * We use 1090 to leave a small buffer.
  */
-export const MAX_LOOKBACK_DAYS = 1090;
+// 3 full cycles (Dec→Nov) + buffer = ~40 months ≈ 1280 days
+export const MAX_LOOKBACK_DAYS = 1280;
 
 export const NDVI_PERCENTILES = [10, 25, 50, 75, 90];
 
@@ -47,72 +48,90 @@ export { CALIBRATION_SATELLITE_INDICES };
 // ═══════════════════════════════════════════════════════════════
 
 /**
- * Calibration satellite lookback depth depends on tree phase from referentiel.
+ * Calibration lookback aligned to agronomic cycle start month.
  *
- * | Phase              | Lookback                  |
- * |--------------------|---------------------------|
- * | pleine_production  | 36 months                 |
- * | senescence         | 36 months                 |
- * | entree_production  | 24 months                 |
- * | juvenile           | 12 months (watch-only)    |
- * | No planting year   | 24 months (default)       |
+ * The state machine needs **complete cycles** (Dec→Nov for olive).
+ * Lookback anchors to the cycle start month, not the run date, so
+ * every returned date range contains N full cycles.
  *
- * Phase thresholds come from the crop referentiel (e.g. olive: juvenile < 5y,
- * entree_production < 10y) via detectPhaseAgeFromReferentiel.
+ * | Phase              | Complete cycles needed |
+ * |--------------------|-----------------------|
+ * | juvenile           | 1                     |
+ * | entree_production  | 2                     |
+ * | pleine_production  | 3                     |
+ * | senescence         | 3                     |
+ * | unknown / default  | 2                     |
  *
- * @see docs/docs/features/satellite-analysis.md — Delta Sync Helper
- * @see docs/docs/features/cron-jobs.md — Delta Sync Strategy
+ * Cycle start month is read from ``stades_bbch[0].mois[0]`` in the
+ * referential (Dec for all current crops).
  */
+
+const MONTH_ABBR_TO_NUM: Record<string, number> = {
+  Jan: 1, Feb: 2, Mar: 3, Apr: 4, May: 5, Jun: 6,
+  Jul: 7, Aug: 8, Sep: 9, Oct: 10, Nov: 11, Dec: 12,
+};
+
+function getCycleStartMonth(ref: Record<string, unknown> | null): number {
+  if (!ref) return 12; // default Dec
+  const stades = ref.stades_bbch;
+  if (!Array.isArray(stades) || stades.length === 0) return 12;
+  const firstStade = stades[0] as Record<string, unknown>;
+  const mois = firstStade?.mois;
+  if (Array.isArray(mois) && mois.length > 0) {
+    return MONTH_ABBR_TO_NUM[String(mois[0])] ?? 12;
+  }
+  return 12;
+}
+
+function cyclesNeededForPhase(phase: string): number {
+  switch (phase) {
+    case 'juvenile':
+      return 1;
+    case 'pleine_production':
+    case 'senescence':
+    case 'maturite_avancee':
+      return 3;
+    case 'entree_production':
+    default:
+      return 2;
+  }
+}
+
 export function getCalibrationLookbackDate(
   plantingYear: number | null,
   cropType?: string | null,
   system?: string | null,
 ): string {
   const now = new Date();
+  const ref = cropType ? getLocalCropReference(cropType) : null;
+  const cycleStartMonth = getCycleStartMonth(ref);
 
-  let start: Date;
-
-  if (plantingYear != null) {
+  // Resolve maturity phase
+  let phase = 'unknown';
+  if (plantingYear != null && cropType) {
     const ageAns = now.getFullYear() - plantingYear;
-
-    // Resolve phase from referentiel if crop data is available
-    let phase: string;
-    if (cropType) {
-      const ref = getLocalCropReference(cropType);
-      phase = ref
-        ? detectPhaseAgeFromReferentiel(ageAns, system ?? 'intensif', ref)
-        : 'unknown';
-    } else {
-      phase = 'unknown';
+    if (ref) {
+      phase = detectPhaseAgeFromReferentiel(ageAns, system ?? 'intensif', ref);
     }
-
-    if (phase === 'pleine_production' || phase === 'senescence') {
-      // Mature trees: 36 months
-      start = new Date();
-      start.setMonth(start.getMonth() - 36);
-    } else if (phase === 'juvenile') {
-      // Young trees (watch-only mode): fixed 12-month window
-      start = new Date();
-      start.setMonth(start.getMonth() - 12);
-    } else {
-      // entree_production or unknown: 24 months
-      start = new Date();
-      start.setMonth(start.getMonth() - 24);
-    }
-  } else {
-    // No planting year: default 24 months
-    start = new Date();
-    start.setMonth(start.getMonth() - 24);
   }
+
+  const cycles = cyclesNeededForPhase(phase);
+
+  // Find the most recent cycle start month before today (UTC to avoid TZ drift)
+  const nowYear = now.getFullYear();
+  const nowMonth = now.getMonth() + 1; // 1-indexed
+  const cycleYear = nowMonth >= cycleStartMonth ? nowYear : nowYear - 1;
+
+  // Go back N full cycles from the most recent cycle start
+  const startYear = cycleYear - cycles;
+  const startStr = `${startYear}-${String(cycleStartMonth).padStart(2, "0")}-01`;
 
   // Clamp: never exceed MAX_LOOKBACK_DAYS from today
   const maxStart = new Date();
   maxStart.setDate(maxStart.getDate() - MAX_LOOKBACK_DAYS);
-  if (start < maxStart) {
-    start = maxStart;
-  }
+  const maxStartStr = maxStart.toISOString().split("T")[0];
 
-  return start.toISOString().split("T")[0];
+  return startStr < maxStartStr ? maxStartStr : startStr;
 }
 
 export function resolveCalibratingRecoveryPhase(profileSnapshot: unknown): AiPhase {
@@ -219,11 +238,9 @@ export interface WeatherDailyRow {
   shortwave_radiation_sum?: number | string | null;
   precipitation_sum: number | string | null;
   et0_fao_evapotranspiration: number | string | null;
-  gdd_olivier?: number | string | null;
-  gdd_agrumes?: number | string | null;
-  gdd_avocatier?: number | string | null;
-  gdd_palmier_dattier?: number | string | null;
   chill_hours?: number | string | null;
+  /** Generic GDD access — use gddColumn() to get the right key */
+  [key: `gdd_${string}`]: number | string | null | undefined;
 }
 
 export interface AnalysisRow {
@@ -579,6 +596,44 @@ export class CalibrationDataService {
     return required.filter((name) => !present.has(name));
   }
 
+  /**
+   * Fetch all July-August NDVI mean values for vegetation pre-check.
+   * Returns raw numeric array — caller applies thresholds.
+   */
+  async fetchSummerNdvi(
+    parcelId: string,
+    organizationId: string,
+  ): Promise<number[]> {
+    const supabase = this.databaseService.getAdminClient();
+    const { data, error } = await supabase
+      .from("satellite_indices_data")
+      .select("date, mean_value")
+      .eq("organization_id", organizationId)
+      .eq("parcel_id", parcelId)
+      .eq("index_name", "NDVI");
+
+    if (error) {
+      this.logger.warn(
+        `[fetchSummerNdvi] Failed to fetch NDVI for parcel ${parcelId}: ${error.message}`,
+      );
+      return [];
+    }
+
+    const summerValues: number[] = [];
+    for (const row of data ?? []) {
+      const dateStr = row.date as string;
+      if (!dateStr) continue;
+      const month = new Date(dateStr).getMonth() + 1; // 1-indexed
+      if (month !== 7 && month !== 8) continue;
+      const value = this.toNumber(row.mean_value);
+      if (value !== null) {
+        summerValues.push(value);
+      }
+    }
+
+    return summerValues;
+  }
+
   async fetchSatelliteImages(
     parcelId: string,
     organizationId: string,
@@ -591,6 +646,7 @@ export class CalibrationDataService {
       .select("date, index_name, mean_value, cloud_coverage_percentage")
       .eq("organization_id", organizationId)
       .eq("parcel_id", parcelId)
+      .in("index_name", [...CALIBRATION_SATELLITE_INDICES])
       .gte("date", effectiveSince)
       .order("date", { ascending: true })
       .order("index_name", { ascending: true });
@@ -635,6 +691,7 @@ export class CalibrationDataService {
 
   async fetchWeatherRows(
     parcel: ParcelContext,
+    sinceDate?: string,
   ): Promise<WeatherDailyRow[]> {
     if (!parcel.boundary.length) {
       throw new BadRequestException(
@@ -648,16 +705,14 @@ export class CalibrationDataService {
       WeatherProvider.calculateCentroid(wgs84Boundary);
     const roundedLatitude = this.roundCoordinate(latitude, 2);
     const roundedLongitude = this.roundCoordinate(longitude, 2);
-    const sinceDate = getCalibrationLookbackDate(parcel.plantingYear, parcel.cropType, parcel.system);
+    const effectiveSince = sinceDate ?? getCalibrationLookbackDate(parcel.plantingYear, parcel.cropType, parcel.system);
 
     const { data, error } = await supabase
       .from("weather_daily_data")
-      .select(
-        "date, latitude, longitude, temperature_min, temperature_max, temperature_mean, relative_humidity_mean, wind_speed_max, shortwave_radiation_sum, precipitation_sum, et0_fao_evapotranspiration, gdd_olivier, gdd_agrumes, gdd_avocatier, gdd_palmier_dattier, chill_hours",
-      )
+      .select("*")
       .eq("latitude", roundedLatitude)
       .eq("longitude", roundedLongitude)
-      .gte("date", sinceDate)
+      .gte("date", effectiveSince)
       .order("date", { ascending: true });
 
     if (error) {
@@ -673,6 +728,7 @@ export class CalibrationDataService {
     parcel: ParcelContext,
     organizationId: string,
     authToken?: string,
+    sinceDate?: string,
   ): Promise<void> {
     if (!parcel.boundary.length) {
       return;
@@ -683,7 +739,7 @@ export class CalibrationDataService {
       WeatherProvider.calculateCentroid(wgs84Boundary);
     const roundedLatitude = this.roundCoordinate(latitude, 2);
     const roundedLongitude = this.roundCoordinate(longitude, 2);
-    const startDate = getCalibrationLookbackDate(parcel.plantingYear, parcel.cropType, parcel.system);
+    const startDate = sinceDate ?? getCalibrationLookbackDate(parcel.plantingYear, parcel.cropType, parcel.system);
     const endDate = new Date().toISOString().split("T")[0];
 
     const body = await this.satelliteProxy.proxy("GET", "/weather/historical", {
@@ -702,33 +758,14 @@ export class CalibrationDataService {
       data: Array<Record<string, unknown>>;
     };
 
+    // FastAPI /weather/historical now uses cache-aside (fetch_with_db_cache) and
+    // persists weather to weather_daily_data with pre-computed GDD columns.
+    // No secondary upsert needed here — that would overwrite GDD columns with NULL.
     if (!body.data?.length) {
-      return;
-    }
-
-    const supabase = this.databaseService.getAdminClient();
-    const rows = body.data.map((entry) => ({
-      latitude: roundedLatitude,
-      longitude: roundedLongitude,
-      date: entry.date as string,
-      temperature_min: entry.temperature_min ?? null,
-      temperature_max: entry.temperature_max ?? null,
-      temperature_mean: entry.temperature_mean ?? null,
-      relative_humidity_mean: entry.relative_humidity_mean ?? null,
-      precipitation_sum: entry.precipitation_sum ?? null,
-      wind_speed_max: entry.wind_speed_max ?? null,
-      shortwave_radiation_sum: entry.shortwave_radiation_sum ?? null,
-      et0_fao_evapotranspiration: entry.et0_fao_evapotranspiration ?? null,
-      source: body.source ?? "open-meteo-archive",
-    }));
-
-    const { error } = await supabase
-      .from("weather_daily_data")
-      .upsert(rows, { onConflict: "latitude,longitude,date" });
-
-    if (error) {
-      this.logger.warn(
-        `Weather auto-sync persist failed for parcel ${parcel.id}: ${error.message}`,
+      this.logger.warn(`Weather sync returned no data for parcel ${parcel.id}`);
+    } else {
+      this.logger.log(
+        `Weather sync triggered for parcel ${parcel.id}: ${body.data.length} rows cached via FastAPI`,
       );
     }
   }
@@ -787,6 +824,14 @@ export class CalibrationDataService {
   async fetchCropReferenceData(
     cropType: string,
   ): Promise<Record<string, unknown>> {
+    // Disk first — JSON files are the source of truth for referentials.
+    // Edits to DATA_*.json take effect immediately without DB sync.
+    const localRef = getLocalCropReference(cropType);
+    if (localRef) {
+      return localRef;
+    }
+
+    // Fallback to DB (production without bundled files, or Docker)
     const supabase = this.databaseService.getAdminClient();
     const { data, error } = await supabase
       .from("crop_ai_references")
@@ -802,20 +847,12 @@ export class CalibrationDataService {
 
     if (error) {
       this.logger.warn(
-        `DB crop reference lookup failed for "${cropType}": ${error.message}, falling back to local JSON`,
+        `DB crop reference lookup failed for "${cropType}": ${error.message}`,
       );
-    }
-
-    const localRef = getLocalCropReference(cropType);
-    if (localRef) {
-      this.logger.log(
-        `Using bundled JSON reference for "${cropType}"`,
-      );
-      return localRef;
     }
 
     this.logger.warn(
-      `No crop reference found for "${cropType}" (DB or local)`,
+      `No crop reference found for "${cropType}" (disk or DB)`,
     );
     return {};
   }
@@ -1013,18 +1050,7 @@ export class CalibrationDataService {
   }
 
   hasMissingGdd(rows: WeatherDailyRow[], cropType: string): boolean {
-    const gddColumnByCrop: Record<string, keyof WeatherDailyRow> = {
-      olivier: "gdd_olivier",
-      agrumes: "gdd_agrumes",
-      avocatier: "gdd_avocatier",
-      palmier_dattier: "gdd_palmier_dattier",
-    };
-
-    const column = gddColumnByCrop[cropType];
-    if (!column) {
-      return false;
-    }
-
+    const column = `gdd_${cropType}` as keyof WeatherDailyRow;
     return rows.some((row) => this.toNumber(row[column]) === null);
   }
 
@@ -1116,6 +1142,99 @@ export class CalibrationDataService {
   extractCoefficientEtat(output: CalibrationResponse): number | null {
     const raw = (output as unknown as Record<string, unknown>).coefficient_etat_parcelle;
     return this.toNumber(raw);
+  }
+
+  /**
+   * Recalculate gdd_at_entry for phase transitions using pre-computed GDD
+   * stored in weather_gdd_daily. Just SUMs between date ranges — no formula.
+   * Persists corrected values back to calibrations.baseline_data.
+   */
+  async recalculatePhaseGdd(
+    phenology: Record<string, unknown>,
+    latitude: number,
+    longitude: number,
+    cropType: string,
+    calibrationId?: string,
+    organizationId?: string,
+  ): Promise<Record<string, unknown>> {
+    const phaseTimeline = phenology.phase_timeline as Array<Record<string, unknown>> | undefined;
+    if (!Array.isArray(phaseTimeline) || phaseTimeline.length === 0) {
+      return phenology;
+    }
+
+    const supabase = this.databaseService.getAdminClient();
+    const roundedLat = this.roundCoordinate(latitude, 2);
+    const roundedLon = this.roundCoordinate(longitude, 2);
+    const resetPhases = new Set(['repos', 'DORMANCE']);
+
+    const updatedTimeline = await Promise.all(
+      phaseTimeline.map(async (tl) => {
+        const transitions = tl.transitions as Array<Record<string, unknown>> | undefined;
+        if (!Array.isArray(transitions)) return tl;
+
+        // Find cycle start = first non-repos transition
+        let cycleStartDate: string | null = null;
+        for (const t of transitions) {
+          if (!resetPhases.has(t.phase as string)) {
+            cycleStartDate = t.start_date as string;
+            break;
+          }
+        }
+
+        const updatedTransitions = await Promise.all(
+          transitions.map(async (t) => {
+            const phase = t.phase as string;
+            const startDate = t.start_date as string;
+
+            if (resetPhases.has(phase)) {
+              return { ...t, gdd_at_entry: 0 };
+            }
+            if (!cycleStartDate || !startDate) return t;
+
+            // SUM(gdd_daily) from cycle start to this transition
+            const { data } = await supabase.rpc('sum_gdd_between', {
+              p_lat: roundedLat,
+              p_lon: roundedLon,
+              p_crop: cropType.toLowerCase(),
+              p_start: cycleStartDate,
+              p_end: startDate,
+            });
+
+            const gddSum = typeof data === 'number' ? data : 0;
+            return { ...t, gdd_at_entry: Math.round(gddSum * 100) / 100 };
+          }),
+        );
+
+        return { ...tl, transitions: updatedTransitions };
+      }),
+    );
+
+    const updatedPhenology = { ...phenology, phase_timeline: updatedTimeline };
+
+    // Persist corrected values back to DB
+    if (calibrationId && organizationId) {
+      const { data: cal } = await supabase
+        .from('calibrations')
+        .select('baseline_data')
+        .eq('id', calibrationId)
+        .eq('organization_id', organizationId)
+        .single();
+
+      if (cal?.baseline_data) {
+        const baseline = typeof cal.baseline_data === 'object'
+          ? { ...cal.baseline_data as Record<string, unknown> }
+          : {};
+        baseline.phenology = updatedPhenology;
+        await supabase
+          .from('calibrations')
+          .update({ baseline_data: baseline })
+          .eq('id', calibrationId)
+          .eq('organization_id', organizationId);
+        this.logger.log(`Persisted recalculated GDD for calibration ${calibrationId}`);
+      }
+    }
+
+    return updatedPhenology;
   }
 
   extractBaselineData(output: CalibrationResponse): Record<string, unknown> {

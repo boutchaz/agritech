@@ -343,7 +343,7 @@ export const ExportData = () => {
 
       <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
         <p className="text-sm text-blue-800 dark:text-blue-200">
-          {t('settings.export.downloadStarted', 'Your download should have started automatically. Use this file to import your data in the AgriTech Desktop application.')}
+          {t('settings.export.downloadStarted', 'Your download should have started automatically. Use this file to import your data in the AgroGina Desktop application.')}
         </p>
       </div>
 

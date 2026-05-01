@@ -193,7 +193,7 @@ export class EmailService {
 
   async sendTestEmail(to: string): Promise<boolean> {
     return this.sendByType('test_email', to, {
-      message: 'This is a test email from the AgriTech platform.',
+      message: 'This is a test email from the AgroGina platform.',
       date: new Date().toISOString(),
     });
   }

@@ -10,6 +10,13 @@ import { AiReferencesService } from './ai-references.service';
 export class AiReferencesController {
   constructor(private readonly aiReferencesService: AiReferencesService) {}
 
+  @Get('supported-crops')
+  @ApiOperation({ summary: 'Get all AgromindIA-supported crop types and their varieties' })
+  @ApiResponse({ status: 200, description: 'Supported crops with variety codes' })
+  getSupportedCrops() {
+    return this.aiReferencesService.getSupportedCrops();
+  }
+
   @Get(':cropType')
   @ApiOperation({ summary: 'Get full AI reference data for a crop type' })
   @ApiResponse({ status: 200, description: 'AI reference data retrieved successfully' })

@@ -1,12 +1,18 @@
+from pathlib import Path
+
 from pydantic_settings import BaseSettings
 from pydantic import ConfigDict
 from typing import List, Union, Any
 import os
 
-# Load .env file before reading environment variables
+# Load .env from backend-service root — cwd may be repo root when uvicorn is spawned from IDEs/scripts.
 from dotenv import load_dotenv
 
-load_dotenv()
+_BACKEND_ROOT = Path(__file__).resolve().parent.parent.parent
+_ENV_MAIN = _BACKEND_ROOT / ".env"
+_ENV_LOCAL = _BACKEND_ROOT / ".env.local"
+load_dotenv(_ENV_MAIN)
+load_dotenv(_ENV_LOCAL, override=True)
 
 
 class Settings(BaseSettings):
@@ -69,7 +75,11 @@ class Settings(BaseSettings):
     CELERY_BROKER_URL: str = "redis://localhost:6379/0"
     CELERY_RESULT_BACKEND: str = "redis://localhost:6379/0"
 
-    model_config = ConfigDict(env_file=".env", case_sensitive=True, extra="ignore")
+    model_config = ConfigDict(
+        env_file=(str(_ENV_MAIN), str(_ENV_LOCAL)),
+        case_sensitive=True,
+        extra="ignore",
+    )
 
 
 settings = Settings()

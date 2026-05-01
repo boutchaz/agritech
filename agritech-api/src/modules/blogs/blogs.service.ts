@@ -300,7 +300,7 @@ export class BlogsService {
         excerpt: attrs.excerpt || '',
         content: attrs.content || '',
         featured_image: this.transformImage(attrs.featured_image),
-        author: attrs.author || 'AgriTech Team',
+        author: attrs.author || 'AgroGina Team',
         reading_time: attrs.reading_time || 5,
         is_featured: attrs.is_featured || false,
         tags: attrs.tags || [],

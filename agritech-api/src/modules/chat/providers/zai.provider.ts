@@ -266,7 +266,7 @@ export class ZaiProvider extends BaseAIProvider {
       userPrompt: string;
       config: any;
       onToken: (token: string) => void;
-      onComplete: () => void;
+      onComplete: (meta?: { tokensUsed?: number }) => void;
       onError: (error: Error) => void;
     }): Promise<void> {
       try {
@@ -289,6 +289,7 @@ export class ZaiProvider extends BaseAIProvider {
                 temperature: request.config.temperature ?? 0.7,
                 max_tokens: request.config.maxTokens ?? 8192,
                 stream: true,
+                stream_options: { include_usage: true },
               },
               {
                 headers: {
@@ -315,6 +316,7 @@ export class ZaiProvider extends BaseAIProvider {
           let buffer = '';
           let isSettled = false;
           let isComplete = false;
+          let streamTokensUsed: number | undefined;
 
           const cleanup = () => {
             stream.removeListener('data', onData);
@@ -330,7 +332,7 @@ export class ZaiProvider extends BaseAIProvider {
             isSettled = true;
             isComplete = true;
             cleanup();
-            request.onComplete();
+            request.onComplete(streamTokensUsed != null ? { tokensUsed: streamTokensUsed } : undefined);
             resolve();
           };
 
@@ -372,6 +374,11 @@ export class ZaiProvider extends BaseAIProvider {
               const message = streamApiErrorMessage(parsed.error);
               finishError(new Error(`Z.ai stream error: ${message}`));
               return;
+            }
+
+            // Capture usage from final chunk (when stream_options.include_usage is true)
+            if (parsed.usage?.total_tokens) {
+              streamTokensUsed = parsed.usage.total_tokens;
             }
 
             if (Array.isArray(parsed.choices) && parsed.choices.length === 0 && parsed.finish_reason === 'stop') {
@@ -714,7 +721,7 @@ export class ZaiProvider extends BaseAIProvider {
       >;
       config: any;
       onToken: (token: string) => void;
-      onComplete: () => void;
+      onComplete: (meta?: { tokensUsed?: number }) => void;
       onError: (error: Error) => void;
     }): Promise<void> {
       try {
@@ -737,6 +744,7 @@ export class ZaiProvider extends BaseAIProvider {
                 temperature: request.config.temperature ?? 0.7,
                 max_tokens: request.config.maxTokens ?? 8192,
                 stream: true,
+                stream_options: { include_usage: true },
               },
               {
                 headers: {
@@ -763,6 +771,7 @@ export class ZaiProvider extends BaseAIProvider {
           let buffer = '';
           let isSettled = false;
           let isComplete = false;
+          let streamTokensUsed: number | undefined;
 
           const cleanup = () => {
             stream.removeListener('data', onData);
@@ -778,7 +787,7 @@ export class ZaiProvider extends BaseAIProvider {
             isSettled = true;
             isComplete = true;
             cleanup();
-            request.onComplete();
+            request.onComplete(streamTokensUsed != null ? { tokensUsed: streamTokensUsed } : undefined);
             resolve();
           };
 
@@ -820,6 +829,11 @@ export class ZaiProvider extends BaseAIProvider {
               const message = streamApiErrorMessage(parsed.error);
               finishError(new Error(`Z.ai vision stream error: ${message}`));
               return;
+            }
+
+            // Capture usage from final chunk
+            if (parsed.usage?.total_tokens) {
+              streamTokensUsed = parsed.usage.total_tokens;
             }
 
             if (Array.isArray(parsed.choices) && parsed.choices.length === 0 && parsed.finish_reason === 'stop') {

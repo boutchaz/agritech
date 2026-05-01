@@ -1,19 +1,23 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NotificationsService } from '../notifications/notifications.service';
 import { DatabaseService } from '../database/database.service';
+import { EmailService } from '../email/email.service';
 import { CreateSiamRdvDto } from './dto/create-siam-rdv.dto';
 
 @Injectable()
-export class PublicRdvService {
+export class PublicRdvService implements OnModuleInit {
   private readonly logger = new Logger(PublicRdvService.name);
-  private readonly supabaseAdmin: ReturnType<DatabaseService['getAdminClient']> | null;
+  private supabaseAdmin: ReturnType<DatabaseService['getAdminClient']> | null = null;
 
   constructor(
     private readonly notificationsService: NotificationsService,
+    private readonly emailService: EmailService,
     private readonly configService: ConfigService,
     private readonly databaseService: DatabaseService,
-  ) {
+  ) {}
+
+  onModuleInit() {
     try {
       this.supabaseAdmin = this.databaseService.getAdminClient();
     } catch {
@@ -123,5 +127,121 @@ export class PublicRdvService {
 
     this.logger.log(`SIAM RDV submitted by ${dto.nom} for slot ${dto.creneau} (persisted: ${dbPersisted}, emailed: ${emailSent})`);
     return { success: true };
+  }
+
+  async confirmLead(
+    leadId: string,
+    overrideSlot?: string,
+  ): Promise<{ success: boolean; emailSent: boolean }> {
+    if (!this.supabaseAdmin) {
+      throw new Error('Database not available');
+    }
+
+    const { data: lead, error: fetchError } = await this.supabaseAdmin
+      .from('siam_rdv_leads')
+      .select('*')
+      .eq('id', leadId)
+      .single();
+
+    if (fetchError || !lead) {
+      throw new NotFoundException(`Lead ${leadId} not found`);
+    }
+
+    if (lead.status === 'confirmed') {
+      return { success: true, emailSent: lead.email_sent };
+    }
+
+    const confirmedSlot = overrideSlot || lead.creneau;
+
+    const { error: updateError } = await this.supabaseAdmin
+      .from('siam_rdv_leads')
+      .update({
+        status: 'confirmed',
+        confirmed_at: new Date().toISOString(),
+        confirmed_slot: confirmedSlot,
+      })
+      .eq('id', leadId);
+
+    if (updateError) {
+      this.logger.error(`Failed to confirm lead ${leadId}: ${updateError.message}`);
+      return { success: false, emailSent: false };
+    }
+
+    let emailSent = false;
+    if (lead.email) {
+      const contactPhone = this.configService.get<string>('CONTACT_PHONE') || '+212 5XX XXX XXX';
+      emailSent = await this.emailService.sendByType('siam_rdv_confirmation', lead.email, {
+        nom: lead.nom,
+        confirmed_slot: confirmedSlot,
+        contact_phone: contactPhone,
+      });
+
+      if (emailSent) {
+        await this.supabaseAdmin
+          .from('siam_rdv_leads')
+          .update({ email_sent: true })
+          .eq('id', leadId);
+      } else {
+        this.logger.error(`Failed to send confirmation email to ${lead.email}`);
+      }
+    } else {
+      this.logger.warn(`Lead ${leadId} has no email — skipping confirmation email`);
+    }
+
+    this.logger.log(`Lead ${leadId} confirmed for slot ${confirmedSlot} (email: ${emailSent})`);
+    return { success: true, emailSent };
+  }
+
+  async rejectLead(
+    leadId: string,
+    reason: string,
+  ): Promise<{ success: boolean; emailSent: boolean }> {
+    if (!this.supabaseAdmin) {
+      throw new Error('Database not available');
+    }
+
+    const { data: lead, error: fetchError } = await this.supabaseAdmin
+      .from('siam_rdv_leads')
+      .select('*')
+      .eq('id', leadId)
+      .single();
+
+    if (fetchError || !lead) {
+      throw new NotFoundException(`Lead ${leadId} not found`);
+    }
+
+    if (lead.status === 'rejected') {
+      return { success: true, emailSent: false };
+    }
+
+    const { error: updateError } = await this.supabaseAdmin
+      .from('siam_rdv_leads')
+      .update({
+        status: 'rejected',
+        rejection_reason: reason,
+      })
+      .eq('id', leadId);
+
+    if (updateError) {
+      this.logger.error(`Failed to reject lead ${leadId}: ${updateError.message}`);
+      return { success: false, emailSent: false };
+    }
+
+    let emailSent = false;
+    if (lead.email) {
+      const contactPhone = this.configService.get<string>('CONTACT_PHONE') || '+212 5XX XXX XXX';
+      emailSent = await this.emailService.sendByType('siam_rdv_rejection', lead.email, {
+        nom: lead.nom,
+        rejection_reason: reason,
+        contact_phone: contactPhone,
+      });
+
+      if (!emailSent) {
+        this.logger.error(`Failed to send rejection email to ${lead.email}`);
+      }
+    }
+
+    this.logger.log(`Lead ${leadId} rejected (email: ${emailSent})`);
+    return { success: true, emailSent };
   }
 }

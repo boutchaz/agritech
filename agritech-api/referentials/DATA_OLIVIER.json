@@ -68,15 +68,57 @@
   "capacites_calibrage": {
     "supported": true,
     "phenology_mode": "state_machine",
+    "subtypes": {
+      "traditionnel": {
+        "required_indices": [
+          "NDVI",
+          "NIRv",
+          "NDMI",
+          "NDRE",
+          "EVI",
+          "MSAVI",
+          "MSI",
+          "GCI"
+        ]
+      },
+      "intensif": {
+        "required_indices": [
+          "NDVI",
+          "NIRv",
+          "NDMI",
+          "NDRE",
+          "EVI",
+          "MSAVI",
+          "MSI",
+          "GCI"
+        ]
+      },
+      "super_intensif": {
+        "required_indices": [
+          "NDVI",
+          "NIRv",
+          "NDMI",
+          "NDRE",
+          "EVI",
+          "MSAVI",
+          "MSI",
+          "GCI"
+        ]
+      }
+    },
+    "min_observed_images": 10,
+    "min_history_days": 120,
+    "min_history_months_for_period_percentiles": 24,
     "required_indices": [
       "NDVI",
       "NIRv",
       "NDMI",
-      "NDRE"
-    ],
-    "min_observed_images": 10,
-    "min_history_days": 120,
-    "min_history_months_for_period_percentiles": 24
+      "NDRE",
+      "EVI",
+      "MSAVI",
+      "MSI",
+      "GCI"
+    ]
   },
   "varietes": [
     {
@@ -3020,42 +3062,42 @@
     ]
   },
   "gdd": {
-    "tbase_c": 7.5,
+    "tbase_c": 10,
     "plafond_c": 30,
     "reference": "Moriondo et al. 2001",
-    "formule": "GDD_jour = max(0, (min(Tmax, 30) + max(Tmin, 7.5)) / 2 - 7.5)",
+    "formule": "GDD_jour = max(0, (min(Tmax, 30) + max(Tmin, 10)) / 2 - 10)",
     "activation_forcing": {
-      "condition_thermique": "Tmoy > 7.5",
+      "condition_thermique": "Tmoy > 10",
       "condition_satellite": "hausse_NIRv_ou_NIRvP >= 20pct_vs_passage_precedent",
       "note": "Double condition obligatoire. Le GDD ne démarre pas à date fixe mais au point d'activation satellite + thermique confirmé."
     },
     "cumul_reset": "Remis à 0 quand dormance (Phase 0) se termine",
     "seuils_chill_units_par_variete": {
-      "Picholine Marocaine": [
+      "PM": [
         100,
         200
       ],
-      "Haouzia": [
+      "HAO": [
         100,
         150
       ],
-      "Menara": [
+      "MEN": [
         100,
         150
       ],
-      "Arbequina": [
+      "ARB": [
         200,
         400
       ],
-      "Arbosana": [
+      "ARS": [
         200,
         350
       ],
-      "Koroneiki": [
+      "KOR": [
         150,
         300
       ],
-      "Picual": [
+      "PIC": [
         400,
         600
       ]
@@ -3427,9 +3469,6 @@
     "regle_defaut": "En cas de co-occurrence non listée : appliquer priorité standard 🔴 > 🟠 > 🟡 > 🟢. Traiter alertes séquentiellement, pas simultanément."
   },
   "protocole_phenologique": {
-    "_description": "Protocole phénologique Simo v2.0 — sous-module du calibrage uniquement. Exécuté sur l'historique satellite lors du calibrage pour : filtrer les données, classifier le signal, détecter les phases et produire des alertes de calibrage. NE PAS confondre avec les alertes OLI-XX qui sont pour le suivi opérationnel.",
-    "_scope": "CALIBRAGE UNIQUEMENT — pas de suivi opérationnel",
-    "_espece": "Olea europaea L.",
     "filtrage": {
       "_description": "Le filtrage se déroule en deux temps. L'IA ne refait pas le travail déjà fait.",
       "fait_au_telechargement": {
@@ -3464,230 +3503,116 @@
         }
       }
     },
-    "classification_signal": {
-      "_description": "Détermine si les indices sont interprétables pour l'olivier à cette date",
-      "mode_amorcage": {
-        "condition": "nombre_cycles_complets < 3",
-        "effet": {
-          "ELEVEE": "MODEREE",
-          "MODEREE": "FAIBLE",
-          "FAIBLE": "TRES_FAIBLE"
-        }
+    "phases_par_maturite": {
+      "juvenile": [
+        "DORMANCE",
+        "DEBOURREMENT",
+        "CROISSANCE",
+        "FLORAISON",
+        "POST_RECOLTE"
+      ],
+      "entree_production": null,
+      "pleine_production": null,
+      "maturite_avancee": null,
+      "senescence": null
+    },
+    "calculs_preliminaires": {
+      "GDD_jour": "max(0, (min(Tmax, Tplafond) + max(Tmin, Tbase)) / 2 - Tbase)",
+      "NIRvP_norm": "(NIRvP - NIRvP_min_hist) / (NIRvP_max_hist - NIRvP_min_hist)",
+      "Perte_NDVI": "(NDVI_pic_cycle - NDVI_actuel) / NDVI_pic_cycle",
+      "Perte_NIRv": "(NIRv_pic_cycle - NIRv_actuel) / NIRv_pic_cycle",
+      "Ratio_decouplage": "Perte_NIRv / max(Perte_NDVI, 0.01)"
+    }
+  },
+  "signaux": {
+    "streaks": {
+      "warm_streak": {
+        "var": "Tmoy",
+        "gt_var": "Tmoy_Q25"
       },
-      "references_adaptatives": {
-        "Ratio_NIRv_NDVI_ete": "médiane(NIRv/NDVI) sur juillet-septembre historique",
-        "NIRv_ete_moyen": "moyenne(NIRv) sur juillet-septembre historiques (hors hors_norme)",
-        "NIRv_ete_sigma": "écart-type(NIRv) sur juillet-septembre historiques",
-        "Tmoy_Q25": "percentile 25% de Tmoy sur historique annuel",
-        "NDVI_pic_habituel": "médiane des pics printaniers NDVI historiques",
-        "GCI_NIRvP_historique": "liste ratios GCI/NIRvP printaniers — pour quartiles diagnostic floraison"
+      "cold_streak": {
+        "var": "Tmoy",
+        "lt_var": "Tmoy_Q25"
       },
-      "arbre_decision": [
+      "hot_streak": {
+        "var": "Tmoy",
+        "gt": 25
+      },
+      "hot_dry_streak": {
+        "and": [
+          {
+            "var": "Tmax",
+            "gt": 30
+          },
+          {
+            "var": "precip_30j",
+            "lt": 5
+          }
+        ]
+      }
+    }
+  },
+  "phases_config": {
+    "_note": "Phase transition config. GDD from stades_bbch is the primary trigger. Satellite conditions are optional confidence boosters.",
+    "repos": {
+      "nom": "Dormance hivernale",
+      "state_key": "DORMANCE",
+      "exit_conditions": [
         {
-          "condition": "Tmax_30j_pct > 70 ET Precip_30j < 5",
-          "etat_signal": "SIGNAL_PUR",
-          "interpretation": "Indices absolus fiables. Fenêtre de calibrage principal."
-        },
-        {
-          "condition": "(NIRv/NDVI > Ratio_NIRv_NDVI_ete × 1.10) ET (NDVI > NDVI_pic_habituel)",
-          "etat_signal": "DOMINE_ADVENTICES",
-          "interpretation": "Indices absolus NON interprétables pour l'olivier. Diagnostic thermique uniquement."
-        },
-        {
-          "condition": "Precip_30j > 20 ET Tmoy > 10",
-          "etat_signal": "MIXTE_MODERE",
-          "interpretation": "Indices biaisés. Utiliser dérivées et ratios uniquement."
-        },
-        {
-          "condition": "defaut",
-          "etat_signal": "MIXTE_MODERE"
+          "var": "chill_satisfied",
+          "eq": true
         }
       ],
-      "point_clarification": {
-        "condition": "etat_signal_precedent IN [MIXTE_MODERE, DOMINE_ADVENTICES] ET dNDVI_dt ≤ 0 ET Tmax_30j_pct > 70 ET Precip_30j < 5",
-        "action": "etat_signal = SIGNAL_PUR — les adventices ont séché"
+      "on_exit": {
+        "reset": [
+          "GDD_cumul"
+        ]
       }
     },
-    "phases": {
-      "_note": "Machine à états sur l'historique. Chaque phase a conditions entrée, maintien et sortie. GDD calculé depuis referentiel.gdd (tbase 7.5°C, plafond 30°C).",
-      "calculs_preliminaires": {
-        "GDD_jour": "max(0, (min(Tmax, 30) + max(Tmin, 7.5)) / 2 - 7.5)",
-        "NIRvP_norm": "(NIRvP - NIRvP_min_hist) / (NIRvP_max_hist - NIRvP_min_hist)",
-        "dNDVI_dt": "(NDVI(t) - NDVI(t-1)) / jours_entre_acquisitions",
-        "dNIRv_dt": "(NIRv(t) - NIRv(t-1)) / jours_entre_acquisitions",
-        "Perte_NDVI": "(NDVI_pic_cycle - NDVI_actuel) / NDVI_pic_cycle",
-        "Perte_NIRv": "(NIRv_pic_cycle - NIRv_actuel) / NIRv_pic_cycle",
-        "Ratio_decouplage": "Perte_NIRv / max(Perte_NDVI, 0.01)"
-      },
-      "PHASE_0": {
-        "identifiant": "DORMANCE",
-        "nom": "Dormance hivernale",
-        "verification_prealable": "SI Tmoy_Q25 >= 15 → PAS_DE_DORMANCE_MARQUEE — passer directement à Phase 1",
-        "condition_entree": "Tmoy < Tmoy_Q25 ET NIRvP_norm < 0.15",
-        "condition_sortie": {
-          "vers": "PHASE_1",
-          "condition": "Tmoy > Tmoy_Q25 durablement (≥ 10 jours consécutifs)",
-          "action": "GDD_cumul = 0"
-        },
-        "confiance": "ELEVEE",
-        "surveillance": "Chill Units (CU) — lire referentiel.gdd.seuils_chill_units_par_variete"
-      },
-      "PHASE_1": {
-        "identifiant": "DEBOURREMENT",
-        "nom": "Débourrement",
-        "condition_maintien": "Tmoy > 15 pendant ≥ 15 jours sur les 20 derniers ET GDD_cumul > 50 ET Precip_30j > 20 OU irrigation ET dNIRv_dt > 0 soutenu",
-        "condition_sortie": {
-          "vers": "PHASE_2",
-          "condition": "GDD_cumul >= 350 ET Tmoy >= 18",
-          "action": "Phase = FLORAISON"
-        },
-        "discrimination_adventices": "ratio_derivees = dNDVI_dt / max(dNIRv_dt, 0.001) → si > 2.0 : adventices dominent",
-        "confiance": "MODEREE"
-      },
-      "PHASE_2": {
-        "identifiant": "FLORAISON",
-        "nom": "Floraison",
-        "condition_maintien": "GDD_cumul ∈ [350, 700] ET Tmoy ∈ [18, 25]",
-        "diagnostic_intensite": {
-          "priorite_1": "Input terrain si disponible (parcelle.terrain_disponible = oui)",
-          "priorite_2": "Alternance (floraison_N-1 forte → FAIBLE | faible → FORTE)",
-          "priorite_3": "Ratio GCI/NIRvP en quartiles (Q4 → floraison FAIBLE | Q1 → FORTE)"
-        },
-        "taille_rajeunissement": "Si annees_post_taille < 2 → intensite = ABSENTE",
-        "condition_sortie": {
-          "vers": "PHASE_3",
-          "condition": "GDD_cumul > 700 OU Tmoy > 25 durablement"
-        },
-        "confiance": "FAIBLE (spectral) / MODEREE (thermique + alternance)"
-      },
-      "PHASE_3": {
-        "identifiant": "NOUAISON",
-        "nom": "Nouaison / Clarification",
-        "condition_maintien": "GDD_cumul > seuil_floraison + 150 ET Clarification != ATTEINTE",
-        "clarification": "dNDVI_dt ≤ 0 ET Tmax_30j_pct > 70 ET Precip_30j < 5 → etat_signal = SIGNAL_PUR",
-        "condition_sortie": {
-          "vers": "PHASE_4",
-          "condition": "etat_signal = SIGNAL_PUR ET Tmax > 30 récurrent"
-        },
-        "confiance": "MODEREE"
-      },
-      "PHASE_4": {
-        "identifiant": "STRESS_ESTIVAL",
-        "nom": "Stress estival + Maturation",
-        "note": "FENÊTRE DE CALIBRAGE PRINCIPAL — indices absolus fiables ici",
-        "condition_maintien": "etat_signal = SIGNAL_PUR",
-        "diagnostic_severite": [
-          {
-            "condition": "NIRv_actuel > NIRv_ete_moyen - 0.5 × NIRv_ete_sigma",
-            "severite": "PAS_DE_STRESS"
-          },
-          {
-            "condition": "NIRv_actuel > NIRv_ete_moyen - 1.5 × NIRv_ete_sigma",
-            "severite": "STRESS_MODERE"
-          },
-          {
-            "condition": "defaut",
-            "severite": "STRESS_SEVERE"
-          }
-        ],
-        "diagnostic_type": [
-          {
-            "condition": "Ratio_decouplage > 1.3",
-            "type": "FONCTIONNEL"
-          },
-          {
-            "condition": "Ratio_decouplage > 0.9",
-            "type": "MIXTE"
-          },
-          {
-            "condition": "defaut",
-            "type": "STRUCTUREL"
-          }
-        ],
-        "diagnostic_tendance": {
-          "declin": "NIRv_ete_actuel < NIRv_ete_N-1 ET NIRv_ete_N-1 < NIRv_ete_N-2 → DÉCLIN 2 cycles consécutifs",
-          "recuperation": "NIRv_ete_actuel > NIRv_ete_N-1 → récupération en cours"
-        },
-        "condition_sortie_reprise": {
-          "vers": "PHASE_6",
-          "condition": "Precip_episode > 20 ET Tmoy < 25 ET dNIRv_dt > 0"
-        },
-        "condition_sortie_dormance": {
-          "vers": "PHASE_0",
-          "condition": "Tmoy < Tmoy_Q25 ET Tmoy_Q25 < 15 ET NIRvP_norm < 0.15 ET aucune_reprise",
-          "action": "GDD_cumul = 0"
-        },
-        "confiance": "ELEVEE (stress) / MODEREE (maturation)"
-      },
-      "PHASE_6": {
-        "identifiant": "REPRISE_AUTOMNALE",
-        "nom": "Reprise automnale",
-        "pre_condition": "Phase 4 doit avoir été détectée dans ce cycle — sinon passer directement à Phase 0",
-        "condition_maintien": "Precip_recentes > 20 ET Tmoy < 25 ET dNIRv_dt > 0",
-        "diagnostic_intensite": "Hausse_NIRv_pct = (NIRv_actuel - NIRv_plancher_ete) / NIRv_plancher_ete × 100 → < 10% = ABSENTE | < 25% = FAIBLE | < 50% = MODEREE | ≥ 50% = FORTE",
-        "condition_sortie": {
-          "vers": "PHASE_0",
-          "condition": "Tmoy < Tmoy_Q25 ET Tmoy_Q25 < 15 ET NIRvP_norm < 0.15",
-          "action": "GDD_cumul = 0"
-        },
-        "confiance": "MODEREE à ELEVEE"
-      }
+    "debourrement": {
+      "nom": "Débourrement",
+      "state_key": "DEBOURREMENT",
+      "exit_conditions": []
     },
-    "alertes_calibrage": {
-      "_description": "Alertes détectées PENDANT l'analyse historique du calibrage. Ce sont des constats sur l'historique de la parcelle. NE PAS confondre avec les alertes OLI-XX qui sont des alertes opérationnelles déclenchées pendant le suivi.",
-      "_difference_OLI_XX": "OLI-XX = alertes suivi opérationnel (temps réel). Ces alertes = constats historiques calibrage.",
-      "ALERTE_CAL_1": {
-        "nom": "Stress fonctionnel invisible dans l'historique",
-        "condition": "Phase STRESS_ESTIVAL ET Perte_NIRv > 0.40 ET Perte_NDVI < 0.20",
-        "message": "Stress fonctionnel masqué détecté : NIRv a chuté de {Perte_NIRv×100}% alors que NDVI ne baissait que de {Perte_NDVI×100}%. La parcelle souffrait mais la canopée paraissait intacte.",
-        "impact_calibrage": "Confirme stress hydrique chronique — renforce diagnostic explicatif",
-        "severite": "ATTENTION"
-      },
-      "ALERTE_CAL_2": {
-        "nom": "Canicule en fenêtre floraison/nouaison (historique)",
-        "condition": "GDD_cumul ∈ [350, 850] ET (Tmax > 40 pendant ≥ 1 jour OU Tmax > 35 pendant ≥ 2 jours consécutifs)",
-        "message_critique": "Canicule détectée pendant floraison/nouaison — risque chute fleurs et jeunes fruits cette saison-là",
-        "impact_calibrage": "Expliquer baisse rendement historique si détecté — exclure de la baseline si triple confirmation",
-        "severite": "CRITIQUE ou ATTENTION selon intensité"
-      },
-      "ALERTE_CAL_3": {
-        "nom": "Déclin progressif de la parcelle",
-        "condition": "NIRv_ete_actuel < NIRv_ete_N-1 ET NIRv_ete_N-1 < NIRv_ete_N-2",
-        "message": "Déclin détecté : le plancher estival du NIRv diminue pour la 2ème année consécutive.",
-        "impact_calibrage": "Coefficient_etat_parcelle → dégradé. Potentiel rendement ajusté à la baisse. Mentionner dans diagnostic explicatif.",
-        "severite": "ELEVEE"
-      },
-      "ALERTE_CAL_4": {
-        "nom": "Débourrement prématuré détecté (historique)",
-        "condition": "Phase DORMANCE ET Tmoy > 18 pendant > 5 jours ET hausse_NIRv > 10%",
-        "message": "Débourrement prématuré détecté cette saison — chilling possiblement insuffisant ({CU} CU accumulés).",
-        "impact_calibrage": "Expliquer floraison hétérogène ou précoce. Intégrer dans profil variétal.",
-        "severite": "ATTENTION"
-      },
-      "ALERTE_CAL_5": {
-        "nom": "Reprise automnale avortée (historique)",
-        "condition": "Phase STRESS_ESTIVAL ET mois ∈ [Nov, Dec] ET Precip_30j > 20 ET Hausse_NIRv_pct < 10",
-        "message": "Reprise automnale avortée malgré précipitations — réserves possiblement épuisées cette saison.",
-        "impact_calibrage": "Signal de stress chronique grave. Renforce coefficient dégradé.",
-        "severite": "ATTENTION"
-      },
-      "ALERTE_CAL_6": {
-        "nom": "Rupture spectrale détectée",
-        "condition": "NDVI_pic_actuel < NDVI_pic_N-1 × 0.60 ET Precip_annuelles dans la normale",
-        "message": "Rupture spectrale détectée cette saison — vérifier si un événement a eu lieu (taille, arrachage, maladie).",
-        "impact_calibrage": "Segmenter historique AVANT/APRÈS si rupture de régime confirmée. Sinon exclure si triple confirmation.",
-        "severite": "INFORMATION"
-      }
+    "croissance": {
+      "nom": "Croissance végétative",
+      "state_key": "CROISSANCE",
+      "exit_conditions": []
     },
-    "sortie_par_saison": {
-      "_description": "Ce que le protocole produit pour CHAQUE saison dans l'historique",
-      "phase_detectee": "identifiant parmi DORMANCE/DEBOURREMENT/FLORAISON/NOUAISON/STRESS_ESTIVAL/REPRISE_AUTOMNALE",
-      "dates_transitions": "date_debut et date_fin de chaque phase",
-      "gdd_cumule_transitions": "GDD à chaque transition de phase",
-      "confiance_par_phase": "ELEVEE | MODEREE | FAIBLE | TRES_FAIBLE",
-      "etat_signal": "SIGNAL_PUR | MIXTE_MODERE | DOMINE_ADVENTICES",
-      "alertes_calibrage_detectees": "liste de ALERTE_CAL_X détectées cette saison",
-      "mode": "NORMAL | AMORCAGE"
+    "floraison": {
+      "nom": "Floraison",
+      "state_key": "FLORAISON",
+      "exit_conditions": []
+    },
+    "nouaison": {
+      "nom": "Nouaison",
+      "state_key": "NOUAISON",
+      "exit_conditions": []
+    },
+    "grossissement": {
+      "nom": "Grossissement du fruit",
+      "state_key": "GROSSISSEMENT",
+      "exit_conditions": []
+    },
+    "maturation": {
+      "nom": "Maturation / Véraison",
+      "state_key": "MATURATION",
+      "exit_conditions": []
+    },
+    "post_recolte": {
+      "nom": "Post-récolte",
+      "state_key": "POST_RECOLTE",
+      "exit_conditions": [
+        {
+          "var": "cold_streak",
+          "gte": 10
+        }
+      ],
+      "on_exit": {
+        "reset": [
+          "GDD_cumul"
+        ]
+      }
     }
   }
 }

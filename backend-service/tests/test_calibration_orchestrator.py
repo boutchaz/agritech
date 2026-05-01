@@ -1,3 +1,4 @@
+import asyncio
 from importlib import import_module
 
 
@@ -85,11 +86,13 @@ def test_orchestrator_runs_all_steps_and_returns_output() -> None:
         }
     )
 
-    output = run_calibration_pipeline(
-        calibration_input=calibration_input,
-        satellite_images=_build_satellite_images(),
-        weather_rows=build_weather_fixture(),
-        storage=None,
+    output = asyncio.run(
+        run_calibration_pipeline(
+            calibration_input=calibration_input,
+            satellite_images=_build_satellite_images(),
+            weather_rows=build_weather_fixture(),
+            storage=None,
+        )
     )
 
     assert output.parcel_id == parcel["parcel_id"]
@@ -102,3 +105,63 @@ def test_orchestrator_runs_all_steps_and_returns_output() -> None:
     assert output.step7.zone_summary
     assert 0 <= output.step8.health_score.total <= 100
     assert 0 <= output.confidence.normalized_score <= 1
+
+
+def test_orchestrator_normalizes_mixed_case_index_keys() -> None:
+    parcel = build_parcel_context_fixture()
+    weather = build_weather_fixture()
+
+    calibration_input = CalibrationInput.model_validate(
+        {
+            "parcel_id": parcel["parcel_id"],
+            "organization_id": parcel["organization_id"],
+            "crop_type": parcel["crop_type"],
+            "variety": parcel["variety"],
+            "planting_year": parcel["planting_year"],
+            "planting_system": parcel["planting_system"],
+            "analyses": [],
+            "harvest_records": build_harvest_fixture(),
+            "reference_data": build_crop_reference_fixture(),
+        }
+    )
+
+    # Need >= 10 observed NDVI images to pass the min_observed_images guard.
+    # Use mixed-case index keys across entries to test normalization.
+    _base_indices_upper = {
+        "NDVI": 0.40, "NIRV": 0.31, "ndmi": 0.22, "NdRe": 0.21,
+        "EVI": 0.18, "msavi": 0.25, "MSI": 0.90, "gci": 1.15,
+    }
+    _base_indices_lower = {
+        "ndvi": 0.45, "nirv": 0.35, "NDMI": 0.24, "NDRE": 0.23,
+        "evi": 0.20, "MSAVI": 0.27, "msi": 0.88, "GCI": 1.20,
+    }
+    satellite_images = []
+    for i in range(12):
+        day = 1 + i * 15
+        month = 1 + (day - 1) // 30
+        day_of_month = ((day - 1) % 30) + 1
+        if month > 12:
+            month = 12
+            day_of_month = 28
+        date_str = f"2024-{month:02d}-{day_of_month:02d}"
+        indices = dict(_base_indices_upper if i % 2 == 0 else _base_indices_lower)
+        satellite_images.append(
+            {"date": date_str, "cloud_coverage": 5.0, "indices": indices}
+        )
+
+    output = asyncio.run(
+        run_calibration_pipeline(
+            calibration_input=calibration_input,
+            satellite_images=satellite_images,
+            weather_rows=weather,
+            storage=None,
+        )
+    )
+
+    # "msavi"/"MSAVI" in input is normalized to canonical "MSAVI2" internally.
+    for index in ["NDVI", "NIRv", "NDMI", "NDRE", "EVI", "MSAVI2", "MSI", "GCI"]:
+        assert index in output.step3.global_percentiles, (
+            f"{index} not in {list(output.step3.global_percentiles.keys())}"
+        )
+        assert output.step3.global_percentiles[index].p10 is not None
+        assert output.step3.global_percentiles[index].p25 is not None

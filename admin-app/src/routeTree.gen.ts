@@ -12,11 +12,14 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
+import { Route as AuthenticatedSupportedCountriesRouteImport } from './routes/_authenticated/supported-countries'
 import { Route as AuthenticatedSubscriptionModelRouteImport } from './routes/_authenticated/subscription-model'
 import { Route as AuthenticatedRdvRouteImport } from './routes/_authenticated/rdv'
 import { Route as AuthenticatedEmailTemplatesRouteImport } from './routes/_authenticated/email-templates'
 import { Route as AuthenticatedCronJobsRouteImport } from './routes/_authenticated/cron-jobs'
 import { Route as AuthenticatedClientsRouteImport } from './routes/_authenticated/clients'
+import { Route as AuthenticatedChangelogRouteImport } from './routes/_authenticated/changelog'
+import { Route as AuthenticatedBannersRouteImport } from './routes/_authenticated/banners'
 import { Route as AuthenticatedReferentielsCropRouteImport } from './routes/_authenticated/referentiels/$crop'
 import { Route as AuthenticatedClientsOrgIdRouteImport } from './routes/_authenticated/clients/$orgId'
 
@@ -34,6 +37,12 @@ const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedSupportedCountriesRoute =
+  AuthenticatedSupportedCountriesRouteImport.update({
+    id: '/supported-countries',
+    path: '/supported-countries',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedSubscriptionModelRoute =
   AuthenticatedSubscriptionModelRouteImport.update({
     id: '/subscription-model',
@@ -61,6 +70,16 @@ const AuthenticatedClientsRoute = AuthenticatedClientsRouteImport.update({
   path: '/clients',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedChangelogRoute = AuthenticatedChangelogRouteImport.update({
+  id: '/changelog',
+  path: '/changelog',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedBannersRoute = AuthenticatedBannersRouteImport.update({
+  id: '/banners',
+  path: '/banners',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedReferentielsCropRoute =
   AuthenticatedReferentielsCropRouteImport.update({
     id: '/referentiels/$crop',
@@ -77,21 +96,27 @@ const AuthenticatedClientsOrgIdRoute =
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
   '/login': typeof LoginRoute
+  '/banners': typeof AuthenticatedBannersRoute
+  '/changelog': typeof AuthenticatedChangelogRoute
   '/clients': typeof AuthenticatedClientsRouteWithChildren
   '/cron-jobs': typeof AuthenticatedCronJobsRoute
   '/email-templates': typeof AuthenticatedEmailTemplatesRoute
   '/rdv': typeof AuthenticatedRdvRoute
   '/subscription-model': typeof AuthenticatedSubscriptionModelRoute
+  '/supported-countries': typeof AuthenticatedSupportedCountriesRoute
   '/clients/$orgId': typeof AuthenticatedClientsOrgIdRoute
   '/referentiels/$crop': typeof AuthenticatedReferentielsCropRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
+  '/banners': typeof AuthenticatedBannersRoute
+  '/changelog': typeof AuthenticatedChangelogRoute
   '/clients': typeof AuthenticatedClientsRouteWithChildren
   '/cron-jobs': typeof AuthenticatedCronJobsRoute
   '/email-templates': typeof AuthenticatedEmailTemplatesRoute
   '/rdv': typeof AuthenticatedRdvRoute
   '/subscription-model': typeof AuthenticatedSubscriptionModelRoute
+  '/supported-countries': typeof AuthenticatedSupportedCountriesRoute
   '/': typeof AuthenticatedIndexRoute
   '/clients/$orgId': typeof AuthenticatedClientsOrgIdRoute
   '/referentiels/$crop': typeof AuthenticatedReferentielsCropRoute
@@ -100,11 +125,14 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/login': typeof LoginRoute
+  '/_authenticated/banners': typeof AuthenticatedBannersRoute
+  '/_authenticated/changelog': typeof AuthenticatedChangelogRoute
   '/_authenticated/clients': typeof AuthenticatedClientsRouteWithChildren
   '/_authenticated/cron-jobs': typeof AuthenticatedCronJobsRoute
   '/_authenticated/email-templates': typeof AuthenticatedEmailTemplatesRoute
   '/_authenticated/rdv': typeof AuthenticatedRdvRoute
   '/_authenticated/subscription-model': typeof AuthenticatedSubscriptionModelRoute
+  '/_authenticated/supported-countries': typeof AuthenticatedSupportedCountriesRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/clients/$orgId': typeof AuthenticatedClientsOrgIdRoute
   '/_authenticated/referentiels/$crop': typeof AuthenticatedReferentielsCropRoute
@@ -114,21 +142,27 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/login'
+    | '/banners'
+    | '/changelog'
     | '/clients'
     | '/cron-jobs'
     | '/email-templates'
     | '/rdv'
     | '/subscription-model'
+    | '/supported-countries'
     | '/clients/$orgId'
     | '/referentiels/$crop'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
+    | '/banners'
+    | '/changelog'
     | '/clients'
     | '/cron-jobs'
     | '/email-templates'
     | '/rdv'
     | '/subscription-model'
+    | '/supported-countries'
     | '/'
     | '/clients/$orgId'
     | '/referentiels/$crop'
@@ -136,11 +170,14 @@ export interface FileRouteTypes {
     | '__root__'
     | '/_authenticated'
     | '/login'
+    | '/_authenticated/banners'
+    | '/_authenticated/changelog'
     | '/_authenticated/clients'
     | '/_authenticated/cron-jobs'
     | '/_authenticated/email-templates'
     | '/_authenticated/rdv'
     | '/_authenticated/subscription-model'
+    | '/_authenticated/supported-countries'
     | '/_authenticated/'
     | '/_authenticated/clients/$orgId'
     | '/_authenticated/referentiels/$crop'
@@ -172,6 +209,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof AuthenticatedIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/supported-countries': {
+      id: '/_authenticated/supported-countries'
+      path: '/supported-countries'
+      fullPath: '/supported-countries'
+      preLoaderRoute: typeof AuthenticatedSupportedCountriesRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/subscription-model': {
@@ -209,6 +253,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedClientsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/changelog': {
+      id: '/_authenticated/changelog'
+      path: '/changelog'
+      fullPath: '/changelog'
+      preLoaderRoute: typeof AuthenticatedChangelogRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/banners': {
+      id: '/_authenticated/banners'
+      path: '/banners'
+      fullPath: '/banners'
+      preLoaderRoute: typeof AuthenticatedBannersRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/referentiels/$crop': {
       id: '/_authenticated/referentiels/$crop'
       path: '/referentiels/$crop'
@@ -238,21 +296,27 @@ const AuthenticatedClientsRouteWithChildren =
   AuthenticatedClientsRoute._addFileChildren(AuthenticatedClientsRouteChildren)
 
 interface AuthenticatedRouteChildren {
+  AuthenticatedBannersRoute: typeof AuthenticatedBannersRoute
+  AuthenticatedChangelogRoute: typeof AuthenticatedChangelogRoute
   AuthenticatedClientsRoute: typeof AuthenticatedClientsRouteWithChildren
   AuthenticatedCronJobsRoute: typeof AuthenticatedCronJobsRoute
   AuthenticatedEmailTemplatesRoute: typeof AuthenticatedEmailTemplatesRoute
   AuthenticatedRdvRoute: typeof AuthenticatedRdvRoute
   AuthenticatedSubscriptionModelRoute: typeof AuthenticatedSubscriptionModelRoute
+  AuthenticatedSupportedCountriesRoute: typeof AuthenticatedSupportedCountriesRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedReferentielsCropRoute: typeof AuthenticatedReferentielsCropRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedBannersRoute: AuthenticatedBannersRoute,
+  AuthenticatedChangelogRoute: AuthenticatedChangelogRoute,
   AuthenticatedClientsRoute: AuthenticatedClientsRouteWithChildren,
   AuthenticatedCronJobsRoute: AuthenticatedCronJobsRoute,
   AuthenticatedEmailTemplatesRoute: AuthenticatedEmailTemplatesRoute,
   AuthenticatedRdvRoute: AuthenticatedRdvRoute,
   AuthenticatedSubscriptionModelRoute: AuthenticatedSubscriptionModelRoute,
+  AuthenticatedSupportedCountriesRoute: AuthenticatedSupportedCountriesRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedReferentielsCropRoute: AuthenticatedReferentielsCropRoute,
 }

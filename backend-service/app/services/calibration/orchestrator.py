@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from collections import defaultdict
 from datetime import UTC, datetime
 from typing import Any
@@ -14,18 +15,18 @@ from .support.confidence import (
     ConfidenceInput,
     calculate_confidence_score,
 )
-from .pipeline.s1_satellite_extraction import (
-    extract_satellite_history,
-)
+from .support.recommendations import generate_recommendations
+from .pipeline.s1_satellite_extraction import extract_satellite_history
 from .pipeline.s2_weather_extraction import extract_weather_history
+from .pipeline.s2a_signal_classification import classify_signal
 from .pipeline.s3_percentile_calculation import calculate_percentiles
 from .pipeline.s4_phenology_detection import detect_phenology
 from .pipeline.s5_anomaly_detection import detect_anomalies
 from .pipeline.s6_yield_potential import calculate_yield_potential
 from .pipeline.s7_zone_detection import classify_zones
 from .pipeline.s8_health_score import calculate_health_score
-from .support.gdd_service import precompute_gdd_rows
-from .referential_utils import get_calibration_capabilities
+from .referential_utils import get_calibration_capabilities, get_gdd_tbase_tupper
+from .support.gdd_service import compute_daily_gdd
 from .types import (
     CalibrationInput,
     CalibrationMetadata,
@@ -33,17 +34,39 @@ from .types import (
     ConfidenceComponent,
     ConfidenceScore,
     MaturityPhase,
-    Recommendation,
+    WeatherRowAccessor,
 )
 
-FROST_THRESHOLD_BY_CROP = {
-    "olivier": -2.0,
-    "agrumes": 0.0,
-    "avocatier": 2.0,
-    "palmier_dattier": -4.0,
-}
 
-EVERGREEN_CROPS = {"olivier", "agrumes", "avocatier"}
+def _get_frost_threshold(reference_data: dict[str, Any] | None) -> float:
+    """Read frost threshold from referentiel seuils_meteo.gel.threshold_c."""
+    if reference_data:
+        gel = (reference_data.get("seuils_meteo") or {}).get("gel") or {}
+        val = gel.get("threshold_c")
+        if isinstance(val, (int, float)):
+            return float(val)
+    return -2.0  # safe default
+
+
+def _is_evergreen(
+    crop_type: str,
+    reference_data: dict[str, Any] | None,
+    planting_system: str | None = None,
+) -> bool:
+    """Determine if crop is evergreen from referentiel capacites_calibrage."""
+    if reference_data:
+        cap = reference_data.get("capacites_calibrage") or {}
+        # Explicit flag if present
+        if "evergreen" in cap:
+            return bool(cap["evergreen"])
+    capabilities = get_calibration_capabilities(
+        crop_type,
+        reference_data,
+        subtype=planting_system,
+    )
+    if capabilities.phenology_mode == "state_machine":
+        return True
+    return False
 
 _COMPONENT_MAX_SCORES: dict[str, float] = {
     "satellite": 30.0,
@@ -138,7 +161,7 @@ def _latest_analysis_fields(
 
 def _observed_points(points: list[Any]) -> list[Any]:
     return [
-        point for point in points if not point.interpolated and not point.outlier
+        point for point in points if point.is_observed
     ]
 
 
@@ -150,7 +173,101 @@ def _observed_month_span(points: list[Any]) -> int:
     return ((last.year - first.year) * 12) + (last.month - first.month) + 1
 
 
-def run_calibration_pipeline(
+def _extract_location_from_weather_rows(
+    weather_rows: list[dict[str, Any]],
+) -> tuple[float, float] | None:
+    """Return (lat, lon) from the first row that has both fields, or None."""
+    for r in weather_rows:
+        lat = r.get("latitude")
+        lon = r.get("longitude")
+        if lat is not None and lon is not None:
+            return float(lat), float(lon)
+    return None
+
+
+def _compute_gdd_from_weather_rows(
+    weather_rows: list[dict[str, Any]],
+    crop_type: str,
+    reference_data: dict[str, Any] | None,
+) -> list[dict[str, Any]]:
+    """Compute daily GDD from raw weather rows using referential tbase/tupper.
+
+    Used as a fallback when ``weather_gdd_daily`` has no data yet.
+    Delegates to ``compute_daily_gdd`` — single source of truth for the formula.
+    Returns rows with ``date``, ``gdd_daily``, ``chill_hours``.
+    """
+    tbase, tupper = get_gdd_tbase_tupper(crop_type, reference_data)
+    if tbase is None:
+        return []
+    tupper = tupper if tupper is not None else 40.0
+
+    result: list[dict[str, Any]] = []
+    for r in sorted(weather_rows, key=lambda x: str(x.get("date", ""))):
+        w = WeatherRowAccessor(r)
+        if not w.date_str:
+            continue
+        gdd = compute_daily_gdd(w.temp_max, w.temp_min, tbase, tupper)
+        result.append({
+            "date": w.date_str,
+            "gdd_daily": round(gdd, 4),
+            "chill_hours": 1.0 if w.temp_min < 7.2 else 0.0,
+        })
+    return result
+
+
+async def _enrich_step2_with_gdd(
+    step2,
+    *,
+    lat: float,
+    lon: float,
+    crop_type: str,
+    start_date: str,
+    end_date: str,
+    supabase_svc,
+    weather_rows: list[dict[str, Any]] | None = None,
+    reference_data: dict[str, Any] | None = None,
+) -> None:
+    """Populate step2 monthly GDD totals and cumulative from ``weather_gdd_daily``.
+
+    Strategy:
+    - Try to read from ``weather_gdd_daily`` (pre-computed, fast).
+    - If empty (first calibration for this location/crop), compute GDD from
+      ``weather_rows`` in memory using the referential formula, then persist
+      to ``weather_gdd_daily`` asynchronously (fire-and-forget sync).
+    - Skipped gracefully when Supabase is unavailable (tests, offline).
+    """
+    rows = await supabase_svc.get_gdd_timeseries(
+        lat, lon, crop_type, start_date, end_date
+    )
+
+    if not rows:
+        # Cache miss — compute from weather_rows already in memory
+        if not weather_rows:
+            return
+        rows = _compute_gdd_from_weather_rows(weather_rows, crop_type, reference_data)
+        if not rows:
+            return
+        # Fire-and-forget: persist to weather_gdd_daily for future calibrations
+        asyncio.ensure_future(
+            supabase_svc.upsert_gdd_rows(lat, lon, crop_type, rows)
+        )
+
+    monthly_totals: dict[str, float] = defaultdict(float)
+    cumulative = 0.0
+    cumulative_by_month: dict[str, float] = {}
+    for row in rows:
+        daily = float(row.get("gdd_daily") or 0.0)
+        cumulative += daily
+        month_key = str(row["date"])[:7]
+        monthly_totals[month_key] += daily
+        cumulative_by_month[month_key] = round(cumulative, 3)
+
+    step2.cumulative_gdd = cumulative_by_month
+    for agg in step2.monthly_aggregates:
+        agg.gdd_total = round(monthly_totals.get(agg.month, 0.0), 3)
+
+
+async def run_calibration_pipeline(
     *,
     calibration_input: CalibrationInput,
     satellite_images: list[dict[str, Any]],
@@ -158,30 +275,46 @@ def run_calibration_pipeline(
     storage=None,
     ndvi_raster_pixels: list[dict[str, Any]] | None = None,
     previous_output: CalibrationOutput | None = None,
+    supabase_svc=None,
 ) -> CalibrationOutput:
+    # --- Pre-pipeline: fast synchronous setup ---
     maturity_phase = determine_maturity_phase(
         planting_year=calibration_input.planting_year,
         crop_type=calibration_input.crop_type,
         reference_data=calibration_input.reference_data,
         variety=calibration_input.variety,
     )
-
     adjustment = get_threshold_adjustment(
         maturity_phase,
         planting_year=calibration_input.planting_year,
         reference_data=calibration_input.reference_data,
     )
+    normalized_images = _normalize_satellite_images(satellite_images)
+    observed_ndvi_points: list[Any] = []  # populated after step1 completes
 
-    step1 = extract_satellite_history(
-        organization_id=calibration_input.organization_id,
-        parcel_id=calibration_input.parcel_id,
-        images=_normalize_satellite_images(satellite_images),
-        storage=storage,
-        reference_data=calibration_input.reference_data,
+    # --- Phase 1: S1(satellite_extraction) + S2(weather_extraction) — independent ---
+    step1, step2 = await asyncio.gather(
+        asyncio.to_thread(
+            extract_satellite_history,
+            organization_id=calibration_input.organization_id,
+            parcel_id=calibration_input.parcel_id,
+            images=normalized_images,
+            storage=storage,
+            reference_data=calibration_input.reference_data,
+        ),
+        asyncio.to_thread(
+            extract_weather_history,
+            weather_data=weather_rows,
+            crop_type=calibration_input.crop_type,
+            reference_data=calibration_input.reference_data,
+        ),
     )
+
+    # Capability & data guard (sequential — depends on step1)
     capabilities = get_calibration_capabilities(
         calibration_input.crop_type,
         calibration_input.reference_data,
+        subtype=calibration_input.planting_system,
     )
     if not capabilities.supported:
         raise ValueError(
@@ -190,132 +323,132 @@ def run_calibration_pipeline(
     observed_ndvi_points = _observed_points(step1.index_time_series.get("NDVI", []))
     if len(observed_ndvi_points) < capabilities.min_observed_images:
         raise ValueError(
-            f"Calibration requires at least {capabilities.min_observed_images} observed NDVI images after filtering"
+            f"Calibration requires at least {capabilities.min_observed_images} "
+            "observed NDVI images after filtering"
         )
 
-    step2 = extract_weather_history(
-        weather_data=weather_rows,
-        crop_type=calibration_input.crop_type,
-        reference_data=calibration_input.reference_data,
-    )
+    for required_index in capabilities.required_indices:
+        key = _canon_index_key(required_index)
+        observed_points = _observed_points(step1.index_time_series.get(key, []))
+        if not observed_points:
+            raise ValueError(
+                f"Calibration requires observed {key} series for planting_system "
+                f"'{calibration_input.planting_system or 'default'}'"
+            )
 
-    # Crop-aware GDD: replace naive cumulative_gdd with gdd_service model
-    # (chill-gated for olives, BBCH-month-filtered, NIRv-gated)
     nirv_series_raw = [
         {"date": p.date.isoformat(), "value": p.value}
         for p in step1.index_time_series.get("NIRv", [])
     ]
-    gdd_rows, _ = precompute_gdd_rows(
-        weather_rows,
-        calibration_input.crop_type,
-        variety=calibration_input.variety,
-        nirv_series=nirv_series_raw,
-        reference_data=calibration_input.reference_data,
-    )
-    gdd_column = f"gdd_{calibration_input.crop_type}"
-    crop_aware_cumulative: dict[str, float] = {}
-    monthly_gdd_totals: dict[str, float] = defaultdict(float)
-    running_gdd = 0.0
-    for row in sorted(gdd_rows, key=lambda r: str(r.get("date", ""))):
-        daily = float(row.get(gdd_column, 0.0))
-        running_gdd += daily
-        month_key = str(row.get("date", ""))[:7]
-        crop_aware_cumulative[month_key] = round(running_gdd, 3)
-        monthly_gdd_totals[month_key] += daily
-    if crop_aware_cumulative:
-        step2.cumulative_gdd = crop_aware_cumulative
-        for agg in step2.monthly_aggregates:
-            agg.gdd_total = round(monthly_gdd_totals.get(agg.month, 0.0), 3)
 
-    from .pipeline.s2a_signal_classification import classify_signal
-
-    signal_classification = classify_signal(step1, step2, calibration_input.crop_type)
-
-    step3 = calculate_percentiles(
-        step1,
-        reference_data=calibration_input.reference_data,
-        crop_type=calibration_input.crop_type,
-        planting_system=calibration_input.planting_system,
+    # --- Phase 2: S2A(signal_classification) + S3(percentile_calculation) + S4(phenology_detection) + S6(yield_potential) ---
+    signal_classification, step3, step4, step6 = await asyncio.gather(
+        asyncio.to_thread(
+            classify_signal,
+            step1, step2, calibration_input.crop_type,
+        ),
+        asyncio.to_thread(
+            calculate_percentiles,
+            step1,
+            reference_data=calibration_input.reference_data,
+            crop_type=calibration_input.crop_type,
+            planting_system=calibration_input.planting_system,
+        ),
+        asyncio.to_thread(
+            detect_phenology,
+            step1,
+            step2,
+            crop_type=calibration_input.crop_type,
+            variety=calibration_input.variety,
+            planting_system=calibration_input.planting_system,
+            reference_data=calibration_input.reference_data,
+            maturity_phase=maturity_phase.value if isinstance(maturity_phase, MaturityPhase) else None,
+        ),
+        asyncio.to_thread(
+            calculate_yield_potential,
+            planting_year=calibration_input.planting_year,
+            crop_type=calibration_input.crop_type,
+            variety=calibration_input.variety,
+            reference_data=calibration_input.reference_data,
+            harvest_records=calibration_input.harvest_records,
+            maturity_phase=maturity_phase,
+            satellite_data=step1,
+            plant_count=calibration_input.plant_count,
+            area_hectares=calibration_input.area_hectares,
+            density_per_hectare=calibration_input.density_per_hectare,
+        ),
     )
-    step4 = detect_phenology(
-        step1,
-        step2,
-        crop_type=calibration_input.crop_type,
-        variety=calibration_input.variety,
-        planting_system=calibration_input.planting_system,
-        reference_data=calibration_input.reference_data,
-    )
+
+    # Enrich step2 GDD from weather_gdd_daily (cache-first, compute-on-miss).
+    if supabase_svc is not None:
+        location = _extract_location_from_weather_rows(weather_rows)
+        if location:
+            dates = [str(r.get("date", "")) for r in weather_rows if r.get("date")]
+            if dates:
+                await _enrich_step2_with_gdd(
+                    step2,
+                    lat=location[0],
+                    lon=location[1],
+                    crop_type=calibration_input.crop_type,
+                    start_date=min(dates),
+                    end_date=max(dates),
+                    supabase_svc=supabase_svc,
+                    weather_rows=weather_rows,
+                    reference_data=calibration_input.reference_data,
+                )
+
     if not step4.yearly_stages:
         raise ValueError("Unable to detect phenology from observed satellite history")
-    step5 = detect_anomalies(
-        step1,
-        step2,
-        step4,
-        adjustment,
-        reference_data=calibration_input.reference_data,
-        planting_system=calibration_input.planting_system,
-        crop_type=calibration_input.crop_type,
-    )
-
-    step6 = calculate_yield_potential(
-        planting_year=calibration_input.planting_year,
-        crop_type=calibration_input.crop_type,
-        variety=calibration_input.variety,
-        reference_data=calibration_input.reference_data,
-        harvest_records=calibration_input.harvest_records,
-        maturity_phase=maturity_phase,
-        satellite_data=step1,
-        plant_count=calibration_input.plant_count,
-        area_hectares=calibration_input.area_hectares,
-        density_per_hectare=calibration_input.density_per_hectare,
-    )
-
-    ndvi_points = observed_ndvi_points
-    ndvi_values = [point.value for point in ndvi_points] if ndvi_points else [0.0]
-    median_ndvi = float(np.median(ndvi_values))
-
-    if ndvi_raster_pixels and len(ndvi_raster_pixels) > 1:
-        # Use actual sampled pixel values directly as a column vector.
-        # A spatial grid would flood NaN cells with median, drowning real variation.
-        # Step7 only counts pixels per class — it doesn't need spatial adjacency.
-        pixel_values = [
-            float(p["value"]) for p in ndvi_raster_pixels if p.get("value") is not None
-        ]
-
-        if len(pixel_values) > 1:
-            raster = np.array(pixel_values, dtype=np.float64).reshape(-1, 1)
-            has_real_zones = True
-        else:
-            raster = np.array([[median_ndvi]], dtype=np.float64)
-            has_real_zones = False
-    else:
-        raster = np.array([[median_ndvi]], dtype=np.float64)
-        has_real_zones = False
 
     ndvi_percentiles = step3.global_percentiles.get("NDVI")
     if ndvi_percentiles is None:
         raise ValueError(
             "Calibration requires enough observed satellite history to compute NDVI percentiles"
         )
-    step7 = classify_zones(raster, ndvi_percentiles)
 
-    step8 = calculate_health_score(
+    # --- Phase 3: S5(anomaly_detection) + S7(zone_classification) — independent ---
+    step5, step7 = await asyncio.gather(
+        asyncio.to_thread(
+            detect_anomalies,
+            step1, step2, step4, adjustment,
+            reference_data=calibration_input.reference_data,
+            planting_system=calibration_input.planting_system,
+            crop_type=calibration_input.crop_type,
+        ),
+        asyncio.to_thread(
+            classify_zones,
+            ndvi_percentiles,
+            ndvi_raster_pixels=ndvi_raster_pixels,
+            observed_ndvi_points=observed_ndvi_points,
+            gci_percentiles=step3.global_percentiles.get("GCI"),
+            observed_gci_points=_observed_points(step1.index_time_series.get("GCI", [])),
+        ),
+    )
+
+    # --- Phase 4: S8(health_score) — needs S1 + S3 + S7 ---
+    step8 = await asyncio.to_thread(
+        calculate_health_score,
         step1=step1,
         step3=step3,
-        step5=step5,
         step7=step7,
     )
 
-    recommendations: list[Recommendation] = []
-
+    # Analysis fields for confidence scoring and recommendations
     soil_date, soil_fields = _latest_analysis_fields(calibration_input.analyses, "soil")
-    water_date, water_fields = _latest_analysis_fields(
-        calibration_input.analyses, "water"
+    water_date, water_fields = _latest_analysis_fields(calibration_input.analyses, "water")
+
+    # Recommendations
+    recommendations = generate_recommendations(
+        step8=step8,
+        step5=step5,
+        step2=step2,
+        crop_type=calibration_input.crop_type,
+        maturity_phase=maturity_phase if isinstance(maturity_phase, MaturityPhase) else MaturityPhase.UNKNOWN,
     )
 
     confidence = calculate_confidence_score(
         ConfidenceInput(
-            satellite_months=max(1, _observed_month_span(ndvi_points)),
+            satellite_months=max(1, _observed_month_span(observed_ndvi_points)),
             soil_analysis_date=None if soil_date is None else soil_date.date(),
             soil_fields=soil_fields,
             water_analysis_date=None if water_date is None else water_date.date(),
@@ -333,16 +466,18 @@ def run_calibration_pipeline(
         )
     )
 
+    has_real_zones = step7.zone_summary is not None and len(step7.zone_summary) > 1
+
     data_quality_flags: list[str] = []
-
-    ndvi_valid_count = len(ndvi_points)
-    if ndvi_valid_count < MIN_SATELLITE_IMAGES:
+    if len(observed_ndvi_points) < MIN_SATELLITE_IMAGES:
         data_quality_flags.append("insufficient_satellite_data")
-
     if not has_real_zones:
         data_quality_flags.append("single_pixel_zones")
-
-    if calibration_input.crop_type in EVERGREEN_CROPS and not step4.referential_cycle_used:
+    if _is_evergreen(
+        calibration_input.crop_type,
+        calibration_input.reference_data,
+        calibration_input.planting_system,
+    ) and not step4.referential_cycle_used:
         data_quality_flags.append("evergreen_phenology_approximate")
     if step4.status != "ok":
         data_quality_flags.append(f"phenology_{step4.status}")

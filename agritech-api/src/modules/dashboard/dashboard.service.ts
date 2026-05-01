@@ -132,12 +132,13 @@ export class DashboardService {
         return this.databaseService.getAdminClient();
     }
 
-    /** In-memory geocoding cache: location string → {lat, lng} */
+    /** In-memory geocoding cache: location string → {lat, lng} — capped at 500 entries */
     private readonly geocodeCache = new Map<string, { lat: number; lng: number }>();
+    private static readonly GEOCODE_CACHE_MAX = 500;
 
     /**
      * Geocode a location string via OpenStreetMap Nominatim (free, no API key).
-     * Results are cached in-memory for the lifetime of the service instance.
+     * Results are cached in-memory with LRU eviction at 500 entries.
      */
     private async geocodeLocation(query: string): Promise<{ lat: number; lng: number } | null> {
         if (!query?.trim()) return null;
@@ -152,7 +153,7 @@ export class DashboardService {
 
             const res = await fetch(url, {
                 signal: controller.signal,
-                headers: { 'User-Agent': 'AgriTech-Platform/1.0' }, // Nominatim requires a UA
+                headers: { 'User-Agent': 'AgroGina-Platform/1.0' }, // Nominatim requires a UA
             });
             clearTimeout(timeout);
 
@@ -165,6 +166,11 @@ export class DashboardService {
             if (isNaN(lat) || isNaN(lng)) return null;
 
             const coords = { lat, lng };
+            // Evict oldest entry if at capacity (Map preserves insertion order)
+            if (this.geocodeCache.size >= DashboardService.GEOCODE_CACHE_MAX) {
+                const oldest = this.geocodeCache.keys().next().value;
+                if (oldest !== undefined) this.geocodeCache.delete(oldest);
+            }
             this.geocodeCache.set(key, coords);
             return coords;
         } catch {

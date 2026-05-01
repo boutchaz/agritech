@@ -90,8 +90,8 @@ const SubscriptionRequired = ({
           <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
             <p className="text-xs text-center text-gray-500 dark:text-gray-400">
               Need help? Contact your organization administrator or{' '}
-              <a href="mailto:support@agritech.com" className="text-blue-600 hover:text-blue-700">
-                support@agritech.com
+          <a href="mailto:support@agrogina.com" className="text-blue-600 hover:text-blue-700">
+            support@agrogina.com
               </a>
             </p>
           </div>

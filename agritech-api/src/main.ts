@@ -14,6 +14,12 @@ import { AppModule } from './app.module';
 // Global exception filter to log all 403 exceptions with stack traces
 @Catch()
 class AllExceptionsFilter implements ExceptionFilter {
+  private errorRecorder: { recordError: () => void } | null = null;
+
+  setErrorRecorder(recorder: { recordError: () => void }) {
+    this.errorRecorder = recorder;
+  }
+
   catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse();
@@ -58,8 +64,9 @@ class AllExceptionsFilter implements ExceptionFilter {
       console.error(`==========================================================\n`);
     }
 
-    // Report server errors to Sentry
+    // Track error rate for health monitoring
     if (status >= 500) {
+      this.errorRecorder?.recordError();
       Sentry.captureException(exception);
     }
 
@@ -191,7 +198,15 @@ async function bootstrap() {
   );
 
   // Global exception filter to capture and log 403 errors with stack traces
-  app.useGlobalFilters(new AllExceptionsFilter());
+  const exceptionFilter = new AllExceptionsFilter();
+  try {
+    const { HealthService } = await import('./modules/health/health.service');
+    const healthService = app.get(HealthService);
+    exceptionFilter.setErrorRecorder(healthService);
+  } catch {
+    // HealthService not available — error rate tracking disabled
+  }
+  app.useGlobalFilters(exceptionFilter);
 
   // Enable CORS
   const corsOrigin = configService.get('CORS_ORIGIN', 'http://localhost:5173');
@@ -297,11 +312,11 @@ async function bootstrap() {
 
   // Swagger API documentation
   const config = new DocumentBuilder()
-    .setTitle('AgriTech API')
+    .setTitle('AgroGina API')
     .setDescription(`
-# AgriTech Platform Business Logic API
+# AgroGina Platform Business Logic API
 
-NestJS-based backend service handling complex business logic for the AgriTech multi-tenant agricultural SaaS platform.
+NestJS-based backend service handling complex business logic for the AgroGina multi-tenant agricultural SaaS platform.
 
 ## Overview
 
@@ -344,7 +359,7 @@ All errors follow a standard format:
 \`\`\`
     `)
     .setVersion('1.0.0')
-    .setContact('AgriTech Team', 'https://agritech.thebzlab.online', 'support@thebzlab.online')
+    .setContact('AgroGina Team', 'https://agrogina.thebzlab.online', 'support@thebzlab.online')
     .setLicense('ISC', 'https://opensource.org/licenses/ISC')
     .addBearerAuth(
       {
@@ -454,7 +469,7 @@ All errors follow a standard format:
   console.log(`
   ╔═══════════════════════════════════════════════════════╗
   ║                                                       ║
-  ║   🌾 AgriTech API Server                             ║
+   ║   🌾 AgroGina API Server                             ║
   ║                                                       ║
   ║   Server running on: http://0.0.0.0:${port}             ║
   ║   API Docs: http://0.0.0.0:${port}/api/docs             ║

@@ -33,7 +33,7 @@ function ImportDataPage() {
     try {
       const { open } = await import('@tauri-apps/api/dialog');
       const selected = await open({
-        filters: [{ name: 'AgriTech Bundle', extensions: ['agritech', 'zip'] }],
+        filters: [{ name: 'AgroGina Bundle', extensions: ['agritech', 'zip'] }],
         multiple: false,
       });
       if (selected && typeof selected === 'string') {

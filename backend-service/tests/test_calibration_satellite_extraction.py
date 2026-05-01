@@ -67,6 +67,7 @@ def test_step1_filters_heavy_cloud_and_marks_low_density_series() -> None:
         images=images,
         storage=None,
         max_cloud_coverage=20.0,
+        interpolate_max_gap_days=1,
     )
 
     assert output.filtered_image_count >= 5
@@ -116,3 +117,82 @@ def test_step1_interpolates_missing_dates_within_gap_limit() -> None:
 
     assert len(output.interpolated_dates) == 9
     assert any(point.interpolated for point in output.index_time_series["NDVI"])
+
+
+def test_step1_parses_numeric_strings_in_indices_and_cloud_coverage() -> None:
+    images = [
+        {
+            "date": "2024-01-01",
+            "cloud_coverage": "12.5",
+            "indices": {
+                "NDVI": "0.45",
+                "NIRv": "0.32",
+                "NDMI": "0.18",
+                "NDRE": "0.24",
+                "EVI": "0.29",
+                "MSAVI": "0.31",
+                "MSI": "0.88",
+                "GCI": "1.25",
+            },
+        },
+        {
+            "date": "2024-01-16",
+            "cloud_coverage": "8,0",
+            "indices": {
+                "NDVI": "0.50",
+                "NIRv": "0.36",
+                "NDMI": "0.21",
+                "NDRE": "0.28",
+                "EVI": "0.34",
+                "MSAVI": "0.36",
+                "MSI": "0.84",
+                "GCI": "1.31",
+            },
+        },
+    ]
+
+    output = extract_satellite_history(
+        organization_id="org-1",
+        parcel_id="parcel-1",
+        images=images,
+        storage=None,
+        max_cloud_coverage=20.0,
+        interpolate_max_gap_days=1,
+    )
+
+    ndvi_values = [point.value for point in output.index_time_series["NDVI"]]
+    assert ndvi_values[0] == 0.45
+    assert ndvi_values[1] == 0.5
+    assert output.cloud_coverage_mean == 10.25
+
+
+def test_step1_ignores_missing_indices_instead_of_injecting_zero_points() -> None:
+    images = [
+        {
+            "date": "2024-01-01",
+            "cloud_coverage": 5.0,
+            "indices": {
+                "NDVI": 0.42,
+                "NDMI": 0.21,
+            },
+        },
+        {
+            "date": "2024-01-16",
+            "cloud_coverage": 6.0,
+            "indices": {
+                "NDVI": 0.48,
+            },
+        },
+    ]
+
+    output = extract_satellite_history(
+        organization_id="org-1",
+        parcel_id="parcel-1",
+        images=images,
+        storage=None,
+        interpolate_max_gap_days=1,
+    )
+
+    assert [p.value for p in output.index_time_series["NDVI"]] == [0.42, 0.48]
+    assert [p.value for p in output.index_time_series["NDMI"]] == [0.21]
+    assert output.index_time_series["NIRv"] == []

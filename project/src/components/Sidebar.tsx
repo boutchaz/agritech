@@ -203,16 +203,18 @@ const Sidebar = ({
 
   // Section toggles - initialize based on current path
   const [showPersonnel, setShowPersonnel] = useState(() =>
-    getInitialSectionState(["/workers", "/tasks"]),
+    getInitialSectionState(["/workers", "/tasks", "/workforce/payments"]),
   );
   const [showProduction, setShowProduction] = useState(() =>
     getInitialSectionState([
       "/campaigns",
       "/crop-cycles",
+      "/crops",
       "/harvests",
       "/reception-batches",
       "/quality-control",
       "/biological-assets",
+      "/product-applications",
     ]),
   );
   const [showCompliance, setShowCompliance] = useState(() =>
@@ -232,6 +234,7 @@ const Sidebar = ({
       "/accounting/invoices",
       "/accounting/payments",
       "/accounting/journal",
+      "/accounting/bank-accounts",
       "/utilities",
     ]),
   );
@@ -253,7 +256,7 @@ const Sidebar = ({
     queueMicrotask(() => {
       // Personnel section
       if (
-        ["/workers", "/tasks"].some(
+        ["/workers", "/tasks", "/workforce/payments"].some(
           (p) => currentPath === p || currentPath.startsWith(p + "/"),
         )
       ) {
@@ -264,10 +267,12 @@ const Sidebar = ({
         [
           "/campaigns",
           "/crop-cycles",
+          "/crops",
           "/harvests",
           "/reception-batches",
           "/quality-control",
           "/biological-assets",
+          "/product-applications",
         ].some((p) => currentPath === p || currentPath.startsWith(p + "/"))
       ) {
         setShowProduction(true);
@@ -294,6 +299,7 @@ const Sidebar = ({
           "/accounting/invoices",
           "/accounting/payments",
           "/accounting/journal",
+          "/accounting/bank-accounts",
           "/utilities",
         ].some((p) => currentPath === p || currentPath.startsWith(p + "/"))
       ) {
@@ -843,6 +849,13 @@ const Sidebar = ({
                         isActive={currentPath === "/tasks"}
                       />
                     </ProtectedNavItem>
+                    <ProtectedNavItem action="read" subject="Payment">
+                      <PopoverNavItem onNavigate={handleNavigation}
+                        path="/workforce/payments"
+                        label={t("nav.paymentRecords", "Payment Records")}
+                        isActive={currentPath === "/workforce/payments"}
+                      />
+                    </ProtectedNavItem>
                   </CollapsedSectionPopover>
                 </div>
               ) : (
@@ -887,6 +900,17 @@ const Sidebar = ({
                           {renderText(t("nav.tasks"))}
                         </Button>
                       </ProtectedNavItem>
+                      <ProtectedNavItem action="read" subject="Payment">
+                        <Button
+                          variant="ghost"
+                          className={getSubItemClassName(
+                            currentPath === "/workforce/payments",
+                          )}
+                          onClick={(e) => handleNavigation("/workforce/payments", e)}
+                        >
+                          {renderText(t("nav.paymentRecords", "Payment Records"))}
+                        </Button>
+                      </ProtectedNavItem>
                     </>
                   )}
                 </>
@@ -928,6 +952,13 @@ const Sidebar = ({
                         isActive={currentPath === "/crop-cycles"}
                       />
                     </ProtectedNavItem>
+                    <ProtectedNavItem action="read" subject="CropCycle">
+                      <PopoverNavItem onNavigate={handleNavigation}
+                        path="/crops"
+                        label={t("nav.crops", "Crops")}
+                        isActive={currentPath === "/crops"}
+                      />
+                    </ProtectedNavItem>
                     <ProtectedNavItem action="read" subject="Harvest">
                       <PopoverNavItem onNavigate={handleNavigation}
                         path="/harvests"
@@ -950,10 +981,17 @@ const Sidebar = ({
                       />
                     </ProtectedNavItem>
                     <ProtectedNavItem action="read" subject="BiologicalAsset">
-                      <PopoverNavItem onNavigate={handleNavigation}
+                       <PopoverNavItem onNavigate={handleNavigation}
                         path="/biological-assets"
                         label={t("nav.biologicalAssets", "Biological Assets")}
                         isActive={currentPath === "/biological-assets"}
+                      />
+                    </ProtectedNavItem>
+                    <ProtectedNavItem action="read" subject="Stock">
+                      <PopoverNavItem onNavigate={handleNavigation}
+                        path="/product-applications"
+                        label={t("nav.productApplications", "Product Applications")}
+                        isActive={currentPath === "/product-applications"}
                       />
                     </ProtectedNavItem>
                   </CollapsedSectionPopover>
@@ -998,6 +1036,17 @@ const Sidebar = ({
                           onClick={(e) => handleNavigation("/crop-cycles", e)}
                         >
                           {renderText(t("nav.cropCycles", "Crop Cycles"))}
+                        </Button>
+                      </ProtectedNavItem>
+                      <ProtectedNavItem action="read" subject="CropCycle">
+                        <Button
+                          variant="ghost"
+                          className={getSubItemClassName(
+                            currentPath === "/crops",
+                          )}
+                          onClick={(e) => handleNavigation("/crops", e)}
+                        >
+                          {renderText(t("nav.crops", "Crops"))}
                         </Button>
                       </ProtectedNavItem>
                       <ProtectedNavItem action="read" subject="Harvest">
@@ -1048,6 +1097,19 @@ const Sidebar = ({
                           }
                         >
                           {renderText(t("nav.biologicalAssets", "Biological Assets"))}
+                        </Button>
+                      </ProtectedNavItem>
+                      <ProtectedNavItem action="read" subject="Stock">
+                        <Button
+                          variant="ghost"
+                          className={getSubItemClassName(
+                            currentPath === "/product-applications",
+                          )}
+                          onClick={(e) =>
+                            handleNavigation("/product-applications", e)
+                          }
+                        >
+                          {renderText(t("nav.productApplications", "Product Applications"))}
                         </Button>
                       </ProtectedNavItem>
                     </>
@@ -1328,6 +1390,13 @@ const Sidebar = ({
                           isActive={currentPath === "/utilities"}
                         />
                       </ProtectedNavItem>
+                      <ProtectedNavItem action="read" subject="BankAccount">
+                        <PopoverNavItem onNavigate={handleNavigation}
+                          path="/accounting/bank-accounts"
+                          label={t("nav.bankAccounts", "Bank Accounts")}
+                          isActive={currentPath === "/accounting/bank-accounts"}
+                        />
+                      </ProtectedNavItem>
                     </CollapsedSectionPopover>
                   </div>
                 ) : (
@@ -1412,6 +1481,19 @@ const Sidebar = ({
                             onClick={(e) => handleNavigation("/utilities", e)}
                           >
                             {renderText(t("nav.expenses"))}
+                          </Button>
+                        </ProtectedNavItem>
+                        <ProtectedNavItem action="read" subject="BankAccount">
+                          <Button
+                            variant="ghost"
+                            className={getSubItemClassName(
+                              currentPath === "/accounting/bank-accounts",
+                            )}
+                            onClick={(e) =>
+                              handleNavigation("/accounting/bank-accounts", e)
+                            }
+                          >
+                            {renderText(t("nav.bankAccounts", "Bank Accounts"))}
                           </Button>
                         </ProtectedNavItem>
                       </>

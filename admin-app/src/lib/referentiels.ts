@@ -32,9 +32,23 @@ export const referentialApi = {
     });
   },
 
+  update(crop: string, value: unknown): Promise<{ success: boolean }> {
+    return apiRequest<{ success: boolean }>(`/api/v1/admin/referentials/${crop}`, {
+      method: 'PUT',
+      body: JSON.stringify(value),
+    });
+  },
+
   validateSection(crop: string, section: string, value: unknown): Promise<{ valid: boolean; errors: ValidationError[] }> {
     return apiRequest<{ valid: boolean; errors: ValidationError[] }>(
       `/api/v1/admin/referentials/${crop}/${section}/validate`,
+      { method: 'POST', body: JSON.stringify(value) },
+    );
+  },
+
+  validate(crop: string, value: unknown): Promise<{ valid: boolean; errors: ValidationError[] }> {
+    return apiRequest<{ valid: boolean; errors: ValidationError[] }>(
+      `/api/v1/admin/referentials/${crop}/validate`,
       { method: 'POST', body: JSON.stringify(value) },
     );
   },

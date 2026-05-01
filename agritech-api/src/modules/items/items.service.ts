@@ -23,6 +23,7 @@ export class ItemsService {
 
     const applyFilters = (q: any) => {
       q = q.eq('organization_id', organizationId);
+      q = q.is('deleted_at', null);
       if (filters?.parent_group_id !== undefined) {
         q = filters.parent_group_id === null
           ? q.is('parent_group_id', null)
@@ -59,6 +60,7 @@ export class ItemsService {
       .select('*')
       .eq('id', id)
       .eq('organization_id', organizationId)
+      .is('deleted_at', null)
       .maybeSingle();
 
     if (error) {
@@ -104,6 +106,7 @@ export class ItemsService {
       })
       .eq('id', id)
       .eq('organization_id', organizationId)
+      .is('deleted_at', null)
       .select()
       .single();
 
@@ -124,13 +127,13 @@ export class ItemsService {
       .from('items')
       .select('id')
       .in('item_group_id', allIds)
+      .is('deleted_at', null)
       .limit(1);
 
     if (linkedItems && linkedItems.length > 0) {
       throw new BadRequestException('Cannot delete item group with items. Please move or delete items first.');
     }
 
-    // Delete all descendants bottom-up, then the group itself
     await this.deleteGroupCascade(supabase, id, organizationId);
 
     return { message: 'Item group deleted successfully' };
@@ -142,7 +145,8 @@ export class ItemsService {
       .from('item_groups')
       .select('id')
       .eq('parent_group_id', parentId)
-      .eq('organization_id', organizationId);
+      .eq('organization_id', organizationId)
+      .is('deleted_at', null);
 
     for (const child of children || []) {
       const childIds = await this.collectGroupIds(supabase, child.id, organizationId);
@@ -156,7 +160,8 @@ export class ItemsService {
       .from('item_groups')
       .select('id')
       .eq('parent_group_id', id)
-      .eq('organization_id', organizationId);
+      .eq('organization_id', organizationId)
+      .is('deleted_at', null);
 
     for (const child of children || []) {
       await this.deleteGroupCascade(supabase, child.id, organizationId);
@@ -164,9 +169,10 @@ export class ItemsService {
 
     const { error } = await supabase
       .from('item_groups')
-      .delete()
+      .update({ deleted_at: new Date().toISOString(), is_active: false })
       .eq('id', id)
-      .eq('organization_id', organizationId);
+      .eq('organization_id', organizationId)
+      .is('deleted_at', null);
 
     if (error) {
       this.logger.error(`Failed to delete item group ${id}: ${error.message}`);
@@ -326,6 +332,7 @@ export class ItemsService {
         .eq('organization_id', organizationId)
         .eq('name', group.name)
         .is('parent_group_id', null)
+        .is('deleted_at', null)
         .maybeSingle();
 
       let parentId: string;
@@ -335,9 +342,10 @@ export class ItemsService {
         // Patch code/description if missing
         if (!existing.code) {
           await supabase
-            .from('item_groups')
-            .update({ code: group.code, description: group.description, updated_by: userId })
-            .eq('id', parentId);
+              .from('item_groups')
+              .update({ code: group.code, description: group.description, updated_by: userId })
+              .eq('id', parentId)
+              .is('deleted_at', null);
         }
         skipped++;
       } else {
@@ -372,6 +380,7 @@ export class ItemsService {
           .eq('organization_id', organizationId)
           .eq('name', sub.name)
           .eq('parent_group_id', parentId)
+          .is('deleted_at', null)
           .maybeSingle();
 
         if (existingSub) {
@@ -380,7 +389,8 @@ export class ItemsService {
             await supabase
               .from('item_groups')
               .update({ code: sub.code, description: sub.description, updated_by: userId })
-              .eq('id', existingSub.id);
+              .eq('id', existingSub.id)
+              .is('deleted_at', null);
           }
           skipped++;
         } else {
@@ -418,6 +428,7 @@ export class ItemsService {
 
     const applyFilters = (q: any) => {
       q = q.eq('organization_id', organizationId);
+      q = q.is('deleted_at', null);
       if (filters?.item_group_id) q = q.eq('item_group_id', filters.item_group_id);
       if (filters?.is_active !== undefined) q = q.eq('is_active', filters.is_active);
       if (filters?.is_sales_item !== undefined) q = q.eq('is_sales_item', filters.is_sales_item);
@@ -447,6 +458,46 @@ export class ItemsService {
     return paginatedResponse(data || [], count || 0, page, pageSize);
   }
 
+  async findByBarcode(barcode: string, organizationId: string): Promise<any> {
+    const supabase = this.databaseService.getAdminClient();
+
+    const { data: variant, error: variantError } = await supabase
+      .from('product_variants')
+      .select('*, item:items(*)')
+      .eq('barcode', barcode)
+      .eq('organization_id', organizationId)
+      .is('deleted_at', null)
+      .maybeSingle();
+
+    if (variantError) {
+      this.logger.error(`Failed to fetch barcode variant: ${variantError.message}`);
+      throw new BadRequestException(`Failed to fetch barcode variant: ${variantError.message}`);
+    }
+
+    if (variant) {
+      return { type: 'variant', variant, item: variant.item };
+    }
+
+    const { data: item, error: itemError } = await supabase
+      .from('items')
+      .select('*, variants:product_variants(*)')
+      .eq('barcode', barcode)
+      .eq('organization_id', organizationId)
+      .is('deleted_at', null)
+      .maybeSingle();
+
+    if (itemError) {
+      this.logger.error(`Failed to fetch barcode item: ${itemError.message}`);
+      throw new BadRequestException(`Failed to fetch barcode item: ${itemError.message}`);
+    }
+
+    if (item) {
+      return { type: 'item', item };
+    }
+
+    throw new NotFoundException(`No item found with barcode: ${barcode}`);
+  }
+
   // =====================================================
   // PRODUCT VARIANTS
   // =====================================================
@@ -459,6 +510,7 @@ export class ItemsService {
       .select('*')
       .eq('organization_id', organizationId)
       .eq('item_id', itemId)
+      .is('deleted_at', null)
       .order('variant_name', { ascending: true });
 
     if (error) {
@@ -494,6 +546,7 @@ export class ItemsService {
       .update(dto)
       .eq('id', id)
       .eq('organization_id', organizationId)
+      .is('deleted_at', null)
       .select()
       .single();
 
@@ -517,9 +570,10 @@ export class ItemsService {
 
     const { error } = await supabase
       .from('product_variants')
-      .delete()
+      .update({ deleted_at: new Date().toISOString(), is_active: false })
       .eq('id', id)
-      .eq('organization_id', organizationId);
+      .eq('organization_id', organizationId)
+      .is('deleted_at', null);
 
     if (error) {
       this.logger.error(`Failed to delete product variant: ${error.message}`);
@@ -540,6 +594,7 @@ export class ItemsService {
       `)
       .eq('id', id)
       .eq('organization_id', organizationId)
+      .is('deleted_at', null)
       .single();
 
     if (error) {
@@ -563,6 +618,7 @@ export class ItemsService {
         .from('items')
         .select('item_code')
         .eq('organization_id', organizationId)
+        .is('deleted_at', null)
         .like('item_code', `%-${year}-%`);
 
       if (itemGroupId) {
@@ -594,7 +650,8 @@ export class ItemsService {
       const nextSeq = maxSeq + 1;
       return `${prefix}-${year}-${nextSeq.toString().padStart(5, '0')}`;
     } catch (error) {
-      this.logger.error(`Item code generation error: ${error.message}`);
+      const err = error as Error;
+      this.logger.error(`Item code generation error: ${err.message}`);
       throw error;
     }
   }
@@ -658,6 +715,7 @@ export class ItemsService {
       })
       .eq('id', id)
       .eq('organization_id', organizationId)
+      .is('deleted_at', null)
       .select()
       .single();
 
@@ -671,6 +729,8 @@ export class ItemsService {
 
   async deleteItem(id: string, organizationId: string): Promise<any> {
     const supabase = this.databaseService.getAdminClient();
+    const deletedAt = new Date().toISOString();
+    const warnings: string[] = [];
 
     // Check if item is used in stock entries
     const { data: stockEntries } = await supabase
@@ -680,7 +740,7 @@ export class ItemsService {
       .limit(1);
 
     if (stockEntries && stockEntries.length > 0) {
-      throw new BadRequestException('Cannot delete item used in stock transactions. Please deactivate it instead.');
+      warnings.push('Item is used in stock transactions');
     }
 
     // Check if item is used in invoices
@@ -691,21 +751,105 @@ export class ItemsService {
       .limit(1);
 
     if (invoices && invoices.length > 0) {
-      throw new BadRequestException('Cannot delete item used in invoices. Please deactivate it instead.');
+      warnings.push('Item is used in invoices');
     }
 
     const { error } = await supabase
       .from('items')
-      .delete()
+      .update({ deleted_at: deletedAt, is_active: false })
       .eq('id', id)
-      .eq('organization_id', organizationId);
+      .eq('organization_id', organizationId)
+      .is('deleted_at', null);
 
     if (error) {
       this.logger.error(`Failed to delete item: ${error.message}`);
       throw new BadRequestException(`Failed to delete item: ${error.message}`);
     }
 
-    return { message: 'Item deleted successfully' };
+    const { error: variantsError } = await supabase
+      .from('product_variants')
+      .update({ deleted_at: deletedAt, is_active: false })
+      .eq('item_id', id)
+      .eq('organization_id', organizationId)
+      .is('deleted_at', null);
+
+    if (variantsError) {
+      this.logger.error(`Failed to delete item variants: ${variantsError.message}`);
+      throw new BadRequestException(`Failed to delete item variants: ${variantsError.message}`);
+    }
+
+    return {
+      message: warnings.length > 0
+        ? `Item deleted successfully with warnings: ${warnings.join('; ')}`
+        : 'Item deleted successfully',
+      warnings,
+    };
+  }
+
+  async restoreItem(id: string, organizationId: string): Promise<any> {
+    const supabase = this.databaseService.getAdminClient();
+
+    const { data, error } = await supabase
+      .from('items')
+      .update({ deleted_at: null, is_active: true })
+      .eq('id', id)
+      .eq('organization_id', organizationId)
+      .select()
+      .single();
+
+    if (error) {
+      throw new BadRequestException(`Failed to restore item: ${error.message}`);
+    }
+
+    const { error: variantsError } = await supabase
+      .from('product_variants')
+      .update({ deleted_at: null, is_active: true })
+      .eq('item_id', id)
+      .eq('organization_id', organizationId)
+      .not('deleted_at', 'is', null);
+
+    if (variantsError) {
+      throw new BadRequestException(`Failed to restore item variants: ${variantsError.message}`);
+    }
+
+    return data;
+  }
+
+  async findDeletedItems(organizationId: string, filters?: any): Promise<PaginatedResponse<any>> {
+    const supabase = this.databaseService.getAdminClient();
+    const page = Number(filters?.page) || 1;
+    const pageSize = Number(filters?.pageSize) || 100;
+
+    const applyFilters = (q: any) => {
+      q = q.eq('organization_id', organizationId);
+      q = q.not('deleted_at', 'is', null);
+      if (filters?.item_group_id) q = q.eq('item_group_id', filters.item_group_id);
+      if (filters?.is_active !== undefined) q = q.eq('is_active', filters.is_active);
+      if (filters?.is_sales_item !== undefined) q = q.eq('is_sales_item', filters.is_sales_item);
+      if (filters?.is_purchase_item !== undefined) q = q.eq('is_purchase_item', filters.is_purchase_item);
+      if (filters?.is_stock_item !== undefined) q = q.eq('is_stock_item', filters.is_stock_item);
+      if (filters?.crop_type) q = q.eq('crop_type', filters.crop_type);
+      if (filters?.variety) q = q.eq('variety', filters.variety);
+      if (filters?.search) { const s = sanitizeSearch(filters.search); if (s) q = q.or(`item_code.ilike.%${s}%,item_name.ilike.%${s}%,barcode.ilike.%${s}%`); }
+      return q;
+    };
+
+    const { count } = await applyFilters(
+      supabase.from('items').select('id', { count: 'exact', head: true })
+    );
+
+    const from = (page - 1) * pageSize;
+    let query = applyFilters(supabase.from('items').select(`*, item_group:item_groups(id, name, code, path)`));
+    query = query.order('deleted_at', { ascending: false }).order('item_code', { ascending: true }).range(from, from + pageSize - 1);
+
+    const { data, error } = await query;
+
+    if (error) {
+      this.logger.error(`Failed to fetch deleted items: ${error.message}`);
+      throw new BadRequestException(`Failed to fetch deleted items: ${error.message}`);
+    }
+
+    return paginatedResponse(data || [], count || 0, page, pageSize);
   }
 
   // =====================================================
@@ -726,6 +870,7 @@ export class ItemsService {
         item_group:item_groups(id, name)
       `)
       .eq('organization_id', organizationId)
+      .is('deleted_at', null)
       .eq('is_active', true)
       .order('item_name', { ascending: true });
 
@@ -781,6 +926,7 @@ export class ItemsService {
         .select('id')
         .eq('organization_id', organizationId)
         .eq('farm_id', filters.farm_id)
+        .is('deleted_at', null)
         .eq('is_active', true);
 
       if (whError) {
@@ -816,6 +962,8 @@ export class ItemsService {
         )
       `)
       .eq('organization_id', organizationId)
+      .is('warehouse.deleted_at', null)
+      .is('item.deleted_at', null)
       .gt('remaining_quantity', 0);
 
     if (warehouseIds) {
@@ -895,6 +1043,7 @@ export class ItemsService {
       .from('items')
       .select('id, item_code, item_name, default_unit, minimum_stock_level')
       .eq('organization_id', organizationId)
+      .is('deleted_at', null)
       .eq('is_active', true)
       .not('minimum_stock_level', 'is', null);
 
@@ -961,6 +1110,7 @@ export class ItemsService {
       `)
       .eq('organization_id', organizationId)
       .eq('item_id', itemId)
+      .is('warehouse.deleted_at', null)
       .eq('movement_type', 'OUT')
       .order('movement_date', { ascending: false });
 
@@ -1129,11 +1279,12 @@ export class ItemsService {
       let warehouseIds: string[] | null = null;
       if (filters?.farm_id) {
         const { data: warehouses, error: whError } = await supabase
-          .from('warehouses')
-          .select('id')
-          .eq('organization_id', organizationId)
-          .eq('farm_id', filters.farm_id)
-          .eq('is_active', true);
+        .from('warehouses')
+        .select('id')
+        .eq('organization_id', organizationId)
+        .eq('farm_id', filters.farm_id)
+        .is('deleted_at', null)
+        .eq('is_active', true);
 
         if (whError) {
           this.logger.error(`Failed to fetch warehouses: ${whError.message}`);
@@ -1185,12 +1336,14 @@ export class ItemsService {
       const { data: warehouses } = await supabase
         .from('warehouses')
         .select('id, name, farm_id, farm:farms(id, name)')
+        .is('deleted_at', null)
         .in('id', uniqueWarehouseIds);
 
       // Fetch item details separately
       const { data: items } = await supabase
         .from('items')
         .select('id, item_code, item_name, default_unit')
+        .is('deleted_at', null)
         .in('id', uniqueItemIds);
 
       // Create lookup maps
@@ -1281,6 +1434,7 @@ export class ItemsService {
       .select('id, item_name, default_unit')
       .eq('id', itemId)
       .eq('organization_id', organizationId)
+      .is('deleted_at', null)
       .maybeSingle();
 
     if (itemError || !item) {

@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import * as os from 'os';
 import { DatabaseService } from '../database/database.service';
 
 export type ServiceStatus = 'up' | 'down' | 'degraded';
@@ -23,17 +24,37 @@ export class HealthService {
   private readonly logger = new Logger(HealthService.name);
   private readonly timeoutMs = 5000;
 
+  /** Rolling window for error rate tracking */
+  private readonly errorTimestamps: number[] = [];
+  private readonly errorWindowMs = 5 * 60 * 1000; // 5 min window
+  private readonly errorRateThreshold = 50; // > 50 errors in 5min = degraded
+  private readonly errorRateCritical = 200; // > 200 = down
+
   constructor(
     private readonly configService: ConfigService,
     private readonly databaseService: DatabaseService,
   ) {}
 
+  /** Call from global exception filter to track error rate */
+  recordError(): void {
+    this.errorTimestamps.push(Date.now());
+    // Prune old entries
+    const cutoff = Date.now() - this.errorWindowMs;
+    while (this.errorTimestamps.length > 0 && this.errorTimestamps[0] < cutoff) {
+      this.errorTimestamps.shift();
+    }
+  }
+
   async checkAll(): Promise<DeepHealthResult> {
-    const [supabase, satellite, cms, memory] = await Promise.all([
+    const [supabase, satellite, cms, memory, dbPool, disk, cpu, errorRate] = await Promise.all([
       this.checkSupabase(),
       this.checkSatellite(),
       this.checkCms(),
       this.checkMemory(),
+      this.checkDbPool(),
+      this.checkDisk(),
+      this.checkCpu(),
+      Promise.resolve(this.checkErrorRate()),
     ]);
 
     const services: Record<string, ServiceCheckResult> = {
@@ -41,6 +62,10 @@ export class HealthService {
       satellite,
       cms,
       memory,
+      dbPool,
+      disk,
+      cpu,
+      errorRate,
     };
 
     const anyDown = Object.values(services).some((s) => s.status === 'down');
@@ -81,7 +106,8 @@ export class HealthService {
   }
 
   async checkSatellite(): Promise<ServiceCheckResult> {
-    const url = this.configService.get<string>('SATELLITE_SERVICE_URL') || 'http://localhost:8000';
+    const url =
+      this.configService.get<string>('SATELLITE_SERVICE_URL') || 'http://localhost:8001';
     const healthUrl = `${url.replace(/\/+$/, '')}/health`;
     return this.checkHttpEndpoint('satellite', healthUrl);
   }
@@ -112,6 +138,86 @@ export class HealthService {
         rssMb,
         heapPercent,
       },
+    };
+  }
+
+  checkDbPool(): ServiceCheckResult {
+    const stats = this.getPoolStats();
+    const waiting = stats.waiting ?? 0;
+    const total = stats.total ?? 0;
+    const idle = stats.idle ?? 0;
+
+    let status: ServiceStatus = 'up';
+    if (waiting > 10 || (total > 0 && idle === 0 && waiting > 0)) {
+      status = 'down';
+    } else if (waiting > 3 || (total > 0 && idle <= 1)) {
+      status = 'degraded';
+    }
+
+    return {
+      status,
+      responseTimeMs: 0,
+      details: { total, idle, waiting },
+      ...(status !== 'up' && { error: `Pool pressure: ${waiting} waiting, ${idle} idle of ${total} total` }),
+    };
+  }
+
+  async checkDisk(): Promise<ServiceCheckResult> {
+    try {
+      const { execSync } = require('child_process');
+      const output = execSync("df -P / | tail -1 | awk '{print $5}'", { encoding: 'utf-8' }).trim();
+      const usedPercent = parseInt(output.replace('%', ''), 10);
+
+      let status: ServiceStatus = 'up';
+      if (usedPercent > 95) status = 'down';
+      else if (usedPercent > 85) status = 'degraded';
+
+      return {
+        status,
+        responseTimeMs: 0,
+        details: { usedPercent },
+        ...(status !== 'up' && { error: `Disk ${usedPercent}% full` }),
+      };
+    } catch (error) {
+      return { status: 'up', responseTimeMs: 0, details: { note: 'disk check unavailable' } };
+    }
+  }
+
+  checkCpu(): ServiceCheckResult {
+    const cpus = os.cpus();
+    const loadAvg = os.loadavg();
+    const load1m = loadAvg[0];
+    const numCpus = cpus.length;
+    const loadPercent = Math.round((load1m / numCpus) * 100);
+
+    let status: ServiceStatus = 'up';
+    if (loadPercent > 95) status = 'down';
+    else if (loadPercent > 80) status = 'degraded';
+
+    return {
+      status,
+      responseTimeMs: 0,
+      details: { load1m: Math.round(load1m * 100) / 100, numCpus, loadPercent },
+      ...(status !== 'up' && { error: `CPU load ${loadPercent}% (${load1m.toFixed(1)}/${numCpus} cores)` }),
+    };
+  }
+
+  checkErrorRate(): ServiceCheckResult {
+    const cutoff = Date.now() - this.errorWindowMs;
+    while (this.errorTimestamps.length > 0 && this.errorTimestamps[0] < cutoff) {
+      this.errorTimestamps.shift();
+    }
+    const count = this.errorTimestamps.length;
+
+    let status: ServiceStatus = 'up';
+    if (count > this.errorRateCritical) status = 'down';
+    else if (count > this.errorRateThreshold) status = 'degraded';
+
+    return {
+      status,
+      responseTimeMs: 0,
+      details: { errorsInWindow: count, windowMinutes: this.errorWindowMs / 60000 },
+      ...(status !== 'up' && { error: `${count} errors in last ${this.errorWindowMs / 60000}min` }),
     };
   }
 

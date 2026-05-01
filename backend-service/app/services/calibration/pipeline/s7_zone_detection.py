@@ -6,7 +6,7 @@ from typing import Any, Literal, cast
 import numpy as np
 from numpy.typing import NDArray
 
-from ..types import GeoJsonFeatureCollection, PercentileSet, Step7Output, ZoneSummary
+from ..types import GeoJsonFeatureCollection, NutritionalZones, PercentileSet, Step7Output, ZoneSummary
 
 
 def _class_for_value(value: float, percentiles: PercentileSet) -> str:
@@ -35,11 +35,38 @@ def _pattern_type(class_counts: Counter[str], total: int) -> str:
     return "mixed"
 
 
-def classify_zones(
-    median_raster: NDArray[np.float64],
+def _build_raster(
+    ndvi_raster_pixels: list[dict[str, Any]] | None,
+    observed_ndvi_points: list[Any] | None,
+) -> tuple[NDArray[np.float64], bool, list[dict[str, float]] | None]:
+    """Build raster array from raw pixel data. Returns (raster, has_real_zones, pixel_coords)."""
+    fallback_values = (
+        [p.value for p in observed_ndvi_points] if observed_ndvi_points else [0.0]
+    )
+    median_ndvi = float(np.median(fallback_values))
+
+    if ndvi_raster_pixels and len(ndvi_raster_pixels) > 1:
+        valid_pixels = [p for p in ndvi_raster_pixels if p.get("value") is not None]
+        pixel_values = [float(p["value"]) for p in valid_pixels]
+        if len(pixel_values) > 1:
+            raster = np.array(pixel_values, dtype=np.float64).reshape(-1, 1)
+            coords: list[dict[str, float]] | None = None
+            if all(p.get("lon") is not None and p.get("lat") is not None for p in valid_pixels):
+                coords = [{"lon": float(p["lon"]), "lat": float(p["lat"])} for p in valid_pixels]
+            return raster, True, coords
+
+    return np.array([[median_ndvi]], dtype=np.float64), False, None
+
+
+def _classify_index(
     percentiles: PercentileSet,
-    pixel_size_m2: float = 100.0,
-) -> Step7Output:
+    raster_pixels: list[dict[str, Any]] | None,
+    observed_points: list[Any] | None,
+    pixel_size_m2: float,
+) -> tuple[GeoJsonFeatureCollection, list[ZoneSummary], str]:
+    """Core classification logic — reusable for any vegetation index."""
+    median_raster, _, pixel_coords = _build_raster(raster_pixels, observed_points)
+
     rows, cols = median_raster.shape
     class_counts: Counter[str] = Counter()
     features: list[dict[str, Any]] = []
@@ -54,12 +81,12 @@ def classify_zones(
             spatial_pattern_type="unknown",
         )
 
-    for row in range(rows):
-        for col in range(cols):
-            value = float(median_raster[row, col])
+    if pixel_coords and len(pixel_coords) == total_pixels:
+        for i in range(total_pixels):
+            value = float(median_raster.flat[i])
             zone_class = _class_for_value(value, percentiles)
             class_counts[zone_class] += 1
-
+            coord = pixel_coords[i]
             features.append(
                 {
                     "type": "Feature",
@@ -70,10 +97,30 @@ def classify_zones(
                     },
                     "geometry": {
                         "type": "Point",
-                        "coordinates": [float(col), float(row)],
+                        "coordinates": [coord["lon"], coord["lat"]],
                     },
                 }
             )
+    else:
+        for row in range(rows):
+            for col in range(cols):
+                value = float(median_raster[row, col])
+                zone_class = _class_for_value(value, percentiles)
+                class_counts[zone_class] += 1
+                features.append(
+                    {
+                        "type": "Feature",
+                        "properties": {
+                            "zone": zone_class,
+                            "value": value,
+                            "pixel_area_m2": pixel_size_m2,
+                        },
+                        "geometry": {
+                            "type": "Point",
+                            "coordinates": [float(col), float(row)],
+                        },
+                    }
+                )
 
     summary: list[ZoneSummary] = []
     for zone in ["A", "B", "C", "D", "E"]:
@@ -90,10 +137,45 @@ def classify_zones(
 
     pattern = _pattern_type(class_counts, total_pixels)
 
+    geojson = GeoJsonFeatureCollection(type="FeatureCollection", features=features)
+    return geojson, summary, pattern
+
+
+def classify_zones(
+    percentiles: PercentileSet,
+    *,
+    ndvi_raster_pixels: list[dict[str, Any]] | None = None,
+    observed_ndvi_points: list[Any] | None = None,
+    gci_percentiles: PercentileSet | None = None,
+    observed_gci_points: list[Any] | None = None,
+    pixel_size_m2: float = 100.0,
+) -> Step7Output:
+    """Classify parcel zones: NDVI (vigor) + GCI (nutritional/chlorophyll).
+
+    NDVI zones = vegetation vigor map (existing behavior).
+    GCI zones = nutritional status map (chlorophyll/nitrogen).
+    """
+    # NDVI vigor zones
+    ndvi_geojson, ndvi_summary, ndvi_pattern = _classify_index(
+        percentiles, ndvi_raster_pixels, observed_ndvi_points, pixel_size_m2,
+    )
+
+    # GCI nutritional zones (if data available)
+    nutritional = None
+    if gci_percentiles:
+        gci_geojson, gci_summary, gci_pattern = _classify_index(
+            gci_percentiles, None, observed_gci_points, pixel_size_m2,
+        )
+        nutritional = NutritionalZones(
+            zones_geojson=gci_geojson,
+            zone_summary=gci_summary,
+            spatial_pattern_type=gci_pattern,
+            index_used="GCI",
+        )
+
     return Step7Output(
-        zones_geojson=GeoJsonFeatureCollection(
-            type="FeatureCollection", features=features
-        ),
-        zone_summary=summary,
-        spatial_pattern_type=pattern,
+        zones_geojson=ndvi_geojson,
+        zone_summary=ndvi_summary,
+        spatial_pattern_type=ndvi_pattern,
+        nutritional_zones=nutritional,
     )

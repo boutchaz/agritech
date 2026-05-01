@@ -2535,6 +2535,38 @@ CREATE INDEX IF NOT EXISTS idx_payment_records_farm ON payment_records(farm_id);
 CREATE INDEX IF NOT EXISTS idx_payment_records_worker ON payment_records(worker_id);
 CREATE INDEX IF NOT EXISTS idx_payment_records_status ON payment_records(status);
 
+CREATE TABLE IF NOT EXISTS piece_work_records (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  farm_id UUID NOT NULL REFERENCES farms(id) ON DELETE CASCADE,
+  worker_id UUID NOT NULL REFERENCES workers(id) ON DELETE CASCADE,
+  work_date DATE NOT NULL,
+  task_id UUID REFERENCES tasks(id) ON DELETE SET NULL,
+  parcel_id UUID REFERENCES parcels(id) ON DELETE SET NULL,
+  work_unit_id UUID NOT NULL REFERENCES work_units(id) ON DELETE RESTRICT,
+  units_completed NUMERIC NOT NULL,
+  rate_per_unit NUMERIC NOT NULL,
+  total_amount NUMERIC NOT NULL,
+  quality_rating INTEGER CHECK (quality_rating IS NULL OR (quality_rating >= 1 AND quality_rating <= 5)),
+  start_time TEXT,
+  end_time TEXT,
+  break_duration INTEGER DEFAULT 0,
+  notes TEXT,
+  payment_status TEXT DEFAULT 'pending' CHECK (payment_status IN ('pending', 'approved', 'paid')),
+  created_by UUID REFERENCES auth.users(id),
+  verified_by UUID REFERENCES auth.users(id),
+  verified_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_piece_work_records_org ON piece_work_records(organization_id);
+CREATE INDEX IF NOT EXISTS idx_piece_work_records_farm ON piece_work_records(farm_id);
+CREATE INDEX IF NOT EXISTS idx_piece_work_records_worker ON piece_work_records(worker_id);
+CREATE INDEX IF NOT EXISTS idx_piece_work_records_date ON piece_work_records(work_date);
+CREATE INDEX IF NOT EXISTS idx_piece_work_records_status ON piece_work_records(payment_status);
+CREATE INDEX IF NOT EXISTS idx_piece_work_records_parcel ON piece_work_records(parcel_id);
+
 -- Payment Summary View
 CREATE OR REPLACE VIEW payment_summary WITH (security_invoker = true) AS
 SELECT
@@ -2666,12 +2698,13 @@ CREATE TABLE IF NOT EXISTS warehouses (
   reception_type TEXT,
   has_weighing_station BOOLEAN DEFAULT false,
   has_quality_lab BOOLEAN DEFAULT false,
+  deleted_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   CHECK (reception_type IN ('general', 'olivier', 'viticole', 'laitier', 'fruiter', 'legumier'))
 );
 
-CREATE INDEX IF NOT EXISTS idx_warehouses_org ON warehouses(organization_id);
+CREATE INDEX IF NOT EXISTS idx_warehouses_org ON warehouses(organization_id) WHERE deleted_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_warehouses_farm ON warehouses(farm_id);
 
 -- =====================================================
@@ -2920,13 +2953,14 @@ CREATE TABLE IF NOT EXISTS item_groups (
   image_url TEXT,
   sort_order INTEGER DEFAULT 0,
   is_active BOOLEAN DEFAULT true,
+  deleted_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   created_by UUID REFERENCES auth.users(id),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   updated_by UUID REFERENCES auth.users(id)
 );
 
-CREATE INDEX IF NOT EXISTS idx_item_groups_org ON item_groups(organization_id);
+CREATE INDEX IF NOT EXISTS idx_item_groups_org ON item_groups(organization_id) WHERE deleted_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_item_groups_parent ON item_groups(parent_group_id);
 CREATE INDEX IF NOT EXISTS idx_item_groups_code ON item_groups(code) WHERE code IS NOT NULL;
 
@@ -2956,6 +2990,8 @@ CREATE TABLE IF NOT EXISTS items (
   default_warehouse_id UUID REFERENCES warehouses(id),
   standard_rate NUMERIC,
   minimum_stock_level NUMERIC DEFAULT 0,
+  reorder_point NUMERIC DEFAULT 0,
+  reorder_quantity NUMERIC DEFAULT 0,
   last_purchase_rate NUMERIC,
   last_sales_rate NUMERIC,
   weight_per_unit NUMERIC,
@@ -2981,6 +3017,7 @@ CREATE TABLE IF NOT EXISTS items (
   images JSONB DEFAULT '[]'::jsonb,
   notes TEXT,
   marketplace_category_slug TEXT, -- Strapi marketplace category slug for website display
+  deleted_at TIMESTAMPTZ, -- Soft delete: NULL = active, set to timestamp when deleted
   created_at TIMESTAMPTZ DEFAULT NOW(),
   created_by UUID REFERENCES auth.users(id),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
@@ -2989,7 +3026,7 @@ CREATE TABLE IF NOT EXISTS items (
   CHECK (seasonality IN ('spring', 'summer', 'autumn', 'winter', 'year-round'))
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS idx_items_code_org ON items(organization_id, item_code);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_items_code_org ON items(organization_id, item_code) WHERE deleted_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_items_org ON items(organization_id);
 CREATE INDEX IF NOT EXISTS idx_items_group ON items(item_group_id);
 CREATE INDEX IF NOT EXISTS idx_items_barcode ON items(barcode) WHERE barcode IS NOT NULL;
@@ -3014,17 +3051,18 @@ CREATE TABLE IF NOT EXISTS product_variants (
   barcode TEXT,
   is_active BOOLEAN DEFAULT true,
   notes TEXT,
+  deleted_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW(),
-
-  -- Ensure variant_name is unique per item
-  CONSTRAINT product_variants_unique_name UNIQUE (organization_id, item_id, variant_name)
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_product_variants_unique_name ON product_variants (organization_id, item_id, variant_name) WHERE deleted_at IS NULL;
 
 CREATE INDEX IF NOT EXISTS idx_product_variants_org ON product_variants(organization_id);
 CREATE INDEX IF NOT EXISTS idx_product_variants_item ON product_variants(item_id);
 CREATE INDEX IF NOT EXISTS idx_product_variants_sku ON product_variants(variant_sku) WHERE variant_sku IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_product_variants_unit_id ON product_variants(unit_id);
+CREATE INDEX IF NOT EXISTS idx_product_variants_active ON product_variants(organization_id, item_id) WHERE deleted_at IS NULL;
 
 COMMENT ON TABLE product_variants IS 'Product variants for items with multiple sizes/dimensions (e.g., 1L bottle vs 5L bottle of same product)';
 COMMENT ON COLUMN product_variants.variant_name IS 'Variant designation (e.g., "1L", "5L", "10kg", "25kg")';
@@ -3271,7 +3309,7 @@ CREATE TABLE IF NOT EXISTS stock_entries (
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   updated_by UUID REFERENCES auth.users(id),
   CHECK (entry_type IN ('Material Receipt', 'Material Issue', 'Stock Transfer', 'Stock Reconciliation')),
-  CHECK (status IN ('Draft', 'Submitted', 'Posted', 'Cancelled'))
+  CHECK (status IN ('Draft', 'Submitted', 'Posted', 'Cancelled', 'Reversed'))
 );
 
 CREATE INDEX IF NOT EXISTS idx_stock_entries_org ON stock_entries(organization_id);
@@ -3420,6 +3458,271 @@ CREATE TRIGGER trg_validate_stock_movement_unit
   EXECUTE FUNCTION validate_stock_movement_unit();
 
 COMMENT ON FUNCTION validate_stock_movement_unit() IS 'Validates that stock_movements.unit matches the variant''s unit from work_units with detailed error messaging';
+
+CREATE OR REPLACE FUNCTION sync_variant_quantity_from_movements()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.variant_id IS NOT NULL THEN
+    UPDATE product_variants
+    SET quantity = (
+      SELECT COALESCE(SUM(sm.quantity), 0)
+      FROM stock_movements sm
+      WHERE sm.item_id = NEW.item_id
+        AND sm.variant_id = NEW.variant_id
+        AND sm.organization_id = NEW.organization_id
+    )
+    WHERE id = NEW.variant_id;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_sync_variant_quantity ON stock_movements;
+CREATE TRIGGER trg_sync_variant_quantity
+  AFTER INSERT ON stock_movements
+  FOR EACH ROW
+  WHEN (NEW.variant_id IS NOT NULL)
+  EXECUTE FUNCTION sync_variant_quantity_from_movements();
+
+-- Stock Reservations
+CREATE TABLE IF NOT EXISTS stock_reservations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  item_id UUID NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+  variant_id UUID REFERENCES product_variants(id) ON DELETE SET NULL,
+  warehouse_id UUID NOT NULL REFERENCES warehouses(id) ON DELETE CASCADE,
+  quantity NUMERIC NOT NULL CHECK (quantity > 0),
+  reserved_by UUID NOT NULL REFERENCES auth.users(id),
+  reserved_at TIMESTAMPTZ DEFAULT NOW(),
+  expires_at TIMESTAMPTZ NOT NULL,
+  status TEXT DEFAULT 'active' CHECK (status IN ('active', 'released', 'fulfilled', 'expired')),
+  reference_type TEXT,
+  reference_id UUID,
+  notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_stock_reservations_org ON stock_reservations(organization_id);
+CREATE INDEX IF NOT EXISTS idx_stock_reservations_item ON stock_reservations(item_id);
+CREATE INDEX IF NOT EXISTS idx_stock_reservations_variant ON stock_reservations(variant_id) WHERE variant_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_stock_reservations_status ON stock_reservations(status) WHERE status = 'active';
+CREATE INDEX IF NOT EXISTS idx_stock_reservations_expires ON stock_reservations(expires_at) WHERE status = 'active';
+
+-- Warehouse Stock Levels (denormalized for O(1) balance queries)
+CREATE TABLE IF NOT EXISTS warehouse_stock_levels (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  item_id UUID NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+  variant_id UUID REFERENCES product_variants(id) ON DELETE SET NULL,
+  warehouse_id UUID NOT NULL REFERENCES warehouses(id) ON DELETE CASCADE,
+  quantity NUMERIC NOT NULL DEFAULT 0,
+  reserved_quantity NUMERIC NOT NULL DEFAULT 0,
+  available_quantity NUMERIC GENERATED ALWAYS AS (quantity - reserved_quantity) STORED,
+  last_movement_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_warehouse_stock_levels_org ON warehouse_stock_levels(organization_id);
+CREATE INDEX IF NOT EXISTS idx_warehouse_stock_levels_item ON warehouse_stock_levels(item_id);
+CREATE INDEX IF NOT EXISTS idx_warehouse_stock_levels_warehouse ON warehouse_stock_levels(warehouse_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_warehouse_stock_levels_unique
+  ON warehouse_stock_levels (organization_id, item_id, warehouse_id)
+  WHERE variant_id IS NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_warehouse_stock_levels_unique_var
+  ON warehouse_stock_levels (organization_id, item_id, variant_id, warehouse_id)
+  WHERE variant_id IS NOT NULL;
+
+CREATE OR REPLACE FUNCTION update_warehouse_stock_levels()
+RETURNS TRIGGER AS $$
+DECLARE
+  v_variant_id UUID;
+  v_warehouse_id UUID;
+  v_item_id UUID;
+  v_org_id UUID;
+  v_existing_id UUID;
+  v_qty NUMERIC;
+BEGIN
+  v_variant_id := COALESCE(NEW.variant_id, OLD.variant_id);
+  v_warehouse_id := COALESCE(NEW.warehouse_id, OLD.warehouse_id);
+  v_item_id := COALESCE(NEW.item_id, OLD.item_id);
+  v_org_id := COALESCE(NEW.organization_id, OLD.organization_id);
+
+  SELECT COALESCE(SUM(quantity), 0) INTO v_qty
+  FROM stock_movements
+  WHERE organization_id = v_org_id
+    AND item_id = v_item_id
+    AND warehouse_id = v_warehouse_id
+    AND (variant_id = v_variant_id OR (v_variant_id IS NULL AND variant_id IS NULL));
+
+  SELECT id INTO v_existing_id
+  FROM warehouse_stock_levels
+  WHERE organization_id = v_org_id
+    AND item_id = v_item_id
+    AND warehouse_id = v_warehouse_id
+    AND (variant_id = v_variant_id OR (v_variant_id IS NULL AND variant_id IS NULL))
+  LIMIT 1;
+
+  IF v_existing_id IS NOT NULL THEN
+    UPDATE warehouse_stock_levels
+    SET quantity = v_qty,
+        last_movement_at = NOW(),
+        updated_at = NOW()
+    WHERE id = v_existing_id;
+  ELSE
+    INSERT INTO warehouse_stock_levels (
+      organization_id,
+      item_id,
+      variant_id,
+      warehouse_id,
+      quantity,
+      last_movement_at
+    )
+    VALUES (v_org_id, v_item_id, v_variant_id, v_warehouse_id, v_qty, NOW());
+  END IF;
+
+  RETURN COALESCE(NEW, OLD);
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_update_warehouse_stock_levels ON stock_movements;
+CREATE TRIGGER trg_update_warehouse_stock_levels
+  AFTER INSERT OR DELETE ON stock_movements
+  FOR EACH ROW
+  EXECUTE FUNCTION update_warehouse_stock_levels();
+
+CREATE OR REPLACE FUNCTION update_warehouse_stock_reserved()
+RETURNS TRIGGER AS $$
+DECLARE
+  v_item_id UUID;
+  v_variant_id UUID;
+  v_warehouse_id UUID;
+  v_org_id UUID;
+  v_existing_id UUID;
+  v_reserved NUMERIC;
+BEGIN
+  v_item_id := COALESCE(NEW.item_id, OLD.item_id);
+  v_variant_id := COALESCE(NEW.variant_id, OLD.variant_id);
+  v_warehouse_id := COALESCE(NEW.warehouse_id, OLD.warehouse_id);
+  v_org_id := COALESCE(NEW.organization_id, OLD.organization_id);
+
+  SELECT COALESCE(SUM(quantity), 0) INTO v_reserved
+  FROM stock_reservations
+  WHERE organization_id = v_org_id
+    AND item_id = v_item_id
+    AND warehouse_id = v_warehouse_id
+    AND status = 'active'
+    AND expires_at > NOW()
+    AND (variant_id = v_variant_id OR (v_variant_id IS NULL AND variant_id IS NULL));
+
+  SELECT id INTO v_existing_id
+  FROM warehouse_stock_levels
+  WHERE organization_id = v_org_id
+    AND item_id = v_item_id
+    AND warehouse_id = v_warehouse_id
+    AND (variant_id = v_variant_id OR (v_variant_id IS NULL AND variant_id IS NULL))
+  LIMIT 1;
+
+  IF v_existing_id IS NOT NULL THEN
+    UPDATE warehouse_stock_levels
+    SET reserved_quantity = v_reserved,
+        updated_at = NOW()
+    WHERE id = v_existing_id;
+  END IF;
+
+  RETURN COALESCE(NEW, OLD);
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_update_warehouse_stock_reserved ON stock_reservations;
+CREATE TRIGGER trg_update_warehouse_stock_reserved
+  AFTER INSERT OR UPDATE OF status OR DELETE ON stock_reservations
+  FOR EACH ROW
+  EXECUTE FUNCTION update_warehouse_stock_reserved();
+
+-- One-time backfill for existing data
+DO $$
+DECLARE
+  v_record RECORD;
+  v_existing_id UUID;
+  v_reserved NUMERIC;
+BEGIN
+  FOR v_record IN
+    SELECT
+      sm.organization_id,
+      sm.item_id,
+      sm.variant_id,
+      sm.warehouse_id,
+      SUM(sm.quantity) AS quantity,
+      MAX(sm.created_at) AS last_movement_at
+    FROM stock_movements sm
+    GROUP BY sm.organization_id, sm.item_id, sm.variant_id, sm.warehouse_id
+  LOOP
+    SELECT COALESCE(SUM(quantity), 0) INTO v_reserved
+    FROM stock_reservations sr
+    WHERE sr.organization_id = v_record.organization_id
+      AND sr.item_id = v_record.item_id
+      AND sr.warehouse_id = v_record.warehouse_id
+      AND sr.status = 'active'
+      AND sr.expires_at > NOW()
+      AND (sr.variant_id = v_record.variant_id OR (v_record.variant_id IS NULL AND sr.variant_id IS NULL));
+
+    SELECT id INTO v_existing_id
+    FROM warehouse_stock_levels wsl
+    WHERE wsl.organization_id = v_record.organization_id
+      AND wsl.item_id = v_record.item_id
+      AND wsl.warehouse_id = v_record.warehouse_id
+      AND (wsl.variant_id = v_record.variant_id OR (v_record.variant_id IS NULL AND wsl.variant_id IS NULL))
+    LIMIT 1;
+
+    IF v_existing_id IS NOT NULL THEN
+      UPDATE warehouse_stock_levels
+      SET quantity = v_record.quantity,
+          reserved_quantity = v_reserved,
+          last_movement_at = v_record.last_movement_at,
+          updated_at = NOW()
+      WHERE id = v_existing_id;
+    ELSE
+      INSERT INTO warehouse_stock_levels (
+        organization_id,
+        item_id,
+        variant_id,
+        warehouse_id,
+        quantity,
+        reserved_quantity,
+        last_movement_at
+      )
+      VALUES (
+        v_record.organization_id,
+        v_record.item_id,
+        v_record.variant_id,
+        v_record.warehouse_id,
+        v_record.quantity,
+        v_reserved,
+        v_record.last_movement_at
+      );
+    END IF;
+  END LOOP;
+END $$;
+
+-- Stock Entry Approvals
+CREATE TABLE IF NOT EXISTS stock_entry_approvals (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  stock_entry_id UUID NOT NULL REFERENCES stock_entries(id) ON DELETE CASCADE,
+  requested_by UUID NOT NULL REFERENCES auth.users(id),
+  approved_by UUID REFERENCES auth.users(id),
+  approved_at TIMESTAMPTZ,
+  rejected_by UUID REFERENCES auth.users(id),
+  rejected_at TIMESTAMPTZ,
+  rejection_reason TEXT,
+  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_stock_entry_approvals_entry ON stock_entry_approvals(stock_entry_id);
+CREATE INDEX IF NOT EXISTS idx_stock_entry_approvals_status ON stock_entry_approvals(status) WHERE status = 'pending';
 
 -- Stock Valuation
 CREATE TABLE IF NOT EXISTS stock_valuation (
@@ -3660,6 +3963,7 @@ CREATE TABLE IF NOT EXISTS satellite_indices_data (
   max_value NUMERIC,
   std_value NUMERIC,
   median_value NUMERIC,
+  percentile_10 NUMERIC,
   percentile_25 NUMERIC,
   percentile_75 NUMERIC,
   percentile_90 NUMERIC,
@@ -3799,6 +4103,23 @@ CREATE TABLE IF NOT EXISTS cloud_coverage_checks (
 CREATE INDEX IF NOT EXISTS idx_cloud_coverage_checks_org ON cloud_coverage_checks(organization_id);
 CREATE INDEX IF NOT EXISTS idx_cloud_coverage_checks_parcel ON cloud_coverage_checks(parcel_id);
 CREATE INDEX IF NOT EXISTS idx_cloud_coverage_checks_date ON cloud_coverage_checks(check_date DESC);
+
+CREATE MATERIALIZED VIEW IF NOT EXISTS mv_stock_levels AS
+SELECT
+  sm.organization_id,
+  sm.item_id,
+  sm.warehouse_id,
+  sm.variant_id,
+  COALESCE(SUM(sm.quantity), 0) AS balance_quantity,
+  COALESCE(SUM(sm.quantity * sm.cost_per_unit), 0) AS balance_value,
+  MAX(sm.movement_date) AS last_movement_date,
+  COUNT(sm.id) AS movement_count
+FROM stock_movements sm
+GROUP BY sm.organization_id, sm.item_id, sm.warehouse_id, sm.variant_id;
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_mv_stock_levels_pk ON mv_stock_levels(organization_id, item_id, warehouse_id, COALESCE(variant_id, '00000000-0000-0000-0000-000000000000'::uuid));
+CREATE INDEX IF NOT EXISTS idx_mv_stock_levels_org ON mv_stock_levels(organization_id);
+CREATE INDEX IF NOT EXISTS idx_mv_stock_levels_item ON mv_stock_levels(item_id);
 
 -- =====================================================
 -- 15. ANALYSES & REPORTS TABLES
@@ -4982,6 +5303,7 @@ ALTER TABLE IF EXISTS task_equipment ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS work_records ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS metayage_settlements ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS payment_records ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS piece_work_records ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS payment_advances ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS payment_bonuses ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS payment_deductions ENABLE ROW LEVEL SECURITY;
@@ -5468,12 +5790,7 @@ CREATE TABLE IF NOT EXISTS weather_daily_data (
   soil_moisture_0_7cm NUMERIC(6, 4),     -- m³/m³
   soil_moisture_7_28cm NUMERIC(6, 4),    -- m³/m³
   source TEXT DEFAULT 'open-meteo-archive',
-  -- GDD columns per crop type
-  gdd_olivier NUMERIC,
-  gdd_agrumes NUMERIC,
-  gdd_avocatier NUMERIC,
-  gdd_palmier_dattier NUMERIC,
-  chill_hours NUMERIC,
+  chill_hours NUMERIC,  -- daily chill-hour contribution (generic, not crop-specific)
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE (latitude, longitude, date)
@@ -5482,6 +5799,37 @@ CREATE INDEX IF NOT EXISTS idx_weather_daily_data_lat_lon_date
   ON public.weather_daily_data(latitude, longitude, date);
 CREATE INDEX IF NOT EXISTS idx_weather_daily_data_date ON weather_daily_data(date DESC);
 CREATE INDEX IF NOT EXISTS idx_weather_daily_data_location ON weather_daily_data(latitude, longitude);
+
+-- Generic per-crop daily GDD cache — replaces the per-column approach (gdd_olivier, gdd_agrumes, …)
+-- in weather_daily_data. Scaling to new crops requires no schema change: add a row with a new crop_type.
+-- No RLS — shared location cache like weather_daily_data (not org-scoped).
+CREATE TABLE IF NOT EXISTS public.weather_gdd_daily (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  latitude      NUMERIC(7,2) NOT NULL,
+  longitude     NUMERIC(7,2) NOT NULL,
+  date          DATE NOT NULL,
+  crop_type     TEXT NOT NULL,          -- e.g. 'olivier', 'agrumes', 'avocatier', 'palmier_dattier'
+  gdd_daily     NUMERIC(7,4) NOT NULL DEFAULT 0,
+  chill_hours   NUMERIC(6,4),           -- daily chill-hour contribution (relevant for chill-tracking crops)
+  model_version TEXT NOT NULL DEFAULT 'v1',  -- bump when formula changes to allow targeted cache invalidation
+  computed_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (latitude, longitude, date, crop_type)
+);
+CREATE INDEX IF NOT EXISTS idx_weather_gdd_daily_location_crop
+  ON public.weather_gdd_daily(latitude, longitude, crop_type, date);
+CREATE INDEX IF NOT EXISTS idx_weather_gdd_daily_date
+  ON public.weather_gdd_daily(date DESC);
+
+-- Sum pre-computed GDD between two dates for a location and crop type.
+-- Reads from weather_gdd_daily (generic: any crop_type, no schema change needed).
+CREATE OR REPLACE FUNCTION sum_gdd_between(
+  p_lat numeric, p_lon numeric, p_crop text, p_start date, p_end date
+) RETURNS numeric AS $$
+  SELECT COALESCE(SUM(gdd_daily), 0)
+  FROM weather_gdd_daily
+  WHERE latitude = p_lat AND longitude = p_lon
+    AND crop_type = p_crop AND date >= p_start AND date < p_end;
+$$ LANGUAGE sql STABLE;
 
 -- Weather derived data: per-parcel derived meteorological variables (ORG-scoped via parcel -> farm -> org)
 CREATE TABLE IF NOT EXISTS weather_derived_data (
@@ -5529,6 +5877,8 @@ CREATE TABLE IF NOT EXISTS weather_forecasts (
 CREATE INDEX IF NOT EXISTS idx_weather_forecasts_location ON weather_forecasts(latitude, longitude);
 CREATE INDEX IF NOT EXISTS idx_weather_forecasts_target ON weather_forecasts(target_date);
 
+-- NOTE: per-crop GDD columns (gdd_olivier, gdd_agrumes, …) have been removed from weather_daily_data.
+-- All GDD is now stored in weather_gdd_daily (generic, crop_type row per day).
 -- RLS: weather_daily_data and weather_forecasts are location caches (NO RLS, like satellite_par_data)
 -- RLS: weather_derived_data is org-scoped
 ALTER TABLE IF EXISTS weather_derived_data ENABLE ROW LEVEL SECURITY;
@@ -14996,6 +15346,31 @@ CREATE POLICY "org_delete_payment_records" ON payment_records
     is_organization_member(organization_id)
   );
 
+DROP POLICY IF EXISTS "org_read_piece_work_records" ON piece_work_records;
+CREATE POLICY "org_read_piece_work_records" ON piece_work_records
+  FOR SELECT USING (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_write_piece_work_records" ON piece_work_records;
+CREATE POLICY "org_write_piece_work_records" ON piece_work_records
+  FOR INSERT WITH CHECK (
+    auth.uid() IS NOT NULL AND
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_update_piece_work_records" ON piece_work_records;
+CREATE POLICY "org_update_piece_work_records" ON piece_work_records
+  FOR UPDATE USING (
+    is_organization_member(organization_id)
+  );
+
+DROP POLICY IF EXISTS "org_delete_piece_work_records" ON piece_work_records;
+CREATE POLICY "org_delete_piece_work_records" ON piece_work_records
+  FOR DELETE USING (
+    is_organization_member(organization_id)
+  );
+
 -- Payment Advances Policies
 DROP POLICY IF EXISTS "org_read_payment_advances" ON payment_advances;
 CREATE POLICY "org_read_payment_advances" ON payment_advances
@@ -15348,6 +15723,45 @@ DROP POLICY IF EXISTS "org_delete_stock_account_mappings" ON stock_account_mappi
 CREATE POLICY "org_delete_stock_account_mappings" ON stock_account_mappings
   FOR DELETE USING (
     is_organization_member(organization_id)
+  );
+
+-- Stock Reservations Policies
+ALTER TABLE stock_reservations ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_read_stock_reservations" ON stock_reservations;
+CREATE POLICY "org_read_stock_reservations" ON stock_reservations
+  FOR SELECT USING (is_organization_member(organization_id));
+DROP POLICY IF EXISTS "org_write_stock_reservations" ON stock_reservations;
+CREATE POLICY "org_write_stock_reservations" ON stock_reservations
+  FOR INSERT WITH CHECK (auth.uid() IS NOT NULL AND is_organization_member(organization_id));
+DROP POLICY IF EXISTS "org_update_stock_reservations" ON stock_reservations;
+CREATE POLICY "org_update_stock_reservations" ON stock_reservations
+  FOR UPDATE USING (is_organization_member(organization_id));
+DROP POLICY IF EXISTS "org_delete_stock_reservations" ON stock_reservations;
+CREATE POLICY "org_delete_stock_reservations" ON stock_reservations
+  FOR DELETE USING (is_organization_member(organization_id));
+
+-- Stock Entry Approvals Policies
+ALTER TABLE stock_entry_approvals ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_read_stock_entry_approvals" ON stock_entry_approvals;
+CREATE POLICY "org_read_stock_entry_approvals" ON stock_entry_approvals
+  FOR SELECT USING (
+    stock_entry_id IN (
+      SELECT id FROM stock_entries WHERE is_organization_member(organization_id)
+    )
+  );
+DROP POLICY IF EXISTS "org_write_stock_entry_approvals" ON stock_entry_approvals;
+CREATE POLICY "org_write_stock_entry_approvals" ON stock_entry_approvals
+  FOR INSERT WITH CHECK (
+    stock_entry_id IN (
+      SELECT id FROM stock_entries WHERE is_organization_member(organization_id)
+    )
+  );
+DROP POLICY IF EXISTS "org_update_stock_entry_approvals" ON stock_entry_approvals;
+CREATE POLICY "org_update_stock_entry_approvals" ON stock_entry_approvals
+  FOR UPDATE USING (
+    stock_entry_id IN (
+      SELECT id FROM stock_entries WHERE is_organization_member(organization_id)
+    )
   );
 
 -- =====================================================
@@ -21848,6 +22262,12 @@ DROP TRIGGER IF EXISTS trg_payment_records_updated_at ON payment_records;
 CREATE TRIGGER trg_payment_records_updated_at BEFORE UPDATE ON payment_records
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS set_piece_work_records_updated_at ON piece_work_records;
+CREATE TRIGGER set_piece_work_records_updated_at
+  BEFORE UPDATE ON piece_work_records
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
 DROP TRIGGER IF EXISTS trg_payment_advances_updated_at ON payment_advances;
 CREATE TRIGGER trg_payment_advances_updated_at BEFORE UPDATE ON payment_advances
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
@@ -23609,6 +24029,10 @@ CREATE TABLE IF NOT EXISTS siam_rdv_leads (
   source VARCHAR(80),
   source_ip VARCHAR(45),
   email_sent BOOLEAN DEFAULT false,
+  status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'confirmed', 'rejected')),
+  confirmed_at TIMESTAMPTZ,
+  confirmed_slot VARCHAR(40),
+  rejection_reason TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -23775,5 +24199,575 @@ CREATE TRIGGER set_email_templates_updated_at
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
 
+-- =====================================================
+-- SIAM RDV email templates (system-level, no org)
+-- =====================================================
+INSERT INTO email_templates (organization_id, name, description, type, category, subject, html_body, text_body, variables, is_system, is_active)
+VALUES (
+  NULL,
+  'Confirmation RDV SIAM',
+  'Email sent to lead when their SIAM rendez-vous is confirmed by admin',
+  'siam_rdv_confirmation',
+  'general',
+  'Votre rendez-vous AgroGina au SIAM est confirmé — {{confirmed_slot}}',
+  '<div style="max-width:600px;margin:0 auto;font-family:system-ui,-apple-system,sans-serif;color:#1a1a1a;background:#f9f7f2;padding:24px;border-radius:12px">'
+    || '<div style="background:#1d6b3a;color:white;padding:24px;border-radius:8px 8px 0 0;text-align:center">'
+    || '<h1 style="margin:0;font-size:22px">Rendez-vous confirmé ✅</h1>'
+    || '</div>'
+    || '<div style="background:white;padding:24px;border-radius:0 0 8px 8px">'
+    || '<p style="font-size:16px">Bonjour <strong>{{nom}}</strong>,</p>'
+    || '<p style="font-size:15px">Votre demande de rendez-vous au Salon International de l''Agriculture (SIAM) à Meknès a été <strong>confirmée</strong>.</p>'
+    || '<div style="background:#e8f5ec;border:1px solid #1d6b3a;border-radius:8px;padding:16px;margin:16px 0;text-align:center">'
+    || '<p style="margin:0;font-size:13px;color:#666">Créneau confirmé</p>'
+    || '<p style="margin:4px 0 0;font-size:20px;font-weight:600;color:#1d6b3a">{{confirmed_slot}}</p>'
+    || '</div>'
+    || '<p style="font-size:14px;color:#555">Nous vous attendons sur le stand AgroGina. Notre équipe vous présentera la plateforme ERP + IA décisionnelle conçue pour les fermes marocaines.</p>'
+    || '<p style="font-size:14px;color:#555">En cas d''empêchement, contactez-nous à <a href="mailto:contact@agrogina.com" style="color:#1d6b3a">contact@agrogina.com</a> ou au <strong>{{contact_phone}}</strong>.</p>'
+    || '<hr style="border:none;border-top:1px solid #eee;margin:20px 0" />'
+    || '<p style="font-size:12px;color:#888;text-align:center">AgroGina — ERP agricole + Agronomie + AgromindIA<br/>Stand SIAM 2026, Meknès</p>'
+    || '</div>'
+    || '</div>',
+  E'Bonjour {{nom}}, votre rendez-vous au SIAM est confirmé pour le créneau {{confirmed_slot}}.\nNous vous attendons sur le stand AgroGina.\nEn cas d''empêchement, contactez-nous à contact@agrogina.com ou au {{contact_phone}}.',
+  '["nom","confirmed_slot","contact_phone"]'::jsonb,
+  true,
+  true
+) ON CONFLICT (type) WHERE organization_id IS NULL DO NOTHING;
 
+INSERT INTO email_templates (organization_id, name, description, type, category, subject, html_body, text_body, variables, is_system, is_active)
+VALUES (
+  NULL,
+  'Refus RDV SIAM',
+  'Email sent to lead when their SIAM rendez-vous slot is no longer available',
+  'siam_rdv_rejection',
+  'general',
+  'Mise à jour concernant votre demande de rendez-vous SIAM',
+  '<div style="max-width:600px;margin:0 auto;font-family:system-ui,-apple-system,sans-serif;color:#1a1a1a;background:#f9f7f2;padding:24px;border-radius:12px">'
+    || '<div style="background:#555;color:white;padding:24px;border-radius:8px 8px 0 0;text-align:center">'
+    || '<h1 style="margin:0;font-size:22px">Mise à jour de votre demande</h1>'
+    || '</div>'
+    || '<div style="background:white;padding:24px;border-radius:0 0 8px 8px">'
+    || '<p style="font-size:16px">Bonjour <strong>{{nom}}</strong>,</p>'
+    || '<p style="font-size:15px">Nous avons bien reçu votre demande de rendez-vous au SIAM, malheureusement le créneau demandé n''est plus disponible.</p>'
+    || '<div style="background:#fef3c7;border:1px solid #f59e0b;border-radius:8px;padding:16px;margin:16px 0">'
+    || '<p style="margin:0;font-size:14px;color:#92400e">{{rejection_reason}}</p>'
+    || '</div>'
+    || '<p style="font-size:14px;color:#555">Nous serions ravis de vous rencontrer ! Merci de nous contacter pour convenir d''un autre créneau :</p>'
+    || '<ul style="font-size:14px;color:#555">'
+    || '<li>📧 <a href="mailto:contact@agrogina.com" style="color:#1d6b3a">contact@agrogina.com</a></li>'
+    || '<li>📞 <strong>{{contact_phone}}</strong></li>'
+    || '<li>🌐 <a href="https://rdv.agrogina.ma/rdv-siam" style="color:#1d6b3a">rdv.agrogina.ma/rdv-siam</a></li>'
+    || '</ul>'
+    || '<hr style="border:none;border-top:1px solid #eee;margin:20px 0" />'
+    || '<p style="font-size:12px;color:#888;text-align:center">AgroGina — ERP agricole + Agronomie + AgromindIA<br/>Stand SIAM 2026, Meknès</p>'
+    || '</div>'
+    || '</div>',
+  E'Bonjour {{nom}}, votre demande de rendez-vous au SIAM n''a pas pu être confirmée.\nMotif : {{rejection_reason}}\nContactez-nous pour reprogrammer : contact@agrogina.com ou {{contact_phone}}.',
+  '["nom","rejection_reason","contact_phone"]'::jsonb,
+  true,
+  true
+) ON CONFLICT (type) WHERE organization_id IS NULL DO NOTHING;
+
+
+-- =====================================================
+-- BANNERS
+-- =====================================================
+-- Admin-configurable in-app banners for temporary operational messaging:
+-- maintenance windows, degraded service warnings, feature rollout notices, etc.
+
+-- Single-row config table for subscription pricing model (admin-managed)
+CREATE TABLE IF NOT EXISTS subscription_pricing_config (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  modules JSONB NOT NULL DEFAULT '[]',
+  ha_tiers JSONB NOT NULL DEFAULT '[]',
+  size_multipliers JSONB NOT NULL DEFAULT '[]',
+  default_discount_percent NUMERIC NOT NULL DEFAULT 10,
+  updated_by UUID REFERENCES user_profiles(id),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- No RLS — admin-only access via service_role key
+ALTER TABLE subscription_pricing_config ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "service_role_only" ON subscription_pricing_config
+  FOR ALL USING (auth.role() = 'service_role');
+
+CREATE TABLE IF NOT EXISTS banners (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  message TEXT NOT NULL,
+  severity TEXT NOT NULL DEFAULT 'info' CHECK (severity IN ('info', 'success', 'warning', 'critical')),
+  audience TEXT NOT NULL DEFAULT 'all' CHECK (audience IN ('all', 'admins', 'managers', 'growers')),
+  enabled BOOLEAN NOT NULL DEFAULT true,
+  dismissible BOOLEAN NOT NULL DEFAULT true,
+  cta_label TEXT,
+  cta_url TEXT,
+  priority INTEGER NOT NULL DEFAULT 0,
+  start_at TIMESTAMPTZ,
+  end_at TIMESTAMPTZ,
+  impressions INTEGER NOT NULL DEFAULT 0,
+  dismissals INTEGER NOT NULL DEFAULT 0,
+  created_by UUID REFERENCES user_profiles(id),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+ALTER TABLE banners ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "org_access" ON banners
+  FOR ALL USING (organization_id IS NULL OR public.is_organization_member(organization_id));
+
+CREATE INDEX IF NOT EXISTS idx_banners_org ON banners (organization_id);
+CREATE INDEX IF NOT EXISTS idx_banners_active ON banners (organization_id, enabled, start_at, end_at);
+
+CREATE TRIGGER set_banners_updated_at
+  BEFORE UPDATE ON banners
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
+
+-- =====================================================
+-- BANNER DISMISSALS
+-- =====================================================
+-- Tracks which users have dismissed which banners, preventing re-show.
+
+CREATE TABLE IF NOT EXISTS banner_dismissals (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  banner_id UUID NOT NULL REFERENCES banners(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES user_profiles(id) ON DELETE CASCADE,
+  dismissed_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE(banner_id, user_id)
+);
+
+ALTER TABLE banner_dismissals ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "org_access" ON banner_dismissals
+  FOR ALL USING (
+    EXISTS (
+      SELECT 1 FROM banners b
+      WHERE b.id = banner_dismissals.banner_id
+      AND public.is_organization_member(b.organization_id)
+    )
+  );
+
+
+-- =====================================================
+-- CHANGELOGS
+-- =====================================================
+-- Durable, browsable history of user-facing product changes.
+
+CREATE TABLE IF NOT EXISTS changelogs (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  description TEXT NOT NULL,
+  version TEXT,
+  category TEXT NOT NULL DEFAULT 'feature' CHECK (category IN ('feature', 'improvement', 'fix', 'breaking', 'infra')),
+  published_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  is_global BOOLEAN NOT NULL DEFAULT false,
+  created_by UUID REFERENCES user_profiles(id),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+ALTER TABLE changelogs ENABLE ROW LEVEL SECURITY;
+
+-- Global changelogs are visible to everyone; org-specific ones only to org members
+CREATE POLICY "changelog_read" ON changelogs
+  FOR SELECT USING (
+    is_global = true
+    OR (organization_id IS NOT NULL AND public.is_organization_member(organization_id))
+  );
+
+CREATE POLICY "changelog_manage" ON changelogs
+  FOR ALL USING (
+    EXISTS (
+      SELECT 1
+      FROM public.organization_users ou
+      JOIN public.roles r ON r.id = ou.role_id
+      WHERE ou.user_id = auth.uid()
+        AND r.name = 'system_admin'
+        AND ou.is_active = true
+    )
+  );
+
+
+CREATE INDEX IF NOT EXISTS idx_changelogs_published ON changelogs (published_at DESC);
+CREATE INDEX IF NOT EXISTS idx_changelogs_org ON changelogs (organization_id);
+CREATE INDEX IF NOT EXISTS idx_changelogs_global ON changelogs (is_global) WHERE is_global = true;
+
+CREATE TRIGGER set_changelogs_updated_at
+  BEFORE UPDATE ON changelogs
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
+
+
+
+-- =====================================================
+-- SUPPORTED COUNTRIES
+-- =====================================================
+-- Platform-level table tracking which countries the platform supports.
+-- Managed by internal admins. No organization_id — this is global data.
+
+CREATE TABLE IF NOT EXISTS supported_countries (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  country_code TEXT NOT NULL UNIQUE,
+  country_name TEXT NOT NULL,
+  region TEXT NOT NULL,
+  enabled BOOLEAN NOT NULL DEFAULT true,
+  display_order INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+COMMENT ON TABLE supported_countries IS 'Platform-level list of countries where the platform is available for agricultural land';
+
+ALTER TABLE supported_countries ENABLE ROW LEVEL SECURITY;
+
+-- Everyone can read supported countries (public info)
+CREATE POLICY "supported_countries_read" ON supported_countries
+  FOR SELECT USING (true);
+
+-- Only service_role can manage (admin API uses service_role client)
+CREATE POLICY "supported_countries_manage" ON supported_countries
+  FOR ALL USING (
+    auth.role() = 'service_role'
+  );
+
+CREATE INDEX IF NOT EXISTS idx_supported_countries_region ON supported_countries (region);
+CREATE INDEX IF NOT EXISTS idx_supported_countries_enabled ON supported_countries (enabled) WHERE enabled = true;
+
+CREATE TRIGGER set_supported_countries_updated_at
+  BEFORE UPDATE ON supported_countries
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
+-- Seed initial supported countries (more can be added via admin API)
+INSERT INTO supported_countries (country_code, country_name, region, enabled, display_order) VALUES
+  ('MA', 'Morocco', 'Africa', true, 1)
+ON CONFLICT (country_code) DO NOTHING;
+
+
+-- Add subscription_pricing_config table for admin-managed pricing model
+CREATE TABLE IF NOT EXISTS subscription_pricing_config (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  modules JSONB NOT NULL DEFAULT '[]',
+  ha_tiers JSONB NOT NULL DEFAULT '[]',
+  size_multipliers JSONB NOT NULL DEFAULT '[]',
+  default_discount_percent NUMERIC NOT NULL DEFAULT 10,
+  updated_by UUID REFERENCES user_profiles(id),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+ALTER TABLE subscription_pricing_config ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "service_role_only" ON subscription_pricing_config;
+CREATE POLICY "service_role_only" ON subscription_pricing_config
+  FOR ALL USING (auth.role() = 'service_role');
+
+-- Also make banners.organization_id nullable (global banners)
+ALTER TABLE banners ALTER COLUMN organization_id DROP NOT NULL;
+
+-- Update banners RLS to allow global banners
+DROP POLICY IF EXISTS "org_access" ON banners;
+CREATE POLICY "org_access" ON banners
+  FOR ALL USING (organization_id IS NULL OR public.is_organization_member(organization_id));
+
+-- =====================================================
+-- Stock Reservations, Warehouse Stock Levels, and Stock Entry Approvals
+-- Required by Stock Management Production Readiness (Sprints 2, 3, 4)
+-- =====================================================
+
+-- Stock Reservations
+CREATE TABLE IF NOT EXISTS stock_reservations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  item_id UUID NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+  variant_id UUID REFERENCES product_variants(id) ON DELETE SET NULL,
+  warehouse_id UUID NOT NULL REFERENCES warehouses(id) ON DELETE CASCADE,
+  quantity NUMERIC NOT NULL CHECK (quantity > 0),
+  reserved_by UUID NOT NULL REFERENCES auth.users(id),
+  reserved_at TIMESTAMPTZ DEFAULT NOW(),
+  expires_at TIMESTAMPTZ NOT NULL,
+  status TEXT DEFAULT 'active' CHECK (status IN ('active', 'released', 'fulfilled', 'expired')),
+  reference_type TEXT,
+  reference_id UUID,
+  notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_stock_reservations_org ON stock_reservations(organization_id);
+CREATE INDEX IF NOT EXISTS idx_stock_reservations_item ON stock_reservations(item_id);
+CREATE INDEX IF NOT EXISTS idx_stock_reservations_variant ON stock_reservations(variant_id) WHERE variant_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_stock_reservations_status ON stock_reservations(status) WHERE status = 'active';
+CREATE INDEX IF NOT EXISTS idx_stock_reservations_expires ON stock_reservations(expires_at) WHERE status = 'active';
+
+-- Warehouse Stock Levels (denormalized for O(1) balance queries)
+CREATE TABLE IF NOT EXISTS warehouse_stock_levels (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  item_id UUID NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+  variant_id UUID REFERENCES product_variants(id) ON DELETE SET NULL,
+  warehouse_id UUID NOT NULL REFERENCES warehouses(id) ON DELETE CASCADE,
+  quantity NUMERIC NOT NULL DEFAULT 0,
+  reserved_quantity NUMERIC NOT NULL DEFAULT 0,
+  available_quantity NUMERIC GENERATED ALWAYS AS (quantity - reserved_quantity) STORED,
+  last_movement_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_warehouse_stock_levels_org ON warehouse_stock_levels(organization_id);
+CREATE INDEX IF NOT EXISTS idx_warehouse_stock_levels_item ON warehouse_stock_levels(item_id);
+CREATE INDEX IF NOT EXISTS idx_warehouse_stock_levels_warehouse ON warehouse_stock_levels(warehouse_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_warehouse_stock_levels_unique
+  ON warehouse_stock_levels (organization_id, item_id, warehouse_id)
+  WHERE variant_id IS NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_warehouse_stock_levels_unique_var
+  ON warehouse_stock_levels (organization_id, item_id, variant_id, warehouse_id)
+  WHERE variant_id IS NOT NULL;
+
+-- Trigger: update warehouse_stock_levels on stock_movements change
+CREATE OR REPLACE FUNCTION update_warehouse_stock_levels()
+RETURNS TRIGGER AS $$
+DECLARE
+  v_variant_id UUID;
+  v_warehouse_id UUID;
+  v_item_id UUID;
+  v_org_id UUID;
+  v_existing_id UUID;
+  v_qty NUMERIC;
+BEGIN
+  v_variant_id := COALESCE(NEW.variant_id, OLD.variant_id);
+  v_warehouse_id := COALESCE(NEW.warehouse_id, OLD.warehouse_id);
+  v_item_id := COALESCE(NEW.item_id, OLD.item_id);
+  v_org_id := COALESCE(NEW.organization_id, OLD.organization_id);
+
+  SELECT COALESCE(SUM(quantity), 0) INTO v_qty
+  FROM stock_movements
+  WHERE organization_id = v_org_id
+    AND item_id = v_item_id
+    AND warehouse_id = v_warehouse_id
+    AND (variant_id = v_variant_id OR (v_variant_id IS NULL AND variant_id IS NULL));
+
+  SELECT id INTO v_existing_id
+  FROM warehouse_stock_levels
+  WHERE organization_id = v_org_id
+    AND item_id = v_item_id
+    AND warehouse_id = v_warehouse_id
+    AND (variant_id = v_variant_id OR (v_variant_id IS NULL AND variant_id IS NULL))
+  LIMIT 1;
+
+  IF v_existing_id IS NOT NULL THEN
+    UPDATE warehouse_stock_levels
+    SET quantity = v_qty,
+        last_movement_at = NOW(),
+        updated_at = NOW()
+    WHERE id = v_existing_id;
+  ELSE
+    INSERT INTO warehouse_stock_levels (
+      organization_id,
+      item_id,
+      variant_id,
+      warehouse_id,
+      quantity,
+      last_movement_at
+    )
+    VALUES (v_org_id, v_item_id, v_variant_id, v_warehouse_id, v_qty, NOW());
+  END IF;
+
+  RETURN COALESCE(NEW, OLD);
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_update_warehouse_stock_levels ON stock_movements;
+CREATE TRIGGER trg_update_warehouse_stock_levels
+  AFTER INSERT OR DELETE ON stock_movements
+  FOR EACH ROW
+  EXECUTE FUNCTION update_warehouse_stock_levels();
+
+-- Trigger: update reserved_quantity on stock_reservations change
+CREATE OR REPLACE FUNCTION update_warehouse_stock_reserved()
+RETURNS TRIGGER AS $$
+DECLARE
+  v_item_id UUID;
+  v_variant_id UUID;
+  v_warehouse_id UUID;
+  v_org_id UUID;
+  v_existing_id UUID;
+  v_reserved NUMERIC;
+BEGIN
+  v_item_id := COALESCE(NEW.item_id, OLD.item_id);
+  v_variant_id := COALESCE(NEW.variant_id, OLD.variant_id);
+  v_warehouse_id := COALESCE(NEW.warehouse_id, OLD.warehouse_id);
+  v_org_id := COALESCE(NEW.organization_id, OLD.organization_id);
+
+  SELECT COALESCE(SUM(quantity), 0) INTO v_reserved
+  FROM stock_reservations
+  WHERE organization_id = v_org_id
+    AND item_id = v_item_id
+    AND warehouse_id = v_warehouse_id
+    AND status = 'active'
+    AND expires_at > NOW()
+    AND (variant_id = v_variant_id OR (v_variant_id IS NULL AND variant_id IS NULL));
+
+  SELECT id INTO v_existing_id
+  FROM warehouse_stock_levels
+  WHERE organization_id = v_org_id
+    AND item_id = v_item_id
+    AND warehouse_id = v_warehouse_id
+    AND (variant_id = v_variant_id OR (v_variant_id IS NULL AND variant_id IS NULL))
+  LIMIT 1;
+
+  IF v_existing_id IS NOT NULL THEN
+    UPDATE warehouse_stock_levels
+    SET reserved_quantity = v_reserved,
+        updated_at = NOW()
+    WHERE id = v_existing_id;
+  END IF;
+
+  RETURN COALESCE(NEW, OLD);
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_update_warehouse_stock_reserved ON stock_reservations;
+CREATE TRIGGER trg_update_warehouse_stock_reserved
+  AFTER INSERT OR UPDATE OF status OR DELETE ON stock_reservations
+  FOR EACH ROW
+  EXECUTE FUNCTION update_warehouse_stock_reserved();
+
+-- One-time backfill for existing data
+DO $$
+DECLARE
+  v_record RECORD;
+  v_existing_id UUID;
+  v_reserved NUMERIC;
+BEGIN
+  FOR v_record IN
+    SELECT
+      sm.organization_id,
+      sm.item_id,
+      sm.variant_id,
+      sm.warehouse_id,
+      SUM(sm.quantity) AS quantity,
+      MAX(sm.created_at) AS last_movement_at
+    FROM stock_movements sm
+    GROUP BY sm.organization_id, sm.item_id, sm.variant_id, sm.warehouse_id
+  LOOP
+    SELECT COALESCE(SUM(quantity), 0) INTO v_reserved
+    FROM stock_reservations sr
+    WHERE sr.organization_id = v_record.organization_id
+      AND sr.item_id = v_record.item_id
+      AND sr.warehouse_id = v_record.warehouse_id
+      AND sr.status = 'active'
+      AND sr.expires_at > NOW()
+      AND (sr.variant_id = v_record.variant_id OR (v_record.variant_id IS NULL AND sr.variant_id IS NULL));
+
+    SELECT id INTO v_existing_id
+    FROM warehouse_stock_levels wsl
+    WHERE wsl.organization_id = v_record.organization_id
+      AND wsl.item_id = v_record.item_id
+      AND wsl.warehouse_id = v_record.warehouse_id
+      AND (wsl.variant_id = v_record.variant_id OR (v_record.variant_id IS NULL AND wsl.variant_id IS NULL))
+    LIMIT 1;
+
+    IF v_existing_id IS NOT NULL THEN
+      UPDATE warehouse_stock_levels
+      SET quantity = v_record.quantity,
+          reserved_quantity = v_reserved,
+          last_movement_at = v_record.last_movement_at,
+          updated_at = NOW()
+      WHERE id = v_existing_id;
+    ELSE
+      INSERT INTO warehouse_stock_levels (
+        organization_id,
+        item_id,
+        variant_id,
+        warehouse_id,
+        quantity,
+        reserved_quantity,
+        last_movement_at
+      )
+      VALUES (
+        v_record.organization_id,
+        v_record.item_id,
+        v_record.variant_id,
+        v_record.warehouse_id,
+        v_record.quantity,
+        v_reserved,
+        v_record.last_movement_at
+      );
+    END IF;
+  END LOOP;
+END $$;
+
+-- Stock Entry Approvals
+CREATE TABLE IF NOT EXISTS stock_entry_approvals (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  stock_entry_id UUID NOT NULL REFERENCES stock_entries(id) ON DELETE CASCADE,
+  requested_by UUID NOT NULL REFERENCES auth.users(id),
+  approved_by UUID REFERENCES auth.users(id),
+  approved_at TIMESTAMPTZ,
+  rejected_by UUID REFERENCES auth.users(id),
+  rejected_at TIMESTAMPTZ,
+  rejection_reason TEXT,
+  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_stock_entry_approvals_entry ON stock_entry_approvals(stock_entry_id);
+CREATE INDEX IF NOT EXISTS idx_stock_entry_approvals_status ON stock_entry_approvals(status) WHERE status = 'pending';
+
+-- =====================================================
+-- RLS Policies
+-- =====================================================
+
+-- Stock Reservations Policies
+ALTER TABLE stock_reservations ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_read_stock_reservations" ON stock_reservations;
+CREATE POLICY "org_read_stock_reservations" ON stock_reservations
+  FOR SELECT USING (is_organization_member(organization_id));
+DROP POLICY IF EXISTS "org_write_stock_reservations" ON stock_reservations;
+CREATE POLICY "org_write_stock_reservations" ON stock_reservations
+  FOR INSERT WITH CHECK (auth.uid() IS NOT NULL AND is_organization_member(organization_id));
+DROP POLICY IF EXISTS "org_update_stock_reservations" ON stock_reservations;
+CREATE POLICY "org_update_stock_reservations" ON stock_reservations
+  FOR UPDATE USING (is_organization_member(organization_id));
+DROP POLICY IF EXISTS "org_delete_stock_reservations" ON stock_reservations;
+CREATE POLICY "org_delete_stock_reservations" ON stock_reservations
+  FOR DELETE USING (is_organization_member(organization_id));
+
+-- Warehouse Stock Levels Policies (read-only for org members, writes via triggers)
+ALTER TABLE warehouse_stock_levels ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_read_warehouse_stock_levels" ON warehouse_stock_levels;
+CREATE POLICY "org_read_warehouse_stock_levels" ON warehouse_stock_levels
+  FOR SELECT USING (is_organization_member(organization_id));
+
+-- Stock Entry Approvals Policies
+ALTER TABLE stock_entry_approvals ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_read_stock_entry_approvals" ON stock_entry_approvals;
+CREATE POLICY "org_read_stock_entry_approvals" ON stock_entry_approvals
+  FOR SELECT USING (
+    stock_entry_id IN (
+      SELECT id FROM stock_entries WHERE is_organization_member(organization_id)
+    )
+  );
+DROP POLICY IF EXISTS "org_write_stock_entry_approvals" ON stock_entry_approvals;
+CREATE POLICY "org_write_stock_entry_approvals" ON stock_entry_approvals
+  FOR INSERT WITH CHECK (
+    stock_entry_id IN (
+      SELECT id FROM stock_entries WHERE is_organization_member(organization_id)
+    )
+  );
+DROP POLICY IF EXISTS "org_update_stock_entry_approvals" ON stock_entry_approvals;
+CREATE POLICY "org_update_stock_entry_approvals" ON stock_entry_approvals
+  FOR UPDATE USING (
+    stock_entry_id IN (
+      SELECT id FROM stock_entries WHERE is_organization_member(organization_id)
+    )
+  );
 

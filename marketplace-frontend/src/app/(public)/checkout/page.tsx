@@ -140,7 +140,7 @@ export default function CheckoutPage() {
                             <div className="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center">
                                 <Leaf className="w-5 h-5 text-white" />
                             </div>
-                            <span className="text-xl font-bold text-gray-900">AgriTech</span>
+                            <span className="text-xl font-bold text-gray-900">AgroGina</span>
                         </Link>
                         <Link
                             href="/cart"
@@ -195,10 +195,11 @@ export default function CheckoutPage() {
                                 <div className="space-y-4">
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            <label htmlFor="shipping-name" className="block text-sm font-medium text-gray-700 mb-1">
                                                 Nom complet *
                                             </label>
                                             <input
+                                                id="shipping-name"
                                                 type="text"
                                                 name="name"
                                                 value={shippingDetails.name}
@@ -208,10 +209,11 @@ export default function CheckoutPage() {
                                             />
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            <label htmlFor="shipping-phone" className="block text-sm font-medium text-gray-700 mb-1">
                                                 Telephone *
                                             </label>
                                             <input
+                                                id="shipping-phone"
                                                 type="tel"
                                                 name="phone"
                                                 value={shippingDetails.phone}
@@ -223,10 +225,11 @@ export default function CheckoutPage() {
                                     </div>
 
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        <label htmlFor="shipping-email" className="block text-sm font-medium text-gray-700 mb-1">
                                             Email (optionnel)
                                         </label>
                                         <input
+                                            id="shipping-email"
                                             type="email"
                                             name="email"
                                             value={shippingDetails.email}
@@ -237,10 +240,11 @@ export default function CheckoutPage() {
                                     </div>
 
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        <label htmlFor="shipping-address" className="block text-sm font-medium text-gray-700 mb-1">
                                             Adresse *
                                         </label>
                                         <input
+                                            id="shipping-address"
                                             type="text"
                                             name="address"
                                             value={shippingDetails.address}
@@ -252,10 +256,11 @@ export default function CheckoutPage() {
 
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            <label htmlFor="shipping-city" className="block text-sm font-medium text-gray-700 mb-1">
                                                 Ville *
                                             </label>
                                             <input
+                                                id="shipping-city"
                                                 type="text"
                                                 name="city"
                                                 value={shippingDetails.city}
@@ -265,10 +270,11 @@ export default function CheckoutPage() {
                                             />
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                            <label htmlFor="shipping-postal-code" className="block text-sm font-medium text-gray-700 mb-1">
                                                 Code postal
                                             </label>
                                             <input
+                                                id="shipping-postal-code"
                                                 type="text"
                                                 name="postal_code"
                                                 value={shippingDetails.postal_code}
@@ -281,6 +287,7 @@ export default function CheckoutPage() {
                                 </div>
 
                                 <button
+                                    type="button"
                                     onClick={handleNextStep}
                                     className="mt-6 w-full py-3 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors"
                                 >
@@ -299,6 +306,7 @@ export default function CheckoutPage() {
                                             Livraison
                                         </h2>
                                         <button
+                                            type="button"
                                             onClick={() => setStep(1)}
                                             className="text-sm text-green-600 hover:text-green-700"
                                         >
@@ -376,6 +384,7 @@ export default function CheckoutPage() {
                                 </div>
 
                                 <button
+                                    type="button"
                                     onClick={handleSubmitOrder}
                                     disabled={isSubmitting}
                                     className="w-full py-4 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"

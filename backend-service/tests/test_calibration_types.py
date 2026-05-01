@@ -172,8 +172,8 @@ def _step_outputs():
                 "total": 78.0,
                 "components": {
                     "vigor": 80.0,
-                    "homogeneity": 74.0,
-                    "stability": 77.0,
+                    "spatial_homogeneity": 74.0,
+                    "temporal_stability": 77.0,
                     "hydric": 79.0,
                     "nutritional": 76.0,
                 },
@@ -267,8 +267,8 @@ def test_health_score_rejects_values_outside_range() -> None:
                 "total": 150,
                 "components": {
                     "vigor": 80.0,
-                    "homogeneity": 74.0,
-                    "stability": 77.0,
+                    "spatial_homogeneity": 74.0,
+                    "temporal_stability": 77.0,
                     "hydric": 79.0,
                     "nutritional": 76.0,
                 },

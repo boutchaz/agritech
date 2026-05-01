@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
+import { getLocalCropReference } from '../calibration/crop-reference-loader';
 
 const VALID_CROP_TYPES = [
   'olivier',
@@ -15,6 +16,22 @@ const VALID_CROP_TYPES = [
 
 type CropType = (typeof VALID_CROP_TYPES)[number];
 type ReferenceData = Record<string, unknown>;
+
+export interface SupportedVariety {
+  code: string;
+  nom: string;
+}
+
+export interface SupportedCrop {
+  code: string;
+  label: string;
+  varieties: SupportedVariety[];
+  varietyGroups?: Record<string, SupportedVariety[]>;
+}
+
+export interface SupportedCropsResponse {
+  crops: SupportedCrop[];
+}
 
 @Injectable()
 export class AiReferencesService {
@@ -42,6 +59,66 @@ export class AiReferencesService {
     }
 
     return data.reference_data;
+  }
+
+  getSupportedCrops(): SupportedCropsResponse {
+    const crops: SupportedCrop[] = [];
+
+    for (const cropType of VALID_CROP_TYPES) {
+      const ref = getLocalCropReference(cropType);
+      if (!ref) continue;
+
+      const metadata = ref.metadata as Record<string, unknown> | undefined;
+      const label = (metadata?.culture as string) ?? cropType;
+
+      const { varieties, varietyGroups } = this.extractVarietyCodes(ref);
+      const crop: SupportedCrop = { code: cropType, label, varieties };
+      if (varietyGroups) {
+        crop.varietyGroups = varietyGroups;
+      }
+      crops.push(crop);
+    }
+
+    return { crops };
+  }
+
+  private extractVarietiesFromArray(arr: unknown[]): SupportedVariety[] {
+    const result: SupportedVariety[] = [];
+    for (const v of arr) {
+      if (v && typeof v === 'object' && 'code' in v) {
+        const obj = v as Record<string, unknown>;
+        result.push({ code: String(obj.code), nom: String(obj.nom ?? obj.code) });
+      }
+    }
+    return result;
+  }
+
+  private extractVarietyCodes(ref: ReferenceData): {
+    varieties: SupportedVariety[];
+    varietyGroups?: Record<string, SupportedVariety[]>;
+  } {
+    const varietes = ref.varietes;
+
+    if (Array.isArray(varietes)) {
+      return { varieties: this.extractVarietiesFromArray(varietes) };
+    }
+
+    if (varietes && typeof varietes === 'object') {
+      // Grouped structure (e.g. agrumes: { oranges: [...], citrons: [...] })
+      const allVarieties: SupportedVariety[] = [];
+      const groups: Record<string, SupportedVariety[]> = {};
+
+      for (const [groupKey, group] of Object.entries(varietes as Record<string, unknown>)) {
+        if (!Array.isArray(group)) continue;
+        const extracted = this.extractVarietiesFromArray(group);
+        groups[groupKey] = extracted;
+        allVarieties.push(...extracted);
+      }
+
+      return { varieties: allVarieties, varietyGroups: groups };
+    }
+
+    return { varieties: [] };
   }
 
   async findVarieties(cropType: string): Promise<unknown[]> {

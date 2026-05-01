@@ -28,8 +28,8 @@ async function getCities() {
 }
 
 export const metadata: Metadata = {
-    title: 'Nos Partenaires - AgriTech Market',
-    description: 'Découvrez nos vendeurs et producteurs agricoles de confiance sur AgriTech Market.',
+    title: 'Nos Partenaires - AgroGina Market',
+    description: 'Découvrez nos vendeurs et producteurs agricoles de confiance sur AgroGina Market.',
 };
 
 export default async function SellersPage() {

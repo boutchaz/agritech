@@ -151,9 +151,8 @@ const buildSnapshotInput = (
         total: 69,
         components: {
           vigor: 81,
+          spatial_homogeneity: 70,
           temporal_stability: 78,
-          spatial_heterogeneity: 70,
-          stability: 76,
           hydric: 22,
           nutritional: 73,
         },
@@ -197,6 +196,16 @@ describe('CalibrationReviewAdapter', () => {
       const result = adapter.transform(buildSnapshotInput());
       expect(result.block_a.confidence_score).toBe(50);
       expect(result.block_a.confidence_level).toBe('moyen'); // 50-75 range
+    });
+
+    it('scales 0–1 pipeline normalized_score to percent for level and score', () => {
+      const input = buildSnapshotInput();
+      (input.output as { confidence: { normalized_score: number } }).confidence.normalized_score =
+        0.6364;
+      const result = adapter.transform(input);
+      expect(result.block_a.confidence_score).toBe(64);
+      expect(result.block_a.confidence_level).toBe('moyen');
+      expect(result.block_d.current_confidence).toBe(64);
     });
 
     it('returns yield range with min and max', () => {

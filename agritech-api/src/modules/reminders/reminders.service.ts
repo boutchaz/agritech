@@ -38,7 +38,7 @@ export class RemindersService {
         description,
         due_date,
         organization_id,
-        assigned_user_id,
+        assigned_to,
         worker:workers!assigned_to(user_id)
       `)
       .in('status', ['pending', 'assigned', 'in_progress'])
@@ -77,7 +77,7 @@ export class RemindersService {
         description,
         due_date,
         organization_id,
-        assigned_user_id,
+        assigned_to,
         worker:workers!assigned_to(user_id)
       `)
       .lt('due_date', today)
@@ -126,8 +126,8 @@ export class RemindersService {
       return;
     }
 
-    // Get user ID (from assigned_user_id or worker.user_id)
-    const userId = task.assigned_user_id || task.worker?.user_id;
+    // Get user ID from the assigned worker's user_id
+    const userId = task.worker?.user_id;
     if (!userId) {
       this.logger.warn(`No user assigned to task ${task.id}, skipping reminder`);
       return;

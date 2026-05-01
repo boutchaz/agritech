@@ -1492,9 +1492,7 @@ export class AIReportsService {
 
     const { data: weatherRows } = await supabase
       .from('weather_daily_data')
-      .select(
-        'date, temperature_min, temperature_max, temperature_mean, relative_humidity_mean, wind_speed_max, precipitation_sum, et0_fao_evapotranspiration, gdd_olivier, gdd_agrumes, gdd_avocatier, gdd_palmier_dattier, chill_hours',
-      )
+      .select('*')
       .eq('parcel_id', parcelId)
       .gte('date', defaultStartDate)
       .lte('date', defaultEndDate)
@@ -2465,17 +2463,8 @@ export class AIReportsService {
     row: Record<string, unknown>,
     cropType: string | undefined,
   ): number | undefined {
-    const normalizedCropType = cropType?.toLowerCase();
-    if (normalizedCropType === 'agrumes') {
-      return this.toNumber(row.gdd_agrumes);
-    }
-    if (normalizedCropType === 'avocatier') {
-      return this.toNumber(row.gdd_avocatier);
-    }
-    if (normalizedCropType === 'palmier_dattier') {
-      return this.toNumber(row.gdd_palmier_dattier);
-    }
-    return this.toNumber(row.gdd_olivier);
+    const key = `gdd_${(cropType ?? 'olivier').toLowerCase()}`;
+    return this.toNumber(row[key]);
   }
 
   private async fetchLatestCompletedCalibration(

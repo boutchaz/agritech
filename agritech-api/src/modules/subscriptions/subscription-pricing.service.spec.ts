@@ -12,10 +12,12 @@ describe('SubscriptionPricingService modular pricing', () => {
   let service: SubscriptionPricingService;
 
   beforeEach(() => {
+    // PricingConfigService not used by sync methods under test — pass null
     service = new SubscriptionPricingService(
       new ConfigService({
         SUBSCRIPTION_VAT_RATE: '0.2',
       }),
+      null as any,
     );
   });
 

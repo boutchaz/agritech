@@ -44,6 +44,8 @@ import { OrganizationUsersModule } from "./modules/organization-users/organizati
 import { SatelliteIndicesModule } from "./modules/satellite-indices/satellite-indices.module";
 import { WeatherModule } from "./modules/weather/weather.module";
 import { WorkUnitsModule } from "./modules/work-units/work-units.module";
+import { BannersModule } from "./modules/banners/banners.module";
+import { ChangelogsModule } from "./modules/changelogs/changelogs.module";
 import { SoilAnalysesModule } from "./modules/soil-analyses/soil-analyses.module";
 import { AnalysesModule } from "./modules/analyses/analyses.module";
 import { RolesModule } from "./modules/roles/roles.module";
@@ -159,6 +161,8 @@ import { EmailTemplatesModule } from "./modules/email-templates/email-templates.
     TaskAssignmentsModule,
     WorkersModule,
     WorkUnitsModule,
+    BannersModule,
+    ChangelogsModule,
     PieceWorkModule,
     PaymentRecordsModule,
     StockEntriesModule,

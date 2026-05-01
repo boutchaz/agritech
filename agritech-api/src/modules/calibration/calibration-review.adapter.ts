@@ -1,4 +1,5 @@
 import { Injectable, Logger } from "@nestjs/common";
+import { getLocalCropReference } from "./crop-reference-loader";
 import type {
   CalibrationSnapshotInput,
   CalibrationReviewView,
@@ -95,7 +96,7 @@ const COMPONENT_TARGET_BLOCK: Record<string, string> = {
   hydric: "B",
   nutritional: "B",
   temporal_stability: "B",
-  stability: "C",
+  spatial_homogeneity: "C",
 };
 
 // Spec F4 — alternance index thresholds
@@ -146,8 +147,9 @@ export class CalibrationReviewAdapter {
     const healthTotal = this.asNumber(healthScoreObj.total, 0);
     const healthMatch = HEALTH_LABELS.find((h) => healthTotal >= h.min) ?? HEALTH_LABELS[HEALTH_LABELS.length - 1];
 
-    // Confidence score
-    const confidenceNormalized = this.asNumber(confidence.normalized_score, 0);
+    // Confidence score (pipeline uses 0–1; legacy snapshots may already use 0–100)
+    const confidenceRaw = this.asNumber(confidence.normalized_score, 0);
+    const confidenceNormalized = this.confidenceNormalizedToPercent(confidenceRaw);
     const confidenceMatch = CONFIDENCE_LEVELS.find((c) => confidenceNormalized >= c.min) ?? CONFIDENCE_LEVELS[CONFIDENCE_LEVELS.length - 1];
 
     // Yield potential
@@ -190,6 +192,10 @@ export class CalibrationReviewAdapter {
     };
   }
 
+  /**
+   * Build summary narrative (template-based fallback).
+   * AI enrichment happens in calibration.service.ts via aiReportsService.generateCalibrationSummary().
+   */
   private buildSummaryNarrative(
     healthScore: number,
     healthLabel: HealthLabel,
@@ -201,7 +207,6 @@ export class CalibrationReviewAdapter {
   ): string {
     const parts: string[] = [];
 
-    // Health sentence
     const healthDescriptions: Record<HealthLabel, string> = {
       excellent: `La parcelle affiche un excellent état de santé (${healthScore}/100)`,
       bon: `La parcelle est en bon état général (${healthScore}/100)`,
@@ -211,12 +216,10 @@ export class CalibrationReviewAdapter {
     };
     parts.push(healthDescriptions[healthLabel] + ".");
 
-    // Yield sentence
     if (yieldRange) {
       parts.push(`Le potentiel de rendement estimé se situe entre ${yieldRange.min} et ${yieldRange.max} ${yieldRange.unit}.`);
     }
 
-    // Strengths
     if (strengths.length > 0) {
       const strengthNames = strengths.map((s) => s.component.toLowerCase());
       if (strengthNames.length === 1) {
@@ -226,7 +229,6 @@ export class CalibrationReviewAdapter {
       }
     }
 
-    // Concerns
     if (concerns.length > 0) {
       const critiques = concerns.filter((c) => c.severity === "critique");
       const vigilances = concerns.filter((c) => c.severity === "vigilance");
@@ -240,7 +242,6 @@ export class CalibrationReviewAdapter {
       }
     }
 
-    // Confidence caveat
     const confCaveats: Record<ConfidenceLevel, string> = {
       eleve: "",
       moyen: "Le score de confiance est modéré — une vérification terrain est conseillée.",
@@ -282,7 +283,7 @@ export class CalibrationReviewAdapter {
         strengthPhrase: "Comportement régulier dans le temps.",
         concernPhrase: "Variations temporelles importantes.",
       },
-      stability: {
+      spatial_homogeneity: {
         name: "Homogénéité spatiale",
         strengthPhrase: "Parcelle homogène.",
         concernPhrase: "Hétérogénéité spatiale significative.",
@@ -344,7 +345,7 @@ export class CalibrationReviewAdapter {
       heterogeneity_flag: this.checkHeterogeneity(step7),
       temporal_stability: this.buildTemporalStability(step4),
       history_depth: this.buildHistoryDepth(step1),
-      phenology_dashboard: this.buildPhenologyDashboard(step4),
+      phenology_dashboard: this.buildPhenologyDashboard(step4, input.crop_type),
     };
   }
 
@@ -627,7 +628,32 @@ export class CalibrationReviewAdapter {
     return { label, variance_percent: variancePercent, phrase };
   }
 
-  private buildPhenologyDashboard(step4: JsonRecord): BlockBAnalyse["phenology_dashboard"] {
+  /**
+   * Extract GDD entry thresholds per phase_kc from referentiel stades_bbch.
+   * Returns the first gdd_cumul[0] for each phase_kc (entry threshold).
+   */
+  private extractReferentielGdd(cropType: string | null | undefined): Record<string, number> | null {
+    if (!cropType) return null;
+    const ref = getLocalCropReference(cropType);
+    if (!ref) return null;
+    const stades = ref.stades_bbch;
+    if (!Array.isArray(stades)) return null;
+
+    const gddByPhase: Record<string, number> = {};
+    for (const stade of stades) {
+      const s = stade as Record<string, unknown>;
+      const phaseKc = s.phase_kc as string | undefined;
+      const gddCumul = s.gdd_cumul as number[] | undefined;
+      if (!phaseKc || !Array.isArray(gddCumul) || gddCumul.length === 0) continue;
+      // Keep first occurrence (lowest GDD entry for this phase)
+      if (!(phaseKc in gddByPhase)) {
+        gddByPhase[phaseKc] = gddCumul[0];
+      }
+    }
+    return Object.keys(gddByPhase).length > 0 ? gddByPhase : null;
+  }
+
+  private buildPhenologyDashboard(step4: JsonRecord, cropType?: string | null): BlockBAnalyse["phenology_dashboard"] {
     const phaseTimeline = this.asArray(step4.phase_timeline);
     const meanDates = this.asRecord(step4.mean_dates);
     const variability = this.asRecord(step4.inter_annual_variability_days ?? step4.inter_annual_variability);
@@ -703,6 +729,7 @@ export class CalibrationReviewAdapter {
       mean_stages: meanStages,
       timelines,
       yearly_stages: yearlyStagesOut,
+      referentiel_gdd: this.extractReferentielGdd(cropType),
     };
   }
 
@@ -774,7 +801,9 @@ export class CalibrationReviewAdapter {
   private buildBlockD(input: CalibrationSnapshotInput): BlockDAmeliorer {
     const output = this.getOutput(input);
     const confidence = this.asRecord(output.confidence);
-    const currentConfidence = Math.round(this.asNumber(confidence.normalized_score, 0));
+    const currentConfidence = this.confidenceNormalizedToPercent(
+      this.asNumber(confidence.normalized_score, 0),
+    );
     const inputs = this.asRecord(input.inputs);
 
     const available: AvailableDataItem[] = [];
@@ -923,6 +952,18 @@ export class CalibrationReviewAdapter {
     if (stepName === "step4") return this.asRecord(output.phenology);
 
     return step;
+  }
+
+  /**
+   * Same scale rule as calibration.service when persisting: pipeline `normalized_score` is 0–1;
+   * older payloads may already store 0–100.
+   */
+  private confidenceNormalizedToPercent(raw: number): number {
+    if (!Number.isFinite(raw) || raw < 0) {
+      return 0;
+    }
+    const scaled = raw <= 1 ? raw * 100 : raw;
+    return Math.round(scaled);
   }
 
   private asRecord(value: unknown): JsonRecord {

@@ -123,6 +123,7 @@ class TimeSeriesPoint(BaseModel):
     max_value: Optional[float] = None
     std_value: Optional[float] = None
     median_value: Optional[float] = None
+    percentile_10: Optional[float] = None
     percentile_25: Optional[float] = None
     percentile_75: Optional[float] = None
     percentile_90: Optional[float] = None
@@ -375,6 +376,7 @@ class SatelliteIndicesData(BaseModel):
     max_value: Optional[float] = None
     std_value: Optional[float] = None
     median_value: Optional[float] = None
+    percentile_10: Optional[float] = None
     percentile_25: Optional[float] = None
     percentile_75: Optional[float] = None
     percentile_90: Optional[float] = None

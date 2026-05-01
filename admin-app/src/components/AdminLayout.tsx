@@ -12,6 +12,9 @@ import {
   Clock,
   Menu,
   X,
+  Megaphone,
+  BookOpen,
+  Globe,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -29,6 +32,9 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
     { to: '/subscription-model', label: 'Subscription Model', icon: CreditCard },
     { to: '/email-templates', label: 'Email Templates', icon: Mail },
     { to: '/cron-jobs', label: 'Cron Jobs', icon: Clock },
+    { to: '/banners', label: 'Banners', icon: Megaphone },
+    { to: '/changelog', label: 'Changelog', icon: BookOpen },
+    { to: '/supported-countries', label: 'Supported Countries', icon: Globe },
     { to: '/rdv', label: 'RDV SIAM', icon: CalendarCheck },
   ];
 

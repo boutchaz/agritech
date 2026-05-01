@@ -52,6 +52,12 @@ export class DemoDataService {
       const parcels = await this.createDemoParcels(organizationId, farm.id);
       this.logger.log(`✅ Created ${parcels.length} demo parcels`);
 
+      await this.createDemoSatelliteIndicesData(organizationId, farm.id, parcels);
+      this.logger.log(`✅ Created demo satellite indices data`);
+
+      await this.createDemoWeatherData(organizationId, parcels);
+      this.logger.log(`✅ Created demo weather data`);
+
       // 3. Seed Workers
       const workers = await this.createDemoWorkers(
         organizationId,
@@ -99,6 +105,9 @@ export class DemoDataService {
         userId,
       );
       this.logger.log(`✅ Created demo stock entries`);
+
+      await this.createDemoMarketplaceData(organizationId, items, userId);
+      this.logger.log(`✅ Created demo marketplace data`);
 
       // 8. Seed Customers/Suppliers
       const { customers, suppliers } = await this.createDemoParties(
@@ -452,6 +461,36 @@ export class DemoDataService {
       // 45. Seed Calibrations (linked to parcels via composite FK)
       await this.createDemoCalibrations(organizationId, parcels, userId);
       this.logger.log(`✅ Created demo calibrations`);
+
+      await this.createDemoAIRecommendations(organizationId, parcels);
+      this.logger.log(`✅ Created demo AI recommendations`);
+
+      await this.createDemoAnnualPlans(organizationId, parcels);
+      this.logger.log(`✅ Created demo annual plans and interventions`);
+
+      await this.createDemoMonitoringAnalyses(organizationId, parcels);
+      this.logger.log(`✅ Created demo monitoring analyses`);
+
+      await this.createDemoSeasonTracking(organizationId, parcels, userId);
+      this.logger.log(`✅ Created demo season tracking`);
+
+      await this.createDemoChatHistory(organizationId, userId);
+      this.logger.log(`✅ Created demo chat history`);
+
+      await this.createDemoAIQuota(organizationId);
+      this.logger.log(`✅ Created demo AI quota`);
+
+      const pieceWorkRecords = await this.createDemoPieceWorkRecords(
+        organizationId,
+        farm.id,
+        parcels,
+        workers,
+        tasks,
+        userId,
+      );
+      this.logger.log(
+        `✅ Created ${pieceWorkRecords.length} demo piece work records`,
+      );
 
       this.logger.log(
         `✅ Demo data seeding completed successfully for organization ${organizationId}`,
@@ -6383,6 +6422,1653 @@ export class DemoDataService {
     }
   }
 
+  private async createDemoSatelliteIndicesData(
+    organizationId: string,
+    farmId: string,
+    parcels: any[],
+  ): Promise<void> {
+    if (!parcels?.length) return;
+
+    const client = this.databaseService.getAdminClient();
+    const today = new Date();
+    const dates = Array.from({ length: 6 }, (_, index) => {
+      const date = new Date(today);
+      date.setDate(today.getDate() - (35 - index * 7));
+      return date.toISOString().split("T")[0];
+    });
+
+    const parcelProfiles = parcels.map((parcel) => {
+      if (parcel.name.includes("Olives")) {
+        return {
+          parcel,
+          crop: "olivier",
+          ndvi: [0.74, 0.71, 0.69, 0.66, 0.62, 0.58],
+          ndre: [0.38, 0.37, 0.36, 0.34, 0.31, 0.28],
+          ndmi: [0.34, 0.33, 0.32, 0.29, 0.25, 0.22],
+          alertsAt: [4, 5],
+        };
+      }
+
+      if (parcel.name.includes("Agrumes")) {
+        return {
+          parcel,
+          crop: "agrumes",
+          ndvi: [0.79, 0.78, 0.76, 0.74, 0.72, 0.7],
+          ndre: [0.42, 0.41, 0.4, 0.39, 0.37, 0.36],
+          ndmi: [0.39, 0.38, 0.37, 0.35, 0.34, 0.33],
+          alertsAt: [],
+        };
+      }
+
+      return {
+        parcel,
+        crop: "legumes",
+        ndvi: [0.66, 0.63, 0.59, 0.55, 0.51, 0.47],
+        ndre: [0.33, 0.31, 0.29, 0.27, 0.24, 0.22],
+        ndmi: [0.28, 0.26, 0.23, 0.2, 0.17, 0.15],
+        alertsAt: [3, 4, 5],
+      };
+    });
+
+    const rows = parcelProfiles.flatMap((profile) =>
+      dates.flatMap((date, index) => {
+        const values = [
+          { indexName: "NDVI", series: profile.ndvi },
+          { indexName: "NDRE", series: profile.ndre },
+          { indexName: "NDMI", series: profile.ndmi },
+        ];
+
+        return values.map(({ indexName, series }) => {
+          const mean = series[index];
+          const significantDeviation = profile.alertsAt.includes(index);
+          const trendDirection =
+            index >= series.length - 2 && significantDeviation
+              ? "declining"
+              : index === 0
+                ? "stable"
+                : mean >= series[index - 1]
+                  ? "improving"
+                  : "stable";
+
+          return {
+            organization_id: organizationId,
+            farm_id: farmId,
+            parcel_id: profile.parcel.id,
+            date,
+            index_name: indexName,
+            mean_value: mean,
+            min_value: Math.max(mean - 0.08, 0.05),
+            max_value: Math.min(mean + 0.07, 0.95),
+            std_value: 0.03 + index * 0.002,
+            median_value: mean,
+            percentile_10: Math.max(mean - 0.06, 0.04),
+            percentile_25: Math.max(mean - 0.03, 0.05),
+            percentile_75: Math.min(mean + 0.03, 0.95),
+            percentile_90: Math.min(mean + 0.05, 0.96),
+            pixel_count: 1100 + index * 45,
+            cloud_coverage_percentage:
+              profile.crop === "agrumes" ? 5 + index : 7 + index * 1.5,
+            image_source: "Sentinel-2",
+            baseline_position: significantDeviation
+              ? "sous_p10"
+              : mean >= 0.7
+                ? "au_dessus_p75"
+                : "entre_p25_p75",
+            is_significant_deviation: significantDeviation,
+            trend_direction: trendDirection,
+            trend_duration_days: index * 7,
+            metadata: {
+              localisation: { latitude: 34.92, longitude: -2.32 },
+              culture: profile.crop,
+              commentaire:
+                significantDeviation && trendDirection === "declining"
+                  ? "Baisse persistante nécessitant une vérification terrain."
+                  : "Valeurs cohérentes avec la saison et le stade cultural.",
+            },
+          };
+        });
+      }),
+    );
+
+    const { error } = await client.from("satellite_indices_data").insert(rows);
+
+    if (error) {
+      this.logger.error(
+        `Failed to create demo satellite indices data: ${error.message}`,
+      );
+    }
+  }
+
+  private async createDemoWeatherData(
+    organizationId: string,
+    parcels: any[],
+  ): Promise<void> {
+    if (!parcels?.length) return;
+
+    const client = this.databaseService.getAdminClient();
+    const latitude = 34.92;
+    const longitude = -2.32;
+    const today = new Date();
+    const historyRows = [];
+    const forecastRows = [];
+    const derivedRows = [];
+
+    for (let dayOffset = 29; dayOffset >= 0; dayOffset -= 1) {
+      const date = new Date(today);
+      date.setDate(today.getDate() - dayOffset);
+      const isoDate = date.toISOString().split("T")[0];
+      const cycle = 29 - dayOffset;
+      const temperatureMin = 8 + (cycle % 6) + (cycle > 20 ? 1 : 0);
+      const temperatureMax = 19 + (cycle % 8) + (cycle > 15 ? 2 : 0);
+      const temperatureMean = Number(
+        ((temperatureMin + temperatureMax) / 2).toFixed(1),
+      );
+      const precipitation = [0, 0, 1.2, 0, 0, 0.4, 0.8][cycle % 7];
+      const humidityMean = 52 + (cycle % 5) * 3;
+      const windMax = 18 + (cycle % 6) * 2;
+      const radiation = Number((18 + cycle * 0.35).toFixed(2));
+      const et0 = Number((2.7 + cycle * 0.06).toFixed(2));
+      const soilTemp = Number((15 + cycle * 0.18).toFixed(1));
+      const soilMoisture = Number((0.22 - cycle * 0.0015).toFixed(4));
+
+      historyRows.push({
+        latitude,
+        longitude,
+        date: isoDate,
+        temperature_min: temperatureMin,
+        temperature_max: temperatureMax,
+        temperature_mean: temperatureMean,
+        relative_humidity_mean: humidityMean,
+        relative_humidity_max: Math.min(humidityMean + 12, 92),
+        relative_humidity_min: Math.max(humidityMean - 14, 25),
+        precipitation_sum: precipitation,
+        wind_speed_max: windMax,
+        wind_gusts_max: windMax + 8,
+        shortwave_radiation_sum: radiation,
+        et0_fao_evapotranspiration: et0,
+        soil_temperature_0_7cm: soilTemp,
+        soil_temperature_7_28cm: Number((soilTemp - 1.3).toFixed(1)),
+        soil_moisture_0_7cm: Math.max(soilMoisture, 0.11),
+        soil_moisture_7_28cm: Math.max(Number((soilMoisture + 0.03).toFixed(4)), 0.14),
+        source: "open-meteo-archive",
+        chill_hours: cycle < 10 ? 4 + (cycle % 3) : 0,
+      });
+
+      for (const parcel of parcels) {
+        const cropType = parcel.name.includes("Olives")
+          ? "olivier"
+          : parcel.name.includes("Agrumes")
+            ? "agrumes"
+            : "tomate";
+        const baseTemp = cropType === "agrumes" ? 12 : 10;
+        const gddDaily = Math.max(temperatureMean - baseTemp, 0);
+        const gddCumulative = Number((gddDaily * (cycle + 1)).toFixed(2));
+        const waterBalance = Number(
+          (precipitation - et0 - (cropType === "tomate" ? 0.5 : 0)).toFixed(2),
+        );
+
+        derivedRows.push({
+          organization_id: organizationId,
+          parcel_id: parcel.id,
+          date: isoDate,
+          gdd_daily: Number(gddDaily.toFixed(2)),
+          gdd_cumulative: gddCumulative,
+          gdd_base_temp: baseTemp,
+          chill_hours_daily: cycle < 10 && cropType !== "tomate" ? 4 + (cycle % 3) : 0,
+          chill_hours_cumulative:
+            cycle < 10 && cropType !== "tomate" ? (cycle + 1) * 4.5 : 0,
+          frost_risk: temperatureMin <= 9 && cycle < 5,
+          heat_stress: temperatureMax >= 29,
+          water_balance: waterBalance,
+          kc_used: cropType === "olivier" ? 0.65 : cropType === "agrumes" ? 0.78 : 0.95,
+          phenological_stage:
+            cropType === "olivier"
+              ? "Grossissement du fruit"
+              : cropType === "agrumes"
+                ? "Nouaison avancée"
+                : "Floraison et nouaison",
+        });
+      }
+    }
+
+    const forecastDate = today.toISOString().split("T")[0];
+    for (let day = 1; day <= 7; day += 1) {
+      const target = new Date(today);
+      target.setDate(today.getDate() + day);
+      const temperatureMin = 12 + (day % 3);
+      const temperatureMax = 24 + day;
+      const temperatureMean = Number(
+        ((temperatureMin + temperatureMax) / 2).toFixed(1),
+      );
+
+      forecastRows.push({
+        latitude,
+        longitude,
+        forecast_date: forecastDate,
+        target_date: target.toISOString().split("T")[0],
+        temperature_min: temperatureMin,
+        temperature_max: temperatureMax,
+        temperature_mean: temperatureMean,
+        relative_humidity_mean: 50 + day * 2,
+        precipitation_sum: day === 3 ? 1.6 : day === 6 ? 0.8 : 0,
+        wind_speed_max: 20 + day * 1.5,
+        et0_fao_evapotranspiration: Number((3.4 + day * 0.12).toFixed(2)),
+        source: "open-meteo-forecast",
+      });
+    }
+
+    const { error: historyError } = await client
+      .from("weather_daily_data")
+      .insert(historyRows);
+    if (historyError) {
+      this.logger.error(`Failed to create demo weather history: ${historyError.message}`);
+    }
+
+    const { error: forecastError } = await client
+      .from("weather_forecasts")
+      .insert(forecastRows);
+    if (forecastError) {
+      this.logger.error(`Failed to create demo weather forecasts: ${forecastError.message}`);
+    }
+
+    const { error: derivedError } = await client
+      .from("weather_derived_data")
+      .insert(derivedRows);
+    if (derivedError) {
+      this.logger.error(`Failed to create demo weather derived data: ${derivedError.message}`);
+    }
+  }
+
+  private async createDemoAIRecommendations(
+    organizationId: string,
+    parcels: any[],
+  ): Promise<void> {
+    if (!parcels?.length) return;
+
+    const client = this.databaseService.getAdminClient();
+    const { data: calibrations } = await client
+      .from("calibrations")
+      .select("id, parcel_id")
+      .eq("organization_id", organizationId);
+
+    const calibrationByParcel = new Map(
+      (calibrations || []).map((calibration) => [calibration.parcel_id, calibration.id]),
+    );
+
+    const parcelByName = new Map(parcels.map((parcel) => [parcel.name, parcel]));
+    const olivesParcel = parcelByName.get("Parcelle Olives") || parcels[0];
+    const agrumesParcel = parcelByName.get("Parcelle Agrumes") || parcels[1] || parcels[0];
+    const legumesParcel = parcelByName.get("Parcelle Légumes") || parcels[2] || parcels[0];
+    const now = new Date();
+
+    const recommendations = [
+      {
+        parcel_id: olivesParcel.id,
+        organization_id: organizationId,
+        calibration_id: calibrationByParcel.get(olivesParcel.id) || null,
+        alert_code: "OLI-IRR-01",
+        crop_type: "olivier",
+        type: "irrigation",
+        recommendation_type: "reactive",
+        theme: "irrigation",
+        priority: "urgent",
+        status: "proposed",
+        bloc_1_constat: {
+          indice: "NDMI",
+          valeur_actuelle: 0.22,
+          tendance: "declining",
+          baseline_position: "sous_p10",
+          message: "Stress hydrique confirmé sur la zone sud de la parcelle olives.",
+        },
+        bloc_2_diagnostic: {
+          hypotheses: ["Uniformité d'irrigation insuffisante", "Vent sec des 7 derniers jours"],
+          confidence_level: 0.84,
+          missing_data: [],
+        },
+        bloc_3_action: {
+          description: "Lancer un cycle de goutte-à-goutte de 7 heures avant 8h.",
+          produit: "Eau d'irrigation",
+          dose: { volume_m3_ha: 28 },
+          methode: "Goutte à goutte",
+        },
+        bloc_4_fenetre: {
+          urgence: "agir sous 24h",
+          periode_optimale: "demain entre 04h00 et 08h00",
+        },
+        bloc_5_conditions: {
+          meteo: "Pas de vent fort > 25 km/h",
+          compatibilite: "Compatible avec fertigation azotée légère",
+        },
+        bloc_6_suivi: {
+          delai_evaluation: "72h",
+          indicateur: "NDMI et reprise de turgescence",
+          expected_response: "Stabilisation de la baisse sur 1 passage satellite",
+        },
+        expires_at: new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString(),
+      },
+      {
+        parcel_id: agrumesParcel.id,
+        organization_id: organizationId,
+        calibration_id: calibrationByParcel.get(agrumesParcel.id) || null,
+        alert_code: "AGR-FERT-02",
+        crop_type: "agrumes",
+        type: "fertilisation",
+        recommendation_type: "planned",
+        theme: "fertigation_n",
+        priority: "priority",
+        status: "validated",
+        bloc_1_constat: {
+          indice: "NDRE",
+          valeur_actuelle: 0.36,
+          baseline_position: "entre_p25_p75",
+          message: "La vigueur reste correcte mais la croissance active exige un apport d'appoint.",
+        },
+        bloc_2_diagnostic: {
+          hypotheses: ["Besoin d'azote fractionné", "Bonne réponse attendue sur bloc central"],
+          confidence_level: 0.78,
+        },
+        bloc_3_action: {
+          description: "Appliquer un apport de nitrate de calcium en fertigation.",
+          produit: "Nitrate de calcium",
+          dose: { valeur: 18, unite: "kg/ha" },
+          methode: "Fertigation",
+        },
+        bloc_4_fenetre: {
+          urgence: "cette semaine",
+          deadline: new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000).toISOString(),
+        },
+        bloc_5_conditions: {
+          meteo: "Fractionner hors épisode pluvieux",
+        },
+        bloc_6_suivi: {
+          delai_evaluation: "10 jours",
+          indicateur: "Homogénéité des pousses",
+        },
+        expires_at: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+      },
+      {
+        parcel_id: legumesParcel.id,
+        organization_id: organizationId,
+        calibration_id: null,
+        alert_code: "LEG-PHY-03",
+        crop_type: "tomate",
+        type: "phytosanitary",
+        recommendation_type: "reactive",
+        theme: "phytosanitary",
+        priority: "vigilance",
+        status: "executed",
+        bloc_1_constat: {
+          indice: "NDVI",
+          valeur_actuelle: 0.47,
+          inter_index_coherence: "Moyenne",
+          message: "Début de baisse de vigueur sur bordure nord, compatible avec pression mildiou faible à modérée.",
+        },
+        bloc_2_diagnostic: {
+          hypotheses: ["Humidité nocturne persistante", "Couverture foliaire dense"],
+          confidence_level: 0.72,
+        },
+        bloc_3_action: {
+          description: "Pulvérisation cuivre + biocontrôle sur 7 ha.",
+          produit: "Cuivre + Bacillus subtilis",
+          dose: { valeur: 2.5, unite: "L/ha" },
+          methode: "Pulvérisation foliaire",
+        },
+        bloc_4_fenetre: {
+          urgence: "sous 48h",
+        },
+        bloc_5_conditions: {
+          meteo: "Intervenir avec vent < 18 km/h",
+        },
+        bloc_6_suivi: {
+          delai_evaluation: "5 jours",
+          indicateur: "Stabilisation des symptômes",
+        },
+        executed_at: new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+        execution_notes: "Traitement réalisé tôt le matin avec couverture homogène.",
+      },
+      {
+        parcel_id: legumesParcel.id,
+        organization_id: organizationId,
+        calibration_id: null,
+        alert_code: "LEG-PHY-03-EVAL",
+        crop_type: "tomate",
+        type: "phytosanitary",
+        recommendation_type: "reactive",
+        theme: "phytosanitary",
+        priority: "info",
+        status: "evaluated",
+        bloc_1_constat: {
+          message: "Le suivi terrain montre une stabilisation des foyers après traitement.",
+        },
+        bloc_2_diagnostic: {
+          confidence_level: 0.81,
+        },
+        bloc_3_action: {
+          description: "Poursuivre la surveillance sans nouveau traitement immédiat.",
+        },
+        bloc_4_fenetre: {
+          urgence: "contrôle hebdomadaire",
+        },
+        bloc_5_conditions: {
+          meteo: "Réévaluer si humidité > 85% pendant 2 nuits",
+        },
+        bloc_6_suivi: {
+          delai_evaluation: "7 jours",
+          indicateur: "Evolution visuelle des foyers",
+        },
+        executed_at: new Date(now.getTime() - 6 * 24 * 60 * 60 * 1000).toISOString(),
+        evaluated_at: new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+        evaluation_result: "effective",
+        evaluation_notes: "Diminution nette des lésions actives et reprise du rythme de croissance.",
+      },
+      {
+        parcel_id: olivesParcel.id,
+        organization_id: organizationId,
+        calibration_id: calibrationByParcel.get(olivesParcel.id) || null,
+        alert_code: "OLI-TAIL-04",
+        crop_type: "olivier",
+        type: "pruning",
+        recommendation_type: "planned",
+        theme: "pruning",
+        priority: "priority",
+        status: "closed",
+        bloc_1_constat: {
+          message: "Taille d'entretien terminée sur 90% de la parcelle avec bonne homogénéité.",
+        },
+        bloc_2_diagnostic: {
+          confidence_level: 0.76,
+        },
+        bloc_3_action: {
+          description: "Clôturer le cycle et archiver les observations terrain.",
+        },
+        bloc_4_fenetre: {
+          urgence: "aucune",
+        },
+        bloc_5_conditions: {
+          meteo: "RAS",
+        },
+        bloc_6_suivi: {
+          delai_evaluation: "30 jours",
+          indicateur: "Reprise végétative post-taille",
+        },
+        executed_at: new Date(now.getTime() - 20 * 24 * 60 * 60 * 1000).toISOString(),
+        evaluated_at: new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000).toISOString(),
+      },
+      {
+        parcel_id: agrumesParcel.id,
+        organization_id: organizationId,
+        calibration_id: calibrationByParcel.get(agrumesParcel.id) || null,
+        alert_code: "AGR-REC-05",
+        crop_type: "agrumes",
+        type: "harvest",
+        recommendation_type: "planned",
+        theme: "harvest",
+        priority: "vigilance",
+        status: "validated",
+        bloc_1_constat: {
+          message: "La couleur et l'homogénéité annoncent une fenêtre de récolte proche.",
+        },
+        bloc_2_diagnostic: {
+          confidence_level: 0.69,
+        },
+        bloc_3_action: {
+          description: "Préparer les équipes et les caisses de récolte pour la semaine prochaine.",
+        },
+        bloc_4_fenetre: {
+          periode_optimale: "entre J+6 et J+10",
+        },
+        bloc_5_conditions: {
+          meteo: "Eviter toute récolte après pluie",
+        },
+        bloc_6_suivi: {
+          delai_evaluation: "à l'ouverture de chantier",
+          indicateur: "Taux Brix et fermeté",
+        },
+        expires_at: new Date(now.getTime() + 10 * 24 * 60 * 60 * 1000).toISOString(),
+      },
+    ];
+
+    const { error } = await client
+      .from("ai_recommendations")
+      .insert(recommendations);
+
+    if (error) {
+      this.logger.error(`Failed to create demo AI recommendations: ${error.message}`);
+    }
+  }
+
+  private async createDemoAnnualPlans(
+    organizationId: string,
+    parcels: any[],
+  ): Promise<void> {
+    if (!parcels?.length) return;
+
+    const client = this.databaseService.getAdminClient();
+    const { data: calibrations } = await client
+      .from("calibrations")
+      .select("id, parcel_id")
+      .eq("organization_id", organizationId);
+    const calibrationByParcel = new Map(
+      (calibrations || []).map((calibration) => [calibration.parcel_id, calibration.id]),
+    );
+
+    const now = new Date();
+    const season =
+      now.getMonth() + 1 < 8
+        ? `${now.getFullYear() - 1}-${now.getFullYear()}`
+        : `${now.getFullYear()}-${now.getFullYear() + 1}`;
+
+    const plans = parcels.map((parcel, index) => {
+      const isOlives = parcel.name.includes("Olives");
+      const isAgrumes = parcel.name.includes("Agrumes");
+
+      return {
+        parcel_id: parcel.id,
+        organization_id: organizationId,
+        calibration_id: calibrationByParcel.get(parcel.id) || null,
+        season,
+        status: index === 0 ? "active" : index === 1 ? "validated" : "draft",
+        crop_type: isOlives ? "olivier" : isAgrumes ? "agrumes" : "tomate",
+        variety: parcel.variety,
+        nutrition_option: isOlives ? "A" : isAgrumes ? "A" : "B",
+        nutrition_option_reason:
+          isOlives
+            ? "Données sol + calibration complètes"
+            : isAgrumes
+              ? "Historique de production stable et calibration validée"
+              : "Plan maraîcher en ajustement avec données partielles",
+        yield_target_t_ha: isOlives ? 5.8 : isAgrumes ? 24.5 : 52,
+        alternance_status: isOlives ? "OFF" : "NA",
+        production_target: isOlives ? "huile_qualite" : isAgrumes ? "mixte" : "mixte",
+        dose_n_kg_ha: isOlives ? 78 : isAgrumes ? 115 : 145,
+        dose_p_kg_ha: isOlives ? 32 : isAgrumes ? 48 : 62,
+        dose_k_kg_ha: isOlives ? 88 : isAgrumes ? 130 : 175,
+        dose_mg_kg_ha: isOlives ? 4.5 : isAgrumes ? 5.2 : 6.8,
+        monthly_calendar: {
+          janvier: ["Analyse eau", "Entretien réseau"],
+          mars: [isOlives ? "Taille d'entretien" : "Apport de démarrage"],
+          mai: ["Fractionnement nutritionnel", "Contrôle sanitaire"],
+          juillet: ["Pilotage irrigation", "Suivi stress hydrique"],
+          octobre: [isAgrumes ? "Pré-récolte" : isOlives ? "Préparation récolte" : "Récoltes échelonnées"],
+        },
+        irrigation_plan: {
+          systeme: parcel.irrigation_type,
+          reference_kc: isOlives ? 0.65 : isAgrumes ? 0.78 : 0.95,
+          volume_reference_m3_ha:
+            isOlives ? { juillet: 22, aout: 28 } : isAgrumes ? { juillet: 30, aout: 34 } : { avril: 24, mai: 28 },
+        },
+        harvest_forecast: {
+          fenetre:
+            isOlives ? "novembre-décembre" : isAgrumes ? "octobre-novembre" : "juin-juillet",
+          rendement_cible_t_ha: isOlives ? 5.8 : isAgrumes ? 24.5 : 52,
+        },
+        verifications: {
+          doses_plausibles: true,
+          fractionnement_ok: true,
+          coherences_culture: true,
+        },
+        budget_estimate_dh: isOlives ? 38500 : isAgrumes ? 46200 : 58900,
+        plan_summary: isOlives
+          ? "Plan orienté maintien de vigueur, optimisation de l'irrigation et qualité huile."
+          : isAgrumes
+            ? "Plan orienté calibre, régularité de charge et sécurisation phytosanitaire."
+            : "Plan intensif maraîcher avec surveillance sanitaire rapprochée et fertigation pilotée.",
+        validated_by_user: index < 2,
+        validated_at: index < 2 ? now.toISOString() : null,
+      };
+    });
+
+    const { data: createdPlans, error } = await client
+      .from("annual_plans")
+      .insert(plans)
+      .select("id, parcel_id");
+
+    if (error) {
+      this.logger.error(`Failed to create demo annual plans: ${error.message}`);
+      return;
+    }
+
+    const interventions = (createdPlans || []).flatMap((plan, index) => {
+      const parcel = parcels.find((currentParcel) => currentParcel.id === plan.parcel_id);
+      const isOlives = parcel?.name.includes("Olives");
+      const isAgrumes = parcel?.name.includes("Agrumes");
+
+      return [
+        {
+          annual_plan_id: plan.id,
+          parcel_id: plan.parcel_id,
+          organization_id: organizationId,
+          month: 3,
+          week: 2,
+          intervention_type: isOlives ? "pruning" : "fertilisation",
+          description: isOlives
+            ? "Taille d'entretien pour aérer la frondaison."
+            : "Apport de démarrage avant montée en charge.",
+          product: isOlives ? "Main d'œuvre spécialisée" : "NPK enrichi",
+          dose_data: isOlives ? { unite: "h/ha", valeur: 14 } : { unite: "kg/ha", valeur: 22 },
+          priority: "high",
+          status: index === 0 ? "executed" : "planned",
+          scheduled_date: `${season.slice(0, 4)}-03-12`,
+          executed_at: index === 0 ? `${season.slice(0, 4)}-03-13T09:00:00.000Z` : null,
+        },
+        {
+          annual_plan_id: plan.id,
+          parcel_id: plan.parcel_id,
+          organization_id: organizationId,
+          month: 4,
+          week: 4,
+          intervention_type: "irrigation",
+          description: "Réglage du pilotage d'irrigation avant montée des besoins.",
+          product: "Eau d'irrigation",
+          dose_data: { unite: "m3/ha", valeur: isAgrumes ? 18 : isOlives ? 14 : 16 },
+          priority: "high",
+          status: "planned",
+          scheduled_date: `${now.getFullYear()}-04-28`,
+        },
+        {
+          annual_plan_id: plan.id,
+          parcel_id: plan.parcel_id,
+          organization_id: organizationId,
+          month: 5,
+          week: 2,
+          intervention_type: "fertilisation",
+          description: "Fractionnement nutritionnel principal.",
+          product: isAgrumes ? "Nitrate de calcium" : isOlives ? "Sulfate d'ammonium" : "Solution fertigation NPK",
+          dose_data: { unite: "kg/ha", valeur: isAgrumes ? 18 : isOlives ? 16 : 24 },
+          priority: "critical",
+          status: "planned",
+          scheduled_date: `${now.getFullYear()}-05-12`,
+        },
+        {
+          annual_plan_id: plan.id,
+          parcel_id: plan.parcel_id,
+          organization_id: organizationId,
+          month: 6,
+          week: 1,
+          intervention_type: "phytosanitary",
+          description: isAgrumes
+            ? "Traitement préventif contre cochenille et alternaria."
+            : isOlives
+              ? "Surveillance mouche et traitement ciblé si seuil atteint."
+              : "Protection préventive mildiou/alternariose.",
+          product: isAgrumes ? "Huile minérale + cuivre" : isOlives ? "Piégeage + appât" : "Cuivre + biocontrôle",
+          dose_data: { unite: "L/ha", valeur: isOlives ? 1.2 : 2.5 },
+          priority: "high",
+          status: index === 1 ? "executed" : "planned",
+          scheduled_date: `${now.getFullYear()}-06-06`,
+          executed_at: index === 1 ? `${now.getFullYear()}-06-07T07:30:00.000Z` : null,
+        },
+        {
+          annual_plan_id: plan.id,
+          parcel_id: plan.parcel_id,
+          organization_id: organizationId,
+          month: isOlives ? 11 : isAgrumes ? 10 : 7,
+          week: 2,
+          intervention_type: "harvest",
+          description: "Préparation logistique de la récolte et mobilisation des équipes.",
+          product: "Caisses et consommables de récolte",
+          dose_data: { unite: "unites/ha", valeur: isOlives ? 35 : isAgrumes ? 48 : 55 },
+          priority: "normal",
+          status: "planned",
+          scheduled_date: `${isOlives ? now.getFullYear() : now.getFullYear()}-${String(isOlives ? 11 : isAgrumes ? 10 : 7).padStart(2, "0")}-10`,
+        },
+      ];
+    });
+
+    const { error: interventionsError } = await client
+      .from("plan_interventions")
+      .insert(interventions);
+
+    if (interventionsError) {
+      this.logger.error(
+        `Failed to create demo plan interventions: ${interventionsError.message}`,
+      );
+    }
+  }
+
+  private async createDemoMarketplaceData(
+    organizationId: string,
+    items: any[],
+    userId: string,
+  ): Promise<void> {
+    const client = this.databaseService.getAdminClient();
+    const oliveOilItem = items.find((item) => item.item_code === "REC-HUILE-EV") || null;
+    const clementineItem = items.find((item) => item.item_code === "REC-CLEM-BIO") || null;
+    const orangeItem = items.find((item) => item.item_code === "REC-ORA-NAV") || null;
+    const now = new Date();
+
+    const listings = [
+      {
+        organization_id: organizationId,
+        title: "Huile d'olive extra vierge Berkane",
+        description: "Huile premium pressée à froid, lot traçable campagne actuelle.",
+        price: 42,
+        currency: "MAD",
+        quantity_available: 1200,
+        unit: "L",
+        status: "active",
+        is_public: true,
+        images: ["/demo/marketplace/huile-olive.jpg"],
+        location_lat: 34.92,
+        location_lng: -2.32,
+        location_address: "Berkane, Oriental, Maroc",
+        created_by: userId,
+      },
+      {
+        organization_id: organizationId,
+        title: "Clémentines de Berkane calibre export",
+        description: "Clémentines fraîches triées, calibre homogène, conditionnement 10 kg.",
+        price: 8.5,
+        currency: "MAD",
+        quantity_available: 18500,
+        unit: "kg",
+        status: "active",
+        is_public: true,
+        images: ["/demo/marketplace/clementines.jpg"],
+        location_lat: 34.92,
+        location_lng: -2.32,
+        location_address: "Berkane, Oriental, Maroc",
+        created_by: userId,
+      },
+      {
+        organization_id: organizationId,
+        title: "Oranges Navel fraîches",
+        description: "Oranges de table et jus, disponibilité immédiate.",
+        price: 6.8,
+        currency: "MAD",
+        quantity_available: 13200,
+        unit: "kg",
+        status: "sold_out",
+        is_public: true,
+        images: ["/demo/marketplace/oranges.jpg"],
+        location_lat: 34.92,
+        location_lng: -2.32,
+        location_address: "Berkane, Oriental, Maroc",
+        created_by: userId,
+      },
+      {
+        organization_id: organizationId,
+        title: "Tomates de saison sous suivi agronomique",
+        description: "Tomates fraîches récolte du matin, circuit court restauration.",
+        price: 7.2,
+        currency: "MAD",
+        quantity_available: 6400,
+        unit: "kg",
+        status: "active",
+        is_public: false,
+        images: ["/demo/marketplace/tomates.jpg"],
+        location_lat: 34.92,
+        location_lng: -2.32,
+        location_address: "Berkane, Oriental, Maroc",
+        created_by: userId,
+      },
+      {
+        organization_id: organizationId,
+        title: "Pack terroir Berkane",
+        description: "Assortiment huile d'olive et agrumes pour revendeurs premium.",
+        price: 285,
+        currency: "MAD",
+        quantity_available: 80,
+        unit: "colis",
+        status: "draft",
+        is_public: false,
+        images: ["/demo/marketplace/pack-terroir.jpg"],
+        location_lat: 34.92,
+        location_lng: -2.32,
+        location_address: "Berkane, Oriental, Maroc",
+        created_by: userId,
+      },
+    ];
+
+    const { data: createdListings, error: listingsError } = await client
+      .from("marketplace_listings")
+      .insert(listings)
+      .select("id, title");
+    if (listingsError) {
+      this.logger.error(`Failed to create demo marketplace listings: ${listingsError.message}`);
+      return;
+    }
+
+    const listingByTitle = new Map(
+      (createdListings || []).map((listing) => [listing.title, listing.id]),
+    );
+
+    const orders = [
+      {
+        buyer_organization_id: organizationId,
+        seller_organization_id: organizationId,
+        status: "pending",
+        total_amount: 12600,
+        currency: "MAD",
+        notes: "Commande démonstration B2B locale.",
+        shipping_address: "Marché de gros, Berkane",
+        shipping_details: {
+          name: "Coopérative Demo",
+          phone: "+212661000001",
+          email: "achat-demo@agrogina.ma",
+          address: "Marché de gros, Berkane",
+          city: "Berkane",
+          postal_code: "63300",
+        },
+        payment_method: "cod",
+        payment_status: "pending",
+        buyer_name: "Coopérative Demo",
+        buyer_phone: "+212661000001",
+        buyer_email: "achat-demo@agrogina.ma",
+        created_by: userId,
+      },
+      {
+        buyer_organization_id: organizationId,
+        seller_organization_id: organizationId,
+        status: "confirmed",
+        total_amount: 8900,
+        currency: "MAD",
+        notes: "Commande restauration validée.",
+        shipping_address: "Zone logistique Berkane",
+        shipping_details: {
+          name: "Restaurant Demo",
+          phone: "+212661000002",
+          email: "commandes-demo@agrogina.ma",
+          address: "Zone logistique Berkane",
+          city: "Berkane",
+          postal_code: "63300",
+        },
+        payment_method: "cmi",
+        payment_status: "processing",
+        buyer_name: "Restaurant Demo",
+        buyer_phone: "+212661000002",
+        buyer_email: "commandes-demo@agrogina.ma",
+        created_by: userId,
+      },
+      {
+        buyer_organization_id: organizationId,
+        seller_organization_id: organizationId,
+        status: "delivered",
+        total_amount: 16400,
+        currency: "MAD",
+        notes: "Commande livrée et payée.",
+        shipping_address: "Casablanca - Derb Omar",
+        shipping_details: {
+          name: "Grossiste Demo",
+          phone: "+212661000003",
+          email: "grossiste-demo@agrogina.ma",
+          address: "Derb Omar",
+          city: "Casablanca",
+          postal_code: "20250",
+        },
+        payment_method: "cod",
+        payment_status: "completed",
+        buyer_name: "Grossiste Demo",
+        buyer_phone: "+212661000003",
+        buyer_email: "grossiste-demo@agrogina.ma",
+        created_by: userId,
+      },
+      {
+        buyer_organization_id: organizationId,
+        seller_organization_id: organizationId,
+        status: "cancelled",
+        total_amount: 5400,
+        currency: "MAD",
+        notes: "Commande annulée faute de disponibilité immédiate.",
+        shipping_address: "Oujda centre",
+        shipping_details: {
+          name: "Acheteur Demo",
+          phone: "+212661000004",
+          email: "buyer-demo@agrogina.ma",
+          address: "Oujda centre",
+          city: "Oujda",
+          postal_code: "60000",
+        },
+        payment_method: "cod",
+        payment_status: "failed",
+        buyer_name: "Acheteur Demo",
+        buyer_phone: "+212661000004",
+        buyer_email: "buyer-demo@agrogina.ma",
+        created_by: userId,
+      },
+    ];
+
+    const { data: createdOrders, error: ordersError } = await client
+      .from("marketplace_orders")
+      .insert(orders)
+      .select("id");
+    if (ordersError) {
+      this.logger.error(`Failed to create demo marketplace orders: ${ordersError.message}`);
+      return;
+    }
+
+    const orderItems = [
+      {
+        order_id: createdOrders?.[0]?.id,
+        listing_id: listingByTitle.get("Huile d'olive extra vierge Berkane") || null,
+        item_id: oliveOilItem?.id || null,
+        product_type: "listing",
+        title: "Huile d'olive extra vierge Berkane",
+        quantity: 300,
+        unit_price: 42,
+        unit: "L",
+        image_url: "/demo/marketplace/huile-olive.jpg",
+        total_price: 12600,
+      },
+      {
+        order_id: createdOrders?.[1]?.id,
+        listing_id: listingByTitle.get("Tomates de saison sous suivi agronomique") || null,
+        item_id: null,
+        product_type: "listing",
+        title: "Tomates de saison sous suivi agronomique",
+        quantity: 1200,
+        unit_price: 7.2,
+        unit: "kg",
+        image_url: "/demo/marketplace/tomates.jpg",
+        total_price: 8640,
+      },
+      {
+        order_id: createdOrders?.[1]?.id,
+        listing_id: listingByTitle.get("Clémentines de Berkane calibre export") || null,
+        item_id: clementineItem?.id || null,
+        product_type: "listing",
+        title: "Clémentines de Berkane calibre export",
+        quantity: 30,
+        unit_price: 8.5,
+        unit: "kg",
+        image_url: "/demo/marketplace/clementines.jpg",
+        total_price: 255,
+      },
+      {
+        order_id: createdOrders?.[2]?.id,
+        listing_id: listingByTitle.get("Clémentines de Berkane calibre export") || null,
+        item_id: clementineItem?.id || null,
+        product_type: "listing",
+        title: "Clémentines de Berkane calibre export",
+        quantity: 1200,
+        unit_price: 8.5,
+        unit: "kg",
+        image_url: "/demo/marketplace/clementines.jpg",
+        total_price: 10200,
+      },
+      {
+        order_id: createdOrders?.[2]?.id,
+        listing_id: listingByTitle.get("Oranges Navel fraîches") || null,
+        item_id: orangeItem?.id || null,
+        product_type: "listing",
+        title: "Oranges Navel fraîches",
+        quantity: 911.76,
+        unit_price: 6.8,
+        unit: "kg",
+        image_url: "/demo/marketplace/oranges.jpg",
+        total_price: 6200,
+      },
+      {
+        order_id: createdOrders?.[3]?.id,
+        listing_id: listingByTitle.get("Oranges Navel fraîches") || null,
+        item_id: orangeItem?.id || null,
+        product_type: "listing",
+        title: "Oranges Navel fraîches",
+        quantity: 794.12,
+        unit_price: 6.8,
+        unit: "kg",
+        image_url: "/demo/marketplace/oranges.jpg",
+        total_price: 5400,
+      },
+    ].filter((item) => item.order_id);
+
+    const { error: orderItemsError } = await client
+      .from("marketplace_order_items")
+      .insert(orderItems);
+    if (orderItemsError) {
+      this.logger.error(
+        `Failed to create demo marketplace order items: ${orderItemsError.message}`,
+      );
+    }
+
+    const quoteRequests = [
+      {
+        requester_organization_id: organizationId,
+        seller_organization_id: organizationId,
+        item_id: oliveOilItem?.id || null,
+        listing_id: listingByTitle.get("Huile d'olive extra vierge Berkane") || null,
+        product_title: "Huile d'olive extra vierge Berkane",
+        product_description: "Demande de prix pour revendeur régional",
+        requested_quantity: 500,
+        unit_of_measure: "L",
+        message: "Merci de confirmer le meilleur prix départ ferme pour 500L.",
+        buyer_contact_name: "Maison Demo Retail",
+        buyer_contact_email: "retail-demo@agrogina.ma",
+        buyer_contact_phone: "+212661200001",
+        status: "pending",
+      },
+      {
+        requester_organization_id: organizationId,
+        seller_organization_id: organizationId,
+        item_id: clementineItem?.id || null,
+        listing_id: listingByTitle.get("Clémentines de Berkane calibre export") || null,
+        product_title: "Clémentines de Berkane calibre export",
+        product_description: "Demande CHR pour fin de semaine",
+        requested_quantity: 2400,
+        unit_of_measure: "kg",
+        message: "Pouvez-vous réserver 2.4 tonnes pour livraison vendredi ?",
+        buyer_contact_name: "Hôtel Demo",
+        buyer_contact_email: "hotel-demo@agrogina.ma",
+        buyer_contact_phone: "+212661200002",
+        status: "viewed",
+        viewed_at: new Date(now.getTime() - 2 * 60 * 60 * 1000).toISOString(),
+      },
+      {
+        requester_organization_id: organizationId,
+        seller_organization_id: organizationId,
+        item_id: null,
+        listing_id: listingByTitle.get("Tomates de saison sous suivi agronomique") || null,
+        product_title: "Tomates de saison sous suivi agronomique",
+        product_description: "Approvisionnement restauration collective",
+        requested_quantity: 1800,
+        unit_of_measure: "kg",
+        message: "Nous cherchons une offre hebdomadaire sur 3 semaines.",
+        buyer_contact_name: "Cuisine Centrale Demo",
+        buyer_contact_email: "cuisine-demo@agrogina.ma",
+        buyer_contact_phone: "+212661200003",
+        status: "quoted",
+        seller_response: "Offre possible à 6.9 MAD/kg avec ramassage à Berkane.",
+        quoted_price: 6.9,
+        quote_valid_until: new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000).toISOString(),
+        viewed_at: new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString(),
+        responded_at: new Date(now.getTime() - 12 * 60 * 60 * 1000).toISOString(),
+      },
+      {
+        requester_organization_id: organizationId,
+        seller_organization_id: organizationId,
+        item_id: orangeItem?.id || null,
+        listing_id: listingByTitle.get("Oranges Navel fraîches") || null,
+        product_title: "Oranges Navel fraîches",
+        product_description: "Demande grossiste Oujda",
+        requested_quantity: 3000,
+        unit_of_measure: "kg",
+        message: "Le prix proposé reste trop élevé pour notre marché.",
+        buyer_contact_name: "Grossiste Oujda Demo",
+        buyer_contact_email: "oujda-demo@agrogina.ma",
+        buyer_contact_phone: "+212661200004",
+        status: "declined",
+        seller_response: "Quantité disponible reportée à la prochaine fenêtre.",
+        viewed_at: new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+        responded_at: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+      },
+    ].filter((request) => request.item_id || request.listing_id);
+
+    const { error: quoteRequestsError } = await client
+      .from("marketplace_quote_requests")
+      .insert(quoteRequests);
+    if (quoteRequestsError) {
+      this.logger.error(
+        `Failed to create demo marketplace quote requests: ${quoteRequestsError.message}`,
+      );
+    }
+  }
+
+  private async createDemoChatHistory(
+    organizationId: string,
+    userId: string,
+  ): Promise<void> {
+    const client = this.databaseService.getAdminClient();
+    const baseTime = new Date();
+    baseTime.setHours(baseTime.getHours() - 6);
+
+    const messages = [
+      {
+        organization_id: organizationId,
+        user_id: userId,
+        role: "user",
+        content: "Donne-moi les priorités du jour pour la parcelle olives.",
+        language: "fr",
+        metadata: { prompt_tokens: 18, completion_tokens: 0, model: "gpt-4.1" },
+        created_at: new Date(baseTime.getTime()).toISOString(),
+      },
+      {
+        organization_id: organizationId,
+        user_id: userId,
+        role: "assistant",
+        content: "Priorité 1: irrigation avant 8h sur la zone sud. Priorité 2: vérifier l'uniformité du goutte-à-goutte. Priorité 3: contrôler la parcelle légumes après le traitement.",
+        language: "fr",
+        metadata: { prompt_tokens: 18, completion_tokens: 54, model: "gpt-4.1" },
+        created_at: new Date(baseTime.getTime() + 90 * 1000).toISOString(),
+      },
+      {
+        organization_id: organizationId,
+        user_id: userId,
+        role: "user",
+        content: "Quel volume d'eau recommandes-tu pour les agrumes cette semaine ?",
+        language: "fr",
+        metadata: { prompt_tokens: 22, completion_tokens: 0, model: "gpt-4.1" },
+        created_at: new Date(baseTime.getTime() + 7 * 60 * 1000).toISOString(),
+      },
+      {
+        organization_id: organizationId,
+        user_id: userId,
+        role: "assistant",
+        content: "Pour les agrumes: viser 30 à 34 m³/ha selon la pression réseau et fractionner sur 2 tours si le vent dépasse 20 km/h.",
+        language: "fr",
+        metadata: { prompt_tokens: 22, completion_tokens: 39, model: "gpt-4.1" },
+        created_at: new Date(baseTime.getTime() + 8 * 60 * 1000).toISOString(),
+      },
+      {
+        organization_id: organizationId,
+        user_id: userId,
+        role: "user",
+        content: "La recommandation phytosanitaire tomates a-t-elle été efficace ?",
+        language: "fr",
+        metadata: { prompt_tokens: 16, completion_tokens: 0, model: "gpt-4.1" },
+        created_at: new Date(baseTime.getTime() + 16 * 60 * 1000).toISOString(),
+      },
+      {
+        organization_id: organizationId,
+        user_id: userId,
+        role: "assistant",
+        content: "Oui. L'évaluation est positive: baisse nette des lésions actives et reprise de croissance. Je recommande simplement une surveillance hebdomadaire.",
+        language: "fr",
+        metadata: { prompt_tokens: 16, completion_tokens: 33, model: "gpt-4.1" },
+        created_at: new Date(baseTime.getTime() + 17 * 60 * 1000).toISOString(),
+      },
+    ];
+
+    const { error } = await client.from("chat_conversations").insert(messages);
+    if (error) {
+      this.logger.error(`Failed to create demo chat history: ${error.message}`);
+    }
+  }
+
+  private async createDemoAIQuota(organizationId: string): Promise<void> {
+    const client = this.databaseService.getAdminClient();
+    const now = new Date();
+    const periodStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const periodEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+
+    const { error } = await client.from("ai_quotas").insert({
+      organization_id: organizationId,
+      monthly_limit: 1200,
+      current_count: 186,
+      period_start: periodStart.toISOString(),
+      period_end: periodEnd.toISOString(),
+    });
+
+    if (error) {
+      this.logger.error(`Failed to create demo AI quota: ${error.message}`);
+    }
+  }
+
+  private async createDemoPieceWorkRecords(
+    organizationId: string,
+    farmId: string,
+    parcels: any[],
+    workers: any[],
+    tasks: any[],
+    userId: string,
+  ): Promise<any[]> {
+    if (!parcels?.length || !workers?.length) return [];
+
+    const client = this.databaseService.getAdminClient();
+
+    const { data: workUnits, error: workUnitsError } = await client
+      .from("work_units")
+      .select("id, code")
+      .eq("organization_id", organizationId)
+      .in("code", ["KG", "HA", "PCS"]);
+
+    if (workUnitsError) {
+      this.logger.error(
+        `Failed to fetch work units for piece work records: ${workUnitsError.message}`,
+      );
+      return [];
+    }
+
+    const workUnitIdByCode = new Map(
+      (workUnits || []).map((unit) => [unit.code, unit.id]),
+    );
+
+    if (
+      !workUnitIdByCode.get("KG") ||
+      !workUnitIdByCode.get("HA") ||
+      !workUnitIdByCode.get("PCS")
+    ) {
+      this.logger.error(
+        "Missing required work units (KG, HA, PCS) for demo piece work records",
+      );
+      return [];
+    }
+
+    const olivesParcel =
+      parcels.find((parcel) => parcel.name?.includes("Olives")) || parcels[0];
+    const agrumesParcel =
+      parcels.find((parcel) => parcel.name?.includes("Agrumes")) ||
+      parcels[1] ||
+      parcels[0];
+    const legumesParcel =
+      parcels.find((parcel) => parcel.name?.includes("Légumes")) ||
+      parcels[2] ||
+      parcels[0];
+
+    const getWorker = (index: number) => workers[index] || workers[0];
+    const resolveTaskId = (parcelId: string, keywords: string[]) => {
+      const normalizedKeywords = keywords.map((keyword) => keyword.toLowerCase());
+      const matchingTask = tasks.find((task) => {
+        if (task.parcel_id !== parcelId) return false;
+        const haystack = [task.title, task.description, task.task_type]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+
+        return normalizedKeywords.some((keyword) => haystack.includes(keyword));
+      });
+
+      return matchingTask?.id || null;
+    };
+
+    const buildDate = (daysAgo: number) => {
+      const date = new Date();
+      date.setDate(date.getDate() - daysAgo);
+      return date;
+    };
+
+    const seedRows = [
+      {
+        parcel: olivesParcel,
+        worker: getWorker(0),
+        taskId: resolveTaskId(olivesParcel.id, ["récolte", "harvesting"]),
+        daysAgo: 55,
+        unitCode: "KG",
+        unitsCompleted: 320,
+        ratePerUnit: 3.4,
+        qualityRating: 5,
+        startTime: "06:00",
+        endTime: "14:30",
+        breakDuration: 45,
+        paymentStatus: "paid",
+        notes: "Récolte d'olives précoce - bon rendement et fruits homogènes",
+      },
+      {
+        parcel: olivesParcel,
+        worker: getWorker(1),
+        taskId: resolveTaskId(olivesParcel.id, ["récolte", "harvesting"]),
+        daysAgo: 7,
+        unitCode: "KG",
+        unitsCompleted: 180,
+        ratePerUnit: 3.1,
+        qualityRating: 4,
+        startTime: "06:30",
+        endTime: "13:30",
+        breakDuration: 30,
+        paymentStatus: "pending",
+        notes: "Récolte d'olives - bonne qualité, tri effectué au champ",
+      },
+      {
+        parcel: olivesParcel,
+        worker: getWorker(3),
+        taskId: resolveTaskId(olivesParcel.id, ["traitement", "pest_control"]),
+        daysAgo: 18,
+        unitCode: "HA",
+        unitsCompleted: 8,
+        ratePerUnit: 12,
+        qualityRating: 4,
+        startTime: "07:00",
+        endTime: "12:30",
+        breakDuration: 30,
+        paymentStatus: "approved",
+        notes: "Traitement phytosanitaire sur oliviers avec couverture régulière",
+      },
+      {
+        parcel: olivesParcel,
+        worker: getWorker(0),
+        taskId: resolveTaskId(olivesParcel.id, ["irrigation"]),
+        daysAgo: 12,
+        unitCode: "HA",
+        unitsCompleted: 6.5,
+        ratePerUnit: 10,
+        qualityRating: 3,
+        startTime: "06:00",
+        endTime: "11:30",
+        breakDuration: 30,
+        paymentStatus: "pending",
+        notes: "Irrigation localisée parcelle olives - pression réseau stable",
+      },
+      {
+        parcel: olivesParcel,
+        worker: getWorker(4),
+        taskId: resolveTaskId(olivesParcel.id, ["récolte", "harvesting"]),
+        daysAgo: 42,
+        unitCode: "KG",
+        unitsCompleted: 275,
+        ratePerUnit: 3.5,
+        qualityRating: 5,
+        startTime: "06:15",
+        endTime: "14:00",
+        breakDuration: 45,
+        paymentStatus: "approved",
+        notes: "Récolte d'olives - lot destiné au moulin, faible taux de perte",
+      },
+      {
+        parcel: agrumesParcel,
+        worker: getWorker(2),
+        taskId: resolveTaskId(agrumesParcel.id, ["récolte", "harvesting"]),
+        daysAgo: 35,
+        unitCode: "PCS",
+        unitsCompleted: 240,
+        ratePerUnit: 2.8,
+        qualityRating: 5,
+        startTime: "06:00",
+        endTime: "13:45",
+        breakDuration: 45,
+        paymentStatus: "paid",
+        notes: "Cueillette des clémentines - calibre export majoritaire",
+      },
+      {
+        parcel: agrumesParcel,
+        worker: getWorker(1),
+        taskId: resolveTaskId(agrumesParcel.id, ["taille", "pruning"]),
+        daysAgo: 10,
+        unitCode: "HA",
+        unitsCompleted: 7.2,
+        ratePerUnit: 14,
+        qualityRating: 4,
+        startTime: "07:00",
+        endTime: "13:00",
+        breakDuration: 30,
+        paymentStatus: "pending",
+        notes: "Taille des agrumes avec suppression du bois sec sur les rangs nord",
+      },
+      {
+        parcel: agrumesParcel,
+        worker: getWorker(3),
+        taskId: resolveTaskId(agrumesParcel.id, ["irrigation"]),
+        daysAgo: 6,
+        unitCode: "HA",
+        unitsCompleted: 8,
+        ratePerUnit: 11,
+        qualityRating: 3,
+        startTime: "06:30",
+        endTime: "12:00",
+        breakDuration: 30,
+        paymentStatus: "approved",
+        notes: "Irrigation complémentaire parcelle agrumes avant hausse de température",
+      },
+      {
+        parcel: agrumesParcel,
+        worker: getWorker(0),
+        taskId: resolveTaskId(agrumesParcel.id, ["récolte", "harvesting"]),
+        daysAgo: 4,
+        unitCode: "PCS",
+        unitsCompleted: 185,
+        ratePerUnit: 3.1,
+        qualityRating: 4,
+        startTime: "06:00",
+        endTime: "12:45",
+        breakDuration: 30,
+        paymentStatus: "pending",
+        notes: "Cueillette sélective agrumes - fruits mûrs triés par rangée",
+      },
+      {
+        parcel: agrumesParcel,
+        worker: getWorker(4),
+        taskId: resolveTaskId(agrumesParcel.id, ["récolte", "harvesting"]),
+        daysAgo: 27,
+        unitCode: "PCS",
+        unitsCompleted: 260,
+        ratePerUnit: 2.9,
+        qualityRating: 5,
+        startTime: "06:15",
+        endTime: "14:15",
+        breakDuration: 45,
+        paymentStatus: "approved",
+        notes: "Récolte agrumes - lot homogène avec peu d'écarts de calibre",
+      },
+      {
+        parcel: legumesParcel,
+        worker: getWorker(1),
+        taskId: resolveTaskId(legumesParcel.id, ["récolte", "harvesting"]),
+        daysAgo: 21,
+        unitCode: "KG",
+        unitsCompleted: 410,
+        ratePerUnit: 2.4,
+        qualityRating: 4,
+        startTime: "05:45",
+        endTime: "13:30",
+        breakDuration: 45,
+        paymentStatus: "paid",
+        notes: "Récolte de tomates - fruits fermes avec faible taux d'éclatement",
+      },
+      {
+        parcel: legumesParcel,
+        worker: getWorker(2),
+        taskId: resolveTaskId(legumesParcel.id, ["plantation", "planting"]),
+        daysAgo: 14,
+        unitCode: "PCS",
+        unitsCompleted: 160,
+        ratePerUnit: 6.5,
+        qualityRating: 4,
+        startTime: "07:00",
+        endTime: "15:00",
+        breakDuration: 60,
+        paymentStatus: "pending",
+        notes: "Plantation de jeunes plants de tomates sur planches préparées",
+      },
+      {
+        parcel: legumesParcel,
+        worker: getWorker(3),
+        taskId: resolveTaskId(legumesParcel.id, ["désherbage", "maintenance"]),
+        daysAgo: 9,
+        unitCode: "HA",
+        unitsCompleted: 6.8,
+        ratePerUnit: 13,
+        qualityRating: 3,
+        startTime: "06:30",
+        endTime: "12:30",
+        breakDuration: 30,
+        paymentStatus: "pending",
+        notes: "Désherbage manuel parcelle légumes avec nettoyage des bordures",
+      },
+      {
+        parcel: legumesParcel,
+        worker: getWorker(4),
+        taskId: resolveTaskId(legumesParcel.id, ["récolte", "harvesting"]),
+        daysAgo: 3,
+        unitCode: "KG",
+        unitsCompleted: 360,
+        ratePerUnit: 2.6,
+        qualityRating: 5,
+        startTime: "05:30",
+        endTime: "13:15",
+        breakDuration: 45,
+        paymentStatus: "approved",
+        notes: "Récolte tomates de pleine saison - rendement soutenu et qualité stable",
+      },
+      {
+        parcel: legumesParcel,
+        worker: getWorker(0),
+        taskId: resolveTaskId(legumesParcel.id, ["récolte", "harvesting"]),
+        daysAgo: 48,
+        unitCode: "PCS",
+        unitsCompleted: 130,
+        ratePerUnit: 5.2,
+        qualityRating: 4,
+        startTime: "06:45",
+        endTime: "13:15",
+        breakDuration: 30,
+        paymentStatus: "pending",
+        notes: "Tri et mise en cagettes des tomates destinées au marché local",
+      },
+      {
+        parcel: olivesParcel,
+        worker: getWorker(2),
+        taskId: resolveTaskId(olivesParcel.id, ["récolte", "harvesting"]),
+        daysAgo: 2,
+        unitCode: "KG",
+        unitsCompleted: 205,
+        ratePerUnit: 3,
+        qualityRating: 4,
+        startTime: "06:00",
+        endTime: "13:00",
+        breakDuration: 30,
+        paymentStatus: "pending",
+        notes: "Récolte d'olives sur les rangs sud - maturité homogène",
+      },
+    ];
+
+    const records = seedRows.map((row) => {
+      const workDate = buildDate(row.daysAgo);
+      const verificationDate = new Date(workDate);
+      verificationDate.setDate(
+        verificationDate.getDate() + (row.paymentStatus === "paid" ? 4 : 2),
+      );
+
+      return {
+        organization_id: organizationId,
+        farm_id: farmId,
+        worker_id: row.worker.id,
+        work_date: workDate.toISOString().split("T")[0],
+        task_id: row.taskId,
+        parcel_id: row.parcel.id,
+        work_unit_id: workUnitIdByCode.get(row.unitCode),
+        units_completed: row.unitsCompleted,
+        rate_per_unit: row.ratePerUnit,
+        total_amount: Number((row.unitsCompleted * row.ratePerUnit).toFixed(2)),
+        quality_rating: row.qualityRating,
+        start_time: row.startTime,
+        end_time: row.endTime,
+        break_duration: row.breakDuration,
+        notes: row.notes,
+        payment_status: row.paymentStatus,
+        created_by: userId,
+        verified_by:
+          row.paymentStatus === "pending"
+            ? null
+            : userId,
+        verified_at:
+          row.paymentStatus === "pending"
+            ? null
+            : verificationDate.toISOString(),
+      };
+    });
+
+    const { data: createdRecords, error } = await client
+      .from("piece_work_records")
+      .insert(records)
+      .select();
+
+    if (error) {
+      this.logger.error(
+        `Failed to create demo piece work records: ${error.message}`,
+      );
+      return [];
+    }
+
+    return createdRecords || [];
+  }
+
+  private async createDemoMonitoringAnalyses(
+    organizationId: string,
+    parcels: any[],
+  ): Promise<void> {
+    if (!parcels?.length) return;
+
+    const client = this.databaseService.getAdminClient();
+    const now = new Date();
+    const rows = parcels.flatMap((parcel, index) => {
+      const firstDate = new Date(now);
+      firstDate.setDate(now.getDate() - (12 - index * 2));
+      const secondDate = new Date(now);
+      secondDate.setDate(now.getDate() - (4 - index));
+
+      return [firstDate, secondDate].map((date, dateIndex) => ({
+        parcel_id: parcel.id,
+        organization_id: organizationId,
+        analysis_date: date.toISOString().split("T")[0],
+        spectral_result: {
+          ndvi: parcel.name.includes("Agrumes") ? 0.74 - dateIndex * 0.03 : parcel.name.includes("Olives") ? 0.63 - dateIndex * 0.05 : 0.52 - dateIndex * 0.04,
+          ndmi: parcel.name.includes("Agrumes") ? 0.34 - dateIndex * 0.02 : parcel.name.includes("Olives") ? 0.25 - dateIndex * 0.03 : 0.18 - dateIndex * 0.03,
+          coherence_inter_indices: dateIndex === 0 ? "bonne" : "moyenne",
+        },
+        phenology_result: {
+          stade: parcel.name.includes("Olives")
+            ? "grossissement"
+            : parcel.name.includes("Agrumes")
+              ? "maturation progressive"
+              : "floraison-fructification",
+          avance_jours: dateIndex === 0 ? 0 : 2,
+        },
+        diagnostic_scenario:
+          parcel.name.includes("Olives") && dateIndex === 1
+            ? "stress_hydrique_localise"
+            : parcel.name.includes("Légumes")
+              ? "pression_sanitaire_moderee"
+              : "croissance_conforme",
+        coherence: dateIndex === 0 ? "élevée" : "bonne",
+      }));
+    });
+
+    const { error } = await client.from("monitoring_analyses").insert(rows);
+    if (error) {
+      this.logger.error(`Failed to create demo monitoring analyses: ${error.message}`);
+    }
+  }
+
+  private async createDemoSeasonTracking(
+    organizationId: string,
+    parcels: any[],
+    userId: string,
+  ): Promise<void> {
+    if (!parcels?.length) return;
+
+    const client = this.databaseService.getAdminClient();
+    const { data: calibrations } = await client
+      .from("calibrations")
+      .select("id, parcel_id")
+      .eq("organization_id", organizationId);
+    const calibrationByParcel = new Map(
+      (calibrations || []).map((calibration) => [calibration.parcel_id, calibration.id]),
+    );
+    const now = new Date();
+    const season =
+      now.getMonth() + 1 < 8
+        ? `${now.getFullYear() - 1}-${now.getFullYear()}`
+        : `${now.getFullYear()}-${now.getFullYear() + 1}`;
+
+    const rows = parcels.map((parcel) => ({
+      parcel_id: parcel.id,
+      organization_id: organizationId,
+      saison: season,
+      rendement_reel_t_ha: parcel.name.includes("Olives")
+        ? 5.2
+        : parcel.name.includes("Agrumes")
+          ? 23.8
+          : 49.5,
+      rendement_reel_kg_arbre: parcel.name.includes("Olives") ? 28 : parcel.name.includes("Agrumes") ? 74 : null,
+      qualite_recolte: parcel.name.includes("Olives")
+        ? "Très bonne teneur en huile et faible acidité"
+        : parcel.name.includes("Agrumes")
+          ? "Bon calibre, coloration homogène"
+          : "Bonne fermeté et taux de rebut limité",
+      regularite_percue: parcel.name.includes("Olives")
+        ? "stable"
+        : parcel.name.includes("Agrumes")
+          ? "stable"
+          : "very_irregular",
+      applications: [
+        { type: "irrigation", resultat: "maîtrisé" },
+        { type: "fertilisation", resultat: "satisfaisant" },
+      ],
+      evenements: parcel.name.includes("Légumes")
+        ? [{ type: "pression_sanitaire", impact: "modéré" }]
+        : [{ type: "stress_hydrique", impact: "faible" }],
+      bilan_campagne: parcel.name.includes("Légumes")
+        ? "Campagne productive mais plus irrégulière; renforcer prévention sanitaire et homogénéité irrigation."
+        : "Campagne globalement réussie avec bonne cohérence entre pilotage agronomique et résultat de récolte.",
+      recalibrage_annual_id: calibrationByParcel.get(parcel.id) || null,
+      cloture_at: new Date(now.getTime() - 15 * 24 * 60 * 60 * 1000).toISOString(),
+      created_by: userId,
+    }));
+
+    const { error } = await client.from("suivis_saison").insert(rows);
+    if (error) {
+      this.logger.error(`Failed to create demo season tracking: ${error.message}`);
+    }
+  }
+
   /**
    * Clear all demo data for an organization
    * This deletes data that was created via demo seeding
@@ -6397,14 +8083,134 @@ export class DemoDataService {
     try {
       // Delete in reverse order of dependencies
 
+      const { count: aiQuotasCount } = await client
+        .from("ai_quotas")
+        .delete({ count: "exact" })
+        .eq("organization_id", organizationId);
+      deletedCounts["ai_quotas"] = aiQuotasCount || 0;
+
+      const { count: chatConversationsCount } = await client
+        .from("chat_conversations")
+        .delete({ count: "exact" })
+        .eq("organization_id", organizationId);
+      deletedCounts["chat_conversations"] = chatConversationsCount || 0;
+
+      const { count: pieceWorkRecordsCount } = await client
+        .from("piece_work_records")
+        .delete({ count: "exact" })
+        .eq("organization_id", organizationId);
+      deletedCounts["piece_work_records"] = pieceWorkRecordsCount || 0;
+
+      const { data: marketplaceOrders } = await client
+        .from("marketplace_orders")
+        .select("id")
+        .or(`buyer_organization_id.eq.${organizationId},seller_organization_id.eq.${organizationId}`);
+      if (marketplaceOrders?.length) {
+        const orderIds = marketplaceOrders.map((order) => order.id);
+        const { count: marketplaceOrderItemsCount } = await client
+          .from("marketplace_order_items")
+          .delete({ count: "exact" })
+          .in("order_id", orderIds);
+        deletedCounts["marketplace_order_items"] = marketplaceOrderItemsCount || 0;
+      } else {
+        deletedCounts["marketplace_order_items"] = 0;
+      }
+
+      const { count: marketplaceQuoteRequestsCount } = await client
+        .from("marketplace_quote_requests")
+        .delete({ count: "exact" })
+        .or(`requester_organization_id.eq.${organizationId},seller_organization_id.eq.${organizationId}`);
+      deletedCounts["marketplace_quote_requests"] = marketplaceQuoteRequestsCount || 0;
+
+      const { count: marketplaceOrdersCount } = await client
+        .from("marketplace_orders")
+        .delete({ count: "exact" })
+        .or(`buyer_organization_id.eq.${organizationId},seller_organization_id.eq.${organizationId}`);
+      deletedCounts["marketplace_orders"] = marketplaceOrdersCount || 0;
+
+      const { count: marketplaceListingsCount } = await client
+        .from("marketplace_listings")
+        .delete({ count: "exact" })
+        .eq("organization_id", organizationId);
+      deletedCounts["marketplace_listings"] = marketplaceListingsCount || 0;
+
+      const { count: weatherForecastsCount } = await client
+        .from("weather_forecasts")
+        .delete({ count: "exact" })
+        .eq("latitude", 34.92)
+        .eq("longitude", -2.32);
+      deletedCounts["weather_forecasts"] = weatherForecastsCount || 0;
+
+      const { count: weatherDailyDataCount } = await client
+        .from("weather_daily_data")
+        .delete({ count: "exact" })
+        .eq("latitude", 34.92)
+        .eq("longitude", -2.32);
+      deletedCounts["weather_daily_data"] = weatherDailyDataCount || 0;
+
+      const { count: weatherDerivedCount } = await client
+        .from("weather_derived_data")
+        .delete({ count: "exact" })
+        .eq("organization_id", organizationId);
+      deletedCounts["weather_derived_data"] = weatherDerivedCount || 0;
+
+      const { count: suivisSaisonCount } = await client
+        .from("suivis_saison")
+        .delete({ count: "exact" })
+        .eq("organization_id", organizationId);
+      deletedCounts["suivis_saison"] = suivisSaisonCount || 0;
+
+      const { count: monitoringAnalysesCount } = await client
+        .from("monitoring_analyses")
+        .delete({ count: "exact" })
+        .eq("organization_id", organizationId);
+      deletedCounts["monitoring_analyses"] = monitoringAnalysesCount || 0;
+
+      const { data: annualPlans } = await client
+        .from("annual_plans")
+        .select("id")
+        .eq("organization_id", organizationId);
+      if (annualPlans?.length) {
+        const annualPlanIds = annualPlans.map((plan) => plan.id);
+        const { count: planInterventionsCount } = await client
+          .from("plan_interventions")
+          .delete({ count: "exact" })
+          .in("annual_plan_id", annualPlanIds);
+        deletedCounts["plan_interventions"] = planInterventionsCount || 0;
+      } else {
+        deletedCounts["plan_interventions"] = 0;
+      }
+
+      const { count: annualPlansCount } = await client
+        .from("annual_plans")
+        .delete({ count: "exact" })
+        .eq("organization_id", organizationId);
+      deletedCounts["annual_plans"] = annualPlansCount || 0;
+
+      const { count: aiRecommendationsCount } = await client
+        .from("ai_recommendations")
+        .delete({ count: "exact" })
+        .eq("organization_id", organizationId);
+      deletedCounts["ai_recommendations"] = aiRecommendationsCount || 0;
+
       // Calibrations (composite FK to parcels)
-      await client.from('calibrations').delete().eq('organization_id', organizationId);
+      const { count: calibrationsCount } = await client
+        .from('calibrations')
+        .delete({ count: "exact" })
+        .eq('organization_id', organizationId);
+      deletedCounts["calibrations"] = calibrationsCount || 0;
 
       // Pest/disease reports
       await client.from('pest_disease_reports').delete().eq('organization_id', organizationId);
 
       // Crop templates
       await client.from('crop_templates').delete().eq('organization_id', organizationId);
+
+      const { count: satelliteIndicesCount } = await client
+        .from("satellite_indices_data")
+        .delete({ count: "exact" })
+        .eq("organization_id", organizationId);
+      deletedCounts["satellite_indices_data"] = satelliteIndicesCount || 0;
 
       // Crop cycle children first (stages, harvest events)
       const { data: orgCropCycles } = await client.from('crop_cycles').select('id').eq('organization_id', organizationId);
@@ -6902,6 +8708,901 @@ export class DemoDataService {
     }
   }
 
+  async seedSiamDemoData(organizationId: string, userId: string): Promise<void> {
+    this.logger.log(
+      `Starting SIAM demo data seeding for organization ${organizationId}`,
+    );
+
+    try {
+      this.logger.log("Clearing existing data before SIAM seeding...");
+      await this.clearDemoData(organizationId);
+      this.logger.log("✅ Existing data cleared");
+
+      const { farms, parcels } = await this.createSiamFarmsAndParcels(
+        organizationId,
+      );
+      this.logger.log(
+        `✅ Created ${farms.length} SIAM farms and ${parcels.length} SIAM parcels`,
+      );
+
+      const calibrations = await this.createSiamCalibrations(
+        organizationId,
+        parcels,
+        userId,
+      );
+      this.logger.log(`✅ Created ${calibrations.length} SIAM calibrations`);
+
+      const recommendations = await this.createSiamRecommendations(
+        organizationId,
+        parcels,
+      );
+      this.logger.log(
+        `✅ Created ${recommendations.length} SIAM AI recommendations`,
+      );
+
+      const harvestRecords = await this.createSiamHarvestRecords(
+        organizationId,
+        parcels,
+        userId,
+      );
+      this.logger.log(
+        `✅ Created ${harvestRecords.length} SIAM harvest records`,
+      );
+
+      const analyses = await this.createSiamAnalyses(organizationId, parcels);
+      this.logger.log(`✅ Created ${analyses.length} SIAM analyses`);
+
+      this.logger.log(
+        `SIAM demo data seeding completed successfully for organization ${organizationId}`,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Failed to seed SIAM demo data: ${error.message}`,
+        error.stack,
+      );
+      throw error;
+    }
+  }
+
+  private createSiamBoundary(
+    centerLat: number,
+    centerLon: number,
+    latOffset = 0.0012,
+    lonOffset = 0.0012,
+  ) {
+    return [
+      [centerLon - lonOffset, centerLat - latOffset],
+      [centerLon + lonOffset, centerLat - latOffset],
+      [centerLon + lonOffset, centerLat + latOffset],
+      [centerLon - lonOffset, centerLat + latOffset],
+      [centerLon - lonOffset, centerLat - latOffset],
+    ];
+  }
+
+  private async createSiamFarmsAndParcels(
+    organizationId: string,
+  ): Promise<{ farms: any[]; parcels: any[] }> {
+    const client = this.databaseService.getAdminClient();
+
+    const farms = [
+      {
+        organization_id: organizationId,
+        name: "Ferme Atlas",
+        location: "Meknès, Maroc",
+        city: "Meknès",
+        state: "Fès-Meknès",
+        country: "Maroc",
+        size: 180,
+        size_unit: "hectare",
+        soil_type: "Argilo-calcaire",
+        climate_zone: "Méditerranéen continental",
+        irrigation_type: "Irrigué",
+        manager_name: "Équipe Démo SIAM",
+        manager_email: "siam-atlas@example.com",
+        established_date: "1990-02-01",
+        description:
+          "Exploitation oléicole de démonstration près de Meknès avec vergers matures et blocs récemment renouvelés.",
+        coordinates: { lat: 33.899, lon: -5.535 },
+        status: "active",
+        is_active: true,
+      },
+      {
+        organization_id: organizationId,
+        name: "Ferme Ziz",
+        location: "Meknès, Maroc",
+        city: "Meknès",
+        state: "Fès-Meknès",
+        country: "Maroc",
+        size: 90,
+        size_unit: "hectare",
+        soil_type: "Limono-sableux",
+        climate_zone: "Méditerranéen irrigué",
+        irrigation_type: "Goutte à goutte",
+        manager_name: "Équipe Démo SIAM",
+        manager_email: "siam-ziz@example.com",
+        established_date: "2014-03-15",
+        description:
+          "Bloc agrumicole équipé en goutte-à-goutte, orienté rendement et qualité export.",
+        coordinates: { lat: 33.886, lon: -5.521 },
+        status: "active",
+        is_active: true,
+      },
+      {
+        organization_id: organizationId,
+        name: "Ferme Rif",
+        location: "Meknès, Maroc",
+        city: "Meknès",
+        state: "Fès-Meknès",
+        country: "Maroc",
+        size: 50,
+        size_unit: "hectare",
+        soil_type: "Argilo-limoneux",
+        climate_zone: "Méditerranéen semi-aride",
+        irrigation_type: "Pluvial",
+        manager_name: "Équipe Démo SIAM",
+        manager_email: "siam-rif@example.com",
+        established_date: "1990-01-10",
+        description:
+          "Ferme mixte céréales-olivier conduite majoritairement en pluvial pour démontrer les arbitrages eau/rendement.",
+        coordinates: { lat: 33.914, lon: -5.548 },
+        status: "active",
+        is_active: true,
+      },
+    ];
+
+    const { data: createdFarms, error: farmError } = await client
+      .from("farms")
+      .insert(farms)
+      .select();
+
+    if (farmError) {
+      this.logger.warn(`Failed to create SIAM farms: ${farmError.message}`);
+      return { farms: [], parcels: [] };
+    }
+
+    const farmMap = new Map(createdFarms.map((farm) => [farm.name, farm]));
+
+    const parcelBlueprints = [
+      {
+        farmName: "Ferme Atlas",
+        name: "A1 - Atlas Nord",
+        description: "Bloc olivier mature irrigué à haute régularité.",
+        area: 24,
+        crop_type: "olivier",
+        variety: "Picholine Marocaine",
+        planting_year: 1990,
+        planting_system: "irrigué",
+        irrigation_type: "Goutte à goutte",
+        soil_type: "Argilo-calcaire",
+        centerLat: 33.903,
+        centerLon: -5.539,
+      },
+      {
+        farmName: "Ferme Atlas",
+        name: "A2 - Atlas Est",
+        description: "Olivier en pleine production avec bonne homogénéité végétative.",
+        area: 18,
+        crop_type: "olivier",
+        variety: "Haouzia",
+        planting_year: 2014,
+        planting_system: "irrigué",
+        irrigation_type: "Micro-aspersion",
+        soil_type: "Argilo-calcaire",
+        centerLat: 33.901,
+        centerLon: -5.531,
+      },
+      {
+        farmName: "Ferme Atlas",
+        name: "A3 - Atlas Ouest",
+        description: "Bloc ancien avec alternance marquée entre zones nord et sud.",
+        area: 22,
+        crop_type: "olivier",
+        variety: "Nocellara",
+        planting_year: 1990,
+        planting_system: "irrigué",
+        irrigation_type: "Goutte à goutte",
+        soil_type: "Argilo-calcaire",
+        centerLat: 33.898,
+        centerLon: -5.544,
+      },
+      {
+        farmName: "Ferme Atlas",
+        name: "A4 - Atlas Sud",
+        description: "Jeune verger avec besoin de montée en vigueur avant floraison.",
+        area: 14,
+        crop_type: "olivier",
+        variety: "Picholine Marocaine",
+        planting_year: 2023,
+        planting_system: "irrigué",
+        irrigation_type: "Goutte à goutte",
+        soil_type: "Argilo-limoneux",
+        centerLat: 33.894,
+        centerLon: -5.534,
+      },
+      {
+        farmName: "Ferme Atlas",
+        name: "A5 - Atlas Central",
+        description: "Bloc olivier à rendement stable avec micro-variabilité hydrique.",
+        area: 20,
+        crop_type: "olivier",
+        variety: "Haouzia",
+        planting_year: 2014,
+        planting_system: "irrigué",
+        irrigation_type: "Goutte à goutte",
+        soil_type: "Argilo-calcaire",
+        centerLat: 33.899,
+        centerLon: -5.537,
+      },
+      {
+        farmName: "Ferme Atlas",
+        name: "A6 - Atlas Replanté",
+        description: "Jeune bloc replanté pour démontrer l'entrée en production.",
+        area: 16,
+        crop_type: "olivier",
+        variety: "Picholine Marocaine",
+        planting_year: 2023,
+        planting_system: "irrigué",
+        irrigation_type: "Goutte à goutte",
+        soil_type: "Limono-argileux",
+        centerLat: 33.906,
+        centerLon: -5.528,
+      },
+      {
+        farmName: "Ferme Atlas",
+        name: "A7 - Atlas Plateau",
+        description: "Bloc mature exposé au vent avec besoin de suivi nutritionnel.",
+        area: 26,
+        crop_type: "olivier",
+        variety: "Nocellara",
+        planting_year: 1990,
+        planting_system: "irrigué",
+        irrigation_type: "Aspersion localisée",
+        soil_type: "Argilo-calcaire",
+        centerLat: 33.908,
+        centerLon: -5.541,
+      },
+      {
+        farmName: "Ferme Atlas",
+        name: "A8 - Atlas Vallon",
+        description: "Bloc intermédiaire avec variabilité intra-parcellaire au centre.",
+        area: 20,
+        crop_type: "olivier",
+        variety: "Haouzia",
+        planting_year: 2014,
+        planting_system: "irrigué",
+        irrigation_type: "Goutte à goutte",
+        soil_type: "Argilo-limoneux",
+        centerLat: 33.896,
+        centerLon: -5.529,
+      },
+      {
+        farmName: "Ferme Ziz",
+        name: "B1 - Ziz Navel",
+        description: "Agrumes goutte à goutte avec créneau de récolte précoce.",
+        area: 28,
+        crop_type: "agrumes",
+        variety: "Navel",
+        planting_year: 2014,
+        planting_system: "goutte_à_goutte",
+        irrigation_type: "Goutte à goutte",
+        soil_type: "Limono-sableux",
+        centerLat: 33.888,
+        centerLon: -5.522,
+      },
+      {
+        farmName: "Ferme Ziz",
+        name: "B2 - Ziz Valencia",
+        description: "Bloc Valencia Late à fort potentiel de charge fruitière.",
+        area: 24,
+        crop_type: "agrumes",
+        variety: "Valencia Late",
+        planting_year: 2014,
+        planting_system: "goutte_à_goutte",
+        irrigation_type: "Goutte à goutte",
+        soil_type: "Limono-sableux",
+        centerLat: 33.884,
+        centerLon: -5.517,
+      },
+      {
+        farmName: "Ferme Ziz",
+        name: "B3 - Ziz Jeune",
+        description: "Jeune agrumes avec sensibilité hydrique en début de journée.",
+        area: 18,
+        crop_type: "agrumes",
+        variety: "Navel",
+        planting_year: 2023,
+        planting_system: "goutte_à_goutte",
+        irrigation_type: "Goutte à goutte",
+        soil_type: "Sablo-limoneux",
+        centerLat: 33.881,
+        centerLon: -5.513,
+      },
+      {
+        farmName: "Ferme Ziz",
+        name: "B4 - Ziz Oliviers",
+        description: "Bloc olivier de diversification proche du bassin d'irrigation.",
+        area: 20,
+        crop_type: "olivier",
+        variety: "Picholine Marocaine",
+        planting_year: 2014,
+        planting_system: "goutte_à_goutte",
+        irrigation_type: "Goutte à goutte",
+        soil_type: "Limono-argileux",
+        centerLat: 33.89,
+        centerLon: -5.526,
+      },
+      {
+        farmName: "Ferme Rif",
+        name: "C1 - Rif Blé",
+        description: "Blé dur pluvial sur plateau avec potentiel correct si pluie tardive.",
+        area: 16,
+        crop_type: "blé_dur",
+        variety: "Karim",
+        planting_year: 2023,
+        planting_system: "pluvial",
+        irrigation_type: "Pluvial",
+        soil_type: "Argilo-limoneux",
+        centerLat: 33.917,
+        centerLon: -5.551,
+      },
+      {
+        farmName: "Ferme Rif",
+        name: "C2 - Rif Blé",
+        description: "Blé dur destiné aux démonstrations rendement/coût en sec.",
+        area: 12,
+        crop_type: "blé_dur",
+        variety: "Amal",
+        planting_year: 2023,
+        planting_system: "pluvial",
+        irrigation_type: "Pluvial",
+        soil_type: "Argilo-limoneux",
+        centerLat: 33.912,
+        centerLon: -5.545,
+      },
+      {
+        farmName: "Ferme Rif",
+        name: "D1 - Rif Orge",
+        description: "Orge pluviale sensible à la baisse de vigueur sur bordure est.",
+        area: 10,
+        crop_type: "orge",
+        variety: "Taffa",
+        planting_year: 2023,
+        planting_system: "pluvial",
+        irrigation_type: "Pluvial",
+        soil_type: "Argilo-limoneux",
+        centerLat: 33.919,
+        centerLon: -5.542,
+      },
+      {
+        farmName: "Ferme Rif",
+        name: "R1 - Rif Oliviers",
+        description: "Oliviers traditionnels conduits en sec sur pente douce.",
+        area: 12,
+        crop_type: "olivier",
+        variety: "Picholine Marocaine",
+        planting_year: 1990,
+        planting_system: "pluvial",
+        irrigation_type: "Pluvial",
+        soil_type: "Argilo-calcaire",
+        centerLat: 33.915,
+        centerLon: -5.549,
+      },
+      {
+        farmName: "Ferme Rif",
+        name: "R2 - Rif Oliviers",
+        description: "Bloc mixte olivier/pluvial pour démontrer l'écart de vigueur.",
+        area: 10,
+        crop_type: "olivier",
+        variety: "Haouzia",
+        planting_year: 2014,
+        planting_system: "pluvial",
+        irrigation_type: "Pluvial",
+        soil_type: "Argilo-calcaire",
+        centerLat: 33.91,
+        centerLon: -5.553,
+      },
+    ];
+
+    const parcels = parcelBlueprints
+      .map((parcel) => {
+        const farm = farmMap.get(parcel.farmName);
+        if (!farm?.id) return null;
+
+        return {
+          organization_id: organizationId,
+          farm_id: farm.id,
+          name: parcel.name,
+          description: parcel.description,
+          area: parcel.area,
+          area_unit: "hectares",
+          calculated_area: parcel.area,
+          crop_type: parcel.crop_type,
+          crop_category:
+            parcel.crop_type === "agrumes" || parcel.crop_type === "olivier"
+              ? "fruit_trees"
+              : "field_crops",
+          variety: parcel.variety,
+          planting_year: parcel.planting_year,
+          planting_date: `${parcel.planting_year}-03-15`,
+          planting_system: parcel.planting_system,
+          irrigation_type: parcel.irrigation_type,
+          soil_type: parcel.soil_type,
+          boundary: this.createSiamBoundary(parcel.centerLat, parcel.centerLon),
+          water_source:
+            parcel.planting_system === "pluvial" ? "rainfed" : "well",
+          langue: "fr",
+          ai_enabled: true,
+          ai_phase: "ready_calibration",
+          is_active: true,
+        };
+      })
+      .filter(Boolean);
+
+    const { data: createdParcels, error: parcelError } = await client
+      .from("parcels")
+      .insert(parcels)
+      .select();
+
+    if (parcelError) {
+      this.logger.warn(`Failed to create SIAM parcels: ${parcelError.message}`);
+      return { farms: createdFarms || [], parcels: [] };
+    }
+
+    return { farms: createdFarms || [], parcels: createdParcels || [] };
+  }
+
+  private async createSiamCalibrations(
+    organizationId: string,
+    parcels: any[],
+    userId: string,
+  ): Promise<any[]> {
+    if (!parcels?.length) return [];
+
+    const client = this.databaseService.getAdminClient();
+    const targetParcels = parcels.slice(0, 6);
+    const now = new Date();
+
+    const calibrations = targetParcels.map((parcel, index) => {
+      const startedAt = new Date(now.getTime() - (index + 10) * 86400000);
+      const completedAt = new Date(startedAt.getTime() + 5400000);
+      const isYoungParcel = Number(parcel.planting_year) >= 2020;
+      const healthScore = 84 - index * 4;
+      const confidenceScore = 89 - index * 3;
+      const zoneLabel = index % 2 === 0 ? "nord" : "sud";
+
+      return {
+        parcel_id: parcel.id,
+        organization_id: organizationId,
+        type: "initial",
+        status: "validated",
+        started_at: startedAt.toISOString(),
+        completed_at: completedAt.toISOString(),
+        mode_calibrage: "calibrage_complet",
+        phase_age: isYoungParcel ? "entree_production" : "pleine_production",
+        p50_ndvi: 0.61 + index * 0.018,
+        p50_nirv: 0.37 + index * 0.015,
+        p50_ndmi: 0.24 + index * 0.018,
+        p50_ndre: 0.21 + index * 0.012,
+        p10_ndvi: 0.45 + index * 0.015,
+        p10_ndmi: 0.16 + index * 0.014,
+        confidence_score: confidenceScore,
+        health_score: healthScore,
+        yield_potential_min:
+          parcel.crop_type === "agrumes"
+            ? 18 + index
+            : parcel.crop_type === "olivier"
+              ? 2.6 + index * 0.2
+              : 1.8 + index * 0.15,
+        yield_potential_max:
+          parcel.crop_type === "agrumes"
+            ? 27 + index
+            : parcel.crop_type === "olivier"
+              ? 4.8 + index * 0.2
+              : 3.0 + index * 0.15,
+        coefficient_etat_parcelle: 0.79 + index * 0.02,
+        anomaly_count: index % 3 === 0 ? 1 : 0,
+        baseline_data: JSON.stringify({
+          percentiles: {
+            ndvi: {
+              p10: 0.45 + index * 0.015,
+              p25: 0.53 + index * 0.015,
+              p50: 0.61 + index * 0.018,
+              p75: 0.7 + index * 0.015,
+              p90: 0.78 + index * 0.012,
+            },
+            ndmi: {
+              p10: 0.16 + index * 0.014,
+              p25: 0.2 + index * 0.014,
+              p50: 0.24 + index * 0.018,
+              p75: 0.3 + index * 0.014,
+              p90: 0.35 + index * 0.012,
+            },
+          },
+          phenology: {
+            saison_courante: "printemps",
+            stade_phenologique:
+              parcel.crop_type === "agrumes"
+                ? "grossissement_fruits"
+                : parcel.crop_type === "olivier"
+                  ? "nouaison"
+                  : "montaison",
+          },
+          zones_intra_parcellaires: [
+            {
+              zone: zoneLabel,
+              ndvi_moyen: 0.69 - index * 0.01,
+              statut: healthScore >= 75 ? "bon" : "attention",
+            },
+            {
+              zone: "centre",
+              ndvi_moyen: 0.63 - index * 0.01,
+              statut: index % 2 === 0 ? "bon" : "surveiller",
+            },
+          ],
+        }),
+        diagnostic_data: JSON.stringify({
+          resume_pourquoi:
+            parcel.crop_type === "agrumes"
+              ? "Calibration validée avec légère tension hydrique en milieu de journée sur le bloc central."
+              : "Calibration validée avec un niveau de vigueur globalement correct et une variabilité localisée sur la bordure sud.",
+          ecarts: [
+            {
+              indice: "NDMI",
+              zone: zoneLabel,
+              ecart: -0.05 + index * 0.003,
+              cause_probable:
+                index % 2 === 0
+                  ? "Hétérogénéité de l'irrigation"
+                  : "Vigueur hétérogène liée à la réserve utile",
+            },
+          ],
+        }),
+        scores_detail: JSON.stringify({
+          sante: {
+            vigueur: 82 - index * 3,
+            homogeneite: 79 - index * 2,
+            stabilite: 81 - index * 2,
+            hydrique: 76 - index * 3,
+            nutritionnel: 78 - index * 2,
+          },
+          confiance: {
+            bloc_a: Math.min(confidenceScore + 2, 90),
+            bloc_b: Math.max(confidenceScore - 4, 70),
+          },
+        }),
+        validated_by_user: true,
+        validated_at: new Date(completedAt.getTime() + 3600000).toISOString(),
+        calibration_version: "v3",
+        rapport_fr: `Calibrage SIAM validé pour ${parcel.name}. Santé estimée à ${healthScore}/100 avec confiance ${confidenceScore}/100.`,
+      };
+    });
+
+    const { data, error } = await client
+      .from("calibrations")
+      .insert(calibrations)
+      .select();
+
+    if (error) {
+      this.logger.warn(`Failed to create SIAM calibrations: ${error.message}`);
+      return [];
+    }
+
+    if (data?.length) {
+      for (const calibration of data) {
+        await client
+          .from("parcels")
+          .update({ ai_calibration_id: calibration.id, ai_phase: "active" })
+          .eq("id", calibration.parcel_id)
+          .eq("organization_id", organizationId);
+      }
+    }
+
+    return data || [];
+  }
+
+  private async createSiamRecommendations(
+    organizationId: string,
+    parcels: any[],
+  ): Promise<any[]> {
+    if (!parcels?.length) return [];
+
+    const client = this.databaseService.getAdminClient();
+    const parcelByName = new Map(parcels.map((parcel) => [parcel.name, parcel]));
+    const fallbackParcels = parcels;
+
+    const recommendationBlueprints = [
+      {
+        parcel: parcelByName.get("B3 - Ziz Jeune") || fallbackParcels[0],
+        type: "irrigation",
+        priority: "priority",
+        theme: "irrigation",
+        message: "Arrosez la parcelle B3 demain avant 8h — stress hydrique détecté",
+      },
+      {
+        parcel: parcelByName.get("A1 - Atlas Nord") || fallbackParcels[1],
+        type: "irrigation",
+        priority: "vigilance",
+        theme: "irrigation",
+        message:
+          "Risque de stress hydrique sur parcelle A1 — vérifiez le système d'irrigation",
+      },
+      {
+        parcel: parcelByName.get("C2 - Rif Blé") || fallbackParcels[2],
+        type: "harvest",
+        priority: "priority",
+        theme: "harvest",
+        message:
+          "Récolte optimale pour parcelle C2 entre le 15 et le 20 octobre",
+      },
+      {
+        parcel: parcelByName.get("A4 - Atlas Sud") || fallbackParcels[3],
+        type: "fertilisation",
+        priority: "priority",
+        theme: "soil_amendment",
+        message:
+          "Application de fertilisant recommandée sur parcelle A4 avant le 15 mars",
+      },
+      {
+        parcel: parcelByName.get("D1 - Rif Orge") || fallbackParcels[4],
+        type: "information",
+        priority: "vigilance",
+        theme: "monitoring",
+        message:
+          "Surveillance renforcée recommandée pour la parcelle D1 — baisse de vigueur détectée",
+      },
+    ];
+
+    const recommendations = recommendationBlueprints
+      .filter((recommendation) => recommendation.parcel?.id)
+      .map((recommendation, index) => ({
+        parcel_id: recommendation.parcel.id,
+        organization_id: organizationId,
+        crop_type: recommendation.parcel.crop_type || "olivier",
+        type: recommendation.type,
+        recommendation_type: "reactive",
+        theme: recommendation.theme,
+        priority: recommendation.priority,
+        status: "validated",
+        alert_code: `SIAM-${index + 1}`,
+        bloc_1_constat: {
+          language: "fr",
+          message: recommendation.message,
+          parcelle: recommendation.parcel.name,
+        },
+        bloc_2_diagnostic: {
+          language: "fr",
+          diagnostic:
+            recommendation.type === "irrigation"
+              ? "Le signal satellite montre une baisse de réserve utile sur la zone active."
+              : recommendation.type === "harvest"
+                ? "La fenêtre de maturité optimale se rapproche avec une bonne homogénéité."
+                : recommendation.type === "fertilisation"
+                  ? "La vigueur reste inférieure au bloc de référence, signe d'un besoin nutritionnel."
+                  : "Une baisse de vigueur localisée justifie une observation terrain renforcée.",
+        },
+        bloc_3_action: {
+          language: "fr",
+          description: recommendation.message,
+        },
+        bloc_4_fenetre: {
+          language: "fr",
+          urgence:
+            recommendation.priority === "priority" ? "agir cette semaine" : "surveiller sous 72h",
+        },
+        bloc_5_conditions: {
+          language: "fr",
+          conditions:
+            recommendation.type === "irrigation"
+              ? "Intervenir tôt le matin et vérifier la pression réseau."
+              : "Confirmer la condition terrain avant exécution.",
+        },
+        bloc_6_suivi: {
+          language: "fr",
+          suivi: "Recontrôler l'état de la parcelle lors du prochain passage terrain.",
+        },
+      }));
+
+    const { data, error } = await client
+      .from("ai_recommendations")
+      .insert(recommendations)
+      .select();
+
+    if (error) {
+      this.logger.warn(`Failed to create SIAM recommendations: ${error.message}`);
+      return [];
+    }
+
+    return data || [];
+  }
+
+  private async createSiamHarvestRecords(
+    organizationId: string,
+    parcels: any[],
+    userId: string,
+  ): Promise<any[]> {
+    if (!parcels?.length) return [];
+
+    const client = this.databaseService.getAdminClient();
+    const harvestRecords = parcels.flatMap((parcel, parcelIndex) => {
+      const years =
+        parcel.crop_type === "olivier"
+          ? [2023, 2024, 2025]
+          : parcel.crop_type === "agrumes"
+            ? [2024, 2025]
+            : [2023, 2025];
+
+      return years.map((year, yearIndex) => {
+        const yieldPerHectare =
+          parcel.crop_type === "olivier"
+            ? 2.6 + ((parcelIndex + yearIndex) % 4) * 0.6
+            : parcel.crop_type === "agrumes"
+              ? 17 + ((parcelIndex + yearIndex) % 4) * 3.5
+              : 1.8 + ((parcelIndex + yearIndex) % 3) * 0.4;
+
+        const quantity = Number(parcel.area || parcel.calculated_area || 0) * yieldPerHectare * 1000;
+
+        return {
+          organization_id: organizationId,
+          farm_id: parcel.farm_id,
+          parcel_id: parcel.id,
+          harvest_date: `${year}-${parcel.crop_type === "agrumes" ? "11-10" : parcel.crop_type === "olivier" ? "10-18" : "06-25"}`,
+          quantity: Number(quantity.toFixed(0)),
+          unit: "kg",
+          quality_grade:
+            parcel.crop_type === "olivier"
+              ? "Extra"
+              : parcel.crop_type === "agrumes"
+                ? "A"
+                : "First",
+          quality_notes: `Récolte SIAM ${parcel.name} - campagne ${year}`,
+          quality_score: parcel.crop_type === "olivier" ? 9 : 8,
+          status: "stored",
+          intended_for:
+            parcel.crop_type === "olivier" ? "processing" : "market",
+          expected_price_per_unit:
+            parcel.crop_type === "olivier"
+              ? 14
+              : parcel.crop_type === "agrumes"
+                ? 5.5
+                : 3.2,
+          notes: `Rendement estimé à ${yieldPerHectare.toFixed(1)} t/ha pour ${parcel.crop_type}.`,
+          created_by: userId,
+        };
+      });
+    });
+
+    const { data, error } = await client
+      .from("harvest_records")
+      .insert(harvestRecords)
+      .select();
+
+    if (error) {
+      this.logger.warn(`Failed to create SIAM harvest records: ${error.message}`);
+      return [];
+    }
+
+    return data || [];
+  }
+
+  private async createSiamAnalyses(
+    organizationId: string,
+    parcels: any[],
+  ): Promise<any[]> {
+    if (!parcels?.length) return [];
+
+    const client = this.databaseService.getAdminClient();
+    const today = new Date();
+    const oneMonthAgo = new Date(today);
+    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+    const twoMonthsAgo = new Date(today);
+    twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2);
+    const threeMonthsAgo = new Date(today);
+    threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+
+    const analyses = [
+      {
+        organization_id: organizationId,
+        parcel_id: parcels[0].id,
+        analysis_type: "soil",
+        analysis_date: threeMonthsAgo.toISOString().split("T")[0],
+        laboratory: "Laboratoire Agronomique Meknès",
+        data: {
+          ph: 7.4,
+          ec: 0.48,
+          nitrogen: 0.16,
+          phosphorus: 28,
+          potassium: 220,
+          organic_matter: 2.6,
+          recommendations: [
+            "Maintenir les apports organiques avant l'été",
+            "Surveiller le potassium sur les zones sud",
+          ],
+        },
+        notes: "Analyse sol SIAM - bloc olivier mature A1",
+      },
+      {
+        organization_id: organizationId,
+        parcel_id: parcels[3].id,
+        analysis_type: "soil",
+        analysis_date: twoMonthsAgo.toISOString().split("T")[0],
+        laboratory: "Laboratoire Agronomique Meknès",
+        data: {
+          ph: 7.1,
+          ec: 0.39,
+          nitrogen: 0.19,
+          phosphorus: 24,
+          potassium: 185,
+          organic_matter: 2.1,
+          recommendations: [
+            "Renforcer l'azote sur jeune verger",
+            "Fractionner la fertilisation de printemps",
+          ],
+        },
+        notes: "Analyse sol SIAM - jeune olivier A4",
+      },
+      {
+        organization_id: organizationId,
+        parcel_id: parcels[12].id,
+        analysis_type: "soil",
+        analysis_date: oneMonthAgo.toISOString().split("T")[0],
+        laboratory: "Laboratoire Agronomique Meknès",
+        data: {
+          ph: 7.8,
+          ec: 0.52,
+          nitrogen: 0.11,
+          phosphorus: 18,
+          potassium: 160,
+          organic_matter: 1.7,
+          recommendations: [
+            "Augmenter la matière organique sur céréales pluviales",
+            "Positionner un apport de fond avant les premières pluies",
+          ],
+        },
+        notes: "Analyse sol SIAM - blé dur C2",
+      },
+      {
+        organization_id: organizationId,
+        parcel_id: parcels[8].id,
+        analysis_type: "water",
+        analysis_date: oneMonthAgo.toISOString().split("T")[0],
+        laboratory: "Laboratoire Qualité des Eaux Meknès",
+        data: {
+          ph: 7.2,
+          ec: 1.1,
+          tds: 702,
+          suitability: "Bonne pour irrigation goutte à goutte",
+        },
+        notes: "Analyse eau SIAM - réseau goutte à goutte Ziz",
+      },
+      {
+        organization_id: organizationId,
+        parcel_id: parcels[0].id,
+        analysis_type: "water",
+        analysis_date: today.toISOString().split("T")[0],
+        laboratory: "Laboratoire Qualité des Eaux Meknès",
+        data: {
+          ph: 7.0,
+          ec: 0.9,
+          tds: 590,
+          suitability: "Très bonne pour irrigation localisée",
+        },
+        notes: "Analyse eau SIAM - forage Atlas",
+      },
+    ];
+
+    const { data, error } = await client
+      .from("analyses")
+      .insert(analyses)
+      .select();
+
+    if (error) {
+      this.logger.warn(`Failed to create SIAM analyses: ${error.message}`);
+      return [];
+    }
+
+    return data || [];
+  }
+
   async clearDemoDataOnly(
     organizationId: string,
   ): Promise<{ deletedCounts: Record<string, number> }> {
@@ -7305,6 +10006,16 @@ export class DemoDataService {
         : { count: 0 };
       deletedCounts["work_records"] = workRecordsCount || 0;
 
+      if (farmIds.length > 0) {
+        const { count: pieceWorkRecordsCount } = await client
+          .from("piece_work_records")
+          .delete({ count: "exact" })
+          .in("farm_id", farmIds);
+        deletedCounts["piece_work_records"] = pieceWorkRecordsCount || 0;
+      } else {
+        deletedCounts["piece_work_records"] = 0;
+      }
+
       const { count: soilAnalysesCount } = parcelIds.length
         ? await client
             .from("soil_analyses")
@@ -7552,6 +10263,9 @@ export class DemoDataService {
       "satellite_indices_data",
       "calibrations",
       "ai_recommendations",
+      "annual_plans",
+      "plan_interventions",
+      "weather_derived_data",
       "workers",
       "tasks",
       "harvest_records",
@@ -7595,6 +10309,12 @@ export class DemoDataService {
       "metayage_settlements",
       "biological_asset_valuations",
       "pest_disease_reports",
+      "chat_conversations",
+      "ai_quotas",
+      "monitoring_analyses",
+      "suivis_saison",
+      "marketplace_listings",
+      "piece_work_records",
     ];
 
     for (const table of tables) {
@@ -7607,6 +10327,67 @@ export class DemoDataService {
       } catch {
         stats[table] = 0;
       }
+    }
+
+    try {
+      const { count } = await client
+        .from("weather_daily_data")
+        .select("*", { count: "exact", head: true })
+        .eq("latitude", 34.92)
+        .eq("longitude", -2.32);
+      stats["weather_daily_data"] = count || 0;
+    } catch {
+      stats["weather_daily_data"] = 0;
+    }
+
+    try {
+      const { count } = await client
+        .from("weather_forecasts")
+        .select("*", { count: "exact", head: true })
+        .eq("latitude", 34.92)
+        .eq("longitude", -2.32);
+      stats["weather_forecasts"] = count || 0;
+    } catch {
+      stats["weather_forecasts"] = 0;
+    }
+
+    try {
+      const { count } = await client
+        .from("marketplace_orders")
+        .select("*", { count: "exact", head: true })
+        .or(`buyer_organization_id.eq.${organizationId},seller_organization_id.eq.${organizationId}`);
+      stats["marketplace_orders"] = count || 0;
+    } catch {
+      stats["marketplace_orders"] = 0;
+    }
+
+    try {
+      const { data: marketplaceOrders } = await client
+        .from("marketplace_orders")
+        .select("id")
+        .or(`buyer_organization_id.eq.${organizationId},seller_organization_id.eq.${organizationId}`);
+      const orderIds = marketplaceOrders?.map((order) => order.id) || [];
+      if (orderIds.length) {
+        const { count } = await client
+          .from("marketplace_order_items")
+          .select("*", { count: "exact", head: true })
+          .in("order_id", orderIds);
+        stats["marketplace_order_items"] = count || 0;
+      } else {
+        stats["marketplace_order_items"] = 0;
+      }
+    } catch {
+      stats["marketplace_order_items"] = 0;
+    }
+
+    try {
+      const { count } = await client
+        .from("marketplace_quote_requests")
+        .select("*", { count: "exact", head: true })
+        .or(`requester_organization_id.eq.${organizationId},seller_organization_id.eq.${organizationId}`);
+      stats["marketplace_quote_requests"] = count || 0;
+    } catch {
+      stats["marketplace_quote_requests"] = 0;
     }
 
     return stats;
@@ -8452,6 +11233,7 @@ export class DemoDataService {
       "cloud_coverage_checks",
       "satellite_heatmap_cache",
       "workers",
+      "work_units",
       "cost_centers",
       "structures",
       "warehouses",
@@ -8465,6 +11247,7 @@ export class DemoDataService {
       "task_assignments",
       "work_records",
       "payment_records",
+      "piece_work_records",
       "payment_advances",
       "metayage_settlements",
       "harvest_records",
@@ -8781,6 +11564,32 @@ export class DemoDataService {
     // Map old IDs to new IDs for reference updates
     const idMaps: Record<string, Map<string, string>> = {};
 
+    if (Array.isArray(importData.work_units) && importData.work_units.length > 0) {
+      const { data: currentWorkUnits, error: currentWorkUnitsError } = await client
+        .from("work_units")
+        .select("id, code")
+        .eq("organization_id", organizationId);
+
+      if (currentWorkUnitsError) {
+        this.logger.error(
+          `Failed to prepare work unit ID mappings: ${currentWorkUnitsError.message}`,
+        );
+      } else {
+        const workUnitIdByCode = new Map(
+          (currentWorkUnits || []).map((unit) => [unit.code, unit.id]),
+        );
+
+        idMaps.work_units = new Map();
+        for (const workUnit of importData.work_units) {
+          const mappedId = workUnitIdByCode.get(workUnit.code);
+          if (workUnit.id && mappedId) {
+            idMaps.work_units.set(workUnit.id, mappedId);
+          }
+        }
+        importedCounts["work_units"] = idMaps.work_units.size;
+      }
+    }
+
     // Tables to import in order (respecting dependencies)
     const importOrder = [
       "farms",
@@ -8806,6 +11615,7 @@ export class DemoDataService {
       "task_assignments",
       "work_records",
       "payment_records",
+      "piece_work_records",
       "payment_advances",
       "metayage_settlements",
       "harvest_records",
@@ -9055,6 +11865,13 @@ export class DemoDataService {
         farm_id: "farms",
         worker_id: "workers",
         task_id: "tasks",
+      },
+      piece_work_records: {
+        farm_id: "farms",
+        worker_id: "workers",
+        task_id: "tasks",
+        parcel_id: "parcels",
+        work_unit_id: "work_units",
       },
       payment_records: {
         farm_id: "farms",

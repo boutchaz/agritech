@@ -1,8 +1,8 @@
 [package]
 name = "agritech-desktop"
 version = "0.1.0"
-description = "AgriTech Desktop - Standalone agricultural management"
-authors = ["AgriTech Team"]
+description = "AgroGina Desktop - Standalone agricultural management"
+authors = ["AgroGina Team"]
 license = "MIT"
 repository = ""
 edition = "2021"

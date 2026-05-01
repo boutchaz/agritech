@@ -57,7 +57,7 @@ async function getProduct(id: string): Promise<Product | null> {
   }
 }
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://market.agritech.ma';
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://market.agrogina.ma';
 
 export async function generateMetadata({
   params,
@@ -68,15 +68,15 @@ export async function generateMetadata({
   const product = await getProduct(id);
 
   if (!product) {
-    return { title: 'Produit non trouvé - AgriTech Market' };
+    return { title: 'Produit non trouvé - AgroGina Market' };
   }
 
   const description =
-    product.description || product.short_description || `Achetez ${product.title} sur AgriTech Market`;
+    product.description || product.short_description || `Achetez ${product.title} sur AgroGina Market`;
   const imageUrl = product.images?.[0];
 
   return {
-    title: `${product.title} - AgriTech Market`,
+    title: `${product.title} - AgroGina Market`,
     description,
     openGraph: {
       title: product.title,
@@ -170,10 +170,7 @@ export default async function ProductDetailPage({
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-      />
+      <script type="application/ld+json">{JSON.stringify(jsonLd)}</script>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <nav className="flex items-center space-x-2 text-sm text-gray-500 mb-6">

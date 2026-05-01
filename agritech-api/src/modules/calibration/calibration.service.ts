@@ -4,6 +4,7 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  UnprocessableEntityException,
   forwardRef,
 } from "@nestjs/common";
 import { AIReportsService } from "../ai-reports/ai-reports.service";
@@ -48,6 +49,7 @@ import {
   MINIMUM_CONFIDENCE_FOR_ACTIVE,
   NDVI_PERCENTILES,
 } from "./calibration-data.service";
+import { checkVegetation } from "./vegetation-check";
 import type {
   ParcelContext,
   ParcelAiPhase,
@@ -269,6 +271,25 @@ export class CalibrationService {
       }
     }
 
+    // Phase 0.5: vegetation pre-check using historical summer NDVI
+    const summerNdvi = await this.dataService.fetchSummerNdvi(parcelId, organizationId);
+    const vegetationResult = checkVegetation(parcel.plantingYear, summerNdvi);
+
+    if (!vegetationResult.continueCalibration) {
+      throw new UnprocessableEntityException({
+        statusCode: 422,
+        message: "Végétation insuffisante détectée",
+        error: "Unprocessable Entity",
+        vegetation_status: vegetationResult.status,
+        user_message: {
+          title: "Végétation insuffisante détectée",
+          body: "L'analyse satellitaire de votre parcelle sur les 3 dernières saisons estivales indique l'absence de végétation ligneuse établie. Une parcelle sans arbres adultes ne peut pas être calibrée. Vérifiez que : (1) votre parcelle est correctement délimitée (2) vos arbres sont plantés et établis depuis au moins 4 ans. Si votre plantation est récente (moins de 4 ans), renseignez l'âge réel de vos arbres et relancez.",
+          action: "correct_parcel",
+        },
+        ndvi_stats: vegetationResult.ndviStats,
+      });
+    }
+
     const supabase = this.databaseService.getAdminClient();
     const startedAt = new Date().toISOString();
 
@@ -296,6 +317,9 @@ export class CalibrationService {
           recovery: {
             previous_ai_phase: previousPhase,
           },
+          ...(vegetationResult.status === "ZONE_GRISE" && {
+            vegetation_check_status: "ZONE_GRISE",
+          }),
         },
       })
       .select("*")
@@ -804,7 +828,7 @@ export class CalibrationService {
 
     const [satelliteImages, initialWeatherRows, analyses, harvestRecords, referenceData] = await Promise.all([
       this.dataService.fetchSatelliteImages(parcelId, organizationId, calibrationDataStart),
-      this.dataService.fetchWeatherRows(parcel),
+      this.dataService.fetchWeatherRows(parcel, calibrationDataStart),
       this.dataService.fetchAnalyses(parcelId),
       this.dataService.fetchHarvestRecords(parcelId),
       this.dataService.fetchCropReferenceData(parcel.cropType),
@@ -814,8 +838,8 @@ export class CalibrationService {
 
     if (weatherRows.length === 0) {
       emitProgress(1, "weather_sync", "Synchronisation des données météo...");
-      await this.dataService.syncWeatherData(parcel, organizationId, authToken);
-      weatherRows = await this.dataService.fetchWeatherRows(parcel);
+      await this.dataService.syncWeatherData(parcel, organizationId, authToken, calibrationDataStart);
+      weatherRows = await this.dataService.fetchWeatherRows(parcel, calibrationDataStart);
       this.logger.log(
         `Weather auto-sync completed for parcel ${parcelId}: ${weatherRows.length} rows`,
       );
@@ -1132,7 +1156,7 @@ export class CalibrationService {
       referenceData,
     ] = await Promise.all([
       this.dataService.fetchSatelliteImages(parcelId, organizationId, calibrationDataStart),
-      this.dataService.fetchWeatherRows(parcel),
+      this.dataService.fetchWeatherRows(parcel, calibrationDataStart),
       this.dataService.fetchAnalyses(parcelId),
       this.dataService.fetchHarvestRecords(parcelId),
       this.dataService.fetchCropReferenceData(parcel.cropType),
@@ -1192,8 +1216,8 @@ export class CalibrationService {
 
     if (weatherRows.length === 0) {
       emitProgress(2, "weather_sync", "Synchronisation des données météo...");
-      await this.dataService.syncWeatherData(parcel, organizationId, authToken);
-      weatherRows = await this.dataService.fetchWeatherRows(parcel);
+      await this.dataService.syncWeatherData(parcel, organizationId, authToken, calibrationDataStart);
+      weatherRows = await this.dataService.fetchWeatherRows(parcel, calibrationDataStart);
       this.logger.log(
         `Weather auto-sync completed for parcel ${parcelId}: ${weatherRows.length} rows`,
       );
@@ -1935,14 +1959,14 @@ export class CalibrationService {
 
     const { data: parcelRow, error: parcelError } = await supabase
       .from("parcels")
-      .select("planting_year")
+      .select("planting_year, crop_type, boundary")
       .eq("id", parcelId)
       .eq("organization_id", organizationId)
       .maybeSingle();
 
     if (parcelError) {
       this.logger.warn(
-        `Failed to fetch parcel planting_year for review: ${parcelError.message}`,
+        `Failed to fetch parcel data for review: ${parcelError.message}`,
       );
     }
 
@@ -1950,6 +1974,35 @@ export class CalibrationService {
       parcelRow && typeof (parcelRow as { planting_year?: unknown }).planting_year === "number"
         ? (parcelRow as { planting_year: number }).planting_year
         : null;
+    const cropType =
+      parcelRow && typeof (parcelRow as { crop_type?: unknown }).crop_type === "string"
+        ? (parcelRow as { crop_type: string }).crop_type
+        : null;
+
+    // Recalculate GDD for phase transitions from actual weather data
+    const outputAny = output as Record<string, unknown>;
+    if (cropType && outputAny.step4 && typeof outputAny.step4 === 'object') {
+      try {
+        const boundary = this.dataService.parseBoundary(
+          (parcelRow as Record<string, unknown>)?.boundary,
+        );
+        if (boundary.length > 0) {
+          const { latitude, longitude } = WeatherProvider.calculateCentroid(
+            WeatherProvider.ensureWGS84(boundary),
+          );
+          outputAny.step4 = await this.dataService.recalculatePhaseGdd(
+            outputAny.step4 as Record<string, unknown>,
+            latitude,
+            longitude,
+            cropType,
+            record.id,
+            organizationId,
+          );
+        }
+      } catch (err) {
+        this.logger.warn(`GDD recalculation failed: ${(err as Error).message}`);
+      }
+    }
 
     const snapshotInput: CalibrationSnapshotInput = {
       calibration_id: record.id,
@@ -1961,6 +2014,7 @@ export class CalibrationService {
       status: record.status,
       parcel_phase: record.phase_age ?? "unknown",
       organization_id: record.organization_id,
+      crop_type: cropType,
       planting_year: plantingYear,
       calibration_history: history.map((item) => ({
         id: item.id,

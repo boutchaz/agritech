@@ -1,8 +1,28 @@
 import { Injectable, Logger, HttpException, HttpStatus } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 import { DatabaseService } from '../database/database.service';
 import { CreateOrderDto, UpdateOrderStatusDto } from './dto/create-order.dto';
 import { CartService } from './cart.service';
 import { NotificationsService } from '../notifications/notifications.service';
+
+type MarketplaceCartItem = {
+    listing_id?: string | null;
+    item_id?: string | null;
+    seller_organization_id: string;
+    title: string;
+    quantity: number;
+    unit_price: number;
+    unit?: string | null;
+    image_url?: string | null;
+};
+
+type MarketplaceEmailItem = {
+    title: string;
+    quantity: number;
+    unit_price: number;
+    unit: string | null;
+};
 
 @Injectable()
 export class OrdersService {
@@ -11,8 +31,24 @@ export class OrdersService {
     constructor(
         private readonly databaseService: DatabaseService,
         private readonly cartService: CartService,
-        private readonly notificationsService: NotificationsService
+        private readonly notificationsService: NotificationsService,
+        private readonly jwtService: JwtService,
+        private readonly configService: ConfigService,
     ) {}
+
+    private async resolveUserOrg(token: string): Promise<{ userId: string; organizationId: string | null }> {
+        const secret = this.configService.get<string>('SUPABASE_JWT_SECRET') || this.configService.get<string>('JWT_SECRET');
+        const payload = await this.jwtService.verifyAsync<{ sub: string }>(token, { secret });
+        const userId = payload.sub;
+
+        const { data: userData } = await this.databaseService.getAdminClient()
+            .from('auth_users_view')
+            .select('organization_id')
+            .eq('id', userId)
+            .single();
+
+        return { userId, organizationId: userData?.organization_id ?? null };
+    }
 
     /**
      * Atomically deduct stock using a conditional UPDATE with WHERE guard.
@@ -76,24 +112,18 @@ export class OrdersService {
     }
 
     async createOrder(token: string, dto: CreateOrderDto) {
-        const supabase = this.databaseService.getClientWithAuth(token);
+        const { userId, organizationId } = await this.resolveUserOrg(token);
+        const supabase = this.databaseService.getAdminClient();
 
-        // Get current user
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
-        if (userError || !user) {
-            throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
-        }
-
-        // Get user's organization
-        const { data: userData } = await supabase
-            .from('auth_users_view')
-            .select('organization_id')
-            .eq('id', user.id)
-            .single();
-
-        if (!userData?.organization_id) {
+        if (!organizationId) {
             throw new HttpException('User must belong to an organization', HttpStatus.BAD_REQUEST);
         }
+
+        const { data: userProfile } = await supabase
+            .from('profiles')
+            .select('email')
+            .eq('id', userId)
+            .single();
 
         // Get user's cart with items
         const cart = await this.cartService.getCart(token);
@@ -103,8 +133,9 @@ export class OrdersService {
         }
 
         // Group cart items by seller
-        const itemsBySeller: Map<string, typeof cart.items> = new Map();
-        for (const item of cart.items) {
+        const cartItems: MarketplaceCartItem[] = cart.items;
+        const itemsBySeller = new Map<string, MarketplaceCartItem[]>();
+        for (const item of cartItems) {
             const sellerId = item.seller_organization_id;
             if (!itemsBySeller.has(sellerId)) {
                 itemsBySeller.set(sellerId, []);
@@ -116,13 +147,13 @@ export class OrdersService {
         const orders = [];
 
         for (const [sellerOrgId, items] of itemsBySeller) {
-            const orderTotal = items.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
+            const orderTotal = items.reduce((sum: number, item: MarketplaceCartItem) => sum + (item.quantity * item.unit_price), 0);
 
             // Create order
             const { data: order, error: orderError } = await supabase
                 .from('marketplace_orders')
                 .insert({
-                    buyer_organization_id: userData.organization_id,
+                    buyer_organization_id: organizationId,
                     seller_organization_id: sellerOrgId,
                     status: 'pending',
                     total_amount: orderTotal,
@@ -144,7 +175,7 @@ export class OrdersService {
             }
 
             // Create order items
-            const orderItems = items.map(item => ({
+            const orderItems = items.map((item: MarketplaceCartItem) => ({
                 order_id: order.id,
                 listing_id: item.listing_id || null,
                 item_id: item.item_id || null,
@@ -169,14 +200,12 @@ export class OrdersService {
                     .from('marketplace_orders')
                     .delete()
                     .eq('id', order.id)
-                    .eq('buyer_organization_id', userData.organization_id);
+                    .eq('buyer_organization_id', organizationId);
                 throw new HttpException('Failed to create order items', HttpStatus.INTERNAL_SERVER_ERROR);
             }
 
             // Deduct stock for each order item
-            for (const [index, orderItem] of createdItems.entries()) {
-                const cartItem = items[index];
-
+            for (const [, orderItem] of createdItems.entries()) {
                 try {
                     if (orderItem.product_type === 'listing' && orderItem.listing_id) {
                         await this.deductMarketplaceListingStock(
@@ -256,7 +285,7 @@ export class OrdersService {
                         .from('marketplace_orders')
                         .delete()
                         .eq('id', order.id)
-                        .eq('buyer_organization_id', userData.organization_id);
+                        .eq('buyer_organization_id', organizationId);
                     throw new HttpException(
                         stockError.message || 'Failed to deduct stock',
                         HttpStatus.BAD_REQUEST
@@ -273,14 +302,7 @@ export class OrdersService {
                     .eq('id', sellerOrgId)
                     .single();
 
-                // Get buyer organization name
-                const { data: buyerOrg } = await supabase
-                    .from('organizations')
-                    .select('name')
-                    .eq('id', userData.organization_id)
-                    .single();
-
-                const buyerEmail = dto.shipping_details.email || user.email;
+                const buyerEmail = dto.shipping_details.email || userProfile?.email;
                 const shippingAddress = `${dto.shipping_details.address}, ${dto.shipping_details.city}${dto.shipping_details.postal_code ? ', ' + dto.shipping_details.postal_code : ''}`;
 
                 const emailData = {
@@ -290,7 +312,7 @@ export class OrdersService {
                     sellerName: sellerOrg?.name || 'Vendeur',
                     totalAmount: orderTotal,
                     currency: 'MAD',
-                    items: orderItems.map(item => ({
+                    items: orderItems.map((item: MarketplaceEmailItem) => ({
                         title: item.title,
                         quantity: item.quantity,
                         unitPrice: item.unit_price,
@@ -331,22 +353,10 @@ export class OrdersService {
      * Get orders for the current user (both as buyer and seller)
      */
     async getOrders(token: string, role?: 'buyer' | 'seller') {
-        const supabase = this.databaseService.getClientWithAuth(token);
+        const { organizationId } = await this.resolveUserOrg(token);
+        const supabase = this.databaseService.getAdminClient();
 
-        // Get current user
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
-        if (userError || !user) {
-            throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
-        }
-
-        // Get user's organization
-        const { data: userData } = await supabase
-            .from('auth_users_view')
-            .select('organization_id')
-            .eq('id', user.id)
-            .single();
-
-        if (!userData?.organization_id) {
+        if (!organizationId) {
             return [];
         }
 
@@ -359,12 +369,12 @@ export class OrdersService {
             .order('created_at', { ascending: false });
 
         if (role === 'buyer') {
-            query = query.eq('buyer_organization_id', userData.organization_id);
+            query = query.eq('buyer_organization_id', organizationId);
         } else if (role === 'seller') {
-            query = query.eq('seller_organization_id', userData.organization_id);
+            query = query.eq('seller_organization_id', organizationId);
         } else {
             // Get both buyer and seller orders
-            query = query.or(`buyer_organization_id.eq.${userData.organization_id},seller_organization_id.eq.${userData.organization_id}`);
+            query = query.or(`buyer_organization_id.eq.${organizationId},seller_organization_id.eq.${organizationId}`);
         }
 
         const { data: orders, error: ordersError } = await query;
@@ -381,20 +391,8 @@ export class OrdersService {
      * Get a single order by ID
      */
     async getOrder(token: string, orderId: string) {
-        const supabase = this.databaseService.getClientWithAuth(token);
-
-        // Get current user
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
-        if (userError || !user) {
-            throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
-        }
-
-        // Get user's organization
-        const { data: userData } = await supabase
-            .from('auth_users_view')
-            .select('organization_id')
-            .eq('id', user.id)
-            .single();
+        const { organizationId } = await this.resolveUserOrg(token);
+        const supabase = this.databaseService.getAdminClient();
 
         const { data: order, error: orderError } = await supabase
             .from('marketplace_orders')
@@ -412,8 +410,8 @@ export class OrdersService {
         }
 
         // Check if user is buyer or seller
-        if (order.buyer_organization_id !== userData?.organization_id &&
-            order.seller_organization_id !== userData?.organization_id) {
+        if (order.buyer_organization_id !== organizationId &&
+            order.seller_organization_id !== organizationId) {
             throw new HttpException('Unauthorized', HttpStatus.FORBIDDEN);
         }
 
@@ -424,20 +422,8 @@ export class OrdersService {
      * Update order status (for sellers)
      */
     async updateOrderStatus(token: string, orderId: string, dto: UpdateOrderStatusDto) {
-        const supabase = this.databaseService.getClientWithAuth(token);
-
-        // Get current user
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
-        if (userError || !user) {
-            throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
-        }
-
-        // Get user's organization
-        const { data: userData } = await supabase
-            .from('auth_users_view')
-            .select('organization_id')
-            .eq('id', user.id)
-            .single();
+        const { userId, organizationId } = await this.resolveUserOrg(token);
+        const supabase = this.databaseService.getAdminClient();
 
         // Get the order
         const { data: order, error: orderError } = await supabase
@@ -451,7 +437,7 @@ export class OrdersService {
         }
 
         // Check if user is the seller
-        if (order.seller_organization_id !== userData?.organization_id) {
+        if (order.seller_organization_id !== organizationId) {
             throw new HttpException('Only sellers can update order status', HttpStatus.FORBIDDEN);
         }
 
@@ -500,7 +486,13 @@ export class OrdersService {
                 .eq('id', order.seller_organization_id)
                 .single();
 
-            const buyerEmail = updated.buyer_email || user.email;
+            const { data: userProfile } = await supabase
+                .from('profiles')
+                .select('email')
+                .eq('id', userId)
+                .single();
+
+            const buyerEmail = updated.buyer_email || userProfile?.email;
             const shippingAddress = updated.shipping_details
                 ? `${updated.shipping_details.address}, ${updated.shipping_details.city}${updated.shipping_details.postal_code ? ', ' + updated.shipping_details.postal_code : ''}`
                 : '';
@@ -512,7 +504,7 @@ export class OrdersService {
                 sellerName: sellerOrg?.name || 'Vendeur',
                 totalAmount: updated.total_amount,
                 currency: updated.currency,
-                items: orderItems?.map(item => ({
+                items: orderItems?.map((item: MarketplaceEmailItem) => ({
                     title: item.title,
                     quantity: item.quantity,
                     unitPrice: item.unit_price,
@@ -552,20 +544,8 @@ export class OrdersService {
      * Cancel an order (for buyers)
      */
     async cancelOrder(token: string, orderId: string) {
-        const supabase = this.databaseService.getClientWithAuth(token);
-
-        // Get current user
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
-        if (userError || !user) {
-            throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
-        }
-
-        // Get user's organization
-        const { data: userData } = await supabase
-            .from('auth_users_view')
-            .select('organization_id')
-            .eq('id', user.id)
-            .single();
+        const { userId, organizationId } = await this.resolveUserOrg(token);
+        const supabase = this.databaseService.getAdminClient();
 
         // Get the order
         const { data: order, error: orderError } = await supabase
@@ -579,7 +559,7 @@ export class OrdersService {
         }
 
         // Check if user is the buyer
-        if (order.buyer_organization_id !== userData?.organization_id) {
+        if (order.buyer_organization_id !== organizationId) {
             throw new HttpException('Only buyers can cancel orders', HttpStatus.FORBIDDEN);
         }
 
@@ -701,7 +681,13 @@ export class OrdersService {
                 .eq('id', order.seller_organization_id)
                 .single();
 
-            const buyerEmail = updated.buyer_email || user.email;
+            const { data: userProfile } = await supabase
+                .from('profiles')
+                .select('email')
+                .eq('id', userId)
+                .single();
+
+            const buyerEmail = updated.buyer_email || userProfile?.email;
             const shippingAddress = updated.shipping_details
                 ? `${updated.shipping_details.address}, ${updated.shipping_details.city}${updated.shipping_details.postal_code ? ', ' + updated.shipping_details.postal_code : ''}`
                 : '';
@@ -713,7 +699,7 @@ export class OrdersService {
                 sellerName: sellerOrg?.name || 'Vendeur',
                 totalAmount: updated.total_amount,
                 currency: updated.currency,
-                items: orderItems?.map(item => ({
+                items: orderItems?.map((item: MarketplaceEmailItem) => ({
                     title: item.title,
                     quantity: item.quantity,
                     unitPrice: item.unit_price,

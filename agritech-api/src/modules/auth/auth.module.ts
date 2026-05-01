@@ -35,6 +35,7 @@ import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
   ],
   controllers: [AuthController],
   providers: [AuthService, JwtStrategy, JwtAuthGuard],
-  exports: [AuthService, JwtAuthGuard, JwtStrategy],
+  // Export JwtModule so JwtService is injectable in any module (e.g. MarketplaceService verifies tokens with verifyAsync + secret per call).
+  exports: [AuthService, JwtAuthGuard, JwtStrategy, JwtModule],
 })
 export class AuthModule { }

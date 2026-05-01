@@ -123,6 +123,13 @@
       "title": "Observation mode",
       "body": "Confidence is too low for active recommendations. Add soil/water analyses or harvest history to improve accuracy."
     },
+    "vegetationCheck": {
+      "titleParcelleVide": "Insufficient vegetation detected",
+      "bodyParcelleVide": "Satellite analysis of your parcel over the last 3 summer seasons shows no established woody vegetation. A parcel without mature trees cannot be calibrated. Please verify that: (1) your parcel boundaries are correct (2) your trees have been planted and established for at least 4 years. If your plantation is recent (under 4 years), update the actual age of your trees and try again.",
+      "correctParcel": "Correct my parcel",
+      "titleZoneGrise": "Mixed vegetation detected — Calibration started",
+      "bodyZoneGrise": "Your parcel shows variable vegetation that may include intercropping or grass. Calibration has started, but please verify that your trees are well established."
+    },
     "nextStep": {
       "title": "Next step on your parcel",
       "body": "Monitoring is on. Review your season calendar and suggested tips to move to field work.",

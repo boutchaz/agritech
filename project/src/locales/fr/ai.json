@@ -123,6 +123,13 @@
       "title": "Mode observation",
       "body": "Le score de confiance est insuffisant pour des recommandations actives. Ajoutez des analyses de sol/eau ou des historiques de récolte pour améliorer la précision."
     },
+    "vegetationCheck": {
+      "titleParcelleVide": "Végétation insuffisante détectée",
+      "bodyParcelleVide": "L'analyse satellitaire de votre parcelle sur les 3 dernières saisons estivales indique l'absence de végétation ligneuse établie. Une parcelle sans arbres adultes ne peut pas être calibrée. Vérifiez que : (1) votre parcelle est correctement délimitée (2) vos arbres sont plantés et établis depuis au moins 4 ans. Si votre plantation est récente (moins de 4 ans), renseignez l'âge réel de vos arbres et relancez.",
+      "correctParcel": "Corriger ma parcelle",
+      "titleZoneGrise": "Végétation mixte détectée — Calibrage lancé",
+      "bodyZoneGrise": "Votre parcelle présente une végétation variable pouvant inclure des cultures intercalaires ou des herbes. Le calibrage est lancé, mais vérifiez que vos arbres sont bien établis."
+    },
     "nextStep": {
       "title": "Prochaine étape sur votre parcelle",
       "body": "Le suivi est actif. Consultez votre calendrier de saison et les conseils proposés pour passer à la mise en œuvre au champ.",

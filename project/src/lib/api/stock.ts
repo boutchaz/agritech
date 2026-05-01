@@ -11,6 +11,71 @@ import type {
 
 const BASE_URL = '/api/v1/stock-entries';
 
+// =====================================================
+// Response types for Sprint 5-7 endpoints
+// =====================================================
+
+export interface StockDashboardData {
+  totalStockValue: number;
+  lowStockAlertsCount: number;
+  pendingEntriesCount: number;
+  recentMovementsCount: number;
+  warehouseCount: number;
+}
+
+export interface BatchData {
+  id: string;
+  batchNumber: string;
+  itemId: string;
+  warehouseId: string;
+  itemName: string;
+  warehouseName: string;
+  remainingQuantity: number;
+  unit: string;
+  costPerUnit: number;
+  totalValue: number;
+  expiryDate: string | null;
+  receivedDate: string;
+  valuationDate: string;
+}
+
+export interface ExpiryAlertData {
+  id: string;
+  itemName: string;
+  batchNumber: string;
+  warehouseName: string;
+  expiryDate: string;
+  daysUntilExpiry: number;
+  quantity: number;
+  unit: string;
+  urgency: 'expired' | 'critical' | 'warning' | 'attention';
+}
+
+export interface ReorderSuggestionData {
+  itemId: string;
+  itemCode: string;
+  itemName: string;
+  currentStock: number;
+  reorderPoint: number;
+  shortfall: number;
+  suggestedOrderQty: number;
+  unit: string;
+}
+
+export interface ApprovalData {
+  id: string;
+  entryId: string;
+  entryNumber: string;
+  entryType: string;
+  entryDate: string;
+  requestedByName: string;
+  warehouseName: string;
+  totalItems: number;
+  totalValue: number;
+  status: 'pending' | 'approved' | 'rejected';
+  requestedAt: string;
+}
+
 export const stockEntriesApi = {
   /**
    * Get all stock entries with optional filters
@@ -63,9 +128,18 @@ export const stockEntriesApi = {
   /**
    * Cancel a stock entry
    */
-  async cancel(id: string, organizationId?: string): Promise<StockEntry> {
-    return apiClient.patch<StockEntry>(`${BASE_URL}/${id}/cancel`, {}, {}, organizationId);
-  },
+    async cancel(id: string, organizationId?: string): Promise<StockEntry> {
+     return apiClient.patch<StockEntry>(`${BASE_URL}/${id}/cancel`, {}, {}, organizationId);
+   },
+
+   async reverse(id: string, reason: string, organizationId?: string): Promise<{
+     original_entry_id: string;
+     reversal_entry_id: string;
+     reversal_number: string;
+     message: string;
+   }> {
+     return apiClient.post(`${BASE_URL}/${id}/reverse`, { reason }, {}, organizationId);
+   },
 
   /**
    * Delete a draft stock entry
@@ -89,6 +163,77 @@ export const stockEntriesApi = {
     if (filters?.crop_cycle_id) params.append('crop_cycle_id', filters.crop_cycle_id);
 
     const url = `${BASE_URL}/movements/list${params.toString() ? `?${params.toString()}` : ''}`;
-    return apiClient.get<StockMovementWithDetails[]>(url, {}, organizationId);
+    const response = await apiClient.get<{ data: StockMovementWithDetails[]; total: number }>(url, {}, organizationId);
+    return Array.isArray(response) ? response : (response.data || []);
+  },
+
+  async getDashboard(organizationId?: string): Promise<StockDashboardData> {
+    return apiClient.get<StockDashboardData>(`${BASE_URL}/dashboard`, {}, organizationId);
+  },
+
+  async getBatches(filters?: Record<string, unknown>, organizationId?: string): Promise<BatchData[]> {
+    const params = new URLSearchParams();
+    if (filters) {
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          params.append(key, String(value));
+        }
+      });
+    }
+    const url = `${BASE_URL}/batches${params.toString() ? `?${params.toString()}` : ''}`;
+    return apiClient.get<BatchData[]>(url, {}, organizationId);
+  },
+
+  async getExpiryAlerts(daysThreshold?: number, organizationId?: string): Promise<ExpiryAlertData[]> {
+    const params = new URLSearchParams();
+    if (daysThreshold) params.append('days_threshold', String(daysThreshold));
+    const url = `${BASE_URL}/expiry-alerts${params.toString() ? `?${params.toString()}` : ''}`;
+    return apiClient.get<ExpiryAlertData[]>(url, {}, organizationId);
+  },
+
+  async getFEFOSuggestion(
+    itemId: string,
+    warehouseId: string,
+    variantId?: string,
+    organizationId?: string,
+  ): Promise<BatchData[]> {
+    const params = new URLSearchParams();
+    params.append('item_id', itemId);
+    params.append('warehouse_id', warehouseId);
+    if (variantId) params.append('variant_id', variantId);
+    return apiClient.get<BatchData[]>(`${BASE_URL}/fefo-suggestion?${params.toString()}`, {}, organizationId);
+  },
+
+  async getReorderSuggestions(organizationId?: string): Promise<ReorderSuggestionData[]> {
+    return apiClient.get<ReorderSuggestionData[]>(`${BASE_URL}/reorder-suggestions`, {}, organizationId);
+  },
+
+  async getSystemQuantity(
+    itemId: string,
+    warehouseId: string,
+    variantId?: string,
+    organizationId?: string,
+  ): Promise<{ quantity: number; unit: string }> {
+    const params = new URLSearchParams();
+    params.append('item_id', itemId);
+    params.append('warehouse_id', warehouseId);
+    if (variantId) params.append('variant_id', variantId);
+    return apiClient.get<{ quantity: number; unit: string }>(`${BASE_URL}/system-quantity?${params.toString()}`, {}, organizationId);
+  },
+
+  async requestApproval(entryId: string, organizationId?: string): Promise<{ message: string }> {
+    return apiClient.post<{ message: string }>(`${BASE_URL}/${entryId}/request-approval`, {}, {}, organizationId);
+  },
+
+  async approveEntry(approvalId: string, organizationId?: string): Promise<{ message: string }> {
+    return apiClient.patch<{ message: string }>(`${BASE_URL}/approvals/${approvalId}/approve`, {}, {}, organizationId);
+  },
+
+  async rejectEntry(approvalId: string, reason: string, organizationId?: string): Promise<{ message: string }> {
+    return apiClient.patch<{ message: string }>(`${BASE_URL}/approvals/${approvalId}/reject`, { reason }, {}, organizationId);
+  },
+
+  async getPendingApprovals(organizationId?: string): Promise<ApprovalData[]> {
+    return apiClient.get<ApprovalData[]>(`${BASE_URL}/approvals/pending`, {}, organizationId);
   },
 };

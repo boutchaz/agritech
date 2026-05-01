@@ -1,4 +1,6 @@
 import { Injectable, HttpException, HttpStatus, Logger } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 import { DatabaseService } from '../database/database.service';
 import { CreateReviewDto } from './dto/create-review.dto';
 
@@ -21,23 +23,34 @@ export interface Review {
 export class ReviewsService {
   private readonly logger = new Logger(ReviewsService.name);
 
-  constructor(private readonly databaseService: DatabaseService) {}
+  constructor(
+    private readonly databaseService: DatabaseService,
+    private readonly jwtService: JwtService,
+    private readonly configService: ConfigService,
+  ) {}
+
+  private async resolveUserOrg(token: string): Promise<{ userId: string; organizationId: string | null }> {
+    const secret = this.configService.get<string>('SUPABASE_JWT_SECRET') || this.configService.get<string>('JWT_SECRET');
+    const payload = await this.jwtService.verifyAsync<{ sub: string }>(token, { secret });
+    const userId = payload.sub;
+
+    const { data: userData } = await this.databaseService.getAdminClient()
+      .from('auth_users_view')
+      .select('organization_id')
+      .eq('id', userId)
+      .single();
+
+    return { userId, organizationId: userData?.organization_id ?? null };
+  }
 
   async canReview(token: string, sellerOrganizationId: string): Promise<{ canReview: boolean; reason?: string }> {
-    const supabase = this.databaseService.getClientWithAuth(token);
+    const { userId, organizationId: myOrgId } = await this.resolveUserOrg(token);
+    const supabase = this.databaseService.getAdminClient();
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
+    if (!userId) {
       return { canReview: false, reason: 'Unauthorized' };
     }
 
-    const { data: userData } = await supabase
-      .from('auth_users_view')
-      .select('organization_id')
-      .eq('id', user.id)
-      .single();
-
-    const myOrgId = userData?.organization_id;
     if (!myOrgId) {
       return { canReview: false, reason: 'No organization' };
     }
@@ -71,20 +84,13 @@ export class ReviewsService {
   }
 
   async createReview(token: string, dto: CreateReviewDto): Promise<Review> {
-    const supabase = this.databaseService.getClientWithAuth(token);
+    const { userId, organizationId: myOrgId } = await this.resolveUserOrg(token);
+    const supabase = this.databaseService.getAdminClient();
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
+    if (!userId) {
       throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
     }
 
-    const { data: userData } = await supabase
-      .from('auth_users_view')
-      .select('organization_id')
-      .eq('id', user.id)
-      .single();
-
-    const myOrgId = userData?.organization_id;
     if (!myOrgId) {
       throw new HttpException('No organization found', HttpStatus.FORBIDDEN);
     }

@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import {
   useStockEntries,
   usePostStockEntry,
-  useCancelStockEntry,
+  useReverseStockEntry,
   useDeleteStockEntry,
 } from '@/hooks/useStockEntries';
 import {
@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/Input';
 import {
   DataTablePagination,
   FilterBar,
@@ -53,11 +54,11 @@ import {
   Edit,
   Trash2,
   CheckCircle,
-  XCircle,
   Download,
   CalendarDays,
   Hash,
   MapPin,
+  RotateCcw,
 } from 'lucide-react';
 import type {
   StockEntry,
@@ -104,12 +105,13 @@ export default function StockEntryList({ onCreateClick, onViewClick }: StockEntr
   const [pageSize, setPageSize] = useState(10);
   const [confirmAction, setConfirmAction] = useState<{
     entry: StockEntry;
-    action: 'post' | 'cancel' | 'delete';
+    action: 'post' | 'delete' | 'reverse';
   } | null>(null);
+  const [reverseReason, setReverseReason] = useState('');
 
   const { data: entries = [], isLoading } = useStockEntries(filters);
   const postEntry = usePostStockEntry();
-  const cancelEntry = useCancelStockEntry();
+  const reverseEntry = useReverseStockEntry();
   const deleteEntry = useDeleteStockEntry();
 
   // Filter entries by search term
@@ -146,17 +148,6 @@ export default function StockEntryList({ onCreateClick, onViewClick }: StockEntr
     }
   };
 
-  const handleCancel = async (entryId: string) => {
-    try {
-      await cancelEntry.mutateAsync(entryId);
-      toast.success(t('stockEntries.toast.cancelSuccess'));
-      setConfirmAction(null);
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : '';
-      toast.error(`${t('stockEntries.toast.cancelError')}: ${message}`);
-    }
-  };
-
   const handleDelete = async (entryId: string) => {
     try {
       await deleteEntry.mutateAsync(entryId);
@@ -168,7 +159,26 @@ export default function StockEntryList({ onCreateClick, onViewClick }: StockEntr
     }
   };
 
-  const getActionLabel = (action: 'post' | 'cancel' | 'delete') => {
+  const handleReverse = async (entryId: string) => {
+    const reason = reverseReason.trim();
+
+    if (!reason) {
+      toast.error(t('stockEntries.toast.reverseReasonRequired', 'Reversal reason is required'));
+      return;
+    }
+
+    try {
+      await reverseEntry.mutateAsync({ entryId, reason });
+      toast.success(t('stockEntries.toast.reverseSuccess', 'Stock entry reversed successfully'));
+      setConfirmAction(null);
+      setReverseReason('');
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : '';
+      toast.error(`${t('stockEntries.toast.reverseError', 'Failed to reverse stock entry')}: ${message}`);
+    }
+  };
+
+  const getActionLabel = (action: 'post' | 'delete' | 'reverse') => {
     switch (action) {
       case 'post':
         return {
@@ -176,17 +186,20 @@ export default function StockEntryList({ onCreateClick, onViewClick }: StockEntr
           description: t('stockEntries.confirm.postDescription'),
           confirmLabel: t('stockEntries.confirm.postConfirm'),
         };
-      case 'cancel':
-        return {
-          title: t('stockEntries.confirm.cancelTitle'),
-          description: t('stockEntries.confirm.cancelDescription'),
-          confirmLabel: t('stockEntries.confirm.cancelConfirm'),
-        };
       case 'delete':
         return {
           title: t('stockEntries.confirm.deleteTitle'),
           description: t('stockEntries.confirm.deleteDescription'),
           confirmLabel: t('stockEntries.confirm.deleteConfirm'),
+        };
+      case 'reverse':
+        return {
+          title: t('stockEntries.confirm.reverseTitle', 'Reverse stock entry'),
+          description: t(
+            'stockEntries.confirm.reverseDescription',
+            'This will create reversal movements and mark the original entry as reversed.'
+          ),
+          confirmLabel: t('stockEntries.confirm.reverseConfirm', 'Reverse entry'),
         };
     }
   };
@@ -289,9 +302,14 @@ export default function StockEntryList({ onCreateClick, onViewClick }: StockEntr
         )}
 
         {entry.status === 'Posted' && (
-          <DropdownMenuItem onClick={() => setConfirmAction({ entry, action: 'cancel' })}>
-            <XCircle className="w-4 h-4 mr-2 text-orange-600" />
-            {t('stockEntries.actions.cancelEntry')}
+          <DropdownMenuItem
+            onClick={() => {
+              setReverseReason('');
+              setConfirmAction({ entry, action: 'reverse' });
+            }}
+          >
+            <RotateCcw className="w-4 h-4 mr-2 text-orange-600" />
+            {t('stockEntries.actions.reverseEntry', 'Reverse entry')}
           </DropdownMenuItem>
         )}
 
@@ -376,15 +394,15 @@ export default function StockEntryList({ onCreateClick, onViewClick }: StockEntr
                   <SelectTrigger>
                     <SelectValue placeholder={t('stockEntries.allStatuses')} />
                   </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">{t('stockEntries.allStatuses')}</SelectItem>
-                    <SelectItem value="Draft">{t('stockEntries.status.draft')}</SelectItem>
-                    <SelectItem value="Submitted">{t('stockEntries.status.submitted')}</SelectItem>
-                    <SelectItem value="Posted">{t('stockEntries.status.posted')}</SelectItem>
-                    <SelectItem value="Cancelled">{t('stockEntries.status.cancelled')}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+                    <SelectContent>
+                      <SelectItem value="all">{t('stockEntries.allStatuses')}</SelectItem>
+                      <SelectItem value="Draft">{t('stockEntries.status.draft')}</SelectItem>
+                      <SelectItem value="Posted">{t('stockEntries.status.posted')}</SelectItem>
+                      <SelectItem value="Cancelled">{t('stockEntries.status.cancelled')}</SelectItem>
+                      <SelectItem value="Reversed">{t('stockEntries.status.reversed', 'Reversed')}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
             </div>
           </div>
         }
@@ -553,6 +571,25 @@ export default function StockEntryList({ onCreateClick, onViewClick }: StockEntr
               <AlertDialogDescription>
                 {getActionLabel(confirmAction.action).description}
               </AlertDialogDescription>
+              {confirmAction.action === 'reverse' && (
+                <div className="mt-4 space-y-2">
+                  <label
+                    htmlFor="stock-entry-reversal-reason"
+                    className="text-sm font-medium text-gray-900 dark:text-gray-100"
+                  >
+                    {t('stockEntries.form.reversalReason', 'Reversal reason')}
+                  </label>
+                  <Input
+                    id="stock-entry-reversal-reason"
+                    value={reverseReason}
+                    onChange={(event) => setReverseReason(event.target.value)}
+                    placeholder={t(
+                      'stockEntries.form.reversalReasonPlaceholder',
+                      'Explain why this stock entry is being reversed'
+                    )}
+                  />
+                </div>
+              )}
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>{t('stockEntries.confirm.cancel')}</AlertDialogCancel>
@@ -560,7 +597,7 @@ export default function StockEntryList({ onCreateClick, onViewClick }: StockEntr
                 onClick={() => {
                   const { entry, action } = confirmAction;
                   if (action === 'post') handlePost(entry.id);
-                  else if (action === 'cancel') handleCancel(entry.id);
+                  else if (action === 'reverse') handleReverse(entry.id);
                   else if (action === 'delete') handleDelete(entry.id);
                 }}
                 className={
@@ -568,6 +605,8 @@ export default function StockEntryList({ onCreateClick, onViewClick }: StockEntr
                     ? 'bg-red-600 hover:bg-red-700'
                     : confirmAction.action === 'post'
                     ? 'bg-green-600 hover:bg-green-700'
+                    : confirmAction.action === 'reverse'
+                    ? 'bg-orange-600 hover:bg-orange-700'
                     : ''
                 }
               >

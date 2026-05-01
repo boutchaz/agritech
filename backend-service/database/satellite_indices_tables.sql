@@ -43,6 +43,7 @@ CREATE TABLE public.satellite_indices_data (
     max_value numeric(10,6),
     std_value numeric(10,6),
     median_value numeric(10,6),
+    percentile_10 numeric(10,6),
     percentile_25 numeric(10,6),
     percentile_75 numeric(10,6),
     percentile_90 numeric(10,6),

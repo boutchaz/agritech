@@ -134,7 +134,7 @@ export default function SignupPage() {
                     <div className="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center">
                         <Leaf className="w-6 h-6 text-white" />
                     </div>
-                    <span className="text-2xl font-bold text-gray-900">AgriTech Market</span>
+                    <span className="text-2xl font-bold text-gray-900">AgroGina Market</span>
                 </Link>
                 <h2 className="mt-6 text-center text-3xl font-bold text-gray-900">
                     Créer un compte
@@ -158,9 +158,9 @@ export default function SignupPage() {
 
                         {/* Seller Type Selection */}
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-3">
+                            <p className="block text-sm font-medium text-gray-700 mb-3">
                                 Je suis
-                            </label>
+                            </p>
                             <div className="grid grid-cols-3 gap-3">
                                 {sellerTypeOptions.map((option) => {
                                     const Icon = option.icon;

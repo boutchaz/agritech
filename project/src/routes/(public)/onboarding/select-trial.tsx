@@ -1,16 +1,14 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { useAuth } from '@/hooks/useAuth'
-import { SUBSCRIPTION_PLANS, type PlanType, BASE_MODULE_IDS, computeModularQuote } from '@/lib/polar'
-import { Check, Loader2, Package, Zap } from 'lucide-react'
+import { BASE_MODULE_IDS, computeModularQuote } from '@/lib/polar'
+import { Check, Loader2 } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useOrganizationStore } from '@/stores/organizationStore'
 import { useAuthStore } from '@/stores/authStore'
 import { useOnboardingStore } from '@/stores/onboardingStore'
 import {
   trackOnboardingStart,
-  trackTrialPlanView,
-  trackTrialPlanSelect,
   trackTrialStartAttempt,
   trackTrialStartSuccess,
   trackTrialStartFailure,
@@ -49,12 +47,9 @@ const pollUntil = async <T,>(
    return null
 }
 
-type TrialMode = 'modular' | 'formula'
-
 function SelectTrialPage() {
   const { currentOrganization, user, loading, refreshUserData, organizations } = useAuth()
   const [isCreating, setIsCreating] = useState(false)
-  const [selectedPlan, setSelectedPlan] = useState<PlanType>('standard')
   const [error, setError] = useState<string | null>(null)
   const [isSettingUp, setIsSettingUp] = useState(false)
   const [setupStep, setSetupStep] = useState<SetupStepId>('auth')
@@ -62,7 +57,6 @@ function SelectTrialPage() {
   const queryClient = useQueryClient()
   const setSelectedPlanType = useOnboardingStore((state) => state.setSelectedPlanType)
 
-  const [trialMode, setTrialMode] = useState<TrialMode>('modular')
   const [selectedModules, setSelectedModules] = useState<string[]>(BASE_MODULE_IDS)
   const [modularHectares, setModularHectares] = useState<number>(50)
 
@@ -78,10 +72,6 @@ function SelectTrialPage() {
   useEffect(() => {
     trackPageView({ title: 'Start Your Free Trial' })
     trackOnboardingStart()
-
-     Object.entries(SUBSCRIPTION_PLANS).forEach(([_planType, plan]) => {
-       trackTrialPlanView(plan.name)
-     })
   }, [])
 
   const hasOrganization = currentOrganization || (organizations && organizations.length > 0)
@@ -324,16 +314,11 @@ function SelectTrialPage() {
       return
     }
 
-    setSelectedPlanType(trialMode === 'formula' ? selectedPlan : 'standard')
+    setSelectedPlanType('standard')
     setIsCreating(true)
     setError(null)
 
-    if (trialMode === 'formula') {
-      trackTrialStartAttempt(selectedPlan)
-      trackTrialPlanSelect(selectedPlan, SUBSCRIPTION_PLANS[selectedPlan].pricePerHaYearHt)
-    } else {
-      trackTrialStartAttempt('standard')
-    }
+    trackTrialStartAttempt('standard')
 
     try {
       const accessToken = useAuthStore.getState().getAccessToken()
@@ -343,12 +328,9 @@ function SelectTrialPage() {
 
       const body: Record<string, unknown> = {
         organization_id: orgToUse.id,
-        plan_type: trialMode === 'formula' ? selectedPlan : 'standard',
-      }
-
-      if (trialMode === 'modular') {
-        body.selected_modules = selectedModules
-        body.contracted_hectares = modularHectares
+        plan_type: 'standard',
+        selected_modules: selectedModules,
+        contracted_hectares: modularHectares,
       }
 
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001'
@@ -373,7 +355,7 @@ function SelectTrialPage() {
         throw new Error(data?.error || 'Failed to create trial subscription')
       }
 
-      trackTrialStartSuccess(trialMode === 'formula' ? selectedPlan : 'standard')
+      trackTrialStartSuccess('standard')
 
       localStorage.setItem('currentOrganization', JSON.stringify(orgToUse))
       useOrganizationStore.getState().setCurrentOrganization({
@@ -394,8 +376,8 @@ function SelectTrialPage() {
         type: 'active'
       })
 
-      // If modules were already selected in modular mode, save them and skip the modules onboarding step
-      if (trialMode === 'modular' && selectedModules.length > 0) {
+      // Modules were already selected, save them and skip the modules onboarding step
+      if (selectedModules.length > 0) {
         const moduleMap: Record<string, boolean> = {}
         selectedModules.forEach((id) => { moduleMap[id] = true })
         useOnboardingStore.getState().updateModuleSelection(moduleMap)
@@ -409,7 +391,7 @@ function SelectTrialPage() {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to create trial subscription'
       setError(errorMessage)
-      trackTrialStartFailure(trialMode === 'formula' ? selectedPlan : 'standard', errorMessage)
+      trackTrialStartFailure('standard', errorMessage)
       setIsCreating(false)
     }
   }
@@ -432,161 +414,45 @@ function SelectTrialPage() {
           </div>
         )}
 
-        <div className="flex justify-center gap-3 mb-8">
-          <button
-            type="button"
-            onClick={() => setTrialMode('modular')}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all ${
-              trialMode === 'modular'
-                ? 'bg-green-600 text-white shadow-lg shadow-green-500/30'
-                : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:border-green-300'
-            }`}
-          >
-            <Package className="h-4 w-4" />
-            Choose Modules
-          </button>
-          <button
-            type="button"
-            onClick={() => setTrialMode('formula')}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all ${
-              trialMode === 'formula'
-                ? 'bg-green-600 text-white shadow-lg shadow-green-500/30'
-                : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:border-green-300'
-            }`}
-          >
-            <Zap className="h-4 w-4" />
-            Quick Start
-          </button>
-        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-8">
+          <div className="lg:col-span-7">
+            <SubscriptionModulePicker
+              selectedModules={selectedModules}
+              onChange={setSelectedModules}
+            />
+          </div>
+          <div className="lg:col-span-5 space-y-6">
+            <HectarePricingCalculator
+              hectares={modularHectares}
+              onChange={setModularHectares}
+            />
 
-        {trialMode === 'modular' ? (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-8">
-            <div className="lg:col-span-7">
-              <SubscriptionModulePicker
-                selectedModules={selectedModules}
-                onChange={setSelectedModules}
-              />
-            </div>
-            <div className="lg:col-span-5 space-y-6">
-              <HectarePricingCalculator
-                hectares={modularHectares}
-                onChange={setModularHectares}
-              />
-
-              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
-                  Your Trial Includes
-                </h3>
-                <div className="space-y-3 text-sm">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
+                Your Trial Includes
+              </h3>
+              <div className="space-y-3 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-600 dark:text-gray-400">Modules</span>
+                  <span className="font-semibold text-gray-900 dark:text-white">{selectedModules.length} selected</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600 dark:text-gray-400">Hectares</span>
+                  <span className="font-semibold text-gray-900 dark:text-white">{modularHectares} ha</span>
+                </div>
+                <div className="border-t border-gray-100 dark:border-gray-700 pt-3">
                   <div className="flex justify-between">
-                    <span className="text-gray-600 dark:text-gray-400">Modules</span>
-                    <span className="font-semibold text-gray-900 dark:text-white">{selectedModules.length} selected</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600 dark:text-gray-400">Hectares</span>
-                    <span className="font-semibold text-gray-900 dark:text-white">{modularHectares} ha</span>
-                  </div>
-                  <div className="border-t border-gray-100 dark:border-gray-700 pt-3">
-                    <div className="flex justify-between">
-                      <span className="text-gray-600 dark:text-gray-400">After trial (monthly)</span>
-                      <span className="font-semibold text-gray-900 dark:text-white">{modularQuote.cycleTtc.toLocaleString()} MAD TTC</span>
-                    </div>
+                    <span className="text-gray-600 dark:text-gray-400">After trial (monthly)</span>
+                    <span className="font-semibold text-gray-900 dark:text-white">${modularQuote.cycleTtc.toLocaleString()} TTC</span>
                   </div>
                 </div>
-                <div className="mt-4 rounded-lg bg-green-50 dark:bg-green-900/20 p-3 text-center">
-                  <span className="text-sm font-bold text-green-700 dark:text-green-400">14-day FREE trial</span>
-                </div>
+              </div>
+              <div className="mt-4 rounded-lg bg-green-50 dark:bg-green-900/20 p-3 text-center">
+                <span className="text-sm font-bold text-green-700 dark:text-green-400">14-day FREE trial</span>
               </div>
             </div>
           </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            {(Object.keys(SUBSCRIPTION_PLANS) as PlanType[]).map((planType) => {
-              const plan = SUBSCRIPTION_PLANS[planType]
-              const isSelected = selectedPlan === planType
-              const handlePlanClick = () => setSelectedPlan(planType)
-
-              return (
-                <div
-                  key={planType}
-                  data-testid={`plan-card-${planType}`}
-                  data-selected={isSelected}
-                  className={`relative bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 cursor-pointer transition-all ${
-                    isSelected
-                      ? 'ring-2 ring-green-500 shadow-green-500/20'
-                      : 'hover:shadow-xl'
-                  }`}
-                  onClick={handlePlanClick}
-                >
-                  {plan.highlighted && (
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                      <span className="bg-gradient-to-r from-green-600 to-lime-500 text-white text-xs font-semibold px-3 py-1 rounded-full">
-                        Recommended
-                      </span>
-                    </div>
-                  )}
-
-                  {isSelected && (
-                    <div className="absolute top-4 right-4">
-                      <div className="bg-green-500 rounded-full p-1">
-                        <Check className="h-4 w-4 text-white" />
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="mb-4">
-                    <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-                      {plan.name}
-                    </h3>
-                    <div className="flex items-baseline mb-2">
-                      <span className="text-3xl font-bold text-gray-900 dark:text-white">
-                        {plan.pricePerHaYearHt} MAD
-                      </span>
-                      <span className="text-gray-600 dark:text-gray-400 ml-2">/ha/year HT</span>
-                    </div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      {plan.description}
-                    </p>
-                  </div>
-
-                  <div className="space-y-2 mb-6">
-                    <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                      Key Features:
-                    </p>
-                    {plan.features.slice(0, 4).map((feature) => (
-                      <div key={feature} className="flex items-start space-x-2">
-                        <div className="mt-1.5 h-1.5 w-1.5 rounded-full bg-green-600 flex-shrink-0" />
-                        <span className="text-xs text-gray-600 dark:text-gray-400">
-                          {feature}
-                        </span>
-                      </div>
-                    ))}
-                    {plan.features.length > 4 && (
-                      <p className="text-xs text-gray-500 dark:text-gray-500 ml-3.5">
-                        +{plan.features.length - 4} more features
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
-                    <p>
-                      Hectares:{' '}
-                      {plan.limits.maxHectaresInclusive
-                        ? `up to ${plan.limits.maxHectaresInclusive}`
-                        : `>${plan.limits.minHectaresExclusive || 0}`}
-                    </p>
-                    <p>
-                      Users:{' '}
-                      {plan.limits.includedUsers === null
-                        ? 'Unlimited'
-                        : plan.limits.includedUsers}
-                    </p>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        )}
+        </div>
 
         <div className="text-center">
           <Button

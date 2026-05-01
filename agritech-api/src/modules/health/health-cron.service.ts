@@ -30,7 +30,8 @@ export class HealthCronService implements OnModuleInit, OnModuleDestroy {
 
     this.serviceUrls = {
       supabase: this.configService.get<string>('SUPABASE_URL') || 'supabase',
-      satellite: this.configService.get<string>('SATELLITE_SERVICE_URL') || 'http://localhost:8000',
+      satellite:
+        this.configService.get<string>('SATELLITE_SERVICE_URL') || 'http://localhost:8001',
       cms: this.configService.get<string>('STRAPI_API_URL') || 'http://localhost:1337/api',
     };
   }
@@ -60,6 +61,10 @@ export class HealthCronService implements OnModuleInit, OnModuleDestroy {
       { name: 'satellite', result: result.services.satellite },
       { name: 'cms', result: result.services.cms },
       { name: 'memory', result: result.services.memory },
+      { name: 'dbPool', result: result.services.dbPool },
+      { name: 'disk', result: result.services.disk },
+      { name: 'cpu', result: result.services.cpu },
+      { name: 'errorRate', result: result.services.errorRate },
     ];
 
     for (const { name, result: check } of checks) {

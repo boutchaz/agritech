@@ -1,4 +1,4 @@
--- AgriTech Desktop SQLite Schema
+-- AgroGina Desktop SQLite Schema
 -- Mirrors Supabase tables for offline usage and data import
 -- Version: 2.0 - Extended to support full organization data export/import
 

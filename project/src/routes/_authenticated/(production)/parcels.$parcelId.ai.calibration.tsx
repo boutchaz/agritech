@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { useAICalibration } from '@/hooks/useAICalibration';
@@ -16,19 +16,8 @@ import { useAIRecommendations } from '@/hooks/useAIRecommendations';
 import type { CalibrationHistoryRecord } from '@/lib/api/calibration-output';
 import type {
   CalibrationOutput,
-  AnomalyRecord,
-  Recommendation,
-  SeverityLevel,
   CalibrationMaturityPhase,
   NutritionOption,
-  IndexTimePoint,
-  SpectralPercentiles,
-  ZoneSummary,
-  MonthlyWeatherAggregate,
-  ExtremeEvent,
-  ConfidenceComponent,
-  Step1Output,
-  Step4Output,
 } from '@/types/calibration-output';
 import type { CalibrationPhase } from '@/lib/api/calibration-output';
 import {
@@ -43,22 +32,6 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import {
-  Line,
-  BarChart,
-  Bar,
-  PieChart,
-  Pie,
-  Cell,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  Area,
-  ComposedChart,
-} from 'recharts';
-import {
   BrainCircuit,
   Play,
   AlertCircle,
@@ -71,14 +44,11 @@ import {
   Target,
   Leaf,
   Activity,
-  BarChart3,
   Shield,
   Calendar,
   Thermometer,
   AlertTriangle,
   Info,
-  Zap,
-  TrendingUp,
   TreePine,
   Save,
   GitCompareArrows,
@@ -100,22 +70,9 @@ import { CalibrationSyntheseBanner } from '@/components/calibration/CalibrationS
 import { useAnnualEligibility } from '@/hooks/useAnnualRecalibration';
 import { annualPlanStatusLabel } from '@/lib/farmerFriendlyLabels';
 import { Button } from '@/components/ui/button';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/radix-select';
-import {
-  defaultPhenologyYear,
-  eligiblePhenologyYearsFromStep4,
-  parsePhenologyDateValue,
-} from '@/lib/calibration-phenology-years';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import {
   confidenceToFraction,
-  confidenceValueToPercent,
   formatConfidencePercent,
 } from '@/lib/calibration-confidence';
 
@@ -168,71 +125,22 @@ const MATURITY_LABELS: Record<CalibrationMaturityPhase, string> = {
   unknown: 'Unknown',
 };
 
-const SEVERITY_COLORS: Record<SeverityLevel, { bg: string; text: string; dot: string }> = {
-  low: { bg: 'bg-blue-100 dark:bg-blue-900/30', text: 'text-blue-800 dark:text-blue-300', dot: 'bg-blue-500' },
-  medium: { bg: 'bg-yellow-100 dark:bg-yellow-900/30', text: 'text-yellow-800 dark:text-yellow-300', dot: 'bg-yellow-500' },
-  high: { bg: 'bg-orange-100 dark:bg-orange-900/30', text: 'text-orange-800 dark:text-orange-300', dot: 'bg-orange-500' },
-  critical: { bg: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-800 dark:text-red-300', dot: 'bg-red-500' },
-};
-
-const ZONE_COLORS: Record<string, string> = {
-  A: '#22c55e',
-  B: '#3b82f6',
-  C: '#f59e0b',
-  D: '#f97316',
-  E: '#ef4444',
-};
-
-const CHART_COLORS = {
-  ndvi: '#22c55e',
-  ndmi: '#3b82f6',
-  ndre: '#eab308',
-  precip: '#3b82f6',
-  gdd: '#f59e0b',
-  band: '#22c55e',
-};
-
-const DATA_QUALITY_FLAG_LABELS: Record<string, string> = {
-  insufficient_satellite_data: 'Limited satellite observations — results may be less reliable',
-  single_pixel_zones: 'Zone analysis uses parcel-level summary (per-pixel rasters not yet available)',
-  evergreen_phenology_approximate: 'Phenological stages are approximate for this evergreen crop',
-};
-
-const HEALTH_COMPONENT_LABELS: Record<string, string> = {
-  vigor: 'Vigor',
-  temporal_stability: 'Temporal Stability',
-  spatial_heterogeneity: 'Spatial Uniformity',
-  homogeneity: 'Temporal Stability',
-  stability: 'Stability',
-  hydric: 'Hydric Status',
-  nutritional: 'Nutritional Status',
-};
-
 function healthScoreColor(score: number): string {
   if (score >= 70) return 'text-green-600 dark:text-green-400';
   if (score >= 40) return 'text-yellow-600 dark:text-yellow-400';
   return 'text-red-600 dark:text-red-400';
 }
 
-function healthBarColor(score: number): string {
-  if (score >= 70) return 'bg-green-500';
-  if (score >= 40) return 'bg-yellow-500';
-  return 'bg-red-500';
-}
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-US', {
+function formatCalibrationHistoryRunAt(iso: string, locale: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleString(locale || undefined, {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
   });
-}
-
-function toSeverityLevel(value: string): SeverityLevel {
-  if (value === 'high' || value === 'medium' || value === 'low' || value === 'critical') {
-    return value;
-  }
-  return 'low';
 }
 
 const PhaseBanner = ({ phase }: { phase: CalibrationPhase }) => {
@@ -248,7 +156,7 @@ const PhaseBanner = ({ phase }: { phase: CalibrationPhase }) => {
           <div>
             <h3 className="font-semibold text-amber-900 dark:text-amber-100">Awaiting Validation</h3>
             <p className="text-sm text-amber-700 dark:text-amber-300">
-              Review the calibration report below and validate to activate AI diagnostics.
+              Review the calibration status below and validate to activate AI diagnostics.
             </p>
           </div>
         </div>
@@ -299,765 +207,9 @@ const PhaseBanner = ({ phase }: { phase: CalibrationPhase }) => {
   return null;
 };
 
-const ExecutiveSummary = ({ output, t }: { output: CalibrationOutput; t: (key: string) => string }) => {
-  const health = output.step8?.health_score;
-  const confidence = output.confidence;
-  const confidencePct = confidence
-    ? (confidenceValueToPercent(confidence.normalized_score) ?? 0)
-    : 0;
-  const yieldPotential = output.step6?.yield_potential;
-  const alternance = output.step6?.alternance;
-  const zones = output.step7?.zone_summary;
-
-  if (!health) return null;
-
-  return (
-    <div className="space-y-6" data-testid="calibration-executive-summary">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-6">
-          <div className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Health Score</div>
-          <div className="flex items-end space-x-3">
-            <span className={`text-5xl font-bold ${healthScoreColor(health.total)}`}>
-              {health.total}
-            </span>
-            <span className="text-lg text-gray-400 dark:text-gray-500 mb-1">/100</span>
-          </div>
-          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 mt-3">
-            <div
-              className={`h-2.5 rounded-full transition-all ${healthBarColor(health.total)}`}
-              style={{ width: `${health.total}%` }}
-            />
-          </div>
-
-          <div className="mt-4 space-y-2">
-            {Object.entries(health.components ?? {}).map(([key, value]) => (
-              <div key={key} className="flex items-center space-x-3">
-                <span className="text-xs text-gray-500 dark:text-gray-400 w-24">{HEALTH_COMPONENT_LABELS[key] ?? key}</span>
-                <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
-                  <div
-                    className={`h-1.5 rounded-full ${healthBarColor(value)}`}
-                    style={{ width: `${value}%` }}
-                  />
-                </div>
-                <span className="text-xs font-medium text-gray-700 dark:text-gray-300 w-8 text-right">{value}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-4">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Confidence</span>
-              <span className="text-lg font-bold text-gray-900 dark:text-white">
-                {confidencePct}%
-              </span>
-            </div>
-            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-              <div
-                className="bg-blue-500 h-2 rounded-full transition-all"
-                style={{ width: `${confidencePct}%` }}
-              />
-            </div>
-          </div>
-
-          <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-4">
-            <div className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Maturity Phase</div>
-            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
-              {MATURITY_LABELS[output.phase_age]}
-            </span>
-          </div>
-
-          {yieldPotential && (
-          <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-4">
-            <div className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Yield Potential</div>
-            <div className="flex items-baseline space-x-1">
-              <span className="text-xl font-bold text-gray-900 dark:text-white">
-                {yieldPotential.minimum} – {yieldPotential.maximum}
-              </span>
-              <span className="text-sm text-gray-500 dark:text-gray-400">{yieldPotential.unit ?? 't/ha'}</span>
-            </div>
-            <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-              Method: {(yieldPotential.method ?? '').replace(/_/g, ' ')} · Bracket: {(yieldPotential.reference_bracket ?? '').replace(/_/g, ' ')}
-            </div>
-            {yieldPotential.historical_average != null && (
-              <div className="text-xs text-gray-400 dark:text-gray-500">
-                Historical avg: {yieldPotential.historical_average} t/ha
-              </div>
-            )}
-            {alternance?.detected && (
-              <div className="mt-2 inline-flex items-center rounded-md bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700">
-                Alternance detected - {alternance.current_year_type === 'on' ? 'ON' : 'OFF'} year (confidence:{' '}
-                {(alternance.confidence * 100).toFixed(0)}%)
-              </div>
-            )}
-          </div>
-          )}
-        </div>
-      </div>
-
-      {(zones?.length ?? 0) > 1 && (
-        <div>
-          <div className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">{t('calibrationZones.zoneDistribution')}</div>
-          <div className="flex items-center space-x-2">
-            {(zones ?? []).map((zone) => (
-              <div
-                key={zone.class_name}
-                className="flex-1 text-center"
-                style={{ flex: zone.surface_percent }}
-              >
-                <div
-                  className="h-4 rounded-sm"
-                  style={{ backgroundColor: ZONE_COLORS[zone.class_name] ?? '#6b7280' }}
-                />
-                <div className="text-xs mt-1 text-gray-600 dark:text-gray-400">
-                  {t(`calibrationZones.${zone.class_name}`)} ({zone.surface_percent.toFixed(0)}%)
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
-interface IndexChartProps {
-  title: string;
-  data: IndexTimePoint[];
-  color: string;
-  percentiles?: SpectralPercentiles;
-}
-
-const IndexTimeSeriesChart = ({ title, data, color, percentiles }: IndexChartProps) => {
-  const chartData = data.map((pt) => ({
-    date: new Date(pt.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-    value: Number(pt.value.toFixed(3)),
-    ...(percentiles ? { p25: percentiles.p25, p75: percentiles.p75 } : {}),
-  }));
-
-  return (
-    <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-4">
-      <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">{title}</h4>
-      <ResponsiveContainer width="100%" height={220}>
-        <ComposedChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
-          <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-          <XAxis dataKey="date" tick={{ fontSize: 10 }} angle={-30} textAnchor="end" height={50} />
-          <YAxis tick={{ fontSize: 10 }} domain={['auto', 'auto']} />
-          <Tooltip />
-          {percentiles && (
-            <Area
-              type="monotone"
-              dataKey="p75"
-              stroke="none"
-              fill={color}
-              fillOpacity={0.1}
-              name="P75"
-            />
-          )}
-          {percentiles && (
-            <Area
-              type="monotone"
-              dataKey="p25"
-              stroke="none"
-              fill="#ffffff"
-              fillOpacity={1}
-              name="P25"
-            />
-          )}
-          <Line
-            type="monotone"
-            dataKey="value"
-            stroke={color}
-            strokeWidth={2}
-            dot={{ r: 2 }}
-            name={title}
-          />
-        </ComposedChart>
-      </ResponsiveContainer>
-    </div>
-  );
-};
-
-const ZonePieChart = ({ zones, t }: { zones: ZoneSummary[]; t: (key: string) => string }) => {
-  const data = zones.map((z) => ({
-    name: t(`calibrationZones.${z.class_name}`),
-    value: z.surface_percent,
-    color: ZONE_COLORS[z.class_name] ?? '#6b7280',
-  }));
-
-  return (
-    <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-4">
-      <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">{t('calibrationZones.spatialHomogeneity')}</h4>
-      <ResponsiveContainer width="100%" height={220}>
-        <PieChart>
-          <Pie
-            data={data}
-            cx="50%"
-            cy="50%"
-            outerRadius={80}
-            dataKey="value"
-            label={({ name, value }: { name: string; value: number }) => `${name}: ${value.toFixed(0)}%`}
-          >
-            {data.map((entry) => (
-              <Cell key={`cell-${entry.name}`} fill={entry.color} />
-            ))}
-          </Pie>
-          <Tooltip formatter={(val: number) => `${val.toFixed(1)}%`} />
-        </PieChart>
-      </ResponsiveContainer>
-    </div>
-  );
-};
-
-const PhenologyTimeline = ({
-  step4,
-  step1,
-  plantingYear,
-}: {
-  step4: Step4Output | undefined;
-  step1: Step1Output | undefined;
-  plantingYear: number | null | undefined;
-}) => {
-  const { t, i18n } = useTranslation('ai');
-  const [selectedYear, setSelectedYear] = useState<number | null>(null);
-
-  const eligible = useMemo(
-    () => eligiblePhenologyYearsFromStep4(step4, step1, plantingYear),
-    [step4, step1, plantingYear],
-  );
-
-  const effectiveYear =
-    selectedYear != null && eligible.includes(selectedYear)
-      ? selectedYear
-      : defaultPhenologyYear(eligible);
-
-  const dates = useMemo(() => {
-    if (effectiveYear != null && step4?.yearly_stages?.[String(effectiveYear)]) {
-      return step4.yearly_stages[String(effectiveYear)] as unknown as Record<
-        string,
-        string | unknown
-      >;
-    }
-    return step4?.mean_dates as unknown as Record<string, string | unknown> | undefined;
-  }, [effectiveYear, step4]);
-  
-
-  // Same chronological order as backend step4_phenology_detection._temporal_order_valid
-  const stages = [
-    { key: 'dormancy_exit', labelKey: 'calibrationReview.level4.dormancyExit', icon: <Zap className="w-3 h-3" /> },
-    { key: 'plateau_start', labelKey: 'calibrationReview.level4.plateauStart', icon: <Activity className="w-3 h-3" /> },
-    { key: 'peak', labelKey: 'calibrationReview.level4.peak', icon: <TrendingUp className="w-3 h-3" /> },
-    { key: 'decline_start', labelKey: 'calibrationReview.level4.declineStart', icon: <AlertTriangle className="w-3 h-3" /> },
-    { key: 'dormancy_entry', labelKey: 'calibrationReview.level4.dormancyEntry', icon: <Calendar className="w-3 h-3" /> },
-  ];
-
-  return (
-    <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between mb-3">
-        <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-          {t('calibrationReview.level4.phenologyTimeline')}
-        </h4>
-        {eligible.length > 0 && (
-          <div className="flex flex-col gap-1 w-full sm:w-auto sm:min-w-[200px]">
-            <span className="text-xs text-gray-500 dark:text-gray-400">
-              {t('calibrationReview.level4.phenologyCampaignYear')}
-            </span>
-            <Select
-              value={effectiveYear != null ? String(effectiveYear) : undefined}
-              onValueChange={(v) => setSelectedYear(parseInt(v, 10))}
-            >
-              <SelectTrigger
-                className="h-9 bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-700"
-                data-testid="phenology-year-select"
-              >
-                <SelectValue placeholder={t('calibrationReview.level4.pending')} />
-              </SelectTrigger>
-              <SelectContent>
-                {eligible.map((y) => (
-                  <SelectItem key={y} value={String(y)}>
-                    {y}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <p className="text-[10px] text-gray-400 dark:text-gray-500 leading-snug">
-              {t('calibrationReview.level4.phenologyCampaignYearHint')}
-            </p>
-          </div>
-        )}
-      </div>
-      {eligible.length === 0 && step4?.mean_dates && (
-        <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-          {t('calibrationReview.level4.phenologyMeanAcrossYears')}
-        </p>
-      )}
-      <div className="flex items-center justify-between">
-        {stages.map((stage, i) => {
-          const raw = dates?.[stage.key];
-          const dt = parsePhenologyDateValue(raw);
-          return (
-            <div key={stage.key} className="flex flex-col items-center text-center flex-1">
-              <div className="flex items-center w-full">
-                {i > 0 && <div className="flex-1 h-0.5 bg-green-300 dark:bg-green-700" />}
-                <div className="w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/40 flex items-center justify-center text-green-600 dark:text-green-400 shrink-0">
-                  {stage.icon}
-                </div>
-                {i < stages.length - 1 && <div className="flex-1 h-0.5 bg-green-300 dark:bg-green-700" />}
-              </div>
-              <span className="text-xs font-medium text-gray-700 dark:text-gray-300 mt-1">
-                {t(stage.labelKey)}
-              </span>
-              {dt ? (
-                <span className="text-xs text-gray-400 dark:text-gray-500">
-                  {dt.toLocaleDateString(i18n.language, { month: 'short', day: 'numeric' })}
-                </span>
-              ) : (
-                <span className="text-xs text-gray-400 dark:text-gray-500">
-                  {t('calibrationReview.level4.pending')}
-                </span>
-              )}
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-};
-
-const MonthlyWeatherChart = ({ aggregates }: { aggregates: MonthlyWeatherAggregate[] }) => {
-  const data = aggregates.map((m) => ({
-    month: m.month,
-    precipitation: Number(m.precipitation_total.toFixed(1)),
-    gdd: Number(m.gdd_total.toFixed(0)),
-  }));
-
-  return (
-    <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-4">
-      <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Monthly Weather</h4>
-      <ResponsiveContainer width="100%" height={220}>
-        <BarChart data={data} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
-          <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-          <XAxis dataKey="month" tick={{ fontSize: 10 }} />
-          <YAxis yAxisId="precip" tick={{ fontSize: 10 }} />
-          <YAxis yAxisId="gdd" orientation="right" tick={{ fontSize: 10 }} />
-          <Tooltip />
-          <Legend wrapperStyle={{ fontSize: 11 }} />
-          <Bar yAxisId="precip" dataKey="precipitation" fill={CHART_COLORS.precip} name="Precipitation (mm)" />
-          <Bar yAxisId="gdd" dataKey="gdd" fill={CHART_COLORS.gdd} name="GDD" />
-        </BarChart>
-      </ResponsiveContainer>
-    </div>
-  );
-};
-
-const DetailedAnalysis = ({
-  output,
-  t,
-  plantingYear,
-}: {
-  output: CalibrationOutput;
-  t: (key: string) => string;
-  plantingYear?: number | null;
-}) => {
-  const step1 = output.step1;
-  const step2 = output.step2;
-  const step3 = output.step3;
-  const step4 = output.step4;
-  const step7 = output.step7;
-
-  const ndviData = step1?.index_time_series?.NDVI;
-  const ndmiData = step1?.index_time_series?.NDMI;
-  const ndreData = step1?.index_time_series?.NDRE;
-  const ndviPercentiles = step3?.global_percentiles?.NDVI;
-  const ndmiPercentiles = step3?.global_percentiles?.NDMI;
-  const ndrePercentiles = step3?.global_percentiles?.NDRE;
-
-  return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {ndviData && ndviData.length > 0 && (
-          <IndexTimeSeriesChart
-            title="NDVI - Vegetative Vigor"
-            data={ndviData}
-            color={CHART_COLORS.ndvi}
-            percentiles={ndviPercentiles}
-          />
-        )}
-        {ndmiData && ndmiData.length > 0 && (
-          <IndexTimeSeriesChart
-            title="NDMI - Hydric State"
-            data={ndmiData}
-            color={CHART_COLORS.ndmi}
-            percentiles={ndmiPercentiles}
-          />
-        )}
-        {ndreData && ndreData.length > 0 && (
-          <IndexTimeSeriesChart
-            title="NDRE - Nutritional State"
-            data={ndreData}
-            color={CHART_COLORS.ndre}
-            percentiles={ndrePercentiles}
-          />
-        )}
-        {step7?.zone_summary && step7.zone_summary.length > 1 ? (
-          <ZonePieChart zones={step7.zone_summary} t={t} />
-        ) : (
-          <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-4">
-            <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">{t('calibrationZones.spatialHomogeneity')}</h4>
-            <div className="flex flex-col items-center justify-center h-[188px] text-center">
-              <Target className="w-8 h-8 text-gray-300 dark:text-gray-600 mb-2" />
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                {t('calibrationZones.comingSoon')}
-              </p>
-              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                {t('calibrationZones.comingSoonSub')}
-              </p>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {output?.metadata?.data_quality_flags?.includes('evergreen_phenology_approximate') && (
-        <div className="flex items-start space-x-2 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800/30">
-          <Info className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
-          <p className="text-sm text-amber-700 dark:text-amber-300">
-            This crop is evergreen — phenological stages are approximate. Evergreen trees show subtle seasonal variation
-            that is difficult to detect from satellite imagery alone.
-          </p>
-        </div>
-      )}
-      <PhenologyTimeline step4={step4} step1={step1} plantingYear={plantingYear ?? null} />
-
-      {step2?.monthly_aggregates && step2.monthly_aggregates.length > 0 && (
-        <MonthlyWeatherChart aggregates={step2.monthly_aggregates} />
-      )}
-    </div>
-  );
-};
-
-const AnomalyList = ({
-  anomalies,
-  extremeEvents,
-}: { anomalies: AnomalyRecord[]; extremeEvents: ExtremeEvent[] }) => {
-  if (anomalies.length === 0 && extremeEvents.length === 0) {
-    return (
-      <div className="flex items-center space-x-3 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
-        <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400" />
-        <span className="text-sm text-green-700 dark:text-green-300">No anomalies detected during the analysis period.</span>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-4">
-      {anomalies.length > 0 && (
-        <div className="space-y-2">
-          <h4 className="text-sm font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">Spectral Anomalies</h4>
-          {anomalies.map((anomaly) => {
-            const sev = SEVERITY_COLORS[anomaly.severity];
-            return (
-              <div
-                key={`anomaly-${anomaly.date}-${anomaly.anomaly_type}`}
-                className={`flex items-start space-x-3 p-3 rounded-lg border ${sev.bg} border-gray-200 dark:border-gray-700`}
-              >
-                <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${sev.dot}`} />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center space-x-2 flex-wrap">
-                    <span className="text-sm font-medium text-gray-900 dark:text-white">
-                      {formatDate(anomaly.date)}
-                    </span>
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${sev.bg} ${sev.text}`}>
-                      {(anomaly.anomaly_type ?? '').replace(/_/g, ' ')}
-                    </span>
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${sev.bg} ${sev.text}`}>
-                      {anomaly.severity}
-                    </span>
-                    {anomaly.index_name && (
-                      <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
-                        {anomaly.index_name}
-                      </span>
-                    )}
-                  </div>
-                  {(anomaly.value != null || anomaly.deviation != null) && (
-                    <div className="flex items-center space-x-3 mt-1.5 text-xs text-gray-600 dark:text-gray-400">
-                      {anomaly.value != null && (
-                        <span>
-                          Value: <span className="font-medium text-gray-800 dark:text-gray-200">{anomaly.value.toFixed(3)}</span>
-                        </span>
-                      )}
-                      {anomaly.previous_value != null && (
-                        <span>
-                          Prev: <span className="font-medium text-gray-800 dark:text-gray-200">{anomaly.previous_value.toFixed(3)}</span>
-                        </span>
-                      )}
-                      {anomaly.deviation != null && (
-                        <span>
-                          Deviation: <span className="font-medium text-gray-800 dark:text-gray-200">{(anomaly.deviation * 100).toFixed(1)}%</span>
-                        </span>
-                      )}
-                    </div>
-                  )}
-                  {anomaly.weather_reference && (
-                    <div className="flex items-center space-x-1 mt-1 text-xs text-gray-500 dark:text-gray-400">
-                      <CloudRain className="w-3 h-3" />
-                      <span>Weather ref: {anomaly.weather_reference}</span>
-                    </div>
-                  )}
-                  {anomaly.excluded_from_reference && (
-                    <span className="text-xs text-gray-400 dark:text-gray-500 italic">Excluded from reference baseline</span>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {extremeEvents.length > 0 && (
-        <div className="space-y-2">
-          <h4 className="text-sm font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">Extreme Weather Events</h4>
-          {extremeEvents.map((event) => {
-            const sev = SEVERITY_COLORS[event.severity];
-            return (
-              <div
-                key={`event-${event.date}-${event.event_type}`}
-                className={`flex items-center space-x-3 p-3 rounded-lg ${sev.bg}`}
-              >
-                <Thermometer className={`w-4 h-4 ${sev.text}`} />
-                <span className="text-sm text-gray-900 dark:text-white">{formatDate(event.date)}</span>
-                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${sev.bg} ${sev.text}`}>
-                  {(event.event_type ?? '').replace(/_/g, ' ')}
-                </span>
-                <span className={`text-xs font-medium ${sev.text}`}>{event.severity}</span>
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-};
-
-const RecommendationsList = ({ recommendations }: { recommendations: Recommendation[] }) => {
-  if (recommendations.length === 0) {
-    return (
-      <div className="flex items-center space-x-3 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
-        <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400" />
-        <span className="text-sm text-green-700 dark:text-green-300">No immediate actions recommended.</span>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-3">
-      {recommendations.map((recommendation) => {
-        const severity = toSeverityLevel(recommendation.severity);
-        const sev = SEVERITY_COLORS[severity];
-
-        return (
-          <div
-            key={`recommendation-${recommendation.type}-${recommendation.component ?? 'none'}-${recommendation.message}`}
-            className={`p-4 rounded-lg border ${sev.bg} border-gray-200 dark:border-gray-700`}
-          >
-            <div className="flex items-center gap-2 flex-wrap mb-1.5">
-              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${sev.bg} ${sev.text}`}>
-                {(recommendation.type ?? '').replace(/_/g, ' ')}
-              </span>
-              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${sev.bg} ${sev.text}`}>
-                {severity}
-              </span>
-              {recommendation.component && (
-                <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
-                  {recommendation.component.replace(/_/g, ' ')}
-                </span>
-              )}
-            </div>
-            <p className="text-sm text-gray-800 dark:text-gray-200">{recommendation.message}</p>
-          </div>
-        );
-      })}
-    </div>
-  );
-};
-
-const ConfidenceBreakdown = ({ components }: { components: Record<string, ConfidenceComponent> }) => {
-  return (
-    <div className="space-y-2">
-      {Object.entries(components ?? {}).map(([name, comp]) => {
-        const pct = comp.max_score > 0 ? (comp.score / comp.max_score) * 100 : 0;
-        return (
-          <div key={name} className="flex items-center space-x-3">
-            <span className="text-xs text-gray-500 dark:text-gray-400 w-28 capitalize">{name.replace(/_/g, ' ')}</span>
-            <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
-              <div
-                className="bg-blue-500 h-1.5 rounded-full"
-                style={{ width: `${pct}%` }}
-              />
-            </div>
-            <span className="text-xs font-medium text-gray-700 dark:text-gray-300 w-16 text-right">
-              {comp.score}/{comp.max_score}
-            </span>
-          </div>
-        );
-      })}
-    </div>
-  );
-};
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function toFiniteNumber(value: unknown): number | null {
-  if (typeof value === 'number' && Number.isFinite(value)) {
-    return value;
-  }
-  if (typeof value === 'string') {
-    const parsed = Number(value);
-    if (Number.isFinite(parsed)) {
-      return parsed;
-    }
-  }
-  return null;
-}
-
-function getRunSatelliteImages(report: Record<string, unknown> | null | undefined): Array<Record<string, unknown>> {
-  if (!report || !isRecord(report)) {
-    return [];
-  }
-
-  const inputs = isRecord(report.inputs) ? report.inputs : null;
-  const satelliteImages = inputs?.satellite_images;
-  if (!Array.isArray(satelliteImages)) {
-    return [];
-  }
-
-  return satelliteImages.filter(isRecord);
-}
-
-const CalibrationImprovement = ({ output, report }: { output: CalibrationOutput;
-  report?: Record<string, unknown> | null; }) => {
-  const flagsRaw = output?.metadata?.data_quality_flags;
-  const flags = Array.isArray(flagsRaw) ? flagsRaw : [];
-  const conf = output.confidence;
-  const step1 = output.step1;
-
-  if (!conf || !step1) return null;
-
-  const satelliteImages = getRunSatelliteImages(report);
-  const runCloudValues = satelliteImages
-    .map((image) => toFiniteNumber(image.cloud_coverage))
-    .filter((value): value is number => value !== null);
-  const averageInputCloudCoverage = runCloudValues.length > 0
-    ? runCloudValues.reduce((sum, value) => sum + value, 0) / runCloudValues.length
-    : null;
-  const retainedImageCount = satelliteImages.length > 0
-    ? Math.max(0, satelliteImages.length - (step1.filtered_image_count ?? 0))
-    : (step1.index_time_series?.NDVI?.filter((point) => !point.interpolated) ?? []).length;
-  const allCloudValuesAreZero = runCloudValues.length > 0 && runCloudValues.every((value) => value === 0);
-  const hasFlatCloudMetrics = satelliteImages.length > 0 && allCloudValuesAreZero && (step1.filtered_image_count ?? 0) === 0;
-
-  return (
-    <div className="space-y-6">
-      <div>
-        <h4 className="text-sm font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider mb-3">
-          Confidence Score Breakdown
-        </h4>
-        <ConfidenceBreakdown components={conf.components} />
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-        <div className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-3">
-          <div className="flex items-center space-x-2 mb-1">
-            <Satellite className="w-4 h-4 text-blue-500" />
-            <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Avg Input Cloud</span>
-          </div>
-          <span className="text-lg font-bold text-gray-900 dark:text-white">
-            {(averageInputCloudCoverage ?? step1.cloud_coverage_mean).toFixed(1)}%
-          </span>
-          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-            Across cached satellite readings used for this run
-          </p>
-        </div>
-        <div className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-3">
-          <div className="flex items-center space-x-2 mb-1">
-            <BarChart3 className="w-4 h-4 text-green-500" />
-            <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Usable Images</span>
-          </div>
-          <span className="text-lg font-bold text-gray-900 dark:text-white">
-            {retainedImageCount}
-          </span>
-          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-            Retained after cloud filtering
-          </p>
-        </div>
-        <div className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-3">
-          <div className="flex items-center space-x-2 mb-1">
-            <CloudOff className="w-4 h-4 text-amber-500" />
-            <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Rejected for Clouds</span>
-          </div>
-          <span className="text-lg font-bold text-gray-900 dark:text-white">
-            {step1.filtered_image_count ?? 0}
-          </span>
-          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-            Images above the 20% cloud threshold
-          </p>
-        </div>
-        <div className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-3">
-          <div className="flex items-center space-x-2 mb-1">
-            <AlertCircle className="w-4 h-4 text-yellow-500" />
-            <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Outliers Removed</span>
-          </div>
-          <span className="text-lg font-bold text-gray-900 dark:text-white">
-            {step1.outlier_count ?? 0}
-          </span>
-        </div>
-      </div>
-
-      {hasFlatCloudMetrics && (
-        <div className="flex items-start space-x-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-          <Info className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
-          <span className="text-sm text-blue-700 dark:text-blue-300">
-            Cloud metrics are flat for this run because the cached satellite inputs only contain 0% cloud metadata, so the cloud filter had nothing to reject.
-          </span>
-        </div>
-      )}
-
-      {flags.length > 0 && (
-        <div>
-          <h4 className="text-sm font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider mb-2">
-            Data Quality Notes
-          </h4>
-          <div className="space-y-1">
-            {flags.map((flag) => (
-              <div key={flag} className="flex items-center space-x-2 text-sm">
-                <Info className="w-4 h-4 text-yellow-500 shrink-0" />
-                <span className="text-gray-700 dark:text-gray-300">{DATA_QUALITY_FLAG_LABELS[flag] ?? flag}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {flags.length === 0 && (
-        <div className="flex items-center space-x-2 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
-          <CheckCircle2 className="w-4 h-4 text-green-500" />
-          <span className="text-sm text-green-700 dark:text-green-300">No data quality issues detected.</span>
-        </div>
-      )}
-
-      <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
-        <div className="flex items-center justify-between text-xs text-gray-400 dark:text-gray-500">
-          <span>Version: {output?.metadata?.version}</span>
-          <span>Generated: {formatDate(output?.metadata?.generated_at)}</span>
-        </div>
-      </div>
-    </div>
-  );
-};
-
 const CalibrationHistoryList = ({ records }: { records: CalibrationHistoryRecord[] }) => {
+  const { i18n } = useTranslation();
+
   if (records.length === 0) {
     return (
       <div className="flex items-center space-x-3 p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg">
@@ -1093,7 +245,7 @@ const CalibrationHistoryList = ({ records }: { records: CalibrationHistoryRecord
               <div className="flex flex-col">
                 <div className="flex items-center space-x-2">
                   <span className="text-sm font-medium text-gray-900 dark:text-white">
-                    {formatDate(record.created_at)}
+                    {formatCalibrationHistoryRunAt(record.created_at, i18n.language)}
                   </span>
                   {isLatest && (
                     <span className="text-xs px-1.5 py-0.5 rounded bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 font-medium">
@@ -1138,88 +290,6 @@ const CalibrationHistoryList = ({ records }: { records: CalibrationHistoryRecord
           </div>
         );
       })}
-    </div>
-  );
-};
-
-const CalibrationReport = ({
-  output,
-  report,
-  t,
-  phase,
-  plantingYear,
-}: {
-  output: CalibrationOutput;
-  report?: Record<string, unknown> | null;
-  t: (key: string) => string;
-  phase?: string;
-  plantingYear?: number | null;
-}) => {
-  const hasInsufficientData = output?.metadata?.data_quality_flags?.includes('insufficient_satellite_data');
-
-  return (
-      <div className="space-y-4" data-testid="calibration-report">
-      {hasInsufficientData && (
-        <div className="bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-300 dark:border-amber-700 p-4">
-          <div className="flex items-start space-x-3">
-            <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
-            <div>
-              <h4 className="font-semibold text-amber-900 dark:text-amber-100">Limited Satellite Data</h4>
-              <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
-                This calibration was computed with fewer than 6 satellite observations. Results may be unreliable —
-                consider re-calibrating once more imagery is available.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <CollapsibleSection
-        title="Executive Summary"
-        icon={<Target className="w-5 h-5 text-green-600 dark:text-green-400" />}
-        defaultOpen={true}
-      >
-        <ExecutiveSummary output={output} t={t} />
-      </CollapsibleSection>
-
-      <CollapsibleSection
-        title="Detailed Analysis"
-        icon={<BarChart3 className="w-5 h-5 text-blue-600 dark:text-blue-400" />}
-        defaultOpen={false}
-      >
-        <DetailedAnalysis output={output} t={t} plantingYear={plantingYear} />
-      </CollapsibleSection>
-
-      <CollapsibleSection
-        title={`Detected Anomalies (${output.step5?.anomalies?.length ?? 0})`}
-        icon={<AlertTriangle className="w-5 h-5 text-orange-600 dark:text-orange-400" />}
-        defaultOpen={false}
-      >
-        <AnomalyList anomalies={output.step5?.anomalies ?? []} extremeEvents={output.step2?.extreme_events ?? []} />
-      </CollapsibleSection>
-
-      {phase === 'active' && (output.recommendations ?? []).length > 0 && (
-        <CollapsibleSection
-          title="Recommendations"
-          icon={<Leaf className="w-5 h-5 text-green-600 dark:text-green-400" />}
-          badge={(
-            <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 font-medium">
-              {(output.recommendations ?? []).length}
-            </span>
-          )}
-          defaultOpen={false}
-        >
-          <RecommendationsList recommendations={output.recommendations ?? []} />
-        </CollapsibleSection>
-      )}
-
-      <CollapsibleSection
-        title="Calibration Improvement"
-        icon={<Shield className="w-5 h-5 text-purple-600 dark:text-purple-400" />}
-        defaultOpen={false}
-      >
-        <CalibrationImprovement output={output} report={report} />
-      </CollapsibleSection>
     </div>
   );
 };
@@ -1627,21 +697,21 @@ const CalibrationProgressStepper = ({ progress }: { progress: CalibrationProgres
 
 const AICalibrationPage = () => {
   const { parcelId } = Route.useParams();
-  const { t } = useTranslation();
   const { t: tAi } = useTranslation('ai');
   const navigate = useNavigate();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmAction] = useState<{title:string;description?:string;variant?:"destructive"|"default";onConfirm:()=>void}>({title:"",onConfirm:()=>{}});
   const [isPartialWizardOpen, setIsPartialWizardOpen] = useState(false);
   const [isFullWizardOpen, setIsFullWizardOpen] = useState(false);
+  const [lastCalibrationLaunchAt, setLastCalibrationLaunchAt] = useState<number | null>(null);
 
   const { data: parcelData, refetch: refetchParcel } = useParcelById(parcelId);
-  const { data: calibration, isLoading: isCalibrationLoading } = useAICalibration(parcelId);
-  const { data: phase } = useCalibrationPhase(parcelId);
+  const { data: calibration, isLoading: isCalibrationLoading, refetch: refetchCalibration } = useAICalibration(parcelId);
+  const { data: phase, refetch: refetchPhase } = useCalibrationPhase(parcelId);
   const { data: diagnostics } = useAIDiagnostics(parcelId, phase === 'active');
   const calibrationProgress = useCalibrationProgress(parcelId);
 
-  const { data: reportData, isLoading: isReportLoading } = useCalibrationReport(parcelId);
+  const { data: reportData, isLoading: isReportLoading, refetch: refetchReport } = useCalibrationReport(parcelId);
   const { data: historyRecords } = useCalibrationHistory(parcelId);
   const { data: annualPlan } = useAIPlan(parcelId);
   const { data: aiRecommendations } = useAIRecommendations(parcelId);
@@ -1669,6 +739,9 @@ const AICalibrationPage = () => {
   const canShowAnnualBanner = phase === 'active' && annualEligibility?.eligible === true;
   const isObservationOnly = phase === 'active' && parcelData?.ai_observation_only === true;
   const estimatedCampaignCount = Math.max(2, historyRecords?.length ?? 1);
+  const isWaitingForCalibrationResult =
+    lastCalibrationLaunchAt !== null &&
+    !(hasV2Report || calibrationCompletedButPhaseStuck || phase === 'calibrated' || phase === 'awaiting_nutrition_option' || phase === 'active' || isFailed);
 
   const handleOpenPartialRecalibration = () => {
     setIsPartialWizardOpen(true);
@@ -1691,6 +764,39 @@ const AICalibrationPage = () => {
   const handleCloseFullWizard = () => {
     setIsFullWizardOpen(false);
   };
+
+  const handleCalibrationLaunchStarted = () => {
+    setLastCalibrationLaunchAt(Date.now());
+    setIsFullWizardOpen(false);
+  };
+
+  useEffect(() => {
+    if (!parcelId || (!isWaitingForCalibrationResult && !isCalibrating)) {
+      return;
+    }
+
+    const pollCalibrationState = () => {
+      void refetchCalibration();
+      void refetchPhase();
+      void refetchReport();
+      void refetchParcel();
+    };
+
+    pollCalibrationState();
+    const intervalId = window.setInterval(pollCalibrationState, 10000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [
+    isCalibrating,
+    isWaitingForCalibrationResult,
+    parcelId,
+    refetchCalibration,
+    refetchParcel,
+    refetchPhase,
+    refetchReport,
+  ]);
 
   if (isCalibrationLoading || isReportLoading) {
     return <SectionLoader className="h-64 py-0" />;
@@ -1816,7 +922,11 @@ const AICalibrationPage = () => {
         contentClassName="max-h-[92vh] overflow-y-auto p-0"
       >
           <div className="px-2 pt-2 pb-1 sm:px-4 sm:pt-4 sm:pb-2">
-            <CalibrationWizard parcelId={parcelId} parcelData={parcelData} />
+            <CalibrationWizard
+              parcelId={parcelId}
+              parcelData={parcelData}
+              onStarted={handleCalibrationLaunchStarted}
+            />
           </div>
       </ResponsiveDialog>
 
@@ -1911,8 +1021,12 @@ const AICalibrationPage = () => {
         <PlantingYearPrompt parcelId={parcelId} onSaved={() => refetchParcel()} />
       )}
 
-      {isWizardPhase && !missingPlantingYear && !isFullWizardOpen && (
-        <CalibrationWizard parcelId={parcelId} parcelData={parcelData} />
+      {isWizardPhase && !missingPlantingYear && !isFullWizardOpen && !isWaitingForCalibrationResult && (
+        <CalibrationWizard
+          parcelId={parcelId}
+          parcelData={parcelData}
+          onStarted={handleCalibrationLaunchStarted}
+        />
       )}
 
       {isCalibrating && (
@@ -1933,17 +1047,24 @@ const AICalibrationPage = () => {
         </div>
       )}
 
-      {hasV2Report && !isCalibrating && (
-        <CalibrationReport
-          output={v2Output}
-          report={reportData?.report && typeof reportData.report === 'object'
-            ? reportData.report as Record<string, unknown>
-            : null}
-          t={t}
-          phase={isObservationOnly ? 'observation' : phase}
-          plantingYear={parcelData?.planting_year ?? null}
-        />
-      )}
+      {hasV2Report &&
+        !isCalibrating &&
+        v2Output?.metadata?.data_quality_flags?.includes('insufficient_satellite_data') && (
+          <div className="space-y-4" data-testid="calibration-report">
+            <div className="bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-300 dark:border-amber-700 p-4">
+              <div className="flex items-start space-x-3">
+                <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+                <div>
+                  <h4 className="font-semibold text-amber-900 dark:text-amber-100">Limited Satellite Data</h4>
+                  <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
+                    This calibration was computed with fewer than 6 satellite observations. Results may be unreliable —
+                    consider re-calibrating once more imagery is available.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
       {historyRecords && historyRecords.length > 1 && !isCalibrating && (
         <CollapsibleSection

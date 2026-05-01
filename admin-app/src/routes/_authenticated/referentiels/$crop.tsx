@@ -15,6 +15,10 @@ import {
 import { referentialApi, getCropLabel, getSectionLabel } from '@/lib/referentiels';
 import type { ValidationError } from '@/lib/referentiels';
 import { toast } from 'sonner';
+import {
+  buildReferentialSchema,
+  formatZodErrors,
+} from '../../../../../shared/referential-schema';
 
 type JsonPath = (string | number)[];
 
@@ -27,6 +31,12 @@ function CropDetailPage() {
   const [hasChanges, setHasChanges] = useState(false);
   const [validationErrors, setValidationErrors] = useState<ValidationError[]>([]);
   const [isValidating, setIsValidating] = useState(false);
+  const [rawEditorOpen, setRawEditorOpen] = useState(false);
+  const [rawJsonDraft, setRawJsonDraft] = useState('');
+  const [rawJsonError, setRawJsonError] = useState<string | null>(null);
+  const [rawValidationErrors, setRawValidationErrors] = useState<ValidationError[]>([]);
+  const [hasRawChanges, setHasRawChanges] = useState(false);
+  const [isValidatingRaw, setIsValidatingRaw] = useState(false);
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['referential', crop],
@@ -48,6 +58,21 @@ function CropDetailPage() {
     },
   });
 
+  const updateDocumentMutation = useMutation({
+    mutationFn: (value: unknown) => referentialApi.update(crop, value),
+    onSuccess: () => {
+      toast.success('Referential JSON saved');
+      queryClient.invalidateQueries({ queryKey: ['referential', crop] });
+      setRawEditorOpen(false);
+      setRawJsonError(null);
+      setRawValidationErrors([]);
+      setHasRawChanges(false);
+    },
+    onError: (err: Error) => {
+      toast.error(`Update failed: ${err.message}`);
+    },
+  });
+
   const toggleSection = (key: string) => {
     setExpandedSections((prev) => {
       const next = new Set(prev);
@@ -59,6 +84,10 @@ function CropDetailPage() {
 
   const startEdit = (section: string) => {
     if (!data) return;
+    setRawEditorOpen(false);
+    setRawJsonError(null);
+    setRawValidationErrors([]);
+    setHasRawChanges(false);
     setEditingSection(section);
     setSectionDraft(structuredClone(data[section]));
     setHasChanges(false);
@@ -75,8 +104,36 @@ function CropDetailPage() {
     setValidationErrors([]);
   };
 
+  const openRawEditor = () => {
+    if (!data) return;
+    cancelEdit();
+    setRawEditorOpen(true);
+    setRawJsonDraft(JSON.stringify(data, null, 2));
+    setRawJsonError(null);
+    setRawValidationErrors([]);
+    setHasRawChanges(false);
+  };
+
+  const cancelRawEdit = () => {
+    setRawEditorOpen(false);
+    setRawJsonError(null);
+    setRawValidationErrors([]);
+    setHasRawChanges(false);
+  };
+
   const saveEdit = async () => {
-    if (!editingSection || !sectionDraft) return;
+    if (!editingSection || !sectionDraft || !data) return;
+
+    const mergedDocument = {
+      ...structuredClone(data),
+      [editingSection]: sectionDraft,
+    };
+    const localValidation = buildReferentialSchema(crop).safeParse(mergedDocument);
+    if (!localValidation.success) {
+      setValidationErrors(formatZodErrors(localValidation.error));
+      toast.error(`${localValidation.error.issues.length} validation error(s)`);
+      return;
+    }
 
     // Validate before saving
     setIsValidating(true);
@@ -95,6 +152,53 @@ function CropDetailPage() {
     setIsValidating(false);
 
     updateMutation.mutate({ section: editingSection, value: sectionDraft });
+  };
+
+  const parseRawJson = (): unknown | null => {
+    try {
+      const parsed = JSON.parse(rawJsonDraft);
+      setRawJsonError(null);
+      return parsed;
+    } catch (err) {
+      setRawJsonError(err instanceof Error ? err.message : 'Invalid JSON');
+      return null;
+    }
+  };
+
+  const validateRawEdit = async (): Promise<unknown | null> => {
+    const parsed = parseRawJson();
+    if (parsed === null) return null;
+
+    const localValidation = buildReferentialSchema(crop).safeParse(parsed);
+    if (!localValidation.success) {
+      setRawValidationErrors(formatZodErrors(localValidation.error));
+      toast.error(`${localValidation.error.issues.length} validation error(s)`);
+      return null;
+    }
+    setRawValidationErrors([]);
+
+    setIsValidatingRaw(true);
+    try {
+      const result = await referentialApi.validate(crop, parsed);
+      if (!result.valid) {
+        setRawValidationErrors(result.errors);
+        toast.error(`${result.errors.length} validation error(s)`);
+        return null;
+      }
+      setRawValidationErrors([]);
+      return parsed;
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Validation failed');
+      return null;
+    } finally {
+      setIsValidatingRaw(false);
+    }
+  };
+
+  const saveRawEdit = async () => {
+    const parsed = await validateRawEdit();
+    if (parsed === null) return;
+    updateDocumentMutation.mutate(parsed);
   };
 
   const updateValue = useCallback((path: JsonPath, newValue: unknown) => {
@@ -154,6 +258,15 @@ function CropDetailPage() {
           <RefreshCw className={`h-4 w-4 shrink-0 ${isLoading ? 'animate-spin' : ''}`} />
           Refresh
         </button>
+        <button
+          type="button"
+          onClick={openRawEditor}
+          disabled={isLoading || !data}
+          className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 sm:w-auto sm:shrink-0"
+        >
+          <Pencil className="h-4 w-4 shrink-0" />
+          Edit JSON
+        </button>
       </div>
 
       {isLoading ? (
@@ -163,8 +276,93 @@ function CropDetailPage() {
       ) : !data ? (
         <p className="text-red-600">Failed to load referential for {crop}</p>
       ) : (
-        <div className="space-y-2">
-          {sections.map((section) => {
+        <div className="space-y-4">
+          {rawEditorOpen && (
+            <div className="rounded-lg border border-emerald-300 bg-white p-4 ring-1 ring-emerald-100">
+              <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <h2 className="text-base font-semibold text-gray-900">Raw JSON Editor</h2>
+                  <p className="mt-1 text-sm text-gray-500">
+                    Paste a full referential JSON document here. This path supports new top-level
+                    sections and canonical keys.
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void validateRawEdit();
+                    }}
+                    disabled={isValidatingRaw || updateDocumentMutation.isPending}
+                    className="inline-flex items-center gap-1.5 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                  >
+                    {isValidatingRaw ? 'Validating...' : 'Validate JSON'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void saveRawEdit();
+                    }}
+                    disabled={
+                      isValidatingRaw ||
+                      updateDocumentMutation.isPending ||
+                      !hasRawChanges
+                    }
+                    className="inline-flex items-center gap-1.5 rounded-md bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
+                  >
+                    <Save className="h-4 w-4" />
+                    Save JSON
+                  </button>
+                  <button
+                    type="button"
+                    onClick={cancelRawEdit}
+                    className="inline-flex items-center gap-1.5 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  >
+                    <X className="h-4 w-4" />
+                    Cancel
+                  </button>
+                </div>
+              </div>
+
+              <textarea
+                value={rawJsonDraft}
+                onChange={(e) => {
+                  setRawJsonDraft(e.target.value);
+                  setHasRawChanges(true);
+                  setRawJsonError(null);
+                }}
+                spellCheck={false}
+                className="min-h-[28rem] w-full rounded-md border border-gray-300 bg-gray-50 p-3 font-mono text-sm text-gray-900 focus:border-emerald-400 focus:outline-none focus:ring-1 focus:ring-emerald-400"
+              />
+
+              {rawJsonError && (
+                <div className="mt-3 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                  Invalid JSON: {rawJsonError}
+                </div>
+              )}
+
+              {rawValidationErrors.length > 0 && (
+                <div className="mt-3 rounded-md border border-red-200 bg-red-50 p-3">
+                  <p className="mb-1 text-sm font-medium text-red-800">
+                    Schema validation failed ({rawValidationErrors.length}
+                    {rawValidationErrors.length > 1 ? ' errors' : ' error'})
+                  </p>
+                  <ul className="space-y-0.5 text-xs text-red-700">
+                    {rawValidationErrors.map((e, i) => (
+                      <li key={i}>
+                        <span className="font-mono text-red-600">{e.path || '$'}</span>
+                        {' - '}
+                        {e.message}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="space-y-2">
+            {sections.map((section) => {
             const isExpanded = expandedSections.has(section);
             const isEditing = editingSection === section;
             const value = isEditing ? sectionDraft : data[section];
@@ -256,7 +454,8 @@ function CropDetailPage() {
                 )}
               </div>
             );
-          })}
+            })}
+          </div>
         </div>
       )}
     </div>

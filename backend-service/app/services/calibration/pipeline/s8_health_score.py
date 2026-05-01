@@ -6,7 +6,6 @@ from ..types import (
     HealthScore,
     Step1Output,
     Step3Output,
-    Step5Output,
     Step7Output,
     Step8Output,
 )
@@ -51,55 +50,46 @@ def _temporal_homogeneity(step3: Step3Output) -> float:
     return _clamp(100 - cv * 200)
 
 
-def _spatial_heterogeneity(step7: Step7Output) -> float:
-    """Score spatial uniformity from zone distribution.
+def _spatial_homogeneity(step7: Step7Output) -> float:
+    """Score spatial homogeneity from zone distribution.
 
-    A parcel dominated by one zone (uniform) scores high.
-    A parcel spread across many zones (heterogeneous) scores low.
-
-    Uses a concentration metric: sum of squared proportions (Herfindahl index).
-    - Perfectly uniform (100% one zone): HHI = 1.0 → score 100
-    - Perfectly spread (20% each of 5 zones): HHI = 0.2 → score 0
-    - Scales linearly from HHI 0.2 (worst) to 1.0 (best).
+    Spec §3.8: "% surface en classe C ou mieux".
+    Zones A, B, C are considered healthy; D, E are problem zones.
+    Score = percentage of parcel area in class C or better.
     """
     if not step7.zone_summary:
         return 50.0  # No data → neutral
 
-    proportions = [z.surface_percent / 100.0 for z in step7.zone_summary]
-    hhi = sum(p * p for p in proportions)
-
-    # HHI ranges from 1/N (uniform spread) to 1.0 (single zone).
-    # With 5 zones, min HHI = 0.2. Map [0.2, 1.0] → [0, 100].
-    min_hhi = 0.2
-    score = (hhi - min_hhi) / (1.0 - min_hhi) * 100
-    return _clamp(score)
+    good_zones = {"A", "B", "C"}
+    good_pct = sum(
+        z.surface_percent for z in step7.zone_summary if z.class_name in good_zones
+    )
+    return _clamp(good_pct)
 
 
 def calculate_health_score(
     *,
     step1: Step1Output,
     step3: Step3Output,
-    step5: Step5Output,
     step7: Step7Output,
 ) -> Step8Output:
-    ndvi_value = _rolling_median(step1, "NDVI")
+    # Spec §3.8: vigor uses NIRv median vs referential
+    nirv_value = _rolling_median(step1, "NIRv")
     ndmi_value = _rolling_median(step1, "NDMI")
     ndre_value = _rolling_median(step1, "NDRE")
 
-    ndvi_ref = step3.global_percentiles.get("NDVI")
+    nirv_ref = step3.global_percentiles.get("NIRv")
     ndmi_ref = step3.global_percentiles.get("NDMI")
     ndre_ref = step3.global_percentiles.get("NDRE")
 
     vigor = 50.0
-    if ndvi_ref and ndvi_ref.p90 > ndvi_ref.p10:
-        vigor = ((ndvi_value - ndvi_ref.p10) / (ndvi_ref.p90 - ndvi_ref.p10)) * 100
+    if nirv_ref and nirv_ref.p90 > nirv_ref.p10:
+        vigor = ((nirv_value - nirv_ref.p10) / (nirv_ref.p90 - nirv_ref.p10)) * 100
     vigor = _clamp(vigor)
 
+    # Spec §3.8: spatial homogeneity 20%, temporal stability 15%
+    spatial = _spatial_homogeneity(step7)
     temporal = _temporal_homogeneity(step3)
-    spatial = _spatial_heterogeneity(step7)
-
-    anomaly_count = len(step5.anomalies)
-    stability = _clamp(100 - anomaly_count * 8)
 
     hydric = 50.0
     if ndmi_ref and ndmi_ref.p90 > ndmi_ref.p10:
@@ -113,14 +103,11 @@ def calculate_health_score(
         ) * 100
     nutritional = _clamp(nutritional)
 
-    # Weights: vigor 30%, temporal 10%, spatial 10%, stability 15%, hydric 20%, nutritional 15%
-    # Previously temporal_stability was 20% (temporal only, spatial ignored).
-    # Now split: 10% temporal + 10% spatial = same total weight for homogeneity.
+    # Spec §3.8 weights: vigor 30%, spatial 20%, temporal 15%, hydric 20%, nutritional 15%
     total = (
         vigor * 0.30
-        + temporal * 0.10
-        + spatial * 0.10
-        + stability * 0.15
+        + spatial * 0.20
+        + temporal * 0.15
         + hydric * 0.20
         + nutritional * 0.15
     )
@@ -130,9 +117,8 @@ def calculate_health_score(
             total=round(_clamp(total), 4),
             components={
                 "vigor": round(vigor, 4),
+                "spatial_homogeneity": round(spatial, 4),
                 "temporal_stability": round(temporal, 4),
-                "spatial_heterogeneity": round(spatial, 4),
-                "stability": round(stability, 4),
                 "hydric": round(hydric, 4),
                 "nutritional": round(nutritional, 4),
             },

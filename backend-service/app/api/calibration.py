@@ -1,18 +1,17 @@
-from datetime import datetime
+from datetime import date, datetime
 import logging
 from typing import Any, SupportsFloat, TypedDict, cast
 
 import numpy as np
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
-from ..services.calibration.support.gdd_service import precompute_gdd_rows
+from ..services.calibration.support.gdd_service import precompute_gdd
 from ..services.calibration.orchestrator import run_calibration_pipeline
 from ..services.calibration.types import CalibrationInput, CalibrationOutput
+from ..services.supabase_service import supabase_service
 
-from app.middleware.auth import get_current_user_or_service
-
-router = APIRouter(dependencies=[Depends(get_current_user_or_service)])
+router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
@@ -36,26 +35,44 @@ VALID_CROP_TYPES = {
     "palmier_dattier",
 }
 DEFAULT_CROP_TYPE = "olivier"
+CROP_TYPE_ALIASES = {
+    "olive": "olivier",
+    "olivier": "olivier",
+    "olives": "olivier",
+    "citrus": "agrumes",
+    "agrumes": "agrumes",
+    "avocado": "avocatier",
+    "avocatier": "avocatier",
+    "date_palm": "palmier_dattier",
+    "palmier": "palmier_dattier",
+    "palmier_dattier": "palmier_dattier",
+}
 
 
+# TODO: Replace fallback with proper crop/system expansion once all types are defined
 def _normalize_crop_type(crop_type: str | None) -> str:
-    """Normalize and validate crop_type against supported referentials."""
+    """Accept any crop_type — map unknown ones to default with a log warning."""
     if not crop_type or not crop_type.strip():
-        raise HTTPException(status_code=400, detail="crop_type is required")
+        logger.warning(
+            "Empty crop_type received, defaulting to '%s'", DEFAULT_CROP_TYPE
+        )
+        return DEFAULT_CROP_TYPE
 
     normalized = crop_type.strip().lower()
     if normalized in VALID_CROP_TYPES:
         return normalized
 
+    mapped = CROP_TYPE_ALIASES.get(normalized)
+    if mapped:
+        return mapped
+
     logger.warning(
-        "Unsupported crop_type '%s' not in %s",
+        "Unknown crop_type '%s' not in %s — defaulting to '%s'",
         crop_type,
         VALID_CROP_TYPES,
+        DEFAULT_CROP_TYPE,
     )
-    raise HTTPException(
-        status_code=400,
-        detail=f"Unsupported crop_type '{crop_type}'",
-    )
+    return DEFAULT_CROP_TYPE
 
 
 GENERIC_PHENOLOGY: list[PhenologyDefinition] = [
@@ -285,17 +302,12 @@ class PrecomputeGddRequest(BaseModel):
     latitude: float
     longitude: float
     crop_type: str
-    variety: str | None = None
-    chill_threshold: int | None = None
-    nirv_series: list[dict[str, Any]] = Field(default_factory=list)
     rows: list[dict[str, Any]] = Field(default_factory=list)
-    reference_data: dict[str, Any] | None = None
 
 
 class PrecomputeGddResponse(BaseModel):
     crop_type: str
     updated_rows: int
-    rows: list[dict[str, Any]] = Field(default_factory=list)
 
 
 def _build_v2_error(step: str, reason: str) -> dict[str, str]:
@@ -326,16 +338,17 @@ def _validate_v2_request(request: CalibrationRunV2Request) -> None:
         )
 
 
-def _run_v2(request: CalibrationRunV2Request) -> CalibrationOutput:
+async def _run_v2(request: CalibrationRunV2Request) -> CalibrationOutput:
     _validate_v2_request(request)
 
     try:
-        return run_calibration_pipeline(
+        return await run_calibration_pipeline(
             calibration_input=request.calibration_input,
             satellite_images=request.satellite_images,
             weather_rows=request.weather_rows,
             storage=None,
             ndvi_raster_pixels=request.ndvi_raster_pixels,
+            supabase_svc=supabase_service,
         )
     except ValueError as exc:
         raise HTTPException(
@@ -466,32 +479,27 @@ def _extract_month(date_value: str) -> int:
 
 @router.post("/v2/run", response_model=CalibrationOutput)
 async def run_calibration_v2(request: CalibrationRunV2Request):
-    return _run_v2(request)
+    return await _run_v2(request)
 
 
 @router.post("/run-v2", response_model=CalibrationOutput)
 async def run_calibration_v2_legacy(request: CalibrationRunV2Request):
-    return _run_v2(request)
+    return await _run_v2(request)
 
 
 @router.post("/v2/precompute-gdd", response_model=PrecomputeGddResponse)
 async def precompute_gdd_v2(request: PrecomputeGddRequest):
     request.crop_type = _normalize_crop_type(request.crop_type)
 
-    updated_list, count = precompute_gdd_rows(
-        list(request.rows),
-        request.crop_type,
-        variety=request.variety,
-        chill_threshold=request.chill_threshold,
-        nirv_series=request.nirv_series,
-        reference_data=request.reference_data,
+    updated_rows = precompute_gdd(
+        latitude=request.latitude,
+        longitude=request.longitude,
+        crop_type=request.crop_type,
+        rows=request.rows,
+        as_of=date.today(),
     )
 
-    return PrecomputeGddResponse(
-        crop_type=request.crop_type,
-        updated_rows=count,
-        rows=updated_list,
-    )
+    return PrecomputeGddResponse(crop_type=request.crop_type, updated_rows=updated_rows)
 
 
 @router.post("/v2/extract-raster", response_model=ExtractRasterResponse)
@@ -499,7 +507,19 @@ async def extract_ndvi_raster(request: ExtractRasterRequest):
     from ..services.earth_engine import EarthEngineService
 
     ee_service = EarthEngineService()
-    ee_service.initialize()
+    try:
+        ee_service.initialize()
+    except Exception as exc:
+        message = str(exc)
+        if "earthengine authenticate" in message.lower() or "authorize access" in message.lower():
+            raise HTTPException(
+                status_code=503,
+                detail="Earth Engine is not authenticated on this environment. Run 'earthengine authenticate' or configure service-account credentials.",
+            ) from exc
+        raise HTTPException(
+            status_code=502,
+            detail=f"Earth Engine initialization failed: {message}",
+        ) from exc
 
     geometry = {"type": "Polygon", "coordinates": [request.geometry]}
 

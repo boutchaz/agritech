@@ -63,8 +63,8 @@ function normalizeParcel(parcel: ServiceParcel): Parcel {
 // Query keys
 export const parcelsKeys = {
   all: ['parcels'] as const,
-  byFarm: (farmId: string) => ['parcels', farmId] as const,
-  byOrganization: (organizationId: string) => ['parcels', 'organization', organizationId] as const,
+  byFarm: (farmId: string, includeArchived?: boolean) => ['parcels', farmId, { includeArchived }] as const,
+  byOrganization: (organizationId: string, includeArchived?: boolean) => ['parcels', 'organization', organizationId, { includeArchived }] as const,
   byFarms: (farmIds: string[]) => ['parcels', 'farms', [...farmIds].sort().join(',')] as const,
   byId: (parcelId: string) => ['parcels', parcelId] as const,
   applications: (parcelId: string) => ['parcels', parcelId, 'applications'] as const,
@@ -118,12 +118,12 @@ export const useFarms = (organizationId: string | undefined) => {
 };
 
 // Fetch parcels for a specific farm using parcelsService (apiClient)
-export const useParcelsByFarm = (farmId: string | undefined, organizationId?: string | null) => {
+export const useParcelsByFarm = (farmId: string | undefined, organizationId?: string | null, includeArchived?: boolean) => {
   return useQuery({
-    queryKey: parcelsKeys.byFarm(farmId || ''),
+    queryKey: parcelsKeys.byFarm(farmId || '', includeArchived),
     queryFn: async (): Promise<Parcel[]> => {
       if (!farmId) return [];
-      const parcels = await parcelsService.listParcels(farmId, organizationId);
+      const parcels = await parcelsService.listParcels(farmId, organizationId, includeArchived);
       return parcels.map(normalizeParcel);
     },
     enabled: !!farmId && !!organizationId,
@@ -151,12 +151,12 @@ export const useParcelsByFarms = (farmIds: string[], organizationId?: string | n
   });
 };
 
-export const useParcelsByOrganization = (organizationId?: string | null) => {
+export const useParcelsByOrganization = (organizationId?: string | null, includeArchived?: boolean) => {
   return useQuery({
-    queryKey: parcelsKeys.byOrganization(organizationId || ''),
+    queryKey: parcelsKeys.byOrganization(organizationId || '', includeArchived),
     queryFn: async (): Promise<Parcel[]> => {
       if (!organizationId) return [];
-      const parcels = await parcelsService.listParcels(undefined, organizationId);
+      const parcels = await parcelsService.listParcels(undefined, organizationId, includeArchived);
       return parcels.map(normalizeParcel);
     },
     enabled: !!organizationId,

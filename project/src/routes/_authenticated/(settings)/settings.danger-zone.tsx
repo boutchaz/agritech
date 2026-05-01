@@ -145,7 +145,7 @@ function DangerZonePage() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `agritech-export-${currentOrganization?.name?.replace(/\s+/g, '-')}-${new Date().toISOString().split('T')[0]}.json`;
+        a.download = `agrogina-export-${currentOrganization?.name?.replace(/\s+/g, '-')}-${new Date().toISOString().split('T')[0]}.json`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);

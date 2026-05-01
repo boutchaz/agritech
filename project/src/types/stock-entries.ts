@@ -9,7 +9,7 @@ export type StockEntryType =
   | 'Stock Transfer'
   | 'Stock Reconciliation';
 
-export type StockEntryStatus = 'Draft' | 'Posted' | 'Cancelled';
+export type StockEntryStatus = 'Draft' | 'Posted' | 'Cancelled' | 'Reversed';
 
 export type StockMovementType = 'IN' | 'OUT' | 'TRANSFER';
 
@@ -354,6 +354,7 @@ export const STOCK_ENTRY_STATUS_COLORS: Record<StockEntryStatus, string> = {
   Draft: 'bg-gray-100 text-gray-800',
   Posted: 'bg-green-100 text-green-800',
   Cancelled: 'bg-red-100 text-red-800',
+  Reversed: 'bg-orange-100 text-orange-800',
 };
 
 // Movement type colors

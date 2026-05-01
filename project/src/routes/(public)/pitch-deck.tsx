@@ -9,7 +9,7 @@ export const Route = createFileRoute('/(public)/pitch-deck')({
     component: PitchDeck,
 })
 
-const RAW_MARKDOWN = `# Pitch Deck: CodeLovers Agritech Platform
+const RAW_MARKDOWN = `# Pitch Deck: CodeLovers AgroGina Platform
 
 ## Slide 1: The Problem
 **Farming is Complex, Data is Fragmented**
@@ -200,7 +200,7 @@ function PitchDeck() {
             {/* Controls Header */}
             <div className="fixed top-0 left-0 right-0 z-50 p-4 flex justify-between items-center opacity-0 hover:opacity-100 transition-opacity duration-300">
                 <div className="text-sm font-medium text-slate-400">
-                    CodeLovers Agritech
+                    CodeLovers AgroGina
                 </div>
                 <div className="flex gap-2">
                     <Button

@@ -50,12 +50,12 @@ export async function generateMetadata({
     const seller = await getSeller(slug);
 
     if (!seller) {
-        return { title: 'Partenaire non trouvé - AgriTech Market' };
+      return { title: 'Partenaire non trouvé - AgroGina Market' };
     }
 
     return {
-        title: `${seller.name} - AgriTech Market`,
-        description: seller.description || `Découvrez ${seller.name} sur AgriTech Market.`,
+        title: `${seller.name} - AgroGina Market`,
+        description: seller.description || `Découvrez ${seller.name} sur AgroGina Market.`,
         openGraph: {
             title: seller.name,
             description: seller.description || '',

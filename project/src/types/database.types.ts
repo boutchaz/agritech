@@ -2634,6 +2634,204 @@ export type Database = {
           },
         ]
       }
+      banner_dismissals: {
+        Row: {
+          banner_id: string
+          dismissed_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          banner_id: string
+          dismissed_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          banner_id?: string
+          dismissed_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "banner_dismissals_banner_id_fkey"
+            columns: ["banner_id"]
+            isOneToOne: false
+            referencedRelation: "banners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "banner_dismissals_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      banners: {
+        Row: {
+          audience: string
+          created_at: string
+          created_by: string | null
+          cta_label: string | null
+          cta_url: string | null
+          dismissals: number
+          dismissible: boolean
+          enabled: boolean
+          end_at: string | null
+          id: string
+          impressions: number
+          message: string
+          organization_id: string | null
+          priority: number
+          severity: string
+          start_at: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          audience?: string
+          created_at?: string
+          created_by?: string | null
+          cta_label?: string | null
+          cta_url?: string | null
+          dismissals?: number
+          dismissible?: boolean
+          enabled?: boolean
+          end_at?: string | null
+          id?: string
+          impressions?: number
+          message: string
+          organization_id?: string | null
+          priority?: number
+          severity?: string
+          start_at?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          audience?: string
+          created_at?: string
+          created_by?: string | null
+          cta_label?: string | null
+          cta_url?: string | null
+          dismissals?: number
+          dismissible?: boolean
+          enabled?: boolean
+          end_at?: string | null
+          id?: string
+          impressions?: number
+          message?: string
+          organization_id?: string | null
+          priority?: number
+          severity?: string
+          start_at?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "banners_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "banners_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "accounting_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "banners_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_churn_risk"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "banners_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_org_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "banners_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_top_orgs_by_activity"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "banners_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "dashboard_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "banners_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "financial_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "banners_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "banners_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "production_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "banners_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "sales_analytics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "banners_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "task_completion"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "banners_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_organization_financial_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "banners_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_production_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "banners_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "workforce_summary"
+            referencedColumns: ["organization_id"]
+          },
+        ]
+      }
       billing_documents: {
         Row: {
           amount_ht: number
@@ -3780,6 +3978,147 @@ export type Database = {
           },
           {
             foreignKeyName: "certifications_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "workforce_summary"
+            referencedColumns: ["organization_id"]
+          },
+        ]
+      }
+      changelogs: {
+        Row: {
+          category: string
+          created_at: string
+          created_by: string | null
+          description: string
+          id: string
+          is_global: boolean
+          organization_id: string | null
+          published_at: string
+          title: string
+          updated_at: string
+          version: string | null
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          description: string
+          id?: string
+          is_global?: boolean
+          organization_id?: string | null
+          published_at?: string
+          title: string
+          updated_at?: string
+          version?: string | null
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          id?: string
+          is_global?: boolean
+          organization_id?: string | null
+          published_at?: string
+          title?: string
+          updated_at?: string
+          version?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "changelogs_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "changelogs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "accounting_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "changelogs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_churn_risk"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "changelogs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_org_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "changelogs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_top_orgs_by_activity"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "changelogs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "dashboard_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "changelogs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "financial_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "changelogs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "changelogs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "production_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "changelogs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "sales_analytics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "changelogs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "task_completion"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "changelogs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_organization_financial_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "changelogs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_production_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "changelogs_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "workforce_summary"
@@ -10954,6 +11293,7 @@ export type Database = {
           default_sales_account_id: string | null
           default_tax_id: string | null
           default_warehouse_id: string | null
+          deleted_at: string | null
           description: string | null
           id: string
           image_url: string | null
@@ -10975,6 +11315,7 @@ export type Database = {
           default_sales_account_id?: string | null
           default_tax_id?: string | null
           default_warehouse_id?: string | null
+          deleted_at?: string | null
           description?: string | null
           id?: string
           image_url?: string | null
@@ -10996,6 +11337,7 @@ export type Database = {
           default_sales_account_id?: string | null
           default_tax_id?: string | null
           default_warehouse_id?: string | null
+          deleted_at?: string | null
           description?: string | null
           id?: string
           image_url?: string | null
@@ -11156,6 +11498,7 @@ export type Database = {
           default_sales_account_id: string | null
           default_unit: string
           default_warehouse_id: string | null
+          deleted_at: string | null
           description: string | null
           has_batch_no: boolean | null
           has_expiry_date: boolean | null
@@ -11183,6 +11526,8 @@ export type Database = {
           minimum_stock_level: number | null
           notes: string | null
           organization_id: string
+          reorder_point: number | null
+          reorder_quantity: number | null
           seasonality: string | null
           shelf_life_days: number | null
           show_in_website: boolean | null
@@ -11211,6 +11556,7 @@ export type Database = {
           default_sales_account_id?: string | null
           default_unit: string
           default_warehouse_id?: string | null
+          deleted_at?: string | null
           description?: string | null
           has_batch_no?: boolean | null
           has_expiry_date?: boolean | null
@@ -11238,6 +11584,8 @@ export type Database = {
           minimum_stock_level?: number | null
           notes?: string | null
           organization_id: string
+          reorder_point?: number | null
+          reorder_quantity?: number | null
           seasonality?: string | null
           shelf_life_days?: number | null
           show_in_website?: boolean | null
@@ -11266,6 +11614,7 @@ export type Database = {
           default_sales_account_id?: string | null
           default_unit?: string
           default_warehouse_id?: string | null
+          deleted_at?: string | null
           description?: string | null
           has_batch_no?: boolean | null
           has_expiry_date?: boolean | null
@@ -11293,6 +11642,8 @@ export type Database = {
           minimum_stock_level?: number | null
           notes?: string | null
           organization_id?: string
+          reorder_point?: number | null
+          reorder_quantity?: number | null
           seasonality?: string | null
           shelf_life_days?: number | null
           show_in_website?: boolean | null
@@ -16370,6 +16721,236 @@ export type Database = {
         }
         Relationships: []
       }
+      piece_work_records: {
+        Row: {
+          break_duration: number | null
+          created_at: string | null
+          created_by: string | null
+          end_time: string | null
+          farm_id: string
+          id: string
+          notes: string | null
+          organization_id: string
+          parcel_id: string | null
+          payment_status: string | null
+          quality_rating: number | null
+          rate_per_unit: number
+          start_time: string | null
+          task_id: string | null
+          total_amount: number
+          units_completed: number
+          updated_at: string | null
+          verified_at: string | null
+          verified_by: string | null
+          work_date: string
+          work_unit_id: string
+          worker_id: string
+        }
+        Insert: {
+          break_duration?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          end_time?: string | null
+          farm_id: string
+          id?: string
+          notes?: string | null
+          organization_id: string
+          parcel_id?: string | null
+          payment_status?: string | null
+          quality_rating?: number | null
+          rate_per_unit: number
+          start_time?: string | null
+          task_id?: string | null
+          total_amount: number
+          units_completed: number
+          updated_at?: string | null
+          verified_at?: string | null
+          verified_by?: string | null
+          work_date: string
+          work_unit_id: string
+          worker_id: string
+        }
+        Update: {
+          break_duration?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          end_time?: string | null
+          farm_id?: string
+          id?: string
+          notes?: string | null
+          organization_id?: string
+          parcel_id?: string | null
+          payment_status?: string | null
+          quality_rating?: number | null
+          rate_per_unit?: number
+          start_time?: string | null
+          task_id?: string | null
+          total_amount?: number
+          units_completed?: number
+          updated_at?: string | null
+          verified_at?: string | null
+          verified_by?: string | null
+          work_date?: string
+          work_unit_id?: string
+          worker_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "piece_work_records_farm_id_fkey"
+            columns: ["farm_id"]
+            isOneToOne: false
+            referencedRelation: "farms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "piece_work_records_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "accounting_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "piece_work_records_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_churn_risk"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "piece_work_records_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_org_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "piece_work_records_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_top_orgs_by_activity"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "piece_work_records_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "dashboard_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "piece_work_records_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "financial_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "piece_work_records_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "piece_work_records_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "production_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "piece_work_records_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "sales_analytics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "piece_work_records_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "task_completion"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "piece_work_records_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_organization_financial_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "piece_work_records_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_production_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "piece_work_records_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "workforce_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "piece_work_records_parcel_id_fkey"
+            columns: ["parcel_id"]
+            isOneToOne: false
+            referencedRelation: "parcels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "piece_work_records_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "pending_tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "piece_work_records_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "piece_work_records_work_unit_id_fkey"
+            columns: ["work_unit_id"]
+            isOneToOne: false
+            referencedRelation: "work_units"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "piece_work_records_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "assignable_users"
+            referencedColumns: ["worker_id"]
+          },
+          {
+            foreignKeyName: "piece_work_records_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "v_active_workers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "piece_work_records_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "worker_assignments"
+            referencedColumns: ["worker_id"]
+          },
+          {
+            foreignKeyName: "piece_work_records_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       plan_interventions: {
         Row: {
           annual_plan_id: string
@@ -17415,6 +17996,7 @@ export type Database = {
           barcode: string | null
           base_quantity: number | null
           created_at: string | null
+          deleted_at: string | null
           id: string
           is_active: boolean | null
           item_id: string
@@ -17433,6 +18015,7 @@ export type Database = {
           barcode?: string | null
           base_quantity?: number | null
           created_at?: string | null
+          deleted_at?: string | null
           id?: string
           is_active?: boolean | null
           item_id: string
@@ -17451,6 +18034,7 @@ export type Database = {
           barcode?: string | null
           base_quantity?: number | null
           created_at?: string | null
+          deleted_at?: string | null
           id?: string
           is_active?: boolean | null
           item_id?: string
@@ -20432,6 +21016,7 @@ export type Database = {
           min_value: number | null
           organization_id: string
           parcel_id: string
+          percentile_10: number | null
           percentile_25: number | null
           percentile_75: number | null
           percentile_90: number | null
@@ -20461,6 +21046,7 @@ export type Database = {
           min_value?: number | null
           organization_id: string
           parcel_id: string
+          percentile_10?: number | null
           percentile_25?: number | null
           percentile_75?: number | null
           percentile_90?: number | null
@@ -20490,6 +21076,7 @@ export type Database = {
           min_value?: number | null
           organization_id?: string
           parcel_id?: string
+          percentile_10?: number | null
           percentile_25?: number | null
           percentile_75?: number | null
           percentile_90?: number | null
@@ -21016,6 +21603,8 @@ export type Database = {
       }
       siam_rdv_leads: {
         Row: {
+          confirmed_at: string | null
+          confirmed_slot: string | null
           created_at: string | null
           creneau: string
           cultures: string[] | null
@@ -21025,13 +21614,17 @@ export type Database = {
           id: string
           nom: string
           region: string | null
+          rejection_reason: string | null
           source: string | null
           source_ip: string | null
+          status: string | null
           surface: string | null
           tel: string
           updated_at: string | null
         }
         Insert: {
+          confirmed_at?: string | null
+          confirmed_slot?: string | null
           created_at?: string | null
           creneau: string
           cultures?: string[] | null
@@ -21041,13 +21634,17 @@ export type Database = {
           id?: string
           nom: string
           region?: string | null
+          rejection_reason?: string | null
           source?: string | null
           source_ip?: string | null
+          status?: string | null
           surface?: string | null
           tel: string
           updated_at?: string | null
         }
         Update: {
+          confirmed_at?: string | null
+          confirmed_slot?: string | null
           created_at?: string | null
           creneau?: string
           cultures?: string[] | null
@@ -21057,8 +21654,10 @@ export type Database = {
           id?: string
           nom?: string
           region?: string | null
+          rejection_reason?: string | null
           source?: string | null
           source_ip?: string | null
+          status?: string | null
           surface?: string | null
           tel?: string
           updated_at?: string | null
@@ -21923,6 +22522,56 @@ export type Database = {
           },
         ]
       }
+      stock_entry_approvals: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string | null
+          id: string
+          rejected_at: string | null
+          rejected_by: string | null
+          rejection_reason: string | null
+          requested_by: string
+          status: string | null
+          stock_entry_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string | null
+          id?: string
+          rejected_at?: string | null
+          rejected_by?: string | null
+          rejection_reason?: string | null
+          requested_by: string
+          status?: string | null
+          stock_entry_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string | null
+          id?: string
+          rejected_at?: string | null
+          rejected_by?: string | null
+          rejection_reason?: string | null
+          requested_by?: string
+          status?: string | null
+          stock_entry_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_entry_approvals_stock_entry_id_fkey"
+            columns: ["stock_entry_id"]
+            isOneToOne: false
+            referencedRelation: "stock_entries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stock_entry_items: {
         Row: {
           batch_number: string | null
@@ -22261,6 +22910,173 @@ export type Database = {
           },
           {
             foreignKeyName: "stock_movements_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stock_reservations: {
+        Row: {
+          created_at: string | null
+          expires_at: string
+          id: string
+          item_id: string
+          notes: string | null
+          organization_id: string
+          quantity: number
+          reference_id: string | null
+          reference_type: string | null
+          reserved_at: string | null
+          reserved_by: string
+          status: string | null
+          updated_at: string | null
+          variant_id: string | null
+          warehouse_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          expires_at: string
+          id?: string
+          item_id: string
+          notes?: string | null
+          organization_id: string
+          quantity: number
+          reference_id?: string | null
+          reference_type?: string | null
+          reserved_at?: string | null
+          reserved_by: string
+          status?: string | null
+          updated_at?: string | null
+          variant_id?: string | null
+          warehouse_id: string
+        }
+        Update: {
+          created_at?: string | null
+          expires_at?: string
+          id?: string
+          item_id?: string
+          notes?: string | null
+          organization_id?: string
+          quantity?: number
+          reference_id?: string | null
+          reference_type?: string | null
+          reserved_at?: string | null
+          reserved_by?: string
+          status?: string | null
+          updated_at?: string | null
+          variant_id?: string | null
+          warehouse_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_reservations_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_reservations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "accounting_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "stock_reservations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_churn_risk"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_reservations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_org_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_reservations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_top_orgs_by_activity"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_reservations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "dashboard_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "stock_reservations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "financial_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "stock_reservations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_reservations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "production_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "stock_reservations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "sales_analytics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "stock_reservations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "task_completion"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "stock_reservations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_organization_financial_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "stock_reservations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_production_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "stock_reservations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "workforce_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "stock_reservations_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "product_variants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_reservations_warehouse_id_fkey"
             columns: ["warehouse_id"]
             isOneToOne: false
             referencedRelation: "warehouses"
@@ -22928,6 +23744,47 @@ export type Database = {
           value?: number
         }
         Relationships: []
+      }
+      subscription_pricing_config: {
+        Row: {
+          created_at: string
+          default_discount_percent: number
+          ha_tiers: Json
+          id: string
+          modules: Json
+          size_multipliers: Json
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          default_discount_percent?: number
+          ha_tiers?: Json
+          id?: string
+          modules?: Json
+          size_multipliers?: Json
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          default_discount_percent?: number
+          ha_tiers?: Json
+          id?: string
+          modules?: Json
+          size_multipliers?: Json
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_pricing_config_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       subscription_usage: {
         Row: {
@@ -23688,6 +24545,39 @@ export type Database = {
             referencedColumns: ["organization_id"]
           },
         ]
+      }
+      supported_countries: {
+        Row: {
+          country_code: string
+          country_name: string
+          created_at: string
+          display_order: number
+          enabled: boolean
+          id: string
+          region: string
+          updated_at: string
+        }
+        Insert: {
+          country_code: string
+          country_name: string
+          created_at?: string
+          display_order?: number
+          enabled?: boolean
+          id?: string
+          region: string
+          updated_at?: string
+        }
+        Update: {
+          country_code?: string
+          country_name?: string
+          created_at?: string
+          display_order?: number
+          enabled?: boolean
+          id?: string
+          region?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       task_assignments: {
         Row: {
@@ -25570,6 +26460,161 @@ export type Database = {
           },
         ]
       }
+      warehouse_stock_levels: {
+        Row: {
+          available_quantity: number | null
+          created_at: string | null
+          id: string
+          item_id: string
+          last_movement_at: string | null
+          organization_id: string
+          quantity: number
+          reserved_quantity: number
+          updated_at: string | null
+          variant_id: string | null
+          warehouse_id: string
+        }
+        Insert: {
+          available_quantity?: number | null
+          created_at?: string | null
+          id?: string
+          item_id: string
+          last_movement_at?: string | null
+          organization_id: string
+          quantity?: number
+          reserved_quantity?: number
+          updated_at?: string | null
+          variant_id?: string | null
+          warehouse_id: string
+        }
+        Update: {
+          available_quantity?: number | null
+          created_at?: string | null
+          id?: string
+          item_id?: string
+          last_movement_at?: string | null
+          organization_id?: string
+          quantity?: number
+          reserved_quantity?: number
+          updated_at?: string | null
+          variant_id?: string | null
+          warehouse_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "warehouse_stock_levels_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "warehouse_stock_levels_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "accounting_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "warehouse_stock_levels_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_churn_risk"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "warehouse_stock_levels_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_org_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "warehouse_stock_levels_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_top_orgs_by_activity"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "warehouse_stock_levels_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "dashboard_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "warehouse_stock_levels_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "financial_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "warehouse_stock_levels_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "warehouse_stock_levels_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "production_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "warehouse_stock_levels_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "sales_analytics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "warehouse_stock_levels_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "task_completion"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "warehouse_stock_levels_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_organization_financial_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "warehouse_stock_levels_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_production_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "warehouse_stock_levels_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "workforce_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "warehouse_stock_levels_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "product_variants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "warehouse_stock_levels_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       warehouses: {
         Row: {
           address: string | null
@@ -25577,6 +26622,7 @@ export type Database = {
           capacity_unit: string | null
           city: string | null
           created_at: string | null
+          deleted_at: string | null
           description: string | null
           farm_id: string | null
           has_quality_lab: boolean | null
@@ -25602,6 +26648,7 @@ export type Database = {
           capacity_unit?: string | null
           city?: string | null
           created_at?: string | null
+          deleted_at?: string | null
           description?: string | null
           farm_id?: string | null
           has_quality_lab?: boolean | null
@@ -25627,6 +26674,7 @@ export type Database = {
           capacity_unit?: string | null
           city?: string | null
           created_at?: string | null
+          deleted_at?: string | null
           description?: string | null
           farm_id?: string | null
           has_quality_lab?: boolean | null
@@ -25906,10 +26954,6 @@ export type Database = {
           created_at: string | null
           date: string
           et0_fao_evapotranspiration: number | null
-          gdd_agrumes: number | null
-          gdd_avocatier: number | null
-          gdd_olivier: number | null
-          gdd_palmier_dattier: number | null
           id: string
           latitude: number
           longitude: number
@@ -25935,10 +26979,6 @@ export type Database = {
           created_at?: string | null
           date: string
           et0_fao_evapotranspiration?: number | null
-          gdd_agrumes?: number | null
-          gdd_avocatier?: number | null
-          gdd_olivier?: number | null
-          gdd_palmier_dattier?: number | null
           id?: string
           latitude: number
           longitude: number
@@ -25964,10 +27004,6 @@ export type Database = {
           created_at?: string | null
           date?: string
           et0_fao_evapotranspiration?: number | null
-          gdd_agrumes?: number | null
-          gdd_avocatier?: number | null
-          gdd_olivier?: number | null
-          gdd_palmier_dattier?: number | null
           id?: string
           latitude?: number
           longitude?: number
@@ -26335,6 +27371,42 @@ export type Database = {
           temperature_min?: number | null
           updated_at?: string | null
           wind_speed_max?: number | null
+        }
+        Relationships: []
+      }
+      weather_gdd_daily: {
+        Row: {
+          chill_hours: number | null
+          computed_at: string
+          crop_type: string
+          date: string
+          gdd_daily: number
+          id: string
+          latitude: number
+          longitude: number
+          model_version: string
+        }
+        Insert: {
+          chill_hours?: number | null
+          computed_at?: string
+          crop_type: string
+          date: string
+          gdd_daily?: number
+          id?: string
+          latitude: number
+          longitude: number
+          model_version?: string
+        }
+        Update: {
+          chill_hours?: number | null
+          computed_at?: string
+          crop_type?: string
+          date?: string
+          gdd_daily?: number
+          id?: string
+          latitude?: number
+          longitude?: number
+          model_version?: string
         }
         Relationships: []
       }
@@ -28152,6 +29224,132 @@ export type Database = {
           },
           {
             foreignKeyName: "inventory_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mv_stock_levels: {
+        Row: {
+          balance_quantity: number | null
+          balance_value: number | null
+          item_id: string | null
+          last_movement_date: string | null
+          movement_count: number | null
+          organization_id: string | null
+          variant_id: string | null
+          warehouse_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_movements_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "accounting_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "stock_movements_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_churn_risk"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_org_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_top_orgs_by_activity"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "dashboard_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "stock_movements_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "financial_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "stock_movements_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "production_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "stock_movements_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "sales_analytics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "stock_movements_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "task_completion"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "stock_movements_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_organization_financial_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "stock_movements_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_production_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "stock_movements_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "workforce_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "stock_movements_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "product_variants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_warehouse_id_fkey"
             columns: ["warehouse_id"]
             isOneToOne: false
             referencedRelation: "warehouses"
@@ -30233,6 +31431,16 @@ export type Database = {
       st_wrapx: {
         Args: { geom: unknown; move: number; wrap: number }
         Returns: unknown
+      }
+      sum_gdd_between: {
+        Args: {
+          p_crop: string
+          p_end: string
+          p_lat: number
+          p_lon: number
+          p_start: string
+        }
+        Returns: number
       }
       unlockrows: { Args: { "": string }; Returns: number }
       updategeometrysrid: {

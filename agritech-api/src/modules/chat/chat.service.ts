@@ -397,15 +397,16 @@ export class ChatService implements OnModuleInit {
         fullResponse += token;
         callbacks.onToken(token);
       },
-      onComplete: async () => {
+      onComplete: async (meta?: { tokensUsed?: number }) => {
         const { cleanText, suggestions } = this.finalizeAssistantContent(fullResponse);
 
-        this.aiQuotaService.logUsage(organizationId, userId, 'chat', 'zai', model, null, false).catch(() => {});
+        this.aiQuotaService.logUsage(organizationId, userId, 'chat', 'zai', model, meta?.tokensUsed ?? null, false).catch(() => {});
 
         if (shouldSaveHistory) {
           await this.conversationService.saveMessage(userId, organizationId, 'assistant', cleanText, dto.language, {
             provider: 'zai',
             model,
+            tokensUsed: meta?.tokensUsed,
             streamed: true,
           });
         }

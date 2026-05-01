@@ -41,7 +41,7 @@ export function Navbar() {
             <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center">
               <Leaf className="w-5 h-5 text-white" />
             </div>
-            <span className="text-xl font-bold text-gray-900">AgriTech</span>
+             <span className="text-xl font-bold text-gray-900">AgroGina</span>
             <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-medium">Market</span>
           </Link>
 
@@ -86,6 +86,7 @@ export function Navbar() {
 
           {/* Mobile Menu Button */}
           <button
+            type="button"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             className="md:hidden p-2 text-gray-600"
           >
@@ -160,6 +161,7 @@ export function Navbar() {
                   {t('dashboard')}
                 </Link>
                 <button
+                  type="button"
                   onClick={() => { setMobileMenuOpen(false); handleLogout(); }}
                   className="flex items-center gap-2 text-red-600 hover:text-red-700 transition"
                 >

@@ -156,38 +156,12 @@ export const MultiTenantAuthProvider = ({ children }: { children: React.ReactNod
     setCurrentFarm(farm);
     localStorage.setItem('currentFarm', JSON.stringify(farm));
     
-    // Invalidate all farm-related queries to refresh dashboard and widgets
-    // Use predicate to match any query that might be farm-related
-    queryClient.invalidateQueries({
-      predicate: (query) => {
-        const queryKey = query.queryKey;
-        // Check if query key contains farm-related terms
-        const keyString = JSON.stringify(queryKey).toLowerCase();
-        return (
-          keyString.includes('farm') ||
-          keyString.includes('parcel') ||
-          keyString.includes('dashboard') ||
-          keyString.includes('analys') ||
-          keyString.includes('harvest') ||
-          keyString.includes('task') ||
-          keyString.includes('worker') ||
-          keyString.includes('inventory') ||
-          keyString.includes('stock') ||
-          keyString.includes('sales-order') ||
-          keyString.includes('invoice') ||
-          keyString.includes('crop') ||
-          keyString.includes('satellite') ||
-          keyString.includes('intelligence') ||
-          keyString.includes('lab-service') ||
-          keyString.includes('piece-work') ||
-          keyString.includes('metayage') ||
-          keyString.includes('item-farm-usage') ||
-          keyString.includes('farm-stock-levels')
-        );
-      },
-    });
-    
-    // Also explicitly invalidate common query key patterns
+    // Invalidate farm-dependent queries to refresh dashboard and widgets.
+    // IMPORTANT: Do NOT invalidate the 'farms' query itself — the list of farms
+    // doesn't change when switching the active farm. Invalidating it causes a
+    // refetch that can momentarily empty the farm selector dropdown (the query
+    // returns new object references, the sync effect re-fires, potentially
+    // causing cascading invalidations).
     queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] });
     queryClient.invalidateQueries({ queryKey: ['parcels'] });
     queryClient.invalidateQueries({ queryKey: ['parcels-with-details'] });
@@ -207,26 +181,8 @@ export const MultiTenantAuthProvider = ({ children }: { children: React.ReactNod
     queryClient.invalidateQueries({ queryKey: ['production-intelligence'] });
     queryClient.invalidateQueries({ queryKey: ['lab-services'] });
     queryClient.invalidateQueries({ queryKey: ['piece-work'] });
-    queryClient.invalidateQueries({ queryKey: ['farms'] });
-    
-    // Force refetch active queries immediately
-    queryClient.refetchQueries({
-      predicate: (query) => {
-        const queryKey = query.queryKey;
-        const keyString = JSON.stringify(queryKey).toLowerCase();
-        return (
-          keyString.includes('farm') ||
-          keyString.includes('parcel') ||
-          keyString.includes('dashboard') ||
-          keyString.includes('analys') ||
-          keyString.includes('harvest') ||
-          keyString.includes('task') ||
-          keyString.includes('worker') ||
-          keyString.includes('inventory') ||
-          keyString.includes('stock')
-        );
-      },
-    });
+    queryClient.invalidateQueries({ queryKey: ['item-farm-usage'] });
+    queryClient.invalidateQueries({ queryKey: ['farm-stock-levels'] });
   };
 
   // Sign out handler

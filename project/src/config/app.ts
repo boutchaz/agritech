@@ -8,6 +8,6 @@ export const appConfig = {
     },
     company: {
         name: "AGROGINA Inc.",
-        link: "https://agriprofy.com"
+        link: "https://agrogina.com"
     }
 } as const;
