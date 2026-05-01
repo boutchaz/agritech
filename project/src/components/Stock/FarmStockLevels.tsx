@@ -1,10 +1,10 @@
 
-import { useNavigate } from '@tanstack/react-router';
 import { Package, Warehouse, Building2, ExternalLink, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useFarmStockLevels } from '@/hooks/useFarmStockLevels';
 import { useCurrency } from '@/hooks/useCurrency';
 import { useTranslation } from 'react-i18next';
+import { formatQuantity } from '@/utils/units';
 
 interface FarmStockLevelsProps {
   item_id?: string;
@@ -17,8 +17,7 @@ export default function FarmStockLevels({
   farm_id,
   showWarehouseDetails = true,
 }: FarmStockLevelsProps) {
-  const { t } = useTranslation('stock');
-  const navigate = useNavigate();
+  const { t, i18n } = useTranslation('stock');
   const { format: formatCurrency } = useCurrency();
 
   const { data: stockLevels = [], isLoading } = useFarmStockLevels({
@@ -106,7 +105,7 @@ export default function FarmStockLevels({
                   {t('stock.farmStockLevels.totalStock', 'Total Stock')}:
                 </span>
                 <span className="font-semibold text-gray-900 dark:text-white">
-                  {parseFloat(totalQuantity.toFixed(3))} {stockLevels[0]?.default_unit || ''}
+                  {formatQuantity(totalQuantity, stockLevels[0]?.default_unit, i18n.language)}
                 </span>
               </div>
               <div className="flex items-center justify-between text-sm mt-1">
@@ -145,7 +144,7 @@ export default function FarmStockLevels({
                     </div>
                     <div className="text-right">
                       <p className="text-sm font-semibold text-gray-900 dark:text-white">
-                        {parseFloat(warehouseStock.total_quantity.toFixed(3))} {stockLevels[0]?.default_unit || ''}
+                        {formatQuantity(warehouseStock.total_quantity, stockLevels[0]?.default_unit, i18n.language)}
                       </p>
                       <p className="text-xs text-gray-500 dark:text-gray-400">
                         {formatCurrency(warehouseStock.total_value)}

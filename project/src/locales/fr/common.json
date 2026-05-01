@@ -3820,6 +3820,12 @@
         "onlyDraftDelete": "Seules les factures en brouillon peuvent être supprimées",
         "editDraftOnly": "Seules les factures en brouillon peuvent être modifiées"
       },
+      "submit": {
+        "button": "Soumettre la facture",
+        "confirm": "Êtes-vous sûr de vouloir soumettre cette facture ? Cela créera une écriture comptable et mettra à jour le stock.",
+        "success": "Facture soumise avec succès",
+        "error": "Échec de la soumission de la facture"
+      },
       "empty": {
         "message": "Aucune facture trouvée. Créez votre première facture pour commencer.",
         "filtered": "Aucune facture ne correspond à vos filtres."

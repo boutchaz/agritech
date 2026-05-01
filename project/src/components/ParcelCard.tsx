@@ -13,6 +13,7 @@ import { AIStatusBadge } from './ai/AIStatusBadge';
 import { Button } from '@/components/ui/button';
 import { StatusDot } from '@/components/ui/status-dot';
 import { useTranslation } from 'react-i18next';
+import { SatelliteAccessGate } from '@/components/authorization/SatelliteAccessGate';
 
 const IndicesCalculator = lazy(() => import('./SatelliteAnalysisView/IndicesCalculator'));
 const TimeSeriesChart = lazy(() => import('./SatelliteAnalysisView/TimeSeriesChart'));
@@ -477,6 +478,7 @@ const ParcelCard = ({ parcel, activeTab, onTabChange, sensorData, isAssigned = f
       case 'satellite':
         return (
           <div className="space-y-6">
+            <SatelliteAccessGate>
             {parcel.boundary ? (
               <Suspense fallback={
                 <div className="flex items-center justify-center p-12">
@@ -516,6 +518,7 @@ const ParcelCard = ({ parcel, activeTab, onTabChange, sensorData, isAssigned = f
                 </p>
               </div>
             )}
+            </SatelliteAccessGate>
           </div>
         );
 

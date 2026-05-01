@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { DataTablePagination, FilterBar, ListPageLayout, useServerTableState } from '@/components/ui/data-table';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ExternalLink, Loader2, AlertTriangle, CheckCircle } from 'lucide-react';
+import { formatQuantity } from '@/utils/units';
 
 interface InventoryStockLevel {
   item_id: string;
@@ -31,7 +32,7 @@ interface InventoryWarehouseStockLevel {
 }
 
 export default function InventoryStock() {
-  const { t } = useTranslation('stock');
+  const { t, i18n } = useTranslation('stock');
   const { format: formatCurrency } = useCurrency();
   const navigate = useNavigate();
   const { page, pageSize, search, setPage, setPageSize, setSearch } = useServerTableState({ defaultPageSize: 20 });
@@ -231,7 +232,7 @@ export default function InventoryStock() {
                     {row.warehouse_name}
                   </TableCell>
                   <TableCell className="px-4 py-3 text-sm text-right text-gray-900 dark:text-white">
-                    {row.total_quantity.toFixed(3)} {row.default_unit}
+                    {formatQuantity(row.total_quantity, row.default_unit, i18n.language)}
                   </TableCell>
                   <TableCell className="px-4 py-3 text-sm text-right text-gray-900 dark:text-white">
                     {formatCurrency(row.total_value)}

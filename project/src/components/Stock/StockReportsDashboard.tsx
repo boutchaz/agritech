@@ -21,7 +21,6 @@ import {
   Download,
   Loader2,
   DollarSign,
-  BarChart3,
 } from 'lucide-react';
 import type { StockMovementFilters } from '@/types/stock-entries';
 import { MOVEMENT_TYPE_COLORS } from '@/types/stock-entries';
@@ -29,20 +28,17 @@ import { Badge } from '@/components/ui/badge';
 import { useFarmStockLevels } from '@/hooks/useFarmStockLevels';
 import { useCurrency } from '@/hooks/useCurrency';
 import { useTranslation } from 'react-i18next';
+import { formatQuantity } from '@/utils/units';
 import { isRTLLocale } from '@/lib/is-rtl-locale';
 
 // Lazy load chart components
 const LineChart = lazy(() =>
   import('recharts').then((mod) => ({ default: mod.LineChart }))
 );
-const BarChart = lazy(() =>
-  import('recharts').then((mod) => ({ default: mod.BarChart }))
-);
 const PieChart = lazy(() =>
   import('recharts').then((mod) => ({ default: mod.PieChart }))
 );
 const Line = lazy(() => import('recharts').then((mod) => ({ default: mod.Line })));
-const Bar = lazy(() => import('recharts').then((mod) => ({ default: mod.Bar })));
 const Pie = lazy(() => import('recharts').then((mod) => ({ default: mod.Pie })));
 const Cell = lazy(() => import('recharts').then((mod) => ({ default: mod.Cell })));
 const XAxis = lazy(() => import('recharts').then((mod) => ({ default: mod.XAxis })));
@@ -305,7 +301,7 @@ export default function StockReportsDashboard() {
                     <div className="text-end">
                       <p className="font-medium">
                         {movement.quantity > 0 ? '+' : ''}
-                        {movement.quantity.toFixed(2)} {movement.unit}
+                        {formatQuantity(movement.quantity, movement.unit, i18n.language)}
                       </p>
                       <p className="text-sm text-gray-500">
                         {t('reports.balance')} {movement.balance_quantity.toFixed(2)}
@@ -395,13 +391,13 @@ export default function StockReportsDashboard() {
                         <div className="flex items-center justify-between text-sm">
                           <span className="text-gray-600">{t('reports.currentStock')}</span>
                           <span className="font-medium text-orange-700">
-                            {parseFloat(item.total_quantity.toFixed(3))} {item.default_unit}
+                            {formatQuantity(item.total_quantity, item.default_unit, i18n.language)}
                           </span>
                         </div>
                         {item.minimum_stock_level && (
                           <div className="flex items-center justify-between text-sm mt-1">
                             <span className="text-gray-600">{t('reports.minimumLevel')}</span>
-                            <span className="font-medium">{item.minimum_stock_level} {item.default_unit}</span>
+                            <span className="font-medium">{formatQuantity(item.minimum_stock_level, item.default_unit, i18n.language)}</span>
                           </div>
                         )}
                         <div className="flex items-center justify-between text-sm mt-1">

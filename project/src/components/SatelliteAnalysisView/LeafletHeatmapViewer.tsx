@@ -947,7 +947,10 @@ const LeafletHeatmapViewer = ({
           )}
         </div>
 
-        <div className={`border rounded-lg overflow-hidden relative ${isFullscreen ? 'fixed inset-0 z-50 bg-white' : 'h-96'}`}>
+        <div
+          className={`border rounded-lg overflow-hidden relative ${isFullscreen ? 'bg-white dark:bg-slate-900' : 'h-96'}`}
+          style={isFullscreen ? { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, width: '100vw', height: '100dvh', zIndex: 9999, borderRadius: 0 } : undefined}
+        >
           {/* Fullscreen Toggle Button */}
           {!compact && (
             <Button

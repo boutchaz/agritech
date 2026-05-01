@@ -9,6 +9,7 @@ import ModernPageHeader from '@/components/ModernPageHeader';
 import { ContentSkeleton } from '@/components/ui/page-skeletons';
 import { Button } from '@/components/ui/button';
 import { PageLoader } from '@/components/ui/loader';
+import { SatelliteAccessGate } from '@/components/authorization/SatelliteAccessGate';
 
 const MultiParcelHeatmapViewer = lazy(
   () => import('@/components/SatelliteAnalysisView/MultiParcelHeatmapViewer'),
@@ -68,13 +69,15 @@ const FarmHeatmapPage = () => {
           {t('satellite:farmHeatmap.backToFarms', 'Back to farms')}
         </Button>
 
-        {isLoading ? (
-          <ContentSkeleton lines={8} className="p-6" />
-        ) : (
-          <Suspense fallback={<ContentSkeleton lines={8} className="p-6" />}>
-            <MultiParcelHeatmapViewer parcels={inputs} farmName={farm?.name} />
-          </Suspense>
-        )}
+        <SatelliteAccessGate>
+          {isLoading ? (
+            <ContentSkeleton lines={8} className="p-6" />
+          ) : (
+            <Suspense fallback={<ContentSkeleton lines={8} className="p-6" />}>
+              <MultiParcelHeatmapViewer parcels={inputs} farmName={farm?.name} />
+            </Suspense>
+          )}
+        </SatelliteAccessGate>
       </div>
     </PageLayout>
   );

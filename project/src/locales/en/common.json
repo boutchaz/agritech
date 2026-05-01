@@ -3736,6 +3736,12 @@
         "onlyDraftDelete": "Only draft invoices can be deleted",
         "editDraftOnly": "Only draft invoices can be edited"
       },
+      "submit": {
+        "button": "Submit Invoice",
+        "confirm": "Are you sure you want to submit this invoice? This will create a journal entry and update stock.",
+        "success": "Invoice submitted successfully",
+        "error": "Failed to submit invoice"
+      },
       "empty": {
         "message": "No invoices found. Create your first invoice to get started.",
         "filtered": "No invoices match your filters."
