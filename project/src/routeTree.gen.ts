@@ -167,6 +167,7 @@ import { Route as AuthenticatedaccountingAccountingGeneralLedgerRouteImport } fr
 import { Route as AuthenticatedaccountingAccountingFiscalYearsRouteImport } from './routes/_authenticated/(accounting)/accounting/fiscal-years'
 import { Route as AuthenticatedaccountingAccountingDeliveryNotesRouteImport } from './routes/_authenticated/(accounting)/accounting/delivery-notes'
 import { Route as AuthenticatedaccountingAccountingCustomersRouteImport } from './routes/_authenticated/(accounting)/accounting/customers'
+import { Route as AuthenticatedaccountingAccountingCustomerDeliveriesRouteImport } from './routes/_authenticated/(accounting)/accounting/customer-deliveries'
 import { Route as AuthenticatedaccountingAccountingCostCentersRouteImport } from './routes/_authenticated/(accounting)/accounting/cost-centers'
 import { Route as AuthenticatedaccountingAccountingCashFlowRouteImport } from './routes/_authenticated/(accounting)/accounting/cash-flow'
 import { Route as AuthenticatedaccountingAccountingBankAccountsRouteImport } from './routes/_authenticated/(accounting)/accounting/bank-accounts'
@@ -1129,6 +1130,12 @@ const AuthenticatedaccountingAccountingCustomersRoute =
     path: '/customers',
     getParentRoute: () => AuthenticatedaccountingAccountingRoute,
   } as any)
+const AuthenticatedaccountingAccountingCustomerDeliveriesRoute =
+  AuthenticatedaccountingAccountingCustomerDeliveriesRouteImport.update({
+    id: '/customer-deliveries',
+    path: '/customer-deliveries',
+    getParentRoute: () => AuthenticatedaccountingAccountingRoute,
+  } as any)
 const AuthenticatedaccountingAccountingCostCentersRoute =
   AuthenticatedaccountingAccountingCostCentersRouteImport.update({
     id: '/cost-centers',
@@ -1411,6 +1418,7 @@ export interface FileRoutesByFullPath {
   '/accounting/bank-accounts': typeof AuthenticatedaccountingAccountingBankAccountsRoute
   '/accounting/cash-flow': typeof AuthenticatedaccountingAccountingCashFlowRoute
   '/accounting/cost-centers': typeof AuthenticatedaccountingAccountingCostCentersRoute
+  '/accounting/customer-deliveries': typeof AuthenticatedaccountingAccountingCustomerDeliveriesRoute
   '/accounting/customers': typeof AuthenticatedaccountingAccountingCustomersRoute
   '/accounting/delivery-notes': typeof AuthenticatedaccountingAccountingDeliveryNotesRoute
   '/accounting/fiscal-years': typeof AuthenticatedaccountingAccountingFiscalYearsRoute
@@ -1601,6 +1609,7 @@ export interface FileRoutesByTo {
   '/accounting/bank-accounts': typeof AuthenticatedaccountingAccountingBankAccountsRoute
   '/accounting/cash-flow': typeof AuthenticatedaccountingAccountingCashFlowRoute
   '/accounting/cost-centers': typeof AuthenticatedaccountingAccountingCostCentersRoute
+  '/accounting/customer-deliveries': typeof AuthenticatedaccountingAccountingCustomerDeliveriesRoute
   '/accounting/customers': typeof AuthenticatedaccountingAccountingCustomersRoute
   '/accounting/delivery-notes': typeof AuthenticatedaccountingAccountingDeliveryNotesRoute
   '/accounting/fiscal-years': typeof AuthenticatedaccountingAccountingFiscalYearsRoute
@@ -1794,6 +1803,7 @@ export interface FileRoutesById {
   '/_authenticated/(accounting)/accounting/bank-accounts': typeof AuthenticatedaccountingAccountingBankAccountsRoute
   '/_authenticated/(accounting)/accounting/cash-flow': typeof AuthenticatedaccountingAccountingCashFlowRoute
   '/_authenticated/(accounting)/accounting/cost-centers': typeof AuthenticatedaccountingAccountingCostCentersRoute
+  '/_authenticated/(accounting)/accounting/customer-deliveries': typeof AuthenticatedaccountingAccountingCustomerDeliveriesRoute
   '/_authenticated/(accounting)/accounting/customers': typeof AuthenticatedaccountingAccountingCustomersRoute
   '/_authenticated/(accounting)/accounting/delivery-notes': typeof AuthenticatedaccountingAccountingDeliveryNotesRoute
   '/_authenticated/(accounting)/accounting/fiscal-years': typeof AuthenticatedaccountingAccountingFiscalYearsRoute
@@ -1991,6 +2001,7 @@ export interface FileRouteTypes {
     | '/accounting/bank-accounts'
     | '/accounting/cash-flow'
     | '/accounting/cost-centers'
+    | '/accounting/customer-deliveries'
     | '/accounting/customers'
     | '/accounting/delivery-notes'
     | '/accounting/fiscal-years'
@@ -2181,6 +2192,7 @@ export interface FileRouteTypes {
     | '/accounting/bank-accounts'
     | '/accounting/cash-flow'
     | '/accounting/cost-centers'
+    | '/accounting/customer-deliveries'
     | '/accounting/customers'
     | '/accounting/delivery-notes'
     | '/accounting/fiscal-years'
@@ -2373,6 +2385,7 @@ export interface FileRouteTypes {
     | '/_authenticated/(accounting)/accounting/bank-accounts'
     | '/_authenticated/(accounting)/accounting/cash-flow'
     | '/_authenticated/(accounting)/accounting/cost-centers'
+    | '/_authenticated/(accounting)/accounting/customer-deliveries'
     | '/_authenticated/(accounting)/accounting/customers'
     | '/_authenticated/(accounting)/accounting/delivery-notes'
     | '/_authenticated/(accounting)/accounting/fiscal-years'
@@ -3631,6 +3644,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedaccountingAccountingCustomersRouteImport
       parentRoute: typeof AuthenticatedaccountingAccountingRoute
     }
+    '/_authenticated/(accounting)/accounting/customer-deliveries': {
+      id: '/_authenticated/(accounting)/accounting/customer-deliveries'
+      path: '/customer-deliveries'
+      fullPath: '/accounting/customer-deliveries'
+      preLoaderRoute: typeof AuthenticatedaccountingAccountingCustomerDeliveriesRouteImport
+      parentRoute: typeof AuthenticatedaccountingAccountingRoute
+    }
     '/_authenticated/(accounting)/accounting/cost-centers': {
       id: '/_authenticated/(accounting)/accounting/cost-centers'
       path: '/cost-centers'
@@ -3895,6 +3915,7 @@ interface AuthenticatedaccountingAccountingRouteChildren {
   AuthenticatedaccountingAccountingBankAccountsRoute: typeof AuthenticatedaccountingAccountingBankAccountsRoute
   AuthenticatedaccountingAccountingCashFlowRoute: typeof AuthenticatedaccountingAccountingCashFlowRoute
   AuthenticatedaccountingAccountingCostCentersRoute: typeof AuthenticatedaccountingAccountingCostCentersRoute
+  AuthenticatedaccountingAccountingCustomerDeliveriesRoute: typeof AuthenticatedaccountingAccountingCustomerDeliveriesRoute
   AuthenticatedaccountingAccountingCustomersRoute: typeof AuthenticatedaccountingAccountingCustomersRoute
   AuthenticatedaccountingAccountingDeliveryNotesRoute: typeof AuthenticatedaccountingAccountingDeliveryNotesRoute
   AuthenticatedaccountingAccountingFiscalYearsRoute: typeof AuthenticatedaccountingAccountingFiscalYearsRoute
@@ -3932,6 +3953,8 @@ const AuthenticatedaccountingAccountingRouteChildren: AuthenticatedaccountingAcc
       AuthenticatedaccountingAccountingCashFlowRoute,
     AuthenticatedaccountingAccountingCostCentersRoute:
       AuthenticatedaccountingAccountingCostCentersRoute,
+    AuthenticatedaccountingAccountingCustomerDeliveriesRoute:
+      AuthenticatedaccountingAccountingCustomerDeliveriesRoute,
     AuthenticatedaccountingAccountingCustomersRoute:
       AuthenticatedaccountingAccountingCustomersRoute,
     AuthenticatedaccountingAccountingDeliveryNotesRoute:

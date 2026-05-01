@@ -649,6 +649,12 @@
   background: transparent;
 }
 
+/* Radix UI forces dir="ltr" on horizontal tab wrappers, breaking RTL layout.
+   Override to match document direction. */
+:root[dir="rtl"] [data-orientation="horizontal"][dir="ltr"] {
+  direction: rtl;
+}
+
 /* Hide scrollbar for horizontal scroll strips */
 .scrollbar-hide {
   -ms-overflow-style: none;

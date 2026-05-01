@@ -511,6 +511,27 @@ export class TasksService {
       }
     }
 
+    // Post cost JE when task transitions to completed via PATCH (mirror complete() behavior)
+    const updatedActualCost = Number(task.actual_cost ?? 0);
+    if (statusChangedToCompleted && updatedActualCost > 0 && task.task_type) {
+      try {
+        await this.accountingAutomationService.createJournalEntryFromCost(
+          organizationId,
+          taskId,
+          task.task_type,
+          updatedActualCost,
+          new Date(),
+          updateTaskDto.notes || `Cost for completed task: ${task.title}`,
+          userId,
+          task.parcel_id || undefined,
+        );
+      } catch (journalError: any) {
+        this.logger.error(
+          `Failed to create cost JE for task ${taskId}: ${journalError?.message}`,
+        );
+      }
+    }
+
     // Auto time tracking on status transitions
     if (updateTaskDto.status && updateTaskDto.status !== existingTask.status) {
       if (updateTaskDto.status === "in_progress" && task.assigned_to) {
@@ -749,6 +770,15 @@ export class TasksService {
    */
   async bulkUpdateStatus(userId: string, organizationId: string, taskIds: string[], status: string) {
     await this.verifyOrganizationAccess(userId, organizationId);
+
+    // Bulk completion bypasses work-record + cost-JE + clock-out + notification side effects.
+    // Force callers through the per-task complete() endpoint for proper accounting.
+    if (status === 'completed') {
+      throw new BadRequestException(
+        'Bulk-completing tasks is not allowed. Use POST /tasks/:id/complete per task to ensure cost JE, work records, and notifications are posted.',
+      );
+    }
+
     const client = this.databaseService.getAdminClient();
 
     const { data, error } = await client

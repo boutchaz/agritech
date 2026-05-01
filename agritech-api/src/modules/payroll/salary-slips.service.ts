@@ -5,12 +5,14 @@ import {
 } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { ComputedSlip, PayrollCalcService } from './payroll-calc.service';
+import { AccountingAutomationService } from '../journal-entries/accounting-automation.service';
 
 @Injectable()
 export class SalarySlipsService {
   constructor(
     private readonly db: DatabaseService,
     private readonly calc: PayrollCalcService,
+    private readonly accounting: AccountingAutomationService,
   ) {}
 
   async list(
@@ -130,8 +132,40 @@ export class SalarySlipsService {
     organizationId: string,
     id: string,
     status: 'submitted' | 'paid' | 'cancelled',
+    userId: string | null = null,
   ) {
     const supabase = this.db.getAdminClient();
+
+    if (status === 'paid') {
+      const { data: slip, error: fetchErr } = await supabase
+        .from('salary_slips')
+        .select(
+          'id, farm_id, worker_id, pay_period_start, pay_period_end, gross_pay, total_deductions, net_pay, journal_entry_id, worker:workers(first_name, last_name)',
+        )
+        .eq('organization_id', organizationId)
+        .eq('id', id)
+        .single();
+      if (fetchErr || !slip) throw new NotFoundException('Salary slip not found');
+
+      if (!slip.journal_entry_id) {
+        const w = (slip as any).worker;
+        const workerName = `${w?.first_name ?? ''} ${w?.last_name ?? ''}`.trim() || 'Worker';
+        try {
+          await this.accounting.createJournalEntryFromSalarySlip(
+            organizationId,
+            slip as any,
+            workerName,
+            userId ?? slip.worker_id,
+          );
+        } catch (err: any) {
+          // Don't block payment on accounting failure — log and continue
+          // (payment still recorded; JE can be retried later)
+          // eslint-disable-next-line no-console
+          console.error(`[salary-slips] JE creation failed for slip ${slip.id}: ${err?.message}`);
+        }
+      }
+    }
+
     const { data, error } = await supabase
       .from('salary_slips')
       .update({ status, updated_at: new Date().toISOString() })

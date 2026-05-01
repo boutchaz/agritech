@@ -2,9 +2,10 @@ import { useState, type ReactNode } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Loader2, Plus, Pencil, Trash2, Clock } from 'lucide-react';
+import { Loader2, Plus, Pencil, Trash2, Clock, Building2, Users } from 'lucide-react';
 import { withRouteProtection } from '@/components/authorization/withRouteProtection';
 import { useAuth } from '@/hooks/useAuth';
+import ModernPageHeader from '@/components/ModernPageHeader';
 import {
   useCreateShift,
   useDeleteShift,
@@ -42,23 +43,26 @@ function ShiftsPage() {
   const shifts = query.data ?? [];
 
   return (
-    <div className="p-6 space-y-6 max-w-6xl">
-      <header className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold">{t('shifts.title', 'Shifts')}</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            {t(
-              'shifts.subtitle',
-              'Define daily working schedules — start/end time, grace period, auto-attendance rules.',
-            )}
-          </p>
-        </div>
-        <Button onClick={() => setCreating(true)}>
-          <Plus className="w-4 h-4 mr-2" />
-          {t('common.create', 'Create')}
-        </Button>
-      </header>
-
+    <>
+      <ModernPageHeader
+        breadcrumbs={[
+          { icon: Building2, label: currentOrganization?.name ?? '', path: '/dashboard' },
+          { icon: Users, label: t('nav.workforce', 'Workforce'), path: '/workforce/employees' },
+          { icon: Clock, label: t('shifts.title', 'Shifts'), isActive: true },
+        ]}
+        title={t('shifts.title', 'Shifts')}
+        subtitle={t(
+          'shifts.subtitle',
+          'Define daily working schedules — start/end time, grace period, auto-attendance rules.',
+        )}
+        actions={
+          <Button onClick={() => setCreating(true)}>
+            <Plus className="w-4 h-4 mr-2" />
+            {t('common.create', 'Create')}
+          </Button>
+        }
+      />
+      <div className="p-3 sm:p-4 lg:p-6 space-y-6">
       {query.isLoading ? (
         <div className="flex items-center justify-center h-40">
           <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
@@ -144,7 +148,8 @@ function ShiftsPage() {
           }}
         />
       )}
-    </div>
+      </div>
+    </>
   );
 }
 

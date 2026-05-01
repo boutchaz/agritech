@@ -1,9 +1,10 @@
 import { useMemo } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
-import { Loader2, Users, AlertTriangle } from 'lucide-react';
+import { Loader2, Users, AlertTriangle, Building2, BarChart3 } from 'lucide-react';
 import { withRouteProtection } from '@/components/authorization/withRouteProtection';
 import { useAuth } from '@/hooks/useAuth';
+import ModernPageHeader from '@/components/ModernPageHeader';
 import { useFarms } from '@/hooks/useParcelsQuery';
 import { useLeaveBalanceSummary, useWorkforceSummary } from '@/hooks/useHrAdvanced';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -53,14 +54,17 @@ function HrAnalyticsPage() {
   };
 
   return (
-    <div className="p-6 space-y-6 max-w-6xl">
-      <header>
-        <h1 className="text-2xl font-semibold">{t('hrAnalytics.title', 'HR Analytics')}</h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          {t('hrAnalytics.subtitle', 'Workforce composition, CNSS coverage, leave balances.')}
-        </p>
-      </header>
-
+    <>
+      <ModernPageHeader
+        breadcrumbs={[
+          { icon: Building2, label: currentOrganization?.name ?? '', path: '/dashboard' },
+          { icon: Users, label: t('nav.workforce', 'Workforce'), path: '/workforce/employees' },
+          { icon: BarChart3, label: t('hrAnalytics.title', 'HR Analytics'), isActive: true },
+        ]}
+        title={t('hrAnalytics.title', 'HR Analytics')}
+        subtitle={t('hrAnalytics.subtitle', 'Workforce composition, CNSS coverage, leave balances.')}
+      />
+      <div className="p-3 sm:p-4 lg:p-6 space-y-6">
       {workforce.isLoading ? (
         <div className="flex items-center justify-center h-40">
           <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
@@ -165,7 +169,8 @@ function HrAnalyticsPage() {
           </Card>
         </>
       )}
-    </div>
+      </div>
+    </>
   );
 }
 

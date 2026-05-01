@@ -75,7 +75,8 @@ const InfrastructureManagement = () => {
     installation_date: new Date().toISOString().split('T')[0],
     condition: 'good',
     usage: '',
-    structure_details: {}
+    structure_details: {},
+    photos: [],
   });
 
   const error = apiError ? 'Failed to fetch structures' : null;
@@ -588,7 +589,8 @@ const InfrastructureManagement = () => {
         installation_date: new Date().toISOString().split('T')[0],
         condition: 'good',
         usage: '',
-        structure_details: {}
+        structure_details: {},
+        photos: [],
       });
       toast.success(t('infrastructure.messages.createSuccess'));
     } catch (error) {

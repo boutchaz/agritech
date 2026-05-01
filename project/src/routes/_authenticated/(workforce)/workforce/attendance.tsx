@@ -2,7 +2,7 @@ import { createFileRoute } from '@tanstack/react-router';
 import * as React from 'react';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Building2, CheckCircle2, Clock, Home, MapPin, Users, X } from 'lucide-react';
+import { Building2, CheckCircle2, Clock, MapPin, Users, X } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/Input';
@@ -23,13 +23,12 @@ import {
 } from '@/components/ui/table';
 import { useAuth } from '@/hooks/useAuth';
 import { useAttendanceRecords } from '@/hooks/useAttendance';
-import { PageLayout } from '@/components/PageLayout';
 import ModernPageHeader from '@/components/ModernPageHeader';
 import AttendanceCheckInWidget from '@/components/Workforce/AttendanceCheckInWidget';
 
 function AttendancePage() {
   const { t } = useTranslation();
-  const { currentOrganization, currentFarm } = useAuth();
+  const { currentOrganization } = useAuth();
 
   const [from, setFrom] = useState<string>(() => {
     const d = new Date();
@@ -59,29 +58,20 @@ function AttendancePage() {
   }, [records]);
 
   return (
-    <PageLayout
-      header={
-        <ModernPageHeader
-          breadcrumbs={[
-            {
-              icon: Building2,
-              label: currentOrganization?.name || t('nav.dashboard', 'Dashboard'),
-              path: '/dashboard',
-            },
-            ...(currentFarm?.name
-              ? [{ icon: Home, label: currentFarm.name, path: '/farm-hierarchy' }]
-              : []),
-            { icon: Clock, label: t('attendance.title', 'Attendance'), isActive: true },
-          ]}
-          title={t('attendance.title', 'Attendance')}
-          subtitle={t(
-            'attendance.subtitle',
-            'GPS check-in/out for workers and day labourers.',
-          )}
-        />
-      }
-    >
-      <div className="p-3 sm:p-4 md:p-6 pb-20 md:pb-6 space-y-6">
+    <>
+      <ModernPageHeader
+        breadcrumbs={[
+          { icon: Building2, label: currentOrganization?.name ?? '', path: '/dashboard' },
+          { icon: Users, label: t('nav.workforce', 'Workforce'), path: '/workforce/employees' },
+          { icon: Clock, label: t('attendance.title', 'Attendance'), isActive: true },
+        ]}
+        title={t('attendance.title', 'Attendance')}
+        subtitle={t(
+          'attendance.subtitle',
+          'GPS check-in/out for workers and day labourers.',
+        )}
+      />
+      <div className="p-3 sm:p-4 lg:p-6 space-y-6">
         <div className="grid gap-4 lg:grid-cols-[360px_1fr]">
           <AttendanceCheckInWidget />
 
@@ -234,7 +224,7 @@ function AttendancePage() {
           </CardContent>
         </Card>
       </div>
-    </PageLayout>
+    </>
   );
 }
 

@@ -21,6 +21,19 @@ interface StoredOrganization {
 
 const STORAGE_VERSION = 2;
 
+let autoSaveTimer: ReturnType<typeof setTimeout> | null = null;
+
+function scheduleAutoSave(getState: () => OnboardingStore) {
+  if (autoSaveTimer) clearTimeout(autoSaveTimer);
+  autoSaveTimer = setTimeout(() => {
+    const state = getState();
+    if (state.userId && state.isRestored) {
+      state.persistState().catch(() => {});
+    }
+    autoSaveTimer = null;
+  }, 2000);
+}
+
 const getDefaultState = (userId: string, email: string): OnboardingState => ({
   version: STORAGE_VERSION,
   userId,
@@ -131,37 +144,50 @@ export const useOnboardingStore = create<OnboardingStore>()(
 
           const defaultState = getDefaultState(userId, email);
 
-          // Build final state - saved state takes precedence over defaults
-          // But we still need to ensure all required fields exist
+          let lsState: Partial<OnboardingState> | null = null;
+          try {
+            const raw = localStorage.getItem('agritech-onboarding');
+            if (raw) {
+              const parsed = JSON.parse(raw);
+              if (parsed?.state) lsState = parsed.state;
+            }
+          } catch {}
+
           const finalState: OnboardingState = {
-            userId: savedState?.userId ?? defaultState.userId,
-            version: savedState?.version ?? defaultState.version,
-            currentStep: savedState?.currentStep ?? defaultState.currentStep,
-            existingOrgId: savedState?.existingOrgId ?? defaultState.existingOrgId,
-            existingFarmId: savedState?.existingFarmId ?? defaultState.existingFarmId,
-            selectedPlanType: savedState?.selectedPlanType ?? defaultState.selectedPlanType,
-            // Merge user profile data if available (from AuthContext)
+            userId: savedState?.userId ?? lsState?.userId ?? defaultState.userId,
+            version: savedState?.version ?? lsState?.version ?? defaultState.version,
+            currentStep: savedState?.currentStep ?? lsState?.currentStep ?? defaultState.currentStep,
+            existingOrgId: savedState?.existingOrgId ?? lsState?.existingOrgId ?? defaultState.existingOrgId,
+            existingFarmId: savedState?.existingFarmId ?? lsState?.existingFarmId ?? defaultState.existingFarmId,
+            selectedPlanType: savedState?.selectedPlanType ?? lsState?.selectedPlanType ?? defaultState.selectedPlanType,
             profileData: {
-              first_name: userProfile?.first_name || savedState?.profileData?.first_name || defaultState.profileData.first_name,
-              last_name: userProfile?.last_name || savedState?.profileData?.last_name || defaultState.profileData.last_name,
-              phone: userProfile?.phone || savedState?.profileData?.phone || defaultState.profileData.phone,
-              timezone: userProfile?.timezone || savedState?.profileData?.timezone || defaultState.profileData.timezone,
-              language: userProfile?.language || savedState?.profileData?.language || defaultState.profileData.language,
+              ...defaultState.profileData,
+              ...(lsState?.profileData || {}),
+              ...(savedState?.profileData || {}),
+              first_name: userProfile?.first_name || savedState?.profileData?.first_name || lsState?.profileData?.first_name || defaultState.profileData.first_name,
+              last_name: userProfile?.last_name || savedState?.profileData?.last_name || lsState?.profileData?.last_name || defaultState.profileData.last_name,
+              phone: userProfile?.phone || savedState?.profileData?.phone || lsState?.profileData?.phone || defaultState.profileData.phone,
+              timezone: userProfile?.timezone || savedState?.profileData?.timezone || lsState?.profileData?.timezone || defaultState.profileData.timezone,
+              language: userProfile?.language || savedState?.profileData?.language || lsState?.profileData?.language || defaultState.profileData.language,
             },
             organizationData: {
               ...defaultState.organizationData,
+              ...(lsState?.organizationData || {}),
               ...(savedState?.organizationData || {}),
             },
             farmData: {
               ...defaultState.farmData,
+              ...(lsState?.farmData || {}),
               ...(savedState?.farmData || {}),
             },
             moduleSelection: {
               ...defaultState.moduleSelection,
+              ...(lsState?.moduleSelection || {}),
               ...(savedState?.moduleSelection || {}),
             },
             preferences: {
               ...defaultState.preferences,
+              ...(lsState?.preferences || {}),
               ...(savedState?.preferences || {}),
             },
           };
@@ -173,8 +199,6 @@ export const useOnboardingStore = create<OnboardingStore>()(
             };
           }
 
-          // Always merge organization data from localStorage if it exists
-          // This takes precedence over backend state for the organization created during signup
           if (orgData) {
             finalState.organizationData = {
               ...finalState.organizationData,
@@ -255,39 +279,39 @@ export const useOnboardingStore = create<OnboardingStore>()(
         }
       },
 
-      // Update profile data
       updateProfileData: (data) => {
         set((state) => ({
           profileData: { ...state.profileData, ...data },
         }));
+        scheduleAutoSave(get);
       },
 
-      // Update organization data
       updateOrganizationData: (data) => {
         set((state) => ({
           organizationData: { ...state.organizationData, ...data },
         }));
+        scheduleAutoSave(get);
       },
 
-      // Update farm data
       updateFarmData: (data) => {
         set((state) => ({
           farmData: { ...state.farmData, ...data },
         }));
+        scheduleAutoSave(get);
       },
 
-      // Update module selection
       updateModuleSelection: (data) => {
         set((state) => ({
           moduleSelection: { ...state.moduleSelection, ...data },
         }));
+        scheduleAutoSave(get);
       },
 
-      // Update preferences
       updatePreferences: (data) => {
         set((state) => ({
           preferences: { ...state.preferences, ...data },
         }));
+        scheduleAutoSave(get);
       },
 
       // Set current step
@@ -324,11 +348,17 @@ export const useOnboardingStore = create<OnboardingStore>()(
       storage: createJSONStorage(() => localStorage),
       // Don't persist these fields to localStorage (they're loaded from backend)
       partialize: (state) => ({
-        // Only persist minimal state to localStorage as backup
+        version: state.version,
         userId: state.userId,
         currentStep: state.currentStep,
         existingOrgId: state.existingOrgId,
         existingFarmId: state.existingFarmId,
+        selectedPlanType: state.selectedPlanType,
+        profileData: state.profileData,
+        organizationData: state.organizationData,
+        farmData: state.farmData,
+        moduleSelection: state.moduleSelection,
+        preferences: state.preferences,
       }),
     }
   )

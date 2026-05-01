@@ -2,6 +2,7 @@ import { Controller, Get, Patch, Post, Delete, Body, UseGuards, Request, Param, 
 import { OnboardingService } from './onboarding.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { OrganizationGuard } from '../../common/guards/organization.guard';
+import { SkipOrganizationGuard } from '../../common/decorators/skip-organization-guard.decorator';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse, ApiBody, ApiQuery } from '@nestjs/swagger';
 import {
   OnboardingStateDto,
@@ -21,6 +22,7 @@ export class OnboardingController {
   constructor(private readonly onboardingService: OnboardingService) {}
 
   @Get('check-slug')
+  @SkipOrganizationGuard()
   @ApiOperation({ summary: 'Check if organization slug is available' })
   @ApiQuery({ name: 'slug', required: true, description: 'The slug to check' })
   @ApiResponse({ status: 200, description: 'Slug availability check result', type: CheckSlugAvailabilityResponseDto })
@@ -31,6 +33,7 @@ export class OnboardingController {
   }
 
   @Get('state')
+  @SkipOrganizationGuard()
   @ApiOperation({ summary: 'Get current onboarding state' })
   @ApiResponse({ status: 200, description: 'Onboarding state retrieved successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -39,6 +42,7 @@ export class OnboardingController {
   }
 
   @Patch('state')
+  @SkipOrganizationGuard()
   @ApiOperation({ summary: 'Save onboarding state (partial update)' })
   @ApiResponse({ status: 200, description: 'Onboarding state saved successfully' })
   @ApiResponse({ status: 400, description: 'Bad request' })
@@ -48,6 +52,7 @@ export class OnboardingController {
   }
 
   @Delete('state')
+  @SkipOrganizationGuard()
   @ApiOperation({ summary: 'Clear/reset onboarding state' })
   @ApiResponse({ status: 200, description: 'Onboarding state cleared successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -56,6 +61,7 @@ export class OnboardingController {
   }
 
   @Post('profile')
+  @SkipOrganizationGuard()
   @ApiOperation({ summary: 'Save user profile data (Step 1)' })
   @ApiResponse({ status: 201, description: 'Profile saved successfully' })
   @ApiResponse({ status: 400, description: 'Bad request' })

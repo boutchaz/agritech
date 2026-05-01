@@ -2,9 +2,10 @@ import { useState, type ReactNode } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Loader2, Plus, Trash2, UserPlus, Pencil } from 'lucide-react';
+import { Loader2, Plus, Trash2, UserPlus, Pencil, Building2, Users, Layers } from 'lucide-react';
 import { withRouteProtection } from '@/components/authorization/withRouteProtection';
 import { useAuth } from '@/hooks/useAuth';
+import ModernPageHeader from '@/components/ModernPageHeader';
 import { useWorkers } from '@/hooks/useWorkers';
 import {
   useCreateAssignment,
@@ -70,23 +71,26 @@ function SalaryStructuresPage() {
   const structures = query.data ?? [];
 
   return (
-    <div className="p-6 space-y-6 max-w-6xl">
-      <header className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold">{t('salaryStructures.title', 'Salary Structures')}</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            {t(
-              'salaryStructures.subtitle',
-              'Define payroll templates and their components. Assign workers to a structure to drive their payslips.',
-            )}
-          </p>
-        </div>
-        <Button onClick={() => setCreating(true)}>
-          <Plus className="w-4 h-4 mr-2" />
-          {t('common.create', 'Create')}
-        </Button>
-      </header>
-
+    <>
+      <ModernPageHeader
+        breadcrumbs={[
+          { icon: Building2, label: currentOrganization?.name ?? '', path: '/dashboard' },
+          { icon: Users, label: t('nav.workforce', 'Workforce'), path: '/workforce/employees' },
+          { icon: Layers, label: t('salaryStructures.title', 'Salary Structures'), isActive: true },
+        ]}
+        title={t('salaryStructures.title', 'Salary Structures')}
+        subtitle={t(
+          'salaryStructures.subtitle',
+          'Define payroll templates and their components. Assign workers to a structure to drive their payslips.',
+        )}
+        actions={
+          <Button onClick={() => setCreating(true)}>
+            <Plus className="w-4 h-4 mr-2" />
+            {t('common.create', 'Create')}
+          </Button>
+        }
+      />
+      <div className="p-3 sm:p-4 lg:p-6 space-y-6">
       {query.isLoading ? (
         <div className="flex items-center justify-center h-40">
           <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
@@ -212,7 +216,8 @@ function SalaryStructuresPage() {
           onClose={() => setAssigning(null)}
         />
       )}
-    </div>
+      </div>
+    </>
   );
 }
 

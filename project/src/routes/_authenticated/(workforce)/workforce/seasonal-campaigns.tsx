@@ -2,9 +2,10 @@ import { useState, type ReactNode } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Loader2, Plus, Pencil, Trash2 } from 'lucide-react';
+import { Loader2, Plus, Pencil, Trash2, Building2, Users, Sprout } from 'lucide-react';
 import { withRouteProtection } from '@/components/authorization/withRouteProtection';
 import { useAuth } from '@/hooks/useAuth';
+import ModernPageHeader from '@/components/ModernPageHeader';
 import { useFarms } from '@/hooks/useParcelsQuery';
 import {
   useCreateSeasonalCampaign,
@@ -63,38 +64,39 @@ function SeasonalCampaignsPage() {
   const farmName = (id: string) => farmList.find((f) => f.id === id)?.name ?? '—';
 
   return (
-    <div className="p-6 space-y-6 max-w-6xl">
-      <header className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold">
-            {t('seasonalCampaigns.title', 'Seasonal Campaigns')}
-          </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            {t(
-              'seasonalCampaigns.subtitle',
-              'Plan harvest, planting and treatment campaigns. Track labour budget vs actual.',
-            )}
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as typeof statusFilter)}>
-            <SelectTrigger className="w-44">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{t('common.all', 'All')}</SelectItem>
-              {STATUSES.map((s) => (
-                <SelectItem key={s} value={s}>{s}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button onClick={() => setCreating(true)} disabled={!farmList.length}>
-            <Plus className="w-4 h-4 mr-2" />
-            {t('common.create', 'Create')}
-          </Button>
-        </div>
-      </header>
-
+    <>
+      <ModernPageHeader
+        breadcrumbs={[
+          { icon: Building2, label: currentOrganization?.name ?? '', path: '/dashboard' },
+          { icon: Users, label: t('nav.workforce', 'Workforce'), path: '/workforce/employees' },
+          { icon: Sprout, label: t('seasonalCampaigns.title', 'Seasonal Campaigns'), isActive: true },
+        ]}
+        title={t('seasonalCampaigns.title', 'Seasonal Campaigns')}
+        subtitle={t(
+          'seasonalCampaigns.subtitle',
+          'Plan harvest, planting and treatment campaigns. Track labour budget vs actual.',
+        )}
+        actions={
+          <>
+            <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as typeof statusFilter)}>
+              <SelectTrigger className="w-44">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t('common.all', 'All')}</SelectItem>
+                {STATUSES.map((s) => (
+                  <SelectItem key={s} value={s}>{s}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button onClick={() => setCreating(true)} disabled={!farmList.length}>
+              <Plus className="w-4 h-4 mr-2" />
+              {t('common.create', 'Create')}
+            </Button>
+          </>
+        }
+      />
+      <div className="p-3 sm:p-4 lg:p-6 space-y-6">
       {query.isLoading ? (
         <Loading />
       ) : !items.length ? (
@@ -178,7 +180,8 @@ function SeasonalCampaignsPage() {
           }}
         />
       )}
-    </div>
+      </div>
+    </>
   );
 }
 

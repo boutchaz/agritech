@@ -2,9 +2,10 @@ import { useMemo, useState, type ReactNode } from 'react';
 import { Link, createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { ArrowLeft, Loader2, Plus, Trash2 } from 'lucide-react';
+import { ArrowLeft, Loader2, Plus, Trash2, Building2, Users, LogOut } from 'lucide-react';
 import { withRouteProtection } from '@/components/authorization/withRouteProtection';
 import { useAuth } from '@/hooks/useAuth';
+import ModernPageHeader from '@/components/ModernPageHeader';
 import {
   useSeparation,
   useUpdateFnf,
@@ -61,9 +62,27 @@ function SeparationDetailPage() {
   }
 
   const sep = query.data;
+  const workerName = `${sep.worker?.first_name ?? ''} ${sep.worker?.last_name ?? ''}`.trim();
 
   return (
-    <div className="p-6 space-y-6 max-w-5xl">
+    <>
+      <ModernPageHeader
+        breadcrumbs={[
+          { icon: Building2, label: currentOrganization?.name ?? '', path: '/dashboard' },
+          { icon: Users, label: t('nav.workforce', 'Workforce'), path: '/workforce/employees' },
+          { icon: LogOut, label: t('separations.title', 'Separations'), path: '/workforce/separations' },
+          { icon: LogOut, label: workerName || t('separations.detail', 'Détail'), isActive: true },
+        ]}
+        title={workerName || t('separations.detail', 'Détail')}
+        subtitle={`${t(`separations.type.${sep.separation_type}`, sep.separation_type)}${sep.worker?.cin ? ` · CIN ${sep.worker.cin}` : ''}`}
+        actions={
+          <>
+            <Badge>{t(`separations.status.${sep.status}`, sep.status)}</Badge>
+            <Badge variant="outline">FnF: {sep.fnf_status}</Badge>
+          </>
+        }
+      />
+      <div className="p-3 sm:p-4 lg:p-6 space-y-6">
       <div>
         <Link
           to="/workforce/separations"
@@ -73,22 +92,6 @@ function SeparationDetailPage() {
           {t('separations.backToList', 'Back to separations')}
         </Link>
       </div>
-
-      <header className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold">
-            {sep.worker?.first_name} {sep.worker?.last_name}
-          </h1>
-          <p className="text-sm text-gray-500 mt-1">
-            {t(`separations.type.${sep.separation_type}`, sep.separation_type)}
-            {sep.worker?.cin && ` · CIN ${sep.worker.cin}`}
-          </p>
-        </div>
-        <div className="flex flex-col items-end gap-2">
-          <Badge>{t(`separations.status.${sep.status}`, sep.status)}</Badge>
-          <Badge variant="outline">FnF: {sep.fnf_status}</Badge>
-        </div>
-      </header>
 
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
@@ -165,7 +168,8 @@ function SeparationDetailPage() {
       </div>
 
       <FnfSection key={sep.id} sep={sep} orgId={orgId!} onSave={updateFnf} />
-    </div>
+      </div>
+    </>
   );
 }
 

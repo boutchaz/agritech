@@ -2,9 +2,10 @@ import { useState, type ReactNode } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Loader2, Plus, Pencil, Trash2, Star } from 'lucide-react';
+import { Loader2, Plus, Pencil, Trash2, Star, Building2, Users, Briefcase } from 'lucide-react';
 import { withRouteProtection } from '@/components/authorization/withRouteProtection';
 import { useAuth } from '@/hooks/useAuth';
+import ModernPageHeader from '@/components/ModernPageHeader';
 import { useFarms } from '@/hooks/useParcelsQuery';
 import {
   useCreateApplicant,
@@ -76,30 +77,33 @@ function RecruitmentPage() {
   const openingList = openings.data ?? [];
 
   return (
-    <div className="p-6 space-y-6 max-w-6xl">
-      <header className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold">{t('recruitment.title', 'Recruitment')}</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            {t('recruitment.subtitle', 'Job openings and applicant pipeline.')}
-          </p>
-        </div>
-        <div className="flex gap-2">
-          {tab === 'openings' && (
-            <Button onClick={() => setCreatingOpening(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              {t('recruitment.newOpening', 'New opening')}
-            </Button>
-          )}
-          {tab === 'applicants' && (
-            <Button onClick={() => setCreatingApplicant(true)} disabled={!openingList.length}>
-              <Plus className="w-4 h-4 mr-2" />
-              {t('recruitment.newApplicant', 'New applicant')}
-            </Button>
-          )}
-        </div>
-      </header>
-
+    <>
+      <ModernPageHeader
+        breadcrumbs={[
+          { icon: Building2, label: currentOrganization?.name ?? '', path: '/dashboard' },
+          { icon: Users, label: t('nav.workforce', 'Workforce'), path: '/workforce/employees' },
+          { icon: Briefcase, label: t('recruitment.title', 'Recruitment'), isActive: true },
+        ]}
+        title={t('recruitment.title', 'Recruitment')}
+        subtitle={t('recruitment.subtitle', 'Job openings and applicant pipeline.')}
+        actions={
+          <>
+            {tab === 'openings' && (
+              <Button onClick={() => setCreatingOpening(true)}>
+                <Plus className="w-4 h-4 mr-2" />
+                {t('recruitment.newOpening', 'New opening')}
+              </Button>
+            )}
+            {tab === 'applicants' && (
+              <Button onClick={() => setCreatingApplicant(true)} disabled={!openingList.length}>
+                <Plus className="w-4 h-4 mr-2" />
+                {t('recruitment.newApplicant', 'New applicant')}
+              </Button>
+            )}
+          </>
+        }
+      />
+      <div className="p-3 sm:p-4 lg:p-6 space-y-6">
       <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)}>
         <TabsList>
           <TabsTrigger value="openings">{t('recruitment.openings', 'Openings')}</TabsTrigger>
@@ -244,7 +248,8 @@ function RecruitmentPage() {
           }}
         />
       )}
-    </div>
+      </div>
+    </>
   );
 }
 

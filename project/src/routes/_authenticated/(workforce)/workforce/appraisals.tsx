@@ -2,9 +2,10 @@ import { useMemo, useState, type ReactNode } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Loader2, Plus, Pencil, Users } from 'lucide-react';
+import { Loader2, Plus, Pencil, Users, Building2, Star } from 'lucide-react';
 import { withRouteProtection } from '@/components/authorization/withRouteProtection';
 import { useAuth } from '@/hooks/useAuth';
+import ModernPageHeader from '@/components/ModernPageHeader';
 import { useWorkers } from '@/hooks/useWorkers';
 import {
   useAppraisalCycles,
@@ -69,22 +70,25 @@ function AppraisalsPage() {
   const workerList = (workers.data ?? []).map((w) => ({ id: w.id, name: `${w.first_name} ${w.last_name}` }));
 
   return (
-    <div className="p-6 space-y-6 max-w-6xl">
-      <header className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold">{t('appraisals.title', 'Performance Appraisals')}</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            {t('appraisals.subtitle', 'Run appraisal cycles, capture self/manager ratings, KRAs and goals.')}
-          </p>
-        </div>
-        {tab === 'cycles' && (
-          <Button onClick={() => setCreatingCycle(true)}>
-            <Plus className="w-4 h-4 mr-2" />
-            {t('appraisals.newCycle', 'New cycle')}
-          </Button>
-        )}
-      </header>
-
+    <>
+      <ModernPageHeader
+        breadcrumbs={[
+          { icon: Building2, label: currentOrganization?.name ?? '', path: '/dashboard' },
+          { icon: Users, label: t('nav.workforce', 'Workforce'), path: '/workforce/employees' },
+          { icon: Star, label: t('appraisals.title', 'Performance Appraisals'), isActive: true },
+        ]}
+        title={t('appraisals.title', 'Performance Appraisals')}
+        subtitle={t('appraisals.subtitle', 'Run appraisal cycles, capture self/manager ratings, KRAs and goals.')}
+        actions={
+          tab === 'cycles' ? (
+            <Button onClick={() => setCreatingCycle(true)}>
+              <Plus className="w-4 h-4 mr-2" />
+              {t('appraisals.newCycle', 'New cycle')}
+            </Button>
+          ) : undefined
+        }
+      />
+      <div className="p-3 sm:p-4 lg:p-6 space-y-6">
       <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)}>
         <TabsList>
           <TabsTrigger value="cycles">{t('appraisals.cycles', 'Cycles')}</TabsTrigger>
@@ -221,7 +225,8 @@ function AppraisalsPage() {
           }}
         />
       )}
-    </div>
+      </div>
+    </>
   );
 }
 

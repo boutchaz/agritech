@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router';
+import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { CompletionStep } from '@/components/onboarding/steps/CompletionStep';
 import { useOnboardingStore } from '@/stores/onboardingStore';
 import { useOrganizationStore } from '@/stores/organizationStore';
@@ -6,7 +6,6 @@ import { onboardingApi } from '@/lib/api/onboarding';
 import { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
-/** Same key as organization step / onboarding initialize — required for X-Organization-Id when Zustand is empty (e.g. after refresh). */
 function readStoredOrganizationId(): string | null {
   if (typeof window === 'undefined') return null;
   try {
@@ -18,12 +17,40 @@ function readStoredOrganizationId(): string | null {
   }
 }
 
+async function resolveOrgId(
+  existingOrgId: string | null,
+  storeOrgId: string | null,
+): Promise<string | null> {
+  const candidates = [
+    existingOrgId?.trim(),
+    storeOrgId?.trim(),
+    readStoredOrganizationId(),
+  ].filter(Boolean) as string[];
+
+  for (const candidate of candidates) {
+    try {
+      const res = await fetch(
+        `${import.meta.env.VITE_API_URL || ''}/api/v1/organizations/${candidate}`,
+        {
+          headers: {
+            Authorization: `Bearer ${await import('@/stores/authStore').then(m => m.useAuthStore.getState().getAccessToken())}`,
+            'X-Organization-Id': candidate,
+          },
+        },
+      );
+      if (res.ok) return candidate;
+    } catch {}
+  }
+  return null;
+}
+
 export const Route = createFileRoute('/(public)/onboarding/complete')({
   component: CompleteStepComponent,
 });
 
 function CompleteStepComponent() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const preferences = useOnboardingStore((state) => state.preferences);
   const profileData = useOnboardingStore((state) => state.profileData);
   const organizationData = useOnboardingStore((state) => state.organizationData);
@@ -41,10 +68,14 @@ function CompleteStepComponent() {
     setIsLoading(true);
 
     try {
-      const orgIdForApi =
+      let orgIdForApi =
         (existingOrgId && existingOrgId.trim()) ||
         (storeOrgId && storeOrgId.trim()) ||
         readStoredOrganizationId();
+
+      if (!orgIdForApi) {
+        orgIdForApi = await resolveOrgId(existingOrgId, storeOrgId);
+      }
 
       if (!orgIdForApi) {
         setError(
@@ -59,7 +90,6 @@ function CompleteStepComponent() {
 
       await onboardingApi.savePreferencesAndComplete(preferences, orgIdForApi);
 
-      // Clear onboarding state after completion
       await clearState();
 
       window.location.href = '/';
@@ -70,13 +100,25 @@ function CompleteStepComponent() {
     }
   }, [preferences, existingOrgId, storeOrgId, clearState, t]);
 
+  const handleGoBackToOrg = useCallback(() => {
+    navigate({ to: '/onboarding/organization' });
+  }, [navigate]);
+
   const selectedModulesCount = Object.values(moduleSelection || {}).filter(Boolean).length;
 
   return (
     <>
       {error && (
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 max-w-md px-4 py-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
-          {error}
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 max-w-md px-4 py-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700 flex flex-col gap-2">
+          <span>{error}</span>
+          {error.includes('organization') && (
+            <button
+              onClick={handleGoBackToOrg}
+              className="text-xs font-medium underline hover:no-underline"
+            >
+              {t('onboarding.backToOrgStep', 'Go back to organization step')}
+            </button>
+          )}
         </div>
       )}
       <CompletionStep

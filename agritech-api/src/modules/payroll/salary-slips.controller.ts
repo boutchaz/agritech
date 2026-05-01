@@ -85,10 +85,11 @@ export class SalarySlipsController {
   @Put(':id/pay')
   @RequirePermission(Action.Update, Subject.SALARY_SLIP)
   pay(
+    @Request() req: any,
     @Param('organizationId') organizationId: string,
     @Param('id') id: string,
   ) {
-    return this.service.setStatus(organizationId, id, 'paid');
+    return this.service.setStatus(organizationId, id, 'paid', req.user?.id ?? null);
   }
 
   @Put(':id/cancel')

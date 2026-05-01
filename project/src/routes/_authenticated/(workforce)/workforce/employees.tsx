@@ -1,39 +1,35 @@
 
 import { createFileRoute } from '@tanstack/react-router'
+import { useTranslation } from 'react-i18next'
+import { Building2, Users } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
-import { PageLayout } from '@/components/PageLayout'
 import EmployeeManagement from '@/components/EmployeeManagement'
-import OrganizationSwitcher from '@/components/OrganizationSwitcher'
-import LanguageSwitcher from '@/components/LanguageSwitcher'
+import ModernPageHeader from '@/components/ModernPageHeader'
 import { PageLoader } from '@/components/ui/loader'
 
 const AppContent = () => {
-  const { currentOrganization, currentFarm } = useAuth();
+  const { t } = useTranslation();
+  const { currentOrganization } = useAuth();
 
   if (!currentOrganization) {
     return <PageLoader className="min-h-screen" />;
   }
 
   return (
-    <PageLayout activeModule="employees">
-      <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex justify-between items-center">
-        <div className="flex items-center space-x-4">
-          <h1 className="text-xl font-semibold text-gray-900 dark:text-white">
-            {currentOrganization.name}
-          </h1>
-          {currentFarm && (
-            <span className="text-sm text-gray-500 dark:text-gray-400">
-              • {currentFarm.name}
-            </span>
-          )}
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <OrganizationSwitcher />
-          <LanguageSwitcher />
-        </div>
+    <>
+      <ModernPageHeader
+        breadcrumbs={[
+          { icon: Building2, label: currentOrganization?.name ?? '', path: '/dashboard' },
+          { icon: Users, label: t('nav.workforce', 'Workforce'), path: '/workforce/employees' },
+          { icon: Users, label: t('employees.title', 'Employees'), isActive: true },
+        ]}
+        title={t('employees.title', 'Employees')}
+        subtitle={t('employees.subtitle', 'Manage employees, contracts, and assignments.')}
+      />
+      <div className="p-3 sm:p-4 lg:p-6 space-y-6">
+        <EmployeeManagement />
       </div>
-      <EmployeeManagement />
-    </PageLayout>
+    </>
   );
 };
 
