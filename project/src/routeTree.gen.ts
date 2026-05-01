@@ -73,6 +73,9 @@ import { Route as AuthenticatedsettingsSettingsIndexRouteImport } from './routes
 import { Route as AuthenticatedinventoryStockIndexRouteImport } from './routes/_authenticated/(inventory)/stock/index'
 import { Route as AuthenticatedaccountingAccountingIndexRouteImport } from './routes/_authenticated/(accounting)/accounting/index'
 import { Route as AuthenticatedComplianceCertificationsCertIdRouteImport } from './routes/_authenticated/compliance/certifications/$certId'
+import { Route as AuthenticatedworkforceWorkforceSalaryStructuresRouteImport } from './routes/_authenticated/(workforce)/workforce/salary-structures'
+import { Route as AuthenticatedworkforceWorkforceSalarySlipsRouteImport } from './routes/_authenticated/(workforce)/workforce/salary-slips'
+import { Route as AuthenticatedworkforceWorkforcePayrollRunsRouteImport } from './routes/_authenticated/(workforce)/workforce/payroll-runs'
 import { Route as AuthenticatedworkforceWorkforcePaymentsRouteImport } from './routes/_authenticated/(workforce)/workforce/payments'
 import { Route as AuthenticatedworkforceWorkforceLeaveTypesRouteImport } from './routes/_authenticated/(workforce)/workforce/leave-types'
 import { Route as AuthenticatedworkforceWorkforceLeaveApplicationsRouteImport } from './routes/_authenticated/(workforce)/workforce/leave-applications'
@@ -543,6 +546,24 @@ const AuthenticatedComplianceCertificationsCertIdRoute =
   AuthenticatedComplianceCertificationsCertIdRouteImport.update({
     id: '/compliance/certifications/$certId',
     path: '/compliance/certifications/$certId',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedworkforceWorkforceSalaryStructuresRoute =
+  AuthenticatedworkforceWorkforceSalaryStructuresRouteImport.update({
+    id: '/(workforce)/workforce/salary-structures',
+    path: '/workforce/salary-structures',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedworkforceWorkforceSalarySlipsRoute =
+  AuthenticatedworkforceWorkforceSalarySlipsRouteImport.update({
+    id: '/(workforce)/workforce/salary-slips',
+    path: '/workforce/salary-slips',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedworkforceWorkforcePayrollRunsRoute =
+  AuthenticatedworkforceWorkforcePayrollRunsRouteImport.update({
+    id: '/(workforce)/workforce/payroll-runs',
+    path: '/workforce/payroll-runs',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedworkforceWorkforcePaymentsRoute =
@@ -1346,6 +1367,9 @@ export interface FileRoutesByFullPath {
   '/workforce/leave-applications': typeof AuthenticatedworkforceWorkforceLeaveApplicationsRoute
   '/workforce/leave-types': typeof AuthenticatedworkforceWorkforceLeaveTypesRoute
   '/workforce/payments': typeof AuthenticatedworkforceWorkforcePaymentsRoute
+  '/workforce/payroll-runs': typeof AuthenticatedworkforceWorkforcePayrollRunsRoute
+  '/workforce/salary-slips': typeof AuthenticatedworkforceWorkforceSalarySlipsRoute
+  '/workforce/salary-structures': typeof AuthenticatedworkforceWorkforceSalaryStructuresRoute
   '/compliance/certifications/$certId': typeof AuthenticatedComplianceCertificationsCertIdRoute
   '/accounting/': typeof AuthenticatedaccountingAccountingIndexRoute
   '/stock/': typeof AuthenticatedinventoryStockIndexRoute
@@ -1515,6 +1539,9 @@ export interface FileRoutesByTo {
   '/workforce/leave-applications': typeof AuthenticatedworkforceWorkforceLeaveApplicationsRoute
   '/workforce/leave-types': typeof AuthenticatedworkforceWorkforceLeaveTypesRoute
   '/workforce/payments': typeof AuthenticatedworkforceWorkforcePaymentsRoute
+  '/workforce/payroll-runs': typeof AuthenticatedworkforceWorkforcePayrollRunsRoute
+  '/workforce/salary-slips': typeof AuthenticatedworkforceWorkforceSalarySlipsRoute
+  '/workforce/salary-structures': typeof AuthenticatedworkforceWorkforceSalaryStructuresRoute
   '/compliance/certifications/$certId': typeof AuthenticatedComplianceCertificationsCertIdRoute
   '/accounting': typeof AuthenticatedaccountingAccountingIndexRoute
   '/stock': typeof AuthenticatedinventoryStockIndexRoute
@@ -1689,6 +1716,9 @@ export interface FileRoutesById {
   '/_authenticated/(workforce)/workforce/leave-applications': typeof AuthenticatedworkforceWorkforceLeaveApplicationsRoute
   '/_authenticated/(workforce)/workforce/leave-types': typeof AuthenticatedworkforceWorkforceLeaveTypesRoute
   '/_authenticated/(workforce)/workforce/payments': typeof AuthenticatedworkforceWorkforcePaymentsRoute
+  '/_authenticated/(workforce)/workforce/payroll-runs': typeof AuthenticatedworkforceWorkforcePayrollRunsRoute
+  '/_authenticated/(workforce)/workforce/salary-slips': typeof AuthenticatedworkforceWorkforceSalarySlipsRoute
+  '/_authenticated/(workforce)/workforce/salary-structures': typeof AuthenticatedworkforceWorkforceSalaryStructuresRoute
   '/_authenticated/compliance/certifications/$certId': typeof AuthenticatedComplianceCertificationsCertIdRoute
   '/_authenticated/(accounting)/accounting/': typeof AuthenticatedaccountingAccountingIndexRoute
   '/_authenticated/(inventory)/stock/': typeof AuthenticatedinventoryStockIndexRoute
@@ -1866,6 +1896,9 @@ export interface FileRouteTypes {
     | '/workforce/leave-applications'
     | '/workforce/leave-types'
     | '/workforce/payments'
+    | '/workforce/payroll-runs'
+    | '/workforce/salary-slips'
+    | '/workforce/salary-structures'
     | '/compliance/certifications/$certId'
     | '/accounting/'
     | '/stock/'
@@ -2035,6 +2068,9 @@ export interface FileRouteTypes {
     | '/workforce/leave-applications'
     | '/workforce/leave-types'
     | '/workforce/payments'
+    | '/workforce/payroll-runs'
+    | '/workforce/salary-slips'
+    | '/workforce/salary-structures'
     | '/compliance/certifications/$certId'
     | '/accounting'
     | '/stock'
@@ -2208,6 +2244,9 @@ export interface FileRouteTypes {
     | '/_authenticated/(workforce)/workforce/leave-applications'
     | '/_authenticated/(workforce)/workforce/leave-types'
     | '/_authenticated/(workforce)/workforce/payments'
+    | '/_authenticated/(workforce)/workforce/payroll-runs'
+    | '/_authenticated/(workforce)/workforce/salary-slips'
+    | '/_authenticated/(workforce)/workforce/salary-structures'
     | '/_authenticated/compliance/certifications/$certId'
     | '/_authenticated/(accounting)/accounting/'
     | '/_authenticated/(inventory)/stock/'
@@ -2711,6 +2750,27 @@ declare module '@tanstack/react-router' {
       path: '/compliance/certifications/$certId'
       fullPath: '/compliance/certifications/$certId'
       preLoaderRoute: typeof AuthenticatedComplianceCertificationsCertIdRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/(workforce)/workforce/salary-structures': {
+      id: '/_authenticated/(workforce)/workforce/salary-structures'
+      path: '/workforce/salary-structures'
+      fullPath: '/workforce/salary-structures'
+      preLoaderRoute: typeof AuthenticatedworkforceWorkforceSalaryStructuresRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/(workforce)/workforce/salary-slips': {
+      id: '/_authenticated/(workforce)/workforce/salary-slips'
+      path: '/workforce/salary-slips'
+      fullPath: '/workforce/salary-slips'
+      preLoaderRoute: typeof AuthenticatedworkforceWorkforceSalarySlipsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/(workforce)/workforce/payroll-runs': {
+      id: '/_authenticated/(workforce)/workforce/payroll-runs'
+      path: '/workforce/payroll-runs'
+      fullPath: '/workforce/payroll-runs'
+      preLoaderRoute: typeof AuthenticatedworkforceWorkforcePayrollRunsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/(workforce)/workforce/payments': {
@@ -3978,6 +4038,9 @@ interface AuthenticatedRouteChildren {
   AuthenticatedworkforceWorkforceLeaveApplicationsRoute: typeof AuthenticatedworkforceWorkforceLeaveApplicationsRoute
   AuthenticatedworkforceWorkforceLeaveTypesRoute: typeof AuthenticatedworkforceWorkforceLeaveTypesRoute
   AuthenticatedworkforceWorkforcePaymentsRoute: typeof AuthenticatedworkforceWorkforcePaymentsRoute
+  AuthenticatedworkforceWorkforcePayrollRunsRoute: typeof AuthenticatedworkforceWorkforcePayrollRunsRoute
+  AuthenticatedworkforceWorkforceSalarySlipsRoute: typeof AuthenticatedworkforceWorkforceSalarySlipsRoute
+  AuthenticatedworkforceWorkforceSalaryStructuresRoute: typeof AuthenticatedworkforceWorkforceSalaryStructuresRoute
   AuthenticatedComplianceCertificationsCertIdRoute: typeof AuthenticatedComplianceCertificationsCertIdRoute
   AuthenticatedComplianceCertificationsIndexRoute: typeof AuthenticatedComplianceCertificationsIndexRoute
   AuthenticatedComplianceCorrectiveActionsIndexRoute: typeof AuthenticatedComplianceCorrectiveActionsIndexRoute
@@ -4065,6 +4128,12 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
     AuthenticatedworkforceWorkforceLeaveTypesRoute,
   AuthenticatedworkforceWorkforcePaymentsRoute:
     AuthenticatedworkforceWorkforcePaymentsRoute,
+  AuthenticatedworkforceWorkforcePayrollRunsRoute:
+    AuthenticatedworkforceWorkforcePayrollRunsRoute,
+  AuthenticatedworkforceWorkforceSalarySlipsRoute:
+    AuthenticatedworkforceWorkforceSalarySlipsRoute,
+  AuthenticatedworkforceWorkforceSalaryStructuresRoute:
+    AuthenticatedworkforceWorkforceSalaryStructuresRoute,
   AuthenticatedComplianceCertificationsCertIdRoute:
     AuthenticatedComplianceCertificationsCertIdRoute,
   AuthenticatedComplianceCertificationsIndexRoute:
