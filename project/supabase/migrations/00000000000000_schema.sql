@@ -7551,7 +7551,7 @@ ON CONFLICT (name) DO UPDATE SET
 DO $perms$
 DECLARE
 -- BEGIN GENERATED PERMISSION RESOURCES (do not edit by hand)
-  -- 74 resources × 5 actions = 370 permission rows
+  -- 77 resources × 5 actions = 385 permission rows
   v_resources TEXT[] := ARRAY[
     'users','organizations','roles','subscriptions',
     'farms','parcels','warehouses','infrastructure',
@@ -7571,7 +7571,8 @@ DECLARE
     'costs','revenues','inventory','utilities',
     'equipment','agronomy_sources','chat','settings',
     'api','hr_compliance','leave_types','leave_allocations',
-    'leave_applications','holidays'
+    'leave_applications','holidays','salary_structures','salary_slips',
+    'payroll_runs'
   ];
 -- END GENERATED PERMISSION RESOURCES
   v_actions TEXT[] := ARRAY['read','create','update','delete','manage'];
@@ -18620,3 +18621,267 @@ DROP POLICY IF EXISTS "org_access_leave_encashments" ON leave_encashments;
 CREATE POLICY "org_access_leave_encashments" ON leave_encashments
   FOR ALL USING (is_organization_member(organization_id))
   WITH CHECK (is_organization_member(organization_id));
+
+-- =====================================================================
+-- HR Module — Phase 1.B: Payroll Processing
+-- =====================================================================
+
+-- Progressive income tax brackets (separate from tax_configurations which is
+-- flat-rate VAT-style). Used by the payroll calc engine when compliance
+-- settings income_tax_enabled = true.
+CREATE TABLE IF NOT EXISTS income_tax_brackets (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  country_code VARCHAR(2),
+  -- NULL country_code AND non-null org_id = org override; non-null country_code
+  -- AND null org_id = system default for that country.
+  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+
+  bracket_set_name TEXT NOT NULL,         -- e.g. 'morocco_ir_annual_2026'
+  period TEXT NOT NULL DEFAULT 'annual'
+    CHECK (period IN ('annual', 'monthly')),
+  currency TEXT NOT NULL DEFAULT 'MAD',
+
+  lower_bound NUMERIC NOT NULL,           -- inclusive
+  upper_bound NUMERIC,                    -- exclusive; NULL = no upper bound
+  rate NUMERIC(5,2) NOT NULL,             -- % (0–100)
+  quick_deduction NUMERIC NOT NULL DEFAULT 0, -- "somme à déduire" (optional)
+  effective_date DATE NOT NULL DEFAULT CURRENT_DATE,
+  expiry_date DATE,
+
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+  CHECK (organization_id IS NULL OR country_code IS NULL),
+  CHECK (upper_bound IS NULL OR upper_bound > lower_bound)
+);
+
+CREATE INDEX IF NOT EXISTS idx_income_tax_brackets_country ON income_tax_brackets(country_code, bracket_set_name) WHERE organization_id IS NULL;
+CREATE INDEX IF NOT EXISTS idx_income_tax_brackets_org ON income_tax_brackets(organization_id, bracket_set_name) WHERE organization_id IS NOT NULL;
+
+ALTER TABLE income_tax_brackets ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "income_tax_brackets_read" ON income_tax_brackets;
+CREATE POLICY "income_tax_brackets_read" ON income_tax_brackets
+  FOR SELECT USING (
+    organization_id IS NULL OR is_organization_member(organization_id)
+  );
+DROP POLICY IF EXISTS "income_tax_brackets_write_org" ON income_tax_brackets;
+CREATE POLICY "income_tax_brackets_write_org" ON income_tax_brackets
+  FOR ALL USING (
+    organization_id IS NOT NULL AND is_organization_member(organization_id)
+  ) WITH CHECK (
+    organization_id IS NOT NULL AND is_organization_member(organization_id)
+  );
+
+-- Seed Moroccan IR (annual brackets, 2026 reference)
+INSERT INTO income_tax_brackets (country_code, bracket_set_name, period, currency, lower_bound, upper_bound, rate, quick_deduction)
+VALUES
+  ('MA', 'morocco_ir_annual_2026', 'annual', 'MAD',      0,   30000,  0,     0),
+  ('MA', 'morocco_ir_annual_2026', 'annual', 'MAD',  30000,   50000, 10,  3000),
+  ('MA', 'morocco_ir_annual_2026', 'annual', 'MAD',  50000,   60000, 20,  8000),
+  ('MA', 'morocco_ir_annual_2026', 'annual', 'MAD',  60000,   80000, 30, 14000),
+  ('MA', 'morocco_ir_annual_2026', 'annual', 'MAD',  80000,  180000, 34, 17200),
+  ('MA', 'morocco_ir_annual_2026', 'annual', 'MAD', 180000,    NULL, 38, 24400)
+ON CONFLICT DO NOTHING;
+
+-- Salary Structures
+CREATE TABLE IF NOT EXISTS salary_structures (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  description TEXT,
+  applicable_worker_types TEXT[] NOT NULL DEFAULT ARRAY['fixed_salary'],
+  is_default BOOLEAN NOT NULL DEFAULT false,
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  currency TEXT NOT NULL DEFAULT 'MAD',
+  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(organization_id, name)
+);
+
+CREATE INDEX IF NOT EXISTS idx_salary_structures_org ON salary_structures(organization_id);
+
+ALTER TABLE salary_structures ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_access_salary_structures" ON salary_structures;
+CREATE POLICY "org_access_salary_structures" ON salary_structures
+  FOR ALL USING (is_organization_member(organization_id))
+  WITH CHECK (is_organization_member(organization_id));
+
+DROP TRIGGER IF EXISTS update_salary_structures_updated_at ON salary_structures;
+CREATE TRIGGER update_salary_structures_updated_at
+  BEFORE UPDATE ON salary_structures
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Salary Components (earnings + deductions on a structure)
+CREATE TABLE IF NOT EXISTS salary_components (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  salary_structure_id UUID NOT NULL REFERENCES salary_structures(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  name_fr TEXT,
+  name_ar TEXT,
+  component_type TEXT NOT NULL CHECK (component_type IN ('earning', 'deduction')),
+  category TEXT NOT NULL CHECK (category IN (
+    'basic_salary', 'housing_allowance', 'transport_allowance', 'family_allowance',
+    'overtime', 'bonus', 'commission', 'other_earning',
+    'cnss_employee', 'cnss_employer', 'amo_employee', 'amo_employer',
+    'cis_employee', 'cis_employer',
+    'income_tax', 'professional_tax',
+    'advance_deduction', 'loan_deduction', 'other_deduction'
+  )),
+  calculation_type TEXT NOT NULL CHECK (calculation_type IN ('fixed', 'percentage_of_basic', 'formula')),
+  amount NUMERIC,
+  percentage NUMERIC,
+  formula TEXT,
+  is_statutory BOOLEAN NOT NULL DEFAULT false,
+  is_taxable BOOLEAN NOT NULL DEFAULT true,
+  depends_on_payment_days BOOLEAN NOT NULL DEFAULT true,
+  condition_formula TEXT,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_salary_components_structure ON salary_components(salary_structure_id);
+
+ALTER TABLE salary_components ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_access_salary_components" ON salary_components;
+CREATE POLICY "org_access_salary_components" ON salary_components
+  FOR ALL USING (
+    is_organization_member((SELECT organization_id FROM salary_structures WHERE id = salary_structure_id))
+  ) WITH CHECK (
+    is_organization_member((SELECT organization_id FROM salary_structures WHERE id = salary_structure_id))
+  );
+
+-- Salary Structure Assignments (worker → structure with effective dates)
+CREATE TABLE IF NOT EXISTS salary_structure_assignments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  worker_id UUID NOT NULL REFERENCES workers(id) ON DELETE CASCADE,
+  salary_structure_id UUID NOT NULL REFERENCES salary_structures(id) ON DELETE CASCADE,
+  base_amount NUMERIC NOT NULL CHECK (base_amount >= 0),
+  variable_amount NUMERIC NOT NULL DEFAULT 0,
+  cost_center_farm_id UUID REFERENCES farms(id) ON DELETE SET NULL,
+  cost_center_split JSONB,
+  effective_from DATE NOT NULL,
+  effective_to DATE,
+  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(worker_id, effective_from)
+);
+
+CREATE INDEX IF NOT EXISTS idx_ssa_org ON salary_structure_assignments(organization_id);
+CREATE INDEX IF NOT EXISTS idx_ssa_worker ON salary_structure_assignments(worker_id);
+CREATE INDEX IF NOT EXISTS idx_ssa_effective ON salary_structure_assignments(worker_id, effective_from DESC);
+
+ALTER TABLE salary_structure_assignments ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_access_ssa" ON salary_structure_assignments;
+CREATE POLICY "org_access_ssa" ON salary_structure_assignments
+  FOR ALL USING (is_organization_member(organization_id))
+  WITH CHECK (is_organization_member(organization_id));
+
+-- Payroll Runs (batch processing record)
+CREATE TABLE IF NOT EXISTS payroll_runs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  pay_period_start DATE NOT NULL,
+  pay_period_end DATE NOT NULL,
+  pay_frequency TEXT NOT NULL CHECK (pay_frequency IN ('monthly', 'biweekly', 'weekly', 'daily')),
+  posting_date DATE NOT NULL DEFAULT CURRENT_DATE,
+  farm_id UUID REFERENCES farms(id) ON DELETE SET NULL,
+  worker_type TEXT,
+  total_workers INTEGER NOT NULL DEFAULT 0,
+  total_gross_pay NUMERIC NOT NULL DEFAULT 0,
+  total_deductions NUMERIC NOT NULL DEFAULT 0,
+  total_net_pay NUMERIC NOT NULL DEFAULT 0,
+  total_employer_contributions NUMERIC NOT NULL DEFAULT 0,
+  status TEXT NOT NULL DEFAULT 'draft'
+    CHECK (status IN ('draft', 'processing', 'submitted', 'paid', 'cancelled')),
+  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  submitted_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  submitted_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CHECK (pay_period_end >= pay_period_start)
+);
+
+CREATE INDEX IF NOT EXISTS idx_payroll_runs_org ON payroll_runs(organization_id);
+CREATE INDEX IF NOT EXISTS idx_payroll_runs_period ON payroll_runs(organization_id, pay_period_start DESC);
+
+ALTER TABLE payroll_runs ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_access_payroll_runs" ON payroll_runs;
+CREATE POLICY "org_access_payroll_runs" ON payroll_runs
+  FOR ALL USING (is_organization_member(organization_id))
+  WITH CHECK (is_organization_member(organization_id));
+
+DROP TRIGGER IF EXISTS update_payroll_runs_updated_at ON payroll_runs;
+CREATE TRIGGER update_payroll_runs_updated_at
+  BEFORE UPDATE ON payroll_runs
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Salary Slips (per worker per pay period)
+CREATE TABLE IF NOT EXISTS salary_slips (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  farm_id UUID REFERENCES farms(id) ON DELETE SET NULL,
+  worker_id UUID NOT NULL REFERENCES workers(id) ON DELETE CASCADE,
+  salary_structure_assignment_id UUID REFERENCES salary_structure_assignments(id) ON DELETE SET NULL,
+  payroll_run_id UUID REFERENCES payroll_runs(id) ON DELETE SET NULL,
+
+  pay_period_start DATE NOT NULL,
+  pay_period_end DATE NOT NULL,
+  pay_frequency TEXT NOT NULL CHECK (pay_frequency IN ('monthly', 'biweekly', 'weekly', 'daily')),
+
+  working_days INTEGER NOT NULL DEFAULT 0,
+  present_days NUMERIC NOT NULL DEFAULT 0,
+  absent_days NUMERIC NOT NULL DEFAULT 0,
+  leave_days NUMERIC NOT NULL DEFAULT 0,
+  holiday_days NUMERIC NOT NULL DEFAULT 0,
+  payment_days NUMERIC NOT NULL DEFAULT 0,
+
+  gross_pay NUMERIC NOT NULL DEFAULT 0,
+  earnings JSONB NOT NULL DEFAULT '[]'::jsonb,
+  total_deductions NUMERIC NOT NULL DEFAULT 0,
+  deductions JSONB NOT NULL DEFAULT '[]'::jsonb,
+  employer_contributions JSONB NOT NULL DEFAULT '[]'::jsonb,
+  net_pay NUMERIC NOT NULL DEFAULT 0,
+
+  taxable_income NUMERIC,
+  income_tax NUMERIC,
+  tax_deduction_amount NUMERIC,
+  tax_regime TEXT CHECK (tax_regime IS NULL OR tax_regime IN ('standard', 'simplified')),
+
+  status TEXT NOT NULL DEFAULT 'draft'
+    CHECK (status IN ('draft', 'submitted', 'paid', 'cancelled')),
+
+  journal_entry_id UUID,
+  cost_center JSONB,
+
+  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+  UNIQUE(worker_id, pay_period_start, pay_period_end)
+);
+
+CREATE INDEX IF NOT EXISTS idx_salary_slips_org ON salary_slips(organization_id);
+CREATE INDEX IF NOT EXISTS idx_salary_slips_worker ON salary_slips(worker_id);
+CREATE INDEX IF NOT EXISTS idx_salary_slips_run ON salary_slips(payroll_run_id);
+CREATE INDEX IF NOT EXISTS idx_salary_slips_period ON salary_slips(organization_id, pay_period_start DESC);
+
+ALTER TABLE salary_slips ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_access_salary_slips" ON salary_slips;
+CREATE POLICY "org_access_salary_slips" ON salary_slips
+  FOR ALL USING (is_organization_member(organization_id))
+  WITH CHECK (is_organization_member(organization_id));
+
+DROP TRIGGER IF EXISTS update_salary_slips_updated_at ON salary_slips;
+CREATE TRIGGER update_salary_slips_updated_at
+  BEFORE UPDATE ON salary_slips
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Self-service: workers may read their own salary slips through workers.user_id.
+DROP POLICY IF EXISTS "self_read_salary_slips" ON salary_slips;
+CREATE POLICY "self_read_salary_slips" ON salary_slips
+  FOR SELECT USING (
+    worker_id IN (SELECT id FROM workers WHERE user_id = auth.uid())
+  );

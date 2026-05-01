@@ -124,6 +124,9 @@ export const RESOURCES: readonly ResourceDef[] = [
     { key: 'leave_allocations', subject: Subject.LEAVE_ALLOCATION, displayName: 'Leave Allocations' },
     { key: 'leave_applications', subject: Subject.LEAVE_APPLICATION, displayName: 'Leave Applications' },
     { key: 'holidays', subject: Subject.HOLIDAY, displayName: 'Holidays' },
+    { key: 'salary_structures', subject: Subject.SALARY_STRUCTURE, displayName: 'Salary Structures' },
+    { key: 'salary_slips', subject: Subject.SALARY_SLIP, displayName: 'Salary Slips' },
+    { key: 'payroll_runs', subject: Subject.PAYROLL_RUN, displayName: 'Payroll Runs' },
 ];
 
 export const RESOURCE_SUBJECT_MAP: Record<string, Subject> = Object.freeze(

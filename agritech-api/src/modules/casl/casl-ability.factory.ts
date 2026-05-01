@@ -168,6 +168,9 @@ export class CaslAbilityFactory {
             can(Action.Manage, Subject.LEAVE_ALLOCATION);
             can(Action.Manage, Subject.LEAVE_APPLICATION);
             can(Action.Manage, Subject.HOLIDAY);
+            can(Action.Manage, Subject.SALARY_STRUCTURE);
+            can(Action.Manage, Subject.SALARY_SLIP);
+            can(Action.Manage, Subject.PAYROLL_RUN);
             console.log('[CaslAbilityFactory] Organization admin - full org access granted');
         }
         // ============ FARM MANAGER ============
@@ -239,6 +242,9 @@ export class CaslAbilityFactory {
             can(Action.Manage, Subject.LEAVE_ALLOCATION);
             can(Action.Manage, Subject.LEAVE_APPLICATION);
             can(Action.Read, Subject.HOLIDAY);
+            can(Action.Read, Subject.SALARY_STRUCTURE);
+            can(Action.Read, Subject.SALARY_SLIP);
+            can(Action.Read, Subject.PAYROLL_RUN);
 
             console.log('[CaslAbilityFactory] Farm manager permissions granted');
         }
@@ -308,6 +314,7 @@ export class CaslAbilityFactory {
             can(Action.Create, Subject.LEAVE_APPLICATION);
             can(Action.Read, Subject.LEAVE_APPLICATION);
             can(Action.Read, Subject.LEAVE_ALLOCATION);
+            can(Action.Read, Subject.SALARY_SLIP); // own slips only via self_read RLS
 
             console.log('[CaslAbilityFactory] Farm worker permissions granted');
         }
@@ -343,6 +350,7 @@ export class CaslAbilityFactory {
             can(Action.Create, Subject.LEAVE_APPLICATION);
             can(Action.Read, Subject.LEAVE_APPLICATION);
             can(Action.Read, Subject.LEAVE_ALLOCATION);
+            can(Action.Read, Subject.SALARY_SLIP);
 
             console.log('[CaslAbilityFactory] Day laborer permissions granted');
         }
@@ -618,6 +626,9 @@ export class CaslAbilityFactory {
             can(Action.Manage, Subject.LEAVE_ALLOCATION);
             can(Action.Manage, Subject.LEAVE_APPLICATION);
             can(Action.Manage, Subject.HOLIDAY);
+            can(Action.Manage, Subject.SALARY_STRUCTURE);
+            can(Action.Manage, Subject.SALARY_SLIP);
+            can(Action.Manage, Subject.PAYROLL_RUN);
         } else if (roleName === 'farm_manager') {
             // Farm operations
             can(Action.Manage, Subject.FARM);
@@ -698,6 +709,9 @@ export class CaslAbilityFactory {
             can(Action.Manage, Subject.LEAVE_ALLOCATION);
             can(Action.Manage, Subject.LEAVE_APPLICATION);
             can(Action.Read, Subject.HOLIDAY);
+            can(Action.Read, Subject.SALARY_STRUCTURE);
+            can(Action.Read, Subject.SALARY_SLIP);
+            can(Action.Read, Subject.PAYROLL_RUN);
 
             cannot(Action.Delete, Subject.JOURNAL_ENTRY);
             cannot(Action.Manage, Subject.ACCOUNT);
@@ -774,6 +788,7 @@ export class CaslAbilityFactory {
             can(Action.Create, Subject.LEAVE_APPLICATION);
             can(Action.Read, Subject.LEAVE_APPLICATION);
             can(Action.Read, Subject.LEAVE_ALLOCATION);
+            can(Action.Read, Subject.SALARY_SLIP);
         } else if (roleName === 'day_laborer') {
             can(Action.Read, Subject.TASK);
             can(Action.Update, Subject.TASK);
@@ -806,6 +821,7 @@ export class CaslAbilityFactory {
             can(Action.Create, Subject.LEAVE_APPLICATION);
             can(Action.Read, Subject.LEAVE_APPLICATION);
             can(Action.Read, Subject.LEAVE_ALLOCATION);
+            can(Action.Read, Subject.SALARY_SLIP);
         } else if (roleName === 'viewer') {
             // Read-only access
             can(Action.Read, Subject.FARM);

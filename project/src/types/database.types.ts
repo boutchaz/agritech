@@ -11745,6 +11745,149 @@ export type Database = {
           },
         ]
       }
+      income_tax_brackets: {
+        Row: {
+          bracket_set_name: string
+          country_code: string | null
+          created_at: string
+          currency: string
+          effective_date: string
+          expiry_date: string | null
+          id: string
+          lower_bound: number
+          organization_id: string | null
+          period: string
+          quick_deduction: number
+          rate: number
+          updated_at: string
+          upper_bound: number | null
+        }
+        Insert: {
+          bracket_set_name: string
+          country_code?: string | null
+          created_at?: string
+          currency?: string
+          effective_date?: string
+          expiry_date?: string | null
+          id?: string
+          lower_bound: number
+          organization_id?: string | null
+          period?: string
+          quick_deduction?: number
+          rate: number
+          updated_at?: string
+          upper_bound?: number | null
+        }
+        Update: {
+          bracket_set_name?: string
+          country_code?: string | null
+          created_at?: string
+          currency?: string
+          effective_date?: string
+          expiry_date?: string | null
+          id?: string
+          lower_bound?: number
+          organization_id?: string | null
+          period?: string
+          quick_deduction?: number
+          rate?: number
+          updated_at?: string
+          upper_bound?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "income_tax_brackets_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "accounting_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "income_tax_brackets_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_churn_risk"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "income_tax_brackets_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_org_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "income_tax_brackets_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_top_orgs_by_activity"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "income_tax_brackets_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "dashboard_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "income_tax_brackets_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "financial_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "income_tax_brackets_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "income_tax_brackets_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "production_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "income_tax_brackets_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "sales_analytics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "income_tax_brackets_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "task_completion"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "income_tax_brackets_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_organization_financial_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "income_tax_brackets_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_production_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "income_tax_brackets_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "workforce_summary"
+            referencedColumns: ["organization_id"]
+          },
+        ]
+      }
       internal_admins: {
         Row: {
           created_at: string | null
@@ -18866,6 +19009,174 @@ export type Database = {
           },
         ]
       }
+      payroll_runs: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          farm_id: string | null
+          id: string
+          name: string
+          organization_id: string
+          pay_frequency: string
+          pay_period_end: string
+          pay_period_start: string
+          posting_date: string
+          status: string
+          submitted_at: string | null
+          submitted_by: string | null
+          total_deductions: number
+          total_employer_contributions: number
+          total_gross_pay: number
+          total_net_pay: number
+          total_workers: number
+          updated_at: string
+          worker_type: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          farm_id?: string | null
+          id?: string
+          name: string
+          organization_id: string
+          pay_frequency: string
+          pay_period_end: string
+          pay_period_start: string
+          posting_date?: string
+          status?: string
+          submitted_at?: string | null
+          submitted_by?: string | null
+          total_deductions?: number
+          total_employer_contributions?: number
+          total_gross_pay?: number
+          total_net_pay?: number
+          total_workers?: number
+          updated_at?: string
+          worker_type?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          farm_id?: string | null
+          id?: string
+          name?: string
+          organization_id?: string
+          pay_frequency?: string
+          pay_period_end?: string
+          pay_period_start?: string
+          posting_date?: string
+          status?: string
+          submitted_at?: string | null
+          submitted_by?: string | null
+          total_deductions?: number
+          total_employer_contributions?: number
+          total_gross_pay?: number
+          total_net_pay?: number
+          total_workers?: number
+          updated_at?: string
+          worker_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payroll_runs_farm_id_fkey"
+            columns: ["farm_id"]
+            isOneToOne: false
+            referencedRelation: "farms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payroll_runs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "accounting_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "payroll_runs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_churn_risk"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payroll_runs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_org_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payroll_runs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_top_orgs_by_activity"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payroll_runs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "dashboard_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "payroll_runs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "financial_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "payroll_runs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payroll_runs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "production_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "payroll_runs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "sales_analytics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "payroll_runs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "task_completion"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "payroll_runs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_organization_financial_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "payroll_runs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_production_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "payroll_runs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "workforce_summary"
+            referencedColumns: ["organization_id"]
+          },
+        ]
+      }
       performance_alerts: {
         Row: {
           acknowledged_at: string | null
@@ -23060,6 +23371,630 @@ export type Database = {
           wau?: number | null
         }
         Relationships: []
+      }
+      salary_components: {
+        Row: {
+          amount: number | null
+          calculation_type: string
+          category: string
+          component_type: string
+          condition_formula: string | null
+          created_at: string
+          depends_on_payment_days: boolean
+          formula: string | null
+          id: string
+          is_statutory: boolean
+          is_taxable: boolean
+          name: string
+          name_ar: string | null
+          name_fr: string | null
+          percentage: number | null
+          salary_structure_id: string
+          sort_order: number
+        }
+        Insert: {
+          amount?: number | null
+          calculation_type: string
+          category: string
+          component_type: string
+          condition_formula?: string | null
+          created_at?: string
+          depends_on_payment_days?: boolean
+          formula?: string | null
+          id?: string
+          is_statutory?: boolean
+          is_taxable?: boolean
+          name: string
+          name_ar?: string | null
+          name_fr?: string | null
+          percentage?: number | null
+          salary_structure_id: string
+          sort_order?: number
+        }
+        Update: {
+          amount?: number | null
+          calculation_type?: string
+          category?: string
+          component_type?: string
+          condition_formula?: string | null
+          created_at?: string
+          depends_on_payment_days?: boolean
+          formula?: string | null
+          id?: string
+          is_statutory?: boolean
+          is_taxable?: boolean
+          name?: string
+          name_ar?: string | null
+          name_fr?: string | null
+          percentage?: number | null
+          salary_structure_id?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "salary_components_salary_structure_id_fkey"
+            columns: ["salary_structure_id"]
+            isOneToOne: false
+            referencedRelation: "salary_structures"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      salary_slips: {
+        Row: {
+          absent_days: number
+          cost_center: Json | null
+          created_at: string
+          created_by: string | null
+          deductions: Json
+          earnings: Json
+          employer_contributions: Json
+          farm_id: string | null
+          gross_pay: number
+          holiday_days: number
+          id: string
+          income_tax: number | null
+          journal_entry_id: string | null
+          leave_days: number
+          net_pay: number
+          organization_id: string
+          pay_frequency: string
+          pay_period_end: string
+          pay_period_start: string
+          payment_days: number
+          payroll_run_id: string | null
+          present_days: number
+          salary_structure_assignment_id: string | null
+          status: string
+          tax_deduction_amount: number | null
+          tax_regime: string | null
+          taxable_income: number | null
+          total_deductions: number
+          updated_at: string
+          worker_id: string
+          working_days: number
+        }
+        Insert: {
+          absent_days?: number
+          cost_center?: Json | null
+          created_at?: string
+          created_by?: string | null
+          deductions?: Json
+          earnings?: Json
+          employer_contributions?: Json
+          farm_id?: string | null
+          gross_pay?: number
+          holiday_days?: number
+          id?: string
+          income_tax?: number | null
+          journal_entry_id?: string | null
+          leave_days?: number
+          net_pay?: number
+          organization_id: string
+          pay_frequency: string
+          pay_period_end: string
+          pay_period_start: string
+          payment_days?: number
+          payroll_run_id?: string | null
+          present_days?: number
+          salary_structure_assignment_id?: string | null
+          status?: string
+          tax_deduction_amount?: number | null
+          tax_regime?: string | null
+          taxable_income?: number | null
+          total_deductions?: number
+          updated_at?: string
+          worker_id: string
+          working_days?: number
+        }
+        Update: {
+          absent_days?: number
+          cost_center?: Json | null
+          created_at?: string
+          created_by?: string | null
+          deductions?: Json
+          earnings?: Json
+          employer_contributions?: Json
+          farm_id?: string | null
+          gross_pay?: number
+          holiday_days?: number
+          id?: string
+          income_tax?: number | null
+          journal_entry_id?: string | null
+          leave_days?: number
+          net_pay?: number
+          organization_id?: string
+          pay_frequency?: string
+          pay_period_end?: string
+          pay_period_start?: string
+          payment_days?: number
+          payroll_run_id?: string | null
+          present_days?: number
+          salary_structure_assignment_id?: string | null
+          status?: string
+          tax_deduction_amount?: number | null
+          tax_regime?: string | null
+          taxable_income?: number | null
+          total_deductions?: number
+          updated_at?: string
+          worker_id?: string
+          working_days?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "salary_slips_farm_id_fkey"
+            columns: ["farm_id"]
+            isOneToOne: false
+            referencedRelation: "farms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "salary_slips_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "accounting_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "salary_slips_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_churn_risk"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "salary_slips_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_org_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "salary_slips_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_top_orgs_by_activity"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "salary_slips_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "dashboard_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "salary_slips_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "financial_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "salary_slips_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "salary_slips_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "production_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "salary_slips_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "sales_analytics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "salary_slips_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "task_completion"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "salary_slips_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_organization_financial_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "salary_slips_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_production_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "salary_slips_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "workforce_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "salary_slips_payroll_run_id_fkey"
+            columns: ["payroll_run_id"]
+            isOneToOne: false
+            referencedRelation: "payroll_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "salary_slips_salary_structure_assignment_id_fkey"
+            columns: ["salary_structure_assignment_id"]
+            isOneToOne: false
+            referencedRelation: "salary_structure_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "salary_slips_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "assignable_users"
+            referencedColumns: ["worker_id"]
+          },
+          {
+            foreignKeyName: "salary_slips_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "v_active_workers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "salary_slips_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "worker_assignments"
+            referencedColumns: ["worker_id"]
+          },
+          {
+            foreignKeyName: "salary_slips_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      salary_structure_assignments: {
+        Row: {
+          base_amount: number
+          cost_center_farm_id: string | null
+          cost_center_split: Json | null
+          created_at: string
+          created_by: string | null
+          effective_from: string
+          effective_to: string | null
+          id: string
+          organization_id: string
+          salary_structure_id: string
+          variable_amount: number
+          worker_id: string
+        }
+        Insert: {
+          base_amount: number
+          cost_center_farm_id?: string | null
+          cost_center_split?: Json | null
+          created_at?: string
+          created_by?: string | null
+          effective_from: string
+          effective_to?: string | null
+          id?: string
+          organization_id: string
+          salary_structure_id: string
+          variable_amount?: number
+          worker_id: string
+        }
+        Update: {
+          base_amount?: number
+          cost_center_farm_id?: string | null
+          cost_center_split?: Json | null
+          created_at?: string
+          created_by?: string | null
+          effective_from?: string
+          effective_to?: string | null
+          id?: string
+          organization_id?: string
+          salary_structure_id?: string
+          variable_amount?: number
+          worker_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "salary_structure_assignments_cost_center_farm_id_fkey"
+            columns: ["cost_center_farm_id"]
+            isOneToOne: false
+            referencedRelation: "farms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "salary_structure_assignments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "accounting_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "salary_structure_assignments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_churn_risk"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "salary_structure_assignments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_org_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "salary_structure_assignments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_top_orgs_by_activity"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "salary_structure_assignments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "dashboard_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "salary_structure_assignments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "financial_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "salary_structure_assignments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "salary_structure_assignments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "production_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "salary_structure_assignments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "sales_analytics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "salary_structure_assignments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "task_completion"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "salary_structure_assignments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_organization_financial_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "salary_structure_assignments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_production_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "salary_structure_assignments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "workforce_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "salary_structure_assignments_salary_structure_id_fkey"
+            columns: ["salary_structure_id"]
+            isOneToOne: false
+            referencedRelation: "salary_structures"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "salary_structure_assignments_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "assignable_users"
+            referencedColumns: ["worker_id"]
+          },
+          {
+            foreignKeyName: "salary_structure_assignments_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "v_active_workers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "salary_structure_assignments_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "worker_assignments"
+            referencedColumns: ["worker_id"]
+          },
+          {
+            foreignKeyName: "salary_structure_assignments_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "workers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      salary_structures: {
+        Row: {
+          applicable_worker_types: string[]
+          created_at: string
+          created_by: string | null
+          currency: string
+          description: string | null
+          id: string
+          is_active: boolean
+          is_default: boolean
+          name: string
+          organization_id: string
+          updated_at: string
+        }
+        Insert: {
+          applicable_worker_types?: string[]
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          name: string
+          organization_id: string
+          updated_at?: string
+        }
+        Update: {
+          applicable_worker_types?: string[]
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          name?: string
+          organization_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "salary_structures_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "accounting_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "salary_structures_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_churn_risk"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "salary_structures_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_org_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "salary_structures_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "admin_top_orgs_by_activity"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "salary_structures_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "dashboard_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "salary_structures_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "financial_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "salary_structures_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "salary_structures_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "production_metrics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "salary_structures_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "sales_analytics"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "salary_structures_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "task_completion"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "salary_structures_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_organization_financial_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "salary_structures_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "v_production_summary"
+            referencedColumns: ["organization_id"]
+          },
+          {
+            foreignKeyName: "salary_structures_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "workforce_summary"
+            referencedColumns: ["organization_id"]
+          },
+        ]
       }
       sales_order_items: {
         Row: {
