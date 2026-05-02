@@ -18,7 +18,9 @@ import { ButtonLoader } from '@/components/ui/loader';
  */
 
 // How often to check for SW updates (in ms)
-const UPDATE_CHECK_INTERVAL = 60 * 60 * 1000; // 1 hour
+const UPDATE_CHECK_INTERVAL = 15 * 60 * 1000; // 15 minutes
+// How long the toast waits before auto-applying the update.
+const UPDATE_AUTO_APPLY_DELAY = 30 * 1000; // 30 seconds
 
 export function ServiceWorkerUpdate() {
   const [isUpdating, setIsUpdating] = useState(false);
@@ -77,25 +79,40 @@ export function ServiceWorkerUpdate() {
     }
   }, [updateServiceWorker]);
 
-  // Show toast when new version is detected
+  // Show toast when new version is detected, then auto-apply after a short
+  // delay so users who never interact with the toast still get the fix.
   useEffect(() => {
     if (!needRefresh) return;
 
+    let postponed = false;
+    const autoApplyTimer = setTimeout(() => {
+      if (postponed) return;
+      handleUpdate();
+    }, UPDATE_AUTO_APPLY_DELAY);
+
     toast.info('Nouvelle version disponible', {
-      description: 'Cliquez sur "Mettre à jour" pour obtenir les dernières fonctionnalités.',
+      description: 'Mise à jour automatique dans quelques secondes.',
       action: {
         label: 'Mettre à jour',
-        onClick: handleUpdate,
+        onClick: () => {
+          clearTimeout(autoApplyTimer);
+          handleUpdate();
+        },
       },
       cancel: {
         label: 'Plus tard',
-        onClick: () => setNeedRefresh(false),
+        onClick: () => {
+          postponed = true;
+          clearTimeout(autoApplyTimer);
+          setNeedRefresh(false);
+        },
       },
-      duration: Infinity, // Keep until user acts
-      id: 'sw-update', // Prevent duplicate toasts
+      duration: UPDATE_AUTO_APPLY_DELAY,
+      id: 'sw-update',
     });
 
     return () => {
+      clearTimeout(autoApplyTimer);
       toast.dismiss('sw-update');
     };
   }, [needRefresh, handleUpdate, setNeedRefresh]);

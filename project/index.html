@@ -217,6 +217,21 @@
     <script type="module" src="/src/main.tsx"></script>
     <!-- Handle chunk-load failures from stale deployments -->
     <script>
+      // Self-heal: kill the service worker + caches so the next reload
+      // bypasses any stale precache. Returns a promise that always resolves.
+      async function agroginaKillSW() {
+        try {
+          if ('serviceWorker' in navigator) {
+            const regs = await navigator.serviceWorker.getRegistrations();
+            await Promise.all(regs.map(function (r) { return r.unregister().catch(function(){}); }));
+          }
+          if ('caches' in window) {
+            const keys = await caches.keys();
+            await Promise.all(keys.map(function (k) { return caches.delete(k).catch(function(){}); }));
+          }
+        } catch (_) { /* best-effort */ }
+      }
+
       window.addEventListener('error', function(e) {
         // Detect chunk load failure (stale deployment or network error)
         if (
@@ -232,8 +247,8 @@
           const lastReload = sessionStorage.getItem(reloadKey);
           if (!lastReload || Date.now() - parseInt(lastReload, 10) > 30000) {
             sessionStorage.setItem(reloadKey, String(Date.now()));
-            console.warn('[chunk-error-handler] Stale chunk detected, reloading...');
-            window.location.reload();
+            console.warn('[chunk-error-handler] Stale chunk detected, killing SW + caches and reloading...');
+            agroginaKillSW().finally(function () { window.location.reload(); });
           } else {
             console.error('[chunk-error-handler] Reload already attempted, showing error.');
             const root = document.getElementById('root');
@@ -242,7 +257,7 @@
                 '<div style="text-align:center;max-width:400px;padding:24px;">' +
                 '<h2 style="color:#dc2626;margin-bottom:8px;">Erreur de chargement</h2>' +
                 '<p style="color:#6b7280;margin-bottom:16px;">Une nouvelle version est disponible. Veuillez rafraîchir la page.</p>' +
-                '<button onclick="sessionStorage.removeItem(\'agrogina:chunk-reload\');location.reload()" style="padding:8px 24px;background:#10b981;color:white;border:none;border-radius:6px;cursor:pointer;font-size:14px;">Rafraîchir</button>' +
+                '<button onclick="sessionStorage.removeItem(\'agrogina:chunk-reload\');agroginaKillSW().finally(function(){location.reload()})" style="padding:8px 24px;background:#10b981;color:white;border:none;border-radius:6px;cursor:pointer;font-size:14px;">Rafraîchir</button>' +
                 '</div></div>';
             }
           }
