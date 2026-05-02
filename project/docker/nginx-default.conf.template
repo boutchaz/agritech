@@ -1,18 +1,14 @@
 # Canonical host: set CANONICAL_PUBLIC_HOST at runtime (same as DASHBOARD_PUBLIC_HOST in Dokploy).
-# First server: www → 301 to apex HTTPS (preserves path + query for SEO).
+# The apex block is the *default* — if CANONICAL_PUBLIC_HOST is unset (defaults
+# to "localhost" in compose), unknown Host headers (e.g. the public domain
+# behind Dokploy's proxy) still land here instead of falling through to the
+# www-redirect block, which would otherwise 301 every visitor to
+# https://localhost/$request_uri.
 
 server {
-    listen 80;
-    listen [::]:80;
-    server_name www.${CANONICAL_PUBLIC_HOST};
-
-    return 301 https://${CANONICAL_PUBLIC_HOST}$request_uri;
-}
-
-server {
-    listen 80;
-    listen [::]:80;
-    server_name ${CANONICAL_PUBLIC_HOST} localhost;
+    listen 80 default_server;
+    listen [::]:80 default_server;
+    server_name ${CANONICAL_PUBLIC_HOST} localhost _;
 
     root /usr/share/nginx/html;
     index index.html;
@@ -98,4 +94,14 @@ server {
     add_header X-Content-Type-Options "nosniff" always;
     add_header X-XSS-Protection "1; mode=block" always;
     add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+}
+
+# www → apex 301 (preserves path + query for SEO). Only matches explicit
+# www.<canonical> Host — never the catch-all default.
+server {
+    listen 80;
+    listen [::]:80;
+    server_name www.${CANONICAL_PUBLIC_HOST};
+
+    return 301 https://${CANONICAL_PUBLIC_HOST}$request_uri;
 }
