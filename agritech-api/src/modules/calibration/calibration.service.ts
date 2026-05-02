@@ -2339,6 +2339,31 @@ export class CalibrationService {
       getCalibrationLookbackDate(parcel.plantingYear, parcel.cropType, parcel.system),
     );
     const hasMinSatellite = satelliteImages.length >= 10;
+
+    // Reconcile: if the parcel is stuck in awaiting_data but already has
+    // enough images (because the background sync's promise was killed by an
+    // API restart), transition it now so the UI unblocks.
+    if (hasMinSatellite && parcel.aiPhase === "awaiting_data") {
+      try {
+        const { data: transitioned } = await this.databaseService
+          .getAdminClient()
+          .from("parcels")
+          .update({ ai_phase: "ready_calibration" })
+          .eq("id", parcelId)
+          .eq("organization_id", organizationId)
+          .eq("ai_phase", "awaiting_data")
+          .select("id");
+        if (transitioned?.length) {
+          this.logger.log(
+            `Reconciled parcel ${parcelId}: awaiting_data → ready_calibration (${satelliteImages.length} images already cached)`,
+          );
+        }
+      } catch (err) {
+        this.logger.warn(
+          `Reconcile of parcel ${parcelId} failed: ${err instanceof Error ? err.message : "unknown"}`,
+        );
+      }
+    }
     checks.push(
       hasMinSatellite
         ? {
