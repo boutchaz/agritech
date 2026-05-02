@@ -22,6 +22,7 @@ import LanguageSwitcher from './LanguageSwitcher';
 import SupportedRegionsSection from './SupportedRegionsSection';
 import { WowIntro } from './WowIntro';
 import { useLandingSettings } from '@/hooks/useLandingSettings';
+import { useSupportInfo } from '@/hooks/useSupportInfo';
 import { appConfig } from '@/config/app';
 import DemoRequestForm from './landing/DemoRequestForm';
 
@@ -1259,13 +1260,55 @@ function CTABanner({ t, onDemo, onTrial }: { t: T; onDemo: () => void; onTrial: 
   );
 }
 
-function Footer({ t }: { t: T }) {
-  const cols = [
-    { t: t('landing2.footer.platform', 'Plateforme'), l: [t('landing2.footer.modules', 'Modules'), t('landing2.footer.pricing', 'Tarifs'), t('landing2.footer.security', 'Sécurité'), t('landing2.footer.api', 'API & intégrations')] },
-    { t: t('landing2.footer.resources', 'Ressources'), l: [t('landing2.footer.docs', 'Documentation'), t('landing2.footer.cases', 'Études de cas'), t('landing2.footer.blog', 'Blog agronomique'), t('landing2.footer.webinars', 'Webinaires')] },
-    { t: t('landing2.footer.company', 'Société'), l: [t('landing2.footer.about', 'À propos'), t('landing2.footer.careers', 'Carrières'), t('landing2.footer.press', 'Presse'), t('landing2.footer.contact', 'Contact')] },
-    { t: t('landing2.footer.legal', 'Légal'), l: [t('landing2.footer.tos', 'CGU'), t('landing2.footer.privacy', 'Confidentialité'), t('landing2.footer.cookies', 'Cookies'), t('landing2.footer.mentions', 'Mentions légales')] },
+function Footer({
+  t,
+  onContact,
+  supportEmail,
+}: {
+  t: T;
+  onContact: () => void;
+  supportEmail: string;
+}) {
+  const mailto = `mailto:${supportEmail}`;
+  const cols: { title: string; links: { label: string; href: string; onClick?: () => void }[] }[] = [
+    {
+      title: t('landing2.footer.platform', 'Plateforme'),
+      links: [
+        { label: t('landing2.footer.modules', 'Modules'), href: '#modules' },
+        { label: t('landing2.footer.pricing', 'Tarifs'), href: '#pricing' },
+        { label: t('landing2.footer.security', 'Sécurité'), href: '/privacy-policy' },
+        { label: t('landing2.footer.api', 'API & intégrations'), href: mailto + '?subject=API%20%26%20int%C3%A9grations' },
+      ],
+    },
+    {
+      title: t('landing2.footer.resources', 'Ressources'),
+      links: [
+        { label: t('landing2.footer.docs', 'Documentation'), href: '/blog' },
+        { label: t('landing2.footer.cases', 'Études de cas'), href: '#testimonials' },
+        { label: t('landing2.footer.blog', 'Blog agronomique'), href: '/blog' },
+        { label: t('landing2.footer.faq', 'FAQ'), href: '#faq' },
+      ],
+    },
+    {
+      title: t('landing2.footer.company', 'Société'),
+      links: [
+        { label: t('landing2.footer.about', 'À propos'), href: 'https://wearecodelovers.com/' },
+        { label: t('landing2.footer.careers', 'Carrières'), href: mailto + '?subject=Carri%C3%A8res' },
+        { label: t('landing2.footer.press', 'Presse'), href: mailto + '?subject=Presse' },
+        { label: t('landing2.footer.contact', 'Contact'), href: '#', onClick: onContact },
+      ],
+    },
+    {
+      title: t('landing2.footer.legal', 'Légal'),
+      links: [
+        { label: t('landing2.footer.tos', 'CGU'), href: '/terms-of-service' },
+        { label: t('landing2.footer.privacy', 'Confidentialité'), href: '/privacy-policy' },
+        { label: t('landing2.footer.cookies', 'Cookies'), href: '/privacy-policy' },
+        { label: t('landing2.footer.mentions', 'Mentions légales'), href: '/terms-of-service' },
+      ],
+    },
   ];
+
   return (
     <footer className="lp-footer-section">
       <div style={{ maxWidth: 1240, margin: '0 auto' }}>
@@ -1283,24 +1326,50 @@ function Footer({ t }: { t: T }) {
             </div>
           </div>
           {cols.map((c) => (
-            <div key={c.t}>
+            <div key={c.title}>
               <div className="onb-mono-cap" style={{ color: 'rgba(255,255,255,.4)', marginBottom: 16, fontSize: 10 }}>
-                {c.t}
+                {c.title}
               </div>
               <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: 10 }}>
-                {c.l.map((item) => (
-                  <li key={item}>
-                    <a href="#" style={{ fontSize: 13, color: 'rgba(255,255,255,.75)', textDecoration: 'none' }}>
-                      {item}
-                    </a>
-                  </li>
-                ))}
+                {c.links.map((item) => {
+                  const isExternal = item.href.startsWith('http') || item.href.startsWith('mailto:');
+                  const isHash = item.href.startsWith('#');
+                  return (
+                    <li key={item.label}>
+                      <a
+                        href={item.href}
+                        onClick={item.onClick ? (e) => { e.preventDefault(); item.onClick?.(); } : undefined}
+                        target={isExternal ? '_blank' : undefined}
+                        rel={isExternal ? 'noopener noreferrer' : undefined}
+                        style={{ fontSize: 13, color: 'rgba(255,255,255,.75)', textDecoration: 'none' }}
+                      >
+                        {item.label}
+                        {isHash ? '' : ''}
+                      </a>
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           ))}
         </div>
         <div className="lp-footer-bottom">
           <span className="onb-mono">© 2026 Agrogina · 31.6294° N · 7.9811° W</span>
+          <span style={{ fontSize: 11, color: 'rgba(255,255,255,.55)' }}>
+            {t('landing2.footer.builtBy', 'Conçu et développé par')}{' '}
+            <a
+              href="https://wearecodelovers.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: 'var(--onb-brand-300, #6ee7b7)', textDecoration: 'none', fontWeight: 600 }}
+            >
+              CodeLovers
+            </a>
+            {' · '}
+            <span className="onb-mono" style={{ color: 'rgba(255,255,255,.4)' }}>
+              wearecodelovers.com
+            </span>
+          </span>
           <span className="onb-mono">FR · MA · v2026.05</span>
         </div>
       </div>
@@ -1752,6 +1821,7 @@ const LandingPage = () => {
 
   const tFn: T = (k, d) => t(k, { defaultValue: d ?? k });
   const landing = useLandingSettings();
+  const support = useSupportInfo();
   const partnerNames = landing.partners.map((p) => p.name);
 
   return (
@@ -1770,7 +1840,7 @@ const LandingPage = () => {
       <Pricing t={tFn} onContact={openDemo} />
       <FAQSection t={tFn} />
       <CTABanner t={tFn} onDemo={openDemo} onTrial={goTrial} />
-      <Footer t={tFn} />
+      <Footer t={tFn} onContact={openDemo} supportEmail={support.contact_email} />
 
       {navOpen && (
         <MobileNav

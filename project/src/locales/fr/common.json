@@ -9283,7 +9283,9 @@
       "cookies": "Cookies",
       "mentions": "Mentions légales",
       "tagline": "La plateforme agricole intégrée. Pour la saison qui vient, et toutes celles d'après.",
-      "availableOn": "Disponible sur"
+      "availableOn": "Disponible sur",
+      "builtBy": "Conçu et développé par",
+      "faq": "FAQ"
     },
     "demo": {
       "eyebrow": "Démo personnalisée",

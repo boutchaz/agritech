@@ -9474,7 +9474,9 @@
       "cookies": "Cookies",
       "mentions": "Legal notice",
       "tagline": "The integrated agricultural platform. For this season, and every one after.",
-      "availableOn": "Available on"
+      "availableOn": "Available on",
+      "builtBy": "Designed and built by",
+      "faq": "FAQ"
     },
     "demo": {
       "eyebrow": "Personalized demo",
