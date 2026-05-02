@@ -4,6 +4,10 @@ import { tasksApi } from '../api/tasks';
 import { workersApi } from '../api/workers';
 import { stockEntriesApi } from '../api/stock';
 import { parcelsApi } from '../api/parcels';
+import { harvestsApi } from '../api/harvests';
+import { analysesApi } from '../api/analyses';
+import { usersApi } from '../api/users';
+import { dashboardService } from '../../services/dashboardService';
 import { db } from './db';
 import { telemetry } from './telemetry';
 import { isLikelyOnline } from './useOnlineStatus';
@@ -26,7 +30,9 @@ export interface PrefetchProgress {
 }
 
 const META_KEY = 'prefetch:state:v1';
-const RERUN_INTERVAL_MS = 24 * 60 * 60 * 1000;
+// Re-run every 30 min instead of 24h so users get fresh data within a
+// working session (and so testing offline doesn't require waiting a day).
+const RERUN_INTERVAL_MS = 30 * 60 * 1000;
 const STEP_TIMEOUT_MS = 30_000;
 
 interface MetaState {
@@ -101,10 +107,51 @@ export function buildPrefetchPlan(organizationId: string): PrefetchStep[] {
       queryFn: () => stockEntriesApi.getAll(undefined, organizationId),
       optional: true,
     },
+    {
+      // Used by /dashboard and AI views — without this, dashboard shows
+      // blank cards offline.
+      name: 'dashboard-summary',
+      queryKey: ['dashboard-summary', organizationId, undefined],
+      queryFn: () => dashboardService.getDashboardSummary(undefined),
+      optional: true,
+    },
+    {
+      // Parcels-with-details powers most parcel cards (area, current crop,
+      // last harvest etc.). The lighter `parcels` step above doesn't cover it.
+      name: 'parcels-with-details',
+      queryKey: ['parcels-with-details', organizationId],
+      queryFn: () => parcelsApi.getAll({}, organizationId),
+      optional: true,
+    },
+    {
+      name: 'harvests',
+      queryKey: ['harvests', organizationId, undefined],
+      queryFn: () => harvestsApi.getAll(undefined, organizationId),
+      optional: true,
+    },
+    {
+      name: 'analyses',
+      queryKey: ['analyses', organizationId],
+      queryFn: () => analysesApi.getAll(undefined, organizationId),
+      optional: true,
+    },
+    {
+      // /users/me — needed for role/permissions-aware UI gating offline.
+      name: 'user-profile',
+      queryKey: ['auth', 'profile'],
+      queryFn: () => usersApi.getMe(),
+      optional: true,
+    },
+    {
+      name: 'organizations',
+      queryKey: ['auth', 'organizations'],
+      queryFn: () => usersApi.getMyOrganizations(),
+      optional: true,
+    },
   ];
 }
 
-let listeners = new Set<(p: PrefetchProgress) => void>();
+const listeners = new Set<(p: PrefetchProgress) => void>();
 let current: PrefetchProgress = {
   total: 0,
   completed: 0,

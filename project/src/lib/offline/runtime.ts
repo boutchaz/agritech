@@ -101,8 +101,19 @@ export function initOfflineRuntime(queryClient?: QueryClient): void {
     }
   }
 
-  // Online -> flush
-  window.addEventListener('online', () => void flushNow('online-event'));
+  // Online -> flush + re-prefetch so any data missed offline is filled in.
+  window.addEventListener('online', () => {
+    void flushNow('online-event');
+    void maybePrefetch('online-resume');
+  });
+
+  // Tab regains focus while online -> opportunistic re-prefetch (cheap due to
+  // 30 min cooldown + completedSteps memoization).
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && navigator.onLine) {
+      void maybePrefetch('visibility');
+    }
+  });
 
   // Periodic flush (leader only)
   window.setInterval(() => void flushNow('interval'), 30_000);

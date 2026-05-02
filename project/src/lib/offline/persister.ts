@@ -17,6 +17,33 @@ function keyFor(orgId: string | null): string {
   return `agm:${org}:${APP_VERSION}:${SCHEMA_VERSION}:queries`;
 }
 
+/**
+ * Resolve the active org synchronously, in this priority:
+ *   1) provided getter (Zustand store, may not be hydrated yet at boot)
+ *   2) localStorage 'currentOrganization' (written by MultiTenantAuthProvider)
+ * Falls back to null only if neither is set. Without this, the very first
+ * `restoreClient` call at boot reads from `agm:no-org:...` (empty) instead
+ * of the org-keyed bucket the user actually persisted to last session.
+ */
+function resolveOrgId(getter: () => string | null): string | null {
+  try {
+    const fromStore = getter();
+    if (fromStore) return fromStore;
+  } catch {
+    /* ignore */
+  }
+  try {
+    const raw = typeof localStorage !== 'undefined' ? localStorage.getItem('currentOrganization') : null;
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed.id === 'string') return parsed.id;
+    }
+  } catch {
+    /* ignore */
+  }
+  return null;
+}
+
 export const PERSIST_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 
 export const PERSIST_BUSTER = `${APP_VERSION}:${SCHEMA_VERSION}`;
@@ -30,6 +57,7 @@ export const PERSIST_QUERY_KEY_ALLOWLIST = new Set<string>([
   'task-time-logs',
   'parcels',
   'parcel',
+  'parcels-with-details',
   'farms',
   'farm',
   'farm-hierarchy',
@@ -37,20 +65,36 @@ export const PERSIST_QUERY_KEY_ALLOWLIST = new Set<string>([
   'stock-entries',
   'stock-entry',
   'stock-movements',
+  'stock-dashboard',
   'inventory-items',
   'workers',
   'worker',
+  'active-workers',
   'harvests',
   'harvest',
   'harvest-statistics',
   'pest-reports',
   'pest-alerts',
   'organizations',
+  'organization',
+  'organization-modules',
   'user-profile',
   'permissions',
   'auth',
   'subscription',
   'modules',
+  'analyses',
+  'analysis',
+  'crops',
+  'crop',
+  'crop-cycles',
+  'dashboard-summary',
+  'compliance',
+  'satellite',
+  'weather',
+  'support-info',
+  'landing-settings',
+  'supported-countries',
 ]);
 
 export function shouldPersistQuery(queryKey: readonly unknown[]): boolean {
@@ -62,7 +106,7 @@ export function shouldPersistQuery(queryKey: readonly unknown[]): boolean {
 export function createIDBPersister(orgIdProvider: () => string | null): Persister {
   return {
     persistClient: async (client: PersistedClient) => {
-      const orgId = orgIdProvider();
+      const orgId = resolveOrgId(orgIdProvider);
       const filtered: PersistedClient = {
         ...client,
         clientState: {
@@ -75,7 +119,7 @@ export function createIDBPersister(orgIdProvider: () => string | null): Persiste
       await set(keyFor(orgId), filtered, getStore());
     },
     restoreClient: async () => {
-      const orgId = orgIdProvider();
+      const orgId = resolveOrgId(orgIdProvider);
       try {
         return (await get<PersistedClient>(keyFor(orgId), getStore())) ?? undefined;
       } catch {
@@ -83,7 +127,7 @@ export function createIDBPersister(orgIdProvider: () => string | null): Persiste
       }
     },
     removeClient: async () => {
-      const orgId = orgIdProvider();
+      const orgId = resolveOrgId(orgIdProvider);
       await del(keyFor(orgId), getStore());
     },
   };
