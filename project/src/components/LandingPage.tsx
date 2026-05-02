@@ -22,7 +22,6 @@ import LanguageSwitcher from './LanguageSwitcher';
 import SupportedRegionsSection from './SupportedRegionsSection';
 import { WowIntro } from './WowIntro';
 import { useLandingSettings } from '@/hooks/useLandingSettings';
-import { useSupportInfo } from '@/hooks/useSupportInfo';
 import { appConfig } from '@/config/app';
 import DemoRequestForm from './landing/DemoRequestForm';
 
@@ -1263,13 +1262,10 @@ function CTABanner({ t, onDemo, onTrial }: { t: T; onDemo: () => void; onTrial: 
 function Footer({
   t,
   onContact,
-  supportEmail,
 }: {
   t: T;
   onContact: () => void;
-  supportEmail: string;
 }) {
-  const mailto = `mailto:${supportEmail}`;
   const cols: { title: string; links: { label: string; href: string; onClick?: () => void }[] }[] = [
     {
       title: t('landing2.footer.platform', 'Plateforme'),
@@ -1277,7 +1273,6 @@ function Footer({
         { label: t('landing2.footer.modules', 'Modules'), href: '#modules' },
         { label: t('landing2.footer.pricing', 'Tarifs'), href: '#pricing' },
         { label: t('landing2.footer.security', 'Sécurité'), href: '/privacy-policy' },
-        { label: t('landing2.footer.api', 'API & intégrations'), href: mailto + '?subject=API%20%26%20int%C3%A9grations' },
       ],
     },
     {
@@ -1293,8 +1288,6 @@ function Footer({
       title: t('landing2.footer.company', 'Société'),
       links: [
         { label: t('landing2.footer.about', 'À propos'), href: 'https://wearecodelovers.com/' },
-        { label: t('landing2.footer.careers', 'Carrières'), href: mailto + '?subject=Carri%C3%A8res' },
-        { label: t('landing2.footer.press', 'Presse'), href: mailto + '?subject=Presse' },
         { label: t('landing2.footer.contact', 'Contact'), href: '#', onClick: onContact },
       ],
     },
@@ -1318,12 +1311,6 @@ function Footer({
             <p style={{ fontSize: 13, color: 'rgba(255,255,255,.6)', maxWidth: 320, lineHeight: 1.55, marginTop: 18 }}>
               {t('landing2.footer.tagline', "La plateforme agricole intégrée. Pour la saison qui vient, et toutes celles d'après.")}
             </p>
-            <div style={{ marginTop: 22, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-              <span className="onb-mono-cap" style={{ color: 'rgba(255,255,255,.4)', fontSize: 9.5 }}>
-                {t('landing2.footer.availableOn', 'Disponible sur')}
-              </span>
-              <span style={{ fontSize: 11, color: 'rgba(255,255,255,.7)' }}>iOS · Android · Web</span>
-            </div>
           </div>
           {cols.map((c) => (
             <div key={c.title}>
@@ -1821,7 +1808,6 @@ const LandingPage = () => {
 
   const tFn: T = (k, d) => t(k, { defaultValue: d ?? k });
   const landing = useLandingSettings();
-  const support = useSupportInfo();
   const partnerNames = landing.partners.map((p) => p.name);
 
   return (
@@ -1840,7 +1826,7 @@ const LandingPage = () => {
       <Pricing t={tFn} onContact={openDemo} />
       <FAQSection t={tFn} />
       <CTABanner t={tFn} onDemo={openDemo} onTrial={goTrial} />
-      <Footer t={tFn} onContact={openDemo} supportEmail={support.contact_email} />
+      <Footer t={tFn} onContact={openDemo} />
 
       {navOpen && (
         <MobileNav
