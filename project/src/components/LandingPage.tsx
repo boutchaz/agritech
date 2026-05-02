@@ -20,9 +20,12 @@ import {
 } from 'lucide-react';
 import LanguageSwitcher from './LanguageSwitcher';
 import SupportedRegionsSection from './SupportedRegionsSection';
+import { WowIntro } from './WowIntro';
 import { useLandingSettings } from '@/hooks/useLandingSettings';
 import { appConfig } from '@/config/app';
 import DemoRequestForm from './landing/DemoRequestForm';
+
+const INTRO_KEY = 'agrogina:intro-seen';
 
 import '../styles/onboarding-tokens.css';
 
@@ -1710,6 +1713,22 @@ const LandingPage = () => {
   const { t, i18n } = useTranslation();
   const [demoOpen, setDemoOpen] = useState(false);
   const [navOpen, setNavOpen] = useState(false);
+  const [introDone, setIntroDone] = useState(() => {
+    if (typeof window === 'undefined') return true;
+    try {
+      return window.sessionStorage.getItem(INTRO_KEY) === '1';
+    } catch {
+      return true;
+    }
+  });
+  const finishIntro = () => {
+    setIntroDone(true);
+    try {
+      window.sessionStorage.setItem(INTRO_KEY, '1');
+    } catch {
+      // ignore storage errors
+    }
+  };
 
   const isRTL = i18n.language?.startsWith('ar');
   const siteOrigin = typeof window !== 'undefined' ? window.location.origin : 'https://app.agritech.local';
@@ -1778,6 +1797,7 @@ const LandingPage = () => {
   return (
     <div className="onb-shell" dir={isRTL ? 'rtl' : 'ltr'} style={{ minHeight: '100vh' }}>
       <style>{RESPONSIVE_CSS}</style>
+      {!introDone && <WowIntro onComplete={finishIntro} />}
       <LandingNav t={tFn} onMenu={() => setNavOpen(true)} onTrial={goTrial} />
       <Hero t={tFn} onDemo={openDemo} onTrial={goTrial} stats={landing.hero_stats} />
       <LogoStrip t={tFn} partners={partnerNames} />
