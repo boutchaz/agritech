@@ -19544,3 +19544,246 @@ DROP TRIGGER IF EXISTS trg_landing_settings_updated_at ON landing_settings;
 CREATE TRIGGER trg_landing_settings_updated_at
   BEFORE UPDATE ON landing_settings
   FOR EACH ROW EXECUTE FUNCTION update_support_settings_updated_at();
+
+-- =====================================================================
+-- PERFORMANCE: Supabase linter fixes
+-- 1) auth.<fn>() / current_setting() in RLS → wrap in (select ...) so
+--    they're evaluated once per query instead of once per row.
+-- 2) Drop duplicate indexes flagged by 0009_duplicate_index.
+-- 3) Consolidate redundant permissive policies on selected tables.
+-- =====================================================================
+
+-- 1) Rewrite RLS policies in public schema. Idempotent: collapses
+--    accidental double-wrapping (select (select auth.x())) → (select auth.x()).
+DO $perf_rls_initplan$
+DECLARE
+  r RECORD;
+  new_qual  TEXT;
+  new_check TEXT;
+  to_clause    TEXT;
+  using_clause TEXT;
+  check_clause TEXT;
+  policy_kind  TEXT;
+BEGIN
+  FOR r IN
+    SELECT schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check
+    FROM pg_policies
+    WHERE schemaname = 'public'
+  LOOP
+    new_qual  := r.qual;
+    new_check := r.with_check;
+
+    IF new_qual IS NOT NULL THEN
+      new_qual := regexp_replace(new_qual,
+        '\mauth\.(uid|jwt|role|email)\(\)',
+        '(select auth.\1())', 'g');
+      new_qual := regexp_replace(new_qual,
+        '\mcurrent_setting\(([^()]*)\)',
+        '(select current_setting(\1))', 'g');
+      -- collapse accidental double-wrap
+      new_qual := regexp_replace(new_qual,
+        '\(\s*select\s+\(\s*select\s+(auth\.(uid|jwt|role|email)\(\))\s*\)\s*\)',
+        '(select \1)', 'g');
+      new_qual := regexp_replace(new_qual,
+        '\(\s*select\s+\(\s*select\s+(current_setting\([^()]*\))\s*\)\s*\)',
+        '(select \1)', 'g');
+    END IF;
+
+    IF new_check IS NOT NULL THEN
+      new_check := regexp_replace(new_check,
+        '\mauth\.(uid|jwt|role|email)\(\)',
+        '(select auth.\1())', 'g');
+      new_check := regexp_replace(new_check,
+        '\mcurrent_setting\(([^()]*)\)',
+        '(select current_setting(\1))', 'g');
+      new_check := regexp_replace(new_check,
+        '\(\s*select\s+\(\s*select\s+(auth\.(uid|jwt|role|email)\(\))\s*\)\s*\)',
+        '(select \1)', 'g');
+      new_check := regexp_replace(new_check,
+        '\(\s*select\s+\(\s*select\s+(current_setting\([^()]*\))\s*\)\s*\)',
+        '(select \1)', 'g');
+    END IF;
+
+    IF new_qual IS NOT DISTINCT FROM r.qual
+       AND new_check IS NOT DISTINCT FROM r.with_check THEN
+      CONTINUE;
+    END IF;
+
+    to_clause    := array_to_string(r.roles, ', ');
+    using_clause := CASE WHEN new_qual  IS NOT NULL THEN format(' USING (%s)', new_qual)        ELSE '' END;
+    check_clause := CASE WHEN new_check IS NOT NULL THEN format(' WITH CHECK (%s)', new_check)  ELSE '' END;
+    policy_kind  := CASE WHEN r.permissive = 'PERMISSIVE' THEN 'PERMISSIVE' ELSE 'RESTRICTIVE' END;
+
+    EXECUTE format('DROP POLICY IF EXISTS %I ON %I.%I',
+                   r.policyname, r.schemaname, r.tablename);
+    EXECUTE format('CREATE POLICY %I ON %I.%I AS %s FOR %s TO %s%s%s',
+                   r.policyname, r.schemaname, r.tablename,
+                   policy_kind, r.cmd, to_clause, using_clause, check_clause);
+  END LOOP;
+END
+$perf_rls_initplan$;
+
+-- 2) Drop duplicate indexes (keep the one with the org-scoped name).
+DROP INDEX IF EXISTS idx_account_mappings_org_override;
+DROP INDEX IF EXISTS idx_ai_rec_citations_unique;
+DROP INDEX IF EXISTS idx_biological_assets_type;
+DROP INDEX IF EXISTS idx_crop_cycles_status;
+
+-- 3) Consolidate the most flagged multiple-permissive overlaps.
+--    Strategy: drop the broad admin_manage_* / admin_write_* catch-alls
+--    where finer-grained org_* / read_* policies already cover the same
+--    actions for the same role. Service-role-only policies are dropped
+--    entirely because the service_role key bypasses RLS by design.
+
+-- modules: admin_manage_modules covers ALL, admin_write_modules covers
+-- INSERT/UPDATE/DELETE; both overlap with public_read_modules /
+-- read_active_modules for SELECT. Keep admin_write_modules + the read
+-- pair, drop admin_manage_modules.
+DROP POLICY IF EXISTS admin_manage_modules ON modules;
+-- modules public read + read_active overlap on SELECT — keep one.
+DROP POLICY IF EXISTS read_active_modules ON modules;
+
+-- roles: admin_manage_roles overlaps with org_*_roles + read_active_roles.
+DROP POLICY IF EXISTS admin_manage_roles ON roles;
+DROP POLICY IF EXISTS read_active_roles  ON roles;
+
+-- account_mappings: admin_manage_account_mappings overlaps with the four
+-- explicit insert/update/delete/read policies.
+DROP POLICY IF EXISTS admin_manage_account_mappings ON account_mappings;
+
+-- account_templates: admin_manage_account_templates overlaps with
+-- read_published_account_templates for SELECT.
+DROP POLICY IF EXISTS admin_manage_account_templates ON account_templates;
+
+-- currencies: admin_manage_currencies overlaps with read_active_currencies.
+DROP POLICY IF EXISTS admin_manage_currencies ON currencies;
+
+-- support_settings + landing_settings: admin_write covers ALL (incl. SELECT)
+-- and overlaps with the public_read policy. Restrict admin_write to
+-- INSERT/UPDATE/DELETE so it no longer overlaps on SELECT.
+DROP POLICY IF EXISTS support_settings_admin_write ON support_settings;
+CREATE POLICY support_settings_admin_write ON support_settings
+  FOR INSERT TO public WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM organization_users ou JOIN roles r ON r.id = ou.role_id
+      WHERE ou.user_id = (select auth.uid())
+        AND ou.is_active = true
+        AND r.name = 'system_admin'
+    )
+  );
+CREATE POLICY support_settings_admin_update ON support_settings
+  FOR UPDATE TO public USING (
+    EXISTS (
+      SELECT 1 FROM organization_users ou JOIN roles r ON r.id = ou.role_id
+      WHERE ou.user_id = (select auth.uid())
+        AND ou.is_active = true
+        AND r.name = 'system_admin'
+    )
+  );
+CREATE POLICY support_settings_admin_delete ON support_settings
+  FOR DELETE TO public USING (
+    EXISTS (
+      SELECT 1 FROM organization_users ou JOIN roles r ON r.id = ou.role_id
+      WHERE ou.user_id = (select auth.uid())
+        AND ou.is_active = true
+        AND r.name = 'system_admin'
+    )
+  );
+
+DROP POLICY IF EXISTS landing_settings_admin_write ON landing_settings;
+CREATE POLICY landing_settings_admin_write ON landing_settings
+  FOR INSERT TO public WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM organization_users ou JOIN roles r ON r.id = ou.role_id
+      WHERE ou.user_id = (select auth.uid())
+        AND ou.is_active = true
+        AND r.name = 'system_admin'
+    )
+  );
+CREATE POLICY landing_settings_admin_update ON landing_settings
+  FOR UPDATE TO public USING (
+    EXISTS (
+      SELECT 1 FROM organization_users ou JOIN roles r ON r.id = ou.role_id
+      WHERE ou.user_id = (select auth.uid())
+        AND ou.is_active = true
+        AND r.name = 'system_admin'
+    )
+  );
+CREATE POLICY landing_settings_admin_delete ON landing_settings
+  FOR DELETE TO public USING (
+    EXISTS (
+      SELECT 1 FROM organization_users ou JOIN roles r ON r.id = ou.role_id
+      WHERE ou.user_id = (select auth.uid())
+        AND ou.is_active = true
+        AND r.name = 'system_admin'
+    )
+  );
+
+-- Remaining permissive overlaps: drop catch-all/duplicate policies.
+DROP POLICY IF EXISTS public_read_all_module_prices       ON module_prices;
+DROP POLICY IF EXISTS public_read_all_subscription_pricing ON subscription_pricing;
+DROP POLICY IF EXISTS service_role_all_user_profiles      ON user_profiles;
+-- admin_read_* overlap with org_read_* (admin already passes via the
+-- org_read predicate when they're org members; cross-org admin reads
+-- happen via service role bypass).
+DROP POLICY IF EXISTS admin_read_all_organizations  ON organizations;
+DROP POLICY IF EXISTS admin_read_subscriptions      ON subscriptions;
+DROP POLICY IF EXISTS admin_read_subscription_usage ON subscription_usage;
+-- Marketplace + crop_templates legitimately need both — combine into
+-- a single OR'd policy per cmd.
+DO $merge_marketplace$
+DECLARE
+  buyers_qual TEXT;
+  sellers_qual TEXT;
+  buyers_upd TEXT;
+  sellers_upd TEXT;
+BEGIN
+  SELECT qual INTO buyers_qual FROM pg_policies
+    WHERE schemaname='public' AND tablename='marketplace_quote_requests'
+      AND policyname='Users can view their own quote requests';
+  SELECT qual INTO sellers_qual FROM pg_policies
+    WHERE schemaname='public' AND tablename='marketplace_quote_requests'
+      AND policyname='Sellers can view requests sent to them';
+  IF buyers_qual IS NOT NULL AND sellers_qual IS NOT NULL THEN
+    DROP POLICY IF EXISTS "Users can view their own quote requests" ON marketplace_quote_requests;
+    DROP POLICY IF EXISTS "Sellers can view requests sent to them"  ON marketplace_quote_requests;
+    EXECUTE format(
+      'CREATE POLICY marketplace_quote_requests_select ON marketplace_quote_requests FOR SELECT USING ((%s) OR (%s))',
+      buyers_qual, sellers_qual);
+  END IF;
+
+  SELECT qual INTO buyers_upd FROM pg_policies
+    WHERE schemaname='public' AND tablename='marketplace_quote_requests'
+      AND policyname='Buyers can update their own requests';
+  SELECT qual INTO sellers_upd FROM pg_policies
+    WHERE schemaname='public' AND tablename='marketplace_quote_requests'
+      AND policyname='Sellers can update their received requests';
+  IF buyers_upd IS NOT NULL AND sellers_upd IS NOT NULL THEN
+    DROP POLICY IF EXISTS "Buyers can update their own requests" ON marketplace_quote_requests;
+    DROP POLICY IF EXISTS "Sellers can update their received requests" ON marketplace_quote_requests;
+    EXECUTE format(
+      'CREATE POLICY marketplace_quote_requests_update ON marketplace_quote_requests FOR UPDATE USING ((%s) OR (%s))',
+      buyers_upd, sellers_upd);
+  END IF;
+END $merge_marketplace$;
+
+-- Merge crop_templates SELECT (global + org) into a single OR'd policy.
+DO $merge_crop_templates$
+DECLARE
+  q_global TEXT;
+  q_org    TEXT;
+BEGIN
+  SELECT qual INTO q_global FROM pg_policies
+    WHERE schemaname='public' AND tablename='crop_templates'
+      AND policyname='crop_templates_select_global';
+  SELECT qual INTO q_org    FROM pg_policies
+    WHERE schemaname='public' AND tablename='crop_templates'
+      AND policyname='crop_templates_select_org';
+  IF q_global IS NOT NULL AND q_org IS NOT NULL THEN
+    DROP POLICY IF EXISTS crop_templates_select_global ON crop_templates;
+    DROP POLICY IF EXISTS crop_templates_select_org    ON crop_templates;
+    EXECUTE format(
+      'CREATE POLICY crop_templates_select ON crop_templates FOR SELECT USING ((%s) OR (%s))',
+      q_global, q_org);
+  END IF;
+END $merge_crop_templates$;
