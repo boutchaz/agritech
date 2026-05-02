@@ -598,7 +598,7 @@ export class CalibrationReviewAdapter {
     step1: JsonRecord,
     step3: JsonRecord,
     step4: JsonRecord,
-    step5: JsonRecord,
+    _step5: JsonRecord,
   ): BlockBAnalyse["spectral"] {
     const indexSeries = this.asRecord(step1.index_time_series);
     const globalPercentiles = this.asRecord(step3.global_percentiles);
@@ -646,22 +646,8 @@ export class CalibrationReviewAdapter {
       end_date: i < phaseOrder.length - 1 ? this.asString(meanDates[phaseOrder[i + 1]]) ?? null : null,
     })).filter((p) => p.start_date);
 
-    // Build excluded periods from anomalies
-    const anomalyIconLabels: Record<string, string> = {
-      frost: "Gel", heatwave: "Canicule", drought: "Sécheresse",
-      hail: "Grêle", wind: "Chergui", sudden_drop: "Chute",
-    };
-    const excludedPeriods = this.asArray(step5.anomalies).map((a) => {
-      const rec = this.asRecord(a);
-      const type = this.asString(rec.anomaly_type) ?? "anomaly";
-      return {
-        date: this.asString(rec.date) ?? "",
-        type,
-        label: `Exclu — ${anomalyIconLabels[type] ?? type}`,
-      };
-    });
-
-    return { indices, percentiles, phenology_phases: phenologyPhases, excluded_periods: excludedPeriods };
+    // Excluded-period markers are not exposed in the review API (UI removed).
+    return { indices, percentiles, phenology_phases: phenologyPhases, excluded_periods: [] };
   }
 
   private buildSpatialPatterns(step7: JsonRecord): BlockBAnalyse["spatial_patterns"] {
@@ -1072,39 +1058,9 @@ export class CalibrationReviewAdapter {
 
   // ─── Block C: Anomalies et ruptures (Phase 2 — minimal) ───
 
-  private buildBlockC(input: CalibrationSnapshotInput): BlockCAnomalies | null {
-    const output = this.getOutput(input);
-    const step5 = this.getStep(output, "step5");
-    const anomalies = this.asArray(step5.anomalies);
-
-    if (anomalies.length === 0) return null;
-
-    return {
-      anomalies: anomalies.map((item) => {
-        const record = this.asRecord(item);
-        return {
-          period: this.asString(record.date) ?? "",
-          type: this.asString(record.anomaly_type) ?? "anomaly",
-          icon: this.getAnomalyIcon(this.asString(record.anomaly_type) ?? ""),
-          impact: "Exclue du calcul",
-          sources: [],
-        };
-      }),
-      ruptures: [],
-      total_excluded_percent: 0,
-      calibrage_limite: false,
-    };
-  }
-
-  private getAnomalyIcon(type: string): string {
-    const lower = type.toLowerCase();
-    if (lower.includes("gel") || lower.includes("frost")) return "frost";
-    if (lower.includes("canic") || lower.includes("heat")) return "heatwave";
-    if (lower.includes("chergui") || lower.includes("wind")) return "wind";
-    if (lower.includes("sech") || lower.includes("drought")) return "drought";
-    if (lower.includes("grele") || lower.includes("hail")) return "hail";
-    if (lower.includes("pluv") || lower.includes("rain")) return "rain";
-    return "anomaly";
+  /** Block C (anomaly list) removed from product review — keep null so clients do not render it. */
+  private buildBlockC(_input: CalibrationSnapshotInput): BlockCAnomalies | null {
+    return null;
   }
 
   // ─── Block D: Ameliorer la precision ───────────────────────

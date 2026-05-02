@@ -86,6 +86,14 @@ export function CalibrationRunInputsPanel({
 }: CalibrationRunInputsPanelProps) {
   const { t } = useTranslation('ai');
 
+  /** Support / debug panel — only when `VITE_DEV=true` (see `.env.example`). Hidden in all other builds. */
+  const showCalibrationRunInputsPanel =
+    String(import.meta.env.VITE_DEV).toLowerCase() === 'true';
+
+  if (!showCalibrationRunInputsPanel) {
+    return null;
+  }
+
   const requestFieldLabel = (key: string) =>
     t(`calibration.requestFields.${key}`, { defaultValue: key.replace(/_/g, ' ') });
 

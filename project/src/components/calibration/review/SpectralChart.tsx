@@ -89,13 +89,11 @@ function SpectralChartPlot({
   chartData,
   activeIndex,
   pBand,
-  excludedPeriods,
   heightClassName,
 }: {
   chartData: ChartRow[];
   activeIndex: string;
   pBand: SpectralData['percentiles'][string] | undefined;
-  excludedPeriods: SpectralData['excluded_periods'];
   heightClassName: string;
 }) {
   return (
@@ -156,17 +154,6 @@ function SpectralChartPlot({
             />
           )}
 
-          {/* Vertical markers only — labels moved below chart to avoid overlap */}
-          {excludedPeriods.map((ep, i) => (
-            <ReferenceLine
-              key={i}
-              x={ep.date}
-              stroke="#ef4444"
-              strokeDasharray="4 4"
-              strokeOpacity={0.6}
-            />
-          ))}
-
           <Area
             type="monotone"
             dataKey="value"
@@ -220,43 +207,17 @@ export function SpectralChart({ data }: SpectralChartProps) {
     );
   }
 
-  const legendAndExcluded = (
-    <>
-      <div className="flex flex-wrap items-center gap-4 mt-3 text-xs text-gray-500 dark:text-gray-400">
-        <div className="flex items-center gap-1.5">
-          <div className="w-6 h-2 rounded-sm" style={{ backgroundColor: INDEX_COLORS[activeIndex], opacity: 0.12 }} />
-          <span>P25-P75</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className="w-6 h-2 rounded-sm" style={{ backgroundColor: INDEX_COLORS[activeIndex], opacity: 0.06 }} />
-          <span>P10-P90</span>
-        </div>
-        {data.excluded_periods.length > 0 && (
-          <div className="flex items-center gap-1.5">
-            <div className="w-4 h-0 border-t-2 border-dashed border-red-400" />
-            <span>{t('calibrationReview.spectral.excluded', 'Périodes exclues')}</span>
-          </div>
-        )}
+  const percentileLegend = (
+    <div className="flex flex-wrap items-center gap-4 mt-3 text-xs text-gray-500 dark:text-gray-400">
+      <div className="flex items-center gap-1.5">
+        <div className="w-6 h-2 rounded-sm" style={{ backgroundColor: INDEX_COLORS[activeIndex], opacity: 0.12 }} />
+        <span>P25-P75</span>
       </div>
-
-      {data.excluded_periods.length > 0 && (
-        <div className="mt-3 rounded-lg border border-red-100 dark:border-red-900/40 bg-red-50/50 dark:bg-red-950/20 px-3 py-2">
-          <p className="text-xs font-semibold text-red-800 dark:text-red-200 mb-2">
-            {t('calibrationReview.spectral.excludedListTitle', 'Marqueurs sur le graphique')}
-          </p>
-          <ul className="space-y-1.5 text-xs text-red-900 dark:text-red-100">
-            {data.excluded_periods.map((ep, i) => (
-              <li key={i} className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-                <time dateTime={ep.date} className="font-mono tabular-nums shrink-0 text-red-700 dark:text-red-300">
-                  {formatDate(ep.date)}
-                </time>
-                <span className="min-w-0 break-words">{ep.label}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-    </>
+      <div className="flex items-center gap-1.5">
+        <div className="w-6 h-2 rounded-sm" style={{ backgroundColor: INDEX_COLORS[activeIndex], opacity: 0.06 }} />
+        <span>P10-P90</span>
+      </div>
+    </div>
   );
 
   return (
@@ -298,11 +259,10 @@ export function SpectralChart({ data }: SpectralChartProps) {
           chartData={chartData}
           activeIndex={activeIndex}
           pBand={pBand}
-          excludedPeriods={data.excluded_periods}
           heightClassName="h-[280px]"
         />
 
-        {legendAndExcluded}
+        {percentileLegend}
       </div>
 
       <Dialog open={fullscreenOpen} onOpenChange={setFullscreenOpen}>
@@ -318,10 +278,9 @@ export function SpectralChart({ data }: SpectralChartProps) {
               chartData={chartData}
               activeIndex={activeIndex}
               pBand={pBand}
-              excludedPeriods={data.excluded_periods}
               heightClassName="h-[min(72dvh,720px)] min-h-[280px] shrink-0"
             />
-            {legendAndExcluded}
+            {percentileLegend}
           </div>
         </DialogContent>
       </Dialog>
