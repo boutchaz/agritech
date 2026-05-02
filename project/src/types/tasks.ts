@@ -174,6 +174,7 @@ export interface TaskComment {
   
   // Joined data
   user_name?: string;
+  user_avatar_url?: string;
   worker_name?: string;
 }
 

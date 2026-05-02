@@ -4841,7 +4841,16 @@
         "ownerShare": "Owner Share"
       },
       "pending": "pending",
-      "paid": "paid",
+  "offlineBanner": {
+    "offline": "Offline",
+    "offlineWithPending": "Offline — {{count}} pending",
+    "syncing": "Syncing… {{count}}",
+    "pendingActions": "{{count}} action(s) pending",
+    "failedActions": "{{count}} action(s) failed",
+    "limitedConnection": "Limited connection",
+    "review": "Review"
+  },
+  "paid": "paid",
       "settlements": "settlements",
       "workerTotal": "Total for",
       "noSettlements": "No settlements recorded. Use the calculator to create a settlement.",
@@ -5777,6 +5786,8 @@
       "paymentSection": "Payment and Work Units",
       "fixedSalarySelected": "Fixed salary employees selected - payment optional",
       "fixedSalaryNote": "<strong>Note:</strong> Fixed salary workers are already paid monthly. Payment for this task is optional (bonus/premium for exceptional work).",
+      "fixedSalaryNoteLabel": "Note:",
+      "fixedSalaryNoteText": "Fixed salary workers are already paid monthly. Payment for this task is optional (bonus/premium for exceptional work).",
       "paymentTypeLabel": "Payment type",
       "paymentTypeOptional": "(optional)",
       "paymentTypePlaceholder": "Select",

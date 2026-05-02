@@ -13,7 +13,6 @@ import {
   Search,
   MapPin,
   Calendar,
-  Eye,
   MoreVertical,
   Users,
 } from 'lucide-react';
@@ -22,6 +21,7 @@ import {
   usePaginatedWorkers,
   useDeactivateWorker,
   useDeleteWorker,
+  useWorkersActivitySummary,
 } from '../../hooks/useWorkers';
 import { useAuth } from '../../hooks/useAuth';
 import { getCompensationDisplay } from '../../types/workers';
@@ -88,11 +88,12 @@ function formatMad(amount: number): string {
 }
 
 interface SparklineProps {
-  seed: string;
+  data?: Array<{ date: string; hours: number; amount: number }>;
+  fallbackSeed: string;
   color: 'blue' | 'amber' | 'red';
 }
 
-const Sparkline = ({ seed, color }: SparklineProps) => {
+const Sparkline = ({ data, fallbackSeed, color }: SparklineProps) => {
   const stroke =
     color === 'red' ? '#ef4444' : color === 'amber' ? '#f59e0b' : '#3b82f6';
   const fill =
@@ -102,13 +103,20 @@ const Sparkline = ({ seed, color }: SparklineProps) => {
         ? 'rgba(245,158,11,0.15)'
         : 'rgba(59,130,246,0.12)';
 
-  const h = hashString(seed);
   const points = useMemo(() => {
+    if (data && data.length > 0) {
+      const maxAmount = Math.max(...data.map(d => d.amount), 1);
+      return data.map((d, i) => {
+        const x = data.length === 1 ? 50 : (i / (data.length - 1)) * 100;
+        const y = 30 - (d.amount / maxAmount) * 28 - 1;
+        return { x, y: Math.max(1, Math.min(29, y)) };
+      });
+    }
+    const h = hashString(fallbackSeed);
     const n = 10;
     const arr: Array<{ x: number; y: number }> = [];
     for (let i = 0; i < n; i += 1) {
       const t = i / (n - 1);
-      // deterministic but natural-looking
       const v =
         0.5 +
         0.25 * Math.sin((h % 360) * 0.05 + i * 0.9) +
@@ -117,7 +125,7 @@ const Sparkline = ({ seed, color }: SparklineProps) => {
       arr.push({ x: t * 100, y: 30 - clamped * 28 - 1 });
     }
     return arr;
-  }, [h]);
+  }, [data, fallbackSeed]);
 
   const polylinePts = points.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
   const areaPts = `0,30 ${polylinePts} 100,30`;
@@ -163,6 +171,8 @@ const WorkersList = ({ organizationId, farms }: WorkersListProps) => {
 
   const { data: workersData = [] } = useWorkers(organizationId);
   const allWorkers = workersData as Worker[];
+
+  const { data: activitySummary = {} } = useWorkersActivitySummary(organizationId, 30);
 
   const { data: paginatedData, isLoading: _isLoading } = usePaginatedWorkers(organizationId, {
     ...tableState.queryParams,
@@ -310,7 +320,11 @@ const WorkersList = ({ organizationId, farms }: WorkersListProps) => {
     return (
       <div
         key={worker.id}
-        className="relative bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-lg transition-all"
+        role="button"
+        tabIndex={0}
+        onClick={() => handleViewWorker(worker.id)}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleViewWorker(worker.id); } }}
+        className="relative bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-lg hover:border-emerald-300 dark:hover:border-emerald-600 transition-all cursor-pointer active:scale-[0.99]"
       >
         <div className={`absolute inset-y-0 start-0 w-1 ${accentColor}`} aria-hidden />
 
@@ -321,11 +335,7 @@ const WorkersList = ({ organizationId, farms }: WorkersListProps) => {
           >
             {initials || '??'}
           </div>
-          <button
-            type="button"
-            onClick={() => handleViewWorker(worker.id)}
-            className="flex-1 min-w-0 text-start"
-          >
+          <div className="flex-1 min-w-0 text-start">
             <p className="font-semibold text-gray-900 dark:text-white truncate">
               {worker.first_name} {worker.last_name}
             </p>
@@ -338,7 +348,7 @@ const WorkersList = ({ organizationId, farms }: WorkersListProps) => {
                 <span className="truncate">{worker.farm_name}</span>
               </p>
             )}
-          </button>
+          </div>
           {due && (
             <span className="inline-flex items-center gap-1 bg-red-50 text-red-700 border border-red-200 text-xs px-2 py-0.5 rounded-full">
               <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
@@ -383,7 +393,7 @@ const WorkersList = ({ organizationId, farms }: WorkersListProps) => {
             <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">
               {t('workers.sparkline.last30Days', '30 derniers j')}
             </p>
-            <Sparkline seed={seed} color={sparkColor} />
+            <Sparkline data={activitySummary[worker.id]?.days} fallbackSeed={seed} color={sparkColor} />
           </div>
         </div>
 
@@ -420,17 +430,6 @@ const WorkersList = ({ organizationId, farms }: WorkersListProps) => {
                 <Calendar className="w-4 h-4" />
               </button>
             </Can>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleViewWorker(worker.id);
-              }}
-              className="border border-gray-200 dark:border-gray-700 rounded-md p-1.5 hover:bg-gray-50 dark:hover:bg-gray-700/50 text-gray-600 dark:text-gray-300"
-              title={t('workers.actions.view', 'Voir')}
-            >
-              <Eye className="w-4 h-4" />
-            </button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
@@ -603,17 +602,38 @@ const WorkersList = ({ organizationId, farms }: WorkersListProps) => {
           {workers.map(renderWorkerCard)}
         </div>
       ) : (
-        <div className="flex flex-col items-center justify-center h-64 border rounded-xl border-dashed border-gray-300 dark:border-gray-700 text-center px-4">
-          <Users className="w-10 h-10 text-gray-400 mb-2" />
-          <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">
-            {t('workers.list.noWorkersFound')}
+        <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
+          <div className="relative mb-6">
+            <div className="w-24 h-24 rounded-full bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center">
+              <Users className="w-12 h-12 text-emerald-400 dark:text-emerald-500" />
+            </div>
+            <div className="absolute -bottom-1 -right-1 w-10 h-10 rounded-full bg-white dark:bg-gray-800 border-2 border-gray-100 dark:border-gray-700 flex items-center justify-center shadow-sm">
+              <Plus className="w-5 h-5 text-emerald-500" />
+            </div>
+          </div>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
+            {t('workers.list.emptyTitle', 'Aucun ouvrier trouvé')}
+          </h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400 max-w-sm mb-6">
+            {filterType !== 'all' || tableState.search
+              ? t('workers.list.emptyFiltered', 'Aucun ouvrier ne correspond à vos filtres. Essayez de modifier vos critères de recherche.')
+              : t('workers.list.emptyDescription', 'Commencez par ajouter votre premier ouvrier pour gérer votre personnel.')
+            }
           </p>
-          {can('create', 'Worker') && (
-            <Button type="button" onClick={openCreateForm}>
-              <Plus className="w-4 h-4 me-1" />
+          {(filterType !== 'all' || tableState.search) ? (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => { setFilterType('all'); tableState.setSearch(''); }}
+            >
+              {t('workers.list.clearFilters', 'Effacer les filtres')}
+            </Button>
+          ) : can('create', 'Worker') ? (
+            <Button type="button" onClick={openCreateForm} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+              <Plus className="w-4 h-4 me-2" />
               {t('workers.list.addWorker', 'Ajouter un ouvrier')}
             </Button>
-          )}
+          ) : null}
         </div>
       )}
 

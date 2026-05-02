@@ -151,7 +151,20 @@ export const useOnboardingStore = create<OnboardingStore>()(
               const parsed = JSON.parse(raw);
               if (parsed?.state) lsState = parsed.state;
             }
-          } catch {}
+          } catch {
+            // localStorage parse failed — treat as no cached state
+          }
+
+          // Stale localStorage from prior user (incl. DB reset → new user_id):
+          // discard if userId mismatch.
+          if (lsState?.userId && lsState.userId !== userId) {
+            lsState = null;
+            try {
+              localStorage.removeItem('agritech-onboarding');
+            } catch {
+              // ignore storage quota / privacy-mode errors
+            }
+          }
 
           const finalState: OnboardingState = {
             userId: savedState?.userId ?? lsState?.userId ?? defaultState.userId,

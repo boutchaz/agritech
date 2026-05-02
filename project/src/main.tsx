@@ -19,6 +19,7 @@ import {
 } from './lib/offline'
 import './i18n/config'
 import './index.css'
+import './styles/onboarding-tokens.css'
 
 // Initialize Locator for React DevTools debugging (development only)
 if (import.meta.env.DEV) {

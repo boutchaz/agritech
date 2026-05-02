@@ -314,9 +314,11 @@ const AnalysisWidget = () => {
             {t('dashboard.widgets.analysis.empty', 'No analyses available')}
           </p>
           <Button
+            type="button"
+            variant="blue"
             size="sm"
             onClick={handleViewAnalyses}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-[10px] uppercase tracking-widest rounded-xl px-4 w-fit mx-auto"
+            className="w-fit mx-auto font-bold text-[10px] uppercase tracking-widest rounded-xl px-4"
           >
             {t('dashboard.widgets.analysis.addAnalysis', 'Add New')}
           </Button>

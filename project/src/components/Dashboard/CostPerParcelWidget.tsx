@@ -175,9 +175,11 @@ const CostPerParcelWidget = () => {
             {t('dashboard.widgets.costParcel.empty', 'No cost data available')}
           </p>
           <Button
+            type="button"
+            variant="green"
             size="sm"
             onClick={handleViewAll}
-            className="bg-green-600 hover:bg-green-700 text-white font-bold text-[10px] uppercase tracking-widest rounded-xl px-4"
+            className="font-bold text-[10px] uppercase tracking-widest rounded-xl px-4"
           >
             {t('dashboard.widgets.costParcel.viewProfitability', 'View Profitability')}
           </Button>

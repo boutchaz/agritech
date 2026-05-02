@@ -104,7 +104,7 @@ function RegisterPage() {
       }
 
       trackRegisterSuccess(includeDemoData)
-      window.location.href = '/onboarding/select-trial'
+      window.location.href = '/onboarding'
     } catch (error) {
       const message = error instanceof Error ? error.message : t('auth.register.errorGeneric')
       if (message.includes('already exists') || message.includes('already registered')) {

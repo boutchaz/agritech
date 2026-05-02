@@ -1699,14 +1699,14 @@ export class TasksService {
       throw new Error(`Failed to fetch task comments: ${error.message}`);
     }
 
-    // Resolve user names from user_profiles in a batch
+    // Resolve user names + avatars from user_profiles in a batch
     const userIds = [...new Set((data || []).map((c) => c.user_id).filter(Boolean))];
-    let userMap: Record<string, { full_name?: string; email?: string }> = {};
+    let userMap: Record<string, { full_name?: string; email?: string; avatar_url?: string }> = {};
 
     if (userIds.length > 0) {
       const { data: profiles } = await client
         .from("user_profiles")
-        .select("id, full_name, email")
+        .select("id, full_name, email, avatar_url")
         .in("id", userIds);
 
       if (profiles) {
@@ -1717,6 +1717,7 @@ export class TasksService {
     return (data || []).map((comment) => ({
       ...comment,
       user_name: userMap[comment.user_id]?.full_name || userMap[comment.user_id]?.email || undefined,
+      user_avatar_url: userMap[comment.user_id]?.avatar_url || undefined,
       worker_name: comment.worker
         ? `${comment.worker.first_name} ${comment.worker.last_name}`
         : undefined,
@@ -1980,7 +1981,7 @@ export class TasksService {
     const client = this.databaseService.getAdminClient();
     const { data, error } = await client
       .from('task_watchers')
-      .select('id, user_id, created_at, user_profile:user_profiles!task_watchers_user_id_fkey(id, first_name, last_name, email)')
+      .select('id, user_id, created_at, user_profile:user_profiles!task_watchers_user_profile_fkey(id, first_name, last_name, email)')
       .eq('task_id', taskId)
       .eq('organization_id', organizationId);
     if (error) throw new BadRequestException(`Failed to load watchers: ${error.message}`);
@@ -2415,11 +2416,28 @@ export class TasksService {
       throw new ForbiddenException("Time log does not belong to this organization");
     }
 
+    const { data: existingLog } = await client
+      .from("task_time_logs")
+      .select("start_time")
+      .eq("id", timeLogId)
+      .single();
+
+    const endTime = new Date();
+    const breakMinutes = clockOutData.break_duration || 0;
+    let totalHours = 0;
+    if (existingLog?.start_time) {
+      const startMs = new Date(existingLog.start_time).getTime();
+      const endMs = endTime.getTime();
+      const breakMs = breakMinutes * 60 * 1000;
+      totalHours = Math.max(0, (endMs - startMs - breakMs) / (1000 * 60 * 60));
+    }
+
     const { data, error } = await client
       .from("task_time_logs")
       .update({
-        end_time: new Date().toISOString(),
-        break_duration: clockOutData.break_duration || 0,
+        end_time: endTime.toISOString(),
+        break_duration: breakMinutes,
+        total_hours: Math.round(totalHours * 100) / 100,
         notes: clockOutData.notes || null,
         units_completed: clockOutData.units_completed ?? null,
         photo_url: clockOutData.photo_url ?? null,

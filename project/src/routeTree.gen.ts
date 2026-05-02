@@ -59,12 +59,14 @@ import { Route as AuthenticatedcoreDashboardRouteImport } from './routes/_authen
 import { Route as AuthenticatedcoreChatRouteImport } from './routes/_authenticated/(core)/chat'
 import { Route as AuthenticatedcoreAnalyticsRouteImport } from './routes/_authenticated/(core)/analytics'
 import { Route as AuthenticatedaccountingAccountingRouteImport } from './routes/_authenticated/(accounting)/accounting'
+import { Route as publicOnboardingSurfaceRouteImport } from './routes/(public)/onboarding/surface'
 import { Route as publicOnboardingSelectTrialRouteImport } from './routes/(public)/onboarding/select-trial'
 import { Route as publicOnboardingProfileRouteImport } from './routes/(public)/onboarding/profile'
 import { Route as publicOnboardingOrganizationRouteImport } from './routes/(public)/onboarding/organization'
 import { Route as publicOnboardingModulesRouteImport } from './routes/(public)/onboarding/modules'
 import { Route as publicOnboardingFarmRouteImport } from './routes/(public)/onboarding/farm'
 import { Route as publicOnboardingCompleteRouteImport } from './routes/(public)/onboarding/complete'
+import { Route as publicOnboardingAccountTypeRouteImport } from './routes/(public)/onboarding/account-type'
 import { Route as authAuthCallbackRouteImport } from './routes/(auth)/auth.callback'
 import { Route as AuthenticatedComplianceCorrectiveActionsIndexRouteImport } from './routes/_authenticated/compliance/corrective-actions/index'
 import { Route as AuthenticatedComplianceCertificationsIndexRouteImport } from './routes/_authenticated/compliance/certifications/index'
@@ -489,6 +491,11 @@ const AuthenticatedaccountingAccountingRoute =
     path: '/accounting',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const publicOnboardingSurfaceRoute = publicOnboardingSurfaceRouteImport.update({
+  id: '/surface',
+  path: '/surface',
+  getParentRoute: () => publicOnboardingRoute,
+} as any)
 const publicOnboardingSelectTrialRoute =
   publicOnboardingSelectTrialRouteImport.update({
     id: '/select-trial',
@@ -520,6 +527,12 @@ const publicOnboardingCompleteRoute =
   publicOnboardingCompleteRouteImport.update({
     id: '/complete',
     path: '/complete',
+    getParentRoute: () => publicOnboardingRoute,
+  } as any)
+const publicOnboardingAccountTypeRoute =
+  publicOnboardingAccountTypeRouteImport.update({
+    id: '/account-type',
+    path: '/account-type',
     getParentRoute: () => publicOnboardingRoute,
   } as any)
 const authAuthCallbackRoute = authAuthCallbackRouteImport.update({
@@ -1392,12 +1405,14 @@ export interface FileRoutesByFullPath {
   '/referentiels': typeof AuthenticatedReferentielsRoute
   '/reports': typeof AuthenticatedReportsRoute
   '/auth/callback': typeof authAuthCallbackRoute
+  '/onboarding/account-type': typeof publicOnboardingAccountTypeRoute
   '/onboarding/complete': typeof publicOnboardingCompleteRoute
   '/onboarding/farm': typeof publicOnboardingFarmRoute
   '/onboarding/modules': typeof publicOnboardingModulesRoute
   '/onboarding/organization': typeof publicOnboardingOrganizationRoute
   '/onboarding/profile': typeof publicOnboardingProfileRoute
   '/onboarding/select-trial': typeof publicOnboardingSelectTrialRoute
+  '/onboarding/surface': typeof publicOnboardingSurfaceRoute
   '/accounting': typeof AuthenticatedaccountingAccountingRouteWithChildren
   '/analytics': typeof AuthenticatedcoreAnalyticsRoute
   '/chat': typeof AuthenticatedcoreChatRoute
@@ -1590,12 +1605,14 @@ export interface FileRoutesByTo {
   '/referentiels': typeof AuthenticatedReferentielsRoute
   '/reports': typeof AuthenticatedReportsRoute
   '/auth/callback': typeof authAuthCallbackRoute
+  '/onboarding/account-type': typeof publicOnboardingAccountTypeRoute
   '/onboarding/complete': typeof publicOnboardingCompleteRoute
   '/onboarding/farm': typeof publicOnboardingFarmRoute
   '/onboarding/modules': typeof publicOnboardingModulesRoute
   '/onboarding/organization': typeof publicOnboardingOrganizationRoute
   '/onboarding/profile': typeof publicOnboardingProfileRoute
   '/onboarding/select-trial': typeof publicOnboardingSelectTrialRoute
+  '/onboarding/surface': typeof publicOnboardingSurfaceRoute
   '/analytics': typeof AuthenticatedcoreAnalyticsRoute
   '/chat': typeof AuthenticatedcoreChatRoute
   '/dashboard': typeof AuthenticatedcoreDashboardRoute
@@ -1783,12 +1800,14 @@ export interface FileRoutesById {
   '/_authenticated/referentiels': typeof AuthenticatedReferentielsRoute
   '/_authenticated/reports': typeof AuthenticatedReportsRoute
   '/(auth)/auth/callback': typeof authAuthCallbackRoute
+  '/(public)/onboarding/account-type': typeof publicOnboardingAccountTypeRoute
   '/(public)/onboarding/complete': typeof publicOnboardingCompleteRoute
   '/(public)/onboarding/farm': typeof publicOnboardingFarmRoute
   '/(public)/onboarding/modules': typeof publicOnboardingModulesRoute
   '/(public)/onboarding/organization': typeof publicOnboardingOrganizationRoute
   '/(public)/onboarding/profile': typeof publicOnboardingProfileRoute
   '/(public)/onboarding/select-trial': typeof publicOnboardingSelectTrialRoute
+  '/(public)/onboarding/surface': typeof publicOnboardingSurfaceRoute
   '/_authenticated/(accounting)/accounting': typeof AuthenticatedaccountingAccountingRouteWithChildren
   '/_authenticated/(core)/analytics': typeof AuthenticatedcoreAnalyticsRoute
   '/_authenticated/(core)/chat': typeof AuthenticatedcoreChatRoute
@@ -1984,12 +2003,14 @@ export interface FileRouteTypes {
     | '/referentiels'
     | '/reports'
     | '/auth/callback'
+    | '/onboarding/account-type'
     | '/onboarding/complete'
     | '/onboarding/farm'
     | '/onboarding/modules'
     | '/onboarding/organization'
     | '/onboarding/profile'
     | '/onboarding/select-trial'
+    | '/onboarding/surface'
     | '/accounting'
     | '/analytics'
     | '/chat'
@@ -2182,12 +2203,14 @@ export interface FileRouteTypes {
     | '/referentiels'
     | '/reports'
     | '/auth/callback'
+    | '/onboarding/account-type'
     | '/onboarding/complete'
     | '/onboarding/farm'
     | '/onboarding/modules'
     | '/onboarding/organization'
     | '/onboarding/profile'
     | '/onboarding/select-trial'
+    | '/onboarding/surface'
     | '/analytics'
     | '/chat'
     | '/dashboard'
@@ -2374,12 +2397,14 @@ export interface FileRouteTypes {
     | '/_authenticated/referentiels'
     | '/_authenticated/reports'
     | '/(auth)/auth/callback'
+    | '/(public)/onboarding/account-type'
     | '/(public)/onboarding/complete'
     | '/(public)/onboarding/farm'
     | '/(public)/onboarding/modules'
     | '/(public)/onboarding/organization'
     | '/(public)/onboarding/profile'
     | '/(public)/onboarding/select-trial'
+    | '/(public)/onboarding/surface'
     | '/_authenticated/(accounting)/accounting'
     | '/_authenticated/(core)/analytics'
     | '/_authenticated/(core)/chat'
@@ -2927,6 +2952,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedaccountingAccountingRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/(public)/onboarding/surface': {
+      id: '/(public)/onboarding/surface'
+      path: '/surface'
+      fullPath: '/onboarding/surface'
+      preLoaderRoute: typeof publicOnboardingSurfaceRouteImport
+      parentRoute: typeof publicOnboardingRoute
+    }
     '/(public)/onboarding/select-trial': {
       id: '/(public)/onboarding/select-trial'
       path: '/select-trial'
@@ -2967,6 +2999,13 @@ declare module '@tanstack/react-router' {
       path: '/complete'
       fullPath: '/onboarding/complete'
       preLoaderRoute: typeof publicOnboardingCompleteRouteImport
+      parentRoute: typeof publicOnboardingRoute
+    }
+    '/(public)/onboarding/account-type': {
+      id: '/(public)/onboarding/account-type'
+      path: '/account-type'
+      fullPath: '/onboarding/account-type'
+      preLoaderRoute: typeof publicOnboardingAccountTypeRouteImport
       parentRoute: typeof publicOnboardingRoute
     }
     '/(auth)/auth/callback': {
@@ -4650,22 +4689,26 @@ const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
 )
 
 interface publicOnboardingRouteChildren {
+  publicOnboardingAccountTypeRoute: typeof publicOnboardingAccountTypeRoute
   publicOnboardingCompleteRoute: typeof publicOnboardingCompleteRoute
   publicOnboardingFarmRoute: typeof publicOnboardingFarmRoute
   publicOnboardingModulesRoute: typeof publicOnboardingModulesRoute
   publicOnboardingOrganizationRoute: typeof publicOnboardingOrganizationRoute
   publicOnboardingProfileRoute: typeof publicOnboardingProfileRoute
   publicOnboardingSelectTrialRoute: typeof publicOnboardingSelectTrialRoute
+  publicOnboardingSurfaceRoute: typeof publicOnboardingSurfaceRoute
   publicOnboardingIndexRoute: typeof publicOnboardingIndexRoute
 }
 
 const publicOnboardingRouteChildren: publicOnboardingRouteChildren = {
+  publicOnboardingAccountTypeRoute: publicOnboardingAccountTypeRoute,
   publicOnboardingCompleteRoute: publicOnboardingCompleteRoute,
   publicOnboardingFarmRoute: publicOnboardingFarmRoute,
   publicOnboardingModulesRoute: publicOnboardingModulesRoute,
   publicOnboardingOrganizationRoute: publicOnboardingOrganizationRoute,
   publicOnboardingProfileRoute: publicOnboardingProfileRoute,
   publicOnboardingSelectTrialRoute: publicOnboardingSelectTrialRoute,
+  publicOnboardingSurfaceRoute: publicOnboardingSurfaceRoute,
   publicOnboardingIndexRoute: publicOnboardingIndexRoute,
 }
 

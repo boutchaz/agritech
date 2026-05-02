@@ -498,10 +498,10 @@ describe('WorkersService', () => {
         const result = await service.findAll(
           TEST_IDS.user,
           TEST_IDS.organization,
-          TEST_IDS.farm
+          { farmId: TEST_IDS.farm }
         );
 
-        expect(queryBuilder.eq).toHaveBeenCalledWith('farm_id', TEST_IDS.farm);
+        expect(queryBuilder.or).toHaveBeenCalled();
         expect(result).toBeDefined();
       });
 

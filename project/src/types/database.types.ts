@@ -2586,6 +2586,13 @@ export type Database = {
             foreignKeyName: "appraisals_manager_id_fkey"
             columns: ["manager_id"]
             isOneToOne: false
+            referencedRelation: "worker_payment_history"
+            referencedColumns: ["worker_id"]
+          },
+          {
+            foreignKeyName: "appraisals_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
             referencedRelation: "workers"
             referencedColumns: ["id"]
           },
@@ -2692,6 +2699,13 @@ export type Database = {
             columns: ["worker_id"]
             isOneToOne: false
             referencedRelation: "worker_assignments"
+            referencedColumns: ["worker_id"]
+          },
+          {
+            foreignKeyName: "appraisals_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "worker_payment_history"
             referencedColumns: ["worker_id"]
           },
           {
@@ -2879,6 +2893,13 @@ export type Database = {
             columns: ["worker_id"]
             isOneToOne: false
             referencedRelation: "worker_assignments"
+            referencedColumns: ["worker_id"]
+          },
+          {
+            foreignKeyName: "attendance_records_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "worker_payment_history"
             referencedColumns: ["worker_id"]
           },
           {
@@ -8243,6 +8264,13 @@ export type Database = {
             foreignKeyName: "deliveries_driver_id_fkey"
             columns: ["driver_id"]
             isOneToOne: false
+            referencedRelation: "worker_payment_history"
+            referencedColumns: ["worker_id"]
+          },
+          {
+            foreignKeyName: "deliveries_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
             referencedRelation: "workers"
             referencedColumns: ["id"]
           },
@@ -10211,6 +10239,13 @@ export type Database = {
             foreignKeyName: "expense_claims_worker_id_fkey"
             columns: ["worker_id"]
             isOneToOne: false
+            referencedRelation: "worker_payment_history"
+            referencedColumns: ["worker_id"]
+          },
+          {
+            foreignKeyName: "expense_claims_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
             referencedRelation: "workers"
             referencedColumns: ["id"]
           },
@@ -11231,6 +11266,13 @@ export type Database = {
             foreignKeyName: "grievances_against_worker_id_fkey"
             columns: ["against_worker_id"]
             isOneToOne: false
+            referencedRelation: "worker_payment_history"
+            referencedColumns: ["worker_id"]
+          },
+          {
+            foreignKeyName: "grievances_against_worker_id_fkey"
+            columns: ["against_worker_id"]
+            isOneToOne: false
             referencedRelation: "workers"
             referencedColumns: ["id"]
           },
@@ -11337,6 +11379,13 @@ export type Database = {
             columns: ["raised_by_worker_id"]
             isOneToOne: false
             referencedRelation: "worker_assignments"
+            referencedColumns: ["worker_id"]
+          },
+          {
+            foreignKeyName: "grievances_raised_by_worker_id_fkey"
+            columns: ["raised_by_worker_id"]
+            isOneToOne: false
+            referencedRelation: "worker_payment_history"
             referencedColumns: ["worker_id"]
           },
           {
@@ -11887,6 +11936,13 @@ export type Database = {
             columns: ["supervisor_id"]
             isOneToOne: false
             referencedRelation: "worker_assignments"
+            referencedColumns: ["worker_id"]
+          },
+          {
+            foreignKeyName: "harvest_records_supervisor_id_fkey"
+            columns: ["supervisor_id"]
+            isOneToOne: false
+            referencedRelation: "worker_payment_history"
             referencedColumns: ["worker_id"]
           },
           {
@@ -14619,6 +14675,13 @@ export type Database = {
             foreignKeyName: "job_applicants_referred_by_worker_id_fkey"
             columns: ["referred_by_worker_id"]
             isOneToOne: false
+            referencedRelation: "worker_payment_history"
+            referencedColumns: ["worker_id"]
+          },
+          {
+            foreignKeyName: "job_applicants_referred_by_worker_id_fkey"
+            columns: ["referred_by_worker_id"]
+            isOneToOne: false
             referencedRelation: "workers"
             referencedColumns: ["id"]
           },
@@ -15289,6 +15352,13 @@ export type Database = {
             foreignKeyName: "leave_allocations_worker_id_fkey"
             columns: ["worker_id"]
             isOneToOne: false
+            referencedRelation: "worker_payment_history"
+            referencedColumns: ["worker_id"]
+          },
+          {
+            foreignKeyName: "leave_allocations_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
             referencedRelation: "workers"
             referencedColumns: ["id"]
           },
@@ -15469,6 +15539,13 @@ export type Database = {
             columns: ["worker_id"]
             isOneToOne: false
             referencedRelation: "worker_assignments"
+            referencedColumns: ["worker_id"]
+          },
+          {
+            foreignKeyName: "leave_applications_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "worker_payment_history"
             referencedColumns: ["worker_id"]
           },
           {
@@ -15765,6 +15842,13 @@ export type Database = {
             columns: ["worker_id"]
             isOneToOne: false
             referencedRelation: "worker_assignments"
+            referencedColumns: ["worker_id"]
+          },
+          {
+            foreignKeyName: "leave_encashments_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "worker_payment_history"
             referencedColumns: ["worker_id"]
           },
           {
@@ -17485,6 +17569,13 @@ export type Database = {
             foreignKeyName: "metayage_settlements_worker_id_fkey"
             columns: ["worker_id"]
             isOneToOne: false
+            referencedRelation: "worker_payment_history"
+            referencedColumns: ["worker_id"]
+          },
+          {
+            foreignKeyName: "metayage_settlements_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
             referencedRelation: "workers"
             referencedColumns: ["id"]
           },
@@ -18110,6 +18201,13 @@ export type Database = {
             columns: ["worker_id"]
             isOneToOne: false
             referencedRelation: "worker_assignments"
+            referencedColumns: ["worker_id"]
+          },
+          {
+            foreignKeyName: "onboarding_records_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "worker_payment_history"
             referencedColumns: ["worker_id"]
           },
           {
@@ -19957,6 +20055,13 @@ export type Database = {
             foreignKeyName: "payment_advances_worker_id_fkey"
             columns: ["worker_id"]
             isOneToOne: false
+            referencedRelation: "worker_payment_history"
+            referencedColumns: ["worker_id"]
+          },
+          {
+            foreignKeyName: "payment_advances_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
             referencedRelation: "workers"
             referencedColumns: ["id"]
           },
@@ -20311,6 +20416,13 @@ export type Database = {
             columns: ["worker_id"]
             isOneToOne: false
             referencedRelation: "worker_assignments"
+            referencedColumns: ["worker_id"]
+          },
+          {
+            foreignKeyName: "payment_records_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "worker_payment_history"
             referencedColumns: ["worker_id"]
           },
           {
@@ -20854,6 +20966,13 @@ export type Database = {
             foreignKeyName: "performance_feedback_reviewer_id_fkey"
             columns: ["reviewer_id"]
             isOneToOne: false
+            referencedRelation: "worker_payment_history"
+            referencedColumns: ["worker_id"]
+          },
+          {
+            foreignKeyName: "performance_feedback_reviewer_id_fkey"
+            columns: ["reviewer_id"]
+            isOneToOne: false
             referencedRelation: "workers"
             referencedColumns: ["id"]
           },
@@ -20876,6 +20995,13 @@ export type Database = {
             columns: ["worker_id"]
             isOneToOne: false
             referencedRelation: "worker_assignments"
+            referencedColumns: ["worker_id"]
+          },
+          {
+            foreignKeyName: "performance_feedback_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "worker_payment_history"
             referencedColumns: ["worker_id"]
           },
           {
@@ -21662,6 +21788,13 @@ export type Database = {
             columns: ["worker_id"]
             isOneToOne: false
             referencedRelation: "worker_assignments"
+            referencedColumns: ["worker_id"]
+          },
+          {
+            foreignKeyName: "piece_work_records_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "worker_payment_history"
             referencedColumns: ["worker_id"]
           },
           {
@@ -23958,6 +24091,13 @@ export type Database = {
             foreignKeyName: "reception_batches_quality_checked_by_fkey"
             columns: ["quality_checked_by"]
             isOneToOne: false
+            referencedRelation: "worker_payment_history"
+            referencedColumns: ["worker_id"]
+          },
+          {
+            foreignKeyName: "reception_batches_quality_checked_by_fkey"
+            columns: ["quality_checked_by"]
+            isOneToOne: false
             referencedRelation: "workers"
             referencedColumns: ["id"]
           },
@@ -23980,6 +24120,13 @@ export type Database = {
             columns: ["received_by"]
             isOneToOne: false
             referencedRelation: "worker_assignments"
+            referencedColumns: ["worker_id"]
+          },
+          {
+            foreignKeyName: "reception_batches_received_by_fkey"
+            columns: ["received_by"]
+            isOneToOne: false
+            referencedRelation: "worker_payment_history"
             referencedColumns: ["worker_id"]
           },
           {
@@ -25121,6 +25268,13 @@ export type Database = {
             foreignKeyName: "safety_incidents_supervisor_id_fkey"
             columns: ["supervisor_id"]
             isOneToOne: false
+            referencedRelation: "worker_payment_history"
+            referencedColumns: ["worker_id"]
+          },
+          {
+            foreignKeyName: "safety_incidents_supervisor_id_fkey"
+            columns: ["supervisor_id"]
+            isOneToOne: false
             referencedRelation: "workers"
             referencedColumns: ["id"]
           },
@@ -25425,6 +25579,13 @@ export type Database = {
             foreignKeyName: "salary_slips_worker_id_fkey"
             columns: ["worker_id"]
             isOneToOne: false
+            referencedRelation: "worker_payment_history"
+            referencedColumns: ["worker_id"]
+          },
+          {
+            foreignKeyName: "salary_slips_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
             referencedRelation: "workers"
             referencedColumns: ["id"]
           },
@@ -25591,6 +25752,13 @@ export type Database = {
             columns: ["worker_id"]
             isOneToOne: false
             referencedRelation: "worker_assignments"
+            referencedColumns: ["worker_id"]
+          },
+          {
+            foreignKeyName: "salary_structure_assignments_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "worker_payment_history"
             referencedColumns: ["worker_id"]
           },
           {
@@ -27292,6 +27460,13 @@ export type Database = {
             foreignKeyName: "separations_worker_id_fkey"
             columns: ["worker_id"]
             isOneToOne: false
+            referencedRelation: "worker_payment_history"
+            referencedColumns: ["worker_id"]
+          },
+          {
+            foreignKeyName: "separations_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
             referencedRelation: "workers"
             referencedColumns: ["id"]
           },
@@ -27448,6 +27623,13 @@ export type Database = {
             columns: ["worker_id"]
             isOneToOne: false
             referencedRelation: "worker_assignments"
+            referencedColumns: ["worker_id"]
+          },
+          {
+            foreignKeyName: "shift_assignments_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "worker_payment_history"
             referencedColumns: ["worker_id"]
           },
           {
@@ -27617,6 +27799,13 @@ export type Database = {
             columns: ["worker_id"]
             isOneToOne: false
             referencedRelation: "worker_assignments"
+            referencedColumns: ["worker_id"]
+          },
+          {
+            foreignKeyName: "shift_requests_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "worker_payment_history"
             referencedColumns: ["worker_id"]
           },
           {
@@ -30869,6 +31058,13 @@ export type Database = {
             foreignKeyName: "task_assignments_worker_id_fkey"
             columns: ["worker_id"]
             isOneToOne: false
+            referencedRelation: "worker_payment_history"
+            referencedColumns: ["worker_id"]
+          },
+          {
+            foreignKeyName: "task_assignments_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
             referencedRelation: "workers"
             referencedColumns: ["id"]
           },
@@ -31100,6 +31296,13 @@ export type Database = {
             foreignKeyName: "task_comments_worker_id_fkey"
             columns: ["worker_id"]
             isOneToOne: false
+            referencedRelation: "worker_payment_history"
+            referencedColumns: ["worker_id"]
+          },
+          {
+            foreignKeyName: "task_comments_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
             referencedRelation: "workers"
             referencedColumns: ["id"]
           },
@@ -31279,6 +31482,13 @@ export type Database = {
             foreignKeyName: "task_mentions_mentioned_worker_id_fkey"
             columns: ["mentioned_worker_id"]
             isOneToOne: false
+            referencedRelation: "worker_payment_history"
+            referencedColumns: ["worker_id"]
+          },
+          {
+            foreignKeyName: "task_mentions_mentioned_worker_id_fkey"
+            columns: ["mentioned_worker_id"]
+            isOneToOne: false
             referencedRelation: "workers"
             referencedColumns: ["id"]
           },
@@ -31426,6 +31636,13 @@ export type Database = {
             foreignKeyName: "task_time_logs_worker_id_fkey"
             columns: ["worker_id"]
             isOneToOne: false
+            referencedRelation: "worker_payment_history"
+            referencedColumns: ["worker_id"]
+          },
+          {
+            foreignKeyName: "task_time_logs_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
             referencedRelation: "workers"
             referencedColumns: ["id"]
           },
@@ -31550,6 +31767,13 @@ export type Database = {
             columns: ["task_id"]
             isOneToOne: false
             referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_watchers_user_profile_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -31794,6 +32018,13 @@ export type Database = {
             foreignKeyName: "tasks_assigned_to_fkey"
             columns: ["assigned_to"]
             isOneToOne: false
+            referencedRelation: "worker_payment_history"
+            referencedColumns: ["worker_id"]
+          },
+          {
+            foreignKeyName: "tasks_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
             referencedRelation: "workers"
             referencedColumns: ["id"]
           },
@@ -31935,6 +32166,13 @@ export type Database = {
             columns: ["worker_id"]
             isOneToOne: false
             referencedRelation: "worker_assignments"
+            referencedColumns: ["worker_id"]
+          },
+          {
+            foreignKeyName: "tasks_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "worker_payment_history"
             referencedColumns: ["worker_id"]
           },
           {
@@ -32423,6 +32661,13 @@ export type Database = {
             columns: ["worker_id"]
             isOneToOne: false
             referencedRelation: "worker_assignments"
+            referencedColumns: ["worker_id"]
+          },
+          {
+            foreignKeyName: "training_enrollments_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "worker_payment_history"
             referencedColumns: ["worker_id"]
           },
           {
@@ -34404,6 +34649,13 @@ export type Database = {
             foreignKeyName: "work_records_worker_id_fkey"
             columns: ["worker_id"]
             isOneToOne: false
+            referencedRelation: "worker_payment_history"
+            referencedColumns: ["worker_id"]
+          },
+          {
+            foreignKeyName: "work_records_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
             referencedRelation: "workers"
             referencedColumns: ["id"]
           },
@@ -34725,6 +34977,13 @@ export type Database = {
             foreignKeyName: "worker_documents_worker_id_fkey"
             columns: ["worker_id"]
             isOneToOne: false
+            referencedRelation: "worker_payment_history"
+            referencedColumns: ["worker_id"]
+          },
+          {
+            foreignKeyName: "worker_documents_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
             referencedRelation: "workers"
             referencedColumns: ["id"]
           },
@@ -34892,6 +35151,13 @@ export type Database = {
             foreignKeyName: "worker_qualifications_worker_id_fkey"
             columns: ["worker_id"]
             isOneToOne: false
+            referencedRelation: "worker_payment_history"
+            referencedColumns: ["worker_id"]
+          },
+          {
+            foreignKeyName: "worker_qualifications_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
             referencedRelation: "workers"
             referencedColumns: ["id"]
           },
@@ -34969,6 +35235,13 @@ export type Database = {
             columns: ["driver_worker_id"]
             isOneToOne: false
             referencedRelation: "worker_assignments"
+            referencedColumns: ["worker_id"]
+          },
+          {
+            foreignKeyName: "worker_transport_driver_worker_id_fkey"
+            columns: ["driver_worker_id"]
+            isOneToOne: false
+            referencedRelation: "worker_payment_history"
             referencedColumns: ["worker_id"]
           },
           {
@@ -35421,6 +35694,13 @@ export type Database = {
             columns: ["reporting_to"]
             isOneToOne: false
             referencedRelation: "worker_assignments"
+            referencedColumns: ["worker_id"]
+          },
+          {
+            foreignKeyName: "workers_reporting_to_fkey"
+            columns: ["reporting_to"]
+            isOneToOne: false
+            referencedRelation: "worker_payment_history"
             referencedColumns: ["worker_id"]
           },
           {
@@ -36709,6 +36989,13 @@ export type Database = {
             foreignKeyName: "leave_allocations_worker_id_fkey"
             columns: ["worker_id"]
             isOneToOne: false
+            referencedRelation: "worker_payment_history"
+            referencedColumns: ["worker_id"]
+          },
+          {
+            foreignKeyName: "leave_allocations_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
             referencedRelation: "workers"
             referencedColumns: ["id"]
           },
@@ -36998,6 +37285,13 @@ export type Database = {
             foreignKeyName: "payment_records_worker_id_fkey"
             columns: ["worker_id"]
             isOneToOne: false
+            referencedRelation: "worker_payment_history"
+            referencedColumns: ["worker_id"]
+          },
+          {
+            foreignKeyName: "payment_records_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
             referencedRelation: "workers"
             referencedColumns: ["id"]
           },
@@ -37142,6 +37436,13 @@ export type Database = {
             columns: ["assigned_to"]
             isOneToOne: false
             referencedRelation: "worker_assignments"
+            referencedColumns: ["worker_id"]
+          },
+          {
+            foreignKeyName: "tasks_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "worker_payment_history"
             referencedColumns: ["worker_id"]
           },
           {
@@ -38033,6 +38334,20 @@ export type Database = {
             referencedColumns: ["organization_id"]
           },
         ]
+      }
+      worker_payment_history: {
+        Row: {
+          approved_amount: number | null
+          average_payment: number | null
+          last_payment_date: string | null
+          pending_amount: number | null
+          total_paid: number | null
+          total_payments: number | null
+          worker_id: string | null
+          worker_name: string | null
+          worker_type: Database["public"]["Enums"]["worker_type"] | null
+        }
+        Relationships: []
       }
       workforce_summary: {
         Row: {
@@ -39037,16 +39352,6 @@ export type Database = {
       st_wrapx: {
         Args: { geom: unknown; move: number; wrap: number }
         Returns: unknown
-      }
-      sum_gdd_between: {
-        Args: {
-          p_crop: string
-          p_end: string
-          p_lat: number
-          p_lon: number
-          p_start: string
-        }
-        Returns: number
       }
       unlockrows: { Args: { "": string }; Returns: number }
       updategeometrysrid: {

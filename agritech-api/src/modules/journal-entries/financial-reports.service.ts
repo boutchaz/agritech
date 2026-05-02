@@ -1266,6 +1266,8 @@ export class FinancialReportsService {
         );
       }
 
+      await this.accountingAutomationService.applyCashSettlementDate(pgClient, journalEntryId, effectiveDate);
+
       await pgClient.query(
         `UPDATE fiscal_years SET status = 'closed', is_current = false, closed_at = $1, closed_by = $2, closing_notes = COALESCE(closing_notes, $3), updated_at = $1 WHERE id = $4 AND organization_id = $5`,
         [now, userId, remark, fiscalYearId, organizationId],

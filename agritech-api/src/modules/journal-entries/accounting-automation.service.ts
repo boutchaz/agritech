@@ -1144,6 +1144,7 @@ export class AccountingAutomationService {
         `UPDATE journal_entries SET status = 'posted', posted_by = $1, posted_at = $2, total_debit = $3, total_credit = $4 WHERE id = $5`,
         [userId, now, totalDebit, totalCredit, reversalId],
       );
+      await this.applyCashSettlementDate(pgClient, reversalId, effectiveDate);
 
       return { reversalEntryId: reversalId };
     });
@@ -1176,5 +1177,34 @@ export class AccountingAutomationService {
         `Total credit mismatch: Header (${dto.total_credit}) != Items (${totalCredit})`,
       );
     }
+  }
+
+  /**
+   * Stamp cash_settlement_date on cash/bank journal_items for a posted JE.
+   * Replaces the dropped set_cash_settlement_on_payment_post trigger.
+   * Call from every JE-post code path after the JE row is set to status='posted'.
+   */
+  async applyCashSettlementDate(
+    pgClient: { query: (sql: string, params?: unknown[]) => Promise<{ rowCount: number }> },
+    journalEntryId: string,
+    entryDate: string,
+  ): Promise<void> {
+    await pgClient.query(
+      `UPDATE journal_items ji
+         SET cash_settlement_date = $2
+       WHERE ji.journal_entry_id = $1
+         AND ji.cash_settlement_date IS NULL
+         AND EXISTS (
+           SELECT 1 FROM accounts a
+           WHERE a.id = ji.account_id
+             AND a.account_type ILIKE 'asset'
+             AND (
+               a.account_subtype ILIKE '%cash%' OR a.account_subtype ILIKE '%bank%'
+               OR a.name ILIKE '%cash%' OR a.name ILIKE '%bank%'
+               OR a.name ILIKE '%caisse%' OR a.name ILIKE '%banque%'
+             )
+         )`,
+      [journalEntryId, entryDate],
+    );
   }
 }

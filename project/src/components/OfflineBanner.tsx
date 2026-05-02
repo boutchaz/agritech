@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { CloudOff, RefreshCw, AlertTriangle, Wifi } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useOnlineStatus } from '@/lib/offline/useOnlineStatus';
 import { countByStatus, subscribeOutbox } from '@/lib/offline/outbox';
 import { useOrganizationStore } from '@/stores/organizationStore';
@@ -17,6 +18,7 @@ export function OfflineBanner({
 }: {
   onReviewDeadLetters?: () => void;
 }) {
+  const { t } = useTranslation();
   const status = useOnlineStatus();
   const orgId = useOrganizationStore((s) => s.currentOrganization?.id ?? null);
   const [counts, setCounts] = useState<Counts>({ pending: 0, inflight: 0, failed: 0, dead: 0 });
@@ -50,23 +52,25 @@ export function OfflineBanner({
   if (status === 'offline') {
     tone = 'red';
     icon = <CloudOff className="h-4 w-4" />;
-    text = totalPending > 0 ? `Hors ligne — ${totalPending} en attente` : 'Hors ligne';
+    text = totalPending > 0
+      ? t('offlineBanner.offlineWithPending', `Offline — ${totalPending} pending`, { count: totalPending })
+      : t('offlineBanner.offline', 'Offline');
   } else if (counts.inflight > 0) {
     tone = 'amber';
     icon = <RefreshCw className="h-4 w-4 animate-spin" />;
-    text = `Synchronisation… ${counts.inflight}`;
+    text = t('offlineBanner.syncing', `Syncing… ${counts.inflight}`, { count: counts.inflight });
   } else if (totalPending > 0) {
     tone = 'amber';
     icon = <RefreshCw className="h-4 w-4" />;
-    text = `${totalPending} action(s) en attente`;
+    text = t('offlineBanner.pendingActions', `${totalPending} action(s) pending`, { count: totalPending });
   } else if (counts.dead > 0) {
     tone = 'purple';
     icon = <AlertTriangle className="h-4 w-4" />;
-    text = `${counts.dead} action(s) en échec`;
+    text = t('offlineBanner.failedActions', `${counts.dead} action(s) failed`, { count: counts.dead });
   } else if (status === 'limited') {
     tone = 'sky';
     icon = <Wifi className="h-4 w-4" />;
-    text = 'Connexion limitée';
+    text = t('offlineBanner.limitedConnection', 'Limited connection');
   }
 
   const colorMap = {
@@ -93,7 +97,7 @@ export function OfflineBanner({
           onClick={onReviewDeadLetters}
           className="ml-2 rounded bg-white/20 px-2 py-0.5 hover:bg-white/30"
         >
-          Réviser
+          {t('offlineBanner.review', 'Review')}
         </button>
       ) : null}
     </div>

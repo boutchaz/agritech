@@ -1463,31 +1463,10 @@ CREATE INDEX IF NOT EXISTS idx_journal_items_cash_settled
   ON journal_items(cash_settlement_date)
   WHERE cash_settlement_date IS NOT NULL;
 
--- Phase 4c: trigger to populate cash_settlement_date when a JE is posted that moves cash.
-CREATE OR REPLACE FUNCTION set_cash_settlement_on_payment_post() RETURNS trigger AS $$
-BEGIN
-  IF NEW.status = 'posted' AND (OLD.status IS NULL OR OLD.status <> 'posted') THEN
-    IF NEW.entry_type IN ('payment','receipt','cash','bank')
-       OR EXISTS (
-         SELECT 1 FROM journal_items ji
-         JOIN accounts a ON a.id = ji.account_id
-         WHERE ji.journal_entry_id = NEW.id
-           AND a.account_type ILIKE 'asset'
-           AND (a.account_subtype ILIKE '%cash%' OR a.account_subtype ILIKE '%bank%'
-                OR a.name ILIKE '%cash%' OR a.name ILIKE '%bank%'
-                OR a.name ILIKE '%caisse%' OR a.name ILIKE '%banque%')
-       ) THEN
-      UPDATE journal_items SET cash_settlement_date = NEW.entry_date
-      WHERE journal_entry_id = NEW.id AND cash_settlement_date IS NULL;
-    END IF;
-  END IF;
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
+-- Phase 4c: cash_settlement_date is now set by the application layer
+-- (AccountingAutomationService.applyCashSettlementDate) after every JE post.
 DROP TRIGGER IF EXISTS trg_set_cash_settlement ON journal_entries;
-CREATE TRIGGER trg_set_cash_settlement AFTER INSERT OR UPDATE ON journal_entries
-FOR EACH ROW EXECUTE FUNCTION set_cash_settlement_on_payment_post();
+DROP FUNCTION IF EXISTS set_cash_settlement_on_payment_post();
 
 -- Invoices
 CREATE TABLE IF NOT EXISTS invoices (
@@ -1598,49 +1577,12 @@ COMMENT ON COLUMN invoices.original_invoice_id IS 'For credit/debit notes: the i
 COMMENT ON COLUMN invoices.credit_reason IS 'Free-text reason on credit/debit notes (return, damage, weight dispute, price adjustment, other).';
 COMMENT ON COLUMN invoices.credited_amount IS 'Sum of grand_total of credit notes that reference this invoice. Updated by trigger.';
 
--- Keep invoices.credited_amount in sync with related credit notes.
--- Fires on INSERT / UPDATE of grand_total / DELETE of credit_note rows.
-CREATE OR REPLACE FUNCTION sync_invoice_credited_amount()
-RETURNS TRIGGER AS $$
-DECLARE
-  v_target UUID;
-BEGIN
-  v_target := COALESCE(NEW.original_invoice_id, OLD.original_invoice_id);
-  IF v_target IS NULL THEN
-    RETURN COALESCE(NEW, OLD);
-  END IF;
-
-  UPDATE invoices
-  SET credited_amount = COALESCE((
-    SELECT SUM(grand_total)
-    FROM invoices
-    WHERE original_invoice_id = v_target
-      AND document_type = 'credit_note'
-      AND status NOT IN ('cancelled')
-  ), 0)
-  WHERE id = v_target;
-
-  RETURN COALESCE(NEW, OLD);
-END;
-$$ LANGUAGE plpgsql;
-
--- Trigger uses three flavors because TG_OP is not available in WHEN clauses.
--- Each WHEN inspects only NEW (INSERT/UPDATE) or OLD (DELETE).
+-- invoices.credited_amount is now recomputed in the application layer
+-- (InvoicesService.createCreditNote) within the credit-note transaction.
 DROP TRIGGER IF EXISTS trg_sync_invoice_credited_amount ON invoices;
 DROP TRIGGER IF EXISTS trg_sync_invoice_credited_amount_iu ON invoices;
 DROP TRIGGER IF EXISTS trg_sync_invoice_credited_amount_d ON invoices;
-CREATE TRIGGER trg_sync_invoice_credited_amount_iu
-  AFTER INSERT OR UPDATE OF grand_total, status, original_invoice_id, document_type
-  ON invoices
-  FOR EACH ROW
-  WHEN (NEW.document_type = 'credit_note' AND NEW.original_invoice_id IS NOT NULL)
-  EXECUTE FUNCTION sync_invoice_credited_amount();
-CREATE TRIGGER trg_sync_invoice_credited_amount_d
-  AFTER DELETE
-  ON invoices
-  FOR EACH ROW
-  WHEN (OLD.document_type = 'credit_note' AND OLD.original_invoice_id IS NOT NULL)
-  EXECUTE FUNCTION sync_invoice_credited_amount();
+DROP FUNCTION IF EXISTS sync_invoice_credited_amount();
 
 -- Invoice Items
 CREATE TABLE IF NOT EXISTS invoice_items (
@@ -2466,6 +2408,10 @@ CREATE TABLE IF NOT EXISTS task_watchers (
 CREATE INDEX IF NOT EXISTS idx_task_watchers_task ON task_watchers(task_id);
 CREATE INDEX IF NOT EXISTS idx_task_watchers_user ON task_watchers(user_id);
 CREATE INDEX IF NOT EXISTS idx_task_watchers_org ON task_watchers(organization_id);
+
+ALTER TABLE task_watchers
+  ADD CONSTRAINT task_watchers_user_profile_fkey
+  FOREIGN KEY (user_id) REFERENCES user_profiles(id) ON DELETE CASCADE;
 
 -- Task Mentions — persistent record of @mentions in comments for notifications and analytics
 CREATE TABLE IF NOT EXISTS task_mentions (
@@ -6091,26 +6037,10 @@ CREATE POLICY "Users can delete templates in their organization"
     ON document_templates FOR DELETE
     USING (organization_id IN (SELECT organization_id FROM organization_users WHERE user_id = auth.uid()));
 
-CREATE OR REPLACE FUNCTION ensure_single_default_template()
-RETURNS TRIGGER AS $$
-BEGIN
-    IF NEW.is_default = true THEN
-        UPDATE document_templates
-        SET is_default = false, updated_at = NOW()
-        WHERE organization_id = NEW.organization_id
-          AND document_type = NEW.document_type
-          AND id != NEW.id
-          AND is_default = true;
-    END IF;
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
+-- Single-default-template invariant is enforced in the application layer
+-- (DocumentTemplatesService.clearDefaultForType).
 DROP TRIGGER IF EXISTS trg_ensure_single_default_template ON document_templates;
-CREATE TRIGGER trg_ensure_single_default_template
-    BEFORE INSERT OR UPDATE ON document_templates
-    FOR EACH ROW
-    EXECUTE FUNCTION ensure_single_default_template();
+DROP FUNCTION IF EXISTS ensure_single_default_template();
 
 CREATE OR REPLACE FUNCTION update_document_templates_timestamp()
 RETURNS TRIGGER AS $$
@@ -6133,33 +6063,10 @@ GRANT SELECT ON document_templates TO anon;
 -- 26. ONBOARDING HELPER FUNCTIONS
 -- =====================================================
 
--- Function to handle new user signup - creates user profile automatically
-CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS TRIGGER
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-BEGIN
-  INSERT INTO public.user_profiles (id, email, full_name, created_at, updated_at)
-  VALUES (
-    NEW.id,
-    NEW.email,
-    COALESCE(NEW.raw_user_meta_data->>'full_name', ''),
-    NOW(),
-    NOW()
-  )
-  ON CONFLICT (id) DO NOTHING;
-  RETURN NEW;
-END;
-$$;
-
--- Trigger to auto-create user profile on signup
+-- user_profiles row creation is now handled by AuthService.signup ->
+-- UsersService.createProfile. The auth.users trigger is no longer needed.
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
-CREATE TRIGGER on_auth_user_created
-  AFTER INSERT ON auth.users
-  FOR EACH ROW
-  EXECUTE FUNCTION public.handle_new_user();
+DROP FUNCTION IF EXISTS public.handle_new_user();
 
 
 
@@ -6226,16 +6133,9 @@ CREATE INDEX IF NOT EXISTS idx_weather_gdd_daily_location_crop
 CREATE INDEX IF NOT EXISTS idx_weather_gdd_daily_date
   ON public.weather_gdd_daily(date DESC);
 
--- Sum pre-computed GDD between two dates for a location and crop type.
--- Reads from weather_gdd_daily (generic: any crop_type, no schema change needed).
-CREATE OR REPLACE FUNCTION sum_gdd_between(
-  p_lat numeric, p_lon numeric, p_crop text, p_start date, p_end date
-) RETURNS numeric AS $$
-  SELECT COALESCE(SUM(gdd_daily), 0)
-  FROM weather_gdd_daily
-  WHERE latitude = p_lat AND longitude = p_lon
-    AND crop_type = p_crop AND date >= p_start AND date < p_end;
-$$ LANGUAGE sql STABLE;
+-- sum_gdd_between has been replaced by an inline supabase select+sum
+-- in CalibrationDataService — see usage of weather_gdd_daily there.
+DROP FUNCTION IF EXISTS sum_gdd_between(numeric, numeric, text, date, date);
 
 -- Weather hourly data: location-based hourly temperature cache (NOT org-scoped, shared geographically).
 -- Used as the source of truth for chill_hours and other phenological hour-counters.
@@ -6913,37 +6813,10 @@ EXCEPTION WHEN others THEN
   RAISE NOTICE 'FK fk_crop_ai_references_crop_type left NOT VALID: %. Reconcile crop_types.code then run: ALTER TABLE public.crop_ai_references VALIDATE CONSTRAINT fk_crop_ai_references_crop_type;', SQLERRM;
 END $$;
 
--- S2: JSONB shape validation. Ensures reference_data.metadata.culture matches
--- crop_type and metadata.version is present. Defense in depth: app layer also checks.
-CREATE OR REPLACE FUNCTION public.validate_crop_ai_reference()
-RETURNS TRIGGER AS $$
-DECLARE
-  ref_culture TEXT;
-  ref_version TEXT;
-BEGIN
-  IF NEW.reference_data IS NULL THEN
-    RAISE EXCEPTION 'crop_ai_references.reference_data cannot be null';
-  END IF;
-  ref_culture := NEW.reference_data->'metadata'->>'culture';
-  ref_version := NEW.reference_data->'metadata'->>'version';
-  IF ref_culture IS NULL THEN
-    RAISE EXCEPTION 'reference_data.metadata.culture is required';
-  END IF;
-  IF ref_version IS NULL THEN
-    RAISE EXCEPTION 'reference_data.metadata.version is required';
-  END IF;
-  IF NEW.crop_type <> ref_culture THEN
-    RAISE EXCEPTION 'crop_type (%) must match reference_data.metadata.culture (%)',
-      NEW.crop_type, ref_culture;
-  END IF;
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
+-- crop_ai_references shape validation is enforced in the application layer
+-- (admin/ReferentialService.assertValidCropAiReference).
 DROP TRIGGER IF EXISTS trg_validate_crop_ai_reference ON public.crop_ai_references;
-CREATE TRIGGER trg_validate_crop_ai_reference
-  BEFORE INSERT OR UPDATE ON public.crop_ai_references
-  FOR EACH ROW EXECUTE FUNCTION public.validate_crop_ai_reference();
+DROP FUNCTION IF EXISTS public.validate_crop_ai_reference();
 
 -- Evenements Parcelle (parcel events that may trigger partial recalibration)
 CREATE TABLE IF NOT EXISTS evenements_parcelle (
@@ -11207,26 +11080,10 @@ CREATE INDEX IF NOT EXISTS idx_fiscal_years_org ON fiscal_years(organization_id)
 CREATE INDEX IF NOT EXISTS idx_fiscal_years_dates ON fiscal_years(start_date, end_date);
 CREATE INDEX IF NOT EXISTS idx_fiscal_years_current ON fiscal_years(organization_id, is_current) WHERE is_current = true;
 
--- Ensure only one current fiscal year per organization
-CREATE OR REPLACE FUNCTION ensure_single_current_fiscal_year()
-RETURNS TRIGGER AS $$
-BEGIN
-  IF NEW.is_current = true THEN
-    UPDATE fiscal_years
-    SET is_current = false
-    WHERE organization_id = NEW.organization_id
-    AND id != NEW.id
-    AND is_current = true;
-  END IF;
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
+-- Single-current-fiscal-year invariant is enforced in the application layer
+-- (FiscalYearsService.clearCurrentForOrg).
 DROP TRIGGER IF EXISTS trg_ensure_single_current_fiscal_year ON fiscal_years;
-CREATE TRIGGER trg_ensure_single_current_fiscal_year
-  BEFORE INSERT OR UPDATE ON fiscal_years
-  FOR EACH ROW
-  EXECUTE FUNCTION ensure_single_current_fiscal_year();
+DROP FUNCTION IF EXISTS ensure_single_current_fiscal_year();
 
 -- 2. FISCAL PERIODS TABLE
 CREATE TABLE IF NOT EXISTS fiscal_periods (
@@ -14821,66 +14678,15 @@ COMMENT ON FUNCTION check_organization_access(UUID) IS 'Check if current user ha
 -- -----------------------------------------------------
 -- Note: Geometry columns are now directly in CREATE TABLE statements
 
--- Function to sync JSONB coordinates to geometry columns
-CREATE OR REPLACE FUNCTION sync_farm_geometry()
-RETURNS TRIGGER AS $$
-BEGIN
-  IF NEW.coordinates IS NOT NULL AND NEW.coordinates ? 'lat' AND NEW.coordinates ? 'lng' THEN
-    NEW.location_point := ST_SetSRID(
-      ST_MakePoint(
-        (NEW.coordinates->>'lng')::FLOAT,
-        (NEW.coordinates->>'lat')::FLOAT
-      ),
-      4326
-    );
-  END IF;
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
+-- Geometry columns (farms.location_point, parcels.boundary_geom, parcels.centroid)
+-- are now populated in the application layer:
+--   FarmsService.syncFarmLocationPoint
+--   ParcelsService.syncParcelBoundaryGeom
 DROP TRIGGER IF EXISTS trg_sync_farm_geometry ON farms;
-CREATE TRIGGER trg_sync_farm_geometry
-  BEFORE INSERT OR UPDATE ON farms
-  FOR EACH ROW
-  EXECUTE FUNCTION sync_farm_geometry();
-
--- Function to sync parcel boundary JSONB to geometry
-CREATE OR REPLACE FUNCTION sync_parcel_geometry()
-RETURNS TRIGGER AS $$
-DECLARE
-  coords JSONB;
-  ring TEXT;
-BEGIN
-  IF NEW.boundary IS NOT NULL AND jsonb_array_length(NEW.boundary) > 2 THEN
-    -- Build WKT polygon from JSONB array of {lat, lng} points
-    SELECT string_agg(
-      (coord->>'lng')::TEXT || ' ' || (coord->>'lat')::TEXT,
-      ','
-    ) INTO ring
-    FROM jsonb_array_elements(NEW.boundary) AS coord;
-    
-    -- Close the ring if needed
-    IF ring IS NOT NULL THEN
-      NEW.boundary_geom := ST_SetSRID(
-        ST_GeomFromText('POLYGON((' || ring || ',' || 
-          (NEW.boundary->0->>'lng')::TEXT || ' ' || (NEW.boundary->0->>'lat')::TEXT || '))'),
-        4326
-      );
-      NEW.centroid := ST_Centroid(NEW.boundary_geom);
-    END IF;
-  END IF;
-  RETURN NEW;
-EXCEPTION WHEN OTHERS THEN
-  -- Silently ignore geometry conversion errors to not break inserts
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
+DROP FUNCTION IF EXISTS sync_farm_geometry();
 
 DROP TRIGGER IF EXISTS trg_sync_parcel_geometry ON parcels;
-CREATE TRIGGER trg_sync_parcel_geometry
-  BEFORE INSERT OR UPDATE ON parcels
-  FOR EACH ROW
-  EXECUTE FUNCTION sync_parcel_geometry();
+DROP FUNCTION IF EXISTS sync_parcel_geometry();
 
 -- -----------------------------------------------------
 -- 2. MISSING BUSINESS KEY UNIQUE CONSTRAINTS
@@ -17405,20 +17211,14 @@ ALTER FUNCTION public.update_updated_at_column()                  SET search_pat
 ALTER FUNCTION public.capture_base_quantity_at_movement()         SET search_path = public, pg_catalog;
 ALTER FUNCTION public.update_document_templates_timestamp()       SET search_path = public, pg_catalog;
 ALTER FUNCTION public.audit_trigger_func()                        SET search_path = public, pg_catalog;
-ALTER FUNCTION public.sync_farm_geometry()                        SET search_path = public, pg_catalog;
 ALTER FUNCTION public.update_product_variants_updated_at()        SET search_path = public, pg_catalog;
-ALTER FUNCTION public.ensure_single_default_template()            SET search_path = public, pg_catalog;
 ALTER FUNCTION public.validate_stock_movement_unit()              SET search_path = public, pg_catalog;
-ALTER FUNCTION public.sum_gdd_between(numeric, numeric, text, date, date)
-                                                                  SET search_path = public, pg_catalog;
 ALTER FUNCTION public.update_warehouse_stock_reserved()           SET search_path = public, pg_catalog;
 ALTER FUNCTION public.sync_variant_quantity_from_movements()      SET search_path = public, pg_catalog;
 ALTER FUNCTION public.update_quote_request_updated_at()           SET search_path = public, pg_catalog;
 ALTER FUNCTION public.update_quality_inspections_updated_at()     SET search_path = public, pg_catalog;
-ALTER FUNCTION public.sync_parcel_geometry()                      SET search_path = public, pg_catalog;
 ALTER FUNCTION public.update_warehouse_stock_levels()             SET search_path = public, pg_catalog;
 ALTER FUNCTION public.update_campaigns_updated_at()               SET search_path = public, pg_catalog;
-ALTER FUNCTION public.ensure_single_current_fiscal_year()         SET search_path = public, pg_catalog;
 ALTER FUNCTION public.update_account_mappings_updated_at()        SET search_path = public, pg_catalog;
 
 -- ---------------------------------------------------------------------------
@@ -17978,27 +17778,10 @@ COMMIT;
 -- modules marked is_required = true. Companion to the preceding
 -- catalog alignment migration.
 
-CREATE OR REPLACE FUNCTION seed_required_modules_for_new_org()
-RETURNS TRIGGER AS $$
-BEGIN
-  INSERT INTO organization_modules (organization_id, module_id, is_active)
-  SELECT NEW.id, m.id, true
-  FROM modules m
-  WHERE m.is_required = true
-  ON CONFLICT (organization_id, module_id) DO UPDATE SET
-    is_active  = true,
-    updated_at = NOW();
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
+-- Required modules are now seeded in the application layer
+-- (OrganizationsService.create -> seedRequiredModules).
 DROP TRIGGER IF EXISTS trg_seed_required_modules ON organizations;
-CREATE TRIGGER trg_seed_required_modules
-AFTER INSERT ON organizations
-FOR EACH ROW EXECUTE FUNCTION seed_required_modules_for_new_org();
-
-COMMENT ON FUNCTION seed_required_modules_for_new_org IS
-  'Auto-activates all modules.is_required=true for newly created organizations.';
+DROP FUNCTION IF EXISTS seed_required_modules_for_new_org();
 
 -- ============================================================================
 -- OFFLINE-FIRST SUPPORT: client_id (idempotency) + version (optimistic lock) +
@@ -18235,21 +18018,10 @@ CREATE TRIGGER update_hr_compliance_settings_updated_at
   BEFORE UPDATE ON hr_compliance_settings
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
--- Auto-create empty (morocco_none) settings row whenever an organization is created.
-CREATE OR REPLACE FUNCTION create_default_hr_compliance_settings()
-RETURNS TRIGGER AS $$
-BEGIN
-  INSERT INTO hr_compliance_settings (organization_id)
-  VALUES (NEW.id)
-  ON CONFLICT (organization_id) DO NOTHING;
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
+-- HR compliance defaults are now seeded in the application layer
+-- (OrganizationsService.create -> createDefaultHrComplianceSettings).
 DROP TRIGGER IF EXISTS trg_create_hr_compliance_settings ON organizations;
-CREATE TRIGGER trg_create_hr_compliance_settings
-  AFTER INSERT ON organizations
-  FOR EACH ROW EXECUTE FUNCTION create_default_hr_compliance_settings();
+DROP FUNCTION IF EXISTS create_default_hr_compliance_settings();
 
 
 -- =====================================================================
@@ -19614,3 +19386,33 @@ SELECT
 FROM salary_slips
 WHERE status != 'cancelled'
 GROUP BY organization_id, farm_id, DATE_TRUNC('month', pay_period_start);
+
+-- =====================================================================
+-- WORKER PAYMENT HISTORY (per-worker aggregate for sparkline context)
+-- =====================================================================
+CREATE OR REPLACE VIEW worker_payment_history WITH (security_invoker = true) AS
+SELECT
+  w.id AS worker_id,
+  w.first_name || ' ' || w.last_name AS worker_name,
+  w.worker_type,
+  COALESCE(pay.total_payments, 0) AS total_payments,
+  COALESCE(pay.total_paid, 0) AS total_paid,
+  COALESCE(pay.pending_amount, 0) AS pending_amount,
+  COALESCE(pay.approved_amount, 0) AS approved_amount,
+  pay.last_payment_date,
+  COALESCE(pay.average_payment, 0) AS average_payment
+FROM workers w
+LEFT JOIN LATERAL (
+  SELECT
+    COUNT(*) AS total_payments,
+    SUM(CASE WHEN pr.status = 'paid' THEN pr.net_amount ELSE 0 END) AS total_paid,
+    SUM(CASE WHEN pr.status = 'pending' THEN pr.net_amount ELSE 0 END) AS pending_amount,
+    SUM(CASE WHEN pr.status = 'approved' THEN pr.net_amount ELSE 0 END) AS approved_amount,
+    MAX(pr.payment_date) AS last_payment_date,
+    CASE WHEN COUNT(*) > 0
+      THEN SUM(pr.net_amount) / COUNT(*)
+      ELSE 0
+    END AS average_payment
+  FROM payment_records pr
+  WHERE pr.worker_id = w.id
+) pay ON true;

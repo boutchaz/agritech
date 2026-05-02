@@ -737,6 +737,8 @@ export class ParcelsService {
 
     this.logger.log(`Parcel created successfully: ${newParcel.id}`);
 
+    await this.syncParcelBoundaryGeom(newParcel.id, newParcel.boundary);
+
     if (
       newParcel.boundary &&
       Array.isArray(newParcel.boundary) &&
@@ -1092,6 +1094,10 @@ export class ParcelsService {
 
     this.logger.log(`Parcel updated successfully: ${updatedParcel.id}`);
 
+    if (dto.boundary !== undefined) {
+      await this.syncParcelBoundaryGeom(parcelId, dto.boundary);
+    }
+
     // Trigger satellite download when boundary is set/changed
     const boundaryChanged =
       dto.boundary !== undefined &&
@@ -1243,5 +1249,43 @@ export class ParcelsService {
       applications: transformedApplications,
       total: transformedApplications.length,
     };
+  }
+
+  private async syncParcelBoundaryGeom(
+    parcelId: string,
+    boundary: unknown,
+  ): Promise<void> {
+    if (!Array.isArray(boundary) || boundary.length < 3) {
+      return;
+    }
+
+    type LatLng = { lat: number; lng: number };
+    const points: LatLng[] = [];
+    for (const c of boundary) {
+      if (!c || typeof c !== "object") return;
+      const lat = Number((c as Record<string, unknown>).lat);
+      const lng = Number((c as Record<string, unknown>).lng);
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+      points.push({ lat, lng });
+    }
+
+    const ring = points.map((p) => `${p.lng} ${p.lat}`).join(",");
+    const wkt = `POLYGON((${ring},${points[0].lng} ${points[0].lat}))`;
+
+    try {
+      await this.databaseService.executeInPgTransaction(async (pgClient) => {
+        await pgClient.query(
+          `UPDATE parcels
+           SET boundary_geom = ST_SetSRID(ST_GeomFromText($1), 4326),
+               centroid     = ST_Centroid(ST_SetSRID(ST_GeomFromText($1), 4326))
+           WHERE id = $2`,
+          [wkt, parcelId],
+        );
+      });
+    } catch (err) {
+      this.logger.warn(
+        `Failed to sync parcel geometry for ${parcelId}: ${(err as Error).message}`,
+      );
+    }
   }
 }

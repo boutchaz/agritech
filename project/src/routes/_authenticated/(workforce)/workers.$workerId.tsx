@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { z } from "zod";
 import {
   ArrowLeft,
   Phone,
@@ -18,6 +19,8 @@ import {
   ShieldCheck,
   Wallet,
   Droplet,
+  Loader2,
+  MessageSquare,
 } from "lucide-react";
 import {
   useWorker,
@@ -35,52 +38,69 @@ import { format, differenceInCalendarDays } from "date-fns";
 import { fr } from "date-fns/locale";
 import WorkerForm from "@/components/Workers/WorkerForm";
 import WorkerPaymentDialog from "@/components/Workers/WorkerPaymentDialog";
+import TaskForm from "@/components/Tasks/TaskForm";
+import { ResponsiveDialog } from "@/components/ui/responsive-dialog";
+import { Input } from "@/components/ui/Input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/radix-select";
+import {
+  useCreateApplication,
+  useLeaveTypes,
+} from "@/hooks/useLeaveManagement";
+import { useSendMessage } from "@/hooks/useChat";
 import type { PaymentType, PaymentRecord } from "@/types/payments";
 import type { MetayageSettlement as MetayageSettlementType, WorkRecord } from "@/types/workers";
+import type { CreateApplicationInput } from "@/lib/api/leave-management";
 import { cn } from "@/lib/utils";
 
-// ---------- Inline visual components ----------
+// ---------- Schema ----------
 
-// Deterministic seed from string
-function seed(str: string): number {
-  let h = 2166136261;
-  for (let i = 0; i < str.length; i++) {
-    h ^= str.charCodeAt(i);
-    h = Math.imul(h, 16777619);
-  }
-  return Math.abs(h);
+const leaveApplicationSchema = z.object({
+  worker_id: z.string().uuid({ message: 'Worker is required' }),
+  leave_type_id: z.string().uuid({ message: 'Leave type is required' }),
+  from_date: z.string().min(10, 'From date is required'),
+  to_date: z.string().min(10, 'To date is required'),
+  reason: z.string().trim().min(3, 'Reason must be at least 3 characters'),
+  half_day: z.boolean().optional(),
+  half_day_period: z.enum(['first_half', 'second_half']).optional(),
+});
+
+// ---------- Stats helpers ----------
+
+function trendLabel(current: number, previous: number, unit = '%'): { text: string | null; positive: boolean } {
+  if (previous === 0 && current === 0) return { text: null, positive: true };
+  if (previous === 0) return { text: `+${current}`, positive: true };
+  const change = Math.round(((current - previous) / previous) * 100);
+  const sign = change > 0 ? '+' : '';
+  return { text: `${sign}${change}${unit} vs. mois préc.`, positive: change >= 0 };
 }
 
-// Sparkline (line/area) — TODO: real time-series
-function Sparkline({ id, color }: { id: string; color: string }) {
-  const s = seed(id);
-  const points = Array.from({ length: 12 }, (_, i) => {
-    const y = 15 + Math.sin((i + s % 7) * 0.7) * 8 + Math.cos((i + s % 5) * 0.4) * 4;
-    return `${(i / 11) * 100},${Math.max(2, Math.min(28, y))}`;
-  });
-  const path = points.join(" ");
-  const areaPath = `0,30 ${path} 100,30`;
+function StatCard({ label, value, unit, trend }: {
+  label: string;
+  value: number | string;
+  unit?: string;
+  trend?: { text: string | null; positive: boolean };
+}) {
   return (
-    <svg viewBox="0 0 100 30" className="w-full h-8" preserveAspectRatio="none">
-      <polyline points={areaPath} fill={color} fillOpacity="0.15" stroke="none" />
-      <polyline points={path} fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-// Mini bar chart — TODO: real time-series
-function MiniBarChart({ id, color }: { id: string; color: string }) {
-  const s = seed(id);
-  const bars = Array.from({ length: 10 }, (_, i) => {
-    const h = 6 + ((s >> (i % 10)) & 0xff) / 255 * 22;
-    return { x: i * 10 + 1, y: 30 - h, h };
-  });
-  return (
-    <svg viewBox="0 0 100 30" className="w-full h-8" preserveAspectRatio="none">
-      {bars.map((b, i) => (
-        <rect key={i} x={b.x} y={b.y} width={8} height={b.h} fill={color} rx={1} />
-      ))}
-    </svg>
+    <div className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4">
+      <p className="text-xs text-gray-500 dark:text-gray-400">{label}</p>
+      <p className="mt-1 text-3xl font-bold text-gray-900 dark:text-white">
+        {value}
+        {unit && <span className="text-sm font-normal text-gray-400 ms-1">{unit}</span>}
+      </p>
+      {trend?.text && (
+        <p className={cn('text-xs mt-1', trend.positive ? 'text-emerald-600' : 'text-red-500')}>
+          {trend.text}
+        </p>
+      )}
+    </div>
   );
 }
 
@@ -106,6 +126,297 @@ function relativeFr(dateStr: string): string {
   }
 }
 
+function LeaveApplicationQuickDialog({
+  orgId,
+  workerId,
+  workerName,
+  onClose,
+  onSuccess,
+}: {
+  orgId: string;
+  workerId: string;
+  workerName: string;
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  const { t } = useTranslation();
+  const typesQuery = useLeaveTypes(orgId);
+  const create = useCreateApplication();
+  const [submitting, setSubmitting] = useState(false);
+  const [draft, setDraft] = useState<CreateApplicationInput>({
+    worker_id: workerId,
+    leave_type_id: '',
+    from_date: new Date().toISOString().slice(0, 10),
+    to_date: new Date().toISOString().slice(0, 10),
+    reason: '',
+  });
+
+  const set = <K extends keyof CreateApplicationInput>(key: K, v: CreateApplicationInput[K]) =>
+    setDraft((d) => ({ ...d, [key]: v }));
+
+  const totalDays = useMemo(() => {
+    if (!draft.from_date || !draft.to_date) return 0;
+    const ms = new Date(draft.to_date).getTime() - new Date(draft.from_date).getTime();
+    if (ms < 0) return 0;
+    const days = Math.floor(ms / 86_400_000) + 1;
+    return draft.half_day && days === 1 ? 0.5 : days;
+  }, [draft.from_date, draft.to_date, draft.half_day]);
+
+  const handleSubmit = async () => {
+    const result = leaveApplicationSchema.safeParse(draft);
+    if (!result.success) {
+      const first = result.error.issues[0];
+      toast.error(first?.message ?? t('validation.allFieldsRequired', 'All fields are required'));
+      return;
+    }
+    if (totalDays <= 0) {
+      toast.error(t('leaveApplications.invalidRange', 'To-date must be on or after from-date'));
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await create.mutateAsync({ orgId, data: result.data as CreateApplicationInput });
+      onSuccess();
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : t('common.errorOccurred', 'An error occurred');
+      toast.error(message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <ResponsiveDialog
+      open
+      onOpenChange={(o) => !o && onClose()}
+      size="lg"
+      title={t('workers.detail.quickActions.markLeave', 'Marquer un congé') + ` — ${workerName}`}
+      footer={
+        <>
+          <Button variant="outline" onClick={onClose} disabled={submitting}>
+            {t('common.cancel', 'Annuler')}
+          </Button>
+          <Button onClick={handleSubmit} disabled={submitting}>
+            {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : t('common.submit', 'Enregistrer')}
+          </Button>
+        </>
+      }
+    >
+      <div className="space-y-4">
+        <div className="space-y-1">
+          <Label>{t('leaveTypes.title', 'Type de congé')}</Label>
+          <Select value={draft.leave_type_id} onValueChange={(v) => set('leave_type_id', v)}>
+            <SelectTrigger>
+              <SelectValue placeholder={t('common.select', 'Sélectionner')} />
+            </SelectTrigger>
+            <SelectContent>
+              {(typesQuery.data ?? []).map((lt) => (
+                <SelectItem key={lt.id} value={lt.id}>
+                  {lt.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1">
+            <Label>{t('common.from', 'Du')}</Label>
+            <Input
+              type="date"
+              value={draft.from_date}
+              onChange={(e) => set('from_date', e.target.value)}
+            />
+          </div>
+          <div className="space-y-1">
+            <Label>{t('common.to', 'Au')}</Label>
+            <Input
+              type="date"
+              value={draft.to_date}
+              onChange={(e) => set('to_date', e.target.value)}
+            />
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between">
+          <Label className="cursor-pointer">{t('leaveApplications.halfDay', 'Demi-journée')}</Label>
+          <Switch
+            checked={!!draft.half_day}
+            onCheckedChange={(v) => set('half_day', v)}
+            disabled={draft.from_date !== draft.to_date}
+          />
+        </div>
+
+        <div className="text-sm text-gray-600 dark:text-gray-400">
+          {t('leaveApplications.totalDays', 'Total jours')}: <strong>{totalDays}</strong>
+        </div>
+
+        <div className="space-y-1">
+          <Label>{t('common.reason', 'Raison')}</Label>
+          <Input value={draft.reason} onChange={(e) => set('reason', e.target.value)} />
+        </div>
+      </div>
+    </ResponsiveDialog>
+  );
+}
+
+function SendMessageQuickDialog({
+  workerName,
+  onClose,
+  onSend,
+}: {
+  workerName: string;
+  onClose: () => void;
+  onSend: (message: string) => void;
+}) {
+  const { t } = useTranslation();
+  const [message, setMessage] = useState('');
+  const [sending, setSending] = useState(false);
+  const sendMessage = useSendMessage();
+
+  const handleSend = async () => {
+    if (!message.trim()) {
+      toast.error(t('validation.required', 'Le message est requis'));
+      return;
+    }
+    setSending(true);
+    try {
+      await sendMessage.mutateAsync({
+        query: `[Message pour ${workerName}] ${message}`,
+        language: 'fr',
+        save_history: true,
+      });
+      toast.success(t('workers.detail.quickActions.messageSent', 'Message envoyé'));
+      onSend(message);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : t('common.errorOccurred', 'An error occurred');
+      toast.error(msg);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <ResponsiveDialog
+      open
+      onOpenChange={(o) => !o && onClose()}
+      size="md"
+      title={t('workers.detail.quickActions.sendMessage', 'Envoyer un message') + ` — ${workerName}`}
+      footer={
+        <>
+          <Button variant="outline" onClick={onClose} disabled={sending}>
+            {t('common.cancel', 'Annuler')}
+          </Button>
+          <Button onClick={handleSend} disabled={!message.trim() || sending}>
+            {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <MessageSquare className="h-4 w-4 me-2" />}
+            {t('common.send', 'Envoyer')}
+          </Button>
+        </>
+      }
+    >
+      <div className="space-y-3">
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          {t('workers.detail.quickActions.messageContext', 'Ce message sera envoyé via AgromindIA.')}
+        </p>
+        <textarea
+          className="w-full min-h-[120px] rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 p-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          placeholder={t('workers.detail.quickActions.messagePlaceholder', 'Écrire un message...')}
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          autoFocus
+        />
+      </div>
+    </ResponsiveDialog>
+  );
+}
+
+type TimelineItem = { id: string; date: string; title: string; subtitle: string; kind: 'work' | 'payment' | 'irrigation' };
+
+function WorkHistoryDialog({
+  workerName,
+  items,
+  onClose,
+}: {
+  workerName: string;
+  items: TimelineItem[];
+  onClose: () => void;
+}) {
+  const { t } = useTranslation();
+  const [filter, setFilter] = useState<'all' | 'work' | 'payment'>('all');
+  const filtered = filter === 'all' ? items : items.filter((i) => i.kind === filter);
+
+  return (
+    <ResponsiveDialog
+      open
+      onOpenChange={(o) => !o && onClose()}
+      size="lg"
+      title={t('workers.detail.workHistory', 'Historique des travaux') + ` — ${workerName}`}
+    >
+      <div className="space-y-4">
+        <div className="flex gap-2">
+          {(['all', 'work', 'payment'] as const).map((f) => (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={cn(
+                'px-3 py-1.5 text-xs font-medium rounded-full transition-colors',
+                filter === f
+                  ? 'bg-emerald-600 text-white'
+                  : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700',
+              )}
+            >
+              {f === 'all' ? t('common.all', 'Tout')
+                : f === 'work' ? t('workers.detail.workFilter', 'Travaux')
+                : t('workers.detail.paymentFilter', 'Paiements')}
+              <span className="ml-1 opacity-70">
+                ({(f === 'all' ? items : items.filter((i) => i.kind === f)).length})
+              </span>
+            </button>
+          ))}
+        </div>
+
+        {filtered.length === 0 ? (
+          <p className="text-sm text-gray-500 py-8 text-center">
+            {t('workers.detail.noRecentActivity', 'Aucune activité récente')}
+          </p>
+        ) : (
+          <div className="max-h-[60vh] overflow-y-auto">
+            <ol className="relative ms-2">
+              <span className="absolute start-2 top-2 bottom-2 w-px bg-gray-200 dark:bg-gray-700" aria-hidden />
+              {filtered.map((item) => {
+                const dotColor =
+                  item.kind === 'payment' ? 'bg-blue-500'
+                  : item.kind === 'irrigation' ? 'bg-orange-500'
+                  : 'bg-emerald-500';
+                const Icon =
+                  item.kind === 'payment' ? Banknote
+                  : item.kind === 'irrigation' ? Droplet
+                  : CheckCircle2;
+                return (
+                  <li key={item.id} className="relative ps-8 pb-4 last:pb-0">
+                    <span className={cn('absolute start-0 top-1 h-4 w-4 rounded-full flex items-center justify-center', dotColor)}>
+                      <Icon className="h-2.5 w-2.5 text-white" />
+                    </span>
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{item.title}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{item.subtitle}</p>
+                      </div>
+                      <span className="text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap">
+                        {relativeFr(item.date)}
+                      </span>
+                    </div>
+                  </li>
+                );
+              })}
+            </ol>
+          </div>
+        )}
+      </div>
+    </ResponsiveDialog>
+  );
+}
+
 function WorkerDetailPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -117,6 +428,11 @@ function WorkerDetailPage() {
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [paymentPeriod, setPaymentPeriod] = useState<{ start: string; end: string } | null>(null);
   const [paymentType, setPaymentType] = useState<PaymentType | null>(null);
+  const [showTaskForm, setShowTaskForm] = useState(false);
+  const [showLeaveDialog, setShowLeaveDialog] = useState(false);
+  const [showCnssDialog, setShowCnssDialog] = useState(false);
+  const [showMessageDialog, setShowMessageDialog] = useState(false);
+  const [showWorkHistory, setShowWorkHistory] = useState(false);
 
   const { data: worker, isLoading: workerLoading } = useWorker(currentOrganization?.id || null, workerId);
   const { data: farms = [] } = useFarms(currentOrganization?.id || "");
@@ -143,8 +459,8 @@ function WorkerDetailPage() {
   );
   const hasPending = pendingPayments.length > 0;
 
-  // Build activity timeline
-  const timeline = useMemo(() => {
+  // Build full activity timeline (no limit)
+  const fullTimeline = useMemo(() => {
     type Item = { id: string; date: string; title: string; subtitle: string; kind: 'work' | 'payment' | 'irrigation' };
     const items: Item[] = [];
     (workRecords as WorkRecord[]).forEach((r) => {
@@ -170,9 +486,11 @@ function WorkerDetailPage() {
     });
     return items
       .filter((i) => i.date)
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-      .slice(0, 5);
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [workRecords, payments, formatCurrency, t]);
+
+  // Card shows only the 5 most recent
+  const timeline = fullTimeline.slice(0, 5);
 
   const paidHistory = useMemo(
     () =>
@@ -206,10 +524,7 @@ function WorkerDetailPage() {
     worker.worker_type === 'metayage' ? 'Métayage' : worker.worker_type
   );
 
-  // Stat values
-  const daysWorked = stats?.totalDaysWorked ?? worker.total_days_worked ?? 0;
-  const tasksDone = stats?.totalTasksCompleted ?? worker.total_tasks_completed ?? 0;
-  const attendancePct = 96; // TODO: real attendance metric
+  const monthly = stats?.monthly ?? { thisMonth: { days: 0, tasks: 0, attendance: 0 }, prevMonth: { days: 0, tasks: 0, attendance: 0 }, workingDaysSoFar: 0 };
 
   return (
     <div className="space-y-6">
@@ -290,28 +605,28 @@ function WorkerDetailPage() {
                 <span className="text-start">{t('workers.detail.quickActions.recordPayment', 'Enregistrer un paiement')}</span>
               </button>
               <button
-                onClick={() => toast.info(t('common.comingSoon', 'Bientôt'))}
+                onClick={() => setShowTaskForm(true)}
                 className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-sm text-gray-700 dark:text-gray-200 transition-colors"
               >
                 <CheckCircle2 className="h-4 w-4" />
                 <span className="text-start">{t('workers.detail.quickActions.assignTask', 'Assigner une tâche')}</span>
               </button>
               <button
-                onClick={() => toast.info(t('common.comingSoon', 'Bientôt'))}
+                onClick={() => setShowLeaveDialog(true)}
                 className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-sm text-gray-700 dark:text-gray-200 transition-colors"
               >
                 <Calendar className="h-4 w-4" />
                 <span className="text-start">{t('workers.detail.quickActions.markLeave', 'Marquer un congé')}</span>
               </button>
               <button
-                onClick={() => toast.info(t('common.comingSoon', 'Bientôt'))}
+                onClick={() => setShowCnssDialog(true)}
                 className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-sm text-gray-700 dark:text-gray-200 transition-colors"
               >
                 <Shield className="h-4 w-4" />
                 <span className="text-start">{t('workers.detail.quickActions.declareCnss', 'Déclarer à la CNSS')}</span>
               </button>
               <button
-                onClick={() => toast.info(t('common.comingSoon', 'Bientôt'))}
+                onClick={() => setShowMessageDialog(true)}
                 className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-sm text-gray-700 dark:text-gray-200 transition-colors"
               >
                 <Mail className="h-4 w-4" />
@@ -325,36 +640,24 @@ function WorkerDetailPage() {
         <div className="lg:col-span-8 space-y-6">
           {/* Top metrics + pending payment */}
           <div className={cn("grid gap-4", hasPending ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-4" : "grid-cols-1 sm:grid-cols-3")}>
-            {/* Days worked */}
-            <div className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4">
-              <p className="text-xs text-gray-500 dark:text-gray-400">{t('workers.stats.daysWorked', 'Jours travaillés')}</p>
-              <p className="mt-1 text-3xl font-bold text-gray-900 dark:text-white">
-                {daysWorked}
-                <span className="text-sm font-normal text-gray-400 ms-1">/30j</span>
-              </p>
-              <Sparkline id={worker.id + 'days'} color="#10b981" />
-              <p className="text-xs text-emerald-600 mt-1">+8% vs. période préc.</p>
-            </div>
-            {/* Tasks */}
-            <div className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4">
-              <p className="text-xs text-gray-500 dark:text-gray-400">{t('workers.stats.tasks', 'Tâches')}</p>
-              <p className="mt-1 text-3xl font-bold text-gray-900 dark:text-white">
-                {tasksDone}
-                <span className="text-sm font-normal text-gray-400 ms-1">ce mois</span>
-              </p>
-              <MiniBarChart id={worker.id + 'tasks'} color="#3b82f6" />
-              <p className="text-xs text-emerald-600 mt-1">+12% vs. période préc.</p>
-            </div>
-            {/* Attendance */}
-            <div className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4">
-              <p className="text-xs text-gray-500 dark:text-gray-400">{t('workers.stats.attendance', 'Présence')}</p>
-              <p className="mt-1 text-3xl font-bold text-gray-900 dark:text-white">
-                {attendancePct}
-                <span className="text-sm font-normal text-gray-400 ms-1">%</span>
-              </p>
-              <Sparkline id={worker.id + 'att'} color="#f59e0b" />
-              <p className="text-xs text-emerald-600 mt-1">+1pt vs. période préc.</p>
-            </div>
+            <StatCard
+              label={t('workers.stats.daysWorked', 'Jours travaillés')}
+              value={monthly.thisMonth.days}
+              unit={monthly.workingDaysSoFar > 0 ? `/${monthly.workingDaysSoFar}j` : undefined}
+              trend={trendLabel(monthly.thisMonth.days, monthly.prevMonth.days)}
+            />
+            <StatCard
+              label={t('workers.stats.tasks', 'Tâches')}
+              value={monthly.thisMonth.tasks}
+              unit={t('workers.stats.thisMonth', 'ce mois')}
+              trend={trendLabel(monthly.thisMonth.tasks, monthly.prevMonth.tasks)}
+            />
+            <StatCard
+              label={t('workers.stats.attendance', 'Présence')}
+              value={monthly.thisMonth.attendance}
+              unit="%"
+              trend={trendLabel(monthly.thisMonth.attendance, monthly.prevMonth.attendance, 'pt')}
+            />
             {/* Pending payment card */}
             {hasPending && (
               <div className="rounded-2xl p-6 text-white bg-gradient-to-br from-red-500 to-red-600 shadow-sm flex flex-col">
@@ -384,7 +687,7 @@ function WorkerDetailPage() {
                 {t('workers.detail.recentWork', 'Travaux récents')}
               </h3>
               <button
-                onClick={() => toast.info(t('common.comingSoon', 'Bientôt'))}
+                onClick={() => setShowWorkHistory(true)}
                 className="text-sm text-emerald-600 hover:underline"
               >
                 {t('common.viewAll', 'Tout voir')} →
@@ -572,6 +875,68 @@ function WorkerDetailPage() {
             setShowEditForm(false);
             queryClient.invalidateQueries({ queryKey: ["worker", currentOrganization.id, workerId] });
           }}
+        />
+      )}
+
+      {/* Task Form Dialog */}
+      {worker && showTaskForm && (
+        <TaskForm
+          organizationId={currentOrganization.id}
+          farms={farms.map((f: { id: string; name: string }) => ({ id: f.id, name: f.name }))}
+          onClose={() => setShowTaskForm(false)}
+          initialWorkerId={worker.id}
+          onSuccess={() => {
+            setShowTaskForm(false);
+            toast.success(t('workers.detail.quickActions.taskAssigned', 'Tâche créée et assignée'));
+          }}
+        />
+      )}
+
+      {/* Leave Application Dialog */}
+      {worker && showLeaveDialog && (
+        <LeaveApplicationQuickDialog
+          orgId={currentOrganization.id}
+          workerId={worker.id}
+          workerName={`${worker.first_name} ${worker.last_name}`}
+          onClose={() => setShowLeaveDialog(false)}
+          onSuccess={() => {
+            setShowLeaveDialog(false);
+            toast.success(t('workers.detail.quickActions.leaveMarked', 'Congé enregistré'));
+          }}
+        />
+      )}
+
+      {/* CNSS Declaration Dialog */}
+      {worker && showCnssDialog && (
+        <WorkerForm
+          open={showCnssDialog}
+          worker={worker}
+          organizationId={currentOrganization.id}
+          farms={farms.map((f: { id: string; name: string }) => ({ id: f.id, name: f.name }))}
+          onClose={() => setShowCnssDialog(false)}
+          onSuccess={() => {
+            setShowCnssDialog(false);
+            queryClient.invalidateQueries({ queryKey: ["worker", currentOrganization.id, workerId] });
+            toast.success(t('workers.detail.quickActions.cnssDeclared', 'CNSS mise à jour'));
+          }}
+        />
+      )}
+
+      {/* Send Message Dialog */}
+      {worker && showMessageDialog && (
+        <SendMessageQuickDialog
+          workerName={`${worker.first_name} ${worker.last_name}`}
+          onClose={() => setShowMessageDialog(false)}
+          onSend={() => setShowMessageDialog(false)}
+        />
+      )}
+
+      {/* Work History Dialog */}
+      {worker && showWorkHistory && (
+        <WorkHistoryDialog
+          workerName={`${worker.first_name} ${worker.last_name}`}
+          items={fullTimeline}
+          onClose={() => setShowWorkHistory(false)}
         />
       )}
     </div>

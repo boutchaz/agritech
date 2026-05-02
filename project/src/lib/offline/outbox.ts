@@ -170,6 +170,19 @@ export async function flush(
   flushing = true;
   const startedAt = Date.now();
   try {
+    const orphanedInflight = await db().outbox
+      .where('[organizationId+status]')
+      .equals([organizationId, 'inflight'])
+      .toArray();
+    if (orphanedInflight.length > 0) {
+      await Promise.all(
+        orphanedInflight.map((r) =>
+          db().outbox.update(r.id, { status: 'pending', lastError: 'recovered-orphan', nextAttemptAt: Date.now() }),
+        ),
+      );
+      telemetry.track('orphan_recovery', { count: orphanedInflight.length });
+    }
+
     const now = Date.now();
     const all = await db().outbox
       .where('[organizationId+status]')

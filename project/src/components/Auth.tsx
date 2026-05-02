@@ -41,7 +41,7 @@ const Auth = ({ onAuthSuccess }: AuthProps) => {
           }));
         }
 
-        window.location.href = '/onboarding/select-trial';
+        window.location.href = '/onboarding';
       } else {
         const response = await loginViaApi(email, password);
 

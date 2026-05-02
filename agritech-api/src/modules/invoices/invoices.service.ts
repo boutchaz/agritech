@@ -727,6 +727,7 @@ export class InvoicesService {
         `UPDATE journal_entries SET status = 'posted', posted_by = $1, posted_at = $2, total_debit = $3, total_credit = $4 WHERE id = $5`,
         [userId, now, totalDebit, totalCredit, jeId],
       );
+      await this.accountingAutomationService.applyCashSettlementDate(pgClient, jeId, postingDate);
 
       // Mark invoice submitted and link to journal entry
       await pgClient.query(
@@ -1324,11 +1325,26 @@ export class InvoicesService {
         `UPDATE journal_entries SET status = 'posted', posted_by = $1, posted_at = $2, total_debit = $3, total_credit = $4 WHERE id = $5`,
         [userId, now, totalDebit, totalCredit, jeId],
       );
+      await this.accountingAutomationService.applyCashSettlementDate(pgClient, jeId, postingDate);
 
-      // 5e. Link JE to credit note
+      // 5e. Link JE to credit note + sync parent's credited_amount
       await pgClient.query(
         `UPDATE invoices SET journal_entry_id = $1 WHERE id = $2`,
         [jeId, cnId],
+      );
+
+      // Replaces dropped sync_invoice_credited_amount trigger:
+      // recompute parent invoice's credited_amount from all non-cancelled credit notes.
+      await pgClient.query(
+        `UPDATE invoices
+           SET credited_amount = COALESCE((
+             SELECT SUM(grand_total) FROM invoices
+             WHERE original_invoice_id = $1
+               AND document_type = 'credit_note'
+               AND status NOT IN ('cancelled')
+           ), 0)
+         WHERE id = $1`,
+        [originalInvoiceId],
       );
 
       return { creditNoteId: cnId, journalEntryId: jeId };

@@ -1539,6 +1539,15 @@
       "journalEntryHelp": "إنشاء قيد تلقائي في دفتر الأستاذ المحاسبي"
     }
   },
+  "offlineBanner": {
+    "offline": "غير متصل",
+    "offlineWithPending": "غير متصل — {{count}} قيد الانتظار",
+    "syncing": "مزامنة… {{count}}",
+    "pendingActions": "{{count}} إجراء(ات) قيد الانتظار",
+    "failedActions": "{{count}} إجراء(ات) فاشلة",
+    "limitedConnection": "اتصال محدود",
+    "review": "مراجعة"
+  },
   "paid": "مدفوع",
   "pending": "قيد الانتظار",
   "notFound": {
@@ -5613,6 +5622,8 @@
       "paymentSection": "الدفع ووحدات العمل",
       "fixedSalarySelected": "موظفو الراتب الثابت محددون - الدفع اختياري",
       "fixedSalaryNote": "<strong>ملاحظة:</strong> العمال ذوو الراتب الثابت يتقاضون رواتبهم شهرياً. الدفع لهذه المهمة اختياري (مكافأة/علاوة للعمل الاستثنائي).",
+      "fixedSalaryNoteLabel": "ملاحظة:",
+      "fixedSalaryNoteText": "العمال ذوو الراتب الثابت يتقاضون رواتبهم شهرياً. الدفع لهذه المهمة اختياري (مكافأة/علاوة للعمل الاستثنائي).",
       "paymentTypeLabel": "نوع الدفع",
       "paymentTypeOptional": "(اختياري)",
       "paymentTypePlaceholder": "اختر",

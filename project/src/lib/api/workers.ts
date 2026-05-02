@@ -116,6 +116,26 @@ export interface CreateWorkerInput {
 
 export type UpdateWorkerInput = Partial<CreateWorkerInput>;
 
+export interface MonthlyPeriodStats {
+  days: number;
+  tasks: number;
+  attendance: number;
+}
+
+export interface ActivityDay {
+  date: string;
+  hours: number;
+  amount: number;
+}
+
+export interface WorkerActivitySummary {
+  days: ActivityDay[];
+  totalHours: number;
+  totalAmount: number;
+}
+
+export type WorkersActivitySummary = Record<string, WorkerActivitySummary>;
+
 export interface WorkerStats {
   worker: Worker;
   totalWorkRecords: number;
@@ -123,6 +143,11 @@ export interface WorkerStats {
   pendingPayments: number;
   totalDaysWorked: number;
   totalTasksCompleted: number;
+  monthly: {
+    thisMonth: MonthlyPeriodStats;
+    prevMonth: MonthlyPeriodStats;
+    workingDaysSoFar: number;
+  };
 }
 
 export interface WorkerFilters {
@@ -306,6 +331,17 @@ export const workersApi = {
     return apiClient.post<{ share: number }>(
       `/api/v1/organizations/${organizationId}/workers/${workerId}/calculate-metayage-share`,
       { grossRevenue, totalCharges },
+      {},
+      organizationId,
+    );
+  },
+
+  async getActivitySummary(
+    organizationId: string,
+    days: number = 30,
+  ): Promise<WorkersActivitySummary> {
+    return apiClient.get<WorkersActivitySummary>(
+      `/api/v1/organizations/${organizationId}/workers/activity-summary?days=${days}`,
       {},
       organizationId,
     );

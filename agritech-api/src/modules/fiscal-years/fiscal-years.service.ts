@@ -59,6 +59,10 @@ export class FiscalYearsService {
 
     const { is_current, ...rest } = createDto as CreateFiscalYearDto & { is_current?: boolean };
 
+    if (is_current) {
+      await this.clearCurrentForOrg(organizationId);
+    }
+
     const { data, error } = await client
       .from('fiscal_years')
       .insert({
@@ -102,6 +106,10 @@ export class FiscalYearsService {
       }
     }
 
+    if (updateDto.is_current) {
+      await this.clearCurrentForOrg(organizationId, id);
+    }
+
     const { data, error } = await client
       .from('fiscal_years')
       .update({
@@ -119,6 +127,22 @@ export class FiscalYearsService {
     }
 
     return data;
+  }
+
+  private async clearCurrentForOrg(organizationId: string, exceptId?: string): Promise<void> {
+    const client = this.databaseService.getAdminClient();
+    let query = client
+      .from('fiscal_years')
+      .update({ is_current: false })
+      .eq('organization_id', organizationId)
+      .eq('is_current', true);
+
+    if (exceptId) query = query.neq('id', exceptId);
+
+    const { error } = await query;
+    if (error) {
+      this.logger.warn(`Failed to clear current fiscal year flag: ${error.message}`);
+    }
   }
 
   async remove(id: string, organizationId: string) {

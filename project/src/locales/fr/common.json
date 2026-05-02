@@ -1467,6 +1467,15 @@
       "journalEntryHelp": "Créer automatiquement une écriture dans le grand livre comptable"
     }
   },
+  "offlineBanner": {
+    "offline": "Hors ligne",
+    "offlineWithPending": "Hors ligne — {{count}} en attente",
+    "syncing": "Synchronisation… {{count}}",
+    "pendingActions": "{{count}} action(s) en attente",
+    "failedActions": "{{count}} action(s) en échec",
+    "limitedConnection": "Connexion limitée",
+    "review": "Réviser"
+  },
   "paid": "payé",
   "pending": "en attente",
   "notFound": {
@@ -5687,6 +5696,8 @@
       "paymentSection": "Paiement et Unités de Travail",
       "fixedSalarySelected": "Salariés fixes sélectionnés - paiement optionnel",
       "fixedSalaryNote": "<strong>Note:</strong> Les travailleurs à salaire fixe sont déjà rémunérés mensuellement. Le paiement pour cette tâche est optionnel (bonus/prime pour travail exceptionnel).",
+      "fixedSalaryNoteLabel": "Note :",
+      "fixedSalaryNoteText": "Les travailleurs à salaire fixe sont déjà rémunérés mensuellement. Le paiement pour cette tâche est optionnel (bonus/prime pour travail exceptionnel).",
       "paymentTypeLabel": "Type de paiement",
       "paymentTypeOptional": "(optionnel)",
       "paymentTypePlaceholder": "Sélectionner",

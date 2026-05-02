@@ -310,6 +310,11 @@ export class PaymentsService {
                     `UPDATE journal_entries SET status = 'posted', posted_by = $1, posted_at = $2, total_debit = $3, total_credit = $4 WHERE id = $5`,
                     [userId, now, cashAmount, cashAmount, journalEntryId],
                 );
+                await this.accountingAutomationService.applyCashSettlementDate(
+                    pgClient,
+                    journalEntryId,
+                    payment.payment_date,
+                );
 
                 // 7. Update payment status to submitted and link journal entry
                 await pgClient.query(
@@ -790,6 +795,7 @@ export class PaymentsService {
                 `UPDATE journal_entries SET status='posted', posted_by=$1, posted_at=$2, total_debit=$3, total_credit=$3 WHERE id=$4`,
                 [userId, now, amount, jeId],
             );
+            await this.accountingAutomationService.applyCashSettlementDate(pgClient, jeId, postingDate);
 
             await pgClient.query(
                 `UPDATE accounting_payments SET journal_entry_id=$1 WHERE id=$2`,
@@ -982,6 +988,7 @@ export class PaymentsService {
                 `UPDATE journal_entries SET status='posted', posted_by=$1, posted_at=$2, total_debit=$3, total_credit=$3 WHERE id=$4`,
                 [userId, now, totalDebit, jeId],
             );
+            await this.accountingAutomationService.applyCashSettlementDate(pgClient, jeId, postingDate);
 
             return jeId;
         });

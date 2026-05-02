@@ -128,6 +128,24 @@ export class ReferentialService {
     return { valid: errors.length === 0, errors };
   }
 
+  private assertValidCropAiReference(cropType: string, referenceData: unknown): void {
+    if (!referenceData || typeof referenceData !== 'object') {
+      throw new BadRequestException('reference_data cannot be null');
+    }
+    const meta = (referenceData as Record<string, unknown>).metadata as
+      | Record<string, unknown>
+      | undefined;
+    const refCulture = meta?.culture as string | undefined;
+    const refVersion = meta?.version as string | undefined;
+    if (!refCulture) throw new BadRequestException('reference_data.metadata.culture is required');
+    if (!refVersion) throw new BadRequestException('reference_data.metadata.version is required');
+    if (cropType !== refCulture) {
+      throw new BadRequestException(
+        `crop_type (${cropType}) must match reference_data.metadata.culture (${refCulture})`,
+      );
+    }
+  }
+
   async updateSection(
     crop: string,
     section: string,
@@ -164,6 +182,8 @@ export class ReferentialService {
 
     const metadata = data.metadata as Record<string, string> | undefined;
     const version = metadata?.version ?? 'unknown';
+
+    this.assertValidCropAiReference(crop.toLowerCase(), data);
 
     const { error } = await this.supabase
       .from('crop_ai_references')
@@ -208,6 +228,8 @@ export class ReferentialService {
       typeof metadata.version === 'string' && metadata.version.trim().length > 0
         ? metadata.version
         : 'unknown';
+
+    this.assertValidCropAiReference(normalizedCrop, referenceData);
 
     const { error } = await this.supabase
       .from('crop_ai_references')
@@ -267,6 +289,8 @@ export class ReferentialService {
       pays: 'Maroc',
       usage: 'LLM_direct_read — no parser needed',
     };
+
+    this.assertValidCropAiReference(normalized, refData);
 
     const { error } = await this.supabase
       .from('crop_ai_references')

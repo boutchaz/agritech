@@ -209,9 +209,11 @@ const WorkersActivityWidget = () => {
             {t('dashboard.widgets.workers.empty')}
           </p>
           <Button
+            type="button"
+            variant="purple"
             size="sm"
             onClick={handleViewWorkers}
-            className="bg-purple-600 hover:bg-purple-700 text-white font-bold text-[10px] uppercase tracking-widest rounded-xl px-4"
+            className="font-bold text-[10px] uppercase tracking-widest rounded-xl px-4"
           >
             {t('dashboard.widgets.workers.addWorkers')}
           </Button>

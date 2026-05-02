@@ -33,6 +33,8 @@ interface TaskAttachmentsProps {
   taskId: string;
   organizationId: string;
   disabled?: boolean;
+  /** Strip outer card title — parent Card provides chrome. */
+  embedded?: boolean;
 }
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
@@ -81,6 +83,16 @@ function loadAttachments(taskId: string, organizationId: string): Attachment[] {
   }
 }
 
+/** Same query as inside TaskAttachments — for headers / counts on task detail. */
+export function useTaskAttachmentsQuery(taskId: string, organizationId: string) {
+  return useQuery({
+    queryKey: ['task-attachments', organizationId, taskId],
+    queryFn: () => loadAttachments(taskId, organizationId),
+    staleTime: Infinity,
+    enabled: !!taskId && !!organizationId,
+  });
+}
+
 function saveAttachments(
   taskId: string,
   organizationId: string,
@@ -96,6 +108,7 @@ export default function TaskAttachments({
   taskId,
   organizationId,
   disabled = false,
+  embedded = false,
 }: TaskAttachmentsProps) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
@@ -106,12 +119,7 @@ export default function TaskAttachments({
 
   const queryKey = ['task-attachments', organizationId, taskId];
 
-  const { data: attachments = [], isLoading } = useQuery({
-    queryKey,
-    queryFn: () => loadAttachments(taskId, organizationId),
-    staleTime: Infinity,
-    enabled: !!taskId && !!organizationId,
-  });
+  const { data: attachments = [], isLoading } = useTaskAttachmentsQuery(taskId, organizationId);
 
   const setAttachments = useCallback(
     (newAttachments: Attachment[]) => {
@@ -306,18 +314,8 @@ export default function TaskAttachments({
 
   const isImage = (type: string) => type.startsWith('image/');
 
-  return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-      <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-        <Paperclip className="w-5 h-5" />
-        {t('tasks.attachments.title', 'Attachments')}
-        {attachments.length > 0 && (
-          <span className="text-sm font-normal text-gray-500">
-            ({attachments.length})
-          </span>
-        )}
-      </h2>
-
+  const inner = (
+    <>
       {/* Upload Drop Zone */}
       {!disabled && (
         <div
@@ -384,9 +382,11 @@ export default function TaskAttachments({
           <Loader2 className="w-6 h-6 text-gray-400 animate-spin" />
         </div>
       ) : attachments.length === 0 ? (
-        <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
-          {t('tasks.attachments.noFiles', 'No attachments yet')}
-        </p>
+        !embedded ? (
+          <p className="py-4 text-center text-sm text-gray-500 dark:text-gray-400">
+            {t('tasks.attachments.noFiles', 'No attachments yet')}
+          </p>
+        ) : null
       ) : (
         <div className="space-y-3">
           {attachments.map((attachment) => {
@@ -486,6 +486,23 @@ export default function TaskAttachments({
           })}
         </div>
       )}
+    </>
+  );
+
+  if (embedded) {
+    return <div className="space-y-4">{inner}</div>;
+  }
+
+  return (
+    <div className="rounded-lg bg-white p-6 shadow dark:bg-gray-800">
+      <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-white">
+        <Paperclip className="h-5 w-5" />
+        {t('tasks.attachments.title', 'Attachments')}
+        {attachments.length > 0 && (
+          <span className="text-sm font-normal text-gray-500">({attachments.length})</span>
+        )}
+      </h2>
+      {inner}
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { workersApi, type PaginatedWorkerQuery } from '../lib/api/workers';
 import { withOfflineQueue } from '../lib/offline/withOfflineQueue';
 import type { PaginatedResponse } from '../lib/api/types';
 import type { WorkerFormData, WorkRecord, MetayageSettlement } from '../types/workers';
+import type { WorkersActivitySummary } from '../lib/api/workers';
 
 export type { PaginatedWorkerQuery };
 
@@ -290,5 +291,17 @@ export const useWorkerStats = (organizationId: string | null, workerId: string |
       return workersApi.getStats(organizationId, workerId);
     },
     enabled: !!organizationId && !!workerId,
+  });
+};
+
+export const useWorkersActivitySummary = (organizationId: string | null, days: number = 30) => {
+  return useQuery({
+    queryKey: ['workers-activity-summary', organizationId, days],
+    queryFn: async () => {
+      if (!organizationId) return {};
+      return workersApi.getActivitySummary(organizationId, days) as Promise<WorkersActivitySummary>;
+    },
+    enabled: !!organizationId,
+    staleTime: 5 * 60 * 1000,
   });
 };
