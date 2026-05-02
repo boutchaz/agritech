@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, lazy, Suspense } from 'react';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { useAICalibration } from '@/hooks/useAICalibration';
@@ -57,10 +57,20 @@ import {
 } from 'lucide-react';
 import { SelectionCard } from '@/components/onboarding';
 import { ButtonLoader, SectionLoader } from '@/components/ui/loader';
-import { CalibrationWizard } from '@/components/calibration/CalibrationWizard';
-import { RecalibrationWizard } from '@/components/calibration/RecalibrationWizard';
+// Wizards are heavy and only rendered when the user opens a dialog.
+// Code-split them so the initial calibration page payload shrinks.
+const CalibrationWizard = lazy(() =>
+  import('@/components/calibration/CalibrationWizard').then((m) => ({ default: m.CalibrationWizard })),
+);
+const RecalibrationWizard = lazy(() =>
+  import('@/components/calibration/RecalibrationWizard').then((m) => ({ default: m.RecalibrationWizard })),
+);
+const AnnualRecalibrationWizard = lazy(() =>
+  import('@/components/calibration/AnnualRecalibrationWizard').then((m) => ({
+    default: m.AnnualRecalibrationWizard,
+  })),
+);
 import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
-import { AnnualRecalibrationWizard } from '@/components/calibration/AnnualRecalibrationWizard';
 import { TargetYieldStep } from '@/components/calibration/TargetYieldStep';
 import { CalibrationRunInputsPanel } from '@/components/calibration/CalibrationRunInputsPanel';
 import { CalibrationReviewSection } from '@/components/calibration/review/CalibrationReviewSection';
@@ -1328,18 +1338,20 @@ const AICalibrationPage = () => {
       >
         <div data-testid="calibration-partial-recalibration-dialog">
           <div className="px-2 pt-2 pb-1 sm:px-4 sm:pt-4 sm:pb-2">
-            <RecalibrationWizard
-              parcelId={parcelId}
-              baselineData={reportData}
-              confidenceScore={
-                v2Output?.confidence.normalized_score != null
-                  ? (confidenceToFraction(v2Output.confidence.normalized_score) ??
-                    undefined)
-                  : undefined
-              }
-              onClose={handleCancelPartialRecalibration}
-              onSwitchToFullRecalibration={handleOpenFullRecalibrationWizard}
-            />
+            <Suspense fallback={<SectionLoader />}>
+              <RecalibrationWizard
+                parcelId={parcelId}
+                baselineData={reportData}
+                confidenceScore={
+                  v2Output?.confidence.normalized_score != null
+                    ? (confidenceToFraction(v2Output.confidence.normalized_score) ??
+                      undefined)
+                    : undefined
+                }
+                onClose={handleCancelPartialRecalibration}
+                onSwitchToFullRecalibration={handleOpenFullRecalibrationWizard}
+              />
+            </Suspense>
           </div>
         </div>
       </ResponsiveDialog>
@@ -1352,11 +1364,13 @@ const AICalibrationPage = () => {
         contentClassName="max-h-[92vh] overflow-y-auto p-0"
       >
           <div className="px-2 pt-2 pb-1 sm:px-4 sm:pt-4 sm:pb-2">
-            <CalibrationWizard
-              parcelId={parcelId}
-              parcelData={parcelData}
-              onStarted={handleCalibrationLaunchStarted}
-            />
+            <Suspense fallback={<SectionLoader />}>
+              <CalibrationWizard
+                parcelId={parcelId}
+                parcelData={parcelData}
+                onStarted={handleCalibrationLaunchStarted}
+              />
+            </Suspense>
           </div>
       </ResponsiveDialog>
 
@@ -1435,11 +1449,13 @@ const AICalibrationPage = () => {
       })()}
 
       {showAnnualRecalibrationWizard && (
-        <AnnualRecalibrationWizard
-          parcelId={parcelId}
-          estimatedCampaignCount={estimatedCampaignCount}
-          onClose={() => setShowAnnualRecalibrationWizard(false)}
-        />
+        <Suspense fallback={<SectionLoader />}>
+          <AnnualRecalibrationWizard
+            parcelId={parcelId}
+            estimatedCampaignCount={estimatedCampaignCount}
+            onClose={() => setShowAnnualRecalibrationWizard(false)}
+          />
+        </Suspense>
       )}
 
       {missingPlantingYear && (
@@ -1447,11 +1463,13 @@ const AICalibrationPage = () => {
       )}
 
       {isWizardPhase && !missingPlantingYear && !isFullWizardOpen && !isWaitingForCalibrationResult && (
-        <CalibrationWizard
-          parcelId={parcelId}
-          parcelData={parcelData}
-          onStarted={handleCalibrationLaunchStarted}
-        />
+        <Suspense fallback={<SectionLoader />}>
+          <CalibrationWizard
+            parcelId={parcelId}
+            parcelData={parcelData}
+            onStarted={handleCalibrationLaunchStarted}
+          />
+        </Suspense>
       )}
 
       {isCalibrating && (

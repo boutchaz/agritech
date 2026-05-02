@@ -83,7 +83,9 @@ const router = createRouter({
   routeTree,
   context: routerContext,
   defaultPreload: 'intent',
-  defaultPreloadStaleTime: 0,
+  // Was 0 — meant intent-preloaded data was stale on arrival, forcing a
+  // refetch. 30s lets navigations within a click's worth of time hit cache.
+  defaultPreloadStaleTime: 30 * 1000,
 })
 
 // Register the router instance for type safety
