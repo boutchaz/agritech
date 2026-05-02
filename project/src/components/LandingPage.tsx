@@ -10,17 +10,21 @@ import {
   LayoutGrid,
   Leaf,
   Mail,
+  Menu,
   Plus,
   Receipt,
   Sprout,
   Users,
   Warehouse,
+  X,
 } from 'lucide-react';
 import LanguageSwitcher from './LanguageSwitcher';
 import { appConfig } from '@/config/app';
 import DemoRequestForm from './landing/DemoRequestForm';
 
 import '../styles/onboarding-tokens.css';
+
+type T = (key: string, fallback?: string) => string;
 
 /* ────────────────────────────────────────────────────────── shared bits */
 
@@ -71,7 +75,7 @@ function SectionHead({
   dark?: boolean;
 }) {
   return (
-    <div style={{ maxWidth: 760, margin: '0 auto 56px', textAlign: 'center' }}>
+    <div className="lp-section-head">
       {eyebrow && (
         <div className="onb-mono-cap" style={{ color: dark ? 'var(--onb-brand-100)' : 'var(--onb-brand-700)', marginBottom: 14 }}>
           <span
@@ -81,19 +85,16 @@ function SectionHead({
               height: 1,
               background: dark ? 'var(--onb-brand-100)' : 'var(--onb-brand-600)',
               verticalAlign: 'middle',
-              marginRight: 8,
+              marginInlineEnd: 8,
             }}
           />
           {eyebrow}
         </div>
       )}
       <h2
-        className="onb-h-display"
+        className="onb-h-display lp-section-title"
         style={{
-          fontSize: 'clamp(34px, 4vw, 54px)',
-          margin: '0 0 18px',
           color: dark ? 'white' : 'var(--onb-ink-900)',
-          lineHeight: 1.05,
           textWrap: 'balance' as CSSProperties['textWrap'],
         }}
       >
@@ -101,14 +102,8 @@ function SectionHead({
       </h2>
       {subtitle && (
         <p
-          style={{
-            fontSize: 17,
-            lineHeight: 1.55,
-            color: dark ? 'rgba(255,255,255,.7)' : 'var(--onb-ink-600)',
-            margin: '0 auto',
-            maxWidth: 580,
-            textWrap: 'pretty' as CSSProperties['textWrap'],
-          }}
+          className="lp-section-sub"
+          style={{ color: dark ? 'rgba(255,255,255,.7)' : 'var(--onb-ink-600)', textWrap: 'pretty' as CSSProperties['textWrap'] }}
         >
           {subtitle}
         </p>
@@ -154,75 +149,111 @@ function FieldScene() {
           />
         );
       })}
-      <path
-        d="M150 220 q 8 -8 16 0 q 8 -8 16 0"
-        stroke="#3f6212"
-        strokeWidth="2"
-        fill="none"
-        strokeLinecap="round"
-      />
+      <path d="M150 220 q 8 -8 16 0 q 8 -8 16 0" stroke="#3f6212" strokeWidth="2" fill="none" strokeLinecap="round" />
     </svg>
   );
 }
 
 /* ────────────────────────────────────────────────────────── nav */
 
-function LandingNav({ onDemo }: { onDemo: () => void }) {
+function LandingNav({ t, onDemo, onTrial }: { t: T; onDemo: () => void; onTrial: () => void }) {
+  const [open, setOpen] = useState(false);
+  const links = [
+    { label: t('landing2.nav.platform', 'Plateforme'), href: '#platform' },
+    { label: t('landing2.nav.modules', 'Modules'), href: '#modules' },
+    { label: t('landing2.nav.pricing', 'Tarifs'), href: '#pricing' },
+    { label: t('landing2.nav.clients', 'Clients'), href: '#testimonials' },
+    { label: t('landing2.nav.faq', 'FAQ'), href: '#faq' },
+  ];
   return (
-    <header
-      style={{
-        position: 'sticky',
-        top: 0,
-        zIndex: 30,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '16px 40px',
-        background: 'rgba(244,246,240,.85)',
-        backdropFilter: 'blur(12px)',
-        borderBottom: '1px solid var(--onb-rule)',
-      }}
-    >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
+    <header className="lp-nav">
+      <div style={{ display: 'flex', alignItems: 'center', gap: 24, minWidth: 0 }}>
         <AgroginaWordmark size={26} />
-        <div style={{ width: 1, height: 16, background: 'var(--onb-rule)' }} />
-        <nav className="lp-nav-links" style={{ display: 'flex', gap: 22 }}>
-          {[
-            { label: 'Plateforme', href: '#platform' },
-            { label: 'Modules', href: '#modules' },
-            { label: 'Tarifs', href: '#pricing' },
-            { label: 'Clients', href: '#testimonials' },
-            { label: 'FAQ', href: '#faq' },
-          ].map((l) => (
-            <a
-              key={l.href}
-              href={l.href}
-              style={{ fontSize: 13, color: 'var(--onb-ink-700)', textDecoration: 'none', fontWeight: 500 }}
-            >
+        <div className="lp-nav-divider" />
+        <nav className="lp-nav-links">
+          {links.map((l) => (
+            <a key={l.href} href={l.href} className="lp-nav-link">
               {l.label}
             </a>
           ))}
         </nav>
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+      <div className="lp-nav-actions">
         <LanguageSwitcher />
-        <Link
-          to="/login"
-          search={{ redirect: undefined }}
-          style={{ fontSize: 13, color: 'var(--onb-ink-700)', textDecoration: 'none', fontWeight: 500 }}
-        >
-          Connexion
+        <Link to="/login" search={{ redirect: undefined }} className="lp-nav-link lp-login">
+          {t('landing2.nav.login', 'Connexion')}
         </Link>
-        <button
-          type="button"
-          onClick={onDemo}
-          className="onb-btn onb-btn-primary"
-          style={{ padding: '10px 18px', fontSize: 13, background: 'var(--onb-brand-600)' }}
-        >
-          Essai gratuit
+        <button type="button" onClick={onTrial} className="onb-btn onb-btn-primary lp-cta-btn">
+          {t('landing2.nav.trial', 'Essai gratuit')}
           <ArrowRight size={14} strokeWidth={1.8} />
         </button>
+        <button
+          type="button"
+          aria-label={t('landing2.nav.menu', 'Menu')}
+          onClick={() => setOpen(true)}
+          className="lp-nav-burger"
+        >
+          <Menu size={20} />
+        </button>
       </div>
+
+      {open && (
+        <div className="lp-mobile-nav" role="dialog" aria-modal="true">
+          <div className="lp-mobile-nav-head">
+            <AgroginaWordmark size={24} />
+            <button
+              type="button"
+              aria-label={t('landing2.nav.close', 'Fermer')}
+              onClick={() => setOpen(false)}
+              className="lp-icon-btn"
+            >
+              <X size={18} />
+            </button>
+          </div>
+          <nav className="lp-mobile-nav-links">
+            {links.map((l) => (
+              <a key={l.href} href={l.href} onClick={() => setOpen(false)}>
+                {l.label}
+              </a>
+            ))}
+          </nav>
+          <div className="lp-mobile-nav-actions">
+            <LanguageSwitcher />
+            <Link
+              to="/login"
+              search={{ redirect: undefined }}
+              onClick={() => setOpen(false)}
+              className="onb-btn onb-btn-ghost"
+              style={{ width: '100%' }}
+            >
+              {t('landing2.nav.login', 'Connexion')}
+            </Link>
+            <button
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                onTrial();
+              }}
+              className="onb-btn onb-btn-primary"
+              style={{ width: '100%' }}
+            >
+              {t('landing2.nav.trial', 'Essai gratuit')}
+              <ArrowRight size={16} strokeWidth={1.8} />
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                onDemo();
+              }}
+              className="onb-btn onb-btn-ghost"
+              style={{ width: '100%' }}
+            >
+              {t('landing2.nav.demo', 'Réserver une démo')}
+            </button>
+          </div>
+        </div>
+      )}
     </header>
   );
 }
@@ -248,32 +279,17 @@ function HeroStat({ label, value, unit, trend }: { label: string; value: string;
   );
 }
 
-function Hero({ onDemo, onTrial }: { onDemo: () => void; onTrial: () => void }) {
+function Hero({ t, onDemo, onTrial }: { t: T; onDemo: () => void; onTrial: () => void }) {
   const stats = [
-    { n: '12.4k', t: 'Exploitations actives' },
-    { n: '847k ha', t: 'Surface monitorée' },
-    { n: '14', t: 'Pays · MENA + EU' },
-    { n: '99.94%', t: 'Disponibilité réseau' },
+    { n: '12.4k', t: t('landing2.hero.statFarms', 'Exploitations actives') },
+    { n: '847k ha', t: t('landing2.hero.statSurface', 'Surface monitorée') },
+    { n: '14', t: t('landing2.hero.statCountries', 'Pays · MENA + EU') },
+    { n: '99.94%', t: t('landing2.hero.statUptime', 'Disponibilité réseau') },
   ];
   return (
-    <section
-      className="lp-hero"
-      style={{
-        display: 'grid',
-        minHeight: 'calc(100vh - 65px)',
-        borderBottom: '1px solid var(--onb-rule)',
-      }}
-    >
-      <div
-        style={{
-          padding: '72px 64px 56px',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'space-between',
-          gap: 48,
-        }}
-      >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+    <section className="lp-hero">
+      <div className="lp-hero-copy">
+        <div className="lp-hero-eyebrow-row">
           <span className="onb-mono-cap" style={{ color: 'var(--onb-brand-700)' }}>
             <span
               style={{
@@ -283,79 +299,54 @@ function Hero({ onDemo, onTrial }: { onDemo: () => void; onTrial: () => void }) 
                 borderRadius: 999,
                 background: 'var(--onb-brand-600)',
                 boxShadow: '0 0 0 4px rgba(16,185,129,.15)',
-                marginRight: 8,
+                marginInlineEnd: 8,
                 verticalAlign: 'middle',
               }}
             />
-            Plateforme agricole · Saison 25/26
+            {t('landing2.hero.badge', 'Plateforme agricole · Saison 25/26')}
           </span>
           <span className="onb-mono" style={{ fontSize: 10, color: 'var(--onb-ink-400)' }}>
-            v2026.05
+            {t('landing2.hero.version', 'v2026.05')}
           </span>
         </div>
 
         <div>
-          <h1
-            className="onb-h-display"
-            style={{
-              fontSize: 'clamp(48px, 6vw, 92px)',
-              margin: '0 0 24px',
-              color: 'var(--onb-ink-900)',
-              lineHeight: 0.96,
-              textWrap: 'balance' as CSSProperties['textWrap'],
-              maxWidth: 640,
-            }}
-          >
-            Cultivez
+          <h1 className="onb-h-display lp-hero-title">
+            {t('landing2.hero.titleL1', 'Cultivez')}
             <br />
-            avec{' '}
-            <em style={{ fontStyle: 'italic', fontWeight: 400, color: 'var(--onb-brand-700)' }}>précision.</em>
+            {t('landing2.hero.titleL2', 'avec ')}
+            <em style={{ fontStyle: 'italic', fontWeight: 400, color: 'var(--onb-brand-700)' }}>
+              {t('landing2.hero.titleEm', 'précision.')}
+            </em>
             <br />
-            Décidez avec données.
+            {t('landing2.hero.titleL3', 'Décidez avec données.')}
           </h1>
-          <p
-            style={{
-              fontSize: 19,
-              lineHeight: 1.5,
-              color: 'var(--onb-ink-600)',
-              maxWidth: 480,
-              margin: '0 0 32px',
-              textWrap: 'pretty' as CSSProperties['textWrap'],
-            }}
-          >
-            Agrogina réunit la gestion de vos parcelles, vos équipes, vos stocks et vos capteurs dans un seul espace —
-            de la graine à la facture.
+          <p className="lp-hero-sub">
+            {t(
+              'landing2.hero.subtitle',
+              "Agrogina réunit la gestion de vos parcelles, vos équipes, vos stocks et vos capteurs dans un seul espace — de la graine à la facture.",
+            )}
           </p>
 
-          <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', marginBottom: 24 }}>
-            <button
-              type="button"
-              onClick={onTrial}
-              className="onb-btn onb-btn-primary"
-              style={{ padding: '18px 28px', fontSize: 15 }}
-            >
-              Démarrer l'essai gratuit
+          <div className="lp-hero-ctas">
+            <button type="button" onClick={onTrial} className="onb-btn onb-btn-primary lp-cta-primary">
+              {t('landing2.hero.ctaTrial', "Démarrer l'essai gratuit")}
               <ArrowRight size={18} strokeWidth={1.8} />
             </button>
-            <button
-              type="button"
-              onClick={onDemo}
-              className="onb-btn onb-btn-ghost"
-              style={{ padding: '18px 22px', fontSize: 14 }}
-            >
-              Réserver une démo
+            <button type="button" onClick={onDemo} className="onb-btn onb-btn-ghost lp-cta-ghost">
+              {t('landing2.hero.ctaDemo', 'Réserver une démo')}
             </button>
-            <span className="onb-mono" style={{ fontSize: 11, color: 'var(--onb-ink-400)', marginLeft: 4 }}>
-              14 jours · sans carte
+            <span className="onb-mono lp-trial-note">
+              {t('landing2.hero.trialNote', '14 jours · sans carte')}
             </span>
           </div>
         </div>
 
-        <div style={{ borderTop: '1px solid var(--onb-rule)', paddingTop: 22 }}>
+        <div className="lp-hero-stats">
           <div className="onb-mono-cap" style={{ marginBottom: 14, color: 'var(--onb-ink-500)' }}>
-            Conçu pour la réalité du terrain
+            {t('landing2.hero.statsTitle', 'Conçu pour la réalité du terrain')}
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 22 }}>
+          <div className="lp-hero-stats-grid">
             {stats.map((s) => (
               <div key={s.t}>
                 <div className="onb-h-display" style={{ fontSize: 26, lineHeight: 1, marginBottom: 6 }}>
@@ -373,83 +364,38 @@ function Hero({ onDemo, onTrial }: { onDemo: () => void; onTrial: () => void }) 
         </div>
       </div>
 
-      <div
-        className="lp-hero-visual"
-        style={{
-          background: 'linear-gradient(160deg, #eef5e0 0%, #e2ecd0 60%, #d2dfba 100%)',
-          position: 'relative',
-          overflow: 'hidden',
-          borderLeft: '1px solid var(--onb-rule)',
-        }}
-      >
+      <div className="lp-hero-visual">
         <FieldScene />
 
-        <div
-          style={{
-            position: 'absolute',
-            top: 32,
-            right: 32,
-            background: 'rgba(255,255,255,.92)',
-            backdropFilter: 'blur(10px)',
-            border: '1px solid var(--onb-rule)',
-            borderRadius: 14,
-            padding: '14px 16px',
-            minWidth: 240,
-            boxShadow: 'var(--onb-sh-md)',
-          }}
-        >
+        <div className="lp-hero-station">
           <div className="onb-mono-cap" style={{ marginBottom: 10, fontSize: 9.5 }}>
-            Station · Champ Nord-7
+            {t('landing2.hero.station', 'Station · Champ Nord-7')}
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 14 }}>
-            <HeroStat label="Sol" value="58%" unit="hum" trend="up" />
-            <HeroStat label="Air" value="22°" unit="C" trend="flat" />
-            <HeroStat label="Vent" value="11" unit="km/h" trend="up" />
+            <HeroStat label={t('landing2.hero.soil', 'Sol')} value="58%" unit={t('landing2.hero.unitHum', 'hum')} trend="up" />
+            <HeroStat label={t('landing2.hero.air', 'Air')} value="22°" unit="C" trend="flat" />
+            <HeroStat label={t('landing2.hero.wind', 'Vent')} value="11" unit="km/h" trend="up" />
           </div>
           <div className="onb-tick-rule" style={{ margin: '12px 0 8px' }} />
           <div
             className="onb-mono"
             style={{ fontSize: 9.5, color: 'var(--onb-ink-400)', display: 'flex', justifyContent: 'space-between' }}
           >
-            <span>↻ Sync · 12s</span>
+            <span>{t('landing2.hero.sync', '↻ Sync · 12s')}</span>
             <span>NODE-A7Q</span>
           </div>
         </div>
 
-        <div
-          style={{
-            position: 'absolute',
-            bottom: 32,
-            left: 32,
-            padding: '10px 14px',
-            borderRadius: 10,
-            background: 'rgba(15, 32, 26, .82)',
-            color: 'white',
-            backdropFilter: 'blur(10px)',
-            fontSize: 11,
-          }}
-        >
+        <div className="lp-hero-region">
           <div className="onb-mono-cap" style={{ color: 'rgba(255,255,255,.55)', marginBottom: 4, fontSize: 9 }}>
-            Région · Marrakech-Safi
+            {t('landing2.hero.region', 'Région · Marrakech-Safi')}
           </div>
           <div className="onb-mono" style={{ fontSize: 12 }}>
             31.6294° N &nbsp;·&nbsp; 7.9811° W
           </div>
         </div>
 
-        <div
-          style={{
-            position: 'absolute',
-            bottom: 32,
-            right: 32,
-            background: 'white',
-            borderRadius: 12,
-            padding: '12px 14px',
-            maxWidth: 240,
-            border: '1px solid var(--onb-rule)',
-            boxShadow: 'var(--onb-sh-md)',
-          }}
-        >
+        <div className="lp-hero-alert">
           <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
             <div
               style={{
@@ -468,10 +414,10 @@ function Hero({ onDemo, onTrial }: { onDemo: () => void; onTrial: () => void }) 
             </div>
             <div>
               <div className="onb-mono-cap" style={{ fontSize: 9, color: 'var(--onb-ink-500)', marginBottom: 3 }}>
-                Alerte · 09h12
+                {t('landing2.hero.alert', 'Alerte · 09h12')}
               </div>
               <div style={{ fontSize: 12.5, fontWeight: 500, lineHeight: 1.35 }}>
-                Irrigation recommandée · Parcelle 4-B
+                {t('landing2.hero.alertText', 'Irrigation recommandée · Parcelle 4-B')}
               </div>
             </div>
           </div>
@@ -485,7 +431,7 @@ function Hero({ onDemo, onTrial }: { onDemo: () => void; onTrial: () => void }) 
 
 /* ────────────────────────────────────────────────────────── logo strip */
 
-function LogoStrip() {
+function LogoStrip({ t }: { t: T }) {
   const partners = [
     'Coopérative Atlas',
     'OCP Agri',
@@ -497,25 +443,11 @@ function LogoStrip() {
     'Domaine Royal',
   ];
   return (
-    <section
-      style={{
-        padding: '36px 40px',
-        borderBottom: '1px solid var(--onb-rule)',
-        background: 'var(--onb-bg-paper)',
-      }}
-    >
+    <section className="lp-logos-section">
       <div className="onb-mono-cap" style={{ textAlign: 'center', marginBottom: 22, color: 'var(--onb-ink-500)' }}>
-        Ils nous font confiance
+        {t('landing2.logos.title', 'Ils nous font confiance')}
       </div>
-      <div
-        className="lp-logos"
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(8, 1fr)',
-          gap: 18,
-          alignItems: 'center',
-        }}
-      >
+      <div className="lp-logos">
         {partners.map((p, i) => (
           <div
             key={p}
@@ -540,13 +472,26 @@ function LogoStrip() {
 
 /* ────────────────────────────────────────────────────────── product preview */
 
-function MapMock() {
-  const parcels = ['Nord-7 · Blé', 'Est-3 · Olivier', 'Sud-1 · Agrumes', 'Ouest-5 · Maraîchage', 'Nord-2 · Jachère'];
+function MapMock({ t }: { t: T }) {
+  const parcels = [
+    t('landing2.mock.p1', 'Nord-7 · Blé'),
+    t('landing2.mock.p2', 'Est-3 · Olivier'),
+    t('landing2.mock.p3', 'Sud-1 · Agrumes'),
+    t('landing2.mock.p4', 'Ouest-5 · Maraîchage'),
+    t('landing2.mock.p5', 'Nord-2 · Jachère'),
+  ];
+  const details: [string, string][] = [
+    [t('landing2.mock.crop', 'Culture'), t('landing2.mock.cropV', 'Blé tendre')],
+    [t('landing2.mock.area', 'Surface'), '49.2 ha'],
+    [t('landing2.mock.stage', 'Stade'), t('landing2.mock.stageV', 'Tallage')],
+    [t('landing2.mock.soilHum', 'Humidité sol'), '58%'],
+    [t('landing2.mock.lastRain', 'Dernière pluie'), t('landing2.mock.lastRainV', 'Il y a 4j')],
+  ];
   return (
-    <div className="lp-mock-map" style={{ display: 'grid', gridTemplateColumns: '260px 1fr 280px', height: 'calc(100% - 41px)' }}>
-      <aside style={{ borderRight: '1px solid var(--onb-rule)', padding: 16, background: 'var(--onb-bg-paper)' }}>
+    <div className="lp-mock-map">
+      <aside className="lp-mock-side">
         <div className="onb-mono-cap" style={{ marginBottom: 12, fontSize: 9.5 }}>
-          Parcelles · 12
+          {t('landing2.mock.parcels', 'Parcelles · 12')}
         </div>
         {parcels.map((p, i) => (
           <div
@@ -614,18 +559,12 @@ function MapMock() {
           />
         ))}
       </div>
-      <aside style={{ borderLeft: '1px solid var(--onb-rule)', padding: 16, fontSize: 12 }}>
+      <aside className="lp-mock-side lp-mock-side-right">
         <div className="onb-mono-cap" style={{ marginBottom: 12, fontSize: 9.5 }}>
-          Détails · Nord-7
+          {t('landing2.mock.details', 'Détails · Nord-7')}
         </div>
         <div style={{ display: 'grid', gap: 10 }}>
-          {[
-            ['Culture', 'Blé tendre'],
-            ['Surface', '49.2 ha'],
-            ['Stade', 'Tallage'],
-            ['Humidité sol', '58%'],
-            ['Dernière pluie', 'Il y a 4j'],
-          ].map(([k, v]) => (
+          {details.map(([k, v]) => (
             <div
               key={k}
               style={{
@@ -633,6 +572,7 @@ function MapMock() {
                 justifyContent: 'space-between',
                 borderBottom: '1px dashed var(--onb-rule)',
                 paddingBottom: 6,
+                fontSize: 12,
               }}
             >
               <span style={{ color: 'var(--onb-ink-500)' }}>{k}</span>
@@ -651,36 +591,37 @@ function MapMock() {
             lineHeight: 1.4,
           }}
         >
-          <strong>Recommandation :</strong> irrigation 18mm dans les 48h.
+          <strong>{t('landing2.mock.recoLabel', 'Recommandation :')}</strong>{' '}
+          {t('landing2.mock.recoText', 'irrigation 18mm dans les 48h.')}
         </div>
       </aside>
     </div>
   );
 }
 
-function TasksMock() {
+function TasksMock({ t }: { t: T }) {
   type Status = 'done' | 'active' | 'pending';
   const tasks: { time: string; who: string; task: string; dur: string; status: Status }[] = [
-    { time: '06:30', who: 'Hassan A.', task: 'Irrigation · Parcelle 4-B', dur: '2h', status: 'done' },
-    { time: '08:00', who: 'Équipe Récolte', task: 'Cueillette agrumes · Sud-1', dur: '5h', status: 'active' },
-    { time: '10:00', who: 'Karim M.', task: 'Traitement bio · Olivier', dur: '3h', status: 'active' },
-    { time: '14:00', who: 'Saida B.', task: 'Inspection capteurs · Nord-7', dur: '1h', status: 'pending' },
-    { time: '16:00', who: 'Équipe Stock', task: 'Réception engrais · Entrepôt 2', dur: '2h', status: 'pending' },
+    { time: '06:30', who: 'Hassan A.', task: t('landing2.tasks.t1', 'Irrigation · Parcelle 4-B'), dur: '2h', status: 'done' },
+    { time: '08:00', who: t('landing2.tasks.team1', 'Équipe Récolte'), task: t('landing2.tasks.t2', 'Cueillette agrumes · Sud-1'), dur: '5h', status: 'active' },
+    { time: '10:00', who: 'Karim M.', task: t('landing2.tasks.t3', 'Traitement bio · Olivier'), dur: '3h', status: 'active' },
+    { time: '14:00', who: 'Saida B.', task: t('landing2.tasks.t4', 'Inspection capteurs · Nord-7'), dur: '1h', status: 'pending' },
+    { time: '16:00', who: t('landing2.tasks.team2', 'Équipe Stock'), task: t('landing2.tasks.t5', 'Réception engrais · Entrepôt 2'), dur: '2h', status: 'pending' },
   ];
   return (
     <div style={{ padding: 24, height: 'calc(100% - 41px)', overflow: 'hidden' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 18 }}>
         <h3 className="onb-h-display" style={{ fontSize: 22, margin: 0 }}>
-          Aujourd'hui · Mardi 5 mai
+          {t('landing2.tasks.today', "Aujourd'hui · Mardi 5 mai")}
         </h3>
         <span className="onb-mono" style={{ fontSize: 11, color: 'var(--onb-ink-500)' }}>
-          5 tâches · 13h
+          {t('landing2.tasks.summary', '5 tâches · 13h')}
         </span>
       </div>
       <div style={{ display: 'grid', gap: 6 }}>
-        {tasks.map((t) => (
+        {tasks.map((task) => (
           <div
-            key={t.time}
+            key={task.time}
             style={{
               display: 'grid',
               gridTemplateColumns: '60px 1fr auto auto',
@@ -688,19 +629,19 @@ function TasksMock() {
               alignItems: 'center',
               padding: '12px 14px',
               borderRadius: 10,
-              background: t.status === 'active' ? 'var(--onb-brand-50)' : 'var(--onb-bg-paper)',
+              background: task.status === 'active' ? 'var(--onb-brand-50)' : 'var(--onb-bg-paper)',
               border: '1px solid var(--onb-rule)',
             }}
           >
             <span className="onb-mono" style={{ fontSize: 12, color: 'var(--onb-ink-700)' }}>
-              {t.time}
+              {task.time}
             </span>
             <div>
-              <div style={{ fontSize: 13.5, fontWeight: 500 }}>{t.task}</div>
-              <div style={{ fontSize: 11.5, color: 'var(--onb-ink-500)', marginTop: 2 }}>{t.who}</div>
+              <div style={{ fontSize: 13.5, fontWeight: 500 }}>{task.task}</div>
+              <div style={{ fontSize: 11.5, color: 'var(--onb-ink-500)', marginTop: 2 }}>{task.who}</div>
             </div>
             <span className="onb-mono" style={{ fontSize: 11, color: 'var(--onb-ink-500)' }}>
-              {t.dur}
+              {task.dur}
             </span>
             <span
               className="onb-mono"
@@ -709,16 +650,20 @@ function TasksMock() {
                 padding: '3px 8px',
                 borderRadius: 4,
                 background:
-                  t.status === 'done' ? 'var(--onb-ink-100)' : t.status === 'active' ? 'var(--onb-brand-600)' : 'transparent',
+                  task.status === 'done' ? 'var(--onb-ink-100)' : task.status === 'active' ? 'var(--onb-brand-600)' : 'transparent',
                 color:
-                  t.status === 'done' ? 'var(--onb-ink-600)' : t.status === 'active' ? 'white' : 'var(--onb-ink-500)',
-                border: t.status === 'pending' ? '1px solid var(--onb-rule)' : 0,
+                  task.status === 'done' ? 'var(--onb-ink-600)' : task.status === 'active' ? 'white' : 'var(--onb-ink-500)',
+                border: task.status === 'pending' ? '1px solid var(--onb-rule)' : 0,
                 textTransform: 'uppercase',
                 letterSpacing: '0.06em',
                 fontWeight: 600,
               }}
             >
-              {t.status === 'done' ? '✓ Fait' : t.status === 'active' ? '● En cours' : 'À venir'}
+              {task.status === 'done'
+                ? t('landing2.tasks.done', '✓ Fait')
+                : task.status === 'active'
+                ? t('landing2.tasks.active', '● En cours')
+                : t('landing2.tasks.pending', 'À venir')}
             </span>
           </div>
         ))}
@@ -727,25 +672,39 @@ function TasksMock() {
   );
 }
 
-function YieldMock() {
+function YieldStat({ label, value, trend }: { label: string; value: string; trend?: string }) {
+  return (
+    <div>
+      <div className="onb-mono-cap" style={{ fontSize: 9, marginBottom: 3 }}>
+        {label}
+      </div>
+      <div className="onb-h-display" style={{ fontSize: 18, lineHeight: 1 }}>
+        {value}
+        {trend && <span style={{ fontSize: 11, color: 'var(--onb-brand-600)', marginInlineStart: 4 }}>{trend}</span>}
+      </div>
+    </div>
+  );
+}
+
+function YieldMock({ t }: { t: T }) {
   const data = [42, 48, 55, 61, 58, 67, 72, 78, 81, 76, 84, 91];
   const max = Math.max(...data);
   const months = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
   return (
     <div style={{ padding: 24, height: 'calc(100% - 41px)' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 18 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 18, flexWrap: 'wrap', gap: 12 }}>
         <div>
           <h3 className="onb-h-display" style={{ fontSize: 22, margin: 0 }}>
-            Rendement · Saison 25/26
+            {t('landing2.yield.title', 'Rendement · Saison 25/26')}
           </h3>
           <div className="onb-mono" style={{ fontSize: 11, color: 'var(--onb-ink-500)', marginTop: 4 }}>
-            Tonnes / hectare · toutes parcelles
+            {t('landing2.yield.sub', 'Tonnes / hectare · toutes parcelles')}
           </div>
         </div>
         <div style={{ display: 'flex', gap: 18 }}>
-          <YieldStat label="Total" value="2 847 t" />
-          <YieldStat label="Moy./ha" value="6.8 t" trend="+12%" />
-          <YieldStat label="Objectif" value="3 200 t" />
+          <YieldStat label={t('landing2.yield.total', 'Total')} value="2 847 t" />
+          <YieldStat label={t('landing2.yield.avg', 'Moy./ha')} value="6.8 t" trend="+12%" />
+          <YieldStat label={t('landing2.yield.target', 'Objectif')} value="3 200 t" />
         </div>
       </div>
       <div
@@ -758,7 +717,7 @@ function YieldMock() {
         }}
       >
         {data.map((v, i) => (
-          <div key={months[i]} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+          <div key={months[i] + i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
             <div
               style={{
                 width: '100%',
@@ -795,127 +754,55 @@ function YieldMock() {
   );
 }
 
-function YieldStat({ label, value, trend }: { label: string; value: string; trend?: string }) {
-  return (
-    <div>
-      <div className="onb-mono-cap" style={{ fontSize: 9, marginBottom: 3 }}>
-        {label}
-      </div>
-      <div className="onb-h-display" style={{ fontSize: 18, lineHeight: 1 }}>
-        {value}
-        {trend && (
-          <span style={{ fontSize: 11, color: 'var(--onb-brand-600)', marginLeft: 4 }}>{trend}</span>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function ProductPreview() {
+function ProductPreview({ t }: { t: T }) {
   const [tab, setTab] = useState<'map' | 'tasks' | 'yield'>('map');
   const tabs = [
-    { id: 'map' as const, l: 'Carte parcellaire' },
-    { id: 'tasks' as const, l: 'Tâches du jour' },
-    { id: 'yield' as const, l: 'Rendements' },
+    { id: 'map' as const, l: t('landing2.platform.tabMap', 'Carte parcellaire') },
+    { id: 'tasks' as const, l: t('landing2.platform.tabTasks', 'Tâches du jour') },
+    { id: 'yield' as const, l: t('landing2.platform.tabYield', 'Rendements') },
   ];
   return (
-    <section id="platform" style={{ padding: '100px 40px', borderBottom: '1px solid var(--onb-rule)' }}>
+    <section id="platform" className="lp-section">
       <SectionHead
-        eyebrow="01 · Plateforme"
+        eyebrow={t('landing2.platform.eyebrow', '01 · Plateforme')}
         title={
           <>
-            Un poste de pilotage{' '}
-            <em style={{ fontStyle: 'italic', color: 'var(--onb-brand-700)' }}>pour toute la ferme.</em>
+            {t('landing2.platform.titlePre', 'Un poste de pilotage ')}
+            <em style={{ fontStyle: 'italic', color: 'var(--onb-brand-700)' }}>
+              {t('landing2.platform.titleEm', 'pour toute la ferme.')}
+            </em>
           </>
         }
-        subtitle="Cartographie temps-réel, planification des tâches, suivi des cultures et de la météo — réunis dans une interface pensée par et pour les agriculteurs."
+        subtitle={t(
+          'landing2.platform.subtitle',
+          'Cartographie temps-réel, planification des tâches, suivi des cultures et de la météo — réunis dans une interface pensée par et pour les agriculteurs.',
+        )}
       />
-      <div
-        style={{
-          display: 'flex',
-          gap: 4,
-          padding: 4,
-          background: 'white',
-          border: '1px solid var(--onb-rule)',
-          borderRadius: 999,
-          width: 'fit-content',
-          margin: '0 auto 28px',
-        }}
-      >
-        {tabs.map((t) => (
+      <div className="lp-tabs">
+        {tabs.map((tb) => (
           <button
-            key={t.id}
+            key={tb.id}
             type="button"
-            onClick={() => setTab(t.id)}
-            style={{
-              padding: '8px 18px',
-              borderRadius: 999,
-              border: 0,
-              background: tab === t.id ? 'var(--onb-ink-900)' : 'transparent',
-              color: tab === t.id ? 'white' : 'var(--onb-ink-600)',
-              fontFamily: 'inherit',
-              fontSize: 13,
-              fontWeight: 500,
-              cursor: 'pointer',
-              transition: 'all .2s',
-            }}
+            onClick={() => setTab(tb.id)}
+            className={`lp-tab ${tab === tb.id ? 'lp-tab-active' : ''}`}
           >
-            {t.l}
+            {tb.l}
           </button>
         ))}
       </div>
-      <div
-        style={{
-          maxWidth: 1240,
-          margin: '0 auto',
-          background: 'var(--onb-ink-900)',
-          borderRadius: 18,
-          padding: 8,
-          boxShadow: '0 24px 60px rgba(20, 40, 30, .12), 0 4px 12px rgba(20, 40, 30, .06)',
-        }}
-      >
-        <div
-          style={{
-            background: 'white',
-            borderRadius: 12,
-            overflow: 'hidden',
-            aspectRatio: '16 / 9',
-            position: 'relative',
-          }}
-        >
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-              padding: '10px 14px',
-              borderBottom: '1px solid var(--onb-rule)',
-              background: 'var(--onb-bg-paper)',
-            }}
-          >
+      <div className="lp-mock-frame">
+        <div className="lp-mock-window">
+          <div className="lp-mock-window-bar">
             <div style={{ display: 'flex', gap: 5 }}>
-              {['#e8e6df', '#e8e6df', '#e8e6df'].map((c, i) => (
-                <span key={i} style={{ width: 10, height: 10, borderRadius: 999, background: c }} />
+              {[0, 1, 2].map((i) => (
+                <span key={i} style={{ width: 10, height: 10, borderRadius: 999, background: '#e8e6df' }} />
               ))}
             </div>
-            <div
-              className="onb-mono"
-              style={{
-                fontSize: 11,
-                color: 'var(--onb-ink-500)',
-                marginLeft: 14,
-                padding: '4px 10px',
-                background: 'white',
-                borderRadius: 6,
-                border: '1px solid var(--onb-rule)',
-              }}
-            >
-              agrogina.ma/mabella · {tab}
-            </div>
+            <div className="onb-mono lp-mock-url">agrogina.ma/mabella · {tab}</div>
           </div>
-          {tab === 'map' && <MapMock />}
-          {tab === 'tasks' && <TasksMock />}
-          {tab === 'yield' && <YieldMock />}
+          {tab === 'map' && <MapMock t={t} />}
+          {tab === 'tasks' && <TasksMock t={t} />}
+          {tab === 'yield' && <YieldMock t={t} />}
         </div>
       </div>
     </section>
@@ -924,70 +811,38 @@ function ProductPreview() {
 
 /* ────────────────────────────────────────────────────────── modules */
 
-function ModulesSection() {
+function ModulesSection({ t }: { t: T }) {
   const mods = [
-    { n: '01', icon: Sprout, title: 'Multi-Fermes & Parcellaire', desc: 'Cartographie de vos parcelles, cultures, rotations.' },
-    { n: '02', icon: LayoutGrid, title: 'Dashboard & Live Map', desc: 'Suivi temps-réel — météo, capteurs, équipes.' },
-    { n: '03', icon: CheckCircle2, title: 'Tâches Agronomiques', desc: 'Planification, suivi GPS, signature de fin.' },
-    { n: '04', icon: Leaf, title: 'Récolte & Traçabilité', desc: 'Lots, destinations, traçabilité de la graine au client.' },
-    { n: '05', icon: Users, title: 'RH & Paie Agronomique', desc: 'Personnel fixe et journalier, paie, contrats.' },
-    { n: '06', icon: Warehouse, title: 'Stocks & Entrepôts', desc: 'Alertes, fournisseurs, mouvements multi-sites.' },
-    { n: '07', icon: Receipt, title: 'Compta & Facturation', desc: 'Devis, factures, relances, exports comptables.' },
-    { n: '08', icon: Brain, title: 'Assistant IA', desc: 'Posez des questions à vos données en langage naturel.' },
+    { n: '01', icon: Sprout, title: t('landing2.mod.m1', 'Multi-Fermes & Parcellaire'), desc: t('landing2.mod.m1d', 'Cartographie de vos parcelles, cultures, rotations.') },
+    { n: '02', icon: LayoutGrid, title: t('landing2.mod.m2', 'Dashboard & Live Map'), desc: t('landing2.mod.m2d', 'Suivi temps-réel — météo, capteurs, équipes.') },
+    { n: '03', icon: CheckCircle2, title: t('landing2.mod.m3', 'Tâches Agronomiques'), desc: t('landing2.mod.m3d', 'Planification, suivi GPS, signature de fin.') },
+    { n: '04', icon: Leaf, title: t('landing2.mod.m4', 'Récolte & Traçabilité'), desc: t('landing2.mod.m4d', 'Lots, destinations, traçabilité de la graine au client.') },
+    { n: '05', icon: Users, title: t('landing2.mod.m5', 'RH & Paie Agronomique'), desc: t('landing2.mod.m5d', 'Personnel fixe et journalier, paie, contrats.') },
+    { n: '06', icon: Warehouse, title: t('landing2.mod.m6', 'Stocks & Entrepôts'), desc: t('landing2.mod.m6d', 'Alertes, fournisseurs, mouvements multi-sites.') },
+    { n: '07', icon: Receipt, title: t('landing2.mod.m7', 'Compta & Facturation'), desc: t('landing2.mod.m7d', 'Devis, factures, relances, exports comptables.') },
+    { n: '08', icon: Brain, title: t('landing2.mod.m8', 'Assistant IA'), desc: t('landing2.mod.m8d', 'Posez des questions à vos données en langage naturel.') },
   ];
   return (
-    <section
-      id="modules"
-      style={{ padding: '100px 40px', borderBottom: '1px solid var(--onb-rule)', background: 'var(--onb-bg-paper)' }}
-    >
+    <section id="modules" className="lp-section lp-section-paper">
       <SectionHead
-        eyebrow="02 · Modules"
+        eyebrow={t('landing2.modules.eyebrow', '02 · Modules')}
         title={
           <>
-            Une plateforme. <em style={{ fontStyle: 'italic', color: 'var(--onb-brand-700)' }}>Huit métiers.</em>
+            {t('landing2.modules.titlePre', 'Une plateforme. ')}
+            <em style={{ fontStyle: 'italic', color: 'var(--onb-brand-700)' }}>
+              {t('landing2.modules.titleEm', 'Huit métiers.')}
+            </em>
           </>
         }
-        subtitle="Activez ce dont vous avez besoin. Tout est intégré, rien n'est cloisonné."
+        subtitle={t('landing2.modules.subtitle', "Activez ce dont vous avez besoin. Tout est intégré, rien n'est cloisonné.")}
       />
-      <div
-        className="lp-modules"
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(4, 1fr)',
-          gap: 1,
-          background: 'var(--onb-rule)',
-          border: '1px solid var(--onb-rule)',
-          maxWidth: 1240,
-          margin: '0 auto',
-        }}
-      >
+      <div className="lp-modules">
         {mods.map((m) => {
           const Icon = m.icon;
           return (
-            <div
-              key={m.n}
-              style={{
-                background: 'white',
-                padding: '28px 24px',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 14,
-                minHeight: 200,
-              }}
-            >
+            <div key={m.n} className="lp-module-tile">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <div
-                  style={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: 10,
-                    background: 'var(--onb-brand-50)',
-                    color: 'var(--onb-brand-700)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
+                <div className="lp-module-icon">
                   <Icon size={20} strokeWidth={1.6} />
                 </div>
                 <span className="onb-mono" style={{ fontSize: 10, color: 'var(--onb-ink-400)' }}>
@@ -1010,46 +865,35 @@ function ModulesSection() {
 
 /* ────────────────────────────────────────────────────────── how it works */
 
-function HowItWorks() {
+function HowItWorks({ t }: { t: T }) {
   const steps = [
-    { n: '01', title: 'Configurez en 3 minutes', desc: 'Onboarding guidé : profil, exploitation, modules. Pas de paperasse.' },
-    { n: '02', title: 'Tracez vos parcelles', desc: 'Importez un fichier KML ou délimitez à la main sur la carte satellite.' },
-    { n: '03', title: 'Connectez vos capteurs', desc: 'Stations météo, sondes, automatismes — compatibles Modbus, LoRa, GSM.' },
-    { n: '04', title: 'Pilotez la saison', desc: 'Tâches, équipes, rendements, factures — tout dans une vue unifiée.' },
+    { n: '01', title: t('landing2.steps.s1', 'Configurez en 3 minutes'), desc: t('landing2.steps.s1d', 'Onboarding guidé : profil, exploitation, modules. Pas de paperasse.') },
+    { n: '02', title: t('landing2.steps.s2', 'Tracez vos parcelles'), desc: t('landing2.steps.s2d', 'Importez un fichier KML ou délimitez à la main sur la carte satellite.') },
+    { n: '03', title: t('landing2.steps.s3', 'Connectez vos capteurs'), desc: t('landing2.steps.s3d', 'Stations météo, sondes, automatismes — compatibles Modbus, LoRa, GSM.') },
+    { n: '04', title: t('landing2.steps.s4', 'Pilotez la saison'), desc: t('landing2.steps.s4d', 'Tâches, équipes, rendements, factures — tout dans une vue unifiée.') },
   ];
   return (
-    <section style={{ padding: '100px 40px', borderBottom: '1px solid var(--onb-rule)' }}>
+    <section className="lp-section">
       <SectionHead
-        eyebrow="03 · Démarrage"
+        eyebrow={t('landing2.steps.eyebrow', '03 · Démarrage')}
         title={
           <>
-            De l'inscription au pilotage,{' '}
-            <em style={{ fontStyle: 'italic', color: 'var(--onb-brand-700)' }}>en une matinée.</em>
+            {t('landing2.steps.titlePre', "De l'inscription au pilotage, ")}
+            <em style={{ fontStyle: 'italic', color: 'var(--onb-brand-700)' }}>
+              {t('landing2.steps.titleEm', 'en une matinée.')}
+            </em>
           </>
         }
-        subtitle="Pas besoin d'équipe IT. Pas de migration sans fin. Vous vous occupez du terrain."
+        subtitle={t('landing2.steps.subtitle', "Pas besoin d'équipe IT. Pas de migration sans fin. Vous vous occupez du terrain.")}
       />
-      <div className="lp-steps" style={{ maxWidth: 1100, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)' }}>
+      <div className="lp-steps">
         {steps.map((s, i) => (
-          <div
-            key={s.n}
-            style={{
-              padding: '28px 24px',
-              borderLeft: i === 0 ? 0 : '1px solid var(--onb-rule)',
-              position: 'relative',
-            }}
-          >
+          <div key={s.n} className="lp-step" style={{ borderInlineStart: i === 0 ? 0 : '1px solid var(--onb-rule)' }}>
             <div
               className="onb-mono"
-              style={{
-                fontSize: 11,
-                color: 'var(--onb-brand-700)',
-                fontWeight: 600,
-                marginBottom: 18,
-                letterSpacing: '0.04em',
-              }}
+              style={{ fontSize: 11, color: 'var(--onb-brand-700)', fontWeight: 600, marginBottom: 18, letterSpacing: '0.04em' }}
             >
-              ÉTAPE {s.n}
+              {t('landing2.steps.label', 'ÉTAPE')} {s.n}
             </div>
             <h4 className="onb-h-display" style={{ fontSize: 22, margin: '0 0 10px', lineHeight: 1.1 }}>
               {s.title}
@@ -1064,24 +908,15 @@ function HowItWorks() {
 
 /* ────────────────────────────────────────────────────────── stats band */
 
-function StatsBand() {
+function StatsBand({ t }: { t: T }) {
   const stats = [
-    { v: '+24%', l: 'Rendement moyen', s: 'Sur cultures monitorées' },
-    { v: '−38%', l: "Consommation d'eau", s: 'Irrigation optimisée' },
-    { v: '6.2h', l: 'Économisées / sem.', s: 'Tâches automatisées' },
-    { v: '4.9/5', l: 'Satisfaction client', s: '847 avis vérifiés' },
+    { v: '+24%', l: t('landing2.statsBand.s1', 'Rendement moyen'), s: t('landing2.statsBand.s1d', 'Sur cultures monitorées') },
+    { v: '−38%', l: t('landing2.statsBand.s2', "Consommation d'eau"), s: t('landing2.statsBand.s2d', 'Irrigation optimisée') },
+    { v: '6.2h', l: t('landing2.statsBand.s3', 'Économisées / sem.'), s: t('landing2.statsBand.s3d', 'Tâches automatisées') },
+    { v: '4.9/5', l: t('landing2.statsBand.s4', 'Satisfaction client'), s: t('landing2.statsBand.s4d', '847 avis vérifiés') },
   ];
   return (
-    <section
-      style={{
-        padding: '80px 40px',
-        background: 'var(--onb-ink-900)',
-        color: 'white',
-        borderBottom: '1px solid var(--onb-rule)',
-        position: 'relative',
-        overflow: 'hidden',
-      }}
-    >
+    <section className="lp-stats-section">
       <svg
         style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0.07, pointerEvents: 'none' }}
         aria-hidden="true"
@@ -1095,25 +930,19 @@ function StatsBand() {
       </svg>
       <div style={{ maxWidth: 1240, margin: '0 auto', position: 'relative' }}>
         <div className="onb-mono-cap" style={{ color: 'var(--onb-brand-100)', marginBottom: 18 }}>
-          04 · Impact mesuré
+          {t('landing2.statsBand.eyebrow', '04 · Impact mesuré')}
         </div>
-        <h2
-          className="onb-h-display"
-          style={{ fontSize: 'clamp(40px, 4vw, 56px)', margin: '0 0 56px', maxWidth: 700, lineHeight: 1.05 }}
-        >
-          Ce que change Agrogina,
+        <h2 className="onb-h-display lp-stats-title">
+          {t('landing2.statsBand.titleL1', 'Ce que change Agrogina,')}
           <br />
-          <em style={{ fontStyle: 'italic', color: 'var(--onb-brand-100)' }}>en chiffres.</em>
+          <em style={{ fontStyle: 'italic', color: 'var(--onb-brand-100)' }}>
+            {t('landing2.statsBand.titleEm', 'en chiffres.')}
+          </em>
         </h2>
-        <div className="lp-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 32 }}>
+        <div className="lp-stats">
           {stats.map((s) => (
             <div key={s.l}>
-              <div
-                className="onb-h-display"
-                style={{ fontSize: 'clamp(48px, 5vw, 72px)', lineHeight: 1, color: 'white', marginBottom: 12 }}
-              >
-                {s.v}
-              </div>
+              <div className="onb-h-display lp-stat-value">{s.v}</div>
               <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 4 }}>{s.l}</div>
               <div
                 className="onb-mono"
@@ -1131,41 +960,42 @@ function StatsBand() {
 
 /* ────────────────────────────────────────────────────────── testimonials */
 
-function Testimonials() {
+function Testimonials({ t }: { t: T }) {
+  const compact = [
+    {
+      q: t('landing2.testi.t2q', 'Le module RH a remplacé Excel et trois cahiers. Le contrôleur de la CNSS adore.'),
+      n: 'Saida El Khouri',
+      r: t('landing2.testi.t2r', 'Coopérative Atlas · 12 fermes'),
+    },
+    {
+      q: t('landing2.testi.t3q', "Les alertes capteurs ont sauvé une parcelle d'agrumes du gel l'an dernier. Rentabilisé en une saison."),
+      n: 'Karim Benjelloun',
+      r: t('landing2.testi.t3r', 'Domaine Agdal · 85 ha'),
+    },
+  ];
   return (
-    <section id="testimonials" style={{ padding: '100px 40px', borderBottom: '1px solid var(--onb-rule)' }}>
+    <section id="testimonials" className="lp-section">
       <SectionHead
-        eyebrow="05 · Témoignages"
+        eyebrow={t('landing2.testi.eyebrow', '05 · Témoignages')}
         title={
           <>
-            Le terrain <em style={{ fontStyle: 'italic', color: 'var(--onb-brand-700)' }}>en parle mieux que nous.</em>
+            {t('landing2.testi.titlePre', 'Le terrain ')}
+            <em style={{ fontStyle: 'italic', color: 'var(--onb-brand-700)' }}>
+              {t('landing2.testi.titleEm', 'en parle mieux que nous.')}
+            </em>
           </>
         }
       />
-      <div
-        className="lp-testimonials"
-        style={{ maxWidth: 1240, margin: '0 auto', display: 'grid', gridTemplateColumns: '1.4fr 1fr 1fr', gap: 16 }}
-      >
-        <article
-          style={{
-            padding: 32,
-            borderRadius: 'var(--onb-r-lg)',
-            background: 'var(--onb-bg-paper)',
-            border: '1px solid var(--onb-rule)',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'space-between',
-            minHeight: 360,
-          }}
-        >
+      <div className="lp-testimonials">
+        <article className="lp-testi-featured">
           <div>
             <div className="onb-mono-cap" style={{ marginBottom: 18, color: 'var(--onb-brand-700)' }}>
-              ★★★★★ · Étude de cas
+              {t('landing2.testi.featuredLabel', '★★★★★ · Étude de cas')}
             </div>
             <p
               style={{
                 fontFamily: 'var(--onb-font-display)',
-                fontSize: 28,
+                fontSize: 24,
                 lineHeight: 1.25,
                 fontWeight: 400,
                 color: 'var(--onb-ink-900)',
@@ -1173,8 +1003,12 @@ function Testimonials() {
                 letterSpacing: '-0.02em',
               }}
             >
-              « Avant Agrogina, je remplissais des cahiers le soir. Aujourd'hui, j'ai une vision complète de mes 240
-              hectares depuis mon téléphone — et mes équipes savent exactement quoi faire le matin. »
+              «{' '}
+              {t(
+                'landing2.testi.t1q',
+                "Avant Agrogina, je remplissais des cahiers le soir. Aujourd'hui, j'ai une vision complète de mes 240 hectares depuis mon téléphone — et mes équipes savent exactement quoi faire le matin.",
+              )}{' '}
+              »
             </p>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 22 }}>
@@ -1190,43 +1024,24 @@ function Testimonials() {
             <div>
               <div style={{ fontWeight: 600, fontSize: 14 }}>Zakaria Boutchamir</div>
               <div className="onb-mono" style={{ fontSize: 11, color: 'var(--onb-ink-500)' }}>
-                Ferme Mabella · 240 ha · Marrakech-Safi
+                {t('landing2.testi.t1r', 'Ferme Mabella · 240 ha · Marrakech-Safi')}
               </div>
             </div>
           </div>
         </article>
 
-        {[
-          { q: 'Le module RH a remplacé Excel et trois cahiers. Le contrôleur de la CNSS adore.', n: 'Saida El Khouri', r: 'Coopérative Atlas · 12 fermes' },
-          {
-            q: "Les alertes capteurs ont sauvé une parcelle d'agrumes du gel l'an dernier. Rentabilisé en une saison.",
-            n: 'Karim Benjelloun',
-            r: 'Domaine Agdal · 85 ha',
-          },
-        ].map((t) => (
-          <article
-            key={t.n}
-            style={{
-              padding: 24,
-              borderRadius: 'var(--onb-r-lg)',
-              background: 'white',
-              border: '1px solid var(--onb-rule)',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-              minHeight: 360,
-            }}
-          >
+        {compact.map((c) => (
+          <article key={c.n} className="lp-testi-compact">
             <div>
               <div className="onb-mono-cap" style={{ marginBottom: 16, color: 'var(--onb-brand-700)' }}>
                 ★★★★★
               </div>
-              <p style={{ fontSize: 16, lineHeight: 1.45, color: 'var(--onb-ink-800)', margin: 0 }}>« {t.q} »</p>
+              <p style={{ fontSize: 15, lineHeight: 1.45, color: 'var(--onb-ink-800)', margin: 0 }}>« {c.q} »</p>
             </div>
             <div style={{ marginTop: 22 }}>
-              <div style={{ fontWeight: 600, fontSize: 14 }}>{t.n}</div>
+              <div style={{ fontWeight: 600, fontSize: 14 }}>{c.n}</div>
               <div className="onb-mono" style={{ fontSize: 10.5, color: 'var(--onb-ink-500)' }}>
-                {t.r}
+                {c.r}
               </div>
             </div>
           </article>
@@ -1236,162 +1051,116 @@ function Testimonials() {
   );
 }
 
-/* ────────────────────────────────────────────────────────── pricing */
+/* ────────────────────────────────────────────────────────── pricing — quote-only */
 
-function Pricing({ onContact }: { onContact: () => void }) {
+function Pricing({ t, onContact }: { t: T; onContact: () => void }) {
   const plans = [
     {
-      name: 'Particulier',
-      price: '149',
-      desc: 'Petits producteurs, < 5 ha',
-      features: ["Jusqu'à 3 parcelles", 'Module Live Map', 'Tâches & rappels', 'Support email'],
+      key: 'farmer',
+      name: t('landing2.pricing.farmer.name', 'Particulier'),
+      desc: t('landing2.pricing.farmer.desc', 'Petits producteurs, < 5 ha'),
+      features: [
+        t('landing2.pricing.farmer.f1', "Jusqu'à 3 parcelles"),
+        t('landing2.pricing.farmer.f2', 'Module Live Map'),
+        t('landing2.pricing.farmer.f3', 'Tâches & rappels'),
+        t('landing2.pricing.farmer.f4', 'Support email'),
+      ],
       featured: false,
     },
     {
-      name: 'Exploitation',
-      price: '449',
-      desc: 'Fermes professionnelles, 5–200 ha',
+      key: 'farm',
+      name: t('landing2.pricing.farm.name', 'Exploitation'),
+      desc: t('landing2.pricing.farm.desc', 'Fermes professionnelles, 5–200 ha'),
       features: [
-        'Parcelles illimitées',
-        'Tous les modules essentiels',
-        '5 utilisateurs inclus',
-        'Support prioritaire 24/7',
-        'Formation sur site',
+        t('landing2.pricing.farm.f1', 'Parcelles illimitées'),
+        t('landing2.pricing.farm.f2', 'Tous les modules essentiels'),
+        t('landing2.pricing.farm.f3', '5 utilisateurs inclus'),
+        t('landing2.pricing.farm.f4', 'Support prioritaire 24/7'),
+        t('landing2.pricing.farm.f5', 'Formation sur site'),
       ],
       featured: true,
     },
     {
-      name: 'Entreprise',
-      price: 'Sur devis',
-      desc: 'Coopératives & agro-industrie',
-      features: ['Multi-fermes illimité', 'Tous modules + IA', 'SSO & API', 'Account manager dédié', 'SLA 99.9%'],
+      key: 'enterprise',
+      name: t('landing2.pricing.enterprise.name', 'Entreprise'),
+      desc: t('landing2.pricing.enterprise.desc', 'Coopératives & agro-industrie'),
+      features: [
+        t('landing2.pricing.enterprise.f1', 'Multi-fermes illimité'),
+        t('landing2.pricing.enterprise.f2', 'Tous modules + IA'),
+        t('landing2.pricing.enterprise.f3', 'SSO & API'),
+        t('landing2.pricing.enterprise.f4', 'Account manager dédié'),
+        t('landing2.pricing.enterprise.f5', 'SLA 99.9%'),
+      ],
       featured: false,
     },
   ];
 
+  const quote = t('landing2.pricing.quote', 'Sur devis');
+  const quoteSub = t('landing2.pricing.quoteSub', 'Tarif personnalisé selon votre exploitation');
+  const ctaLabel = t('landing2.pricing.cta', 'Demander un devis');
+  const popular = t('landing2.pricing.popular', '★ Populaire');
+
   return (
-    <section
-      id="pricing"
-      style={{
-        padding: '100px 40px',
-        borderBottom: '1px solid var(--onb-rule)',
-        background: 'var(--onb-ink-900)',
-        color: 'white',
-      }}
-    >
+    <section id="pricing" className="lp-pricing-section">
       <SectionHead
-        eyebrow="06 · Tarifs"
+        eyebrow={t('landing2.pricing.eyebrow', '06 · Tarifs')}
         title={
           <>
-            Un prix pour <em style={{ fontStyle: 'italic', color: 'var(--onb-brand-100)' }}>chaque ferme.</em>
+            {t('landing2.pricing.titlePre', 'Un tarif pour ')}
+            <em style={{ fontStyle: 'italic', color: 'var(--onb-brand-100)' }}>
+              {t('landing2.pricing.titleEm', 'chaque ferme.')}
+            </em>
           </>
         }
-        subtitle="Tarification mensuelle, sans engagement. Essai gratuit de 14 jours sur tous les plans."
+        subtitle={t(
+          'landing2.pricing.subtitle',
+          'Tarification sur mesure selon vos parcelles, modules et utilisateurs. 14 jours gratuits, sans engagement.',
+        )}
         dark
       />
-      <div
-        className="lp-pricing"
-        style={{ maxWidth: 1100, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}
-      >
+      <div className="lp-pricing">
         {plans.map((p) => (
-          <div
-            key={p.name}
-            style={{
-              padding: 28,
-              borderRadius: 'var(--onb-r-lg)',
-              background: p.featured ? 'white' : 'rgba(255,255,255,.04)',
-              color: p.featured ? 'var(--onb-ink-900)' : 'inherit',
-              border: p.featured ? 0 : '1px solid rgba(255,255,255,.12)',
-              position: 'relative',
-              transform: p.featured ? 'translateY(-12px)' : 'none',
-              boxShadow: p.featured
-                ? '0 24px 60px rgba(20, 40, 30, .35), 0 4px 12px rgba(20, 40, 30, .15)'
-                : 'none',
-            }}
-          >
-            {p.featured && (
-              <span
-                className="onb-mono"
-                style={{
-                  position: 'absolute',
-                  top: -12,
-                  left: 28,
-                  padding: '4px 10px',
-                  background: 'var(--onb-brand-600)',
-                  color: 'white',
-                  fontSize: 9.5,
-                  fontWeight: 600,
-                  letterSpacing: '0.08em',
-                  textTransform: 'uppercase',
-                  borderRadius: 4,
-                }}
-              >
-                ★ Populaire
-              </span>
-            )}
+          <div key={p.key} className={`lp-plan ${p.featured ? 'lp-plan-featured' : ''}`}>
+            {p.featured && <span className="onb-mono lp-plan-badge">{popular}</span>}
             <div
               className="onb-mono-cap"
               style={{ color: p.featured ? 'var(--onb-brand-700)' : 'rgba(255,255,255,.5)', marginBottom: 12 }}
             >
               {p.name}
             </div>
-            <div className="onb-h-display" style={{ fontSize: p.price === 'Sur devis' ? 32 : 56, lineHeight: 1, marginBottom: 6 }}>
-              {p.price !== 'Sur devis' && (
-                <span style={{ fontSize: 22, verticalAlign: 'top', marginRight: 4 }}>€</span>
-              )}
-              {p.price}
-              {p.price !== 'Sur devis' && (
-                <span
-                  style={{
-                    fontSize: 14,
-                    color: p.featured ? 'var(--onb-ink-500)' : 'rgba(255,255,255,.5)',
-                    marginLeft: 6,
-                    fontFamily: 'var(--onb-font-body)',
-                  }}
-                >
-                  /mois
-                </span>
-              )}
-            </div>
+            <div className="onb-h-display lp-plan-price">{quote}</div>
             <p
               style={{
                 fontSize: 13,
                 color: p.featured ? 'var(--onb-ink-500)' : 'rgba(255,255,255,.6)',
-                margin: '0 0 22px',
+                margin: '0 0 6px',
               }}
             >
               {p.desc}
             </p>
-            {p.price === 'Sur devis' ? (
-              <button
-                type="button"
-                onClick={onContact}
-                className="onb-btn onb-btn-primary"
-                style={{
-                  width: '100%',
-                  padding: '14px',
-                  background: p.featured ? 'var(--onb-brand-600)' : 'white',
-                  color: p.featured ? 'white' : 'var(--onb-ink-900)',
-                }}
-              >
-                Contacter
-              </button>
-            ) : (
-              <Link
-                to="/register"
-                className="onb-btn onb-btn-primary"
-                style={{
-                  width: '100%',
-                  padding: '14px',
-                  background: p.featured ? 'var(--onb-brand-600)' : 'white',
-                  color: p.featured ? 'white' : 'var(--onb-ink-900)',
-                  textDecoration: 'none',
-                  display: 'inline-flex',
-                }}
-              >
-                Démarrer
-              </Link>
-            )}
+            <p
+              className="onb-mono"
+              style={{
+                fontSize: 11,
+                color: p.featured ? 'var(--onb-ink-400)' : 'rgba(255,255,255,.4)',
+                margin: '0 0 22px',
+              }}
+            >
+              {quoteSub}
+            </p>
+            <button
+              type="button"
+              onClick={onContact}
+              className="onb-btn onb-btn-primary"
+              style={{
+                width: '100%',
+                padding: '14px',
+                background: p.featured ? 'var(--onb-brand-600)' : 'white',
+                color: p.featured ? 'white' : 'var(--onb-ink-900)',
+              }}
+            >
+              {ctaLabel}
+            </button>
             <ul style={{ listStyle: 'none', padding: 0, margin: '22px 0 0' }}>
               {p.features.map((f, i) => (
                 <li
@@ -1423,37 +1192,25 @@ function Pricing({ onContact }: { onContact: () => void }) {
 
 /* ────────────────────────────────────────────────────────── faq */
 
-function FAQSection() {
+function FAQSection({ t }: { t: T }) {
   const [open, setOpen] = useState(0);
   const faqs = [
-    {
-      q: 'Faut-il une connexion internet sur le terrain ?',
-      a: "Non. L'application mobile fonctionne hors-ligne et synchronise dès qu'une connexion est retrouvée. Idéal pour les zones rurales mal couvertes.",
-    },
-    {
-      q: 'Mes données restent-elles ma propriété ?',
-      a: 'Absolument. Vos données vous appartiennent et sont hébergées en Europe (Frankfurt) avec chiffrement AES-256. Export complet possible à tout moment.',
-    },
-    {
-      q: 'Quels capteurs sont compatibles ?',
-      a: 'Plus de 80 marques supportées : Davis, Sentek, Pessl, Adcon, Libelium… via Modbus, LoRa ou GSM. Notre équipe peut auditer votre matériel existant.',
-    },
-    {
-      q: 'Y a-t-il un engagement ?',
-      a: 'Aucun. Vous pouvez résilier à tout moment depuis votre espace. Le mois entamé reste dû, le suivant est annulé.',
-    },
-    {
-      q: 'Proposez-vous une formation ?',
-      a: "Oui, incluse dans le plan Exploitation : une demi-journée sur site avec un agronome. Pour les coopératives, un programme sur-mesure est disponible.",
-    },
+    { q: t('landing2.faq.q1', 'Faut-il une connexion internet sur le terrain ?'), a: t('landing2.faq.a1', "Non. L'application mobile fonctionne hors-ligne et synchronise dès qu'une connexion est retrouvée. Idéal pour les zones rurales mal couvertes.") },
+    { q: t('landing2.faq.q2', 'Mes données restent-elles ma propriété ?'), a: t('landing2.faq.a2', 'Absolument. Vos données vous appartiennent et sont hébergées en Europe (Frankfurt) avec chiffrement AES-256. Export complet possible à tout moment.') },
+    { q: t('landing2.faq.q3', 'Quels capteurs sont compatibles ?'), a: t('landing2.faq.a3', 'Plus de 80 marques supportées : Davis, Sentek, Pessl, Adcon, Libelium… via Modbus, LoRa ou GSM. Notre équipe peut auditer votre matériel existant.') },
+    { q: t('landing2.faq.q4', 'Y a-t-il un engagement ?'), a: t('landing2.faq.a4', 'Aucun. Vous pouvez résilier à tout moment depuis votre espace. Le mois entamé reste dû, le suivant est annulé.') },
+    { q: t('landing2.faq.q5', 'Proposez-vous une formation ?'), a: t('landing2.faq.a5', 'Oui, incluse dans le plan Exploitation : une demi-journée sur site avec un agronome. Pour les coopératives, un programme sur-mesure est disponible.') },
   ];
   return (
-    <section id="faq" style={{ padding: '100px 40px', borderBottom: '1px solid var(--onb-rule)' }}>
+    <section id="faq" className="lp-section">
       <SectionHead
-        eyebrow="07 · Questions"
+        eyebrow={t('landing2.faq.eyebrow', '07 · Questions')}
         title={
           <>
-            On vous répond <em style={{ fontStyle: 'italic', color: 'var(--onb-brand-700)' }}>franchement.</em>
+            {t('landing2.faq.titlePre', 'On vous répond ')}
+            <em style={{ fontStyle: 'italic', color: 'var(--onb-brand-700)' }}>
+              {t('landing2.faq.titleEm', 'franchement.')}
+            </em>
           </>
         }
       />
@@ -1463,57 +1220,25 @@ function FAQSection() {
             <button
               type="button"
               onClick={() => setOpen(open === i ? -1 : i)}
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                width: '100%',
-                padding: '22px 0',
-                border: 0,
-                background: 'transparent',
-                fontFamily: 'inherit',
-                cursor: 'pointer',
-                textAlign: 'left',
-                gap: 18,
-              }}
+              className="lp-faq-trigger"
             >
               <span style={{ display: 'flex', gap: 18, alignItems: 'baseline' }}>
                 <span className="onb-mono" style={{ fontSize: 11, color: 'var(--onb-ink-400)' }}>
                   {String(i + 1).padStart(2, '0')}
                 </span>
-                <span className="onb-h-body" style={{ fontSize: 17, color: 'var(--onb-ink-900)' }}>
+                <span className="onb-h-body" style={{ fontSize: 16, color: 'var(--onb-ink-900)' }}>
                   {f.q}
                 </span>
               </span>
               <span
-                style={{
-                  width: 28,
-                  height: 28,
-                  borderRadius: 999,
-                  border: '1px solid var(--onb-rule)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: 'var(--onb-ink-700)',
-                  flexShrink: 0,
-                  transform: open === i ? 'rotate(45deg)' : 'rotate(0deg)',
-                  transition: 'transform .25s',
-                }}
+                className="lp-faq-icon"
+                style={{ transform: open === i ? 'rotate(45deg)' : 'rotate(0deg)' }}
               >
                 <Plus size={14} strokeWidth={1.8} />
               </span>
             </button>
             {open === i && (
-              <div
-                style={{
-                  paddingLeft: 41,
-                  paddingBottom: 22,
-                  fontSize: 15,
-                  lineHeight: 1.6,
-                  color: 'var(--onb-ink-600)',
-                  maxWidth: 640,
-                }}
-              >
+              <div className="lp-faq-answer">
                 {f.a}
               </div>
             )}
@@ -1526,32 +1251,10 @@ function FAQSection() {
 
 /* ────────────────────────────────────────────────────────── CTA + footer */
 
-function CTABanner({ onDemo, onTrial }: { onDemo: () => void; onTrial: () => void }) {
+function CTABanner({ t, onDemo, onTrial }: { t: T; onDemo: () => void; onTrial: () => void }) {
   return (
-    <section
-      style={{
-        padding: '80px 40px',
-        background: 'var(--onb-bg-paper)',
-        borderBottom: '1px solid var(--onb-rule)',
-      }}
-    >
-      <div
-        className="lp-cta"
-        style={{
-          maxWidth: 1100,
-          margin: '0 auto',
-          background: 'white',
-          border: '1px solid var(--onb-rule)',
-          borderRadius: 28,
-          padding: '56px',
-          display: 'grid',
-          gridTemplateColumns: '1.4fr 1fr',
-          gap: 40,
-          alignItems: 'center',
-          position: 'relative',
-          overflow: 'hidden',
-        }}
-      >
+    <section className="lp-cta-section">
+      <div className="lp-cta">
         <div style={{ position: 'relative', zIndex: 1 }}>
           <div className="onb-mono-cap" style={{ color: 'var(--onb-brand-700)', marginBottom: 14 }}>
             <span
@@ -1561,49 +1264,32 @@ function CTABanner({ onDemo, onTrial }: { onDemo: () => void; onTrial: () => voi
                 height: 1,
                 background: 'var(--onb-brand-600)',
                 verticalAlign: 'middle',
-                marginRight: 8,
+                marginInlineEnd: 8,
               }}
             />
-            Démarrez maintenant
+            {t('landing2.cta.eyebrow', 'Démarrez maintenant')}
           </div>
-          <h2 className="onb-h-display" style={{ fontSize: 'clamp(34px, 3.5vw, 50px)', margin: '0 0 16px', lineHeight: 1.05 }}>
-            La saison 25/26
+          <h2 className="onb-h-display lp-cta-title">
+            {t('landing2.cta.titleL1', 'La saison 25/26')}
             <br />
-            <em style={{ fontStyle: 'italic', color: 'var(--onb-brand-700)' }}>commence ici.</em>
+            <em style={{ fontStyle: 'italic', color: 'var(--onb-brand-700)' }}>
+              {t('landing2.cta.titleEm', 'commence ici.')}
+            </em>
           </h2>
-          <p style={{ fontSize: 16, color: 'var(--onb-ink-600)', maxWidth: 480, margin: '0 0 28px', lineHeight: 1.5 }}>
-            14 jours gratuits, sans carte bancaire. Configuration en 3 minutes, accompagnement par un agronome dédié.
+          <p style={{ fontSize: 15, color: 'var(--onb-ink-600)', maxWidth: 480, margin: '0 0 28px', lineHeight: 1.5 }}>
+            {t('landing2.cta.subtitle', '14 jours gratuits, sans carte bancaire. Configuration en 3 minutes, accompagnement par un agronome dédié.')}
           </p>
-          <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-            <button
-              type="button"
-              onClick={onTrial}
-              className="onb-btn onb-btn-primary"
-              style={{ padding: '16px 24px', fontSize: 14 }}
-            >
-              Démarrer l'essai gratuit
+          <div className="lp-cta-buttons">
+            <button type="button" onClick={onTrial} className="onb-btn onb-btn-primary">
+              {t('landing2.cta.trial', "Démarrer l'essai gratuit")}
               <ArrowRight size={16} strokeWidth={1.8} />
             </button>
-            <button
-              type="button"
-              onClick={onDemo}
-              className="onb-btn onb-btn-ghost"
-              style={{ padding: '16px 22px', fontSize: 13 }}
-            >
-              Réserver une démo
+            <button type="button" onClick={onDemo} className="onb-btn onb-btn-ghost">
+              {t('landing2.cta.demo', 'Réserver une démo')}
             </button>
           </div>
         </div>
-        <div
-          style={{
-            aspectRatio: '4 / 3',
-            borderRadius: 'var(--onb-r-lg)',
-            background: 'linear-gradient(160deg, #eef5e0 0%, #d2dfba 100%)',
-            position: 'relative',
-            overflow: 'hidden',
-            border: '1px solid var(--onb-rule)',
-          }}
-        >
+        <div className="lp-cta-visual">
           <FieldScene />
           <CornerMarks inset={12} color="rgba(15,32,26,.18)" size={10} />
         </div>
@@ -1612,34 +1298,25 @@ function CTABanner({ onDemo, onTrial }: { onDemo: () => void; onTrial: () => voi
   );
 }
 
-function Footer() {
+function Footer({ t }: { t: T }) {
   const cols = [
-    { t: 'Plateforme', l: ['Modules', 'Tarifs', 'Sécurité', 'API & intégrations'] },
-    { t: 'Ressources', l: ['Documentation', 'Études de cas', 'Blog agronomique', 'Webinaires'] },
-    { t: 'Société', l: ['À propos', 'Carrières', 'Presse', 'Contact'] },
-    { t: 'Légal', l: ['CGU', 'Confidentialité', 'Cookies', 'Mentions légales'] },
+    { t: t('landing2.footer.platform', 'Plateforme'), l: [t('landing2.footer.modules', 'Modules'), t('landing2.footer.pricing', 'Tarifs'), t('landing2.footer.security', 'Sécurité'), t('landing2.footer.api', 'API & intégrations')] },
+    { t: t('landing2.footer.resources', 'Ressources'), l: [t('landing2.footer.docs', 'Documentation'), t('landing2.footer.cases', 'Études de cas'), t('landing2.footer.blog', 'Blog agronomique'), t('landing2.footer.webinars', 'Webinaires')] },
+    { t: t('landing2.footer.company', 'Société'), l: [t('landing2.footer.about', 'À propos'), t('landing2.footer.careers', 'Carrières'), t('landing2.footer.press', 'Presse'), t('landing2.footer.contact', 'Contact')] },
+    { t: t('landing2.footer.legal', 'Légal'), l: [t('landing2.footer.tos', 'CGU'), t('landing2.footer.privacy', 'Confidentialité'), t('landing2.footer.cookies', 'Cookies'), t('landing2.footer.mentions', 'Mentions légales')] },
   ];
   return (
-    <footer style={{ padding: '64px 40px 32px', background: 'var(--onb-ink-900)', color: 'white' }}>
+    <footer className="lp-footer-section">
       <div style={{ maxWidth: 1240, margin: '0 auto' }}>
-        <div
-          className="lp-footer"
-          style={{
-            display: 'grid',
-            gridTemplateColumns: '1.6fr 1fr 1fr 1fr 1fr',
-            gap: 40,
-            paddingBottom: 48,
-            borderBottom: '1px solid rgba(255,255,255,.1)',
-          }}
-        >
+        <div className="lp-footer">
           <div>
             <AgroginaWordmark size={26} />
             <p style={{ fontSize: 13, color: 'rgba(255,255,255,.6)', maxWidth: 320, lineHeight: 1.55, marginTop: 18 }}>
-              La plateforme agricole intégrée. Pour la saison qui vient, et toutes celles d'après.
+              {t('landing2.footer.tagline', "La plateforme agricole intégrée. Pour la saison qui vient, et toutes celles d'après.")}
             </p>
-            <div style={{ marginTop: 22, display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ marginTop: 22, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
               <span className="onb-mono-cap" style={{ color: 'rgba(255,255,255,.4)', fontSize: 9.5 }}>
-                Disponible sur
+                {t('landing2.footer.availableOn', 'Disponible sur')}
               </span>
               <span style={{ fontSize: 11, color: 'rgba(255,255,255,.7)' }}>iOS · Android · Web</span>
             </div>
@@ -1661,18 +1338,7 @@ function Footer() {
             </div>
           ))}
         </div>
-        <div
-          style={{
-            paddingTop: 24,
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            fontSize: 11,
-            color: 'rgba(255,255,255,.4)',
-            flexWrap: 'wrap',
-            gap: 12,
-          }}
-        >
+        <div className="lp-footer-bottom">
           <span className="onb-mono">© 2026 Agrogina · 31.6294° N · 7.9811° W</span>
           <span className="onb-mono">FR · MA · v2026.05</span>
         </div>
@@ -1681,39 +1347,353 @@ function Footer() {
   );
 }
 
-/* ────────────────────────────────────────────────────────── responsive css (scoped) */
+/* ────────────────────────────────────────────────────────── responsive css (mobile-first) */
 
 const RESPONSIVE_CSS = `
-.onb-shell .lp-hero { grid-template-columns: minmax(0,1fr) minmax(0,1.05fr); }
-@media (max-width: 1024px) {
-  .onb-shell .lp-hero { grid-template-columns: 1fr; }
-  .onb-shell .lp-hero-visual { min-height: 480px; border-left: 0; border-top: 1px solid var(--onb-rule); }
-  .onb-shell .lp-modules { grid-template-columns: repeat(2, 1fr) !important; }
-  .onb-shell .lp-steps { grid-template-columns: repeat(2, 1fr) !important; gap: 1px; background: var(--onb-rule); }
-  .onb-shell .lp-steps > * { background: var(--onb-bg-canvas); border-left: 0 !important; }
-  .onb-shell .lp-stats { grid-template-columns: repeat(2, 1fr) !important; }
-  .onb-shell .lp-testimonials { grid-template-columns: 1fr !important; }
-  .onb-shell .lp-pricing { grid-template-columns: 1fr !important; }
-  .onb-shell .lp-cta { grid-template-columns: 1fr !important; padding: 40px !important; }
-  .onb-shell .lp-footer { grid-template-columns: repeat(2, 1fr) !important; }
-  .onb-shell .lp-logos { grid-template-columns: repeat(4, 1fr) !important; }
-  .onb-shell .lp-mock-map { grid-template-columns: 1fr !important; }
-  .onb-shell .lp-nav-links { display: none !important; }
+.onb-shell .lp-section { padding: 56px 20px; border-bottom: 1px solid var(--onb-rule); }
+.onb-shell .lp-section-paper { background: var(--onb-bg-paper); }
+.onb-shell .lp-section-head { max-width: 760px; margin: 0 auto 40px; text-align: center; padding: 0 4px; }
+.onb-shell .lp-section-title { font-size: clamp(28px, 7vw, 54px); margin: 0 0 14px; line-height: 1.05; }
+.onb-shell .lp-section-sub { font-size: 15px; line-height: 1.55; margin: 0 auto; max-width: 580px; }
+
+/* nav */
+.onb-shell .lp-nav {
+  position: sticky; top: 0; z-index: 30;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 20px;
+  background: rgba(244,246,240,.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--onb-rule);
+  gap: 12px;
 }
-@media (max-width: 640px) {
-  .onb-shell .lp-modules { grid-template-columns: 1fr !important; }
-  .onb-shell .lp-stats { grid-template-columns: 1fr !important; }
-  .onb-shell .lp-footer { grid-template-columns: 1fr !important; }
-  .onb-shell .lp-logos { grid-template-columns: repeat(2, 1fr) !important; }
+.onb-shell .lp-nav-divider { display: none; width: 1px; height: 16px; background: var(--onb-rule); }
+.onb-shell .lp-nav-links { display: none; gap: 22px; }
+.onb-shell .lp-nav-link { font-size: 13px; color: var(--onb-ink-700); text-decoration: none; font-weight: 500; }
+.onb-shell .lp-nav-actions { display: flex; align-items: center; gap: 10px; }
+.onb-shell .lp-login { display: none; }
+.onb-shell .lp-cta-btn { padding: 9px 14px !important; font-size: 12px !important; background: var(--onb-brand-600) !important; }
+.onb-shell .lp-nav-burger {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 36px; height: 36px; border-radius: 8px;
+  border: 1px solid var(--onb-rule); background: white; color: var(--onb-ink-700);
+  cursor: pointer;
 }
+.onb-shell .lp-mobile-nav {
+  position: fixed; inset: 0; z-index: 60;
+  background: var(--onb-bg-canvas);
+  display: flex; flex-direction: column; padding: 16px;
+}
+.onb-shell .lp-mobile-nav-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+.onb-shell .lp-mobile-nav-links { display: flex; flex-direction: column; gap: 4px; flex: 1; }
+.onb-shell .lp-mobile-nav-links a {
+  padding: 14px 12px; border-radius: 10px;
+  font-size: 17px; font-weight: 500; color: var(--onb-ink-900); text-decoration: none;
+  border: 1px solid transparent;
+}
+.onb-shell .lp-mobile-nav-links a:active { background: var(--onb-ink-50); border-color: var(--onb-rule); }
+.onb-shell .lp-mobile-nav-actions { display: flex; flex-direction: column; gap: 8px; padding-top: 16px; border-top: 1px solid var(--onb-rule); }
+.onb-shell .lp-icon-btn {
+  width: 36px; height: 36px; border-radius: 999px;
+  border: 1px solid var(--onb-rule); background: white;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--onb-ink-700); cursor: pointer;
+}
+
+/* hero */
+.onb-shell .lp-hero {
+  display: grid; grid-template-columns: 1fr;
+  border-bottom: 1px solid var(--onb-rule);
+}
+.onb-shell .lp-hero-copy {
+  padding: 40px 20px 40px;
+  display: flex; flex-direction: column; gap: 32px;
+}
+.onb-shell .lp-hero-eyebrow-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.onb-shell .lp-hero-title {
+  font-size: clamp(40px, 11vw, 92px);
+  margin: 0 0 18px;
+  color: var(--onb-ink-900);
+  line-height: 0.96;
+  text-wrap: balance;
+}
+.onb-shell .lp-hero-sub {
+  font-size: 16px; line-height: 1.55;
+  color: var(--onb-ink-600);
+  max-width: 520px;
+  margin: 0 0 24px;
+}
+.onb-shell .lp-hero-ctas { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; }
+.onb-shell .lp-cta-primary { padding: 14px 22px !important; font-size: 14px !important; }
+.onb-shell .lp-cta-ghost { padding: 14px 18px !important; font-size: 13px !important; }
+.onb-shell .lp-trial-note { font-size: 11px; color: var(--onb-ink-400); }
+.onb-shell .lp-hero-stats { border-top: 1px solid var(--onb-rule); padding-top: 22px; }
+.onb-shell .lp-hero-stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 22px; }
+
+.onb-shell .lp-hero-visual {
+  background: linear-gradient(160deg, #eef5e0 0%, #e2ecd0 60%, #d2dfba 100%);
+  position: relative; overflow: hidden;
+  border-top: 1px solid var(--onb-rule);
+  min-height: 380px;
+}
+.onb-shell .lp-hero-station {
+  position: absolute; top: 16px; right: 16px;
+  background: rgba(255,255,255,.92); backdrop-filter: blur(10px);
+  border: 1px solid var(--onb-rule); border-radius: 14px;
+  padding: 12px 14px; min-width: 220px; max-width: calc(100% - 32px);
+  box-shadow: var(--onb-sh-md);
+}
+.onb-shell .lp-hero-region {
+  position: absolute; bottom: 16px; left: 16px;
+  padding: 8px 12px; border-radius: 10px;
+  background: rgba(15, 32, 26, .82); color: white;
+  backdrop-filter: blur(10px); font-size: 11px;
+}
+.onb-shell .lp-hero-alert {
+  position: absolute; bottom: 16px; right: 16px;
+  background: white; border-radius: 12px;
+  padding: 10px 12px; max-width: 220px;
+  border: 1px solid var(--onb-rule); box-shadow: var(--onb-sh-md);
+}
+
+/* logo strip */
+.onb-shell .lp-logos-section {
+  padding: 28px 20px;
+  border-bottom: 1px solid var(--onb-rule);
+  background: var(--onb-bg-paper);
+}
+.onb-shell .lp-logos { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; align-items: center; }
+
+/* product preview */
+.onb-shell .lp-tabs {
+  display: flex; gap: 4px; padding: 4px;
+  background: white; border: 1px solid var(--onb-rule);
+  border-radius: 999px; width: fit-content;
+  margin: 0 auto 20px;
+  overflow-x: auto; max-width: 100%;
+}
+.onb-shell .lp-tab {
+  padding: 7px 14px; border-radius: 999px; border: 0;
+  background: transparent; color: var(--onb-ink-600);
+  font-family: inherit; font-size: 12px; font-weight: 500; cursor: pointer;
+  transition: all .2s; white-space: nowrap;
+}
+.onb-shell .lp-tab-active { background: var(--onb-ink-900); color: white; }
+.onb-shell .lp-mock-frame {
+  max-width: 1240px; margin: 0 auto;
+  background: var(--onb-ink-900); border-radius: 14px;
+  padding: 6px;
+  box-shadow: 0 24px 60px rgba(20, 40, 30, .12);
+}
+.onb-shell .lp-mock-window { background: white; border-radius: 10px; overflow: hidden; aspect-ratio: 4 / 3; position: relative; }
+.onb-shell .lp-mock-window-bar {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 12px; border-bottom: 1px solid var(--onb-rule);
+  background: var(--onb-bg-paper);
+}
+.onb-shell .lp-mock-url {
+  font-size: 10.5px; color: var(--onb-ink-500);
+  margin-inline-start: 10px; padding: 3px 8px;
+  background: white; border-radius: 6px; border: 1px solid var(--onb-rule);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.onb-shell .lp-mock-map { display: grid; grid-template-columns: 1fr; height: calc(100% - 38px); }
+.onb-shell .lp-mock-side { padding: 12px; background: var(--onb-bg-paper); border-bottom: 1px solid var(--onb-rule); max-height: 30%; overflow-y: auto; }
+.onb-shell .lp-mock-side-right { background: white; border-bottom: 0; border-top: 1px solid var(--onb-rule); }
+
+/* modules */
+.onb-shell .lp-modules {
+  display: grid; grid-template-columns: 1fr; gap: 1px;
+  background: var(--onb-rule); border: 1px solid var(--onb-rule);
+  max-width: 1240px; margin: 0 auto;
+}
+.onb-shell .lp-module-tile {
+  background: white; padding: 22px 18px;
+  display: flex; flex-direction: column; gap: 12px;
+  min-height: 160px;
+}
+.onb-shell .lp-module-icon {
+  width: 38px; height: 38px; border-radius: 10px;
+  background: var(--onb-brand-50); color: var(--onb-brand-700);
+  display: flex; align-items: center; justify-content: center;
+}
+
+/* steps */
+.onb-shell .lp-steps {
+  max-width: 1100px; margin: 0 auto;
+  display: grid; grid-template-columns: 1fr; gap: 1px;
+  background: var(--onb-rule);
+}
+.onb-shell .lp-step { padding: 22px 18px; background: var(--onb-bg-canvas); position: relative; }
+
+/* stats band */
+.onb-shell .lp-stats-section {
+  padding: 64px 20px;
+  background: var(--onb-ink-900); color: white;
+  border-bottom: 1px solid var(--onb-rule);
+  position: relative; overflow: hidden;
+}
+.onb-shell .lp-stats-title {
+  font-size: clamp(32px, 7vw, 56px);
+  margin: 0 0 40px; max-width: 700px; line-height: 1.05;
+}
+.onb-shell .lp-stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; }
+.onb-shell .lp-stat-value { font-size: clamp(36px, 9vw, 72px); line-height: 1; color: white; margin-bottom: 10px; }
+
+/* testimonials */
+.onb-shell .lp-testimonials { max-width: 1240px; margin: 0 auto; display: grid; grid-template-columns: 1fr; gap: 14px; }
+.onb-shell .lp-testi-featured {
+  padding: 24px; border-radius: var(--onb-r-lg);
+  background: var(--onb-bg-paper); border: 1px solid var(--onb-rule);
+  display: flex; flex-direction: column; justify-content: space-between;
+  min-height: 280px;
+}
+.onb-shell .lp-testi-compact {
+  padding: 22px; border-radius: var(--onb-r-lg);
+  background: white; border: 1px solid var(--onb-rule);
+  display: flex; flex-direction: column; justify-content: space-between;
+  min-height: 240px;
+}
+
+/* pricing */
+.onb-shell .lp-pricing-section {
+  padding: 64px 20px;
+  border-bottom: 1px solid var(--onb-rule);
+  background: var(--onb-ink-900); color: white;
+}
+.onb-shell .lp-pricing { max-width: 1100px; margin: 0 auto; display: grid; grid-template-columns: 1fr; gap: 14px; }
+.onb-shell .lp-plan {
+  padding: 24px; border-radius: var(--onb-r-lg);
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.12);
+  position: relative;
+}
+.onb-shell .lp-plan-featured {
+  background: white; color: var(--onb-ink-900); border: 0;
+  box-shadow: 0 24px 60px rgba(20, 40, 30, .35), 0 4px 12px rgba(20, 40, 30, .15);
+}
+.onb-shell .lp-plan-badge {
+  position: absolute; top: -12px; left: 24px;
+  padding: 4px 10px; background: var(--onb-brand-600); color: white;
+  font-size: 9.5px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
+  border-radius: 4px;
+}
+.onb-shell .lp-plan-price {
+  font-size: 36px; line-height: 1; margin-bottom: 6px;
+  font-family: var(--onb-font-display); font-weight: 500;
+}
+
+/* faq */
+.onb-shell .lp-faq-trigger {
+  display: flex; justify-content: space-between; align-items: center;
+  width: 100%; padding: 18px 0; border: 0; background: transparent;
+  font-family: inherit; cursor: pointer; text-align: start; gap: 14px;
+}
+.onb-shell .lp-faq-icon {
+  width: 28px; height: 28px; border-radius: 999px;
+  border: 1px solid var(--onb-rule);
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--onb-ink-700); flex-shrink: 0;
+  transition: transform .25s;
+}
+.onb-shell .lp-faq-answer { padding-inline-start: 38px; padding-bottom: 18px; font-size: 14px; line-height: 1.6; color: var(--onb-ink-600); max-width: 640px; }
+
+/* cta */
+.onb-shell .lp-cta-section { padding: 56px 20px; background: var(--onb-bg-paper); border-bottom: 1px solid var(--onb-rule); }
+.onb-shell .lp-cta {
+  max-width: 1100px; margin: 0 auto;
+  background: white; border: 1px solid var(--onb-rule);
+  border-radius: 24px; padding: 32px 24px;
+  display: grid; grid-template-columns: 1fr; gap: 24px;
+  position: relative; overflow: hidden;
+}
+.onb-shell .lp-cta-title { font-size: clamp(28px, 6.5vw, 48px); margin: 0 0 14px; line-height: 1.05; }
+.onb-shell .lp-cta-buttons { display: flex; gap: 10px; flex-wrap: wrap; }
+.onb-shell .lp-cta-visual {
+  aspect-ratio: 4 / 3; border-radius: var(--onb-r-lg);
+  background: linear-gradient(160deg, #eef5e0 0%, #d2dfba 100%);
+  position: relative; overflow: hidden; border: 1px solid var(--onb-rule);
+}
+
+/* footer */
+.onb-shell .lp-footer-section { padding: 48px 20px 24px; background: var(--onb-ink-900); color: white; }
+.onb-shell .lp-footer { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; padding-bottom: 32px; border-bottom: 1px solid rgba(255,255,255,.1); }
+.onb-shell .lp-footer-bottom {
+  padding-top: 18px; display: flex; justify-content: space-between; align-items: center;
+  font-size: 11px; color: rgba(255,255,255,.4); flex-wrap: wrap; gap: 12px;
+}
+
+/* breakpoint: tablet */
+@media (min-width: 720px) {
+  .onb-shell .lp-section { padding: 80px 32px; }
+  .onb-shell .lp-section-head { margin-bottom: 48px; }
+  .onb-shell .lp-logos { grid-template-columns: repeat(4, 1fr); }
+  .onb-shell .lp-modules { grid-template-columns: repeat(2, 1fr); }
+  .onb-shell .lp-steps { grid-template-columns: repeat(2, 1fr); }
+  .onb-shell .lp-stats { grid-template-columns: repeat(4, 1fr); }
+  .onb-shell .lp-stats-section { padding: 80px 32px; }
+  .onb-shell .lp-pricing-section { padding: 80px 32px; }
+  .onb-shell .lp-pricing { grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .onb-shell .lp-testimonials { grid-template-columns: 1fr 1fr; }
+  .onb-shell .lp-cta-section { padding: 64px 32px; }
+  .onb-shell .lp-cta { grid-template-columns: 1.4fr 1fr; padding: 40px; gap: 32px; }
+  .onb-shell .lp-footer { grid-template-columns: 1.6fr repeat(4, 1fr); gap: 32px; }
+  .onb-shell .lp-mock-window { aspect-ratio: 16 / 9; }
+  .onb-shell .lp-mock-map { grid-template-columns: 220px 1fr 240px; }
+  .onb-shell .lp-mock-side { max-height: none; padding: 14px; border-bottom: 0; border-right: 1px solid var(--onb-rule); }
+  .onb-shell .lp-mock-side-right { border-right: 0; border-left: 1px solid var(--onb-rule); border-top: 0; background: white; }
+  .onb-shell .lp-hero-stats-grid { grid-template-columns: repeat(4, 1fr); }
+  .onb-shell .lp-hero-station { min-width: 240px; }
+  .onb-shell .lp-hero-alert { max-width: 240px; }
+}
+
+/* breakpoint: desktop */
+@media (min-width: 1024px) {
+  .onb-shell .lp-section { padding: 100px 40px; }
+  .onb-shell .lp-section-head { margin-bottom: 56px; }
+  .onb-shell .lp-section-sub { font-size: 17px; }
+  .onb-shell .lp-nav { padding: 16px 40px; }
+  .onb-shell .lp-nav-divider { display: block; }
+  .onb-shell .lp-nav-links { display: flex; }
+  .onb-shell .lp-login { display: inline; }
+  .onb-shell .lp-cta-btn { padding: 10px 18px !important; font-size: 13px !important; }
+  .onb-shell .lp-nav-burger { display: none; }
+  .onb-shell .lp-hero { grid-template-columns: minmax(0,1fr) minmax(0,1.05fr); min-height: calc(100vh - 65px); }
+  .onb-shell .lp-hero-copy { padding: 72px 64px 56px; gap: 48px; }
+  .onb-shell .lp-hero-visual { border-top: 0; border-left: 1px solid var(--onb-rule); min-height: auto; }
+  .onb-shell .lp-hero-station, .onb-shell .lp-hero-region, .onb-shell .lp-hero-alert { top: 32px; right: 32px; }
+  .onb-shell .lp-hero-region { top: auto; bottom: 32px; left: 32px; right: auto; }
+  .onb-shell .lp-hero-alert { top: auto; bottom: 32px; right: 32px; left: auto; }
+  .onb-shell .lp-hero-sub { font-size: 19px; }
+  .onb-shell .lp-cta-primary { padding: 18px 28px !important; font-size: 15px !important; }
+  .onb-shell .lp-cta-ghost { padding: 18px 22px !important; font-size: 14px !important; }
+  .onb-shell .lp-modules { grid-template-columns: repeat(4, 1fr); }
+  .onb-shell .lp-module-tile { padding: 28px 24px; min-height: 200px; }
+  .onb-shell .lp-steps { grid-template-columns: repeat(4, 1fr); gap: 0; background: transparent; }
+  .onb-shell .lp-step { background: transparent; padding: 28px 24px; }
+  .onb-shell .lp-pricing-section { padding: 100px 40px; }
+  .onb-shell .lp-plan-featured { transform: translateY(-12px); }
+  .onb-shell .lp-pricing { gap: 14px; }
+  .onb-shell .lp-stats-section { padding: 80px 40px; }
+  .onb-shell .lp-testimonials { grid-template-columns: 1.4fr 1fr 1fr; gap: 16px; }
+  .onb-shell .lp-cta-section { padding: 80px 40px; }
+  .onb-shell .lp-cta { padding: 56px; gap: 40px; border-radius: 28px; }
+  .onb-shell .lp-footer-section { padding: 64px 40px 32px; }
+  .onb-shell .lp-logos { grid-template-columns: repeat(8, 1fr); gap: 18px; }
+  .onb-shell .lp-tab { padding: 8px 18px; font-size: 13px; }
+}
+
+/* RTL */
+.onb-shell[dir="rtl"] .lp-mobile-nav-links a { text-align: right; }
+.onb-shell[dir="rtl"] .lp-faq-trigger { text-align: right; }
 `;
 
 /* ────────────────────────────────────────────────────────── page */
 
 const LandingPage = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [demoOpen, setDemoOpen] = useState(false);
 
+  const isRTL = i18n.language?.startsWith('ar');
   const siteOrigin = typeof window !== 'undefined' ? window.location.origin : 'https://app.agritech.local';
 
   const structuredData = useMemo(
@@ -1723,22 +1703,16 @@ const LandingPage = () => {
       applicationCategory: 'BusinessApplication',
       name: appConfig.name,
       url: `${siteOrigin}/`,
-      description: t('landing.seo.description', {
-        defaultValue: 'Plateforme agricole intégrée pour piloter parcelles, équipes, stocks et capteurs.',
-      }),
+      description: t('landing2.seo.description', 'Plateforme agricole intégrée pour piloter parcelles, équipes, stocks et capteurs.'),
       image: `${siteOrigin}/assets/logo.png`,
-      offers: { '@type': 'Offer', price: '149', priceCurrency: 'EUR' },
+      offers: { '@type': 'Offer', priceSpecification: { '@type': 'PriceSpecification', priceCurrency: 'EUR', price: '0' } },
     }),
     [siteOrigin, t],
   );
 
   useEffect(() => {
-    const pageTitle = t('landing.seo.title', {
-      defaultValue: `${appConfig.name} · Plateforme agricole intégrée`,
-    });
-    const description = t('landing.seo.description', {
-      defaultValue: 'Cultivez avec précision. Décidez avec données.',
-    });
+    const pageTitle = t('landing2.seo.title', `${appConfig.name} · Plateforme agricole intégrée`);
+    const description = t('landing2.seo.description', 'Cultivez avec précision. Décidez avec données.');
     document.title = pageTitle;
 
     const ensureMeta = (nameOrProp: string, content: string, isProperty = false) => {
@@ -1779,21 +1753,23 @@ const LandingPage = () => {
   };
   const openDemo = () => setDemoOpen(true);
 
+  const tFn: T = (k, d) => t(k, { defaultValue: d ?? k });
+
   return (
-    <div className="onb-shell" style={{ minHeight: '100vh' }}>
+    <div className="onb-shell" dir={isRTL ? 'rtl' : 'ltr'} style={{ minHeight: '100vh' }}>
       <style>{RESPONSIVE_CSS}</style>
-      <LandingNav onDemo={openDemo} />
-      <Hero onDemo={openDemo} onTrial={goTrial} />
-      <LogoStrip />
-      <ProductPreview />
-      <ModulesSection />
-      <HowItWorks />
-      <StatsBand />
-      <Testimonials />
-      <Pricing onContact={openDemo} />
-      <FAQSection />
-      <CTABanner onDemo={openDemo} onTrial={goTrial} />
-      <Footer />
+      <LandingNav t={tFn} onDemo={openDemo} onTrial={goTrial} />
+      <Hero t={tFn} onDemo={openDemo} onTrial={goTrial} />
+      <LogoStrip t={tFn} />
+      <ProductPreview t={tFn} />
+      <ModulesSection t={tFn} />
+      <HowItWorks t={tFn} />
+      <StatsBand t={tFn} />
+      <Testimonials t={tFn} />
+      <Pricing t={tFn} onContact={openDemo} />
+      <FAQSection t={tFn} />
+      <CTABanner t={tFn} onDemo={openDemo} onTrial={goTrial} />
+      <Footer t={tFn} />
 
       {demoOpen && (
         <div
@@ -1809,6 +1785,7 @@ const LandingPage = () => {
             alignItems: 'center',
             justifyContent: 'center',
             padding: 16,
+            overflowY: 'auto',
           }}
           onClick={() => setDemoOpen(false)}
         >
@@ -1821,7 +1798,7 @@ const LandingPage = () => {
               width: '100%',
               maxHeight: '90vh',
               overflowY: 'auto',
-              padding: 32,
+              padding: 24,
               border: '1px solid var(--onb-rule)',
               boxShadow: 'var(--onb-sh-md)',
               position: 'relative',
@@ -1830,11 +1807,11 @@ const LandingPage = () => {
             <button
               type="button"
               onClick={() => setDemoOpen(false)}
-              aria-label="Fermer"
+              aria-label={t('landing2.modalClose', 'Fermer')}
               style={{
                 position: 'absolute',
-                top: 16,
-                right: 16,
+                top: 12,
+                insetInlineEnd: 12,
                 width: 32,
                 height: 32,
                 borderRadius: 999,
@@ -1847,14 +1824,14 @@ const LandingPage = () => {
                 color: 'var(--onb-ink-700)',
               }}
             >
-              <Plus size={14} style={{ transform: 'rotate(45deg)' }} />
+              <X size={14} />
             </button>
             <div className="onb-mono-cap" style={{ color: 'var(--onb-brand-700)', marginBottom: 12 }}>
-              <Mail size={11} style={{ display: 'inline', marginRight: 6, verticalAlign: 'middle' }} />
-              Démo personnalisée
+              <Mail size={11} style={{ display: 'inline', marginInlineEnd: 6, verticalAlign: 'middle' }} />
+              {t('landing2.demo.eyebrow', 'Démo personnalisée')}
             </div>
-            <h3 className="onb-h-display" style={{ fontSize: 28, margin: '0 0 18px' }}>
-              Réservez votre démo.
+            <h3 className="onb-h-display" style={{ fontSize: 'clamp(22px, 5vw, 28px)', margin: '0 0 18px' }}>
+              {t('landing2.demo.title', 'Réservez votre démo.')}
             </h3>
             <DemoRequestForm />
           </div>
