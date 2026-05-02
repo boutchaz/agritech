@@ -16853,7 +16853,24 @@ CREATE TRIGGER set_supported_countries_updated_at
 
 -- Seed initial supported countries (more can be added via admin API)
 INSERT INTO supported_countries (country_code, country_name, region, enabled, display_order) VALUES
-  ('MA', 'Morocco', 'Africa', true, 1)
+  -- Africa (MENA)
+  ('MA', 'Morocco',  'Africa', true, 1),
+  ('TN', 'Tunisia',  'Africa', true, 2),
+  ('DZ', 'Algeria',  'Africa', true, 3),
+  ('EG', 'Egypt',    'Africa', true, 4),
+  ('SN', 'Senegal',  'Africa', true, 5),
+  -- Middle East
+  ('AE', 'United Arab Emirates', 'Middle East', true, 1),
+  ('SA', 'Saudi Arabia',         'Middle East', true, 2),
+  ('JO', 'Jordan',               'Middle East', true, 3),
+  ('LB', 'Lebanon',              'Middle East', true, 4),
+  -- Europe
+  ('FR', 'France',  'Europe', true, 1),
+  ('ES', 'Spain',   'Europe', true, 2),
+  ('IT', 'Italy',   'Europe', true, 3),
+  ('PT', 'Portugal','Europe', true, 4),
+  ('DE', 'Germany', 'Europe', true, 5),
+  ('NL', 'Netherlands', 'Europe', true, 6)
 ON CONFLICT (country_code) DO NOTHING;
 
 
