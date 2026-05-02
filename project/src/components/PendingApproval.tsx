@@ -2,17 +2,18 @@ import { Clock, LogOut, Mail, Phone, XCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { AgroginaLogo, ScreenShell } from '@/components/onboarding-v2/chrome';
 import { useAuth } from '../hooks/useAuth';
+import { useSupportInfo } from '../hooks/useSupportInfo';
 
 interface PendingApprovalProps {
   status: 'pending' | 'rejected' | 'approved';
 }
 
-const SUPPORT_EMAIL = 'support@agrogina.com';
-const SUPPORT_PHONE = '+212 600 000 000';
-
 const PendingApproval = ({ status }: PendingApprovalProps) => {
   const { t } = useTranslation();
   const { currentOrganization, signOut } = useAuth();
+  const support = useSupportInfo();
+  const SUPPORT_EMAIL = support.email;
+  const SUPPORT_PHONE = support.phone;
   const isRejected = status === 'rejected';
 
   const eyebrow = isRejected

@@ -19416,3 +19416,54 @@ LEFT JOIN LATERAL (
   FROM payment_records pr
   WHERE pr.worker_id = w.id
 ) pay ON true;
+
+-- =====================================================================
+-- SUPPORT SETTINGS (single global row — public read, system_admin write)
+-- =====================================================================
+CREATE TABLE IF NOT EXISTS support_settings (
+  id BOOLEAN PRIMARY KEY DEFAULT TRUE,
+  email TEXT NOT NULL DEFAULT 'support@agrogina.com',
+  phone TEXT NOT NULL DEFAULT '+212 600 000 000',
+  whatsapp TEXT,
+  address TEXT,
+  hours TEXT,
+  contact_email TEXT NOT NULL DEFAULT 'contact@agrogina.com',
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  CONSTRAINT support_settings_singleton CHECK (id = TRUE)
+);
+
+INSERT INTO support_settings (id) VALUES (TRUE)
+ON CONFLICT (id) DO NOTHING;
+
+ALTER TABLE support_settings ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "support_settings_public_read" ON support_settings;
+CREATE POLICY "support_settings_public_read" ON support_settings
+  FOR SELECT USING (TRUE);
+
+DROP POLICY IF EXISTS "support_settings_admin_write" ON support_settings;
+CREATE POLICY "support_settings_admin_write" ON support_settings
+  FOR ALL USING (
+    EXISTS (
+      SELECT 1
+      FROM organization_users ou
+      JOIN roles r ON r.id = ou.role_id
+      WHERE ou.user_id = auth.uid()
+        AND ou.is_active = true
+        AND r.name = 'system_admin'
+    )
+  );
+
+CREATE OR REPLACE FUNCTION update_support_settings_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_support_settings_updated_at ON support_settings;
+CREATE TRIGGER trg_support_settings_updated_at
+  BEFORE UPDATE ON support_settings
+  FOR EACH ROW EXECUTE FUNCTION update_support_settings_updated_at();

@@ -1,4 +1,7 @@
+import { useSupportInfo } from '@/hooks/useSupportInfo';
+
 export function TermsOfServiceContent() {
+  const support = useSupportInfo();
   return (
     <>
       <div className="not-prose mb-8 grid gap-3 sm:grid-cols-2">
@@ -220,8 +223,8 @@ export function TermsOfServiceContent() {
       </p>
       <ul>
         <li><strong>Société</strong> : CodeLovers</li>
-        <li><strong>Email</strong> : contact@agrogina.com</li>
-        <li><strong>Adresse</strong> : Casablanca, Maroc</li>
+        <li><strong>Email</strong> : <a href={`mailto:${support.contact_email}`}>{support.contact_email}</a></li>
+        {support.address && <li><strong>Adresse</strong> : {support.address}</li>}
       </ul>
     </>
   )

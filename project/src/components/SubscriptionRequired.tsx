@@ -2,6 +2,7 @@
 import { AlertTriangle, CreditCard, Lock } from 'lucide-react';
 import { useNavigate } from '@tanstack/react-router';
 import { useAuth } from '../hooks/useAuth';
+import { useSupportInfo } from '../hooks/useSupportInfo';
 import { Button } from '@/components/ui/button';
 
 interface SubscriptionRequiredProps {
@@ -15,6 +16,7 @@ const SubscriptionRequired = ({
 }: SubscriptionRequiredProps) => {
   const navigate = useNavigate();
   const { currentOrganization } = useAuth();
+  const support = useSupportInfo();
 
   const defaultMessages = {
     no_subscription: 'Your organization does not have an active subscription.',
@@ -90,8 +92,8 @@ const SubscriptionRequired = ({
           <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
             <p className="text-xs text-center text-gray-500 dark:text-gray-400">
               Need help? Contact your organization administrator or{' '}
-          <a href="mailto:support@agrogina.com" className="text-blue-600 hover:text-blue-700">
-            support@agrogina.com
+          <a href={`mailto:${support.email}`} className="text-blue-600 hover:text-blue-700">
+            {support.email}
               </a>
             </p>
           </div>

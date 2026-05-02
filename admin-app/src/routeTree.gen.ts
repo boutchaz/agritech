@@ -13,6 +13,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
 import { Route as AuthenticatedSupportedCountriesRouteImport } from './routes/_authenticated/supported-countries'
+import { Route as AuthenticatedSupportSettingsRouteImport } from './routes/_authenticated/support-settings'
 import { Route as AuthenticatedSubscriptionModelRouteImport } from './routes/_authenticated/subscription-model'
 import { Route as AuthenticatedRdvRouteImport } from './routes/_authenticated/rdv'
 import { Route as AuthenticatedRagSourcesRouteImport } from './routes/_authenticated/rag-sources'
@@ -44,6 +45,12 @@ const AuthenticatedSupportedCountriesRoute =
   AuthenticatedSupportedCountriesRouteImport.update({
     id: '/supported-countries',
     path: '/supported-countries',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedSupportSettingsRoute =
+  AuthenticatedSupportSettingsRouteImport.update({
+    id: '/support-settings',
+    path: '/support-settings',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedSubscriptionModelRoute =
@@ -125,6 +132,7 @@ export interface FileRoutesByFullPath {
   '/rag-sources': typeof AuthenticatedRagSourcesRoute
   '/rdv': typeof AuthenticatedRdvRoute
   '/subscription-model': typeof AuthenticatedSubscriptionModelRoute
+  '/support-settings': typeof AuthenticatedSupportSettingsRoute
   '/supported-countries': typeof AuthenticatedSupportedCountriesRoute
   '/clients/$orgId': typeof AuthenticatedClientsOrgIdRoute
   '/referentiels/$crop': typeof AuthenticatedReferentielsCropRoute
@@ -141,6 +149,7 @@ export interface FileRoutesByTo {
   '/rag-sources': typeof AuthenticatedRagSourcesRoute
   '/rdv': typeof AuthenticatedRdvRoute
   '/subscription-model': typeof AuthenticatedSubscriptionModelRoute
+  '/support-settings': typeof AuthenticatedSupportSettingsRoute
   '/supported-countries': typeof AuthenticatedSupportedCountriesRoute
   '/': typeof AuthenticatedIndexRoute
   '/clients/$orgId': typeof AuthenticatedClientsOrgIdRoute
@@ -160,6 +169,7 @@ export interface FileRoutesById {
   '/_authenticated/rag-sources': typeof AuthenticatedRagSourcesRoute
   '/_authenticated/rdv': typeof AuthenticatedRdvRoute
   '/_authenticated/subscription-model': typeof AuthenticatedSubscriptionModelRoute
+  '/_authenticated/support-settings': typeof AuthenticatedSupportSettingsRoute
   '/_authenticated/supported-countries': typeof AuthenticatedSupportedCountriesRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/clients/$orgId': typeof AuthenticatedClientsOrgIdRoute
@@ -180,6 +190,7 @@ export interface FileRouteTypes {
     | '/rag-sources'
     | '/rdv'
     | '/subscription-model'
+    | '/support-settings'
     | '/supported-countries'
     | '/clients/$orgId'
     | '/referentiels/$crop'
@@ -196,6 +207,7 @@ export interface FileRouteTypes {
     | '/rag-sources'
     | '/rdv'
     | '/subscription-model'
+    | '/support-settings'
     | '/supported-countries'
     | '/'
     | '/clients/$orgId'
@@ -214,6 +226,7 @@ export interface FileRouteTypes {
     | '/_authenticated/rag-sources'
     | '/_authenticated/rdv'
     | '/_authenticated/subscription-model'
+    | '/_authenticated/support-settings'
     | '/_authenticated/supported-countries'
     | '/_authenticated/'
     | '/_authenticated/clients/$orgId'
@@ -254,6 +267,13 @@ declare module '@tanstack/react-router' {
       path: '/supported-countries'
       fullPath: '/supported-countries'
       preLoaderRoute: typeof AuthenticatedSupportedCountriesRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/support-settings': {
+      id: '/_authenticated/support-settings'
+      path: '/support-settings'
+      fullPath: '/support-settings'
+      preLoaderRoute: typeof AuthenticatedSupportSettingsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/subscription-model': {
@@ -353,6 +373,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedRagSourcesRoute: typeof AuthenticatedRagSourcesRoute
   AuthenticatedRdvRoute: typeof AuthenticatedRdvRoute
   AuthenticatedSubscriptionModelRoute: typeof AuthenticatedSubscriptionModelRoute
+  AuthenticatedSupportSettingsRoute: typeof AuthenticatedSupportSettingsRoute
   AuthenticatedSupportedCountriesRoute: typeof AuthenticatedSupportedCountriesRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedClientsOrgIdRoute: typeof AuthenticatedClientsOrgIdRoute
@@ -370,6 +391,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedRagSourcesRoute: AuthenticatedRagSourcesRoute,
   AuthenticatedRdvRoute: AuthenticatedRdvRoute,
   AuthenticatedSubscriptionModelRoute: AuthenticatedSubscriptionModelRoute,
+  AuthenticatedSupportSettingsRoute: AuthenticatedSupportSettingsRoute,
   AuthenticatedSupportedCountriesRoute: AuthenticatedSupportedCountriesRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedClientsOrgIdRoute: AuthenticatedClientsOrgIdRoute,

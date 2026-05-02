@@ -79,6 +79,7 @@ import { ProfitabilityModule } from "./modules/profitability/profitability.modul
 import { ProductApplicationsModule } from "./modules/product-applications/product-applications.module";
 import { AccountMappingsModule } from "./modules/account-mappings/account-mappings.module";
 import { AdminModule } from "./modules/admin/admin.module";
+import { SupportModule } from "./modules/support/support.module";
 import { EventsModule } from "./modules/events/events.module";
 import { MarketplaceModule } from "./modules/marketplace/marketplace.module";
 import { StrapiModule } from "./modules/strapi/strapi.module";
@@ -237,6 +238,7 @@ import { BarcodeModule } from "./modules/barcode/barcode.module";
 
     // Admin & Analytics
     AdminModule,
+    SupportModule,
     EventsModule,
     AdoptionModule,
     MarketplaceModule,
