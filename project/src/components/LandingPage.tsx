@@ -1066,51 +1066,14 @@ function Testimonials({ t }: { t: T }) {
 /* ────────────────────────────────────────────────────────── pricing — quote-only */
 
 function Pricing({ t, onContact }: { t: T; onContact: () => void }) {
-  const plans = [
-    {
-      key: 'farmer',
-      name: t('landing2.pricing.farmer.name', 'Particulier'),
-      desc: t('landing2.pricing.farmer.desc', 'Petits producteurs, < 5 ha'),
-      features: [
-        t('landing2.pricing.farmer.f1', "Jusqu'à 3 parcelles"),
-        t('landing2.pricing.farmer.f2', 'Module Live Map'),
-        t('landing2.pricing.farmer.f3', 'Tâches & rappels'),
-        t('landing2.pricing.farmer.f4', 'Support email'),
-      ],
-      featured: false,
-    },
-    {
-      key: 'farm',
-      name: t('landing2.pricing.farm.name', 'Exploitation'),
-      desc: t('landing2.pricing.farm.desc', 'Fermes professionnelles, 5–200 ha'),
-      features: [
-        t('landing2.pricing.farm.f1', 'Parcelles illimitées'),
-        t('landing2.pricing.farm.f2', 'Tous les modules essentiels'),
-        t('landing2.pricing.farm.f3', '5 utilisateurs inclus'),
-        t('landing2.pricing.farm.f4', 'Support prioritaire 24/7'),
-        t('landing2.pricing.farm.f5', 'Formation sur site'),
-      ],
-      featured: true,
-    },
-    {
-      key: 'enterprise',
-      name: t('landing2.pricing.enterprise.name', 'Entreprise'),
-      desc: t('landing2.pricing.enterprise.desc', 'Coopératives & agro-industrie'),
-      features: [
-        t('landing2.pricing.enterprise.f1', 'Multi-fermes illimité'),
-        t('landing2.pricing.enterprise.f2', 'Tous modules + IA'),
-        t('landing2.pricing.enterprise.f3', 'SSO & API'),
-        t('landing2.pricing.enterprise.f4', 'Account manager dédié'),
-        t('landing2.pricing.enterprise.f5', 'SLA 99.9%'),
-      ],
-      featured: false,
-    },
+  const features = [
+    t('landing2.pricing.f1', 'Parcelles illimitées'),
+    t('landing2.pricing.f2', 'Tous les modules · activez ce que vous voulez'),
+    t('landing2.pricing.f3', 'Multi-fermes & coopératives'),
+    t('landing2.pricing.f4', 'Support prioritaire 24/7'),
+    t('landing2.pricing.f5', 'Formation sur site avec un agronome'),
+    t('landing2.pricing.f6', 'SSO, API & intégrations'),
   ];
-
-  const quote = t('landing2.pricing.quote', 'Sur devis');
-  const quoteSub = t('landing2.pricing.quoteSub', 'Tarif personnalisé selon votre exploitation');
-  const ctaLabel = t('landing2.pricing.cta', 'Demander un devis');
-  const popular = t('landing2.pricing.popular', '★ Populaire');
 
   return (
     <section id="pricing" className="lp-pricing-section">
@@ -1130,73 +1093,68 @@ function Pricing({ t, onContact }: { t: T; onContact: () => void }) {
         )}
         dark
       />
-      <div className="lp-pricing">
-        {plans.map((p) => (
-          <div key={p.key} className={`lp-plan ${p.featured ? 'lp-plan-featured' : ''}`}>
-            {p.featured && <span className="onb-mono lp-plan-badge">{popular}</span>}
+      <div className="lp-pricing-single">
+        <div className="lp-plan-single">
+          <div className="lp-plan-single-head">
+            <span className="onb-mono lp-plan-badge">
+              {t('landing2.pricing.popular', '★ Sur mesure')}
+            </span>
             <div
               className="onb-mono-cap"
-              style={{ color: p.featured ? 'var(--onb-brand-700)' : 'rgba(255,255,255,.5)', marginBottom: 12 }}
+              style={{ color: 'var(--onb-brand-700)', marginTop: 18, marginBottom: 12 }}
             >
-              {p.name}
+              {t('landing2.pricing.singleName', 'Plan Agrogina')}
             </div>
-            <div className="onb-h-display lp-plan-price">{quote}</div>
-            <p
-              style={{
-                fontSize: 13,
-                color: p.featured ? 'var(--onb-ink-500)' : 'rgba(255,255,255,.6)',
-                margin: '0 0 6px',
-              }}
-            >
-              {p.desc}
-            </p>
+            <div className="onb-h-display lp-plan-price-single">
+              {t('landing2.pricing.quote', 'Sur devis')}
+            </div>
             <p
               className="onb-mono"
-              style={{
-                fontSize: 11,
-                color: p.featured ? 'var(--onb-ink-400)' : 'rgba(255,255,255,.4)',
-                margin: '0 0 22px',
-              }}
+              style={{ fontSize: 11, color: 'var(--onb-ink-400)', margin: '6px 0 18px' }}
             >
-              {quoteSub}
+              {t('landing2.pricing.quoteSub', 'Tarif personnalisé selon votre exploitation')}
+            </p>
+            <p style={{ fontSize: 14, color: 'var(--onb-ink-600)', margin: '0 0 22px', lineHeight: 1.55 }}>
+              {t(
+                'landing2.pricing.singleDesc',
+                'Que vous gériez 3 hectares ou 3 000, nous construisons une offre qui colle à vos parcelles, vos modules et vos utilisateurs.',
+              )}
             </p>
             <button
               type="button"
               onClick={onContact}
-              className="onb-btn onb-btn-primary"
-              style={{
-                width: '100%',
-                padding: '14px',
-                background: p.featured ? 'var(--onb-brand-600)' : 'white',
-                color: p.featured ? 'white' : 'var(--onb-ink-900)',
-              }}
+              className="onb-btn onb-btn-primary lp-plan-cta"
             >
-              {ctaLabel}
+              {t('landing2.pricing.cta', 'Demander un devis')}
             </button>
-            <ul style={{ listStyle: 'none', padding: 0, margin: '22px 0 0' }}>
-              {p.features.map((f, i) => (
+            <p className="onb-mono lp-plan-note">
+              {t('landing2.pricing.trialNote', "14 jours gratuits · sans carte · réponse sous 24h")}
+            </p>
+          </div>
+          <div className="lp-plan-features">
+            <div className="onb-mono-cap" style={{ color: 'var(--onb-ink-500)', marginBottom: 16 }}>
+              {t('landing2.pricing.included', 'Inclus dans toutes les offres')}
+            </div>
+            <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+              {features.map((f, i) => (
                 <li
                   key={f}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: 10,
-                    fontSize: 13.5,
-                    padding: '8px 0',
-                    borderTop: i === 0 ? 0 : `1px dashed ${p.featured ? 'var(--onb-rule)' : 'rgba(255,255,255,.08)'}`,
+                    gap: 12,
+                    fontSize: 14,
+                    padding: '10px 0',
+                    borderTop: i === 0 ? 0 : '1px dashed var(--onb-rule)',
                   }}
                 >
-                  <Check
-                    size={14}
-                    strokeWidth={2}
-                    style={{ color: p.featured ? 'var(--onb-brand-600)' : 'var(--onb-brand-100)', flexShrink: 0 }}
-                  />
+                  <Check size={14} strokeWidth={2} style={{ color: 'var(--onb-brand-600)', flexShrink: 0 }} />
                   {f}
                 </li>
               ))}
             </ul>
           </div>
-        ))}
+        </div>
       </div>
     </section>
   );
@@ -1577,29 +1535,40 @@ const RESPONSIVE_CSS = `
   border-bottom: 1px solid var(--onb-rule);
   background: var(--onb-ink-900); color: white;
 }
-.onb-shell .lp-pricing { max-width: 1100px; margin: 0 auto; display: grid; grid-template-columns: 1fr; gap: 14px; }
-.onb-shell .lp-plan {
-  padding: 24px; border-radius: var(--onb-r-lg);
-  background: rgba(255,255,255,.04);
-  border: 1px solid rgba(255,255,255,.12);
+.onb-shell .lp-pricing-single { max-width: 920px; margin: 0 auto; }
+.onb-shell .lp-plan-single {
+  background: white; color: var(--onb-ink-900);
+  border-radius: 24px;
+  display: grid; grid-template-columns: 1fr;
+  overflow: hidden;
+  box-shadow: 0 24px 60px rgba(20, 40, 30, .35), 0 4px 12px rgba(20, 40, 30, .15);
   position: relative;
 }
-@media (max-width: 719px) {
-  .onb-shell .lp-plan:not(.lp-plan-featured) { display: none; }
-}
-.onb-shell .lp-plan-featured {
-  background: white; color: var(--onb-ink-900); border: 0;
-  box-shadow: 0 24px 60px rgba(20, 40, 30, .35), 0 4px 12px rgba(20, 40, 30, .15);
+.onb-shell .lp-plan-single-head { padding: 32px 24px; position: relative; }
+.onb-shell .lp-plan-features {
+  padding: 28px 24px;
+  background: var(--onb-bg-paper);
+  border-top: 1px solid var(--onb-rule);
 }
 .onb-shell .lp-plan-badge {
-  position: absolute; top: -12px; left: 24px;
+  display: inline-block;
   padding: 4px 10px; background: var(--onb-brand-600); color: white;
   font-size: 9.5px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
-  border-radius: 4px;
+  border-radius: 999px;
 }
-.onb-shell .lp-plan-price {
-  font-size: 36px; line-height: 1; margin-bottom: 6px;
+.onb-shell .lp-plan-price-single {
+  font-size: clamp(40px, 8vw, 56px); line-height: 1;
   font-family: var(--onb-font-display); font-weight: 500;
+  color: var(--onb-ink-900);
+}
+.onb-shell .lp-plan-cta {
+  width: 100%; padding: 16px;
+  background: var(--onb-brand-600); color: white;
+  font-size: 15px;
+}
+.onb-shell .lp-plan-cta:hover { background: var(--onb-brand-700); }
+.onb-shell .lp-plan-note {
+  margin: 12px 0 0; font-size: 11px; color: var(--onb-ink-400); text-align: center;
 }
 
 /* faq */
@@ -1652,7 +1621,9 @@ const RESPONSIVE_CSS = `
   .onb-shell .lp-stats { grid-template-columns: repeat(4, 1fr); }
   .onb-shell .lp-stats-section { padding: 80px 32px; }
   .onb-shell .lp-pricing-section { padding: 80px 32px; }
-  .onb-shell .lp-pricing { grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .onb-shell .lp-plan-single { grid-template-columns: 1.05fr 1fr; }
+  .onb-shell .lp-plan-single-head { padding: 40px 36px; }
+  .onb-shell .lp-plan-features { padding: 40px 36px; border-top: 0; border-left: 1px solid var(--onb-rule); }
   .onb-shell .lp-testimonials { grid-template-columns: 1fr 1fr; }
   .onb-shell .lp-cta-section { padding: 64px 32px; }
   .onb-shell .lp-cta { grid-template-columns: 1.4fr 1fr; padding: 40px; gap: 32px; }
@@ -1691,8 +1662,6 @@ const RESPONSIVE_CSS = `
   .onb-shell .lp-steps { grid-template-columns: repeat(4, 1fr); gap: 0; background: transparent; }
   .onb-shell .lp-step { background: transparent; padding: 28px 24px; }
   .onb-shell .lp-pricing-section { padding: 100px 40px; }
-  .onb-shell .lp-plan-featured { transform: translateY(-12px); }
-  .onb-shell .lp-pricing { gap: 14px; }
   .onb-shell .lp-stats-section { padding: 80px 40px; }
   .onb-shell .lp-testimonials { grid-template-columns: 1.4fr 1fr 1fr; gap: 16px; }
   .onb-shell .lp-cta-section { padding: 80px 40px; }

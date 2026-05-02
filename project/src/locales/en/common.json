@@ -5839,6 +5839,20 @@
       "check": "Check item",
       "uncheck": "Uncheck item",
       "removeItem": "Remove item"
+    },
+    "detail": {
+      "platformCard": {
+        "title": "AgroGina",
+        "tagline": "Intelligent farm management platform · Morocco",
+        "websiteLabel": "agrogina.com",
+        "logoAlt": "AgroGina logo",
+        "description": "The all-in-one platform to manage your plots, teams, inventory, satellite insights, and farm accounting.",
+        "featureParcels": "Plots & operations",
+        "featureTeams": "Teams & workforce",
+        "featureStock": "Stock & supplies",
+        "featureSatellite": "Satellite analysis",
+        "featureAccounting": "Accounting"
+      }
     }
   },
   "dangerZone": {
@@ -9377,7 +9391,7 @@
       "quote": "On request",
       "quoteSub": "Custom pricing for your farm",
       "cta": "Request a quote",
-      "popular": "★ Popular",
+      "popular": "★ Custom-built",
       "farmer": {
         "name": "Smallholder",
         "desc": "Small producers, < 5 ha",
@@ -9403,7 +9417,17 @@
         "f3": "SSO & API",
         "f4": "Dedicated account manager",
         "f5": "SLA 99.9%"
-      }
+      },
+      "singleName": "Agrogina Plan",
+      "singleDesc": "Whether you run 3 hectares or 3,000, we build a quote that fits your plots, modules, and users.",
+      "included": "Included in every quote",
+      "trialNote": "14 days free · no card · reply within 24h",
+      "f1": "Unlimited plots",
+      "f2": "All modules · turn on what you need",
+      "f3": "Multi-farm & cooperatives",
+      "f4": "24/7 priority support",
+      "f5": "On-site training with an agronomist",
+      "f6": "SSO, API & integrations"
     },
     "faq": {
       "eyebrow": "07 · Questions",
@@ -9458,8 +9482,8 @@
     },
     "modalClose": "Close",
     "seo": {
-      "title": "Agrogina · Integrated agricultural platform",
-      "description": "Grow with precision. Decide with data."
+      "title": "AgroGina - Smart Farm Management & Agronomy | Morocco",
+      "description": "Agricultural ERP and field operations for Morocco: plots, teams, stock, accounting, satellite NDVI/NDWI, and AgromindIA for actionable advice. Built for 50–600+ ha farms and weak connectivity."
     }
   }
 }

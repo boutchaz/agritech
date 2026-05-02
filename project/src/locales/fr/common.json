@@ -2457,8 +2457,8 @@
     },
     "seo": {
       "title": "AGROGINA - La Suite de Gestion Agricole Tout-en-Un | Maroc",
-      "description": "AGROGINA révolutionne l'agriculture au Maroc. Une plateforme unique pour piloter production, finance, RH, stocks et commercialisation. Agriculture de précision et gestion d'exploitation simplifiée.",
-      "keywords": "gestion agricole, logiciel agriculture maroc, erp agricole, parcelles, NDVI, analyse satellite, comptabilité agricole, gestion ferme, agriculture de précision, marketplace agricole, contrôle qualité fruit, gestion main d'oeuvre agricole, agrogina"
+      "description": "ERP agricole et agronomie au Maroc : parcelles, équipes, stocks, comptabilité, analyses satellite NDVI/NDWI et AgromindIA pour des décisions utiles sur le terrain. Pour exploitations de 50 à 600+ ha, avec interface simple et usage possible en faible connectivité.",
+      "keywords": "gestion agricole, logiciel agriculture maroc, erp agricole, parcelles, NDVI, analyse satellite, AgromindIA, intelligence agricole, comptabilité agricole, coopérative agricole, agriculture de précision, gestion main-d'œuvre agricole, agrogina"
     }
   },
   "suppliers": {
@@ -5749,6 +5749,20 @@
       "check": "Cocher l'élément",
       "uncheck": "Décocher l'élément",
       "removeItem": "Supprimer l'élément"
+    },
+    "detail": {
+      "platformCard": {
+        "title": "AgroGina",
+        "tagline": "Plateforme de gestion agricole intelligente · Maroc",
+        "websiteLabel": "agrogina.com",
+        "logoAlt": "Logo AgroGina",
+        "description": "La plateforme complète pour piloter vos parcelles, équipes, stocks, analyses satellite et comptabilité.",
+        "featureParcels": "Parcelles & exploitation",
+        "featureTeams": "Équipes & main-d'œuvre",
+        "featureStock": "Stocks & approvisionnement",
+        "featureSatellite": "Analyses satellite",
+        "featureAccounting": "Comptabilité"
+      }
     }
   },
   "dangerZone": {
@@ -9186,7 +9200,7 @@
       "quote": "Sur devis",
       "quoteSub": "Tarif personnalisé selon votre exploitation",
       "cta": "Demander un devis",
-      "popular": "★ Populaire",
+      "popular": "★ Sur mesure",
       "farmer": {
         "name": "Particulier",
         "desc": "Petits producteurs, < 5 ha",
@@ -9212,7 +9226,17 @@
         "f3": "SSO & API",
         "f4": "Account manager dédié",
         "f5": "SLA 99.9%"
-      }
+      },
+      "singleName": "Plan Agrogina",
+      "singleDesc": "Que vous gériez 3 hectares ou 3 000, nous construisons une offre qui colle à vos parcelles, vos modules et vos utilisateurs.",
+      "included": "Inclus dans toutes les offres",
+      "trialNote": "14 jours gratuits · sans carte · réponse sous 24h",
+      "f1": "Parcelles illimitées",
+      "f2": "Tous les modules · activez ce que vous voulez",
+      "f3": "Multi-fermes & coopératives",
+      "f4": "Support prioritaire 24/7",
+      "f5": "Formation sur site avec un agronome",
+      "f6": "SSO, API & intégrations"
     },
     "faq": {
       "eyebrow": "07 · Questions",
