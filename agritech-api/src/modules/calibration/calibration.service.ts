@@ -3027,4 +3027,74 @@ export class CalibrationService {
   async getIrrigationRecommendation(parcelId: string, organizationId: string) {
     return this.dataService.getIrrigationRecommendation(parcelId, organizationId);
   }
+
+  /**
+   * One-shot bundle for the calibration page so the client can hydrate every
+   * panel from a single round-trip instead of firing 4–6 parallel queries.
+   * Errors in optional pieces (nutrition suggestion, history) degrade
+   * gracefully — the report + phase are always returned.
+   */
+  async getCalibrationBundle(
+    parcelId: string,
+    organizationId: string,
+  ): Promise<{
+    report: Awaited<ReturnType<CalibrationService["getCalibrationReport"]>> | null;
+    history: Awaited<ReturnType<CalibrationService["getCalibrationHistory"]>>;
+    nutritionSuggestion:
+      | Awaited<ReturnType<CalibrationService["getNutritionSuggestion"]>>
+      | null;
+    latestCalibration:
+      | Awaited<ReturnType<CalibrationService["getLatestCalibration"]>>
+      | null;
+    aiPhase: string;
+  }> {
+    const supabase = this.databaseService.getAdminClient();
+    const [reportRes, historyRes, nutritionRes, latestRes, parcelRes] =
+      await Promise.allSettled([
+        this.getCalibrationReport(parcelId, organizationId),
+        this.getCalibrationHistory(parcelId, organizationId),
+        this.getNutritionSuggestion(parcelId, organizationId),
+        this.getLatestCalibration(parcelId, organizationId),
+        supabase
+          .from("parcels")
+          .select("ai_phase")
+          .eq("id", parcelId)
+          .eq("organization_id", organizationId)
+          .maybeSingle(),
+      ]);
+
+    const aiPhase =
+      parcelRes.status === "fulfilled"
+        ? (parcelRes.value.data?.ai_phase as string | null) ?? "unknown"
+        : "unknown";
+
+    if (reportRes.status === "rejected") {
+      this.logger.warn(
+        `bundle: report failed for ${parcelId}: ${
+          reportRes.reason instanceof Error
+            ? reportRes.reason.message
+            : reportRes.reason
+        }`,
+      );
+    }
+    if (historyRes.status === "rejected") {
+      this.logger.warn(
+        `bundle: history failed for ${parcelId}: ${
+          historyRes.reason instanceof Error
+            ? historyRes.reason.message
+            : historyRes.reason
+        }`,
+      );
+    }
+
+    return {
+      report: reportRes.status === "fulfilled" ? reportRes.value : null,
+      history: historyRes.status === "fulfilled" ? historyRes.value : [],
+      nutritionSuggestion:
+        nutritionRes.status === "fulfilled" ? nutritionRes.value : null,
+      latestCalibration:
+        latestRes.status === "fulfilled" ? latestRes.value : null,
+      aiPhase,
+    };
+  }
 }

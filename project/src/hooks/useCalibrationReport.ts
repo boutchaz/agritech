@@ -124,6 +124,56 @@ export function useStartPartialRecalibration(parcelId: string) {
   });
 }
 
+/**
+ * Aggregate fetch for the calibration page. Hits a single backend endpoint
+ * that returns report + history + nutrition-suggestion + latest calibration
+ * + ai_phase, then seeds each individual queryKey from the result so the
+ * existing hooks (useCalibrationReport, useCalibrationHistory, etc.) read
+ * straight from cache without firing their own requests.
+ *
+ * Cuts the cold-cache request count for the calibration page from ~5 to 1.
+ */
+export function useCalibrationBundle(parcelId: string) {
+  const { currentOrganization } = useAuth();
+  const queryClient = useQueryClient();
+  const orgId = currentOrganization?.id;
+
+  return useQuery({
+    queryKey: queryKeys.calibration.bundle(parcelId, orgId),
+    queryFn: async () => {
+      if (!orgId) throw new Error("No organization selected");
+      const bundle = await calibrationApi.getCalibrationBundle(parcelId, orgId);
+      // Seed individual caches so the per-piece hooks don't refetch.
+      queryClient.setQueryData(
+        queryKeys.calibration.report(parcelId, orgId),
+        bundle.report,
+      );
+      queryClient.setQueryData(
+        queryKeys.calibration.history(parcelId, orgId),
+        bundle.history,
+      );
+      queryClient.setQueryData(
+        queryKeys.calibration.nutritionSuggestion(parcelId, orgId),
+        bundle.nutritionSuggestion,
+      );
+      queryClient.setQueryData(
+        queryKeys.calibration.phase(parcelId, orgId),
+        bundle.aiPhase,
+      );
+      if (bundle.latestCalibration) {
+        queryClient.setQueryData(
+          queryKeys.calibration.status(parcelId, orgId),
+          bundle.latestCalibration,
+        );
+      }
+      return bundle;
+    },
+    enabled: !!parcelId && !!orgId,
+    staleTime: 2 * 60 * 1000,
+    placeholderData: keepPreviousData,
+  });
+}
+
 export function useCalibrationReport(parcelId: string) {
   const { currentOrganization } = useAuth();
 

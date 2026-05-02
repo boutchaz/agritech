@@ -228,6 +228,14 @@ export interface CalibrationProgressResponse {
   stale: boolean;
 }
 
+export interface CalibrationBundleResponse {
+  report: CalibrationReportResponse | null;
+  history: CalibrationHistoryRecord[];
+  nutritionSuggestion: NutritionSuggestionResponse | null;
+  latestCalibration: CalibrationStatusRecord | null;
+  aiPhase: CalibrationPhase | string;
+}
+
 export const calibrationApi = {
   async startCalibration(
     parcelId: string,
@@ -279,6 +287,17 @@ export const calibrationApi = {
   ): Promise<CalibrationReportResponse | null> {
     return apiClient.get<CalibrationReportResponse | null>(
       `${BASE_URL}/${parcelId}/calibration/report`,
+      {},
+      organizationId,
+    );
+  },
+
+  async getCalibrationBundle(
+    parcelId: string,
+    organizationId?: string,
+  ): Promise<CalibrationBundleResponse> {
+    return apiClient.get<CalibrationBundleResponse>(
+      `${BASE_URL}/${parcelId}/calibration/bundle`,
       {},
       organizationId,
     );

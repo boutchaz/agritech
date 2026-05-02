@@ -9,7 +9,8 @@ useCalibrationPhase,
 useCalibrationHistory,
 useValidateCalibration,
 useNutritionSuggestion,
-useConfirmNutritionOption, } from '@/hooks/useCalibrationReport';
+useConfirmNutritionOption,
+useCalibrationBundle, } from '@/hooks/useCalibrationReport';
 import { useCalibrationProgress, type CalibrationProgressEvent } from '@/hooks/useCalibrationSocket';
 import { useAIPlan } from '@/hooks/useAIPlan';
 import { useAIRecommendations } from '@/hooks/useAIRecommendations';
@@ -1017,6 +1018,9 @@ const AICalibrationPage = () => {
   const [lastCalibrationLaunchAt, setLastCalibrationLaunchAt] = useState<number | null>(null);
 
   const { data: parcelData, refetch: refetchParcel } = useParcelById(parcelId);
+  // Aggregate fetch — must run before the per-piece hooks so its onSuccess
+  // can seed their queryKeys before they evaluate their fetchers.
+  useCalibrationBundle(parcelId);
   const { data: calibration, isLoading: isCalibrationLoading, isFetching: isCalibrationFetching, refetch: refetchCalibration } = useAICalibration(parcelId);
   const { data: phase, isFetching: isPhaseFetching, refetch: refetchPhase } = useCalibrationPhase(parcelId);
   const { data: diagnostics } = useAIDiagnostics(parcelId, phase === 'active');

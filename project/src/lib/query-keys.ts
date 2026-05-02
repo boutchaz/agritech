@@ -159,6 +159,8 @@ export const queryKeys = {
       ['calibration', organizationId ?? 'none', parcelId, 'zones'] as const,
     irrigation: (parcelId: string, organizationId?: string) =>
       ['calibration', organizationId ?? 'none', parcelId, 'irrigation'] as const,
+    bundle: (parcelId: string, organizationId?: string) =>
+      ['calibration', organizationId ?? 'none', parcelId, 'bundle'] as const,
   },
 
   annual: {
