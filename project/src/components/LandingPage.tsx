@@ -19,6 +19,8 @@ import {
   X,
 } from 'lucide-react';
 import LanguageSwitcher from './LanguageSwitcher';
+import SupportedRegionsSection from './SupportedRegionsSection';
+import { useLandingSettings } from '@/hooks/useLandingSettings';
 import { appConfig } from '@/config/app';
 import DemoRequestForm from './landing/DemoRequestForm';
 
@@ -292,13 +294,17 @@ function HeroStat({ label, value, unit, trend }: { label: string; value: string;
   );
 }
 
-function Hero({ t, onDemo, onTrial }: { t: T; onDemo: () => void; onTrial: () => void }) {
-  const stats = [
-    { n: '12.4k', t: t('landing2.hero.statFarms', 'Exploitations actives') },
-    { n: '847k ha', t: t('landing2.hero.statSurface', 'Surface monitorée') },
-    { n: '14', t: t('landing2.hero.statCountries', 'Pays · MENA + EU') },
-    { n: '99.94%', t: t('landing2.hero.statUptime', 'Disponibilité réseau') },
-  ];
+function Hero({
+  t,
+  onDemo,
+  onTrial,
+  stats,
+}: {
+  t: T;
+  onDemo: () => void;
+  onTrial: () => void;
+  stats: { value: string; label: string }[];
+}) {
   return (
     <section className="lp-hero">
       <div className="lp-hero-copy">
@@ -360,16 +366,16 @@ function Hero({ t, onDemo, onTrial }: { t: T; onDemo: () => void; onTrial: () =>
             {t('landing2.hero.statsTitle', 'Conçu pour la réalité du terrain')}
           </div>
           <div className="lp-hero-stats-grid">
-            {stats.map((s) => (
-              <div key={s.t}>
+            {stats.map((s, i) => (
+              <div key={`${s.label}-${i}`}>
                 <div className="onb-h-display" style={{ fontSize: 26, lineHeight: 1, marginBottom: 6 }}>
-                  {s.n}
+                  {s.value}
                 </div>
                 <div
                   className="onb-mono"
                   style={{ fontSize: 10, color: 'var(--onb-ink-500)', textTransform: 'uppercase', letterSpacing: '0.06em' }}
                 >
-                  {s.t}
+                  {s.label}
                 </div>
               </div>
             ))}
@@ -444,17 +450,7 @@ function Hero({ t, onDemo, onTrial }: { t: T; onDemo: () => void; onTrial: () =>
 
 /* ────────────────────────────────────────────────────────── logo strip */
 
-function LogoStrip({ t }: { t: T }) {
-  const partners = [
-    'Coopérative Atlas',
-    'OCP Agri',
-    'GlobalGAP',
-    'BIO Maroc',
-    'AgriBank',
-    'Crédit Agricole',
-    'INRA',
-    'Domaine Royal',
-  ];
+function LogoStrip({ t, partners }: { t: T; partners: string[] }) {
   return (
     <section className="lp-logos-section">
       <div className="onb-mono-cap" style={{ textAlign: 'center', marginBottom: 22, color: 'var(--onb-ink-500)' }}>
@@ -1776,18 +1772,21 @@ const LandingPage = () => {
   const openDemo = () => setDemoOpen(true);
 
   const tFn: T = (k, d) => t(k, { defaultValue: d ?? k });
+  const landing = useLandingSettings();
+  const partnerNames = landing.partners.map((p) => p.name);
 
   return (
     <div className="onb-shell" dir={isRTL ? 'rtl' : 'ltr'} style={{ minHeight: '100vh' }}>
       <style>{RESPONSIVE_CSS}</style>
       <LandingNav t={tFn} onMenu={() => setNavOpen(true)} onTrial={goTrial} />
-      <Hero t={tFn} onDemo={openDemo} onTrial={goTrial} />
-      <LogoStrip t={tFn} />
+      <Hero t={tFn} onDemo={openDemo} onTrial={goTrial} stats={landing.hero_stats} />
+      <LogoStrip t={tFn} partners={partnerNames} />
       <ProductPreview t={tFn} />
       <ModulesSection t={tFn} />
       <HowItWorks t={tFn} />
       <StatsBand t={tFn} />
       <Testimonials t={tFn} />
+      <SupportedRegionsSection />
       <Pricing t={tFn} onContact={openDemo} />
       <FAQSection t={tFn} />
       <CTABanner t={tFn} onDemo={openDemo} onTrial={goTrial} />

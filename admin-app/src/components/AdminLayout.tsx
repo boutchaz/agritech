@@ -14,6 +14,7 @@ import {
   Megaphone,
   BookOpen,
   Globe,
+  Layers,
   Library,
   LifeBuoy,
   PanelLeft,
@@ -45,6 +46,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/changelog', label: 'Changelog', icon: BookOpen },
   { to: '/supported-countries', label: 'Supported Countries', icon: Globe },
   { to: '/support-settings', label: 'Support Info', icon: LifeBuoy },
+  { to: '/landing-settings', label: 'Landing Page', icon: Layers },
   { to: '/rdv', label: 'RDV SIAM', icon: CalendarCheck },
 ];
 

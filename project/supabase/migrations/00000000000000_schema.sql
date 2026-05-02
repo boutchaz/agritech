@@ -17602,27 +17602,27 @@ INSERT INTO modules (
   is_available, navigation_items, dashboard_widgets
 ) VALUES
   ('core',             'core',             'Home',          '#10b981', 'core',       'Core features available to every organization', 1,  0,   true,  true,  true,
-    '["/dashboard","/settings","/farm-hierarchy","/parcels","/notifications"]'::jsonb, '[]'::jsonb),
+    '["/dashboard","/settings","/farm-hierarchy","/parcels","/notifications","/analytics","/live-dashboard","/referentiels"]'::jsonb, '[]'::jsonb),
   ('chat_advisor',     'chat_advisor',     'Bot',           '#10b981', 'analytics',  'Conversational AgromindIA assistant',             2,  0,   true,  true,  true,
     '["/chat"]'::jsonb, '[]'::jsonb),
   ('agromind_advisor', 'agromind_advisor', 'Sparkles',      '#7c3aed', 'analytics',  'AI advisor per parcel: calibration, diagnostics, recommendations, annual plan', 3, 0, false, false, true,
     '["/parcels/$parcelId/ai"]'::jsonb, '[]'::jsonb),
   ('satellite',        'satellite',        'Satellite',     '#06b6d4', 'analytics',  'Satellite imagery, vegetation indices, weather',  4,  0,   false, false, true,
-    '["/satellite-analysis","/production/satellite-analysis","/parcels/$parcelId/satellite","/parcels/$parcelId/weather"]'::jsonb, '[]'::jsonb),
+    '["/satellite-analysis","/production/satellite-analysis","/parcels/$parcelId/satellite","/parcels/$parcelId/weather","/parcels/$parcelId/analyse","/farms/$farmId/satellite/heatmap","/production/soil-analysis"]'::jsonb, '[]'::jsonb),
   ('personnel',        'personnel',        'Users',         '#3b82f6', 'hr',         'Workers and tasks',                               5,  0,   false, false, true,
-    '["/workers","/tasks","/workforce/payments","/workforce/workers/piece-work"]'::jsonb, '[]'::jsonb),
+    '["/workers","/tasks","/workforce"]'::jsonb, '[]'::jsonb),
   ('stock',            'stock',            'Package',       '#10b981', 'inventory',  'Inventory and infrastructure',                    6,  0,   false, false, true,
-    '["/stock","/infrastructure"]'::jsonb, '[]'::jsonb),
+    '["/stock","/infrastructure","/equipment","/inventory"]'::jsonb, '[]'::jsonb),
   ('production',       'production',       'Wheat',         '#f59e0b', 'production', 'Campaigns, crop cycles, harvests, quality',       7,  0,   false, false, true,
-    '["/campaigns","/crop-cycles","/harvests","/reception-batches","/quality-control","/biological-assets","/product-applications"]'::jsonb, '[]'::jsonb),
+    '["/campaigns","/crop-cycles","/harvests","/reception-batches","/quality-control","/biological-assets","/product-applications","/production","/parcels/$parcelId/production","/parcels/$parcelId/profitability","/pest-alerts"]'::jsonb, '[]'::jsonb),
   ('fruit_trees',      'fruit_trees',      'TreeDeciduous', '#10b981', 'agriculture','Trees, orchards, pruning',                        8,  0,   false, false, true,
     '["/trees","/orchards","/pruning"]'::jsonb, '[]'::jsonb),
-  ('compliance',       'compliance',       'ShieldCheck',   '#a855f7', 'operations', 'Compliance and certifications',                   9,  0,   false, false, true,
+  ('compliance',       'compliance',       'ShieldCheck',   '#a855f7', 'operations', 'Compliance and certifications',                   9, 0,   false, false, true,
     '["/compliance"]'::jsonb, '[]'::jsonb),
   ('sales_purchasing', 'sales_purchasing', 'ShoppingCart',  '#f43f5e', 'sales',      'Quotes, sales orders, purchase orders',           10, 0,   false, false, true,
     '["/accounting/quotes","/accounting/sales-orders","/accounting/purchase-orders","/accounting/customers","/stock/suppliers"]'::jsonb, '[]'::jsonb),
   ('accounting',       'accounting',       'BookOpen',      '#6366f1', 'accounting', 'Invoices, payments, journal, reports',            11, 0,   false, false, true,
-    '["/accounting","/utilities"]'::jsonb, '[]'::jsonb),
+    '["/accounting","/utilities","/reports","/parcels/$parcelId/reports"]'::jsonb, '[]'::jsonb),
   ('marketplace',      'marketplace',      'ShoppingBag',   '#f97316', 'sales',      'B2B quote marketplace',                           12, 0,   false, false, true,
     '["/marketplace"]'::jsonb, '[]'::jsonb)
 ON CONFLICT (slug) DO UPDATE SET
@@ -19466,4 +19466,52 @@ $$ LANGUAGE plpgsql;
 DROP TRIGGER IF EXISTS trg_support_settings_updated_at ON support_settings;
 CREATE TRIGGER trg_support_settings_updated_at
   BEFORE UPDATE ON support_settings
+  FOR EACH ROW EXECUTE FUNCTION update_support_settings_updated_at();
+
+-- =====================================================================
+-- LANDING SETTINGS (single global row — public read, system_admin write)
+-- =====================================================================
+CREATE TABLE IF NOT EXISTS landing_settings (
+  id BOOLEAN PRIMARY KEY DEFAULT TRUE,
+  hero_stats JSONB NOT NULL DEFAULT '[
+    {"value":"12.4k","label":"Exploitations actives"},
+    {"value":"847k ha","label":"Surface monitorée"},
+    {"value":"14","label":"Pays · MENA + EU"},
+    {"value":"99.94%","label":"Disponibilité réseau"}
+  ]'::jsonb,
+  partners JSONB NOT NULL DEFAULT '[
+    {"name":"Coopérative Atlas"},
+    {"name":"OCP Agri"},
+    {"name":"GlobalGAP"},
+    {"name":"BIO Maroc"},
+    {"name":"AgriBank"},
+    {"name":"Crédit Agricole"},
+    {"name":"INRA"},
+    {"name":"Domaine Royal"}
+  ]'::jsonb,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  CONSTRAINT landing_settings_singleton CHECK (id = TRUE)
+);
+
+INSERT INTO landing_settings (id) VALUES (TRUE) ON CONFLICT (id) DO NOTHING;
+
+ALTER TABLE landing_settings ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "landing_settings_public_read" ON landing_settings;
+CREATE POLICY "landing_settings_public_read" ON landing_settings FOR SELECT USING (TRUE);
+
+DROP POLICY IF EXISTS "landing_settings_admin_write" ON landing_settings;
+CREATE POLICY "landing_settings_admin_write" ON landing_settings
+  FOR ALL USING (
+    EXISTS (
+      SELECT 1 FROM organization_users ou
+      JOIN roles r ON r.id = ou.role_id
+      WHERE ou.user_id = auth.uid() AND ou.is_active = true AND r.name = 'system_admin'
+    )
+  );
+
+DROP TRIGGER IF EXISTS trg_landing_settings_updated_at ON landing_settings;
+CREATE TRIGGER trg_landing_settings_updated_at
+  BEFORE UPDATE ON landing_settings
   FOR EACH ROW EXECUTE FUNCTION update_support_settings_updated_at();

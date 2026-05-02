@@ -80,6 +80,7 @@ import { ProductApplicationsModule } from "./modules/product-applications/produc
 import { AccountMappingsModule } from "./modules/account-mappings/account-mappings.module";
 import { AdminModule } from "./modules/admin/admin.module";
 import { SupportModule } from "./modules/support/support.module";
+import { LandingModule } from "./modules/landing/landing.module";
 import { EventsModule } from "./modules/events/events.module";
 import { MarketplaceModule } from "./modules/marketplace/marketplace.module";
 import { StrapiModule } from "./modules/strapi/strapi.module";
@@ -239,6 +240,7 @@ import { BarcodeModule } from "./modules/barcode/barcode.module";
     // Admin & Analytics
     AdminModule,
     SupportModule,
+    LandingModule,
     EventsModule,
     AdoptionModule,
     MarketplaceModule,
