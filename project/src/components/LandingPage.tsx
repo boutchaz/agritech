@@ -156,30 +156,32 @@ function FieldScene() {
 
 /* ────────────────────────────────────────────────────────── nav */
 
-function LandingNav({ t, onDemo, onTrial }: { t: T; onDemo: () => void; onTrial: () => void }) {
-  const [open, setOpen] = useState(false);
-  const links = [
-    { label: t('landing2.nav.platform', 'Plateforme'), href: '#platform' },
-    { label: t('landing2.nav.modules', 'Modules'), href: '#modules' },
-    { label: t('landing2.nav.pricing', 'Tarifs'), href: '#pricing' },
-    { label: t('landing2.nav.clients', 'Clients'), href: '#testimonials' },
-    { label: t('landing2.nav.faq', 'FAQ'), href: '#faq' },
-  ];
+const NAV_LINK_KEYS: { key: string; defaultLabel: string; href: string }[] = [
+  { key: 'landing2.nav.platform', defaultLabel: 'Plateforme', href: '#platform' },
+  { key: 'landing2.nav.modules', defaultLabel: 'Modules', href: '#modules' },
+  { key: 'landing2.nav.pricing', defaultLabel: 'Tarifs', href: '#pricing' },
+  { key: 'landing2.nav.clients', defaultLabel: 'Clients', href: '#testimonials' },
+  { key: 'landing2.nav.faq', defaultLabel: 'FAQ', href: '#faq' },
+];
+
+function LandingNav({ t, onMenu, onTrial }: { t: T; onMenu: () => void; onTrial: () => void }) {
   return (
     <header className="lp-nav">
       <div style={{ display: 'flex', alignItems: 'center', gap: 24, minWidth: 0 }}>
         <AgroginaWordmark size={26} />
         <div className="lp-nav-divider" />
         <nav className="lp-nav-links">
-          {links.map((l) => (
+          {NAV_LINK_KEYS.map((l) => (
             <a key={l.href} href={l.href} className="lp-nav-link">
-              {l.label}
+              {t(l.key, l.defaultLabel)}
             </a>
           ))}
         </nav>
       </div>
       <div className="lp-nav-actions">
-        <LanguageSwitcher />
+        <div className="lp-lang-desktop">
+          <LanguageSwitcher />
+        </div>
         <Link to="/login" search={{ redirect: undefined }} className="lp-nav-link lp-login">
           {t('landing2.nav.login', 'Connexion')}
         </Link>
@@ -190,71 +192,82 @@ function LandingNav({ t, onDemo, onTrial }: { t: T; onDemo: () => void; onTrial:
         <button
           type="button"
           aria-label={t('landing2.nav.menu', 'Menu')}
-          onClick={() => setOpen(true)}
+          onClick={onMenu}
           className="lp-nav-burger"
         >
           <Menu size={20} />
         </button>
       </div>
-
-      {open && (
-        <div className="lp-mobile-nav" role="dialog" aria-modal="true">
-          <div className="lp-mobile-nav-head">
-            <AgroginaWordmark size={24} />
-            <button
-              type="button"
-              aria-label={t('landing2.nav.close', 'Fermer')}
-              onClick={() => setOpen(false)}
-              className="lp-icon-btn"
-            >
-              <X size={18} />
-            </button>
-          </div>
-          <nav className="lp-mobile-nav-links">
-            {links.map((l) => (
-              <a key={l.href} href={l.href} onClick={() => setOpen(false)}>
-                {l.label}
-              </a>
-            ))}
-          </nav>
-          <div className="lp-mobile-nav-actions">
-            <LanguageSwitcher />
-            <Link
-              to="/login"
-              search={{ redirect: undefined }}
-              onClick={() => setOpen(false)}
-              className="onb-btn onb-btn-ghost"
-              style={{ width: '100%' }}
-            >
-              {t('landing2.nav.login', 'Connexion')}
-            </Link>
-            <button
-              type="button"
-              onClick={() => {
-                setOpen(false);
-                onTrial();
-              }}
-              className="onb-btn onb-btn-primary"
-              style={{ width: '100%' }}
-            >
-              {t('landing2.nav.trial', 'Essai gratuit')}
-              <ArrowRight size={16} strokeWidth={1.8} />
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setOpen(false);
-                onDemo();
-              }}
-              className="onb-btn onb-btn-ghost"
-              style={{ width: '100%' }}
-            >
-              {t('landing2.nav.demo', 'Réserver une démo')}
-            </button>
-          </div>
-        </div>
-      )}
     </header>
+  );
+}
+
+function MobileNav({
+  t,
+  onClose,
+  onDemo,
+  onTrial,
+}: {
+  t: T;
+  onClose: () => void;
+  onDemo: () => void;
+  onTrial: () => void;
+}) {
+  return (
+    <div className="lp-mobile-nav" role="dialog" aria-modal="true">
+      <div className="lp-mobile-nav-head">
+        <AgroginaWordmark size={24} />
+        <button
+          type="button"
+          aria-label={t('landing2.nav.close', 'Fermer')}
+          onClick={onClose}
+          className="lp-icon-btn"
+        >
+          <X size={18} />
+        </button>
+      </div>
+      <nav className="lp-mobile-nav-links">
+        {NAV_LINK_KEYS.map((l) => (
+          <a key={l.href} href={l.href} onClick={onClose}>
+            {t(l.key, l.defaultLabel)}
+          </a>
+        ))}
+        <Link
+          to="/login"
+          search={{ redirect: undefined }}
+          onClick={onClose}
+          style={{ padding: '14px 12px', borderRadius: 10, fontSize: 17, fontWeight: 500, color: 'var(--onb-ink-900)', textDecoration: 'none' }}
+        >
+          {t('landing2.nav.login', 'Connexion')}
+        </Link>
+      </nav>
+      <div className="lp-mobile-nav-actions">
+        <LanguageSwitcher />
+        <button
+          type="button"
+          onClick={() => {
+            onClose();
+            onTrial();
+          }}
+          className="onb-btn onb-btn-primary"
+          style={{ width: '100%' }}
+        >
+          {t('landing2.nav.trial', 'Essai gratuit')}
+          <ArrowRight size={16} strokeWidth={1.8} />
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            onClose();
+            onDemo();
+          }}
+          className="onb-btn onb-btn-ghost"
+          style={{ width: '100%' }}
+        >
+          {t('landing2.nav.demo', 'Réserver une démo')}
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -1379,9 +1392,14 @@ const RESPONSIVE_CSS = `
   cursor: pointer;
 }
 .onb-shell .lp-mobile-nav {
-  position: fixed; inset: 0; z-index: 60;
-  background: var(--onb-bg-canvas);
+  position: fixed; inset: 0; z-index: 100;
+  background: #f4f6f0;
   display: flex; flex-direction: column; padding: 16px;
+  overflow-y: auto;
+}
+.onb-shell .lp-lang-desktop { display: none; }
+@media (min-width: 1024px) {
+  .onb-shell .lp-lang-desktop { display: block; }
 }
 .onb-shell .lp-mobile-nav-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
 .onb-shell .lp-mobile-nav-links { display: flex; flex-direction: column; gap: 4px; flex: 1; }
@@ -1567,6 +1585,9 @@ const RESPONSIVE_CSS = `
   border: 1px solid rgba(255,255,255,.12);
   position: relative;
 }
+@media (max-width: 719px) {
+  .onb-shell .lp-plan:not(.lp-plan-featured) { display: none; }
+}
 .onb-shell .lp-plan-featured {
   background: white; color: var(--onb-ink-900); border: 0;
   box-shadow: 0 24px 60px rgba(20, 40, 30, .35), 0 4px 12px rgba(20, 40, 30, .15);
@@ -1692,6 +1713,7 @@ const RESPONSIVE_CSS = `
 const LandingPage = () => {
   const { t, i18n } = useTranslation();
   const [demoOpen, setDemoOpen] = useState(false);
+  const [navOpen, setNavOpen] = useState(false);
 
   const isRTL = i18n.language?.startsWith('ar');
   const siteOrigin = typeof window !== 'undefined' ? window.location.origin : 'https://app.agritech.local';
@@ -1758,7 +1780,7 @@ const LandingPage = () => {
   return (
     <div className="onb-shell" dir={isRTL ? 'rtl' : 'ltr'} style={{ minHeight: '100vh' }}>
       <style>{RESPONSIVE_CSS}</style>
-      <LandingNav t={tFn} onDemo={openDemo} onTrial={goTrial} />
+      <LandingNav t={tFn} onMenu={() => setNavOpen(true)} onTrial={goTrial} />
       <Hero t={tFn} onDemo={openDemo} onTrial={goTrial} />
       <LogoStrip t={tFn} />
       <ProductPreview t={tFn} />
@@ -1770,6 +1792,15 @@ const LandingPage = () => {
       <FAQSection t={tFn} />
       <CTABanner t={tFn} onDemo={openDemo} onTrial={goTrial} />
       <Footer t={tFn} />
+
+      {navOpen && (
+        <MobileNav
+          t={tFn}
+          onClose={() => setNavOpen(false)}
+          onDemo={openDemo}
+          onTrial={goTrial}
+        />
+      )}
 
       {demoOpen && (
         <div
