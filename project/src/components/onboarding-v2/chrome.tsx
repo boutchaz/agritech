@@ -1,5 +1,5 @@
 import { ArrowLeft, ArrowRight, type LucideIcon } from 'lucide-react';
-import { useState, type CSSProperties, type ReactNode } from 'react';
+import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 
 export function AgroginaMark({ size = 32 }: { size?: number }) {
   return (
@@ -77,20 +77,23 @@ export function ProgressBar({ step, total, variant = 'numeric' }: { step: number
 
   if (variant === 'segments') {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <span style={{ fontSize: 12, color: 'var(--onb-ink-500)', fontWeight: 500 }}>
-          {step}/{total}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+        <span
+          className="onb-mono"
+          style={{ fontSize: 11, color: 'var(--onb-ink-500)', fontWeight: 500 }}
+        >
+          {String(step).padStart(2, '0')} / {String(total).padStart(2, '0')}
         </span>
         <div style={{ display: 'flex', gap: 4 }}>
           {Array.from({ length: total }).map((_, i) => (
             <div
               key={i}
               style={{
-                width: 36,
-                height: 4,
+                width: i < step ? 32 : 22,
+                height: 3,
                 borderRadius: 999,
                 background: i < step ? 'var(--onb-brand-600)' : 'var(--onb-ink-200)',
-                transition: 'background .3s',
+                transition: 'all .3s',
               }}
             />
           ))}
@@ -118,34 +121,120 @@ export function ProgressBar({ step, total, variant = 'numeric' }: { step: number
   );
 }
 
-export function OnbHeader({ step, total, variant = 'numeric' }: { step: number; total: number; variant?: ProgressVariant }) {
+function TelemetryStrip() {
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setTick((t) => t + 1), 4000);
+    return () => clearInterval(id);
+  }, []);
+  const items = [
+    { l: 'NODE', v: 'AGR-7Q42' },
+    { l: 'GEO', v: '31.629°N · 7.981°W' },
+    { l: 'LOCALE', v: 'fr-MA' },
+    { l: 'BUILD', v: '2026.05' },
+  ];
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 18,
+        padding: '6px 16px',
+        borderRadius: 999,
+        background: 'var(--onb-ink-50)',
+        border: '1px solid var(--onb-rule)',
+      }}
+    >
+      <span
+        style={{
+          width: 6,
+          height: 6,
+          borderRadius: 999,
+          background: 'var(--onb-brand-500)',
+          boxShadow: '0 0 0 4px rgba(16,185,129,.18)',
+        }}
+      />
+      {items.map((it) => (
+        <span
+          key={it.l}
+          className="onb-mono"
+          style={{ fontSize: 10, display: 'inline-flex', gap: 6 }}
+        >
+          <span style={{ color: 'var(--onb-ink-400)' }}>{it.l}</span>
+          <span style={{ color: 'var(--onb-ink-700)' }}>{it.v}</span>
+        </span>
+      ))}
+    </div>
+  );
+}
+
+export function OnbHeader({
+  step,
+  total,
+  variant = 'segments',
+  onSave,
+  showTelemetry = true,
+}: {
+  step: number;
+  total: number;
+  variant?: ProgressVariant;
+  onSave?: () => void;
+  showTelemetry?: boolean;
+}) {
   return (
     <header
       style={{
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        padding: '20px 32px',
-        borderBottom: '1px solid var(--onb-ink-100)',
+        gap: 18,
+        padding: '18px 32px',
+        borderBottom: '1px solid var(--onb-rule)',
         background: 'rgba(255,255,255,.85)',
-        backdropFilter: 'blur(8px)',
+        backdropFilter: 'blur(10px)',
         position: 'sticky',
         top: 0,
         zIndex: 10,
       }}
     >
-      <AgroginaLogo size={28} />
-      <ProgressBar step={step} total={total} variant={variant} />
+      <div style={{ display: 'flex', alignItems: 'center', gap: 18, minWidth: 0 }}>
+        <AgroginaLogo size={28} />
+        <div style={{ width: 1, height: 18, background: 'var(--onb-rule)' }} />
+        <span className="onb-mono-cap" style={{ whiteSpace: 'nowrap' }}>
+          Onboarding · Saison 25/26
+        </span>
+        {showTelemetry && (
+          <div className="onb-telemetry-md" style={{ marginLeft: 8 }}>
+            <TelemetryStrip />
+          </div>
+        )}
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
+        <ProgressBar step={step} total={total} variant={variant} />
+        {onSave && (
+          <>
+            <div style={{ width: 1, height: 18, background: 'var(--onb-rule)' }} />
+            <button
+              type="button"
+              onClick={onSave}
+              className="onb-btn onb-btn-ghost"
+              style={{ padding: '8px 14px', fontSize: 13 }}
+            >
+              Sauvegarder
+            </button>
+          </>
+        )}
+      </div>
     </header>
   );
 }
 
 type Tone = 'brand' | 'soil' | 'sky' | 'wheat';
-const TONE_BG: Record<Tone, { bg: string; fg: string }> = {
-  brand: { bg: 'var(--onb-brand-50)', fg: 'var(--onb-brand-700)' },
-  soil: { bg: 'var(--onb-soil-50)', fg: 'var(--onb-soil-700)' },
-  sky: { bg: 'var(--onb-sky-100)', fg: 'var(--onb-sky-500)' },
-  wheat: { bg: '#fdf6e0', fg: 'var(--onb-wheat-500)' },
+const TONE_BG: Record<Tone, { bg: string; fg: string; ring: string }> = {
+  brand: { bg: 'var(--onb-brand-50)', fg: 'var(--onb-brand-700)', ring: 'rgba(10,143,95,.12)' },
+  soil: { bg: 'var(--onb-soil-50)', fg: 'var(--onb-soil-700)', ring: 'rgba(139,106,53,.12)' },
+  sky: { bg: 'var(--onb-sky-100)', fg: 'var(--onb-sky-500)', ring: 'rgba(14,165,233,.12)' },
+  wheat: { bg: '#fdf6e0', fg: 'var(--onb-wheat-500)', ring: 'rgba(217,165,42,.18)' },
 };
 
 export function ScreenHero({ icon: Icon, tone = 'brand' }: { icon: LucideIcon; tone?: Tone }) {
@@ -154,44 +243,74 @@ export function ScreenHero({ icon: Icon, tone = 'brand' }: { icon: LucideIcon; t
     <div
       className="onb-scale-pop"
       style={{
-        width: 64,
-        height: 64,
-        borderRadius: 18,
+        width: 56,
+        height: 56,
+        borderRadius: 16,
         background: t.bg,
         color: t.fg,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        margin: '0 auto 20px',
+        margin: '0 auto 18px',
+        boxShadow: `0 0 0 6px ${t.ring}`,
       }}
     >
-      <Icon size={28} strokeWidth={1.6} />
+      <Icon size={24} strokeWidth={1.6} />
     </div>
   );
 }
 
-export function ScreenTitle({ eyebrow, title, subtitle }: { eyebrow?: string; title: string; subtitle?: string }) {
+export function ScreenTitle({
+  eyebrow,
+  title,
+  subtitle,
+  align = 'center',
+}: {
+  eyebrow?: string;
+  title: string;
+  subtitle?: string;
+  align?: 'center' | 'left';
+}) {
   return (
-    <div style={{ textAlign: 'center', marginBottom: 28 }}>
+    <div style={{ textAlign: align, marginBottom: 28 }}>
       {eyebrow && (
-        <div
-          style={{
-            fontSize: 11,
-            fontWeight: 600,
-            letterSpacing: '0.12em',
-            textTransform: 'uppercase',
-            color: 'var(--onb-brand-700)',
-            marginBottom: 10,
-          }}
-        >
+        <div className="onb-mono-cap" style={{ color: 'var(--onb-brand-700)', marginBottom: 10 }}>
+          <span
+            style={{
+              display: 'inline-block',
+              width: 18,
+              height: 1,
+              background: 'var(--onb-brand-600)',
+              verticalAlign: 'middle',
+              marginRight: 8,
+            }}
+          />
           {eyebrow}
         </div>
       )}
-      <h1 className="onb-h-display" style={{ fontSize: 32, margin: '0 0 10px', color: 'var(--onb-ink-900)' }}>
+      <h1
+        className="onb-h-display"
+        style={{
+          fontSize: 36,
+          margin: '0 0 10px',
+          color: 'var(--onb-ink-900)',
+          textWrap: 'balance' as CSSProperties['textWrap'],
+        }}
+      >
         {title}
       </h1>
       {subtitle && (
-        <p style={{ margin: 0, fontSize: 15, color: 'var(--onb-ink-500)', maxWidth: 420, marginInline: 'auto', lineHeight: 1.5 }}>
+        <p
+          style={{
+            margin: 0,
+            fontSize: 15,
+            color: 'var(--onb-ink-500)',
+            maxWidth: 460,
+            marginInline: align === 'center' ? 'auto' : 0,
+            lineHeight: 1.55,
+            textWrap: 'pretty' as CSSProperties['textWrap'],
+          }}
+        >
           {subtitle}
         </p>
       )}
@@ -223,19 +342,37 @@ export function NavRow({
   loading?: boolean;
 }) {
   return (
-    <div style={{ display: 'flex', gap: 12, marginTop: 24 }}>
+    <div
+      style={{
+        display: 'flex',
+        gap: 12,
+        marginTop: 28,
+        paddingTop: 20,
+        borderTop: '1px solid var(--onb-rule)',
+        alignItems: 'center',
+      }}
+    >
       {onBack && (
         <button type="button" onClick={onBack} className="onb-btn onb-btn-ghost">
           <ArrowLeft size={16} strokeWidth={1.6} />
           {backLabel}
         </button>
       )}
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 10 }}>
+        <span className="onb-mono" style={{ fontSize: 10, color: 'var(--onb-ink-400)' }}>
+          ⏎ pour continuer
+        </span>
+      </div>
       <button
         type="button"
         onClick={onNext}
         disabled={disabled || loading}
         className="onb-btn onb-btn-primary"
-        style={{ flex: 1, opacity: disabled || loading ? 0.5 : 1, cursor: disabled || loading ? 'not-allowed' : 'pointer' }}
+        style={{
+          minWidth: 200,
+          opacity: disabled || loading ? 0.5 : 1,
+          cursor: disabled || loading ? 'not-allowed' : 'pointer',
+        }}
       >
         {loading ? '…' : nextLabel}
         {!loading && <ArrowRight size={16} strokeWidth={1.6} />}

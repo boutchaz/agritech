@@ -11,8 +11,14 @@
   /* Earth supports */
   --onb-soil-50: #faf6f0;
   --onb-soil-100: #f1e8d8;
+  --onb-soil-200: #e3d2b0;
+  --onb-soil-300: #c9ab78;
+  --onb-soil-400: #a8854a;
+  --onb-soil-500: #8b6a35;
   --onb-soil-700: #5a4422;
+  --onb-wheat-300: #f3d177;
   --onb-wheat-500: #d9a52a;
+  --onb-terracotta-400: #e07a4f;
   --onb-terracotta-500: #c8623d;
   --onb-sky-100: #e0f2fe;
   --onb-sky-500: #0ea5e9;
@@ -29,7 +35,9 @@
   --onb-ink-100: #eef2ef;
   --onb-ink-50: #f7faf8;
 
-  --onb-bg-canvas: #f5f7f3;
+  --onb-bg-canvas: #f4f6f0;
+  --onb-bg-paper: #faf9f4;
+  --onb-rule: #d8dfd2;
 
   /* Radii */
   --onb-r-md: 14px;
@@ -63,6 +71,32 @@
   font-family: var(--onb-font-body);
   font-weight: 500;
   letter-spacing: -0.01em;
+}
+
+.onb-shell .onb-mono {
+  font-family: var(--onb-font-mono);
+  font-variant-numeric: tabular-nums;
+}
+.onb-shell .onb-mono-cap {
+  font-family: var(--onb-font-mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--onb-ink-500);
+}
+.onb-shell .onb-tick-rule {
+  background-image: repeating-linear-gradient(to right, var(--onb-rule) 0 1px, transparent 1px 8px);
+  height: 1px;
+}
+.onb-shell .onb-hairline {
+  height: 1px;
+  background: var(--onb-rule);
+}
+
+.onb-shell .onb-telemetry-md { display: none; }
+@media (min-width: 1024px) {
+  .onb-shell .onb-telemetry-md { display: block; }
 }
 
 @keyframes onbFadeUp {
