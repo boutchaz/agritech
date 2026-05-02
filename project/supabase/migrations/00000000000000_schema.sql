@@ -19489,6 +19489,18 @@ CREATE TABLE IF NOT EXISTS landing_settings (
     {"name":"INRA"},
     {"name":"Domaine Royal"}
   ]'::jsonb,
+  testimonials JSONB NOT NULL DEFAULT '{
+    "featured": {
+      "quote":"Avant Agrogina, je remplissais des cahiers le soir. Aujourd''hui, j''ai une vision complète de mes 240 hectares depuis mon téléphone — et mes équipes savent exactement quoi faire le matin.",
+      "author":"Zakaria Boutchamir",
+      "role":"Ferme Mabella · 240 ha · Marrakech-Safi",
+      "badge":"★★★★★ · Étude de cas"
+    },
+    "compact": [
+      {"quote":"Le module RH a remplacé Excel et trois cahiers. Le contrôleur de la CNSS adore.","author":"Saida El Khouri","role":"Coopérative Atlas · 12 fermes"},
+      {"quote":"Les alertes capteurs ont sauvé une parcelle d''agrumes du gel l''an dernier. Rentabilisé en une saison.","author":"Karim Benjelloun","role":"Domaine Agdal · 85 ha"}
+    ]
+  }'::jsonb,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
   CONSTRAINT landing_settings_singleton CHECK (id = TRUE)

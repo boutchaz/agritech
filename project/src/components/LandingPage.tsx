@@ -972,19 +972,15 @@ function StatsBand({ t }: { t: T }) {
 
 /* ────────────────────────────────────────────────────────── testimonials */
 
-function Testimonials({ t }: { t: T }) {
-  const compact = [
-    {
-      q: t('landing2.testi.t2q', 'Le module RH a remplacé Excel et trois cahiers. Le contrôleur de la CNSS adore.'),
-      n: 'Saida El Khouri',
-      r: t('landing2.testi.t2r', 'Coopérative Atlas · 12 fermes'),
-    },
-    {
-      q: t('landing2.testi.t3q', "Les alertes capteurs ont sauvé une parcelle d'agrumes du gel l'an dernier. Rentabilisé en une saison."),
-      n: 'Karim Benjelloun',
-      r: t('landing2.testi.t3r', 'Domaine Agdal · 85 ha'),
-    },
-  ];
+function Testimonials({
+  t,
+  featured,
+  compact,
+}: {
+  t: T;
+  featured: { quote: string; author: string; role: string; badge?: string };
+  compact: { quote: string; author: string; role: string }[];
+}) {
   return (
     <section id="testimonials" className="lp-section">
       <SectionHead
@@ -1002,7 +998,7 @@ function Testimonials({ t }: { t: T }) {
         <article className="lp-testi-featured">
           <div>
             <div className="onb-mono-cap" style={{ marginBottom: 18, color: 'var(--onb-brand-700)' }}>
-              {t('landing2.testi.featuredLabel', '★★★★★ · Étude de cas')}
+              {featured.badge ?? t('landing2.testi.featuredLabel', '★★★★★ · Étude de cas')}
             </div>
             <p
               style={{
@@ -1015,12 +1011,7 @@ function Testimonials({ t }: { t: T }) {
                 letterSpacing: '-0.02em',
               }}
             >
-              «{' '}
-              {t(
-                'landing2.testi.t1q',
-                "Avant Agrogina, je remplissais des cahiers le soir. Aujourd'hui, j'ai une vision complète de mes 240 hectares depuis mon téléphone — et mes équipes savent exactement quoi faire le matin.",
-              )}{' '}
-              »
+              « {featured.quote} »
             </p>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 22 }}>
@@ -1034,26 +1025,26 @@ function Testimonials({ t }: { t: T }) {
               }}
             />
             <div>
-              <div style={{ fontWeight: 600, fontSize: 14 }}>Zakaria Boutchamir</div>
+              <div style={{ fontWeight: 600, fontSize: 14 }}>{featured.author}</div>
               <div className="onb-mono" style={{ fontSize: 11, color: 'var(--onb-ink-500)' }}>
-                {t('landing2.testi.t1r', 'Ferme Mabella · 240 ha · Marrakech-Safi')}
+                {featured.role}
               </div>
             </div>
           </div>
         </article>
 
         {compact.map((c) => (
-          <article key={c.n} className="lp-testi-compact">
+          <article key={c.author + c.role} className="lp-testi-compact">
             <div>
               <div className="onb-mono-cap" style={{ marginBottom: 16, color: 'var(--onb-brand-700)' }}>
                 ★★★★★
               </div>
-              <p style={{ fontSize: 15, lineHeight: 1.45, color: 'var(--onb-ink-800)', margin: 0 }}>« {c.q} »</p>
+              <p style={{ fontSize: 15, lineHeight: 1.45, color: 'var(--onb-ink-800)', margin: 0 }}>« {c.quote} »</p>
             </div>
             <div style={{ marginTop: 22 }}>
-              <div style={{ fontWeight: 600, fontSize: 14 }}>{c.n}</div>
+              <div style={{ fontWeight: 600, fontSize: 14 }}>{c.author}</div>
               <div className="onb-mono" style={{ fontSize: 10.5, color: 'var(--onb-ink-500)' }}>
-                {c.r}
+                {c.role}
               </div>
             </div>
           </article>
@@ -1774,7 +1765,7 @@ const LandingPage = () => {
       <ModulesSection t={tFn} />
       <HowItWorks t={tFn} />
       <StatsBand t={tFn} />
-      <Testimonials t={tFn} />
+      <Testimonials t={tFn} featured={landing.testimonials.featured} compact={landing.testimonials.compact} />
       <SupportedRegionsSection />
       <Pricing t={tFn} onContact={openDemo} />
       <FAQSection t={tFn} />

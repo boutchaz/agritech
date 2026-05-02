@@ -8,11 +8,24 @@ import { Layers, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { apiRequest } from '@/lib/api-client';
 
+interface Testimonial {
+  quote: string;
+  author: string;
+  role: string;
+  badge?: string;
+}
 interface LandingSettings {
   hero_stats: { value: string; label: string }[];
   partners: { name: string }[];
+  testimonials: { featured: Testimonial; compact: Testimonial[] };
   updated_at: string;
 }
+
+const testimonialShape = {
+  quote: z.string().min(1, 'Required').max(800),
+  author: z.string().min(1, 'Required').max(120),
+  role: z.string().min(1, 'Required').max(160),
+};
 
 const schema = z.object({
   hero_stats: z
@@ -24,6 +37,13 @@ const schema = z.object({
     )
     .max(8),
   partners: z.array(z.object({ name: z.string().min(1, 'Required').max(80) })).max(24),
+  testimonials: z.object({
+    featured: z.object({
+      ...testimonialShape,
+      badge: z.string().max(80).optional().or(z.literal('')),
+    }),
+    compact: z.array(z.object(testimonialShape)).max(8),
+  }),
 });
 type FormData = z.infer<typeof schema>;
 
@@ -40,14 +60,35 @@ function LandingSettingsPage() {
 
   const form = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { hero_stats: [], partners: [] },
+    defaultValues: {
+      hero_stats: [],
+      partners: [],
+      testimonials: {
+        featured: { quote: '', author: '', role: '', badge: '' },
+        compact: [],
+      },
+    },
   });
 
   const stats = useFieldArray({ control: form.control, name: 'hero_stats' });
   const partners = useFieldArray({ control: form.control, name: 'partners' });
+  const compact = useFieldArray({ control: form.control, name: 'testimonials.compact' });
 
   useEffect(() => {
-    if (data) form.reset({ hero_stats: data.hero_stats, partners: data.partners });
+    if (data)
+      form.reset({
+        hero_stats: data.hero_stats,
+        partners: data.partners,
+        testimonials: {
+          featured: {
+            quote: data.testimonials?.featured?.quote ?? '',
+            author: data.testimonials?.featured?.author ?? '',
+            role: data.testimonials?.featured?.role ?? '',
+            badge: data.testimonials?.featured?.badge ?? '',
+          },
+          compact: data.testimonials?.compact ?? [],
+        },
+      });
   }, [data, form]);
 
   const updateMutation = useMutation({
@@ -167,6 +208,90 @@ function LandingSettingsPage() {
               ))}
               {partners.fields.length === 0 && (
                 <p className="text-xs text-gray-400 italic">No partners configured.</p>
+              )}
+            </div>
+          </section>
+
+          <section>
+            <div className="mb-3">
+              <h2 className="text-sm font-semibold text-gray-900">Featured testimonial</h2>
+              <p className="text-xs text-gray-500">Shown as the large card in the testimonials section.</p>
+            </div>
+            <div className="space-y-2">
+              <textarea
+                {...form.register('testimonials.featured.quote')}
+                rows={3}
+                placeholder="Quote (without the « » — they're added automatically)"
+                className={inputCls}
+              />
+              <div className="grid grid-cols-2 gap-2">
+                <input
+                  {...form.register('testimonials.featured.author')}
+                  placeholder="Author (e.g. Zakaria Boutchamir)"
+                  className={inputCls}
+                />
+                <input
+                  {...form.register('testimonials.featured.role')}
+                  placeholder="Role (e.g. Ferme Mabella · 240 ha)"
+                  className={inputCls}
+                />
+              </div>
+              <input
+                {...form.register('testimonials.featured.badge')}
+                placeholder="Badge (e.g. ★★★★★ · Étude de cas)"
+                className={inputCls}
+              />
+            </div>
+          </section>
+
+          <section>
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <h2 className="text-sm font-semibold text-gray-900">Compact testimonials</h2>
+                <p className="text-xs text-gray-500">Up to 8. Shown next to the featured one.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => compact.append({ quote: '', author: '', role: '' })}
+                disabled={compact.fields.length >= 8}
+                className="inline-flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Add
+              </button>
+            </div>
+            <div className="space-y-3">
+              {compact.fields.map((f, i) => (
+                <div key={f.id} className="rounded-lg border border-gray-200 p-3 space-y-2 relative">
+                  <button
+                    type="button"
+                    onClick={() => compact.remove(i)}
+                    className="absolute top-2 right-2 rounded p-1 text-gray-400 hover:bg-red-50 hover:text-red-500"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                  <textarea
+                    {...form.register(`testimonials.compact.${i}.quote`)}
+                    rows={2}
+                    placeholder="Quote"
+                    className={inputCls}
+                  />
+                  <div className="grid grid-cols-2 gap-2">
+                    <input
+                      {...form.register(`testimonials.compact.${i}.author`)}
+                      placeholder="Author"
+                      className={inputCls}
+                    />
+                    <input
+                      {...form.register(`testimonials.compact.${i}.role`)}
+                      placeholder="Role"
+                      className={inputCls}
+                    />
+                  </div>
+                </div>
+              ))}
+              {compact.fields.length === 0 && (
+                <p className="text-xs text-gray-400 italic">No compact testimonials configured.</p>
               )}
             </div>
           </section>
