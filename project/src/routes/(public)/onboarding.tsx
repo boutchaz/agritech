@@ -80,7 +80,7 @@ function OnboardingLayout() {
     void loadLanguage(profileLanguage);
   }, [isRestored, profileLanguage]);
 
-  if (loading || !isRestored) {
+  if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[var(--onb-bg-canvas,#f5f7f3)]">
         <div className="text-center">
@@ -94,9 +94,25 @@ function OnboardingLayout() {
     );
   }
 
+  // Unauthenticated: bounce to /login before the isRestored gate (which only
+  // flips inside `initialize`, called when user?.id exists).
   if (!user) {
     navigate({ to: '/login', search: { redirect: undefined } });
     return null;
+  }
+
+  if (!isRestored) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[var(--onb-bg-canvas,#f5f7f3)]">
+        <div className="text-center">
+          <div className="relative mx-auto mb-4 h-10 w-10">
+            <div className="absolute inset-0 animate-ping rounded-lg bg-emerald-500 opacity-20" />
+            <div className="absolute inset-0 animate-pulse rounded-lg bg-emerald-500" />
+          </div>
+          <p className="text-sm text-slate-500">{t('onboarding.loading', 'Chargement…')}</p>
+        </div>
+      </div>
+    );
   }
 
   return (
