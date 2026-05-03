@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Body, UseGuards, Request, Headers, Res, Req } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Body, UseGuards, Request, Headers, Res, Req, UnauthorizedException } from '@nestjs/common';
 import type { Response, Request as ExpressRequest } from 'express';
 import {
   ApiTags,
@@ -112,10 +112,14 @@ export class UpdateProfileDto {
 }
 
 export class RefreshTokenDto {
-  @ApiProperty({ example: 'eyJhbGciOiJIUzI1NiIs...' })
+  // Optional: callers without a refresh token in memory rely on the
+  // httpOnly `agg_refresh` cookie. The handler falls back to it when the
+  // body field is absent. Required-with-IsNotEmpty would reject the
+  // cold-reload flow with 400 before the cookie fallback runs.
+  @ApiProperty({ example: 'eyJhbGciOiJIUzI1NiIs...', required: false })
   @IsString()
-  @IsNotEmpty()
-  refreshToken: string;
+  @IsOptional()
+  refreshToken?: string;
 }
 
 export class RedeemExchangeCodeDto {
@@ -400,6 +404,11 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     const refreshToken = body?.refreshToken || req.cookies?.[REFRESH_TOKEN_COOKIE];
+    if (!refreshToken) {
+      // No body token and no cookie — caller has no session. 401 (not 400)
+      // so the frontend clears auth state and redirects to login.
+      throw new UnauthorizedException('No refresh token provided');
+    }
     const result = await this.authService.refreshToken(refreshToken);
     if (result?.access_token) {
       setAuthCookies(res, {
