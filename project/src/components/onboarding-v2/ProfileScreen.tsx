@@ -25,7 +25,10 @@ export function ProfileScreen({
   onBack?: () => void;
   loading?: boolean;
 }) {
-  const valid = (data.first_name || '').trim().length > 0 && isValidPhoneNumber(data.phone || '');
+  const phoneRaw = data.phone || '';
+  const phoneValid = isValidPhoneNumber(phoneRaw);
+  const phoneError = phoneRaw.trim().length > 0 && !phoneValid;
+  const valid = (data.first_name || '').trim().length > 0 && phoneValid;
 
   const langLabel: Record<string, string> = {
     fr: 'Français',
@@ -93,11 +96,18 @@ export function ProfileScreen({
               defaultCountry="MA"
               value={data.phone || undefined}
               onChange={(v) => onChange({ phone: v ?? '' })}
-              className="w-full"
+              className={`w-full ${phoneError ? '[&_input]:!border-red-500 [&_input]:!ring-red-500 [&_input]:focus-visible:!ring-red-500' : ''}`}
+              aria-invalid={phoneError || undefined}
             />
-            <p style={{ fontSize: 12, color: 'var(--onb-ink-500)', margin: '8px 4px 0' }}>
-              Pour WhatsApp, SMS et alertes critiques (gel, pluie, marché).
-            </p>
+            {phoneError ? (
+              <p role="alert" style={{ fontSize: 12, color: '#dc2626', margin: '8px 4px 0' }}>
+                Numéro de téléphone invalide. Vérifiez l'indicatif et le format.
+              </p>
+            ) : (
+              <p style={{ fontSize: 12, color: 'var(--onb-ink-500)', margin: '8px 4px 0' }}>
+                Pour WhatsApp, SMS et alertes critiques (gel, pluie, marché).
+              </p>
+            )}
           </div>
 
           <div style={{ marginTop: 18, paddingTop: 18, borderTop: '1px dashed var(--onb-ink-200)' }}>

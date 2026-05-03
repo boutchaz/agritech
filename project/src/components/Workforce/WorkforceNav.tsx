@@ -1,23 +1,22 @@
 import { useMemo } from 'react';
-import { createFileRoute, Outlet, useRouter, useRouterState } from '@tanstack/react-router';
+import { useRouter, useRouterState } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
-import { Building2, Users } from 'lucide-react';
 
-import { useAuth } from '@/hooks/useAuth';
-import { PageLayout } from '@/components/PageLayout';
-import ModernPageHeader from '@/components/ModernPageHeader';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { withRouteProtection } from '@/components/authorization/withRouteProtection';
 import { cn } from '@/lib/utils';
 import { isRTLLocale } from '@/lib/is-rtl-locale';
-import { PageLoader } from '@/components/ui/loader';
 
 type TabDef = { value: string; label: string; to: string };
 type GroupDef = { value: string; label: string; tabs: TabDef[] };
 
-const WorkforceLayout = () => {
+/**
+ * Shared workforce/personnel tabs. Renders two rows: top groups,
+ * then the active group's sub-tabs. Highlights based on current pathname,
+ * so it works whether mounted inside WorkforceLayout (Outlet children)
+ * or in standalone routes like /workers and /tasks.
+ */
+export function WorkforceNav() {
   const { t, i18n } = useTranslation();
-  const { currentOrganization } = useAuth();
   const router = useRouter();
   const { location } = useRouterState();
   const isRTL = isRTLLocale(i18n.language);
@@ -109,17 +108,17 @@ const WorkforceLayout = () => {
   );
 
   const activeTab = useMemo(() => {
-    if (!location) return allTabs[0]?.value ?? 'applications';
+    if (!location) return allTabs[0]?.value ?? 'workers';
     const path = location.pathname;
     const match = allTabs
       .slice()
       .sort((a, b) => b.to.length - a.to.length)
-      .find((tab) => path.startsWith(tab.to));
-    return match?.value ?? allTabs[0]?.value ?? 'applications';
+      .find((tab) => path === tab.to || path.startsWith(`${tab.to}/`));
+    return match?.value ?? allTabs[0]?.value ?? 'workers';
   }, [location, allTabs]);
 
   const activeGroupValue = useMemo(
-    () => allTabs.find((tab) => tab.value === activeTab)?.group ?? groups[0]?.value ?? 'leave',
+    () => allTabs.find((tab) => tab.value === activeTab)?.group ?? groups[0]?.value ?? 'team',
     [allTabs, activeTab, groups],
   );
 
@@ -140,73 +139,47 @@ const WorkforceLayout = () => {
     router.navigate({ to: target.to });
   };
 
-  if (!currentOrganization) {
-    return <PageLoader />;
-  }
-
   return (
-    <PageLayout
-      activeModule="workforce"
-      header={
-        <ModernPageHeader
-          breadcrumbs={[
-            { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
-            { icon: Users, label: t('nav.personnel', 'Personnel'), isActive: true },
-          ]}
-          title={t('nav.personnel', 'Personnel')}
-          subtitle={t('workforceHub.subtitle', 'Manage workforce, leave, payroll and lifecycle')}
-        />
-      }
-    >
-      <div className="px-3 pb-20 pt-0 sm:px-4 md:px-6 md:pb-6">
-        <Tabs value={activeGroupValue} onValueChange={handleGroupChange}>
-          <div
-            className={cn(
-              'relative flex w-full min-w-0 items-center gap-1',
-              isRTL ? 'justify-end' : 'justify-start',
-            )}
+    <div className="space-y-2">
+      <Tabs value={activeGroupValue} onValueChange={handleGroupChange}>
+        <div
+          className={cn(
+            'relative flex w-full min-w-0 items-center gap-1',
+            isRTL ? 'justify-end' : 'justify-start',
+          )}
+        >
+          <TabsList
+            dir={isRTL ? 'rtl' : 'ltr'}
+            className="w-full min-w-0 justify-start overflow-x-auto whitespace-nowrap rounded-lg [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           >
-            <TabsList
-              dir={isRTL ? 'rtl' : 'ltr'}
-              className="w-full min-w-0 justify-start overflow-x-auto whitespace-nowrap rounded-lg [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-            >
-              {groups.map((g) => (
-                <TabsTrigger key={g.value} value={g.value} className="shrink-0 font-semibold">
-                  {g.label}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </div>
-        </Tabs>
-
-        <Tabs value={activeTab} onValueChange={handleTabChange} className="mt-2">
-          <div
-            className={cn(
-              'relative flex w-full min-w-0 items-center gap-1',
-              isRTL ? 'justify-end' : 'justify-start',
-            )}
-          >
-            <TabsList
-              dir={isRTL ? 'rtl' : 'ltr'}
-              className="w-full min-w-0 justify-start overflow-x-auto whitespace-nowrap rounded-md bg-muted/50 [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-            >
-              {activeGroupTabs.map((tab) => (
-                <TabsTrigger key={tab.value} value={tab.value} className="shrink-0">
-                  {tab.label}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </div>
-        </Tabs>
-
-        <div className="mt-4 sm:mt-6">
-          <Outlet />
+            {groups.map((g) => (
+              <TabsTrigger key={g.value} value={g.value} className="shrink-0 font-semibold">
+                {g.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
         </div>
-      </div>
-    </PageLayout>
-  );
-};
+      </Tabs>
 
-export const Route = createFileRoute('/_authenticated/(workforce)/workforce')({
-  component: withRouteProtection(WorkforceLayout, 'read', 'Worker'),
-});
+      <Tabs value={activeTab} onValueChange={handleTabChange}>
+        <div
+          className={cn(
+            'relative flex w-full min-w-0 items-center gap-1',
+            isRTL ? 'justify-end' : 'justify-start',
+          )}
+        >
+          <TabsList
+            dir={isRTL ? 'rtl' : 'ltr'}
+            className="w-full min-w-0 justify-start overflow-x-auto whitespace-nowrap rounded-md bg-muted/50 [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          >
+            {activeGroupTabs.map((tab) => (
+              <TabsTrigger key={tab.value} value={tab.value} className="shrink-0">
+                {tab.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </div>
+      </Tabs>
+    </div>
+  );
+}

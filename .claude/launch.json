@@ -1,0 +1,60 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "frontend",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "agriprofy", "dev"],
+      "port": 5173,
+      "autoPort": true
+    },
+    {
+      "name": "agritech-api",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "agritech-api", "start:dev"],
+      "port": 3001
+    },
+    {
+      "name": "admin-app",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "agritech-admin", "dev"],
+      "port": 5174
+    },
+    {
+      "name": "marketplace",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "marketplace-frontend", "dev"],
+      "port": 3002
+    },
+    {
+      "name": "cms",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "cms", "dev"],
+      "port": 1337
+    },
+    {
+      "name": "docs",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "agritech-docs", "start"],
+      "port": 3000
+    },
+    {
+      "name": "satellite-service",
+      "runtimeExecutable": "backend-service/venv/bin/uvicorn",
+      "runtimeArgs": ["app.main:app", "--host", "127.0.0.1", "--port", "8001", "--reload"],
+      "port": 8001
+    },
+    {
+      "name": "supabase",
+      "runtimeExecutable": "supabase",
+      "runtimeArgs": ["start"],
+      "port": 54321
+    },
+    {
+      "name": "mobile",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "mobile", "start"],
+      "port": 8081
+    }
+  ]
+}

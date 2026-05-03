@@ -129,15 +129,59 @@ export function ModulesScreen({
 
         <div
           style={{
-            fontSize: 11,
-            fontWeight: 600,
-            letterSpacing: '0.08em',
-            textTransform: 'uppercase',
-            color: 'var(--onb-ink-500)',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
             marginBottom: 12,
           }}
         >
-          Modules complémentaires
+          <div
+            style={{
+              fontSize: 11,
+              fontWeight: 600,
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
+              color: 'var(--onb-ink-500)',
+            }}
+          >
+            Modules complémentaires
+          </div>
+          {(() => {
+            const addonIds = addons.map((m) => m.id);
+            const allSelected = addonIds.every((id) => selected.includes(id));
+            return (
+              <button
+                type="button"
+                onClick={() => {
+                  if (allSelected) {
+                    onToggle(selected.filter((id) => !addonIds.includes(id)));
+                  } else {
+                    onToggle(Array.from(new Set([...selected, ...addonIds])));
+                  }
+                }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '5px 12px',
+                  borderRadius: 999,
+                  border: `1px solid ${allSelected ? 'var(--onb-brand-500)' : 'var(--onb-ink-200)'}`,
+                  background: allSelected ? 'var(--onb-brand-50)' : 'white',
+                  color: allSelected ? 'var(--onb-brand-700)' : 'var(--onb-ink-700)',
+                  fontSize: 11,
+                  fontWeight: 600,
+                  letterSpacing: '0.04em',
+                  textTransform: 'uppercase',
+                  cursor: 'pointer',
+                  fontFamily: 'inherit',
+                  transition: 'all .15s',
+                }}
+              >
+                <Check size={12} strokeWidth={2.4} />
+                {allSelected ? 'Tout désélectionner' : 'Tout sélectionner'}
+              </button>
+            );
+          })()}
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
           {addons.map((m) => (

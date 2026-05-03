@@ -6,15 +6,18 @@ import { cn } from '@/lib/utils';
 
 type ResponsiveDialogSize = 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | 'full';
 
+// Sizes ramp by breakpoint so tablets (sm/md) get a sensible width before
+// jumping to the full requested size on lg+. Caps at calc(100vw-2rem) to
+// guarantee gutters even at the widest breakpoint.
 const sizeClasses: Record<ResponsiveDialogSize, string> = {
-  sm: 'sm:max-w-[425px]',
-  md: 'sm:max-w-[500px]',
-  lg: 'sm:max-w-[600px]',
-  xl: 'sm:max-w-[700px]',
-  '2xl': 'sm:max-w-2xl',
-  '3xl': 'sm:max-w-3xl',
-  '4xl': 'sm:max-w-4xl',
-  full: 'sm:max-w-[95vw]',
+  sm: 'w-[calc(100vw-2rem)] sm:max-w-[425px]',
+  md: 'w-[calc(100vw-2rem)] sm:max-w-[500px]',
+  lg: 'w-[calc(100vw-2rem)] sm:max-w-[600px]',
+  xl: 'w-[calc(100vw-2rem)] sm:max-w-[640px] lg:max-w-[700px]',
+  '2xl': 'w-[calc(100vw-2rem)] sm:max-w-[640px] lg:max-w-2xl',
+  '3xl': 'w-[calc(100vw-2rem)] sm:max-w-[640px] md:max-w-2xl lg:max-w-3xl',
+  '4xl': 'w-[calc(100vw-2rem)] sm:max-w-[640px] md:max-w-2xl lg:max-w-4xl',
+  full: 'w-[calc(100vw-2rem)] sm:max-w-[95vw]',
 };
 
 interface ResponsiveDialogProps {

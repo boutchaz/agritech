@@ -3,22 +3,9 @@ import { FieldScene } from './scenes';
 
 export function WelcomeScreen({ onStart, onSignIn }: { onStart: () => void; onSignIn?: () => void }) {
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        display: 'grid',
-        gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1.1fr)',
-        alignItems: 'stretch',
-      }}
-    >
+    <div className="min-h-screen grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] items-stretch">
       <div
-        className="onb-fade-up"
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center',
-          padding: '48px 64px',
-        }}
+        className="onb-fade-up flex flex-col justify-center px-6 py-10 sm:px-10 sm:py-12 lg:px-16 lg:py-12"
       >
         <div
           style={{
@@ -46,35 +33,51 @@ export function WelcomeScreen({ onStart, onSignIn }: { onStart: () => void; onSi
         </div>
         <h1
           className="onb-h-display"
-          style={{ fontSize: 'clamp(40px, 5vw, 64px)', margin: '0 0 20px', color: 'var(--onb-ink-900)', maxWidth: 520 }}
+          style={{ fontSize: 'clamp(32px, 6vw, 64px)', margin: '0 0 20px', color: 'var(--onb-ink-900)', maxWidth: 520, lineHeight: 1.05 }}
         >
           La saison commence ici.
         </h1>
-        <p style={{ fontSize: 18, lineHeight: 1.55, color: 'var(--onb-ink-600)', maxWidth: 460, margin: '0 0 36px' }}>
+        <p
+          className="text-base sm:text-lg"
+          style={{ lineHeight: 1.55, color: 'var(--onb-ink-600)', maxWidth: 460, margin: '0 0 32px' }}
+        >
           Configurons votre exploitation en 3 minutes. Nous nous occupons des paramètres techniques —
           vous gardez les mains sur la terre.
         </p>
 
-        <div style={{ display: 'flex', gap: 12, marginBottom: 36 }}>
-          <button type="button" onClick={onStart} className="onb-btn onb-btn-primary" style={{ padding: '18px 28px', fontSize: 16 }}>
+        <div className="flex flex-col sm:flex-row flex-wrap gap-3 mb-9">
+          <button
+            type="button"
+            onClick={onStart}
+            className="onb-btn onb-btn-primary w-full sm:w-auto justify-center"
+            style={{ padding: '16px 24px', fontSize: 16 }}
+          >
             Commencer la configuration
             <ArrowRight size={18} strokeWidth={1.6} />
           </button>
           {onSignIn && (
-            <button type="button" onClick={onSignIn} className="onb-btn onb-btn-ghost" style={{ padding: '18px 24px', fontSize: 15 }}>
+            <button
+              type="button"
+              onClick={onSignIn}
+              className="onb-btn onb-btn-ghost w-full sm:w-auto justify-center"
+              style={{ padding: '16px 22px', fontSize: 15 }}
+            >
               J'ai déjà un compte
             </button>
           )}
         </div>
 
-        <div style={{ display: 'flex', gap: 32, paddingTop: 28, borderTop: '1px solid var(--onb-ink-100)' }}>
+        <div
+          className="grid grid-cols-3 gap-4 sm:gap-8 pt-7"
+          style={{ borderTop: '1px solid var(--onb-ink-100)' }}
+        >
           {[
             { n: '3 min', t: 'pour démarrer' },
             { n: '12 400+', t: 'exploitations' },
             { n: '14 pays', t: 'MENA + Europe' },
           ].map((s) => (
             <div key={s.t}>
-              <div className="onb-h-display" style={{ fontSize: 24, color: 'var(--onb-ink-900)' }}>
+              <div className="onb-h-display" style={{ fontSize: 'clamp(18px, 4.5vw, 24px)', color: 'var(--onb-ink-900)', whiteSpace: 'nowrap' }}>
                 {s.n}
               </div>
               <div style={{ fontSize: 12, color: 'var(--onb-ink-500)', marginTop: 2 }}>{s.t}</div>
@@ -84,10 +87,9 @@ export function WelcomeScreen({ onStart, onSignIn }: { onStart: () => void; onSi
       </div>
 
       <div
+        className="hidden lg:block relative overflow-hidden"
         style={{
           background: 'linear-gradient(160deg, #f0f7e8 0%, #e6efd9 60%, #d8e8c4 100%)',
-          position: 'relative',
-          overflow: 'hidden',
           borderLeft: '1px solid var(--onb-ink-100)',
         }}
       >

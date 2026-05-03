@@ -390,8 +390,25 @@ function Hero({
         <FieldScene />
 
         <div className="lp-hero-station">
-          <div className="onb-mono-cap" style={{ marginBottom: 10, fontSize: 9.5 }}>
-            {t('landing2.hero.station', 'Station · Champ Nord-7')}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+            <div className="onb-mono-cap" style={{ fontSize: 9.5 }}>
+              {t('landing2.hero.station', 'Station · Champ Nord-7')}
+            </div>
+            <span
+              className="onb-mono"
+              style={{
+                fontSize: 8.5,
+                fontWeight: 600,
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
+                padding: '2px 6px',
+                borderRadius: 4,
+                background: 'var(--onb-brand-600)',
+                color: '#fff',
+              }}
+            >
+              {t('landing2.hero.beta', 'Beta')}
+            </span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 14 }}>
             <HeroStat label={t('landing2.hero.soil', 'Sol')} value="58%" unit={t('landing2.hero.unitHum', 'hum')} trend="up" />
