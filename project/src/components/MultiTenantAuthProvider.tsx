@@ -127,8 +127,12 @@ export const MultiTenantAuthProvider = ({ children }: { children: React.ReactNod
 
   const isSessionValid = !useAuthStore.getState().isTokenExpired() && !!useAuthStore.getState().getAccessToken();
   const hasCompletedOnboarding = profile?.onboarding_completed === true;
+  // Invited users already belong to an org — they should never see onboarding,
+  // regardless of their profile flag. Onboarding is only for the first user
+  // creating a brand-new organization.
+  const belongsToOrg = organizations.length > 0;
   const needsOnboarding = isSessionValid && !profileError && !orgsError && !!(
-    user && !loading && !hasCompletedOnboarding
+    user && !loading && !hasCompletedOnboarding && !belongsToOrg
   );
 
 

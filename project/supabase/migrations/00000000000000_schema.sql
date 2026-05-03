@@ -327,6 +327,18 @@ CREATE TABLE IF NOT EXISTS organization_users (
 ALTER TABLE public.organization_users
   ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL;
 
+-- Any user who already belongs to at least one active organization is, by
+-- definition, past onboarding (onboarding only exists to bootstrap an org).
+-- Flip the flag so invited users don't get bounced back to /onboarding.
+UPDATE public.user_profiles up
+   SET onboarding_completed = true,
+       onboarding_completed_at = COALESCE(onboarding_completed_at, NOW())
+ WHERE COALESCE(up.onboarding_completed, false) = false
+   AND EXISTS (
+     SELECT 1 FROM public.organization_users ou
+      WHERE ou.user_id = up.id AND ou.is_active = true
+   );
+
 -- Define is_organization_member() as early as possible so any RLS policy
 -- declared further down in this file can reference it. The canonical
 -- definition (with same body) is repeated near the RLS section to keep

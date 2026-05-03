@@ -262,6 +262,22 @@ export class OrganizationUsersService {
         throw new BadRequestException(`Failed to create organization user: ${error.message}`);
       }
 
+      // Invited users skip onboarding — they're joining an existing org.
+      // Mark their profile as already onboarded so the auth gate lets them in.
+      const { error: profileFlagError } = await client
+        .from('user_profiles')
+        .update({
+          onboarding_completed: true,
+          onboarding_completed_at: new Date().toISOString(),
+        })
+        .eq('id', dto.user_id)
+        .or('onboarding_completed.is.null,onboarding_completed.eq.false');
+      if (profileFlagError) {
+        this.logger.warn(
+          `Failed to flag invited user as onboarded: ${profileFlagError.message}`,
+        );
+      }
+
       try {
         const { data: profile } = await client
           .from('user_profiles')
