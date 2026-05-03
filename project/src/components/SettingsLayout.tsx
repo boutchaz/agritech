@@ -187,7 +187,7 @@ const SettingsLayout = ({ children }: SettingsLayoutProps) => {
               "settings.menu.integrationsDescription",
               "Email (SMTP) and WhatsApp (Meta Cloud API) for sharing invoices and quotes",
             ),
-            roles: ADMIN_ROLES,
+            roles: ADMIN_AND_MANAGER_ROLES,
           },
         ],
       },
