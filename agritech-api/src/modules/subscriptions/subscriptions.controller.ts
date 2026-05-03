@@ -9,10 +9,7 @@ import {
   HttpCode,
   HttpStatus,
   Logger,
-  UnauthorizedException,
-  Req,
-  UsePipes,
-  ValidationPipe,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -43,8 +40,10 @@ import {
   TerminateSubscriptionDto,
 } from './dto/lifecycle.dto';
 
-const polarWebhookModulePath = '@polar-sh/sdk/webhooks';
-const { validateEvent, WebhookVerificationError } = require(polarWebhookModulePath);
+// Polar billing integration is currently disabled (Morocco-only operation).
+// The checkout + webhook endpoints below return 503 to avoid exercising the
+// SDK at runtime. Restore by re-importing @polar-sh/sdk/webhooks here and
+// undoing the throws in createCheckout / handlePolarWebhook below.
 
 @ApiTags('subscriptions')
 @Controller('subscriptions')
@@ -134,18 +133,12 @@ export class SubscriptionsController {
       'Create a Polar checkout URL and persist quote snapshot for migration/reconciliation',
   })
   @ApiResponse({ status: 201, type: CheckoutResponseDto })
-  async createCheckout(@Request() req, @Body() checkoutDto: CheckoutDto) {
-    const organizationId = req.headers['x-organization-id'] as string;
-    if (!organizationId) {
-      throw new BadRequestException(
-        'Organization ID is required in X-Organization-Id header',
-      );
-    }
-
-    return this.subscriptionsService.createCheckoutUrl(
-      req.user.id,
-      organizationId,
-      checkoutDto,
+  async createCheckout(@Request() _req, @Body() _checkoutDto: CheckoutDto) {
+    // Billing checkout is disabled — Polar integration paused for Morocco-only ops.
+    // Subscriptions are managed manually by admins until a regional billing
+    // provider is wired up. Re-enable by restoring the body below.
+    throw new ServiceUnavailableException(
+      'Online subscription checkout is currently disabled. Contact an administrator to upgrade your plan.',
     );
   }
 
@@ -202,73 +195,17 @@ export class SubscriptionsController {
 export class WebhooksController {
   private readonly logger = new Logger(WebhooksController.name);
 
-  constructor(private readonly subscriptionsService: SubscriptionsService) {}
+  constructor() {}
 
   @Post('polar')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Handle Polar.sh webhook events' })
-  @UsePipes(
-    new ValidationPipe({
-      transform: true,
-      whitelist: false,
-      forbidNonWhitelisted: false,
-    }),
-  )
-  async handlePolarWebhook(
-    @Req()
-    req: {
-      rawBody?: string;
-      headers: Record<string, string | string[] | undefined>;
-    },
-  ) {
-    const rawBody = req.rawBody;
-    if (!rawBody) {
-      throw new UnauthorizedException('Missing raw body');
-    }
-
-    const webhookSecret = process.env.POLAR_WEBHOOK_SECRET;
-    if (!webhookSecret) {
-      this.logger.error('POLAR_WEBHOOK_SECRET is not configured');
-      throw new UnauthorizedException('Invalid webhook signature');
-    }
-
-    const normalizedHeaders: Record<string, string> = {};
-    for (const [key, value] of Object.entries(req.headers || {})) {
-      if (typeof value === 'string') {
-        normalizedHeaders[key] = value;
-      } else if (Array.isArray(value) && value.length > 0) {
-        normalizedHeaders[key] = value[0];
-      }
-    }
-
-    let event: { type: string; data: Record<string, unknown> };
-    try {
-      event = validateEvent(rawBody, normalizedHeaders, webhookSecret);
-    } catch (error) {
-      if (error instanceof WebhookVerificationError) {
-        throw new UnauthorizedException('Invalid webhook signature');
-      }
-      throw error;
-    }
-
-    try {
-      const result = await this.subscriptionsService.handlePolarWebhook(
-        event.type,
-        event.data,
-      );
-      return {
-        success: true,
-        message: 'Webhook processed successfully',
-        data: result,
-      };
-    } catch (error) {
-      this.logger.error('Error processing webhook', error);
-      if (error instanceof BadRequestException) {
-        const message =
-          error instanceof Error ? error.message : 'Invalid webhook payload';
-        return { success: false, message };
-      }
-      throw error;
-    }
+  @HttpCode(HttpStatus.SERVICE_UNAVAILABLE)
+  @ApiOperation({ summary: 'Polar webhook (disabled — Morocco-only ops)' })
+  async handlePolarWebhook() {
+    // Polar webhook handler is disabled. To re-enable, restore the prior
+    // implementation: read req.rawBody, verify signature with
+    // POLAR_WEBHOOK_SECRET via @polar-sh/sdk/webhooks → validateEvent, then
+    // dispatch event.type to subscriptionsService.handlePolarWebhook(...).
+    this.logger.warn('Received Polar webhook while billing integration is disabled — ignoring.');
+    throw new ServiceUnavailableException('Polar webhooks are currently disabled.');
   }
 }
