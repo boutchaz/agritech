@@ -143,6 +143,7 @@ export class HrAdvancedService {
 
   async createEnrollment(orgId: string, dto: CreateEnrollmentDto) {
     const supabase = this.db.getAdminClient();
+    await this.assertProgramAndWorkersInOrg(orgId, dto.program_id, [dto.worker_id]);
     const { data, error } = await supabase
       .from('training_enrollments')
       .insert({ organization_id: orgId, ...dto })
@@ -154,6 +155,7 @@ export class HrAdvancedService {
 
   async bulkEnroll(orgId: string, dto: BulkEnrollDto) {
     const supabase = this.db.getAdminClient();
+    await this.assertProgramAndWorkersInOrg(orgId, dto.program_id, dto.worker_ids);
     const rows = dto.worker_ids.map((worker_id) => ({
       organization_id: orgId,
       program_id: dto.program_id,
@@ -166,6 +168,50 @@ export class HrAdvancedService {
       .select('*');
     if (error) throw new BadRequestException(error.message);
     return data ?? [];
+  }
+
+  /**
+   * Verify both the program_id and every worker_id belong to the current org
+   * before any enrollment write. The bare insert/upsert below only stamps
+   * organization_id; without this guard a foreign program_id (or a foreign
+   * worker_id mixed into bulk enroll) would be persisted with this org's
+   * organization_id, scrambling membership.
+   */
+  private async assertProgramAndWorkersInOrg(
+    orgId: string,
+    programId: string,
+    workerIds: string[],
+  ): Promise<void> {
+    const supabase = this.db.getAdminClient();
+    const uniqueWorkerIds = Array.from(new Set(workerIds));
+
+    const [{ data: program }, { data: workers }] = await Promise.all([
+      supabase
+        .from('training_programs')
+        .select('id')
+        .eq('id', programId)
+        .eq('organization_id', orgId)
+        .maybeSingle(),
+      supabase
+        .from('workers')
+        .select('id')
+        .in('id', uniqueWorkerIds)
+        .eq('organization_id', orgId),
+    ]);
+
+    if (!program) {
+      throw new BadRequestException(
+        `Training program ${programId} does not belong to this organization`,
+      );
+    }
+
+    const foundIds = new Set((workers ?? []).map((w) => w.id));
+    const missing = uniqueWorkerIds.filter((id) => !foundIds.has(id));
+    if (missing.length > 0) {
+      throw new BadRequestException(
+        `Workers do not belong to this organization: ${missing.join(', ')}`,
+      );
+    }
   }
 
   async updateEnrollment(orgId: string, id: string, dto: UpdateEnrollmentDto) {
@@ -212,24 +258,32 @@ export class HrAdvancedService {
       quals,
       appraisal,
     ] = await Promise.all([
+      // Every read scopes by both worker_id AND organization_id. Without the
+      // org filter a worker invited into a second org could read salary slips,
+      // leave balances, and qualifications from their *other* employer by
+      // hitting /organizations/:other-org/hr/me with their original workerId.
       supabase
         .from('workers')
         .select('id, first_name, last_name, cin, worker_type, farm_id, is_active, hire_date, monthly_salary, daily_rate, is_cnss_declared')
         .eq('id', workerId)
-        .single(),
+        .eq('organization_id', orgId)
+        .maybeSingle(),
       supabase
         .from('leave_balance_summary')
         .select('*')
-        .eq('worker_id', workerId),
+        .eq('worker_id', workerId)
+        .eq('organization_id', orgId),
       supabase
         .from('leave_applications')
         .select('id', { count: 'exact', head: true })
         .eq('worker_id', workerId)
+        .eq('organization_id', orgId)
         .eq('status', 'pending'),
       supabase
         .from('salary_slips')
         .select('*')
         .eq('worker_id', workerId)
+        .eq('organization_id', orgId)
         .order('pay_period_end', { ascending: false })
         .limit(1)
         .maybeSingle(),
@@ -237,11 +291,13 @@ export class HrAdvancedService {
         .from('expense_claims')
         .select('id', { count: 'exact', head: true })
         .eq('worker_id', workerId)
+        .eq('organization_id', orgId)
         .in('status', ['pending', 'partially_approved']),
       supabase
         .from('worker_qualifications')
         .select('id, qualification_name, qualification_type, expiry_date, is_valid')
         .eq('worker_id', workerId)
+        .eq('organization_id', orgId)
         .lte('expiry_date', in30Str)
         .gte('expiry_date', today)
         .order('expiry_date', { ascending: true }),
@@ -249,11 +305,27 @@ export class HrAdvancedService {
         .from('appraisals')
         .select('*, cycle:appraisal_cycles(id, name, status, end_date)')
         .eq('worker_id', workerId)
+        .eq('organization_id', orgId)
         .neq('status', 'completed')
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle(),
     ]);
+
+    // If the worker doesn't belong to this org, return an empty summary —
+    // not just empty fields with stale relation reads.
+    if (!worker.data) {
+      return {
+        worker: null,
+        org_role: orgRole,
+        leave_balances: [],
+        pending_leave: 0,
+        latest_slip: null,
+        pending_expense_claims: 0,
+        expiring_qualifications: [],
+        active_appraisal: null,
+      };
+    }
 
     return {
       worker: worker.data ?? null,

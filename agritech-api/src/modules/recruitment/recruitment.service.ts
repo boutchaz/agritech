@@ -83,24 +83,34 @@ export class RecruitmentService {
 
   async createApplicant(orgId: string, dto: CreateJobApplicantDto) {
     const supabase = this.db.getAdminClient();
+    // Verify the job_opening belongs to this org BEFORE inserting + bumping
+    // its counter. Without this check a foreign job_opening_id would create
+    // an applicant for another org's opening and tick its application_count.
+    const { data: opening } = await supabase
+      .from('job_openings')
+      .select('id, application_count')
+      .eq('id', dto.job_opening_id)
+      .eq('organization_id', orgId)
+      .maybeSingle();
+    if (!opening) {
+      throw new BadRequestException(
+        `Job opening ${dto.job_opening_id} does not belong to this organization`,
+      );
+    }
+
     const { data, error } = await supabase
       .from('job_applicants')
       .insert({ organization_id: orgId, ...dto })
       .select('*')
       .single();
     if (error) throw new BadRequestException(error.message);
-    // Increment opening's application_count
-    const { data: opening } = await supabase
+
+    await supabase
       .from('job_openings')
-      .select('application_count')
+      .update({ application_count: (opening.application_count ?? 0) + 1 })
       .eq('id', dto.job_opening_id)
-      .single();
-    if (opening) {
-      await supabase
-        .from('job_openings')
-        .update({ application_count: (opening.application_count ?? 0) + 1 })
-        .eq('id', dto.job_opening_id);
-    }
+      .eq('organization_id', orgId);
+
     return data;
   }
 

@@ -13,6 +13,36 @@ export class FilesService {
   ) {}
 
   /**
+   * Reject storage bucket/path values that could escape the intended bucket
+   * key namespace. Supabase Storage treats keys as opaque strings — there is
+   * no real filesystem traversal — but a `..` segment, leading slash, or
+   * backslash in caller-supplied input is a strong signal of an attempted
+   * path-walk and probably points at a bug or abuse. Bucket name is
+   * additionally restricted to the safe Supabase character set.
+   */
+  private assertSafeStoragePath(bucket: string, filePath: string): void {
+    if (!bucket || typeof bucket !== 'string' || !/^[a-z0-9._-]+$/.test(bucket)) {
+      throw new BadRequestException('Invalid bucket name');
+    }
+    if (!filePath || typeof filePath !== 'string') {
+      throw new BadRequestException('Invalid file path');
+    }
+    if (filePath.length > 1024) {
+      throw new BadRequestException('File path too long');
+    }
+    if (filePath.startsWith('/') || filePath.startsWith('\\')) {
+      throw new BadRequestException('File path must be relative');
+    }
+    if (filePath.includes('\0')) {
+      throw new BadRequestException('File path contains null byte');
+    }
+    const segments = filePath.split(/[\/\\]/);
+    if (segments.some((seg) => seg === '..' || seg === '.' || seg.trim() === '')) {
+      throw new BadRequestException('File path contains traversal segment');
+    }
+  }
+
+  /**
    * Insert or update a file_registry row (unique on bucket_name + file_path).
    */
   async upsertFileRegistryEntry(
@@ -203,10 +233,7 @@ export class FilesService {
     filePath: string,
     options?: { upsert?: boolean; cacheControl?: string },
   ): Promise<{ path: string; publicUrl: string }> {
-    // Validate bucket and path to prevent path traversal
-    if (/\.\.|[\/\\]\.\./.test(bucket) || /\.\.|[\/\\]\.\./.test(filePath)) {
-      throw new BadRequestException('Invalid bucket or file path');
-    }
+    this.assertSafeStoragePath(bucket, filePath);
     const client = this.databaseService.getAdminClient();
 
     const { error } = await client.storage
@@ -233,10 +260,7 @@ export class FilesService {
   }
 
   async removeFromStorage(bucket: string, filePaths: string[]): Promise<void> {
-    // Validate paths to prevent path traversal
-    if (/\.\.|[\/\\]\.\./.test(bucket) || filePaths.some(p => /\.\.|[\/\\]\.\./.test(p))) {
-      throw new BadRequestException('Invalid bucket or file path');
-    }
+    for (const p of filePaths) this.assertSafeStoragePath(bucket, p);
     const client = this.databaseService.getAdminClient();
 
     const { error } = await client.storage.from(bucket).remove(filePaths);
@@ -248,10 +272,7 @@ export class FilesService {
   }
 
   async downloadFromStorage(bucket: string, filePath: string): Promise<Buffer> {
-    // Validate paths to prevent path traversal
-    if (/\.\.|[\/\\]\.\./.test(bucket) || /\.\.|[\/\\]\.\./.test(filePath)) {
-      throw new BadRequestException('Invalid bucket or file path');
-    }
+    this.assertSafeStoragePath(bucket, filePath);
     const client = this.databaseService.getAdminClient();
 
     const { data, error } = await client.storage.from(bucket).download(filePath);

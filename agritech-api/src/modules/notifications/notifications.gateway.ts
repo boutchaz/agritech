@@ -81,6 +81,10 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
         client.organizationId = organizationId;
         // Join organization room
         client.join(`org:${organizationId}`);
+        // Join the user+org room so per-user notifications can be scoped to
+        // a single organization (a user in multiple orgs shouldn't receive
+        // org A's notifications while logged into org B).
+        client.join(`user:${client.user.id}:org:${organizationId}`);
       }
 
       // Join user-specific room
@@ -133,11 +137,15 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
     // Leave previous organization room if any
     if (client.organizationId) {
       client.leave(`org:${client.organizationId}`);
+      if (client.user) {
+        client.leave(`user:${client.user.id}:org:${client.organizationId}`);
+      }
     }
 
     // Join new organization room
     client.organizationId = data.organizationId;
     client.join(`org:${data.organizationId}`);
+    client.join(`user:${client.user.id}:org:${data.organizationId}`);
 
     this.logger.log(`User ${client.user.id} joined organization ${data.organizationId}`);
     return { success: true, organizationId: data.organizationId };
@@ -176,11 +184,20 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
   }
 
   /**
-   * Send a notification to a specific user
+   * Send a notification to a specific user. When organizationId is provided
+   * (it should be — every notification row carries one), the message is
+   * scoped to the user+org room so a user with sessions in multiple orgs
+   * only sees the notification while connected to the matching org.
+   * The legacy `user:${userId}` path remains for transient calls without org.
    */
-  sendToUser(userId: string, notification: any) {
-    this.server.to(`user:${userId}`).emit('notification:new', notification);
-    this.logger.debug(`Notification sent to user ${userId}: ${notification.title}`);
+  sendToUser(userId: string, notification: any, organizationId?: string) {
+    const room = organizationId
+      ? `user:${userId}:org:${organizationId}`
+      : `user:${userId}`;
+    this.server.to(room).emit('notification:new', notification);
+    this.logger.debug(
+      `Notification sent to ${room}: ${notification.title}`,
+    );
   }
 
   /**
@@ -236,16 +253,27 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
   }
 
   private extractToken(client: Socket): string | null {
-    // Try to get token from query params
+    // 1. Query param (legacy)
     const queryToken = client.handshake.query.token as string;
-    if (queryToken) {
-      return queryToken;
-    }
+    if (queryToken) return queryToken;
 
-    // Try to get token from auth header
+    // 2. Authorization header
     const authHeader = client.handshake.headers.authorization;
     if (authHeader && authHeader.startsWith('Bearer ')) {
       return authHeader.substring(7);
+    }
+
+    // 3. httpOnly cookie (`agg_access`) — set by /auth/login + /auth/refresh-token.
+    // socket.io-client must connect with `withCredentials: true` for the cookie
+    // to be sent on the upgrade request.
+    const cookieHeader = client.handshake.headers.cookie;
+    if (cookieHeader) {
+      for (const part of cookieHeader.split(';')) {
+        const [rawKey, ...rest] = part.split('=');
+        if (rawKey?.trim() === 'agg_access' && rest.length > 0) {
+          return rest.join('=').trim();
+        }
+      }
     }
 
     return null;

@@ -146,7 +146,7 @@ export class NotificationsService {
     }
 
     // Emit notification via WebSocket
-    this.gateway.sendToUser(dto.userId, data);
+    this.gateway.sendToUser(dto.userId, data, dto.organizationId);
     this.logger.log(`Notification created and sent to user ${dto.userId}: ${dto.title}`);
 
     return data;
@@ -185,9 +185,14 @@ export class NotificationsService {
       throw new Error(`Failed to create bulk notifications: ${error.message}`);
     }
 
-    // Emit to each user
+    // Emit to each user, scoped to the notification's organization so a user
+    // who belongs to multiple orgs only sees the message in the right session.
     for (const notification of created) {
-      this.gateway.sendToUser(notification.user_id, notification);
+      this.gateway.sendToUser(
+        notification.user_id,
+        notification,
+        notification.organization_id,
+      );
     }
 
     this.logger.log(`Created ${created.length} notifications for ${userIds.length} users`);

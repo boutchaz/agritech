@@ -148,6 +148,30 @@ export class SalaryStructuresService {
   ) {
     const supabase = this.db.getAdminClient();
 
+    // Validate cross-tenant references BEFORE writing. The bare insert at the
+    // bottom only sets organization_id; without these checks a caller could
+    // bind another org's worker (or salary structure) into this org's payroll.
+    const [{ data: worker }, { data: structure }] = await Promise.all([
+      supabase
+        .from('workers')
+        .select('id')
+        .eq('id', dto.worker_id)
+        .eq('organization_id', organizationId)
+        .maybeSingle(),
+      supabase
+        .from('salary_structures')
+        .select('id')
+        .eq('id', dto.salary_structure_id)
+        .eq('organization_id', organizationId)
+        .maybeSingle(),
+    ]);
+    if (!worker) {
+      throw new BadRequestException(`Worker ${dto.worker_id} does not belong to this organization`);
+    }
+    if (!structure) {
+      throw new BadRequestException(`Salary structure ${dto.salary_structure_id} does not belong to this organization`);
+    }
+
     // Close the previous assignment for this worker by setting effective_to.
     const { data: prev } = await supabase
       .from('salary_structure_assignments')
@@ -165,7 +189,8 @@ export class SalaryStructuresService {
       await supabase
         .from('salary_structure_assignments')
         .update({ effective_to: closeDate.toISOString().slice(0, 10) })
-        .eq('id', prev.id);
+        .eq('id', prev.id)
+        .eq('organization_id', organizationId);
     }
 
     const { data, error } = await supabase

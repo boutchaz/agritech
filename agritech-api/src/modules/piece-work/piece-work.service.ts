@@ -119,8 +119,12 @@ export class PieceWorkService {
     const client = this.databaseService.getAdminClient();
 
     try {
-      // Calculate total amount
-      const totalAmount = dto.units_completed * dto.rate_per_unit;
+      // Calculate total amount with 2-decimal currency rounding. Float
+      // multiplication on its own (e.g. 0.1 * 0.2) drifts via IEEE-754 and
+      // would persist mismatched cents to the GL when these records flow
+      // into payment_records.
+      const totalAmount =
+        Math.round((dto.units_completed * dto.rate_per_unit + Number.EPSILON) * 100) / 100;
 
       const insertData = {
         organization_id: organizationId,
@@ -159,26 +163,21 @@ export class PieceWorkService {
         throw new BadRequestException(`Failed to create piece work record: ${error.message}`);
       }
 
-      const { data: workUnit, error: workUnitError } = await client
-        .from('work_units')
-        .select('usage_count')
-        .eq('id', dto.work_unit_id)
-        .eq('organization_id', organizationId)
-        .maybeSingle();
-
-      if (workUnitError) {
-        this.logger.warn(`Failed to fetch work unit usage count: ${workUnitError.message}`);
-      } else if (workUnit) {
-        const nextCount = (workUnit.usage_count ?? 0) + 1;
-        const { error: updateError } = await client
-          .from('work_units')
-          .update({ usage_count: nextCount })
-          .eq('id', dto.work_unit_id)
-          .eq('organization_id', organizationId);
-
-        if (updateError) {
-          this.logger.warn(`Failed to increment work unit usage count: ${updateError.message}`);
-        }
+      // Atomic increment in a single round trip. The previous SELECT-then-UPDATE
+      // pattern lost increments under concurrent creates (last writer wins on
+      // the stale-read value) and doubled the latency.
+      try {
+        const pool = this.databaseService.getPgPool();
+        await pool.query(
+          `UPDATE work_units
+              SET usage_count = COALESCE(usage_count, 0) + 1
+            WHERE id = $1 AND organization_id = $2`,
+          [dto.work_unit_id, organizationId],
+        );
+      } catch (e) {
+        this.logger.warn(
+          `Failed to increment work unit usage count: ${e instanceof Error ? e.message : String(e)}`,
+        );
       }
 
       // Notify operational roles about new piece work
@@ -215,12 +214,13 @@ export class PieceWorkService {
     try {
       const updateData: any = { ...dto };
 
-      // Recalculate total amount if units or rate changed
+      // Recalculate total amount if units or rate changed (rounded to cents).
       if (dto.units_completed || dto.rate_per_unit) {
         const record = await this.findOne(id, organizationId);
-        const unitsCompleted = dto.units_completed ?? record.units_completed;
-        const ratePerUnit = dto.rate_per_unit ?? record.rate_per_unit;
-        updateData.total_amount = unitsCompleted * ratePerUnit;
+        const unitsCompleted = Number(dto.units_completed ?? record.units_completed);
+        const ratePerUnit = Number(dto.rate_per_unit ?? record.rate_per_unit);
+        updateData.total_amount =
+          Math.round((unitsCompleted * ratePerUnit + Number.EPSILON) * 100) / 100;
       }
 
       const { data, error } = await client

@@ -175,6 +175,18 @@ export class EmployeeLifecycleService {
 
   async createSeparation(orgId: string, userId: string | null, dto: CreateSeparationDto) {
     const supabase = this.db.getAdminClient();
+    // Verify the worker belongs to this org before creating a separation that
+    // could later be promoted to "relieved" and used to deactivate them.
+    const { data: worker } = await supabase
+      .from('workers')
+      .select('id')
+      .eq('id', dto.worker_id)
+      .eq('organization_id', orgId)
+      .maybeSingle();
+    if (!worker) {
+      throw new BadRequestException(`Worker ${dto.worker_id} does not belong to this organization`);
+    }
+
     const { data, error } = await supabase
       .from('separations')
       .insert({ organization_id: orgId, created_by: userId, ...dto })
@@ -199,10 +211,15 @@ export class EmployeeLifecycleService {
         .eq('organization_id', orgId)
         .maybeSingle();
       if (sep) {
+        // Scope the worker mutation by organization. Without this guard a
+        // separation row planted with a foreign worker_id (defense in depth
+        // beyond createSeparation's check) could deactivate another org's
+        // worker by id alone.
         await supabase
           .from('workers')
           .update({ is_active: false, status: 'terminated', end_date: new Date().toISOString().slice(0, 10) })
-          .eq('id', sep.worker_id);
+          .eq('id', sep.worker_id)
+          .eq('organization_id', orgId);
       }
     }
     const { data, error } = await supabase

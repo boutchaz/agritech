@@ -131,32 +131,35 @@ export class LeaveApplicationsService {
     if (application.status !== 'pending')
       throw new BadRequestException(`Cannot approve application in status ${application.status}`);
 
-    const supabase = this.db.getAdminClient();
-    // Update status first so a failure leaves allocation untouched, then
-    // distribute used_days across each allocation period the leave overlaps.
-    const { data, error } = await supabase
-      .from('leave_applications')
-      .update({
-        status: 'approved',
-        approved_by: userId,
-        approved_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', applicationId)
-      .eq('organization_id', organizationId)
-      .select('*')
-      .single();
-    if (error) throw new BadRequestException(error.message);
+    // Atomicity: both the status flip and the leave-balance update must commit
+    // together or not at all. Using executeInPgTransaction ensures a single
+    // PG transaction wraps both, so a failure mid-flow leaves the application
+    // pending AND the allocations untouched.
+    const data = await this.db.executeInPgTransaction(async (pg) => {
+      const now = new Date().toISOString();
+      const updateRes = await pg.query(
+        `UPDATE leave_applications
+         SET status = 'approved', approved_by = $1, approved_at = $2, updated_at = $2
+         WHERE id = $3 AND organization_id = $4
+         RETURNING *`,
+        [userId, now, applicationId, organizationId],
+      );
+      if (updateRes.rowCount === 0) {
+        throw new BadRequestException('Failed to approve leave application');
+      }
 
-    await this.distributeAllocationUsedDays(
-      organizationId,
-      application.worker_id,
-      application.leave_type_id,
-      application.from_date,
-      application.to_date,
-      Number(application.total_days),
-      application.half_day ?? false,
-    );
+      await this.distributeAllocationUsedDaysPg(pg, {
+        organizationId,
+        workerId: application.worker_id,
+        leaveTypeId: application.leave_type_id,
+        fromDate: application.from_date,
+        toDate: application.to_date,
+        delta: Number(application.total_days),
+        halfDay: application.half_day ?? false,
+      });
+
+      return updateRes.rows[0];
+    });
 
     return data;
   }
@@ -215,30 +218,35 @@ export class LeaveApplicationsService {
       }
     }
 
-    if (application.status === 'approved') {
-      await this.distributeAllocationUsedDays(
-        organizationId,
-        application.worker_id,
-        application.leave_type_id,
-        application.from_date,
-        application.to_date,
-        -Number(application.total_days),
-        application.half_day ?? false,
-      );
-    }
+    // Atomicity: refund balance + flip status to cancelled in one PG tx.
+    // If only the refund had run before, a failure on status update would
+    // leave used_days reduced AND the application still marked approved,
+    // letting the same window be re-approved or refunded twice.
+    const data = await this.db.executeInPgTransaction(async (pg) => {
+      if (application.status === 'approved') {
+        await this.distributeAllocationUsedDaysPg(pg, {
+          organizationId,
+          workerId: application.worker_id,
+          leaveTypeId: application.leave_type_id,
+          fromDate: application.from_date,
+          toDate: application.to_date,
+          delta: -Number(application.total_days),
+          halfDay: application.half_day ?? false,
+        });
+      }
 
-    const supabase = this.db.getAdminClient();
-    const { data, error } = await supabase
-      .from('leave_applications')
-      .update({
-        status: 'cancelled',
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', applicationId)
-      .eq('organization_id', organizationId)
-      .select('*')
-      .single();
-    if (error) throw new BadRequestException(error.message);
+      const updateRes = await pg.query(
+        `UPDATE leave_applications
+         SET status = 'cancelled', updated_at = $1
+         WHERE id = $2 AND organization_id = $3
+         RETURNING *`,
+        [new Date().toISOString(), applicationId, organizationId],
+      );
+      if (updateRes.rowCount === 0) {
+        throw new BadRequestException('Failed to cancel leave application');
+      }
+      return updateRes.rows[0];
+    });
     return data;
   }
 
@@ -293,44 +301,60 @@ export class LeaveApplicationsService {
    * of leave days that fall inside its period (half-day handled). `delta`
    * sign drives both apply (+) and refund (-).
    */
-  private async distributeAllocationUsedDays(
-    organizationId: string,
-    workerId: string,
-    leaveTypeId: string,
-    fromDate: string,
-    toDate: string,
-    delta: number,
-    halfDay: boolean,
+  /**
+   * pg/tx-bound version of distributeAllocationUsedDays. Locks the relevant
+   * leave_allocations rows FOR UPDATE so two concurrent approvals on
+   * overlapping windows can't double-spend the balance.
+   */
+  private async distributeAllocationUsedDaysPg(
+    pg: import('pg').PoolClient,
+    params: {
+      organizationId: string;
+      workerId: string;
+      leaveTypeId: string;
+      fromDate: string;
+      toDate: string;
+      delta: number;
+      halfDay: boolean;
+    },
   ) {
+    const { organizationId, workerId, leaveTypeId, fromDate, toDate, delta, halfDay } = params;
     if (delta === 0) return;
-    const supabase = this.db.getAdminClient();
-    const { data: allocs } = await supabase
-      .from('leave_allocations')
-      .select('id, used_days, period_start, period_end')
-      .eq('organization_id', organizationId)
-      .eq('worker_id', workerId)
-      .eq('leave_type_id', leaveTypeId)
-      .lte('period_start', toDate)
-      .gte('period_end', fromDate);
-    if (!allocs?.length) return;
+    const allocsRes = await pg.query(
+      `SELECT id, used_days, period_start, period_end
+         FROM leave_allocations
+        WHERE organization_id = $1
+          AND worker_id = $2
+          AND leave_type_id = $3
+          AND period_start <= $4
+          AND period_end >= $5
+        FOR UPDATE`,
+      [organizationId, workerId, leaveTypeId, toDate, fromDate],
+    );
+    const allocs = allocsRes.rows;
+    if (allocs.length === 0) return;
 
     const sign = delta < 0 ? -1 : 1;
     for (const alloc of allocs) {
       const overlap = countDateOverlap(
         fromDate,
         toDate,
-        alloc.period_start,
-        alloc.period_end,
+        alloc.period_start instanceof Date
+          ? alloc.period_start.toISOString().slice(0, 10)
+          : alloc.period_start,
+        alloc.period_end instanceof Date
+          ? alloc.period_end.toISOString().slice(0, 10)
+          : alloc.period_end,
       );
       if (overlap <= 0) continue;
       const portion = halfDay && fromDate === toDate ? 0.5 : overlap;
-      await supabase
-        .from('leave_allocations')
-        .update({
-          used_days: Math.max(0, Number(alloc.used_days) + sign * portion),
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', alloc.id);
+      const newUsed = Math.max(0, Number(alloc.used_days) + sign * portion);
+      await pg.query(
+        `UPDATE leave_allocations
+            SET used_days = $1, updated_at = $2
+          WHERE id = $3`,
+        [newUsed, new Date().toISOString(), alloc.id],
+      );
     }
   }
 

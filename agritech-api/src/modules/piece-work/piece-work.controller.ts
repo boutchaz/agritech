@@ -22,15 +22,20 @@ import { PieceWorkService } from './piece-work.service';
 import { CreatePieceWorkDto, UpdatePieceWorkDto, PieceWorkFiltersDto } from './dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { OrganizationGuard } from '../../common/guards/organization.guard';
+import { PoliciesGuard } from '../casl/policies.guard';
+import { CheckPolicies } from '../casl/check-policies.decorator';
+import { Action } from '../casl/action.enum';
+import { AppAbility } from '../casl/casl-ability.factory';
 
 @ApiTags('piece-work')
 @ApiBearerAuth()
 @Controller('organizations/:organizationId/farms/:farmId/piece-work')
-@UseGuards(JwtAuthGuard, OrganizationGuard)
+@UseGuards(JwtAuthGuard, OrganizationGuard, PoliciesGuard)
 export class PieceWorkController {
   constructor(private readonly pieceWorkService: PieceWorkService) {}
 
   @Get()
+  @CheckPolicies((ability: AppAbility) => ability.can(Action.Read, 'PieceWork'))
   @ApiOperation({ summary: 'Get all piece work records for a farm' })
   @ApiParam({ name: 'organizationId', description: 'Organization ID' })
   @ApiParam({ name: 'farmId', description: 'Farm ID' })
@@ -54,6 +59,7 @@ export class PieceWorkController {
   }
 
   @Get(':id')
+  @CheckPolicies((ability: AppAbility) => ability.can(Action.Read, 'PieceWork'))
   @ApiOperation({ summary: 'Get a single piece work record by ID' })
   @ApiParam({ name: 'organizationId', description: 'Organization ID' })
   @ApiParam({ name: 'farmId', description: 'Farm ID' })
@@ -71,6 +77,7 @@ export class PieceWorkController {
   }
 
   @Post()
+  @CheckPolicies((ability: AppAbility) => ability.can(Action.Create, 'PieceWork'))
   @ApiOperation({ summary: 'Create a new piece work record' })
   @ApiParam({ name: 'organizationId', description: 'Organization ID' })
   @ApiParam({ name: 'farmId', description: 'Farm ID' })
@@ -90,6 +97,7 @@ export class PieceWorkController {
   }
 
   @Patch(':id')
+  @CheckPolicies((ability: AppAbility) => ability.can(Action.Update, 'PieceWork'))
   @ApiOperation({ summary: 'Update a piece work record' })
   @ApiParam({ name: 'organizationId', description: 'Organization ID' })
   @ApiParam({ name: 'farmId', description: 'Farm ID' })
@@ -109,6 +117,7 @@ export class PieceWorkController {
   }
 
   @Delete(':id')
+  @CheckPolicies((ability: AppAbility) => ability.can(Action.Delete, 'PieceWork'))
   @ApiOperation({ summary: 'Delete a piece work record' })
   @ApiParam({ name: 'organizationId', description: 'Organization ID' })
   @ApiParam({ name: 'farmId', description: 'Farm ID' })
@@ -127,6 +136,7 @@ export class PieceWorkController {
   }
 
   @Patch('bulk-verify')
+  @CheckPolicies((ability: AppAbility) => ability.can(Action.Update, 'PieceWork'))
   @ApiOperation({ summary: 'Bulk verify multiple piece work records' })
   @ApiParam({ name: 'organizationId', description: 'Organization ID' })
   @ApiParam({ name: 'farmId', description: 'Farm ID' })
@@ -144,6 +154,7 @@ export class PieceWorkController {
   }
 
   @Post('bulk-generate-payments')
+  @CheckPolicies((ability: AppAbility) => ability.can(Action.Create, 'PaymentRecord'))
   @ApiOperation({ summary: 'Bulk generate payments for multiple piece work records' })
   @ApiParam({ name: 'organizationId', description: 'Organization ID' })
   @ApiParam({ name: 'farmId', description: 'Farm ID' })
@@ -161,6 +172,7 @@ export class PieceWorkController {
   }
 
   @Post(':id/generate-payment')
+  @CheckPolicies((ability: AppAbility) => ability.can(Action.Create, 'PaymentRecord'))
   @ApiOperation({ summary: 'Generate payment for a piece work record' })
   @ApiParam({ name: 'organizationId', description: 'Organization ID' })
   @ApiParam({ name: 'farmId', description: 'Farm ID' })
@@ -180,6 +192,7 @@ export class PieceWorkController {
   }
 
   @Patch(':id/verify')
+  @CheckPolicies((ability: AppAbility) => ability.can(Action.Update, 'PieceWork'))
   @ApiOperation({ summary: 'Verify a piece work record' })
   @ApiParam({ name: 'organizationId', description: 'Organization ID' })
   @ApiParam({ name: 'farmId', description: 'Farm ID' })

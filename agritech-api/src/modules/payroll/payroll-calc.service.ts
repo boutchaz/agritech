@@ -74,9 +74,9 @@ export class PayrollCalcService {
 
     const compliance = await this.compliance.get(organizationId);
 
-    const assignment = await this.findActiveAssignment(workerId, payPeriodStart);
+    const assignment = await this.findActiveAssignment(organizationId, workerId, payPeriodStart);
     const components = assignment
-      ? await this.loadComponents(assignment.salary_structure_id)
+      ? await this.loadComponents(organizationId, assignment.salary_structure_id)
       : [];
 
     const baseAmount = assignment?.base_amount
@@ -259,11 +259,12 @@ export class PayrollCalcService {
     return Math.max(0, amount);
   }
 
-  private async findActiveAssignment(workerId: string, asOf: string) {
+  private async findActiveAssignment(organizationId: string, workerId: string, asOf: string) {
     const supabase = this.db.getAdminClient();
     const { data } = await supabase
       .from('salary_structure_assignments')
       .select('id, salary_structure_id, base_amount, variable_amount, effective_from, effective_to')
+      .eq('organization_id', organizationId)
       .eq('worker_id', workerId)
       .lte('effective_from', asOf)
       .order('effective_from', { ascending: false })
@@ -274,8 +275,18 @@ export class PayrollCalcService {
     return data;
   }
 
-  private async loadComponents(structureId: string) {
+  private async loadComponents(organizationId: string, structureId: string) {
     const supabase = this.db.getAdminClient();
+    // Re-verify the structure belongs to this org. salary_components has no
+    // organization_id column, but salary_structures does — fetch through it.
+    const { data: structure } = await supabase
+      .from('salary_structures')
+      .select('id')
+      .eq('id', structureId)
+      .eq('organization_id', organizationId)
+      .maybeSingle();
+    if (!structure) return [];
+
     const { data } = await supabase
       .from('salary_components')
       .select('*')
