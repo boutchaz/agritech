@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { v4 as uuidv4 } from 'uuid';
 import { useAuth } from '../hooks/useAuth';
+import { useModuleEnabled } from './useModuleEnabled';
 import { stockEntriesApi } from '../lib/api/stock';
 import { runOrQueue as runOrQueueOffline } from '../lib/offline/runOrQueue';
 import type {
@@ -15,6 +16,10 @@ import type {
  */
 export function useStockEntries(filters?: StockEntryFilters) {
   const { currentOrganization } = useAuth();
+  // Suppress queries when the org doesn't have the stock module enabled —
+  // otherwise every dashboard route that mounts a stock widget pings
+  // /stock-entries and gets 403'd, polluting Sentry and the network tab.
+  const stockEnabled = useModuleEnabled('stock');
 
   return useQuery({
     queryKey: ['stock-entries', currentOrganization?.id, filters],
@@ -25,7 +30,7 @@ export function useStockEntries(filters?: StockEntryFilters) {
 
       return stockEntriesApi.getAll(filters, currentOrganization.id);
     },
-    enabled: !!currentOrganization?.id,
+    enabled: stockEnabled && !!currentOrganization?.id,
   });
 }
 
@@ -34,6 +39,7 @@ export function useStockEntries(filters?: StockEntryFilters) {
  */
 export function useStockEntry(entryId: string | null) {
   const { currentOrganization } = useAuth();
+  const stockEnabled = useModuleEnabled('stock');
 
   return useQuery({
     queryKey: ['stock-entry', entryId],
@@ -43,7 +49,7 @@ export function useStockEntry(entryId: string | null) {
 
       return stockEntriesApi.getOne(entryId, currentOrganization.id);
     },
-    enabled: !!entryId && !!currentOrganization?.id,
+    enabled: stockEnabled && !!entryId && !!currentOrganization?.id,
   });
 }
 
@@ -279,6 +285,7 @@ export function useDeleteStockEntry() {
 export function useStockMovements(filters?: StockMovementFilters) {
   const { currentOrganization } = useAuth();
 
+  const stockEnabled = useModuleEnabled('stock');
   return useQuery({
     queryKey: ['stock-movements', currentOrganization?.id, filters],
     queryFn: async () => {
@@ -288,7 +295,7 @@ export function useStockMovements(filters?: StockMovementFilters) {
 
       return stockEntriesApi.getMovements(filters, currentOrganization.id);
     },
-    enabled: !!currentOrganization?.id,
+    enabled: stockEnabled && !!currentOrganization?.id,
   });
 }
 
@@ -304,6 +311,7 @@ export function useItemStockMovements(itemId: string | null) {
  */
 export function useStockAging(warehouseId?: string) {
   const { currentOrganization } = useAuth();
+  const stockEnabled = useModuleEnabled('stock');
 
   return useQuery({
     queryKey: ['stock-aging', currentOrganization?.id, warehouseId],
@@ -313,7 +321,7 @@ export function useStockAging(warehouseId?: string) {
       }
       return stockEntriesApi.getAging(currentOrganization.id, warehouseId);
     },
-    enabled: !!currentOrganization?.id,
+    enabled: stockEnabled && !!currentOrganization?.id,
     staleTime: 60 * 1000,
   });
 }
