@@ -1,9 +1,10 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsString, IsUUID, IsEnum, IsBoolean, IsIn, IsDateString } from 'class-validator';
+import { IsOptional, IsString, IsUUID, IsEnum, IsBoolean, IsDateString } from 'class-validator';
 import { Type, Transform } from 'class-transformer';
 import { CropCycleStatus } from './create-crop-cycle.dto';
+import { PaginatedQueryDto } from '../../../common/dto/paginated-query.dto';
 
-export class CropCycleFiltersDto {
+export class CropCycleFiltersDto extends PaginatedQueryDto {
   @ApiPropertyOptional({ description: 'Filter by status', enum: CropCycleStatus })
   @IsOptional()
   @IsEnum(CropCycleStatus)
@@ -80,23 +81,4 @@ export class CropCycleFiltersDto {
   @IsString()
   search?: string;
 
-  @ApiPropertyOptional({ description: 'Page number (default: 1)' })
-  @IsOptional()
-  @Type(() => Number)
-  page?: number;
-
-  @ApiPropertyOptional({ description: 'Page size (default: 12)' })
-  @IsOptional()
-  @Type(() => Number)
-  pageSize?: number;
-
-  @ApiPropertyOptional({ description: 'Sort by field' })
-  @IsOptional()
-  @IsString()
-  sortBy?: string;
-
-  @ApiPropertyOptional({ description: 'Sort direction (asc or desc)' })
-  @IsOptional()
-  @IsIn(['asc', 'desc'])
-  sortDir?: 'asc' | 'desc';
 }

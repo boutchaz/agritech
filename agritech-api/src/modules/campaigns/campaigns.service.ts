@@ -5,6 +5,7 @@ import { NotificationsService, MANAGEMENT_ROLES } from '../notifications/notific
 import { NotificationType } from '../notifications/dto/notification.dto';
 import { CreateCampaignDto, CampaignStatus } from './dto';
 import { CampaignFiltersDto } from './dto/campaign-filters.dto';
+import { paginatedResponse, SortDirection } from '../../common/dto/paginated-query.dto';
 
 const TABLE = 'agricultural_campaigns';
 
@@ -41,7 +42,7 @@ export class CampaignsService {
     const page = filters.page || 1;
     const pageSize = filters.pageSize || 12;
     const sortBy = filters.sortBy || 'start_date';
-    const sortDir = filters.sortDir === 'asc' ? true : false;
+    const sortDir = filters.sortDir === SortDirection.ASC;
 
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
@@ -55,13 +56,7 @@ export class CampaignsService {
       throw error;
     }
 
-    return {
-      data: data || [],
-      total: count || 0,
-      page,
-      pageSize,
-      totalPages: Math.ceil((count || 0) / pageSize),
-    };
+    return paginatedResponse(data || [], count || 0, page, pageSize);
   }
 
   async findOne(id: string, organizationId: string) {

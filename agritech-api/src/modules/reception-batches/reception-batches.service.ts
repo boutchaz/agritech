@@ -7,6 +7,7 @@ import { ReceptionBatchFiltersDto } from './dto/reception-batch-filters.dto';
 import { DatabaseService } from '../database/database.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationType } from '../notifications/dto/notification.dto';
+import { paginatedResponse } from '../../common/dto/paginated-query.dto';
 
 @Injectable()
 export class ReceptionBatchesService {
@@ -510,13 +511,7 @@ export class ReceptionBatchesService {
       throw new BadRequestException(`Failed to fetch reception batches: ${error.message}`);
     }
 
-    return {
-      data: data || [],
-      total: count || 0,
-      page,
-      pageSize,
-      totalPages: Math.ceil((count || 0) / pageSize),
-    };
+    return paginatedResponse(data || [], count || 0, page, pageSize);
   }
 
   // Get single batch

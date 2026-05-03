@@ -31,11 +31,17 @@ export class EmailTemplatesController {
     @Request() req,
     @Param('organizationId') organizationId: string,
     @Query('category') category?: EmailTemplateCategory,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
   ) {
     return this.emailTemplatesService.findAll(
       req.user.userId,
       organizationId,
       category,
+      {
+        page: page ? Number(page) : undefined,
+        pageSize: pageSize ? Number(pageSize) : undefined,
+      },
     );
   }
 

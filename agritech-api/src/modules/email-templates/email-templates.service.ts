@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException, Logger, OnModuleInit } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { CreateEmailTemplateDto, EmailTemplateCategory, UpdateEmailTemplateDto } from './dto';
+import { paginatedResponse, type PaginatedResponse } from '../../common/dto/paginated-query.dto';
 
 export interface SeedEmailTemplate {
   name: string;
@@ -231,30 +232,37 @@ export class EmailTemplatesService implements OnModuleInit {
     userId: string,
     organizationId: string,
     category?: EmailTemplateCategory,
-  ) {
+    pagination: { page?: number; pageSize?: number } = {},
+  ): Promise<PaginatedResponse<any>> {
     await this.verifyOrganizationAccess(userId, organizationId);
 
     await this.seedDefaultsIfEmpty(organizationId);
 
     const client = this.databaseService.getAdminClient();
-    let query = client
-      .from('email_templates')
-      .select('*')
-      .eq('organization_id', organizationId)
+    const page = Math.max(1, Number(pagination.page) || 1);
+    const pageSize = Math.max(1, Math.min(100, Number(pagination.pageSize) || 100));
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
+
+    const apply = (q: any) => {
+      q = q.eq('organization_id', organizationId);
+      if (category) q = q.eq('category', category);
+      return q;
+    };
+
+    const { count } = await apply(
+      client.from('email_templates').select('id', { count: 'exact', head: true }),
+    );
+    const { data, error } = await apply(client.from('email_templates').select('*'))
       .order('category')
-      .order('name');
-
-    if (category) {
-      query = query.eq('category', category);
-    }
-
-    const { data, error } = await query;
+      .order('name')
+      .range(from, to);
 
     if (error) {
       throw new BadRequestException(`Failed to fetch email templates: ${error.message}`);
     }
 
-    return data || [];
+    return paginatedResponse(data ?? [], count ?? 0, page, pageSize);
   }
 
   async findOne(
