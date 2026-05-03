@@ -203,6 +203,118 @@ export class AuthService {
   }
 
   /**
+   * Recover orphaned users whose onboarding completed but never produced an
+   * organization_users row. Three known causes: (1) signup-time race that
+   * left only the org row, (2) backoffice-provisioned org without
+   * membership, (3) DB reset wiping membership while the browser still
+   * holds an existingOrgId pointer in onboarding_state.
+   *
+   * Without this every guarded request 403s and the user has no path back
+   * other than DevTools or manual SQL. Side-effect: when the saved
+   * existingOrgId no longer points to a claimable org, we flip
+   * onboarding_completed=false so the next page load redirects through
+   * onboarding (which self-heals via ensureOrgMembership in the PATCH
+   * branch of saveOrganization).
+   *
+   * Returns the refreshed profile when a heal happened, otherwise null.
+   */
+  private async healOrphanMembership(userId: string, profile: any): Promise<any | null> {
+    const activeMemberships = (profile?.organization_users || []).filter(
+      (ou: any) => ou?.is_active,
+    );
+    if (activeMemberships.length > 0) return null;
+
+    const client = this.databaseService.getAdminClient();
+    const existingOrgId: string | undefined =
+      profile?.onboarding_state?.existingOrgId ?? undefined;
+
+    if (existingOrgId) {
+      // Claim the org only if (a) it exists and (b) no other user is
+      // already an active organization_admin there. The second guard
+      // prevents a second user with the same stale localStorage value
+      // from hijacking someone else's org.
+      const { data: org } = await client
+        .from('organizations')
+        .select('id')
+        .eq('id', existingOrgId)
+        .maybeSingle();
+
+      if (org?.id) {
+        const { data: otherAdmin } = await client
+          .from('organization_users')
+          .select('id, roles!inner(name)')
+          .eq('organization_id', existingOrgId)
+          .eq('is_active', true)
+          .eq('roles.name', 'organization_admin')
+          .neq('user_id', userId)
+          .limit(1)
+          .maybeSingle();
+
+        if (!otherAdmin) {
+          const { data: roleData } = await client
+            .from('roles')
+            .select('id')
+            .eq('name', 'organization_admin')
+            .single();
+
+          if (roleData?.id) {
+            const { error: insertErr } = await client
+              .from('organization_users')
+              .upsert(
+                {
+                  organization_id: existingOrgId,
+                  user_id: userId,
+                  role_id: roleData.id,
+                  is_active: true,
+                  created_at: new Date().toISOString(),
+                },
+                { onConflict: 'organization_id,user_id' },
+              );
+
+            if (!insertErr) {
+              this.logger.log(
+                `healOrphanMembership: claimed org ${existingOrgId} for user ${userId}`,
+              );
+              return await this.refetchProfile(userId);
+            }
+            this.logger.warn(
+              `healOrphanMembership: claim failed: ${insertErr.message}`,
+            );
+          }
+        }
+      }
+    }
+
+    if (profile?.onboarding_completed) {
+      await client
+        .from('user_profiles')
+        .update({ onboarding_completed: false, onboarding_completed_at: null })
+        .eq('id', userId);
+      this.logger.log(
+        `healOrphanMembership: reset onboarding_completed for ${userId} (no claimable org)`,
+      );
+      return await this.refetchProfile(userId);
+    }
+
+    return null;
+  }
+
+  private async refetchProfile(userId: string): Promise<any | null> {
+    const client = this.databaseService.getAdminClient();
+    const { data, error } = await client
+      .from('user_profiles')
+      .select(
+        `*, organization_users (organization_id, role_id, is_active,
+          organizations (id, name),
+          roles (id, name, display_name, level))`,
+      )
+      .eq('id', userId)
+      .single();
+    if (error) return null;
+    return data;
+  }
+
+  /**
    * Get user profile with organization and role information
    */
   async getUserProfile(userId: string) {
@@ -235,7 +347,8 @@ export class AuthService {
       .single();
 
     if (!error && profile) {
-      return profile;
+      const healed = await this.healOrphanMembership(userId, profile);
+      return healed ?? profile;
     }
 
     // If no profile exists, fall back to basic Supabase auth user data
