@@ -30,6 +30,7 @@ import { Route as AuthenticatedPestAlertsIndexRouteImport } from './routes/_auth
 import { Route as AuthenticatedComplianceIndexRouteImport } from './routes/_authenticated/compliance/index'
 import { Route as publicOnboardingIndexRouteImport } from './routes/(public)/onboarding/index'
 import { Route as AuthenticatedPestAlertsReportIdRouteImport } from './routes/_authenticated/pest-alerts/$reportId'
+import { Route as AuthenticatedworkforceWorkforceRouteImport } from './routes/_authenticated/(workforce)/workforce'
 import { Route as AuthenticatedworkforceWorkersRouteImport } from './routes/_authenticated/(workforce)/workers'
 import { Route as AuthenticatedworkforceTasksRouteImport } from './routes/_authenticated/(workforce)/tasks'
 import { Route as AuthenticatedsettingsSettingsRouteImport } from './routes/_authenticated/(settings)/settings'
@@ -70,6 +71,7 @@ import { Route as publicOnboardingAccountTypeRouteImport } from './routes/(publi
 import { Route as authAuthCallbackRouteImport } from './routes/(auth)/auth.callback'
 import { Route as AuthenticatedComplianceCorrectiveActionsIndexRouteImport } from './routes/_authenticated/compliance/corrective-actions/index'
 import { Route as AuthenticatedComplianceCertificationsIndexRouteImport } from './routes/_authenticated/compliance/certifications/index'
+import { Route as AuthenticatedworkforceWorkforceIndexRouteImport } from './routes/_authenticated/(workforce)/workforce/index'
 import { Route as AuthenticatedworkforceTasksIndexRouteImport } from './routes/_authenticated/(workforce)/tasks/index'
 import { Route as AuthenticatedsettingsSettingsIndexRouteImport } from './routes/_authenticated/(settings)/settings.index'
 import { Route as AuthenticatedinventoryStockIndexRouteImport } from './routes/_authenticated/(inventory)/stock/index'
@@ -321,6 +323,12 @@ const AuthenticatedPestAlertsReportIdRoute =
     path: '/pest-alerts/$reportId',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedworkforceWorkforceRoute =
+  AuthenticatedworkforceWorkforceRouteImport.update({
+    id: '/(workforce)/workforce',
+    path: '/workforce',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedworkforceWorkersRoute =
   AuthenticatedworkforceWorkersRouteImport.update({
     id: '/(workforce)/workers',
@@ -555,6 +563,12 @@ const AuthenticatedComplianceCertificationsIndexRoute =
     path: '/compliance/certifications/',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedworkforceWorkforceIndexRoute =
+  AuthenticatedworkforceWorkforceIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedworkforceWorkforceRoute,
+  } as any)
 const AuthenticatedworkforceTasksIndexRoute =
   AuthenticatedworkforceTasksIndexRouteImport.update({
     id: '/',
@@ -587,183 +601,183 @@ const AuthenticatedComplianceCertificationsCertIdRoute =
   } as any)
 const AuthenticatedworkforceWorkforceWorkerTransportRoute =
   AuthenticatedworkforceWorkforceWorkerTransportRouteImport.update({
-    id: '/(workforce)/workforce/worker-transport',
-    path: '/workforce/worker-transport',
-    getParentRoute: () => AuthenticatedRoute,
+    id: '/worker-transport',
+    path: '/worker-transport',
+    getParentRoute: () => AuthenticatedworkforceWorkforceRoute,
   } as any)
 const AuthenticatedworkforceWorkforceTrainingRoute =
   AuthenticatedworkforceWorkforceTrainingRouteImport.update({
-    id: '/(workforce)/workforce/training',
-    path: '/workforce/training',
-    getParentRoute: () => AuthenticatedRoute,
+    id: '/training',
+    path: '/training',
+    getParentRoute: () => AuthenticatedworkforceWorkforceRoute,
   } as any)
 const AuthenticatedworkforceWorkforceShiftsRoute =
   AuthenticatedworkforceWorkforceShiftsRouteImport.update({
-    id: '/(workforce)/workforce/shifts',
-    path: '/workforce/shifts',
-    getParentRoute: () => AuthenticatedRoute,
+    id: '/shifts',
+    path: '/shifts',
+    getParentRoute: () => AuthenticatedworkforceWorkforceRoute,
   } as any)
 const AuthenticatedworkforceWorkforceSeparationsRoute =
   AuthenticatedworkforceWorkforceSeparationsRouteImport.update({
-    id: '/(workforce)/workforce/separations',
-    path: '/workforce/separations',
-    getParentRoute: () => AuthenticatedRoute,
+    id: '/separations',
+    path: '/separations',
+    getParentRoute: () => AuthenticatedworkforceWorkforceRoute,
   } as any)
 const AuthenticatedworkforceWorkforceSeasonalCampaignsRoute =
   AuthenticatedworkforceWorkforceSeasonalCampaignsRouteImport.update({
-    id: '/(workforce)/workforce/seasonal-campaigns',
-    path: '/workforce/seasonal-campaigns',
-    getParentRoute: () => AuthenticatedRoute,
+    id: '/seasonal-campaigns',
+    path: '/seasonal-campaigns',
+    getParentRoute: () => AuthenticatedworkforceWorkforceRoute,
   } as any)
 const AuthenticatedworkforceWorkforceSalaryStructuresRoute =
   AuthenticatedworkforceWorkforceSalaryStructuresRouteImport.update({
-    id: '/(workforce)/workforce/salary-structures',
-    path: '/workforce/salary-structures',
-    getParentRoute: () => AuthenticatedRoute,
+    id: '/salary-structures',
+    path: '/salary-structures',
+    getParentRoute: () => AuthenticatedworkforceWorkforceRoute,
   } as any)
 const AuthenticatedworkforceWorkforceSalarySlipsRoute =
   AuthenticatedworkforceWorkforceSalarySlipsRouteImport.update({
-    id: '/(workforce)/workforce/salary-slips',
-    path: '/workforce/salary-slips',
-    getParentRoute: () => AuthenticatedRoute,
+    id: '/salary-slips',
+    path: '/salary-slips',
+    getParentRoute: () => AuthenticatedworkforceWorkforceRoute,
   } as any)
 const AuthenticatedworkforceWorkforceSafetyIncidentsRoute =
   AuthenticatedworkforceWorkforceSafetyIncidentsRouteImport.update({
-    id: '/(workforce)/workforce/safety-incidents',
-    path: '/workforce/safety-incidents',
-    getParentRoute: () => AuthenticatedRoute,
+    id: '/safety-incidents',
+    path: '/safety-incidents',
+    getParentRoute: () => AuthenticatedworkforceWorkforceRoute,
   } as any)
 const AuthenticatedworkforceWorkforceRosterRoute =
   AuthenticatedworkforceWorkforceRosterRouteImport.update({
-    id: '/(workforce)/workforce/roster',
-    path: '/workforce/roster',
-    getParentRoute: () => AuthenticatedRoute,
+    id: '/roster',
+    path: '/roster',
+    getParentRoute: () => AuthenticatedworkforceWorkforceRoute,
   } as any)
 const AuthenticatedworkforceWorkforceRecruitmentRoute =
   AuthenticatedworkforceWorkforceRecruitmentRouteImport.update({
-    id: '/(workforce)/workforce/recruitment',
-    path: '/workforce/recruitment',
-    getParentRoute: () => AuthenticatedRoute,
+    id: '/recruitment',
+    path: '/recruitment',
+    getParentRoute: () => AuthenticatedworkforceWorkforceRoute,
   } as any)
 const AuthenticatedworkforceWorkforceQualificationsRoute =
   AuthenticatedworkforceWorkforceQualificationsRouteImport.update({
-    id: '/(workforce)/workforce/qualifications',
-    path: '/workforce/qualifications',
-    getParentRoute: () => AuthenticatedRoute,
+    id: '/qualifications',
+    path: '/qualifications',
+    getParentRoute: () => AuthenticatedworkforceWorkforceRoute,
   } as any)
 const AuthenticatedworkforceWorkforcePayrollRunsRoute =
   AuthenticatedworkforceWorkforcePayrollRunsRouteImport.update({
-    id: '/(workforce)/workforce/payroll-runs',
-    path: '/workforce/payroll-runs',
-    getParentRoute: () => AuthenticatedRoute,
+    id: '/payroll-runs',
+    path: '/payroll-runs',
+    getParentRoute: () => AuthenticatedworkforceWorkforceRoute,
   } as any)
 const AuthenticatedworkforceWorkforcePaymentsRoute =
   AuthenticatedworkforceWorkforcePaymentsRouteImport.update({
-    id: '/(workforce)/workforce/payments',
-    path: '/workforce/payments',
-    getParentRoute: () => AuthenticatedRoute,
+    id: '/payments',
+    path: '/payments',
+    getParentRoute: () => AuthenticatedworkforceWorkforceRoute,
   } as any)
 const AuthenticatedworkforceWorkforceOnboardingRoute =
   AuthenticatedworkforceWorkforceOnboardingRouteImport.update({
-    id: '/(workforce)/workforce/onboarding',
-    path: '/workforce/onboarding',
-    getParentRoute: () => AuthenticatedRoute,
+    id: '/onboarding',
+    path: '/onboarding',
+    getParentRoute: () => AuthenticatedworkforceWorkforceRoute,
   } as any)
 const AuthenticatedworkforceWorkforceMyHrRoute =
   AuthenticatedworkforceWorkforceMyHrRouteImport.update({
-    id: '/(workforce)/workforce/my-hr',
-    path: '/workforce/my-hr',
-    getParentRoute: () => AuthenticatedRoute,
+    id: '/my-hr',
+    path: '/my-hr',
+    getParentRoute: () => AuthenticatedworkforceWorkforceRoute,
   } as any)
 const AuthenticatedworkforceWorkforceLeaveTypesRoute =
   AuthenticatedworkforceWorkforceLeaveTypesRouteImport.update({
-    id: '/(workforce)/workforce/leave-types',
-    path: '/workforce/leave-types',
-    getParentRoute: () => AuthenticatedRoute,
+    id: '/leave-types',
+    path: '/leave-types',
+    getParentRoute: () => AuthenticatedworkforceWorkforceRoute,
   } as any)
 const AuthenticatedworkforceWorkforceLeaveEncashmentsRoute =
   AuthenticatedworkforceWorkforceLeaveEncashmentsRouteImport.update({
-    id: '/(workforce)/workforce/leave-encashments',
-    path: '/workforce/leave-encashments',
-    getParentRoute: () => AuthenticatedRoute,
+    id: '/leave-encashments',
+    path: '/leave-encashments',
+    getParentRoute: () => AuthenticatedworkforceWorkforceRoute,
   } as any)
 const AuthenticatedworkforceWorkforceLeaveBlockDatesRoute =
   AuthenticatedworkforceWorkforceLeaveBlockDatesRouteImport.update({
-    id: '/(workforce)/workforce/leave-block-dates',
-    path: '/workforce/leave-block-dates',
-    getParentRoute: () => AuthenticatedRoute,
+    id: '/leave-block-dates',
+    path: '/leave-block-dates',
+    getParentRoute: () => AuthenticatedworkforceWorkforceRoute,
   } as any)
 const AuthenticatedworkforceWorkforceLeaveApplicationsRoute =
   AuthenticatedworkforceWorkforceLeaveApplicationsRouteImport.update({
-    id: '/(workforce)/workforce/leave-applications',
-    path: '/workforce/leave-applications',
-    getParentRoute: () => AuthenticatedRoute,
+    id: '/leave-applications',
+    path: '/leave-applications',
+    getParentRoute: () => AuthenticatedworkforceWorkforceRoute,
   } as any)
 const AuthenticatedworkforceWorkforceLeaveAllocationsRoute =
   AuthenticatedworkforceWorkforceLeaveAllocationsRouteImport.update({
-    id: '/(workforce)/workforce/leave-allocations',
-    path: '/workforce/leave-allocations',
-    getParentRoute: () => AuthenticatedRoute,
+    id: '/leave-allocations',
+    path: '/leave-allocations',
+    getParentRoute: () => AuthenticatedworkforceWorkforceRoute,
   } as any)
 const AuthenticatedworkforceWorkforceHrCalendarRoute =
   AuthenticatedworkforceWorkforceHrCalendarRouteImport.update({
-    id: '/(workforce)/workforce/hr-calendar',
-    path: '/workforce/hr-calendar',
-    getParentRoute: () => AuthenticatedRoute,
+    id: '/hr-calendar',
+    path: '/hr-calendar',
+    getParentRoute: () => AuthenticatedworkforceWorkforceRoute,
   } as any)
 const AuthenticatedworkforceWorkforceHrAnalyticsRoute =
   AuthenticatedworkforceWorkforceHrAnalyticsRouteImport.update({
-    id: '/(workforce)/workforce/hr-analytics',
-    path: '/workforce/hr-analytics',
-    getParentRoute: () => AuthenticatedRoute,
+    id: '/hr-analytics',
+    path: '/hr-analytics',
+    getParentRoute: () => AuthenticatedworkforceWorkforceRoute,
   } as any)
 const AuthenticatedworkforceWorkforceHolidaysRoute =
   AuthenticatedworkforceWorkforceHolidaysRouteImport.update({
-    id: '/(workforce)/workforce/holidays',
-    path: '/workforce/holidays',
-    getParentRoute: () => AuthenticatedRoute,
+    id: '/holidays',
+    path: '/holidays',
+    getParentRoute: () => AuthenticatedworkforceWorkforceRoute,
   } as any)
 const AuthenticatedworkforceWorkforceGrievancesRoute =
   AuthenticatedworkforceWorkforceGrievancesRouteImport.update({
-    id: '/(workforce)/workforce/grievances',
-    path: '/workforce/grievances',
-    getParentRoute: () => AuthenticatedRoute,
+    id: '/grievances',
+    path: '/grievances',
+    getParentRoute: () => AuthenticatedworkforceWorkforceRoute,
   } as any)
 const AuthenticatedworkforceWorkforceGeofencesRoute =
   AuthenticatedworkforceWorkforceGeofencesRouteImport.update({
-    id: '/(workforce)/workforce/geofences',
-    path: '/workforce/geofences',
-    getParentRoute: () => AuthenticatedRoute,
+    id: '/geofences',
+    path: '/geofences',
+    getParentRoute: () => AuthenticatedworkforceWorkforceRoute,
   } as any)
 const AuthenticatedworkforceWorkforceExpenseClaimsRoute =
   AuthenticatedworkforceWorkforceExpenseClaimsRouteImport.update({
-    id: '/(workforce)/workforce/expense-claims',
-    path: '/workforce/expense-claims',
-    getParentRoute: () => AuthenticatedRoute,
+    id: '/expense-claims',
+    path: '/expense-claims',
+    getParentRoute: () => AuthenticatedworkforceWorkforceRoute,
   } as any)
 const AuthenticatedworkforceWorkforceEmployeesRoute =
   AuthenticatedworkforceWorkforceEmployeesRouteImport.update({
-    id: '/(workforce)/workforce/employees',
-    path: '/workforce/employees',
-    getParentRoute: () => AuthenticatedRoute,
+    id: '/employees',
+    path: '/employees',
+    getParentRoute: () => AuthenticatedworkforceWorkforceRoute,
   } as any)
 const AuthenticatedworkforceWorkforceDayLaborersRoute =
   AuthenticatedworkforceWorkforceDayLaborersRouteImport.update({
-    id: '/(workforce)/workforce/day-laborers',
-    path: '/workforce/day-laborers',
-    getParentRoute: () => AuthenticatedRoute,
+    id: '/day-laborers',
+    path: '/day-laborers',
+    getParentRoute: () => AuthenticatedworkforceWorkforceRoute,
   } as any)
 const AuthenticatedworkforceWorkforceAttendanceRoute =
   AuthenticatedworkforceWorkforceAttendanceRouteImport.update({
-    id: '/(workforce)/workforce/attendance',
-    path: '/workforce/attendance',
-    getParentRoute: () => AuthenticatedRoute,
+    id: '/attendance',
+    path: '/attendance',
+    getParentRoute: () => AuthenticatedworkforceWorkforceRoute,
   } as any)
 const AuthenticatedworkforceWorkforceAppraisalsRoute =
   AuthenticatedworkforceWorkforceAppraisalsRouteImport.update({
-    id: '/(workforce)/workforce/appraisals',
-    path: '/workforce/appraisals',
-    getParentRoute: () => AuthenticatedRoute,
+    id: '/appraisals',
+    path: '/appraisals',
+    getParentRoute: () => AuthenticatedworkforceWorkforceRoute,
   } as any)
 const AuthenticatedworkforceWorkersWorkerIdRoute =
   AuthenticatedworkforceWorkersWorkerIdRouteImport.update({
@@ -1241,9 +1255,9 @@ const AuthenticatedaccountingAccountingAccountMappingsRoute =
   } as any)
 const AuthenticatedworkforceWorkforceTasksIndexRoute =
   AuthenticatedworkforceWorkforceTasksIndexRouteImport.update({
-    id: '/(workforce)/workforce/tasks/',
-    path: '/workforce/tasks/',
-    getParentRoute: () => AuthenticatedRoute,
+    id: '/tasks/',
+    path: '/tasks/',
+    getParentRoute: () => AuthenticatedworkforceWorkforceRoute,
   } as any)
 const AuthenticatedproductionParcelsParcelIdIndexRoute =
   AuthenticatedproductionParcelsParcelIdIndexRouteImport.update({
@@ -1259,15 +1273,15 @@ const AuthenticatedinventoryStockItemsIndexRoute =
   } as any)
 const AuthenticatedworkforceWorkforceWorkersPieceWorkRoute =
   AuthenticatedworkforceWorkforceWorkersPieceWorkRouteImport.update({
-    id: '/(workforce)/workforce/workers/piece-work',
-    path: '/workforce/workers/piece-work',
-    getParentRoute: () => AuthenticatedRoute,
+    id: '/workers/piece-work',
+    path: '/workers/piece-work',
+    getParentRoute: () => AuthenticatedworkforceWorkforceRoute,
   } as any)
 const AuthenticatedworkforceWorkforceTasksCalendarRoute =
   AuthenticatedworkforceWorkforceTasksCalendarRouteImport.update({
-    id: '/(workforce)/workforce/tasks/calendar',
-    path: '/workforce/tasks/calendar',
-    getParentRoute: () => AuthenticatedRoute,
+    id: '/tasks/calendar',
+    path: '/tasks/calendar',
+    getParentRoute: () => AuthenticatedworkforceWorkforceRoute,
   } as any)
 const AuthenticatedworkforceWorkforceSeparationsSeparationIdRoute =
   AuthenticatedworkforceWorkforceSeparationsSeparationIdRouteImport.update({
@@ -1463,6 +1477,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof AuthenticatedsettingsSettingsRouteWithChildren
   '/tasks': typeof AuthenticatedworkforceTasksRouteWithChildren
   '/workers': typeof AuthenticatedworkforceWorkersRouteWithChildren
+  '/workforce': typeof AuthenticatedworkforceWorkforceRouteWithChildren
   '/pest-alerts/$reportId': typeof AuthenticatedPestAlertsReportIdRoute
   '/onboarding/': typeof publicOnboardingIndexRoute
   '/compliance/': typeof AuthenticatedComplianceIndexRoute
@@ -1581,6 +1596,7 @@ export interface FileRoutesByFullPath {
   '/stock/': typeof AuthenticatedinventoryStockIndexRoute
   '/settings/': typeof AuthenticatedsettingsSettingsIndexRoute
   '/tasks/': typeof AuthenticatedworkforceTasksIndexRoute
+  '/workforce/': typeof AuthenticatedworkforceWorkforceIndexRoute
   '/compliance/certifications/': typeof AuthenticatedComplianceCertificationsIndexRoute
   '/compliance/corrective-actions/': typeof AuthenticatedComplianceCorrectiveActionsIndexRoute
   '/stock/items/$itemId': typeof AuthenticatedinventoryStockItemsItemIdRoute
@@ -1779,6 +1795,7 @@ export interface FileRoutesByTo {
   '/stock': typeof AuthenticatedinventoryStockIndexRoute
   '/settings': typeof AuthenticatedsettingsSettingsIndexRoute
   '/tasks': typeof AuthenticatedworkforceTasksIndexRoute
+  '/workforce': typeof AuthenticatedworkforceWorkforceIndexRoute
   '/compliance/certifications': typeof AuthenticatedComplianceCertificationsIndexRoute
   '/compliance/corrective-actions': typeof AuthenticatedComplianceCorrectiveActionsIndexRoute
   '/stock/items/$itemId': typeof AuthenticatedinventoryStockItemsItemIdRoute
@@ -1864,6 +1881,7 @@ export interface FileRoutesById {
   '/_authenticated/(settings)/settings': typeof AuthenticatedsettingsSettingsRouteWithChildren
   '/_authenticated/(workforce)/tasks': typeof AuthenticatedworkforceTasksRouteWithChildren
   '/_authenticated/(workforce)/workers': typeof AuthenticatedworkforceWorkersRouteWithChildren
+  '/_authenticated/(workforce)/workforce': typeof AuthenticatedworkforceWorkforceRouteWithChildren
   '/_authenticated/pest-alerts/$reportId': typeof AuthenticatedPestAlertsReportIdRoute
   '/(public)/onboarding/': typeof publicOnboardingIndexRoute
   '/_authenticated/compliance/': typeof AuthenticatedComplianceIndexRoute
@@ -1982,6 +2000,7 @@ export interface FileRoutesById {
   '/_authenticated/(inventory)/stock/': typeof AuthenticatedinventoryStockIndexRoute
   '/_authenticated/(settings)/settings/': typeof AuthenticatedsettingsSettingsIndexRoute
   '/_authenticated/(workforce)/tasks/': typeof AuthenticatedworkforceTasksIndexRoute
+  '/_authenticated/(workforce)/workforce/': typeof AuthenticatedworkforceWorkforceIndexRoute
   '/_authenticated/compliance/certifications/': typeof AuthenticatedComplianceCertificationsIndexRoute
   '/_authenticated/compliance/corrective-actions/': typeof AuthenticatedComplianceCorrectiveActionsIndexRoute
   '/_authenticated/(inventory)/stock/items/$itemId': typeof AuthenticatedinventoryStockItemsItemIdRoute
@@ -2070,6 +2089,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/tasks'
     | '/workers'
+    | '/workforce'
     | '/pest-alerts/$reportId'
     | '/onboarding/'
     | '/compliance/'
@@ -2188,6 +2208,7 @@ export interface FileRouteTypes {
     | '/stock/'
     | '/settings/'
     | '/tasks/'
+    | '/workforce/'
     | '/compliance/certifications/'
     | '/compliance/corrective-actions/'
     | '/stock/items/$itemId'
@@ -2386,6 +2407,7 @@ export interface FileRouteTypes {
     | '/stock'
     | '/settings'
     | '/tasks'
+    | '/workforce'
     | '/compliance/certifications'
     | '/compliance/corrective-actions'
     | '/stock/items/$itemId'
@@ -2470,6 +2492,7 @@ export interface FileRouteTypes {
     | '/_authenticated/(settings)/settings'
     | '/_authenticated/(workforce)/tasks'
     | '/_authenticated/(workforce)/workers'
+    | '/_authenticated/(workforce)/workforce'
     | '/_authenticated/pest-alerts/$reportId'
     | '/(public)/onboarding/'
     | '/_authenticated/compliance/'
@@ -2588,6 +2611,7 @@ export interface FileRouteTypes {
     | '/_authenticated/(inventory)/stock/'
     | '/_authenticated/(settings)/settings/'
     | '/_authenticated/(workforce)/tasks/'
+    | '/_authenticated/(workforce)/workforce/'
     | '/_authenticated/compliance/certifications/'
     | '/_authenticated/compliance/corrective-actions/'
     | '/_authenticated/(inventory)/stock/items/$itemId'
@@ -2786,6 +2810,13 @@ declare module '@tanstack/react-router' {
       path: '/pest-alerts/$reportId'
       fullPath: '/pest-alerts/$reportId'
       preLoaderRoute: typeof AuthenticatedPestAlertsReportIdRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/(workforce)/workforce': {
+      id: '/_authenticated/(workforce)/workforce'
+      path: '/workforce'
+      fullPath: '/workforce'
+      preLoaderRoute: typeof AuthenticatedworkforceWorkforceRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/(workforce)/workers': {
@@ -3068,6 +3099,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedComplianceCertificationsIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/(workforce)/workforce/': {
+      id: '/_authenticated/(workforce)/workforce/'
+      path: '/'
+      fullPath: '/workforce/'
+      preLoaderRoute: typeof AuthenticatedworkforceWorkforceIndexRouteImport
+      parentRoute: typeof AuthenticatedworkforceWorkforceRoute
+    }
     '/_authenticated/(workforce)/tasks/': {
       id: '/_authenticated/(workforce)/tasks/'
       path: '/'
@@ -3105,213 +3143,213 @@ declare module '@tanstack/react-router' {
     }
     '/_authenticated/(workforce)/workforce/worker-transport': {
       id: '/_authenticated/(workforce)/workforce/worker-transport'
-      path: '/workforce/worker-transport'
+      path: '/worker-transport'
       fullPath: '/workforce/worker-transport'
       preLoaderRoute: typeof AuthenticatedworkforceWorkforceWorkerTransportRouteImport
-      parentRoute: typeof AuthenticatedRoute
+      parentRoute: typeof AuthenticatedworkforceWorkforceRoute
     }
     '/_authenticated/(workforce)/workforce/training': {
       id: '/_authenticated/(workforce)/workforce/training'
-      path: '/workforce/training'
+      path: '/training'
       fullPath: '/workforce/training'
       preLoaderRoute: typeof AuthenticatedworkforceWorkforceTrainingRouteImport
-      parentRoute: typeof AuthenticatedRoute
+      parentRoute: typeof AuthenticatedworkforceWorkforceRoute
     }
     '/_authenticated/(workforce)/workforce/shifts': {
       id: '/_authenticated/(workforce)/workforce/shifts'
-      path: '/workforce/shifts'
+      path: '/shifts'
       fullPath: '/workforce/shifts'
       preLoaderRoute: typeof AuthenticatedworkforceWorkforceShiftsRouteImport
-      parentRoute: typeof AuthenticatedRoute
+      parentRoute: typeof AuthenticatedworkforceWorkforceRoute
     }
     '/_authenticated/(workforce)/workforce/separations': {
       id: '/_authenticated/(workforce)/workforce/separations'
-      path: '/workforce/separations'
+      path: '/separations'
       fullPath: '/workforce/separations'
       preLoaderRoute: typeof AuthenticatedworkforceWorkforceSeparationsRouteImport
-      parentRoute: typeof AuthenticatedRoute
+      parentRoute: typeof AuthenticatedworkforceWorkforceRoute
     }
     '/_authenticated/(workforce)/workforce/seasonal-campaigns': {
       id: '/_authenticated/(workforce)/workforce/seasonal-campaigns'
-      path: '/workforce/seasonal-campaigns'
+      path: '/seasonal-campaigns'
       fullPath: '/workforce/seasonal-campaigns'
       preLoaderRoute: typeof AuthenticatedworkforceWorkforceSeasonalCampaignsRouteImport
-      parentRoute: typeof AuthenticatedRoute
+      parentRoute: typeof AuthenticatedworkforceWorkforceRoute
     }
     '/_authenticated/(workforce)/workforce/salary-structures': {
       id: '/_authenticated/(workforce)/workforce/salary-structures'
-      path: '/workforce/salary-structures'
+      path: '/salary-structures'
       fullPath: '/workforce/salary-structures'
       preLoaderRoute: typeof AuthenticatedworkforceWorkforceSalaryStructuresRouteImport
-      parentRoute: typeof AuthenticatedRoute
+      parentRoute: typeof AuthenticatedworkforceWorkforceRoute
     }
     '/_authenticated/(workforce)/workforce/salary-slips': {
       id: '/_authenticated/(workforce)/workforce/salary-slips'
-      path: '/workforce/salary-slips'
+      path: '/salary-slips'
       fullPath: '/workforce/salary-slips'
       preLoaderRoute: typeof AuthenticatedworkforceWorkforceSalarySlipsRouteImport
-      parentRoute: typeof AuthenticatedRoute
+      parentRoute: typeof AuthenticatedworkforceWorkforceRoute
     }
     '/_authenticated/(workforce)/workforce/safety-incidents': {
       id: '/_authenticated/(workforce)/workforce/safety-incidents'
-      path: '/workforce/safety-incidents'
+      path: '/safety-incidents'
       fullPath: '/workforce/safety-incidents'
       preLoaderRoute: typeof AuthenticatedworkforceWorkforceSafetyIncidentsRouteImport
-      parentRoute: typeof AuthenticatedRoute
+      parentRoute: typeof AuthenticatedworkforceWorkforceRoute
     }
     '/_authenticated/(workforce)/workforce/roster': {
       id: '/_authenticated/(workforce)/workforce/roster'
-      path: '/workforce/roster'
+      path: '/roster'
       fullPath: '/workforce/roster'
       preLoaderRoute: typeof AuthenticatedworkforceWorkforceRosterRouteImport
-      parentRoute: typeof AuthenticatedRoute
+      parentRoute: typeof AuthenticatedworkforceWorkforceRoute
     }
     '/_authenticated/(workforce)/workforce/recruitment': {
       id: '/_authenticated/(workforce)/workforce/recruitment'
-      path: '/workforce/recruitment'
+      path: '/recruitment'
       fullPath: '/workforce/recruitment'
       preLoaderRoute: typeof AuthenticatedworkforceWorkforceRecruitmentRouteImport
-      parentRoute: typeof AuthenticatedRoute
+      parentRoute: typeof AuthenticatedworkforceWorkforceRoute
     }
     '/_authenticated/(workforce)/workforce/qualifications': {
       id: '/_authenticated/(workforce)/workforce/qualifications'
-      path: '/workforce/qualifications'
+      path: '/qualifications'
       fullPath: '/workforce/qualifications'
       preLoaderRoute: typeof AuthenticatedworkforceWorkforceQualificationsRouteImport
-      parentRoute: typeof AuthenticatedRoute
+      parentRoute: typeof AuthenticatedworkforceWorkforceRoute
     }
     '/_authenticated/(workforce)/workforce/payroll-runs': {
       id: '/_authenticated/(workforce)/workforce/payroll-runs'
-      path: '/workforce/payroll-runs'
+      path: '/payroll-runs'
       fullPath: '/workforce/payroll-runs'
       preLoaderRoute: typeof AuthenticatedworkforceWorkforcePayrollRunsRouteImport
-      parentRoute: typeof AuthenticatedRoute
+      parentRoute: typeof AuthenticatedworkforceWorkforceRoute
     }
     '/_authenticated/(workforce)/workforce/payments': {
       id: '/_authenticated/(workforce)/workforce/payments'
-      path: '/workforce/payments'
+      path: '/payments'
       fullPath: '/workforce/payments'
       preLoaderRoute: typeof AuthenticatedworkforceWorkforcePaymentsRouteImport
-      parentRoute: typeof AuthenticatedRoute
+      parentRoute: typeof AuthenticatedworkforceWorkforceRoute
     }
     '/_authenticated/(workforce)/workforce/onboarding': {
       id: '/_authenticated/(workforce)/workforce/onboarding'
-      path: '/workforce/onboarding'
+      path: '/onboarding'
       fullPath: '/workforce/onboarding'
       preLoaderRoute: typeof AuthenticatedworkforceWorkforceOnboardingRouteImport
-      parentRoute: typeof AuthenticatedRoute
+      parentRoute: typeof AuthenticatedworkforceWorkforceRoute
     }
     '/_authenticated/(workforce)/workforce/my-hr': {
       id: '/_authenticated/(workforce)/workforce/my-hr'
-      path: '/workforce/my-hr'
+      path: '/my-hr'
       fullPath: '/workforce/my-hr'
       preLoaderRoute: typeof AuthenticatedworkforceWorkforceMyHrRouteImport
-      parentRoute: typeof AuthenticatedRoute
+      parentRoute: typeof AuthenticatedworkforceWorkforceRoute
     }
     '/_authenticated/(workforce)/workforce/leave-types': {
       id: '/_authenticated/(workforce)/workforce/leave-types'
-      path: '/workforce/leave-types'
+      path: '/leave-types'
       fullPath: '/workforce/leave-types'
       preLoaderRoute: typeof AuthenticatedworkforceWorkforceLeaveTypesRouteImport
-      parentRoute: typeof AuthenticatedRoute
+      parentRoute: typeof AuthenticatedworkforceWorkforceRoute
     }
     '/_authenticated/(workforce)/workforce/leave-encashments': {
       id: '/_authenticated/(workforce)/workforce/leave-encashments'
-      path: '/workforce/leave-encashments'
+      path: '/leave-encashments'
       fullPath: '/workforce/leave-encashments'
       preLoaderRoute: typeof AuthenticatedworkforceWorkforceLeaveEncashmentsRouteImport
-      parentRoute: typeof AuthenticatedRoute
+      parentRoute: typeof AuthenticatedworkforceWorkforceRoute
     }
     '/_authenticated/(workforce)/workforce/leave-block-dates': {
       id: '/_authenticated/(workforce)/workforce/leave-block-dates'
-      path: '/workforce/leave-block-dates'
+      path: '/leave-block-dates'
       fullPath: '/workforce/leave-block-dates'
       preLoaderRoute: typeof AuthenticatedworkforceWorkforceLeaveBlockDatesRouteImport
-      parentRoute: typeof AuthenticatedRoute
+      parentRoute: typeof AuthenticatedworkforceWorkforceRoute
     }
     '/_authenticated/(workforce)/workforce/leave-applications': {
       id: '/_authenticated/(workforce)/workforce/leave-applications'
-      path: '/workforce/leave-applications'
+      path: '/leave-applications'
       fullPath: '/workforce/leave-applications'
       preLoaderRoute: typeof AuthenticatedworkforceWorkforceLeaveApplicationsRouteImport
-      parentRoute: typeof AuthenticatedRoute
+      parentRoute: typeof AuthenticatedworkforceWorkforceRoute
     }
     '/_authenticated/(workforce)/workforce/leave-allocations': {
       id: '/_authenticated/(workforce)/workforce/leave-allocations'
-      path: '/workforce/leave-allocations'
+      path: '/leave-allocations'
       fullPath: '/workforce/leave-allocations'
       preLoaderRoute: typeof AuthenticatedworkforceWorkforceLeaveAllocationsRouteImport
-      parentRoute: typeof AuthenticatedRoute
+      parentRoute: typeof AuthenticatedworkforceWorkforceRoute
     }
     '/_authenticated/(workforce)/workforce/hr-calendar': {
       id: '/_authenticated/(workforce)/workforce/hr-calendar'
-      path: '/workforce/hr-calendar'
+      path: '/hr-calendar'
       fullPath: '/workforce/hr-calendar'
       preLoaderRoute: typeof AuthenticatedworkforceWorkforceHrCalendarRouteImport
-      parentRoute: typeof AuthenticatedRoute
+      parentRoute: typeof AuthenticatedworkforceWorkforceRoute
     }
     '/_authenticated/(workforce)/workforce/hr-analytics': {
       id: '/_authenticated/(workforce)/workforce/hr-analytics'
-      path: '/workforce/hr-analytics'
+      path: '/hr-analytics'
       fullPath: '/workforce/hr-analytics'
       preLoaderRoute: typeof AuthenticatedworkforceWorkforceHrAnalyticsRouteImport
-      parentRoute: typeof AuthenticatedRoute
+      parentRoute: typeof AuthenticatedworkforceWorkforceRoute
     }
     '/_authenticated/(workforce)/workforce/holidays': {
       id: '/_authenticated/(workforce)/workforce/holidays'
-      path: '/workforce/holidays'
+      path: '/holidays'
       fullPath: '/workforce/holidays'
       preLoaderRoute: typeof AuthenticatedworkforceWorkforceHolidaysRouteImport
-      parentRoute: typeof AuthenticatedRoute
+      parentRoute: typeof AuthenticatedworkforceWorkforceRoute
     }
     '/_authenticated/(workforce)/workforce/grievances': {
       id: '/_authenticated/(workforce)/workforce/grievances'
-      path: '/workforce/grievances'
+      path: '/grievances'
       fullPath: '/workforce/grievances'
       preLoaderRoute: typeof AuthenticatedworkforceWorkforceGrievancesRouteImport
-      parentRoute: typeof AuthenticatedRoute
+      parentRoute: typeof AuthenticatedworkforceWorkforceRoute
     }
     '/_authenticated/(workforce)/workforce/geofences': {
       id: '/_authenticated/(workforce)/workforce/geofences'
-      path: '/workforce/geofences'
+      path: '/geofences'
       fullPath: '/workforce/geofences'
       preLoaderRoute: typeof AuthenticatedworkforceWorkforceGeofencesRouteImport
-      parentRoute: typeof AuthenticatedRoute
+      parentRoute: typeof AuthenticatedworkforceWorkforceRoute
     }
     '/_authenticated/(workforce)/workforce/expense-claims': {
       id: '/_authenticated/(workforce)/workforce/expense-claims'
-      path: '/workforce/expense-claims'
+      path: '/expense-claims'
       fullPath: '/workforce/expense-claims'
       preLoaderRoute: typeof AuthenticatedworkforceWorkforceExpenseClaimsRouteImport
-      parentRoute: typeof AuthenticatedRoute
+      parentRoute: typeof AuthenticatedworkforceWorkforceRoute
     }
     '/_authenticated/(workforce)/workforce/employees': {
       id: '/_authenticated/(workforce)/workforce/employees'
-      path: '/workforce/employees'
+      path: '/employees'
       fullPath: '/workforce/employees'
       preLoaderRoute: typeof AuthenticatedworkforceWorkforceEmployeesRouteImport
-      parentRoute: typeof AuthenticatedRoute
+      parentRoute: typeof AuthenticatedworkforceWorkforceRoute
     }
     '/_authenticated/(workforce)/workforce/day-laborers': {
       id: '/_authenticated/(workforce)/workforce/day-laborers'
-      path: '/workforce/day-laborers'
+      path: '/day-laborers'
       fullPath: '/workforce/day-laborers'
       preLoaderRoute: typeof AuthenticatedworkforceWorkforceDayLaborersRouteImport
-      parentRoute: typeof AuthenticatedRoute
+      parentRoute: typeof AuthenticatedworkforceWorkforceRoute
     }
     '/_authenticated/(workforce)/workforce/attendance': {
       id: '/_authenticated/(workforce)/workforce/attendance'
-      path: '/workforce/attendance'
+      path: '/attendance'
       fullPath: '/workforce/attendance'
       preLoaderRoute: typeof AuthenticatedworkforceWorkforceAttendanceRouteImport
-      parentRoute: typeof AuthenticatedRoute
+      parentRoute: typeof AuthenticatedworkforceWorkforceRoute
     }
     '/_authenticated/(workforce)/workforce/appraisals': {
       id: '/_authenticated/(workforce)/workforce/appraisals'
-      path: '/workforce/appraisals'
+      path: '/appraisals'
       fullPath: '/workforce/appraisals'
       preLoaderRoute: typeof AuthenticatedworkforceWorkforceAppraisalsRouteImport
-      parentRoute: typeof AuthenticatedRoute
+      parentRoute: typeof AuthenticatedworkforceWorkforceRoute
     }
     '/_authenticated/(workforce)/workers/$workerId': {
       id: '/_authenticated/(workforce)/workers/$workerId'
@@ -3868,10 +3906,10 @@ declare module '@tanstack/react-router' {
     }
     '/_authenticated/(workforce)/workforce/tasks/': {
       id: '/_authenticated/(workforce)/workforce/tasks/'
-      path: '/workforce/tasks'
+      path: '/tasks'
       fullPath: '/workforce/tasks/'
       preLoaderRoute: typeof AuthenticatedworkforceWorkforceTasksIndexRouteImport
-      parentRoute: typeof AuthenticatedRoute
+      parentRoute: typeof AuthenticatedworkforceWorkforceRoute
     }
     '/_authenticated/(production)/parcels/$parcelId/': {
       id: '/_authenticated/(production)/parcels/$parcelId/'
@@ -3889,17 +3927,17 @@ declare module '@tanstack/react-router' {
     }
     '/_authenticated/(workforce)/workforce/workers/piece-work': {
       id: '/_authenticated/(workforce)/workforce/workers/piece-work'
-      path: '/workforce/workers/piece-work'
+      path: '/workers/piece-work'
       fullPath: '/workforce/workers/piece-work'
       preLoaderRoute: typeof AuthenticatedworkforceWorkforceWorkersPieceWorkRouteImport
-      parentRoute: typeof AuthenticatedRoute
+      parentRoute: typeof AuthenticatedworkforceWorkforceRoute
     }
     '/_authenticated/(workforce)/workforce/tasks/calendar': {
       id: '/_authenticated/(workforce)/workforce/tasks/calendar'
-      path: '/workforce/tasks/calendar'
+      path: '/tasks/calendar'
       fullPath: '/workforce/tasks/calendar'
       preLoaderRoute: typeof AuthenticatedworkforceWorkforceTasksCalendarRouteImport
-      parentRoute: typeof AuthenticatedRoute
+      parentRoute: typeof AuthenticatedworkforceWorkforceRoute
     }
     '/_authenticated/(workforce)/workforce/separations/$separationId': {
       id: '/_authenticated/(workforce)/workforce/separations/$separationId'
@@ -4535,6 +4573,120 @@ const AuthenticatedworkforceWorkforceSeparationsRouteWithChildren =
     AuthenticatedworkforceWorkforceSeparationsRouteChildren,
   )
 
+interface AuthenticatedworkforceWorkforceRouteChildren {
+  AuthenticatedworkforceWorkforceAppraisalsRoute: typeof AuthenticatedworkforceWorkforceAppraisalsRoute
+  AuthenticatedworkforceWorkforceAttendanceRoute: typeof AuthenticatedworkforceWorkforceAttendanceRoute
+  AuthenticatedworkforceWorkforceDayLaborersRoute: typeof AuthenticatedworkforceWorkforceDayLaborersRoute
+  AuthenticatedworkforceWorkforceEmployeesRoute: typeof AuthenticatedworkforceWorkforceEmployeesRoute
+  AuthenticatedworkforceWorkforceExpenseClaimsRoute: typeof AuthenticatedworkforceWorkforceExpenseClaimsRoute
+  AuthenticatedworkforceWorkforceGeofencesRoute: typeof AuthenticatedworkforceWorkforceGeofencesRoute
+  AuthenticatedworkforceWorkforceGrievancesRoute: typeof AuthenticatedworkforceWorkforceGrievancesRoute
+  AuthenticatedworkforceWorkforceHolidaysRoute: typeof AuthenticatedworkforceWorkforceHolidaysRoute
+  AuthenticatedworkforceWorkforceHrAnalyticsRoute: typeof AuthenticatedworkforceWorkforceHrAnalyticsRoute
+  AuthenticatedworkforceWorkforceHrCalendarRoute: typeof AuthenticatedworkforceWorkforceHrCalendarRoute
+  AuthenticatedworkforceWorkforceLeaveAllocationsRoute: typeof AuthenticatedworkforceWorkforceLeaveAllocationsRoute
+  AuthenticatedworkforceWorkforceLeaveApplicationsRoute: typeof AuthenticatedworkforceWorkforceLeaveApplicationsRoute
+  AuthenticatedworkforceWorkforceLeaveBlockDatesRoute: typeof AuthenticatedworkforceWorkforceLeaveBlockDatesRoute
+  AuthenticatedworkforceWorkforceLeaveEncashmentsRoute: typeof AuthenticatedworkforceWorkforceLeaveEncashmentsRoute
+  AuthenticatedworkforceWorkforceLeaveTypesRoute: typeof AuthenticatedworkforceWorkforceLeaveTypesRoute
+  AuthenticatedworkforceWorkforceMyHrRoute: typeof AuthenticatedworkforceWorkforceMyHrRoute
+  AuthenticatedworkforceWorkforceOnboardingRoute: typeof AuthenticatedworkforceWorkforceOnboardingRoute
+  AuthenticatedworkforceWorkforcePaymentsRoute: typeof AuthenticatedworkforceWorkforcePaymentsRoute
+  AuthenticatedworkforceWorkforcePayrollRunsRoute: typeof AuthenticatedworkforceWorkforcePayrollRunsRoute
+  AuthenticatedworkforceWorkforceQualificationsRoute: typeof AuthenticatedworkforceWorkforceQualificationsRoute
+  AuthenticatedworkforceWorkforceRecruitmentRoute: typeof AuthenticatedworkforceWorkforceRecruitmentRoute
+  AuthenticatedworkforceWorkforceRosterRoute: typeof AuthenticatedworkforceWorkforceRosterRoute
+  AuthenticatedworkforceWorkforceSafetyIncidentsRoute: typeof AuthenticatedworkforceWorkforceSafetyIncidentsRoute
+  AuthenticatedworkforceWorkforceSalarySlipsRoute: typeof AuthenticatedworkforceWorkforceSalarySlipsRoute
+  AuthenticatedworkforceWorkforceSalaryStructuresRoute: typeof AuthenticatedworkforceWorkforceSalaryStructuresRoute
+  AuthenticatedworkforceWorkforceSeasonalCampaignsRoute: typeof AuthenticatedworkforceWorkforceSeasonalCampaignsRoute
+  AuthenticatedworkforceWorkforceSeparationsRoute: typeof AuthenticatedworkforceWorkforceSeparationsRouteWithChildren
+  AuthenticatedworkforceWorkforceShiftsRoute: typeof AuthenticatedworkforceWorkforceShiftsRoute
+  AuthenticatedworkforceWorkforceTrainingRoute: typeof AuthenticatedworkforceWorkforceTrainingRoute
+  AuthenticatedworkforceWorkforceWorkerTransportRoute: typeof AuthenticatedworkforceWorkforceWorkerTransportRoute
+  AuthenticatedworkforceWorkforceIndexRoute: typeof AuthenticatedworkforceWorkforceIndexRoute
+  AuthenticatedworkforceWorkforceTasksCalendarRoute: typeof AuthenticatedworkforceWorkforceTasksCalendarRoute
+  AuthenticatedworkforceWorkforceWorkersPieceWorkRoute: typeof AuthenticatedworkforceWorkforceWorkersPieceWorkRoute
+  AuthenticatedworkforceWorkforceTasksIndexRoute: typeof AuthenticatedworkforceWorkforceTasksIndexRoute
+}
+
+const AuthenticatedworkforceWorkforceRouteChildren: AuthenticatedworkforceWorkforceRouteChildren =
+  {
+    AuthenticatedworkforceWorkforceAppraisalsRoute:
+      AuthenticatedworkforceWorkforceAppraisalsRoute,
+    AuthenticatedworkforceWorkforceAttendanceRoute:
+      AuthenticatedworkforceWorkforceAttendanceRoute,
+    AuthenticatedworkforceWorkforceDayLaborersRoute:
+      AuthenticatedworkforceWorkforceDayLaborersRoute,
+    AuthenticatedworkforceWorkforceEmployeesRoute:
+      AuthenticatedworkforceWorkforceEmployeesRoute,
+    AuthenticatedworkforceWorkforceExpenseClaimsRoute:
+      AuthenticatedworkforceWorkforceExpenseClaimsRoute,
+    AuthenticatedworkforceWorkforceGeofencesRoute:
+      AuthenticatedworkforceWorkforceGeofencesRoute,
+    AuthenticatedworkforceWorkforceGrievancesRoute:
+      AuthenticatedworkforceWorkforceGrievancesRoute,
+    AuthenticatedworkforceWorkforceHolidaysRoute:
+      AuthenticatedworkforceWorkforceHolidaysRoute,
+    AuthenticatedworkforceWorkforceHrAnalyticsRoute:
+      AuthenticatedworkforceWorkforceHrAnalyticsRoute,
+    AuthenticatedworkforceWorkforceHrCalendarRoute:
+      AuthenticatedworkforceWorkforceHrCalendarRoute,
+    AuthenticatedworkforceWorkforceLeaveAllocationsRoute:
+      AuthenticatedworkforceWorkforceLeaveAllocationsRoute,
+    AuthenticatedworkforceWorkforceLeaveApplicationsRoute:
+      AuthenticatedworkforceWorkforceLeaveApplicationsRoute,
+    AuthenticatedworkforceWorkforceLeaveBlockDatesRoute:
+      AuthenticatedworkforceWorkforceLeaveBlockDatesRoute,
+    AuthenticatedworkforceWorkforceLeaveEncashmentsRoute:
+      AuthenticatedworkforceWorkforceLeaveEncashmentsRoute,
+    AuthenticatedworkforceWorkforceLeaveTypesRoute:
+      AuthenticatedworkforceWorkforceLeaveTypesRoute,
+    AuthenticatedworkforceWorkforceMyHrRoute:
+      AuthenticatedworkforceWorkforceMyHrRoute,
+    AuthenticatedworkforceWorkforceOnboardingRoute:
+      AuthenticatedworkforceWorkforceOnboardingRoute,
+    AuthenticatedworkforceWorkforcePaymentsRoute:
+      AuthenticatedworkforceWorkforcePaymentsRoute,
+    AuthenticatedworkforceWorkforcePayrollRunsRoute:
+      AuthenticatedworkforceWorkforcePayrollRunsRoute,
+    AuthenticatedworkforceWorkforceQualificationsRoute:
+      AuthenticatedworkforceWorkforceQualificationsRoute,
+    AuthenticatedworkforceWorkforceRecruitmentRoute:
+      AuthenticatedworkforceWorkforceRecruitmentRoute,
+    AuthenticatedworkforceWorkforceRosterRoute:
+      AuthenticatedworkforceWorkforceRosterRoute,
+    AuthenticatedworkforceWorkforceSafetyIncidentsRoute:
+      AuthenticatedworkforceWorkforceSafetyIncidentsRoute,
+    AuthenticatedworkforceWorkforceSalarySlipsRoute:
+      AuthenticatedworkforceWorkforceSalarySlipsRoute,
+    AuthenticatedworkforceWorkforceSalaryStructuresRoute:
+      AuthenticatedworkforceWorkforceSalaryStructuresRoute,
+    AuthenticatedworkforceWorkforceSeasonalCampaignsRoute:
+      AuthenticatedworkforceWorkforceSeasonalCampaignsRoute,
+    AuthenticatedworkforceWorkforceSeparationsRoute:
+      AuthenticatedworkforceWorkforceSeparationsRouteWithChildren,
+    AuthenticatedworkforceWorkforceShiftsRoute:
+      AuthenticatedworkforceWorkforceShiftsRoute,
+    AuthenticatedworkforceWorkforceTrainingRoute:
+      AuthenticatedworkforceWorkforceTrainingRoute,
+    AuthenticatedworkforceWorkforceWorkerTransportRoute:
+      AuthenticatedworkforceWorkforceWorkerTransportRoute,
+    AuthenticatedworkforceWorkforceIndexRoute:
+      AuthenticatedworkforceWorkforceIndexRoute,
+    AuthenticatedworkforceWorkforceTasksCalendarRoute:
+      AuthenticatedworkforceWorkforceTasksCalendarRoute,
+    AuthenticatedworkforceWorkforceWorkersPieceWorkRoute:
+      AuthenticatedworkforceWorkforceWorkersPieceWorkRoute,
+    AuthenticatedworkforceWorkforceTasksIndexRoute:
+      AuthenticatedworkforceWorkforceTasksIndexRoute,
+  }
+
+const AuthenticatedworkforceWorkforceRouteWithChildren =
+  AuthenticatedworkforceWorkforceRoute._addFileChildren(
+    AuthenticatedworkforceWorkforceRouteChildren,
+  )
+
 interface AuthenticatedRouteChildren {
   AuthenticatedReferentielsRoute: typeof AuthenticatedReferentielsRoute
   AuthenticatedReportsRoute: typeof AuthenticatedReportsRoute
@@ -4567,6 +4719,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedsettingsSettingsRoute: typeof AuthenticatedsettingsSettingsRouteWithChildren
   AuthenticatedworkforceTasksRoute: typeof AuthenticatedworkforceTasksRouteWithChildren
   AuthenticatedworkforceWorkersRoute: typeof AuthenticatedworkforceWorkersRouteWithChildren
+  AuthenticatedworkforceWorkforceRoute: typeof AuthenticatedworkforceWorkforceRouteWithChildren
   AuthenticatedPestAlertsReportIdRoute: typeof AuthenticatedPestAlertsReportIdRoute
   AuthenticatedComplianceIndexRoute: typeof AuthenticatedComplianceIndexRoute
   AuthenticatedPestAlertsIndexRoute: typeof AuthenticatedPestAlertsIndexRoute
@@ -4576,42 +4729,9 @@ interface AuthenticatedRouteChildren {
   AuthenticatedproductionProductionQualityControlRoute: typeof AuthenticatedproductionProductionQualityControlRoute
   AuthenticatedproductionProductionSatelliteAnalysisRoute: typeof AuthenticatedproductionProductionSatelliteAnalysisRoute
   AuthenticatedproductionProductionSoilAnalysisRoute: typeof AuthenticatedproductionProductionSoilAnalysisRoute
-  AuthenticatedworkforceWorkforceAppraisalsRoute: typeof AuthenticatedworkforceWorkforceAppraisalsRoute
-  AuthenticatedworkforceWorkforceAttendanceRoute: typeof AuthenticatedworkforceWorkforceAttendanceRoute
-  AuthenticatedworkforceWorkforceDayLaborersRoute: typeof AuthenticatedworkforceWorkforceDayLaborersRoute
-  AuthenticatedworkforceWorkforceEmployeesRoute: typeof AuthenticatedworkforceWorkforceEmployeesRoute
-  AuthenticatedworkforceWorkforceExpenseClaimsRoute: typeof AuthenticatedworkforceWorkforceExpenseClaimsRoute
-  AuthenticatedworkforceWorkforceGeofencesRoute: typeof AuthenticatedworkforceWorkforceGeofencesRoute
-  AuthenticatedworkforceWorkforceGrievancesRoute: typeof AuthenticatedworkforceWorkforceGrievancesRoute
-  AuthenticatedworkforceWorkforceHolidaysRoute: typeof AuthenticatedworkforceWorkforceHolidaysRoute
-  AuthenticatedworkforceWorkforceHrAnalyticsRoute: typeof AuthenticatedworkforceWorkforceHrAnalyticsRoute
-  AuthenticatedworkforceWorkforceHrCalendarRoute: typeof AuthenticatedworkforceWorkforceHrCalendarRoute
-  AuthenticatedworkforceWorkforceLeaveAllocationsRoute: typeof AuthenticatedworkforceWorkforceLeaveAllocationsRoute
-  AuthenticatedworkforceWorkforceLeaveApplicationsRoute: typeof AuthenticatedworkforceWorkforceLeaveApplicationsRoute
-  AuthenticatedworkforceWorkforceLeaveBlockDatesRoute: typeof AuthenticatedworkforceWorkforceLeaveBlockDatesRoute
-  AuthenticatedworkforceWorkforceLeaveEncashmentsRoute: typeof AuthenticatedworkforceWorkforceLeaveEncashmentsRoute
-  AuthenticatedworkforceWorkforceLeaveTypesRoute: typeof AuthenticatedworkforceWorkforceLeaveTypesRoute
-  AuthenticatedworkforceWorkforceMyHrRoute: typeof AuthenticatedworkforceWorkforceMyHrRoute
-  AuthenticatedworkforceWorkforceOnboardingRoute: typeof AuthenticatedworkforceWorkforceOnboardingRoute
-  AuthenticatedworkforceWorkforcePaymentsRoute: typeof AuthenticatedworkforceWorkforcePaymentsRoute
-  AuthenticatedworkforceWorkforcePayrollRunsRoute: typeof AuthenticatedworkforceWorkforcePayrollRunsRoute
-  AuthenticatedworkforceWorkforceQualificationsRoute: typeof AuthenticatedworkforceWorkforceQualificationsRoute
-  AuthenticatedworkforceWorkforceRecruitmentRoute: typeof AuthenticatedworkforceWorkforceRecruitmentRoute
-  AuthenticatedworkforceWorkforceRosterRoute: typeof AuthenticatedworkforceWorkforceRosterRoute
-  AuthenticatedworkforceWorkforceSafetyIncidentsRoute: typeof AuthenticatedworkforceWorkforceSafetyIncidentsRoute
-  AuthenticatedworkforceWorkforceSalarySlipsRoute: typeof AuthenticatedworkforceWorkforceSalarySlipsRoute
-  AuthenticatedworkforceWorkforceSalaryStructuresRoute: typeof AuthenticatedworkforceWorkforceSalaryStructuresRoute
-  AuthenticatedworkforceWorkforceSeasonalCampaignsRoute: typeof AuthenticatedworkforceWorkforceSeasonalCampaignsRoute
-  AuthenticatedworkforceWorkforceSeparationsRoute: typeof AuthenticatedworkforceWorkforceSeparationsRouteWithChildren
-  AuthenticatedworkforceWorkforceShiftsRoute: typeof AuthenticatedworkforceWorkforceShiftsRoute
-  AuthenticatedworkforceWorkforceTrainingRoute: typeof AuthenticatedworkforceWorkforceTrainingRoute
-  AuthenticatedworkforceWorkforceWorkerTransportRoute: typeof AuthenticatedworkforceWorkforceWorkerTransportRoute
   AuthenticatedComplianceCertificationsCertIdRoute: typeof AuthenticatedComplianceCertificationsCertIdRoute
   AuthenticatedComplianceCertificationsIndexRoute: typeof AuthenticatedComplianceCertificationsIndexRoute
   AuthenticatedComplianceCorrectiveActionsIndexRoute: typeof AuthenticatedComplianceCorrectiveActionsIndexRoute
-  AuthenticatedworkforceWorkforceTasksCalendarRoute: typeof AuthenticatedworkforceWorkforceTasksCalendarRoute
-  AuthenticatedworkforceWorkforceWorkersPieceWorkRoute: typeof AuthenticatedworkforceWorkforceWorkersPieceWorkRoute
-  AuthenticatedworkforceWorkforceTasksIndexRoute: typeof AuthenticatedworkforceWorkforceTasksIndexRoute
   AuthenticatedproductionFarmsFarmIdSatelliteHeatmapRoute: typeof AuthenticatedproductionFarmsFarmIdSatelliteHeatmapRoute
 }
 
@@ -4662,6 +4782,8 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
     AuthenticatedworkforceTasksRouteWithChildren,
   AuthenticatedworkforceWorkersRoute:
     AuthenticatedworkforceWorkersRouteWithChildren,
+  AuthenticatedworkforceWorkforceRoute:
+    AuthenticatedworkforceWorkforceRouteWithChildren,
   AuthenticatedPestAlertsReportIdRoute: AuthenticatedPestAlertsReportIdRoute,
   AuthenticatedComplianceIndexRoute: AuthenticatedComplianceIndexRoute,
   AuthenticatedPestAlertsIndexRoute: AuthenticatedPestAlertsIndexRoute,
@@ -4677,78 +4799,12 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
     AuthenticatedproductionProductionSatelliteAnalysisRoute,
   AuthenticatedproductionProductionSoilAnalysisRoute:
     AuthenticatedproductionProductionSoilAnalysisRoute,
-  AuthenticatedworkforceWorkforceAppraisalsRoute:
-    AuthenticatedworkforceWorkforceAppraisalsRoute,
-  AuthenticatedworkforceWorkforceAttendanceRoute:
-    AuthenticatedworkforceWorkforceAttendanceRoute,
-  AuthenticatedworkforceWorkforceDayLaborersRoute:
-    AuthenticatedworkforceWorkforceDayLaborersRoute,
-  AuthenticatedworkforceWorkforceEmployeesRoute:
-    AuthenticatedworkforceWorkforceEmployeesRoute,
-  AuthenticatedworkforceWorkforceExpenseClaimsRoute:
-    AuthenticatedworkforceWorkforceExpenseClaimsRoute,
-  AuthenticatedworkforceWorkforceGeofencesRoute:
-    AuthenticatedworkforceWorkforceGeofencesRoute,
-  AuthenticatedworkforceWorkforceGrievancesRoute:
-    AuthenticatedworkforceWorkforceGrievancesRoute,
-  AuthenticatedworkforceWorkforceHolidaysRoute:
-    AuthenticatedworkforceWorkforceHolidaysRoute,
-  AuthenticatedworkforceWorkforceHrAnalyticsRoute:
-    AuthenticatedworkforceWorkforceHrAnalyticsRoute,
-  AuthenticatedworkforceWorkforceHrCalendarRoute:
-    AuthenticatedworkforceWorkforceHrCalendarRoute,
-  AuthenticatedworkforceWorkforceLeaveAllocationsRoute:
-    AuthenticatedworkforceWorkforceLeaveAllocationsRoute,
-  AuthenticatedworkforceWorkforceLeaveApplicationsRoute:
-    AuthenticatedworkforceWorkforceLeaveApplicationsRoute,
-  AuthenticatedworkforceWorkforceLeaveBlockDatesRoute:
-    AuthenticatedworkforceWorkforceLeaveBlockDatesRoute,
-  AuthenticatedworkforceWorkforceLeaveEncashmentsRoute:
-    AuthenticatedworkforceWorkforceLeaveEncashmentsRoute,
-  AuthenticatedworkforceWorkforceLeaveTypesRoute:
-    AuthenticatedworkforceWorkforceLeaveTypesRoute,
-  AuthenticatedworkforceWorkforceMyHrRoute:
-    AuthenticatedworkforceWorkforceMyHrRoute,
-  AuthenticatedworkforceWorkforceOnboardingRoute:
-    AuthenticatedworkforceWorkforceOnboardingRoute,
-  AuthenticatedworkforceWorkforcePaymentsRoute:
-    AuthenticatedworkforceWorkforcePaymentsRoute,
-  AuthenticatedworkforceWorkforcePayrollRunsRoute:
-    AuthenticatedworkforceWorkforcePayrollRunsRoute,
-  AuthenticatedworkforceWorkforceQualificationsRoute:
-    AuthenticatedworkforceWorkforceQualificationsRoute,
-  AuthenticatedworkforceWorkforceRecruitmentRoute:
-    AuthenticatedworkforceWorkforceRecruitmentRoute,
-  AuthenticatedworkforceWorkforceRosterRoute:
-    AuthenticatedworkforceWorkforceRosterRoute,
-  AuthenticatedworkforceWorkforceSafetyIncidentsRoute:
-    AuthenticatedworkforceWorkforceSafetyIncidentsRoute,
-  AuthenticatedworkforceWorkforceSalarySlipsRoute:
-    AuthenticatedworkforceWorkforceSalarySlipsRoute,
-  AuthenticatedworkforceWorkforceSalaryStructuresRoute:
-    AuthenticatedworkforceWorkforceSalaryStructuresRoute,
-  AuthenticatedworkforceWorkforceSeasonalCampaignsRoute:
-    AuthenticatedworkforceWorkforceSeasonalCampaignsRoute,
-  AuthenticatedworkforceWorkforceSeparationsRoute:
-    AuthenticatedworkforceWorkforceSeparationsRouteWithChildren,
-  AuthenticatedworkforceWorkforceShiftsRoute:
-    AuthenticatedworkforceWorkforceShiftsRoute,
-  AuthenticatedworkforceWorkforceTrainingRoute:
-    AuthenticatedworkforceWorkforceTrainingRoute,
-  AuthenticatedworkforceWorkforceWorkerTransportRoute:
-    AuthenticatedworkforceWorkforceWorkerTransportRoute,
   AuthenticatedComplianceCertificationsCertIdRoute:
     AuthenticatedComplianceCertificationsCertIdRoute,
   AuthenticatedComplianceCertificationsIndexRoute:
     AuthenticatedComplianceCertificationsIndexRoute,
   AuthenticatedComplianceCorrectiveActionsIndexRoute:
     AuthenticatedComplianceCorrectiveActionsIndexRoute,
-  AuthenticatedworkforceWorkforceTasksCalendarRoute:
-    AuthenticatedworkforceWorkforceTasksCalendarRoute,
-  AuthenticatedworkforceWorkforceWorkersPieceWorkRoute:
-    AuthenticatedworkforceWorkforceWorkersPieceWorkRoute,
-  AuthenticatedworkforceWorkforceTasksIndexRoute:
-    AuthenticatedworkforceWorkforceTasksIndexRoute,
   AuthenticatedproductionFarmsFarmIdSatelliteHeatmapRoute:
     AuthenticatedproductionFarmsFarmIdSatelliteHeatmapRoute,
 }

@@ -2,7 +2,7 @@ import { createFileRoute } from '@tanstack/react-router';
 import * as React from 'react';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Building2, CheckCircle2, Clock, MapPin, Users, X } from 'lucide-react';
+import { CheckCircle2, MapPin, Users, X } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/Input';
@@ -21,14 +21,11 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { useAuth } from '@/hooks/useAuth';
 import { useAttendanceRecords } from '@/hooks/useAttendance';
-import ModernPageHeader from '@/components/ModernPageHeader';
 import AttendanceCheckInWidget from '@/components/Workforce/AttendanceCheckInWidget';
 
 function AttendancePage() {
   const { t } = useTranslation();
-  const { currentOrganization } = useAuth();
 
   const [from, setFrom] = useState<string>(() => {
     const d = new Date();
@@ -59,18 +56,6 @@ function AttendancePage() {
 
   return (
     <>
-      <ModernPageHeader
-        breadcrumbs={[
-          { icon: Building2, label: currentOrganization?.name ?? '', path: '/dashboard' },
-          { icon: Users, label: t('nav.workforce', 'Workforce'), path: '/workforce/employees' },
-          { icon: Clock, label: t('attendance.title', 'Attendance'), isActive: true },
-        ]}
-        title={t('attendance.title', 'Attendance')}
-        subtitle={t(
-          'attendance.subtitle',
-          'GPS check-in/out for workers and day labourers.',
-        )}
-      />
       <div className="p-3 sm:p-4 lg:p-6 space-y-6">
         <div className="grid gap-4 lg:grid-cols-[360px_1fr]">
           <AttendanceCheckInWidget />

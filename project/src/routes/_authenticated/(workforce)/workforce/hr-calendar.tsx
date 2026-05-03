@@ -12,13 +12,9 @@ import {
   LogOut,
   Sprout,
   Star,
-  Building2,
-  Users,
-  CalendarDays,
 } from 'lucide-react';
 import { withRouteProtection } from '@/components/authorization/withRouteProtection';
 import { useAuth } from '@/hooks/useAuth';
-import ModernPageHeader from '@/components/ModernPageHeader';
 import { useHrCalendar } from '@/hooks/useHrAdvanced';
 import type { HrCalendarEvent, HrEventType } from '@/lib/api/hr-advanced';
 import { Button } from '@/components/ui/button';
@@ -101,46 +97,35 @@ function HrCalendarPage() {
 
   return (
     <>
-      <ModernPageHeader
-        breadcrumbs={[
-          { icon: Building2, label: currentOrganization?.name ?? '', path: '/dashboard' },
-          { icon: Users, label: t('nav.workforce', 'Workforce'), path: '/workforce/employees' },
-          { icon: CalendarDays, label: t('hrCalendar.title', 'HR Calendar'), isActive: true },
-        ]}
-        title={t('hrCalendar.title', 'HR Calendar')}
-        subtitle={t('hrCalendar.subtitle', 'All HR events in one view: leaves, interviews, training, expiries, separations, campaigns, holidays.')}
-        actions={
-          <>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() - 1, 1))}
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </Button>
-            <div className="px-3 py-1.5 text-sm font-medium min-w-[180px] text-center capitalize">
-              {monthLabel}
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1))}
-            >
-              <ChevronRight className="w-4 h-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                const d = new Date();
-                setCursor(new Date(d.getFullYear(), d.getMonth(), 1));
-              }}
-            >
-              {t('hrCalendar.today', 'Today')}
-            </Button>
-          </>
-        }
-      />
+      <div className="flex items-center justify-end gap-2 mb-4">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() - 1, 1))}
+        >
+          <ChevronLeft className="w-4 h-4" />
+        </Button>
+        <div className="px-3 py-1.5 text-sm font-medium min-w-[180px] text-center capitalize">
+          {monthLabel}
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1))}
+        >
+          <ChevronRight className="w-4 h-4" />
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            const d = new Date();
+            setCursor(new Date(d.getFullYear(), d.getMonth(), 1));
+          }}
+        >
+          {t('hrCalendar.today', 'Today')}
+        </Button>
+      </div>
       <div className="p-3 sm:p-4 lg:p-6 space-y-4">
       <div className="flex flex-wrap gap-2">
         {ALL_TYPES.map((tp) => {

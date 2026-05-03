@@ -2,10 +2,9 @@ import { useMemo, useState, type ReactNode } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Loader2, Plus, Users, Building2, CalendarCheck } from 'lucide-react';
+import { Loader2, Plus, Users } from 'lucide-react';
 import { withRouteProtection } from '@/components/authorization/withRouteProtection';
 import { useAuth } from '@/hooks/useAuth';
-import ModernPageHeader from '@/components/ModernPageHeader';
 import { useWorkers } from '@/hooks/useWorkers';
 import {
   useBulkAllocate,
@@ -63,30 +62,16 @@ function LeaveAllocationsPage() {
 
   return (
     <>
-      <ModernPageHeader
-        breadcrumbs={[
-          { icon: Building2, label: currentOrganization?.name ?? '', path: '/dashboard' },
-          { icon: Users, label: t('nav.workforce', 'Workforce'), path: '/workforce/employees' },
-          { icon: CalendarCheck, label: t('leaveAllocations.title', 'Leave Allocations'), isActive: true },
-        ]}
-        title={t('leaveAllocations.title', 'Leave Allocations')}
-        subtitle={t(
-          'leaveAllocations.subtitle',
-          'Grant leave balances to workers per leave type and period. Approved applications deduct from these balances.',
-        )}
-        actions={
-          <>
-            <Button variant="outline" onClick={() => setCreating('bulk')}>
-              <Users className="w-4 h-4 mr-2" />
-              {t('leaveAllocations.bulkAllocate', 'Bulk allocate')}
-            </Button>
-            <Button onClick={() => setCreating('single')}>
-              <Plus className="w-4 h-4 mr-2" />
-              {t('common.create', 'Create')}
-            </Button>
-          </>
-        }
-      />
+      <div className="flex items-center justify-end gap-2 mb-4">
+        <Button variant="outline" onClick={() => setCreating('bulk')}>
+          <Users className="w-4 h-4 mr-2" />
+          {t('leaveAllocations.bulkAllocate', 'Bulk allocate')}
+        </Button>
+        <Button onClick={() => setCreating('single')}>
+          <Plus className="w-4 h-4 mr-2" />
+          {t('common.create', 'Create')}
+        </Button>
+      </div>
       <div className="p-3 sm:p-4 lg:p-6 space-y-6">
       <div className="flex gap-3 flex-wrap">
         <div className="space-y-1 w-56">

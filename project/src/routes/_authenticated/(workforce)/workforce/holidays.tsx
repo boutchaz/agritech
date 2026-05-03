@@ -2,10 +2,9 @@ import { useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Loader2, Plus, Download, Trash2, Calendar, Building2, Users } from 'lucide-react';
+import { Loader2, Plus, Download, Trash2 } from 'lucide-react';
 import { withRouteProtection } from '@/components/authorization/withRouteProtection';
 import { useAuth } from '@/hooks/useAuth';
-import ModernPageHeader from '@/components/ModernPageHeader';
 import {
   useAddHolidays,
   useCreateHolidayList,
@@ -45,24 +44,12 @@ function HolidaysPage() {
 
   return (
     <>
-      <ModernPageHeader
-        breadcrumbs={[
-          { icon: Building2, label: currentOrganization?.name ?? '', path: '/dashboard' },
-          { icon: Users, label: t('nav.workforce', 'Workforce'), path: '/workforce/employees' },
-          { icon: Calendar, label: t('holidays.title', 'Holidays'), isActive: true },
-        ]}
-        title={t('holidays.title', 'Holidays')}
-        subtitle={t(
-          'holidays.subtitle',
-          'Manage holiday lists by year. Holidays counted as paid days during payroll runs.',
-        )}
-        actions={
-          <Button onClick={() => setCreating(true)}>
-            <Plus className="w-4 h-4 mr-2" />
-            {t('holidays.createList', 'New list')}
-          </Button>
-        }
-      />
+      <div className="flex items-center justify-end gap-2 mb-4">
+        <Button onClick={() => setCreating(true)}>
+          <Plus className="w-4 h-4 mr-2" />
+          {t('holidays.createList', 'New list')}
+        </Button>
+      </div>
       <div className="p-3 sm:p-4 lg:p-6 space-y-6">
       {listsQuery.isLoading ? (
         <div className="flex items-center justify-center h-40">

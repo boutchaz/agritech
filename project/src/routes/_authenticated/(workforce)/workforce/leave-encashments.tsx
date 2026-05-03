@@ -2,11 +2,10 @@ import { useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Loader2, DollarSign, CheckCircle2, XCircle, Building2, Users } from 'lucide-react';
+import { Loader2, DollarSign, CheckCircle2, XCircle } from 'lucide-react';
 import { withRouteProtection } from '@/components/authorization/withRouteProtection';
 import { useAuth } from '@/hooks/useAuth';
 import { useCurrency } from '@/hooks/useCurrency';
-import ModernPageHeader from '@/components/ModernPageHeader';
 import {
   useLeaveEncashments,
   useApproveLeaveEncashment,
@@ -57,19 +56,6 @@ function LeaveEncashmentsPage() {
 
   return (
     <>
-      <ModernPageHeader
-        breadcrumbs={[
-          { icon: Building2, label: currentOrganization?.name ?? '', path: '/dashboard' },
-          { icon: Users, label: t('nav.workforce', 'Workforce'), path: '/workforce/employees' },
-          { icon: DollarSign, label: t('leaveEncashments.title', 'Leave Encashments'), isActive: true },
-        ]}
-        title={t('leaveEncashments.title', 'Leave Encashments')}
-        subtitle={t(
-          'leaveEncashments.subtitle',
-          'Convert unused leave days into cash payouts.',
-        )}
-      />
-
       <div className="flex items-center gap-3 mb-6">
         <div className="flex gap-2">
           {['', 'pending', 'approved', 'paid', 'cancelled'].map((s) => (

@@ -2,10 +2,9 @@ import { useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Loader2, Plus, Trash2, Pencil, Calendar, Building2, Users, Ban } from 'lucide-react';
+import { Loader2, Plus, Trash2, Pencil, Calendar, Ban } from 'lucide-react';
 import { withRouteProtection } from '@/components/authorization/withRouteProtection';
 import { useAuth } from '@/hooks/useAuth';
-import ModernPageHeader from '@/components/ModernPageHeader';
 import {
   useLeaveBlockDates,
   useCreateLeaveBlockDate,
@@ -58,24 +57,12 @@ function LeaveBlockDatesPage() {
 
   return (
     <>
-      <ModernPageHeader
-        breadcrumbs={[
-          { icon: Building2, label: currentOrganization?.name ?? '', path: '/dashboard' },
-          { icon: Users, label: t('nav.workforce', 'Workforce'), path: '/workforce/employees' },
-          { icon: Ban, label: t('leaveBlockDates.title', 'Leave Block Dates'), isActive: true },
-        ]}
-        title={t('leaveBlockDates.title', 'Leave Block Dates')}
-        subtitle={t(
-          'leaveBlockDates.subtitle',
-          'Define blackout dates when leave cannot be taken.',
-        )}
-        actions={
-          <Button onClick={() => { setEditing(null); setShowDialog(true); }}>
-            <Plus className="h-4 w-4 me-2" />
-            {t('leaveBlockDates.add', 'Add Block Date')}
-          </Button>
-        }
-      />
+      <div className="flex items-center justify-end gap-2 mb-4">
+        <Button onClick={() => { setEditing(null); setShowDialog(true); }}>
+          <Plus className="h-4 w-4 me-2" />
+          {t('leaveBlockDates.add', 'Add Block Date')}
+        </Button>
+      </div>
 
       {blockDatesQuery.isLoading ? (
         <div className="flex items-center justify-center h-64">

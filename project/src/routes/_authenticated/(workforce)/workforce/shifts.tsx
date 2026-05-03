@@ -2,10 +2,9 @@ import { useState, type ReactNode } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Loader2, Plus, Pencil, Trash2, Clock, Building2, Users } from 'lucide-react';
+import { Loader2, Plus, Pencil, Trash2, Clock } from 'lucide-react';
 import { withRouteProtection } from '@/components/authorization/withRouteProtection';
 import { useAuth } from '@/hooks/useAuth';
-import ModernPageHeader from '@/components/ModernPageHeader';
 import {
   useCreateShift,
   useDeleteShift,
@@ -44,24 +43,12 @@ function ShiftsPage() {
 
   return (
     <>
-      <ModernPageHeader
-        breadcrumbs={[
-          { icon: Building2, label: currentOrganization?.name ?? '', path: '/dashboard' },
-          { icon: Users, label: t('nav.workforce', 'Workforce'), path: '/workforce/employees' },
-          { icon: Clock, label: t('shifts.title', 'Shifts'), isActive: true },
-        ]}
-        title={t('shifts.title', 'Shifts')}
-        subtitle={t(
-          'shifts.subtitle',
-          'Define daily working schedules — start/end time, grace period, auto-attendance rules.',
-        )}
-        actions={
-          <Button onClick={() => setCreating(true)}>
-            <Plus className="w-4 h-4 mr-2" />
-            {t('common.create', 'Create')}
-          </Button>
-        }
-      />
+      <div className="flex items-center justify-end gap-2 mb-4">
+        <Button onClick={() => setCreating(true)}>
+          <Plus className="w-4 h-4 mr-2" />
+          {t('common.create', 'Create')}
+        </Button>
+      </div>
       <div className="p-3 sm:p-4 lg:p-6 space-y-6">
       {query.isLoading ? (
         <div className="flex items-center justify-center h-40">

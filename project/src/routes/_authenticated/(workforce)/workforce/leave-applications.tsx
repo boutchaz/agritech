@@ -15,10 +15,9 @@ const leaveApplicationSchema = z.object({
   attachment_urls: z.array(z.string().url()).optional(),
 });
 
-import { Loader2, Check, X, Plus, Calendar as CalendarIcon, Building2, Users } from 'lucide-react';
+import { Loader2, Check, X, Plus } from 'lucide-react';
 import { withRouteProtection } from '@/components/authorization/withRouteProtection';
 import { useAuth } from '@/hooks/useAuth';
-import ModernPageHeader from '@/components/ModernPageHeader';
 import { useWorkers } from '@/hooks/useWorkers';
 import {
   useApproveApplication,
@@ -83,38 +82,24 @@ function LeaveApplicationsPage() {
 
   return (
     <>
-      <ModernPageHeader
-        breadcrumbs={[
-          { icon: Building2, label: currentOrganization?.name ?? '', path: '/dashboard' },
-          { icon: Users, label: t('nav.workforce', 'Workforce'), path: '/workforce/employees' },
-          { icon: CalendarIcon, label: t('leaveApplications.title', 'Leave Applications'), isActive: true },
-        ]}
-        title={t('leaveApplications.title', 'Leave Applications')}
-        subtitle={t(
-          'leaveApplications.subtitle',
-          'Review and approve worker leave requests. Approving an application deducts days from the matching allocation.',
-        )}
-        actions={
-          <>
-            <Select value={status} onValueChange={(v) => setStatus(v as any)}>
-              <SelectTrigger className="w-40">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {STATUS_FILTERS.map((s) => (
-                  <SelectItem key={s.value} value={s.value}>
-                    {t(`leaveApplications.status.${s.value}`, s.label)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button onClick={() => setCreating(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              {t('leaveApplications.apply', 'Apply')}
-            </Button>
-          </>
-        }
-      />
+      <div className="flex items-center justify-end gap-2 mb-4">
+        <Select value={status} onValueChange={(v) => setStatus(v as any)}>
+          <SelectTrigger className="w-40">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {STATUS_FILTERS.map((s) => (
+              <SelectItem key={s.value} value={s.value}>
+                {t(`leaveApplications.status.${s.value}`, s.label)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Button onClick={() => setCreating(true)}>
+          <Plus className="w-4 h-4 mr-2" />
+          {t('leaveApplications.apply', 'Apply')}
+        </Button>
+      </div>
 
       <div className="p-3 sm:p-4 lg:p-6 space-y-6">
         {query.isLoading ? (

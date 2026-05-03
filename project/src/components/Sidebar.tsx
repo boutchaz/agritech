@@ -206,7 +206,7 @@ const Sidebar = ({
 
   // Section toggles - initialize based on current path
   const [showPersonnel, setShowPersonnel] = useState(() =>
-    getInitialSectionState(["/workers", "/tasks", "/workforce/payments"]),
+    getInitialSectionState(["/workers", "/tasks", "/workforce"]),
   );
   const [showProduction, setShowProduction] = useState(() =>
     getInitialSectionState([
@@ -261,7 +261,7 @@ const Sidebar = ({
     queueMicrotask(() => {
       // Personnel section
       if (
-        ["/workers", "/tasks", "/workforce/payments"].some(
+        ["/workers", "/tasks", "/workforce"].some(
           (p) => currentPath === p || currentPath.startsWith(p + "/"),
         )
       ) {
@@ -896,29 +896,11 @@ const Sidebar = ({
                     <ProtectedNavItem action="read" subject="LeaveApplication">
                       <PopoverNavItem onNavigate={handleNavigation}
                         path="/workforce/leave-applications"
-                        label={t("nav.leaveApplications", "Leave Applications")}
-                        isActive={currentPath === "/workforce/leave-applications"}
-                      />
-                    </ProtectedNavItem>
-                    <ProtectedNavItem action="read" subject="LeaveAllocation">
-                      <PopoverNavItem onNavigate={handleNavigation}
-                        path="/workforce/leave-allocations"
-                        label={t("nav.leaveAllocations", "Leave Allocations")}
-                        isActive={currentPath === "/workforce/leave-allocations"}
-                      />
-                    </ProtectedNavItem>
-                    <ProtectedNavItem action="manage" subject="LeaveType">
-                      <PopoverNavItem onNavigate={handleNavigation}
-                        path="/workforce/leave-types"
-                        label={t("nav.leaveTypes", "Leave Types")}
-                        isActive={currentPath === "/workforce/leave-types"}
-                      />
-                    </ProtectedNavItem>
-                    <ProtectedNavItem action="read" subject="Holiday">
-                      <PopoverNavItem onNavigate={handleNavigation}
-                        path="/workforce/holidays"
-                        label={t("nav.holidays", "Holidays")}
-                        isActive={currentPath === "/workforce/holidays"}
+                        label={t("workforceHub.groups.leave", "Leave & Time")}
+                        isActive={
+                          currentPath.startsWith("/workforce/leave-") ||
+                          currentPath === "/workforce/holidays"
+                        }
                       />
                     </ProtectedNavItem>
                     <ProtectedNavItem action="read" subject="SalaryStructure">
@@ -945,22 +927,14 @@ const Sidebar = ({
                     <ProtectedNavItem action="manage" subject="Shift">
                       <PopoverNavItem onNavigate={handleNavigation}
                         path="/workforce/shifts"
-                        label={t("nav.shifts", "Shifts")}
-                        isActive={currentPath === "/workforce/shifts"}
-                      />
-                    </ProtectedNavItem>
-                    <ProtectedNavItem action="manage" subject="ShiftAssignment">
-                      <PopoverNavItem onNavigate={handleNavigation}
-                        path="/workforce/roster"
-                        label={t("nav.roster", "Roster")}
-                        isActive={currentPath === "/workforce/roster"}
-                      />
-                    </ProtectedNavItem>
-                    <ProtectedNavItem action="manage" subject="Attendance">
-                      <PopoverNavItem onNavigate={handleNavigation}
-                        path="/workforce/geofences"
-                        label={t("nav.geofences", "Geofences")}
-                        isActive={currentPath === "/workforce/geofences"}
+                        label={t("workforceHub.groups.scheduling", "Scheduling")}
+                        isActive={
+                          currentPath === "/workforce/shifts" ||
+                          currentPath === "/workforce/roster" ||
+                          currentPath === "/workforce/geofences" ||
+                          currentPath === "/workforce/hr-calendar" ||
+                          currentPath === "/workforce/attendance"
+                        }
                       />
                     </ProtectedNavItem>
                     <ProtectedNavItem action="manage" subject="Onboarding">
@@ -1042,13 +1016,6 @@ const Sidebar = ({
                     </ProtectedNavItem>
                     <ProtectedNavItem action="read" subject="Worker">
                       <PopoverNavItem onNavigate={handleNavigation}
-                        path="/workforce/hr-calendar"
-                        label={t("nav.hrCalendar", "HR Calendar")}
-                        isActive={currentPath === "/workforce/hr-calendar"}
-                      />
-                    </ProtectedNavItem>
-                    <ProtectedNavItem action="read" subject="Worker">
-                      <PopoverNavItem onNavigate={handleNavigation}
                         path="/workforce/hr-analytics"
                         label={t("nav.hrAnalytics", "HR Analytics")}
                         isActive={currentPath === "/workforce/hr-analytics"}
@@ -1122,44 +1089,12 @@ const Sidebar = ({
                         <Button
                           variant="ghost"
                           className={getSubItemClassName(
-                            currentPath === "/workforce/leave-applications",
+                            currentPath.startsWith("/workforce/leave-") ||
+                              currentPath === "/workforce/holidays",
                           )}
                           onClick={(e) => handleNavigation("/workforce/leave-applications", e)}
                         >
-                          {renderText(t("nav.leaveApplications", "Leave Applications"))}
-                        </Button>
-                      </ProtectedNavItem>
-                      <ProtectedNavItem action="read" subject="LeaveAllocation">
-                        <Button
-                          variant="ghost"
-                          className={getSubItemClassName(
-                            currentPath === "/workforce/leave-allocations",
-                          )}
-                          onClick={(e) => handleNavigation("/workforce/leave-allocations", e)}
-                        >
-                          {renderText(t("nav.leaveAllocations", "Leave Allocations"))}
-                        </Button>
-                      </ProtectedNavItem>
-                      <ProtectedNavItem action="manage" subject="LeaveType">
-                        <Button
-                          variant="ghost"
-                          className={getSubItemClassName(
-                            currentPath === "/workforce/leave-types",
-                          )}
-                          onClick={(e) => handleNavigation("/workforce/leave-types", e)}
-                        >
-                          {renderText(t("nav.leaveTypes", "Leave Types"))}
-                        </Button>
-                      </ProtectedNavItem>
-                      <ProtectedNavItem action="read" subject="Holiday">
-                        <Button
-                          variant="ghost"
-                          className={getSubItemClassName(
-                            currentPath === "/workforce/holidays",
-                          )}
-                          onClick={(e) => handleNavigation("/workforce/holidays", e)}
-                        >
-                          {renderText(t("nav.holidays", "Holidays"))}
+                          {renderText(t("workforceHub.groups.leave", "Leave & Time"))}
                         </Button>
                       </ProtectedNavItem>
                       <ProtectedNavItem action="read" subject="SalaryStructure">
@@ -1199,33 +1134,15 @@ const Sidebar = ({
                         <Button
                           variant="ghost"
                           className={getSubItemClassName(
-                            currentPath === "/workforce/shifts",
+                            currentPath === "/workforce/shifts" ||
+                              currentPath === "/workforce/roster" ||
+                              currentPath === "/workforce/geofences" ||
+                              currentPath === "/workforce/hr-calendar" ||
+                              currentPath === "/workforce/attendance",
                           )}
                           onClick={(e) => handleNavigation("/workforce/shifts", e)}
                         >
-                          {renderText(t("nav.shifts", "Shifts"))}
-                        </Button>
-                      </ProtectedNavItem>
-                      <ProtectedNavItem action="manage" subject="ShiftAssignment">
-                        <Button
-                          variant="ghost"
-                          className={getSubItemClassName(
-                            currentPath === "/workforce/roster",
-                          )}
-                          onClick={(e) => handleNavigation("/workforce/roster", e)}
-                        >
-                          {renderText(t("nav.roster", "Roster"))}
-                        </Button>
-                      </ProtectedNavItem>
-                      <ProtectedNavItem action="manage" subject="Attendance">
-                        <Button
-                          variant="ghost"
-                          className={getSubItemClassName(
-                            currentPath === "/workforce/geofences",
-                          )}
-                          onClick={(e) => handleNavigation("/workforce/geofences", e)}
-                        >
-                          {renderText(t("nav.geofences", "Geofences"))}
+                          {renderText(t("workforceHub.groups.scheduling", "Scheduling"))}
                         </Button>
                       </ProtectedNavItem>
                       <ProtectedNavItem action="manage" subject="Onboarding">
@@ -1347,17 +1264,6 @@ const Sidebar = ({
                           onClick={(e) => handleNavigation("/workforce/training", e)}
                         >
                           {renderText(t("nav.training", "Training"))}
-                        </Button>
-                      </ProtectedNavItem>
-                      <ProtectedNavItem action="read" subject="Worker">
-                        <Button
-                          variant="ghost"
-                          className={getSubItemClassName(
-                            currentPath === "/workforce/hr-calendar",
-                          )}
-                          onClick={(e) => handleNavigation("/workforce/hr-calendar", e)}
-                        >
-                          {renderText(t("nav.hrCalendar", "HR Calendar"))}
                         </Button>
                       </ProtectedNavItem>
                       <ProtectedNavItem action="read" subject="Worker">
