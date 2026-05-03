@@ -220,8 +220,7 @@ export class AuthService {
           is_active,
           organizations (
             id,
-            name,
-            subscription_plan
+            name
           ),
           roles (
             id,
@@ -260,7 +259,6 @@ export class AuthService {
         organizations!inner (
           id,
           name,
-          subscription_plan,
           slug
         )
       `)
@@ -449,7 +447,6 @@ export class AuthService {
           id,
           name,
           description,
-          subscription_plan,
           is_active
         ),
         roles (
