@@ -2,7 +2,6 @@ import {  useState, useEffect  } from "react";
 import { createPortal } from "react-dom";
 import { Users, Plus, X, Trash2, Mail, Shield, UserCheck, UserX, Crown, Settings, Eye, Key, Copy, Check, AlertCircle, Clock, RefreshCw, Zap, Loader2 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
-import { useAuthStore } from '../stores/authStore';
 import { Input } from './ui/Input';
 import type { Role } from '../types/auth';
 import { Can, useCan } from '../lib/casl';
@@ -132,37 +131,26 @@ const UsersSettings = () => {
       setLoading(true);
       setError(null);
 
-      const accessToken = useAuthStore.getState().getAccessToken();
-      if (!accessToken) {
-        throw new Error('Not authenticated');
-      }
-
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/invite-user`,
+      // Routed through NestJS now (POST /api/v1/organization-users/invite).
+      // The previous Supabase Edge Function call was blocked by CORS from
+      // the dashboard origin and the function wasn't owned by this repo.
+      const result = await organizationUsersApi.invite(
         {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${accessToken}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            email: inviteUser.email,
-            role_id: inviteUser.role_id,
-            organization_id: currentOrganization.id,
-            first_name: inviteUser.first_name,
-            last_name: inviteUser.last_name
-          })
-        }
+          email: inviteUser.email,
+          role_id: inviteUser.role_id,
+          organization_id: currentOrganization.id,
+          first_name: inviteUser.first_name,
+          last_name: inviteUser.last_name,
+        },
+        currentOrganization.id,
       );
-
-      const result = await response.json();
 
       if (!result.success) {
         throw new Error(result.error || 'Failed to invite user');
       }
 
       // Show success message
-      if (result.message.includes('Invitation email sent')) {
+      if ((result.message ?? '').includes('Invitation email sent')) {
         toast.success(t('users.invite.success'), {
           description: t('users.invite.successDescription', { email: inviteUser.email }),
           duration: 5000,

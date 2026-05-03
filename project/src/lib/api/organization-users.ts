@@ -89,6 +89,23 @@ export const organizationUsersApi = {
   },
 
   /**
+   * Invite a user by email. Replaces the legacy Supabase Edge Function
+   * call (which couldn't be reached cross-origin from the dashboard).
+   */
+  async invite(
+    data: {
+      email: string;
+      role_id: string;
+      organization_id?: string;
+      first_name?: string;
+      last_name?: string;
+    },
+    organizationId?: string,
+  ): Promise<{ success: boolean; message?: string; error?: string }> {
+    return apiClient.post(`${BASE_URL}/invite`, data, {}, organizationId);
+  },
+
+  /**
    * Update an organization user's role or status
    */
   async update(userId: string, data: UpdateOrganizationUserInput, organizationId?: string) {
