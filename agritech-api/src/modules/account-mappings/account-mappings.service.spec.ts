@@ -14,7 +14,7 @@ import { TEST_IDS } from '../../../test/helpers/test-utils';
 describe('AccountMappingsService', () => {
   let service: AccountMappingsService;
   let mockClient: MockSupabaseClient;
-  let mockDatabaseService: { getClient: jest.Mock };
+  let mockDatabaseService: { getAdminClient: jest.Mock };
 
   // ============================================================
   // TEST DATA FIXTURES
@@ -65,7 +65,7 @@ describe('AccountMappingsService', () => {
   beforeEach(async () => {
     mockClient = createMockSupabaseClient();
     mockDatabaseService = {
-      getClient: jest.fn(() => mockClient),
+      getAdminClient: jest.fn(() => mockClient),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -76,6 +76,14 @@ describe('AccountMappingsService', () => {
     }).compile();
 
     service = module.get<AccountMappingsService>(AccountMappingsService);
+
+    // Bypass the new organizations-table lookup added by the multi-country
+    // account_mappings refactor. Tests in this file mock a single `from()`
+    // call chain per case; routing a second call to `organizations` would
+    // require rewriting every test, so stub the resolver directly.
+    (service as any).getOrganizationAccountingContext = jest
+      .fn()
+      .mockResolvedValue({ countryCode: 'MA', accountingStandard: 'CGNC' });
   });
 
   const mockFrom = (queryBuilder: MockQueryBuilder) => {
@@ -262,9 +270,11 @@ describe('AccountMappingsService', () => {
       it('should reject update with duplicate key', async () => {
         const queryBuilder = createMockQueryBuilder();
         queryBuilder.eq.mockReturnValue(queryBuilder);
-        queryBuilder.single
-          .mockResolvedValueOnce(mockQueryResult(mockMapping)) // Exists
-          .mockResolvedValueOnce(mockQueryResult({ id: 'other-id' })); // Duplicate exists
+        queryBuilder.neq.mockReturnValue(queryBuilder);
+        queryBuilder.or.mockReturnValue(queryBuilder);
+        // findOne uses .single(); the dup check now uses .maybeSingle().
+        queryBuilder.single.mockResolvedValueOnce(mockQueryResult(mockMapping)); // findOne
+        queryBuilder.maybeSingle.mockResolvedValueOnce(mockQueryResult({ id: 'other-id' })); // Duplicate
         mockFrom(queryBuilder);
 
         await expect(
@@ -772,129 +782,117 @@ describe('AccountMappingsService', () => {
   });
 
   describe('initializeDefaultMappings', () => {
+    // Helper: build a multi-table mock for the new initializeDefaultMappings flow.
+    //   1. accounts → returns chart rows (id+code)
+    //   2. account_mappings → existing rows (mapping_type+mapping_key tuples)
+    //   3. account_mappings (insert) → returns success/error
+    const setupInitMocks = (opts: {
+      accounts?: Array<{ id: string; code: string }>;
+      existingMappings?: Array<{ mapping_type: string; mapping_key: string }>;
+      insertError?: { message: string } | null;
+    }) => {
+      const accounts = opts.accounts ?? [
+        { id: 'acc-3110', code: '3110' },
+        { id: 'acc-3500', code: '3500' },
+        { id: 'acc-4400', code: '4400' },
+        { id: 'acc-5141', code: '5141' },
+        { id: 'acc-6110', code: '6110' },
+        { id: 'acc-6121', code: '6121' },
+        { id: 'acc-6131', code: '6131' },
+        { id: 'acc-6174', code: '6174' },
+        { id: 'acc-6175', code: '6175' },
+        { id: 'acc-6176', code: '6176' },
+        { id: 'acc-7111', code: '7111' },
+        { id: 'acc-7112', code: '7112' },
+        { id: 'acc-7113', code: '7113' },
+        { id: 'acc-3420', code: '3420' },
+        { id: 'acc-4410', code: '4410' },
+        { id: 'acc-4456', code: '4456' },
+        { id: 'acc-4457', code: '4457' },
+      ];
+
+      const accountsBuilder = createMockQueryBuilder();
+      accountsBuilder.eq.mockReturnValue(accountsBuilder);
+      accountsBuilder.then.mockImplementation((resolve) => {
+        resolve(mockQueryResult(accounts));
+        return Promise.resolve(mockQueryResult(accounts));
+      });
+
+      const existingBuilder = createMockQueryBuilder();
+      existingBuilder.eq.mockReturnValue(existingBuilder);
+      existingBuilder.then.mockImplementation((resolve) => {
+        resolve(mockQueryResult(opts.existingMappings ?? []));
+        return Promise.resolve(mockQueryResult(opts.existingMappings ?? []));
+      });
+
+      const insertBuilder = createMockQueryBuilder();
+      insertBuilder.insert.mockResolvedValue(mockQueryResult(null, opts.insertError ?? null));
+
+      // Route by table + by call order (existing-check, then insert both go to account_mappings).
+      let amCallCount = 0;
+      mockClient.from.mockImplementation((table: string) => {
+        if (table === 'accounts') return accountsBuilder;
+        if (table === 'account_mappings') {
+          amCallCount += 1;
+          return amCallCount === 1 ? existingBuilder : insertBuilder;
+        }
+        return createMockQueryBuilder();
+      });
+
+      return { accountsBuilder, existingBuilder, insertBuilder };
+    };
+
     it('should create default mappings for new organization', async () => {
-      const queryBuilder1 = createMockQueryBuilder();
-      queryBuilder1.eq.mockReturnValue(queryBuilder1);
-      queryBuilder1.limit.mockReturnValue(queryBuilder1);
-      // First query: check for existing mappings (returns empty)
-      queryBuilder1.then.mockImplementation((resolve) => {
-        resolve(mockQueryResult([]));
-        return Promise.resolve(mockQueryResult([]));
-      });
-
-      const queryBuilder2 = createMockQueryBuilder();
-      queryBuilder2.eq.mockReturnValue(queryBuilder2);
-      // Second query: count new mappings (returns 3 mappings)
-      queryBuilder2.then.mockImplementation((resolve) => {
-        resolve(mockQueryResult([
-          { id: '1' },
-          { id: '2' },
-          { id: '3' },
-        ]));
-        return Promise.resolve(mockQueryResult([
-          { id: '1' },
-          { id: '2' },
-          { id: '3' },
-        ]));
-      });
-
-      mockClient.from
-        .mockReturnValueOnce(queryBuilder1)
-        .mockReturnValueOnce(queryBuilder2);
-
-      mockClient.rpc.mockResolvedValue({ data: null, error: null });
+      const { insertBuilder } = setupInitMocks({});
 
       const result = await service.initializeDefaultMappings(ORGANIZATION_ID, 'MA');
 
       expect(result).toBeDefined();
       expect(result.count).toBeGreaterThan(0);
+      expect(insertBuilder.insert).toHaveBeenCalled();
     });
 
-    it('should skip initialization if mappings already exist', async () => {
-      const queryBuilder = createMockQueryBuilder();
-      queryBuilder.eq.mockReturnValue(queryBuilder);
-      queryBuilder.limit.mockReturnValue(queryBuilder);
-      // Setup the limit().then() chain for existing mappings
-      queryBuilder.then.mockImplementation((resolve) => {
-        resolve(mockQueryResult([{ id: 'existing' }]));
-        return Promise.resolve(mockQueryResult([{ id: 'existing' }]));
-      });
-      mockClient.from.mockReturnValue(queryBuilder);
+    it('should skip insertion when all defaults already exist', async () => {
+      // Stub the defaults list to a small fixed set so the test owns the tuples
+      // it pre-fills as "existing".
+      const stubDefaults = [
+        { mapping_type: 'cost_type', mapping_key: 'labor', account_code: '6171', description: '' },
+        { mapping_type: 'cash', mapping_key: 'bank', account_code: '5141', description: '' },
+      ];
+      (service as any).getDefaultMappingDefinitions = jest.fn().mockReturnValue(stubDefaults);
 
-      const result = await service.initializeDefaultMappings(ORGANIZATION_ID, 'MA');
-
-      expect(result.message).toContain('already initialized');
-      expect(result.count).toBe(0);
-      expect(mockClient.rpc).not.toHaveBeenCalled();
-    });
-
-    it('should handle RPC errors gracefully', async () => {
-      const queryBuilder1 = createMockQueryBuilder();
-      queryBuilder1.eq.mockReturnValue(queryBuilder1);
-      queryBuilder1.limit.mockReturnValue(queryBuilder1);
-      // First query: check for existing mappings (returns empty)
-      queryBuilder1.then.mockImplementation((resolve) => {
-        resolve(mockQueryResult([]));
-        return Promise.resolve(mockQueryResult([]));
-      });
-
-      const queryBuilder2 = createMockQueryBuilder();
-      queryBuilder2.eq.mockReturnValue(queryBuilder2);
-      // Second query: count new mappings (returns empty after RPC errors)
-      queryBuilder2.then.mockImplementation((resolve) => {
-        resolve(mockQueryResult([]));
-        return Promise.resolve(mockQueryResult([]));
-      });
-
-      mockClient.from
-        .mockReturnValueOnce(queryBuilder1)
-        .mockReturnValueOnce(queryBuilder2);
-
-      mockClient.rpc.mockResolvedValue({
-        data: null,
-        error: { message: 'Function not found' },
+      const { insertBuilder } = setupInitMocks({
+        accounts: [
+          { id: 'acc-6171', code: '6171' },
+          { id: 'acc-5141', code: '5141' },
+        ],
+        existingMappings: stubDefaults.map((d) => ({
+          mapping_type: d.mapping_type,
+          mapping_key: d.mapping_key,
+        })),
       });
 
       const result = await service.initializeDefaultMappings(ORGANIZATION_ID, 'MA');
 
-      expect(result).toBeDefined();
       expect(result.count).toBe(0);
+      expect(result.message).toContain('already exist');
+      expect(insertBuilder.insert).not.toHaveBeenCalled();
     });
 
-    it('should call both task and harvest mapping functions', async () => {
-      const queryBuilder1 = createMockQueryBuilder();
-      queryBuilder1.eq.mockReturnValue(queryBuilder1);
-      queryBuilder1.limit.mockReturnValue(queryBuilder1);
-      // First query: check for existing mappings (returns empty)
-      queryBuilder1.then.mockImplementation((resolve) => {
-        resolve(mockQueryResult([]));
-        return Promise.resolve(mockQueryResult([]));
-      });
+    it('should fail loudly when chart of accounts is empty', async () => {
+      setupInitMocks({ accounts: [] });
 
-      const queryBuilder2 = createMockQueryBuilder();
-      queryBuilder2.eq.mockReturnValue(queryBuilder2);
-      // Second query: count new mappings
-      queryBuilder2.then.mockImplementation((resolve) => {
-        resolve(mockQueryResult([{ id: 'new-mapping' }]));
-        return Promise.resolve(mockQueryResult([{ id: 'new-mapping' }]));
-      });
+      await expect(service.initializeDefaultMappings(ORGANIZATION_ID, 'MA')).rejects.toThrow(
+        BadRequestException,
+      );
+    });
 
-      mockClient.from
-        .mockReturnValueOnce(queryBuilder1)
-        .mockReturnValueOnce(queryBuilder2);
+    it('should propagate insert errors', async () => {
+      setupInitMocks({ insertError: { message: 'Constraint violated' } });
 
-      mockClient.rpc.mockResolvedValue({ data: null, error: null });
-
-      await service.initializeDefaultMappings(ORGANIZATION_ID, 'MA');
-
-      expect(mockClient.rpc).toHaveBeenCalledWith('create_task_cost_mappings', {
-        p_organization_id: ORGANIZATION_ID,
-        p_country_code: 'MA',
-      });
-      expect(mockClient.rpc).toHaveBeenCalledWith('create_harvest_sales_mappings', {
-        p_organization_id: ORGANIZATION_ID,
-        p_country_code: 'MA',
-      });
+      await expect(service.initializeDefaultMappings(ORGANIZATION_ID, 'MA')).rejects.toThrow(
+        BadRequestException,
+      );
     });
   });
 
@@ -1275,34 +1273,44 @@ describe('AccountMappingsService', () => {
     });
 
     it('should initialize country-specific mappings', async () => {
-      const countryCodes = ['MA', 'FR', 'TN', 'US'];
+      // Only MA defaults are seeded today; other countries throw "no defaults available".
+      // Verify MA flow returns mappings.
+      const accounts = [
+        { id: 'acc-3110', code: '3110' },
+        { id: 'acc-4400', code: '4400' },
+        { id: 'acc-5141', code: '5141' },
+        { id: 'acc-6110', code: '6110' },
+        { id: 'acc-7111', code: '7111' },
+      ];
+      const accountsBuilder = createMockQueryBuilder();
+      accountsBuilder.eq.mockReturnValue(accountsBuilder);
+      accountsBuilder.then.mockImplementation((resolve) => {
+        resolve(mockQueryResult(accounts));
+        return Promise.resolve(mockQueryResult(accounts));
+      });
+      const existingBuilder = createMockQueryBuilder();
+      existingBuilder.eq.mockReturnValue(existingBuilder);
+      existingBuilder.then.mockImplementation((resolve) => {
+        resolve(mockQueryResult([]));
+        return Promise.resolve(mockQueryResult([]));
+      });
+      const insertBuilder = createMockQueryBuilder();
+      insertBuilder.insert.mockResolvedValue(mockQueryResult(null, null));
 
-      for (const countryCode of countryCodes) {
-        mockClient.from.mockClear();
-        mockClient.rpc.mockClear();
+      let amCallCount = 0;
+      mockClient.from.mockImplementation((table: string) => {
+        if (table === 'accounts') return accountsBuilder;
+        if (table === 'account_mappings') {
+          amCallCount += 1;
+          return amCallCount === 1 ? existingBuilder : insertBuilder;
+        }
+        return createMockQueryBuilder();
+      });
 
-        const queryBuilder = createMockQueryBuilder();
-        queryBuilder.eq.mockReturnValue(queryBuilder);
-        queryBuilder.limit.mockReturnValue(queryBuilder);
-        queryBuilder.then.mockImplementation((resolve) => {
-          resolve(mockQueryResult([]));
-          return Promise.resolve(mockQueryResult([]));
-        });
-        mockFrom(queryBuilder);
+      const result = await service.initializeDefaultMappings(ORGANIZATION_ID, 'MA');
 
-        mockClient.rpc.mockResolvedValue({ data: null, error: null });
-
-        const result = await service.initializeDefaultMappings(
-          ORGANIZATION_ID,
-          countryCode
-        );
-
-        expect(result).toBeDefined();
-        expect(mockClient.rpc).toHaveBeenCalledWith('create_task_cost_mappings', {
-          p_organization_id: ORGANIZATION_ID,
-          p_country_code: countryCode,
-        });
-      }
+      expect(result).toBeDefined();
+      expect(result.count).toBeGreaterThan(0);
     });
   });
 });

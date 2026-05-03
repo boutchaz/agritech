@@ -133,12 +133,13 @@ export class PaymentRecordsService {
   /**
    * Get payment records for a specific worker
    */
-  async getByWorkerId(workerId: string) {
+  async getByWorkerId(organizationId: string, workerId: string) {
     const client = this.databaseService.getAdminClient();
 
     const { data, error } = await client
       .from('payment_records')
       .select('*')
+      .eq('organization_id', organizationId)
       .eq('worker_id', workerId)
       .order('period_end', { ascending: false });
 
@@ -152,12 +153,13 @@ export class PaymentRecordsService {
   /**
    * Get payment history for a specific worker
    */
-  async getWorkerPaymentHistory(workerId: string) {
+  async getWorkerPaymentHistory(organizationId: string, workerId: string) {
     const client = this.databaseService.getAdminClient();
 
     const { data, error } = await client
       .from('worker_payment_history')
       .select('*')
+      .eq('organization_id', organizationId)
       .eq('worker_id', workerId)
       .single();
 
@@ -815,6 +817,63 @@ export class PaymentRecordsService {
       throw new BadRequestException('Payment must be approved before processing');
     }
 
+    // Fetch full row first; we need its fields to post the JE before flipping status.
+    const { data: payment, error: fetchErr } = await client
+      .from('payment_records')
+      .select('*')
+      .eq('id', paymentId)
+      .eq('organization_id', organizationId)
+      .single();
+
+    if (fetchErr || !payment) {
+      throw new BadRequestException(`Failed to fetch payment: ${fetchErr?.message || 'not found'}`);
+    }
+
+    // Atomicity: post the journal entry FIRST. If mappings are missing or the JE
+    // insert fails, the payment stays 'approved' — books and payment row stay in
+    // sync. The previous order flipped status before posting and swallowed errors,
+    // leaving paid payments with no GL entry.
+    const { data: existingJournal } = await client
+      .from('journal_entries')
+      .select('id')
+      .eq('reference_id', paymentId)
+      .eq('reference_type', 'worker_payment')
+      .maybeSingle();
+
+    if (!existingJournal) {
+      const { data: jeWorker } = await client
+        .from('workers')
+        .select('first_name, last_name')
+        .eq('id', payment.worker_id)
+        .maybeSingle();
+
+      const jeWorkerName = jeWorker
+        ? `${jeWorker.first_name} ${jeWorker.last_name}`
+        : 'Worker';
+
+      const jePaymentDate = payment.payment_date ? new Date(payment.payment_date) : new Date();
+
+      const journalEntry = await this.accountingAutomationService.createJournalEntryFromWorkerPayment(
+        organizationId,
+        payment.id,
+        payment.net_amount || 0,
+        jePaymentDate,
+        jeWorkerName,
+        payment.payment_type || 'salary',
+        userId,
+        payment.farm_id || undefined,
+      );
+
+      if (!journalEntry?.id) {
+        throw new BadRequestException(
+          `Journal entry not created for payment ${paymentId}. Verify account mappings.`,
+        );
+      }
+      this.logger.log(`Journal entry ${journalEntry.id} created for payment ${payment.id}`);
+    } else {
+      this.logger.log(`Journal entry ${existingJournal.id} already exists for payment ${paymentId}`);
+    }
+
     const { data, error } = await client
       .from('payment_records')
       .update({
@@ -901,58 +960,6 @@ export class PaymentRecordsService {
           `Failed to update work_records payment_status for payment ${paymentId}: ${workRecordError instanceof Error ? workRecordError.message : 'Unknown error'}`,
         );
       }
-    }
-
-    // Create journal entry for the payment if it doesn't already exist
-    try {
-      // Check if journal entry already exists for this payment
-      const { data: existingJournal } = await client
-        .from('journal_entries')
-        .select('id')
-        .eq('reference_id', paymentId)
-        .eq('reference_type', 'worker_payment')
-        .maybeSingle();
-
-      if (!existingJournal) {
-        // Get worker name for journal entry description
-        const { data: worker } = await client
-          .from('workers')
-          .select('first_name, last_name')
-          .eq('id', data.worker_id)
-          .maybeSingle();
-
-        const workerName = worker
-          ? `${worker.first_name} ${worker.last_name}`
-          : 'Worker';
-
-        const paymentDate = data.payment_date
-          ? new Date(data.payment_date)
-          : new Date();
-
-        const journalEntry = await this.accountingAutomationService.createJournalEntryFromWorkerPayment(
-          organizationId,
-          data.id,
-          data.net_amount || 0,
-          paymentDate,
-          workerName,
-          data.payment_type || 'salary',
-          userId,
-          data.farm_id || undefined,
-        );
-
-        if (journalEntry?.id) {
-          // Journal entry is already linked via reference_id and reference_type
-          this.logger.log(`Journal entry ${journalEntry.id} created for payment ${data.id}`);
-        }
-      } else {
-        this.logger.log(`Journal entry ${existingJournal.id} already exists for payment ${paymentId}`);
-      }
-    } catch (journalError) {
-      // Log error but don't fail payment processing if journal entry fails
-      this.logger.error(
-        `Failed to create journal entry for payment ${paymentId}: ${journalError instanceof Error ? journalError.message : 'Unknown error'}`,
-      );
-      // Payment is still processed, just without journal entry
     }
 
     try {

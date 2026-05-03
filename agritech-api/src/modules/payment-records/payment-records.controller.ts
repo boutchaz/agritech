@@ -62,8 +62,11 @@ export class PaymentRecordsController {
    * Get payment records for a specific worker
    */
   @Get('worker/:workerId')
-  async getWorkerPayments(@Param('workerId') workerId: string) {
-    return this.paymentRecordsService.getByWorkerId(workerId);
+  async getWorkerPayments(
+    @Param('organizationId') organizationId: string,
+    @Param('workerId') workerId: string,
+  ) {
+    return this.paymentRecordsService.getByWorkerId(organizationId, workerId);
   }
 
   /**
@@ -71,8 +74,11 @@ export class PaymentRecordsController {
    * Get payment history for a specific worker
    */
   @Get('worker/:workerId/history')
-  async getWorkerPaymentHistory(@Param('workerId') workerId: string) {
-    return this.paymentRecordsService.getWorkerPaymentHistory(workerId);
+  async getWorkerPaymentHistory(
+    @Param('organizationId') organizationId: string,
+    @Param('workerId') workerId: string,
+  ) {
+    return this.paymentRecordsService.getWorkerPaymentHistory(organizationId, workerId);
   }
 
   /**

@@ -99,7 +99,35 @@ export const PaymentForm = ({ payment, onSuccess, onCancel }: PaymentFormProps) 
   const onSubmit = async (data: PaymentFormData) => {
     try {
       if (payment) {
-        await updatePayment.mutateAsync({ id: payment.id, ...data });
+        // Backend exposes no PATCH endpoint for payment fields — only status
+        // transitions. If the user edited amount/date/method/etc. we must
+        // surface that instead of silently dropping the changes.
+        const editableFieldsChanged =
+          Number(data.amount) !== Number(payment.amount) ||
+          data.payment_date !== payment.payment_date ||
+          data.payment_method !== payment.payment_method ||
+          (data.reference_number || null) !== (payment.reference_number || null) ||
+          (data.party_name || '') !== (payment.party_name || '') ||
+          (data.party_id || null) !== (payment.party_id || null) ||
+          (data.party_type || null) !== (payment.party_type || null) ||
+          data.payment_type !== payment.payment_type ||
+          (data.bank_account_id || null) !== (payment.bank_account_id || null) ||
+          (data.remarks || '') !== (payment.remarks || '');
+
+        if (editableFieldsChanged) {
+          throw new Error(
+            'Editing amount, date, method, party, or remarks on an existing payment is not supported. Cancel the payment and create a new one instead.',
+          );
+        }
+
+        const statusChanged = data.status && data.status !== payment.status;
+        if (!statusChanged) {
+          // Nothing to do — don't pretend success.
+          onSuccess?.();
+          return;
+        }
+
+        await updatePayment.mutateAsync({ id: payment.id, status: data.status });
       } else {
         await createPayment.mutateAsync(data as CreatePaymentInput);
       }

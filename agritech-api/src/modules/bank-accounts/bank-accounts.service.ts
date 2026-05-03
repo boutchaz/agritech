@@ -163,10 +163,13 @@ export class BankAccountsService {
       // Check if bank account exists
       await this.findOne(id, organizationId);
 
-      // Check if bank account is used in payments
+      // Check if bank account is used in payments (defense in depth — findOne above
+      // already validated org ownership, but scoping the count check by org too
+      // prevents leaking existence of cross-tenant payments through error timing).
       const { data: payments } = await supabaseClient
         .from('accounting_payments')
         .select('id')
+        .eq('organization_id', organizationId)
         .eq('bank_account_id', id)
         .limit(1);
 

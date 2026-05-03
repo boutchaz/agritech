@@ -434,7 +434,7 @@ export class InvoicesService {
     // Fetch current invoice to validate transition
     const { data: currentInvoice, error: fetchError } = await supabaseClient
       .from('invoices')
-      .select('status, journal_entry_id, grand_total, outstanding_amount, party_id, party_name, party_type, currency_code, invoice_type, invoice_number')
+      .select('status, journal_entry_id, grand_total, outstanding_amount, paid_amount, party_id, party_name, party_type, currency_code, invoice_type, invoice_number')
       .eq('id', id)
       .eq('organization_id', organizationId)
       .single();
@@ -482,48 +482,27 @@ export class InvoicesService {
       reversalEntryId = reversal.reversalEntryId;
     }
 
-    const updateData: any = {
-      status: dto.status,
-    };
-
-    if (dto.remarks) {
-      updateData.remarks = dto.remarks;
-    }
-
-    // Update submitted timestamp if status is submitted
-    if (dto.status === 'submitted') {
-      updateData.submitted_at = new Date().toISOString();
-      updateData.submitted_by = userId;
-    }
-
-    // When marking as paid, also set paid_amount and outstanding_amount
+    // Atomicity: when marking paid, post payment + allocate (which posts JE)
+    // BEFORE flipping invoice status. If payment posting fails, the invoice
+    // stays in its prior status — no orphan "paid" with no payment row.
     if (dto.status === 'paid') {
-      const total = Number(currentInvoice.grand_total) || 0;
-      updateData.paid_amount = total;
-      updateData.outstanding_amount = 0;
-    }
+      // Pay only the *remaining* balance — using grand_total would over-allocate
+      // a partially_paid invoice and the allocation guard would reject it.
+      const grand = Number(currentInvoice.grand_total) || 0;
+      const alreadyPaid = Number(currentInvoice.paid_amount) || 0;
+      const outstanding = currentInvoice.outstanding_amount != null
+        ? Number(currentInvoice.outstanding_amount)
+        : grand - alreadyPaid;
+      const amount = Math.max(0, outstanding);
 
-    const { data, error } = await supabaseClient
-      .from('invoices')
-      .update(updateData)
-      .eq('id', id)
-      .eq('organization_id', organizationId)
-      .select()
-      .single();
+      if (amount === 0) {
+        // Nothing to pay — invoice already settled. Just flip the status below.
+      }
 
-    if (error) {
-      this.logger.error(`Failed to update invoice status: ${error.message}`);
-      throw new BadRequestException(`Failed to update invoice status: ${error.message}`);
-    }
+      const paymentType = currentInvoice.invoice_type === 'sales' ? PaymentType.RECEIVE : PaymentType.PAY;
 
-    // When marking as paid, route through the canonical PaymentsService flow so a JE
-    // is posted, the bank balance moves, and the payment lands in 'submitted' status
-    // with a journal_entry_id. The previous shortcut left the payment row without a JE.
-    if (dto.status === 'paid') {
-      try {
-        const amount = Number(currentInvoice.grand_total) || 0;
-        const paymentType = currentInvoice.invoice_type === 'sales' ? PaymentType.RECEIVE : PaymentType.PAY;
-
+      // Skip payment posting only if outstanding is zero (already settled).
+      if (amount > 0) {
         const draftPayment = await this.paymentsService.create(
           {
             payment_type: paymentType,
@@ -547,13 +526,41 @@ export class InvoicesService {
           organizationId,
           userId,
         );
-      } catch (paymentErr: any) {
-        // Surface accounting failure so caller knows JE was not posted.
-        this.logger.error(`Failed to post payment for invoice ${id}: ${paymentErr?.message}`);
-        throw new BadRequestException(
-          `Invoice marked paid but payment posting failed: ${paymentErr?.message}. Reverse status or retry via Payments module.`,
-        );
       }
+    }
+
+    const updateData: any = {
+      status: dto.status,
+    };
+
+    if (dto.remarks) {
+      updateData.remarks = dto.remarks;
+    }
+
+    // Update submitted timestamp if status is submitted
+    if (dto.status === 'submitted') {
+      updateData.submitted_at = new Date().toISOString();
+      updateData.submitted_by = userId;
+    }
+
+    // Mark fully paid (after payment+JE succeeded above)
+    if (dto.status === 'paid') {
+      const total = Number(currentInvoice.grand_total) || 0;
+      updateData.paid_amount = total;
+      updateData.outstanding_amount = 0;
+    }
+
+    const { data, error } = await supabaseClient
+      .from('invoices')
+      .update(updateData)
+      .eq('id', id)
+      .eq('organization_id', organizationId)
+      .select()
+      .single();
+
+    if (error) {
+      this.logger.error(`Failed to update invoice status: ${error.message}`);
+      throw new BadRequestException(`Failed to update invoice status: ${error.message}`);
     }
 
     return reversalEntryId ? { ...data, reversal_entry_id: reversalEntryId } : data;

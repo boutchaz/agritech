@@ -13,10 +13,11 @@ import { PricingConfigController } from './pricing-config.controller';
 import { PricingConfigService } from './pricing-config.service';
 import { InternalAdminGuard } from './guards/internal-admin.guard';
 import { DatabaseModule } from '../database/database.module';
+import { AccountsModule } from '../accounts/accounts.module';
 import { SubscriptionPricingService } from '../subscriptions/subscription-pricing.service';
 
 @Module({
-  imports: [DatabaseModule, ScheduleModule.forRoot()],
+  imports: [DatabaseModule, AccountsModule, ScheduleModule.forRoot()],
   controllers: [AdminController, CronJobsController, SupportedCountriesController, PolarProductsController, PricingConfigController],
   providers: [AdminService, ReferentialService, CronRegistryService, SupportedCountriesService, InternalAdminGuard, PolarProductsService, PricingConfigService, SubscriptionPricingService],
   exports: [AdminService, ReferentialService, CronRegistryService, SupportedCountriesService, PricingConfigService, InternalAdminGuard],

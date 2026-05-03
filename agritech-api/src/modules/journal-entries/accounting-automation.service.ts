@@ -661,23 +661,20 @@ export class AccountingAutomationService {
       'bank',
     );
 
-    // Log warning if mappings are missing but don't fail (allow payment to be created)
+    // Mappings are required — silently returning null lets the caller mark the
+    // payment 'paid' with no GL impact, breaking payroll-to-ledger completeness.
     if (!expenseAccountId) {
-      this.logger.warn(
+      throw new BadRequestException(
         `Account mapping missing for worker payment expense (labor/salary/wages). ` +
-        `Payment ${paymentId} created but journal entry not created. ` +
-        `Please configure account mappings for labor/salary/wages.`,
+        `Configure cost_type → labor/salary/wages on Settings → Account Mappings before processing payments.`,
       );
-      return null;
     }
 
     if (!cashAccountId) {
-      this.logger.warn(
+      throw new BadRequestException(
         `Cash account mapping missing. ` +
-        `Payment ${paymentId} created but journal entry not created. ` +
-        `Please configure cash/bank account mapping.`,
+        `Configure cash → bank on Settings → Account Mappings before processing payments.`,
       );
-      return null;
     }
 
     // Generate journal entry number

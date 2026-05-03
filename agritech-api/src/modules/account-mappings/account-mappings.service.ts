@@ -339,24 +339,51 @@ export class AccountMappingsService {
     const supabaseClient = this.databaseService.getAdminClient();
 
     try {
-      // Check if mapping exists
-      await this.findOne(id, organizationId);
+      // Fetch existing row so we can merge the patch against current values.
+      // The create() invariant mirrors mapping_key↔source_key — the update
+      // path must preserve that or rows drift into asymmetric keys, and the
+      // dup check must run against the post-merge values, not just the patch.
+      const current = await this.findOne(id, organizationId);
 
-      // Check for duplicate if updating keys
-      const key = dto.source_key || dto.mapping_key;
-      if (key && dto.mapping_type) {
+      // Enforce the create() invariant: mapping_key and source_key must always
+      // be equal. If a caller patches one or both, collapse them to the most
+      // specific provided value. Reject mismatched explicit values rather than
+      // silently picking one — that would let callers produce asymmetric rows.
+      if (
+        dto.mapping_key != null &&
+        dto.source_key != null &&
+        dto.mapping_key !== dto.source_key
+      ) {
+        throw new BadRequestException(
+          `mapping_key and source_key must match. Received mapping_key="${dto.mapping_key}" source_key="${dto.source_key}".`,
+        );
+      }
+
+      const mergedType = dto.mapping_type ?? current.mapping_type;
+      const patchKey = dto.mapping_key ?? dto.source_key;
+      const mergedMappingKey = patchKey ?? current.mapping_key;
+      const mergedSourceKey = patchKey ?? current.source_key;
+
+      const keysChanged =
+        mergedMappingKey !== current.mapping_key ||
+        mergedSourceKey !== current.source_key ||
+        mergedType !== current.mapping_type;
+
+      if (keysChanged) {
+        const sanitizedMapping = String(mergedMappingKey).replace(/[,.()'"]/g, '');
+        const sanitizedSource = String(mergedSourceKey).replace(/[,.()'"]/g, '');
         const { data: existing } = await supabaseClient
           .from('account_mappings')
           .select('id')
           .eq('organization_id', organizationId)
-          .eq('mapping_type', dto.mapping_type)
-          .or(`mapping_key.eq.${key.replace(/[,.()'"]/g, '')},source_key.eq.${key.replace(/[,.()'"]/g, '')}`)
+          .eq('mapping_type', mergedType)
+          .or(`mapping_key.eq.${sanitizedMapping},source_key.eq.${sanitizedSource}`)
           .neq('id', id)
-          .single();
+          .maybeSingle();
 
         if (existing) {
           throw new BadRequestException(
-            `Account mapping for ${dto.mapping_type}/${key} already exists`
+            `Account mapping for ${mergedType}/${mergedMappingKey} already exists`
           );
         }
       }
@@ -378,9 +405,12 @@ export class AccountMappingsService {
         updateData.account_code = account.code;
       }
 
-      if (dto.mapping_type) updateData.mapping_type = dto.mapping_type;
-      if (dto.mapping_key) updateData.mapping_key = dto.mapping_key;
-      if (dto.source_key) updateData.source_key = dto.source_key;
+      // Always write keys together so they stay mirrored.
+      if (keysChanged) {
+        updateData.mapping_type = mergedType;
+        updateData.mapping_key = mergedMappingKey;
+        updateData.source_key = mergedSourceKey;
+      }
       if (dto.account_id) updateData.account_id = dto.account_id;
       if (dto.is_active !== undefined) updateData.is_active = dto.is_active;
       if (dto.description !== undefined) updateData.description = dto.description;

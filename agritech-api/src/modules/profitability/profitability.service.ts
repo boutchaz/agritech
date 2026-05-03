@@ -111,88 +111,226 @@ export class ProfitabilityService {
   }
 
   /**
-   * Calculate profitability analytics
+   * Build account_id → bucket-label maps from account_mappings.
+   * Bucket label = mapping_key (e.g. 'labor', 'materials', 'harvest').
+   * Items posted to accounts not present in any mapping fall into 'other'.
+   */
+  private async loadAccountBuckets(organizationId: string): Promise<{
+    costBucketByAccountId: Map<string, string>;
+    revenueBucketByAccountId: Map<string, string>;
+  }> {
+    const supabase = this.databaseService.getAdminClient();
+    const { data: mappings, error } = await supabase
+      .from('account_mappings')
+      .select('mapping_type, mapping_key, account_id')
+      .eq('organization_id', organizationId)
+      .eq('is_active', true)
+      .in('mapping_type', ['cost_type', 'revenue_type']);
+
+    if (error) {
+      this.logger.warn(`Failed to load account_mappings for buckets: ${error.message}`);
+    }
+
+    const costBucketByAccountId = new Map<string, string>();
+    const revenueBucketByAccountId = new Map<string, string>();
+    for (const m of mappings || []) {
+      if (!m.account_id || !m.mapping_key) continue;
+      if (m.mapping_type === 'cost_type') costBucketByAccountId.set(m.account_id, m.mapping_key);
+      else if (m.mapping_type === 'revenue_type') revenueBucketByAccountId.set(m.account_id, m.mapping_key);
+    }
+    return { costBucketByAccountId, revenueBucketByAccountId };
+  }
+
+  /**
+   * Resolve a fiscal year's date window so a fiscal_year filter narrows the
+   * journal_entries query. Returns null if not found.
+   */
+  private async resolveFiscalYearWindow(
+    organizationId: string,
+    fiscalYearId: string,
+  ): Promise<{ start: string; end: string } | null> {
+    const supabase = this.databaseService.getAdminClient();
+    const { data } = await supabase
+      .from('fiscal_years')
+      .select('start_date, end_date')
+      .eq('organization_id', organizationId)
+      .eq('id', fiscalYearId)
+      .maybeSingle();
+    if (!data) return null;
+    return { start: data.start_date, end: data.end_date };
+  }
+
+  /**
+   * Single source of truth for profitability totals: aggregate posted journal
+   * lines under expense/revenue accounts. Buckets each line via
+   * account_mappings (cost_type/revenue_type) — unmapped accounts → 'other'.
+   *
+   * Returns totals + per-parcel rollup. parcel_id=null lines are bucketed
+   * under the 'unassigned' key.
+   */
+  private async aggregateLedger(opts: {
+    organizationId: string;
+    startDate?: string;
+    endDate?: string;
+    parcelId?: string;
+  }): Promise<{
+    totalCosts: number;
+    totalRevenue: number;
+    costBreakdown: Record<string, number>;
+    revenueBreakdown: Record<string, number>;
+    byParcel: Map<string, {
+      parcel_id: string | null;
+      total_costs: number;
+      total_revenue: number;
+      cost_breakdown: Record<string, number>;
+      revenue_breakdown: Record<string, number>;
+    }>;
+  }> {
+    const supabase = this.databaseService.getAdminClient();
+    const { costBucketByAccountId, revenueBucketByAccountId } = await this.loadAccountBuckets(opts.organizationId);
+
+    const baseSelect = `
+      parcel_id, account_id, debit, credit,
+      accounts!inner(account_type),
+      journal_entries!inner(entry_date, status, organization_id)
+    `;
+
+    let q = supabase
+      .from('journal_items')
+      .select(baseSelect)
+      .eq('journal_entries.organization_id', opts.organizationId)
+      .eq('journal_entries.status', 'posted')
+      .in('accounts.account_type', ['expense', 'revenue', 'Expense', 'Revenue']);
+
+    if (opts.startDate) q = q.gte('journal_entries.entry_date', opts.startDate);
+    if (opts.endDate) q = q.lte('journal_entries.entry_date', opts.endDate);
+    if (opts.parcelId) q = q.eq('parcel_id', opts.parcelId);
+
+    const { data: items, error } = await q;
+    if (error) {
+      this.logger.error('Error aggregating ledger', error);
+      throw new InternalServerErrorException('Failed to aggregate ledger');
+    }
+
+    let totalCosts = 0;
+    let totalRevenue = 0;
+    const costBreakdown: Record<string, number> = {};
+    const revenueBreakdown: Record<string, number> = {};
+    const byParcel = new Map<string, {
+      parcel_id: string | null;
+      total_costs: number;
+      total_revenue: number;
+      cost_breakdown: Record<string, number>;
+      revenue_breakdown: Record<string, number>;
+    }>();
+
+    const ensureParcel = (rawParcelId: string | null) => {
+      const key = rawParcelId || 'unassigned';
+      let row = byParcel.get(key);
+      if (!row) {
+        row = {
+          parcel_id: rawParcelId,
+          total_costs: 0,
+          total_revenue: 0,
+          cost_breakdown: {},
+          revenue_breakdown: {},
+        };
+        byParcel.set(key, row);
+      }
+      return row;
+    };
+
+    for (const raw of items || []) {
+      const item = raw as any;
+      const accountType = String(item.accounts?.account_type || '').toLowerCase();
+      const debit = Number(item.debit || 0);
+      const credit = Number(item.credit || 0);
+      const parcelRow = ensureParcel(item.parcel_id || null);
+
+      if (accountType === 'expense') {
+        const net = debit - credit;
+        if (net === 0) continue;
+        const bucket = costBucketByAccountId.get(item.account_id) || 'other';
+        totalCosts += net;
+        costBreakdown[bucket] = (costBreakdown[bucket] || 0) + net;
+        parcelRow.total_costs += net;
+        parcelRow.cost_breakdown[bucket] = (parcelRow.cost_breakdown[bucket] || 0) + net;
+      } else if (accountType === 'revenue') {
+        const net = credit - debit;
+        if (net === 0) continue;
+        const bucket = revenueBucketByAccountId.get(item.account_id) || 'other';
+        totalRevenue += net;
+        revenueBreakdown[bucket] = (revenueBreakdown[bucket] || 0) + net;
+        parcelRow.total_revenue += net;
+        parcelRow.revenue_breakdown[bucket] = (parcelRow.revenue_breakdown[bucket] || 0) + net;
+      }
+    }
+
+    return { totalCosts, totalRevenue, costBreakdown, revenueBreakdown, byParcel };
+  }
+
+  /**
+   * Calculate profitability analytics from posted journal entries.
+   * The legacy `costs` and `revenues` tables are no longer summed here —
+   * they are detail data (createCost/createRevenue post a journal entry,
+   * which is the single source of truth).
    */
   async getProfitability(organizationId: string, filters: ProfitabilityFiltersDto) {
-    const [costs, revenues] = await Promise.all([
-      this.getCosts(organizationId, filters),
-      this.getRevenues(organizationId, filters),
-    ]);
+    let startDate = filters.start_date;
+    let endDate = filters.end_date;
 
-    // Calculate totals
-    const totalCosts = costs.reduce((sum, cost) => sum + Number(cost.amount), 0);
-    const totalRevenue = revenues.reduce((sum, rev) => sum + Number(rev.amount), 0);
-    const netProfit = totalRevenue - totalCosts;
-    const profitMargin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
-
-    // Cost breakdown by type
-    const costBreakdown = costs.reduce((acc, cost) => {
-      acc[cost.cost_type] = (acc[cost.cost_type] || 0) + Number(cost.amount);
-      return acc;
-    }, {} as Record<string, number>);
-
-    // Revenue breakdown by type
-    const revenueBreakdown = revenues.reduce((acc, rev) => {
-      acc[rev.revenue_type] = (acc[rev.revenue_type] || 0) + Number(rev.amount);
-      return acc;
-    }, {} as Record<string, number>);
-
-    // Group by parcel
-    const byParcel: Record<string, any> = {};
-
-    costs.forEach((cost) => {
-      const parcelId = cost.parcel_id || 'unassigned';
-      const parcelName = cost.parcel?.name || 'Non assigné';
-      if (!byParcel[parcelId]) {
-        byParcel[parcelId] = {
-          parcel_id: cost.parcel_id,
-          parcel_name: parcelName,
-          total_costs: 0,
-          total_revenue: 0,
-          net_profit: 0,
-          cost_breakdown: {},
-          revenue_breakdown: {},
-        };
+    if (filters.fiscal_year_id) {
+      const win = await this.resolveFiscalYearWindow(organizationId, filters.fiscal_year_id);
+      if (win) {
+        startDate = startDate || win.start;
+        endDate = endDate || win.end;
       }
-      byParcel[parcelId].total_costs += Number(cost.amount);
-      byParcel[parcelId].cost_breakdown[cost.cost_type] =
-        (byParcel[parcelId].cost_breakdown[cost.cost_type] || 0) + Number(cost.amount);
+    }
+
+    const agg = await this.aggregateLedger({
+      organizationId,
+      startDate,
+      endDate,
+      parcelId: filters.parcel_id,
     });
 
-    revenues.forEach((rev) => {
-      const parcelId = rev.parcel_id || 'unassigned';
-      const parcelName = rev.parcel?.name || 'Non assigné';
-      if (!byParcel[parcelId]) {
-        byParcel[parcelId] = {
-          parcel_id: rev.parcel_id,
-          parcel_name: parcelName,
-          total_costs: 0,
-          total_revenue: 0,
-          net_profit: 0,
-          cost_breakdown: {},
-          revenue_breakdown: {},
-        };
-      }
-      byParcel[parcelId].total_revenue += Number(rev.amount);
-      byParcel[parcelId].revenue_breakdown[rev.revenue_type] =
-        (byParcel[parcelId].revenue_breakdown[rev.revenue_type] || 0) + Number(rev.amount);
-    });
+    const supabase = this.databaseService.getAdminClient();
+    const parcelIds = Array.from(agg.byParcel.values())
+      .map((p) => p.parcel_id)
+      .filter((id): id is string => Boolean(id));
 
-    // Calculate net profit and margin for each parcel
-    Object.values(byParcel).forEach((parcel) => {
-      parcel.net_profit = parcel.total_revenue - parcel.total_costs;
-      parcel.profit_margin =
-        parcel.total_revenue > 0 ? (parcel.net_profit / parcel.total_revenue) * 100 : undefined;
-    });
+    const parcelNameById = new Map<string, string>();
+    if (parcelIds.length > 0) {
+      const { data: parcels } = await supabase
+        .from('parcels')
+        .select('id, name')
+        .eq('organization_id', organizationId)
+        .in('id', parcelIds);
+      for (const p of parcels || []) parcelNameById.set(p.id, p.name);
+    }
 
+    const byParcel = Array.from(agg.byParcel.values()).map((row) => ({
+      parcel_id: row.parcel_id,
+      parcel_name: row.parcel_id ? (parcelNameById.get(row.parcel_id) || 'Parcelle') : 'Non assigné',
+      total_costs: row.total_costs,
+      total_revenue: row.total_revenue,
+      net_profit: row.total_revenue - row.total_costs,
+      profit_margin: row.total_revenue > 0
+        ? ((row.total_revenue - row.total_costs) / row.total_revenue) * 100
+        : undefined,
+      cost_breakdown: row.cost_breakdown,
+      revenue_breakdown: row.revenue_breakdown,
+    }));
+
+    const netProfit = agg.totalRevenue - agg.totalCosts;
     return {
-      totalCosts,
-      totalRevenue,
+      totalCosts: agg.totalCosts,
+      totalRevenue: agg.totalRevenue,
       netProfit,
-      profitMargin,
-      costBreakdown,
-      revenueBreakdown,
-      byParcel: Object.values(byParcel),
+      profitMargin: agg.totalRevenue > 0 ? (netProfit / agg.totalRevenue) * 100 : 0,
+      costBreakdown: agg.costBreakdown,
+      revenueBreakdown: agg.revenueBreakdown,
+      byParcel,
     };
   }
 
@@ -904,14 +1042,20 @@ export class ProfitabilityService {
   }
 
   /**
-   * Multi-filter financial analysis:
-   * Aggregates costs + revenues across all parcels matching the given filter scope.
+   * Multi-filter financial analysis. Single source of truth = posted journal
+   * entries. Operational tables (costs, revenues, work_records,
+   * product_applications, harvest_records) are NOT summed here — they each
+   * post (or should post) their own JE via accounting-automation, and summing
+   * both sides double-counts.
+   *
+   * Cost/revenue buckets come from account_mappings (mapping_type cost_type/
+   * revenue_type). Items hitting unmapped accounts → 'other'.
    */
   async getAnalysis(organizationId: string, filters: ProfitabilityAnalysisFiltersDto) {
     const supabase = this.databaseService.getAdminClient();
 
-    const startDate = filters.start_date || '1970-01-01';
-    const endDate = filters.end_date || new Date().toISOString().split('T')[0];
+    const startDate = filters.start_date;
+    const endDate = filters.end_date;
 
     // 1. Resolve target parcels based on filter_type
     let parcelsQuery = supabase
@@ -939,6 +1083,9 @@ export class ProfitabilityService {
       throw new InternalServerErrorException('Failed to fetch parcels');
     }
 
+    const emptyCostBreakdown = { labor: 0, materials: 0, product_applications: 0, equipment: 0, other: 0 };
+    const emptyRevBreakdown = { harvest: 0, invoiced: 0, other: 0 };
+
     if (!parcels || parcels.length === 0) {
       return {
         filter_type: filterType,
@@ -950,8 +1097,8 @@ export class ProfitabilityService {
         total_revenue: 0,
         net_profit: 0,
         margin_percent: 0,
-        cost_breakdown: { labor: 0, materials: 0, product_applications: 0, equipment: 0, other: 0 },
-        revenue_breakdown: { harvest: 0, invoiced: 0, other: 0 },
+        cost_breakdown: emptyCostBreakdown,
+        revenue_breakdown: emptyRevBreakdown,
         by_parcel: [],
       };
     }
@@ -959,190 +1106,87 @@ export class ProfitabilityService {
     const parcelIds = parcels.map((p) => p.id);
     const farmIds = [...new Set(parcels.map((p: any) => p.farm_id).filter(Boolean))];
 
-    // Per-parcel accumulator
-    const parcelMap = new Map<string, { name: string; crop_type: string | null; variety: string | null; costs: number; revenue: number }>();
+    const parcelMeta = new Map<string, { name: string; crop_type: string | null; variety: string | null }>();
     for (const p of parcels) {
-      parcelMap.set(p.id, { name: p.name, crop_type: (p as any).crop_type || null, variety: (p as any).variety || null, costs: 0, revenue: 0 });
+      parcelMeta.set(p.id, {
+        name: p.name,
+        crop_type: (p as any).crop_type || null,
+        variety: (p as any).variety || null,
+      });
     }
 
-    // Cost breakdown accumulators
-    const breakdown = { labor: 0, materials: 0, product_applications: 0, equipment: 0, other: 0 };
-    const revBreakdown = { harvest: 0, invoiced: 0, other: 0 };
-
-    // 2. Aggregate legacy costs table
-    const { data: costsData } = await supabase
-      .from('costs')
-      .select('parcel_id, cost_type, amount')
-      .eq('organization_id', organizationId)
-      .in('parcel_id', parcelIds)
-      .gte('date', startDate)
-      .lte('date', endDate);
-
-    for (const c of costsData || []) {
-      const pm = parcelMap.get(c.parcel_id);
-      if (pm) pm.costs += Number(c.amount || 0);
-      const ct = (c.cost_type || 'other').toLowerCase();
-      if (ct === 'labor') breakdown.labor += Number(c.amount || 0);
-      else if (ct === 'materials') breakdown.materials += Number(c.amount || 0);
-      else if (ct === 'equipment') breakdown.equipment += Number(c.amount || 0);
-      else breakdown.other += Number(c.amount || 0);
-    }
-
-    // 3. Aggregate legacy revenues table
-    const { data: revsData } = await supabase
-      .from('revenues')
-      .select('parcel_id, revenue_type, amount')
-      .eq('organization_id', organizationId)
-      .in('parcel_id', parcelIds)
-      .gte('date', startDate)
-      .lte('date', endDate);
-
-    for (const r of revsData || []) {
-      const pm = parcelMap.get(r.parcel_id);
-      if (pm) pm.revenue += Number(r.amount || 0);
-      const rt = (r.revenue_type || 'other').toLowerCase();
-      if (rt === 'harvest') revBreakdown.harvest += Number(r.amount || 0);
-      else revBreakdown.other += Number(r.amount || 0);
-    }
-
-    // 4. Task-based labor costs (work_records linked to parcel tasks)
-    const { data: parcelTasksData } = await supabase
-      .from('tasks')
-      .select('id, parcel_id')
-      .in('parcel_id', parcelIds)
-      .eq('organization_id', organizationId);
-
-    const taskParcelMap = new Map<string, string>(); // task_id → parcel_id
-    for (const t of parcelTasksData || []) {
-      taskParcelMap.set(t.id, t.parcel_id);
-    }
-
-    const taskIds = [...taskParcelMap.keys()];
-    if (taskIds.length > 0) {
-      const { data: workRecs } = await supabase
-        .from('work_records')
-        .select('task_id, total_payment')
-        .eq('organization_id', organizationId)
-        .in('task_id', taskIds)
-        .gte('work_date', startDate)
-        .lte('work_date', endDate);
-
-      for (const wr of workRecs || []) {
-        const parcelId = taskParcelMap.get(wr.task_id);
-        if (parcelId) {
-          const pm = parcelMap.get(parcelId);
-          if (pm) pm.costs += Number(wr.total_payment || 0);
-        }
-        breakdown.labor += Number(wr.total_payment || 0);
-      }
-
-      // 5. Product applications (material costs)
-      const { data: appsByTask } = await supabase
-        .from('product_applications')
-        .select('task_id, parcel_id, cost, quantity_used, items(standard_rate)')
-        .eq('organization_id', organizationId)
-        .in('task_id', taskIds)
-        .gte('application_date', startDate)
-        .lte('application_date', endDate);
-
-      for (const app of appsByTask || []) {
-        const effectiveCost = app.cost != null
-          ? Number(app.cost)
-          : ((app as any).items?.standard_rate ? Number((app as any).items.standard_rate) * Number((app as any).quantity_used || 0) : 0);
-        if (effectiveCost <= 0) continue;
-        const resolvedParcelId = app.parcel_id || taskParcelMap.get(app.task_id);
-        if (resolvedParcelId) {
-          const pm = parcelMap.get(resolvedParcelId);
-          if (pm) pm.costs += effectiveCost;
-        }
-        breakdown.product_applications += effectiveCost;
-      }
-    }
-
-    // Also product applications directly by parcel_id (no task)
-    const { data: appsByParcel } = await supabase
-      .from('product_applications')
-      .select('parcel_id, cost, quantity_used, items(standard_rate)')
-      .eq('organization_id', organizationId)
-      .in('parcel_id', parcelIds)
-      .is('task_id', null)
-      .gte('application_date', startDate)
-      .lte('application_date', endDate);
-
-    for (const app of appsByParcel || []) {
-      const effectiveCost = app.cost != null
-        ? Number(app.cost)
-        : ((app as any).items?.standard_rate ? Number((app as any).items.standard_rate) * Number((app as any).quantity_used || 0) : 0);
-      if (effectiveCost <= 0) continue;
-      const pm = parcelMap.get(app.parcel_id);
-      if (pm) pm.costs += effectiveCost;
-      breakdown.product_applications += effectiveCost;
-    }
-
-    // 6. Harvest revenues
-    const { data: harvests } = await supabase
-      .from('harvest_records')
-      .select('parcel_id, estimated_revenue')
-      .eq('organization_id', organizationId)
-      .in('parcel_id', parcelIds)
-      .gte('harvest_date', startDate)
-      .lte('harvest_date', endDate);
-
-    for (const h of harvests || []) {
-      const pm = parcelMap.get(h.parcel_id);
-      if (pm) pm.revenue += Number(h.estimated_revenue || 0);
-      revBreakdown.harvest += Number(h.estimated_revenue || 0);
-    }
-
-    // 7. Journal items for these parcels (ledger expenses & revenues)
-    const { data: expItems } = await supabase
-      .from('journal_items')
-      .select('parcel_id, debit, credit, accounts!inner(account_type), journal_entries!inner(entry_date, status, organization_id)')
-      .in('parcel_id', parcelIds)
-      .eq('accounts.account_type', 'expense')
-      .eq('journal_entries.organization_id', organizationId)
-      .eq('journal_entries.status', 'posted')
-      .gte('journal_entries.entry_date', startDate)
-      .lte('journal_entries.entry_date', endDate);
-
-    for (const item of expItems || []) {
-      const net = Number(item.debit || 0) - Number(item.credit || 0);
-      const pm = parcelMap.get((item as any).parcel_id);
-      if (pm) pm.costs += net;
-      breakdown.other += net;
-    }
-
-    const { data: revItems } = await supabase
-      .from('journal_items')
-      .select('parcel_id, debit, credit, accounts!inner(account_type), journal_entries!inner(entry_date, status, organization_id)')
-      .in('parcel_id', parcelIds)
-      .eq('accounts.account_type', 'revenue')
-      .eq('journal_entries.organization_id', organizationId)
-      .eq('journal_entries.status', 'posted')
-      .gte('journal_entries.entry_date', startDate)
-      .lte('journal_entries.entry_date', endDate);
-
-    for (const item of revItems || []) {
-      const net = Number(item.credit || 0) - Number(item.debit || 0);
-      const pm = parcelMap.get((item as any).parcel_id);
-      if (pm) pm.revenue += net;
-      revBreakdown.invoiced += net;
-    }
-
-    // 8. Aggregate totals
+    // Aggregate ledger restricted to the target parcels. We loop because
+    // aggregateLedger takes one parcel at a time; for whole-org the loop
+    // collapses to a single un-filtered call.
+    const accCostBreakdown: Record<string, number> = {};
+    const accRevBreakdown: Record<string, number> = {};
+    const perParcelTotals = new Map<string, { costs: number; revenue: number }>();
     let totalCosts = 0;
     let totalRevenue = 0;
-    const byParcel = Array.from(parcelMap.entries()).map(([parcelId, data]) => {
-      totalCosts += data.costs;
-      totalRevenue += data.revenue;
+
+    if (filterType === 'organization') {
+      const agg = await this.aggregateLedger({ organizationId, startDate, endDate });
+      totalCosts = agg.totalCosts;
+      totalRevenue = agg.totalRevenue;
+      Object.assign(accCostBreakdown, agg.costBreakdown);
+      Object.assign(accRevBreakdown, agg.revenueBreakdown);
+      for (const [key, row] of agg.byParcel) {
+        if (key === 'unassigned') continue;
+        if (parcelMeta.has(key)) {
+          perParcelTotals.set(key, { costs: row.total_costs, revenue: row.total_revenue });
+        }
+      }
+    } else {
+      // Filtered scope — fetch ledger once for the whole org then keep the
+      // matching parcels. Cheaper than N round-trips for big farms.
+      const agg = await this.aggregateLedger({ organizationId, startDate, endDate });
+      const targetSet = new Set(parcelIds);
+      for (const [key, row] of agg.byParcel) {
+        if (key === 'unassigned' || !targetSet.has(key)) continue;
+        perParcelTotals.set(key, { costs: row.total_costs, revenue: row.total_revenue });
+        totalCosts += row.total_costs;
+        totalRevenue += row.total_revenue;
+        for (const [bucket, val] of Object.entries(row.cost_breakdown)) {
+          accCostBreakdown[bucket] = (accCostBreakdown[bucket] || 0) + val;
+        }
+        for (const [bucket, val] of Object.entries(row.revenue_breakdown)) {
+          accRevBreakdown[bucket] = (accRevBreakdown[bucket] || 0) + val;
+        }
+      }
+    }
+
+    // Normalize buckets into the legacy shape the frontend expects. Unknown
+    // mapping_keys collapse into 'other'.
+    const costBreakdown = { ...emptyCostBreakdown };
+    for (const [key, val] of Object.entries(accCostBreakdown)) {
+      const norm = key.toLowerCase();
+      if (norm === 'labor' || norm === 'materials' || norm === 'equipment' || norm === 'product_applications') {
+        costBreakdown[norm] += val;
+      } else {
+        costBreakdown.other += val;
+      }
+    }
+    const revBreakdown = { ...emptyRevBreakdown };
+    for (const [key, val] of Object.entries(accRevBreakdown)) {
+      const norm = key.toLowerCase();
+      if (norm === 'harvest' || norm === 'invoiced') {
+        revBreakdown[norm] += val;
+      } else {
+        revBreakdown.other += val;
+      }
+    }
+
+    const byParcel = parcelIds.map((pid) => {
+      const meta = parcelMeta.get(pid)!;
+      const totals = perParcelTotals.get(pid) || { costs: 0, revenue: 0 };
       return {
-        parcel_id: parcelId,
-        parcel_name: data.name,
-        crop_type: data.crop_type,
-        variety: data.variety,
-        costs: data.costs,
-        revenue: data.revenue,
-        profit: data.revenue - data.costs,
+        parcel_id: pid,
+        parcel_name: meta.name,
+        crop_type: meta.crop_type,
+        variety: meta.variety,
+        costs: totals.costs,
+        revenue: totals.revenue,
+        profit: totals.revenue - totals.costs,
       };
     }).sort((a, b) => b.profit - a.profit);
 
@@ -1172,7 +1216,7 @@ export class ProfitabilityService {
       total_revenue: totalRevenue,
       net_profit: netProfit,
       margin_percent: marginPercent,
-      cost_breakdown: breakdown,
+      cost_breakdown: costBreakdown,
       revenue_breakdown: revBreakdown,
       by_parcel: byParcel,
     };

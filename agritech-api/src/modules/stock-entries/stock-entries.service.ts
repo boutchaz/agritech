@@ -817,7 +817,7 @@ export class StockEntriesService {
           const reduce = Math.min(valuationToRemove, available);
           await client.query(
             `UPDATE stock_valuation
-             SET remaining_quantity = remaining_quantity - $1,
+             SET remaining_quantity = GREATEST(remaining_quantity - $1, 0),
                  total_cost = GREATEST(remaining_quantity - $1, 0) * cost_per_unit
              WHERE id = $2`,
             [reduce, valBatch.id],
@@ -959,7 +959,7 @@ export class StockEntriesService {
           const reduce = Math.min(targetValToRemove, parseFloat(valBatch.remaining_quantity));
           await client.query(
             `UPDATE stock_valuation
-             SET remaining_quantity = remaining_quantity - $1,
+             SET remaining_quantity = GREATEST(remaining_quantity - $1, 0),
                  total_cost = GREATEST(remaining_quantity - $1, 0) * cost_per_unit
              WHERE id = $2`,
             [reduce, valBatch.id],
@@ -1067,7 +1067,7 @@ export class StockEntriesService {
             const reduce = Math.min(toRemove, parseFloat(vb.remaining_quantity));
             await client.query(
               `UPDATE stock_valuation
-               SET remaining_quantity = remaining_quantity - $1,
+               SET remaining_quantity = GREATEST(remaining_quantity - $1, 0),
                    total_cost = GREATEST(remaining_quantity - $1, 0) * cost_per_unit
                WHERE id = $2`,
               [reduce, vb.id],
@@ -1757,7 +1757,18 @@ export class StockEntriesService {
     );
 
     const currentBalance = parseFloat(result.rows[0]?.current_balance || '0');
-    return currentBalance + movementQuantity;
+    const newBalance = currentBalance + movementQuantity;
+    if (newBalance < 0) {
+      // Forward Material Issue/Transfer paths pre-validate via validateStockAvailabilityPg,
+      // so a negative balance here means a reversal or out-of-band path consumed more than
+      // exists. Log loudly so it shows up in monitoring.
+      this.logger.warn(
+        `Negative stock balance detected: item=${itemId} warehouse=${warehouseId} ` +
+        `balance_after=${newBalance} (was=${currentBalance}, delta=${movementQuantity}). ` +
+        `Investigate stock_movements consistency.`,
+      );
+    }
+    return newBalance;
   }
 
 
@@ -2699,7 +2710,7 @@ export class StockEntriesService {
 
       await client.query(
         `UPDATE stock_valuation
-         SET remaining_quantity = remaining_quantity - $1,
+         SET remaining_quantity = GREATEST(remaining_quantity - $1, 0),
              total_cost = GREATEST(remaining_quantity - $1, 0) * cost_per_unit
          WHERE id = $2`,
         [consumeQty, batch.id],
@@ -2795,7 +2806,7 @@ export class StockEntriesService {
       if (clampedConsume > 0) {
         await client.query(
           `UPDATE stock_valuation
-           SET remaining_quantity = remaining_quantity - $1,
+           SET remaining_quantity = GREATEST(remaining_quantity - $1, 0),
                total_cost = GREATEST(remaining_quantity - $1, 0) * cost_per_unit
            WHERE id = $2`,
           [clampedConsume, batch.id],
@@ -3668,11 +3679,11 @@ export class StockEntriesService {
    * Seed default stock account mappings using the Moroccan CGNC chart of
    * accounts. Idempotent — skips entry types that already have a mapping.
    *
-   * Default GL flow for agri inputs:
-   *   Material Receipt:       DR 312 (Matières) / CR 441 (Fournisseurs)
-   *   Material Issue:         DR 612 (Achats consommés) / CR 312
-   *   Stock Reconciliation:   DR 612 / CR 312 (treats loss as consumption)
-   *   Opening Stock:          DR 312 / CR 312 (no GL impact, just opens balance)
+   * Default GL flow for agri inputs (chart codes per moroccan-chart-of-accounts.ts):
+   *   Material Receipt:       DR 3100 (Stocks matières) / CR 4410 (Fournisseurs)
+   *   Material Issue:         DR 6110 (Achats consommés) / CR 3100
+   *   Stock Reconciliation:   DR 6110 / CR 3100 (treats loss as consumption)
+   *   Opening Stock:          DR 3100 / CR 3100 (no GL impact, just opens balance)
    *
    * Stock Transfer is intentionally not mapped — same legal entity = no GL.
    */
@@ -3687,7 +3698,7 @@ export class StockEntriesService {
         .from('accounts')
         .select('id, code, account_type')
         .eq('organization_id', organizationId)
-        .in('code', ['312', '441', '612', '611']);
+        .in('code', ['3100', '4410', '6110']);
 
     let { data: accounts, error: accErr } = await loadAccounts();
 
@@ -3711,14 +3722,14 @@ export class StockEntriesService {
       for (const a of accounts || []) byCode.set(a.code, a.id);
       if (byCode.size === 0) {
         throw new BadRequestException(
-          'Chart of accounts seed completed but the expected codes (312/441/612) are missing.',
+          'Chart of accounts seed completed but the expected codes (3100/4410/6110) are missing.',
         );
       }
     }
 
-    const inv = byCode.get('312');
-    const ap = byCode.get('441');
-    const cogs = byCode.get('612');
+    const inv = byCode.get('3100');
+    const ap = byCode.get('4410');
+    const cogs = byCode.get('6110');
 
     const desiredMappings: Array<{
       entry_type: string;

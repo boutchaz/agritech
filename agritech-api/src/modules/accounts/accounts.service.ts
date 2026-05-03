@@ -251,15 +251,18 @@ export class AccountsService {
         }
       }
 
-      // Update parent_id references for accounts that have parent_code
+      // Update parent_id references for accounts that have parent_code.
+      // Guard with EXISTS so a missing parent doesn't NULL out parent_id on
+      // re-runs (which would orphan an existing hierarchy).
       for (const { code, parent_code } of accountsWithParent) {
         await client.query(
           `UPDATE accounts
-           SET parent_id = (
-             SELECT id FROM accounts
-             WHERE organization_id = $1 AND code = $2
-           )
-           WHERE organization_id = $1 AND code = $3`,
+           SET parent_id = parent.id
+           FROM accounts parent
+           WHERE accounts.organization_id = $1
+             AND accounts.code = $3
+             AND parent.organization_id = $1
+             AND parent.code = $2`,
           [organizationId, parent_code, code]
         );
       }

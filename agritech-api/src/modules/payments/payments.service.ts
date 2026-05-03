@@ -538,6 +538,16 @@ export class PaymentsService {
             // Validate status transition
             this.validateStatusTransition(payment.status, dto.status);
 
+            // Block draft → submitted via raw status flip. The only legitimate
+            // path is allocatePayment(), which posts the JE and then sets
+            // status='submitted' + journal_entry_id atomically. Allowing this
+            // shortcut would create orphan submitted payments with no GL entry.
+            if (payment.status === 'draft' && dto.status === 'submitted') {
+                throw new BadRequestException(
+                    'Cannot promote a draft payment to submitted directly. Allocate the payment to an invoice (which posts the journal entry) or record it as an advance.',
+                );
+            }
+
             const updateData: any = {
                 status: dto.status,
                 updated_at: new Date().toISOString(),

@@ -247,32 +247,6 @@ export function useDeletePayment() {
 }
 
 /**
- * Hook to submit a payment (change status from draft to submitted)
- */
-export function useSubmitPayment() {
-  const queryClient = useQueryClient();
-  const { currentOrganization } = useAuth();
-
-  return useMutation({
-    mutationFn: async (id: string) => {
-      if (!currentOrganization?.id) {
-        throw new Error('No organization selected');
-      }
-
-      const data = await paymentsApi.updateStatus(
-        id,
-        { status: 'submitted' },
-        currentOrganization.id
-      );
-      return data as Payment;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['accounting_payments', currentOrganization?.id] });
-    },
-  });
-}
-
-/**
  * Hook to allocate payment to invoices
  * Updated to use NestJS API instead of Supabase Edge Function
  */

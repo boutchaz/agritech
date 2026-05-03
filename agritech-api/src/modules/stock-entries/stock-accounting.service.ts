@@ -69,11 +69,11 @@ export class StockAccountingService {
       );
 
       if (mappings.length === 0) {
-        this.logger.warn(
-          `No stock account mappings found for organization ${stockEntry.organization_id} ` +
-          `and entry type ${stockEntry.entry_type}. Skipping journal entry creation.`,
-        );
-        return { journal_entry_id: null, success: true };
+        const msg =
+          `No stock account mappings configured for organization ${stockEntry.organization_id} / ${stockEntry.entry_type}. ` +
+          `Refusing to post stock entry without GL impact — configure mappings on the Stock Accounting settings page first.`;
+        this.logger.error(msg);
+        return { journal_entry_id: null, success: false, error: msg };
       }
 
       // For outbound entries (Material Issue), the true cost comes from the valuation engine
@@ -99,11 +99,11 @@ export class StockAccountingService {
       const mapping = this.findBestMapping(mappings, itemCategories);
 
       if (!mapping) {
-        this.logger.warn(
-          `No matching account mapping found for stock entry ${stockEntry.entry_number}. ` +
-          `Skipping journal entry creation.`,
-        );
-        return { journal_entry_id: null, success: true };
+        const msg =
+          `No matching account mapping (general or category-specific) for stock entry ${stockEntry.entry_number}. ` +
+          `Refusing to post without GL impact.`;
+        this.logger.error(msg);
+        return { journal_entry_id: null, success: false, error: msg };
       }
 
       // Generate journal entry number
@@ -460,10 +460,11 @@ export class StockAccountingService {
       );
 
       if (mappings.length === 0) {
-        this.logger.warn(
-          `No stock account mappings for reversal ${reversalStockEntry.entry_number}. Skipping journal entry.`,
-        );
-        return { journal_entry_id: null, success: true };
+        const msg =
+          `No stock account mappings for reversal ${reversalStockEntry.entry_number}. ` +
+          `Cannot post a reversal that leaves the GL unbalanced.`;
+        this.logger.error(msg);
+        return { journal_entry_id: null, success: false, error: msg };
       }
 
       const totalValue = reversalStockEntry.entry_type === StockEntryType.MATERIAL_ISSUE
@@ -478,10 +479,11 @@ export class StockAccountingService {
       const mapping = this.findBestMapping(mappings, itemCategories);
 
       if (!mapping) {
-        this.logger.warn(
-          `No matching account mapping for reversal ${reversalStockEntry.entry_number}. Skipping.`,
-        );
-        return { journal_entry_id: null, success: true };
+        const msg =
+          `No matching account mapping for reversal ${reversalStockEntry.entry_number}. ` +
+          `Cannot post a reversal that leaves the GL unbalanced.`;
+        this.logger.error(msg);
+        return { journal_entry_id: null, success: false, error: msg };
       }
 
       const entryNumber = await this.sequencesService.generateJournalEntryNumber(

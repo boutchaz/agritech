@@ -6,6 +6,7 @@ import { SequencesService } from '../sequences/sequences.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { StockEntriesService } from '../stock-entries/stock-entries.service';
 import { AccountingAutomationService } from '../journal-entries/accounting-automation.service';
+import { PaymentsService } from '../payments/payments.service';
 import {
   createMockSupabaseClient,
   createMockQueryBuilder,
@@ -22,13 +23,25 @@ describe('InvoicesService', () => {
   let mockSequencesService: { generateInvoiceNumber: jest.Mock; generateJournalEntryNumber: jest.Mock };
   let mockNotificationsService: { sendInvoiceEmail: jest.Mock };
   let mockStockEntriesService: {};
-  let mockAccountingAutomationService: { resolveAccountId: jest.Mock };
+  let mockAccountingAutomationService: { resolveAccountId: jest.Mock; assertPeriodOpen: jest.Mock };
+  let mockPaymentsService: { create: jest.Mock; allocatePayment: jest.Mock };
 
   beforeEach(async () => {
     mockClient = createMockSupabaseClient();
+    // Stub pg-transaction helper. Hand the callback a minimal pgClient that
+    // resolves any query() with empty rows so postInvoice's lock + insert
+    // queries don't throw. Tests assert resolveAccountId was called; they
+    // don't introspect the JE rows that get inserted.
+    const stubPgClient = {
+      query: jest.fn().mockResolvedValue({ rows: [{ id: 'je-stub', status: 'draft' }] }),
+    };
     mockDatabaseService = {
       getAdminClient: jest.fn(() => mockClient),
-    };
+      executeInPgTransaction: jest.fn(async (fn: any) => {
+        const result = await fn(stubPgClient);
+        return { ...result, journalEntryId: result?.journalEntryId || 'je-stub' };
+      }),
+    } as any;
     mockSequencesService = {
       generateInvoiceNumber: jest.fn().mockResolvedValue('INV-2026-00001'),
       generateJournalEntryNumber: jest.fn().mockResolvedValue('JE-2026-00001'),
@@ -39,6 +52,13 @@ describe('InvoicesService', () => {
     mockStockEntriesService = {};
     mockAccountingAutomationService = {
       resolveAccountId: jest.fn(),
+      assertPeriodOpen: jest.fn().mockResolvedValue(undefined),
+      applyCashSettlementDate: jest.fn().mockResolvedValue(undefined),
+      createReversalEntry: jest.fn().mockResolvedValue({ reversalEntryId: 'rev-stub' }),
+    } as any;
+    mockPaymentsService = {
+      create: jest.fn().mockResolvedValue({ id: 'payment-001' }),
+      allocatePayment: jest.fn().mockResolvedValue(undefined),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -49,6 +69,7 @@ describe('InvoicesService', () => {
         { provide: NotificationsService, useValue: mockNotificationsService },
         { provide: StockEntriesService, useValue: mockStockEntriesService },
         { provide: AccountingAutomationService, useValue: mockAccountingAutomationService },
+        { provide: PaymentsService, useValue: mockPaymentsService },
       ],
     }).compile();
 

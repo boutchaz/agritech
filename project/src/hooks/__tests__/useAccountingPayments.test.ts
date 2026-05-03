@@ -5,7 +5,6 @@ import {
   useCreatePayment,
   useUpdatePayment,
   useDeletePayment,
-  useSubmitPayment,
   useAllocatePayment,
 } from '../useAccountingPayments';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -135,19 +134,6 @@ describe('useDeletePayment', () => {
 
     await opts.onSuccess?.(undefined, 'pay-1' as never, {} as never, {} as never);
     expect(mockInvalidateQueries).toHaveBeenCalled();
-  });
-});
-
-describe('useSubmitPayment', () => {
-  it('calls updateStatus with submitted', async () => {
-    const { paymentsApi } = await import('../../lib/api/payments');
-    vi.mocked(paymentsApi.updateStatus).mockResolvedValue({ id: 'pay-1' } as never);
-
-    useSubmitPayment();
-    const opts = getLatestMutationOptions();
-
-    await opts.mutationFn('pay-1');
-    expect(paymentsApi.updateStatus).toHaveBeenCalledWith('pay-1', { status: 'submitted' }, 'org-123');
   });
 });
 

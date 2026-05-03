@@ -473,6 +473,14 @@ export class JournalEntriesService {
         throw new BadRequestException('Only draft journal entries can be posted');
       }
 
+      // Block posting into a closed fiscal period — every other JE-creation
+      // path enforces this; the manual post endpoint must too or operators can
+      // backdate entries past the period lock.
+      const entryDateStr = typeof entry.entry_date === 'string'
+        ? entry.entry_date.split('T')[0]
+        : new Date(entry.entry_date).toISOString().split('T')[0];
+      await this.fiscalYearsService.assertPeriodOpen(organizationId, entryDateStr);
+
       const now = new Date().toISOString();
       const { error } = await supabaseClient
         .from('journal_entries')

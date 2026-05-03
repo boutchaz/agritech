@@ -1,5 +1,6 @@
 import { Injectable, BadRequestException, NotFoundException, InternalServerErrorException } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
+import { AccountsService } from '../accounts/accounts.service';
 import { sanitizeSearch } from '../../common/utils/sanitize-search';
 import {
   ReferenceDataTable,
@@ -20,7 +21,10 @@ import {
 
 @Injectable()
 export class AdminService {
-  constructor(private databaseService: DatabaseService) {}
+  constructor(
+    private databaseService: DatabaseService,
+    private accountsService: AccountsService,
+  ) {}
 
   /**
    * Get reference data with optional filters
@@ -246,7 +250,8 @@ export class AdminService {
       let accountsCreated = 0;
 
       if (dto.chartType === ChartOfAccountsType.MOROCCAN) {
-        accountsCreated = await this.seedMoroccanChartOfAccounts(client, dto.organizationId);
+        const result = await this.accountsService.seedMoroccanChartOfAccounts(dto.organizationId);
+        accountsCreated = result.accounts_created;
       } else {
         // For other chart types, use account templates
         const { data: templates, error: templatesError } = await client
@@ -974,111 +979,17 @@ export class AdminService {
     return { data: data || [], total: count || 0 };
   }
 
-  private async seedMoroccanChartOfAccounts(client: ReturnType<DatabaseService['getAdminClient']>, organizationId: string): Promise<number> {
-    const moroccanAccounts = [
-      { code: '1', name: 'Financement permanent', account_type: 'equity', is_group: true },
-      { code: '11', name: 'Capitaux propres', account_type: 'equity', parent_code: '1', is_group: true },
-      { code: '111', name: 'Capital social', account_type: 'equity', parent_code: '11', is_group: false },
-      { code: '112', name: 'Primes d\'émission et de fusion', account_type: 'equity', parent_code: '11', is_group: false },
-      { code: '14', name: 'Dettes de financement', account_type: 'liability', parent_code: '1', is_group: true },
-      { code: '141', name: 'Emprunts obligataires', account_type: 'liability', parent_code: '14', is_group: false },
-      { code: '148', name: 'Autres dettes de financement', account_type: 'liability', parent_code: '14', is_group: false },
-      { code: '2', name: 'Actif immobilisé', account_type: 'asset', is_group: true },
-      { code: '21', name: 'Immobilisations en non-valeurs', account_type: 'asset', parent_code: '2', is_group: true },
-      { code: '22', name: 'Immobilisations incorporelles', account_type: 'asset', parent_code: '2', is_group: true },
-      { code: '23', name: 'Immobilisations corporelles', account_type: 'asset', parent_code: '2', is_group: true },
-      { code: '231', name: 'Terrains', account_type: 'asset', parent_code: '23', is_group: false },
-      { code: '232', name: 'Constructions', account_type: 'asset', parent_code: '23', is_group: false },
-      { code: '233', name: 'Installations techniques', account_type: 'asset', parent_code: '23', is_group: false },
-      { code: '234', name: 'Matériel de transport', account_type: 'asset', parent_code: '23', is_group: false },
-      { code: '235', name: 'Mobilier et matériel de bureau', account_type: 'asset', parent_code: '23', is_group: false },
-      { code: '3', name: 'Actif circulant', account_type: 'asset', is_group: true },
-      { code: '31', name: 'Stocks', account_type: 'asset', parent_code: '3', is_group: true },
-      { code: '311', name: 'Marchandises', account_type: 'asset', parent_code: '31', is_group: false },
-      { code: '312', name: 'Matières et fournitures', account_type: 'asset', parent_code: '31', is_group: false },
-      { code: '313', name: 'Produits en cours', account_type: 'asset', parent_code: '31', is_group: false },
-      { code: '315', name: 'Produits finis', account_type: 'asset', parent_code: '31', is_group: false },
-      { code: '34', name: 'Créances de l\'actif circulant', account_type: 'asset', parent_code: '3', is_group: true },
-      { code: '341', name: 'Clients et comptes rattachés', account_type: 'asset', parent_code: '34', is_group: false },
-      { code: '4', name: 'Passif circulant', account_type: 'liability', is_group: true },
-      { code: '44', name: 'Dettes du passif circulant', account_type: 'liability', parent_code: '4', is_group: true },
-      { code: '441', name: 'Fournisseurs et comptes rattachés', account_type: 'liability', parent_code: '44', is_group: false },
-      { code: '443', name: 'Personnel - créditeur', account_type: 'liability', parent_code: '44', is_group: false },
-      { code: '444', name: 'Organismes sociaux', account_type: 'liability', parent_code: '44', is_group: false },
-      { code: '445', name: 'État - créditeur', account_type: 'liability', parent_code: '44', is_group: false },
-      { code: '5', name: 'Trésorerie', account_type: 'asset', is_group: true },
-      { code: '51', name: 'Trésorerie - Actif', account_type: 'asset', parent_code: '5', is_group: true },
-      { code: '511', name: 'Chèques et valeurs à encaisser', account_type: 'asset', parent_code: '51', is_group: false },
-      { code: '514', name: 'Banques', account_type: 'asset', parent_code: '51', is_group: false },
-      { code: '516', name: 'Caisses', account_type: 'asset', parent_code: '51', is_group: false },
-      { code: '55', name: 'Trésorerie - Passif', account_type: 'liability', parent_code: '5', is_group: true },
-      { code: '553', name: 'Crédits de trésorerie', account_type: 'liability', parent_code: '55', is_group: false },
-      { code: '6', name: 'Charges', account_type: 'expense', is_group: true },
-      { code: '61', name: 'Charges d\'exploitation', account_type: 'expense', parent_code: '6', is_group: true },
-      { code: '611', name: 'Achats revendus de marchandises', account_type: 'expense', parent_code: '61', is_group: false },
-      { code: '612', name: 'Achats consommés de matières', account_type: 'expense', parent_code: '61', is_group: false },
-      { code: '613', name: 'Autres charges externes', account_type: 'expense', parent_code: '61', is_group: false },
-      { code: '614', name: 'Impôts et taxes', account_type: 'expense', parent_code: '61', is_group: false },
-      { code: '617', name: 'Charges de personnel', account_type: 'expense', parent_code: '61', is_group: false },
-      { code: '618', name: 'Autres charges d\'exploitation', account_type: 'expense', parent_code: '61', is_group: false },
-      { code: '619', name: 'Dotations d\'exploitation', account_type: 'expense', parent_code: '61', is_group: false },
-      { code: '63', name: 'Charges financières', account_type: 'expense', parent_code: '6', is_group: true },
-      { code: '631', name: 'Charges d\'intérêts', account_type: 'expense', parent_code: '63', is_group: false },
-      { code: '65', name: 'Charges non courantes', account_type: 'expense', parent_code: '6', is_group: true },
-      { code: '67', name: 'Impôts sur les résultats', account_type: 'expense', parent_code: '6', is_group: true },
-      { code: '670', name: 'Impôts sur les bénéfices', account_type: 'expense', parent_code: '67', is_group: false },
-      { code: '7', name: 'Produits', account_type: 'revenue', is_group: true },
-      { code: '71', name: 'Produits d\'exploitation', account_type: 'revenue', parent_code: '7', is_group: true },
-      { code: '711', name: 'Ventes de marchandises', account_type: 'revenue', parent_code: '71', is_group: false },
-      { code: '712', name: 'Ventes de biens et services produits', account_type: 'revenue', parent_code: '71', is_group: false },
-      { code: '713', name: 'Variation de stocks de produits', account_type: 'revenue', parent_code: '71', is_group: false },
-      { code: '714', name: 'Immobilisations produites', account_type: 'revenue', parent_code: '71', is_group: false },
-      { code: '716', name: 'Subventions d\'exploitation', account_type: 'revenue', parent_code: '71', is_group: false },
-      { code: '718', name: 'Autres produits d\'exploitation', account_type: 'revenue', parent_code: '71', is_group: false },
-      { code: '73', name: 'Produits financiers', account_type: 'revenue', parent_code: '7', is_group: true },
-      { code: '732', name: 'Produits des titres de participation', account_type: 'revenue', parent_code: '73', is_group: false },
-      { code: '738', name: 'Intérêts et autres produits financiers', account_type: 'revenue', parent_code: '73', is_group: false },
-      { code: '75', name: 'Produits non courants', account_type: 'revenue', parent_code: '7', is_group: true },
-    ];
-
-    const codeToId = new Map<string, string>();
-    let created = 0;
-
-    for (const acc of moroccanAccounts) {
-      const parentId = acc.parent_code ? codeToId.get(acc.parent_code) : null;
-      const { data, error } = await client
-        .from('accounts')
-        .insert({
-          organization_id: organizationId,
-          code: acc.code,
-          name: acc.name,
-          account_type: acc.account_type,
-          is_group: acc.is_group,
-          parent_id: parentId,
-          is_active: true,
-        })
-        .select('id')
-        .single();
-
-      if (!error && data) {
-        codeToId.set(acc.code, data.id);
-        created++;
-      }
-    }
-
-    return created;
-  }
 
   /**
    * Seed default Moroccan CGNC stock account mappings. Idempotent.
    * Mirrors StockEntriesService.seedDefaultStockAccountMappings — duplicated
    * here to avoid pulling the entire StockEntriesModule into AdminModule.
    *
-   * Default GL flow:
-   *   Material Receipt:     DR 312 (Matières) / CR 441 (Fournisseurs)
-   *   Material Issue:       DR 612 (Achats consommés) / CR 312
-   *   Stock Reconciliation: DR 612 / CR 312
-   *   Opening Stock:        DR 312 / CR 312 (no GL impact, opens balance)
+   * Default GL flow (codes per moroccan-chart-of-accounts.ts):
+   *   Material Receipt:     DR 3100 (Stocks matières) / CR 4410 (Fournisseurs)
+   *   Material Issue:       DR 6110 (Achats consommés) / CR 3100
+   *   Stock Reconciliation: DR 6110 / CR 3100
+   *   Opening Stock:        DR 3100 / CR 3100 (no GL impact, opens balance)
    */
   private async seedDefaultStockAccountMappings(
     client: ReturnType<DatabaseService['getAdminClient']>,
@@ -1088,15 +999,15 @@ export class AdminService {
       .from('accounts')
       .select('id, code')
       .eq('organization_id', organizationId)
-      .in('code', ['312', '441', '612']);
+      .in('code', ['3100', '4410', '6110']);
 
     const byCode = new Map<string, string>();
     for (const a of accounts || []) byCode.set(a.code, a.id);
     if (byCode.size === 0) return 0;
 
-    const inv = byCode.get('312');
-    const ap = byCode.get('441');
-    const cogs = byCode.get('612');
+    const inv = byCode.get('3100');
+    const ap = byCode.get('4410');
+    const cogs = byCode.get('6110');
 
     const desired = [
       { entry_type: 'Material Receipt', debit_account_id: inv, credit_account_id: ap },
@@ -1142,16 +1053,15 @@ export class AdminService {
       .from('accounts')
       .select('id, code')
       .eq('organization_id', organizationId)
-      .in('code', ['4455', '3455', '445']);
+      .in('code', ['4455', '4456', '4457']);
 
     const byCode = new Map<string, string>();
     for (const a of accounts || []) byCode.set(a.code, a.id);
 
-    // 4455 = Etat - TVA facturée (collected); 3455 = Etat - TVA récupérable (deductible);
-    // 445 = État - créditeur (used as fallback for WHT-payable)
-    const tvaCollected = byCode.get('4455') || byCode.get('445');
-    const tvaDeductible = byCode.get('3455') || byCode.get('445');
-    const whtPayable = byCode.get('445') || byCode.get('4455');
+    // 4455 TVA due, 4456 TVA déductible, 4457 TVA collectée (per moroccan-chart-of-accounts.ts)
+    const tvaCollected = byCode.get('4457');
+    const tvaDeductible = byCode.get('4456');
+    const whtPayable = byCode.get('4455');
 
     const desired: Array<{
       name: string;

@@ -127,13 +127,15 @@ export function buildInvoiceLedgerLines(
     // Cr. Revenue accounts (per item)
     let lineCredits = 0;
     invoice.items.forEach((item) => {
+      // Skip zero-amount lines first — they emit no journal line, so a missing
+      // account on a zero-amount item shouldn't block posting.
+      const amount = roundCurrency(toNumber(item.amount) * fx);
+      if (amount === 0) return;
+
       const itemAccountId = item.account_id || item.income_account_id || accounts.defaultRevenueAccountId;
       if (!itemAccountId) {
         throw new Error(`Invoice item ${item.id} missing revenue account. Set account_id on the item or configure a default revenue account mapping.`);
       }
-
-      const amount = roundCurrency(toNumber(item.amount) * fx);
-      if (amount === 0) return;
 
       lines.push({
         journal_entry_id: entryId,
@@ -177,13 +179,14 @@ export function buildInvoiceLedgerLines(
     // Dr. Expense accounts (per item)
     let lineDebits = 0;
     invoice.items.forEach((item) => {
+      // Skip zero-amount lines first (see sales path above for rationale).
+      const amount = roundCurrency(toNumber(item.amount) * fx);
+      if (amount === 0) return;
+
       const itemAccountId = item.account_id || item.expense_account_id || accounts.defaultExpenseAccountId;
       if (!itemAccountId) {
         throw new Error(`Invoice item ${item.id} missing expense account. Set account_id on the item or configure a default expense account mapping.`);
       }
-
-      const amount = roundCurrency(toNumber(item.amount) * fx);
-      if (amount === 0) return;
 
       lines.push({
         journal_entry_id: entryId,

@@ -159,10 +159,10 @@ export const accountingApi = {
     return data as InvoiceWithItems;
   },
 
-  async submitInvoice(invoiceId: string, _userId: string) {
-    const data = await invoicesApi.updateStatus(invoiceId, { status: 'submitted' }, '');
-    return data as Invoice;
-  },
+  // Note: There is no submitInvoice helper. The backend rejects manual
+  // draft → submitted transitions (invoices.service.ts:451). Use the post
+  // invoice endpoint via useInvoices.ts → invoicesApi.post() to submit;
+  // it creates the journal entry and flips status atomically.
 
   async cancelInvoice(invoiceId: string) {
     const data = await invoicesApi.updateStatus(invoiceId, { status: 'cancelled' }, '');
@@ -245,10 +245,9 @@ export const accountingApi = {
     return this.getPayment(id);
   },
 
-  async submitPayment(paymentId: string) {
-    const data = await paymentsApi.updateStatus(paymentId, { status: 'submitted' });
-    return data as unknown as AccountingPayment;
-  },
+  // Note: There is no submitPayment helper. Draft → submitted is server-blocked
+  // (payments.service.ts:541). Submission happens implicitly via allocatePayment
+  // (which posts the JE and flips status) or recordAdvance (for prepayments).
 
   async cancelPayment(paymentId: string) {
     const data = await paymentsApi.updateStatus(paymentId, { status: 'cancelled' });
