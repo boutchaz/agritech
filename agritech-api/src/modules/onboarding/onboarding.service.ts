@@ -635,6 +635,24 @@ export class OnboardingService {
       throw new InternalServerErrorException('Failed to save modules');
     }
 
+    // Mirror the selection onto the org's subscription so the backoffice
+    // contract view (admin → clients → :orgId → Modules) reflects what the
+    // user picked during onboarding. Without this, organization_modules
+    // (feature gates) and subscriptions.selected_modules (contract
+    // entitlement) drift, and admins see only the slugs they originally
+    // typed in the contract form — not the user's onboarding choices.
+    const { error: subUpdateError } = await client
+      .from('subscriptions')
+      .update({ selected_modules: moduleSlugs })
+      .eq('organization_id', organizationId);
+    if (subUpdateError) {
+      // Don't fail the onboarding step — the contract sync is a nice-to-have,
+      // not a hard requirement for module access. Log so it shows up.
+      this.logger.warn(
+        `Saved modules to organization_modules but failed to mirror onto subscriptions.selected_modules: ${subUpdateError.message}`,
+      );
+    }
+
     return { success: true };
   }
 
