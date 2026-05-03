@@ -305,7 +305,6 @@ BEGIN
   END IF;
 END $$;
 
-
 CREATE INDEX IF NOT EXISTS idx_organizations_slug ON organizations(slug);
 CREATE INDEX IF NOT EXISTS idx_organizations_country_code ON organizations(country_code);
 CREATE INDEX IF NOT EXISTS idx_organizations_accounting_standard ON organizations(accounting_standard);
@@ -479,14 +478,14 @@ DROP POLICY IF EXISTS "Users can view their own notifications" ON notifications;
 CREATE POLICY "Users can view their own notifications"
   ON notifications
   FOR SELECT
-  USING (auth.uid() = user_id);
+  USING ((select auth.uid()) = user_id);
 
 DROP POLICY IF EXISTS "Users can update their own notifications" ON notifications;
 CREATE POLICY "Users can update their own notifications"
   ON notifications
   FOR UPDATE
-  USING (auth.uid() = user_id)
-  WITH CHECK (auth.uid() = user_id);
+  USING ((select auth.uid()) = user_id)
+  WITH CHECK ((select auth.uid()) = user_id);
 
 DROP POLICY IF EXISTS "Service role can insert notifications" ON notifications;
 CREATE POLICY "Service role can insert notifications"
@@ -498,7 +497,7 @@ DROP POLICY IF EXISTS "Service role has full access" ON notifications;
 CREATE POLICY "Service role has full access"
   ON notifications
   FOR ALL
-  USING (auth.role() = 'service_role');
+  USING ((select auth.role()) = 'service_role');
 
 COMMENT ON TABLE notifications IS 'In-app real-time notifications for users';
 COMMENT ON COLUMN notifications.type IS 'Notification type: task_assigned, order_status_changed, quote_received, etc.';
@@ -879,19 +878,9 @@ COMMENT ON TABLE account_mappings IS 'Maps generic business operations to countr
 -- SEED ACCOUNT TEMPLATES FOR ALL COUNTRIES
 -- =====================================================
 
-
-
-
-
 -- =====================================================
 -- SEED ACCOUNT MAPPINGS FOR ALL COUNTRIES
 -- =====================================================
-
-
-
-
-
-
 
 -- Quotes
 CREATE TABLE IF NOT EXISTS quotes (
@@ -1793,22 +1782,22 @@ END $$;
 -- Create new non-recursive policies
 CREATE POLICY "org_read_organization_users" ON organization_users
   FOR SELECT USING (
-    user_id = auth.uid()
+    user_id = (select auth.uid())
   );
 
 CREATE POLICY "org_write_organization_users" ON organization_users
   FOR INSERT WITH CHECK (
-    user_id = auth.uid()
+    user_id = (select auth.uid())
   );
 
 CREATE POLICY "org_update_organization_users" ON organization_users
   FOR UPDATE USING (
-    user_id = auth.uid()
+    user_id = (select auth.uid())
   );
 
 CREATE POLICY "org_delete_organization_users" ON organization_users
   FOR DELETE USING (
-    user_id = auth.uid()
+    user_id = (select auth.uid())
   );
 
 -- Customers Policies
@@ -3230,7 +3219,7 @@ CREATE TRIGGER trg_sync_primary_barcode
   AFTER INSERT OR UPDATE OR DELETE ON item_barcodes
   FOR EACH ROW EXECUTE FUNCTION sync_primary_barcode_to_item();
 
--- Updated_at trigger
+-- Updated at trigger
 CREATE OR REPLACE FUNCTION update_item_barcodes_updated_at()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -3943,7 +3932,6 @@ CREATE TRIGGER trg_update_warehouse_stock_reserved
   AFTER INSERT OR UPDATE OF status OR DELETE ON stock_reservations
   FOR EACH ROW
   EXECUTE FUNCTION update_warehouse_stock_reserved();
-
 
 -- Stock Entry Approvals
 CREATE TABLE IF NOT EXISTS stock_entry_approvals (
@@ -5057,11 +5045,11 @@ BEGIN
   EXECUTE $q$ DROP POLICY IF EXISTS "Public read entity-photos" ON storage.objects $q$;
   EXECUTE $q$ CREATE POLICY "Public read entity-photos" ON storage.objects FOR SELECT USING (bucket_id = 'entity-photos') $q$;
   EXECUTE $q$ DROP POLICY IF EXISTS "Authenticated upload entity-photos" ON storage.objects $q$;
-  EXECUTE $q$ CREATE POLICY "Authenticated upload entity-photos" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'entity-photos' AND auth.role() = 'authenticated') $q$;
+  EXECUTE $q$ CREATE POLICY "Authenticated upload entity-photos" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'entity-photos' AND (select auth.role()) = 'authenticated') $q$;
   EXECUTE $q$ DROP POLICY IF EXISTS "Authenticated update entity-photos" ON storage.objects $q$;
-  EXECUTE $q$ CREATE POLICY "Authenticated update entity-photos" ON storage.objects FOR UPDATE USING (bucket_id = 'entity-photos' AND auth.role() = 'authenticated') WITH CHECK (bucket_id = 'entity-photos' AND auth.role() = 'authenticated') $q$;
+  EXECUTE $q$ CREATE POLICY "Authenticated update entity-photos" ON storage.objects FOR UPDATE USING (bucket_id = 'entity-photos' AND (select auth.role()) = 'authenticated') WITH CHECK (bucket_id = 'entity-photos' AND (select auth.role()) = 'authenticated') $q$;
   EXECUTE $q$ DROP POLICY IF EXISTS "Authenticated delete entity-photos" ON storage.objects $q$;
-  EXECUTE $q$ CREATE POLICY "Authenticated delete entity-photos" ON storage.objects FOR DELETE USING (bucket_id = 'entity-photos' AND auth.role() = 'authenticated') $q$;
+  EXECUTE $q$ CREATE POLICY "Authenticated delete entity-photos" ON storage.objects FOR DELETE USING (bucket_id = 'entity-photos' AND (select auth.role()) = 'authenticated') $q$;
 EXCEPTION WHEN OTHERS THEN
   RAISE NOTICE 'entity-photos bucket setup skipped: %', SQLERRM;
 END$$;
@@ -5246,10 +5234,6 @@ BEGIN
 END $$;
 
 -- Allow users to view subscriptions for organizations they belong to
-CREATE POLICY "org_read_subscriptions" ON subscriptions
-  FOR SELECT USING (
-    is_organization_member(organization_id)
-  );
 
 -- Allow organization admins to insert subscriptions
 CREATE POLICY "org_insert_subscriptions" ON subscriptions
@@ -5259,7 +5243,7 @@ CREATE POLICY "org_insert_subscriptions" ON subscriptions
       SELECT 1
       FROM public.organization_users ou
       JOIN public.roles r ON r.id = ou.role_id
-      WHERE ou.user_id = auth.uid()
+      WHERE ou.user_id = (select auth.uid())
         AND ou.organization_id = subscriptions.organization_id
         AND r.name IN ('system_admin', 'organization_admin')
         AND ou.is_active = true
@@ -5274,7 +5258,7 @@ CREATE POLICY "org_update_subscriptions" ON subscriptions
       SELECT 1
       FROM public.organization_users ou
       JOIN public.roles r ON r.id = ou.role_id
-      WHERE ou.user_id = auth.uid()
+      WHERE ou.user_id = (select auth.uid())
         AND ou.organization_id = subscriptions.organization_id
         AND r.name IN ('system_admin', 'organization_admin')
         AND ou.is_active = true
@@ -5289,7 +5273,7 @@ CREATE POLICY "org_delete_subscriptions" ON subscriptions
       SELECT 1
       FROM public.organization_users ou
       JOIN public.roles r ON r.id = ou.role_id
-      WHERE ou.user_id = auth.uid()
+      WHERE ou.user_id = (select auth.uid())
         AND ou.organization_id = subscriptions.organization_id
         AND r.name IN ('system_admin', 'organization_admin')
         AND ou.is_active = true
@@ -6020,22 +6004,22 @@ ALTER TABLE document_templates ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Users can view templates in their organization" ON document_templates;
 CREATE POLICY "Users can view templates in their organization"
     ON document_templates FOR SELECT
-    USING (organization_id IN (SELECT organization_id FROM organization_users WHERE user_id = auth.uid()));
+    USING (organization_id IN (SELECT organization_id FROM organization_users WHERE user_id = (select auth.uid())));
 
 DROP POLICY IF EXISTS "Users can create templates in their organization" ON document_templates;
 CREATE POLICY "Users can create templates in their organization"
     ON document_templates FOR INSERT
-    WITH CHECK (organization_id IN (SELECT organization_id FROM organization_users WHERE user_id = auth.uid()));
+    WITH CHECK (organization_id IN (SELECT organization_id FROM organization_users WHERE user_id = (select auth.uid())));
 
 DROP POLICY IF EXISTS "Users can update templates in their organization" ON document_templates;
 CREATE POLICY "Users can update templates in their organization"
     ON document_templates FOR UPDATE
-    USING (organization_id IN (SELECT organization_id FROM organization_users WHERE user_id = auth.uid()));
+    USING (organization_id IN (SELECT organization_id FROM organization_users WHERE user_id = (select auth.uid())));
 
 DROP POLICY IF EXISTS "Users can delete templates in their organization" ON document_templates;
 CREATE POLICY "Users can delete templates in their organization"
     ON document_templates FOR DELETE
-    USING (organization_id IN (SELECT organization_id FROM organization_users WHERE user_id = auth.uid()));
+    USING (organization_id IN (SELECT organization_id FROM organization_users WHERE user_id = (select auth.uid())));
 
 -- Single-default-template invariant is enforced in the application layer
 -- (DocumentTemplatesService.clearDefaultForType).
@@ -6067,8 +6051,6 @@ GRANT SELECT ON document_templates TO anon;
 -- UsersService.createProfile. The auth.users trigger is no longer needed.
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 DROP FUNCTION IF EXISTS public.handle_new_user();
-
-
 
 -- =====================================================
 -- 27. BACKFILL ORGANIZATION_ID FOR EXISTING DATA
@@ -6428,11 +6410,6 @@ BEGIN
   UPDATE crop_types SET code = 'palmier_dattier'
     WHERE name = 'date_palm' AND organization_id IS NULL AND code IS NULL;
 END $$;
-
-
-
-
-
 
 -- =====================================================
 -- AI & OPERATIONAL ENGINE TABLES
@@ -7183,34 +7160,32 @@ CREATE POLICY "org_delete_plan_interventions" ON public.plan_interventions
 -- Crop AI References RLS
 DROP POLICY IF EXISTS "read_crop_ai_references" ON public.crop_ai_references;
 CREATE POLICY "read_crop_ai_references" ON public.crop_ai_references
-  FOR SELECT USING (auth.uid() IS NOT NULL);
+  FOR SELECT USING ((select auth.uid()) IS NOT NULL);
 
 DROP POLICY IF EXISTS "write_crop_ai_references" ON public.crop_ai_references;
 CREATE POLICY "write_crop_ai_references" ON public.crop_ai_references
-  FOR INSERT WITH CHECK (auth.role() = 'service_role');
+  FOR INSERT WITH CHECK ((select auth.role()) = 'service_role');
 
 DROP POLICY IF EXISTS "update_crop_ai_references" ON public.crop_ai_references;
 CREATE POLICY "update_crop_ai_references" ON public.crop_ai_references
-  FOR UPDATE USING (auth.role() = 'service_role')
-  WITH CHECK (auth.role() = 'service_role');
+  FOR UPDATE USING ((select auth.role()) = 'service_role')
+  WITH CHECK ((select auth.role()) = 'service_role');
 
 DROP POLICY IF EXISTS "delete_crop_ai_references" ON public.crop_ai_references;
 CREATE POLICY "delete_crop_ai_references" ON public.crop_ai_references
-  FOR DELETE USING (auth.role() = 'service_role');
-
-
+  FOR DELETE USING ((select auth.role()) = 'service_role');
 
 -- Evenements Parcelle RLS
 CREATE POLICY "Users can view events in their organization" ON evenements_parcelle
   FOR SELECT USING (
     organization_id IN (
-      SELECT organization_id FROM organization_users WHERE user_id = auth.uid() AND is_active = true
+      SELECT organization_id FROM organization_users WHERE user_id = (select auth.uid()) AND is_active = true
     )
   );
 CREATE POLICY "Users can insert events in their organization" ON evenements_parcelle
   FOR INSERT WITH CHECK (
     organization_id IN (
-      SELECT organization_id FROM organization_users WHERE user_id = auth.uid() AND is_active = true
+      SELECT organization_id FROM organization_users WHERE user_id = (select auth.uid()) AND is_active = true
     )
   );
 
@@ -7218,13 +7193,13 @@ CREATE POLICY "Users can insert events in their organization" ON evenements_parc
 CREATE POLICY "Users can view seasons in their organization" ON suivis_saison
   FOR SELECT USING (
     organization_id IN (
-      SELECT organization_id FROM organization_users WHERE user_id = auth.uid() AND is_active = true
+      SELECT organization_id FROM organization_users WHERE user_id = (select auth.uid()) AND is_active = true
     )
   );
 CREATE POLICY "Users can manage seasons in their organization" ON suivis_saison
   FOR ALL USING (
     organization_id IN (
-      SELECT organization_id FROM organization_users WHERE user_id = auth.uid() AND is_active = true
+      SELECT organization_id FROM organization_users WHERE user_id = (select auth.uid()) AND is_active = true
     )
   );
 
@@ -7568,8 +7543,6 @@ BEGIN
   END IF;
 END $$;
 
-
-
 -- =====================================================
 -- DATA SEEDING & FIXES
 -- =====================================================
@@ -7668,24 +7641,22 @@ DROP POLICY IF EXISTS "service_role_all_user_profiles" ON user_profiles;
 -- but this policy provides an additional fallback
 CREATE POLICY "service_role_all_user_profiles" ON user_profiles
   FOR ALL USING (
-    current_setting('request.jwt.claims', true)::jsonb->>'role' = 'service_role'
-    OR auth.jwt() ->> 'role' = 'service_role'
+    (select current_setting('request.jwt.claims', true))::jsonb->>'role' = 'service_role'
+    OR (select auth.jwt()) ->> 'role' = 'service_role'
   )
   WITH CHECK (
-    current_setting('request.jwt.claims', true)::jsonb->>'role' = 'service_role'
-    OR auth.jwt() ->> 'role' = 'service_role'
+    (select current_setting('request.jwt.claims', true))::jsonb->>'role' = 'service_role'
+    OR (select auth.jwt()) ->> 'role' = 'service_role'
   );
 
 -- Single policy for all operations (supports upsert in onboarding)
 CREATE POLICY "user_all_own_profile" ON user_profiles
   FOR ALL USING (
-    id = auth.uid()
+    id = (select auth.uid())
   )
   WITH CHECK (
-    id = auth.uid()
+    id = (select auth.uid())
   );
-
-
 
 -- =====================================================
 -- ORGANIZATIONS RLS POLICIES
@@ -7696,15 +7667,11 @@ DROP POLICY IF EXISTS "org_update_organizations" ON organizations;
 DROP POLICY IF EXISTS "org_delete_organizations" ON organizations;
 
 -- Read: Users can see organizations they're members of
-CREATE POLICY "org_read_organizations" ON organizations
-  FOR SELECT USING (
-    is_organization_member(id)
-  );
 
 -- Insert: Any authenticated user can create an organization
 CREATE POLICY "org_write_organizations" ON organizations
   FOR INSERT WITH CHECK (
-    auth.uid() IS NOT NULL
+    (select auth.uid()) IS NOT NULL
   );
 
 -- Update: Organization members can update
@@ -7729,25 +7696,25 @@ DROP POLICY IF EXISTS "user_delete_own_dashboard_settings" ON dashboard_settings
 
 CREATE POLICY "user_read_own_dashboard_settings" ON dashboard_settings
   FOR SELECT USING (
-    user_id = auth.uid() AND
+    user_id = (select auth.uid()) AND
     is_organization_member(organization_id)
   );
 
 CREATE POLICY "user_write_own_dashboard_settings" ON dashboard_settings
   FOR INSERT WITH CHECK (
-    user_id = auth.uid() AND
+    user_id = (select auth.uid()) AND
     is_organization_member(organization_id)
   );
 
 CREATE POLICY "user_update_own_dashboard_settings" ON dashboard_settings
   FOR UPDATE USING (
-    user_id = auth.uid() AND
+    user_id = (select auth.uid()) AND
     is_organization_member(organization_id)
   );
 
 CREATE POLICY "user_delete_own_dashboard_settings" ON dashboard_settings
   FOR DELETE USING (
-    user_id = auth.uid()
+    user_id = (select auth.uid())
   );
 
 -- =====================================================
@@ -7770,7 +7737,7 @@ CREATE POLICY "org_read_farms" ON farms
 -- Insert: Authenticated users can create farms for organizations they're members of
 CREATE POLICY "org_write_farms" ON farms
   FOR INSERT WITH CHECK (
-    auth.uid() IS NOT NULL AND
+    (select auth.uid()) IS NOT NULL AND
     is_organization_member(organization_id)
   );
 
@@ -7810,9 +7777,9 @@ CREATE POLICY "org_read_farm_roles" ON farm_management_roles
 -- Insert: Authenticated users can create farm roles for farms they have access to, or for themselves
 CREATE POLICY "org_write_farm_roles" ON farm_management_roles
   FOR INSERT WITH CHECK (
-    auth.uid() IS NOT NULL AND
+    (select auth.uid()) IS NOT NULL AND
     (
-      user_id = auth.uid() OR
+      user_id = (select auth.uid()) OR
       EXISTS (
         SELECT 1 FROM farms
         WHERE farms.id = farm_management_roles.farm_id
@@ -7824,7 +7791,7 @@ CREATE POLICY "org_write_farm_roles" ON farm_management_roles
 -- Update: Users can update farm roles for farms they have access to, or their own roles
 CREATE POLICY "org_update_farm_roles" ON farm_management_roles
   FOR UPDATE USING (
-    user_id = auth.uid() OR
+    user_id = (select auth.uid()) OR
     EXISTS (
       SELECT 1 FROM farms
       WHERE farms.id = farm_management_roles.farm_id
@@ -7835,7 +7802,7 @@ CREATE POLICY "org_update_farm_roles" ON farm_management_roles
 -- Delete: Users can delete farm roles for farms they have access to, or their own roles
 CREATE POLICY "org_delete_farm_roles" ON farm_management_roles
   FOR DELETE USING (
-    user_id = auth.uid() OR
+    user_id = (select auth.uid()) OR
     EXISTS (
       SELECT 1 FROM farms
       WHERE farms.id = farm_management_roles.farm_id
@@ -7860,7 +7827,7 @@ CREATE POLICY "org_read_parcels" ON parcels
 
 CREATE POLICY "org_write_parcels" ON parcels
   FOR INSERT WITH CHECK (
-    auth.uid() IS NOT NULL AND
+    (select auth.uid()) IS NOT NULL AND
     is_organization_member(organization_id)
   );
 
@@ -7894,7 +7861,7 @@ CREATE POLICY "org_read_task_categories" ON task_categories
 DROP POLICY IF EXISTS "org_write_task_categories" ON task_categories;
 CREATE POLICY "org_write_task_categories" ON task_categories
   FOR INSERT WITH CHECK (
-    auth.uid() IS NOT NULL AND
+    (select auth.uid()) IS NOT NULL AND
     is_organization_member(organization_id)
   );
 
@@ -7924,7 +7891,7 @@ CREATE POLICY "org_read_task_templates" ON task_templates
 DROP POLICY IF EXISTS "org_write_task_templates" ON task_templates;
 CREATE POLICY "org_write_task_templates" ON task_templates
   FOR INSERT WITH CHECK (
-    auth.uid() IS NOT NULL AND
+    (select auth.uid()) IS NOT NULL AND
     EXISTS (
       SELECT 1 FROM task_categories
       WHERE task_categories.id = task_templates.category_id
@@ -7966,8 +7933,8 @@ CREATE POLICY "org_read_task_comments" ON task_comments
 DROP POLICY IF EXISTS "org_write_task_comments" ON task_comments;
 CREATE POLICY "org_write_task_comments" ON task_comments
   FOR INSERT WITH CHECK (
-    auth.uid() IS NOT NULL AND
-    user_id = auth.uid() AND
+    (select auth.uid()) IS NOT NULL AND
+    user_id = (select auth.uid()) AND
     EXISTS (
       SELECT 1 FROM tasks
       WHERE tasks.id = task_comments.task_id
@@ -7978,7 +7945,7 @@ CREATE POLICY "org_write_task_comments" ON task_comments
 DROP POLICY IF EXISTS "org_update_task_comments" ON task_comments;
 CREATE POLICY "org_update_task_comments" ON task_comments
   FOR UPDATE USING (
-    user_id = auth.uid() AND
+    user_id = (select auth.uid()) AND
     EXISTS (
       SELECT 1 FROM tasks
       WHERE tasks.id = task_comments.task_id
@@ -7989,7 +7956,7 @@ CREATE POLICY "org_update_task_comments" ON task_comments
 DROP POLICY IF EXISTS "org_delete_task_comments" ON task_comments;
 CREATE POLICY "org_delete_task_comments" ON task_comments
   FOR DELETE USING (
-    user_id = auth.uid() OR
+    user_id = (select auth.uid()) OR
     EXISTS (
       SELECT 1 FROM tasks
       WHERE tasks.id = task_comments.task_id
@@ -8011,7 +7978,7 @@ CREATE POLICY "org_read_task_time_logs" ON task_time_logs
 DROP POLICY IF EXISTS "org_write_task_time_logs" ON task_time_logs;
 CREATE POLICY "org_write_task_time_logs" ON task_time_logs
   FOR INSERT WITH CHECK (
-    auth.uid() IS NOT NULL AND
+    (select auth.uid()) IS NOT NULL AND
     EXISTS (
       SELECT 1 FROM tasks
       WHERE tasks.id = task_time_logs.task_id
@@ -8053,7 +8020,7 @@ CREATE POLICY "org_read_task_dependencies" ON task_dependencies
 DROP POLICY IF EXISTS "org_write_task_dependencies" ON task_dependencies;
 CREATE POLICY "org_write_task_dependencies" ON task_dependencies
   FOR INSERT WITH CHECK (
-    auth.uid() IS NOT NULL AND
+    (select auth.uid()) IS NOT NULL AND
     EXISTS (
       SELECT 1 FROM tasks
       WHERE tasks.id = task_dependencies.task_id
@@ -8095,7 +8062,7 @@ CREATE POLICY "org_read_task_equipment" ON task_equipment
 DROP POLICY IF EXISTS "org_write_task_equipment" ON task_equipment;
 CREATE POLICY "org_write_task_equipment" ON task_equipment
   FOR INSERT WITH CHECK (
-    auth.uid() IS NOT NULL AND
+    (select auth.uid()) IS NOT NULL AND
     EXISTS (
       SELECT 1 FROM tasks
       WHERE tasks.id = task_equipment.task_id
@@ -8131,15 +8098,15 @@ CREATE POLICY "org_read_task_watchers" ON task_watchers
 DROP POLICY IF EXISTS "org_write_task_watchers" ON task_watchers;
 CREATE POLICY "org_write_task_watchers" ON task_watchers
   FOR INSERT WITH CHECK (
-    auth.uid() IS NOT NULL AND
-    user_id = auth.uid() AND
+    (select auth.uid()) IS NOT NULL AND
+    user_id = (select auth.uid()) AND
     is_organization_member(organization_id)
   );
 
 DROP POLICY IF EXISTS "org_delete_task_watchers" ON task_watchers;
 CREATE POLICY "org_delete_task_watchers" ON task_watchers
   FOR DELETE USING (
-    user_id = auth.uid() AND is_organization_member(organization_id)
+    user_id = (select auth.uid()) AND is_organization_member(organization_id)
   );
 
 -- Task Mentions policies (readable by org members; inserted by the comment author)
@@ -8156,7 +8123,7 @@ CREATE POLICY "org_read_task_mentions" ON task_mentions
 DROP POLICY IF EXISTS "org_write_task_mentions" ON task_mentions;
 CREATE POLICY "org_write_task_mentions" ON task_mentions
   FOR INSERT WITH CHECK (
-    auth.uid() IS NOT NULL AND
+    (select auth.uid()) IS NOT NULL AND
     EXISTS (
       SELECT 1 FROM tasks
       WHERE tasks.id = task_mentions.task_id
@@ -8184,7 +8151,7 @@ CREATE POLICY "org_read_work_records" ON work_records
 DROP POLICY IF EXISTS "org_write_work_records" ON work_records;
 CREATE POLICY "org_write_work_records" ON work_records
   FOR INSERT WITH CHECK (
-    auth.uid() IS NOT NULL AND
+    (select auth.uid()) IS NOT NULL AND
     is_organization_member(organization_id)
   );
 
@@ -8210,7 +8177,7 @@ CREATE POLICY "org_read_metayage_settlements" ON metayage_settlements
 DROP POLICY IF EXISTS "org_write_metayage_settlements" ON metayage_settlements;
 CREATE POLICY "org_write_metayage_settlements" ON metayage_settlements
   FOR INSERT WITH CHECK (
-    auth.uid() IS NOT NULL AND
+    (select auth.uid()) IS NOT NULL AND
     is_organization_member(organization_id)
   );
 
@@ -8236,7 +8203,7 @@ CREATE POLICY "org_read_payment_records" ON payment_records
 DROP POLICY IF EXISTS "org_write_payment_records" ON payment_records;
 CREATE POLICY "org_write_payment_records" ON payment_records
   FOR INSERT WITH CHECK (
-    auth.uid() IS NOT NULL AND
+    (select auth.uid()) IS NOT NULL AND
     is_organization_member(organization_id)
   );
 
@@ -8261,7 +8228,7 @@ CREATE POLICY "org_read_piece_work_records" ON piece_work_records
 DROP POLICY IF EXISTS "org_write_piece_work_records" ON piece_work_records;
 CREATE POLICY "org_write_piece_work_records" ON piece_work_records
   FOR INSERT WITH CHECK (
-    auth.uid() IS NOT NULL AND
+    (select auth.uid()) IS NOT NULL AND
     is_organization_member(organization_id)
   );
 
@@ -8287,7 +8254,7 @@ CREATE POLICY "org_read_payment_advances" ON payment_advances
 DROP POLICY IF EXISTS "org_write_payment_advances" ON payment_advances;
 CREATE POLICY "org_write_payment_advances" ON payment_advances
   FOR INSERT WITH CHECK (
-    auth.uid() IS NOT NULL AND
+    (select auth.uid()) IS NOT NULL AND
     is_organization_member(organization_id)
   );
 
@@ -8346,7 +8313,7 @@ CREATE POLICY "org_read_delivery_tracking" ON delivery_tracking
 DROP POLICY IF EXISTS "org_write_delivery_tracking" ON delivery_tracking;
 CREATE POLICY "org_write_delivery_tracking" ON delivery_tracking
   FOR INSERT WITH CHECK (
-    auth.uid() IS NOT NULL AND
+    (select auth.uid()) IS NOT NULL AND
     delivery_id IN (
       SELECT id FROM deliveries WHERE is_organization_member(organization_id)
     )
@@ -8382,7 +8349,7 @@ CREATE POLICY "org_read_warehouses" ON warehouses
 DROP POLICY IF EXISTS "org_write_warehouses" ON warehouses;
 CREATE POLICY "org_write_warehouses" ON warehouses
   FOR INSERT WITH CHECK (
-    auth.uid() IS NOT NULL AND
+    (select auth.uid()) IS NOT NULL AND
     is_organization_member(organization_id)
   );
 
@@ -8408,7 +8375,7 @@ CREATE POLICY "org_read_inventory_batches" ON inventory_batches
 DROP POLICY IF EXISTS "org_write_inventory_batches" ON inventory_batches;
 CREATE POLICY "org_write_inventory_batches" ON inventory_batches
   FOR INSERT WITH CHECK (
-    auth.uid() IS NOT NULL AND
+    (select auth.uid()) IS NOT NULL AND
     is_organization_member(organization_id)
   );
 
@@ -8434,7 +8401,7 @@ CREATE POLICY "org_read_inventory_serial_numbers" ON inventory_serial_numbers
 DROP POLICY IF EXISTS "org_write_inventory_serial_numbers" ON inventory_serial_numbers;
 CREATE POLICY "org_write_inventory_serial_numbers" ON inventory_serial_numbers
   FOR INSERT WITH CHECK (
-    auth.uid() IS NOT NULL AND
+    (select auth.uid()) IS NOT NULL AND
     is_organization_member(organization_id)
   );
 
@@ -8469,7 +8436,7 @@ CREATE POLICY "org_read_stock_movements" ON stock_movements
 DROP POLICY IF EXISTS "org_write_stock_movements" ON stock_movements;
 CREATE POLICY "org_write_stock_movements" ON stock_movements
   FOR INSERT WITH CHECK (
-    auth.uid() IS NOT NULL AND
+    (select auth.uid()) IS NOT NULL AND
     is_organization_member(organization_id)
   );
 
@@ -8495,7 +8462,7 @@ CREATE POLICY "org_read_stock_valuation" ON stock_valuation
 DROP POLICY IF EXISTS "org_write_stock_valuation" ON stock_valuation;
 CREATE POLICY "org_write_stock_valuation" ON stock_valuation
   FOR INSERT WITH CHECK (
-    auth.uid() IS NOT NULL AND
+    (select auth.uid()) IS NOT NULL AND
     is_organization_member(organization_id)
   );
 
@@ -8512,37 +8479,6 @@ CREATE POLICY "org_delete_stock_valuation" ON stock_valuation
   );
 
 -- Product Applications Policies
-DROP POLICY IF EXISTS "product_applications_select_org" ON product_applications;
-CREATE POLICY "product_applications_select_org" ON product_applications
-  FOR SELECT USING (
-    organization_id IN (
-      SELECT organization_id FROM organization_users WHERE user_id = auth.uid() AND is_active = true
-    )
-  );
-
-DROP POLICY IF EXISTS "product_applications_insert_org" ON product_applications;
-CREATE POLICY "product_applications_insert_org" ON product_applications
-  FOR INSERT WITH CHECK (
-    organization_id IN (
-      SELECT organization_id FROM organization_users WHERE user_id = auth.uid() AND is_active = true
-    )
-  );
-
-DROP POLICY IF EXISTS "product_applications_update_org" ON product_applications;
-CREATE POLICY "product_applications_update_org" ON product_applications
-  FOR UPDATE USING (
-    organization_id IN (
-      SELECT organization_id FROM organization_users WHERE user_id = auth.uid() AND is_active = true
-    )
-  );
-
-DROP POLICY IF EXISTS "product_applications_delete_org" ON product_applications;
-CREATE POLICY "product_applications_delete_org" ON product_applications
-  FOR DELETE USING (
-    organization_id IN (
-      SELECT organization_id FROM organization_users WHERE user_id = auth.uid() AND is_active = true
-    )
-  );
 
 -- Opening Stock Balances Policies
 DROP POLICY IF EXISTS "org_read_opening_stock_balances" ON opening_stock_balances;
@@ -8554,7 +8490,7 @@ CREATE POLICY "org_read_opening_stock_balances" ON opening_stock_balances
 DROP POLICY IF EXISTS "org_write_opening_stock_balances" ON opening_stock_balances;
 CREATE POLICY "org_write_opening_stock_balances" ON opening_stock_balances
   FOR INSERT WITH CHECK (
-    auth.uid() IS NOT NULL AND
+    (select auth.uid()) IS NOT NULL AND
     is_organization_member(organization_id)
   );
 
@@ -8580,7 +8516,7 @@ CREATE POLICY "org_read_stock_closing_entries" ON stock_closing_entries
 DROP POLICY IF EXISTS "org_write_stock_closing_entries" ON stock_closing_entries;
 CREATE POLICY "org_write_stock_closing_entries" ON stock_closing_entries
   FOR INSERT WITH CHECK (
-    auth.uid() IS NOT NULL AND
+    (select auth.uid()) IS NOT NULL AND
     is_organization_member(organization_id)
   );
 
@@ -8615,7 +8551,7 @@ CREATE POLICY "org_read_stock_account_mappings" ON stock_account_mappings
 DROP POLICY IF EXISTS "org_write_stock_account_mappings" ON stock_account_mappings;
 CREATE POLICY "org_write_stock_account_mappings" ON stock_account_mappings
   FOR INSERT WITH CHECK (
-    auth.uid() IS NOT NULL AND
+    (select auth.uid()) IS NOT NULL AND
     is_organization_member(organization_id)
   );
 
@@ -8638,7 +8574,7 @@ CREATE POLICY "org_read_stock_reservations" ON stock_reservations
   FOR SELECT USING (is_organization_member(organization_id));
 DROP POLICY IF EXISTS "org_write_stock_reservations" ON stock_reservations;
 CREATE POLICY "org_write_stock_reservations" ON stock_reservations
-  FOR INSERT WITH CHECK (auth.uid() IS NOT NULL AND is_organization_member(organization_id));
+  FOR INSERT WITH CHECK ((select auth.uid()) IS NOT NULL AND is_organization_member(organization_id));
 DROP POLICY IF EXISTS "org_update_stock_reservations" ON stock_reservations;
 CREATE POLICY "org_update_stock_reservations" ON stock_reservations
   FOR UPDATE USING (is_organization_member(organization_id));
@@ -8684,7 +8620,7 @@ CREATE POLICY "org_read_analyses" ON analyses
 DROP POLICY IF EXISTS "org_write_analyses" ON analyses;
 CREATE POLICY "org_write_analyses" ON analyses
   FOR INSERT WITH CHECK (
-    auth.uid() IS NOT NULL AND
+    (select auth.uid()) IS NOT NULL AND
     is_organization_member(organization_id)
   );
 
@@ -8720,7 +8656,7 @@ CREATE POLICY "org_read_soil_analyses" ON soil_analyses
 DROP POLICY IF EXISTS "org_write_soil_analyses" ON soil_analyses;
 CREATE POLICY "org_write_soil_analyses" ON soil_analyses
   FOR INSERT WITH CHECK (
-    auth.uid() IS NOT NULL AND
+    (select auth.uid()) IS NOT NULL AND
     is_organization_member(organization_id)
   );
 
@@ -8739,19 +8675,19 @@ CREATE POLICY "org_delete_soil_analyses" ON soil_analyses
 -- Test Types Policies (no organization_id - allow all authenticated users to read)
 DROP POLICY IF EXISTS "org_read_test_types" ON test_types;
 CREATE POLICY "org_read_test_types" ON test_types
-  FOR SELECT USING (auth.uid() IS NOT NULL);
+  FOR SELECT USING ((select auth.uid()) IS NOT NULL);
 
 DROP POLICY IF EXISTS "org_write_test_types" ON test_types;
 CREATE POLICY "org_write_test_types" ON test_types
-  FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+  FOR INSERT WITH CHECK ((select auth.uid()) IS NOT NULL);
 
 DROP POLICY IF EXISTS "org_update_test_types" ON test_types;
 CREATE POLICY "org_update_test_types" ON test_types
-  FOR UPDATE USING (auth.uid() IS NOT NULL);
+  FOR UPDATE USING ((select auth.uid()) IS NOT NULL);
 
 DROP POLICY IF EXISTS "org_delete_test_types" ON test_types;
 CREATE POLICY "org_delete_test_types" ON test_types
-  FOR DELETE USING (auth.uid() IS NOT NULL);
+  FOR DELETE USING ((select auth.uid()) IS NOT NULL);
 
 -- Parcel Reports Policies (using organization_id directly)
 DROP POLICY IF EXISTS "org_read_parcel_reports" ON parcel_reports;
@@ -8763,7 +8699,7 @@ CREATE POLICY "org_read_parcel_reports" ON parcel_reports
 DROP POLICY IF EXISTS "org_write_parcel_reports" ON parcel_reports;
 CREATE POLICY "org_write_parcel_reports" ON parcel_reports
   FOR INSERT WITH CHECK (
-    auth.uid() IS NOT NULL AND
+    (select auth.uid()) IS NOT NULL AND
     is_organization_member(organization_id)
   );
 
@@ -8786,53 +8722,53 @@ CREATE POLICY "org_delete_parcel_reports" ON parcel_reports
 -- Crop Types Policies (no organization_id - allow all authenticated users to read)
 DROP POLICY IF EXISTS "org_read_crop_types" ON crop_types;
 CREATE POLICY "org_read_crop_types" ON crop_types
-  FOR SELECT USING (auth.uid() IS NOT NULL);
+  FOR SELECT USING ((select auth.uid()) IS NOT NULL);
 
 DROP POLICY IF EXISTS "org_write_crop_types" ON crop_types;
 CREATE POLICY "org_write_crop_types" ON crop_types
-  FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+  FOR INSERT WITH CHECK ((select auth.uid()) IS NOT NULL);
 
 DROP POLICY IF EXISTS "org_update_crop_types" ON crop_types;
 CREATE POLICY "org_update_crop_types" ON crop_types
-  FOR UPDATE USING (auth.uid() IS NOT NULL);
+  FOR UPDATE USING ((select auth.uid()) IS NOT NULL);
 
 DROP POLICY IF EXISTS "org_delete_crop_types" ON crop_types;
 CREATE POLICY "org_delete_crop_types" ON crop_types
-  FOR DELETE USING (auth.uid() IS NOT NULL);
+  FOR DELETE USING ((select auth.uid()) IS NOT NULL);
 
 -- Crop Categories Policies (check through crop_types relationship)
 DROP POLICY IF EXISTS "org_read_crop_categories" ON crop_categories;
 CREATE POLICY "org_read_crop_categories" ON crop_categories
-  FOR SELECT USING (auth.uid() IS NOT NULL);
+  FOR SELECT USING ((select auth.uid()) IS NOT NULL);
 
 DROP POLICY IF EXISTS "org_write_crop_categories" ON crop_categories;
 CREATE POLICY "org_write_crop_categories" ON crop_categories
-  FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+  FOR INSERT WITH CHECK ((select auth.uid()) IS NOT NULL);
 
 DROP POLICY IF EXISTS "org_update_crop_categories" ON crop_categories;
 CREATE POLICY "org_update_crop_categories" ON crop_categories
-  FOR UPDATE USING (auth.uid() IS NOT NULL);
+  FOR UPDATE USING ((select auth.uid()) IS NOT NULL);
 
 DROP POLICY IF EXISTS "org_delete_crop_categories" ON crop_categories;
 CREATE POLICY "org_delete_crop_categories" ON crop_categories
-  FOR DELETE USING (auth.uid() IS NOT NULL);
+  FOR DELETE USING ((select auth.uid()) IS NOT NULL);
 
 -- Crop Varieties Policies (check through crop_categories relationship)
 DROP POLICY IF EXISTS "org_read_crop_varieties" ON crop_varieties;
 CREATE POLICY "org_read_crop_varieties" ON crop_varieties
-  FOR SELECT USING (auth.uid() IS NOT NULL);
+  FOR SELECT USING ((select auth.uid()) IS NOT NULL);
 
 DROP POLICY IF EXISTS "org_write_crop_varieties" ON crop_varieties;
 CREATE POLICY "org_write_crop_varieties" ON crop_varieties
-  FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+  FOR INSERT WITH CHECK ((select auth.uid()) IS NOT NULL);
 
 DROP POLICY IF EXISTS "org_update_crop_varieties" ON crop_varieties;
 CREATE POLICY "org_update_crop_varieties" ON crop_varieties
-  FOR UPDATE USING (auth.uid() IS NOT NULL);
+  FOR UPDATE USING ((select auth.uid()) IS NOT NULL);
 
 DROP POLICY IF EXISTS "org_delete_crop_varieties" ON crop_varieties;
 CREATE POLICY "org_delete_crop_varieties" ON crop_varieties
-  FOR DELETE USING (auth.uid() IS NOT NULL);
+  FOR DELETE USING ((select auth.uid()) IS NOT NULL);
 
 -- Crops Policies (using organization_id directly)
 DROP POLICY IF EXISTS "org_read_crops" ON crops;
@@ -8844,7 +8780,7 @@ CREATE POLICY "org_read_crops" ON crops
 DROP POLICY IF EXISTS "org_write_crops" ON crops;
 CREATE POLICY "org_write_crops" ON crops
   FOR INSERT WITH CHECK (
-    auth.uid() IS NOT NULL AND
+    (select auth.uid()) IS NOT NULL AND
     is_organization_member(organization_id)
   );
 
@@ -8870,7 +8806,7 @@ CREATE POLICY "org_read_tree_categories" ON tree_categories
 DROP POLICY IF EXISTS "org_write_tree_categories" ON tree_categories;
 CREATE POLICY "org_write_tree_categories" ON tree_categories
   FOR INSERT WITH CHECK (
-    auth.uid() IS NOT NULL AND
+    (select auth.uid()) IS NOT NULL AND
     is_organization_member(organization_id)
   );
 
@@ -8896,7 +8832,7 @@ CREATE POLICY "org_read_trees" ON trees
 DROP POLICY IF EXISTS "org_write_trees" ON trees;
 CREATE POLICY "org_write_trees" ON trees
   FOR INSERT WITH CHECK (
-    auth.uid() IS NOT NULL AND
+    (select auth.uid()) IS NOT NULL AND
     is_organization_member(organization_id)
   );
 
@@ -8922,7 +8858,7 @@ CREATE POLICY "org_read_plantation_types" ON plantation_types
 DROP POLICY IF EXISTS "org_write_plantation_types" ON plantation_types;
 CREATE POLICY "org_write_plantation_types" ON plantation_types
   FOR INSERT WITH CHECK (
-    auth.uid() IS NOT NULL AND
+    (select auth.uid()) IS NOT NULL AND
     is_organization_member(organization_id)
   );
 
@@ -8945,36 +8881,36 @@ CREATE POLICY "org_delete_plantation_types" ON plantation_types
 -- Product Categories Policies (no organization_id - allow all authenticated users to read)
 DROP POLICY IF EXISTS "org_read_product_categories" ON product_categories;
 CREATE POLICY "org_read_product_categories" ON product_categories
-  FOR SELECT USING (auth.uid() IS NOT NULL);
+  FOR SELECT USING ((select auth.uid()) IS NOT NULL);
 
 DROP POLICY IF EXISTS "org_write_product_categories" ON product_categories;
 CREATE POLICY "org_write_product_categories" ON product_categories
-  FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+  FOR INSERT WITH CHECK ((select auth.uid()) IS NOT NULL);
 
 DROP POLICY IF EXISTS "org_update_product_categories" ON product_categories;
 CREATE POLICY "org_update_product_categories" ON product_categories
-  FOR UPDATE USING (auth.uid() IS NOT NULL);
+  FOR UPDATE USING ((select auth.uid()) IS NOT NULL);
 
 DROP POLICY IF EXISTS "org_delete_product_categories" ON product_categories;
 CREATE POLICY "org_delete_product_categories" ON product_categories
-  FOR DELETE USING (auth.uid() IS NOT NULL);
+  FOR DELETE USING ((select auth.uid()) IS NOT NULL);
 
 -- Product Subcategories Policies (check through product_categories relationship)
 DROP POLICY IF EXISTS "org_read_product_subcategories" ON product_subcategories;
 CREATE POLICY "org_read_product_subcategories" ON product_subcategories
-  FOR SELECT USING (auth.uid() IS NOT NULL);
+  FOR SELECT USING ((select auth.uid()) IS NOT NULL);
 
 DROP POLICY IF EXISTS "org_write_product_subcategories" ON product_subcategories;
 CREATE POLICY "org_write_product_subcategories" ON product_subcategories
-  FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+  FOR INSERT WITH CHECK ((select auth.uid()) IS NOT NULL);
 
 DROP POLICY IF EXISTS "org_update_product_subcategories" ON product_subcategories;
 CREATE POLICY "org_update_product_subcategories" ON product_subcategories
-  FOR UPDATE USING (auth.uid() IS NOT NULL);
+  FOR UPDATE USING ((select auth.uid()) IS NOT NULL);
 
 DROP POLICY IF EXISTS "org_delete_product_subcategories" ON product_subcategories;
 CREATE POLICY "org_delete_product_subcategories" ON product_subcategories
-  FOR DELETE USING (auth.uid() IS NOT NULL);
+  FOR DELETE USING ((select auth.uid()) IS NOT NULL);
 
 -- Inventory (legacy table) Policies (check through farm relationship)
 DROP POLICY IF EXISTS "org_read_inventory" ON inventory;
@@ -8991,7 +8927,7 @@ CREATE POLICY "org_read_inventory" ON inventory
 DROP POLICY IF EXISTS "org_write_inventory" ON inventory;
 CREATE POLICY "org_write_inventory" ON inventory
   FOR INSERT WITH CHECK (
-    auth.uid() IS NOT NULL AND
+    (select auth.uid()) IS NOT NULL AND
     (
       (farm_id IS NOT NULL AND EXISTS (
         SELECT 1 FROM farms
@@ -9038,7 +8974,7 @@ CREATE POLICY "org_read_cost_categories" ON cost_categories
 DROP POLICY IF EXISTS "org_write_cost_categories" ON cost_categories;
 CREATE POLICY "org_write_cost_categories" ON cost_categories
   FOR INSERT WITH CHECK (
-    auth.uid() IS NOT NULL AND
+    (select auth.uid()) IS NOT NULL AND
     is_organization_member(organization_id)
   );
 
@@ -9064,7 +9000,7 @@ CREATE POLICY "org_read_costs" ON costs
 DROP POLICY IF EXISTS "org_write_costs" ON costs;
 CREATE POLICY "org_write_costs" ON costs
   FOR INSERT WITH CHECK (
-    auth.uid() IS NOT NULL AND
+    (select auth.uid()) IS NOT NULL AND
     is_organization_member(organization_id)
   );
 
@@ -9090,7 +9026,7 @@ CREATE POLICY "org_read_revenues" ON revenues
 DROP POLICY IF EXISTS "org_write_revenues" ON revenues;
 CREATE POLICY "org_write_revenues" ON revenues
   FOR INSERT WITH CHECK (
-    auth.uid() IS NOT NULL AND
+    (select auth.uid()) IS NOT NULL AND
     is_organization_member(organization_id)
   );
 
@@ -9116,7 +9052,7 @@ CREATE POLICY "org_read_profitability_snapshots" ON profitability_snapshots
 DROP POLICY IF EXISTS "org_write_profitability_snapshots" ON profitability_snapshots;
 CREATE POLICY "org_write_profitability_snapshots" ON profitability_snapshots
   FOR INSERT WITH CHECK (
-    auth.uid() IS NOT NULL AND
+    (select auth.uid()) IS NOT NULL AND
     is_organization_member(organization_id)
   );
 
@@ -9146,7 +9082,7 @@ CREATE POLICY "org_read_structures" ON structures
 DROP POLICY IF EXISTS "org_write_structures" ON structures;
 CREATE POLICY "org_write_structures" ON structures
   FOR INSERT WITH CHECK (
-    auth.uid() IS NOT NULL AND
+    (select auth.uid()) IS NOT NULL AND
     is_organization_member(organization_id)
   );
 
@@ -9166,7 +9102,7 @@ CREATE POLICY "org_delete_structures" ON structures
 DROP POLICY IF EXISTS "org_read_equipment_assets" ON equipment_assets;
 CREATE POLICY "org_read_equipment_assets" ON equipment_assets FOR SELECT USING (is_organization_member(organization_id));
 DROP POLICY IF EXISTS "org_write_equipment_assets" ON equipment_assets;
-CREATE POLICY "org_write_equipment_assets" ON equipment_assets FOR INSERT WITH CHECK (auth.uid() IS NOT NULL AND is_organization_member(organization_id));
+CREATE POLICY "org_write_equipment_assets" ON equipment_assets FOR INSERT WITH CHECK ((select auth.uid()) IS NOT NULL AND is_organization_member(organization_id));
 DROP POLICY IF EXISTS "org_update_equipment_assets" ON equipment_assets;
 CREATE POLICY "org_update_equipment_assets" ON equipment_assets FOR UPDATE USING (is_organization_member(organization_id));
 DROP POLICY IF EXISTS "org_delete_equipment_assets" ON equipment_assets;
@@ -9176,7 +9112,7 @@ CREATE POLICY "org_delete_equipment_assets" ON equipment_assets FOR DELETE USING
 DROP POLICY IF EXISTS "org_read_equipment_maintenance" ON equipment_maintenance;
 CREATE POLICY "org_read_equipment_maintenance" ON equipment_maintenance FOR SELECT USING (is_organization_member(organization_id));
 DROP POLICY IF EXISTS "org_write_equipment_maintenance" ON equipment_maintenance;
-CREATE POLICY "org_write_equipment_maintenance" ON equipment_maintenance FOR INSERT WITH CHECK (auth.uid() IS NOT NULL AND is_organization_member(organization_id));
+CREATE POLICY "org_write_equipment_maintenance" ON equipment_maintenance FOR INSERT WITH CHECK ((select auth.uid()) IS NOT NULL AND is_organization_member(organization_id));
 DROP POLICY IF EXISTS "org_update_equipment_maintenance" ON equipment_maintenance;
 CREATE POLICY "org_update_equipment_maintenance" ON equipment_maintenance FOR UPDATE USING (is_organization_member(organization_id));
 DROP POLICY IF EXISTS "org_delete_equipment_maintenance" ON equipment_maintenance;
@@ -9192,7 +9128,7 @@ CREATE POLICY "org_read_utilities" ON utilities
 DROP POLICY IF EXISTS "org_write_utilities" ON utilities;
 CREATE POLICY "org_write_utilities" ON utilities
   FOR INSERT WITH CHECK (
-    auth.uid() IS NOT NULL AND
+    (select auth.uid()) IS NOT NULL AND
     is_organization_member(organization_id)
   );
 
@@ -9235,12 +9171,12 @@ ALTER TABLE internal_admins ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "service_manage_internal_admins" ON internal_admins;
 CREATE POLICY "service_manage_internal_admins" ON internal_admins
   FOR ALL USING (
-    current_setting('role', true) = 'service_role'
+    (select current_setting('role', true)) = 'service_role'
   );
 
 DROP POLICY IF EXISTS "users_read_own_internal_admin" ON internal_admins;
 CREATE POLICY "users_read_own_internal_admin" ON internal_admins
-  FOR SELECT USING (user_id = auth.uid());
+  FOR SELECT USING (user_id = (select auth.uid()));
 
 CREATE OR REPLACE FUNCTION is_internal_admin()
 RETURNS BOOLEAN
@@ -9259,80 +9195,77 @@ $$;
 COMMENT ON FUNCTION is_internal_admin() IS 'Check if the current authenticated user is an internal platform admin';
 
 -- Roles Policies (no organization_id - allow all authenticated users to read)
-DROP POLICY IF EXISTS "org_read_roles" ON roles;
-CREATE POLICY "org_read_roles" ON roles
-  FOR SELECT USING (auth.uid() IS NOT NULL);
 
 DROP POLICY IF EXISTS "org_write_roles" ON roles;
 CREATE POLICY "org_write_roles" ON roles
   FOR INSERT WITH CHECK (
-    current_setting('role', true) = 'service_role'
+    (select current_setting('role', true)) = 'service_role'
     OR is_internal_admin()
   );
 
 DROP POLICY IF EXISTS "org_update_roles" ON roles;
 CREATE POLICY "org_update_roles" ON roles
   FOR UPDATE USING (
-    current_setting('role', true) = 'service_role'
+    (select current_setting('role', true)) = 'service_role'
     OR is_internal_admin()
   );
 
 DROP POLICY IF EXISTS "org_delete_roles" ON roles;
 CREATE POLICY "org_delete_roles" ON roles
   FOR DELETE USING (
-    current_setting('role', true) = 'service_role'
+    (select current_setting('role', true)) = 'service_role'
     OR is_internal_admin()
   );
 
 -- Permissions Policies (no organization_id - allow all authenticated users to read)
 DROP POLICY IF EXISTS "org_read_permissions" ON permissions;
 CREATE POLICY "org_read_permissions" ON permissions
-  FOR SELECT USING (auth.uid() IS NOT NULL);
+  FOR SELECT USING ((select auth.uid()) IS NOT NULL);
 
 DROP POLICY IF EXISTS "org_write_permissions" ON permissions;
 CREATE POLICY "org_write_permissions" ON permissions
   FOR INSERT WITH CHECK (
-    current_setting('role', true) = 'service_role'
+    (select current_setting('role', true)) = 'service_role'
     OR is_internal_admin()
   );
 
 DROP POLICY IF EXISTS "org_update_permissions" ON permissions;
 CREATE POLICY "org_update_permissions" ON permissions
   FOR UPDATE USING (
-    current_setting('role', true) = 'service_role'
+    (select current_setting('role', true)) = 'service_role'
     OR is_internal_admin()
   );
 
 DROP POLICY IF EXISTS "org_delete_permissions" ON permissions;
 CREATE POLICY "org_delete_permissions" ON permissions
   FOR DELETE USING (
-    current_setting('role', true) = 'service_role'
+    (select current_setting('role', true)) = 'service_role'
     OR is_internal_admin()
   );
 
 -- Role Permissions Policies (check through roles relationship)
 DROP POLICY IF EXISTS "org_read_role_permissions" ON role_permissions;
 CREATE POLICY "org_read_role_permissions" ON role_permissions
-  FOR SELECT USING (auth.uid() IS NOT NULL);
+  FOR SELECT USING ((select auth.uid()) IS NOT NULL);
 
 DROP POLICY IF EXISTS "org_write_role_permissions" ON role_permissions;
 CREATE POLICY "org_write_role_permissions" ON role_permissions
   FOR INSERT WITH CHECK (
-    current_setting('role', true) = 'service_role'
+    (select current_setting('role', true)) = 'service_role'
     OR is_internal_admin()
   );
 
 DROP POLICY IF EXISTS "org_update_role_permissions" ON role_permissions;
 CREATE POLICY "org_update_role_permissions" ON role_permissions
   FOR UPDATE USING (
-    current_setting('role', true) = 'service_role'
+    (select current_setting('role', true)) = 'service_role'
     OR is_internal_admin()
   );
 
 DROP POLICY IF EXISTS "org_delete_role_permissions" ON role_permissions;
 CREATE POLICY "org_delete_role_permissions" ON role_permissions
   FOR DELETE USING (
-    current_setting('role', true) = 'service_role'
+    (select current_setting('role', true)) = 'service_role'
     OR is_internal_admin()
   );
 
@@ -9346,7 +9279,7 @@ CREATE POLICY "org_read_role_templates" ON role_templates
 DROP POLICY IF EXISTS "org_write_role_templates" ON role_templates;
 CREATE POLICY "org_write_role_templates" ON role_templates
   FOR INSERT WITH CHECK (
-    auth.uid() IS NOT NULL AND
+    (select auth.uid()) IS NOT NULL AND
     is_organization_member(organization_id)
   );
 
@@ -9366,32 +9299,32 @@ CREATE POLICY "org_delete_role_templates" ON role_templates
 DROP POLICY IF EXISTS "org_read_role_assignments_audit" ON role_assignments_audit;
 CREATE POLICY "org_read_role_assignments_audit" ON role_assignments_audit
   FOR SELECT USING (
-    is_organization_member(organization_id) OR user_id = auth.uid()
+    is_organization_member(organization_id) OR user_id = (select auth.uid())
   );
 
 DROP POLICY IF EXISTS "org_write_role_assignments_audit" ON role_assignments_audit;
 CREATE POLICY "org_write_role_assignments_audit" ON role_assignments_audit
   FOR INSERT WITH CHECK (
-    auth.uid() IS NOT NULL AND
+    (select auth.uid()) IS NOT NULL AND
     is_organization_member(organization_id)
   );
 
 -- Permission Groups Policies (no organization_id - allow all authenticated users to read)
 DROP POLICY IF EXISTS "org_read_permission_groups" ON permission_groups;
 CREATE POLICY "org_read_permission_groups" ON permission_groups
-  FOR SELECT USING (auth.uid() IS NOT NULL);
+  FOR SELECT USING ((select auth.uid()) IS NOT NULL);
 
 DROP POLICY IF EXISTS "org_write_permission_groups" ON permission_groups;
 CREATE POLICY "org_write_permission_groups" ON permission_groups
-  FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+  FOR INSERT WITH CHECK ((select auth.uid()) IS NOT NULL);
 
 DROP POLICY IF EXISTS "org_update_permission_groups" ON permission_groups;
 CREATE POLICY "org_update_permission_groups" ON permission_groups
-  FOR UPDATE USING (auth.uid() IS NOT NULL);
+  FOR UPDATE USING ((select auth.uid()) IS NOT NULL);
 
 DROP POLICY IF EXISTS "org_delete_permission_groups" ON permission_groups;
 CREATE POLICY "org_delete_permission_groups" ON permission_groups
-  FOR DELETE USING (auth.uid() IS NOT NULL);
+  FOR DELETE USING ((select auth.uid()) IS NOT NULL);
 
 -- =====================================================
 -- AUDIT & LOGGING TABLES
@@ -9409,7 +9342,7 @@ CREATE POLICY "org_read_financial_transactions" ON financial_transactions
 DROP POLICY IF EXISTS "org_write_financial_transactions" ON financial_transactions;
 CREATE POLICY "org_write_financial_transactions" ON financial_transactions
   FOR INSERT WITH CHECK (
-    auth.uid() IS NOT NULL AND
+    (select auth.uid()) IS NOT NULL AND
     is_organization_member(organization_id)
   );
 
@@ -9435,7 +9368,7 @@ CREATE POLICY "org_read_livestock" ON livestock
 DROP POLICY IF EXISTS "org_write_livestock" ON livestock;
 CREATE POLICY "org_write_livestock" ON livestock
   FOR INSERT WITH CHECK (
-    auth.uid() IS NOT NULL AND
+    (select auth.uid()) IS NOT NULL AND
     is_organization_member(organization_id)
   );
 
@@ -9452,16 +9385,11 @@ CREATE POLICY "org_delete_livestock" ON livestock
   );
 
 -- Subscription Usage Policies
-DROP POLICY IF EXISTS "org_read_subscription_usage" ON subscription_usage;
-CREATE POLICY "org_read_subscription_usage" ON subscription_usage
-  FOR SELECT USING (
-    is_organization_member(organization_id)
-  );
 
 DROP POLICY IF EXISTS "org_write_subscription_usage" ON subscription_usage;
 CREATE POLICY "org_write_subscription_usage" ON subscription_usage
   FOR INSERT WITH CHECK (
-    auth.uid() IS NOT NULL AND
+    (select auth.uid()) IS NOT NULL AND
     is_organization_member(organization_id)
   );
 
@@ -9482,16 +9410,11 @@ CREATE POLICY "org_delete_subscription_usage" ON subscription_usage
 -- =====================================================
 
 -- Satellite AOIs Policies
-DROP POLICY IF EXISTS "org_read_satellite_aois" ON satellite_aois;
-CREATE POLICY "org_read_satellite_aois" ON satellite_aois
-  FOR SELECT USING (
-    is_organization_member(organization_id)
-  );
 
 DROP POLICY IF EXISTS "org_write_satellite_aois" ON satellite_aois;
 CREATE POLICY "org_write_satellite_aois" ON satellite_aois
   FOR INSERT WITH CHECK (
-    auth.uid() IS NOT NULL AND
+    (select auth.uid()) IS NOT NULL AND
     is_organization_member(organization_id)
   );
 
@@ -9517,7 +9440,7 @@ CREATE POLICY "org_read_satellite_files" ON satellite_files
 DROP POLICY IF EXISTS "org_write_satellite_files" ON satellite_files;
 CREATE POLICY "org_write_satellite_files" ON satellite_files
   FOR INSERT WITH CHECK (
-    auth.uid() IS NOT NULL AND
+    (select auth.uid()) IS NOT NULL AND
     is_organization_member(organization_id)
   );
 
@@ -9543,7 +9466,7 @@ CREATE POLICY "org_read_satellite_indices_data" ON satellite_indices_data
 DROP POLICY IF EXISTS "org_write_satellite_indices_data" ON satellite_indices_data;
 CREATE POLICY "org_write_satellite_indices_data" ON satellite_indices_data
   FOR INSERT WITH CHECK (
-    auth.uid() IS NOT NULL AND
+    (select auth.uid()) IS NOT NULL AND
     is_organization_member(organization_id)
   );
 
@@ -9563,25 +9486,25 @@ CREATE POLICY "org_delete_satellite_indices_data" ON satellite_indices_data
 DROP POLICY IF EXISTS "read_satellite_par_data" ON satellite_par_data;
 CREATE POLICY "read_satellite_par_data" ON satellite_par_data
   FOR SELECT USING (
-    auth.uid() IS NOT NULL
+    (select auth.uid()) IS NOT NULL
   );
 
 DROP POLICY IF EXISTS "write_satellite_par_data" ON satellite_par_data;
 CREATE POLICY "write_satellite_par_data" ON satellite_par_data
   FOR INSERT WITH CHECK (
-    auth.uid() IS NOT NULL
+    (select auth.uid()) IS NOT NULL
   );
 
 DROP POLICY IF EXISTS "update_satellite_par_data" ON satellite_par_data;
 CREATE POLICY "update_satellite_par_data" ON satellite_par_data
   FOR UPDATE USING (
-    auth.uid() IS NOT NULL
+    (select auth.uid()) IS NOT NULL
   );
 
 DROP POLICY IF EXISTS "delete_satellite_par_data" ON satellite_par_data;
 CREATE POLICY "delete_satellite_par_data" ON satellite_par_data
   FOR DELETE USING (
-    auth.uid() IS NOT NULL
+    (select auth.uid()) IS NOT NULL
   );
 
 -- Satellite Processing Jobs Policies
@@ -9594,7 +9517,7 @@ CREATE POLICY "org_read_satellite_processing_jobs" ON satellite_processing_jobs
 DROP POLICY IF EXISTS "org_write_satellite_processing_jobs" ON satellite_processing_jobs;
 CREATE POLICY "org_write_satellite_processing_jobs" ON satellite_processing_jobs
   FOR INSERT WITH CHECK (
-    auth.uid() IS NOT NULL AND
+    (select auth.uid()) IS NOT NULL AND
     is_organization_member(organization_id)
   );
 
@@ -9620,7 +9543,7 @@ CREATE POLICY "org_read_satellite_processing_tasks" ON satellite_processing_task
 DROP POLICY IF EXISTS "org_write_satellite_processing_tasks" ON satellite_processing_tasks;
 CREATE POLICY "org_write_satellite_processing_tasks" ON satellite_processing_tasks
   FOR INSERT WITH CHECK (
-    auth.uid() IS NOT NULL AND
+    (select auth.uid()) IS NOT NULL AND
     is_organization_member(organization_id)
   );
 
@@ -9646,7 +9569,7 @@ CREATE POLICY "org_read_cloud_coverage_checks" ON cloud_coverage_checks
 DROP POLICY IF EXISTS "org_write_cloud_coverage_checks" ON cloud_coverage_checks;
 CREATE POLICY "org_write_cloud_coverage_checks" ON cloud_coverage_checks
   FOR INSERT WITH CHECK (
-    auth.uid() IS NOT NULL AND
+    (select auth.uid()) IS NOT NULL AND
     is_organization_member(organization_id)
   );
 
@@ -9661,7 +9584,6 @@ CREATE POLICY "org_delete_cloud_coverage_checks" ON cloud_coverage_checks
   FOR DELETE USING (
     is_organization_member(organization_id)
   );
-
 
 -- Create sequence for journal entry numbers if it doesn't exist
 CREATE SEQUENCE IF NOT EXISTS journal_entry_seq START 1;
@@ -9897,7 +9819,7 @@ ALTER TABLE saas_metrics_daily ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "admin_manage_account_templates" ON account_templates;
 CREATE POLICY "admin_manage_account_templates" ON account_templates
   FOR ALL USING (
-    current_setting('role', true) = 'service_role'
+    (select current_setting('role', true)) = 'service_role'
     OR is_internal_admin()
   );
 
@@ -9906,38 +9828,24 @@ CREATE POLICY "read_published_account_templates" ON account_templates
   FOR SELECT USING (
     published_at IS NOT NULL
     OR is_internal_admin()
-    OR current_setting('role', true) = 'service_role'
+    OR (select current_setting('role', true)) = 'service_role'
   );
 
 -- Account Mappings: internal_admin can manage
 DROP POLICY IF EXISTS "admin_manage_account_mappings" ON account_mappings;
 CREATE POLICY "admin_manage_account_mappings" ON account_mappings
   FOR ALL USING (
-    current_setting('role', true) = 'service_role'
+    (select current_setting('role', true)) = 'service_role'
     OR is_internal_admin()
   );
 
 -- Modules: internal_admin can manage, others can read active
-DROP POLICY IF EXISTS "admin_manage_modules" ON modules;
-CREATE POLICY "admin_manage_modules" ON modules
-  FOR ALL USING (
-    current_setting('role', true) = 'service_role'
-    OR is_internal_admin()
-  );
-
-DROP POLICY IF EXISTS "read_active_modules" ON modules;
-CREATE POLICY "read_active_modules" ON modules
-  FOR SELECT USING (
-    is_active = true
-    OR is_internal_admin()
-    OR current_setting('role', true) = 'service_role'
-  );
 
 -- Currencies: internal_admin can manage, others can read active
 DROP POLICY IF EXISTS "admin_manage_currencies" ON currencies;
 CREATE POLICY "admin_manage_currencies" ON currencies
   FOR ALL USING (
-    current_setting('role', true) = 'service_role'
+    (select current_setting('role', true)) = 'service_role'
     OR is_internal_admin()
   );
 
@@ -9946,14 +9854,14 @@ CREATE POLICY "read_active_currencies" ON currencies
   FOR SELECT USING (
     is_active = true
     OR is_internal_admin()
-    OR current_setting('role', true) = 'service_role'
+    OR (select current_setting('role', true)) = 'service_role'
   );
 
 -- Roles: internal_admin can manage, others can read active
 DROP POLICY IF EXISTS "admin_manage_roles" ON roles;
 CREATE POLICY "admin_manage_roles" ON roles
   FOR ALL USING (
-    current_setting('role', true) = 'service_role'
+    (select current_setting('role', true)) = 'service_role'
     OR is_internal_admin()
   );
 
@@ -9962,7 +9870,7 @@ CREATE POLICY "read_active_roles" ON roles
   FOR SELECT USING (
     is_active = true
     OR is_internal_admin()
-    OR current_setting('role', true) = 'service_role'
+    OR (select current_setting('role', true)) = 'service_role'
   );
 
 -- Events: internal_admin sees all, others see own org only
@@ -9971,13 +9879,13 @@ CREATE POLICY "events_read_policy" ON events
   FOR SELECT USING (
     is_internal_admin()
     OR (organization_id IS NOT NULL AND is_organization_member(organization_id))
-    OR current_setting('role', true) = 'service_role'
+    OR (select current_setting('role', true)) = 'service_role'
   );
 
 DROP POLICY IF EXISTS "events_insert_policy" ON events;
 CREATE POLICY "events_insert_policy" ON events
   FOR INSERT WITH CHECK (
-    current_setting('role', true) = 'service_role'
+    (select current_setting('role', true)) = 'service_role'
     OR is_internal_admin()
   );
 
@@ -9987,13 +9895,13 @@ CREATE POLICY "org_usage_daily_read_policy" ON organization_usage_daily
   FOR SELECT USING (
     is_internal_admin()
     OR is_organization_member(organization_id)
-    OR current_setting('role', true) = 'service_role'
+    OR (select current_setting('role', true)) = 'service_role'
   );
 
 DROP POLICY IF EXISTS "org_usage_daily_write_policy" ON organization_usage_daily;
 CREATE POLICY "org_usage_daily_write_policy" ON organization_usage_daily
   FOR ALL USING (
-    current_setting('role', true) = 'service_role'
+    (select current_setting('role', true)) = 'service_role'
     OR is_internal_admin()
   );
 
@@ -10001,7 +9909,7 @@ CREATE POLICY "org_usage_daily_write_policy" ON organization_usage_daily
 DROP POLICY IF EXISTS "admin_job_logs_policy" ON admin_job_logs;
 CREATE POLICY "admin_job_logs_policy" ON admin_job_logs
   FOR ALL USING (
-    current_setting('role', true) = 'service_role'
+    (select current_setting('role', true)) = 'service_role'
     OR is_internal_admin()
   );
 
@@ -10009,7 +9917,7 @@ CREATE POLICY "admin_job_logs_policy" ON admin_job_logs
 DROP POLICY IF EXISTS "saas_metrics_daily_policy" ON saas_metrics_daily;
 CREATE POLICY "saas_metrics_daily_policy" ON saas_metrics_daily
   FOR ALL USING (
-    current_setting('role', true) = 'service_role'
+    (select current_setting('role', true)) = 'service_role'
     OR is_internal_admin()
   );
 
@@ -10019,7 +9927,7 @@ CREATE POLICY "admin_read_all_organizations" ON organizations
   FOR SELECT USING (
     is_internal_admin()
     OR is_organization_member(id)
-    OR current_setting('role', true) = 'service_role'
+    OR (select current_setting('role', true)) = 'service_role'
   );
 
 -- Grant internal_admin read access to subscription data for analytics
@@ -10028,7 +9936,7 @@ CREATE POLICY "admin_read_subscriptions" ON subscriptions
   FOR SELECT USING (
     is_internal_admin()
     OR is_organization_member(organization_id)
-    OR current_setting('role', true) = 'service_role'
+    OR (select current_setting('role', true)) = 'service_role'
   );
 
 DROP POLICY IF EXISTS "admin_read_subscription_usage" ON subscription_usage;
@@ -10036,7 +9944,7 @@ CREATE POLICY "admin_read_subscription_usage" ON subscription_usage
   FOR SELECT USING (
     is_internal_admin()
     OR is_organization_member(organization_id)
-    OR current_setting('role', true) = 'service_role'
+    OR (select current_setting('role', true)) = 'service_role'
   );
 
 -- ============================================================================
@@ -10580,16 +10488,16 @@ DROP POLICY IF EXISTS "Users can manage own cart items" ON marketplace_cart_item
 
 -- Cart policies
 CREATE POLICY "Users can view own cart" ON marketplace_carts
-  FOR SELECT USING (user_id = auth.uid());
+  FOR SELECT USING (user_id = (select auth.uid()));
 
 CREATE POLICY "Users can create own cart" ON marketplace_carts
-  FOR INSERT WITH CHECK (user_id = auth.uid());
+  FOR INSERT WITH CHECK (user_id = (select auth.uid()));
 
 CREATE POLICY "Users can update own cart" ON marketplace_carts
-  FOR UPDATE USING (user_id = auth.uid());
+  FOR UPDATE USING (user_id = (select auth.uid()));
 
 CREATE POLICY "Users can delete own cart" ON marketplace_carts
-  FOR DELETE USING (user_id = auth.uid());
+  FOR DELETE USING (user_id = (select auth.uid()));
 
 -- Cart items policies
 CREATE POLICY "Users can view own cart items" ON marketplace_cart_items
@@ -10597,7 +10505,7 @@ CREATE POLICY "Users can view own cart items" ON marketplace_cart_items
     EXISTS (
       SELECT 1 FROM marketplace_carts c
       WHERE c.id = marketplace_cart_items.cart_id
-      AND c.user_id = auth.uid()
+      AND c.user_id = (select auth.uid())
     )
   );
 
@@ -10606,7 +10514,7 @@ CREATE POLICY "Users can manage own cart items" ON marketplace_cart_items
     EXISTS (
       SELECT 1 FROM marketplace_carts c
       WHERE c.id = marketplace_cart_items.cart_id
-      AND c.user_id = auth.uid()
+      AND c.user_id = (select auth.uid())
     )
   );
 
@@ -10751,16 +10659,6 @@ BEGIN
 
   EXECUTE $q$ INSERT INTO storage.buckets (id, name, "public") VALUES ('products', 'products', true) ON CONFLICT (id) DO UPDATE SET "public" = true $q$;
 
-  EXECUTE 'DROP POLICY IF EXISTS "Public read access for products" ON storage.objects';
-  EXECUTE 'DROP POLICY IF EXISTS "Authenticated upload for products" ON storage.objects';
-  EXECUTE 'DROP POLICY IF EXISTS "Users can update own product images" ON storage.objects';
-  EXECUTE 'DROP POLICY IF EXISTS "Users can delete own product images" ON storage.objects';
-
-  EXECUTE $q$ CREATE POLICY "Public read access for products" ON storage.objects FOR SELECT USING (bucket_id = 'products') $q$;
-  EXECUTE $q$ CREATE POLICY "Authenticated upload for products" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'products' AND auth.role() = 'authenticated') $q$;
-  EXECUTE $q$ CREATE POLICY "Users can update own product images" ON storage.objects FOR UPDATE USING (bucket_id = 'products' AND auth.uid()::text = (storage.foldername(name))[1]) WITH CHECK (bucket_id = 'products' AND auth.uid()::text = (storage.foldername(name))[1]) $q$;
-  EXECUTE $q$ CREATE POLICY "Users can delete own product images" ON storage.objects FOR DELETE USING (bucket_id = 'products' AND auth.uid()::text = (storage.foldername(name))[1]) $q$;
-
   EXECUTE $q$ INSERT INTO storage.buckets (id, name, "public") VALUES ('avatars', 'avatars', true) ON CONFLICT (id) DO UPDATE SET "public" = true $q$;
 
   EXECUTE 'DROP POLICY IF EXISTS "Public read access for avatars" ON storage.objects';
@@ -10769,9 +10667,9 @@ BEGIN
   EXECUTE 'DROP POLICY IF EXISTS "Users can delete own avatars" ON storage.objects';
 
   EXECUTE $q$ CREATE POLICY "Public read access for avatars" ON storage.objects FOR SELECT TO public USING (bucket_id = 'avatars') $q$;
-  EXECUTE $q$ CREATE POLICY "Authenticated upload for avatars" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'avatars' AND auth.uid()::text = (storage.foldername(name))[1]) $q$;
-  EXECUTE $q$ CREATE POLICY "Users can update own avatars" ON storage.objects FOR UPDATE TO authenticated USING (bucket_id = 'avatars' AND auth.uid()::text = (storage.foldername(name))[1]) WITH CHECK (bucket_id = 'avatars' AND auth.uid()::text = (storage.foldername(name))[1]) $q$;
-  EXECUTE $q$ CREATE POLICY "Users can delete own avatars" ON storage.objects FOR DELETE TO authenticated USING (bucket_id = 'avatars' AND auth.uid()::text = (storage.foldername(name))[1]) $q$;
+  EXECUTE $q$ CREATE POLICY "Authenticated upload for avatars" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'avatars' AND (select auth.uid())::text = (storage.foldername(name))[1]) $q$;
+  EXECUTE $q$ CREATE POLICY "Users can update own avatars" ON storage.objects FOR UPDATE TO authenticated USING (bucket_id = 'avatars' AND (select auth.uid())::text = (storage.foldername(name))[1]) WITH CHECK (bucket_id = 'avatars' AND (select auth.uid())::text = (storage.foldername(name))[1]) $q$;
+  EXECUTE $q$ CREATE POLICY "Users can delete own avatars" ON storage.objects FOR DELETE TO authenticated USING (bucket_id = 'avatars' AND (select auth.uid())::text = (storage.foldername(name))[1]) $q$;
 
   EXECUTE 'GRANT ALL ON storage.objects TO authenticated';
   EXECUTE 'GRANT SELECT ON storage.objects TO anon';
@@ -10892,8 +10790,6 @@ GROUP BY organization_id, bucket_name;
 GRANT SELECT ON file_storage_stats TO authenticated;
 
 COMMENT ON VIEW file_storage_stats IS 'Storage usage statistics by organization and bucket';
-
-
 
 -- =====================================================
 -- MERGED MIGRATIONS
@@ -11332,7 +11228,7 @@ DROP POLICY IF EXISTS "crop_cycle_stages_select" ON crop_cycle_stages;
 CREATE POLICY "crop_cycle_stages_select" ON crop_cycle_stages
   FOR SELECT USING (crop_cycle_id IN (
     SELECT id FROM crop_cycles WHERE organization_id IN (
-      SELECT organization_id FROM organization_users WHERE user_id = auth.uid()
+      SELECT organization_id FROM organization_users WHERE user_id = (select auth.uid())
     )
   ));
 
@@ -11342,7 +11238,7 @@ CREATE POLICY "crop_cycle_stages_manage" ON crop_cycle_stages
     SELECT id FROM crop_cycles WHERE organization_id IN (
       SELECT ou.organization_id FROM organization_users ou
       JOIN roles r ON ou.role_id = r.id
-      WHERE ou.user_id = auth.uid() AND r.name IN ('system_admin', 'organization_admin', 'farm_manager')
+      WHERE ou.user_id = (select auth.uid()) AND r.name IN ('system_admin', 'organization_admin', 'farm_manager')
     )
   ));
 
@@ -11367,7 +11263,7 @@ DROP POLICY IF EXISTS "harvest_events_select" ON harvest_events;
 CREATE POLICY "harvest_events_select" ON harvest_events
   FOR SELECT USING (crop_cycle_id IN (
     SELECT id FROM crop_cycles WHERE organization_id IN (
-      SELECT organization_id FROM organization_users WHERE user_id = auth.uid()
+      SELECT organization_id FROM organization_users WHERE user_id = (select auth.uid())
     )
   ));
 
@@ -11377,7 +11273,7 @@ CREATE POLICY "harvest_events_manage" ON harvest_events
     SELECT id FROM crop_cycles WHERE organization_id IN (
       SELECT ou.organization_id FROM organization_users ou
       JOIN roles r ON ou.role_id = r.id
-      WHERE ou.user_id = auth.uid() AND r.name IN ('system_admin', 'organization_admin', 'farm_manager')
+      WHERE ou.user_id = (select auth.uid()) AND r.name IN ('system_admin', 'organization_admin', 'farm_manager')
     )
   ));
 
@@ -11767,7 +11663,7 @@ CREATE POLICY "Organization members can view campaigns"
   ON campaigns FOR SELECT
   USING (
     organization_id IN (
-      SELECT organization_id FROM organization_users WHERE user_id = auth.uid()
+      SELECT organization_id FROM organization_users WHERE user_id = (select auth.uid())
     )
   );
 
@@ -11779,7 +11675,7 @@ CREATE POLICY "Organization admins and farm managers can insert campaigns"
     organization_id IN (
       SELECT ou.organization_id FROM organization_users ou
       JOIN roles r ON r.id = ou.role_id
-      WHERE ou.user_id = auth.uid()
+      WHERE ou.user_id = (select auth.uid())
       AND r.name IN ('organization_admin', 'farm_manager', 'system_admin')
       AND ou.is_active = true
     )
@@ -11793,7 +11689,7 @@ CREATE POLICY "Organization admins and farm managers can update campaigns"
     organization_id IN (
       SELECT ou.organization_id FROM organization_users ou
       JOIN roles r ON r.id = ou.role_id
-      WHERE ou.user_id = auth.uid()
+      WHERE ou.user_id = (select auth.uid())
       AND r.name IN ('organization_admin', 'farm_manager', 'system_admin')
       AND ou.is_active = true
     )
@@ -11807,7 +11703,7 @@ CREATE POLICY "Organization admins and farm managers can delete campaigns"
     organization_id IN (
       SELECT ou.organization_id FROM organization_users ou
       JOIN roles r ON r.id = ou.role_id
-      WHERE ou.user_id = auth.uid()
+      WHERE ou.user_id = (select auth.uid())
       AND r.name IN ('organization_admin', 'farm_manager', 'system_admin')
       AND ou.is_active = true
     )
@@ -11945,8 +11841,6 @@ COMMENT ON COLUMN quality_inspections.type IS 'Type of quality inspection';
 COMMENT ON COLUMN quality_inspections.results IS 'JSONB object containing inspection results and measurements';
 COMMENT ON COLUMN quality_inspections.overall_score IS 'Overall quality score from 0 to 100';
 COMMENT ON COLUMN quality_inspections.attachments IS 'Array of attachment URLs (photos, documents, etc.)';
-
-
 
 -- 10. REPORTING VIEWS
 CREATE OR REPLACE VIEW crop_cycle_pnl WITH (security_invoker = true) AS
@@ -12283,8 +12177,6 @@ CREATE POLICY "org_manage_cycle_allocations" ON crop_cycle_allocations
 
 -- 12. SEED DATA: MOROCCO CAMPAIGN TEMPLATES
 
-
-
 -- 13. UPDATE TRIGGERS FOR UPDATED_AT
 DROP TRIGGER IF EXISTS trg_fiscal_years_updated_at ON fiscal_years;
 CREATE TRIGGER trg_fiscal_years_updated_at
@@ -12440,7 +12332,7 @@ CREATE POLICY "org_ai_settings_insert" ON organization_ai_settings
         EXISTS (
             SELECT 1 FROM organization_users ou
             JOIN roles r ON r.id = ou.role_id
-            WHERE ou.user_id = auth.uid()
+            WHERE ou.user_id = (select auth.uid())
                 AND ou.organization_id = organization_ai_settings.organization_id
                 AND r.name IN ('organization_admin', 'system_admin')
                 AND ou.is_active = true
@@ -12456,7 +12348,7 @@ CREATE POLICY "org_ai_settings_update" ON organization_ai_settings
         EXISTS (
             SELECT 1 FROM organization_users ou
             JOIN roles r ON r.id = ou.role_id
-            WHERE ou.user_id = auth.uid()
+            WHERE ou.user_id = (select auth.uid())
                 AND ou.organization_id = organization_ai_settings.organization_id
                 AND r.name IN ('organization_admin', 'system_admin')
                 AND ou.is_active = true
@@ -12472,7 +12364,7 @@ CREATE POLICY "org_ai_settings_delete" ON organization_ai_settings
         EXISTS (
             SELECT 1 FROM organization_users ou
             JOIN roles r ON r.id = ou.role_id
-            WHERE ou.user_id = auth.uid()
+            WHERE ou.user_id = (select auth.uid())
                 AND ou.organization_id = organization_ai_settings.organization_id
                 AND r.name IN ('organization_admin', 'system_admin')
                 AND ou.is_active = true
@@ -12525,9 +12417,9 @@ CREATE POLICY "Users can view their own chat history"
   USING (
     organization_id IN (
       SELECT organization_id FROM public.organization_users
-      WHERE user_id = auth.uid() AND is_active = true
+      WHERE user_id = (select auth.uid()) AND is_active = true
     )
-    AND user_id = auth.uid()
+    AND user_id = (select auth.uid())
   );
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
@@ -12538,9 +12430,9 @@ CREATE POLICY "Users can insert their own messages"
   WITH CHECK (
     organization_id IN (
       SELECT organization_id FROM public.organization_users
-      WHERE user_id = auth.uid() AND is_active = true
+      WHERE user_id = (select auth.uid()) AND is_active = true
     )
-    AND user_id = auth.uid()
+    AND user_id = (select auth.uid())
   );
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
@@ -12551,9 +12443,9 @@ CREATE POLICY "Users can delete their own messages"
   USING (
     organization_id IN (
       SELECT organization_id FROM public.organization_users
-      WHERE user_id = auth.uid() AND is_active = true
+      WHERE user_id = (select auth.uid()) AND is_active = true
     )
-    AND user_id = auth.uid()
+    AND user_id = (select auth.uid())
   );
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
@@ -12593,9 +12485,9 @@ CREATE POLICY "Users can manage their own pending actions"
   USING (
     organization_id IN (
       SELECT organization_id FROM public.organization_users
-      WHERE user_id = auth.uid() AND is_active = true
+      WHERE user_id = (select auth.uid()) AND is_active = true
     )
-    AND user_id = auth.uid()
+    AND user_id = (select auth.uid())
   );
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
@@ -12666,15 +12558,7 @@ COMMENT ON COLUMN cost_centers.default_expense_account_id IS 'Default expense ac
 -- Drop and recreate indexes
 DROP INDEX IF EXISTS idx_account_mappings_lookup;
 DROP INDEX IF EXISTS idx_account_mappings_template_lookup;
-DROP INDEX IF EXISTS idx_account_mappings_org_override;
 
-CREATE UNIQUE INDEX idx_account_mappings_template_lookup
-  ON account_mappings(country_code, accounting_standard, mapping_type, mapping_key)
-  WHERE organization_id IS NULL AND is_default = true;
-
-CREATE UNIQUE INDEX idx_account_mappings_org_override
-  ON account_mappings(organization_id, mapping_type, mapping_key)
-  WHERE organization_id IS NOT NULL;
 
 CREATE INDEX IF NOT EXISTS idx_account_mappings_country ON account_mappings(country_code) WHERE country_code IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_account_mappings_standard ON account_mappings(accounting_standard) WHERE accounting_standard IS NOT NULL;
@@ -12803,7 +12687,6 @@ CREATE INDEX IF NOT EXISTS idx_invoices_org_status_date ON invoices(organization
 CREATE INDEX IF NOT EXISTS idx_accounting_payments_org_status_date ON accounting_payments(organization_id, status, payment_date DESC);
 CREATE INDEX IF NOT EXISTS idx_tasks_org_status_priority ON tasks(organization_id, status, priority, due_date);
 CREATE INDEX IF NOT EXISTS idx_harvest_records_org_date ON harvest_records(organization_id, harvest_date DESC);
-CREATE INDEX IF NOT EXISTS idx_crop_cycles_org_status ON crop_cycles(organization_id, status);
 CREATE INDEX IF NOT EXISTS idx_workers_org_active ON workers(organization_id, is_active) WHERE is_active = true;
 CREATE INDEX IF NOT EXISTS idx_reception_batches_org_status ON reception_batches(organization_id, status, reception_date DESC);
 CREATE INDEX IF NOT EXISTS idx_quality_inspections_org_date ON quality_inspections(organization_id, inspection_date DESC);
@@ -12976,10 +12859,10 @@ ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "org_read_audit_logs" ON audit_logs;
 CREATE POLICY "org_read_audit_logs" ON audit_logs
   FOR SELECT USING (
-    user_id = auth.uid() OR
+    user_id = (select auth.uid()) OR
     EXISTS (
       SELECT 1 FROM organization_users
-      WHERE user_id = auth.uid()
+      WHERE user_id = (select auth.uid())
         AND organization_id = audit_logs.organization_id
         AND is_active = true
     )
@@ -12989,10 +12872,10 @@ CREATE POLICY "org_read_audit_logs" ON audit_logs
 DROP POLICY IF EXISTS "org_write_audit_logs" ON audit_logs;
 CREATE POLICY "org_write_audit_logs" ON audit_logs
   FOR INSERT WITH CHECK (
-    current_setting('role', true) = 'service_role'
+    (select current_setting('role', true)) = 'service_role'
     OR (
-      auth.uid() IS NOT NULL
-      AND user_id = auth.uid()
+      (select auth.uid()) IS NOT NULL
+      AND user_id = (select auth.uid())
       AND (
         organization_id IS NULL
         OR public.is_organization_member(organization_id)
@@ -13463,14 +13346,14 @@ DROP POLICY IF EXISTS "Users can view own organization ai report jobs" ON ai_rep
 CREATE POLICY "Users can view own organization ai report jobs"
   ON ai_report_jobs FOR SELECT
   USING (organization_id IN (
-    SELECT organization_id FROM organization_users WHERE user_id = auth.uid()
+    SELECT organization_id FROM organization_users WHERE user_id = (select auth.uid())
   ));
 
 DROP POLICY IF EXISTS "Users can create ai report jobs" ON ai_report_jobs;
 CREATE POLICY "Users can create ai report jobs"
   ON ai_report_jobs FOR INSERT
   WITH CHECK (organization_id IN (
-    SELECT organization_id FROM organization_users WHERE user_id = auth.uid()
+    SELECT organization_id FROM organization_users WHERE user_id = (select auth.uid())
   ));
 
 DROP POLICY IF EXISTS "Service role can update ai report jobs" ON ai_report_jobs;
@@ -13547,7 +13430,7 @@ ON organization_addons FOR SELECT
 USING (
   organization_id IN (
     SELECT organization_id FROM organization_users
-    WHERE user_id = auth.uid() AND is_active = true
+    WHERE user_id = (select auth.uid()) AND is_active = true
   )
 );
 
@@ -13557,7 +13440,7 @@ ON organization_addons FOR INSERT
 WITH CHECK (
   organization_id IN (
     SELECT organization_id FROM organization_users
-    WHERE user_id = auth.uid() AND is_active = true
+    WHERE user_id = (select auth.uid()) AND is_active = true
       AND role_id IN (SELECT id FROM roles WHERE name IN ('system_admin', 'organization_admin'))
   )
 );
@@ -13568,7 +13451,7 @@ ON organization_addons FOR UPDATE
 USING (
   organization_id IN (
     SELECT organization_id FROM organization_users
-    WHERE user_id = auth.uid() AND is_active = true
+    WHERE user_id = (select auth.uid()) AND is_active = true
       AND role_id IN (SELECT id FROM roles WHERE name IN ('system_admin', 'organization_admin'))
   )
 );
@@ -13579,7 +13462,7 @@ ON organization_addons FOR DELETE
 USING (
   organization_id IN (
     SELECT organization_id FROM organization_users
-    WHERE user_id = auth.uid() AND is_active = true
+    WHERE user_id = (select auth.uid()) AND is_active = true
       AND role_id IN (SELECT id FROM roles WHERE name IN ('system_admin', 'organization_admin'))
   )
 );
@@ -13589,7 +13472,6 @@ CREATE TRIGGER update_organization_addons_updated_at
 BEFORE UPDATE ON organization_addons
 FOR EACH ROW
 EXECUTE FUNCTION update_updated_at_column();
-
 
 -- =====================================================
 -- Migration: 20260127100000_module_based_subscriptions.sql
@@ -13646,32 +13528,14 @@ ALTER TABLE subscription_pricing ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "public_read_module_prices" ON module_prices FOR SELECT USING (true);
 CREATE POLICY "public_read_subscription_pricing" ON subscription_pricing FOR SELECT USING (true);
 
--- Only admins can modify pricing
-CREATE POLICY "admin_write_module_prices" ON module_prices FOR ALL
-WITH CHECK (
-  EXISTS (
-    SELECT 1 FROM organization_users ou
-    JOIN roles r ON ou.role_id = r.id
-    WHERE ou.user_id = auth.uid()
-      AND ou.is_active = true
-      AND r.name IN ('system_admin')
-  )
-);
-
-CREATE POLICY "admin_write_subscription_pricing" ON subscription_pricing FOR ALL
-WITH CHECK (
-  EXISTS (
-    SELECT 1 FROM organization_users ou
-    JOIN roles r ON ou.role_id = r.id
-    WHERE ou.user_id = auth.uid()
-      AND ou.is_active = true
-      AND r.name IN ('system_admin')
-  )
-);
-
-
-
-
+-- Admin write access is provided downstream by explicit per-command policies
+-- (admin_insert_module_prices, admin_update_module_prices,
+--  admin_insert_subscription_pricing, admin_update_subscription_pricing —
+--  see the "Add proper admin policies for pricing updates" block later in
+--  this file). The previously-defined `admin_write_*` FOR ALL policies were
+--  removed because their `WITH CHECK`-only shape defaulted SELECT's USING
+--  to TRUE, contributing to multiple-permissive policy overlap warnings
+--  while adding no real protection above the explicit policies.
 
 -- Add updated_at triggers
 CREATE TRIGGER update_module_prices_updated_at
@@ -13683,7 +13547,6 @@ CREATE TRIGGER update_subscription_pricing_updated_at
 BEFORE UPDATE ON subscription_pricing
 FOR EACH ROW
 EXECUTE FUNCTION update_updated_at_column();
-
 
 -- =====================================================
 -- Migration: 20260127200000_generic_module_config.sql
@@ -13747,7 +13610,7 @@ WITH CHECK (
   EXISTS (
     SELECT 1 FROM organization_users ou
     JOIN roles r ON ou.role_id = r.id
-    WHERE ou.user_id = auth.uid()
+    WHERE ou.user_id = (select auth.uid())
       AND ou.is_active = true
       AND r.name IN ('system_admin')
   )
@@ -13758,7 +13621,6 @@ CREATE TRIGGER update_module_translations_updated_at
 BEFORE UPDATE ON module_translations
 FOR EACH ROW
 EXECUTE FUNCTION update_updated_at_column();
-
 
 -- =====================================================
 -- Migration: 20260129000000_add_polar_aligned_modules.sql
@@ -13827,7 +13689,7 @@ ON polar_subscriptions FOR SELECT
 USING (
   organization_id IN (
     SELECT organization_id FROM organization_users
-    WHERE user_id = auth.uid() AND is_active = true
+    WHERE user_id = (select auth.uid()) AND is_active = true
   )
 );
 
@@ -13837,7 +13699,7 @@ WITH CHECK (
   EXISTS (
     SELECT 1 FROM organization_users ou
     JOIN roles r ON ou.role_id = r.id
-    WHERE ou.user_id = auth.uid()
+    WHERE ou.user_id = (select auth.uid())
       AND ou.is_active = true
       AND r.name IN ('system_admin')
   )
@@ -13850,7 +13712,7 @@ USING (
   EXISTS (
     SELECT 1 FROM organization_users ou
     JOIN roles r ON ou.role_id = r.id
-    WHERE ou.user_id = auth.uid()
+    WHERE ou.user_id = (select auth.uid())
       AND ou.is_active = true
       AND r.name IN ('system_admin')
   )
@@ -13862,22 +13724,17 @@ WITH CHECK (
   EXISTS (
     SELECT 1 FROM organization_users ou
     JOIN roles r ON ou.role_id = r.id
-    WHERE ou.user_id = auth.uid()
+    WHERE ou.user_id = (select auth.uid())
       AND ou.is_active = true
       AND r.name IN ('system_admin')
   )
 );
-
-
-
-
 
 -- Add updated_at triggers
 CREATE TRIGGER update_polar_subscriptions_updated_at
 BEFORE UPDATE ON polar_subscriptions
 FOR EACH ROW
 EXECUTE FUNCTION update_updated_at_column();
-
 
 COMMENT ON COLUMN subscriptions.billing_interval IS 'Billing interval for the subscription: monthly or yearly';
 COMMENT ON COLUMN polar_subscriptions.billing_interval IS 'Billing interval from Polar subscription: monthly or yearly';
@@ -13889,16 +13746,8 @@ COMMENT ON COLUMN polar_subscriptions.billing_interval IS 'Billing interval from
 -- Description: Fixes Row Level Security policies for proper organization access
 
 -- Fix module_prices RLS - should be publicly readable for pricing display
-DROP POLICY IF EXISTS "admin_write_module_prices" ON module_prices;
-CREATE POLICY "public_read_all_module_prices"
-ON module_prices FOR SELECT
-USING (true);
 
 -- Fix subscription_pricing RLS - should be publicly readable
-DROP POLICY IF EXISTS "admin_write_subscription_pricing" ON subscription_pricing;
-CREATE POLICY "public_read_all_subscription_pricing"
-ON subscription_pricing FOR SELECT
-USING (true);
 
 -- Add proper admin policies for pricing updates
 CREATE POLICY "admin_update_module_prices"
@@ -13907,7 +13756,7 @@ USING (
   EXISTS (
     SELECT 1 FROM organization_users ou
     JOIN roles r ON ou.role_id = r.id
-    WHERE ou.user_id = auth.uid()
+    WHERE ou.user_id = (select auth.uid())
       AND ou.is_active = true
       AND r.name IN ('system_admin')
   )
@@ -13919,7 +13768,7 @@ WITH CHECK (
   EXISTS (
     SELECT 1 FROM organization_users ou
     JOIN roles r ON ou.role_id = r.id
-    WHERE ou.user_id = auth.uid()
+    WHERE ou.user_id = (select auth.uid())
       AND ou.is_active = true
       AND r.name IN ('system_admin')
   )
@@ -13931,7 +13780,7 @@ USING (
   EXISTS (
     SELECT 1 FROM organization_users ou
     JOIN roles r ON ou.role_id = r.id
-    WHERE ou.user_id = auth.uid()
+    WHERE ou.user_id = (select auth.uid())
       AND ou.is_active = true
       AND r.name IN ('system_admin')
   )
@@ -13943,7 +13792,7 @@ WITH CHECK (
   EXISTS (
     SELECT 1 FROM organization_users ou
     JOIN roles r ON ou.role_id = r.id
-    WHERE ou.user_id = auth.uid()
+    WHERE ou.user_id = (select auth.uid())
       AND ou.is_active = true
       AND r.name IN ('system_admin')
   )
@@ -13958,7 +13807,7 @@ USING (is_available = true OR
   EXISTS (
     SELECT 1 FROM organization_users ou
     JOIN roles r ON ou.role_id = r.id
-    WHERE ou.user_id = auth.uid()
+    WHERE ou.user_id = (select auth.uid())
       AND ou.is_active = true
       AND r.name IN ('system_admin', 'organization_admin')
   )
@@ -13970,7 +13819,7 @@ WITH CHECK (
   EXISTS (
     SELECT 1 FROM organization_users ou
     JOIN roles r ON ou.role_id = r.id
-    WHERE ou.user_id = auth.uid()
+    WHERE ou.user_id = (select auth.uid())
       AND ou.is_active = true
       AND r.name IN ('system_admin')
   )
@@ -13985,7 +13834,7 @@ ON organization_modules FOR SELECT
 USING (
   organization_id IN (
     SELECT organization_id FROM organization_users
-    WHERE user_id = auth.uid() AND is_active = true
+    WHERE user_id = (select auth.uid()) AND is_active = true
   )
 );
 
@@ -13994,7 +13843,7 @@ ON organization_modules FOR UPDATE
 USING (
   organization_id IN (
     SELECT organization_id FROM organization_users
-    WHERE user_id = auth.uid() AND is_active = true
+    WHERE user_id = (select auth.uid()) AND is_active = true
       AND role_id IN (SELECT id FROM roles WHERE name IN ('system_admin', 'organization_admin'))
   )
 );
@@ -14004,23 +13853,12 @@ ON organization_modules FOR INSERT
 WITH CHECK (
   organization_id IN (
     SELECT organization_id FROM organization_users
-    WHERE user_id = auth.uid() AND is_active = true
+    WHERE user_id = (select auth.uid()) AND is_active = true
       AND role_id IN (SELECT id FROM roles WHERE name IN ('system_admin', 'organization_admin'))
   )
 );
 
 -- Ensure organization_addons RLS is properly set
-DROP POLICY IF EXISTS "org_read_organization_addons" ON organization_addons;
-
-CREATE POLICY "org_read_own_organization_addons"
-ON organization_addons FOR SELECT
-USING (
-  organization_id IN (
-    SELECT organization_id FROM organization_users
-    WHERE user_id = auth.uid() AND is_active = true
-  )
-);
-
 
 -- =====================================================
 -- Migration: 20260129100000_make_products_bucket_private.sql
@@ -14050,13 +13888,13 @@ BEGIN
   EXECUTE $q$ CREATE POLICY "allow_public_view_products" ON storage.objects FOR SELECT USING (bucket_id = 'products') $q$;
 
   EXECUTE 'DROP POLICY IF EXISTS "allow_auth_upload_products" ON storage.objects';
-  EXECUTE $q$ CREATE POLICY "allow_auth_upload_products" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'products' AND auth.role() = 'authenticated') $q$;
+  EXECUTE $q$ CREATE POLICY "allow_auth_upload_products" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'products' AND (select auth.role()) = 'authenticated') $q$;
 
   EXECUTE 'DROP POLICY IF EXISTS "allow_owner_update_products" ON storage.objects';
-  EXECUTE $q$ CREATE POLICY "allow_owner_update_products" ON storage.objects FOR UPDATE USING (bucket_id = 'products' AND (auth.uid()::text = (storage.foldername(name))[1] OR EXISTS (SELECT 1 FROM organization_users ou JOIN roles r ON ou.role_id = r.id WHERE ou.user_id = auth.uid() AND ou.is_active = true AND r.name IN ('system_admin')))) $q$;
+  EXECUTE $q$ CREATE POLICY "allow_owner_update_products" ON storage.objects FOR UPDATE USING (bucket_id = 'products' AND ((select auth.uid())::text = (storage.foldername(name))[1] OR EXISTS (SELECT 1 FROM organization_users ou JOIN roles r ON ou.role_id = r.id WHERE ou.user_id = (select auth.uid()) AND ou.is_active = true AND r.name IN ('system_admin')))) $q$;
 
   EXECUTE 'DROP POLICY IF EXISTS "allow_owner_delete_products" ON storage.objects';
-  EXECUTE $q$ CREATE POLICY "allow_owner_delete_products" ON storage.objects FOR DELETE USING (bucket_id = 'products' AND (auth.uid()::text = (storage.foldername(name))[1] OR EXISTS (SELECT 1 FROM organization_users ou JOIN roles r ON ou.role_id = r.id WHERE ou.user_id = auth.uid() AND ou.is_active = true AND r.name IN ('system_admin')))) $q$;
+  EXECUTE $q$ CREATE POLICY "allow_owner_delete_products" ON storage.objects FOR DELETE USING (bucket_id = 'products' AND ((select auth.uid())::text = (storage.foldername(name))[1] OR EXISTS (SELECT 1 FROM organization_users ou JOIN roles r ON ou.role_id = r.id WHERE ou.user_id = (select auth.uid()) AND ou.is_active = true AND r.name IN ('system_admin')))) $q$;
 END
 $storage_products$;
 
@@ -14246,7 +14084,6 @@ UPDATE modules SET
   ]'::jsonb
 WHERE slug = 'orchards';
 
-
 -- =====================================================
 -- Migration: 20260129130000_abstract_module_system.sql
 -- =====================================================
@@ -14357,7 +14194,7 @@ ON abstract_entities FOR SELECT
 USING (
   organization_id IN (
     SELECT organization_id FROM organization_users
-    WHERE user_id = auth.uid() AND is_active = true
+    WHERE user_id = (select auth.uid()) AND is_active = true
   )
 );
 
@@ -14366,7 +14203,7 @@ ON abstract_entities FOR ALL
 WITH CHECK (
   organization_id IN (
     SELECT organization_id FROM organization_users
-    WHERE user_id = auth.uid() AND is_active = true
+    WHERE user_id = (select auth.uid()) AND is_active = true
   )
 );
 
@@ -14381,7 +14218,7 @@ USING (
       AND ae.entity_id = entity_relationships.parent_entity_id
       AND ae.organization_id IN (
         SELECT organization_id FROM organization_users
-        WHERE user_id = auth.uid() AND is_active = true
+        WHERE user_id = (select auth.uid()) AND is_active = true
       )
   )
 );
@@ -14395,7 +14232,7 @@ WITH CHECK (
       AND ae.entity_id = entity_relationships.parent_entity_id
       AND ae.organization_id IN (
         SELECT organization_id FROM organization_users
-        WHERE user_id = auth.uid() AND is_active = true
+        WHERE user_id = (select auth.uid()) AND is_active = true
       )
   )
 );
@@ -14405,19 +14242,11 @@ ON entity_events FOR SELECT
 USING (
   organization_id IN (
     SELECT organization_id FROM organization_users
-    WHERE user_id = auth.uid() AND is_active = true
+    WHERE user_id = (select auth.uid()) AND is_active = true
   )
 );
 
 -- Functions for abstract entity system
-
-
-
-
-
-
-
-
 
 -- Add updated_at triggers
 CREATE TRIGGER update_abstract_entities_updated_at
@@ -14429,7 +14258,6 @@ CREATE TRIGGER update_entity_types_updated_at
 BEFORE UPDATE ON entity_types
 FOR EACH ROW
 EXECUTE FUNCTION update_updated_at_column();
-
 
 -- =====================================================
 -- Migration: 20260129140000_fix_security_definer_views.sql
@@ -14626,7 +14454,6 @@ COMMENT ON VIEW worker_assignments IS 'Worker assignments with task counts (SECU
 COMMENT ON VIEW workforce_summary IS 'Workforce summary statistics (SECURITY INVOKER)';
 COMMENT ON VIEW subscription_details IS 'Subscription details with addon counts (SECURITY INVOKER)';
 
-
 -- =====================================================
 -- Migration: 20260129150000_fix_search_path_and_security.sql
 -- =====================================================
@@ -14644,11 +14471,6 @@ BEGIN
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
-
-
-
-
-
 
 -- Security function for checking organization access
 CREATE OR REPLACE FUNCTION check_organization_access(p_organization_id UUID)
@@ -14714,7 +14536,6 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_workers_cin_org
 -- 4. FIFO/LIFO STOCK VALUATION CONSUMPTION FUNCTIONS
 -- -----------------------------------------------------
 
-
 -- -----------------------------------------------------
 -- 5. MISSING RLS POLICIES FOR TABLES WITH RLS ENABLED
 -- -----------------------------------------------------
@@ -14738,208 +14559,40 @@ CREATE POLICY "org_delete_task_assignments" ON task_assignments
   FOR DELETE USING (is_organization_member(organization_id));
 
 -- RLS Policies for warehouses
-DROP POLICY IF EXISTS "org_read_warehouses" ON warehouses;
-CREATE POLICY "org_read_warehouses" ON warehouses
-  FOR SELECT USING (is_organization_member(organization_id));
-
-DROP POLICY IF EXISTS "org_write_warehouses" ON warehouses;
-CREATE POLICY "org_write_warehouses" ON warehouses
-  FOR INSERT WITH CHECK (is_organization_member(organization_id));
-
-DROP POLICY IF EXISTS "org_update_warehouses" ON warehouses;
-CREATE POLICY "org_update_warehouses" ON warehouses
-  FOR UPDATE USING (is_organization_member(organization_id));
-
-DROP POLICY IF EXISTS "org_delete_warehouses" ON warehouses;
-CREATE POLICY "org_delete_warehouses" ON warehouses
-  FOR DELETE USING (is_organization_member(organization_id));
 
 -- RLS for stock_movements
-DROP POLICY IF EXISTS "org_read_stock_movements" ON stock_movements;
-CREATE POLICY "org_read_stock_movements" ON stock_movements
-  FOR SELECT USING (is_organization_member(organization_id));
-
-DROP POLICY IF EXISTS "org_write_stock_movements" ON stock_movements;
-CREATE POLICY "org_write_stock_movements" ON stock_movements
-  FOR INSERT WITH CHECK (is_organization_member(organization_id));
 
 -- RLS for stock_valuation
-DROP POLICY IF EXISTS "org_read_stock_valuation" ON stock_valuation;
-CREATE POLICY "org_read_stock_valuation" ON stock_valuation
-  FOR SELECT USING (is_organization_member(organization_id));
-
-DROP POLICY IF EXISTS "org_write_stock_valuation" ON stock_valuation;
-CREATE POLICY "org_write_stock_valuation" ON stock_valuation
-  FOR INSERT WITH CHECK (is_organization_member(organization_id));
 
 -- RLS for inventory_batches
-DROP POLICY IF EXISTS "org_read_inventory_batches" ON inventory_batches;
-CREATE POLICY "org_read_inventory_batches" ON inventory_batches
-  FOR SELECT USING (is_organization_member(organization_id));
-
-DROP POLICY IF EXISTS "org_write_inventory_batches" ON inventory_batches;
-CREATE POLICY "org_write_inventory_batches" ON inventory_batches
-  FOR INSERT WITH CHECK (is_organization_member(organization_id));
 
 -- RLS for inventory_serial_numbers
-DROP POLICY IF EXISTS "org_read_inventory_serial_numbers" ON inventory_serial_numbers;
-CREATE POLICY "org_read_inventory_serial_numbers" ON inventory_serial_numbers
-  FOR SELECT USING (is_organization_member(organization_id));
-
-DROP POLICY IF EXISTS "org_write_inventory_serial_numbers" ON inventory_serial_numbers;
-CREATE POLICY "org_write_inventory_serial_numbers" ON inventory_serial_numbers
-  FOR INSERT WITH CHECK (is_organization_member(organization_id));
 
 -- RLS for opening_stock_balances
-DROP POLICY IF EXISTS "org_read_opening_stock_balances" ON opening_stock_balances;
-CREATE POLICY "org_read_opening_stock_balances" ON opening_stock_balances
-  FOR SELECT USING (is_organization_member(organization_id));
-
-DROP POLICY IF EXISTS "org_write_opening_stock_balances" ON opening_stock_balances;
-CREATE POLICY "org_write_opening_stock_balances" ON opening_stock_balances
-  FOR INSERT WITH CHECK (is_organization_member(organization_id));
 
 -- RLS for stock_closing_entries
-DROP POLICY IF EXISTS "org_read_stock_closing_entries" ON stock_closing_entries;
-CREATE POLICY "org_read_stock_closing_entries" ON stock_closing_entries
-  FOR SELECT USING (is_organization_member(organization_id));
-
-DROP POLICY IF EXISTS "org_write_stock_closing_entries" ON stock_closing_entries;
-CREATE POLICY "org_write_stock_closing_entries" ON stock_closing_entries
-  FOR INSERT WITH CHECK (is_organization_member(organization_id));
 
 -- RLS for stock_account_mappings
-DROP POLICY IF EXISTS "org_read_stock_account_mappings" ON stock_account_mappings;
-CREATE POLICY "org_read_stock_account_mappings" ON stock_account_mappings
-  FOR SELECT USING (is_organization_member(organization_id));
-
-DROP POLICY IF EXISTS "org_write_stock_account_mappings" ON stock_account_mappings;
-CREATE POLICY "org_write_stock_account_mappings" ON stock_account_mappings
-  FOR INSERT WITH CHECK (is_organization_member(organization_id));
 
 -- RLS for costs
-DROP POLICY IF EXISTS "org_read_costs" ON costs;
-CREATE POLICY "org_read_costs" ON costs
-  FOR SELECT USING (is_organization_member(organization_id));
-
-DROP POLICY IF EXISTS "org_write_costs" ON costs;
-CREATE POLICY "org_write_costs" ON costs
-  FOR INSERT WITH CHECK (is_organization_member(organization_id));
-
-DROP POLICY IF EXISTS "org_update_costs" ON costs;
-CREATE POLICY "org_update_costs" ON costs
-  FOR UPDATE USING (is_organization_member(organization_id));
-
-DROP POLICY IF EXISTS "org_delete_costs" ON costs;
-CREATE POLICY "org_delete_costs" ON costs
-  FOR DELETE USING (is_organization_member(organization_id));
 
 -- RLS for revenues
-DROP POLICY IF EXISTS "org_read_revenues" ON revenues;
-CREATE POLICY "org_read_revenues" ON revenues
-  FOR SELECT USING (is_organization_member(organization_id));
-
-DROP POLICY IF EXISTS "org_write_revenues" ON revenues;
-CREATE POLICY "org_write_revenues" ON revenues
-  FOR INSERT WITH CHECK (is_organization_member(organization_id));
-
-DROP POLICY IF EXISTS "org_update_revenues" ON revenues;
-CREATE POLICY "org_update_revenues" ON revenues
-  FOR UPDATE USING (is_organization_member(organization_id));
-
-DROP POLICY IF EXISTS "org_delete_revenues" ON revenues;
-CREATE POLICY "org_delete_revenues" ON revenues
-  FOR DELETE USING (is_organization_member(organization_id));
 
 -- RLS for profitability_snapshots
-DROP POLICY IF EXISTS "org_read_profitability_snapshots" ON profitability_snapshots;
-CREATE POLICY "org_read_profitability_snapshots" ON profitability_snapshots
-  FOR SELECT USING (is_organization_member(organization_id));
-
-DROP POLICY IF EXISTS "org_write_profitability_snapshots" ON profitability_snapshots;
-CREATE POLICY "org_write_profitability_snapshots" ON profitability_snapshots
-  FOR INSERT WITH CHECK (is_organization_member(organization_id));
 
 -- RLS for structures
-DROP POLICY IF EXISTS "org_read_structures" ON structures;
-CREATE POLICY "org_read_structures" ON structures
-  FOR SELECT USING (is_organization_member(organization_id));
-
-DROP POLICY IF EXISTS "org_write_structures" ON structures;
-CREATE POLICY "org_write_structures" ON structures
-  FOR INSERT WITH CHECK (is_organization_member(organization_id));
-
-DROP POLICY IF EXISTS "org_update_structures" ON structures;
-CREATE POLICY "org_update_structures" ON structures
-  FOR UPDATE USING (is_organization_member(organization_id));
-
-DROP POLICY IF EXISTS "org_delete_structures" ON structures;
-CREATE POLICY "org_delete_structures" ON structures
-  FOR DELETE USING (is_organization_member(organization_id));
 
 -- RLS for equipment_assets
-DROP POLICY IF EXISTS "org_read_equipment_assets" ON equipment_assets;
-CREATE POLICY "org_read_equipment_assets" ON equipment_assets FOR SELECT USING (is_organization_member(organization_id));
-DROP POLICY IF EXISTS "org_write_equipment_assets" ON equipment_assets;
-CREATE POLICY "org_write_equipment_assets" ON equipment_assets FOR INSERT WITH CHECK (is_organization_member(organization_id));
-DROP POLICY IF EXISTS "org_update_equipment_assets" ON equipment_assets;
-CREATE POLICY "org_update_equipment_assets" ON equipment_assets FOR UPDATE USING (is_organization_member(organization_id));
-DROP POLICY IF EXISTS "org_delete_equipment_assets" ON equipment_assets;
-CREATE POLICY "org_delete_equipment_assets" ON equipment_assets FOR DELETE USING (is_organization_member(organization_id));
 
 -- RLS for equipment_maintenance
-DROP POLICY IF EXISTS "org_read_equipment_maintenance" ON equipment_maintenance;
-CREATE POLICY "org_read_equipment_maintenance" ON equipment_maintenance FOR SELECT USING (is_organization_member(organization_id));
-DROP POLICY IF EXISTS "org_write_equipment_maintenance" ON equipment_maintenance;
-CREATE POLICY "org_write_equipment_maintenance" ON equipment_maintenance FOR INSERT WITH CHECK (is_organization_member(organization_id));
-DROP POLICY IF EXISTS "org_update_equipment_maintenance" ON equipment_maintenance;
-CREATE POLICY "org_update_equipment_maintenance" ON equipment_maintenance FOR UPDATE USING (is_organization_member(organization_id));
-DROP POLICY IF EXISTS "org_delete_equipment_maintenance" ON equipment_maintenance;
-CREATE POLICY "org_delete_equipment_maintenance" ON equipment_maintenance FOR DELETE USING (is_organization_member(organization_id));
 
 -- RLS for payment_records
-DROP POLICY IF EXISTS "org_read_payment_records" ON payment_records;
-CREATE POLICY "org_read_payment_records" ON payment_records
-  FOR SELECT USING (is_organization_member(organization_id));
-
-DROP POLICY IF EXISTS "org_write_payment_records" ON payment_records;
-CREATE POLICY "org_write_payment_records" ON payment_records
-  FOR INSERT WITH CHECK (is_organization_member(organization_id));
-
-DROP POLICY IF EXISTS "org_update_payment_records" ON payment_records;
-CREATE POLICY "org_update_payment_records" ON payment_records
-  FOR UPDATE USING (is_organization_member(organization_id));
 
 -- RLS for payment_advances
-DROP POLICY IF EXISTS "org_read_payment_advances" ON payment_advances;
-CREATE POLICY "org_read_payment_advances" ON payment_advances
-  FOR SELECT USING (is_organization_member(organization_id));
-
-DROP POLICY IF EXISTS "org_write_payment_advances" ON payment_advances;
-CREATE POLICY "org_write_payment_advances" ON payment_advances
-  FOR INSERT WITH CHECK (is_organization_member(organization_id));
-
-DROP POLICY IF EXISTS "org_update_payment_advances" ON payment_advances;
-CREATE POLICY "org_update_payment_advances" ON payment_advances
-  FOR UPDATE USING (is_organization_member(organization_id));
 
 -- RLS for metayage_settlements
-DROP POLICY IF EXISTS "org_read_metayage_settlements" ON metayage_settlements;
-CREATE POLICY "org_read_metayage_settlements" ON metayage_settlements
-  FOR SELECT USING (is_organization_member(organization_id));
-
-DROP POLICY IF EXISTS "org_write_metayage_settlements" ON metayage_settlements;
-CREATE POLICY "org_write_metayage_settlements" ON metayage_settlements
-  FOR INSERT WITH CHECK (is_organization_member(organization_id));
 
 -- RLS for work_records
-DROP POLICY IF EXISTS "org_read_work_records" ON work_records;
-CREATE POLICY "org_read_work_records" ON work_records
-  FOR SELECT USING (is_organization_member(organization_id));
-
-DROP POLICY IF EXISTS "org_write_work_records" ON work_records;
-CREATE POLICY "org_write_work_records" ON work_records
-  FOR INSERT WITH CHECK (is_organization_member(organization_id));
 
 -- -----------------------------------------------------
 -- 6. BUSINESS KEY UNIQUE CONSTRAINTS
@@ -15366,8 +15019,6 @@ DROP TRIGGER IF EXISTS trg_polar_subscriptions_updated_at ON polar_subscriptions
 CREATE TRIGGER trg_polar_subscriptions_updated_at BEFORE UPDATE ON polar_subscriptions
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
-
-
 -- -----------------------------------------------------
 -- 9. COMPOSITE INDEXES FOR COMMON QUERY PATTERNS
 -- -----------------------------------------------------
@@ -15440,10 +15091,6 @@ CREATE INDEX IF NOT EXISTS idx_satellite_jobs_org_status
 CREATE INDEX IF NOT EXISTS idx_crop_cycles_org_campaign_parcel 
   ON crop_cycles(organization_id, campaign_id, parcel_id);
 
--- Campaign: Biological assets by org + asset type
-CREATE INDEX IF NOT EXISTS idx_biological_assets_org_type 
-  ON biological_assets(organization_id, asset_type);
-
 -- Quality: Inspections by org + date (quality dashboard)
 CREATE INDEX IF NOT EXISTS idx_quality_inspections_org_date 
   ON quality_inspections(organization_id, inspection_date DESC);
@@ -15461,16 +15108,7 @@ CREATE INDEX IF NOT EXISTS idx_workers_farm_active
   ON workers(farm_id, worker_type) 
   WHERE is_active = true;
 
-
-
 -- (product_variants moved before stock_movements to resolve forward reference)
-
-
-
-
-
-
-
 
 -- Index for work records with task reference (for querying work records by task)
 CREATE INDEX IF NOT EXISTS idx_work_records_task_ref ON work_records USING GIN ((notes::jsonb) jsonb_path_ops) WHERE notes IS NOT NULL AND notes::jsonb ? 'task_id';
@@ -15540,10 +15178,10 @@ CREATE POLICY "certifications_read_policy" ON certifications
   FOR SELECT USING (
     organization_id IN (
       SELECT organization_id FROM organization_users
-      WHERE user_id = auth.uid() AND is_active = true
+      WHERE user_id = (select auth.uid()) AND is_active = true
     )
     OR is_internal_admin()
-    OR current_setting('role', true) = 'service_role'
+    OR (select current_setting('role', true)) = 'service_role'
   );
 
 DROP POLICY IF EXISTS "certifications_create_policy" ON certifications;
@@ -15551,10 +15189,10 @@ CREATE POLICY "certifications_create_policy" ON certifications
   FOR INSERT WITH CHECK (
     organization_id IN (
       SELECT organization_id FROM organization_users
-      WHERE user_id = auth.uid() AND is_active = true
+      WHERE user_id = (select auth.uid()) AND is_active = true
     )
     OR is_internal_admin()
-    OR current_setting('role', true) = 'service_role'
+    OR (select current_setting('role', true)) = 'service_role'
   );
 
 DROP POLICY IF EXISTS "certifications_update_policy" ON certifications;
@@ -15562,10 +15200,10 @@ CREATE POLICY "certifications_update_policy" ON certifications
   FOR UPDATE USING (
     organization_id IN (
       SELECT organization_id FROM organization_users
-      WHERE user_id = auth.uid() AND is_active = true
+      WHERE user_id = (select auth.uid()) AND is_active = true
     )
     OR is_internal_admin()
-    OR current_setting('role', true) = 'service_role'
+    OR (select current_setting('role', true)) = 'service_role'
   );
 
 DROP POLICY IF EXISTS "certifications_delete_policy" ON certifications;
@@ -15573,10 +15211,10 @@ CREATE POLICY "certifications_delete_policy" ON certifications
   FOR DELETE USING (
     organization_id IN (
       SELECT organization_id FROM organization_users
-      WHERE user_id = auth.uid() AND is_active = true
+      WHERE user_id = (select auth.uid()) AND is_active = true
     )
     OR is_internal_admin()
-    OR current_setting('role', true) = 'service_role'
+    OR (select current_setting('role', true)) = 'service_role'
   );
 
 -- Compliance Checks (audit records and compliance verification)
@@ -15633,10 +15271,10 @@ CREATE POLICY "compliance_checks_read_policy" ON compliance_checks
   FOR SELECT USING (
     organization_id IN (
       SELECT organization_id FROM organization_users
-      WHERE user_id = auth.uid() AND is_active = true
+      WHERE user_id = (select auth.uid()) AND is_active = true
     )
     OR is_internal_admin()
-    OR current_setting('role', true) = 'service_role'
+    OR (select current_setting('role', true)) = 'service_role'
   );
 
 DROP POLICY IF EXISTS "compliance_checks_create_policy" ON compliance_checks;
@@ -15644,10 +15282,10 @@ CREATE POLICY "compliance_checks_create_policy" ON compliance_checks
   FOR INSERT WITH CHECK (
     organization_id IN (
       SELECT organization_id FROM organization_users
-      WHERE user_id = auth.uid() AND is_active = true
+      WHERE user_id = (select auth.uid()) AND is_active = true
     )
     OR is_internal_admin()
-    OR current_setting('role', true) = 'service_role'
+    OR (select current_setting('role', true)) = 'service_role'
   );
 
 DROP POLICY IF EXISTS "compliance_checks_update_policy" ON compliance_checks;
@@ -15655,10 +15293,10 @@ CREATE POLICY "compliance_checks_update_policy" ON compliance_checks
   FOR UPDATE USING (
     organization_id IN (
       SELECT organization_id FROM organization_users
-      WHERE user_id = auth.uid() AND is_active = true
+      WHERE user_id = (select auth.uid()) AND is_active = true
     )
     OR is_internal_admin()
-    OR current_setting('role', true) = 'service_role'
+    OR (select current_setting('role', true)) = 'service_role'
   );
 
 DROP POLICY IF EXISTS "compliance_checks_delete_policy" ON compliance_checks;
@@ -15666,10 +15304,10 @@ CREATE POLICY "compliance_checks_delete_policy" ON compliance_checks
   FOR DELETE USING (
     organization_id IN (
       SELECT organization_id FROM organization_users
-      WHERE user_id = auth.uid() AND is_active = true
+      WHERE user_id = (select auth.uid()) AND is_active = true
     )
     OR is_internal_admin()
-    OR current_setting('role', true) = 'service_role'
+    OR (select current_setting('role', true)) = 'service_role'
   );
 
 -- Compliance Requirements (reference table for requirements by certification type)
@@ -15726,7 +15364,7 @@ DROP POLICY IF EXISTS "compliance_requirements_write_policy" ON compliance_requi
 CREATE POLICY "compliance_requirements_write_policy" ON compliance_requirements
   FOR ALL USING (
     is_internal_admin()
-    OR current_setting('role', true) = 'service_role'
+    OR (select current_setting('role', true)) = 'service_role'
   );
 
 -- Compliance Evidence (supporting documents for compliance checks)
@@ -15773,11 +15411,11 @@ CREATE POLICY "compliance_evidence_read_policy" ON compliance_evidence
       SELECT id FROM compliance_checks
       WHERE organization_id IN (
         SELECT organization_id FROM organization_users
-        WHERE user_id = auth.uid() AND is_active = true
+        WHERE user_id = (select auth.uid()) AND is_active = true
       )
     )
     OR is_internal_admin()
-    OR current_setting('role', true) = 'service_role'
+    OR (select current_setting('role', true)) = 'service_role'
   );
 
 DROP POLICY IF EXISTS "compliance_evidence_create_policy" ON compliance_evidence;
@@ -15787,11 +15425,11 @@ CREATE POLICY "compliance_evidence_create_policy" ON compliance_evidence
       SELECT id FROM compliance_checks
       WHERE organization_id IN (
         SELECT organization_id FROM organization_users
-        WHERE user_id = auth.uid() AND is_active = true
+        WHERE user_id = (select auth.uid()) AND is_active = true
       )
     )
     OR is_internal_admin()
-    OR current_setting('role', true) = 'service_role'
+    OR (select current_setting('role', true)) = 'service_role'
   );
 
 DROP POLICY IF EXISTS "compliance_evidence_delete_policy" ON compliance_evidence;
@@ -15801,11 +15439,11 @@ CREATE POLICY "compliance_evidence_delete_policy" ON compliance_evidence
       SELECT id FROM compliance_checks
       WHERE organization_id IN (
         SELECT organization_id FROM organization_users
-        WHERE user_id = auth.uid() AND is_active = true
+        WHERE user_id = (select auth.uid()) AND is_active = true
       )
     )
     OR is_internal_admin()
-    OR current_setting('role', true) = 'service_role'
+    OR (select current_setting('role', true)) = 'service_role'
   );
 
 -- Audit Reminders (scheduled reminders for certification audits)
@@ -15834,7 +15472,7 @@ ON audit_reminders FOR SELECT
 TO authenticated
 USING (
   organization_id IN (
-    SELECT organization_id FROM organization_users WHERE user_id = auth.uid()
+    SELECT organization_id FROM organization_users WHERE user_id = (select auth.uid())
   )
 );
 
@@ -15888,18 +15526,18 @@ TO authenticated
 USING (
   organization_id IN (
     SELECT organization_id FROM organization_users
-    WHERE user_id = auth.uid() AND is_active = true
+    WHERE user_id = (select auth.uid()) AND is_active = true
   )
   OR is_internal_admin()
-  OR current_setting('role', true) = 'service_role'
+  OR (select current_setting('role', true)) = 'service_role'
 )
 WITH CHECK (
   organization_id IN (
     SELECT organization_id FROM organization_users
-    WHERE user_id = auth.uid() AND is_active = true
+    WHERE user_id = (select auth.uid()) AND is_active = true
   )
   OR is_internal_admin()
-  OR current_setting('role', true) = 'service_role'
+  OR (select current_setting('role', true)) = 'service_role'
 );
 
 COMMENT ON TABLE corrective_actions IS 'Corrective action plans linked to certifications and compliance checks';
@@ -15918,16 +15556,16 @@ BEGIN
   EXECUTE $q$ INSERT INTO storage.buckets (id, name, "public") VALUES ('compliance-documents', 'compliance-documents', false) ON CONFLICT (id) DO UPDATE SET "public" = false $q$;
 
   EXECUTE 'DROP POLICY IF EXISTS "Org members can read compliance documents" ON storage.objects';
-  EXECUTE $q$ CREATE POLICY "Org members can read compliance documents" ON storage.objects FOR SELECT TO authenticated USING (bucket_id = 'compliance-documents' AND (storage.foldername(name))[1] IN (SELECT organization_id::text FROM organization_users WHERE user_id = auth.uid())) $q$;
+  EXECUTE $q$ CREATE POLICY "Org members can read compliance documents" ON storage.objects FOR SELECT TO authenticated USING (bucket_id = 'compliance-documents' AND (storage.foldername(name))[1] IN (SELECT organization_id::text FROM organization_users WHERE user_id = (select auth.uid()))) $q$;
 
   EXECUTE 'DROP POLICY IF EXISTS "Org members can upload compliance documents" ON storage.objects';
-  EXECUTE $q$ CREATE POLICY "Org members can upload compliance documents" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'compliance-documents' AND (storage.foldername(name))[1] IN (SELECT organization_id::text FROM organization_users WHERE user_id = auth.uid())) $q$;
+  EXECUTE $q$ CREATE POLICY "Org members can upload compliance documents" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'compliance-documents' AND (storage.foldername(name))[1] IN (SELECT organization_id::text FROM organization_users WHERE user_id = (select auth.uid()))) $q$;
 
   EXECUTE 'DROP POLICY IF EXISTS "Org members can update compliance documents" ON storage.objects';
-  EXECUTE $q$ CREATE POLICY "Org members can update compliance documents" ON storage.objects FOR UPDATE TO authenticated USING (bucket_id = 'compliance-documents' AND (storage.foldername(name))[1] IN (SELECT organization_id::text FROM organization_users WHERE user_id = auth.uid())) WITH CHECK (bucket_id = 'compliance-documents' AND (storage.foldername(name))[1] IN (SELECT organization_id::text FROM organization_users WHERE user_id = auth.uid())) $q$;
+  EXECUTE $q$ CREATE POLICY "Org members can update compliance documents" ON storage.objects FOR UPDATE TO authenticated USING (bucket_id = 'compliance-documents' AND (storage.foldername(name))[1] IN (SELECT organization_id::text FROM organization_users WHERE user_id = (select auth.uid()))) WITH CHECK (bucket_id = 'compliance-documents' AND (storage.foldername(name))[1] IN (SELECT organization_id::text FROM organization_users WHERE user_id = (select auth.uid()))) $q$;
 
   EXECUTE 'DROP POLICY IF EXISTS "Org admins can delete compliance documents" ON storage.objects';
-  EXECUTE $q$ CREATE POLICY "Org admins can delete compliance documents" ON storage.objects FOR DELETE TO authenticated USING (bucket_id = 'compliance-documents' AND (storage.foldername(name))[1] IN (SELECT ou.organization_id::text FROM organization_users ou JOIN roles r ON r.id = ou.role_id WHERE ou.user_id = auth.uid() AND r.name IN ('organization_admin', 'farm_manager', 'system_admin'))) $q$;
+  EXECUTE $q$ CREATE POLICY "Org admins can delete compliance documents" ON storage.objects FOR DELETE TO authenticated USING (bucket_id = 'compliance-documents' AND (storage.foldername(name))[1] IN (SELECT ou.organization_id::text FROM organization_users ou JOIN roles r ON r.id = ou.role_id WHERE ou.user_id = (select auth.uid()) AND r.name IN ('organization_admin', 'farm_manager', 'system_admin'))) $q$;
 END
 $storage_compliance$;
 
@@ -15957,9 +15595,6 @@ END $$;
 -- SEED COMPLIANCE REQUIREMENTS DATA
 -- ============================================================================
 
-
-
-
 -- ============================================================================
 -- ENSURE RLS IS ENABLED ON ALL TABLES
 -- ============================================================================
@@ -15985,11 +15620,9 @@ ALTER TABLE IF EXISTS crop_templates ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS crop_cycle_stages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS harvest_events ENABLE ROW LEVEL SECURITY;
 
-
 -- ============================================================================
 -- CONSOLIDATED MIGRATIONS APPENDED FOR PRE-PRODUCTION BASELINE
 -- Date: 2026-03-10
-
 
 -- ============================================================================
 -- Migration: 20260220230000_satellite_heatmap_cache.sql
@@ -16029,7 +15662,7 @@ CREATE POLICY "org_read_satellite_heatmap_cache" ON satellite_heatmap_cache
 
 CREATE POLICY "org_write_satellite_heatmap_cache" ON satellite_heatmap_cache
   FOR INSERT WITH CHECK (
-    auth.uid() IS NOT NULL AND is_organization_member(organization_id)
+    (select auth.uid()) IS NOT NULL AND is_organization_member(organization_id)
   );
 
 CREATE POLICY "org_update_satellite_heatmap_cache" ON satellite_heatmap_cache
@@ -16037,7 +15670,6 @@ CREATE POLICY "org_update_satellite_heatmap_cache" ON satellite_heatmap_cache
 
 CREATE POLICY "org_delete_satellite_heatmap_cache" ON satellite_heatmap_cache
   FOR DELETE USING (is_organization_member(organization_id));
-
 
 -- ============================================================================
 -- Migration: 20260224000000_add_updated_at_to_stock_tables.sql
@@ -16076,7 +15708,6 @@ BEGIN
   END IF;
 END $$;
 
-
 -- ============================================================================
 -- Migration: 20260224100000_add_agriculture_elevage_modules.sql
 -- ============================================================================
@@ -16101,7 +15732,6 @@ INSERT INTO modules (name, icon, category, description, required_plan, is_availa
   ('couveuses', 'Egg', 'elevage', 'Gestion des couveuses (poussins, poulet de chair, poules pondeuses)', NULL, true)
 ON CONFLICT (name) DO NOTHING;
 
-
 -- ============================================================================
 -- Migration: 20260224200000_add_parcel_irrigation_fields.sql
 -- ============================================================================
@@ -16114,7 +15744,6 @@ ALTER TABLE IF EXISTS parcels ADD COLUMN IF NOT EXISTS water_quantity_unit TEXT 
 COMMENT ON COLUMN parcels.irrigation_frequency IS 'Irrigation frequency, e.g. 1x/week, 2x/week, 1x/month';
 COMMENT ON COLUMN parcels.water_quantity_per_session IS 'Water quantity per irrigation session';
 COMMENT ON COLUMN parcels.water_quantity_unit IS 'Unit for water quantity: m3, liters, etc.';
-
 
 -- ============================================================================
 -- Migration: 20260310100000_subscription_contract_alignment.sql
@@ -16195,7 +15824,7 @@ CREATE POLICY "org_read_subscription_contracts" ON subscription_contracts
     organization_id IN (
       SELECT organization_id
       FROM organization_users
-      WHERE user_id = auth.uid() AND is_active = true
+      WHERE user_id = (select auth.uid()) AND is_active = true
     )
   );
 
@@ -16206,7 +15835,7 @@ CREATE POLICY "org_read_subscription_events" ON subscription_events
     organization_id IN (
       SELECT organization_id
       FROM organization_users
-      WHERE user_id = auth.uid() AND is_active = true
+      WHERE user_id = (select auth.uid()) AND is_active = true
     )
   );
 
@@ -16217,7 +15846,7 @@ CREATE POLICY "org_read_billing_documents" ON billing_documents
     organization_id IN (
       SELECT organization_id
       FROM organization_users
-      WHERE user_id = auth.uid() AND is_active = true
+      WHERE user_id = (select auth.uid()) AND is_active = true
     )
   );
 
@@ -16231,7 +15860,7 @@ CREATE POLICY "admin_write_subscription_contracts" ON subscription_contracts
       FROM organization_users ou
       JOIN roles r ON r.id = ou.role_id
       WHERE ou.organization_id = subscription_contracts.organization_id
-        AND ou.user_id = auth.uid()
+        AND ou.user_id = (select auth.uid())
         AND ou.is_active = true
         AND r.name IN ('system_admin', 'organization_admin')
     )
@@ -16242,7 +15871,7 @@ CREATE POLICY "admin_write_subscription_contracts" ON subscription_contracts
       FROM organization_users ou
       JOIN roles r ON r.id = ou.role_id
       WHERE ou.organization_id = subscription_contracts.organization_id
-        AND ou.user_id = auth.uid()
+        AND ou.user_id = (select auth.uid())
         AND ou.is_active = true
         AND r.name IN ('system_admin', 'organization_admin')
     )
@@ -16257,7 +15886,7 @@ CREATE POLICY "admin_write_subscription_events" ON subscription_events
       FROM organization_users ou
       JOIN roles r ON r.id = ou.role_id
       WHERE ou.organization_id = subscription_events.organization_id
-        AND ou.user_id = auth.uid()
+        AND ou.user_id = (select auth.uid())
         AND ou.is_active = true
         AND r.name IN ('system_admin', 'organization_admin')
     )
@@ -16268,7 +15897,7 @@ CREATE POLICY "admin_write_subscription_events" ON subscription_events
       FROM organization_users ou
       JOIN roles r ON r.id = ou.role_id
       WHERE ou.organization_id = subscription_events.organization_id
-        AND ou.user_id = auth.uid()
+        AND ou.user_id = (select auth.uid())
         AND ou.is_active = true
         AND r.name IN ('system_admin', 'organization_admin')
     )
@@ -16283,7 +15912,7 @@ CREATE POLICY "admin_write_billing_documents" ON billing_documents
       FROM organization_users ou
       JOIN roles r ON r.id = ou.role_id
       WHERE ou.organization_id = billing_documents.organization_id
-        AND ou.user_id = auth.uid()
+        AND ou.user_id = (select auth.uid())
         AND ou.is_active = true
         AND r.name IN ('system_admin', 'organization_admin')
     )
@@ -16294,7 +15923,7 @@ CREATE POLICY "admin_write_billing_documents" ON billing_documents
       FROM organization_users ou
       JOIN roles r ON r.id = ou.role_id
       WHERE ou.organization_id = billing_documents.organization_id
-        AND ou.user_id = auth.uid()
+        AND ou.user_id = (select auth.uid())
         AND ou.is_active = true
         AND r.name IN ('system_admin', 'organization_admin')
     )
@@ -16323,7 +15952,6 @@ SELECT
   s.pending_billing_cycle
 FROM subscriptions s;
 
-
 -- ============================================================================
 -- Migration: 20260310113000_fix_missing_updated_at_columns.sql
 -- ============================================================================
@@ -16351,7 +15979,6 @@ ALTER TABLE public.biological_asset_valuations
 UPDATE public.biological_asset_valuations
 SET updated_at = COALESCE(updated_at, created_at, NOW())
 WHERE updated_at IS NULL;
-
 
 -- ============================================================================
 -- Migration: 20260323000000_add_missing_storage_buckets.sql
@@ -16513,7 +16140,7 @@ CREATE INDEX IF NOT EXISTS idx_siam_rdv_leads_created_at ON siam_rdv_leads(creat
 -- RLS: only service_role can access (public table, no org scope)
 ALTER TABLE siam_rdv_leads ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "service_role_only" ON siam_rdv_leads
-  FOR ALL USING (auth.role() = 'service_role');
+  FOR ALL USING ((select auth.role()) = 'service_role');
 
 -- =====================================================
 -- Calibration Wizard Drafts
@@ -16671,9 +16298,6 @@ CREATE TRIGGER set_email_templates_updated_at
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
 
-
-
-
 -- =====================================================
 -- BANNERS
 -- =====================================================
@@ -16696,7 +16320,7 @@ CREATE TABLE IF NOT EXISTS subscription_pricing_config (
 ALTER TABLE subscription_pricing_config ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "service_role_only" ON subscription_pricing_config;
 CREATE POLICY "service_role_only" ON subscription_pricing_config
-  FOR ALL USING (auth.role() = 'service_role');
+  FOR ALL USING ((select auth.role()) = 'service_role');
 
 CREATE TABLE IF NOT EXISTS banners (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -16733,7 +16357,6 @@ CREATE TRIGGER set_banners_updated_at
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
 
-
 -- =====================================================
 -- BANNER DISMISSALS
 -- =====================================================
@@ -16757,7 +16380,6 @@ CREATE POLICY "org_access" ON banner_dismissals
       AND public.is_organization_member(b.organization_id)
     )
   );
-
 
 -- =====================================================
 -- CHANGELOGS
@@ -16793,12 +16415,11 @@ CREATE POLICY "changelog_manage" ON changelogs
       SELECT 1
       FROM public.organization_users ou
       JOIN public.roles r ON r.id = ou.role_id
-      WHERE ou.user_id = auth.uid()
+      WHERE ou.user_id = (select auth.uid())
         AND r.name = 'system_admin'
         AND ou.is_active = true
     )
   );
-
 
 CREATE INDEX IF NOT EXISTS idx_changelogs_published ON changelogs (published_at DESC);
 CREATE INDEX IF NOT EXISTS idx_changelogs_org ON changelogs (organization_id);
@@ -16808,9 +16429,6 @@ CREATE TRIGGER set_changelogs_updated_at
   BEFORE UPDATE ON changelogs
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
-
-
-
 
 -- =====================================================
 -- SUPPORTED COUNTRIES
@@ -16840,7 +16458,7 @@ CREATE POLICY "supported_countries_read" ON supported_countries
 -- Only service_role can manage (admin API uses service_role client)
 CREATE POLICY "supported_countries_manage" ON supported_countries
   FOR ALL USING (
-    auth.role() = 'service_role'
+    (select auth.role()) = 'service_role'
   );
 
 CREATE INDEX IF NOT EXISTS idx_supported_countries_region ON supported_countries (region);
@@ -16872,7 +16490,6 @@ INSERT INTO supported_countries (country_code, country_name, region, enabled, di
   ('DE', 'Germany', 'Europe', true, 5),
   ('NL', 'Netherlands', 'Europe', true, 6)
 ON CONFLICT (country_code) DO NOTHING;
-
 
 -- =====================================================
 -- AGRONOMY RAG — Sources, Chunks, Citations
@@ -16954,7 +16571,6 @@ COMMENT ON COLUMN ai_recommendation_citations.source_ordinal IS 'Which source nu
 
 CREATE INDEX IF NOT EXISTS idx_ai_rec_citations_recommendation ON ai_recommendation_citations (recommendation_id);
 CREATE INDEX IF NOT EXISTS idx_ai_rec_citations_chunk ON ai_recommendation_citations (chunk_id);
-CREATE UNIQUE INDEX IF NOT EXISTS idx_ai_rec_citations_unique ON ai_recommendation_citations (recommendation_id, chunk_id);
 
 -- -----------------------------------------------------
 -- RLS Policies
@@ -16977,7 +16593,7 @@ CREATE POLICY "agronomy_sources_manage" ON agronomy_sources
     EXISTS (
       SELECT 1 FROM public.organization_users ou
       JOIN public.roles r ON r.id = ou.role_id
-      WHERE ou.user_id = auth.uid()
+      WHERE ou.user_id = (select auth.uid())
         AND ou.is_active = true
         AND (
           r.name = 'system_admin'
@@ -17004,7 +16620,7 @@ CREATE POLICY "agronomy_chunks_manage" ON agronomy_chunks
           EXISTS (
             SELECT 1 FROM public.organization_users ou
             JOIN public.roles r ON r.id = ou.role_id
-            WHERE ou.user_id = auth.uid()
+            WHERE ou.user_id = (select auth.uid())
               AND ou.is_active = true
               AND (
                 r.name = 'system_admin'
@@ -17056,13 +16672,13 @@ BEGIN
   EXECUTE $q$ CREATE POLICY "Authenticated read access for agronomy-corpus" ON storage.objects FOR SELECT TO authenticated USING (bucket_id = 'agronomy-corpus') $q$;
 
   EXECUTE 'DROP POLICY IF EXISTS "System admin upload for agronomy-corpus" ON storage.objects';
-  EXECUTE $q$ CREATE POLICY "System admin upload for agronomy-corpus" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'agronomy-corpus' AND (EXISTS (SELECT 1 FROM public.organization_users ou JOIN public.roles r ON r.id = ou.role_id WHERE ou.user_id = auth.uid() AND ou.is_active = true AND r.name = 'system_admin') OR EXISTS (SELECT 1 FROM public.internal_admins ia WHERE ia.user_id = auth.uid() AND ia.is_active = true))) $q$;
+  EXECUTE $q$ CREATE POLICY "System admin upload for agronomy-corpus" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'agronomy-corpus' AND (EXISTS (SELECT 1 FROM public.organization_users ou JOIN public.roles r ON r.id = ou.role_id WHERE ou.user_id = (select auth.uid()) AND ou.is_active = true AND r.name = 'system_admin') OR EXISTS (SELECT 1 FROM public.internal_admins ia WHERE ia.user_id = (select auth.uid()) AND ia.is_active = true))) $q$;
 
   EXECUTE 'DROP POLICY IF EXISTS "System admin update for agronomy-corpus" ON storage.objects';
-  EXECUTE $q$ CREATE POLICY "System admin update for agronomy-corpus" ON storage.objects FOR UPDATE TO authenticated USING (bucket_id = 'agronomy-corpus' AND (EXISTS (SELECT 1 FROM public.organization_users ou JOIN public.roles r ON r.id = ou.role_id WHERE ou.user_id = auth.uid() AND ou.is_active = true AND r.name = 'system_admin') OR EXISTS (SELECT 1 FROM public.internal_admins ia WHERE ia.user_id = auth.uid() AND ia.is_active = true))) WITH CHECK (bucket_id = 'agronomy-corpus' AND (EXISTS (SELECT 1 FROM public.organization_users ou JOIN public.roles r ON r.id = ou.role_id WHERE ou.user_id = auth.uid() AND ou.is_active = true AND r.name = 'system_admin') OR EXISTS (SELECT 1 FROM public.internal_admins ia WHERE ia.user_id = auth.uid() AND ia.is_active = true))) $q$;
+  EXECUTE $q$ CREATE POLICY "System admin update for agronomy-corpus" ON storage.objects FOR UPDATE TO authenticated USING (bucket_id = 'agronomy-corpus' AND (EXISTS (SELECT 1 FROM public.organization_users ou JOIN public.roles r ON r.id = ou.role_id WHERE ou.user_id = (select auth.uid()) AND ou.is_active = true AND r.name = 'system_admin') OR EXISTS (SELECT 1 FROM public.internal_admins ia WHERE ia.user_id = (select auth.uid()) AND ia.is_active = true))) WITH CHECK (bucket_id = 'agronomy-corpus' AND (EXISTS (SELECT 1 FROM public.organization_users ou JOIN public.roles r ON r.id = ou.role_id WHERE ou.user_id = (select auth.uid()) AND ou.is_active = true AND r.name = 'system_admin') OR EXISTS (SELECT 1 FROM public.internal_admins ia WHERE ia.user_id = (select auth.uid()) AND ia.is_active = true))) $q$;
 
   EXECUTE 'DROP POLICY IF EXISTS "System admin delete for agronomy-corpus" ON storage.objects';
-  EXECUTE $q$ CREATE POLICY "System admin delete for agronomy-corpus" ON storage.objects FOR DELETE TO authenticated USING (bucket_id = 'agronomy-corpus' AND (EXISTS (SELECT 1 FROM public.organization_users ou JOIN public.roles r ON r.id = ou.role_id WHERE ou.user_id = auth.uid() AND ou.is_active = true AND r.name = 'system_admin') OR EXISTS (SELECT 1 FROM public.internal_admins ia WHERE ia.user_id = auth.uid() AND ia.is_active = true))) $q$;
+  EXECUTE $q$ CREATE POLICY "System admin delete for agronomy-corpus" ON storage.objects FOR DELETE TO authenticated USING (bucket_id = 'agronomy-corpus' AND (EXISTS (SELECT 1 FROM public.organization_users ou JOIN public.roles r ON r.id = ou.role_id WHERE ou.user_id = (select auth.uid()) AND ou.is_active = true AND r.name = 'system_admin') OR EXISTS (SELECT 1 FROM public.internal_admins ia WHERE ia.user_id = (select auth.uid()) AND ia.is_active = true))) $q$;
 
   EXECUTE 'DROP POLICY IF EXISTS "Service role full access for agronomy-corpus" ON storage.objects';
   EXECUTE $q$ CREATE POLICY "Service role full access for agronomy-corpus" ON storage.objects FOR ALL TO service_role USING (bucket_id = 'agronomy-corpus') WITH CHECK (bucket_id = 'agronomy-corpus') $q$;
@@ -17192,7 +16808,7 @@ ALTER TABLE public.newsletter_subscribers ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "service_role_only" ON public.newsletter_subscribers;
 CREATE POLICY "service_role_only" ON public.newsletter_subscribers
-  FOR ALL USING (auth.role() = 'service_role');
+  FOR ALL USING ((select auth.role()) = 'service_role');
 
 -- ---------------------------------------------------------------------------
 -- PostGIS system table: read-only for everyone. Owned by supabase_admin on
@@ -17211,7 +16827,7 @@ END $$;
 -- Migration: 20260419010000_fix_db_linter_warnings.sql
 -- ============================================================================
 -- Addresses Supabase db-linter WARN-level findings:
---   - 0011_function_search_path_mutable: 18 functions missing search_path
+--   - 0011_function_search_path_mutable: 18+7 functions missing search_path
 --   - 0016_materialized_view_in_api: 2 MVs exposed via PostgREST
 --   - 0024_permissive_rls_policy: 8 RLS policies with USING/WITH CHECK true
 -- NOT addressed here (deferred — too risky pre-/during-SIAM):
@@ -17237,6 +16853,14 @@ ALTER FUNCTION public.update_quality_inspections_updated_at()     SET search_pat
 ALTER FUNCTION public.update_warehouse_stock_levels()             SET search_path = public, pg_catalog;
 ALTER FUNCTION public.update_campaigns_updated_at()               SET search_path = public, pg_catalog;
 ALTER FUNCTION public.update_account_mappings_updated_at()        SET search_path = public, pg_catalog;
+ALTER FUNCTION public.sync_primary_barcode_to_item()              SET search_path = public, pg_catalog;
+ALTER FUNCTION public.update_item_barcodes_updated_at()           SET search_path = public, pg_catalog;
+ALTER FUNCTION public.sync_primary_barcode_to_variant()           SET search_path = public, pg_catalog;
+ALTER FUNCTION public.update_variant_barcodes_updated_at()        SET search_path = public, pg_catalog;
+ALTER FUNCTION public.propagate_stock_entry_context_to_movement() SET search_path = public, pg_catalog;
+-- NOTE: offline_bump_version and update_support_settings_updated_at are
+-- defined later in this file. Their ALTER FUNCTION ... SET search_path
+-- statements were moved to the very end so they run after the CREATE.
 
 -- ---------------------------------------------------------------------------
 -- Remove materialized views from the PostgREST API surface.
@@ -17276,13 +16900,13 @@ CREATE POLICY "org_write_abstract_entities"
   USING (
     organization_id IN (
       SELECT organization_id FROM public.organization_users
-      WHERE user_id = auth.uid() AND is_active = true
+      WHERE user_id = (select auth.uid()) AND is_active = true
     )
   )
   WITH CHECK (
     organization_id IN (
       SELECT organization_id FROM public.organization_users
-      WHERE user_id = auth.uid() AND is_active = true
+      WHERE user_id = (select auth.uid()) AND is_active = true
     )
   );
 
@@ -17298,7 +16922,7 @@ CREATE POLICY "org_write_entity_relationships"
         AND ae.entity_id = entity_relationships.parent_entity_id
         AND ae.organization_id IN (
           SELECT organization_id FROM public.organization_users
-          WHERE user_id = auth.uid() AND is_active = true
+          WHERE user_id = (select auth.uid()) AND is_active = true
         )
     )
   )
@@ -17309,7 +16933,7 @@ CREATE POLICY "org_write_entity_relationships"
         AND ae.entity_id = entity_relationships.parent_entity_id
         AND ae.organization_id IN (
           SELECT organization_id FROM public.organization_users
-          WHERE user_id = auth.uid() AND is_active = true
+          WHERE user_id = (select auth.uid()) AND is_active = true
         )
     )
   );
@@ -17324,7 +16948,7 @@ CREATE POLICY "admin_write_module_translations"
     EXISTS (
       SELECT 1 FROM public.organization_users ou
       JOIN public.roles r ON ou.role_id = r.id
-      WHERE ou.user_id = auth.uid()
+      WHERE ou.user_id = (select auth.uid())
         AND ou.is_active = true
         AND r.name = 'system_admin'
     )
@@ -17333,7 +16957,7 @@ CREATE POLICY "admin_write_module_translations"
     EXISTS (
       SELECT 1 FROM public.organization_users ou
       JOIN public.roles r ON ou.role_id = r.id
-      WHERE ou.user_id = auth.uid()
+      WHERE ou.user_id = (select auth.uid())
         AND ou.is_active = true
         AND r.name = 'system_admin'
     )
@@ -17347,7 +16971,7 @@ CREATE POLICY "admin_write_modules"
     EXISTS (
       SELECT 1 FROM public.organization_users ou
       JOIN public.roles r ON ou.role_id = r.id
-      WHERE ou.user_id = auth.uid()
+      WHERE ou.user_id = (select auth.uid())
         AND ou.is_active = true
         AND r.name = 'system_admin'
     )
@@ -17356,7 +16980,7 @@ CREATE POLICY "admin_write_modules"
     EXISTS (
       SELECT 1 FROM public.organization_users ou
       JOIN public.roles r ON ou.role_id = r.id
-      WHERE ou.user_id = auth.uid()
+      WHERE ou.user_id = (select auth.uid())
         AND ou.is_active = true
         AND r.name = 'system_admin'
     )
@@ -17370,7 +16994,7 @@ CREATE POLICY "admin_write_polar_subscriptions"
     EXISTS (
       SELECT 1 FROM public.organization_users ou
       JOIN public.roles r ON ou.role_id = r.id
-      WHERE ou.user_id = auth.uid()
+      WHERE ou.user_id = (select auth.uid())
         AND ou.is_active = true
         AND r.name = 'system_admin'
     )
@@ -17379,7 +17003,7 @@ CREATE POLICY "admin_write_polar_subscriptions"
     EXISTS (
       SELECT 1 FROM public.organization_users ou
       JOIN public.roles r ON ou.role_id = r.id
-      WHERE ou.user_id = auth.uid()
+      WHERE ou.user_id = (select auth.uid())
         AND ou.is_active = true
         AND r.name = 'system_admin'
     )
@@ -17393,7 +17017,7 @@ CREATE POLICY "admin_write_polar_webhooks"
     EXISTS (
       SELECT 1 FROM public.organization_users ou
       JOIN public.roles r ON ou.role_id = r.id
-      WHERE ou.user_id = auth.uid()
+      WHERE ou.user_id = (select auth.uid())
         AND ou.is_active = true
         AND r.name = 'system_admin'
     )
@@ -17402,7 +17026,7 @@ CREATE POLICY "admin_write_polar_webhooks"
     EXISTS (
       SELECT 1 FROM public.organization_users ou
       JOIN public.roles r ON ou.role_id = r.id
-      WHERE ou.user_id = auth.uid()
+      WHERE ou.user_id = (select auth.uid())
         AND ou.is_active = true
         AND r.name = 'system_admin'
     )
@@ -17589,8 +17213,6 @@ CREATE POLICY "org_access" ON public.account_translations
         AND public.is_organization_member(a.organization_id)
     )
   );
-
-
 
 -- =====================================================================
 -- Migration: 20260424000000_align_modules_catalog.sql
@@ -17786,7 +17408,6 @@ COMMIT;
 -- FROM modules m LEFT JOIN organization_modules om ON om.module_id = m.id
 -- WHERE m.is_available = true
 -- GROUP BY m.slug ORDER BY m.slug;
-
 
 -- =====================================================================
 -- Migration: 20260424000001_seed_required_modules_trigger.sql
@@ -18039,7 +17660,6 @@ CREATE TRIGGER update_hr_compliance_settings_updated_at
 -- (OrganizationsService.create -> createDefaultHrComplianceSettings).
 DROP TRIGGER IF EXISTS trg_create_hr_compliance_settings ON organizations;
 DROP FUNCTION IF EXISTS create_default_hr_compliance_settings();
-
 
 -- =====================================================================
 -- HR Module — Phase 1.A: Leave Management
@@ -18546,7 +18166,7 @@ CREATE TRIGGER update_salary_slips_updated_at
 DROP POLICY IF EXISTS "self_read_salary_slips" ON salary_slips;
 CREATE POLICY "self_read_salary_slips" ON salary_slips
   FOR SELECT USING (
-    worker_id IN (SELECT id FROM workers WHERE user_id = auth.uid())
+    worker_id IN (SELECT id FROM workers WHERE user_id = (select auth.uid()))
   );
 
 -- =====================================================================
@@ -18651,7 +18271,7 @@ CREATE POLICY "org_access_worker_documents" ON worker_documents
 DROP POLICY IF EXISTS "self_read_worker_documents" ON worker_documents;
 CREATE POLICY "self_read_worker_documents" ON worker_documents
   FOR SELECT USING (
-    worker_id IN (SELECT id FROM workers WHERE user_id = auth.uid())
+    worker_id IN (SELECT id FROM workers WHERE user_id = (select auth.uid()))
   );
 
 DROP TRIGGER IF EXISTS update_worker_documents_updated_at ON worker_documents;
@@ -18914,7 +18534,7 @@ CREATE POLICY "org_access_expense_claims" ON expense_claims FOR ALL
   WITH CHECK (is_organization_member(organization_id));
 DROP POLICY IF EXISTS "self_read_expense_claims" ON expense_claims;
 CREATE POLICY "self_read_expense_claims" ON expense_claims FOR SELECT USING (
-  worker_id IN (SELECT id FROM workers WHERE user_id = auth.uid())
+  worker_id IN (SELECT id FROM workers WHERE user_id = (select auth.uid()))
 );
 DROP TRIGGER IF EXISTS update_expense_claims_updated_at ON expense_claims;
 CREATE TRIGGER update_expense_claims_updated_at
@@ -19096,7 +18716,7 @@ CREATE POLICY "org_access_appraisals" ON appraisals FOR ALL
   WITH CHECK (is_organization_member(organization_id));
 DROP POLICY IF EXISTS "self_read_appraisals" ON appraisals;
 CREATE POLICY "self_read_appraisals" ON appraisals FOR SELECT USING (
-  worker_id IN (SELECT id FROM workers WHERE user_id = auth.uid())
+  worker_id IN (SELECT id FROM workers WHERE user_id = (select auth.uid()))
 );
 DROP TRIGGER IF EXISTS update_appraisals_updated_at ON appraisals;
 CREATE TRIGGER update_appraisals_updated_at
@@ -19295,7 +18915,7 @@ CREATE POLICY "org_access_grievances" ON grievances FOR ALL
   WITH CHECK (is_organization_member(organization_id));
 DROP POLICY IF EXISTS "self_read_grievances" ON grievances;
 CREATE POLICY "self_read_grievances" ON grievances FOR SELECT USING (
-  raised_by_worker_id IN (SELECT id FROM workers WHERE user_id = auth.uid())
+  raised_by_worker_id IN (SELECT id FROM workers WHERE user_id = (select auth.uid()))
 );
 DROP TRIGGER IF EXISTS update_grievances_updated_at ON grievances;
 CREATE TRIGGER update_grievances_updated_at
@@ -19466,7 +19086,7 @@ CREATE POLICY "support_settings_admin_write" ON support_settings
       SELECT 1
       FROM organization_users ou
       JOIN roles r ON r.id = ou.role_id
-      WHERE ou.user_id = auth.uid()
+      WHERE ou.user_id = (select auth.uid())
         AND ou.is_active = true
         AND r.name = 'system_admin'
     )
@@ -19624,8 +19244,15 @@ END
 $perf_rls_initplan$;
 
 -- 2) Drop duplicate indexes (keep the one with the org-scoped name).
+--    NOTE: `idx_ai_rec_citations_unique` was a UNIQUE index, NOT a duplicate.
+--    Dropping it here would silently allow duplicate (recommendation_id,
+--    chunk_id) rows. We drop and immediately recreate it to keep the
+--    constraint while still satisfying the perf-advisor's "duplicate index"
+--    flag (the flag is a false positive for UNIQUE indexes).
 DROP INDEX IF EXISTS idx_account_mappings_org_override;
 DROP INDEX IF EXISTS idx_ai_rec_citations_unique;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_ai_rec_citations_unique
+  ON ai_recommendation_citations (recommendation_id, chunk_id);
 DROP INDEX IF EXISTS idx_biological_assets_type;
 DROP INDEX IF EXISTS idx_crop_cycles_status;
 
@@ -19883,7 +19510,7 @@ CREATE POLICY "org_email_settings_admin_write" ON public.organization_email_sett
     EXISTS (
       SELECT 1 FROM public.organization_users ou
       JOIN public.roles r ON r.id = ou.role_id
-      WHERE ou.user_id = auth.uid()
+      WHERE ou.user_id = (select auth.uid())
         AND ou.organization_id = organization_email_settings.organization_id
         AND r.name IN ('organization_admin', 'system_admin')
         AND ou.is_active = true
@@ -19892,7 +19519,7 @@ CREATE POLICY "org_email_settings_admin_write" ON public.organization_email_sett
     EXISTS (
       SELECT 1 FROM public.organization_users ou
       JOIN public.roles r ON r.id = ou.role_id
-      WHERE ou.user_id = auth.uid()
+      WHERE ou.user_id = (select auth.uid())
         AND ou.organization_id = organization_email_settings.organization_id
         AND r.name IN ('organization_admin', 'system_admin')
         AND ou.is_active = true
@@ -19934,7 +19561,7 @@ CREATE POLICY "org_whatsapp_settings_select" ON public.organization_whatsapp_set
   FOR SELECT USING (
     organization_id IN (
       SELECT organization_id FROM public.organization_users
-      WHERE user_id = auth.uid() AND is_active = true
+      WHERE user_id = (select auth.uid()) AND is_active = true
     )
   );
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -19945,7 +19572,7 @@ CREATE POLICY "org_whatsapp_settings_admin_write" ON public.organization_whatsap
     EXISTS (
       SELECT 1 FROM public.organization_users ou
       JOIN public.roles r ON r.id = ou.role_id
-      WHERE ou.user_id = auth.uid()
+      WHERE ou.user_id = (select auth.uid())
         AND ou.organization_id = organization_whatsapp_settings.organization_id
         AND r.name IN ('organization_admin', 'system_admin')
         AND ou.is_active = true
@@ -19954,7 +19581,7 @@ CREATE POLICY "org_whatsapp_settings_admin_write" ON public.organization_whatsap
     EXISTS (
       SELECT 1 FROM public.organization_users ou
       JOIN public.roles r ON r.id = ou.role_id
-      WHERE ou.user_id = auth.uid()
+      WHERE ou.user_id = (select auth.uid())
         AND ou.organization_id = organization_whatsapp_settings.organization_id
         AND r.name IN ('organization_admin', 'system_admin')
         AND ou.is_active = true
@@ -19998,7 +19625,7 @@ CREATE POLICY "share_log_org_select" ON public.share_log
   FOR SELECT USING (
     organization_id IN (
       SELECT organization_id FROM public.organization_users
-      WHERE user_id = auth.uid() AND is_active = true
+      WHERE user_id = (select auth.uid()) AND is_active = true
     )
   );
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -20012,3 +19639,12 @@ GRANT SELECT, INSERT ON public.share_log TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.share_log TO service_role;
 
 COMMENT ON TABLE public.share_log IS 'Audit trail of resource shares (invoices, quotes, etc.) sent via email/WhatsApp.';
+
+-- ---------------------------------------------------------------------------
+-- Late-pinning of search_path for functions defined further down the file.
+-- These ALTERs were originally inline at the perf-pass block above, but the
+-- functions they reference (offline_bump_version, update_support_settings_*)
+-- are created later in the schema, so the ALTERs must run last.
+-- ---------------------------------------------------------------------------
+ALTER FUNCTION public.offline_bump_version()                      SET search_path = public, pg_catalog;
+ALTER FUNCTION public.update_support_settings_updated_at()        SET search_path = public, pg_catalog;
