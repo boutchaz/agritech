@@ -2,10 +2,9 @@ import { useMemo, useState, type ReactNode } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Loader2, Plus, Pencil, Trash2, ShieldCheck, AlertTriangle, Building2, Users } from 'lucide-react';
+import { Loader2, Plus, Pencil, Trash2, ShieldCheck, AlertTriangle } from 'lucide-react';
 import { withRouteProtection } from '@/components/authorization/withRouteProtection';
 import { useAuth } from '@/hooks/useAuth';
-import ModernPageHeader from '@/components/ModernPageHeader';
 import { useWorkers } from '@/hooks/useWorkers';
 import {
   useCreateQualification,
@@ -66,19 +65,7 @@ function QualificationsPage() {
 
   return (
     <>
-      <ModernPageHeader
-        breadcrumbs={[
-          { icon: Building2, label: currentOrganization?.name ?? '', path: '/dashboard' },
-          { icon: Users, label: t('nav.workforce', 'Workforce'), path: '/workforce/employees' },
-          { icon: ShieldCheck, label: t('qualifications.title', 'Worker Qualifications'), isActive: true },
-        ]}
-        title={t('qualifications.title', 'Worker Qualifications')}
-        subtitle={t(
-          'qualifications.subtitle',
-          'Track training certificates: tractor, pesticide, first aid, etc. Get alerts before expiry.',
-        )}
-        actions={
-          <>
+      <div className="flex justify-end mb-2">{<>
             <Select
               value={expiringFilter ? String(expiringFilter) : 'all'}
               onValueChange={(v) => setExpiringFilter(v === 'all' ? undefined : Number(v))}
@@ -96,9 +83,7 @@ function QualificationsPage() {
               <Plus className="w-4 h-4 mr-2" />
               {t('common.create', 'Create')}
             </Button>
-          </>
-        }
-      />
+          </>}</div>
       <div className="p-3 sm:p-4 lg:p-6 space-y-6">
 
       {query.isLoading ? (

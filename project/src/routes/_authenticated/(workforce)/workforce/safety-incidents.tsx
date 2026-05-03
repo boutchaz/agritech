@@ -2,10 +2,9 @@ import { useMemo, useState, type ReactNode } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Loader2, Plus, AlertTriangle, ListTodo, Building2, Users } from 'lucide-react';
+import { Loader2, Plus, AlertTriangle, ListTodo } from 'lucide-react';
 import { withRouteProtection } from '@/components/authorization/withRouteProtection';
 import { useAuth } from '@/hooks/useAuth';
-import ModernPageHeader from '@/components/ModernPageHeader';
 import { useFarms } from '@/hooks/useParcelsQuery';
 import { useWorkers } from '@/hooks/useWorkers';
 import {
@@ -83,16 +82,7 @@ function SafetyIncidentsPage() {
 
   return (
     <>
-      <ModernPageHeader
-        breadcrumbs={[
-          { icon: Building2, label: currentOrganization?.name ?? '', path: '/dashboard' },
-          { icon: Users, label: t('nav.workforce', 'Workforce'), path: '/workforce/employees' },
-          { icon: AlertTriangle, label: t('safety.title', 'Safety Incidents'), isActive: true },
-        ]}
-        title={t('safety.title', 'Safety Incidents')}
-        subtitle={t('safety.subtitle', 'Log injuries, near-misses, chemical exposure. Track CNSS declarations.')}
-        actions={
-          <>
+      <div className="flex justify-end mb-2">{<>
             <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as typeof statusFilter)}>
               <SelectTrigger className="w-44">
                 <SelectValue />
@@ -108,9 +98,7 @@ function SafetyIncidentsPage() {
               <Plus className="w-4 h-4 mr-2" />
               {t('safety.report', 'Report incident')}
             </Button>
-          </>
-        }
-      />
+          </>}</div>
       <div className="p-3 sm:p-4 lg:p-6 space-y-6">
       <div className="grid grid-cols-3 gap-3">
         <StatCard label={t('safety.total', 'Total')} value={stats.total} />

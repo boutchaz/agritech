@@ -2,10 +2,9 @@ import { useMemo, useState, type ReactNode } from 'react';
 import { Link, createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { ArrowLeft, Loader2, Plus, Trash2, Building2, Users, LogOut } from 'lucide-react';
+import { ArrowLeft, Loader2, Plus, Trash2 } from 'lucide-react';
 import { withRouteProtection } from '@/components/authorization/withRouteProtection';
 import { useAuth } from '@/hooks/useAuth';
-import ModernPageHeader from '@/components/ModernPageHeader';
 import {
   useSeparation,
   useUpdateFnf,
@@ -62,26 +61,13 @@ function SeparationDetailPage() {
   }
 
   const sep = query.data;
-  const workerName = `${sep.worker?.first_name ?? ''} ${sep.worker?.last_name ?? ''}`.trim();
 
   return (
     <>
-      <ModernPageHeader
-        breadcrumbs={[
-          { icon: Building2, label: currentOrganization?.name ?? '', path: '/dashboard' },
-          { icon: Users, label: t('nav.workforce', 'Workforce'), path: '/workforce/employees' },
-          { icon: LogOut, label: t('separations.title', 'Separations'), path: '/workforce/separations' },
-          { icon: LogOut, label: workerName || t('separations.detail', 'Détail'), isActive: true },
-        ]}
-        title={workerName || t('separations.detail', 'Détail')}
-        subtitle={`${t(`separations.type.${sep.separation_type}`, sep.separation_type)}${sep.worker?.cin ? ` · CIN ${sep.worker.cin}` : ''}`}
-        actions={
-          <>
+      <div className="flex justify-end mb-2">{<>
             <Badge>{t(`separations.status.${sep.status}`, sep.status)}</Badge>
             <Badge variant="outline">FnF: {sep.fnf_status}</Badge>
-          </>
-        }
-      />
+          </>}</div>
       <div className="p-3 sm:p-4 lg:p-6 space-y-6">
       <div>
         <Link

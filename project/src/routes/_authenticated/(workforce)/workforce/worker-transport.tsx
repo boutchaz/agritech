@@ -2,10 +2,9 @@ import { useState, type ReactNode } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Loader2, Plus, Pencil, Trash2, Bus, Building2, Users } from 'lucide-react';
+import { Loader2, Plus, Pencil, Trash2, Bus } from 'lucide-react';
 import { withRouteProtection } from '@/components/authorization/withRouteProtection';
 import { useAuth } from '@/hooks/useAuth';
-import ModernPageHeader from '@/components/ModernPageHeader';
 import { useFarms } from '@/hooks/useParcelsQuery';
 import { useWorkers } from '@/hooks/useWorkers';
 import {
@@ -57,21 +56,10 @@ function WorkerTransportPage() {
 
   return (
     <>
-      <ModernPageHeader
-        breadcrumbs={[
-          { icon: Building2, label: currentOrganization?.name ?? '', path: '/dashboard' },
-          { icon: Users, label: t('nav.workforce', 'Workforce'), path: '/workforce/employees' },
-          { icon: Bus, label: t('transport.title', 'Worker Transport'), isActive: true },
-        ]}
-        title={t('transport.title', 'Worker Transport')}
-        subtitle={t('transport.subtitle', 'Schedule pickup runs from villages to farms.')}
-        actions={
-          <Button onClick={() => setCreating(true)} disabled={!farmList.length}>
+      <div className="flex justify-end mb-2">{<Button onClick={() => setCreating(true)} disabled={!farmList.length}>
             <Plus className="w-4 h-4 mr-2" />
             {t('transport.create', 'New trip')}
-          </Button>
-        }
-      />
+          </Button>}</div>
       <div className="p-3 sm:p-4 lg:p-6 space-y-6">
       {query.isLoading ? (
         <div className="flex items-center justify-center h-40">

@@ -2,10 +2,9 @@ import { useState, type ReactNode } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Loader2, Plus, AlertCircle, ShieldAlert, Building2, Users, AlertTriangle } from 'lucide-react';
+import { Loader2, Plus, AlertCircle, ShieldAlert } from 'lucide-react';
 import { withRouteProtection } from '@/components/authorization/withRouteProtection';
 import { useAuth } from '@/hooks/useAuth';
-import ModernPageHeader from '@/components/ModernPageHeader';
 import { useWorkers } from '@/hooks/useWorkers';
 import {
   useCreateGrievance,
@@ -73,16 +72,7 @@ function GrievancesPage() {
 
   return (
     <>
-      <ModernPageHeader
-        breadcrumbs={[
-          { icon: Building2, label: currentOrganization?.name ?? '', path: '/dashboard' },
-          { icon: Users, label: t('nav.workforce', 'Workforce'), path: '/workforce/employees' },
-          { icon: AlertTriangle, label: t('grievances.title', 'Grievances'), isActive: true },
-        ]}
-        title={t('grievances.title', 'Grievances')}
-        subtitle={t('grievances.subtitle', 'Confidential channel for worker complaints, harassment, safety concerns.')}
-        actions={
-          <>
+      <div className="flex justify-end mb-2">{<>
             <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as typeof statusFilter)}>
               <SelectTrigger className="w-44">
                 <SelectValue />
@@ -98,9 +88,7 @@ function GrievancesPage() {
               <Plus className="w-4 h-4 mr-2" />
               {t('grievances.create', 'New grievance')}
             </Button>
-          </>
-        }
-      />
+          </>}</div>
       <div className="p-3 sm:p-4 lg:p-6 space-y-6">
       {query.isLoading ? (
         <div className="flex items-center justify-center h-40">

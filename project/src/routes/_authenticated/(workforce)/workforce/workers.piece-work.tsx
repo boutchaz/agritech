@@ -1,10 +1,9 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Calendar, Filter, Package, Building2 } from 'lucide-react';
+import { Calendar, Filter } from 'lucide-react';
 import { PieceWorkEntry, PieceWorkList } from '@/components/Workers/PieceWorkEntry';
 import { useAuth } from '@/hooks/useAuth';
-import ModernPageHeader from '@/components/ModernPageHeader';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/Input';
@@ -38,14 +37,7 @@ function PieceWorkPage() {
   if (!currentFarm) {
     return (
       <>
-        <ModernPageHeader
-          breadcrumbs={[
-            { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
-            { icon: Package, label: t('workers.pieceWork.title', 'Travail à la pièce'), isActive: true },
-          ]}
-          title={t('workers.pieceWork.title', 'Travail à la pièce')}
-          subtitle={t('workers.pieceWork.description', 'Suivi du travail par unités (arbres, caisses, kg...)')}
-        />
+        
         <div className="p-6">
           <Card className="p-6 text-center">
             <p className="text-gray-500">{t('workers.pieceWork.selectFarm', 'Veuillez sélectionner une ferme pour voir les enregistrements.')}</p>
@@ -57,15 +49,7 @@ function PieceWorkPage() {
 
   return (
     <>
-      <ModernPageHeader
-        breadcrumbs={[
-          { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
-          { icon: Package, label: t('workers.pieceWork.title', 'Travail à la pièce'), isActive: true },
-        ]}
-        title={t('workers.pieceWork.title', 'Travail à la pièce')}
-        subtitle={t('workers.pieceWork.description', 'Suivi du travail par unités (arbres, caisses, kg...)')}
-        actions={<PieceWorkEntry />}
-      />
+      <div className="flex justify-end mb-2">{<PieceWorkEntry />}</div>
 
       <div className="p-3 sm:p-4 md:p-6 pb-20 md:pb-6 space-y-6">
         {/* Filters */}

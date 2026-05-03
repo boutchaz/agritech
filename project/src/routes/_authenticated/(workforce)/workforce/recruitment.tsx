@@ -2,10 +2,9 @@ import { useState, type ReactNode } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Loader2, Plus, Pencil, Trash2, Star, Building2, Users, Briefcase, Calendar, Clock, MapPin, Video, Phone, User } from 'lucide-react';
+import { Loader2, Plus, Pencil, Trash2, Star, MapPin, Video, Phone } from 'lucide-react';
 import { withRouteProtection } from '@/components/authorization/withRouteProtection';
 import { useAuth } from '@/hooks/useAuth';
-import ModernPageHeader from '@/components/ModernPageHeader';
 import { useFarms } from '@/hooks/useParcelsQuery';
 import { useWorkers } from '@/hooks/useWorkers';
 import {
@@ -95,16 +94,7 @@ function RecruitmentPage() {
 
   return (
     <>
-      <ModernPageHeader
-        breadcrumbs={[
-          { icon: Building2, label: currentOrganization?.name ?? '', path: '/dashboard' },
-          { icon: Users, label: t('nav.workforce', 'Workforce'), path: '/workforce/employees' },
-          { icon: Briefcase, label: t('recruitment.title', 'Recruitment'), isActive: true },
-        ]}
-        title={t('recruitment.title', 'Recruitment')}
-        subtitle={t('recruitment.subtitle', 'Job openings and applicant pipeline.')}
-        actions={
-          <>
+      <div className="flex justify-end mb-2">{<>
             {tab === 'openings' && (
               <Button onClick={() => setCreatingOpening(true)}>
                 <Plus className="w-4 h-4 mr-2" />
@@ -123,9 +113,7 @@ function RecruitmentPage() {
                 {t('recruitment.newInterview', 'New interview')}
               </Button>
             )}
-          </>
-        }
-      />
+          </>}</div>
       <div className="p-3 sm:p-4 lg:p-6 space-y-6">
       <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)}>
         <TabsList>

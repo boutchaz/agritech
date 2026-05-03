@@ -2,9 +2,8 @@ import { useMemo, useState, type ReactNode } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Loader2, Plus, Check, X, Trash2, Receipt, Building2, Users } from 'lucide-react';
+import { Loader2, Plus, Check, X, Trash2 } from 'lucide-react';
 import { z } from 'zod';
-import ModernPageHeader from '@/components/ModernPageHeader';
 import { HrStatGrid } from '@/components/HrStatGrid';
 
 const expenseItemSchema = z.object({
@@ -108,16 +107,7 @@ function ExpenseClaimsPage() {
 
   return (
     <>
-      <ModernPageHeader
-        breadcrumbs={[
-          { icon: Building2, label: currentOrganization?.name ?? '', path: '/dashboard' },
-          { icon: Users, label: t('nav.workforce', 'Workforce'), path: '/workforce/employees' },
-          { icon: Receipt, label: t('expenses.title', 'Expense Claims'), isActive: true },
-        ]}
-        title={t('expenses.title', 'Expense Claims')}
-        subtitle={t('expenses.subtitle', 'Worker expense reimbursements with approval workflow. Approved claims auto-post to the GL.')}
-        actions={
-          <>
+      <div className="flex justify-end mb-2">{<>
             <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as typeof statusFilter)}>
               <SelectTrigger className="w-44">
                 <SelectValue />
@@ -133,9 +123,7 @@ function ExpenseClaimsPage() {
               <Plus className="w-4 h-4 mr-2" />
               {t('expenses.create', 'New claim')}
             </Button>
-          </>
-        }
-      />
+          </>}</div>
       <div className="p-3 sm:p-4 lg:p-6 space-y-6">
         <HrStatGrid stats={statCards} />
 

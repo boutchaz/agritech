@@ -2,10 +2,9 @@ import { useState, type ReactNode } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Loader2, Plus, Pencil, Trash2, Users, GraduationCap, Building2 } from 'lucide-react';
+import { Loader2, Plus, Pencil, Trash2, Users, GraduationCap } from 'lucide-react';
 import { withRouteProtection } from '@/components/authorization/withRouteProtection';
 import { useAuth } from '@/hooks/useAuth';
-import ModernPageHeader from '@/components/ModernPageHeader';
 import { useWorkers } from '@/hooks/useWorkers';
 import {
   useBulkEnroll,
@@ -76,23 +75,12 @@ function TrainingPage() {
 
   return (
     <>
-      <ModernPageHeader
-        breadcrumbs={[
-          { icon: Building2, label: currentOrganization?.name ?? '', path: '/dashboard' },
-          { icon: Users, label: t('nav.workforce', 'Workforce'), path: '/workforce/employees' },
-          { icon: GraduationCap, label: t('training.title', 'Training'), isActive: true },
-        ]}
-        title={t('training.title', 'Training')}
-        subtitle={t('training.subtitle', 'Manage programs (safety, technical, certifications) and worker enrollments.')}
-        actions={
-          tab === 'programs' ? (
+      <div className="flex justify-end mb-2">{tab === 'programs' ? (
             <Button onClick={() => setCreating(true)}>
               <Plus className="w-4 h-4 mr-2" />
               {t('training.newProgram', 'New program')}
             </Button>
-          ) : undefined
-        }
-      />
+          ) : undefined}</div>
       <div className="p-3 sm:p-4 lg:p-6 space-y-6">
       <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)}>
         <TabsList>

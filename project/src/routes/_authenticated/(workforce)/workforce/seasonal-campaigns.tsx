@@ -2,10 +2,9 @@ import { useState, type ReactNode } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Loader2, Plus, Pencil, Trash2, Building2, Users, Sprout } from 'lucide-react';
+import { Loader2, Plus, Pencil, Trash2 } from 'lucide-react';
 import { withRouteProtection } from '@/components/authorization/withRouteProtection';
 import { useAuth } from '@/hooks/useAuth';
-import ModernPageHeader from '@/components/ModernPageHeader';
 import { useFarms } from '@/hooks/useParcelsQuery';
 import {
   useCreateSeasonalCampaign,
@@ -65,19 +64,7 @@ function SeasonalCampaignsPage() {
 
   return (
     <>
-      <ModernPageHeader
-        breadcrumbs={[
-          { icon: Building2, label: currentOrganization?.name ?? '', path: '/dashboard' },
-          { icon: Users, label: t('nav.workforce', 'Workforce'), path: '/workforce/employees' },
-          { icon: Sprout, label: t('seasonalCampaigns.title', 'Seasonal Campaigns'), isActive: true },
-        ]}
-        title={t('seasonalCampaigns.title', 'Seasonal Campaigns')}
-        subtitle={t(
-          'seasonalCampaigns.subtitle',
-          'Plan harvest, planting and treatment campaigns. Track labour budget vs actual.',
-        )}
-        actions={
-          <>
+      <div className="flex justify-end mb-2">{<>
             <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as typeof statusFilter)}>
               <SelectTrigger className="w-44">
                 <SelectValue />
@@ -93,9 +80,7 @@ function SeasonalCampaignsPage() {
               <Plus className="w-4 h-4 mr-2" />
               {t('common.create', 'Create')}
             </Button>
-          </>
-        }
-      />
+          </>}</div>
       <div className="p-3 sm:p-4 lg:p-6 space-y-6">
       {query.isLoading ? (
         <Loading />
