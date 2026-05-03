@@ -1,4 +1,5 @@
 import {  useEffect, useMemo, useState  } from "react";
+import { useNavigate } from '@tanstack/react-router';
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/hooks/useAuth'
 import Dashboard from '@/components/Dashboard'
@@ -59,10 +60,21 @@ function getStoredLiveMode(): boolean {
   }
 }
 
+// Roles that get the personal HR dashboard instead of the org-wide one.
+const PERSONAL_DASHBOARD_ROLES = new Set(['day_laborer', 'farm_worker']);
+
 const AppContent = () => {
   const { t } = useTranslation();
-  const { currentOrganization, currentFarm, user } = useAuth();
+  const navigate = useNavigate();
+  const { currentOrganization, currentFarm, user, userRole } = useAuth();
   const siteOrigin = typeof window !== 'undefined' ? window.location.origin : 'https://app.agritech.local';
+
+  // Workers/laborers don't need org-wide KPIs — send them to their personal HR view.
+  useEffect(() => {
+    if (userRole?.role_name && PERSONAL_DASHBOARD_ROLES.has(userRole.role_name)) {
+      navigate({ to: '/workforce/my-hr', replace: true });
+    }
+  }, [userRole?.role_name, navigate]);
 
   const [isLiveMode, setIsLiveMode] = useState(getStoredLiveMode);
 

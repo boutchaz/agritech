@@ -8,9 +8,9 @@ interface AuthLayoutProps {
   title: string
   subtitle: string
   helperText?: string
-  switchLabel: string
-  switchHref: string
-  switchCta: string
+  switchLabel?: string
+  switchHref?: string
+  switchCta?: string
   children: React.ReactNode
   backHref?: string
   backLabel?: string
@@ -121,15 +121,17 @@ export function AuthLayout({
 
                 {children}
 
-                <div className="flex items-center justify-center gap-1 text-sm text-slate-500">
-                  <span>{switchLabel}</span>
-                  <Link
-                    to={switchHref}
-                    className="font-medium text-emerald-600 transition hover:text-emerald-500"
-                  >
-                    {switchCta}
-                  </Link>
-                </div>
+                {switchLabel && switchHref && switchCta && (
+                  <div className="flex items-center justify-center gap-1 text-sm text-slate-500">
+                    <span>{switchLabel}</span>
+                    <Link
+                      to={switchHref}
+                      className="font-medium text-emerald-600 transition hover:text-emerald-500"
+                    >
+                      {switchCta}
+                    </Link>
+                  </div>
+                )}
               </div>
             </div>
           </div>
