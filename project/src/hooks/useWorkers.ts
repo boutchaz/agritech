@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { trackEntityCreate, trackEntityUpdate, trackEntityDelete } from '../lib/analytics';
+import { useModuleEnabled } from './useModuleEnabled';
 import { workersApi, type PaginatedWorkerQuery } from '../lib/api/workers';
 import { withOfflineQueue } from '../lib/offline/withOfflineQueue';
 import type { PaginatedResponse } from '../lib/api/types';
@@ -10,18 +11,20 @@ export type { PaginatedWorkerQuery };
 
 // Fetch workers for an organization
 export const useWorkers = (organizationId: string | null, farmId?: string | null) => {
+  const personnelEnabled = useModuleEnabled('personnel');
   return useQuery({
     queryKey: ['workers', organizationId, farmId],
     queryFn: async () => {
       if (!organizationId) return [];
       return workersApi.getAll({ farmId: farmId || undefined }, organizationId);
     },
-    enabled: !!organizationId,
+    enabled: personnelEnabled && !!organizationId,
   });
 };
 
 export const usePaginatedWorkers = (organizationId: string, query: PaginatedWorkerQuery) => {
   const queryKey = JSON.stringify(query);
+  const personnelEnabled = useModuleEnabled('personnel');
 
   return useQuery({
     queryKey: ['workers', 'paginated', organizationId, queryKey],
@@ -32,7 +35,7 @@ export const usePaginatedWorkers = (organizationId: string, query: PaginatedWork
 
       return workersApi.getPaginated(organizationId, query);
     },
-    enabled: !!organizationId,
+    enabled: personnelEnabled && !!organizationId,
     placeholderData: keepPreviousData,
     staleTime: 30 * 1000,
   });
@@ -40,25 +43,27 @@ export const usePaginatedWorkers = (organizationId: string, query: PaginatedWork
 
 // Fetch active workers summary
 export const useActiveWorkers = (organizationId: string | null) => {
+  const personnelEnabled = useModuleEnabled('personnel');
   return useQuery({
     queryKey: ['active-workers', organizationId],
     queryFn: async () => {
       if (!organizationId) return [];
       return workersApi.getActive(organizationId);
     },
-    enabled: !!organizationId,
+    enabled: personnelEnabled && !!organizationId,
   });
 };
 
 // Fetch single worker
 export const useWorker = (organizationId: string | null, workerId: string | null) => {
+  const personnelEnabled = useModuleEnabled('personnel');
   return useQuery({
     queryKey: ['worker', organizationId, workerId],
     queryFn: async () => {
       if (!organizationId || !workerId) return null;
       return workersApi.getById(organizationId, workerId);
     },
-    enabled: !!organizationId && !!workerId,
+    enabled: personnelEnabled && !!organizationId && !!workerId,
   });
 };
 
@@ -168,13 +173,14 @@ export const useWorkRecords = (
   startDate?: string,
   endDate?: string,
 ) => {
+  const personnelEnabled = useModuleEnabled('personnel');
   return useQuery({
     queryKey: ['work-records', organizationId, workerId, startDate, endDate],
     queryFn: async () => {
       if (!organizationId || !workerId) return [];
       return workersApi.getWorkRecords(organizationId, workerId, startDate, endDate) as Promise<WorkRecord[]>;
     },
-    enabled: !!organizationId && !!workerId,
+    enabled: personnelEnabled && !!organizationId && !!workerId,
   });
 };
 
@@ -229,13 +235,14 @@ export const useUpdateWorkRecord = () => {
 
 // Fetch métayage settlements - now uses NestJS API
 export const useMetayageSettlements = (organizationId: string | null, workerId: string | null) => {
+  const personnelEnabled = useModuleEnabled('personnel');
   return useQuery({
     queryKey: ['metayage-settlements', organizationId, workerId],
     queryFn: async () => {
       if (!organizationId || !workerId) return [];
       return workersApi.getMetayageSettlements(organizationId, workerId) as Promise<MetayageSettlement[]>;
     },
-    enabled: !!organizationId && !!workerId,
+    enabled: personnelEnabled && !!organizationId && !!workerId,
   });
 };
 
@@ -284,24 +291,26 @@ export const useCalculateMetayageShare = () => {
 
 // Get worker statistics
 export const useWorkerStats = (organizationId: string | null, workerId: string | null) => {
+  const personnelEnabled = useModuleEnabled('personnel');
   return useQuery({
     queryKey: ['worker-stats', organizationId, workerId],
     queryFn: async () => {
       if (!organizationId || !workerId) return null;
       return workersApi.getStats(organizationId, workerId);
     },
-    enabled: !!organizationId && !!workerId,
+    enabled: personnelEnabled && !!organizationId && !!workerId,
   });
 };
 
 export const useWorkersActivitySummary = (organizationId: string | null, days: number = 30) => {
+  const personnelEnabled = useModuleEnabled('personnel');
   return useQuery({
     queryKey: ['workers-activity-summary', organizationId, days],
     queryFn: async () => {
       if (!organizationId) return {};
       return workersApi.getActivitySummary(organizationId, days) as Promise<WorkersActivitySummary>;
     },
-    enabled: !!organizationId,
+    enabled: personnelEnabled && !!organizationId,
     staleTime: 5 * 60 * 1000,
   });
 };

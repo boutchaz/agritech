@@ -1,6 +1,7 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { createOrgCrudHooks } from './useOrgQuery';
 import { useAuth } from './useAuth';
+import { useModuleEnabled } from './useModuleEnabled';
 import { apiClient } from '@/lib/api-client';
 import type { PaginatedQuery, PaginatedResponse } from '@/lib/api/types';
 import { suppliersApi, type Supplier, type CreateSupplierInput, type SupplierFilters } from '../lib/api/suppliers';
@@ -24,6 +25,7 @@ export function useSuppliers() {
 export function usePaginatedSuppliers(queryParams: PaginatedQuery) {
   const { currentOrganization } = useAuth();
   const organizationId = currentOrganization?.id ?? null;
+  const salesPurchasingEnabled = useModuleEnabled('sales_purchasing');
 
   return useQuery({
     queryKey: ['suppliers', 'paginated', organizationId, queryParams],
@@ -41,7 +43,7 @@ export function usePaginatedSuppliers(queryParams: PaginatedQuery) {
 
       return apiClient.get<PaginatedResponse<Supplier>>(url, {}, organizationId);
     },
-    enabled: !!organizationId,
+    enabled: salesPurchasingEnabled && !!organizationId,
     placeholderData: keepPreviousData,
     staleTime: 30_000,
   });

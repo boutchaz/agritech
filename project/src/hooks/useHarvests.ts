@@ -4,6 +4,7 @@ import { harvestsApi, type PaginatedHarvestQuery } from '../lib/api/harvests';
 import { deliveriesApi } from '../lib/api/deliveries';
 import { runOrQueue as runOrQueueOffline } from '../lib/offline/runOrQueue';
 import { useAuth } from '../hooks/useAuth';
+import { useModuleEnabled } from './useModuleEnabled';
 import type { PaginatedResponse } from '../lib/api/types';
 import type {
   HarvestRecord,
@@ -24,17 +25,19 @@ export type { PaginatedHarvestQuery };
 // =====================================================
 
 export function useHarvests(organizationId: string, filters?: HarvestFilters) {
+  const productionEnabled = useModuleEnabled('production');
   return useQuery({
     queryKey: ['harvests', organizationId, filters],
     queryFn: async () => {
       if (!organizationId) return [];
       return harvestsApi.getAll(filters, organizationId);
     },
-    enabled: !!organizationId,
+    enabled: productionEnabled && !!organizationId,
   });
 }
 
 export function usePaginatedHarvests(organizationId: string, query: PaginatedHarvestQuery) {
+  const productionEnabled = useModuleEnabled('production');
   return useQuery({
     queryKey: ['harvests', 'paginated', organizationId, query],
     queryFn: async (): Promise<PaginatedResponse<HarvestSummary>> => {
@@ -43,13 +46,14 @@ export function usePaginatedHarvests(organizationId: string, query: PaginatedHar
       }
       return harvestsApi.getPaginated(organizationId, query);
     },
-    enabled: !!organizationId,
+    enabled: productionEnabled && !!organizationId,
     placeholderData: keepPreviousData,
     staleTime: 30 * 1000,
   });
 }
 
 export function useHarvest(organizationId: string, harvestId: string | null) {
+  const productionEnabled = useModuleEnabled('production');
   return useQuery({
     queryKey: ['harvest', harvestId],
     queryFn: async () => {
@@ -58,7 +62,7 @@ export function useHarvest(organizationId: string, harvestId: string | null) {
       }
       return harvestsApi.getById(organizationId, harvestId);
     },
-    enabled: !!harvestId && !!organizationId,
+    enabled: productionEnabled && !!harvestId && !!organizationId,
   });
 }
 
@@ -99,13 +103,14 @@ export function useHarvestStatistics(organizationId: string, filters?: { dateFro
 // =====================================================
 
 export function useDeliveries(organizationId: string, filters?: DeliveryFilters) {
+  const productionEnabled = useModuleEnabled('production');
   return useQuery({
     queryKey: ['deliveries', organizationId, filters],
     queryFn: async () => {
       if (!organizationId) return [];
       return deliveriesApi.getAll(filters, organizationId);
     },
-    enabled: !!organizationId,
+    enabled: productionEnabled && !!organizationId,
   });
 }
 

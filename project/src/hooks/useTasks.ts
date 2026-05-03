@@ -9,6 +9,7 @@ import { tasksApi, type PaginatedTaskQuery } from "../lib/api/tasks";
 import { runOrQueue as runOrQueueOffline } from "../lib/offline/runOrQueue";
 import { v4 as uuidv4 } from "uuid";
 import { useAuth } from "../hooks/useAuth";
+import { useModuleEnabled } from './useModuleEnabled';
 import type { PaginatedResponse } from "../lib/api/types";
 import type {
   TaskFilters,
@@ -31,7 +32,8 @@ export type { PaginatedTaskQuery };
 export function useTasks(organizationId: string, filters?: TaskFilters) {
   // Flatten filters into queryKey to avoid object reference issues
   const filterKey = filters ? JSON.stringify(filters) : undefined;
-  
+  const personnelEnabled = useModuleEnabled('personnel');
+
   return useQuery({
     queryKey: ["tasks", organizationId, filterKey],
     queryFn: async () => {
@@ -42,7 +44,7 @@ export function useTasks(organizationId: string, filters?: TaskFilters) {
       );
       return res.data;
     },
-    enabled: !!organizationId,
+    enabled: personnelEnabled && !!organizationId,
     staleTime: 30 * 1000, // 30 seconds
   });
 }
@@ -53,6 +55,7 @@ export function usePaginatedTasks(
 ) {
   // Stable queryKey: serialize object to prevent re-render loops (TanStack uses reference equality)
   const queryKey = JSON.stringify(query);
+  const personnelEnabled = useModuleEnabled('personnel');
 
   return useQuery({
     queryKey: ["tasks", "paginated", organizationId, queryKey],
@@ -62,31 +65,33 @@ export function usePaginatedTasks(
       }
       return tasksApi.getPaginated(organizationId, query);
     },
-    enabled: !!organizationId,
+    enabled: personnelEnabled && !!organizationId,
     placeholderData: keepPreviousData,
     staleTime: 30 * 1000,
   });
 }
 
 export function useTask(organizationId: string | null, taskId: string | null) {
+  const personnelEnabled = useModuleEnabled('personnel');
   return useQuery({
     queryKey: ["task", organizationId, taskId],
     queryFn: async () => {
       if (!organizationId || !taskId) return null;
       return tasksApi.getById(organizationId, taskId);
     },
-    enabled: !!organizationId && !!taskId,
+    enabled: personnelEnabled && !!organizationId && !!taskId,
   });
 }
 
 export function useTaskCategories(organizationId: string) {
+  const personnelEnabled = useModuleEnabled('personnel');
   return useQuery({
     queryKey: ["task-categories", organizationId],
     queryFn: async () => {
       if (!organizationId) return [];
       return tasksApi.getCategories(organizationId);
     },
-    enabled: !!organizationId,
+    enabled: personnelEnabled && !!organizationId,
   });
 }
 

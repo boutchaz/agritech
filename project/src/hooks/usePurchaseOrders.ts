@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { useAuth } from '../hooks/useAuth';
+import { useModuleEnabled } from './useModuleEnabled';
 import { trackEntityCreate, trackEntityUpdate } from '../lib/analytics';
 import { purchaseOrdersApi, type PaginatedPurchaseOrderQuery, type PaginatedResponse } from '../lib/api/purchase-orders';
 import { type InvoiceItemInput } from '../lib/taxCalculations';
@@ -97,6 +98,7 @@ export interface PurchaseOrderWithItems extends PurchaseOrder {
  */
 export function usePurchaseOrders(status?: PurchaseOrder['status']) {
   const { currentOrganization } = useAuth();
+  const salesPurchasingEnabled = useModuleEnabled('sales_purchasing');
 
   return useQuery({
     queryKey: ['purchase_orders', currentOrganization?.id, status],
@@ -114,12 +116,13 @@ export function usePurchaseOrders(status?: PurchaseOrder['status']) {
       const purchaseOrders = Array.isArray(response) ? response : (response?.data || []);
       return purchaseOrders.map((po: unknown) => normalizePurchaseOrder(po as PurchaseOrderApiShape)) as PurchaseOrderWithItems[];
     },
-    enabled: !!currentOrganization?.id,
+    enabled: salesPurchasingEnabled && !!currentOrganization?.id,
   });
 }
 
 export function usePaginatedPurchaseOrders(query: PaginatedPurchaseOrderQuery) {
   const { currentOrganization } = useAuth();
+  const salesPurchasingEnabled = useModuleEnabled('sales_purchasing');
 
   return useQuery({
     queryKey: ['purchase_orders', 'paginated', currentOrganization?.id, query],
@@ -135,7 +138,7 @@ export function usePaginatedPurchaseOrders(query: PaginatedPurchaseOrderQuery) {
         data: rawData.map((po: unknown) => normalizePurchaseOrder(po as PurchaseOrderApiShape)) as PurchaseOrder[],
       };
     },
-    enabled: !!currentOrganization?.id,
+    enabled: salesPurchasingEnabled && !!currentOrganization?.id,
     placeholderData: keepPreviousData,
     staleTime: 30 * 1000,
   });
@@ -143,6 +146,7 @@ export function usePaginatedPurchaseOrders(query: PaginatedPurchaseOrderQuery) {
 
 export function usePurchaseOrder(poId: string | null) {
   const { currentOrganization } = useAuth();
+  const salesPurchasingEnabled = useModuleEnabled('sales_purchasing');
 
   return useQuery({
     queryKey: ['purchase_order', poId],
@@ -153,7 +157,7 @@ export function usePurchaseOrder(poId: string | null) {
       const data = await purchaseOrdersApi.getPurchaseOrder(poId, currentOrganization.id);
       return normalizePurchaseOrder(data as PurchaseOrderApiShape) as PurchaseOrderWithItems;
     },
-    enabled: !!poId && !!currentOrganization?.id,
+    enabled: salesPurchasingEnabled && !!poId && !!currentOrganization?.id,
   });
 }
 
