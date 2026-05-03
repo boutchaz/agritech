@@ -29,7 +29,7 @@ import {
 import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 
 export const Route = createFileRoute('/_authenticated/(workforce)/workforce/geofences')({
-  component: withRouteProtection(GeofencesPage, 'manage', 'Attendance'),
+  component: withRouteProtection(GeofencesPage, 'read', 'Attendance'),
 });
 
 function GeofencesPage() {

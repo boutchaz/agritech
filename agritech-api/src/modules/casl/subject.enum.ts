@@ -118,6 +118,7 @@ export enum Subject {
     SHIFT = 'Shift',
     SHIFT_ASSIGNMENT = 'ShiftAssignment',
     SHIFT_REQUEST = 'ShiftRequest',
+    ATTENDANCE = 'Attendance',
     ONBOARDING = 'Onboarding',
     SEPARATION = 'Separation',
     EXPENSE_CLAIM = 'ExpenseClaim',

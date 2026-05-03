@@ -175,6 +175,7 @@ export class CaslAbilityFactory {
             can(Action.Manage, Subject.SHIFT);
             can(Action.Manage, Subject.SHIFT_ASSIGNMENT);
             can(Action.Manage, Subject.SHIFT_REQUEST);
+            can(Action.Manage, Subject.ATTENDANCE);
             can(Action.Manage, Subject.ONBOARDING);
             can(Action.Manage, Subject.SEPARATION);
             can(Action.Manage, Subject.EXPENSE_CLAIM);
@@ -692,6 +693,7 @@ export class CaslAbilityFactory {
             can(Action.Manage, Subject.SHIFT);
             can(Action.Manage, Subject.SHIFT_ASSIGNMENT);
             can(Action.Manage, Subject.SHIFT_REQUEST);
+            can(Action.Manage, Subject.ATTENDANCE);
             can(Action.Manage, Subject.ONBOARDING);
             can(Action.Manage, Subject.SEPARATION);
             can(Action.Manage, Subject.EXPENSE_CLAIM);

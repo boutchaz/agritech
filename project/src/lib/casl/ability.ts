@@ -34,7 +34,7 @@ export type Subject =
   | 'HrCompliance' | 'LeaveType' | 'LeaveAllocation' | 'LeaveApplication' | 'Holiday'
   | 'LeaveBlockDate' | 'LeaveEncashment'
   | 'SalaryStructure' | 'SalarySlip' | 'PayrollRun' | 'WorkerDocument'
-  | 'Shift' | 'ShiftAssignment' | 'ShiftRequest' | 'Onboarding' | 'Separation'
+  | 'Shift' | 'ShiftAssignment' | 'ShiftRequest' | 'Onboarding' | 'Separation' | 'Attendance'
   | 'SeasonalCampaign' | 'WorkerQualification' | 'SafetyIncident' | 'WorkerTransport'
   | 'ExpenseClaim' | 'ExpenseCategory' | 'JobOpening' | 'JobApplicant' | 'Interview'
   | 'AppraisalCycle' | 'Appraisal' | 'PerformanceFeedback'
@@ -146,6 +146,40 @@ export function defineAbilitiesFor(context: UserContext): AppAbility {
     // Compliance
     can('manage', 'Certification');
     can('manage', 'ComplianceCheck');
+
+    // HR / Workforce — Full access for organization admins
+    can('manage', 'Attendance');
+    can('manage', 'Shift');
+    can('manage', 'ShiftAssignment');
+    can('manage', 'ShiftRequest');
+    can('manage', 'Onboarding');
+    can('manage', 'Separation');
+    can('manage', 'SeasonalCampaign');
+    can('manage', 'WorkerQualification');
+    can('manage', 'SafetyIncident');
+    can('manage', 'WorkerTransport');
+    can('manage', 'ExpenseClaim');
+    can('manage', 'ExpenseCategory');
+    can('manage', 'JobOpening');
+    can('manage', 'JobApplicant');
+    can('manage', 'Interview');
+    can('manage', 'AppraisalCycle');
+    can('manage', 'Appraisal');
+    can('manage', 'PerformanceFeedback');
+    can('manage', 'Grievance');
+    can('manage', 'TrainingProgram');
+    can('manage', 'TrainingEnrollment');
+    can('manage', 'LeaveType');
+    can('manage', 'LeaveAllocation');
+    can('manage', 'LeaveApplication');
+    can('manage', 'Holiday');
+    can('manage', 'LeaveBlockDate');
+    can('manage', 'LeaveEncashment');
+    can('manage', 'SalaryStructure');
+    can('manage', 'SalarySlip');
+    can('manage', 'PayrollRun');
+    can('manage', 'WorkerDocument');
+    can('manage', 'HrCompliance');
   }
 
   // Farm Manager - Manage assigned farms
