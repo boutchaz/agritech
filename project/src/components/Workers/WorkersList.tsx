@@ -31,6 +31,7 @@ import WorkerPaymentDialog from './WorkerPaymentDialog';
 import { Can } from '../authorization/Can';
 import { useCan } from '../../lib/casl/AbilityContext';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/Input';
 import { DataTablePagination, useServerTableState } from '@/components/ui/data-table';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import {
@@ -418,28 +419,32 @@ const WorkersList = ({ organizationId, farms }: WorkersListProps) => {
           </div>
           <div className="flex items-center gap-1">
             <Can I="create" a="Payment">
-              <button
+              <Button
                 type="button"
+                variant="outline"
+                size="icon"
+                className="h-8 w-8 shrink-0"
                 onClick={(e) => {
                   e.stopPropagation();
                   handlePayWorker(worker);
                 }}
-                className="border border-gray-200 dark:border-gray-700 rounded-md p-1.5 hover:bg-gray-50 dark:hover:bg-gray-700/50 text-gray-600 dark:text-gray-300"
                 title={t('workers.actions.paySalary')}
               >
-                <Calendar className="w-4 h-4" />
-              </button>
+                <Calendar className="h-4 w-4" />
+              </Button>
             </Can>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button
+                <Button
                   type="button"
-                  className="border border-gray-200 dark:border-gray-700 rounded-md p-1.5 hover:bg-gray-50 dark:hover:bg-gray-700/50 text-gray-600 dark:text-gray-300"
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8 shrink-0"
                   title={t('common.more', 'Plus')}
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <MoreVertical className="w-4 h-4" />
-                </button>
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-44">
                 {can('update', 'Worker') && (
@@ -510,8 +515,11 @@ const WorkersList = ({ organizationId, farms }: WorkersListProps) => {
               I="create"
               a="Worker"
               fallback={
-                <div className="flex items-center gap-2 px-3 py-2 bg-white/10 text-white/70 rounded-md text-sm border border-white/20">
-                  <Lock className="w-4 h-4" />
+                <div
+                  role="status"
+                  className="flex items-center gap-2 rounded-md border border-white/20 bg-white/10 px-3 py-2 text-sm text-white/80"
+                >
+                  <Lock className="h-4 w-4 shrink-0" aria-hidden />
                   <span>{t('workers.list.restrictedAccess')}</span>
                 </div>
               }
@@ -567,32 +575,34 @@ const WorkersList = ({ organizationId, farms }: WorkersListProps) => {
 
       {/* Search + filter pills */}
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="relative lg:w-1/2">
-          <Search className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <input
-            type="text"
+        <div className="relative min-w-0 flex-1 lg:max-w-md">
+          <Search
+            className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+            aria-hidden
+          />
+          <Input
+            type="search"
             value={tableState.search}
             onChange={(e) => tableState.setSearch(e.target.value)}
             placeholder={t('workers.list.search', 'Rechercher un ouvrier...')}
-            className="w-full ps-10 pe-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-white shadow-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className="ps-9"
+            autoComplete="off"
           />
         </div>
         <div className="flex flex-wrap gap-2">
           {filterPills.map((pill) => {
             const active = filterType === pill.value;
             return (
-              <button
+              <Button
                 key={pill.value}
                 type="button"
+                variant={active ? 'emerald' : 'outline'}
+                size="sm"
                 onClick={() => handleStatusChange(pill.value)}
-                className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
-                  active
-                    ? 'bg-emerald-600 text-white shadow-sm'
-                    : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
-                }`}
+                className="rounded-full px-3 font-medium"
               >
                 {pill.label}
-              </button>
+              </Button>
             );
           })}
         </div>
@@ -604,19 +614,19 @@ const WorkersList = ({ organizationId, farms }: WorkersListProps) => {
           {workers.map(renderWorkerCard)}
         </div>
       ) : (
-        <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
+        <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
           <div className="relative mb-6">
-            <div className="w-24 h-24 rounded-full bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center">
-              <Users className="w-12 h-12 text-emerald-400 dark:text-emerald-500" />
+            <div className="flex h-24 w-24 items-center justify-center rounded-full bg-primary/10 dark:bg-primary/20">
+              <Users className="h-12 w-12 text-primary" aria-hidden />
             </div>
-            <div className="absolute -bottom-1 -right-1 w-10 h-10 rounded-full bg-white dark:bg-gray-800 border-2 border-gray-100 dark:border-gray-700 flex items-center justify-center shadow-sm">
-              <Plus className="w-5 h-5 text-emerald-500" />
+            <div className="absolute -bottom-1 -end-1 flex h-10 w-10 items-center justify-center rounded-full border-2 border-border bg-card shadow-sm">
+              <Plus className="h-5 w-5 text-primary" aria-hidden />
             </div>
           </div>
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
+          <h3 className="mb-1 text-lg font-semibold text-foreground">
             {t('workers.list.emptyTitle', 'Aucun ouvrier trouvé')}
           </h3>
-          <p className="text-sm text-gray-500 dark:text-gray-400 max-w-sm mb-6">
+          <p className="mb-6 max-w-sm text-sm text-muted-foreground">
             {filterType !== 'all' || tableState.search
               ? t('workers.list.emptyFiltered', 'Aucun ouvrier ne correspond à vos filtres. Essayez de modifier vos critères de recherche.')
               : t('workers.list.emptyDescription', 'Commencez par ajouter votre premier ouvrier pour gérer votre personnel.')
@@ -631,8 +641,8 @@ const WorkersList = ({ organizationId, farms }: WorkersListProps) => {
               {t('workers.list.clearFilters', 'Effacer les filtres')}
             </Button>
           ) : can('create', 'Worker') ? (
-            <Button type="button" onClick={openCreateForm} className="bg-emerald-600 hover:bg-emerald-700 text-white">
-              <Plus className="w-4 h-4 me-2" />
+            <Button type="button" variant="emerald" onClick={openCreateForm}>
+              <Plus className="me-2 h-4 w-4" aria-hidden />
               {t('workers.list.addWorker', 'Ajouter un ouvrier')}
             </Button>
           ) : null}

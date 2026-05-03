@@ -1,7 +1,7 @@
 import { createFileRoute, Link, Outlet, useLocation } from '@tanstack/react-router';
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Users, Calculator, Building2, UserCog, Lock, AlertCircle, Settings, Banknote, Handshake } from 'lucide-react';
+import { Users, Calculator, Building2, UserCog, Lock, AlertCircle, Info, Settings, Banknote, Handshake } from 'lucide-react';
 import WorkersList from '@/components/Workers/WorkersList';
 import MetayageCalculator from '@/components/Workers/MetayageCalculator';
 import WorkersPaymentsList from '@/components/Workers/WorkersPaymentsList';
@@ -165,20 +165,20 @@ function WorkersPage() {
                 </Alert>
               )}
               {/* Info banner linking to users settings */}
-              <Alert className="flex-col sm:flex-row">
+              <Alert className="flex-col border-primary/20 bg-primary/5 sm:flex-row dark:border-primary/30 dark:bg-primary/10">
                 <div className="flex items-start gap-2">
-                  <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                  <Info className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
                   <div className="flex-1">
                     <AlertTitle className="text-sm sm:text-base">{t('workers.banner.title')}</AlertTitle>
-                    <AlertDescription className="text-xs sm:text-sm mt-1">
+                    <AlertDescription className="mt-1 text-xs sm:text-sm">
                       {t('workers.banner.description')}
                     </AlertDescription>
                   </div>
                 </div>
-                <div className="mt-3 sm:mt-0 sm:ml-4 flex-shrink-0">
+                <div className="mt-3 flex-shrink-0 sm:ml-4 sm:mt-0">
                   <Link to="/settings/users">
-                    <Button variant="default" size="sm" className="whitespace-nowrap w-full sm:w-auto">
-                      <Settings className="h-4 w-4 me-2" />
+                    <Button variant="emerald" size="sm" className="w-full whitespace-nowrap sm:w-auto">
+                      <Settings className="me-2 h-4 w-4" aria-hidden />
                       {t('workers.banner.usersButton')}
                     </Button>
                   </Link>
@@ -189,38 +189,44 @@ function WorkersPage() {
               <Tabs defaultValue="list" className="w-full">
                 <div
                   className={cn(
-                    'flex w-full min-w-0',
+                    'relative flex w-full min-w-0 items-center gap-1',
                     isRTL ? 'justify-end' : 'justify-start',
                   )}
                 >
                   <TabsList
                     dir={isRTL ? 'rtl' : 'ltr'}
-                    className="w-max max-w-full min-w-0 justify-start overflow-x-auto whitespace-nowrap rounded-lg sm:overflow-visible"
+                    className="w-full min-w-0 justify-start overflow-x-auto whitespace-nowrap rounded-lg [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
                   >
-                    <TabsTrigger value="list" className="shrink-0 gap-2.5 px-2 text-xs sm:px-3 sm:text-sm">
-                      <Users className="h-4 w-4 shrink-0" />
+                    <TabsTrigger
+                      value="list"
+                      className="shrink-0 gap-2.5 px-2 text-xs font-semibold sm:px-3 sm:text-sm"
+                    >
+                      <Users className="h-4 w-4 shrink-0" aria-hidden />
                       <span className="hidden xs:inline sm:inline">{t('workers.tabs.list')}</span>
                       <span className="xs:hidden sm:hidden">{t('nav.personnel')}</span>
                     </TabsTrigger>
-                    <TabsTrigger value="payments" className="shrink-0 gap-2.5 px-2 text-xs sm:px-3 sm:text-sm">
-                      <Banknote className="h-4 w-4 shrink-0" />
+                    <TabsTrigger
+                      value="payments"
+                      className="shrink-0 gap-2.5 px-2 text-xs font-semibold sm:px-3 sm:text-sm"
+                    >
+                      <Banknote className="h-4 w-4 shrink-0" aria-hidden />
                       <span className="hidden xs:inline sm:inline">{t('workers.tabs.payments')}</span>
                       <span className="xs:hidden sm:hidden">{t('workers.tabs.paymentsShort')}</span>
                     </TabsTrigger>
                     <TabsTrigger
                       value="production-sharing"
-                      className="shrink-0 gap-2.5 px-2 text-xs sm:px-3 sm:text-sm"
+                      className="shrink-0 gap-2.5 px-2 text-xs font-semibold sm:px-3 sm:text-sm"
                     >
-                      <Handshake className="h-4 w-4 shrink-0" />
+                      <Handshake className="h-4 w-4 shrink-0" aria-hidden />
                       <span className="hidden xs:inline sm:inline">{t('workers.tabs.productionSharing', 'Partage de Production')}</span>
                       <span className="xs:hidden sm:hidden">{t('workers.tabs.productionSharingShort', 'Partage')}</span>
                     </TabsTrigger>
                     <TabsTrigger
                       value="calculator"
-                      className="shrink-0 gap-2.5 px-2 text-xs sm:px-3 sm:text-sm"
+                      className="shrink-0 gap-2.5 px-2 text-xs font-semibold sm:px-3 sm:text-sm"
                       data-tour="worker-payments"
                     >
-                      <Calculator className="h-4 w-4 shrink-0" />
+                      <Calculator className="h-4 w-4 shrink-0" aria-hidden />
                       <span className="hidden xs:inline sm:inline">{t('workers.tabs.calculator')}</span>
                       <span className="xs:hidden sm:hidden">{t('workers.metayage.calculator')}</span>
                     </TabsTrigger>
