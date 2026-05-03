@@ -520,13 +520,37 @@ export const MultiTenantAuthProvider = ({ children }: { children: React.ReactNod
   useEffect(() => {
     const initAuth = async () => {
       await waitForHydration();
-      
+
       const state = useAuthStore.getState();
-      const authUser = state.user;
       const isAuthenticated = state.isAuthenticated;
 
-      setUser(authUser ? { id: authUser.id, email: authUser.email } as User : null);
-      setShowAuth(!isAuthenticated);
+      // Tokens are memory-only. On reload they're null; we attempt one
+      // refresh which uses the httpOnly `agg_refresh` cookie. If that
+      // succeeds, the in-memory access token is repopulated and the rest
+      // of the app sees a normal authenticated session. If it fails,
+      // there's no valid cookie either and we drop to the login screen.
+      if (isAuthenticated && !state.getAccessToken()) {
+        try {
+          const ok = await state.refreshAccessToken();
+          if (!ok) {
+            useAuthStore.getState().clearAuth();
+            setUser(null);
+            setShowAuth(true);
+            setAuthLoading(false);
+            return;
+          }
+        } catch {
+          useAuthStore.getState().clearAuth();
+          setUser(null);
+          setShowAuth(true);
+          setAuthLoading(false);
+          return;
+        }
+      }
+
+      const refreshed = useAuthStore.getState();
+      setUser(refreshed.user ? { id: refreshed.user.id, email: refreshed.user.email } as User : null);
+      setShowAuth(!refreshed.isAuthenticated);
       setAuthLoading(false);
     };
 

@@ -147,41 +147,46 @@ function getCurrentOrganizationId(): string | null {
 export async function getApiHeaders(
   organizationId?: string | null,
 ): Promise<HeadersInit> {
-  // Refresh access token if expired and refresh token exists
-  if (useAuthStore.getState().isTokenExpired()) {
+  // Tokens live in memory only — see authStore.ts security note. On reload
+  // the in-memory token is null but the httpOnly refresh cookie still exists,
+  // so refresh-then-fetch repopulates the token. We attempt refresh when the
+  // token is missing OR expired; failure means the cookie is gone too and
+  // the user must log in again.
+  const needsRefresh =
+    useAuthStore.getState().isTokenExpired() ||
+    !useAuthStore.getState().getAccessToken();
+
+  if (needsRefresh) {
     const refreshed = await useAuthStore.getState().refreshAccessToken();
     if (!refreshed) {
-      ErrorHandlers.log(null, "[API Client] Token expired and refresh failed");
+      // Note: a 401 here is not always fatal — for some endpoints the cookie
+      // alone is enough. But if refresh failed, the cookie itself is invalid,
+      // so surfacing session-expired is the right move.
+      ErrorHandlers.log(null, "[API Client] Token refresh failed; cookie stale");
       handleSessionExpired();
       throw new Error("Session expired. Please log in again.");
     }
   }
 
-  // Get access token from auth store
   const accessToken = useAuthStore.getState().getAccessToken();
-
-  if (!accessToken) {
-    ErrorHandlers.log(null, "[API Client] No active session found");
-    // If the auth store thinks we're authenticated but there's no token, clear the invalid state
-    if (useAuthStore.getState().isAuthenticated) {
-      handleSessionExpired();
-    }
-    throw new Error("No active session. Please log in again.");
-  }
-
   const orgId = organizationId || getCurrentOrganizationId();
-
   const analyticsHeaders = getAnalyticsHeaders();
 
   const headers: HeadersInit = {
-    Authorization: `Bearer ${accessToken}`,
     "Cache-Control": "no-cache, no-store, must-revalidate",
     Pragma: "no-cache",
     ...analyticsHeaders,
   };
 
+  // Send the Bearer header when we have an in-memory token. The backend also
+  // accepts the `agg_access` httpOnly cookie (see jwt.strategy.ts), so the
+  // header is belt-and-braces — calls succeed via cookie even if absent.
+  if (accessToken) {
+    (headers as Record<string, string>).Authorization = `Bearer ${accessToken}`;
+  }
+
   if (orgId && orgId !== "undefined" && typeof orgId === "string") {
-    headers["X-Organization-Id"] = orgId;
+    (headers as Record<string, string>)["X-Organization-Id"] = orgId;
   }
 
   return headers;

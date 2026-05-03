@@ -909,6 +909,56 @@ export class AuthService {
   }
 
   /**
+   * Verify the JWT carries a Supabase recovery-flow assertion (amr includes
+   * 'recovery') and was issued recently, then change the password. Any old
+   * leaked JWT or normal session token is rejected — closes the gap where
+   * `JwtAuthGuard` alone would let any authenticated session reset the
+   * account password.
+   */
+  async resetPasswordWithRecoveryProof(
+    rawToken: string,
+    userId: string,
+    newPassword: string,
+  ) {
+    if (!rawToken) {
+      throw new UnauthorizedException('Missing token');
+    }
+    const payload = this.decodeJwtPayload(rawToken);
+    if (!payload) {
+      throw new UnauthorizedException('Malformed token');
+    }
+    const amr: Array<{ method?: string }> = Array.isArray(payload.amr) ? payload.amr : [];
+    const isRecovery = amr.some((entry) => entry?.method === 'recovery');
+    if (!isRecovery) {
+      throw new UnauthorizedException(
+        'Password reset requires a recovery-flow session. Use the link from the password-reset email.',
+      );
+    }
+    // Reject stale recovery sessions (>1h since issuance) even if exp hasn't passed.
+    const iat = typeof payload.iat === 'number' ? payload.iat : 0;
+    const ageSeconds = Math.floor(Date.now() / 1000) - iat;
+    if (iat === 0 || ageSeconds > 3600) {
+      throw new UnauthorizedException('Recovery session is stale; request a new password reset email.');
+    }
+    return this.resetPassword(userId, newPassword);
+  }
+
+  /**
+   * Decode a JWT's payload without verifying — verification is the caller's
+   * responsibility (already done by JwtStrategy via Supabase).
+   */
+  private decodeJwtPayload(token: string): Record<string, any> | null {
+    try {
+      const parts = token.split('.');
+      if (parts.length !== 3) return null;
+      const json = Buffer.from(parts[1], 'base64url').toString('utf8');
+      return JSON.parse(json);
+    } catch {
+      return null;
+    }
+  }
+
+  /**
    * Reset password (called after user clicks reset link and is authenticated with recovery token)
    */
   async resetPassword(userId: string, newPassword: string) {

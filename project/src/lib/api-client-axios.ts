@@ -181,18 +181,19 @@ function createApiClient(): AxiosInstance {
     },
   });
 
-  // Request interceptor: Add auth token and organization ID
+  // Request interceptor: Add auth token (when present in memory) + org ID.
+  // Tokens are memory-only (see authStore.ts security note); on cold reload
+  // the in-memory token is null but the httpOnly `agg_access` cookie still
+  // authenticates the request via withCredentials. So a missing in-memory
+  // token is NOT an error here — let the request go and the response
+  // interceptor handle a real 401 by triggering refresh.
   client.interceptors.request.use(
     async (config: InternalAxiosRequestConfig) => {
       const accessToken = getAccessToken();
-
-      if (!accessToken) {
-        throw new Error('No active session');
+      if (accessToken) {
+        config.headers.Authorization = `Bearer ${accessToken}`;
       }
 
-      config.headers.Authorization = `Bearer ${accessToken}`;
-
-      // Add organization ID header
       const organizationId = getCurrentOrganizationId();
       if (organizationId) {
         config.headers['X-Organization-Id'] = organizationId;
@@ -208,23 +209,42 @@ function createApiClient(): AxiosInstance {
   // Response interceptor: Handle errors globally
   client.interceptors.response.use(
     (response) => response,
-    (error: AxiosError) => {
+    async (error: AxiosError) => {
       // Handle network errors
       if (!error.response) {
         return Promise.reject(new Error('Network error. Please check your connection.'));
       }
 
-      // Handle HTTP errors
       const status = error.response.status;
       const data = error.response.data as { message?: string; error?: string };
+      const originalConfig = error.config as
+        | (InternalAxiosRequestConfig & { _retried?: boolean })
+        | undefined;
+
+      // On 401, attempt one refresh-then-retry. The refresh call uses the
+      // httpOnly `agg_refresh` cookie; if it succeeds we retry the original
+      // request once. Guarded by `_retried` to avoid loops.
+      if (status === 401 && originalConfig && !originalConfig._retried) {
+        originalConfig._retried = true;
+        try {
+          const { useAuthStore } = await import('@/stores/authStore');
+          const refreshed = await useAuthStore.getState().refreshAccessToken();
+          if (refreshed) {
+            const accessToken = getAccessToken();
+            if (accessToken) {
+              originalConfig.headers.Authorization = `Bearer ${accessToken}`;
+            }
+            return client.request(originalConfig);
+          }
+        } catch {
+          // fall through to error mapping
+        }
+      }
 
       let message = data?.message || data?.error || error.message;
-
-      // Customize error messages based on status
       switch (status) {
         case 401:
           message = 'Unauthorized. Please sign in again.';
-          // Optionally redirect to login
           break;
         case 403:
           message = 'You do not have permission to perform this action.';
@@ -237,7 +257,6 @@ function createApiClient(): AxiosInstance {
           break;
       }
 
-      // Throw ApiError with original response data preserved
       return Promise.reject(new ApiError(message, status, data));
     }
   );

@@ -1,6 +1,23 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
+// IMPORTANT — security model
+// =============================
+// Access + refresh tokens are NEVER persisted to localStorage / sessionStorage.
+// Durable auth lives in the backend's httpOnly cookies (`agg_access` /
+// `agg_refresh`, set by /auth/login + /auth/refresh-token). The store keeps
+// tokens in memory only for the current page lifetime so XSS payloads can't
+// scrape them out of storage to replay later or exfiltrate.
+//
+// On reload the in-memory tokens are gone; the app calls /auth/refresh-token
+// (which reads the refresh cookie via `credentials: 'include'`) to repopulate
+// the in-memory access token. If that call 401s, the cookie is stale → user
+// must re-authenticate.
+//
+// `user` is persisted (non-sensitive) so the UI can paint a logged-in shell
+// while the refresh round-trip is in flight. Backend /auth/me is the source
+// of truth — never trust persisted user fields for authorization decisions.
+
 const AUTH_STORAGE_KEY = 'auth-storage';
 const AUTH_STORAGE_MODE_KEY = 'auth-storage-mode';
 
@@ -132,24 +149,27 @@ export const useAuthStore = create<AuthState>()(
         if (_refreshPromise) return _refreshPromise;
 
         _refreshPromise = (async () => {
+          // Refresh always attempts the call: the refresh_token lives in an
+          // httpOnly cookie (`agg_refresh`) and is read server-side. The
+          // in-memory refresh_token (if any) is sent in the body purely as a
+          // legacy fallback for transitional clients.
           const { tokens } = get();
-          if (!tokens?.refresh_token) return false;
-
           const API_URL = import.meta.env.VITE_API_URL ?? '';
 
           try {
             const response = await fetch(`${API_URL}/api/v1/auth/refresh-token`, {
               method: 'POST',
-              // Send/receive httpOnly auth cookies — refresh-token cookie may
-              // exist server-side even if the body refreshToken is missing
               credentials: 'include',
               headers: {
                 'Content-Type': 'application/json',
               },
-              body: JSON.stringify({ refreshToken: tokens.refresh_token }),
+              body: JSON.stringify(
+                tokens?.refresh_token ? { refreshToken: tokens.refresh_token } : {},
+              ),
             });
 
             if (!response.ok) {
+              // Cookie is gone or revoked — caller will surface session-expired UX.
               return false;
             }
 
@@ -182,20 +202,22 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: AUTH_STORAGE_KEY, // localStorage/sessionStorage key
-      storage: authStorage,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      storage: authStorage as any,
+      // Persist user + isAuthenticated only. Tokens NEVER touch storage —
+      // see security model note at top of file. The httpOnly auth cookies
+      // hold the durable session; tokens here are an in-memory cache for
+      // the lifetime of the page only.
+      partialize: (state) => ({
+        user: state.user,
+        isAuthenticated: state.isAuthenticated,
+      }) as unknown as AuthState,
       onRehydrateStorage: () => (state) => {
         if (state) {
-          const isExpired = state.tokens?.expires_at
-            ? Date.now() >= state.tokens.expires_at
-            : false;
-
-          if (isExpired && state.isAuthenticated) {
-            if (!state.tokens?.refresh_token) {
-              state.tokens = null;
-              state.user = null;
-              state.isAuthenticated = false;
-            }
-          }
+          // Force tokens to null on rehydrate — defensive in case a previous
+          // build of the app persisted them. Removes any stale tokens still
+          // sitting in localStorage from older sessions.
+          state.tokens = null;
         }
         state?.setHasHydrated(true);
       },

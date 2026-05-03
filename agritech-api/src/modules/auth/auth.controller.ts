@@ -178,8 +178,21 @@ export class AuthController {
   @ApiOperation({ summary: 'Exchange OAuth code for session tokens' })
   @ApiResponse({ status: 200, description: 'OAuth code exchanged successfully' })
   @ApiResponse({ status: 401, description: 'Invalid OAuth code' })
-  async exchangeOAuthCode(@Body() dto: OAuthCallbackDto) {
-    return this.authService.exchangeOAuthCode(dto.code);
+  async exchangeOAuthCode(
+    @Body() dto: OAuthCallbackDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.authService.exchangeOAuthCode(dto.code);
+    // Persist the OAuth-issued session as httpOnly cookies so the browser has
+    // a durable session even after the in-memory tokens are cleared on reload.
+    if (result?.access_token) {
+      setAuthCookies(res, {
+        accessToken: result.access_token,
+        refreshToken: result.refresh_token || '',
+        expiresIn: result.expires_in,
+      });
+    }
+    return result;
   }
 
   @Post('signup')
@@ -192,8 +205,21 @@ export class AuthController {
   })
   @ApiResponse({ status: 400, description: 'Bad request' })
   @ApiResponse({ status: 409, description: 'Conflict - User already exists' })
-  async signup(@Body() signupDto: SignupDto) {
-    return this.authService.signup(signupDto);
+  async signup(
+    @Body() signupDto: SignupDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.authService.signup(signupDto);
+    // Persist signup-issued session as httpOnly cookies (parity with /login).
+    const tokens = (result as any)?.session ?? result;
+    if (tokens?.access_token) {
+      setAuthCookies(res, {
+        accessToken: tokens.access_token,
+        refreshToken: tokens.refresh_token || '',
+        expiresIn: tokens.expires_in,
+      });
+    }
+    return result;
   }
 
   @Get('me')
@@ -349,9 +375,18 @@ export class AuthController {
   @ApiOperation({ summary: 'Reset password using recovery token' })
   @ApiResponse({ status: 200, description: 'Password reset successfully' })
   @ApiResponse({ status: 400, description: 'Bad request' })
-  @ApiResponse({ status: 401, description: 'Invalid or expired token' })
+  @ApiResponse({ status: 401, description: 'Invalid or expired token / not a recovery session' })
   async resetPassword(@Request() req, @Body() dto: ResetPasswordDto) {
-    return this.authService.resetPassword(req.user.id, dto.newPassword);
+    // Require the JWT to come from the Supabase recovery flow specifically —
+    // a normal session token (or any old leaked JWT that's still within its
+    // exp window) must not be accepted to change the password. We check two
+    // independent signals: (1) `amr` claim contains `recovery`, and (2) the
+    // token was issued recently (recovery JWTs are short-lived in practice).
+    return this.authService.resetPasswordWithRecoveryProof(
+      req.rawToken,
+      req.user.id,
+      dto.newPassword,
+    );
   }
 
   @Post('refresh-token')

@@ -45,22 +45,30 @@ class SocketManager {
     this.setStatus('connecting');
 
     try {
-      // Get auth token from auth store (NestJS auth)
-      const accessToken = useAuthStore.getState().getAccessToken();
-
+      // Tokens live in memory only (see authStore.ts). On cold reload the
+      // in-memory token is null but the httpOnly `agg_access` cookie still
+      // authenticates — try a refresh first to get a token in memory; if
+      // that fails we still attempt the connection because socket.io will
+      // send the cookie via `withCredentials: true` and the gateway reads
+      // `agg_access` from the cookie header as a last resort.
+      let accessToken = useAuthStore.getState().getAccessToken();
       if (!accessToken) {
-        console.warn('[Socket] No access token available, skipping connection');
-        this.setStatus('disconnected');
-        return;
+        const refreshed = await useAuthStore.getState().refreshAccessToken();
+        if (refreshed) {
+          accessToken = useAuthStore.getState().getAccessToken();
+        }
       }
 
       const socketUrl = `${SOCKET_URL}/notifications`;
 
       this.socket = io(socketUrl, {
-        query: {
-          token: accessToken,
-          organizationId,
-        },
+        // Always send httpOnly auth cookies on the upgrade request — the
+        // gateway falls back to reading `agg_access` from the cookie header
+        // if no query token / Authorization header is provided.
+        withCredentials: true,
+        query: accessToken
+          ? { token: accessToken, organizationId }
+          : { organizationId },
         transports: ['websocket', 'polling'],
         reconnection: true,
         reconnectionAttempts: Infinity,
