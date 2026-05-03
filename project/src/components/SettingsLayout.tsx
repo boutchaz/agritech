@@ -23,6 +23,7 @@ import {
   Plug,
 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
+import { useModuleBasedDashboard } from "../hooks/useModuleBasedDashboard";
 import { useTranslation } from "react-i18next";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "./ui/drawer";
 import { Separator } from "./ui/separator";
@@ -45,6 +46,10 @@ interface SettingsMenuItem {
   path: string;
   description: string;
   roles: RoleName[];
+  /** Module slug(s) that gate this item. Item is shown only when at
+   *  least one of the listed modules is active for the org. Omit for
+   *  items that are always available (account, billing, danger zone…). */
+  modules?: string[];
 }
 
 interface SettingsSection {
@@ -75,6 +80,7 @@ const SettingsLayout = ({ children }: SettingsLayoutProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { userRole } = useAuth();
+  const { activeModules } = useModuleBasedDashboard();
   const { t } = useTranslation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const mainSidebarCollapsed = useSidebarCollapsed();
@@ -177,6 +183,7 @@ const SettingsLayout = ({ children }: SettingsLayoutProps) => {
             path: "/settings/ai",
             description: t("settings.menu.aiDescription", "AI usage, quotas, and provider settings"),
             roles: ADMIN_ROLES,
+            modules: ["agromind_advisor", "chat_advisor"],
           },
           {
             id: "integrations",
@@ -213,6 +220,8 @@ const SettingsLayout = ({ children }: SettingsLayoutProps) => {
               "GL mappings + stock vs ledger reconciliation",
             ),
             roles: ADMIN_ROLES,
+            // Needs both stock (entries to map) and accounting (GL accounts).
+            modules: ["accounting"],
           },
         ],
       },
@@ -278,18 +287,25 @@ const SettingsLayout = ({ children }: SettingsLayoutProps) => {
     [t],
   );
 
-  // Filter sections: remove items the user can't see, then remove empty sections
+  // Filter sections: remove items the user can't see (role + module gating),
+  // then drop sections that end up empty.
   const visibleSections = useMemo(() => {
     if (!userRole) return [];
+    const activeSet = new Set(activeModules);
     return allSections
       .map((section) => ({
         ...section,
-        items: section.items.filter((item) =>
-          item.roles.includes(userRole.role_name as RoleName),
-        ),
+        items: section.items.filter((item) => {
+          if (!item.roles.includes(userRole.role_name as RoleName)) return false;
+          // Items without `modules` are always available (e.g. account,
+          // billing, legal, danger zone). Items with `modules` are shown
+          // when at least one listed module is active.
+          if (!item.modules || item.modules.length === 0) return true;
+          return item.modules.some((slug) => activeSet.has(slug));
+        }),
       }))
       .filter((section) => section.items.length > 0);
-  }, [allSections, userRole]);
+  }, [allSections, userRole, activeModules]);
 
   // Flat list of all visible items (for mobile bar lookup)
   const allVisibleItems = useMemo(
