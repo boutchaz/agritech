@@ -21,7 +21,7 @@ import {
 } from '@nestjs/swagger';
 import { Idempotent, OptimisticLock } from '../../common/decorators/offline.decorators';
 import { StockEntriesService } from './stock-entries.service';
-import { CreateStockEntryDto } from './dto/create-stock-entry.dto';
+import { CreateStockEntryDto, StockEntryStatus } from './dto/create-stock-entry.dto';
 import { UpdateStockEntryDto } from './dto/update-stock-entry.dto';
 import { OpeningStockFiltersDto } from './dto/opening-stock-filters.dto';
 import { CreateOpeningStockDto } from './dto/create-opening-stock.dto';
