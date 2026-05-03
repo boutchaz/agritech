@@ -9194,6 +9194,16 @@ $$;
 
 COMMENT ON FUNCTION is_internal_admin() IS 'Check if the current authenticated user is an internal platform admin';
 
+-- Organizations SELECT policy is declared here (not next to the other
+-- org policies) because it references is_internal_admin() defined just
+-- above. Without a SELECT policy, RLS denies every read and admin-app
+-- /clients shows zero rows even when the caller is an internal admin.
+DROP POLICY IF EXISTS "org_read_organizations" ON organizations;
+CREATE POLICY "org_read_organizations" ON organizations
+  FOR SELECT USING (
+    is_organization_member(id) OR is_internal_admin()
+  );
+
 -- Roles Policies (no organization_id - allow all authenticated users to read)
 
 DROP POLICY IF EXISTS "org_write_roles" ON roles;
