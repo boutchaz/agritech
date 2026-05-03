@@ -317,10 +317,15 @@ CREATE TABLE IF NOT EXISTS organization_users (
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   role_id UUID, -- FK to roles table added later (roles table defined after this)
   is_active BOOLEAN DEFAULT true,
+  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(organization_id, user_id)
 );
+
+-- Backfill column when table predates the column above
+ALTER TABLE public.organization_users
+  ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL;
 
 -- Define is_organization_member() as early as possible so any RLS policy
 -- declared further down in this file can reference it. The canonical
