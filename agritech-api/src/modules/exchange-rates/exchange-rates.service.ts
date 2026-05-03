@@ -2,6 +2,7 @@ import { Injectable, BadRequestException, NotFoundException, Logger } from '@nes
 import { DatabaseService } from '../database/database.service';
 import { CreateExchangeRateDto } from './dto/create-exchange-rate.dto';
 import { UpdateExchangeRateDto } from './dto/update-exchange-rate.dto';
+import { paginatedResponse, type PaginatedResponse } from '../../common/dto/paginated-query.dto';
 
 export interface ExchangeRate {
   id: string;
@@ -22,26 +23,42 @@ export class ExchangeRatesService {
 
   async findAll(
     organizationId: string,
-    filters?: { from_currency?: string; to_currency?: string; from_date?: string; to_date?: string },
-  ): Promise<ExchangeRate[]> {
+    filters?: {
+      from_currency?: string;
+      to_currency?: string;
+      from_date?: string;
+      to_date?: string;
+      page?: number;
+      pageSize?: number;
+    },
+  ): Promise<PaginatedResponse<ExchangeRate>> {
     const supabase = this.databaseService.getAdminClient();
-    let query = supabase
-      .from('exchange_rates')
-      .select('*')
-      .eq('organization_id', organizationId)
-      .order('rate_date', { ascending: false });
+    const page = Math.max(1, Number(filters?.page) || 1);
+    const pageSize = Math.max(1, Math.min(100, Number(filters?.pageSize) || 100));
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
 
-    if (filters?.from_currency) query = query.eq('from_currency', filters.from_currency.toUpperCase());
-    if (filters?.to_currency) query = query.eq('to_currency', filters.to_currency.toUpperCase());
-    if (filters?.from_date) query = query.gte('rate_date', filters.from_date);
-    if (filters?.to_date) query = query.lte('rate_date', filters.to_date);
+    const apply = (q: any) => {
+      q = q.eq('organization_id', organizationId);
+      if (filters?.from_currency) q = q.eq('from_currency', filters.from_currency.toUpperCase());
+      if (filters?.to_currency) q = q.eq('to_currency', filters.to_currency.toUpperCase());
+      if (filters?.from_date) q = q.gte('rate_date', filters.from_date);
+      if (filters?.to_date) q = q.lte('rate_date', filters.to_date);
+      return q;
+    };
 
-    const { data, error } = await query;
+    const { count } = await apply(
+      supabase.from('exchange_rates').select('id', { count: 'exact', head: true }),
+    );
+    const { data, error } = await apply(supabase.from('exchange_rates').select('*'))
+      .order('rate_date', { ascending: false })
+      .range(from, to);
+
     if (error) {
       this.logger.error(`Failed to list exchange rates: ${error.message}`);
       throw new BadRequestException(`Failed to list exchange rates: ${error.message}`);
     }
-    return (data || []) as ExchangeRate[];
+    return paginatedResponse((data ?? []) as ExchangeRate[], count ?? 0, page, pageSize);
   }
 
   async findOne(id: string, organizationId: string): Promise<ExchangeRate> {

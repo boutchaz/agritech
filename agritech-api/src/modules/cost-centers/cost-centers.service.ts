@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, BadRequestException, Logger } from '@nes
 import { DatabaseService } from '../database/database.service';
 import { CreateCostCenterDto, UpdateCostCenterDto } from './dto';
 import { sanitizeSearch } from '../../common/utils/sanitize-search';
+import { paginatedResponse, type PaginatedResponse } from '../../common/dto/paginated-query.dto';
 
 @Injectable()
 export class CostCentersService {
@@ -12,33 +13,40 @@ export class CostCentersService {
   /**
    * Get all cost centers for an organization
    */
-  async findAll(organizationId: string, filters?: { is_active?: boolean; search?: string }) {
+  async findAll(
+    organizationId: string,
+    filters?: { is_active?: boolean; search?: string; page?: number; pageSize?: number },
+  ): Promise<PaginatedResponse<any>> {
     const supabaseClient = this.databaseService.getAdminClient();
+    const page = Math.max(1, Number(filters?.page) || 1);
+    const pageSize = Math.max(1, Math.min(100, Number(filters?.pageSize) || 100));
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
 
-    try {
-      let query = supabaseClient
-        .from('cost_centers')
-        .select('*')
-        .eq('organization_id', organizationId)
-        .order('code');
-
-      if (filters?.is_active !== undefined) {
-        query = query.eq('is_active', filters.is_active);
-      }
-
+    const apply = (q: any) => {
+      q = q.eq('organization_id', organizationId);
+      if (filters?.is_active !== undefined) q = q.eq('is_active', filters.is_active);
       if (filters?.search) {
         const s = sanitizeSearch(filters.search);
-        if (s) query = query.or(`name.ilike.%${s}%,code.ilike.%${s}%`);
+        if (s) q = q.or(`name.ilike.%${s}%,code.ilike.%${s}%`);
       }
+      return q;
+    };
 
-      const { data, error } = await query;
+    try {
+      const { count } = await apply(
+        supabaseClient.from('cost_centers').select('id', { count: 'exact', head: true }),
+      );
+      const { data, error } = await apply(supabaseClient.from('cost_centers').select('*'))
+        .order('code')
+        .range(from, to);
 
       if (error) {
         this.logger.error('Error fetching cost centers:', error);
         throw new BadRequestException(`Failed to fetch cost centers: ${error.message}`);
       }
 
-      return data || [];
+      return paginatedResponse(data ?? [], count ?? 0, page, pageSize);
     } catch (error) {
       this.logger.error('Error in findAll cost centers:', error);
       throw error;

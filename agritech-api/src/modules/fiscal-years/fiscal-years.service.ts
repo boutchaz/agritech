@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, Logger, NotFoundException, ConflictExc
 import { DatabaseService } from '../database/database.service';
 import { CreateFiscalYearDto } from './dto/create-fiscal-year.dto';
 import { UpdateFiscalYearDto } from './dto/update-fiscal-year.dto';
+import { paginatedResponse, type PaginatedResponse } from '../../common/dto/paginated-query.dto';
 
 @Injectable()
 export class FiscalYearsService {
@@ -9,20 +10,34 @@ export class FiscalYearsService {
 
   constructor(private readonly databaseService: DatabaseService) {}
 
-  async findAll(organizationId: string) {
+  async findAll(
+    organizationId: string,
+    pagination: { page?: number; pageSize?: number } = {},
+  ): Promise<PaginatedResponse<any>> {
     const client = this.databaseService.getAdminClient();
+    const page = Math.max(1, Number(pagination.page) || 1);
+    const pageSize = Math.max(1, Math.min(100, Number(pagination.pageSize) || 100));
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
+
+    const { count } = await client
+      .from('fiscal_years')
+      .select('id', { count: 'exact', head: true })
+      .eq('organization_id', organizationId);
+
     const { data, error } = await client
       .from('fiscal_years')
       .select('*')
       .eq('organization_id', organizationId)
-      .order('start_date', { ascending: false });
+      .order('start_date', { ascending: false })
+      .range(from, to);
 
     if (error) {
       this.logger.error(`Failed to fetch fiscal years: ${error.message}`);
       throw error;
     }
 
-    return data;
+    return paginatedResponse(data ?? [], count ?? 0, page, pageSize);
   }
 
   async findOne(id: string, organizationId: string) {

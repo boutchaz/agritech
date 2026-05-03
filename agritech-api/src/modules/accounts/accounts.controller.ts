@@ -31,7 +31,12 @@ export class AccountsController {
   @ApiQuery({ name: 'is_active', required: false, type: Boolean, description: 'Filter by active status' })
   @ApiResponse({ status: 200, description: 'List of accounts returned successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async findAll(@Req() req: any, @Query('is_active') isActive?: string) {
+  async findAll(
+    @Req() req: any,
+    @Query('is_active') isActive?: string,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
+  ) {
     const organizationId = req.headers['x-organization-id'];
 
     if (!organizationId) {
@@ -40,7 +45,10 @@ export class AccountsController {
 
     const isActiveBool = isActive === 'true' ? true : isActive === 'false' ? false : undefined;
 
-    return this.accountsService.findAll(organizationId, isActiveBool);
+    return this.accountsService.findAll(organizationId, isActiveBool, {
+      page: page ? Number(page) : undefined,
+      pageSize: pageSize ? Number(pageSize) : undefined,
+    });
   }
 
   @Get(':id')

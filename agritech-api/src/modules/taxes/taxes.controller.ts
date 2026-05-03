@@ -42,12 +42,16 @@ export class TaxesController {
     @Query('tax_type') taxType?: 'sales' | 'purchase' | 'both',
     @Query('is_active') isActive?: string,
     @Query('search') search?: string,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
   ) {
     const organizationId = req.headers['x-organization-id'];
     return this.taxesService.findAll(organizationId, {
       tax_type: taxType,
       is_active: isActive === 'true',
       search,
+      page: page ? Number(page) : undefined,
+      pageSize: pageSize ? Number(pageSize) : undefined,
     });
   }
 

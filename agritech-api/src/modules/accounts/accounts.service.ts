@@ -1,5 +1,6 @@
 import { Injectable, Logger, BadRequestException, NotFoundException } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
+import { paginatedResponse, type PaginatedResponse } from '../../common/dto/paginated-query.dto';
 import { AlertService } from '../health/alert.service';
 import { AccountMappingsService } from '../account-mappings/account-mappings.service';
 import { moroccanChartOfAccounts } from './data/moroccan-chart-of-accounts';
@@ -42,28 +43,36 @@ export class AccountsService {
   /**
    * Get all accounts for an organization
    */
-  async findAll(organizationId: string, isActive?: boolean): Promise<any[]> {
+  async findAll(
+    organizationId: string,
+    isActive?: boolean,
+    pagination: { page?: number; pageSize?: number } = {},
+  ): Promise<PaginatedResponse<any>> {
     const supabase = this.databaseService.getAdminClient();
+    const page = Math.max(1, Number(pagination.page) || 1);
+    const pageSize = Math.max(1, Math.min(100, Number(pagination.pageSize) || 100));
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
 
-    let query = supabase
-      .from('accounts')
-      .select('*')
-      .eq('organization_id', organizationId);
+    const apply = (q: any) => {
+      q = q.eq('organization_id', organizationId);
+      if (isActive !== undefined) q = q.eq('is_active', isActive);
+      return q;
+    };
 
-    if (isActive !== undefined) {
-      query = query.eq('is_active', isActive);
-    }
-
-    query = query.order('code', { ascending: true });
-
-    const { data, error } = await query;
+    const { count } = await apply(
+      supabase.from('accounts').select('id', { count: 'exact', head: true }),
+    );
+    const { data, error } = await apply(supabase.from('accounts').select('*'))
+      .order('code', { ascending: true })
+      .range(from, to);
 
     if (error) {
       this.logger.error(`Failed to fetch accounts: ${error.message}`, error);
       throw error;
     }
 
-    return data || [];
+    return paginatedResponse(data ?? [], count ?? 0, page, pageSize);
   }
 
   /**

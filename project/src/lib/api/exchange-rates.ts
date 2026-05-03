@@ -43,11 +43,15 @@ export const exchangeRatesApi = {
     if (filters?.from_date) params.append('from_date', filters.from_date);
     if (filters?.to_date) params.append('to_date', filters.to_date);
     const qs = params.toString();
-    return apiClient.get<ExchangeRate[]>(
+    const res = await apiClient.get<
+      | ExchangeRate[]
+      | { data: ExchangeRate[]; total: number; page: number; pageSize: number; totalPages: number }
+    >(
       `/api/v1/exchange-rates${qs ? `?${qs}` : ''}`,
       {},
       organizationId,
     );
+    return Array.isArray(res) ? res : res.data ?? [];
   },
 
   async getRate(

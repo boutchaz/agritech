@@ -10,6 +10,7 @@ import {
   HttpCode,
   HttpStatus,
   Request,
+  Query,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -37,9 +38,16 @@ export class FiscalYearsController {
   @Get()
   @ApiOperation({ summary: 'Get all fiscal years' })
   @ApiResponse({ status: 200, description: 'Fiscal years retrieved successfully' })
-  findAll(@Request() req) {
+  findAll(
+    @Request() req,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
+  ) {
     const organizationId = req.headers['x-organization-id'] as string;
-    return this.fiscalYearsService.findAll(organizationId);
+    return this.fiscalYearsService.findAll(organizationId, {
+      page: page ? Number(page) : undefined,
+      pageSize: pageSize ? Number(pageSize) : undefined,
+    });
   }
 
   @Get('active')

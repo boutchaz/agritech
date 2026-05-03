@@ -3,6 +3,7 @@ import { DatabaseService } from '../database/database.service';
 import { CreateTaxDto } from './dto/create-tax.dto';
 import { UpdateTaxDto } from './dto/update-tax.dto';
 import { sanitizeSearch } from '../../common/utils/sanitize-search';
+import { paginatedResponse, type PaginatedResponse } from '../../common/dto/paginated-query.dto';
 
 @Injectable()
 export class TaxesService {
@@ -19,39 +20,42 @@ export class TaxesService {
       tax_type?: 'sales' | 'purchase' | 'both';
       is_active?: boolean;
       search?: string;
-    }
-  ): Promise<any> {
+      page?: number;
+      pageSize?: number;
+    },
+  ): Promise<PaginatedResponse<any>> {
     const supabase = this.databaseService.getAdminClient();
+    const page = Math.max(1, Number(filters?.page) || 1);
+    const pageSize = Math.max(1, Math.min(100, Number(filters?.pageSize) || 100));
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
 
-    let query = supabase
-      .from('taxes')
-      .select('*')
-      .eq('organization_id', organizationId)
-      .order('name', { ascending: true });
+    const apply = (q: any) => {
+      q = q.eq('organization_id', organizationId);
+      if (filters?.tax_type && ['sales', 'purchase', 'both'].includes(filters.tax_type)) {
+        q = q.or(`tax_type.eq.${filters.tax_type},tax_type.eq.both`);
+      }
+      if (filters?.is_active !== undefined) q = q.eq('is_active', filters.is_active);
+      if (filters?.search) {
+        const s = sanitizeSearch(filters.search);
+        if (s) q = q.ilike('name', `%${s}%`);
+      }
+      return q;
+    };
 
-    // Filter by tax_type if specified (sales, purchase, or both)
-    if (filters?.tax_type && ['sales', 'purchase', 'both'].includes(filters.tax_type)) {
-      query = query.or(`tax_type.eq.${filters.tax_type},tax_type.eq.both`);
-    }
-
-    // Filter by is_active if specified
-    if (filters?.is_active !== undefined) {
-      query = query.eq('is_active', filters.is_active);
-    }
-
-    // Search by name
-    if (filters?.search) {
-      { const s = sanitizeSearch(filters.search); if (s) query = query.ilike('name', `%${s}%`); }
-    }
-
-    const { data, error } = await query;
+    const { count } = await apply(
+      supabase.from('taxes').select('id', { count: 'exact', head: true }),
+    );
+    const { data, error } = await apply(supabase.from('taxes').select('*'))
+      .order('name', { ascending: true })
+      .range(from, to);
 
     if (error) {
       this.logger.error(`Failed to fetch taxes: ${error.message}`);
       throw new BadRequestException(`Failed to fetch taxes: ${error.message}`);
     }
 
-    return data;
+    return paginatedResponse(data ?? [], count ?? 0, page, pageSize);
   }
 
   /**

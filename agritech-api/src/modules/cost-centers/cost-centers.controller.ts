@@ -42,11 +42,15 @@ export class CostCentersController {
     @Req() req: any,
     @Query('is_active') isActive?: string,
     @Query('search') search?: string,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
   ) {
     const organizationId = req.headers['x-organization-id'];
     return this.costCentersService.findAll(organizationId, {
       is_active: isActive === undefined ? undefined : isActive === 'true',
       search,
+      page: page ? Number(page) : undefined,
+      pageSize: pageSize ? Number(pageSize) : undefined,
     });
   }
 

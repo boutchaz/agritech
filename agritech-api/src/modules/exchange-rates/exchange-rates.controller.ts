@@ -45,6 +45,8 @@ export class ExchangeRatesController {
     @Query('to_currency') toCurrency?: string,
     @Query('from_date') fromDate?: string,
     @Query('to_date') toDate?: string,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
   ) {
     const organizationId = req.headers['x-organization-id'];
     return this.service.findAll(organizationId, {
@@ -52,6 +54,8 @@ export class ExchangeRatesController {
       to_currency: toCurrency,
       from_date: fromDate,
       to_date: toDate,
+      page: page ? Number(page) : undefined,
+      pageSize: pageSize ? Number(pageSize) : undefined,
     });
   }
 
