@@ -85,6 +85,54 @@ export class OnboardingService {
     }
   }
 
+  private async ensureOrgMembership(userId: string, organizationId: string): Promise<void> {
+    const client = this.databaseService.getAdminClient();
+    const { data: existing } = await client
+      .from('organization_users')
+      .select('id, is_active')
+      .eq('user_id', userId)
+      .eq('organization_id', organizationId)
+      .maybeSingle();
+
+    if (existing?.id) {
+      if (!existing.is_active) {
+        const { error } = await client
+          .from('organization_users')
+          .update({ is_active: true })
+          .eq('id', existing.id);
+        if (error) {
+          this.logger.error(`ensureOrgMembership: reactivate failed: ${error.message}`);
+          throw new InternalServerErrorException('Failed to reactivate organization membership');
+        }
+      }
+      return;
+    }
+
+    const { data: roleData, error: roleError } = await client
+      .from('roles')
+      .select('id')
+      .eq('name', 'organization_admin')
+      .single();
+    if (roleError || !roleData) {
+      this.logger.error(`ensureOrgMembership: role lookup failed: ${roleError?.message || 'not found'}`);
+      throw new InternalServerErrorException('Failed to find default role for organization');
+    }
+
+    const { error: insertError } = await client
+      .from('organization_users')
+      .insert({
+        organization_id: organizationId,
+        user_id: userId,
+        role_id: roleData.id,
+        is_active: true,
+        created_at: new Date().toISOString(),
+      });
+    if (insertError) {
+      this.logger.error(`ensureOrgMembership: insert failed: ${insertError.message}`);
+      throw new InternalServerErrorException('Failed to add user to organization');
+    }
+  }
+
   private async resolveOrganizationIdForUser(
     userId: string,
     headerOrganizationId: string | null | undefined,
@@ -370,6 +418,12 @@ export class OnboardingService {
         this.logger.error(`Failed to update organization: ${error.message}`);
         throw new InternalServerErrorException('Failed to update organization');
       }
+
+      // Defensive: when an org was created out-of-band (e.g. backoffice
+      // provisioning, or a prior partial onboarding) the user may not yet
+      // be a member. Without this every authenticated request 403s on
+      // OrganizationGuard. Upsert as organization_admin if missing.
+      await this.ensureOrgMembership(userId, data.id);
 
       return { id: data.id };
     } else {
