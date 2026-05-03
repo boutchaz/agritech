@@ -38,17 +38,18 @@ export interface OnboardingFarmData {
   climate_zone?: string;
 }
 
-export interface OnboardingModuleSelection {
-  farm_management: boolean;
-  inventory: boolean;
-  sales: boolean;
-  procurement: boolean;
-  accounting: boolean;
-  hr: boolean;
-  analytics: boolean;
-  compliance: boolean;
-  marketplace: boolean;
-}
+/**
+ * Keyed by module slug as returned by /api/v1/module-config (e.g. `core`,
+ * `personnel`, `stock`, `accounting`, `marketplace`, ...). The shape is
+ * intentionally open: when the backend adds or renames a module slug, the
+ * client picks it up automatically without a type-locked rename here.
+ *
+ * Earlier versions hardcoded legacy slugs (`farm_management`, `inventory`,
+ * `sales`, `hr`, `analytics`) which no longer exist server-side. Those
+ * defaults rendered as phantom selections and prevented the recommended
+ * modules from being highlighted on first paint.
+ */
+export type OnboardingModuleSelection = Record<string, boolean>;
 
 export interface OnboardingPreferences {
   currency: string;

@@ -61,17 +61,11 @@ const getDefaultState = (userId: string, email: string): OnboardingState => ({
     farm_type: 'main',
     description: ''
   },
-  moduleSelection: {
-    farm_management: true,
-    inventory: false,
-    sales: false,
-    procurement: false,
-    accounting: false,
-    hr: false,
-    analytics: false,
-    compliance: false,
-    marketplace: false
-  },
+  // Empty by default — populated reactively from /api/v1/module-config.
+  // The recommended modules are pre-selected once the config arrives
+  // (see ModulesStep). Hardcoding legacy slugs here caused phantom
+  // selections after the backend module slugs were renamed.
+  moduleSelection: {},
   preferences: {
     currency: 'MAD',
     date_format: 'DD/MM/YYYY',
@@ -315,7 +309,12 @@ export const useOnboardingStore = create<OnboardingStore>()(
 
       updateModuleSelection: (data) => {
         set((state) => ({
-          moduleSelection: { ...state.moduleSelection, ...data },
+          // Coerce missing/undefined values to false so the OnboardingModuleSelection
+          // (Record<string, boolean>) invariant holds — Partial<Record<>> would
+          // otherwise smuggle undefined into the merged object.
+          moduleSelection: Object.fromEntries(
+            Object.entries({ ...state.moduleSelection, ...data }).map(([k, v]) => [k, !!v]),
+          ),
         }));
         scheduleAutoSave(get);
       },

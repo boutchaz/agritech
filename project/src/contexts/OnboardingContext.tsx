@@ -33,22 +33,16 @@ const getDefaultState = (userId: string, email: string): OnboardingState => ({
     farm_type: 'main',
     description: ''
   },
-  moduleSelection: {
-    farm_management: true,
-    inventory: false,
-    sales: false,
-    procurement: false,
-    accounting: false,
-    hr: false,
-    analytics: false,
-    compliance: false,
-    marketplace: false
-  },
+  // Empty by default — populated from /api/v1/module-config in ModulesStep.
+  // Hardcoding legacy slugs here used to create phantom selections after the
+  // backend module slugs were renamed.
+  moduleSelection: {},
   preferences: {
     currency: 'MAD',
     date_format: 'DD/MM/YYYY',
     use_demo_data: false,
-    enable_notifications: true
+    enable_notifications: true,
+    accounting_template_country: 'MA',
   },
   existingFarmId: null,
   existingOrgId: null,
@@ -205,7 +199,14 @@ export const OnboardingProvider = ({ userId, email, children }: OnboardingProvid
   }, []);
 
   const updateModuleSelection = useCallback((data: Partial<OnboardingState['moduleSelection']>) => {
-    setState(prev => ({ ...prev, moduleSelection: { ...prev.moduleSelection, ...data } }));
+    setState(prev => ({
+      ...prev,
+      // Coerce undefined → false to match OnboardingModuleSelection
+      // (Record<string, boolean>); Partial<Record<>> would smuggle undefined.
+      moduleSelection: Object.fromEntries(
+        Object.entries({ ...prev.moduleSelection, ...data }).map(([k, v]) => [k, !!v]),
+      ),
+    }));
   }, []);
 
   const updatePreferences = useCallback((data: Partial<OnboardingState['preferences']>) => {

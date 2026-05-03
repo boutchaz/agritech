@@ -14,6 +14,7 @@ import {
   ShieldCheck,
   LucideIcon,
 } from 'lucide-react';
+import { useEffect, useRef } from 'react';
 import { ModuleCard } from '../ui/ModuleCard';
 import { useModuleConfig } from '@/hooks/useModuleConfig';
 import { ButtonLoader, SectionLoader } from '@/components/ui/loader';
@@ -39,17 +40,10 @@ const ICON_MAP: Record<string, LucideIcon> = {
   BarChart3,
 };
 
-interface ModuleSelection {
-  farm_management: boolean;
-  inventory: boolean;
-  sales: boolean;
-  procurement: boolean;
-  accounting: boolean;
-  hr: boolean;
-  analytics: boolean;
-  marketplace: boolean;
-  compliance: boolean;
-}
+// Open shape keyed by backend module slug (see OnboardingModuleSelection).
+// Anything the backend exposes via /api/v1/module-config can be toggled here
+// without coupling the type to a fixed list of slugs.
+type ModuleSelection = Record<string, boolean>;
 
 interface ModulesStepProps {
   moduleSelection: ModuleSelection;
@@ -86,6 +80,51 @@ export const ModulesStep = ({
   const { data: config, isLoading: isLoadingConfig, error } = useModuleConfig();
   const modules = config?.modules || [];
 
+  // Two responsibilities once the backend module config arrives:
+  //   (1) Strip legacy slug keys (`farm_management`, `inventory`, `sales`,
+  //       `procurement`, `hr`, `analytics`) that older app versions persisted.
+  //       They don't map to any real backend module today and would be
+  //       forwarded as junk to /onboarding/modules + /subscriptions/trial.
+  //   (2) On first paint, if the user hasn't picked any backend slug yet,
+  //       seed the recommended modules so the cards render highlighted.
+  //
+  // Cleanup runs every time the config changes (idempotent — stable output
+  // for stable input), seeding only fires once per mount.
+  const seededRef = useRef(false);
+  useEffect(() => {
+    if (!config?.modules?.length) return;
+    const validSlugs = new Set(config.modules.map((m) => m.slug));
+
+    // (1) Cleanup
+    const legacyKeys = Object.keys(moduleSelection).filter(
+      (k) => !validSlugs.has(k),
+    );
+
+    // (2) Seed (only on first arrival of config)
+    let recommended: Record<string, boolean> = {};
+    if (!seededRef.current) {
+      const userPickedRealSlug = Object.entries(moduleSelection).some(
+        ([slug, isOn]) => isOn && validSlugs.has(slug),
+      );
+      if (!userPickedRealSlug) {
+        recommended = config.modules
+          .filter((m) => m.isRecommended)
+          .reduce<Record<string, boolean>>((acc, m) => {
+            acc[m.slug] = true;
+            return acc;
+          }, {});
+      }
+      seededRef.current = true;
+    }
+
+    if (legacyKeys.length === 0 && Object.keys(recommended).length === 0) return;
+    const cleanup = legacyKeys.reduce<Record<string, boolean>>((acc, k) => {
+      acc[k] = false;
+      return acc;
+    }, {});
+    onUpdate({ ...cleanup, ...recommended });
+  }, [config?.modules, moduleSelection, onUpdate]);
+
   const getRequiredPlan = (requiredPlan?: string | null): PlanType | null => {
     if (!requiredPlan) {
       return null;
@@ -114,7 +153,7 @@ export const ModulesStep = ({
   ).length;
 
   const toggleModule = (moduleId: string) => {
-    onUpdate({ [moduleId]: !moduleSelection[moduleId as keyof ModuleSelection] });
+    onUpdate({ [moduleId]: !moduleSelection[moduleId] });
   };
 
   // Encouraging messages based on selection count
@@ -223,9 +262,9 @@ export const ModulesStep = ({
         <Button
           type="button"
           onClick={() => {
-            const allSelected: Partial<ModuleSelection> = {};
+            const allSelected: Record<string, boolean> = {};
             availableModules.forEach(m => {
-              allSelected[m.slug as keyof ModuleSelection] = true;
+              allSelected[m.slug] = true;
             });
             onUpdate(allSelected);
           }}
@@ -236,9 +275,9 @@ export const ModulesStep = ({
         <Button
           type="button"
           onClick={() => {
-            const recommended: Partial<ModuleSelection> = {};
+            const recommended: Record<string, boolean> = {};
             availableModules.forEach(m => {
-              recommended[m.slug as keyof ModuleSelection] = m.isRecommended;
+              recommended[m.slug] = !!m.isRecommended;
             });
             onUpdate(recommended);
           }}

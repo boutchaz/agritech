@@ -227,18 +227,19 @@ export class SaveOnboardingFarmDto {
 }
 
 export class SaveOnboardingModulesDto {
-  @ApiProperty({ description: 'Module selection' })
+  /**
+   * Open shape: keys are backend module slugs from /module-config (e.g.
+   * `core`, `personnel`, `stock`, `accounting`, `marketplace`). The fixed
+   * legacy keys (`farm_management`, `inventory`, `sales`, `hr`, `analytics`)
+   * no longer correspond to real modules and were dropped — see frontend
+   * OnboardingModuleSelection.
+   */
+  @ApiProperty({
+    description: 'Module selection keyed by backend module slug',
+    example: { core: true, personnel: true, stock: false },
+  })
   @IsObject()
-  moduleSelection: {
-    farm_management: boolean;
-    inventory: boolean;
-    sales: boolean;
-    procurement: boolean;
-    accounting: boolean;
-    hr: boolean;
-    analytics: boolean;
-    marketplace: boolean;
-  };
+  moduleSelection: Record<string, boolean>;
 }
 
 export class SaveOnboardingPreferencesDto {
