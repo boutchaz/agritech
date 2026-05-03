@@ -26,6 +26,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { useCreateStockEntry } from '@/hooks/useStockEntries';
+import { handleStockMappingError } from '@/lib/handleStockMappingError';
 import { useWarehouses } from '@/hooks/useWarehouses';
 import { useItemSelection } from '@/hooks/useItems';
 import { useAuth } from '@/hooks/useAuth';
@@ -341,7 +342,9 @@ export default function StockEntryForm({
       form.reset();
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : '';
-      toast.error(`${t('stockEntries.toast.createError')}: ${message}`);
+      if (!handleStockMappingError(error, t('stockEntries.toast.createError'))) {
+        toast.error(`${t('stockEntries.toast.createError')}: ${message}`);
+      }
     }
   };
 

@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/radix-select';
 import { useAuth } from '@/hooks/useAuth';
 import { useCreateStockEntry } from '@/hooks/useStockEntries';
+import { handleStockMappingError } from '@/lib/handleStockMappingError';
 import { useBarcodeScanner } from '@/hooks/useBarcodeScanner';
 import { stockEntriesApi } from '@/lib/api/stock';
 import type { ItemSelectionOption } from '@/types/items';
@@ -163,7 +164,9 @@ export default function StockTakeWizard() {
       setSubmitted(true);
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : '';
-      toast.error(`${t('stockTake.errorSubmit', 'Failed to submit stock take')}: ${message}`);
+      if (!handleStockMappingError(error, t('stockTake.errorSubmit', 'Failed to submit stock take'))) {
+        toast.error(`${t('stockTake.errorSubmit', 'Failed to submit stock take')}: ${message}`);
+      }
     }
   };
 

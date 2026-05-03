@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/radix-select';
 import { useAuth } from '@/hooks/useAuth';
 import { useCreateStockEntry } from '@/hooks/useStockEntries';
+import { handleStockMappingError } from '@/lib/handleStockMappingError';
 import { useBarcodeScanner } from '@/hooks/useBarcodeScanner';
 import { useWarehouses } from '@/hooks/useWarehouses';
 import BarcodeScanField from '@/components/Stock/BarcodeScanField';
@@ -74,7 +75,9 @@ export default function QuickStockEntry() {
             scanner.setScanValue('');
           },
           onError: (error: Error) => {
-            toast.error(`${t('quickStockEntry.error', 'Failed to create entry')}: ${error.message}`);
+            if (!handleStockMappingError(error, t('quickStockEntry.error', 'Failed to create entry'))) {
+              toast.error(`${t('quickStockEntry.error', 'Failed to create entry')}: ${error.message}`);
+            }
           },
         }
       );

@@ -6,6 +6,7 @@ import {
   useReverseStockEntry,
   useDeleteStockEntry,
 } from '@/hooks/useStockEntries';
+import { handleStockMappingError } from '@/lib/handleStockMappingError';
 import {
   TableCell,
   TableHead,
@@ -160,7 +161,9 @@ export default function StockEntryList({ onCreateClick, onViewClick }: StockEntr
       setConfirmAction(null);
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : '';
-      toast.error(`${t('stockEntries.toast.postError')}: ${message}`);
+      if (!handleStockMappingError(error, t('stockEntries.toast.postError'))) {
+        toast.error(`${t('stockEntries.toast.postError')}: ${message}`);
+      }
     }
   };
 
@@ -190,7 +193,9 @@ export default function StockEntryList({ onCreateClick, onViewClick }: StockEntr
       setReverseReason('');
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : '';
-      toast.error(`${t('stockEntries.toast.reverseError', 'Failed to reverse stock entry')}: ${message}`);
+      if (!handleStockMappingError(error, t('stockEntries.toast.reverseError', 'Failed to reverse stock entry'))) {
+        toast.error(`${t('stockEntries.toast.reverseError', 'Failed to reverse stock entry')}: ${message}`);
+      }
     }
   };
 
