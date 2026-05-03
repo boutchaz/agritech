@@ -99,7 +99,6 @@ import { Route as AuthenticatedworkforceWorkforceHrCalendarRouteImport } from '.
 import { Route as AuthenticatedworkforceWorkforceHrAnalyticsRouteImport } from './routes/_authenticated/(workforce)/workforce/hr-analytics'
 import { Route as AuthenticatedworkforceWorkforceHolidaysRouteImport } from './routes/_authenticated/(workforce)/workforce/holidays'
 import { Route as AuthenticatedworkforceWorkforceGrievancesRouteImport } from './routes/_authenticated/(workforce)/workforce/grievances'
-import { Route as AuthenticatedworkforceWorkforceGeofencesRouteImport } from './routes/_authenticated/(workforce)/workforce/geofences'
 import { Route as AuthenticatedworkforceWorkforceExpenseClaimsRouteImport } from './routes/_authenticated/(workforce)/workforce/expense-claims'
 import { Route as AuthenticatedworkforceWorkforceEmployeesRouteImport } from './routes/_authenticated/(workforce)/workforce/employees'
 import { Route as AuthenticatedworkforceWorkforceDayLaborersRouteImport } from './routes/_authenticated/(workforce)/workforce/day-laborers'
@@ -727,12 +726,6 @@ const AuthenticatedworkforceWorkforceGrievancesRoute =
   AuthenticatedworkforceWorkforceGrievancesRouteImport.update({
     id: '/(workforce)/workforce/grievances',
     path: '/workforce/grievances',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
-const AuthenticatedworkforceWorkforceGeofencesRoute =
-  AuthenticatedworkforceWorkforceGeofencesRouteImport.update({
-    id: '/(workforce)/workforce/geofences',
-    path: '/workforce/geofences',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedworkforceWorkforceExpenseClaimsRoute =
@@ -1551,7 +1544,6 @@ export interface FileRoutesByFullPath {
   '/workforce/day-laborers': typeof AuthenticatedworkforceWorkforceDayLaborersRoute
   '/workforce/employees': typeof AuthenticatedworkforceWorkforceEmployeesRoute
   '/workforce/expense-claims': typeof AuthenticatedworkforceWorkforceExpenseClaimsRoute
-  '/workforce/geofences': typeof AuthenticatedworkforceWorkforceGeofencesRoute
   '/workforce/grievances': typeof AuthenticatedworkforceWorkforceGrievancesRoute
   '/workforce/holidays': typeof AuthenticatedworkforceWorkforceHolidaysRoute
   '/workforce/hr-analytics': typeof AuthenticatedworkforceWorkforceHrAnalyticsRoute
@@ -1749,7 +1741,6 @@ export interface FileRoutesByTo {
   '/workforce/day-laborers': typeof AuthenticatedworkforceWorkforceDayLaborersRoute
   '/workforce/employees': typeof AuthenticatedworkforceWorkforceEmployeesRoute
   '/workforce/expense-claims': typeof AuthenticatedworkforceWorkforceExpenseClaimsRoute
-  '/workforce/geofences': typeof AuthenticatedworkforceWorkforceGeofencesRoute
   '/workforce/grievances': typeof AuthenticatedworkforceWorkforceGrievancesRoute
   '/workforce/holidays': typeof AuthenticatedworkforceWorkforceHolidaysRoute
   '/workforce/hr-analytics': typeof AuthenticatedworkforceWorkforceHrAnalyticsRoute
@@ -1952,7 +1943,6 @@ export interface FileRoutesById {
   '/_authenticated/(workforce)/workforce/day-laborers': typeof AuthenticatedworkforceWorkforceDayLaborersRoute
   '/_authenticated/(workforce)/workforce/employees': typeof AuthenticatedworkforceWorkforceEmployeesRoute
   '/_authenticated/(workforce)/workforce/expense-claims': typeof AuthenticatedworkforceWorkforceExpenseClaimsRoute
-  '/_authenticated/(workforce)/workforce/geofences': typeof AuthenticatedworkforceWorkforceGeofencesRoute
   '/_authenticated/(workforce)/workforce/grievances': typeof AuthenticatedworkforceWorkforceGrievancesRoute
   '/_authenticated/(workforce)/workforce/holidays': typeof AuthenticatedworkforceWorkforceHolidaysRoute
   '/_authenticated/(workforce)/workforce/hr-analytics': typeof AuthenticatedworkforceWorkforceHrAnalyticsRoute
@@ -2158,7 +2148,6 @@ export interface FileRouteTypes {
     | '/workforce/day-laborers'
     | '/workforce/employees'
     | '/workforce/expense-claims'
-    | '/workforce/geofences'
     | '/workforce/grievances'
     | '/workforce/holidays'
     | '/workforce/hr-analytics'
@@ -2356,7 +2345,6 @@ export interface FileRouteTypes {
     | '/workforce/day-laborers'
     | '/workforce/employees'
     | '/workforce/expense-claims'
-    | '/workforce/geofences'
     | '/workforce/grievances'
     | '/workforce/holidays'
     | '/workforce/hr-analytics'
@@ -2558,7 +2546,6 @@ export interface FileRouteTypes {
     | '/_authenticated/(workforce)/workforce/day-laborers'
     | '/_authenticated/(workforce)/workforce/employees'
     | '/_authenticated/(workforce)/workforce/expense-claims'
-    | '/_authenticated/(workforce)/workforce/geofences'
     | '/_authenticated/(workforce)/workforce/grievances'
     | '/_authenticated/(workforce)/workforce/holidays'
     | '/_authenticated/(workforce)/workforce/hr-analytics'
@@ -3269,13 +3256,6 @@ declare module '@tanstack/react-router' {
       path: '/workforce/grievances'
       fullPath: '/workforce/grievances'
       preLoaderRoute: typeof AuthenticatedworkforceWorkforceGrievancesRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/(workforce)/workforce/geofences': {
-      id: '/_authenticated/(workforce)/workforce/geofences'
-      path: '/workforce/geofences'
-      fullPath: '/workforce/geofences'
-      preLoaderRoute: typeof AuthenticatedworkforceWorkforceGeofencesRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/(workforce)/workforce/expense-claims': {
@@ -4581,7 +4561,6 @@ interface AuthenticatedRouteChildren {
   AuthenticatedworkforceWorkforceDayLaborersRoute: typeof AuthenticatedworkforceWorkforceDayLaborersRoute
   AuthenticatedworkforceWorkforceEmployeesRoute: typeof AuthenticatedworkforceWorkforceEmployeesRoute
   AuthenticatedworkforceWorkforceExpenseClaimsRoute: typeof AuthenticatedworkforceWorkforceExpenseClaimsRoute
-  AuthenticatedworkforceWorkforceGeofencesRoute: typeof AuthenticatedworkforceWorkforceGeofencesRoute
   AuthenticatedworkforceWorkforceGrievancesRoute: typeof AuthenticatedworkforceWorkforceGrievancesRoute
   AuthenticatedworkforceWorkforceHolidaysRoute: typeof AuthenticatedworkforceWorkforceHolidaysRoute
   AuthenticatedworkforceWorkforceHrAnalyticsRoute: typeof AuthenticatedworkforceWorkforceHrAnalyticsRoute
@@ -4687,8 +4666,6 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
     AuthenticatedworkforceWorkforceEmployeesRoute,
   AuthenticatedworkforceWorkforceExpenseClaimsRoute:
     AuthenticatedworkforceWorkforceExpenseClaimsRoute,
-  AuthenticatedworkforceWorkforceGeofencesRoute:
-    AuthenticatedworkforceWorkforceGeofencesRoute,
   AuthenticatedworkforceWorkforceGrievancesRoute:
     AuthenticatedworkforceWorkforceGrievancesRoute,
   AuthenticatedworkforceWorkforceHolidaysRoute:

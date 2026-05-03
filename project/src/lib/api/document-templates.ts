@@ -102,11 +102,15 @@ export const documentTemplatesApi = {
     organizationId?: string,
   ): Promise<DocumentTemplate[]> {
     const params = documentType ? `?document_type=${documentType}` : '';
-    return apiClient.get<DocumentTemplate[]>(
+    const res = await apiClient.get<
+      | DocumentTemplate[]
+      | { data: DocumentTemplate[]; total: number; page: number; pageSize: number; totalPages: number }
+    >(
       `${BASE_URL}/${organizationId}/document-templates${params}`,
       {},
       organizationId,
     );
+    return Array.isArray(res) ? res : res.data ?? [];
   },
 
   async getOne(

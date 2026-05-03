@@ -1,5 +1,5 @@
 import { apiClient } from '../api-client';
-import { buildQueryUrl, requireOrganizationId } from './createCrudApi';
+import { requireOrganizationId } from './createCrudApi';
 import type { PaginatedQuery, PaginatedResponse } from './types';
 import type {
   ReceptionBatch,
@@ -69,9 +69,13 @@ export const receptionBatchesApi = {
     }
 
     const queryString = params.toString();
-    return apiClient.get<ReceptionBatch[]>(
+    const res = await apiClient.get<
+      | ReceptionBatch[]
+      | { data: ReceptionBatch[]; total: number; page: number; pageSize: number; totalPages: number }
+    >(
       `/api/v1/organizations/${organizationId}/reception-batches${queryString ? `?${queryString}` : ''}`
     );
+    return Array.isArray(res) ? res : res.data ?? [];
   },
 
   async getPaginated(organizationId: string, query: PaginatedReceptionBatchQuery): Promise<PaginatedResponse<ReceptionBatch>> {

@@ -621,7 +621,7 @@ export class FilesService {
    * Sync existing files from storage to registry
    */
   async syncExistingFiles(organizationId: string): Promise<{ synced: number; skipped: number }> {
-    const buckets = ['products', 'invoices', 'files', 'compliance-documents', 'agritech-documents', 'reports'];
+    const buckets = ['products', 'invoices', 'files', 'compliance-documents', 'agritech-documents', 'reports', 'worker-documents'];
     let synced = 0;
     let skipped = 0;
 

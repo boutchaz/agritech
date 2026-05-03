@@ -2,25 +2,34 @@ import { useState, type ReactNode } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Loader2, Plus, Pencil, Trash2, Star, Building2, Users, Briefcase } from 'lucide-react';
+import { Loader2, Plus, Pencil, Trash2, Star, Building2, Users, Briefcase, Calendar, Clock, MapPin, Video, Phone, User } from 'lucide-react';
 import { withRouteProtection } from '@/components/authorization/withRouteProtection';
 import { useAuth } from '@/hooks/useAuth';
 import ModernPageHeader from '@/components/ModernPageHeader';
 import { useFarms } from '@/hooks/useParcelsQuery';
+import { useWorkers } from '@/hooks/useWorkers';
 import {
   useCreateApplicant,
+  useCreateInterview,
   useCreateJobOpening,
   useDeleteJobOpening,
+  useInterviews,
   useJobApplicants,
   useJobOpenings,
-  useUpdateApplicant,
+  useUpdateInterview,
   useUpdateJobOpening,
+  useUpdateApplicant,
 } from '@/hooks/useHrAdmin';
 import type {
   ApplicantStatus,
   CreateApplicantInput,
+  CreateInterviewInput,
   CreateOpeningInput,
   EmploymentType,
+  Interview,
+  InterviewFeedbackEntry,
+  InterviewStatus,
+  InterviewType,
   JobApplicant,
   JobOpening,
   OpeningStatus,
@@ -50,16 +59,20 @@ const APPLICANT_STATUSES: ApplicantStatus[] = [
   'applied', 'screening', 'interview_scheduled', 'interviewed',
   'offered', 'hired', 'rejected', 'withdrawn',
 ];
+const INTERVIEW_TYPES: InterviewType[] = ['phone', 'video', 'in_person'];
+const INTERVIEW_STATUSES: InterviewStatus[] = ['scheduled', 'completed', 'cancelled', 'no_show'];
 
 function RecruitmentPage() {
   const { t } = useTranslation();
   const { currentOrganization } = useAuth();
   const orgId = currentOrganization?.id ?? null;
-  const [tab, setTab] = useState<'openings' | 'applicants'>('openings');
+  const [tab, setTab] = useState<'openings' | 'applicants' | 'interviews'>('openings');
   const [creatingOpening, setCreatingOpening] = useState(false);
   const [editingOpening, setEditingOpening] = useState<JobOpening | null>(null);
   const [creatingApplicant, setCreatingApplicant] = useState(false);
   const [editingApplicant, setEditingApplicant] = useState<JobApplicant | null>(null);
+  const [creatingInterview, setCreatingInterview] = useState(false);
+  const [editingInterview, setEditingInterview] = useState<Interview | null>(null);
   const [openingFilter, setOpeningFilter] = useState<string | 'all'>('all');
 
   const farms = useFarms(orgId ?? undefined);
@@ -70,6 +83,10 @@ function RecruitmentPage() {
   const deleteOpening = useDeleteJobOpening();
   const createApplicant = useCreateApplicant();
   const updateApplicant = useUpdateApplicant();
+  const interviews = useInterviews(orgId);
+  const workers = useWorkers(orgId);
+  const createInterview = useCreateInterview();
+  const updateInterview = useUpdateInterview();
 
   if (!orgId) return null;
 
@@ -100,6 +117,12 @@ function RecruitmentPage() {
                 {t('recruitment.newApplicant', 'New applicant')}
               </Button>
             )}
+            {tab === 'interviews' && (
+              <Button onClick={() => setCreatingInterview(true)} disabled={!openingList.length}>
+                <Plus className="w-4 h-4 mr-2" />
+                {t('recruitment.newInterview', 'New interview')}
+              </Button>
+            )}
           </>
         }
       />
@@ -108,6 +131,7 @@ function RecruitmentPage() {
         <TabsList>
           <TabsTrigger value="openings">{t('recruitment.openings', 'Openings')}</TabsTrigger>
           <TabsTrigger value="applicants">{t('recruitment.applicants', 'Applicants')}</TabsTrigger>
+          <TabsTrigger value="interviews">{t('recruitment.interviews', 'Interviews')}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="openings" className="mt-4">
@@ -207,6 +231,56 @@ function RecruitmentPage() {
             </div>
           )}
         </TabsContent>
+
+        <TabsContent value="interviews" className="mt-4">
+          {interviews.isLoading ? (
+            <Loading />
+          ) : !interviews.data?.length ? (
+            <Empty msg={t('recruitment.noInterviews', 'No interviews scheduled yet.')} />
+          ) : (
+            <div className="space-y-2">
+              {interviews.data.map((iv) => {
+                const applicant = applicants.data?.find((a) => a.id === iv.applicant_id);
+                const opening = openingList.find((o) => o.id === iv.job_opening_id);
+                return (
+                  <Card
+                    key={iv.id}
+                    className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-900/40"
+                    onClick={() => setEditingInterview(iv)}
+                  >
+                    <CardContent className="py-4 flex items-center justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 text-sm">
+                          <span className="font-medium">
+                            {applicant ? `${applicant.first_name} ${applicant.last_name}` : t('recruitment.unknownApplicant', 'Unknown')}
+                          </span>
+                          <InterviewStatusBadge status={iv.status} />
+                          <InterviewTypeBadge type={iv.interview_type} />
+                        </div>
+                        <div className="text-xs text-gray-500 mt-0.5">
+                          {opening?.title ?? t('recruitment.unknownOpening', 'Unknown opening')}
+                          {' · '}
+                          {t('recruitment.round', 'Round {{n}}', { n: iv.round })}
+                          {' · '}
+                          {new Date(iv.scheduled_at).toLocaleString()}
+                          {' · '}
+                          {iv.duration_minutes}min
+                          {iv.location && ` · ${iv.location}`}
+                        </div>
+                      </div>
+                      {iv.average_rating != null && (
+                        <span className="text-xs flex items-center text-amber-600 shrink-0">
+                          <Star className="w-3 h-3 mr-0.5 fill-current" />
+                          {iv.average_rating.toFixed(1)}
+                        </span>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </TabsContent>
       </Tabs>
 
       {(creatingOpening || editingOpening) && (
@@ -243,6 +317,28 @@ function RecruitmentPage() {
               toast.success(t('common.saved', 'Saved'));
             } else {
               await createApplicant.mutateAsync({ orgId, data });
+              toast.success(t('common.created', 'Created'));
+            }
+          }}
+        />
+      )}
+
+      {(creatingInterview || editingInterview) && (
+        <InterviewDialog
+          openings={openingList.map((o) => ({ id: o.id, title: o.title }))}
+          applicants={applicants.data ?? []}
+          workers={(workers.data ?? []).map((w) => ({ id: w.id, name: `${w.first_name} ${w.last_name}` }))}
+          initial={editingInterview}
+          onClose={() => {
+            setCreatingInterview(false);
+            setEditingInterview(null);
+          }}
+          onSubmit={async (data) => {
+            if (editingInterview) {
+              await updateInterview.mutateAsync({ orgId, id: editingInterview.id, data });
+              toast.success(t('common.saved', 'Saved'));
+            } else {
+              await createInterview.mutateAsync({ orgId, data });
               toast.success(t('common.created', 'Created'));
             }
           }}
@@ -627,5 +723,221 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
       <Label>{label}</Label>
       {children}
     </div>
+  );
+}
+
+function InterviewStatusBadge({ status }: { status: InterviewStatus }) {
+  const { t } = useTranslation();
+  const map: Record<InterviewStatus, 'default' | 'secondary' | 'destructive' | 'outline'> = {
+    scheduled: 'default',
+    completed: 'secondary',
+    cancelled: 'destructive',
+    no_show: 'outline',
+  };
+  return <Badge variant={map[status]}>{t(`recruitment.interviewStatus.${status}`, status)}</Badge>;
+}
+
+function InterviewTypeBadge({ type }: { type: InterviewType }) {
+  const { t } = useTranslation();
+  const icons: Record<InterviewType, ReactNode> = {
+    phone: <Phone className="w-3 h-3" />,
+    video: <Video className="w-3 h-3" />,
+    in_person: <MapPin className="w-3 h-3" />,
+  };
+  return (
+    <Badge variant="outline" className="gap-1">
+      {icons[type]}
+      {t(`recruitment.interviewType.${type}`, type.replace('_', ' '))}
+    </Badge>
+  );
+}
+
+function InterviewDialog({
+  openings,
+  applicants,
+  workers,
+  initial,
+  onClose,
+  onSubmit,
+}: {
+  openings: Array<{ id: string; title: string }>;
+  applicants: JobApplicant[];
+  workers: Array<{ id: string; name: string }>;
+  initial: Interview | null;
+  onClose: () => void;
+  onSubmit: (data: Partial<CreateInterviewInput> & { status?: InterviewStatus; feedback?: InterviewFeedbackEntry[] }) => Promise<void>;
+}) {
+  const { t } = useTranslation();
+  const [draft, setDraft] = useState<Partial<CreateInterviewInput> & { status?: InterviewStatus }>(() =>
+    initial
+      ? {
+          applicant_id: initial.applicant_id,
+          job_opening_id: initial.job_opening_id,
+          round: initial.round,
+          interview_type: initial.interview_type,
+          scheduled_at: initial.scheduled_at.slice(0, 16),
+          duration_minutes: initial.duration_minutes,
+          location: initial.location ?? undefined,
+          interviewer_ids: initial.interviewer_ids,
+          status: initial.status,
+        }
+      : {
+          round: 1,
+          interview_type: 'in_person',
+          scheduled_at: new Date(Date.now() + 86400000).toISOString().slice(0, 16),
+          duration_minutes: 60,
+          interviewer_ids: [],
+        },
+  );
+  const [submitting, setSubmitting] = useState(false);
+
+  const set = <K extends keyof typeof draft>(k: K, v: (typeof draft)[K]) =>
+    setDraft((d) => ({ ...d, [k]: v }));
+
+  const toggleInterviewer = (id: string) => {
+    const current = draft.interviewer_ids ?? [];
+    set(
+      'interviewer_ids',
+      current.includes(id) ? current.filter((i) => i !== id) : [...current.slice(0, 9), id],
+    );
+  };
+
+  const handleSubmit = async () => {
+    if (!draft.applicant_id || !draft.job_opening_id || !draft.scheduled_at) {
+      toast.error(t('recruitment.interviewRequired', 'Applicant, opening, and date are required'));
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await onSubmit(draft);
+      onClose();
+    } catch (err: any) {
+      toast.error(err?.message ?? 'Error');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <ResponsiveDialog
+      open
+      onOpenChange={(o) => !o && onClose()}
+      size="lg"
+      title={initial ? t('recruitment.editInterview', 'Edit interview') : t('recruitment.newInterview', 'New interview')}
+      footer={
+        <>
+          <Button variant="outline" onClick={onClose} disabled={submitting}>
+            {t('common.cancel', 'Cancel')}
+          </Button>
+          <Button onClick={handleSubmit} disabled={submitting}>
+            {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : t('common.save', 'Save')}
+          </Button>
+        </>
+      }
+    >
+      <div className="space-y-4">
+        <div className="grid grid-cols-2 gap-3">
+          <Field label={t('recruitment.opening', 'Opening')}>
+            <Select value={draft.job_opening_id ?? ''} onValueChange={(v) => set('job_opening_id', v)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {openings.map((o) => (
+                  <SelectItem key={o.id} value={o.id}>{o.title}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Field>
+          <Field label={t('recruitment.applicant', 'Applicant')}>
+            <Select value={draft.applicant_id ?? ''} onValueChange={(v) => set('applicant_id', v)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {applicants.map((a) => (
+                  <SelectItem key={a.id} value={a.id}>{a.first_name} {a.last_name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Field>
+        </div>
+        <div className="grid grid-cols-3 gap-3">
+          <Field label={t('recruitment.interviewRound', 'Round')}>
+            <Input
+              type="number"
+              min={1}
+              value={draft.round ?? 1}
+              onChange={(e) => set('round', Number(e.target.value))}
+            />
+          </Field>
+          <Field label={t('recruitment.interviewType', 'Type')}>
+            <Select value={draft.interview_type ?? 'in_person'} onValueChange={(v) => set('interview_type', v as InterviewType)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {INTERVIEW_TYPES.map((t) => (
+                  <SelectItem key={t} value={t}>{t.replace('_', ' ')}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Field>
+          <Field label={t('recruitment.duration', 'Duration (min)')}>
+            <Input
+              type="number"
+              min={15}
+              value={draft.duration_minutes ?? 60}
+              onChange={(e) => set('duration_minutes', Number(e.target.value))}
+            />
+          </Field>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label={t('recruitment.scheduledAt', 'Scheduled at')}>
+            <Input
+              type="datetime-local"
+              value={draft.scheduled_at ?? ''}
+              onChange={(e) => set('scheduled_at', e.target.value)}
+            />
+          </Field>
+          <Field label={t('recruitment.location', 'Location')}>
+            <Input
+              value={draft.location ?? ''}
+              onChange={(e) => set('location', e.target.value || undefined)}
+              placeholder={t('recruitment.locationPlaceholder', 'Room, link, address...')}
+            />
+          </Field>
+        </div>
+        {initial && (
+          <Field label={t('common.status', 'Status')}>
+            <Select value={draft.status ?? 'scheduled'} onValueChange={(v) => set('status', v as InterviewStatus)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {INTERVIEW_STATUSES.map((s) => (
+                  <SelectItem key={s} value={s}>{s.replace('_', ' ')}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Field>
+        )}
+        <Field label={t('recruitment.interviewers', 'Interviewers (max 10)')}>
+          <div className="grid grid-cols-2 gap-1 max-h-40 overflow-y-auto border rounded-md p-2">
+            {workers.map((w) => (
+              <label key={w.id} className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={(draft.interviewer_ids ?? []).includes(w.id)}
+                  onChange={() => toggleInterviewer(w.id)}
+                  className="rounded"
+                />
+                <span className="truncate">{w.name}</span>
+              </label>
+            ))}
+          </div>
+        </Field>
+      </div>
+    </ResponsiveDialog>
   );
 }

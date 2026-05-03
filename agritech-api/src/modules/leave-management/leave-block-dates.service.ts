@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { CreateLeaveBlockDateDto, UpdateLeaveBlockDateDto } from './dto';
 import {
@@ -8,7 +8,29 @@ import {
 
 @Injectable()
 export class LeaveBlockDatesService {
+  private readonly logger = new Logger(LeaveBlockDatesService.name);
+
   constructor(private readonly db: DatabaseService) {}
+
+  /**
+   * Cross-tenant guard for leave_type_id. Without this, a foreign leave-type
+   * UUID slipped into the request would be persisted with this org's
+   * organization_id and could later leak via joins.
+   */
+  private async assertLeaveTypeInOrg(orgId: string, leaveTypeId: string): Promise<void> {
+    const supabase = this.db.getAdminClient();
+    const { data } = await supabase
+      .from('leave_types')
+      .select('id')
+      .eq('id', leaveTypeId)
+      .eq('organization_id', orgId)
+      .maybeSingle();
+    if (!data) {
+      throw new BadRequestException(
+        `Leave type ${leaveTypeId} does not belong to this organization`,
+      );
+    }
+  }
 
   async list(
     organizationId: string,
@@ -48,6 +70,9 @@ export class LeaveBlockDatesService {
   }
 
   async create(organizationId: string, userId: string | null, dto: CreateLeaveBlockDateDto) {
+    if (dto.leave_type_id) {
+      await this.assertLeaveTypeInOrg(organizationId, dto.leave_type_id);
+    }
     const supabase = this.db.getAdminClient();
     const { data, error } = await supabase
       .from('leave_block_dates')
@@ -65,6 +90,9 @@ export class LeaveBlockDatesService {
   }
 
   async update(organizationId: string, id: string, dto: UpdateLeaveBlockDateDto) {
+    if (dto.leave_type_id) {
+      await this.assertLeaveTypeInOrg(organizationId, dto.leave_type_id);
+    }
     const supabase = this.db.getAdminClient();
     const row: Record<string, unknown> = { updated_at: new Date().toISOString() };
     if (dto.block_date !== undefined) row.block_date = dto.block_date;
@@ -102,7 +130,15 @@ export class LeaveBlockDatesService {
       .gte('block_date', from)
       .lte('block_date', to)
       .limit(1);
-    if (error) return false;
+    if (error) {
+      // Don't silently return false — that would let a leave application
+      // bypass block-date enforcement when the table is misconfigured or
+      // the query genuinely fails. Log and surface so the caller decides.
+      this.logger.error(
+        `overlapsBlockDate query failed for org=${organizationId} from=${from} to=${to}: ${error.message}`,
+      );
+      throw new BadRequestException(`Failed to check leave block dates: ${error.message}`);
+    }
     return (data?.length ?? 0) > 0;
   }
 }

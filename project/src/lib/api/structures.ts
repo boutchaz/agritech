@@ -67,9 +67,13 @@ export const structuresApi = {
   /**
    * Get all structures for an organization
    */
-  async getAll(filters?: undefined, organizationId?: string): Promise<Structure[]> {
+  async getAll(_filters?: undefined, organizationId?: string): Promise<Structure[]> {
     if (!organizationId) throw new Error('organizationId is required');
-    return apiClient.get<Structure[]>(getBaseUrl(organizationId), {}, organizationId);
+    const res = await apiClient.get<
+      | Structure[]
+      | { data: Structure[]; total: number; page: number; pageSize: number; totalPages: number }
+    >(getBaseUrl(organizationId), {}, organizationId);
+    return Array.isArray(res) ? res : res.data ?? [];
   },
 
   /**

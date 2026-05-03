@@ -47,6 +47,9 @@ export enum NotificationType {
   CAMPAIGN_STATUS_CHANGED = "campaign_status_changed",
   TASK_REASSIGNED = "task_reassigned",
   PIECE_WORK_CREATED = "piece_work_created",
+  LEAVE_ENCASHMENT_CREATED = "leave_encashment_created",
+  LEAVE_ENCASHMENT_APPROVED = "leave_encashment_approved",
+  LEAVE_ENCASHMENT_CANCELLED = "leave_encashment_cancelled",
   // Phase 3 — Finance
   INVOICE_CREATED = "invoice_created",
   JOURNAL_ENTRY_POSTED = "journal_entry_posted",

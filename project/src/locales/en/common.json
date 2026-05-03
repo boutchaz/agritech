@@ -822,6 +822,7 @@
     "training": "Training",
     "hrCalendar": "HR Calendar",
     "hrAnalytics": "HR Analytics",
+    "geofences": "Geofences",
     "fiscalYears": "Fiscal Years",
     "costCenters": "Cost Centers",
     "accountMappings": "Account Mappings"
@@ -8899,6 +8900,25 @@
       "offSite": "Off-site"
     }
   },
+  "geofences": {
+    "title": "Geofences",
+    "subtitle": "Manage location zones per farm for attendance validation.",
+    "empty": "No geofences yet — create one to enable location-based attendance.",
+    "filterByFarm": "Filter by farm",
+    "allFarms": "All farms",
+    "farm": "Farm",
+    "orgWide": "Org-wide",
+    "coordinates": "Coordinates",
+    "radius": "Radius",
+    "meters": "meters",
+    "latitude": "Latitude",
+    "longitude": "Longitude",
+    "edit": "Edit geofence",
+    "create": "Create geofence",
+    "confirmDelete": "Delete this geofence?",
+    "namePlaceholder": "Farm HQ, Field entrance...",
+    "coordsRequired": "Coordinates are required"
+  },
   "shifts": {
     "title": "Shifts",
     "empty": "No shifts yet — create one to start scheduling.",
@@ -8991,7 +9011,33 @@
     "lastName": "Last name",
     "resumeUrl": "Resume URL",
     "applicantStatus": "Status",
-    "rating": "Rating (1-5)"
+    "rating": "Rating (1-5)",
+    "interviews": "Interviews",
+    "newInterview": "New interview",
+    "editInterview": "Edit interview",
+    "noInterviews": "No interviews scheduled yet.",
+    "interviewRound": "Round",
+    "interviewType": "Type",
+    "interviewers": "Interviewers (max 10)",
+    "scheduledAt": "Scheduled at",
+    "duration": "Duration (min)",
+    "location": "Location",
+    "locationPlaceholder": "Room, link, address...",
+    "round": "Round {{n}}",
+    "unknownApplicant": "Unknown",
+    "unknownOpening": "Unknown opening",
+    "interviewRequired": "Applicant, opening, and date are required",
+    "interviewStatus": {
+      "scheduled": "Scheduled",
+      "completed": "Completed",
+      "cancelled": "Cancelled",
+      "no_show": "No show"
+    },
+    "interviewType": {
+      "phone": "Phone",
+      "video": "Video",
+      "in_person": "In person"
+    }
   },
   "salarySlips": {
     "title": "Salary Slips",
@@ -9486,6 +9532,91 @@
     "seo": {
       "title": "AgroGina - Smart Farm Management & Agronomy | Morocco",
       "description": "Agricultural ERP and field operations for Morocco: plots, teams, stock, accounting, satellite NDVI/NDWI, and AgromindIA for actionable advice. Built for 50–600+ ha farms and weak connectivity."
+    }
+  },
+  "leaveBlockDates": {
+    "title": "Leave Block Dates",
+    "subtitle": "Define blackout dates when leave cannot be taken.",
+    "add": "Add Block Date",
+    "addTitle": "Add Block Date",
+    "editTitle": "Edit Block Date",
+    "empty": "No block dates defined",
+    "date": "Block Date",
+    "reason": "Reason",
+    "reasonPlaceholder": "e.g., Peak harvest period",
+    "leaveType": "Leave Type",
+    "allTypes": "All types",
+    "created": "Block date created",
+    "updated": "Block date updated",
+    "deleteTitle": "Delete Block Date",
+    "deleteConfirm": "Are you sure? Workers will be able to request leave on this date again."
+  },
+  "leaveEncashments": {
+    "title": "Leave Encashments",
+    "subtitle": "Convert unused leave days into cash payouts.",
+    "empty": "No encashments found",
+    "days": "days",
+    "pendingTotal": "Pending",
+    "approved": "Encashment approved",
+    "approveError": "Failed to approve",
+    "markedPaid": "Marked as paid",
+    "payError": "Failed to mark as paid",
+    "cancelTitle": "Cancel Encashment",
+    "cancelConfirm": "The encashed days will be returned to the allocation. This action cannot be undone for paid encashments.",
+    "cancelled": "Encashment cancelled",
+    "cancelError": "Failed to cancel",
+    "markPaid": "Mark Paid",
+    "statuses": {
+      "pending": "Pending",
+      "approved": "Approved",
+      "paid": "Paid",
+      "cancelled": "Cancelled"
+    }
+  },
+  "workerDocuments": {
+    "title": "Documents",
+    "add": "Add",
+    "addTitle": "Add Document",
+    "editTitle": "Edit Document",
+    "upload": "Upload",
+    "empty": "No documents uploaded",
+    "type": "Document Type",
+    "name": "Document Name",
+    "namePlaceholder": "e.g., CIN scan, Contract 2024",
+    "nameRequired": "Document name is required",
+    "fileUrl": "File URL",
+    "fileUrlPlaceholder": "Paste file URL or upload path",
+    "fileRequired": "File URL is required",
+    "expiryDate": "Expiry Date",
+    "notes": "Notes",
+    "notesPlaceholder": "Optional notes",
+    "verified": "Verified",
+    "expired": "Expired",
+    "expiringSoon": "Expiring soon",
+    "deleteTitle": "Delete Document",
+    "deleteConfirm": "Are you sure you want to delete this document? This action cannot be undone.",
+    "created": "Document uploaded successfully",
+    "createError": "Failed to upload document",
+    "updated": "Document updated successfully",
+    "updateError": "Failed to update document",
+    "verifiedSuccess": "Document verified",
+    "verifyError": "Failed to verify document",
+    "deleted": "Document deleted",
+    "deleteError": "Failed to delete document",
+    "types": {
+      "cin": "CIN",
+      "passport": "Passport",
+      "work_permit": "Work Permit",
+      "contract": "Contract",
+      "cnss_card": "CNSS Card",
+      "medical_certificate": "Medical Certificate",
+      "driving_license": "Driving License",
+      "pesticide_certification": "Pesticide Certification",
+      "training_certificate": "Training Certificate",
+      "bank_details": "Bank Details",
+      "tax_document": "Tax Document",
+      "photo": "Photo",
+      "other": "Other"
     }
   }
 }

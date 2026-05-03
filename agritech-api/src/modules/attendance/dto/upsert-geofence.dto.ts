@@ -36,7 +36,7 @@ export class UpsertGeofenceDto {
   @IsOptional()
   @IsInt()
   @Min(10)
-  @Max(50000)
+  @Max(5000)
   radius_m?: number;
 
   @ApiPropertyOptional({ default: true })

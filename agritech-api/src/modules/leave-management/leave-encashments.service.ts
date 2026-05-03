@@ -6,7 +6,8 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
-import { NotificationsGateway } from '../notifications/notifications.gateway';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationType } from '../notifications/dto/notification.dto';
 import { CreateLeaveEncashmentDto } from './dto';
 import {
   paginatedResponse,
@@ -22,7 +23,7 @@ export class LeaveEncashmentsService {
 
   constructor(
     private readonly db: DatabaseService,
-    private readonly gateway: NotificationsGateway,
+    private readonly notifications: NotificationsService,
   ) {}
 
   async list(
@@ -132,16 +133,21 @@ export class LeaveEncashmentsService {
       return insertRes.rows[0];
     });
 
-    this.notifyWorker(dto.worker_id, organizationId, {
+    void this.notifyWorker(dto.worker_id, organizationId, {
+      type: NotificationType.LEAVE_ENCASHMENT_CREATED,
       title: 'Leave Encashment Created',
-      body: `${dto.days_encashed} day(s) encashed — ${totalAmount} MAD`,
-      type: 'leave_encashment',
-      entity_id: encashment.id,
+      message: `${dto.days_encashed} day(s) encashed — ${totalAmount} MAD`,
+      data: { encashment_id: encashment.id, total_amount: totalAmount },
     });
 
     return encashment;
   }
 
+  /**
+   * Approve flips status only — the allocation counter was reserved at
+   * create() under FOR UPDATE (pessimistic accounting). Cancel reverses the
+   * reservation. Do NOT re-bump encashed_days here or you will double-count.
+   */
   async approve(
     organizationId: string,
     userId: string | null,
@@ -166,11 +172,11 @@ export class LeaveEncashmentsService {
       .single();
     if (error) throw new BadRequestException(error.message);
 
-    this.notifyWorker(encashment.worker_id, organizationId, {
+    void this.notifyWorker(encashment.worker_id, organizationId, {
+      type: NotificationType.LEAVE_ENCASHMENT_APPROVED,
       title: 'Leave Encashment Approved',
-      body: `${encashment.days_encashed} day(s) — ${encashment.total_amount} MAD approved`,
-      type: 'leave_encashment',
-      entity_id: encashmentId,
+      message: `${encashment.days_encashed} day(s) — ${encashment.total_amount} MAD approved`,
+      data: { encashment_id: encashmentId },
     });
 
     return data;
@@ -202,14 +208,31 @@ export class LeaveEncashmentsService {
   ) {
     const encashment = await this.getOne(organizationId, encashmentId);
 
-    if (encashment.status === 'approved' || encashment.status === 'paid') {
-      if (!['organization_admin', 'system_admin'].includes(userRole)) {
-        throw new ForbiddenException('Only admins can reverse an approved encashment');
-      }
-    }
-
     if (encashment.status === 'cancelled') {
       throw new BadRequestException('Encashment is already cancelled');
+    }
+
+    const isAdmin = ['organization_admin', 'system_admin'].includes(userRole);
+
+    if (encashment.status === 'approved' || encashment.status === 'paid') {
+      if (!isAdmin) {
+        throw new ForbiddenException('Only admins can reverse an approved encashment');
+      }
+    } else {
+      // Pending: owner OR admin only. Without this any worker in the org could
+      // cancel a coworker's pending encashment via direct API call.
+      if (!isAdmin) {
+        const supabase = this.db.getAdminClient();
+        const { data: worker } = await supabase
+          .from('workers')
+          .select('user_id')
+          .eq('id', encashment.worker_id)
+          .eq('organization_id', organizationId)
+          .maybeSingle();
+        if (!worker?.user_id || worker.user_id !== userId) {
+          throw new ForbiddenException('You can only cancel your own pending encashment');
+        }
+      }
     }
 
     await this.db.executeInPgTransaction(async (pg) => {
@@ -230,11 +253,11 @@ export class LeaveEncashmentsService {
       }
     });
 
-    this.notifyWorker(encashment.worker_id, organizationId, {
+    void this.notifyWorker(encashment.worker_id, organizationId, {
+      type: NotificationType.LEAVE_ENCASHMENT_CANCELLED,
       title: 'Leave Encashment Cancelled',
-      body: `${encashment.days_encashed} day(s) encashment cancelled`,
-      type: 'leave_encashment',
-      entity_id: encashmentId,
+      message: `${encashment.days_encashed} day(s) encashment cancelled`,
+      data: { encashment_id: encashmentId },
     });
   }
 
@@ -250,23 +273,44 @@ export class LeaveEncashmentsService {
     return data;
   }
 
-  private notifyWorker(
+  /**
+   * Persist a notification row for the worker AND emit via WebSocket. The
+   * earlier implementation only emitted, so workers offline at the moment of
+   * the event never saw it. createNotification handles both legs and is
+   * org-scoped via the userId+organizationId pair.
+   */
+  private async notifyWorker(
     workerId: string,
     organizationId: string,
-    payload: { title: string; body: string; type: string; entity_id: string },
-  ) {
-    (async () => {
-      try {
-        const supabase = this.db.getAdminClient();
-        const { data } = await supabase
-          .from('workers')
-          .select('user_id')
-          .eq('id', workerId)
-          .single();
-        if (data?.user_id) {
-          this.gateway.sendToUser(data.user_id, payload, organizationId);
-        }
-      } catch {}
-    })();
+    payload: {
+      type: NotificationType;
+      title: string;
+      message: string;
+      data?: Record<string, unknown>;
+    },
+  ): Promise<void> {
+    try {
+      const supabase = this.db.getAdminClient();
+      const { data: worker } = await supabase
+        .from('workers')
+        .select('user_id')
+        .eq('id', workerId)
+        .eq('organization_id', organizationId)
+        .maybeSingle();
+      if (!worker?.user_id) return;
+
+      await this.notifications.createNotification({
+        userId: worker.user_id,
+        organizationId,
+        type: payload.type,
+        title: payload.title,
+        message: payload.message,
+        data: payload.data ?? {},
+      });
+    } catch (err) {
+      this.logger.warn(
+        `Failed to deliver leave-encashment notification: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
   }
 }

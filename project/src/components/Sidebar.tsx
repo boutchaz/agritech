@@ -956,6 +956,13 @@ const Sidebar = ({
                         isActive={currentPath === "/workforce/roster"}
                       />
                     </ProtectedNavItem>
+                    <ProtectedNavItem action="manage" subject="Attendance">
+                      <PopoverNavItem onNavigate={handleNavigation}
+                        path="/workforce/geofences"
+                        label={t("nav.geofences", "Geofences")}
+                        isActive={currentPath === "/workforce/geofences"}
+                      />
+                    </ProtectedNavItem>
                     <ProtectedNavItem action="manage" subject="Onboarding">
                       <PopoverNavItem onNavigate={handleNavigation}
                         path="/workforce/onboarding"
@@ -1208,6 +1215,17 @@ const Sidebar = ({
                           onClick={(e) => handleNavigation("/workforce/roster", e)}
                         >
                           {renderText(t("nav.roster", "Roster"))}
+                        </Button>
+                      </ProtectedNavItem>
+                      <ProtectedNavItem action="manage" subject="Attendance">
+                        <Button
+                          variant="ghost"
+                          className={getSubItemClassName(
+                            currentPath === "/workforce/geofences",
+                          )}
+                          onClick={(e) => handleNavigation("/workforce/geofences", e)}
+                        >
+                          {renderText(t("nav.geofences", "Geofences"))}
                         </Button>
                       </ProtectedNavItem>
                       <ProtectedNavItem action="manage" subject="Onboarding">

@@ -154,6 +154,12 @@ export class RecruitmentService {
 
   async createInterview(orgId: string, dto: CreateInterviewDto) {
     const supabase = this.db.getAdminClient();
+    await this.assertInterviewRefsInOrg(orgId, {
+      applicantId: dto.applicant_id,
+      jobOpeningId: dto.job_opening_id,
+      interviewerIds: dto.interviewer_ids,
+    });
+
     const { data, error } = await supabase
       .from('interviews')
       .insert({ organization_id: orgId, ...dto })
@@ -165,13 +171,58 @@ export class RecruitmentService {
 
   async updateInterview(orgId: string, id: string, dto: UpdateInterviewDto) {
     const supabase = this.db.getAdminClient();
+
+    // Re-validate FKs if the patch touches any of them.
+    if (dto.applicant_id || dto.job_opening_id || dto.interviewer_ids) {
+      await this.assertInterviewRefsInOrg(orgId, {
+        applicantId: dto.applicant_id,
+        jobOpeningId: dto.job_opening_id,
+        interviewerIds: dto.interviewer_ids,
+      });
+    }
+
     let avgRating: number | null | undefined;
     if (dto.feedback && Array.isArray(dto.feedback) && dto.feedback.length > 0) {
-      const ratings = (dto.feedback as Array<{ rating?: number }>)
-        .map((f) => f.rating)
-        .filter((r): r is number => typeof r === 'number');
-      avgRating = ratings.length > 0 ? ratings.reduce((a, b) => a + b, 0) / ratings.length : null;
+      // Pull the row's interviewer_ids so we can verify each feedback entry
+      // belongs to a real interviewer on this interview. Without this the
+      // average_rating compute could include ratings from non-participants.
+      const { data: existing } = await supabase
+        .from('interviews')
+        .select('interviewer_ids')
+        .eq('id', id)
+        .eq('organization_id', orgId)
+        .single();
+
+      const allowedInterviewerIds: Set<string> = new Set([
+        ...((existing?.interviewer_ids as string[] | null) ?? []),
+        ...((dto.interviewer_ids as string[] | undefined) ?? []),
+      ]);
+
+      const seen = new Set<string>();
+      for (const entry of dto.feedback) {
+        const e = entry as { interviewer_id?: string; rating?: number };
+        if (!e.interviewer_id || !Number.isInteger(e.rating) || (e.rating ?? 0) < 1 || (e.rating ?? 0) > 5) {
+          throw new BadRequestException(
+            `Invalid feedback entry: interviewer_id required, rating must be integer 1-5`,
+          );
+        }
+        if (allowedInterviewerIds.size > 0 && !allowedInterviewerIds.has(e.interviewer_id)) {
+          throw new BadRequestException(
+            `Feedback interviewer_id ${e.interviewer_id} is not assigned to this interview`,
+          );
+        }
+        if (seen.has(e.interviewer_id)) {
+          throw new BadRequestException(
+            `Duplicate feedback for interviewer ${e.interviewer_id}`,
+          );
+        }
+        seen.add(e.interviewer_id);
+      }
+
+      const ratings = (dto.feedback as Array<{ rating: number }>).map((f) => f.rating);
+      avgRating = ratings.reduce((a, b) => a + b, 0) / ratings.length;
     }
+
     const { data, error } = await supabase
       .from('interviews')
       .update({ ...dto, ...(avgRating !== undefined ? { average_rating: avgRating } : {}) })
@@ -182,5 +233,63 @@ export class RecruitmentService {
     if (error) throw new BadRequestException(error.message);
     if (!data) throw new NotFoundException();
     return data;
+  }
+
+  /**
+   * Cross-tenant FK guard for interview create/update. Validates that
+   * applicant_id, job_opening_id, and every interviewer_id belong to the
+   * caller's organization before any write — without this, a foreign UUID
+   * stored on the row leaks data into another org's recruitment view.
+   */
+  private async assertInterviewRefsInOrg(
+    orgId: string,
+    refs: { applicantId?: string; jobOpeningId?: string; interviewerIds?: string[] },
+  ): Promise<void> {
+    const supabase = this.db.getAdminClient();
+
+    if (refs.applicantId) {
+      const { data } = await supabase
+        .from('job_applicants')
+        .select('id')
+        .eq('id', refs.applicantId)
+        .eq('organization_id', orgId)
+        .maybeSingle();
+      if (!data) {
+        throw new BadRequestException(
+          `Applicant ${refs.applicantId} does not belong to this organization`,
+        );
+      }
+    }
+
+    if (refs.jobOpeningId) {
+      const { data } = await supabase
+        .from('job_openings')
+        .select('id')
+        .eq('id', refs.jobOpeningId)
+        .eq('organization_id', orgId)
+        .maybeSingle();
+      if (!data) {
+        throw new BadRequestException(
+          `Job opening ${refs.jobOpeningId} does not belong to this organization`,
+        );
+      }
+    }
+
+    if (refs.interviewerIds && refs.interviewerIds.length > 0) {
+      const unique = Array.from(new Set(refs.interviewerIds));
+      const { data: members } = await supabase
+        .from('organization_users')
+        .select('user_id')
+        .eq('organization_id', orgId)
+        .eq('is_active', true)
+        .in('user_id', unique);
+      const found = new Set((members ?? []).map((m: { user_id: string }) => m.user_id));
+      const missing = unique.filter((id) => !found.has(id));
+      if (missing.length > 0) {
+        throw new BadRequestException(
+          `Interviewers not in this organization: ${missing.join(', ')}`,
+        );
+      }
+    }
   }
 }

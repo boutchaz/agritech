@@ -114,7 +114,11 @@ export const pieceWorkApi = {
     const queryString = params.toString();
     const url = `/api/v1/organizations/${organizationId}/farms/${farmId}/piece-work${queryString ? `?${queryString}` : ''}`;
 
-    return apiClient.get<PieceWorkRecord[]>(url);
+    const res = await apiClient.get<
+      | PieceWorkRecord[]
+      | { data: PieceWorkRecord[]; total: number; page: number; pageSize: number; totalPages: number }
+    >(url);
+    return Array.isArray(res) ? res : res.data ?? [];
   },
 
   /**

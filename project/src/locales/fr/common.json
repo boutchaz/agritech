@@ -1272,6 +1272,7 @@
     "training": "Formation",
     "hrCalendar": "Calendrier RH",
     "hrAnalytics": "Analytique RH",
+    "geofences": "Géofences",
     "fiscalYears": "Exercices comptables",
     "costCenters": "Centres de coûts",
     "accountMappings": "Correspondances de comptes"
@@ -8708,6 +8709,25 @@
       "offSite": "Hors site"
     }
   },
+  "geofences": {
+    "title": "Géofences",
+    "subtitle": "Gérer les zones de localisation par ferme pour la validation de présence.",
+    "empty": "Aucune géofence — créez-en une pour activer la présence par localisation.",
+    "filterByFarm": "Filtrer par ferme",
+    "allFarms": "Toutes les fermes",
+    "farm": "Ferme",
+    "orgWide": "Global",
+    "coordinates": "Coordonnées",
+    "radius": "Rayon",
+    "meters": "mètres",
+    "latitude": "Latitude",
+    "longitude": "Longitude",
+    "edit": "Modifier la géofence",
+    "create": "Créer une géofence",
+    "confirmDelete": "Supprimer cette géofence ?",
+    "namePlaceholder": "Siège, Entrée du champ...",
+    "coordsRequired": "Les coordonnées sont requises"
+  },
   "shifts": {
     "title": "Postes",
     "empty": "Aucun poste — créez-en un pour commencer la planification.",
@@ -8800,7 +8820,33 @@
     "lastName": "Nom",
     "resumeUrl": "URL du CV",
     "applicantStatus": "Statut",
-    "rating": "Note (1-5)"
+    "rating": "Note (1-5)",
+    "interviews": "Entretiens",
+    "newInterview": "Nouvel entretien",
+    "editInterview": "Modifier l'entretien",
+    "noInterviews": "Aucun entretien planifié.",
+    "interviewRound": "Tour",
+    "interviewType": "Type",
+    "interviewers": "Intervieweurs (max 10)",
+    "scheduledAt": "Planifié le",
+    "duration": "Durée (min)",
+    "location": "Lieu",
+    "locationPlaceholder": "Salle, lien, adresse...",
+    "round": "Tour {{n}}",
+    "unknownApplicant": "Inconnu",
+    "unknownOpening": "Offre inconnue",
+    "interviewRequired": "Candidat, offre et date sont requis",
+    "interviewStatus": {
+      "scheduled": "Planifié",
+      "completed": "Terminé",
+      "cancelled": "Annulé",
+      "no_show": "Absent"
+    },
+    "interviewType": {
+      "phone": "Téléphone",
+      "video": "Vidéo",
+      "in_person": "En personne"
+    }
   },
   "salarySlips": {
     "title": "Fiches de paie",
@@ -9295,6 +9341,91 @@
     "seo": {
       "title": "Agrogina · Plateforme agricole intégrée",
       "description": "Cultivez avec précision. Décidez avec données."
+    }
+  },
+  "leaveBlockDates": {
+    "title": "Dates bloquées",
+    "subtitle": "Définir les périodes d'interdiction de congé.",
+    "add": "Ajouter une date bloquée",
+    "addTitle": "Ajouter une date bloquée",
+    "editTitle": "Modifier la date bloquée",
+    "empty": "Aucune date bloquée définie",
+    "date": "Date bloquée",
+    "reason": "Raison",
+    "reasonPlaceholder": "ex., Période de récolte intense",
+    "leaveType": "Type de congé",
+    "allTypes": "Tous les types",
+    "created": "Date bloquée créée",
+    "updated": "Date bloquée mise à jour",
+    "deleteTitle": "Supprimer la date bloquée",
+    "deleteConfirm": "Êtes-vous sûr ? Les ouvriers pourront à nouveau demander un congé à cette date."
+  },
+  "leaveEncashments": {
+    "title": "Rachat de congés",
+    "subtitle": "Convertir les jours de congé non utilisés en paiements.",
+    "empty": "Aucun rachat trouvé",
+    "days": "jours",
+    "pendingTotal": "En attente",
+    "approved": "Rachat approuvé",
+    "approveError": "Échec de l'approbation",
+    "markedPaid": "Marqué comme payé",
+    "payError": "Échec du marquage payé",
+    "cancelTitle": "Annuler le rachat",
+    "cancelConfirm": "Les jours rachetés seront retournés à l'allocation. Cette action est irréversible pour les rachats payés.",
+    "cancelled": "Rachat annulé",
+    "cancelError": "Échec de l'annulation",
+    "markPaid": "Marquer payé",
+    "statuses": {
+      "pending": "En attente",
+      "approved": "Approuvé",
+      "paid": "Payé",
+      "cancelled": "Annulé"
+    }
+  },
+  "workerDocuments": {
+    "title": "Documents",
+    "add": "Ajouter",
+    "addTitle": "Ajouter un document",
+    "editTitle": "Modifier le document",
+    "upload": "Téléverser",
+    "empty": "Aucun document téléversé",
+    "type": "Type de document",
+    "name": "Nom du document",
+    "namePlaceholder": "ex. Scan CIN, Contrat 2024",
+    "nameRequired": "Le nom du document est requis",
+    "fileUrl": "URL du fichier",
+    "fileUrlPlaceholder": "Coller l'URL du fichier ou le chemin",
+    "fileRequired": "L'URL du fichier est requise",
+    "expiryDate": "Date d'expiration",
+    "notes": "Notes",
+    "notesPlaceholder": "Notes facultatives",
+    "verified": "Vérifié",
+    "expired": "Expiré",
+    "expiringSoon": "Expire bientôt",
+    "deleteTitle": "Supprimer le document",
+    "deleteConfirm": "Êtes-vous sûr de vouloir supprimer ce document ? Cette action est irréversible.",
+    "created": "Document téléversé avec succès",
+    "createError": "Échec du téléversement du document",
+    "updated": "Document mis à jour avec succès",
+    "updateError": "Échec de la mise à jour du document",
+    "verifiedSuccess": "Document vérifié",
+    "verifyError": "Échec de la vérification du document",
+    "deleted": "Document supprimé",
+    "deleteError": "Échec de la suppression du document",
+    "types": {
+      "cin": "CIN",
+      "passport": "Passeport",
+      "work_permit": "Permis de travail",
+      "contract": "Contrat",
+      "cnss_card": "Carte CNSS",
+      "medical_certificate": "Certificat médical",
+      "driving_license": "Permis de conduire",
+      "pesticide_certification": "Certification pesticides",
+      "training_certificate": "Certificat de formation",
+      "bank_details": "Coordonnées bancaires",
+      "tax_document": "Document fiscal",
+      "photo": "Photo",
+      "other": "Autre"
     }
   }
 }

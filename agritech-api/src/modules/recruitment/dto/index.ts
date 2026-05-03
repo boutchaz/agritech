@@ -10,7 +10,10 @@ import {
   IsUUID,
   Min,
   Max,
+  ArrayMaxSize,
+  ValidateNested,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 
 const OPENING_STATUSES = ['draft', 'open', 'on_hold', 'closed', 'cancelled'] as const;
@@ -88,11 +91,30 @@ export class CreateInterviewDto {
   @ApiProperty() @IsDateString() scheduled_at!: string;
   @ApiPropertyOptional() @IsOptional() @IsInt() @Min(15) duration_minutes?: number;
   @ApiPropertyOptional() @IsOptional() @IsString() location?: string;
-  @ApiPropertyOptional({ type: [String] })
+  // Cap at 10 — guards against multi-select misuse that would blast a
+  // notification storm (one per interviewer × create + update).
+  @ApiPropertyOptional({ type: [String], maxItems: 10 })
   @IsOptional()
   @IsArray()
+  @ArrayMaxSize(10)
   @IsUUID('all', { each: true })
   interviewer_ids?: string[];
+}
+
+/**
+ * Pinned schema for the `feedback` JSONB column. Without this, the
+ * average_rating compute downstream (recruitment.service.updateInterview)
+ * silently drops malformed entries and can produce wrong averages.
+ */
+export class InterviewFeedbackEntryDto {
+  @ApiProperty() @IsUUID() interviewer_id!: string;
+  @ApiProperty({ minimum: 1, maximum: 5 })
+  @IsInt()
+  @Min(1)
+  @Max(5)
+  rating!: number;
+  @ApiPropertyOptional() @IsOptional() @IsString() notes?: string;
+  @ApiProperty() @IsDateString() submitted_at!: string;
 }
 
 export class UpdateInterviewDto extends PartialType(CreateInterviewDto) {
@@ -100,8 +122,11 @@ export class UpdateInterviewDto extends PartialType(CreateInterviewDto) {
   @IsOptional()
   @IsIn(INTERVIEW_STATUSES as unknown as string[])
   status?: typeof INTERVIEW_STATUSES[number];
-  @ApiPropertyOptional({ type: [Object] })
+  @ApiPropertyOptional({ type: [InterviewFeedbackEntryDto], maxItems: 10 })
   @IsOptional()
   @IsArray()
-  feedback?: unknown[];
+  @ArrayMaxSize(10)
+  @ValidateNested({ each: true })
+  @Type(() => InterviewFeedbackEntryDto)
+  feedback?: InterviewFeedbackEntryDto[];
 }

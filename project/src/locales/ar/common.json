@@ -1344,6 +1344,7 @@
     "training": "التدريب",
     "hrCalendar": "تقويم الموارد البشرية",
     "hrAnalytics": "تحليلات الموارد البشرية",
+    "geofences": "المناطق الجغرافية",
     "fiscalYears": "السنوات المالية",
     "costCenters": "مراكز التكلفة",
     "accountMappings": "تعيين الحسابات"
@@ -8542,6 +8543,25 @@
       "offSite": "خارج الموقع"
     }
   },
+  "geofences": {
+    "title": "المناطق الجغرافية",
+    "subtitle": "إدارة مناطق الموقع لكل مزرعة للتحقق من الحضور.",
+    "empty": "لا توجد مناطق جغرافية — أنشئ واحدة لتفعيل الحضور القائم على الموقع.",
+    "filterByFarm": "تصفية حسب المزرعة",
+    "allFarms": "جميع المزارع",
+    "farm": "المزرعة",
+    "orgWide": "على مستوى المؤسسة",
+    "coordinates": "الإحداثيات",
+    "radius": "نصف القطر",
+    "meters": "متر",
+    "latitude": "خط العرض",
+    "longitude": "خط الطول",
+    "edit": "تعديل المنطقة الجغرافية",
+    "create": "إنشاء منطقة جغرافية",
+    "confirmDelete": "حذف هذه المنطقة الجغرافية؟",
+    "namePlaceholder": "المقر، مدخل الحقل...",
+    "coordsRequired": "الإحداثيات مطلوبة"
+  },
   "shifts": {
     "title": "المناوبات",
     "empty": "لا توجد مناوبات — أنشئ واحدة لبدء الجدولة.",
@@ -8634,7 +8654,33 @@
     "lastName": "اسم العائلة",
     "resumeUrl": "رابط السيرة الذاتية",
     "applicantStatus": "الحالة",
-    "rating": "التقييم (1-5)"
+    "rating": "التقييم (1-5)",
+    "interviews": "المقابلات",
+    "newInterview": "مقابلة جديدة",
+    "editInterview": "تعديل المقابلة",
+    "noInterviews": "لا توجد مقابلات مجدولة بعد.",
+    "interviewRound": "الجولة",
+    "interviewType": "النوع",
+    "interviewers": "المحاورون (10 كحد أقصى)",
+    "scheduledAt": "موعد الجلسة",
+    "duration": "المدة (دقيقة)",
+    "location": "المكان",
+    "locationPlaceholder": "قاعة، رابط، عنوان...",
+    "round": "الجولة {{n}}",
+    "unknownApplicant": "غير معروف",
+    "unknownOpening": "وظيفة غير معروفة",
+    "interviewRequired": "المتقدم والوظيفة والتاريخ مطلوبون",
+    "interviewStatus": {
+      "scheduled": "مجدول",
+      "completed": "مكتمل",
+      "cancelled": "ملغى",
+      "no_show": "لم يحضر"
+    },
+    "interviewType": {
+      "phone": "هاتفي",
+      "video": "مرئي",
+      "in_person": "حضوري"
+    }
   },
   "salarySlips": {
     "title": "كشوف الرواتب",
@@ -9129,6 +9175,91 @@
     "seo": {
       "title": "أغروجينا - إدارة زراعية ذكية وتكنولوجيا الحقل | المغرب",
       "description": "منصة ERP زراعية للمغرب: القطع، الفرق، المخزون، المحاسبة، تحليل الأقمار NDVI/NDWI، وAgromindIA لتوصيات عملية. مناسبة للاستغلاليات من 50 إلى 600+ هكتار والربط غير المستقر."
+    }
+  },
+  "leaveBlockDates": {
+    "title": "تواريخ الحظر",
+    "subtitle": "تحديد التواريخ المحظور فيها أخذ إجازة.",
+    "add": "إضافة تاريخ حظر",
+    "addTitle": "إضافة تاريخ حظر",
+    "editTitle": "تعديل تاريخ الحظر",
+    "empty": "لم يتم تحديد تواريخ حظر",
+    "date": "تاريخ الحظر",
+    "reason": "السبب",
+    "reasonPlaceholder": "مثال، فترة الحصاد",
+    "leaveType": "نوع الإجازة",
+    "allTypes": "جميع الأنواع",
+    "created": "تم إنشاء تاريخ الحظر",
+    "updated": "تم تحديث تاريخ الحظر",
+    "deleteTitle": "حذف تاريخ الحظر",
+    "deleteConfirm": "هل أنت متأكد؟ سيتمكن العمال من طلب إجازة في هذا التاريخ مرة أخرى."
+  },
+  "leaveEncashments": {
+    "title": "تعويض الإجازات",
+    "subtitle": "تحويل أيام الإجازة غير المستخدمة إلى مدفوعات نقدية.",
+    "empty": "لم يتم العثور على تعويضات",
+    "days": "أيام",
+    "pendingTotal": "قيد الانتظار",
+    "approved": "تم الموافقة على التعويض",
+    "approveError": "فشل الموافقة",
+    "markedPaid": "تم التسديد",
+    "payError": "فشل التسديد",
+    "cancelTitle": "إلغاء التعويض",
+    "cancelConfirm": "سيتم إرجاع الأيام المعوضة إلى الرصيد. لا يمكن التراجع عن هذه العملية للتعويضات المدفوعة.",
+    "cancelled": "تم إلغاء التعويض",
+    "cancelError": "فشل الإلغاء",
+    "markPaid": "تم التسديد",
+    "statuses": {
+      "pending": "قيد الانتظار",
+      "approved": "تمت الموافقة",
+      "paid": "مدفوع",
+      "cancelled": "ملغى"
+    }
+  },
+  "workerDocuments": {
+    "title": "الوثائق",
+    "add": "إضافة",
+    "addTitle": "إضافة وثيقة",
+    "editTitle": "تعديل الوثيقة",
+    "upload": "رفع",
+    "empty": "لم يتم رفع أي وثائق",
+    "type": "نوع الوثيقة",
+    "name": "اسم الوثيقة",
+    "namePlaceholder": "مثال: مسح البطاقة الوطنية، عقد 2024",
+    "nameRequired": "اسم الوثيقة مطلوب",
+    "fileUrl": "رابط الملف",
+    "fileUrlPlaceholder": "الصق رابط الملف أو المسار",
+    "fileRequired": "رابط الملف مطلوب",
+    "expiryDate": "تاريخ الانتهاء",
+    "notes": "ملاحظات",
+    "notesPlaceholder": "ملاحظات اختيارية",
+    "verified": "تم التحقق",
+    "expired": "منتهي الصلاحية",
+    "expiringSoon": "ينتهي قريباً",
+    "deleteTitle": "حذف الوثيقة",
+    "deleteConfirm": "هل أنت متأكد من حذف هذه الوثيقة؟ لا يمكن التراجع عن هذا الإجراء.",
+    "created": "تم رفع الوثيقة بنجاح",
+    "createError": "فشل رفع الوثيقة",
+    "updated": "تم تحديث الوثيقة بنجاح",
+    "updateError": "فشل تحديث الوثيقة",
+    "verifiedSuccess": "تم التحقق من الوثيقة",
+    "verifyError": "فشل التحقق من الوثيقة",
+    "deleted": "تم حذف الوثيقة",
+    "deleteError": "فشل حذف الوثيقة",
+    "types": {
+      "cin": "البطاقة الوطنية",
+      "passport": "جواز السفر",
+      "work_permit": "رخصة العمل",
+      "contract": "العقد",
+      "cnss_card": "بطاقة CNSS",
+      "medical_certificate": "الشهادة الطبية",
+      "driving_license": "رخصة القيادة",
+      "pesticide_certification": "شهادة المبيدات",
+      "training_certificate": "شهادة التكوين",
+      "bank_details": "البيانات البنكية",
+      "tax_document": "وثيقة ضريبية",
+      "photo": "صورة",
+      "other": "أخرى"
     }
   }
 }
