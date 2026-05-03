@@ -49,15 +49,19 @@ export interface CreateLetterHeadDto {
   is_active?: boolean;
 }
 
-export interface UpdateLetterHeadDto extends Partial<CreateLetterHeadDto> {}
+export type UpdateLetterHeadDto = Partial<CreateLetterHeadDto>;
 
 export const letterHeadsApi = {
   async getAll(organizationId?: string): Promise<LetterHead[]> {
-    return apiClient.get<LetterHead[]>(
+    const res = await apiClient.get<
+      | LetterHead[]
+      | { data: LetterHead[]; total: number; page: number; pageSize: number; totalPages: number }
+    >(
       `${BASE_URL}/${organizationId}/letter-heads`,
       {},
       organizationId,
     );
+    return Array.isArray(res) ? res : res.data ?? [];
   },
 
   async getOne(letterHeadId: string, organizationId?: string): Promise<LetterHead> {

@@ -2,11 +2,14 @@ import { Injectable, NotFoundException, BadRequestException, Logger } from '@nes
 import { DatabaseService } from '../database/database.service';
 import { sanitizeSearch } from '../../common/utils/sanitize-search';
 import { CreateAccountMappingDto, UpdateAccountMappingDto } from './dto';
+import { paginatedResponse, type PaginatedResponse } from '../../common/dto/paginated-query.dto';
 
 export interface AccountMappingFilters {
   mapping_type?: string;
   is_active?: boolean;
   search?: string;
+  page?: number;
+  pageSize?: number;
 }
 
 export interface AccountMappingOptions {
@@ -88,13 +91,33 @@ export class AccountMappingsService {
   /**
    * Get all account mappings for an organization
    */
-  async findAll(organizationId: string, filters?: AccountMappingFilters) {
+  async findAll(
+    organizationId: string,
+    filters?: AccountMappingFilters,
+  ): Promise<PaginatedResponse<any>> {
     const supabaseClient = this.databaseService.getAdminClient();
+    const page = Math.max(1, Number(filters?.page) || 1);
+    const pageSize = Math.max(1, Math.min(100, Number(filters?.pageSize) || 100));
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
+
+    const apply = (q: any) => {
+      q = q.eq('organization_id', organizationId);
+      if (filters?.mapping_type) q = q.eq('mapping_type', filters.mapping_type);
+      if (filters?.is_active !== undefined) q = q.eq('is_active', filters.is_active);
+      if (filters?.search) {
+        const s = sanitizeSearch(filters.search);
+        if (s) q = q.or(`mapping_key.ilike.%${s}%,source_key.ilike.%${s}%,description.ilike.%${s}%`);
+      }
+      return q;
+    };
 
     try {
-      let query = supabaseClient
-        .from('account_mappings')
-        .select(`
+      const { count } = await apply(
+        supabaseClient.from('account_mappings').select('id', { count: 'exact', head: true }),
+      );
+      const { data, error } = await apply(
+        supabaseClient.from('account_mappings').select(`
           *,
           account:accounts!account_id(
             id,
@@ -102,32 +125,18 @@ export class AccountMappingsService {
             name,
             account_type
           )
-        `)
-        .eq('organization_id', organizationId)
+        `),
+      )
         .order('mapping_type')
-        .order('mapping_key');
-
-      if (filters?.mapping_type) {
-        query = query.eq('mapping_type', filters.mapping_type);
-      }
-
-      if (filters?.is_active !== undefined) {
-        query = query.eq('is_active', filters.is_active);
-      }
-
-      if (filters?.search) {
-        const s = sanitizeSearch(filters.search);
-        if (s) query = query.or(`mapping_key.ilike.%${s}%,source_key.ilike.%${s}%,description.ilike.%${s}%`);
-      }
-
-      const { data, error } = await query;
+        .order('mapping_key')
+        .range(from, to);
 
       if (error) {
         this.logger.error('Error fetching account mappings:', error);
         throw new BadRequestException(`Failed to fetch account mappings: ${error.message}`);
       }
 
-      return data || [];
+      return paginatedResponse(data ?? [], count ?? 0, page, pageSize);
     } catch (error) {
       this.logger.error('Error in findAll account mappings:', error);
       throw error;

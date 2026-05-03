@@ -5,6 +5,7 @@ import { NotificationType } from '../notifications/dto/notification.dto';
 import { CreatePieceWorkDto, UpdatePieceWorkDto, PieceWorkFiltersDto } from './dto';
 import { sanitizeSearch } from '../../common/utils/sanitize-search';
 import { PaymentRecordsService } from '../payment-records/payment-records.service';
+import { paginatedResponse, type PaginatedResponse } from '../../common/dto/paginated-query.dto';
 
 @Injectable()
 export class PieceWorkService {
@@ -19,62 +20,55 @@ export class PieceWorkService {
   /**
    * Get all piece work records with optional filters
    */
-  async findAll(organizationId: string, farmId: string, filters?: PieceWorkFiltersDto): Promise<any> {
+  async findAll(
+    organizationId: string,
+    farmId: string,
+    filters?: PieceWorkFiltersDto,
+  ): Promise<PaginatedResponse<any>> {
     const client = this.databaseService.getAdminClient();
+    const page = Math.max(1, Number(filters?.page) || 1);
+    const pageSize = Math.max(1, Math.min(100, Number(filters?.pageSize) || 100));
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
+
+    const apply = (q: any) => {
+      q = q.eq('organization_id', organizationId).eq('farm_id', farmId);
+      if (filters?.worker_id) q = q.eq('worker_id', filters.worker_id);
+      if (filters?.task_id) q = q.eq('task_id', filters.task_id);
+      if (filters?.parcel_id) q = q.eq('parcel_id', filters.parcel_id);
+      if (filters?.start_date) q = q.gte('work_date', filters.start_date);
+      if (filters?.end_date) q = q.lte('work_date', filters.end_date);
+      if (filters?.payment_status) q = q.eq('payment_status', filters.payment_status);
+      if (filters?.search) {
+        const s = sanitizeSearch(filters.search);
+        if (s) q = q.ilike('notes', `%${s}%`);
+      }
+      return q;
+    };
 
     try {
-      let query = client
-        .from('piece_work_records')
-        .select(`
+      const { count } = await apply(
+        client.from('piece_work_records').select('id', { count: 'exact', head: true }),
+      );
+
+      const { data, error } = await apply(
+        client.from('piece_work_records').select(`
           *,
           worker:workers!inner(id, first_name, last_name),
           work_unit:work_units!inner(id, name, code),
           task:tasks(id, title),
           parcel:parcels(id, name)
-        `)
-        .eq('organization_id', organizationId)
-        .eq('farm_id', farmId);
-
-      // Apply filters
-      if (filters?.worker_id) {
-        query = query.eq('worker_id', filters.worker_id);
-      }
-
-      if (filters?.task_id) {
-        query = query.eq('task_id', filters.task_id);
-      }
-
-      if (filters?.parcel_id) {
-        query = query.eq('parcel_id', filters.parcel_id);
-      }
-
-      if (filters?.start_date) {
-        query = query.gte('work_date', filters.start_date);
-      }
-
-      if (filters?.end_date) {
-        query = query.lte('work_date', filters.end_date);
-      }
-
-      if (filters?.payment_status) {
-        query = query.eq('payment_status', filters.payment_status);
-      }
-
-      if (filters?.search) {
-        const s = sanitizeSearch(filters.search); if (s) query = query.ilike('notes', `%${s}%`);
-      }
-
-      // Default ordering: most recent first
-      query = query.order('work_date', { ascending: false });
-
-      const { data, error } = await query;
+        `),
+      )
+        .order('work_date', { ascending: false })
+        .range(from, to);
 
       if (error) {
         this.logger.error(`Failed to fetch piece work records: ${error.message}`);
         throw new BadRequestException(`Failed to fetch piece work records: ${error.message}`);
       }
 
-      return data;
+      return paginatedResponse(data ?? [], count ?? 0, page, pageSize);
     } catch (error) {
       this.logger.error('Error fetching piece work records:', error);
       throw error;

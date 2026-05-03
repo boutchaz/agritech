@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Delete, Body, Param, Request, UseGuards, Logger } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Body, Param, Query, Request, UseGuards, Logger } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { OrganizationGuard } from '../../common/guards/organization.guard';
@@ -20,9 +20,17 @@ export class StructuresController {
   @ApiParam({ name: 'organizationId', description: 'Organization ID' })
   @ApiResponse({ status: 200, description: 'Returns all structures' })
   @ApiResponse({ status: 403, description: 'Access denied to this organization' })
-  async findAll(@Request() req, @Param('organizationId') organizationId: string) {
+  async findAll(
+    @Request() req,
+    @Param('organizationId') organizationId: string,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
+  ) {
     this.logger.log(`User ${req.user.id} fetching structures for organization ${organizationId}`);
-    return this.structuresService.findAll(req.user.id, organizationId);
+    return this.structuresService.findAll(req.user.id, organizationId, {
+      page: page ? Number(page) : undefined,
+      pageSize: pageSize ? Number(pageSize) : undefined,
+    });
   }
 
   @Get(':id')

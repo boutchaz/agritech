@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { CreateDocumentTemplateDto, DocumentType, UpdateDocumentTemplateDto } from './dto';
+import { paginatedResponse, type PaginatedResponse } from '../../common/dto/paginated-query.dto';
 
 @Injectable()
 export class DocumentTemplatesService {
@@ -28,27 +29,34 @@ export class DocumentTemplatesService {
     userId: string,
     organizationId: string,
     documentType?: DocumentType,
-  ) {
+    pagination: { page?: number; pageSize?: number } = {},
+  ): Promise<PaginatedResponse<any>> {
     await this.verifyOrganizationAccess(userId, organizationId);
 
     const client = this.databaseService.getAdminClient();
-    let query = client
-      .from('document_templates')
-      .select('*')
-      .eq('organization_id', organizationId)
-      .order('name');
+    const page = Math.max(1, Number(pagination.page) || 1);
+    const pageSize = Math.max(1, Math.min(100, Number(pagination.pageSize) || 100));
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
 
-    if (documentType) {
-      query = query.eq('document_type', documentType);
-    }
+    const apply = (q: any) => {
+      q = q.eq('organization_id', organizationId);
+      if (documentType) q = q.eq('document_type', documentType);
+      return q;
+    };
 
-    const { data, error } = await query;
+    const { count } = await apply(
+      client.from('document_templates').select('id', { count: 'exact', head: true }),
+    );
+    const { data, error } = await apply(client.from('document_templates').select('*'))
+      .order('name')
+      .range(from, to);
 
     if (error) {
       throw new BadRequestException(`Failed to fetch templates: ${error.message}`);
     }
 
-    return data || [];
+    return paginatedResponse(data ?? [], count ?? 0, page, pageSize);
   }
 
   async findOne(

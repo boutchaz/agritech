@@ -1,8 +1,9 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsUUID, IsDateString, IsEnum, IsString } from 'class-validator';
+import { IsOptional, IsUUID, IsDateString, IsEnum } from 'class-validator';
 import { PieceWorkPaymentStatus } from './update-piece-work.dto';
+import { PaginatedQueryDto } from '../../../common/dto/paginated-query.dto';
 
-export class PieceWorkFiltersDto {
+export class PieceWorkFiltersDto extends PaginatedQueryDto {
   @ApiPropertyOptional({ description: 'Filter by worker ID' })
   @IsOptional()
   @IsUUID()
@@ -38,8 +39,4 @@ export class PieceWorkFiltersDto {
   @IsEnum(PieceWorkPaymentStatus)
   payment_status?: PieceWorkPaymentStatus;
 
-  @ApiPropertyOptional({ description: 'Search in notes' })
-  @IsOptional()
-  @IsString()
-  search?: string;
 }

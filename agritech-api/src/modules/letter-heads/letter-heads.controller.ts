@@ -6,6 +6,7 @@ import {
   Delete,
   Body,
   Param,
+  Query,
   UseGuards,
   Request,
 } from '@nestjs/common';
@@ -28,8 +29,13 @@ export class LetterHeadsController {
   async findAll(
     @Request() req,
     @Param('organizationId') organizationId: string,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
   ) {
-    return this.letterHeadsService.findAll(req.user.userId, organizationId);
+    return this.letterHeadsService.findAll(req.user.userId, organizationId, {
+      page: page ? Number(page) : undefined,
+      pageSize: pageSize ? Number(pageSize) : undefined,
+    });
   }
 
   @Get('default')

@@ -2,6 +2,7 @@ import { Injectable, Logger, NotFoundException, ForbiddenException, InternalServ
 import { DatabaseService } from '../database/database.service';
 import { CreateStructureDto } from './dto/create-structure.dto';
 import { UpdateStructureDto } from './dto/update-structure.dto';
+import { paginatedResponse, type PaginatedResponse } from '../../common/dto/paginated-query.dto';
 
 @Injectable()
 export class StructuresService {
@@ -12,10 +13,17 @@ export class StructuresService {
   /**
    * Get all structures for an organization
    */
-  async findAll(userId: string, organizationId: string) {
+  async findAll(
+    userId: string,
+    organizationId: string,
+    pagination: { page?: number; pageSize?: number } = {},
+  ): Promise<PaginatedResponse<any>> {
     const client = this.databaseService.getAdminClient();
+    const page = Math.max(1, Number(pagination.page) || 1);
+    const pageSize = Math.max(1, Math.min(100, Number(pagination.pageSize) || 100));
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
 
-    // Verify user has access to this organization
     const { data: orgUser, error: orgError } = await client
       .from('organization_users')
       .select('organization_id')
@@ -28,23 +36,28 @@ export class StructuresService {
       throw new ForbiddenException('You do not have access to this organization');
     }
 
-    // Get all structures for the organization with farm details
-    const { data: structures, error: structuresError } = await client
-      .from('structures')
-      .select(`
+    const apply = (q: any) =>
+      q.eq('organization_id', organizationId).eq('is_active', true);
+
+    const { count } = await apply(
+      client.from('structures').select('id', { count: 'exact', head: true }),
+    );
+
+    const { data: structures, error: structuresError } = await apply(
+      client.from('structures').select(`
         *,
         farm:farms(id, name)
-      `)
-      .eq('organization_id', organizationId)
-      .eq('is_active', true)
-      .order('name');
+      `),
+    )
+      .order('name')
+      .range(from, to);
 
     if (structuresError) {
       this.logger.error(`Failed to fetch structures: ${structuresError.message}`);
       throw new InternalServerErrorException('Failed to fetch structures');
     }
 
-    return structures || [];
+    return paginatedResponse(structures ?? [], count ?? 0, page, pageSize);
   }
 
   /**

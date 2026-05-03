@@ -60,11 +60,15 @@ export const accountMappingsApi = {
     if (filters?.is_active !== undefined) params.append('is_active', String(filters.is_active));
     if (filters?.search) params.append('search', filters.search);
     const queryString = params.toString();
-    return apiClient.get<AccountMapping[]>(
+    const res = await apiClient.get<
+      | AccountMapping[]
+      | { data: AccountMapping[]; total: number; page: number; pageSize: number; totalPages: number }
+    >(
       `/api/v1/account-mappings${queryString ? `?${queryString}` : ''}`,
       {},
       organizationId
     );
+    return Array.isArray(res) ? res : res.data ?? [];
   },
 
   async getOne(id: string, organizationId?: string): Promise<AccountMapping> {

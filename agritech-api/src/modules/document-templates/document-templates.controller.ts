@@ -31,11 +31,17 @@ export class DocumentTemplatesController {
     @Request() req,
     @Param('organizationId') organizationId: string,
     @Query('document_type') documentType?: DocumentType,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
   ) {
     return this.documentTemplatesService.findAll(
       req.user.userId,
       organizationId,
       documentType,
+      {
+        page: page ? Number(page) : undefined,
+        pageSize: pageSize ? Number(pageSize) : undefined,
+      },
     );
   }
 

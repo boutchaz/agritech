@@ -1,4 +1,4 @@
-import { Controller, Get, Param, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
 import { RolesService } from './roles.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -14,8 +14,14 @@ export class RolesController {
   @ApiOperation({ summary: 'Get all active roles' })
   @ApiResponse({ status: 200, description: 'Roles retrieved successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async findAll() {
-    return this.rolesService.findAll();
+  async findAll(
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
+  ) {
+    return this.rolesService.findAll({
+      page: page ? Number(page) : undefined,
+      pageSize: pageSize ? Number(pageSize) : undefined,
+    });
   }
 
   @Get(':id')
