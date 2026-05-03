@@ -57,12 +57,16 @@ export class EquipmentController {
     @Query('farm_id') farmId?: string,
     @Query('category') category?: string,
     @Query('status') status?: string,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
   ) {
     this.logger.log(`User ${req.user.id} fetching equipment for organization ${organizationId}`);
     return this.equipmentService.findAll(req.user.id, organizationId, {
       farm_id: farmId,
       category,
       status,
+      page: page ? Number(page) : undefined,
+      pageSize: pageSize ? Number(pageSize) : undefined,
     });
   }
 

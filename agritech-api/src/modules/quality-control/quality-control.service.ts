@@ -5,6 +5,10 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationType } from '../notifications/dto/notification.dto';
 import { CreateQualityInspectionDto, InspectionStatus } from './dto';
 import { QualityInspectionFiltersDto } from './dto/quality-inspection-filters.dto';
+import {
+  paginatedResponse,
+  SortDirection,
+} from '../../common/dto/paginated-query.dto';
 
 @Injectable()
 export class QualityControlService {
@@ -66,7 +70,7 @@ export class QualityControlService {
     const page = filters.page || 1;
     const pageSize = filters.pageSize || 12;
     const sortBy = filters.sortBy || 'inspection_date';
-    const sortDir = filters.sortDir === 'asc' ? true : false;
+    const sortDir = filters.sortDir === SortDirection.ASC ? true : false;
 
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
@@ -80,13 +84,7 @@ export class QualityControlService {
       throw error;
     }
 
-    return {
-      data: data || [],
-      total: count || 0,
-      page,
-      pageSize,
-      totalPages: Math.ceil((count || 0) / pageSize),
-    };
+    return paginatedResponse(data || [], count || 0, page, pageSize);
   }
 
   async findOne(id: string, organizationId: string) {

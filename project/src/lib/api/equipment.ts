@@ -148,7 +148,11 @@ export const equipmentApi = {
     if (filters?.farm_id) params.farm_id = filters.farm_id;
     if (filters?.category) params.category = filters.category;
     if (filters?.status) params.status = filters.status;
-    return apiClient.get<EquipmentAsset[]>(getBaseUrl(organizationId), params, organizationId);
+    const res = await apiClient.get<
+      | EquipmentAsset[]
+      | { data: EquipmentAsset[]; total: number; page: number; pageSize: number; totalPages: number }
+    >(getBaseUrl(organizationId), params, organizationId);
+    return Array.isArray(res) ? res : res.data ?? [];
   },
 
   async getOne(id: string, organizationId?: string): Promise<EquipmentAsset> {

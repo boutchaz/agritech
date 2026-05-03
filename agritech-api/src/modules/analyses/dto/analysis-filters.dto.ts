@@ -1,9 +1,10 @@
-import { IsOptional, IsString, IsEnum, IsArray } from 'class-validator';
+import { IsOptional, IsString, IsEnum } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { AnalysisType } from './create-analysis.dto';
 import { Type } from 'class-transformer';
+import { PaginatedQueryDto } from '../../../common/dto/paginated-query.dto';
 
-export class AnalysisFiltersDto {
+export class AnalysisFiltersDto extends PaginatedQueryDto {
   @ApiPropertyOptional({ description: 'Single parcel ID filter' })
   @IsOptional()
   @IsString()
@@ -34,12 +35,7 @@ export class AnalysisFiltersDto {
   @IsString()
   date_to?: string;
 
-  @ApiPropertyOptional({ description: 'Page number for pagination' })
-  @IsOptional()
-  @Type(() => Number)
-  page?: number;
-
-  @ApiPropertyOptional({ description: 'Limit per page' })
+  @ApiPropertyOptional({ description: 'Limit per page (alias for pageSize)' })
   @IsOptional()
   @Type(() => Number)
   limit?: number;

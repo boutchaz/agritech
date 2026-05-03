@@ -5,6 +5,10 @@ import { CreateEquipmentDto } from './dto/create-equipment.dto';
 import { UpdateEquipmentDto } from './dto/update-equipment.dto';
 import { CreateMaintenanceDto } from './dto/create-maintenance.dto';
 import { UpdateMaintenanceDto } from './dto/update-maintenance.dto';
+import {
+  paginatedResponse,
+  type PaginatedResponse,
+} from '../../common/dto/paginated-query.dto';
 
 @Injectable()
 export class EquipmentService {
@@ -32,31 +36,52 @@ export class EquipmentService {
 
   // ── Equipment CRUD ──
 
-  async findAll(userId: string, organizationId: string, filters?: { farm_id?: string; category?: string; status?: string }) {
+  async findAll(
+    userId: string,
+    organizationId: string,
+    filters?: {
+      farm_id?: string;
+      category?: string;
+      status?: string;
+      page?: number;
+      pageSize?: number;
+    },
+  ): Promise<PaginatedResponse<any>> {
     await this.verifyOrgAccess(userId, organizationId);
     const client = this.databaseService.getAdminClient();
 
-    let query = client
-      .from('equipment_assets')
-      .select(`
+    const page = Math.max(1, Number(filters?.page) || 1);
+    const pageSize = Math.max(1, Math.min(100, Number(filters?.pageSize) || 100));
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
+
+    const apply = (q: any) => {
+      q = q.eq('organization_id', organizationId).eq('is_active', true);
+      if (filters?.farm_id) q = q.eq('farm_id', filters.farm_id);
+      if (filters?.category) q = q.eq('category', filters.category);
+      if (filters?.status) q = q.eq('status', filters.status);
+      return q;
+    };
+
+    const { count } = await apply(
+      client.from('equipment_assets').select('id', { count: 'exact', head: true }),
+    );
+
+    const { data, error } = await apply(
+      client.from('equipment_assets').select(`
         *,
         farm:farms(id, name)
-      `)
-      .eq('organization_id', organizationId)
-      .eq('is_active', true);
-
-    if (filters?.farm_id) query = query.eq('farm_id', filters.farm_id);
-    if (filters?.category) query = query.eq('category', filters.category);
-    if (filters?.status) query = query.eq('status', filters.status);
-
-    const { data, error } = await query.order('name');
+      `),
+    )
+      .order('name')
+      .range(from, to);
 
     if (error) {
       this.logger.error(`Failed to fetch equipment: ${error.message}`);
       throw new InternalServerErrorException('Failed to fetch equipment');
     }
 
-    return data || [];
+    return paginatedResponse(data ?? [], count ?? 0, page, pageSize);
   }
 
   async findOne(userId: string, organizationId: string, equipmentId: string) {

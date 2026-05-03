@@ -1,9 +1,10 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsString, IsUUID, IsEnum, IsDate, IsIn } from 'class-validator';
+import { IsOptional, IsUUID, IsEnum, IsDate } from 'class-validator';
 import { Type } from 'class-transformer';
 import { InspectionType, InspectionStatus } from './create-quality-inspection.dto';
+import { PaginatedQueryDto } from '../../../common/dto/paginated-query.dto';
 
-export class QualityInspectionFiltersDto {
+export class QualityInspectionFiltersDto extends PaginatedQueryDto {
   @ApiPropertyOptional({ description: 'Filter by inspection type' })
   @IsOptional()
   @IsEnum(InspectionType)
@@ -56,28 +57,4 @@ export class QualityInspectionFiltersDto {
   @Type(() => Number)
   max_overall_score?: number;
 
-  @ApiPropertyOptional({ description: 'Search by notes or results' })
-  @IsOptional()
-  @IsString()
-  search?: string;
-
-  @ApiPropertyOptional({ description: 'Page number (default: 1)' })
-  @IsOptional()
-  @Type(() => Number)
-  page?: number;
-
-  @ApiPropertyOptional({ description: 'Page size (default: 12)' })
-  @IsOptional()
-  @Type(() => Number)
-  pageSize?: number;
-
-  @ApiPropertyOptional({ description: 'Sort by field' })
-  @IsOptional()
-  @IsString()
-  sortBy?: string;
-
-  @ApiPropertyOptional({ description: 'Sort direction (asc or desc)' })
-  @IsOptional()
-  @IsIn(['asc', 'desc'])
-  sortDir?: 'asc' | 'desc';
 }

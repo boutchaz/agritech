@@ -41,7 +41,12 @@ export interface UpdateAnalysisInput {
 
 export interface AnalysesResponse {
   data: Analysis[];
-  count: number;
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  /** @deprecated use `total` */
+  count?: number;
 }
 
 export const analysesApi = {

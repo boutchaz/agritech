@@ -13,6 +13,7 @@ import {
   CreateRecommendationDto,
   UpdateRecommendationDto,
 } from './dto';
+import { paginatedResponse } from '../../common/dto/paginated-query.dto';
 
 @Injectable()
 export class AnalysesService {
@@ -25,6 +26,9 @@ export class AnalysesService {
    */
   async findAll(organizationId: string, filters: AnalysisFiltersDto) {
     this.logger.log(`Finding analyses for org ${organizationId} with filters:`, filters);
+
+    const page = filters.page || 1;
+    const pageSize = filters.pageSize || filters.limit || 100;
 
     try {
       let parcelIds: string[] = [];
@@ -44,8 +48,7 @@ export class AnalysesService {
         parcelIds = parcels?.map(p => p.id) || [];
 
         if (parcelIds.length === 0) {
-          // No parcels found for this farm, return empty result
-          return { data: [], count: 0 };
+          return paginatedResponse([], 0, page, pageSize);
         }
       } else if (filters.parcel_ids) {
         // Use provided parcel IDs (comma-separated)
@@ -68,7 +71,7 @@ export class AnalysesService {
         const farmIds = farms?.map(f => f.id) || [];
 
         if (farmIds.length === 0) {
-          return { data: [], count: 0 };
+          return paginatedResponse([], 0, page, pageSize);
         }
 
         const { data: parcels, error: parcelsError } = await this.databaseService.getAdminClient()
@@ -85,7 +88,7 @@ export class AnalysesService {
       }
 
       if (parcelIds.length === 0) {
-        return { data: [], count: 0 };
+        return paginatedResponse([], 0, page, pageSize);
       }
 
       // Build the query for analyses
@@ -109,11 +112,9 @@ export class AnalysesService {
       }
 
       // Apply pagination
-      if (filters.page && filters.limit) {
-        const from = (filters.page - 1) * filters.limit;
-        const to = from + filters.limit - 1;
-        query = query.range(from, to);
-      }
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
+      query = query.range(from, to);
 
       const { data, error, count } = await query;
 
@@ -122,7 +123,7 @@ export class AnalysesService {
         throw new InternalServerErrorException(`Failed to fetch analyses: ${error.message}`);
       }
 
-      return { data: data || [], count: count || 0 };
+      return paginatedResponse(data || [], count || 0, page, pageSize);
     } catch (error) {
       if (error instanceof InternalServerErrorException) {
         throw error;

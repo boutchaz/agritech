@@ -1,9 +1,9 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsString, IsUUID, IsEnum, IsNumber, IsIn } from 'class-validator';
-import { Type } from 'class-transformer';
+import { IsOptional, IsString, IsUUID, IsEnum } from 'class-validator';
 import { BiologicalAssetType, BiologicalAssetStatus } from './create-biological-asset.dto';
+import { PaginatedQueryDto } from '../../../common/dto/paginated-query.dto';
 
-export class BiologicalAssetFiltersDto {
+export class BiologicalAssetFiltersDto extends PaginatedQueryDto {
   @ApiPropertyOptional({ description: 'Filter by asset type' })
   @IsOptional()
   @IsEnum(BiologicalAssetType)
@@ -44,30 +44,4 @@ export class BiologicalAssetFiltersDto {
   @IsString()
   date_to?: string;
 
-  @ApiPropertyOptional({ description: 'Search by name or notes' })
-  @IsOptional()
-  @IsString()
-  search?: string;
-
-  @ApiPropertyOptional({ description: 'Page number (default: 1)' })
-  @IsOptional()
-  @Type(() => Number)
-  @IsNumber()
-  page?: number;
-
-  @ApiPropertyOptional({ description: 'Page size (default: 12)' })
-  @IsOptional()
-  @Type(() => Number)
-  @IsNumber()
-  pageSize?: number;
-
-  @ApiPropertyOptional({ description: 'Sort by field' })
-  @IsOptional()
-  @IsString()
-  sortBy?: string;
-
-  @ApiPropertyOptional({ description: 'Sort direction (asc or desc)' })
-  @IsOptional()
-  @IsIn(['asc', 'desc'])
-  sortDir?: 'asc' | 'desc';
 }
