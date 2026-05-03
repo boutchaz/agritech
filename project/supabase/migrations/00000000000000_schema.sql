@@ -19838,3 +19838,177 @@ BEGIN
         REFERENCES workers(id, organization_id) ON DELETE CASCADE;
   END IF;
 END $worker_org_fk$;
+
+-- =====================================================
+-- ORGANIZATION EMAIL (SMTP) SETTINGS
+-- =====================================================
+
+CREATE TABLE IF NOT EXISTS public.organization_email_settings (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id UUID NOT NULL UNIQUE REFERENCES public.organizations(id) ON DELETE CASCADE,
+    host TEXT NOT NULL,
+    port INTEGER NOT NULL CHECK (port BETWEEN 1 AND 65535),
+    secure BOOLEAN NOT NULL DEFAULT false,
+    username TEXT NOT NULL,
+    encrypted_password TEXT NOT NULL,
+    from_email TEXT NOT NULL,
+    from_name TEXT,
+    reply_to TEXT,
+    enabled BOOLEAN NOT NULL DEFAULT true,
+    last_tested_at TIMESTAMPTZ,
+    last_test_status TEXT CHECK (last_test_status IN ('success', 'failed')),
+    last_test_error TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_org_email_settings_org_id
+  ON public.organization_email_settings(organization_id);
+
+ALTER TABLE public.organization_email_settings ENABLE ROW LEVEL SECURITY;
+
+DO $$ BEGIN
+CREATE POLICY "org_email_settings_select" ON public.organization_email_settings
+  FOR SELECT USING (
+    organization_id IN (
+      SELECT organization_id FROM public.organization_users
+      WHERE user_id = auth.uid() AND is_active = true
+    )
+  );
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+CREATE POLICY "org_email_settings_admin_write" ON public.organization_email_settings
+  FOR ALL USING (
+    EXISTS (
+      SELECT 1 FROM public.organization_users ou
+      JOIN public.roles r ON r.id = ou.role_id
+      WHERE ou.user_id = auth.uid()
+        AND ou.organization_id = organization_email_settings.organization_id
+        AND r.name IN ('organization_admin', 'system_admin')
+        AND ou.is_active = true
+    )
+  ) WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.organization_users ou
+      JOIN public.roles r ON r.id = ou.role_id
+      WHERE ou.user_id = auth.uid()
+        AND ou.organization_id = organization_email_settings.organization_id
+        AND r.name IN ('organization_admin', 'system_admin')
+        AND ou.is_active = true
+    )
+  );
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.organization_email_settings TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.organization_email_settings TO service_role;
+
+COMMENT ON TABLE public.organization_email_settings IS 'Per-org SMTP credentials for invoice/quote emails. Password stored AES-256-GCM encrypted.';
+
+-- =====================================================
+-- ORGANIZATION WHATSAPP (Meta Cloud API) SETTINGS
+-- =====================================================
+
+CREATE TABLE IF NOT EXISTS public.organization_whatsapp_settings (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id UUID NOT NULL UNIQUE REFERENCES public.organizations(id) ON DELETE CASCADE,
+    phone_number_id TEXT NOT NULL,
+    encrypted_access_token TEXT NOT NULL,
+    business_account_id TEXT,
+    display_phone_number TEXT,
+    enabled BOOLEAN NOT NULL DEFAULT true,
+    last_tested_at TIMESTAMPTZ,
+    last_test_status TEXT CHECK (last_test_status IN ('success', 'failed')),
+    last_test_error TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_org_whatsapp_settings_org_id
+  ON public.organization_whatsapp_settings(organization_id);
+
+ALTER TABLE public.organization_whatsapp_settings ENABLE ROW LEVEL SECURITY;
+
+DO $$ BEGIN
+CREATE POLICY "org_whatsapp_settings_select" ON public.organization_whatsapp_settings
+  FOR SELECT USING (
+    organization_id IN (
+      SELECT organization_id FROM public.organization_users
+      WHERE user_id = auth.uid() AND is_active = true
+    )
+  );
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+CREATE POLICY "org_whatsapp_settings_admin_write" ON public.organization_whatsapp_settings
+  FOR ALL USING (
+    EXISTS (
+      SELECT 1 FROM public.organization_users ou
+      JOIN public.roles r ON r.id = ou.role_id
+      WHERE ou.user_id = auth.uid()
+        AND ou.organization_id = organization_whatsapp_settings.organization_id
+        AND r.name IN ('organization_admin', 'system_admin')
+        AND ou.is_active = true
+    )
+  ) WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.organization_users ou
+      JOIN public.roles r ON r.id = ou.role_id
+      WHERE ou.user_id = auth.uid()
+        AND ou.organization_id = organization_whatsapp_settings.organization_id
+        AND r.name IN ('organization_admin', 'system_admin')
+        AND ou.is_active = true
+    )
+  );
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.organization_whatsapp_settings TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.organization_whatsapp_settings TO service_role;
+
+COMMENT ON TABLE public.organization_whatsapp_settings IS 'Per-org Meta Cloud API credentials (phone_number_id + access token). Token AES-256-GCM encrypted.';
+
+-- =====================================================
+-- SHARE LOG (audit trail for resource sharing)
+-- =====================================================
+
+CREATE TABLE IF NOT EXISTS public.share_log (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id UUID NOT NULL REFERENCES public.organizations(id) ON DELETE CASCADE,
+    resource_type TEXT NOT NULL,
+    resource_id UUID NOT NULL,
+    channel TEXT NOT NULL CHECK (channel IN ('email', 'whatsapp')),
+    recipient TEXT NOT NULL,
+    subject TEXT,
+    success BOOLEAN NOT NULL,
+    error_message TEXT,
+    sent_by UUID REFERENCES auth.users(id),
+    metadata JSONB DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_share_log_org_resource
+  ON public.share_log(organization_id, resource_type, resource_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_share_log_org_created
+  ON public.share_log(organization_id, created_at DESC);
+
+ALTER TABLE public.share_log ENABLE ROW LEVEL SECURITY;
+
+DO $$ BEGIN
+CREATE POLICY "share_log_org_select" ON public.share_log
+  FOR SELECT USING (
+    organization_id IN (
+      SELECT organization_id FROM public.organization_users
+      WHERE user_id = auth.uid() AND is_active = true
+    )
+  );
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+CREATE POLICY "share_log_service_write" ON public.share_log
+  FOR INSERT WITH CHECK (true);
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+GRANT SELECT, INSERT ON public.share_log TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.share_log TO service_role;
+
+COMMENT ON TABLE public.share_log IS 'Audit trail of resource shares (invoices, quotes, etc.) sent via email/WhatsApp.';

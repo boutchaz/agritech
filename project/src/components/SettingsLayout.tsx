@@ -20,6 +20,7 @@ import {
   Home,
   Receipt,
   Calculator,
+  Plug,
 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import { useTranslation } from "react-i18next";
@@ -175,6 +176,17 @@ const SettingsLayout = ({ children }: SettingsLayoutProps) => {
             icon: Brain,
             path: "/settings/ai",
             description: t("settings.menu.aiDescription", "AI usage, quotas, and provider settings"),
+            roles: ADMIN_ROLES,
+          },
+          {
+            id: "integrations",
+            name: t("settings.menu.integrations", "Integrations"),
+            icon: Plug,
+            path: "/settings/integrations",
+            description: t(
+              "settings.menu.integrationsDescription",
+              "Email (SMTP) and WhatsApp (Meta Cloud API) for sharing invoices and quotes",
+            ),
             roles: ADMIN_ROLES,
           },
         ],

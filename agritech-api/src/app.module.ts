@@ -127,6 +127,9 @@ import { AuditModule } from "./modules/audit/audit.module";
 import { AiQuotaModule } from "./modules/ai-quota/ai-quota.module";
 import { PublicRdvModule } from "./modules/public-rdv/public-rdv.module";
 import { EmailTemplatesModule } from "./modules/email-templates/email-templates.module";
+import { OrganizationEmailSettingsModule } from "./modules/organization-email-settings/organization-email-settings.module";
+import { OrganizationWhatsAppSettingsModule } from "./modules/organization-whatsapp-settings/organization-whatsapp-settings.module";
+import { ShareModule } from "./modules/share/share.module";
 import { BarcodeModule } from "./modules/barcode/barcode.module";
 
 @Module({
@@ -273,6 +276,9 @@ import { BarcodeModule } from "./modules/barcode/barcode.module";
     MonitoringModule,
     PublicRdvModule,
     EmailTemplatesModule,
+    OrganizationEmailSettingsModule,
+    OrganizationWhatsAppSettingsModule,
+    ShareModule,
     SyncModule,
   ],
   controllers: [AppController],

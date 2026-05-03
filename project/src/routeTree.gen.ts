@@ -122,6 +122,7 @@ import { Route as AuthenticatedsettingsSettingsOrganizationRouteImport } from '.
 import { Route as AuthenticatedsettingsSettingsOfflineRouteImport } from './routes/_authenticated/(settings)/settings.offline'
 import { Route as AuthenticatedsettingsSettingsModulesRouteImport } from './routes/_authenticated/(settings)/settings.modules'
 import { Route as AuthenticatedsettingsSettingsLegalRouteImport } from './routes/_authenticated/(settings)/settings.legal'
+import { Route as AuthenticatedsettingsSettingsIntegrationsRouteImport } from './routes/_authenticated/(settings)/settings.integrations'
 import { Route as AuthenticatedsettingsSettingsHrComplianceRouteImport } from './routes/_authenticated/(settings)/settings.hr-compliance'
 import { Route as AuthenticatedsettingsSettingsFilesRouteImport } from './routes/_authenticated/(settings)/settings.files'
 import { Route as AuthenticatedsettingsSettingsDocumentsRouteImport } from './routes/_authenticated/(settings)/settings.documents'
@@ -869,6 +870,12 @@ const AuthenticatedsettingsSettingsLegalRoute =
     path: '/legal',
     getParentRoute: () => AuthenticatedsettingsSettingsRoute,
   } as any)
+const AuthenticatedsettingsSettingsIntegrationsRoute =
+  AuthenticatedsettingsSettingsIntegrationsRouteImport.update({
+    id: '/integrations',
+    path: '/integrations',
+    getParentRoute: () => AuthenticatedsettingsSettingsRoute,
+  } as any)
 const AuthenticatedsettingsSettingsHrComplianceRoute =
   AuthenticatedsettingsSettingsHrComplianceRouteImport.update({
     id: '/hr-compliance',
@@ -1546,6 +1553,7 @@ export interface FileRoutesByFullPath {
   '/settings/documents': typeof AuthenticatedsettingsSettingsDocumentsRoute
   '/settings/files': typeof AuthenticatedsettingsSettingsFilesRoute
   '/settings/hr-compliance': typeof AuthenticatedsettingsSettingsHrComplianceRoute
+  '/settings/integrations': typeof AuthenticatedsettingsSettingsIntegrationsRoute
   '/settings/legal': typeof AuthenticatedsettingsSettingsLegalRoute
   '/settings/modules': typeof AuthenticatedsettingsSettingsModulesRoute
   '/settings/offline': typeof AuthenticatedsettingsSettingsOfflineRoute
@@ -1745,6 +1753,7 @@ export interface FileRoutesByTo {
   '/settings/documents': typeof AuthenticatedsettingsSettingsDocumentsRoute
   '/settings/files': typeof AuthenticatedsettingsSettingsFilesRoute
   '/settings/hr-compliance': typeof AuthenticatedsettingsSettingsHrComplianceRoute
+  '/settings/integrations': typeof AuthenticatedsettingsSettingsIntegrationsRoute
   '/settings/legal': typeof AuthenticatedsettingsSettingsLegalRoute
   '/settings/modules': typeof AuthenticatedsettingsSettingsModulesRoute
   '/settings/offline': typeof AuthenticatedsettingsSettingsOfflineRoute
@@ -1950,6 +1959,7 @@ export interface FileRoutesById {
   '/_authenticated/(settings)/settings/documents': typeof AuthenticatedsettingsSettingsDocumentsRoute
   '/_authenticated/(settings)/settings/files': typeof AuthenticatedsettingsSettingsFilesRoute
   '/_authenticated/(settings)/settings/hr-compliance': typeof AuthenticatedsettingsSettingsHrComplianceRoute
+  '/_authenticated/(settings)/settings/integrations': typeof AuthenticatedsettingsSettingsIntegrationsRoute
   '/_authenticated/(settings)/settings/legal': typeof AuthenticatedsettingsSettingsLegalRoute
   '/_authenticated/(settings)/settings/modules': typeof AuthenticatedsettingsSettingsModulesRoute
   '/_authenticated/(settings)/settings/offline': typeof AuthenticatedsettingsSettingsOfflineRoute
@@ -2158,6 +2168,7 @@ export interface FileRouteTypes {
     | '/settings/documents'
     | '/settings/files'
     | '/settings/hr-compliance'
+    | '/settings/integrations'
     | '/settings/legal'
     | '/settings/modules'
     | '/settings/offline'
@@ -2357,6 +2368,7 @@ export interface FileRouteTypes {
     | '/settings/documents'
     | '/settings/files'
     | '/settings/hr-compliance'
+    | '/settings/integrations'
     | '/settings/legal'
     | '/settings/modules'
     | '/settings/offline'
@@ -2561,6 +2573,7 @@ export interface FileRouteTypes {
     | '/_authenticated/(settings)/settings/documents'
     | '/_authenticated/(settings)/settings/files'
     | '/_authenticated/(settings)/settings/hr-compliance'
+    | '/_authenticated/(settings)/settings/integrations'
     | '/_authenticated/(settings)/settings/legal'
     | '/_authenticated/(settings)/settings/modules'
     | '/_authenticated/(settings)/settings/offline'
@@ -3454,6 +3467,13 @@ declare module '@tanstack/react-router' {
       path: '/legal'
       fullPath: '/settings/legal'
       preLoaderRoute: typeof AuthenticatedsettingsSettingsLegalRouteImport
+      parentRoute: typeof AuthenticatedsettingsSettingsRoute
+    }
+    '/_authenticated/(settings)/settings/integrations': {
+      id: '/_authenticated/(settings)/settings/integrations'
+      path: '/integrations'
+      fullPath: '/settings/integrations'
+      preLoaderRoute: typeof AuthenticatedsettingsSettingsIntegrationsRouteImport
       parentRoute: typeof AuthenticatedsettingsSettingsRoute
     }
     '/_authenticated/(settings)/settings/hr-compliance': {
@@ -4455,6 +4475,7 @@ interface AuthenticatedsettingsSettingsRouteChildren {
   AuthenticatedsettingsSettingsDocumentsRoute: typeof AuthenticatedsettingsSettingsDocumentsRoute
   AuthenticatedsettingsSettingsFilesRoute: typeof AuthenticatedsettingsSettingsFilesRoute
   AuthenticatedsettingsSettingsHrComplianceRoute: typeof AuthenticatedsettingsSettingsHrComplianceRoute
+  AuthenticatedsettingsSettingsIntegrationsRoute: typeof AuthenticatedsettingsSettingsIntegrationsRoute
   AuthenticatedsettingsSettingsLegalRoute: typeof AuthenticatedsettingsSettingsLegalRoute
   AuthenticatedsettingsSettingsModulesRoute: typeof AuthenticatedsettingsSettingsModulesRoute
   AuthenticatedsettingsSettingsOfflineRoute: typeof AuthenticatedsettingsSettingsOfflineRoute
@@ -4488,6 +4509,8 @@ const AuthenticatedsettingsSettingsRouteChildren: AuthenticatedsettingsSettingsR
       AuthenticatedsettingsSettingsFilesRoute,
     AuthenticatedsettingsSettingsHrComplianceRoute:
       AuthenticatedsettingsSettingsHrComplianceRoute,
+    AuthenticatedsettingsSettingsIntegrationsRoute:
+      AuthenticatedsettingsSettingsIntegrationsRoute,
     AuthenticatedsettingsSettingsLegalRoute:
       AuthenticatedsettingsSettingsLegalRoute,
     AuthenticatedsettingsSettingsModulesRoute:
