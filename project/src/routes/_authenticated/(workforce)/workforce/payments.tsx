@@ -8,7 +8,6 @@ import { useAuth } from '@/hooks/useAuth';
 import { usePaymentRecords, useApprovePayment, useCreatePaymentRecord, useProcessPayment } from '@/hooks/usePaymentRecords';
 import { useWorkers } from '@/hooks/useWorkers';
 import type { PaymentMethod } from '@/types/payments';
-import ModernPageHeader from '@/components/ModernPageHeader';
 import { PageLoader, SectionLoader } from '@/components/ui/loader';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Button } from '@/components/ui/button';
@@ -35,7 +34,7 @@ import {
 } from '@/components/ui/data-table';
 import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import { Label } from '@/components/ui/label';
-import { DollarSign, Plus, Building2, Users, Clock, CheckCircle2 } from 'lucide-react';
+import { DollarSign, Plus, Users, Clock, CheckCircle2 } from 'lucide-react';
 import { withLicensedRouteProtection } from '@/components/authorization/withLicensedRouteProtection';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
@@ -123,16 +122,6 @@ function PaymentsPage() {
 
   return (
     <>
-      <ModernPageHeader
-        breadcrumbs={[
-          { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
-          { icon: Users, label: t('nav.workforce', 'Workforce'), path: '/workforce/employees' },
-          { icon: DollarSign, label: t('payments.pageTitle', 'Paiements'), isActive: true },
-        ]}
-        title={t('payments.pageTitle', 'Paiements')}
-        subtitle={t('payments.description', 'Suivez les paiements, avances et approbations des travailleurs.')}
-      />
-
       <div className="p-3 sm:p-4 md:p-6 pb-20 md:pb-6">
         <ListPageLayout
           header={

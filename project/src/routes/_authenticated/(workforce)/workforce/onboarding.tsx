@@ -2,10 +2,9 @@ import { useState, type ReactNode } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Loader2, Plus, Pencil, Trash2, Play, Check, ListTodo, Building2, Users, UserPlus } from 'lucide-react';
+import { Loader2, Plus, Pencil, Trash2, Play, Check, ListTodo } from 'lucide-react';
 import { withRouteProtection } from '@/components/authorization/withRouteProtection';
 import { useAuth } from '@/hooks/useAuth';
-import ModernPageHeader from '@/components/ModernPageHeader';
 import { useWorkers } from '@/hooks/useWorkers';
 import {
   useCreateOnboardingTemplate,
@@ -69,35 +68,21 @@ function OnboardingPage() {
 
   return (
     <>
-      <ModernPageHeader
-        breadcrumbs={[
-          { icon: Building2, label: currentOrganization?.name ?? '', path: '/dashboard' },
-          { icon: Users, label: t('nav.workforce', 'Workforce'), path: '/workforce/employees' },
-          { icon: UserPlus, label: t('onboarding.title', 'Onboarding'), isActive: true },
-        ]}
-        title={t('onboarding.title', 'Onboarding')}
-        subtitle={t(
-          'onboarding.subtitle',
-          'Build templates of activities, then run them for each new hire.',
-        )}
-        actions={
-          <>
-            {tab === 'records' && (
-              <Button onClick={() => setStarting(true)} disabled={!templates.data?.length}>
-                <Play className="w-4 h-4 mr-2" />
-                {t('onboarding.start', 'Start onboarding')}
-              </Button>
-            )}
-            {tab === 'templates' && (
-              <Button onClick={() => setCreatingTemplate(true)}>
-                <Plus className="w-4 h-4 mr-2" />
-                {t('onboarding.newTemplate', 'New template')}
-              </Button>
-            )}
-          </>
-        }
-      />
       <div className="p-3 sm:p-4 lg:p-6 space-y-6">
+      <div className="flex justify-end">
+        {tab === 'records' && (
+          <Button onClick={() => setStarting(true)} disabled={!templates.data?.length}>
+            <Play className="w-4 h-4 mr-2" />
+            {t('onboarding.start', 'Start onboarding')}
+          </Button>
+        )}
+        {tab === 'templates' && (
+          <Button onClick={() => setCreatingTemplate(true)}>
+            <Plus className="w-4 h-4 mr-2" />
+            {t('onboarding.newTemplate', 'New template')}
+          </Button>
+        )}
+      </div>
       <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)}>
         <TabsList>
           <TabsTrigger value="records">{t('onboarding.records', 'Active onboardings')}</TabsTrigger>

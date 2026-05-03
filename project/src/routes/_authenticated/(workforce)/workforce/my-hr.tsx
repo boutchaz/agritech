@@ -11,12 +11,9 @@ import {
   FileText,
   Star,
   ChevronRight,
-  Building2,
-  Users,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useMyHrSummary } from '@/hooks/useHrAdvanced';
-import ModernPageHeader from '@/components/ModernPageHeader';
 import { HrStatGrid } from '@/components/HrStatGrid';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -46,15 +43,6 @@ function MyHrPage() {
   if (!data?.worker) {
     return (
       <>
-        <ModernPageHeader
-          breadcrumbs={[
-            { icon: Building2, label: currentOrganization?.name ?? '', path: '/dashboard' },
-            { icon: Users, label: t('nav.workforce', 'Workforce'), path: '/workforce/employees' },
-            { icon: User, label: t('myHr.title', 'My HR'), isActive: true },
-          ]}
-          title={t('myHr.title', 'My HR')}
-          subtitle={t('myHr.subtitle', 'Your personal HR dashboard')}
-        />
         <div className="p-3 sm:p-4 lg:p-6 space-y-6">
           <Card>
             <CardContent className="py-10 text-center">
@@ -78,16 +66,11 @@ function MyHrPage() {
 
   return (
     <>
-      <ModernPageHeader
-        breadcrumbs={[
-          { icon: Building2, label: currentOrganization?.name ?? '', path: '/dashboard' },
-          { icon: Users, label: t('nav.workforce', 'Workforce'), path: '/workforce/employees' },
-          { icon: User, label: fullName, isActive: true },
-        ]}
-        title={fullName}
-        subtitle={t('myHr.subtitle', 'Your personal HR dashboard')}
-      />
       <div className="p-3 sm:p-4 lg:p-6 space-y-6">
+      <div className="flex items-center gap-2">
+        <User className="w-5 h-5 text-gray-500" />
+        <h2 className="text-lg font-semibold">{fullName}</h2>
+      </div>
       <HrStatGrid
         stats={[
           {

@@ -2,10 +2,9 @@ import { useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Loader2, Plus, Play, Send, X, Building2, Users, DollarSign } from 'lucide-react';
+import { Loader2, Plus, Play, Send, X } from 'lucide-react';
 import { withRouteProtection } from '@/components/authorization/withRouteProtection';
 import { useAuth } from '@/hooks/useAuth';
-import ModernPageHeader from '@/components/ModernPageHeader';
 import {
   useCancelPayrollRun,
   useMarkPayrollRunPaid,
@@ -55,25 +54,13 @@ function PayrollRunsPage() {
 
   return (
     <>
-      <ModernPageHeader
-        breadcrumbs={[
-          { icon: Building2, label: currentOrganization?.name ?? '', path: '/dashboard' },
-          { icon: Users, label: t('nav.workforce', 'Workforce'), path: '/workforce/employees' },
-          { icon: DollarSign, label: t('payrollRuns.title', 'Payroll Runs'), isActive: true },
-        ]}
-        title={t('payrollRuns.title', 'Payroll Runs')}
-        subtitle={t(
-          'payrollRuns.subtitle',
-          'Process payroll for a period: create a run, generate slips for matching workers, then submit when ready.',
-        )}
-        actions={
-          <Button onClick={() => setCreating(true)}>
-            <Plus className="w-4 h-4 mr-2" />
-            {t('common.create', 'Create')}
-          </Button>
-        }
-      />
       <div className="p-3 sm:p-4 lg:p-6 space-y-6">
+      <div className="flex justify-end">
+        <Button onClick={() => setCreating(true)}>
+          <Plus className="w-4 h-4 mr-2" />
+          {t('common.create', 'Create')}
+        </Button>
+      </div>
       {query.isLoading ? (
         <div className="flex items-center justify-center h-40">
           <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
