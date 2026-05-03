@@ -60,12 +60,16 @@ function isNotFoundError(error: unknown): boolean {
 
 export const fiscalYearsApi = {
   async getAll(organizationId: string): Promise<FiscalYear[]> {
-    const response = await apiClient.get<FiscalYear[]>(
+    // Backend now returns PaginatedResponse<FiscalYear>; older callers expected
+    // a raw array. Unwrap both shapes so consumers don't crash with
+    // `.filter is not a function`.
+    const response = await apiClient.get<FiscalYear[] | PaginatedResponse<FiscalYear>>(
       '/api/v1/fiscal-years?sortBy=start_date&sortDir=desc',
       {},
       organizationId
     );
-    return response || [];
+    if (Array.isArray(response)) return response;
+    return response?.data ?? [];
   },
 
   async getCurrent(organizationId: string): Promise<FiscalYear | null> {
