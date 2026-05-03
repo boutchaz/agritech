@@ -53,8 +53,52 @@ export class LeaveApplicationsService {
       .single();
     if (werr || !worker) throw new NotFoundException('Worker not found');
 
+    if (dto.from_date > dto.to_date) {
+      throw new BadRequestException('from_date must be on or before to_date');
+    }
+    if ((dto.half_day ?? false) && dto.from_date !== dto.to_date) {
+      throw new BadRequestException('Half-day leave must be a single date');
+    }
+
     const totalDays = computeTotalDays(dto.from_date, dto.to_date, dto.half_day ?? false);
     const isBlockDay = await this.overlapsBlockDate(organizationId, dto.from_date, dto.to_date);
+    if (isBlockDay) {
+      throw new BadRequestException(
+        'Leave dates overlap a blackout period; contact admin to override',
+      );
+    }
+
+    // Reject if worker already has a pending or approved leave overlapping
+    // this range — duplicate / over-counted leave once approved.
+    const { data: overlap, error: overlapErr } = await supabase
+      .from('leave_applications')
+      .select('id, from_date, to_date, status')
+      .eq('organization_id', organizationId)
+      .eq('worker_id', dto.worker_id)
+      .in('status', ['pending', 'approved'])
+      .lte('from_date', dto.to_date)
+      .gte('to_date', dto.from_date)
+      .limit(1);
+    if (overlapErr) throw new BadRequestException(overlapErr.message);
+    if ((overlap?.length ?? 0) > 0) {
+      throw new BadRequestException(
+        `Worker already has a ${overlap![0].status} leave overlapping ${overlap![0].from_date}..${overlap![0].to_date}`,
+      );
+    }
+
+    // Reject if total_days exceed remaining allocation across covering periods.
+    const remaining = await this.remainingAllocation(
+      organizationId,
+      dto.worker_id,
+      dto.leave_type_id,
+      dto.from_date,
+      dto.to_date,
+    );
+    if (remaining !== null && totalDays > remaining + 1e-6) {
+      throw new BadRequestException(
+        `Insufficient leave balance: requesting ${totalDays} day(s), ${remaining} remaining`,
+      );
+    }
 
     const { data, error } = await supabase
       .from('leave_applications')
@@ -87,18 +131,9 @@ export class LeaveApplicationsService {
     if (application.status !== 'pending')
       throw new BadRequestException(`Cannot approve application in status ${application.status}`);
 
-    // Increment used_days on the matching allocation (best-effort; allocation
-    // may not exist yet — in that case approval still proceeds and admin
-    // is expected to allocate retroactively).
-    await this.adjustAllocationUsedDays(
-      organizationId,
-      application.worker_id,
-      application.leave_type_id,
-      application.from_date,
-      Number(application.total_days),
-    );
-
     const supabase = this.db.getAdminClient();
+    // Update status first so a failure leaves allocation untouched, then
+    // distribute used_days across each allocation period the leave overlaps.
     const { data, error } = await supabase
       .from('leave_applications')
       .update({
@@ -112,6 +147,17 @@ export class LeaveApplicationsService {
       .select('*')
       .single();
     if (error) throw new BadRequestException(error.message);
+
+    await this.distributeAllocationUsedDays(
+      organizationId,
+      application.worker_id,
+      application.leave_type_id,
+      application.from_date,
+      application.to_date,
+      Number(application.total_days),
+      application.half_day ?? false,
+    );
+
     return data;
   }
 
@@ -170,13 +216,14 @@ export class LeaveApplicationsService {
     }
 
     if (application.status === 'approved') {
-      // Refund used_days
-      await this.adjustAllocationUsedDays(
+      await this.distributeAllocationUsedDays(
         organizationId,
         application.worker_id,
         application.leave_type_id,
         application.from_date,
+        application.to_date,
         -Number(application.total_days),
+        application.half_day ?? false,
       );
     }
 
@@ -240,31 +287,71 @@ export class LeaveApplicationsService {
     return (data?.length ?? 0) > 0;
   }
 
-  private async adjustAllocationUsedDays(
+  /**
+   * Distribute a leave's total_days across every allocation period that
+   * overlaps the leave range. Each allocation is incremented by the number
+   * of leave days that fall inside its period (half-day handled). `delta`
+   * sign drives both apply (+) and refund (-).
+   */
+  private async distributeAllocationUsedDays(
     organizationId: string,
     workerId: string,
     leaveTypeId: string,
-    onDate: string,
+    fromDate: string,
+    toDate: string,
     delta: number,
+    halfDay: boolean,
   ) {
+    if (delta === 0) return;
     const supabase = this.db.getAdminClient();
-    const { data: alloc } = await supabase
+    const { data: allocs } = await supabase
       .from('leave_allocations')
-      .select('id, used_days')
+      .select('id, used_days, period_start, period_end')
       .eq('organization_id', organizationId)
       .eq('worker_id', workerId)
       .eq('leave_type_id', leaveTypeId)
-      .lte('period_start', onDate)
-      .gte('period_end', onDate)
-      .maybeSingle();
-    if (!alloc) return;
-    await supabase
+      .lte('period_start', toDate)
+      .gte('period_end', fromDate);
+    if (!allocs?.length) return;
+
+    const sign = delta < 0 ? -1 : 1;
+    for (const alloc of allocs) {
+      const overlap = countDateOverlap(
+        fromDate,
+        toDate,
+        alloc.period_start,
+        alloc.period_end,
+      );
+      if (overlap <= 0) continue;
+      const portion = halfDay && fromDate === toDate ? 0.5 : overlap;
+      await supabase
+        .from('leave_allocations')
+        .update({
+          used_days: Math.max(0, Number(alloc.used_days) + sign * portion),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', alloc.id);
+    }
+  }
+
+  private async remainingAllocation(
+    organizationId: string,
+    workerId: string,
+    leaveTypeId: string,
+    fromDate: string,
+    toDate: string,
+  ): Promise<number | null> {
+    const supabase = this.db.getAdminClient();
+    const { data: allocs } = await supabase
       .from('leave_allocations')
-      .update({
-        used_days: Math.max(0, Number(alloc.used_days) + delta),
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', alloc.id);
+      .select('remaining_days, period_start, period_end')
+      .eq('organization_id', organizationId)
+      .eq('worker_id', workerId)
+      .eq('leave_type_id', leaveTypeId)
+      .lte('period_start', toDate)
+      .gte('period_end', fromDate);
+    if (!allocs?.length) return null;
+    return allocs.reduce((sum, a) => sum + Number(a.remaining_days ?? 0), 0);
   }
 }
 
@@ -275,4 +362,12 @@ function computeTotalDays(from: string, to: string, halfDay: boolean): number {
   const days = Math.floor(ms / 86_400_000) + 1;
   if (halfDay && days === 1) return 0.5;
   return days;
+}
+
+function countDateOverlap(aFrom: string, aTo: string, bFrom: string, bTo: string): number {
+  const start = aFrom > bFrom ? aFrom : bFrom;
+  const end = aTo < bTo ? aTo : bTo;
+  if (start > end) return 0;
+  const ms = new Date(end).getTime() - new Date(start).getTime();
+  return Math.floor(ms / 86_400_000) + 1;
 }

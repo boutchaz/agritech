@@ -15183,6 +15183,33 @@ export type Database = {
           },
         ]
       }
+      landing_settings: {
+        Row: {
+          hero_stats: Json
+          id: boolean
+          partners: Json
+          testimonials: Json
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          hero_stats?: Json
+          id?: boolean
+          partners?: Json
+          testimonials?: Json
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          hero_stats?: Json
+          id?: boolean
+          partners?: Json
+          testimonials?: Json
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       leave_allocations: {
         Row: {
           carry_forwarded_days: number
@@ -15328,39 +15355,25 @@ export type Database = {
             referencedColumns: ["organization_id"]
           },
           {
-            foreignKeyName: "leave_allocations_worker_id_fkey"
-            columns: ["worker_id"]
-            isOneToOne: false
-            referencedRelation: "assignable_users"
-            referencedColumns: ["worker_id"]
-          },
-          {
-            foreignKeyName: "leave_allocations_worker_id_fkey"
-            columns: ["worker_id"]
+            foreignKeyName: "leave_allocations_worker_org_fkey"
+            columns: ["worker_id", "organization_id"]
             isOneToOne: false
             referencedRelation: "v_active_workers"
-            referencedColumns: ["id"]
+            referencedColumns: ["id", "organization_id"]
           },
           {
-            foreignKeyName: "leave_allocations_worker_id_fkey"
-            columns: ["worker_id"]
+            foreignKeyName: "leave_allocations_worker_org_fkey"
+            columns: ["worker_id", "organization_id"]
             isOneToOne: false
             referencedRelation: "worker_assignments"
-            referencedColumns: ["worker_id"]
+            referencedColumns: ["worker_id", "organization_id"]
           },
           {
-            foreignKeyName: "leave_allocations_worker_id_fkey"
-            columns: ["worker_id"]
-            isOneToOne: false
-            referencedRelation: "worker_payment_history"
-            referencedColumns: ["worker_id"]
-          },
-          {
-            foreignKeyName: "leave_allocations_worker_id_fkey"
-            columns: ["worker_id"]
+            foreignKeyName: "leave_allocations_worker_org_fkey"
+            columns: ["worker_id", "organization_id"]
             isOneToOne: false
             referencedRelation: "workers"
-            referencedColumns: ["id"]
+            referencedColumns: ["id", "organization_id"]
           },
         ]
       }
@@ -15521,39 +15534,25 @@ export type Database = {
             referencedColumns: ["organization_id"]
           },
           {
-            foreignKeyName: "leave_applications_worker_id_fkey"
-            columns: ["worker_id"]
-            isOneToOne: false
-            referencedRelation: "assignable_users"
-            referencedColumns: ["worker_id"]
-          },
-          {
-            foreignKeyName: "leave_applications_worker_id_fkey"
-            columns: ["worker_id"]
+            foreignKeyName: "leave_applications_worker_org_fkey"
+            columns: ["worker_id", "organization_id"]
             isOneToOne: false
             referencedRelation: "v_active_workers"
-            referencedColumns: ["id"]
+            referencedColumns: ["id", "organization_id"]
           },
           {
-            foreignKeyName: "leave_applications_worker_id_fkey"
-            columns: ["worker_id"]
+            foreignKeyName: "leave_applications_worker_org_fkey"
+            columns: ["worker_id", "organization_id"]
             isOneToOne: false
             referencedRelation: "worker_assignments"
-            referencedColumns: ["worker_id"]
+            referencedColumns: ["worker_id", "organization_id"]
           },
           {
-            foreignKeyName: "leave_applications_worker_id_fkey"
-            columns: ["worker_id"]
-            isOneToOne: false
-            referencedRelation: "worker_payment_history"
-            referencedColumns: ["worker_id"]
-          },
-          {
-            foreignKeyName: "leave_applications_worker_id_fkey"
-            columns: ["worker_id"]
+            foreignKeyName: "leave_applications_worker_org_fkey"
+            columns: ["worker_id", "organization_id"]
             isOneToOne: false
             referencedRelation: "workers"
-            referencedColumns: ["id"]
+            referencedColumns: ["id", "organization_id"]
           },
         ]
       }
@@ -27436,39 +27435,25 @@ export type Database = {
             referencedColumns: ["organization_id"]
           },
           {
-            foreignKeyName: "separations_worker_id_fkey"
-            columns: ["worker_id"]
-            isOneToOne: false
-            referencedRelation: "assignable_users"
-            referencedColumns: ["worker_id"]
-          },
-          {
-            foreignKeyName: "separations_worker_id_fkey"
-            columns: ["worker_id"]
+            foreignKeyName: "separations_worker_org_fkey"
+            columns: ["worker_id", "organization_id"]
             isOneToOne: false
             referencedRelation: "v_active_workers"
-            referencedColumns: ["id"]
+            referencedColumns: ["id", "organization_id"]
           },
           {
-            foreignKeyName: "separations_worker_id_fkey"
-            columns: ["worker_id"]
+            foreignKeyName: "separations_worker_org_fkey"
+            columns: ["worker_id", "organization_id"]
             isOneToOne: false
             referencedRelation: "worker_assignments"
-            referencedColumns: ["worker_id"]
+            referencedColumns: ["worker_id", "organization_id"]
           },
           {
-            foreignKeyName: "separations_worker_id_fkey"
-            columns: ["worker_id"]
-            isOneToOne: false
-            referencedRelation: "worker_payment_history"
-            referencedColumns: ["worker_id"]
-          },
-          {
-            foreignKeyName: "separations_worker_id_fkey"
-            columns: ["worker_id"]
+            foreignKeyName: "separations_worker_org_fkey"
+            columns: ["worker_id", "organization_id"]
             isOneToOne: false
             referencedRelation: "workers"
-            referencedColumns: ["id"]
+            referencedColumns: ["id", "organization_id"]
           },
         ]
       }
@@ -30839,6 +30824,42 @@ export type Database = {
             referencedColumns: ["organization_id"]
           },
         ]
+      }
+      support_settings: {
+        Row: {
+          address: string | null
+          contact_email: string
+          email: string
+          hours: string | null
+          id: boolean
+          phone: string
+          updated_at: string
+          updated_by: string | null
+          whatsapp: string | null
+        }
+        Insert: {
+          address?: string | null
+          contact_email?: string
+          email?: string
+          hours?: string | null
+          id?: boolean
+          phone?: string
+          updated_at?: string
+          updated_by?: string | null
+          whatsapp?: string | null
+        }
+        Update: {
+          address?: string | null
+          contact_email?: string
+          email?: string
+          hours?: string | null
+          id?: boolean
+          phone?: string
+          updated_at?: string
+          updated_by?: string | null
+          whatsapp?: string | null
+        }
+        Relationships: []
       }
       supported_countries: {
         Row: {
@@ -36965,39 +36986,25 @@ export type Database = {
             referencedColumns: ["organization_id"]
           },
           {
-            foreignKeyName: "leave_allocations_worker_id_fkey"
-            columns: ["worker_id"]
-            isOneToOne: false
-            referencedRelation: "assignable_users"
-            referencedColumns: ["worker_id"]
-          },
-          {
-            foreignKeyName: "leave_allocations_worker_id_fkey"
-            columns: ["worker_id"]
+            foreignKeyName: "leave_allocations_worker_org_fkey"
+            columns: ["worker_id", "organization_id"]
             isOneToOne: false
             referencedRelation: "v_active_workers"
-            referencedColumns: ["id"]
+            referencedColumns: ["id", "organization_id"]
           },
           {
-            foreignKeyName: "leave_allocations_worker_id_fkey"
-            columns: ["worker_id"]
+            foreignKeyName: "leave_allocations_worker_org_fkey"
+            columns: ["worker_id", "organization_id"]
             isOneToOne: false
             referencedRelation: "worker_assignments"
-            referencedColumns: ["worker_id"]
+            referencedColumns: ["worker_id", "organization_id"]
           },
           {
-            foreignKeyName: "leave_allocations_worker_id_fkey"
-            columns: ["worker_id"]
-            isOneToOne: false
-            referencedRelation: "worker_payment_history"
-            referencedColumns: ["worker_id"]
-          },
-          {
-            foreignKeyName: "leave_allocations_worker_id_fkey"
-            columns: ["worker_id"]
+            foreignKeyName: "leave_allocations_worker_org_fkey"
+            columns: ["worker_id", "organization_id"]
             isOneToOne: false
             referencedRelation: "workers"
-            referencedColumns: ["id"]
+            referencedColumns: ["id", "organization_id"]
           },
         ]
       }

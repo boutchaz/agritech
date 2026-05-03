@@ -39,12 +39,14 @@ export class HrCalendarService {
     const want = (t: HrEventType) => !types || types.includes(t);
 
     if (want('leave')) {
+      // Overlap predicate: include leaves that start before the window
+      // but extend into it (and vice versa).
       const { data } = await supabase
         .from('leave_applications')
         .select('id, worker_id, from_date, to_date, status, reason, worker:workers(first_name, last_name), leave_type:leave_types(name)')
         .eq('organization_id', orgId)
-        .gte('from_date', from)
-        .lte('from_date', to);
+        .lte('from_date', to)
+        .gte('to_date', from);
       for (const r of (data ?? []) as any[]) {
         events.push({
           id: `leave:${r.id}`,

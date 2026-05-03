@@ -191,6 +191,7 @@ export class PayrollRunsService {
     if (slipsErr) throw new BadRequestException(slipsErr.message);
 
     const created: string[] = [];
+    const failed: Array<{ slip_id: string; reason: string }> = [];
     for (const slip of (slips ?? []) as any[]) {
       if (slip.journal_entry_id) continue; // idempotent
       const workerName = `${slip.worker?.first_name ?? ''} ${slip.worker?.last_name ?? ''}`.trim() || 'Worker';
@@ -203,11 +204,17 @@ export class PayrollRunsService {
         );
         if (je) created.push(je.id);
       } catch (err: any) {
-        // Don't block payment on accounting failure — log and continue
-        // (payment can still be marked paid; JE can be retried later)
-        // eslint-disable-next-line no-console
-        console.error(`[payroll] JE creation failed for slip ${slip.id}: ${err?.message}`);
+        failed.push({ slip_id: slip.id, reason: err?.message ?? 'unknown error' });
       }
+    }
+
+    // Fail closed: if any slip lacks a JE, do NOT mark the run paid.
+    // Otherwise HR state diverges from the GL and reconciliation breaks.
+    if (failed.length > 0) {
+      throw new BadRequestException(
+        `Cannot mark payroll run paid: journal entry creation failed for ${failed.length} slip(s). ` +
+          `First error: ${failed[0].reason}`,
+      );
     }
 
     await supabase

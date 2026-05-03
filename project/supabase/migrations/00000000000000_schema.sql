@@ -19787,3 +19787,54 @@ BEGIN
       q_global, q_org);
   END IF;
 END $merge_crop_templates$;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Org-scoped FKs for leave & separations
+-- Prevents cross-org references where the parent FK was worker_id only.
+-- ─────────────────────────────────────────────────────────────────────────────
+DO $worker_org_fk$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'workers_id_org_unique' AND conrelid = 'workers'::regclass
+  ) THEN
+    ALTER TABLE workers
+      ADD CONSTRAINT workers_id_org_unique UNIQUE (id, organization_id);
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'leave_allocations_worker_org_fkey'
+      AND conrelid = 'leave_allocations'::regclass
+  ) THEN
+    ALTER TABLE leave_allocations
+      DROP CONSTRAINT IF EXISTS leave_allocations_worker_id_fkey,
+      ADD CONSTRAINT leave_allocations_worker_org_fkey
+        FOREIGN KEY (worker_id, organization_id)
+        REFERENCES workers(id, organization_id) ON DELETE CASCADE;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'leave_applications_worker_org_fkey'
+      AND conrelid = 'leave_applications'::regclass
+  ) THEN
+    ALTER TABLE leave_applications
+      DROP CONSTRAINT IF EXISTS leave_applications_worker_id_fkey,
+      ADD CONSTRAINT leave_applications_worker_org_fkey
+        FOREIGN KEY (worker_id, organization_id)
+        REFERENCES workers(id, organization_id) ON DELETE CASCADE;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'separations_worker_org_fkey'
+      AND conrelid = 'separations'::regclass
+  ) THEN
+    ALTER TABLE separations
+      DROP CONSTRAINT IF EXISTS separations_worker_id_fkey,
+      ADD CONSTRAINT separations_worker_org_fkey
+        FOREIGN KEY (worker_id, organization_id)
+        REFERENCES workers(id, organization_id) ON DELETE CASCADE;
+  END IF;
+END $worker_org_fk$;
