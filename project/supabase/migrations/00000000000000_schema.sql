@@ -7383,7 +7383,7 @@ ON CONFLICT (name) DO UPDATE SET
 DO $perms$
 DECLARE
 -- BEGIN GENERATED PERMISSION RESOURCES (do not edit by hand)
-  -- 98 resources × 5 actions = 490 permission rows
+  -- 100 resources × 5 actions = 500 permission rows
   v_resources TEXT[] := ARRAY[
     'users','organizations','roles','subscriptions',
     'farms','parcels','warehouses','infrastructure',
@@ -7403,13 +7403,13 @@ DECLARE
     'costs','revenues','inventory','utilities',
     'equipment','agronomy_sources','chat','settings',
     'api','hr_compliance','leave_types','leave_allocations',
-    'leave_applications','holidays','salary_structures','salary_slips',
-    'payroll_runs','worker_documents','shifts','shift_assignments',
-    'shift_requests','onboarding','separations','expense_claims',
-    'expense_categories','job_openings','job_applicants','interviews',
-    'appraisal_cycles','appraisals','performance_feedback','seasonal_campaigns',
-    'worker_qualifications','safety_incidents','worker_transport','grievances',
-    'training_programs','training_enrollments'
+    'leave_applications','leave_block_dates','leave_encashments','holidays',
+    'salary_structures','salary_slips','payroll_runs','worker_documents',
+    'shifts','shift_assignments','shift_requests','onboarding',
+    'separations','expense_claims','expense_categories','job_openings',
+    'job_applicants','interviews','appraisal_cycles','appraisals',
+    'performance_feedback','seasonal_campaigns','worker_qualifications','safety_incidents',
+    'worker_transport','grievances','training_programs','training_enrollments'
   ];
 -- END GENERATED PERMISSION RESOURCES
   v_actions TEXT[] := ARRAY['read','create','update','delete','manage'];

@@ -21,6 +21,12 @@ import {
   Droplet,
   Loader2,
   MessageSquare,
+  FileText,
+  Upload,
+  Trash2,
+  BadgeCheck,
+  Clock,
+  ExternalLink,
 } from "lucide-react";
 import {
   useWorker,
@@ -55,6 +61,13 @@ import {
   useLeaveTypes,
 } from "@/hooks/useLeaveManagement";
 import { useSendMessage } from "@/hooks/useChat";
+import {
+  useWorkerDocuments,
+  useCreateWorkerDocument,
+  useVerifyWorkerDocument,
+  useDeleteWorkerDocument,
+} from "@/hooks/useWorkerDocuments";
+import type { DocumentType } from "@/lib/api/worker-documents";
 import type { PaymentType, PaymentRecord } from "@/types/payments";
 import type { MetayageSettlement as MetayageSettlementType, WorkRecord } from "@/types/workers";
 import type { CreateApplicationInput } from "@/lib/api/leave-management";
@@ -210,7 +223,7 @@ function LeaveApplicationQuickDialog({
               <SelectValue placeholder={t('common.select', 'Sélectionner')} />
             </SelectTrigger>
             <SelectContent>
-              {(typesQuery.data ?? []).map((lt) => (
+              {(typesQuery.data?.data ?? []).map((lt) => (
                 <SelectItem key={lt.id} value={lt.id}>
                   {lt.name}
                 </SelectItem>
@@ -417,6 +430,159 @@ function WorkHistoryDialog({
   );
 }
 
+// ---------- Document helpers ----------
+
+const DOCUMENT_TYPE_OPTIONS: { value: DocumentType; labelKey: string }[] = [
+  { value: 'cin', labelKey: 'workerDocuments.types.cin' },
+  { value: 'passport', labelKey: 'workerDocuments.types.passport' },
+  { value: 'work_permit', labelKey: 'workerDocuments.types.work_permit' },
+  { value: 'contract', labelKey: 'workerDocuments.types.contract' },
+  { value: 'cnss_card', labelKey: 'workerDocuments.types.cnss_card' },
+  { value: 'medical_certificate', labelKey: 'workerDocuments.types.medical_certificate' },
+  { value: 'driving_license', labelKey: 'workerDocuments.types.driving_license' },
+  { value: 'pesticide_certification', labelKey: 'workerDocuments.types.pesticide_certification' },
+  { value: 'training_certificate', labelKey: 'workerDocuments.types.training_certificate' },
+  { value: 'bank_details', labelKey: 'workerDocuments.types.bank_details' },
+  { value: 'tax_document', labelKey: 'workerDocuments.types.tax_document' },
+  { value: 'photo', labelKey: 'workerDocuments.types.photo' },
+  { value: 'other', labelKey: 'workerDocuments.types.other' },
+];
+
+function DocumentDialog({
+  orgId,
+  workerId,
+  editing,
+  onClose,
+  onSuccess,
+}: {
+  orgId: string;
+  workerId: string;
+  editing: { id: string; document_type: DocumentType; document_name: string; expiry_date: string; notes: string } | null;
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  const { t } = useTranslation();
+  const [docType, setDocType] = useState<DocumentType>(editing?.document_type ?? 'cin');
+  const [docName, setDocName] = useState(editing?.document_name ?? '');
+  const [fileUrl, setFileUrl] = useState('');
+  const [expiryDate, setExpiryDate] = useState(editing?.expiry_date ?? '');
+  const [notes, setNotes] = useState(editing?.notes ?? '');
+  const [submitting, setSubmitting] = useState(false);
+  const createMutation = useCreateWorkerDocument();
+
+  const handleSubmit = async () => {
+    if (!docName.trim()) {
+      toast.error(t('workerDocuments.nameRequired', 'Document name is required'));
+      return;
+    }
+    if (!editing && !fileUrl.trim()) {
+      toast.error(t('workerDocuments.fileRequired', 'File URL is required'));
+      return;
+    }
+    setSubmitting(true);
+    try {
+      if (editing) {
+        onSuccess();
+      } else {
+        await createMutation.mutateAsync({
+          orgId,
+          data: {
+            worker_id: workerId,
+            document_type: docType,
+            document_name: docName.trim(),
+            file_url: fileUrl.trim(),
+            expiry_date: expiryDate || undefined,
+            notes: notes.trim() || undefined,
+          },
+        });
+        onSuccess();
+      }
+    } catch {
+      // swallow — submit failures surface via mutation toasts
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <ResponsiveDialog
+      open
+      onOpenChange={(o) => !o && onClose()}
+      size="md"
+      title={editing
+        ? t('workerDocuments.editTitle', 'Edit Document')
+        : t('workerDocuments.addTitle', 'Add Document')}
+      footer={
+        <>
+          <Button variant="outline" onClick={onClose} disabled={submitting}>
+            {t('common.cancel', 'Cancel')}
+          </Button>
+          <Button onClick={handleSubmit} disabled={submitting}>
+            {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="h-4 w-4 me-2" />}
+            {editing ? t('common.save', 'Save') : t('workerDocuments.upload', 'Upload')}
+          </Button>
+        </>
+      }
+    >
+      <div className="space-y-4">
+        <div className="space-y-1">
+          <Label>{t('workerDocuments.type', 'Document Type')}</Label>
+          <Select value={docType} onValueChange={(v) => setDocType(v as DocumentType)}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {DOCUMENT_TYPE_OPTIONS.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>
+                  {t(opt.labelKey, opt.value.replace(/_/g, ' '))}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-1">
+          <Label>{t('workerDocuments.name', 'Document Name')}</Label>
+          <Input
+            value={docName}
+            onChange={(e) => setDocName(e.target.value)}
+            placeholder={t('workerDocuments.namePlaceholder', 'e.g., CIN scan, Contract 2024')}
+          />
+        </div>
+
+        {!editing && (
+          <div className="space-y-1">
+            <Label>{t('workerDocuments.fileUrl', 'File URL')}</Label>
+            <Input
+              value={fileUrl}
+              onChange={(e) => setFileUrl(e.target.value)}
+              placeholder={t('workerDocuments.fileUrlPlaceholder', 'Paste file URL or upload path')}
+            />
+          </div>
+        )}
+
+        <div className="space-y-1">
+          <Label>{t('workerDocuments.expiryDate', 'Expiry Date')}</Label>
+          <Input
+            type="date"
+            value={expiryDate}
+            onChange={(e) => setExpiryDate(e.target.value)}
+          />
+        </div>
+
+        <div className="space-y-1">
+          <Label>{t('workerDocuments.notes', 'Notes')}</Label>
+          <Input
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder={t('workerDocuments.notesPlaceholder', 'Optional notes')}
+          />
+        </div>
+      </div>
+    </ResponsiveDialog>
+  );
+}
+
 function WorkerDetailPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -433,6 +599,9 @@ function WorkerDetailPage() {
   const [showCnssDialog, setShowCnssDialog] = useState(false);
   const [showMessageDialog, setShowMessageDialog] = useState(false);
   const [showWorkHistory, setShowWorkHistory] = useState(false);
+  const [showDocDialog, setShowDocDialog] = useState(false);
+  const [editingDoc, setEditingDoc] = useState<{ id: string; document_type: DocumentType; document_name: string; expiry_date: string; notes: string } | null>(null);
+  const [docToDelete, setDocToDelete] = useState<string | null>(null);
 
   const { data: worker, isLoading: workerLoading } = useWorker(currentOrganization?.id || null, workerId);
   const { data: farms = [] } = useFarms(currentOrganization?.id || "");
@@ -440,6 +609,12 @@ function WorkerDetailPage() {
   const { data: payments = [] } = useWorkerPayments(currentOrganization?.id || "", workerId);
   const { data: workRecords = [] } = useWorkRecords(currentOrganization?.id || null, workerId);
   const { data: settlements = [] } = useMetayageSettlements(currentOrganization?.id || null, workerId);
+  const { data: documents = [] } = useWorkerDocuments(
+    currentOrganization?.id || null,
+    { worker_id: workerId },
+  );
+  const verifyDoc = useVerifyWorkerDocument();
+  const deleteDoc = useDeleteWorkerDocument();
 
   const handleSettlementPayment = (settlement: MetayageSettlementType) => {
     if (!settlement?.period_start || !settlement?.period_end) return;
@@ -780,6 +955,102 @@ function WorkerDetailPage() {
             </div>
           </div>
 
+          {/* Documents */}
+          <div className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold text-gray-900 dark:text-white">
+                {t('workerDocuments.title', 'Documents')}
+              </h3>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => { setEditingDoc(null); setShowDocDialog(true); }}
+              >
+                <Upload className="h-4 w-4 me-2" />
+                {t('workerDocuments.add', 'Add')}
+              </Button>
+            </div>
+            {documents.length === 0 ? (
+              <p className="text-sm text-gray-500 py-4">
+                {t('workerDocuments.empty', 'No documents uploaded')}
+              </p>
+            ) : (
+              <ul className="divide-y divide-gray-100 dark:divide-gray-800">
+                {documents.map((doc) => {
+                  const isExpired = doc.expiry_date && new Date(doc.expiry_date) < new Date();
+                  const isExpiringSoon = doc.expiry_date && !isExpired &&
+                    differenceInCalendarDays(new Date(doc.expiry_date), new Date()) <= 30;
+                  return (
+                    <li key={doc.id} className="flex items-center justify-between py-3 gap-3">
+                      <div className="flex items-start gap-3 min-w-0">
+                        <FileText className={cn(
+                          "h-5 w-5 shrink-0 mt-0.5",
+                          isExpired ? "text-red-500" : isExpiringSoon ? "text-amber-500" : "text-gray-400",
+                        )} />
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                            {doc.document_name}
+                          </p>
+                          <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                            <span>{t(`workerDocuments.types.${doc.document_type}`, doc.document_type.replace(/_/g, ' '))}</span>
+                            {doc.expiry_date && (
+                              <span className={cn(
+                                "inline-flex items-center gap-1",
+                                isExpired && "text-red-600 dark:text-red-400",
+                                isExpiringSoon && "text-amber-600 dark:text-amber-400",
+                              )}>
+                                <Clock className="h-3 w-3" />
+                                {isExpired
+                                  ? t('workerDocuments.expired', 'Expired')
+                                  : isExpiringSoon
+                                    ? t('workerDocuments.expiringSoon', 'Expiring soon')
+                                    : format(new Date(doc.expiry_date), 'd MMM yyyy', { locale: fr })}
+                              </span>
+                            )}
+                            {doc.is_verified && (
+                              <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
+                                <BadgeCheck className="h-3 w-3" />
+                                {t('workerDocuments.verified', 'Verified')}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        {doc.file_url && (
+                          <a href={doc.file_url} target="_blank" rel="noopener noreferrer">
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <ExternalLink className="h-4 w-4" />
+                            </Button>
+                          </a>
+                        )}
+                        {!doc.is_verified && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-emerald-600"
+                            onClick={() => verifyDoc.mutate({ orgId: currentOrganization.id, id: doc.id })}
+                            disabled={verifyDoc.isPending}
+                          >
+                            <BadgeCheck className="h-4 w-4" />
+                          </Button>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-red-500"
+                          onClick={() => setDocToDelete(doc.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+
           {/* Historique de paie */}
           <div className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-6">
             <div className="flex items-center justify-between mb-4">
@@ -938,6 +1209,50 @@ function WorkerDetailPage() {
           items={fullTimeline}
           onClose={() => setShowWorkHistory(false)}
         />
+      )}
+
+      {/* Document Upload/Edit Dialog */}
+      {worker && showDocDialog && (
+        <DocumentDialog
+          orgId={currentOrganization.id}
+          workerId={worker.id}
+          editing={editingDoc}
+          onClose={() => { setShowDocDialog(false); setEditingDoc(null); }}
+          onSuccess={() => { setShowDocDialog(false); setEditingDoc(null); }}
+        />
+      )}
+
+      {/* Document Delete Confirmation */}
+      {docToDelete && (
+        <ResponsiveDialog
+          open
+          onOpenChange={() => setDocToDelete(null)}
+          size="sm"
+          title={t('workerDocuments.deleteTitle', 'Delete Document')}
+          footer={
+            <>
+              <Button variant="outline" onClick={() => setDocToDelete(null)}>
+                {t('common.cancel', 'Cancel')}
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => {
+                  deleteDoc.mutate(
+                    { orgId: currentOrganization.id, id: docToDelete },
+                    { onSettled: () => setDocToDelete(null) },
+                  );
+                }}
+                disabled={deleteDoc.isPending}
+              >
+                {deleteDoc.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : t('common.delete', 'Delete')}
+              </Button>
+            </>
+          }
+        >
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            {t('workerDocuments.deleteConfirm', 'Are you sure you want to delete this document? This action cannot be undone.')}
+          </p>
+        </ResponsiveDialog>
       )}
     </div>
   );

@@ -5,6 +5,10 @@ import {
 } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { BulkAllocateDto, CreateLeaveAllocationDto } from './dto';
+import {
+  paginatedResponse,
+  type PaginatedResponse,
+} from '../../common/dto/paginated-query.dto';
 
 @Injectable()
 export class LeaveAllocationsService {
@@ -12,21 +16,41 @@ export class LeaveAllocationsService {
 
   async list(
     organizationId: string,
-    filters: { worker_id?: string; leave_type_id?: string },
-  ) {
+    filters: {
+      worker_id?: string;
+      leave_type_id?: string;
+      page?: number;
+      pageSize?: number;
+    },
+  ): Promise<PaginatedResponse<any>> {
     const supabase = this.db.getAdminClient();
-    let query = supabase
-      .from('leave_allocations')
-      .select(
-        `*, worker:workers(id, first_name, last_name, cin), leave_type:leave_types(id, name)`,
-      )
-      .eq('organization_id', organizationId)
-      .order('period_start', { ascending: false });
-    if (filters.worker_id) query = query.eq('worker_id', filters.worker_id);
-    if (filters.leave_type_id) query = query.eq('leave_type_id', filters.leave_type_id);
-    const { data, error } = await query;
+    const page = Math.max(1, Number(filters.page) || 1);
+    const pageSize = Math.max(1, Math.min(100, Number(filters.pageSize) || 100));
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
+
+    const apply = (q: any) => {
+      q = q.eq('organization_id', organizationId);
+      if (filters.worker_id) q = q.eq('worker_id', filters.worker_id);
+      if (filters.leave_type_id) q = q.eq('leave_type_id', filters.leave_type_id);
+      return q;
+    };
+
+    const { count } = await apply(
+      supabase.from('leave_allocations').select('id', { count: 'exact', head: true }),
+    );
+
+    const { data, error } = await apply(
+      supabase
+        .from('leave_allocations')
+        .select(
+          `*, worker:workers(id, first_name, last_name, cin), leave_type:leave_types(id, name)`,
+        ),
+    )
+      .order('period_start', { ascending: false })
+      .range(from, to);
     if (error) throw new BadRequestException(error.message);
-    return data ?? [];
+    return paginatedResponse(data ?? [], count ?? 0, page, pageSize);
   }
 
   async forWorker(organizationId: string, workerId: string) {

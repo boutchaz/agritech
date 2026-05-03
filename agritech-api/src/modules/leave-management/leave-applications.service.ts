@@ -6,30 +6,61 @@ import {
 } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { CreateLeaveApplicationDto, RejectLeaveApplicationDto } from './dto';
+import { LeaveBlockDatesService } from './leave-block-dates.service';
+import {
+  paginatedResponse,
+  type PaginatedResponse,
+} from '../../common/dto/paginated-query.dto';
 
 @Injectable()
 export class LeaveApplicationsService {
-  constructor(private readonly db: DatabaseService) {}
+  constructor(
+    private readonly db: DatabaseService,
+    private readonly blockDatesService: LeaveBlockDatesService,
+  ) {}
 
   async list(
     organizationId: string,
-    filters: { worker_id?: string; status?: string; from?: string; to?: string },
-  ) {
+    filters: {
+      worker_id?: string;
+      status?: string;
+      from?: string;
+      to?: string;
+      page?: number;
+      pageSize?: number;
+    },
+  ): Promise<PaginatedResponse<any>> {
     const supabase = this.db.getAdminClient();
-    let query = supabase
-      .from('leave_applications')
-      .select(
-        `*, worker:workers(id, first_name, last_name, cin, user_id), leave_type:leave_types(id, name)`,
-      )
-      .eq('organization_id', organizationId)
-      .order('created_at', { ascending: false });
-    if (filters.worker_id) query = query.eq('worker_id', filters.worker_id);
-    if (filters.status) query = query.eq('status', filters.status);
-    if (filters.from) query = query.gte('to_date', filters.from);
-    if (filters.to) query = query.lte('from_date', filters.to);
-    const { data, error } = await query;
+    const page = Math.max(1, Number(filters.page) || 1);
+    const pageSize = Math.max(1, Math.min(100, Number(filters.pageSize) || 100));
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
+
+    const apply = (q: any) => {
+      q = q.eq('organization_id', organizationId);
+      if (filters.worker_id) q = q.eq('worker_id', filters.worker_id);
+      if (filters.status) q = q.eq('status', filters.status);
+      if (filters.from) q = q.gte('to_date', filters.from);
+      if (filters.to) q = q.lte('from_date', filters.to);
+      return q;
+    };
+
+    const { count } = await apply(
+      supabase.from('leave_applications').select('id', { count: 'exact', head: true }),
+    );
+
+    const { data, error } = await apply(
+      supabase
+        .from('leave_applications')
+        .select(
+          `*, worker:workers(id, first_name, last_name, cin, user_id), leave_type:leave_types(id, name)`,
+        ),
+    )
+      .order('created_at', { ascending: false })
+      .range(from, to);
+
     if (error) throw new BadRequestException(error.message);
-    return data ?? [];
+    return paginatedResponse(data ?? [], count ?? 0, page, pageSize);
   }
 
   /**
@@ -61,7 +92,7 @@ export class LeaveApplicationsService {
     }
 
     const totalDays = computeTotalDays(dto.from_date, dto.to_date, dto.half_day ?? false);
-    const isBlockDay = await this.overlapsBlockDate(organizationId, dto.from_date, dto.to_date);
+    const isBlockDay = await this.blockDatesService.overlapsBlockDate(organizationId, dto.from_date, dto.to_date);
     if (isBlockDay) {
       throw new BadRequestException(
         'Leave dates overlap a blackout period; contact admin to override',
@@ -280,19 +311,6 @@ export class LeaveApplicationsService {
       .gte('to_date', from);
     if (error) throw new BadRequestException(error.message);
     return data ?? [];
-  }
-
-  private async overlapsBlockDate(organizationId: string, from: string, to: string) {
-    const supabase = this.db.getAdminClient();
-    const { data, error } = await supabase
-      .from('leave_block_dates')
-      .select('id')
-      .eq('organization_id', organizationId)
-      .gte('block_date', from)
-      .lte('block_date', to)
-      .limit(1);
-    if (error) return false;
-    return (data?.length ?? 0) > 0;
   }
 
   /**

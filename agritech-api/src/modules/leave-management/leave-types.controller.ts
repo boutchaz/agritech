@@ -32,8 +32,13 @@ export class LeaveTypesController {
   list(
     @Param('organizationId') organizationId: string,
     @Query('includeInactive') includeInactive?: string,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
   ) {
-    return this.service.list(organizationId, includeInactive === 'true');
+    return this.service.list(organizationId, includeInactive === 'true', {
+      page: page ? Number(page) : undefined,
+      pageSize: pageSize ? Number(pageSize) : undefined,
+    });
   }
 
   @Get(':id')

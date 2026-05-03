@@ -108,6 +108,8 @@ export enum Subject {
     LEAVE_TYPE = 'LeaveType',
     LEAVE_ALLOCATION = 'LeaveAllocation',
     LEAVE_APPLICATION = 'LeaveApplication',
+    LEAVE_BLOCK_DATE = 'LeaveBlockDate',
+    LEAVE_ENCASHMENT = 'LeaveEncashment',
     HOLIDAY = 'Holiday',
     SALARY_STRUCTURE = 'SalaryStructure',
     SALARY_SLIP = 'SalarySlip',

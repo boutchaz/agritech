@@ -42,6 +42,8 @@ export class LeaveApplicationsController {
     @Query('from') from?: string,
     @Query('to') to?: string,
     @Query('scope') scope?: string,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
   ) {
     const selfScope = resolveSelfScope(req.user, scope);
     // Forced self-only roles override any worker_id passed by the client.
@@ -51,6 +53,8 @@ export class LeaveApplicationsController {
       status,
       from,
       to,
+      page: page ? Number(page) : undefined,
+      pageSize: pageSize ? Number(pageSize) : undefined,
     });
   }
 

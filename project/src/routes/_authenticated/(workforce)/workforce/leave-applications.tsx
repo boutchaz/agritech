@@ -79,7 +79,7 @@ function LeaveApplicationsPage() {
   const cancel = useCancelApplication();
 
   if (!orgId) return null;
-  const apps = query.data ?? [];
+  const apps = query.data?.data ?? [];
 
   return (
     <>
@@ -349,7 +349,7 @@ function ApplicationDialog({
                 <SelectValue placeholder={t('common.select', 'Select')} />
               </SelectTrigger>
               <SelectContent>
-                {(typesQuery.data ?? []).map((lt) => (
+                {(typesQuery.data?.data ?? []).map((lt) => (
                   <SelectItem key={lt.id} value={lt.id}>
                     {lt.name}
                   </SelectItem>

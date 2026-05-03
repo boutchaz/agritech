@@ -32,6 +32,7 @@ export type Subject =
   | 'Certification' | 'ComplianceCheck'
   // HR subjects
   | 'HrCompliance' | 'LeaveType' | 'LeaveAllocation' | 'LeaveApplication' | 'Holiday'
+  | 'LeaveBlockDate' | 'LeaveEncashment'
   | 'SalaryStructure' | 'SalarySlip' | 'PayrollRun' | 'WorkerDocument'
   | 'Shift' | 'ShiftAssignment' | 'ShiftRequest' | 'Onboarding' | 'Separation'
   | 'SeasonalCampaign' | 'WorkerQualification' | 'SafetyIncident' | 'WorkerTransport'

@@ -43,7 +43,7 @@ function LeaveTypesPage() {
 
   if (!orgId) return null;
 
-  const types = query.data ?? [];
+  const types = query.data?.data ?? [];
 
   return (
     <>

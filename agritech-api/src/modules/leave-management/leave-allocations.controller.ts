@@ -31,10 +31,14 @@ export class LeaveAllocationsController {
     @Param('organizationId') organizationId: string,
     @Query('worker_id') workerId?: string,
     @Query('leave_type_id') leaveTypeId?: string,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
   ) {
     return this.service.list(organizationId, {
       worker_id: workerId,
       leave_type_id: leaveTypeId,
+      page: page ? Number(page) : undefined,
+      pageSize: pageSize ? Number(pageSize) : undefined,
     });
   }
 

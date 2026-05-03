@@ -58,7 +58,7 @@ function LeaveAllocationsPage() {
 
   if (!orgId) return null;
 
-  const allocations = allocationsQuery.data ?? [];
+  const allocations = allocationsQuery.data?.data ?? [];
   const workers: any[] = Array.isArray(workersQuery.data) ? workersQuery.data : [];
 
   return (
@@ -113,7 +113,7 @@ function LeaveAllocationsPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">{t('common.all', 'All')}</SelectItem>
-              {(typesQuery.data ?? []).map((lt) => (
+              {(typesQuery.data?.data ?? []).map((lt) => (
                 <SelectItem key={lt.id} value={lt.id}>
                   {lt.name}
                 </SelectItem>
@@ -273,7 +273,7 @@ function SingleAllocationDialog({
                 <SelectValue placeholder={t('common.select', 'Select')} />
               </SelectTrigger>
               <SelectContent>
-                {(typesQuery.data ?? []).map((lt) => (
+                {(typesQuery.data?.data ?? []).map((lt) => (
                   <SelectItem key={lt.id} value={lt.id}>
                     {lt.name}
                   </SelectItem>
@@ -410,7 +410,7 @@ function BulkAllocationDialog({
                 <SelectValue placeholder={t('common.select', 'Select')} />
               </SelectTrigger>
               <SelectContent>
-                {(typesQuery.data ?? []).map((lt) => (
+                {(typesQuery.data?.data ?? []).map((lt) => (
                   <SelectItem key={lt.id} value={lt.id}>
                     {lt.name}
                   </SelectItem>

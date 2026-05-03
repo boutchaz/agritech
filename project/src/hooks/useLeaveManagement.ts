@@ -3,13 +3,18 @@ import {
   holidaysApi,
   leaveAllocationsApi,
   leaveApplicationsApi,
+  leaveBlockDatesApi,
+  leaveEncashmentsApi,
   leaveTypesApi,
   type AddHolidaysInput,
   type BulkAllocateInput,
   type CreateAllocationInput,
   type CreateApplicationInput,
+  type CreateLeaveBlockDateInput,
+  type CreateLeaveEncashmentInput,
   type CreateLeaveTypeInput,
   type LeaveStatus,
+  type PaginationParams,
   type UpdateLeaveTypeInput,
 } from '@/lib/api/leave-management';
 
@@ -17,10 +22,14 @@ const orgKey = (orgId: string | null, ...rest: unknown[]) => ['hr', orgId, ...re
 
 // ── Leave Types ─────────────────────────────────────────────────────
 
-export function useLeaveTypes(orgId: string | null, includeInactive = false) {
+export function useLeaveTypes(
+  orgId: string | null,
+  includeInactive = false,
+  pagination: PaginationParams = {},
+) {
   return useQuery({
-    queryKey: orgKey(orgId, 'leave-types', includeInactive),
-    queryFn: () => leaveTypesApi.list(orgId!, includeInactive),
+    queryKey: orgKey(orgId, 'leave-types', includeInactive, pagination),
+    queryFn: () => leaveTypesApi.list(orgId!, includeInactive, pagination),
     enabled: !!orgId,
   });
 }
@@ -59,7 +68,7 @@ export function useDeactivateLeaveType() {
 
 export function useLeaveAllocations(
   orgId: string | null,
-  filters: { worker_id?: string; leave_type_id?: string } = {},
+  filters: { worker_id?: string; leave_type_id?: string } & PaginationParams = {},
 ) {
   return useQuery({
     queryKey: orgKey(orgId, 'leave-allocations', filters),
@@ -92,7 +101,12 @@ export function useBulkAllocate() {
 
 export function useLeaveApplications(
   orgId: string | null,
-  filters: { worker_id?: string; status?: LeaveStatus; from?: string; to?: string } = {},
+  filters: {
+    worker_id?: string;
+    status?: LeaveStatus;
+    from?: string;
+    to?: string;
+  } & PaginationParams = {},
 ) {
   return useQuery({
     queryKey: orgKey(orgId, 'leave-applications', filters),
@@ -211,5 +225,109 @@ export function useDeleteHolidayList() {
       holidaysApi.deleteList(orgId, listId),
     onSuccess: (_d, v) =>
       qc.invalidateQueries({ queryKey: orgKey(v.orgId, 'holiday-lists') }),
+  });
+}
+
+// ── Leave Block Dates ───────────────────────────────────────────────
+
+export function useLeaveBlockDates(
+  orgId: string | null,
+  filters: {
+    from?: string;
+    to?: string;
+    leave_type_id?: string;
+  } & PaginationParams = {},
+) {
+  return useQuery({
+    queryKey: orgKey(orgId, 'leave-block-dates', filters),
+    queryFn: () => leaveBlockDatesApi.list(orgId!, filters),
+    enabled: !!orgId,
+  });
+}
+
+export function useCreateLeaveBlockDate() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ orgId, data }: { orgId: string; data: CreateLeaveBlockDateInput }) =>
+      leaveBlockDatesApi.create(orgId, data),
+    onSuccess: (_d, v) =>
+      qc.invalidateQueries({ queryKey: orgKey(v.orgId, 'leave-block-dates') }),
+  });
+}
+
+export function useUpdateLeaveBlockDate() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ orgId, id, data }: { orgId: string; id: string; data: Partial<CreateLeaveBlockDateInput> }) =>
+      leaveBlockDatesApi.update(orgId, id, data),
+    onSuccess: (_d, v) =>
+      qc.invalidateQueries({ queryKey: orgKey(v.orgId, 'leave-block-dates') }),
+  });
+}
+
+export function useDeleteLeaveBlockDate() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ orgId, id }: { orgId: string; id: string }) =>
+      leaveBlockDatesApi.delete(orgId, id),
+    onSuccess: (_d, v) =>
+      qc.invalidateQueries({ queryKey: orgKey(v.orgId, 'leave-block-dates') }),
+  });
+}
+
+// ── Leave Encashments ───────────────────────────────────────────────
+
+export function useLeaveEncashments(
+  orgId: string | null,
+  filters: { worker_id?: string; status?: string } & PaginationParams = {},
+) {
+  return useQuery({
+    queryKey: orgKey(orgId, 'leave-encashments', filters),
+    queryFn: () => leaveEncashmentsApi.list(orgId!, filters),
+    enabled: !!orgId,
+  });
+}
+
+export function useCreateLeaveEncashment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ orgId, data }: { orgId: string; data: CreateLeaveEncashmentInput }) =>
+      leaveEncashmentsApi.create(orgId, data),
+    onSuccess: (_d, v) => {
+      qc.invalidateQueries({ queryKey: orgKey(v.orgId, 'leave-encashments') });
+      qc.invalidateQueries({ queryKey: orgKey(v.orgId, 'leave-allocations') });
+    },
+  });
+}
+
+export function useApproveLeaveEncashment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ orgId, id }: { orgId: string; id: string }) =>
+      leaveEncashmentsApi.approve(orgId, id),
+    onSuccess: (_d, v) =>
+      qc.invalidateQueries({ queryKey: orgKey(v.orgId, 'leave-encashments') }),
+  });
+}
+
+export function useMarkPaidLeaveEncashment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ orgId, id }: { orgId: string; id: string }) =>
+      leaveEncashmentsApi.markPaid(orgId, id),
+    onSuccess: (_d, v) =>
+      qc.invalidateQueries({ queryKey: orgKey(v.orgId, 'leave-encashments') }),
+  });
+}
+
+export function useCancelLeaveEncashment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ orgId, id }: { orgId: string; id: string }) =>
+      leaveEncashmentsApi.cancel(orgId, id),
+    onSuccess: (_d, v) => {
+      qc.invalidateQueries({ queryKey: orgKey(v.orgId, 'leave-encashments') });
+      qc.invalidateQueries({ queryKey: orgKey(v.orgId, 'leave-allocations') });
+    },
   });
 }

@@ -123,6 +123,8 @@ export const RESOURCES: readonly ResourceDef[] = [
     { key: 'leave_types', subject: Subject.LEAVE_TYPE, displayName: 'Leave Types' },
     { key: 'leave_allocations', subject: Subject.LEAVE_ALLOCATION, displayName: 'Leave Allocations' },
     { key: 'leave_applications', subject: Subject.LEAVE_APPLICATION, displayName: 'Leave Applications' },
+    { key: 'leave_block_dates', subject: Subject.LEAVE_BLOCK_DATE, displayName: 'Leave Block Dates' },
+    { key: 'leave_encashments', subject: Subject.LEAVE_ENCASHMENT, displayName: 'Leave Encashments' },
     { key: 'holidays', subject: Subject.HOLIDAY, displayName: 'Holidays' },
     { key: 'salary_structures', subject: Subject.SALARY_STRUCTURE, displayName: 'Salary Structures' },
     { key: 'salary_slips', subject: Subject.SALARY_SLIP, displayName: 'Salary Slips' },

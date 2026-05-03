@@ -2,6 +2,24 @@ import { apiClient } from '../api-client';
 
 const BASE = (orgId: string) => `/api/v1/organizations/${orgId}`;
 
+export interface PaginatedResponse<T> {
+  data: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+export interface PaginationParams {
+  page?: number;
+  pageSize?: number;
+}
+
+const appendPagination = (qs: URLSearchParams, p: PaginationParams) => {
+  if (p.page) qs.set('page', String(p.page));
+  if (p.pageSize) qs.set('pageSize', String(p.pageSize));
+};
+
 // ── Types ──────────────────────────────────────────────────────────
 
 export interface LeaveType {
@@ -122,6 +140,54 @@ export interface HolidayList {
   holidays?: Holiday[];
 }
 
+export interface LeaveBlockDate {
+  id: string;
+  organization_id: string;
+  block_date: string;
+  reason: string;
+  leave_type_id: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+  leave_type?: { id: string; name: string };
+}
+
+export interface CreateLeaveBlockDateInput {
+  block_date: string;
+  reason: string;
+  leave_type_id?: string;
+}
+
+export type EncashmentStatus = 'pending' | 'approved' | 'paid' | 'cancelled';
+
+export interface LeaveEncashment {
+  id: string;
+  organization_id: string;
+  worker_id: string;
+  leave_type_id: string;
+  leave_allocation_id: string;
+  days_encashed: number;
+  amount_per_day: number;
+  total_amount: number;
+  status: EncashmentStatus;
+  approved_by: string | null;
+  approved_at: string | null;
+  paid_at: string | null;
+  created_by: string | null;
+  created_at: string;
+  worker?: { id: string; first_name: string; last_name: string; cin: string | null };
+  leave_type?: { id: string; name: string };
+  leave_allocation?: { id: string; period_start: string; period_end: string };
+}
+
+export interface CreateLeaveEncashmentInput {
+  worker_id: string;
+  leave_type_id: string;
+  leave_allocation_id: string;
+  days_encashed: number;
+  amount_per_day: number;
+}
+
 export interface Holiday {
   id: string;
   holiday_list_id: string;
@@ -147,12 +213,17 @@ export interface AddHolidaysInput {
 // ── API ────────────────────────────────────────────────────────────
 
 export const leaveTypesApi = {
-  list: (orgId: string, includeInactive = false) =>
-    apiClient.get<LeaveType[]>(
-      `${BASE(orgId)}/leave-types${includeInactive ? '?includeInactive=true' : ''}`,
+  list: (orgId: string, includeInactive = false, pagination: PaginationParams = {}) => {
+    const qs = new URLSearchParams();
+    if (includeInactive) qs.set('includeInactive', 'true');
+    appendPagination(qs, pagination);
+    const q = qs.toString();
+    return apiClient.get<PaginatedResponse<LeaveType>>(
+      `${BASE(orgId)}/leave-types${q ? `?${q}` : ''}`,
       {},
       orgId,
-    ),
+    );
+  },
   create: (orgId: string, dto: CreateLeaveTypeInput) =>
     apiClient.post<LeaveType>(`${BASE(orgId)}/leave-types`, dto, {}, orgId),
   update: (orgId: string, id: string, dto: UpdateLeaveTypeInput) =>
@@ -162,18 +233,23 @@ export const leaveTypesApi = {
 };
 
 export const leaveAllocationsApi = {
-  list: (orgId: string, filters: { worker_id?: string; leave_type_id?: string } = {}) => {
+  list: (
+    orgId: string,
+    filters: { worker_id?: string; leave_type_id?: string } & PaginationParams = {},
+  ) => {
     const qs = new URLSearchParams();
-    Object.entries(filters).forEach(([k, v]) => v && qs.set(k, v));
+    if (filters.worker_id) qs.set('worker_id', filters.worker_id);
+    if (filters.leave_type_id) qs.set('leave_type_id', filters.leave_type_id);
+    appendPagination(qs, filters);
     const q = qs.toString();
-    return apiClient.get<LeaveAllocation[]>(
+    return apiClient.get<PaginatedResponse<LeaveAllocation>>(
       `${BASE(orgId)}/leave-allocations${q ? `?${q}` : ''}`,
       {},
       orgId,
     );
   },
   forWorker: (orgId: string, workerId: string) =>
-    apiClient.get<LeaveAllocation[]>(
+    apiClient.get<PaginatedResponse<LeaveAllocation>>(
       `${BASE(orgId)}/leave-allocations/worker/${workerId}`,
       {},
       orgId,
@@ -187,12 +263,21 @@ export const leaveAllocationsApi = {
 export const leaveApplicationsApi = {
   list: (
     orgId: string,
-    filters: { worker_id?: string; status?: LeaveStatus; from?: string; to?: string } = {},
+    filters: {
+      worker_id?: string;
+      status?: LeaveStatus;
+      from?: string;
+      to?: string;
+    } & PaginationParams = {},
   ) => {
     const qs = new URLSearchParams();
-    Object.entries(filters).forEach(([k, v]) => v && qs.set(k, v));
+    if (filters.worker_id) qs.set('worker_id', filters.worker_id);
+    if (filters.status) qs.set('status', filters.status);
+    if (filters.from) qs.set('from', filters.from);
+    if (filters.to) qs.set('to', filters.to);
+    appendPagination(qs, filters);
     const q = qs.toString();
-    return apiClient.get<LeaveApplication[]>(
+    return apiClient.get<PaginatedResponse<LeaveApplication>>(
       `${BASE(orgId)}/leave-applications${q ? `?${q}` : ''}`,
       {},
       orgId,
@@ -239,4 +324,59 @@ export const holidaysApi = {
     ),
   deleteList: (orgId: string, listId: string) =>
     apiClient.delete<void>(`${BASE(orgId)}/holidays/lists/${listId}`, {}, orgId),
+};
+
+export const leaveBlockDatesApi = {
+  list: (
+    orgId: string,
+    filters: {
+      from?: string;
+      to?: string;
+      leave_type_id?: string;
+    } & PaginationParams = {},
+  ) => {
+    const qs = new URLSearchParams();
+    if (filters.from) qs.set('from', filters.from);
+    if (filters.to) qs.set('to', filters.to);
+    if (filters.leave_type_id) qs.set('leave_type_id', filters.leave_type_id);
+    appendPagination(qs, filters);
+    const q = qs.toString();
+    return apiClient.get<PaginatedResponse<LeaveBlockDate>>(
+      `${BASE(orgId)}/leave-block-dates${q ? `?${q}` : ''}`,
+      {},
+      orgId,
+    );
+  },
+  create: (orgId: string, dto: CreateLeaveBlockDateInput) =>
+    apiClient.post<LeaveBlockDate>(`${BASE(orgId)}/leave-block-dates`, dto, {}, orgId),
+  update: (orgId: string, id: string, dto: Partial<CreateLeaveBlockDateInput>) =>
+    apiClient.put<LeaveBlockDate>(`${BASE(orgId)}/leave-block-dates/${id}`, dto, {}, orgId),
+  delete: (orgId: string, id: string) =>
+    apiClient.delete<void>(`${BASE(orgId)}/leave-block-dates/${id}`, {}, orgId),
+};
+
+export const leaveEncashmentsApi = {
+  list: (
+    orgId: string,
+    filters: { worker_id?: string; status?: string } & PaginationParams = {},
+  ) => {
+    const qs = new URLSearchParams();
+    if (filters.worker_id) qs.set('worker_id', filters.worker_id);
+    if (filters.status) qs.set('status', filters.status);
+    appendPagination(qs, filters);
+    const q = qs.toString();
+    return apiClient.get<PaginatedResponse<LeaveEncashment>>(
+      `${BASE(orgId)}/leave-encashments${q ? `?${q}` : ''}`,
+      {},
+      orgId,
+    );
+  },
+  create: (orgId: string, dto: CreateLeaveEncashmentInput) =>
+    apiClient.post<LeaveEncashment>(`${BASE(orgId)}/leave-encashments`, dto, {}, orgId),
+  approve: (orgId: string, id: string) =>
+    apiClient.put<LeaveEncashment>(`${BASE(orgId)}/leave-encashments/${id}/approve`, {}, {}, orgId),
+  markPaid: (orgId: string, id: string) =>
+    apiClient.put<LeaveEncashment>(`${BASE(orgId)}/leave-encashments/${id}/pay`, {}, {}, orgId),
+  cancel: (orgId: string, id: string) =>
+    apiClient.put<LeaveEncashment>(`${BASE(orgId)}/leave-encashments/${id}/cancel`, {}, {}, orgId),
 };
