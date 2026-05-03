@@ -17,7 +17,12 @@ export class CreateStockAccountMappingDto {
   @IsUUID()
   credit_account_id: string;
 
-  @ApiPropertyOptional({ description: 'Description' })
+  @ApiPropertyOptional({ description: 'Optional item category for category-specific mapping' })
+  @IsOptional()
+  @IsString()
+  item_category?: string;
+
+  @ApiPropertyOptional({ description: 'Deprecated alias. Ignored by the API.' })
   @IsOptional()
   @IsString()
   description?: string;
@@ -39,7 +44,12 @@ export class UpdateStockAccountMappingDto {
   @IsUUID()
   credit_account_id?: string;
 
-  @ApiPropertyOptional({ description: 'Description' })
+  @ApiPropertyOptional({ description: 'Optional item category for category-specific mapping' })
+  @IsOptional()
+  @IsString()
+  item_category?: string;
+
+  @ApiPropertyOptional({ description: 'Deprecated alias. Ignored by the API.' })
   @IsOptional()
   @IsString()
   description?: string;

@@ -455,14 +455,22 @@ export class StockEntriesController {
   @ApiResponse({ status: 400, description: 'Bad request' })
   async create(@Body() createStockEntryDto: CreateStockEntryDto, @Req() req: any) {
     const organizationId = req.headers['x-organization-id'];
+    const requestedStatus = createStockEntryDto.status ?? StockEntryStatus.DRAFT;
     createStockEntryDto.organization_id = organizationId;
     createStockEntryDto.created_by = req.user.sub;
+    if (requestedStatus === StockEntryStatus.POSTED) {
+      createStockEntryDto.status = StockEntryStatus.DRAFT;
+    }
 
     const stockEntry = await this.stockEntriesService.createStockEntry(createStockEntryDto);
 
-    const totalValue = (stockEntry.items || []).reduce(
-      (sum: number, item: any) => sum + (item.quantity || 0) * (item.cost_per_unit || 0),
-      0,
+    if (requestedStatus === StockEntryStatus.POSTED) {
+      return this.stockEntriesService.postStockEntry(stockEntry.id, organizationId, req.user.sub);
+    }
+
+    const totalValue = await this.stockEntriesService.estimateApprovalValue(
+      stockEntry.id,
+      organizationId,
     );
 
     const approvalResult = await this.stockEntryApprovalsService.autoRequestApprovalIfNeeded(

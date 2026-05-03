@@ -500,9 +500,10 @@ const WorkersList = ({ organizationId, farms }: WorkersListProps) => {
           <div className="flex flex-wrap items-center gap-2">
             <Button
               type="button"
-              className="bg-white/10 hover:bg-white/20 border border-white/30 text-white"
+              variant="outline"
+              className="border-white/30 bg-white/10 !text-white shadow-none hover:bg-white/20 hover:!text-white dark:border-white/30 dark:bg-white/10 dark:!text-white dark:hover:bg-white/20 dark:hover:!text-white"
             >
-              <Download className="w-4 h-4 me-1" />
+              <Download className="w-4 h-4 me-1" aria-hidden />
               {t('common.export', 'Exporter')}
             </Button>
             <Can
@@ -517,11 +518,12 @@ const WorkersList = ({ organizationId, farms }: WorkersListProps) => {
             >
               <Button
                 type="button"
+                variant="outline"
                 data-tour="worker-add"
                 onClick={openCreateForm}
-                className="bg-white text-emerald-700 hover:bg-white/90 font-medium"
+                className="border-transparent bg-white !text-emerald-800 shadow-sm hover:bg-white/90 hover:!text-emerald-900 dark:bg-white dark:!text-emerald-800 dark:hover:bg-white/90"
               >
-                <Plus className="w-4 h-4 me-1" />
+                <Plus className="w-4 h-4 me-1" aria-hidden />
                 {t('workers.list.addWorker', 'Ajouter un ouvrier')}
               </Button>
             </Can>

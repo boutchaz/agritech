@@ -29,6 +29,23 @@ export interface StockEntryFilters {
   pageSize?: number;
 }
 
+type ValuationConsumptionOptions = {
+  preferExpiryDate?: boolean;
+  itemName?: string;
+};
+
+type OpeningStockWriteInput = {
+  item_id?: string;
+  warehouse_id?: string;
+  opening_date?: string;
+  quantity?: number;
+  valuation_rate?: number;
+  total_value?: number;
+  batch_number?: string;
+  serial_numbers?: string[] | null;
+  notes?: string;
+};
+
 @Injectable()
 export class StockEntriesService {
   private readonly logger = new Logger(StockEntriesService.name);
@@ -404,6 +421,26 @@ export class StockEntriesService {
         throw new BadRequestException('Cannot post a reversed stock entry');
       }
 
+      if (stockEntry.status === StockEntryStatus.DRAFT) {
+        const approvalResult = await this.maybeRequestApprovalBeforePosting(
+          client,
+          stockEntry,
+          entryItems,
+          userId,
+        );
+
+        if (approvalResult.approvalRequested) {
+          return {
+            message: 'Stock entry submitted for approval',
+            approval: approvalResult,
+            stockEntry: {
+              ...stockEntry,
+              status: StockEntryStatus.SUBMITTED,
+            },
+          };
+        }
+      }
+
       if (stockEntry.status === StockEntryStatus.SUBMITTED) {
         await this.stockEntryApprovalsService.assertApprovedForPosting(
           stockEntryId,
@@ -664,12 +701,13 @@ export class StockEntriesService {
       // 6. Create reversal items and movements for each original item
       for (const item of originalItems) {
         // Create reversal stock entry item
-        await client.query(
+        const reversalItemResult = await client.query(
           `INSERT INTO stock_entry_items (
             stock_entry_id, line_number, item_id, item_name, quantity, unit,
             source_warehouse_id, target_warehouse_id, batch_number, serial_number,
             expiry_date, cost_per_unit, system_quantity, physical_quantity, variant_id, notes
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`,
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+          RETURNING *`,
           [
             reversalEntry.id,
             item.line_number,
@@ -696,6 +734,7 @@ export class StockEntriesService {
           originalEntry,
           reversalEntry,
           item,
+          reversalItemResult.rows[0],
         );
       }
 
@@ -742,16 +781,24 @@ export class StockEntriesService {
     originalEntry: any,
     reversalEntry: any,
     item: any,
+    reversalItem: any,
   ): Promise<void> {
     const entryType = originalEntry.entry_type as StockEntryType;
 
     switch (entryType) {
       case StockEntryType.MATERIAL_RECEIPT: {
-        // Original: IN to to_warehouse → Reverse: OUT from to_warehouse
         const warehouseId = originalEntry.to_warehouse_id;
+        const originalMovement = await this.getOriginalMovementForReversal(
+          client,
+          originalEntry.id,
+          item.id,
+          warehouseId,
+        );
+        const costPerUnit = originalMovement?.cost_per_unit ?? item.cost_per_unit ?? 0;
+        const totalCost = Math.abs(
+          originalMovement?.total_cost ?? (item.quantity * costPerUnit),
+        );
 
-        // Restore valuation by consuming in reverse (or restore batches)
-        // For reversal: we need to remove the valuation that was added
         const valuationResult = await client.query(
           `SELECT id, remaining_quantity, cost_per_unit
            FROM stock_valuation
@@ -769,13 +816,15 @@ export class StockEntriesService {
           const available = parseFloat(valBatch.remaining_quantity);
           const reduce = Math.min(valuationToRemove, available);
           await client.query(
-            `UPDATE stock_valuation SET remaining_quantity = remaining_quantity - $1 WHERE id = $2`,
+            `UPDATE stock_valuation
+             SET remaining_quantity = remaining_quantity - $1,
+                 total_cost = GREATEST(remaining_quantity - $1, 0) * cost_per_unit
+             WHERE id = $2`,
             [reduce, valBatch.id],
           );
           valuationToRemove -= reduce;
         }
 
-        // Create OUT movement
         const movementQuantity = -item.quantity;
         const balanceQuantity = await this.computeRunningBalance(
           client,
@@ -801,10 +850,10 @@ export class StockEntriesService {
             movementQuantity,
             item.unit,
             balanceQuantity,
-            item.cost_per_unit || 0,
-            -(item.quantity * (item.cost_per_unit || 0)),
+            costPerUnit,
+            -totalCost,
             reversalEntry.id,
-            item.id,
+            reversalItem.id,
             item.batch_number || null,
             item.serial_number || null,
           ],
@@ -813,22 +862,31 @@ export class StockEntriesService {
       }
 
       case StockEntryType.MATERIAL_ISSUE: {
-        // Original: OUT from from_warehouse → Reverse: IN back to from_warehouse
         const warehouseId = originalEntry.from_warehouse_id;
+        const originalMovement = await this.getOriginalMovementForReversal(
+          client,
+          originalEntry.id,
+          item.id,
+          warehouseId,
+        );
+        const totalCost = Math.abs(originalMovement?.total_cost ?? 0);
+        const costPerUnit = totalCost > 0
+          ? totalCost / item.quantity
+          : (originalMovement?.cost_per_unit ?? item.cost_per_unit ?? 0);
 
-        // Restore valuation (add back the consumed batches at their original cost)
         await client.query(
           `INSERT INTO stock_valuation (
             organization_id, item_id, variant_id, warehouse_id, quantity, cost_per_unit,
-            stock_entry_id, batch_number, serial_number, remaining_quantity
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+            total_cost, stock_entry_id, batch_number, serial_number, remaining_quantity
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
           [
             originalEntry.organization_id,
             item.item_id,
             item.variant_id || null,
             warehouseId,
             item.quantity,
-            item.cost_per_unit || 0,
+            costPerUnit,
+            item.quantity * costPerUnit,
             reversalEntry.id,
             item.batch_number || null,
             item.serial_number || null,
@@ -836,7 +894,6 @@ export class StockEntriesService {
           ],
         );
 
-        // Create IN movement
         const balanceQuantity = await this.computeRunningBalance(
           client,
           originalEntry.organization_id,
@@ -861,10 +918,10 @@ export class StockEntriesService {
             item.quantity,
             item.unit,
             balanceQuantity,
-            item.cost_per_unit || 0,
-            item.quantity * (item.cost_per_unit || 0),
+            costPerUnit,
+            item.quantity * costPerUnit,
             reversalEntry.id,
-            item.id,
+            reversalItem.id,
             item.batch_number || null,
             item.serial_number || null,
           ],
@@ -873,11 +930,19 @@ export class StockEntriesService {
       }
 
       case StockEntryType.STOCK_TRANSFER: {
-        // Original: OUT from source, IN to target → Reverse: OUT from target, IN back to source
         const sourceWarehouse = originalEntry.from_warehouse_id;
         const targetWarehouse = originalEntry.to_warehouse_id;
+        const originalMovement = await this.getOriginalMovementForReversal(
+          client,
+          originalEntry.id,
+          item.id,
+          targetWarehouse,
+        );
+        const totalCost = Math.abs(originalMovement?.total_cost ?? 0);
+        const costPerUnit = totalCost > 0
+          ? totalCost / item.quantity
+          : (originalMovement?.cost_per_unit ?? item.cost_per_unit ?? 0);
 
-        // Remove valuation from target warehouse (that was added by the transfer)
         const targetValResult = await client.query(
           `SELECT id, remaining_quantity, cost_per_unit
            FROM stock_valuation
@@ -893,25 +958,28 @@ export class StockEntriesService {
           if (targetValToRemove <= 0) break;
           const reduce = Math.min(targetValToRemove, parseFloat(valBatch.remaining_quantity));
           await client.query(
-            `UPDATE stock_valuation SET remaining_quantity = remaining_quantity - $1 WHERE id = $2`,
+            `UPDATE stock_valuation
+             SET remaining_quantity = remaining_quantity - $1,
+                 total_cost = GREATEST(remaining_quantity - $1, 0) * cost_per_unit
+             WHERE id = $2`,
             [reduce, valBatch.id],
           );
           targetValToRemove -= reduce;
         }
 
-        // Restore valuation to source warehouse
         await client.query(
           `INSERT INTO stock_valuation (
             organization_id, item_id, variant_id, warehouse_id, quantity, cost_per_unit,
-            stock_entry_id, batch_number, serial_number, remaining_quantity
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+            total_cost, stock_entry_id, batch_number, serial_number, remaining_quantity
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
           [
             originalEntry.organization_id,
             item.item_id,
             item.variant_id || null,
             sourceWarehouse,
             item.quantity,
-            item.cost_per_unit || 0,
+            costPerUnit,
+            item.quantity * costPerUnit,
             reversalEntry.id,
             item.batch_number || null,
             item.serial_number || null,
@@ -919,7 +987,6 @@ export class StockEntriesService {
           ],
         );
 
-        // OUT from target (reverse the IN that happened)
         const targetMovementQuantity = -item.quantity;
         const targetBalanceQuantity = await this.computeRunningBalance(
           client,
@@ -939,12 +1006,11 @@ export class StockEntriesService {
             originalEntry.organization_id, item.item_id, item.variant_id || null,
             targetWarehouse, 'TRANSFER', reversalEntry.entry_date || new Date(),
             targetMovementQuantity, item.unit, targetBalanceQuantity,
-            item.cost_per_unit || 0, -(item.quantity * (item.cost_per_unit || 0)),
-            reversalEntry.id, item.id, item.batch_number || null, item.serial_number || null,
+            costPerUnit, -(item.quantity * costPerUnit),
+            reversalEntry.id, reversalItem.id, item.batch_number || null, item.serial_number || null,
           ],
         );
 
-        // IN back to source (reverse the OUT that happened)
         const sourceBalanceQuantity = await this.computeRunningBalance(
           client,
           originalEntry.organization_id,
@@ -963,20 +1029,30 @@ export class StockEntriesService {
             originalEntry.organization_id, item.item_id, item.variant_id || null,
             sourceWarehouse, 'TRANSFER', reversalEntry.entry_date || new Date(),
             item.quantity, item.unit, sourceBalanceQuantity,
-            item.cost_per_unit || 0, item.quantity * (item.cost_per_unit || 0),
-            reversalEntry.id, item.id, item.batch_number || null, item.serial_number || null,
+            costPerUnit, item.quantity * costPerUnit,
+            reversalEntry.id, reversalItem.id, item.batch_number || null, item.serial_number || null,
           ],
         );
         break;
       }
 
       case StockEntryType.STOCK_RECONCILIATION: {
-        // Reversal of reconciliation is complex — undo the variance adjustment
         const warehouseId = originalEntry.to_warehouse_id || originalEntry.from_warehouse_id;
         const variance = (item.physical_quantity || 0) - (item.system_quantity || 0);
 
         if (variance > 0) {
-          // Original: added stock (positive variance) → Reverse: remove it
+          const originalMovement = await this.getOriginalMovementForReversal(
+            client,
+            originalEntry.id,
+            item.id,
+            warehouseId,
+          );
+          const totalCost = Math.abs(
+            originalMovement?.total_cost ?? (Math.abs(variance) * (item.cost_per_unit || 0)),
+          );
+          const costPerUnit = Math.abs(variance) > 0
+            ? totalCost / Math.abs(variance)
+            : (originalMovement?.cost_per_unit ?? item.cost_per_unit ?? 0);
           const valResult = await client.query(
             `SELECT id, remaining_quantity FROM stock_valuation
              WHERE organization_id = $1 AND item_id = $2 AND warehouse_id = $3
@@ -989,7 +1065,13 @@ export class StockEntriesService {
           for (const vb of valResult.rows) {
             if (toRemove <= 0) break;
             const reduce = Math.min(toRemove, parseFloat(vb.remaining_quantity));
-            await client.query(`UPDATE stock_valuation SET remaining_quantity = remaining_quantity - $1 WHERE id = $2`, [reduce, vb.id]);
+            await client.query(
+              `UPDATE stock_valuation
+               SET remaining_quantity = remaining_quantity - $1,
+                   total_cost = GREATEST(remaining_quantity - $1, 0) * cost_per_unit
+               WHERE id = $2`,
+              [reduce, vb.id],
+            );
             toRemove -= reduce;
           }
 
@@ -1013,20 +1095,32 @@ export class StockEntriesService {
               originalEntry.organization_id, item.item_id, item.variant_id || null,
               warehouseId, 'OUT', reversalEntry.entry_date || new Date(),
               movementQuantity, item.unit, balanceQuantity,
-              item.cost_per_unit || 0, -(Math.abs(variance) * (item.cost_per_unit || 0)),
-              reversalEntry.id, item.id, item.batch_number || null, item.serial_number || null,
+              costPerUnit, -totalCost,
+              reversalEntry.id, reversalItem.id, item.batch_number || null, item.serial_number || null,
             ],
           );
         } else if (variance < 0) {
-          // Original: removed stock (negative variance) → Reverse: restore it
+          const originalMovement = await this.getOriginalMovementForReversal(
+            client,
+            originalEntry.id,
+            item.id,
+            warehouseId,
+          );
+          const totalCost = Math.abs(
+            originalMovement?.total_cost ?? (Math.abs(variance) * (item.cost_per_unit || 0)),
+          );
+          const costPerUnit = Math.abs(variance) > 0
+            ? totalCost / Math.abs(variance)
+            : (originalMovement?.cost_per_unit ?? item.cost_per_unit ?? 0);
           await client.query(
             `INSERT INTO stock_valuation (
               organization_id, item_id, variant_id, warehouse_id, quantity, cost_per_unit,
-              stock_entry_id, batch_number, serial_number, remaining_quantity
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+              total_cost, stock_entry_id, batch_number, serial_number, remaining_quantity
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
             [
               originalEntry.organization_id, item.item_id, item.variant_id || null,
-              warehouseId, Math.abs(variance), item.cost_per_unit || 0,
+              warehouseId, Math.abs(variance), costPerUnit,
+              Math.abs(variance) * costPerUnit,
               reversalEntry.id, item.batch_number || null, item.serial_number || null,
               Math.abs(variance),
             ],
@@ -1051,8 +1145,8 @@ export class StockEntriesService {
               originalEntry.organization_id, item.item_id, item.variant_id || null,
               warehouseId, 'IN', reversalEntry.entry_date || new Date(),
               Math.abs(variance), item.unit, balanceQuantity,
-              item.cost_per_unit || 0, Math.abs(variance) * (item.cost_per_unit || 0),
-              reversalEntry.id, item.id, item.batch_number || null, item.serial_number || null,
+              costPerUnit, Math.abs(variance) * costPerUnit,
+              reversalEntry.id, reversalItem.id, item.batch_number || null, item.serial_number || null,
             ],
           );
         }
@@ -1193,7 +1287,7 @@ export class StockEntriesService {
           warehouse: row.warehouse,
           quantity: Number(row.quantity || 0),
           remaining_quantity: Number(row.remaining_quantity || 0),
-          total_cost: Number(row.total_cost || 0),
+          total_cost: Number(row.total_cost || (Number(row.remaining_quantity || 0) * Number(row.cost_per_unit || 0))),
           cost_per_unit: Number(row.cost_per_unit || 0),
           valuation_date: row.valuation_date,
           expiry_date: matchingEntryItem?.expiry_date || null,
@@ -1204,7 +1298,7 @@ export class StockEntriesService {
 
       existing.quantity += Number(row.quantity || 0);
       existing.remaining_quantity += Number(row.remaining_quantity || 0);
-      existing.total_cost += Number(row.total_cost || 0);
+      existing.total_cost += Number(row.total_cost || (Number(row.remaining_quantity || 0) * Number(row.cost_per_unit || 0)));
       existing.valuation_date = existing.valuation_date < row.valuation_date ? existing.valuation_date : row.valuation_date;
       if (!existing.expiry_date || (matchingEntryItem?.expiry_date && matchingEntryItem.expiry_date < existing.expiry_date)) {
         existing.expiry_date = matchingEntryItem?.expiry_date || existing.expiry_date;
@@ -1755,8 +1849,8 @@ export class StockEntriesService {
     await client.query(
       `INSERT INTO stock_valuation (
         organization_id, item_id, variant_id, warehouse_id, quantity, cost_per_unit,
-        stock_entry_id, batch_number, serial_number, remaining_quantity
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+        total_cost, stock_entry_id, batch_number, serial_number, remaining_quantity
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
       [
         stockEntry.organization_id,
         item.item_id,
@@ -1764,6 +1858,7 @@ export class StockEntriesService {
         stockEntry.to_warehouse_id,
         item.quantity,
         costPerUnit,
+        totalCost,
         stockEntry.id,
         item.batch_number || null,
         item.serial_number || null,
@@ -1829,6 +1924,7 @@ export class StockEntriesService {
       stockEntry.from_warehouse_id,
       item.quantity,
       valuationMethod,
+      { preferExpiryDate: true, itemName: item.item_name || item.item_id },
     );
 
     const costPerUnit = totalCost / item.quantity;
@@ -1914,6 +2010,7 @@ export class StockEntriesService {
       stockEntry.from_warehouse_id,
       item.quantity,
       valuationMethod,
+      { preferExpiryDate: true, itemName: item.item_name || item.item_id },
     );
 
     const costPerUnit = totalCost / item.quantity;
@@ -1992,8 +2089,8 @@ export class StockEntriesService {
     await client.query(
       `INSERT INTO stock_valuation (
         organization_id, item_id, variant_id, warehouse_id, quantity, cost_per_unit,
-        stock_entry_id, batch_number, serial_number, remaining_quantity
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+        total_cost, stock_entry_id, batch_number, serial_number, remaining_quantity
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
       [
         stockEntry.organization_id,
         item.item_id,
@@ -2001,6 +2098,7 @@ export class StockEntriesService {
         stockEntry.to_warehouse_id,
         item.quantity,
         costPerUnit,
+        totalCost,
         stockEntry.id,
         item.batch_number || null,
         item.serial_number || null,
@@ -2119,8 +2217,8 @@ export class StockEntriesService {
       await client.query(
         `INSERT INTO stock_valuation (
           organization_id, item_id, variant_id, warehouse_id, quantity, cost_per_unit,
-          stock_entry_id, batch_number, serial_number, remaining_quantity
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+          total_cost, stock_entry_id, batch_number, serial_number, remaining_quantity
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
         [
           stockEntry.organization_id,
           item.item_id,
@@ -2128,6 +2226,7 @@ export class StockEntriesService {
           warehouseId,
           absVariance,
           costPerUnit,
+          totalCost,
           stockEntry.id,
           item.batch_number || null,
           item.serial_number || null,
@@ -2159,6 +2258,7 @@ export class StockEntriesService {
           warehouseId,
           absVariance,
           valuationMethod,
+          { preferExpiryDate: true, itemName: item.item_name || item.item_id },
         );
 
         totalCost = consumedCost;
@@ -2524,15 +2624,42 @@ export class StockEntriesService {
     warehouseId: string,
     quantity: number,
     method: ValuationMethod = ValuationMethod.FIFO,
+    options?: ValuationConsumptionOptions,
   ): Promise<{ totalCost: number; consumedBatches: Array<{ batchId: string; quantity: number; cost: number }> }> {
     switch (method) {
       case ValuationMethod.MOVING_AVERAGE:
-        return this.consumeValuationMovingAverage(client, organizationId, itemId, variantId, warehouseId, quantity);
+        return this.consumeValuationMovingAverage(
+          client,
+          organizationId,
+          itemId,
+          variantId,
+          warehouseId,
+          quantity,
+          options,
+        );
       case ValuationMethod.LIFO:
-        return this.consumeValuationBatchOrdered(client, organizationId, itemId, variantId, warehouseId, quantity, 'DESC');
+        return this.consumeValuationBatchOrdered(
+          client,
+          organizationId,
+          itemId,
+          variantId,
+          warehouseId,
+          quantity,
+          'DESC',
+          options,
+        );
       case ValuationMethod.FIFO:
       default:
-        return this.consumeValuationBatchOrdered(client, organizationId, itemId, variantId, warehouseId, quantity, 'ASC');
+        return this.consumeValuationBatchOrdered(
+          client,
+          organizationId,
+          itemId,
+          variantId,
+          warehouseId,
+          quantity,
+          'ASC',
+          options,
+        );
     }
   }
 
@@ -2548,16 +2675,16 @@ export class StockEntriesService {
     warehouseId: string,
     quantity: number,
     sortOrder: 'ASC' | 'DESC',
+    options?: ValuationConsumptionOptions,
   ): Promise<{ totalCost: number; consumedBatches: Array<{ batchId: string; quantity: number; cost: number }> }> {
-    const result = await client.query(
-      `SELECT id, remaining_quantity, cost_per_unit
-       FROM stock_valuation
-       WHERE organization_id = $1 AND item_id = $2 AND warehouse_id = $3
-       AND (variant_id = $4 OR ($4 IS NULL AND variant_id IS NULL))
-       AND remaining_quantity > 0
-       ORDER BY created_at ${sortOrder}
-       FOR UPDATE`,
-      [organizationId, itemId, warehouseId, variantId],
+    const result = await this.getConsumableValuationBatches(
+      client,
+      organizationId,
+      itemId,
+      variantId,
+      warehouseId,
+      sortOrder,
+      options,
     );
 
     let remainingQty = quantity;
@@ -2572,7 +2699,8 @@ export class StockEntriesService {
 
       await client.query(
         `UPDATE stock_valuation
-         SET remaining_quantity = remaining_quantity - $1
+         SET remaining_quantity = remaining_quantity - $1,
+             total_cost = GREATEST(remaining_quantity - $1, 0) * cost_per_unit
          WHERE id = $2`,
         [consumeQty, batch.id],
       );
@@ -2612,17 +2740,16 @@ export class StockEntriesService {
     variantId: string | null,
     warehouseId: string,
     quantity: number,
+    options?: ValuationConsumptionOptions,
   ): Promise<{ totalCost: number; consumedBatches: Array<{ batchId: string; quantity: number; cost: number }> }> {
-    // Lock and fetch all remaining valuation batches
-    const result = await client.query(
-      `SELECT id, remaining_quantity, cost_per_unit
-       FROM stock_valuation
-       WHERE organization_id = $1 AND item_id = $2 AND warehouse_id = $3
-       AND (variant_id = $4 OR ($4 IS NULL AND variant_id IS NULL))
-       AND remaining_quantity > 0
-       ORDER BY created_at ASC
-       FOR UPDATE`,
-      [organizationId, itemId, warehouseId, variantId],
+    const result = await this.getConsumableValuationBatches(
+      client,
+      organizationId,
+      itemId,
+      variantId,
+      warehouseId,
+      'ASC',
+      options,
     );
 
     if (result.rows.length === 0) {
@@ -2668,7 +2795,8 @@ export class StockEntriesService {
       if (clampedConsume > 0) {
         await client.query(
           `UPDATE stock_valuation
-           SET remaining_quantity = remaining_quantity - $1
+           SET remaining_quantity = remaining_quantity - $1,
+               total_cost = GREATEST(remaining_quantity - $1, 0) * cost_per_unit
            WHERE id = $2`,
           [clampedConsume, batch.id],
         );
@@ -2689,6 +2817,435 @@ export class StockEntriesService {
     );
 
     return { totalCost, consumedBatches: consumed };
+  }
+
+  async estimateApprovalValue(stockEntryId: string, organizationId: string): Promise<number> {
+    return this.executeInPgTransaction(async (client) => {
+      const entryResult = await client.query(
+        `SELECT se.*,
+         COALESCE(
+           json_agg(
+             json_build_object(
+               'id', sei.id,
+               'item_id', sei.item_id,
+               'variant_id', sei.variant_id,
+               'item_name', sei.item_name,
+               'quantity', sei.quantity,
+               'unit', sei.unit,
+               'cost_per_unit', sei.cost_per_unit,
+               'batch_number', sei.batch_number,
+               'system_quantity', sei.system_quantity,
+               'physical_quantity', sei.physical_quantity
+             )
+           ) FILTER (WHERE sei.id IS NOT NULL),
+           '[]'::json
+         ) AS stock_entry_items
+         FROM stock_entries se
+         LEFT JOIN stock_entry_items sei ON sei.stock_entry_id = se.id
+         WHERE se.id = $1 AND se.organization_id = $2
+         GROUP BY se.id`,
+        [stockEntryId, organizationId],
+      );
+
+      if (entryResult.rows.length === 0) {
+        throw new NotFoundException('Stock entry not found');
+      }
+
+      const stockEntry = entryResult.rows[0];
+      const items = typeof stockEntry.stock_entry_items === 'string'
+        ? JSON.parse(stockEntry.stock_entry_items)
+        : (stockEntry.stock_entry_items || []);
+
+      return this.estimateEntryValueForApproval(client, stockEntry, items);
+    });
+  }
+
+  private async maybeRequestApprovalBeforePosting(
+    client: PoolClient,
+    stockEntry: any,
+    items: any[],
+    userId: string,
+  ): Promise<{ approvalRequested: boolean; approvalId?: string }> {
+    const totalValue = await this.estimateEntryValueForApproval(client, stockEntry, items);
+    const userRole = await this.stockEntryApprovalsService.resolveUserRole(
+      userId,
+      stockEntry.organization_id,
+    );
+
+    if (!userRole) {
+      return { approvalRequested: false };
+    }
+
+    const requiresApproval = await this.stockEntryApprovalsService.requiresApproval(
+      userRole,
+      stockEntry.entry_type,
+      totalValue,
+    );
+
+    if (!requiresApproval) {
+      return { approvalRequested: false };
+    }
+
+    const approval = await this.stockEntryApprovalsService.requestApprovalInTransaction(
+      stockEntry.id,
+      stockEntry.organization_id,
+      userId,
+      client,
+    );
+
+    return { approvalRequested: true, approvalId: approval.id };
+  }
+
+  private async estimateEntryValueForApproval(
+    client: PoolClient,
+    stockEntry: any,
+    items: any[],
+  ): Promise<number> {
+    switch (stockEntry.entry_type as StockEntryType) {
+      case StockEntryType.MATERIAL_ISSUE:
+      case StockEntryType.STOCK_TRANSFER: {
+        let total = 0;
+        for (const item of items) {
+          total += await this.estimateOutboundCost(
+            client,
+            stockEntry.organization_id,
+            item.item_id,
+            item.variant_id || null,
+            stockEntry.from_warehouse_id,
+            item.quantity,
+            item.batch_number || null,
+            item.item_name || item.item_id,
+          );
+        }
+        return total;
+      }
+      case StockEntryType.STOCK_RECONCILIATION:
+        return items.reduce((sum, item) => {
+          const variance = Math.abs((item.physical_quantity || 0) - (item.system_quantity || 0));
+          return sum + (variance * (item.cost_per_unit || 0));
+        }, 0);
+      case StockEntryType.MATERIAL_RECEIPT:
+      default:
+        return items.reduce((sum, item) => {
+          return sum + ((item.quantity || 0) * (item.cost_per_unit || 0));
+        }, 0);
+    }
+  }
+
+  private async estimateOutboundCost(
+    client: PoolClient,
+    organizationId: string,
+    itemId: string,
+    variantId: string | null,
+    warehouseId: string,
+    quantity: number,
+    batchNumber: string | null,
+    itemName: string,
+  ): Promise<number> {
+    const itemMetaResult = await client.query(
+      `SELECT valuation_method FROM items WHERE id = $1`,
+      [itemId],
+    );
+    const valuationMethod = itemMetaResult.rows[0]?.valuation_method || ValuationMethod.FIFO;
+    const result = await this.getConsumableValuationBatches(
+      client,
+      organizationId,
+      itemId,
+      variantId,
+      warehouseId,
+      valuationMethod === ValuationMethod.LIFO ? 'DESC' : 'ASC',
+      { preferExpiryDate: true, itemName },
+      batchNumber,
+    );
+
+    if (valuationMethod === ValuationMethod.MOVING_AVERAGE) {
+      const totalRemaining = result.rows.reduce(
+        (sum: number, batch: any) => sum + (parseFloat(batch.remaining_quantity) || 0),
+        0,
+      );
+      if (totalRemaining < quantity) {
+        throw new BadRequestException(
+          `Insufficient valuation for ${quantity} units (available ${totalRemaining}, short ${quantity - totalRemaining})`,
+        );
+      }
+      const weightedCostSum = result.rows.reduce(
+        (sum: number, batch: any) =>
+          sum + ((parseFloat(batch.remaining_quantity) || 0) * (parseFloat(batch.cost_per_unit) || 0)),
+        0,
+      );
+      return (weightedCostSum / totalRemaining) * quantity;
+    }
+
+    let remainingQty = quantity;
+    let totalCost = 0;
+    for (const batch of result.rows) {
+      if (remainingQty <= 0) break;
+      const consumeQty = Math.min(remainingQty, parseFloat(batch.remaining_quantity) || 0);
+      totalCost += consumeQty * (parseFloat(batch.cost_per_unit) || 0);
+      remainingQty -= consumeQty;
+    }
+
+    if (remainingQty > 0) {
+      throw new BadRequestException(
+        `Insufficient valuation for ${quantity} units (short ${remainingQty})`,
+      );
+    }
+
+    return totalCost;
+  }
+
+  private async getConsumableValuationBatches(
+    client: PoolClient,
+    organizationId: string,
+    itemId: string,
+    variantId: string | null,
+    warehouseId: string,
+    sortOrder: 'ASC' | 'DESC',
+    options?: ValuationConsumptionOptions,
+    batchNumber?: string | null,
+  ): Promise<{ rows: any[] }> {
+    const params: Array<string | null | boolean> = [organizationId, itemId, warehouseId, variantId];
+    const batchFilter = batchNumber ? ' AND sv.batch_number = $5' : '';
+    if (batchNumber) {
+      params.push(batchNumber);
+    }
+    params.push(Boolean(options?.preferExpiryDate));
+    const fefoParam = params.length;
+
+    const result = await client.query(
+      `SELECT
+         sv.id,
+         sv.remaining_quantity,
+         sv.cost_per_unit,
+         sv.batch_number,
+         (
+           SELECT MIN(sei.expiry_date)
+           FROM stock_entry_items sei
+           WHERE sei.stock_entry_id = sv.stock_entry_id
+             AND sei.item_id = sv.item_id
+             AND (
+               (sv.batch_number IS NOT NULL AND sei.batch_number = sv.batch_number)
+               OR (sv.batch_number IS NULL AND sei.batch_number IS NULL)
+             )
+         ) AS expiry_date
+       FROM stock_valuation sv
+       WHERE sv.organization_id = $1
+         AND sv.item_id = $2
+         AND sv.warehouse_id = $3
+         AND (sv.variant_id = $4 OR ($4 IS NULL AND sv.variant_id IS NULL))
+         AND sv.remaining_quantity > 0${batchFilter}
+       ORDER BY
+         CASE
+           WHEN $${fefoParam}::boolean AND (
+             SELECT MIN(sei.expiry_date)
+             FROM stock_entry_items sei
+             WHERE sei.stock_entry_id = sv.stock_entry_id
+               AND sei.item_id = sv.item_id
+               AND (
+                 (sv.batch_number IS NOT NULL AND sei.batch_number = sv.batch_number)
+                 OR (sv.batch_number IS NULL AND sei.batch_number IS NULL)
+               )
+           ) IS NULL THEN 1
+           ELSE 0
+         END ASC,
+         CASE
+           WHEN $${fefoParam}::boolean THEN (
+             SELECT MIN(sei.expiry_date)
+             FROM stock_entry_items sei
+             WHERE sei.stock_entry_id = sv.stock_entry_id
+               AND sei.item_id = sv.item_id
+               AND (
+                 (sv.batch_number IS NOT NULL AND sei.batch_number = sv.batch_number)
+                 OR (sv.batch_number IS NULL AND sei.batch_number IS NULL)
+               )
+           )
+         END ASC NULLS LAST,
+         sv.created_at ${sortOrder}
+       FOR UPDATE`,
+      params,
+    );
+
+    if (!options?.preferExpiryDate) {
+      return result;
+    }
+
+    const now = Date.now();
+    const nonExpired = result.rows.filter((row) => {
+      if (!row.expiry_date) return true;
+      return new Date(row.expiry_date).getTime() > now;
+    });
+
+    if (nonExpired.length === 0 && result.rows.length > 0) {
+      throw new BadRequestException(
+        `All available batches for item ${options.itemName || itemId} have expired`,
+      );
+    }
+
+    return { rows: nonExpired };
+  }
+
+  private async getOriginalMovementForReversal(
+    client: PoolClient,
+    originalEntryId: string,
+    originalItemId: string,
+    warehouseId: string,
+  ): Promise<{ cost_per_unit: number; total_cost: number } | null> {
+    const result = await client.query(
+      `SELECT cost_per_unit, total_cost
+       FROM stock_movements
+       WHERE stock_entry_id = $1
+         AND stock_entry_item_id = $2
+         AND warehouse_id = $3
+       ORDER BY created_at ASC
+       LIMIT 1`,
+      [originalEntryId, originalItemId, warehouseId],
+    );
+
+    if (result.rows.length === 0) {
+      return null;
+    }
+
+    return {
+      cost_per_unit: parseFloat(result.rows[0].cost_per_unit || '0'),
+      total_cost: parseFloat(result.rows[0].total_cost || '0'),
+    };
+  }
+
+  private normalizeOpeningStockInput(
+    dto: CreateOpeningStockDto | UpdateOpeningStockDto,
+  ): OpeningStockWriteInput {
+    const valuationRate = dto.valuation_rate ?? dto.cost_per_unit;
+    const serialNumbers = dto.serial_numbers
+      ?? (dto.serial_number ? [dto.serial_number] : undefined);
+    const totalValue = dto.total_value ?? (
+      dto.quantity !== undefined && valuationRate !== undefined
+        ? dto.quantity * valuationRate
+        : undefined
+    );
+
+    return {
+      item_id: dto.item_id,
+      warehouse_id: dto.warehouse_id,
+      opening_date: dto.opening_date,
+      quantity: dto.quantity,
+      valuation_rate: valuationRate,
+      total_value: totalValue,
+      batch_number: dto.batch_number,
+      serial_numbers: serialNumbers,
+      notes: dto.notes,
+    };
+  }
+
+  private async createOpeningStockJournalEntry(
+    client: PoolClient,
+    organizationId: string,
+    openingStock: any,
+    userId: string | null,
+  ): Promise<string | null> {
+    const totalValue = (openingStock.quantity || 0) * (openingStock.valuation_rate || 0);
+    if (totalValue === 0) {
+      return null;
+    }
+
+    const mappingResult = await client.query(
+      `SELECT debit_account_id, credit_account_id
+       FROM stock_account_mappings
+       WHERE organization_id = $1 AND entry_type = 'Opening Stock'
+       ORDER BY item_category NULLS LAST
+       LIMIT 1`,
+      [organizationId],
+    );
+
+    let debitAccountId = mappingResult.rows[0]?.debit_account_id || null;
+    let creditAccountId = mappingResult.rows[0]?.credit_account_id || null;
+
+    if (!debitAccountId || !creditAccountId) {
+      const fallbackResult = await client.query(
+        `SELECT entry_type, debit_account_id, credit_account_id
+         FROM stock_account_mappings
+         WHERE organization_id = $1
+           AND entry_type IN ('Material Receipt', 'Material Issue')
+         ORDER BY CASE entry_type
+           WHEN 'Material Receipt' THEN 1
+           WHEN 'Material Issue' THEN 2
+           ELSE 99
+         END
+         LIMIT 1`,
+        [organizationId],
+      );
+
+      const fallback = fallbackResult.rows[0];
+      if (fallback?.entry_type === 'Material Receipt') {
+        debitAccountId = fallback.debit_account_id;
+        creditAccountId = fallback.debit_account_id;
+      } else if (fallback?.entry_type === 'Material Issue') {
+        debitAccountId = fallback.credit_account_id;
+        creditAccountId = fallback.credit_account_id;
+      }
+    }
+
+    if (!debitAccountId || !creditAccountId) {
+      this.logger.warn(`Skipping opening stock journal for ${openingStock.id}: no stock account mapping found`);
+      return null;
+    }
+
+    const entryNumber = await this.sequencesService.generateJournalEntryNumber(organizationId);
+    const journalResult = await client.query(
+      `INSERT INTO journal_entries (
+        organization_id,
+        entry_number,
+        entry_date,
+        remarks,
+        reference_type,
+        reference_id,
+        total_debit,
+        total_credit,
+        status,
+        created_by
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      RETURNING id`,
+      [
+        organizationId,
+        entryNumber,
+        openingStock.opening_date,
+        `Opening Stock: ${openingStock.item_id}`,
+        'Opening Stock',
+        openingStock.id,
+        totalValue,
+        totalValue,
+        'posted',
+        userId,
+      ],
+    );
+
+    const journalEntryId = journalResult.rows[0]?.id || null;
+    if (!journalEntryId) {
+      return null;
+    }
+
+    await client.query(
+      `INSERT INTO journal_items (
+        journal_entry_id,
+        account_id,
+        debit,
+        credit,
+        description
+      ) VALUES ($1, $2, $3, $4, $5)`,
+      [journalEntryId, debitAccountId, totalValue, 0, 'Opening stock balance - Debit'],
+    );
+
+    await client.query(
+      `INSERT INTO journal_items (
+        journal_entry_id,
+        account_id,
+        debit,
+        credit,
+        description
+      ) VALUES ($1, $2, $3, $4, $5)`,
+      [journalEntryId, creditAccountId, 0, totalValue, 'Opening stock balance - Credit'],
+    );
+
+    return journalEntryId;
   }
 
   private async executeInPgTransaction<T>(
@@ -2769,12 +3326,13 @@ export class StockEntriesService {
     dto: CreateOpeningStockDto,
   ): Promise<any> {
     const supabase = this.databaseService.getAdminClient();
+    const normalized = this.normalizeOpeningStockInput(dto);
 
     const { data, error } = await supabase
       .from('opening_stock_balances')
       .insert({
         organization_id: organizationId,
-        ...dto,
+        ...normalized,
         status: 'Draft',
         created_by: userId,
       })
@@ -2798,10 +3356,11 @@ export class StockEntriesService {
     dto: UpdateOpeningStockDto,
   ): Promise<any> {
     const supabase = this.databaseService.getAdminClient();
+    const normalized = this.normalizeOpeningStockInput(dto);
 
     const { data, error } = await supabase
       .from('opening_stock_balances')
-      .update(dto)
+      .update(normalized)
       .eq('id', id)
       .eq('organization_id', organizationId)
       .eq('status', 'Draft')
@@ -2860,7 +3419,7 @@ export class StockEntriesService {
         organizationId,
         openingStock.item_id,
         openingStock.warehouse_id,
-        openingStock.variant_id || null,
+        null,
         openingStock.quantity,
       );
 
@@ -2895,7 +3454,7 @@ export class StockEntriesService {
           'IN',
           openingStock.opening_date,
           openingStock.item_id,
-          openingStock.variant_id || null,
+          null,
           openingStock.warehouse_id,
           openingStock.quantity,
           unit,
@@ -2912,33 +3471,47 @@ export class StockEntriesService {
         `INSERT INTO stock_valuation (
           organization_id,
           item_id,
+          variant_id,
           warehouse_id,
           quantity,
           cost_per_unit,
+          total_cost,
           valuation_date,
           batch_number,
           serial_number,
           remaining_quantity
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
         [
           organizationId,
           openingStock.item_id,
+          null,
           openingStock.warehouse_id,
           openingStock.quantity,
           openingStock.valuation_rate,
+          openingStock.quantity * openingStock.valuation_rate,
           openingStock.opening_date,
           openingStock.batch_number,
           serialNumber,
           openingStock.quantity,
         ],
       );
-
-      const journalResult = await client.query(
-        `SELECT journal_entry_id FROM opening_stock_balances WHERE id = $1`,
-        [id],
+      const journalEntryId = await this.createOpeningStockJournalEntry(
+        client,
+        organizationId,
+        openingStock,
+        postedBy,
       );
 
-      return { journal_entry_id: journalResult.rows[0]?.journal_entry_id ?? null };
+      if (journalEntryId) {
+        await client.query(
+          `UPDATE opening_stock_balances
+           SET journal_entry_id = $1
+           WHERE id = $2`,
+          [journalEntryId, id],
+        );
+      }
+
+      return { journal_entry_id: journalEntryId };
     });
   }
 
@@ -3019,8 +3592,13 @@ export class StockEntriesService {
 
     // Defensively strip organization_id in case a caller injects it in the
     // body — the header-derived value is the only source of truth.
-    const { organization_id: _dtoOrgId, ...safeDto } = dto as CreateStockAccountMappingDto & {
+    const {
+      organization_id: _dtoOrgId,
+      description: _description,
+      ...safeDto
+    } = dto as CreateStockAccountMappingDto & {
       organization_id?: string;
+      description?: string;
     };
 
     const { data, error } = await supabase
@@ -3049,10 +3627,13 @@ export class StockEntriesService {
     dto: UpdateStockAccountMappingDto,
   ): Promise<any> {
     const supabase = this.databaseService.getAdminClient();
+    const { description: _description, ...safeDto } = dto as UpdateStockAccountMappingDto & {
+      description?: string;
+    };
 
     const { data, error } = await supabase
       .from('stock_account_mappings')
-      .update(dto)
+      .update(safeDto)
       .eq('id', id)
       .eq('organization_id', organizationId)
       .select(`
@@ -3239,6 +3820,10 @@ export class StockEntriesService {
       if (m.entry_type === 'Material Issue' && m.credit_account_id) {
         inventoryAccountIds.add(m.credit_account_id);
       }
+      if (m.entry_type === 'Opening Stock') {
+        if (m.debit_account_id) inventoryAccountIds.add(m.debit_account_id);
+        if (m.credit_account_id) inventoryAccountIds.add(m.credit_account_id);
+      }
     }
 
     let glBalance = 0;
@@ -3252,7 +3837,7 @@ export class StockEntriesService {
         .select('account_id, debit, credit, journal_entries!inner(reference_type, organization_id)')
         .in('account_id', accountIds)
         .eq('journal_entries.organization_id', organizationId)
-        .eq('journal_entries.reference_type', 'Stock Entry');
+        .in('journal_entries.reference_type', ['Stock Entry', 'Opening Stock']);
 
       if (jErr) {
         throw new BadRequestException(`Failed to load journal_items: ${jErr.message}`);

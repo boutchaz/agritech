@@ -157,10 +157,12 @@ const ParcelLayout = () => {
       <div className="px-6 pb-6">
         <Button
           type="button"
+          variant="outline"
           onClick={() => navigate({ to: '/parcels', search: { farmId: undefined } })}
-          className="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors flex items-center space-x-2"
+          className="gap-2 px-6 py-3"
         >
-          <span>← {t('parcels.detail.backToParcels')}</span>
+          <span aria-hidden>←</span>
+          {t('parcels.detail.backToParcels')}
         </Button>
       </div>
     </>

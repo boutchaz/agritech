@@ -1,5 +1,13 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsNotEmpty, IsUUID, IsString, IsNumber, IsOptional, IsDateString } from 'class-validator';
+import {
+  IsArray,
+  IsDateString,
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsString,
+  IsUUID,
+} from 'class-validator';
 
 export class CreateOpeningStockDto {
   @ApiProperty({ description: 'Item ID' })
@@ -17,20 +25,25 @@ export class CreateOpeningStockDto {
   @IsNumber()
   quantity: number;
 
-  @ApiProperty({ description: 'Unit of measure' })
-  @IsNotEmpty()
-  @IsString()
-  unit: string;
-
-  @ApiProperty({ description: 'Cost per unit' })
+  @ApiProperty({ description: 'Valuation rate / unit cost' })
   @IsNotEmpty()
   @IsNumber()
-  cost_per_unit: number;
+  valuation_rate: number;
 
-  @ApiProperty({ description: 'Total value' })
-  @IsNotEmpty()
+  @ApiPropertyOptional({ description: 'Total value. Computed server-side when omitted.' })
+  @IsOptional()
   @IsNumber()
   total_value: number;
+
+  @ApiPropertyOptional({ description: 'Deprecated alias for valuation_rate' })
+  @IsOptional()
+  @IsNumber()
+  cost_per_unit?: number;
+
+  @ApiPropertyOptional({ description: 'Deprecated alias. Ignored; item default unit is used.' })
+  @IsOptional()
+  @IsString()
+  unit?: string;
 
   @ApiProperty({ description: 'Opening date (YYYY-MM-DD)' })
   @IsNotEmpty()
@@ -42,7 +55,13 @@ export class CreateOpeningStockDto {
   @IsString()
   batch_number?: string;
 
-  @ApiPropertyOptional({ description: 'Serial number' })
+  @ApiPropertyOptional({ description: 'Serial numbers' })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  serial_numbers?: string[];
+
+  @ApiPropertyOptional({ description: 'Deprecated alias for a single serial number' })
   @IsOptional()
   @IsString()
   serial_number?: string;
