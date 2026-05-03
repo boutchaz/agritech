@@ -214,11 +214,21 @@ export const useAuthStore = create<AuthState>()(
       }) as unknown as AuthState,
       onRehydrateStorage: () => (state) => {
         if (state) {
-          // Force tokens to null on rehydrate — defensive in case a previous
-          // build of the app persisted them. Removes any stale tokens still
-          // sitting in localStorage from older sessions.
           state.tokens = null;
         }
+        // Force a storage rewrite so any stale `tokens` blob persisted by a
+        // previous build is evicted immediately, not "eventually" on the next
+        // state change. We defer to a microtask so the persist middleware has
+        // finished installing — calling setState during rehydrate is a no-op.
+        queueMicrotask(() => {
+          try {
+            // Trigger a write through the partialize → only user +
+            // isAuthenticated land in storage; stale `tokens` is dropped.
+            useAuthStore.setState({ tokens: null });
+          } catch {
+            // ignore — store may not be ready in edge cases
+          }
+        });
         state?.setHasHydrated(true);
       },
     }
