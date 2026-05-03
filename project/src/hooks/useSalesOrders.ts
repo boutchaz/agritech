@@ -247,7 +247,7 @@ export function useConvertOrderToInvoice() {
       return response;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['sales_orders', currentOrganization?.id] });
+      queryClient.invalidateQueries({ queryKey: ['sales_orders'] });
       queryClient.invalidateQueries({ queryKey: ['invoices', currentOrganization?.id] });
     },
   });
@@ -258,7 +258,6 @@ export function useConvertOrderToInvoice() {
  */
 export function useUpdateSalesOrderStatus() {
   const queryClient = useQueryClient();
-  const { currentOrganization } = useAuth();
 
   return useMutation({
     mutationFn: async ({ orderId, status, notes }: {
@@ -270,7 +269,7 @@ export function useUpdateSalesOrderStatus() {
       return data as SalesOrder;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['sales_orders', currentOrganization?.id] });
+      queryClient.invalidateQueries({ queryKey: ['sales_orders'] });
     },
   });
 }
@@ -292,7 +291,7 @@ export function useIssueStock() {
       return data;
     },
     onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['sales_orders', currentOrganization?.id] });
+      queryClient.invalidateQueries({ queryKey: ['sales_orders'] });
       queryClient.invalidateQueries({ queryKey: ['sales_order', variables.orderId] });
       queryClient.invalidateQueries({ queryKey: ['stock_entries'] });
       queryClient.invalidateQueries({ queryKey: ['journal_entries'] });

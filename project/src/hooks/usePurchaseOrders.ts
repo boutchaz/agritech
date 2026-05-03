@@ -37,7 +37,27 @@ type PurchaseOrderApiShape = Partial<PurchaseOrderWithItems> & Record<string, un
 /**
  * Normalize API response to ensure consistent field names
  */
-function normalizePurchaseOrder(po: PurchaseOrderApiShape): PurchaseOrder {
+function normalizePurchaseOrder(po: PurchaseOrderApiShape): PurchaseOrderWithItems {
+  // Backend serializes line items as `purchase_order_items` (Supabase relation
+  // name) but the UI expects `items`. Accept either.
+  const rawItems =
+    (po.items as PurchaseOrderItem[] | undefined) ??
+    ((po as Record<string, unknown>).purchase_order_items as PurchaseOrderItem[] | undefined) ??
+    [];
+  const items: PurchaseOrderItem[] = (rawItems ?? []).map((it) => ({
+    ...it,
+    quantity: Number(it.quantity ?? 0),
+    unit_price: Number(it.unit_price ?? 0),
+    amount: Number(it.amount ?? 0),
+    discount_percent: Number(it.discount_percent ?? 0),
+    discount_amount: Number(it.discount_amount ?? 0),
+    tax_rate: Number(it.tax_rate ?? 0),
+    tax_amount: Number(it.tax_amount ?? 0),
+    line_total: Number(it.line_total ?? 0),
+    received_quantity: Number(it.received_quantity ?? 0),
+    billed_quantity: Number(it.billed_quantity ?? 0),
+  }));
+
   return {
     id: String(po.id ?? ''),
     organization_id: String(po.organization_id ?? ''),
@@ -64,6 +84,7 @@ function normalizePurchaseOrder(po: PurchaseOrderApiShape): PurchaseOrder {
     created_at: String(po.created_at ?? ''),
     updated_at: String(po.updated_at ?? ''),
     created_by: (po.created_by as string | null | undefined) ?? null,
+    items,
   };
 }
 
@@ -211,7 +232,7 @@ export function useCreatePurchaseOrder() {
     },
     onSuccess: () => {
       trackEntityCreate('purchase_order');
-      queryClient.invalidateQueries({ queryKey: ['purchase_orders', currentOrganization?.id] });
+      queryClient.invalidateQueries({ queryKey: ['purchase_orders'] });
     },
   });
 }
@@ -238,7 +259,7 @@ export function useConvertPOToBill() {
     },
     onSuccess: () => {
       trackEntityUpdate('purchase_order');
-      queryClient.invalidateQueries({ queryKey: ['purchase_orders', currentOrganization?.id] });
+      queryClient.invalidateQueries({ queryKey: ['purchase_orders'] });
       queryClient.invalidateQueries({ queryKey: ['invoices', currentOrganization?.id] });
     },
   });
@@ -296,7 +317,7 @@ export function useUpdatePurchaseOrder() {
     },
     onSuccess: () => {
       trackEntityUpdate('purchase_order');
-      queryClient.invalidateQueries({ queryKey: ['purchase_orders', currentOrganization?.id] });
+      queryClient.invalidateQueries({ queryKey: ['purchase_orders'] });
     },
   });
 }
@@ -306,7 +327,6 @@ export function useUpdatePurchaseOrder() {
  */
 export function useUpdatePurchaseOrderStatus() {
   const queryClient = useQueryClient();
-  const { currentOrganization } = useAuth();
 
   return useMutation({
     mutationFn: async ({ poId, status, notes }: {
@@ -318,7 +338,7 @@ export function useUpdatePurchaseOrderStatus() {
       return data as PurchaseOrder;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['purchase_orders', currentOrganization?.id] });
+      queryClient.invalidateQueries({ queryKey: ['purchase_orders'] });
     },
   });
 }
