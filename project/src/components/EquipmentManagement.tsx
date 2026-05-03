@@ -22,7 +22,7 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
-import { FilterBar, ListPageHeader, ListPageLayout } from '@/components/ui/data-table';
+import { DataTablePagination, FilterBar, ListPageHeader, ListPageLayout, useTableState } from '@/components/ui/data-table';
 import { EquipmentMaintenance } from './EquipmentMaintenance';
 
 const CATEGORY_ICONS: Record<EquipmentCategory, React.ElementType> = {
@@ -146,6 +146,13 @@ const EquipmentManagement = () => {
     return items;
   }, [equipment, search]);
 
+  const tableState = useTableState<EquipmentAsset>({
+    data: filteredEquipment as unknown as Record<string, unknown>[],
+    defaultPageSize: 12,
+  });
+  const { paginatedData, page, pageSize, totalPages, totalItems, setPage, setPageSize } = tableState;
+  const pagedEquipment = paginatedData as unknown as EquipmentAsset[];
+
   useEffect(() => {
     if (!showAddDialog) return;
     if (editingItem) {
@@ -219,9 +226,22 @@ const EquipmentManagement = () => {
       <ListPageLayout>
         <ListPageHeader
           title={t('equipment.title', 'Equipment')}
-          count={filteredEquipment.length}
-          onAdd={() => { setEditingItem(null); setShowAddDialog(true); }}
-          addLabel={t('equipment.add', 'Add Equipment')}
+          icon={
+            <span className="inline-flex items-center gap-1 text-sm font-normal text-muted-foreground">
+              <Tractor className="h-5 w-5" />
+              <span>{totalItems}</span>
+            </span>
+          }
+          actions={
+            <Button
+              variant="green"
+              onClick={() => { setEditingItem(null); setShowAddDialog(true); }}
+              className="flex items-center gap-2"
+            >
+              <Plus className="h-4 w-4" />
+              {t('equipment.add', 'Add Equipment')}
+            </Button>
+          }
         />
 
         <FilterBar>
@@ -270,8 +290,9 @@ const EquipmentManagement = () => {
             </Button>
           </div>
         ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {filteredEquipment.map(item => {
+          <>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {pagedEquipment.map(item => {
               const Icon = CATEGORY_ICONS[item.category] || Package;
               return (
                 <div key={item.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
@@ -334,7 +355,19 @@ const EquipmentManagement = () => {
                 </div>
               );
             })}
-          </div>
+            </div>
+            {totalItems > 0 && (
+              <DataTablePagination
+                page={page}
+                totalPages={totalPages}
+                pageSize={pageSize}
+                totalItems={totalItems}
+                onPageChange={setPage}
+                onPageSizeChange={setPageSize}
+                pageSizeOptions={[12, 24, 48]}
+              />
+            )}
+          </>
         )}
       </ListPageLayout>
 

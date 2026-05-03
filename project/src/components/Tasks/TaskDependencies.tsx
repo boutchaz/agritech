@@ -52,6 +52,7 @@ interface TaskDependenciesProps {
   taskId: string;
   organizationId: string;
   disabled?: boolean;
+  embedded?: boolean;
 }
 
 const DEPENDENCY_TYPE_LABELS: Record<DependencyType, string> = {
@@ -80,7 +81,7 @@ const STATUS_LABELS: Record<string, string> = {
 
 const getStatusColor = (status?: string) => STATUS_COLORS[status ?? ''] || 'bg-gray-400';
 const getStatusLabel = (status?: string) => STATUS_LABELS[status ?? ''] || status || 'Unknown';
-export default function TaskDependencies({ taskId, organizationId, disabled }: TaskDependenciesProps) {
+export default function TaskDependencies({ taskId, organizationId, disabled, embedded = false }: TaskDependenciesProps) {
   const { t } = useTranslation();
   const [showAddForm, setShowAddForm] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -174,26 +175,40 @@ export default function TaskDependencies({ taskId, organizationId, disabled }: T
     }
   };
 
-  return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-          <GitBranch className="w-5 h-5" />
-          {t('tasks.detail.dependencies', 'Dependencies')}
-          {(dependsOn.length + requiredBy.length) > 0 && (
-            <span className="text-sm font-normal text-gray-500">
-              ({dependsOn.length + requiredBy.length})
-            </span>
-          )}
-        </h2>
-        {!disabled && !showAddForm && (
-          <Button variant="outline" size="sm" onClick={() => setShowAddForm(true)}>
-            <Plus className="w-4 h-4 mr-1" />
-            {t('tasks.detail.addDependency', 'Add')}
-          </Button>
+  const headerRow = !embedded && (
+    <div className="mb-4 flex items-center justify-between">
+      <h2 className="flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-white">
+        <GitBranch className="h-5 w-5" />
+        {t('tasks.detail.dependencies', 'Dependencies')}
+        {(dependsOn.length + requiredBy.length) > 0 && (
+          <span className="text-sm font-normal text-gray-500">
+            ({dependsOn.length + requiredBy.length})
+          </span>
         )}
+      </h2>
+      {!disabled && !showAddForm && (
+        <Button variant="outline" size="sm" onClick={() => setShowAddForm(true)}>
+          <Plus className="mr-1 h-4 w-4" />
+          {t('tasks.detail.addDependency', 'Add')}
+        </Button>
+      )}
+    </div>
+  );
+
+  const addDepBtn =
+    embedded && !disabled && !showAddForm ? (
+      <div className="mb-4 flex justify-end">
+        <Button variant="outline" size="sm" onClick={() => setShowAddForm(true)}>
+          <Plus className="mr-1 h-4 w-4" />
+          {t('tasks.detail.addDependency', 'Add')}
+        </Button>
       </div>
+    ) : null;
+
+  const body = (
+    <>
+      {headerRow}
+      {addDepBtn}
 
       {/* Blocked Banner */}
       {blockerCount > 0 && (
@@ -220,9 +235,9 @@ export default function TaskDependencies({ taskId, organizationId, disabled }: T
         <div className="space-y-5">
           {/* Depends On Section */}
           <div>
-            <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2 flex items-center gap-1.5">
-              <ArrowLeft className="w-3.5 h-3.5" />
-              {t('tasks.detail.dependsOn', 'Depends On')}
+            <h3 className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+              <ArrowLeft className="h-3.5 w-3.5" />
+              {t('tasks.detail.blockedBySection', 'Bloquée par')}
             </h3>
             {dependsOn.length === 0 ? (
               <p className="text-sm text-gray-400 dark:text-gray-500 italic py-2">
@@ -281,9 +296,9 @@ export default function TaskDependencies({ taskId, organizationId, disabled }: T
 
           {/* Required By Section */}
           <div>
-            <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2 flex items-center gap-1.5">
-              <ArrowRight className="w-3.5 h-3.5" />
-              {t('tasks.detail.requiredBy', 'Required By')}
+            <h3 className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+              <ArrowRight className="h-3.5 w-3.5" />
+              {t('tasks.detail.blocksSection', 'Bloque')}
             </h3>
             {requiredBy.length === 0 ? (
               <p className="text-sm text-gray-400 dark:text-gray-500 italic py-2">
@@ -331,7 +346,7 @@ export default function TaskDependencies({ taskId, organizationId, disabled }: T
 
       {/* Add Dependency Form */}
       {showAddForm && !disabled && (
-        <div className="mt-4 pt-4 border-t dark:border-gray-700 space-y-3">
+        <div className="mt-4 space-y-3 border-t pt-4 dark:border-gray-700">
           <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">
             {t('tasks.detail.addNewDependency', 'Add New Dependency')}
           </h3>
@@ -440,6 +455,16 @@ export default function TaskDependencies({ taskId, organizationId, disabled }: T
           </div>
         </div>
       )}
+    </>
+  );
+
+  if (embedded) {
+    return <div className="space-y-4">{body}</div>;
+  }
+
+  return (
+    <div className="rounded-lg bg-white p-6 shadow dark:bg-gray-800">
+      {body}
     </div>
   );
 }

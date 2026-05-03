@@ -97,7 +97,7 @@ const toLabel = (value: string) =>
 
 export function AccountMappingsManagement() {
   const { hasRole } = useAuth();
-  const { t } = useTranslation();
+  const { t } = useTranslation('accounting');
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingMapping, setEditingMapping] = useState<AccountMapping | null>(null);

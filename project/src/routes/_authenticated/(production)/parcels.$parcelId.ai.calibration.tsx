@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, lazy, Suspense } from 'react';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { useAICalibration } from '@/hooks/useAICalibration';
@@ -9,7 +9,8 @@ useCalibrationPhase,
 useCalibrationHistory,
 useValidateCalibration,
 useNutritionSuggestion,
-useConfirmNutritionOption, } from '@/hooks/useCalibrationReport';
+useConfirmNutritionOption,
+useCalibrationBundle, } from '@/hooks/useCalibrationReport';
 import { useCalibrationProgress, type CalibrationProgressEvent } from '@/hooks/useCalibrationSocket';
 import { useAIPlan } from '@/hooks/useAIPlan';
 import { useAIRecommendations } from '@/hooks/useAIRecommendations';
@@ -57,10 +58,20 @@ import {
 } from 'lucide-react';
 import { SelectionCard } from '@/components/onboarding';
 import { ButtonLoader, SectionLoader } from '@/components/ui/loader';
-import { CalibrationWizard } from '@/components/calibration/CalibrationWizard';
-import { RecalibrationWizard } from '@/components/calibration/RecalibrationWizard';
+// Wizards are heavy and only rendered when the user opens a dialog.
+// Code-split them so the initial calibration page payload shrinks.
+const CalibrationWizard = lazy(() =>
+  import('@/components/calibration/CalibrationWizard').then((m) => ({ default: m.CalibrationWizard })),
+);
+const RecalibrationWizard = lazy(() =>
+  import('@/components/calibration/RecalibrationWizard').then((m) => ({ default: m.RecalibrationWizard })),
+);
+const AnnualRecalibrationWizard = lazy(() =>
+  import('@/components/calibration/AnnualRecalibrationWizard').then((m) => ({
+    default: m.AnnualRecalibrationWizard,
+  })),
+);
 import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
-import { AnnualRecalibrationWizard } from '@/components/calibration/AnnualRecalibrationWizard';
 import { TargetYieldStep } from '@/components/calibration/TargetYieldStep';
 import { CalibrationRunInputsPanel } from '@/components/calibration/CalibrationRunInputsPanel';
 import { CalibrationReviewSection } from '@/components/calibration/review/CalibrationReviewSection';
@@ -275,77 +286,66 @@ const NUTRITION_OPTION_ICONS: Record<
   C: <TreePine className="w-5 h-5" aria-hidden />,
 };
 
-const ValidationPanel = ({ calibrationId, parcelId, healthScore, confidence, onReCalibrate }: { calibrationId: string;
+/** Validate + re-run only (copy lives in the hero card — no second amber panel). */
+const CalibrationValidateControls = ({
+  calibrationId,
+  parcelId,
+  healthScore,
+  confidence,
+  onReCalibrate,
+}: {
+  calibrationId: string;
   parcelId: string;
   healthScore: number;
   confidence: number;
-  onReCalibrate: () => void; }) => {
+  onReCalibrate: () => void;
+}) => {
   const { mutate: validate, isPending: isValidating } = useValidateCalibration(parcelId);
 
   return (
-    <div className="bg-amber-50 dark:bg-amber-900/20 rounded-xl border-2 border-amber-300 dark:border-amber-700 p-6">
-      <div className="flex items-start space-x-4">
-        <div className="p-2 bg-amber-100 dark:bg-amber-900/40 rounded-lg shrink-0">
-          <Shield className="w-6 h-6 text-amber-600 dark:text-amber-400" />
-        </div>
-        <div className="flex-1">
-          <h3 className="text-lg font-semibold text-amber-900 dark:text-amber-100">
-            Validate Calibration Baseline
-          </h3>
-          <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
-            Review the report above. If the results look correct for this parcel, validate to proceed.
-          </p>
-
-          <div className="flex items-center space-x-6 mt-4 text-sm">
-            <div>
-              <span className="text-amber-600 dark:text-amber-400">Health Score:</span>{' '}
-              <span className="font-bold text-amber-900 dark:text-amber-100">{healthScore}/100</span>
-            </div>
-            <div>
-              <span className="text-amber-600 dark:text-amber-400">Confidence:</span>{' '}
-              <span className="font-bold text-amber-900 dark:text-amber-100">{(confidence * 100).toFixed(0)}%</span>
-            </div>
-          </div>
-
-          <div className="flex items-center space-x-3 mt-5">
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="amber" type="button" disabled={isValidating} className="inline-flex items-center space-x-2 px-6 py-2.5 rounded-lg transition-colors font-medium" >
-                  <CheckCircle2 className="w-4 h-4" />
-                  <span>{isValidating ? 'Validating...' : 'Validate & Activate'}</span>
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Validate this calibration?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This will lock in the current baseline (health score: {healthScore}/100, confidence: {(confidence * 100).toFixed(0)}%).
-                    You will then be asked to select a nutrition management option.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={() => validate(calibrationId)}
-                    className="bg-amber-600 hover:bg-amber-700"
-                  >
-                    Validate
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-
-            <Button
-              type="button"
-              onClick={onReCalibrate}
-              className="inline-flex items-center space-x-2 px-4 py-2.5 border border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-300 rounded-lg hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors"
+    <div className="flex flex-wrap items-center gap-3">
+      <AlertDialog>
+        <AlertDialogTrigger asChild>
+          <Button
+            variant="amber"
+            type="button"
+            disabled={isValidating}
+            className="inline-flex items-center space-x-2 px-6 py-2.5 rounded-lg transition-colors font-medium"
+            data-testid="calibration-validate-open-dialog"
+          >
+            <CheckCircle2 className="w-4 h-4" />
+            <span>{isValidating ? 'Validating...' : 'Validate & Activate'}</span>
+          </Button>
+        </AlertDialogTrigger>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Validate this calibration?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will lock in the current baseline (health score: {healthScore}/100, confidence:{' '}
+              {(confidence * 100).toFixed(0)}%). You will then be asked to select a nutrition management option.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => validate(calibrationId)}
+              className="bg-amber-600 hover:bg-amber-700"
             >
-              <Play className="w-4 h-4" />
-              <span>Re-run Calibration</span>
-            </Button>
-          </div>
-        </div>
-      </div>
+              Validate
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <Button
+        type="button"
+        variant="outline"
+        onClick={onReCalibrate}
+        className="inline-flex items-center space-x-2 px-4 py-2.5 border-amber-300 text-amber-800 hover:bg-amber-50 dark:border-amber-700 dark:text-amber-200 dark:hover:bg-amber-950/40 rounded-lg transition-colors"
+      >
+        <Play className="w-4 h-4" />
+        <span>Re-run Calibration</span>
+      </Button>
     </div>
   );
 };
@@ -767,6 +767,8 @@ interface HeroStatusCardProps {
   confidenceFraction: number | null;
   baselineDate: string | null;
   locale: string;
+  /** When set, replaces the default primary/secondary CTAs (e.g. validate baseline controls). */
+  actionSlot?: React.ReactNode;
   primaryCta?: { label: string; onClick: () => void; disabled?: boolean; Icon?: React.ComponentType<{ className?: string }> };
   secondaryCta?: { label: string; onClick: () => void; disabled?: boolean; Icon?: React.ComponentType<{ className?: string }> };
 }
@@ -777,6 +779,7 @@ const HeroStatusCard = ({
   confidenceFraction,
   baselineDate,
   locale,
+  actionSlot,
   primaryCta,
   secondaryCta,
 }: HeroStatusCardProps) => {
@@ -840,33 +843,39 @@ const HeroStatusCard = ({
         </div>
       </div>
 
-      {(primaryCta || secondaryCta) && (
+      {(actionSlot || primaryCta || secondaryCta) && (
         <div className="mt-5 flex flex-wrap items-center gap-2 pt-4 border-t border-black/5 dark:border-white/5">
-          {primaryCta && (
-            <Button
-              variant={status.tone === 'danger' ? 'red' : status.tone === 'warning' ? 'amber' : status.tone === 'success' ? 'green' : 'blue'}
-              type="button"
-              onClick={primaryCta.onClick}
-              disabled={primaryCta.disabled}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold"
-              data-testid="calibration-hero-primary-cta"
-            >
-              {primaryCta.Icon ? <primaryCta.Icon className="w-4 h-4" /> : null}
-              {primaryCta.label}
-            </Button>
-          )}
-          {secondaryCta && (
-            <Button
-              variant="outline"
-              type="button"
-              onClick={secondaryCta.onClick}
-              disabled={secondaryCta.disabled}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium"
-              data-testid="calibration-hero-secondary-cta"
-            >
-              {secondaryCta.Icon ? <secondaryCta.Icon className="w-4 h-4" /> : null}
-              {secondaryCta.label}
-            </Button>
+          {actionSlot ? (
+            actionSlot
+          ) : (
+            <>
+              {primaryCta && (
+                <Button
+                  variant={status.tone === 'danger' ? 'red' : status.tone === 'warning' ? 'amber' : status.tone === 'success' ? 'green' : 'blue'}
+                  type="button"
+                  onClick={primaryCta.onClick}
+                  disabled={primaryCta.disabled}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold"
+                  data-testid="calibration-hero-primary-cta"
+                >
+                  {primaryCta.Icon ? <primaryCta.Icon className="w-4 h-4" /> : null}
+                  {primaryCta.label}
+                </Button>
+              )}
+              {secondaryCta && (
+                <Button
+                  variant="outline"
+                  type="button"
+                  onClick={secondaryCta.onClick}
+                  disabled={secondaryCta.disabled}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium"
+                  data-testid="calibration-hero-secondary-cta"
+                >
+                  {secondaryCta.Icon ? <secondaryCta.Icon className="w-4 h-4" /> : null}
+                  {secondaryCta.label}
+                </Button>
+              )}
+            </>
           )}
         </div>
       )}
@@ -1009,6 +1018,9 @@ const AICalibrationPage = () => {
   const [lastCalibrationLaunchAt, setLastCalibrationLaunchAt] = useState<number | null>(null);
 
   const { data: parcelData, refetch: refetchParcel } = useParcelById(parcelId);
+  // Aggregate fetch — must run before the per-piece hooks so its onSuccess
+  // can seed their queryKeys before they evaluate their fetchers.
+  useCalibrationBundle(parcelId);
   const { data: calibration, isLoading: isCalibrationLoading, isFetching: isCalibrationFetching, refetch: refetchCalibration } = useAICalibration(parcelId);
   const { data: phase, isFetching: isPhaseFetching, refetch: refetchPhase } = useCalibrationPhase(parcelId);
   const { data: diagnostics } = useAIDiagnostics(parcelId, phase === 'active');
@@ -1172,20 +1184,7 @@ const AICalibrationPage = () => {
       Icon: BrainCircuit,
     };
   } else if (phase === 'calibrated') {
-    heroPrimary = {
-      label: 'Review & validate',
-      onClick: () =>
-        document
-          .querySelector('[data-testid="calibration-action-panels"]')
-          ?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
-      Icon: Shield,
-    };
-    heroSecondary = {
-      label: 'Re-run calibration',
-      onClick: handleOpenFullRecalibrationWizard,
-      Icon: Play,
-      disabled: isBusy,
-    };
+    // Validate + re-run live in the hero card (CalibrationValidateControls via actionSlot).
   } else if (phase === 'awaiting_nutrition_option') {
     heroPrimary = {
       label: 'Choose nutrition option',
@@ -1223,6 +1222,21 @@ const AICalibrationPage = () => {
 
   const journeyStep = deriveJourneyStep(phase, hasV2Report);
 
+  const heroValidateActionSlot =
+    (phase === 'calibrated' || calibrationCompletedButPhaseStuck) &&
+    calibration?.status !== 'validated' &&
+    hasV2Report &&
+    v2Output &&
+    reportData?.calibration?.id ? (
+      <CalibrationValidateControls
+        calibrationId={reportData.calibration.id}
+        parcelId={parcelId}
+        healthScore={v2Output.step8.health_score.total}
+        confidence={confidenceToFraction(v2Output.confidence.normalized_score) ?? 0}
+        onReCalibrate={handleOpenFullRecalibrationWizard}
+      />
+    ) : undefined;
+
   return (
     <div className="space-y-6" data-testid="calibration-page">
       <HeroStatusCard
@@ -1231,8 +1245,9 @@ const AICalibrationPage = () => {
         confidenceFraction={heroConfidence}
         baselineDate={baselineDate}
         locale={i18n.language}
-        primaryCta={heroPrimary}
-        secondaryCta={heroSecondary}
+        actionSlot={heroValidateActionSlot}
+        primaryCta={heroValidateActionSlot ? undefined : heroPrimary}
+        secondaryCta={heroValidateActionSlot ? undefined : heroSecondary}
       />
 
       <PhaseTimeline current={journeyStep} />
@@ -1285,17 +1300,6 @@ const AICalibrationPage = () => {
         (phase === 'calibrated' || phase === 'awaiting_nutrition_option' || phase === 'calibrating' || calibrationCompletedButPhaseStuck) &&
         reportData?.calibration?.id && (
         <div className="space-y-4" data-testid="calibration-action-panels">
-          {(phase === 'calibrated' || calibrationCompletedButPhaseStuck) && calibration?.status !== 'validated' && hasV2Report && v2Output && (
-            <ValidationPanel
-              calibrationId={reportData.calibration.id}
-              parcelId={parcelId}
-              healthScore={v2Output.step8.health_score.total}
-              confidence={
-                confidenceToFraction(v2Output.confidence.normalized_score) ?? 0
-              }
-              onReCalibrate={handleOpenFullRecalibrationWizard}
-            />
-          )}
           {(phase === 'awaiting_nutrition_option' ||
             calibration?.status === 'validated' ||
             calibrationCompletedButPhaseStuck) &&
@@ -1338,18 +1342,20 @@ const AICalibrationPage = () => {
       >
         <div data-testid="calibration-partial-recalibration-dialog">
           <div className="px-2 pt-2 pb-1 sm:px-4 sm:pt-4 sm:pb-2">
-            <RecalibrationWizard
-              parcelId={parcelId}
-              baselineData={reportData}
-              confidenceScore={
-                v2Output?.confidence.normalized_score != null
-                  ? (confidenceToFraction(v2Output.confidence.normalized_score) ??
-                    undefined)
-                  : undefined
-              }
-              onClose={handleCancelPartialRecalibration}
-              onSwitchToFullRecalibration={handleOpenFullRecalibrationWizard}
-            />
+            <Suspense fallback={<SectionLoader />}>
+              <RecalibrationWizard
+                parcelId={parcelId}
+                baselineData={reportData}
+                confidenceScore={
+                  v2Output?.confidence.normalized_score != null
+                    ? (confidenceToFraction(v2Output.confidence.normalized_score) ??
+                      undefined)
+                    : undefined
+                }
+                onClose={handleCancelPartialRecalibration}
+                onSwitchToFullRecalibration={handleOpenFullRecalibrationWizard}
+              />
+            </Suspense>
           </div>
         </div>
       </ResponsiveDialog>
@@ -1362,11 +1368,13 @@ const AICalibrationPage = () => {
         contentClassName="max-h-[92vh] overflow-y-auto p-0"
       >
           <div className="px-2 pt-2 pb-1 sm:px-4 sm:pt-4 sm:pb-2">
-            <CalibrationWizard
-              parcelId={parcelId}
-              parcelData={parcelData}
-              onStarted={handleCalibrationLaunchStarted}
-            />
+            <Suspense fallback={<SectionLoader />}>
+              <CalibrationWizard
+                parcelId={parcelId}
+                parcelData={parcelData}
+                onStarted={handleCalibrationLaunchStarted}
+              />
+            </Suspense>
           </div>
       </ResponsiveDialog>
 
@@ -1445,11 +1453,13 @@ const AICalibrationPage = () => {
       })()}
 
       {showAnnualRecalibrationWizard && (
-        <AnnualRecalibrationWizard
-          parcelId={parcelId}
-          estimatedCampaignCount={estimatedCampaignCount}
-          onClose={() => setShowAnnualRecalibrationWizard(false)}
-        />
+        <Suspense fallback={<SectionLoader />}>
+          <AnnualRecalibrationWizard
+            parcelId={parcelId}
+            estimatedCampaignCount={estimatedCampaignCount}
+            onClose={() => setShowAnnualRecalibrationWizard(false)}
+          />
+        </Suspense>
       )}
 
       {missingPlantingYear && (
@@ -1457,11 +1467,13 @@ const AICalibrationPage = () => {
       )}
 
       {isWizardPhase && !missingPlantingYear && !isFullWizardOpen && !isWaitingForCalibrationResult && (
-        <CalibrationWizard
-          parcelId={parcelId}
-          parcelData={parcelData}
-          onStarted={handleCalibrationLaunchStarted}
-        />
+        <Suspense fallback={<SectionLoader />}>
+          <CalibrationWizard
+            parcelId={parcelId}
+            parcelData={parcelData}
+            onStarted={handleCalibrationLaunchStarted}
+          />
+        </Suspense>
       )}
 
       {isCalibrating && (

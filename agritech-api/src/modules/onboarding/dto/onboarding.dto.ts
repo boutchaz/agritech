@@ -31,6 +31,10 @@ export class OnboardingStateDto {
   @IsOptional()
   currentStep?: number;
 
+  @ApiPropertyOptional({ description: 'Selected subscription plan type', nullable: true })
+  @IsOptional()
+  selectedPlanType?: string | null;
+
   @ApiPropertyOptional({ description: 'Profile data' })
   @IsObject()
   @IsOptional()

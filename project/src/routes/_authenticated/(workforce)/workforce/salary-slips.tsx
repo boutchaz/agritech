@@ -2,9 +2,10 @@ import { useState, type ReactNode } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Loader2, FileText, Send, CheckCircle2, X } from 'lucide-react';
+import { Loader2, FileText, Send, CheckCircle2, X, Building2, Users } from 'lucide-react';
 import { withRouteProtection } from '@/components/authorization/withRouteProtection';
 import { useAuth } from '@/hooks/useAuth';
+import ModernPageHeader from '@/components/ModernPageHeader';
 import { useSalarySlips, useSalarySlip, useSlipAction } from '@/hooks/usePayroll';
 import type { SalarySlip, SlipStatus } from '@/lib/api/payroll';
 import { Button } from '@/components/ui/button';
@@ -41,29 +42,29 @@ function SalarySlipsPage() {
   const slips = query.data ?? [];
 
   return (
-    <div className="p-6 space-y-6 max-w-6xl">
-      <header className="flex items-center justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="text-2xl font-semibold flex items-center gap-2">
-            <FileText className="w-6 h-6" />
-            {t('salarySlips.title', 'Salary Slips')}
-          </h1>
-          <p className="text-sm text-gray-500 mt-1">
-            {t('salarySlips.subtitle', 'Generated payslips. Click a row to view the breakdown.')}
-          </p>
-        </div>
-        <Select value={status} onValueChange={(v) => setStatus(v as any)}>
-          <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{t('common.all', 'All')}</SelectItem>
-            <SelectItem value="draft">draft</SelectItem>
-            <SelectItem value="submitted">submitted</SelectItem>
-            <SelectItem value="paid">paid</SelectItem>
-            <SelectItem value="cancelled">cancelled</SelectItem>
-          </SelectContent>
-        </Select>
-      </header>
-
+    <>
+      <ModernPageHeader
+        breadcrumbs={[
+          { icon: Building2, label: currentOrganization?.name ?? '', path: '/dashboard' },
+          { icon: Users, label: t('nav.workforce', 'Workforce'), path: '/workforce/employees' },
+          { icon: FileText, label: t('salarySlips.title', 'Salary Slips'), isActive: true },
+        ]}
+        title={t('salarySlips.title', 'Salary Slips')}
+        subtitle={t('salarySlips.subtitle', 'Generated payslips. Click a row to view the breakdown.')}
+        actions={
+          <Select value={status} onValueChange={(v) => setStatus(v as any)}>
+            <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{t('common.all', 'All')}</SelectItem>
+              <SelectItem value="draft">draft</SelectItem>
+              <SelectItem value="submitted">submitted</SelectItem>
+              <SelectItem value="paid">paid</SelectItem>
+              <SelectItem value="cancelled">cancelled</SelectItem>
+            </SelectContent>
+          </Select>
+        }
+      />
+      <div className="p-3 sm:p-4 lg:p-6 space-y-6">
       {query.isLoading ? (
         <div className="flex items-center justify-center h-40">
           <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
@@ -114,7 +115,8 @@ function SalarySlipsPage() {
           onClose={() => setOpenSlipId(null)}
         />
       )}
-    </div>
+      </div>
+    </>
   );
 }
 

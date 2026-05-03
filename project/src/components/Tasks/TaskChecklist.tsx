@@ -23,9 +23,11 @@ interface ChecklistItem {
 interface TaskChecklistProps {
   taskId: string;
   disabled?: boolean;
+  /** No duplicate card/title — parent Card provides chrome. */
+  embedded?: boolean;
 }
 
-export default function TaskChecklist({ taskId, disabled = false }: TaskChecklistProps) {
+export default function TaskChecklist({ taskId, disabled = false, embedded = false }: TaskChecklistProps) {
   const { t, i18n } = useTranslation();
   const [newItemTitle, setNewItemTitle] = useState('');
 
@@ -66,67 +68,97 @@ export default function TaskChecklist({ taskId, disabled = false }: TaskChecklis
     removeItem.mutate({ taskId, itemId });
   };
 
-  return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-          <ListChecks className="w-5 h-5" />
-          {t('tasks.detail.checklist', 'Checklist')}
-          {totalCount > 0 && (
-            <span className="text-sm font-normal text-gray-500">
-              ({completedCount}/{totalCount})
-            </span>
+  const addRow = !disabled && (
+    embedded ? (
+      <div className="mt-4 space-y-2">
+        <Input
+          value={newItemTitle}
+          onChange={(e) => setNewItemTitle(e.target.value)}
+          placeholder={t('tasks.detail.addChecklistItem', 'Add a checklist item...')}
+          className="w-full"
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              handleAddItem();
+            }
+          }}
+          disabled={addItem.isPending}
+        />
+        <Button
+          type="button"
+          onClick={handleAddItem}
+          disabled={!newItemTitle.trim() || addItem.isPending}
+          className="w-full bg-emerald-600 text-white hover:bg-emerald-700"
+        >
+          {addItem.isPending ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <Plus className="mr-2 h-4 w-4" />
           )}
-        </h2>
-        {totalCount > 0 && (
-          <span className="text-sm font-medium text-gray-600 dark:text-gray-300">
-            {percentage}%
-          </span>
-        )}
+          {t('tasks.detail.addChecklistButton', 'Ajouter un élément')}
+        </Button>
       </div>
+    ) : (
+      <div className="mb-4 flex gap-2">
+        <Input
+          value={newItemTitle}
+          onChange={(e) => setNewItemTitle(e.target.value)}
+          placeholder={t('tasks.detail.addChecklistItem', 'Add a checklist item...')}
+          className="flex-1"
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              handleAddItem();
+            }
+          }}
+          disabled={addItem.isPending}
+        />
+        <Button
+          onClick={handleAddItem}
+          disabled={!newItemTitle.trim() || addItem.isPending}
+          size="sm"
+          variant="outline"
+        >
+          {addItem.isPending ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Plus className="h-4 w-4" />
+          )}
+          <span className="ml-1">{t('common.add', 'Add')}</span>
+        </Button>
+      </div>
+    )
+  );
 
-      {/* Progress bar */}
-      {totalCount > 0 && (
-        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mb-4">
-          <div
-            className="bg-green-500 h-2 rounded-full transition-all duration-300 ease-in-out"
-            style={{ width: `${percentage}%` }}
-          />
-        </div>
+  const body = (
+    <>
+      {!embedded && (
+        <>
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-white">
+              <ListChecks className="h-5 w-5" />
+              {t('tasks.detail.checklist', 'Checklist')}
+              {totalCount > 0 && (
+                <span className="text-sm font-normal text-gray-500">({completedCount}/{totalCount})</span>
+              )}
+            </h2>
+            {totalCount > 0 && (
+              <span className="text-sm font-medium text-gray-600 dark:text-gray-300">{percentage}%</span>
+            )}
+          </div>
+          {totalCount > 0 && (
+            <div className="mb-4 h-2 w-full rounded-full bg-gray-200 dark:bg-gray-700">
+              <div
+                className="h-2 rounded-full bg-green-500 transition-all duration-300 ease-in-out"
+                style={{ width: `${percentage}%` }}
+              />
+            </div>
+          )}
+        </>
       )}
 
       {/* Add item */}
-      {!disabled && (
-        <div className="flex gap-2 mb-4">
-          <Input
-            value={newItemTitle}
-            onChange={(e) => setNewItemTitle(e.target.value)}
-            placeholder={t('tasks.detail.addChecklistItem', 'Add a checklist item...')}
-            className="flex-1"
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                handleAddItem();
-              }
-            }}
-            disabled={addItem.isPending}
-          />
-          <Button
-            onClick={handleAddItem}
-            disabled={!newItemTitle.trim() || addItem.isPending}
-            size="sm"
-            variant="outline"
-          >
-            {addItem.isPending ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Plus className="w-4 h-4" />
-            )}
-            <span className="ml-1">{t('common.add', 'Add')}</span>
-          </Button>
-        </div>
-      )}
+      {!embedded && addRow}
 
       {/* Loading */}
       {isLoading && (
@@ -209,6 +241,18 @@ export default function TaskChecklist({ taskId, disabled = false }: TaskChecklis
           ))}
         </div>
       )}
+
+      {embedded && addRow}
+    </>
+  );
+
+  if (embedded) {
+    return <div className="space-y-1">{body}</div>;
+  }
+
+  return (
+    <div className="rounded-lg bg-white p-6 shadow dark:bg-gray-800">
+      {body}
     </div>
   );
 }

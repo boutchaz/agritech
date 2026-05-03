@@ -184,9 +184,9 @@
     }
   }
 
-  /* Prevent pull-to-refresh and overscroll bounce on tablet */
+  /* Prevent pull-to-refresh / vertical bounce on tablet, but keep horizontal swipe-back working on macOS */
   html, body, #root {
-    overscroll-behavior: none;
+    overscroll-behavior-y: none;
     -webkit-overflow-scrolling: touch;
   }
 
@@ -647,6 +647,12 @@
 
 *::-webkit-scrollbar-corner {
   background: transparent;
+}
+
+/* Radix UI forces dir="ltr" on horizontal tab wrappers, breaking RTL layout.
+   Override to match document direction. */
+:root[dir="rtl"] [data-orientation="horizontal"][dir="ltr"] {
+  direction: rtl;
 }
 
 /* Hide scrollbar for horizontal scroll strips */

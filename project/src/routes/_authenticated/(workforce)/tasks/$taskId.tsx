@@ -2,71 +2,81 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { subscribeQueue, isOnline as isDeviceOnline } from '@/lib/offlineTaskQueue';
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import {
   ArrowLeft,
   Play,
   CheckCircle,
+  CheckCircle2,
   Pause,
   MapPin,
   User,
   Wheat,
-  Edit,
   AlertCircle,
   PackageCheck,
   Hash,
   MessageSquare,
-  Timer,
-  Banknote,
   Loader2,
   Lock,
-  Wallet,
   Eye,
-  EyeOff,
-  Check,
+  Pencil,
   Trash2,
+  Briefcase,
+  Calendar,
+  Clock,
+  CheckSquare,
+  Box,
+  Workflow,
+  Banknote,
   X as XIcon,
+  Check,
+  Save,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { DetailPageSkeleton } from '@/components/ui/page-skeletons';
 import {
   useTask,
   useUpdateTask,
+  useDeleteTask,
   useTaskComments,
   useTaskTimeLogs,
   useIsTaskBlocked,
-  useTaskDependencies,
   useTaskWatchers,
   useFollowTask,
   useUnfollowTask,
   useUpdateTaskComment,
   useDeleteTaskComment,
   useResolveTaskComment,
+  useTaskChecklist,
 } from '@/hooks/useTasks';
 import { useTaskAssignments } from '@/hooks/useTaskAssignments';
-import TaskAttachments from '@/components/Tasks/TaskAttachments';
+import { useFarms, useParcelsByOrganization, useParcelById } from '@/hooks/useParcelsQuery';
+import { useActiveWorkers } from '@/hooks/useWorkers';
+import TaskAttachments, { useTaskAttachmentsQuery } from '@/components/Tasks/TaskAttachments';
 import TaskChecklist from '@/components/Tasks/TaskChecklist';
 import TaskDependencies from '@/components/Tasks/TaskDependencies';
 import TaskWorklog from '@/components/Tasks/TaskWorklog';
 import TaskCommentInput from '@/components/Tasks/TaskCommentInput';
 import CommentDisplay from '@/components/Tasks/CommentDisplay';
+import UserAvatar from '@/components/ui/UserAvatar';
 import { tasksApi } from '@/lib/api/tasks';
+import { cn } from '@/lib/utils';
 import type { TaskAssignment } from '@/lib/api/task-assignments';
 type CropOption = { id: string; name: string; parcel_id?: string; parcel_name?: string; farm_id?: string; variety_id?: string; variety_name?: string; created_at?: string; updated_at?: string };
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
 import type { CompleteHarvestTaskRequest } from '@/types/tasks';
-import { useParcelById } from '@/hooks/useParcelsQuery';
 import {
   getTaskStatusLabel,
   getTaskPriorityLabel,
-  getTaskTypeLabel,
-  TASK_STATUS_COLORS,
-  TASK_PRIORITY_COLORS,
 } from '@/types/tasks';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Select,
   SelectContent,
@@ -89,6 +99,48 @@ type TaskCompletionPayload = Parameters<typeof tasksApi.complete>[2] & {
   }>;
 };
 
+// In-page edit form schema (subset of TaskForm for the inline edit experience)
+const createEditSchema = (t: (key: string) => string) => z.object({
+  title: z.string().min(1, t('tasks.form.validation.titleRequired')),
+  description: z.string(),
+  priority: z.string().min(1),
+  status: z.string().min(1),
+  farm_id: z.string(),
+  parcel_id: z.string(),
+  assigned_to: z.string(),
+  scheduled_start: z.string(),
+  due_date: z.string(),
+  estimated_duration: z.number(),
+  notes: z.string(),
+});
+type EditFormData = z.infer<ReturnType<typeof createEditSchema>>;
+
+const formatDateForInput = (dateStr: string | null | undefined): string => {
+  if (!dateStr) return '';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
+  if (dateStr.includes('T')) return dateStr.split('T')[0];
+  const date = new Date(dateStr);
+  if (!isNaN(date.getTime())) return date.toISOString().split('T')[0];
+  return '';
+};
+
+// Hero status pill labels (translated minimally inline)
+const STATUS_HERO_LABEL: Record<string, string> = {
+  pending: 'En attente',
+  assigned: 'Assignée',
+  in_progress: 'En cours',
+  paused: 'En pause',
+  completed: 'Terminée',
+  cancelled: 'Annulée',
+  overdue: 'En retard',
+};
+const PRIORITY_HERO_LABEL: Record<string, string> = {
+  urgent: 'Urgente',
+  high: 'Haute',
+  medium: 'Moyenne',
+  low: 'Basse',
+};
+
 function TaskDetailPage() {
   const { t, i18n } = useTranslation();
   const { taskId } = Route.useParams();
@@ -96,6 +148,7 @@ function TaskDetailPage() {
   const { currentOrganization, profile } = useAuth();
   const queryClient = useQueryClient();
   const updateTask = useUpdateTask();
+  const deleteTask = useDeleteTask();
 
   const organizationId = currentOrganization?.id || '';
 
@@ -117,9 +170,12 @@ function TaskDetailPage() {
   const [harvestWorkerUnits, setHarvestWorkerUnits] = useState<Record<string, number>>({});
   const [harvestRatePerUnit, setHarvestRatePerUnit] = useState<number>(0);
 
+  // Edit mode toggle (in-page edit)
+  const [isEditing, setIsEditing] = useState(false);
+  const [showReassign, setShowReassign] = useState(false);
+
   // Task assignments (multi-worker)
   const { data: taskAssignments = [] } = useTaskAssignments(task?.id);
-  // Include primary worker if not already in assignments (legacy tasks)
   const allWorkers = React.useMemo(() => {
     if (!task) return taskAssignments;
     const primaryInAssignments = task.worker_id && taskAssignments.some(a => a.worker_id === task.worker_id);
@@ -146,10 +202,9 @@ function TaskDetailPage() {
   // Comments
   const { data: comments = [], isLoading: commentsLoading } = useTaskComments(taskId);
 
-  // Collaboration + worklog data
+  // Collaboration data
   const { data: timeLogs = [] } = useTaskTimeLogs(taskId);
   const { data: blockedStatus } = useIsTaskBlocked(taskId);
-  const { data: dependencies } = useTaskDependencies(taskId);
   const { data: watchers = [] } = useTaskWatchers(taskId);
   const followTask = useFollowTask();
   const unfollowTask = useUnfollowTask();
@@ -160,11 +215,14 @@ function TaskDetailPage() {
   const currentUserId = profile?.id;
   const isWatching = !!watchers.find((w) => w.user_id === currentUserId);
 
-  // Comment editing state — inline editor per comment
+  const { data: checklistForHeader } = useTaskChecklist(taskId);
+  const { data: attachmentList = [] } = useTaskAttachmentsQuery(taskId, organizationId);
+
+  // Comment editing state
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState('');
 
-  // Offline queue status: online/offline + how many actions waiting to sync
+  // Offline queue status
   const [isOnline, setIsOnline] = useState(isDeviceOnline());
   const [queuedCount, setQueuedCount] = useState(0);
   useEffect(() => {
@@ -180,23 +238,17 @@ function TaskDetailPage() {
     };
   }, []);
 
-  // Running cost summary — live roll-up of hours and piece-work earnings
-  const costSummary = useMemo(() => {
-    const totalHours = timeLogs.reduce((sum, l) => sum + Number(l.total_hours || 0), 0);
-    const unitsCompleted = Number(task?.units_completed ?? 0);
-    const ratePerUnit = Number(task?.rate_per_unit ?? 0);
-    const pieceWorkCost = unitsCompleted * ratePerUnit;
-    const actualCost = Number(task?.actual_cost ?? 0);
-    const estimatedCost = Number(task?.cost_estimate ?? 0);
-    return {
-      totalHours,
-      unitsCompleted,
-      pieceWorkCost,
-      actualCost,
-      estimatedCost,
-      hasAny: totalHours > 0 || unitsCompleted > 0 || actualCost > 0 || estimatedCost > 0,
-    };
-  }, [timeLogs, task?.units_completed, task?.rate_per_unit, task?.actual_cost, task?.cost_estimate]);
+  const totalHoursLogged = useMemo(() => {
+    return timeLogs.reduce((sum, l) => {
+      const recorded = Number(l.total_hours || 0);
+      if (recorded > 0) return sum + recorded;
+      if (!l.end_time) return sum;
+      const startMs = new Date(l.start_time).getTime();
+      const endMs = new Date(l.end_time).getTime();
+      const breakMs = (l.break_duration || 0) * 60 * 1000;
+      return sum + Math.max(0, (endMs - startMs - breakMs) / (1000 * 60 * 60));
+    }, 0);
+  }, [timeLogs]);
 
   const getLocale = () => {
     if (i18n.language.startsWith('fr')) return fr;
@@ -216,6 +268,9 @@ function TaskDetailPage() {
   }, [showHarvestForm, lotNumber, task]);
 
   const { data: parcel } = useParcelById(task?.parcel_id);
+  const { data: farms = [] } = useFarms(organizationId);
+  const { data: parcels = [] } = useParcelsByOrganization(organizationId);
+  const { data: workers = [] } = useActiveWorkers(organizationId);
 
   const availableCrops: CropOption[] = useMemo(() => {
     if (parcel && parcel.crop_type && task?.parcel_id) {
@@ -251,6 +306,50 @@ function TaskDetailPage() {
     }
   }, [firstAvailableCropId, harvestData.crop_id]);
 
+  // Edit form (react-hook-form)
+  const editSchema = useMemo(() => createEditSchema(t), [t]);
+  const editForm = useForm<EditFormData>({
+    resolver: zodResolver(editSchema),
+    defaultValues: {
+      title: '',
+      description: '',
+      priority: 'medium',
+      status: 'pending',
+      farm_id: '',
+      parcel_id: '',
+      assigned_to: '',
+      scheduled_start: '',
+      due_date: '',
+      estimated_duration: 0,
+      notes: '',
+    },
+  });
+
+  // Reset form whenever we enter edit mode or task data changes
+  useEffect(() => {
+    if (task && isEditing) {
+      editForm.reset({
+        title: task.title || '',
+        description: task.description || '',
+        priority: task.priority || 'medium',
+        status: task.status || 'pending',
+        farm_id: task.farm_id || '',
+        parcel_id: task.parcel_id || '',
+        assigned_to: task.worker_id || '',
+        scheduled_start: formatDateForInput(task.scheduled_start),
+        due_date: formatDateForInput(task.due_date),
+        estimated_duration: Number(task.estimated_duration ?? 0),
+        notes: (task as { notes?: string }).notes || '',
+      });
+    }
+  }, [task, isEditing, editForm]);
+
+  const watchedFarmId = editForm.watch('farm_id');
+  const filteredParcels = useMemo(
+    () => parcels.filter((p) => !watchedFarmId || p.farm_id === watchedFarmId),
+    [parcels, watchedFarmId],
+  );
+
   if (isLoading) {
     return <DetailPageSkeleton />;
   }
@@ -266,7 +365,7 @@ function TaskDetailPage() {
           {t('tasks.detail.notFoundDesc', 'The task may have been deleted or you may not have access.')}
         </p>
         <Button variant="outline" asChild className="mt-4">
-          <Link to="/tasks" search={{ editTaskId: undefined }}>{t('tasks.detail.backToList', 'Back to tasks')}</Link>
+          <Link to="/tasks">{t('tasks.detail.backToList', 'Back to tasks')}</Link>
         </Button>
       </div>
     );
@@ -278,7 +377,18 @@ function TaskDetailPage() {
   const canPause = task.status === 'in_progress';
   const canResume = task.status === 'paused';
   const canComplete = task.status === 'in_progress' || task.status === 'paused';
+  const isClosed = task.status === 'completed' || task.status === 'cancelled';
   const getTaskOrganizationId = () => task.organization_id || currentOrganization?.id || '';
+
+  // Computed completion percentage (prefer task.completion_percentage, fallback to logged hours / estimated)
+  const computedPercent = (() => {
+    if (task.status === 'completed') return 100;
+    const cp = Number(task.completion_percentage ?? 0);
+    if (cp > 0) return Math.min(100, cp);
+    const est = Number(task.estimated_duration ?? 0);
+    if (est > 0 && totalHoursLogged > 0) return Math.min(100, Math.round((totalHoursLogged / est) * 100));
+    return 0;
+  })();
 
   const handleStartTask = async () => {
     const taskOrganizationId = getTaskOrganizationId();
@@ -286,7 +396,6 @@ function TaskDetailPage() {
       setError(t('tasks.detail.errors.noOrganization', 'Organization context is missing'));
       return;
     }
-
     try {
       setIsActionLoading(true);
       setError(null);
@@ -302,11 +411,7 @@ function TaskDetailPage() {
 
   const handlePauseTask = async () => {
     const taskOrganizationId = getTaskOrganizationId();
-    if (!taskOrganizationId) {
-      setError(t('tasks.detail.errors.noOrganization', 'Organization context is missing'));
-      return;
-    }
-
+    if (!taskOrganizationId) return;
     try {
       setIsActionLoading(true);
       setError(null);
@@ -325,11 +430,7 @@ function TaskDetailPage() {
 
   const handleResumeTask = async () => {
     const taskOrganizationId = getTaskOrganizationId();
-    if (!taskOrganizationId) {
-      setError(t('tasks.detail.errors.noOrganization', 'Organization context is missing'));
-      return;
-    }
-
+    if (!taskOrganizationId) return;
     try {
       setIsActionLoading(true);
       setError(null);
@@ -348,17 +449,13 @@ function TaskDetailPage() {
 
   const handleCompleteTask = async () => {
     const taskOrganizationId = getTaskOrganizationId();
-    if (!taskOrganizationId) {
-      setError(t('tasks.detail.errors.noOrganization', 'Organization context is missing'));
-      return;
-    }
+    if (!taskOrganizationId) return;
 
     if (isHarvestingTask) {
       setHarvestRatePerUnit(task.rate_per_unit || 0);
       setShowHarvestForm(true);
       return;
     }
-
     if (isPerUnitTask) {
       setPerUnitData({ units_completed: task.units_required || 0, rate_per_unit: task.rate_per_unit || 0, notes: '' });
       setShowPerUnitForm(true);
@@ -418,7 +515,7 @@ function TaskDetailPage() {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       queryClient.invalidateQueries({ queryKey: ['task', taskOrganizationId, task.id] });
       queryClient.invalidateQueries({ queryKey: ['work-records'] });
-      navigate({ to: '/tasks', search: { editTaskId: undefined } });
+      navigate({ to: '/tasks' });
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : t('tasks.detail.errors.completeFailed', 'Failed to complete task'));
     } finally {
@@ -428,10 +525,7 @@ function TaskDetailPage() {
 
   const handleCompleteWithHarvest = async () => {
     const taskOrganizationId = getTaskOrganizationId();
-    if (!taskOrganizationId) {
-      setError(t('tasks.detail.errors.noOrganization', 'Organization context is missing'));
-      return;
-    }
+    if (!taskOrganizationId) return;
 
     if (!harvestData.crop_id) {
       setError(t('tasks.detail.errors.cropRequired', 'Please select a crop'));
@@ -445,8 +539,6 @@ function TaskDetailPage() {
       setError(t('tasks.detail.errors.lotNumberRequired', 'Please enter a lot number'));
       return;
     }
-
-    // Validate per-worker units for per-unit harvest tasks with multiple workers
     if (isPerUnitTask && hasMultipleWorkers) {
       const totalUnits = Object.values(harvestWorkerUnits).reduce((s, v) => s + v, 0);
       if (totalUnits <= 0) {
@@ -465,7 +557,6 @@ function TaskDetailPage() {
         ? harvestData.crop_id
         : undefined;
 
-      // Build workers array: for per-unit tasks, include quantity_picked per worker
       const workersPayload = (isPerUnitTask && hasMultipleWorkers)
         ? allWorkers.map(a => ({
             worker_id: a.worker_id,
@@ -496,10 +587,7 @@ function TaskDetailPage() {
         quality_rating: harvestData.quality_rating,
         actual_cost: harvestData.actual_cost,
       };
-
-      if (cropIdToSend) {
-        requestPayload.crop_id = cropIdToSend;
-      }
+      if (cropIdToSend) requestPayload.crop_id = cropIdToSend;
 
       await tasksApi.completeWithHarvest(taskOrganizationId, task.id, requestPayload);
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
@@ -508,7 +596,7 @@ function TaskDetailPage() {
 
       if (completionType === 'partial') {
         setHarvestData({ ...harvestData, quantity: 0, harvest_notes: '' });
-        setHarvestWorkerUnits({}); // reset per-worker units for next day's entry
+        setHarvestWorkerUnits({});
         const year = new Date().getFullYear();
         const parcelCode = task.parcel_id ? `P${task.parcel_id.slice(-2).toUpperCase()}` : 'PX';
         const farmCode = task.farm_id ? `F${task.farm_id.slice(-2).toUpperCase()}` : 'FX';
@@ -516,7 +604,7 @@ function TaskDetailPage() {
         setLotNumber(`${parcelCode}${farmCode}-${sequence}${year}`);
         setError(null);
       } else {
-        navigate({ to: '/tasks', search: { editTaskId: undefined } });
+        navigate({ to: '/tasks' });
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : t('tasks.detail.errors.harvestCompleteFailed', 'Failed to complete harvest'));
@@ -525,9 +613,52 @@ function TaskDetailPage() {
     }
   };
 
-  const handleEditTask = () => {
-    navigate({ to: '/tasks', search: { editTaskId: task.id } });
+  const handleDeleteTask = async () => {
+    const taskOrganizationId = getTaskOrganizationId();
+    if (!taskOrganizationId) return;
+    if (!confirm(t('tasks.detail.deleteConfirm', 'Supprimer cette tâche ? Cette action est irréversible.'))) return;
+    try {
+      setIsActionLoading(true);
+      await deleteTask.mutateAsync({ taskId: task.id, organizationId: taskOrganizationId });
+      toast.success(t('tasks.detail.deleted', 'Tâche supprimée'));
+      navigate({ to: '/tasks' });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t('tasks.detail.errors.deleteFailed', 'Échec de la suppression'));
+    } finally {
+      setIsActionLoading(false);
+    }
   };
+
+  const handleSaveEdit = editForm.handleSubmit(async (values) => {
+    const taskOrganizationId = getTaskOrganizationId();
+    if (!taskOrganizationId) return;
+    try {
+      setIsActionLoading(true);
+      await updateTask.mutateAsync({
+        taskId: task.id,
+        organizationId: taskOrganizationId,
+        updates: {
+          title: values.title,
+          description: values.description || undefined,
+          priority: values.priority as 'low' | 'medium' | 'high' | 'urgent',
+          status: values.status as 'pending' | 'assigned' | 'in_progress' | 'paused' | 'completed' | 'cancelled',
+          farm_id: values.farm_id || undefined,
+          parcel_id: values.parcel_id || undefined,
+          assigned_to: values.assigned_to || undefined,
+          scheduled_start: values.scheduled_start || undefined,
+          due_date: values.due_date || undefined,
+          estimated_duration: values.estimated_duration || undefined,
+          notes: values.notes || undefined,
+        },
+      });
+      toast.success(t('tasks.detail.saved', 'Modifications enregistrées'));
+      setIsEditing(false);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t('tasks.detail.errors.saveFailed', 'Échec de la sauvegarde'));
+    } finally {
+      setIsActionLoading(false);
+    }
+  });
 
   const handleToggleWatch = async () => {
     if (!taskId) return;
@@ -548,12 +679,10 @@ function TaskDetailPage() {
     setEditingCommentId(commentId);
     setEditDraft(currentText);
   };
-
   const handleCancelEditComment = () => {
     setEditingCommentId(null);
     setEditDraft('');
   };
-
   const handleSaveEditComment = async (commentId: string) => {
     if (!taskId || !editDraft.trim()) return;
     try {
@@ -564,7 +693,6 @@ function TaskDetailPage() {
       toast.error(err instanceof Error ? err.message : t('tasks.comments.updateFailed', 'Failed to update comment'));
     }
   };
-
   const handleDeleteComment = async (commentId: string) => {
     if (!taskId) return;
     if (!confirm(t('tasks.comments.deleteConfirm', 'Delete this comment?'))) return;
@@ -575,7 +703,6 @@ function TaskDetailPage() {
       toast.error(err instanceof Error ? err.message : t('tasks.comments.deleteFailed', 'Failed to delete comment'));
     }
   };
-
   const handleToggleResolve = async (commentId: string, currentlyResolved: boolean) => {
     if (!taskId) return;
     try {
@@ -588,73 +715,158 @@ function TaskDetailPage() {
     }
   };
 
+  const handleReassign = async (workerId: string) => {
+    const taskOrganizationId = getTaskOrganizationId();
+    if (!taskOrganizationId) return;
+    try {
+      setIsActionLoading(true);
+      await updateTask.mutateAsync({
+        taskId: task.id,
+        organizationId: taskOrganizationId,
+        updates: { assigned_to: workerId },
+      });
+      toast.success(t('tasks.detail.reassigned', 'Tâche réassignée'));
+      setShowReassign(false);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t('tasks.detail.errors.reassignFailed', 'Échec de la réassignation'));
+    } finally {
+      setIsActionLoading(false);
+    }
+  };
+
+  const idShort = task.id.slice(0, 4).toUpperCase();
+  const statusLabel = STATUS_HERO_LABEL[task.status] || getTaskStatusLabel(task.status, i18n.language as 'en' | 'fr');
+  const priorityLabel = PRIORITY_HERO_LABEL[task.priority] || getTaskPriorityLabel(task.priority, i18n.language as 'en' | 'fr');
+  const statusShowsPulseDot =
+    task.status === 'in_progress' || task.status === 'assigned' || task.status === 'pending';
+
+  const checklistItemsHeader = Array.isArray(checklistForHeader) ? checklistForHeader : [];
+  const checklistDoneCount = checklistItemsHeader.filter((i: { completed?: boolean }) => i.completed).length;
+  const checklistTotalCount = checklistItemsHeader.length;
+
+  const cardShell =
+    'rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-950';
+
   return (
-    <div className="space-y-6">
-      {/* Back + Header */}
-      <div className="flex items-start gap-4">
-        <Button variant="ghost" size="icon" asChild className="mt-1 flex-shrink-0">
-          <Link to="/tasks" search={{ editTaskId: undefined }}>
-            <ArrowLeft className="h-5 w-5" />
+    <div className="space-y-6 pb-24 lg:pb-6">
+      {/* Back + breadcrumb */}
+      <div className="flex items-center gap-2">
+        <Button variant="ghost" size="sm" className="-ms-2 h-9 gap-1.5 text-gray-600 dark:text-gray-400" asChild>
+          <Link to="/tasks">
+            <ArrowLeft className="h-4 w-4" />
+            {t('tasks.detail.backToList', 'Back to tasks')}
           </Link>
         </Button>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-3 flex-wrap">
-            <div className={`p-2 rounded-lg flex-shrink-0 ${
-              task.task_type === 'harvesting' ? 'bg-amber-100 dark:bg-amber-900/30' :
-              task.task_type === 'irrigation' ? 'bg-blue-100 dark:bg-blue-900/30' :
-              'bg-green-100 dark:bg-green-900/30'
-            }`}>
-              {task.task_type === 'harvesting' ? (
-                <Wheat className="w-5 h-5 text-amber-600" />
-              ) : (
-                <CheckCircle className="w-5 h-5 text-green-600" />
-              )}
+      </div>
+
+      {/* Green hero banner */}
+      <div className="relative overflow-hidden rounded-2xl rounded-br-[2rem] bg-emerald-800 p-6 text-white shadow-md dark:bg-emerald-900">
+        <div className="relative flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="min-w-0 flex-1">
+            <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-white/75">
+              {t('tasks.detail.taskKicker', 'Tâche')}
+              {task.parcel_name ? <> · {task.parcel_name}</> : null}
+            </p>
+            <h1 className="mt-1 truncate text-3xl font-bold tracking-tight lg:text-4xl">
+              {task.title}
+            </h1>
+            {/* Pills */}
+            <div className="mt-4 flex flex-wrap items-center gap-2.5">
+              <span className="inline-flex items-center gap-2 rounded-full bg-white/20 px-3.5 py-1.5 text-sm font-semibold ring-1 ring-white/30">
+                {statusShowsPulseDot ? (
+                  <span className="relative flex h-2.5 w-2.5">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-300 opacity-60" />
+                    <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-200" />
+                  </span>
+                ) : null}
+                {statusLabel}
+              </span>
+              <span className="inline-flex items-center rounded-full bg-white/20 px-3.5 py-1.5 text-sm font-semibold ring-1 ring-white/30">
+                {t('tasks.detail.priorityPrefix', 'Priorité')} {priorityLabel}
+              </span>
+              {task.estimated_duration ? (
+                <span className="inline-flex items-center rounded-full bg-white/20 px-3.5 py-1.5 text-sm font-semibold ring-1 ring-white/30">
+                  {task.estimated_duration}h
+                </span>
+              ) : null}
             </div>
-            <div className="min-w-0">
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white truncate">
-                {task.title}
-              </h1>
-              <div className="flex items-center gap-2 mt-1 flex-wrap">
-                <span className={`inline-flex px-2 py-0.5 text-xs font-medium rounded-full ${TASK_PRIORITY_COLORS[task.priority]}`}>
-                  {getTaskPriorityLabel(task.priority, i18n.language as 'en' | 'fr')}
-                </span>
-                <span className={`inline-flex px-2 py-0.5 text-xs font-medium rounded-full ${TASK_STATUS_COLORS[task.status]}`}>
-                  {getTaskStatusLabel(task.status, i18n.language as 'en' | 'fr')}
-                </span>
-                <span className="text-sm text-gray-500 dark:text-gray-400">
-                  {getTaskTypeLabel(task.task_type, i18n.language as 'en' | 'fr')}
-                </span>
+            {/* Progress bar */}
+            <div className="mt-6 max-w-xl">
+              <div className="flex items-center gap-3">
+                <div className="h-3 flex-1 overflow-hidden rounded-full bg-white/25">
+                  <div
+                    className="h-full rounded-full bg-white transition-all"
+                    style={{ width: `${computedPercent}%` }}
+                  />
+                </div>
+                <span className="text-base font-bold tabular-nums text-white">{computedPercent}%</span>
               </div>
             </div>
           </div>
-        </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <Button
-            variant={isWatching ? 'default' : 'outline'}
-            size="sm"
-            onClick={handleToggleWatch}
-            disabled={followTask.isPending || unfollowTask.isPending}
-            title={isWatching
-              ? t('tasks.watch.unfollow', 'Unfollow this task')
-              : t('tasks.watch.follow', 'Follow this task to get notified of activity')}
-          >
-            {isWatching ? <Eye className="w-4 h-4 sm:mr-2" /> : <EyeOff className="w-4 h-4 sm:mr-2" />}
-            <span className="hidden sm:inline">
-              {isWatching
-                ? t('tasks.watch.watching', 'Watching')
-                : t('tasks.watch.watch', 'Watch')}
-            </span>
-            {watchers.length > 0 && (
-              <span className="ml-1 text-xs opacity-70">· {watchers.length}</span>
+
+          {/* Hero actions */}
+          <div className="flex flex-shrink-0 items-center gap-2">
+            {isEditing ? (
+              <>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsEditing(false)}
+                  className="border-white/30 bg-white/10 text-white hover:bg-white/20 hover:text-white"
+                >
+                  <XIcon className="me-2 h-4 w-4" />
+                  {t('common.cancel', 'Annuler')}
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={handleSaveEdit}
+                  disabled={isActionLoading}
+                  className="bg-white text-emerald-700 hover:bg-white/90 font-medium"
+                >
+                  <Save className="me-2 h-4 w-4" />
+                  {t('common.save', 'Enregistrer')}
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleToggleWatch}
+                  disabled={followTask.isPending || unfollowTask.isPending}
+                  className={cn(
+                    "border-white/30 bg-white/10 text-white hover:bg-white/20 hover:text-white",
+                    isWatching && "bg-white/25 ring-1 ring-white/40"
+                  )}
+                >
+                  {followTask.isPending || unfollowTask.isPending ? (
+                    <Loader2 className="me-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Eye className="me-2 h-4 w-4" />
+                  )}
+                  {isWatching
+                    ? t('tasks.watch.watching', 'Suivi ✓')
+                    : t('tasks.watch.follow', 'Suivre')}
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => setIsEditing(true)}
+                  className="bg-white text-emerald-700 hover:bg-white/90 font-medium"
+                >
+                  <Pencil className="me-2 h-4 w-4" />
+                  {t('common.edit', 'Modifier')}
+                </Button>
+              </>
             )}
-          </Button>
-          <Button variant="outline" size="sm" onClick={handleEditTask}>
-            <Edit className="w-4 h-4 mr-2" />
-            {t('common.edit', 'Edit')}
-          </Button>
+          </div>
         </div>
       </div>
 
+      {/* Error banner */}
       {error && (
         <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 flex items-start gap-3">
           <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
@@ -662,8 +874,7 @@ function TaskDetailPage() {
         </div>
       )}
 
-      {/* Offline / queue status banner — makes it clear to the worker that their
-          clock-in/out still works offline and will sync when the connection returns */}
+      {/* Offline / queue status banner */}
       {(!isOnline || queuedCount > 0) && (
         <div className={`rounded-lg p-3 border flex items-center gap-3 ${
           !isOnline
@@ -690,7 +901,7 @@ function TaskDetailPage() {
         </div>
       )}
 
-      {/* Blocked-by banner — unresolved dependencies */}
+      {/* Blocked-by banner */}
       {blockedStatus?.blocked && blockedStatus.blockers.length > 0 && (
         <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
           <div className="flex items-start gap-3">
@@ -707,274 +918,254 @@ function TaskDetailPage() {
                   </li>
                 ))}
               </ul>
-              <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">
-                {t('tasks.blocked.hint', 'Complete the blockers above before starting this task.')}
-              </p>
             </div>
           </div>
         </div>
       )}
 
-      {/* Running cost tile — mobile-visible summary (same panel also appears in sidebar on desktop) */}
-      {costSummary.hasAny && (
-        <div className="bg-gradient-to-br from-emerald-50 to-blue-50 dark:from-emerald-900/20 dark:to-blue-900/20 border border-emerald-200/60 dark:border-emerald-800/60 rounded-lg p-4 lg:hidden">
-          <div className="flex items-center justify-between mb-3">
-            <h4 className="font-medium text-gray-900 dark:text-white flex items-center gap-2 text-sm">
-              <Wallet className="w-4 h-4 text-emerald-600" />
-              {t('tasks.cost.title', 'Running cost')}
-            </h4>
-            {costSummary.estimatedCost > 0 && (
-              <span className="text-xs text-gray-500 dark:text-gray-400">
-                {t('tasks.cost.vs', 'vs {{est}} MAD est.', { est: costSummary.estimatedCost.toLocaleString('fr-FR') })}
-              </span>
-            )}
-          </div>
-          <div className="grid grid-cols-2 gap-3 text-sm">
-            <div>
-              <p className="text-gray-500 dark:text-gray-400 text-xs">
-                {t('tasks.cost.hoursLogged', 'Hours logged')}
-              </p>
-              <p className="font-semibold text-gray-900 dark:text-white">
-                {costSummary.totalHours.toFixed(2)}h
-              </p>
-            </div>
-            <div>
-              <p className="text-gray-500 dark:text-gray-400 text-xs">
-                {t('tasks.cost.unitsDone', 'Units done')}
-              </p>
-              <p className="font-semibold text-gray-900 dark:text-white">
-                {costSummary.unitsCompleted}
-                {task.units_required ? <span className="text-gray-400"> / {task.units_required}</span> : null}
-              </p>
-            </div>
-            <div>
-              <p className="text-gray-500 dark:text-gray-400 text-xs">
-                {t('tasks.cost.pieceWork', 'Piece-work')}
-              </p>
-              <p className="font-semibold text-emerald-700 dark:text-emerald-400">
-                {costSummary.pieceWorkCost.toLocaleString('fr-FR')} MAD
-              </p>
-            </div>
-            <div>
-              <p className="text-gray-500 dark:text-gray-400 text-xs">
-                {t('tasks.cost.actual', 'Actual cost')}
-              </p>
-              <p className="font-semibold text-gray-900 dark:text-white">
-                {costSummary.actualCost.toLocaleString('fr-FR')} MAD
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pb-24 lg:pb-0">
-        {/* Main Content */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Task Info */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-              {t('tasks.detail.information', 'Task Information')}
-            </h2>
-            <div className="grid grid-cols-2 gap-4">
-              {task.farm_name && (
-                <div className="space-y-1">
-                  <p className="text-sm text-gray-500 dark:text-gray-400">{t('tasks.detail.farm', 'Farm')}</p>
-                  <p className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
-                    <MapPin className="w-4 h-4" />
-                    {task.farm_name}
-                  </p>
+      {/* Two-column grid — ~2/3 main, ~1/3 sidebar */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+        {/* Left column */}
+        <div className="space-y-6 lg:col-span-8">
+          {/* Informations card */}
+          <Card className={cardShell}>
+            <CardHeader className="flex flex-row items-center gap-2 space-y-0 pb-2">
+              <Briefcase className="h-5 w-5 text-emerald-600" />
+              <CardTitle className="text-base font-semibold">{t('tasks.detail.information', 'Informations')}</CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              {isEditing ? (
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-1.5 sm:col-span-2">
+                    <Label htmlFor="edit-title">{t('tasks.form.title', 'Titre')}</Label>
+                    <Input id="edit-title" {...editForm.register('title')} />
+                    {editForm.formState.errors.title && (
+                      <p className="text-xs text-red-600">{editForm.formState.errors.title.message}</p>
+                    )}
+                  </div>
+                  <div className="space-y-1.5 sm:col-span-2">
+                    <Label htmlFor="edit-description">{t('tasks.form.description', 'Description')}</Label>
+                    <Textarea id="edit-description" rows={3} {...editForm.register('description')} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>{t('tasks.form.priority', 'Priorité')}</Label>
+                    <Select
+                      value={editForm.watch('priority')}
+                      onValueChange={(v) => editForm.setValue('priority', v, { shouldDirty: true })}
+                    >
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="low">{t('tasks.priority.low', 'Basse')}</SelectItem>
+                        <SelectItem value="medium">{t('tasks.priority.medium', 'Moyenne')}</SelectItem>
+                        <SelectItem value="high">{t('tasks.priority.high', 'Haute')}</SelectItem>
+                        <SelectItem value="urgent">{t('tasks.priority.urgent', 'Urgente')}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>{t('tasks.form.status', 'Statut')}</Label>
+                    <Select
+                      value={editForm.watch('status')}
+                      onValueChange={(v) => editForm.setValue('status', v, { shouldDirty: true })}
+                    >
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="pending">{t('tasks.status.pending', 'En attente')}</SelectItem>
+                        <SelectItem value="assigned">{t('tasks.status.assigned', 'Assignée')}</SelectItem>
+                        <SelectItem value="in_progress">{t('tasks.status.in_progress', 'En cours')}</SelectItem>
+                        <SelectItem value="paused">{t('tasks.status.paused', 'En pause')}</SelectItem>
+                        <SelectItem value="completed">{t('tasks.status.completed', 'Terminée')}</SelectItem>
+                        <SelectItem value="cancelled">{t('tasks.status.cancelled', 'Annulée')}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>{t('tasks.form.farm', 'Ferme')}</Label>
+                    <Select
+                      value={editForm.watch('farm_id') || '__none__'}
+                      onValueChange={(v) => {
+                        editForm.setValue('farm_id', v === '__none__' ? '' : v, { shouldDirty: true });
+                        editForm.setValue('parcel_id', '', { shouldDirty: true });
+                      }}
+                    >
+                      <SelectTrigger><SelectValue placeholder={t('tasks.form.selectFarm', 'Choisir...')} /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none__">—</SelectItem>
+                        {farms.map((f) => (
+                          <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>{t('tasks.form.parcel', 'Parcelle')}</Label>
+                    <Select
+                      value={editForm.watch('parcel_id') || '__none__'}
+                      onValueChange={(v) => editForm.setValue('parcel_id', v === '__none__' ? '' : v, { shouldDirty: true })}
+                    >
+                      <SelectTrigger><SelectValue placeholder={t('tasks.form.selectParcel', 'Choisir...')} /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none__">—</SelectItem>
+                        {filteredParcels.map((p) => (
+                          <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="edit-scheduled-start">{t('tasks.detail.startPlanned', 'Début prévu')}</Label>
+                    <Input id="edit-scheduled-start" type="date" {...editForm.register('scheduled_start')} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="edit-due-date">{t('tasks.detail.endPlanned', 'Fin prévue')}</Label>
+                    <Input id="edit-due-date" type="date" {...editForm.register('due_date')} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="edit-duration">{t('tasks.detail.estimatedDuration', 'Durée estimée (h)')}</Label>
+                    <Input
+                      id="edit-duration"
+                      type="number"
+                      step="0.5"
+                      {...editForm.register('estimated_duration', { valueAsNumber: true })}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>{t('tasks.detail.assignedTo', 'Assignée à')}</Label>
+                    <Select
+                      value={editForm.watch('assigned_to') || '__none__'}
+                      onValueChange={(v) => editForm.setValue('assigned_to', v === '__none__' ? '' : v, { shouldDirty: true })}
+                    >
+                      <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none__">—</SelectItem>
+                        {workers.map((w) => (
+                          <SelectItem key={w.id} value={w.id}>
+                            {[w.first_name, w.last_name].filter(Boolean).join(' ') || w.id}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5 sm:col-span-2">
+                    <Label htmlFor="edit-notes">{t('tasks.form.notes', 'Notes')}</Label>
+                    <Textarea id="edit-notes" rows={2} {...editForm.register('notes')} />
+                  </div>
                 </div>
-              )}
-
-              {'parcel_name' in task && task.parcel_name && (
-                <div className="space-y-1">
-                  <p className="text-sm text-gray-500 dark:text-gray-400">{t('tasks.detail.parcel', 'Parcel')}</p>
-                  <p className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
-                    <MapPin className="w-4 h-4 text-green-600" />
-                    {task.parcel_name}
-                  </p>
-                </div>
-              )}
-
-              {(taskAssignments.length > 0 || task.worker_name) && (
-                <div className="space-y-1">
-                  <p className="text-sm text-gray-500 dark:text-gray-400">{t('tasks.detail.assignedTo', 'Assigned to')}</p>
-                  {taskAssignments.length > 0 ? (
-                    <div className="space-y-1">
-                      {/* Show all assignment workers */}
-                      {taskAssignments.map(a => (
-                        <p key={a.worker_id} className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
-                          <User className="w-4 h-4" />
-                          {a.worker?.first_name} {a.worker?.last_name}
-                        </p>
-                      ))}
-                      {/* Also show primary worker if not already in assignments */}
-                      {task.worker_name && task.worker_id && !taskAssignments.some(a => a.worker_id === task.worker_id) && (
-                        <p className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
-                          <User className="w-4 h-4" />
-                          {task.worker_name}
-                        </p>
-                      )}
+              ) : (
+                <>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <InfoField
+                      icon={<MapPin className="h-3.5 w-3.5" />}
+                      label={t('tasks.detail.farmParcel', 'Ferme · Parcelle')}
+                      value={[task.farm_name, task.parcel_name].filter(Boolean).join(' · ') || '—'}
+                    />
+                    <InfoField
+                      icon={<Clock className="h-3.5 w-3.5" />}
+                      label={t('tasks.detail.estimatedDuration', 'Durée estimée')}
+                      value={task.estimated_duration ? `${task.estimated_duration}h` : '—'}
+                    />
+                    <InfoField
+                      icon={<Calendar className="h-3.5 w-3.5" />}
+                      label={t('tasks.detail.startPlanned', 'Début prévu')}
+                      value={task.scheduled_start ? format(new Date(task.scheduled_start), 'dd MMM yyyy', { locale: getLocale() }) : '—'}
+                    />
+                    <InfoField
+                      icon={<Calendar className="h-3.5 w-3.5" />}
+                      label={t('tasks.detail.endPlanned', 'Fin prévue')}
+                      value={task.due_date ? format(new Date(task.due_date), 'dd MMM yyyy', { locale: getLocale() }) : '—'}
+                    />
+                  </div>
+                  {task.description && (
+                    <div className="mt-6 pt-4 border-t dark:border-gray-700">
+                      <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">
+                        {t('tasks.detail.description', 'Description')}
+                      </p>
+                      <p className="text-gray-900 dark:text-white whitespace-pre-wrap">{task.description}</p>
                     </div>
-                  ) : (
-                    <p className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
-                      <User className="w-4 h-4" />
-                      {task.worker_name}
-                    </p>
                   )}
-                </div>
+                </>
               )}
+            </CardContent>
+          </Card>
 
-              {(() => {
-                const endTime = task.actual_end || task.completed_date;
-                if (task.actual_start && endTime) {
-                  const diffMs = new Date(endTime).getTime() - new Date(task.actual_start).getTime();
-                  const diffH = Math.floor(diffMs / 3600000);
-                  const diffMin = Math.floor((diffMs % 3600000) / 60000);
-                  const label = diffH > 0
-                    ? `${diffH}h${diffMin > 0 ? ` ${diffMin}min` : ''}`
-                    : `${diffMin}min`;
-                  return (
-                    <div className="space-y-1">
-                      <p className="text-sm text-gray-500 dark:text-gray-400">{t('tasks.detail.actualDuration', 'Durée réelle')}</p>
-                      <p className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
-                        <Timer className="w-4 h-4 text-green-600" />
-                        {label}
-                      </p>
-                    </div>
-                  );
-                } else if (task.estimated_duration) {
-                  return (
-                    <div className="space-y-1">
-                      <p className="text-sm text-gray-500 dark:text-gray-400">{t('tasks.detail.estimatedDuration', 'Durée estimée')}</p>
-                      <p className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
-                        <Timer className="w-4 h-4" />
-                        {task.estimated_duration}h
-                      </p>
-                    </div>
-                  );
-                }
-                return null;
-              })()}
+          {/* Suivi du temps */}
+          <Card className={cardShell}>
+            <CardHeader className="flex flex-row items-center gap-2 space-y-0 pb-2">
+              <Clock className="h-5 w-5 text-emerald-600" />
+              <CardTitle className="text-base font-semibold">{t('tasks.detail.timeTracking', 'Suivi du temps')}</CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <TaskWorklog
+                taskId={taskId}
+                taskStatus={task.status}
+                assignedWorkerId={task.worker_id}
+                embedded
+              />
+            </CardContent>
+          </Card>
 
-              {/* Dates prévisionnelles vs réelles */}
-              {(task.scheduled_start || task.actual_start) && (
-                <div className="space-y-1 col-span-2">
-                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('tasks.detail.dates', 'Dates')}</p>
-                  <div className="grid grid-cols-3 gap-2 text-sm bg-gray-50 dark:bg-gray-700/40 rounded-lg p-3">
-                    <div className="font-medium text-gray-500 dark:text-gray-400"></div>
-                    <div className="font-medium text-gray-500 dark:text-gray-400">{t('tasks.detail.planned', 'Prévu')}</div>
-                    <div className="font-medium text-gray-500 dark:text-gray-400">{t('tasks.detail.actual', 'Réel')}</div>
-
-                    {/* Début */}
-                    <div className="flex items-center gap-1 text-gray-600 dark:text-gray-400">
-                      <Play className="w-3 h-3" />{t('tasks.detail.start', 'Début')}
-                    </div>
-                    <div className="text-gray-900 dark:text-white">
-                      {task.scheduled_start ? format(new Date(task.scheduled_start), 'dd/MM/yyyy', { locale: getLocale() }) : '—'}
-                    </div>
-                    <div className={`font-medium ${task.actual_start && task.scheduled_start && new Date(task.actual_start) > new Date(task.scheduled_start) ? 'text-orange-600' : 'text-green-600'}`}>
-                      {task.actual_start ? format(new Date(task.actual_start), 'dd/MM/yyyy HH:mm', { locale: getLocale() }) : '—'}
-                    </div>
-
-                    {/* Fin */}
-                    <div className="flex items-center gap-1 text-gray-600 dark:text-gray-400">
-                      <CheckCircle className="w-3 h-3" />{t('tasks.detail.end', 'Fin')}
-                    </div>
-                    <div className="text-gray-900 dark:text-white">
-                      {task.due_date ? format(new Date(task.due_date), 'dd/MM/yyyy', { locale: getLocale() }) : '—'}
-                    </div>
-                    <div className={`font-medium ${task.completed_date && task.due_date && new Date(task.completed_date) > new Date(task.due_date) ? 'text-red-600' : 'text-green-600'}`}>
-                      {task.completed_date ? format(new Date(task.completed_date), 'dd/MM/yyyy', { locale: getLocale() }) : (task.status === 'in_progress' ? <span className="text-blue-500">{t('tasks.detail.inProgress', 'En cours...')}</span> : '—')}
-                    </div>
-
-                    {/* Écart si terminée */}
-                    {task.actual_start && task.completed_date && task.scheduled_start && (() => {
-                      const plannedMs = new Date(task.due_date || task.scheduled_start).getTime() - new Date(task.scheduled_start).getTime();
-                      const actualMs = new Date(task.completed_date).getTime() - new Date(task.actual_start).getTime();
-                      const diffDays = Math.round((actualMs - plannedMs) / 86400000);
-                      return (
-                        <>
-                          <div className="flex items-center gap-1 text-gray-600 dark:text-gray-400 col-span-1">
-                            <Timer className="w-3 h-3" />{t('tasks.detail.variance', 'Écart')}
-                          </div>
-                          <div className="col-span-2 font-medium">
-                            <span className={diffDays > 0 ? 'text-orange-600' : diffDays < 0 ? 'text-green-600' : 'text-gray-500'}>
-                              {diffDays === 0 ? t('tasks.detail.onTime', 'Dans les temps') : diffDays > 0 ? `+${diffDays}j ${t('tasks.detail.late', 'de retard')}` : `${Math.abs(diffDays)}j ${t('tasks.detail.early', 'en avance')}`}
-                            </span>
-                          </div>
-                        </>
-                      );
-                    })()}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {task.description && (
-              <div className="mt-6 pt-4 border-t dark:border-gray-700">
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">{t('tasks.detail.description', 'Description')}</p>
-                <p className="text-gray-900 dark:text-white whitespace-pre-wrap">{task.description}</p>
+          {/* Liste de contrôle */}
+          <Card className={cardShell}>
+            <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
+              <div className="flex items-center gap-2">
+                <CheckSquare className="h-5 w-5 text-emerald-600" />
+                <CardTitle className="text-base font-semibold">{t('tasks.detail.checklist', 'Liste de contrôle')}</CardTitle>
               </div>
-            )}
+              {checklistTotalCount > 0 ? (
+                <span className="text-sm font-medium tabular-nums text-gray-500 dark:text-gray-400">
+                  {checklistDoneCount} / {checklistTotalCount}
+                </span>
+              ) : null}
+            </CardHeader>
+            <CardContent className="pt-0">
+              <TaskChecklist taskId={taskId} disabled={task.status === 'cancelled'} embedded />
+            </CardContent>
+          </Card>
 
-            {/* Progress Bar */}
-            {task.completion_percentage > 0 && task.status !== 'completed' && (
-              <div className="mt-6 pt-4 border-t dark:border-gray-700">
-                <div className="flex justify-between text-sm mb-2">
-                  <span className="text-gray-500 dark:text-gray-400">{t('tasks.detail.progress', 'Progress')}</span>
-                  <span className="font-medium text-gray-900 dark:text-white">{task.completion_percentage}%</span>
-                </div>
-                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
-                  <div
-                    className="bg-blue-600 h-2.5 rounded-full"
-                    style={{ width: `${task.completion_percentage}%` }}
-                  />
-                </div>
+          {/* Pièces jointes */}
+          <Card className={cardShell}>
+            <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
+              <div className="flex items-center gap-2">
+                <Box className="h-5 w-5 text-emerald-600" />
+                <CardTitle className="text-base font-semibold">{t('tasks.detail.attachments', 'Pièces jointes')}</CardTitle>
               </div>
-            )}
-          </div>
+              <span className="text-sm text-gray-500 dark:text-gray-400">
+                {t('tasks.detail.fileCount', '{{count}} file(s)', { count: attachmentList.length })}
+              </span>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <TaskAttachments
+                taskId={taskId}
+                organizationId={currentOrganization?.id || ''}
+                disabled={task.status === 'cancelled'}
+                embedded
+              />
+            </CardContent>
+          </Card>
 
-          {/* Payment Info — only show when there's meaningful payment data */}
-          {task.payment_type && (task.rate_per_unit || task.units_required || task.actual_cost || task.cost_estimate) && (
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                {t('tasks.detail.paymentInfo', 'Payment Information')}
-              </h2>
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <p className="text-gray-500 dark:text-gray-400">{t('tasks.detail.paymentType', 'Payment type')}</p>
-                  <p className="font-medium text-gray-900 dark:text-white">
-                    {task.payment_type === 'per_unit' ? t('tasks.paymentTypes.perUnit', 'Per unit') :
-                     task.payment_type === 'daily' ? t('tasks.paymentTypes.daily', 'Daily') :
-                     task.payment_type === 'monthly' ? t('tasks.paymentTypes.monthly', 'Monthly') : t('tasks.paymentTypes.metayage', 'Sharecropping')}
-                  </p>
-                </div>
-                {task.units_required && (
-                  <div>
-                    <p className="text-gray-500 dark:text-gray-400">{t('tasks.detail.unitsRequired', 'Units estimated')}</p>
-                    <p className="font-medium text-gray-900 dark:text-white">{task.units_required}</p>
-                  </div>
-                )}
-                {task.rate_per_unit && (
-                  <div>
-                    <p className="text-gray-500 dark:text-gray-400">{t('tasks.detail.ratePerUnit', 'Rate per unit')}</p>
-                    <p className="font-medium text-gray-900 dark:text-white">{task.rate_per_unit} MAD</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
+          {/* Dépendances */}
+          <Card className={cardShell}>
+            <CardHeader className="flex flex-row items-center gap-2 space-y-0 pb-2">
+              <Workflow className="h-5 w-5 text-emerald-600" />
+              <CardTitle className="text-base font-semibold">{t('tasks.detail.dependenciesTitle', 'Dépendances')}</CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <TaskDependencies
+                taskId={taskId}
+                organizationId={currentOrganization?.id || ''}
+                disabled={task.status === 'cancelled'}
+                embedded
+              />
+            </CardContent>
+          </Card>
 
-          {/* Harvest Completion Form */}
+          {/* Harvest / Per-unit forms (kept inline, only when triggered) */}
           {showHarvestForm && (
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 space-y-4">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                 <Wheat className="w-5 h-5 text-amber-600" />
                 {t('tasks.harvestForm.title', 'Record harvest')}
               </h3>
-
-              {/* Completion Type Selector */}
               <div className="space-y-2">
                 <Label>{t('tasks.harvestForm.completionType', 'Completion type')}</Label>
                 <div className="flex gap-4">
@@ -1004,8 +1195,6 @@ function TaskDetailPage() {
                   </label>
                 </div>
               </div>
-
-              {/* Lot Number */}
               <div className="space-y-2">
                 <Label htmlFor="lot_number" className="flex items-center gap-2">
                   <Hash className="w-4 h-4" />
@@ -1016,10 +1205,8 @@ function TaskDetailPage() {
                   type="text"
                   value={lotNumber}
                   onChange={(e) => setLotNumber(e.target.value)}
-                  placeholder={t('tasks.harvestForm.lotPlaceholder', 'e.g. P1FM1-0012025')}
                 />
               </div>
-
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2 col-span-2">
                   <Label htmlFor="crop_id">{t('tasks.harvestForm.cropHarvested', 'Harvested crop *')}</Label>
@@ -1027,9 +1214,7 @@ function TaskDetailPage() {
                     value={harvestData.crop_id || '__none__'}
                     onValueChange={(value) => setHarvestData({ ...harvestData, crop_id: value === '__none__' ? '' : value })}
                   >
-                    <SelectTrigger id="crop_id">
-                      <SelectValue placeholder={t('tasks.harvestForm.selectCrop', 'Select a crop')} />
-                    </SelectTrigger>
+                    <SelectTrigger id="crop_id"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="__none__">{t('tasks.harvestForm.selectCropPlaceholder', 'Select a crop...')}</SelectItem>
                       {availableCrops.map((crop: CropOption) => (
@@ -1040,7 +1225,6 @@ function TaskDetailPage() {
                     </SelectContent>
                   </Select>
                 </div>
-
                 <div className="space-y-2">
                   <Label htmlFor="harvest_date">{t('tasks.harvestForm.harvestDate', 'Harvest date *')}</Label>
                   <Input
@@ -1050,9 +1234,8 @@ function TaskDetailPage() {
                     onChange={(e) => setHarvestData({ ...harvestData, harvest_date: e.target.value })}
                   />
                 </div>
-
                 <div className="space-y-2">
-                  <Label htmlFor="quantity">{t('tasks.harvestForm.quantityHarvested', 'Quantity harvested *')}</Label>
+                  <Label htmlFor="quantity">{t('tasks.harvestForm.quantityHarvested', 'Quantity *')}</Label>
                   <Input
                     id="quantity"
                     type="number"
@@ -1060,56 +1243,42 @@ function TaskDetailPage() {
                     step="0.1"
                     value={harvestData.quantity || ''}
                     onChange={(e) => setHarvestData({ ...harvestData, quantity: parseFloat(e.target.value) || 0 })}
-                    placeholder={t('tasks.harvestForm.quantityPlaceholder', 'e.g. 500')}
                   />
                 </div>
-
                 <div className="space-y-2">
                   <Label htmlFor="unit">{t('tasks.harvestForm.unit', 'Unit')}</Label>
                   <Select value={harvestData.unit} onValueChange={(value) => setHarvestData({ ...harvestData, unit: value as HarvestUnit })}>
-                    <SelectTrigger id="unit">
-                      <SelectValue placeholder={t('tasks.harvestForm.select', 'Select')} />
-                    </SelectTrigger>
+                    <SelectTrigger id="unit"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="kg">{t('tasks.harvestForm.units.kg', 'Kilograms (kg)')}</SelectItem>
-                      <SelectItem value="tons">{t('tasks.harvestForm.units.tons', 'Tons')}</SelectItem>
-                      <SelectItem value="units">{t('tasks.harvestForm.units.units', 'Units')}</SelectItem>
-                      <SelectItem value="boxes">{t('tasks.harvestForm.units.boxes', 'Boxes')}</SelectItem>
-                      <SelectItem value="crates">{t('tasks.harvestForm.units.crates', 'Crates')}</SelectItem>
-                      <SelectItem value="liters">{t('tasks.harvestForm.units.liters', 'Liters')}</SelectItem>
+                      <SelectItem value="kg">kg</SelectItem>
+                      <SelectItem value="tons">t</SelectItem>
+                      <SelectItem value="units">units</SelectItem>
+                      <SelectItem value="boxes">boxes</SelectItem>
+                      <SelectItem value="crates">crates</SelectItem>
+                      <SelectItem value="liters">L</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-
                 <div className="space-y-2">
                   <Label htmlFor="quality_grade">{t('tasks.harvestForm.qualityGrade', 'Quality grade')}</Label>
                   <Select value={harvestData.quality_grade} onValueChange={(value) => setHarvestData({ ...harvestData, quality_grade: value as HarvestQualityGrade })}>
-                    <SelectTrigger id="quality_grade">
-                      <SelectValue placeholder={t('tasks.harvestForm.select', 'Select')} />
-                    </SelectTrigger>
+                    <SelectTrigger id="quality_grade"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Extra">{t('tasks.harvestForm.grades.extra', 'Extra')}</SelectItem>
-                      <SelectItem value="A">{t('tasks.harvestForm.grades.a', 'Grade A')}</SelectItem>
-                      <SelectItem value="First">{t('tasks.harvestForm.grades.first', 'First quality')}</SelectItem>
-                      <SelectItem value="B">{t('tasks.harvestForm.grades.b', 'Grade B')}</SelectItem>
-                      <SelectItem value="Second">{t('tasks.harvestForm.grades.second', 'Second quality')}</SelectItem>
-                      <SelectItem value="C">{t('tasks.harvestForm.grades.c', 'Grade C')}</SelectItem>
-                      <SelectItem value="Third">{t('tasks.harvestForm.grades.third', 'Third quality')}</SelectItem>
+                      <SelectItem value="Extra">Extra</SelectItem>
+                      <SelectItem value="A">A</SelectItem>
+                      <SelectItem value="First">First</SelectItem>
+                      <SelectItem value="B">B</SelectItem>
+                      <SelectItem value="Second">Second</SelectItem>
+                      <SelectItem value="C">C</SelectItem>
+                      <SelectItem value="Third">Third</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
               </div>
-
-              {/* Per-worker unit inputs for per-unit payment harvest tasks */}
               {isPerUnitTask && hasMultipleWorkers && (
                 <div className="space-y-3 border border-blue-200 dark:border-blue-800 rounded-lg p-4 bg-blue-50 dark:bg-blue-900/20">
-                  <p className="text-sm font-medium text-blue-800 dark:text-blue-200">
-                    {t('tasks.harvestForm.perUnitPayment', 'Per-unit payment')} ({harvestData.unit || 'unités'})
-                  </p>
-
-                  {/* Rate per unit input */}
                   <div className="flex items-center gap-3">
-                    <Label htmlFor="harvest-rate-per-unit" className="text-sm text-blue-800 dark:text-blue-200 whitespace-nowrap">{t('tasks.harvestForm.ratePerUnit', 'Rate per unit (MAD):')}</Label>
+                    <Label htmlFor="harvest-rate-per-unit" className="text-sm whitespace-nowrap">{t('tasks.harvestForm.ratePerUnit', 'Rate per unit (MAD):')}</Label>
                     <Input
                       id="harvest-rate-per-unit"
                       type="number"
@@ -1117,53 +1286,31 @@ function TaskDetailPage() {
                       step="0.01"
                       value={harvestRatePerUnit || ''}
                       onChange={(e) => setHarvestRatePerUnit(parseFloat(e.target.value) || 0)}
-                      placeholder={t('tasks.harvestForm.ratePlaceholder', 'e.g. 30')}
-                      className="w-28 bg-white dark:bg-gray-800"
+                      className="w-28"
                     />
                   </div>
-
-                  <p className="text-xs text-blue-600 dark:text-blue-400">
-                    {t('tasks.harvestForm.enterWorkerUnits', 'Enter the number of units completed by each worker.')}
-                  </p>
                   {allWorkers.map(a => {
                     const units = harvestWorkerUnits[a.worker_id] ?? 0;
-                    const rate = harvestRatePerUnit;
                     return (
                       <div key={a.worker_id} className="flex items-center gap-3">
-                        <span className="text-sm text-gray-700 dark:text-gray-300 w-36 truncate">
+                        <span className="text-sm w-36 truncate">
                           {a.worker?.first_name} {a.worker?.last_name}
                         </span>
                         <Input
                           type="number"
                           min="0"
-                          step="1"
                           value={units || ''}
                           onChange={(e) => setHarvestWorkerUnits(prev => ({
                             ...prev,
                             [a.worker_id]: parseFloat(e.target.value) || 0,
                           }))}
-                          placeholder="0"
                           className="w-28"
                         />
-                        {units > 0 && rate > 0 && (
-                          <span className="text-xs text-green-600 font-medium">
-                            = {(units * rate).toFixed(2)} MAD
-                          </span>
-                        )}
                       </div>
                     );
                   })}
-                  {harvestRatePerUnit > 0 && Object.values(harvestWorkerUnits).some(v => v > 0) && (
-                    <div className="flex justify-between items-center pt-2 border-t border-blue-200 dark:border-blue-700">
-                      <span className="text-sm font-medium text-blue-800 dark:text-blue-200">{t('tasks.harvestForm.totalPayments', 'Total payments:')}</span>
-                      <span className="font-bold text-green-600">
-                        {(Object.values(harvestWorkerUnits).reduce((s, v) => s + v, 0) * harvestRatePerUnit).toFixed(2)} MAD
-                      </span>
-                    </div>
-                  )}
                 </div>
               )}
-
               <div className="space-y-2">
                 <Label htmlFor="harvest_notes">{t('tasks.harvestForm.notes', 'Notes')}</Label>
                 <Textarea
@@ -1171,550 +1318,448 @@ function TaskDetailPage() {
                   value={harvestData.harvest_notes || ''}
                   onChange={(e) => setHarvestData({ ...harvestData, harvest_notes: e.target.value })}
                   rows={2}
-                  placeholder={t('tasks.harvestForm.notesPlaceholder', 'Harvest notes...')}
                 />
               </div>
-
               <div className="flex justify-end gap-3 pt-4 border-t dark:border-gray-700">
                 <Button variant="outline" onClick={() => { setShowHarvestForm(false); setCompletionType('complete'); setLotNumber(''); setHarvestWorkerUnits({}); setHarvestRatePerUnit(0); }}>
                   {t('common.cancel', 'Cancel')}
                 </Button>
                 <Button
-                  variant={completionType === 'partial' ? 'amber' : 'green'}
                   onClick={handleCompleteWithHarvest}
                   disabled={isActionLoading}
+                  className="bg-emerald-600 text-white hover:bg-emerald-700"
                 >
                   {completionType === 'partial' ? <PackageCheck className="w-4 h-4 mr-2" /> : <CheckCircle className="w-4 h-4 mr-2" />}
-                  {isActionLoading
-                    ? t('common.saving', 'Saving...')
-                    : completionType === 'partial'
-                      ? t('tasks.harvestForm.savePartial', 'Save partial harvest')
-                      : t('tasks.harvestForm.completeAndSave', 'Complete and save')}
+                  {isActionLoading ? t('common.saving', 'Saving...') : completionType === 'partial' ? t('tasks.harvestForm.savePartial', 'Save partial') : t('tasks.harvestForm.completeAndSave', 'Complete')}
                 </Button>
               </div>
             </div>
           )}
 
-          {/* Worklog / Time Tracking */}
-          <TaskWorklog
-            taskId={taskId}
-            taskStatus={task.status}
-            assignedWorkerId={task.worker_id}
-          />
-
-          {/* Attachments Section */}
-          <TaskAttachments
-            taskId={taskId}
-            organizationId={currentOrganization?.id || ''}
-            disabled={task.status === 'cancelled'}
-          />
-
-          {/* Checklist Section */}
-          <TaskChecklist taskId={taskId} disabled={task.status === 'cancelled'} />
-
-          {/* Dependencies Section */}
-          <TaskDependencies
-            taskId={taskId}
-            organizationId={currentOrganization?.id || ''}
-            disabled={task.status === 'cancelled'}
-          />
-
-          {/* Comments Section */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-              <MessageSquare className="w-5 h-5" />
-              {t('tasks.detail.comments', 'Comments')}
-              {comments.length > 0 && (
-                <span className="text-sm font-normal text-gray-500">({comments.length})</span>
-              )}
-            </h2>
-
-            {/* Add Comment */}
-            <div className="mb-6">
-              <TaskCommentInput taskId={taskId} />
-            </div>
-
-            {/* Comments List */}
-            {commentsLoading ? (
-              <div className="flex justify-center py-4">
-                <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+          {showPerUnitForm && (
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 space-y-4">
+              <h3 className="text-base font-semibold flex items-center gap-2">
+                <Banknote className="w-4 h-4 text-emerald-600" />
+                {t('tasks.harvestForm.perUnitPayment', 'Per-unit payment')}
+              </h3>
+              <div className="space-y-2">
+                <Label>{t('tasks.perUnitForm.ratePerUnit', 'Rate per unit (MAD) *')}</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={perUnitData.rate_per_unit || ''}
+                  onChange={(e) => setPerUnitData({ ...perUnitData, rate_per_unit: parseFloat(e.target.value) || 0 })}
+                />
               </div>
-            ) : comments.length === 0 ? (
-              <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
-                {t('tasks.detail.noComments', 'No comments yet. Be the first to comment.')}
-              </p>
-            ) : (
-              <div className="space-y-4">
-                {comments.map((comment) => {
-                  const anyComment = comment as TaskComment & {
-                    edited_at?: string | null;
-                    resolved_at?: string | null;
-                    resolved_by?: string | null;
-                  };
-                  const isOwn = anyComment.user_id === currentUserId;
-                  const isEditing = editingCommentId === comment.id;
-                  const isIssue = comment.type === 'issue';
-                  const isResolved = !!anyComment.resolved_at;
-                  return (
-                    <div key={comment.id} className={`flex gap-3 rounded-lg p-2 ${isResolved ? 'opacity-60 bg-gray-50 dark:bg-gray-900/40' : ''} ${isIssue && !isResolved ? 'bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800' : ''}`}>
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${isIssue ? 'bg-amber-100 dark:bg-amber-900/30' : 'bg-blue-100 dark:bg-blue-900/30'}`}>
-                        {isIssue ? (
-                          <AlertCircle className="w-4 h-4 text-amber-600" />
-                        ) : (
-                          <User className="w-4 h-4 text-blue-600" />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1 flex-wrap">
-                          <span className="text-sm font-medium text-gray-900 dark:text-white">
-                            {comment.user_name || comment.worker_name || t('tasks.detail.anonymous', 'User')}
-                          </span>
-                          <span className="text-xs text-gray-500 dark:text-gray-400">
-                            {formatDistance(new Date(comment.created_at), new Date(), {
-                              addSuffix: true,
-                              locale: getLocale(),
-                            })}
-                          </span>
-                          {anyComment.edited_at && (
-                            <span className="text-xs italic text-gray-400">· {t('tasks.comments.edited', 'edited')}</span>
-                          )}
-                          {isIssue && !isResolved && (
-                            <span className="text-xs px-1.5 py-0.5 rounded bg-amber-200 dark:bg-amber-900/50 text-amber-900 dark:text-amber-200 font-medium">
-                              {t('tasks.comments.open', 'Open')}
-                            </span>
-                          )}
-                          {isResolved && (
-                            <span className="text-xs px-1.5 py-0.5 rounded bg-emerald-200 dark:bg-emerald-900/50 text-emerald-900 dark:text-emerald-200 font-medium">
-                              {t('tasks.comments.resolved', 'Resolved')}
-                            </span>
-                          )}
-                        </div>
-                        {isEditing ? (
-                          <div className="space-y-2">
-                            <Textarea
-                              value={editDraft}
-                              onChange={(e) => setEditDraft(e.target.value)}
-                              rows={3}
-                              className="text-sm"
-                            />
-                            <div className="flex items-center gap-2">
-                              <Button size="sm" onClick={() => handleSaveEditComment(comment.id)} disabled={updateComment.isPending || !editDraft.trim()}>
-                                <Check className="w-3 h-3 mr-1" />
-                                {t('common.save', 'Save')}
-                              </Button>
-                              <Button size="sm" variant="outline" onClick={handleCancelEditComment}>
-                                <XIcon className="w-3 h-3 mr-1" />
-                                {t('common.cancel', 'Cancel')}
-                              </Button>
-                            </div>
-                          </div>
-                        ) : (
-                          <>
-                            <p className="text-sm text-gray-700 dark:text-gray-300">
-                              <CommentDisplay comment={comment.comment} />
-                            </p>
-                            <div className="flex items-center gap-1 mt-1">
-                              {isIssue && (
-                                <Button size="sm" variant="ghost" onClick={() => handleToggleResolve(comment.id, isResolved)} className="h-7 px-2 text-xs">
-                                  <Check className="w-3 h-3 mr-1" />
-                                  {isResolved ? t('tasks.comments.reopen', 'Reopen') : t('tasks.comments.resolve', 'Resolve')}
-                                </Button>
-                              )}
-                              {isOwn && (
-                                <>
-                                  <Button size="sm" variant="ghost" onClick={() => handleStartEditComment(comment.id, comment.comment)} className="h-7 px-2 text-xs">
-                                    <Edit className="w-3 h-3 mr-1" />
-                                    {t('common.edit', 'Edit')}
-                                  </Button>
-                                  <Button size="sm" variant="ghost" onClick={() => handleDeleteComment(comment.id)} className="h-7 px-2 text-xs text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20">
-                                    <Trash2 className="w-3 h-3 mr-1" />
-                                    {t('common.delete', 'Delete')}
-                                  </Button>
-                                </>
-                              )}
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Sidebar - Actions */}
-        <div className="space-y-6">
-          {/* Running cost tile — desktop sidebar variant */}
-          {costSummary.hasAny && (
-            <div className="hidden lg:block bg-gradient-to-br from-emerald-50 to-blue-50 dark:from-emerald-900/20 dark:to-blue-900/20 border border-emerald-200/60 dark:border-emerald-800/60 rounded-lg p-4">
-              <h2 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2 mb-3">
-                <Wallet className="w-4 h-4 text-emerald-600" />
-                {t('tasks.cost.title', 'Running cost')}
-              </h2>
-              <dl className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <dt className="text-gray-500 dark:text-gray-400">{t('tasks.cost.hoursLogged', 'Hours logged')}</dt>
-                  <dd className="font-semibold text-gray-900 dark:text-white">{costSummary.totalHours.toFixed(2)}h</dd>
-                </div>
-                <div className="flex justify-between">
-                  <dt className="text-gray-500 dark:text-gray-400">{t('tasks.cost.unitsDone', 'Units done')}</dt>
-                  <dd className="font-semibold text-gray-900 dark:text-white">
-                    {costSummary.unitsCompleted}
-                    {task.units_required ? <span className="text-gray-400"> / {task.units_required}</span> : null}
-                  </dd>
-                </div>
-                <div className="flex justify-between">
-                  <dt className="text-gray-500 dark:text-gray-400">{t('tasks.cost.pieceWork', 'Piece-work')}</dt>
-                  <dd className="font-semibold text-emerald-700 dark:text-emerald-400">
-                    {costSummary.pieceWorkCost.toLocaleString('fr-FR')} MAD
-                  </dd>
-                </div>
-                <div className="flex justify-between">
-                  <dt className="text-gray-500 dark:text-gray-400">{t('tasks.cost.actual', 'Actual')}</dt>
-                  <dd className="font-semibold text-gray-900 dark:text-white">
-                    {costSummary.actualCost.toLocaleString('fr-FR')} MAD
-                  </dd>
-                </div>
-                {costSummary.estimatedCost > 0 && (
-                  <div className="flex justify-between pt-2 border-t border-emerald-200/60 dark:border-emerald-800/60">
-                    <dt className="text-gray-500 dark:text-gray-400">{t('tasks.cost.estimated', 'Estimated')}</dt>
-                    <dd className="text-gray-500 dark:text-gray-400">
-                      {costSummary.estimatedCost.toLocaleString('fr-FR')} MAD
-                    </dd>
-                  </div>
-                )}
-              </dl>
-            </div>
-          )}
-
-          {/* Dependencies compact view — desktop sidebar */}
-          {dependencies && (dependencies.depends_on.length > 0 || dependencies.required_by.length > 0) && (
-            <div className="hidden lg:block bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-              <h2 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2 mb-3">
-                <Lock className="w-4 h-4 text-gray-500" />
-                {t('tasks.dependencies.title', 'Dependencies')}
-              </h2>
-              {dependencies.depends_on.length > 0 && (
-                <>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
-                    {t('tasks.dependencies.dependsOn', 'Depends on')}
-                  </p>
-                  <ul className="space-y-1 mb-3">
-                    {dependencies.depends_on.map((d) => (
-                      <li key={d.id} className="text-xs text-gray-700 dark:text-gray-300 flex items-center gap-2">
-                        <span className={`inline-block w-2 h-2 rounded-full ${d.status === 'completed' ? 'bg-emerald-500' : 'bg-amber-500'}`} />
-                        <span className="truncate">{d.title}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </>
-              )}
-              {dependencies.required_by.length > 0 && (
-                <>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
-                    {t('tasks.dependencies.requiredBy', 'Required by')}
-                  </p>
-                  <ul className="space-y-1">
-                    {dependencies.required_by.map((d) => (
-                      <li key={d.id} className="text-xs text-gray-700 dark:text-gray-300 flex items-center gap-2">
-                        <span className="inline-block w-2 h-2 rounded-full bg-blue-500" />
-                        <span className="truncate">{d.title}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </>
-              )}
-            </div>
-          )}
-
-          {/* Assignee — the manager who created/assigned this task */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-              <User className="w-5 h-5" />
-              {t('tasks.detail.assignee', 'Assignee')}
-            </h2>
-            {profile ? (
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-green-700 dark:text-green-400 font-semibold text-sm">
-                  {(profile.first_name?.[0] || '') + (profile.last_name?.[0] || '')}
-                </div>
-                <div>
-                  <p className="font-medium text-gray-900 dark:text-white">
-                    {[profile.first_name, profile.last_name].filter(Boolean).join(' ')}
-                  </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">{t('tasks.detail.manager', 'Responsable')}</p>
-                </div>
-              </div>
-            ) : (
-              <p className="text-sm text-gray-500 dark:text-gray-400">—</p>
-            )}
-          </div>
-
-          {/* Quick Actions */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-              {t('tasks.detail.actions', 'Actions')}
-            </h2>
-            <div className="space-y-3">
-              {canStart && (
-                <Button onClick={handleStartTask} disabled={isActionLoading} className="w-full">
-                  <Play className="w-4 h-4 mr-2" />
-                  {t('tasks.start', 'Start')}
-                </Button>
-              )}
-
-              {canPause && (
-                <Button onClick={handlePauseTask} disabled={isActionLoading} variant="outline" className="w-full">
-                  <Pause className="w-4 h-4 mr-2" />
-                  {t('tasks.pause', 'Pause')}
-                </Button>
-              )}
-
-              {canResume && (
-                <Button onClick={handleResumeTask} disabled={isActionLoading} className="w-full">
-                  <Play className="w-4 h-4 mr-2" />
-                  {t('tasks.resume', 'Resume')}
-                </Button>
-              )}
-
-              {canComplete && !showHarvestForm && !showPerUnitForm && (
-                <Button onClick={handleCompleteTask} disabled={isActionLoading} className="w-full">
-                  {isHarvestingTask ? (
-                    <>
-                      <Wheat className="w-4 h-4 mr-2" />
-                      {t('tasks.completeHarvest', 'Complete with harvest')}
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle className="w-4 h-4 mr-2" />
-                      {t('tasks.complete', 'Complete')}
-                    </>
-                  )}
-                </Button>
-              )}
-
-              {/* Per-unit completion form */}
-              {showPerUnitForm && (
-                <div className="border-t dark:border-gray-700 pt-4 space-y-4">
-                  <h3 className="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                    <Banknote className="w-4 h-4 text-green-600" />
-                    {t('tasks.harvestForm.perUnitPayment', 'Per-unit payment')}
-                  </h3>
-                  <div className="space-y-2">
-                    <Label>{t('tasks.perUnitForm.ratePerUnit', 'Rate per unit (MAD) *')}</Label>
-                    <Input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={perUnitData.rate_per_unit || ''}
-                      onChange={(e) => setPerUnitData({ ...perUnitData, rate_per_unit: parseFloat(e.target.value) || 0 })}
-                      placeholder={t('tasks.perUnitForm.ratePlaceholder', 'e.g. 5.00')}
-                    />
-                  </div>
-                  {hasMultipleWorkers ? (
-                    <div className="space-y-2">
-                      <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('tasks.perUnitForm.unitsPerWorker', 'Units per worker')}</p>
-                      {allWorkers.map(a => (
-                        <div key={a.worker_id} className="flex items-center gap-2">
-                          <span className="text-sm text-gray-700 dark:text-gray-300 w-32 truncate">
-                            {a.worker?.first_name} {a.worker?.last_name}
-                          </span>
-                          <Input
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            value={workerUnits[a.worker_id] ?? ''}
-                            onChange={(e) => setWorkerUnits(prev => ({
-                              ...prev,
-                              [a.worker_id]: parseFloat(e.target.value) || 0,
-                            }))}
-                            placeholder="0"
-                            className="w-28"
-                          />
-                          {(workerUnits[a.worker_id] ?? 0) > 0 && perUnitData.rate_per_unit > 0 && (
-                            <span className="text-xs text-green-600 font-medium">
-                              = {((workerUnits[a.worker_id] ?? 0) * perUnitData.rate_per_unit).toFixed(2)} MAD
-                            </span>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      <Label>{t('tasks.perUnitForm.unitsCompleted', 'Units completed *')}</Label>
+              {hasMultipleWorkers ? (
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">{t('tasks.perUnitForm.unitsPerWorker', 'Units per worker')}</p>
+                  {allWorkers.map(a => (
+                    <div key={a.worker_id} className="flex items-center gap-2">
+                      <span className="text-sm w-32 truncate">
+                        {a.worker?.first_name} {a.worker?.last_name}
+                      </span>
                       <Input
                         type="number"
                         min="0"
-                        step="0.01"
-                        value={perUnitData.units_completed || ''}
-                        onChange={(e) => setPerUnitData({ ...perUnitData, units_completed: parseFloat(e.target.value) || 0 })}
-                        placeholder={t('tasks.perUnitForm.unitsPlaceholder', 'e.g. 100')}
+                        value={workerUnits[a.worker_id] ?? ''}
+                        onChange={(e) => setWorkerUnits(prev => ({
+                          ...prev,
+                          [a.worker_id]: parseFloat(e.target.value) || 0,
+                        }))}
+                        className="w-28"
                       />
                     </div>
-                  )}
-                  {perUnitData.rate_per_unit > 0 && (
-                    <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm font-medium text-green-800 dark:text-green-200">{t('tasks.perUnitForm.total', 'Total')}</span>
-                        <span className="font-bold text-green-600">
-                          {hasMultipleWorkers
-                            ? (Object.values(workerUnits).reduce((s, v) => s + v, 0) * perUnitData.rate_per_unit).toFixed(2)
-                            : (perUnitData.units_completed * perUnitData.rate_per_unit).toFixed(2)} MAD
-                        </span>
-                      </div>
-                    </div>
-                  )}
-                  <div className="space-y-2">
-                    <Label>{t('tasks.perUnitForm.notes', 'Notes')}</Label>
-                    <Textarea
-                      value={perUnitData.notes}
-                      onChange={(e) => setPerUnitData({ ...perUnitData, notes: e.target.value })}
-                      rows={2}
-                      placeholder={t('tasks.perUnitForm.notesPlaceholder', 'Notes on the work done...')}
-                    />
-                  </div>
-                  <div className="flex gap-2">
-                    <Button variant="outline" onClick={() => setShowPerUnitForm(false)} className="flex-1">
-                      {t('common.cancel', 'Cancel')}
-                    </Button>
-                    <Button onClick={handleCompletePerUnit} disabled={isActionLoading} className="flex-1">
-                      <CheckCircle className="w-4 h-4 mr-2" />
-                      {isActionLoading ? t('common.processing', 'Processing...') : t('common.confirm', 'Confirm')}
-                    </Button>
-                  </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <Label>{t('tasks.perUnitForm.unitsCompleted', 'Units completed *')}</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    value={perUnitData.units_completed || ''}
+                    onChange={(e) => setPerUnitData({ ...perUnitData, units_completed: parseFloat(e.target.value) || 0 })}
+                  />
                 </div>
               )}
+              <div className="space-y-2">
+                <Label>{t('tasks.perUnitForm.notes', 'Notes')}</Label>
+                <Textarea
+                  value={perUnitData.notes}
+                  onChange={(e) => setPerUnitData({ ...perUnitData, notes: e.target.value })}
+                  rows={2}
+                />
+              </div>
+              <div className="flex gap-2 justify-end">
+                <Button variant="outline" onClick={() => setShowPerUnitForm(false)}>
+                  {t('common.cancel', 'Cancel')}
+                </Button>
+                <Button
+                  onClick={handleCompletePerUnit}
+                  disabled={isActionLoading}
+                  className="bg-emerald-600 text-white hover:bg-emerald-700"
+                >
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  {isActionLoading ? t('common.processing', 'Processing...') : t('common.confirm', 'Confirm')}
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Commentaires */}
+          <Card className={cardShell}>
+            <CardHeader className="flex flex-row items-center gap-2 space-y-0 pb-2">
+              <MessageSquare className="h-5 w-5 text-emerald-600" />
+              <CardTitle className="text-base font-semibold">
+                {t('tasks.detail.comments', 'Commentaires')}
+                {comments.length > 0 && (
+                  <span className="ml-2 text-sm font-normal text-gray-500">({comments.length})</span>
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              {commentsLoading ? (
+                <div className="flex justify-center py-4">
+                  <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+                </div>
+              ) : comments.length === 0 ? (
+                <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
+                  {t('tasks.detail.noComments', 'Aucun commentaire pour le moment.')}
+                </p>
+              ) : (
+                <div className="space-y-4 mb-6">
+                  {comments.map((comment) => {
+                    const anyComment = comment as TaskComment & {
+                      edited_at?: string | null;
+                      resolved_at?: string | null;
+                      resolved_by?: string | null;
+                    };
+                    const isOwn = anyComment.user_id === currentUserId;
+                    const isEditingThis = editingCommentId === comment.id;
+                    const isIssue = comment.type === 'issue';
+                    const isResolved = !!anyComment.resolved_at;
+                    const authorName = comment.user_name || comment.worker_name || '';
+                    const nameParts = authorName.split(/\s+/);
+                    return (
+                      <div key={comment.id} className={`flex gap-3 rounded-lg p-2 ${isResolved ? 'opacity-60 bg-gray-50 dark:bg-gray-900/40' : ''} ${isIssue && !isResolved ? 'border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-900/10' : ''}`}>
+                        {isIssue ? (
+                          <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/30">
+                            <AlertCircle className="h-4 w-4 text-amber-600" />
+                          </div>
+                        ) : (
+                          <UserAvatar
+                            src={comment.user_avatar_url}
+                            firstName={nameParts[0] || null}
+                            lastName={nameParts.slice(1).join(' ') || null}
+                            size="sm"
+                          />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1 flex-wrap">
+                            <span className="text-sm font-medium text-gray-900 dark:text-white">
+                              {comment.user_name || comment.worker_name || t('tasks.detail.anonymous', 'User')}
+                            </span>
+                            <span className="text-xs text-gray-500 dark:text-gray-400">
+                              {formatDistance(new Date(comment.created_at), new Date(), {
+                                addSuffix: true,
+                                locale: getLocale(),
+                              })}
+                            </span>
+                            {anyComment.edited_at && (
+                              <span className="text-xs italic text-gray-400">· {t('tasks.comments.edited', 'edited')}</span>
+                            )}
+                          </div>
+                          {isEditingThis ? (
+                            <div className="space-y-2">
+                              <Textarea
+                                value={editDraft}
+                                onChange={(e) => setEditDraft(e.target.value)}
+                                rows={3}
+                                className="text-sm"
+                              />
+                              <div className="flex items-center gap-2">
+                                <Button size="sm" onClick={() => handleSaveEditComment(comment.id)} disabled={updateComment.isPending || !editDraft.trim()}>
+                                  <Check className="w-3 h-3 mr-1" />
+                                  {t('common.save', 'Save')}
+                                </Button>
+                                <Button size="sm" variant="outline" onClick={handleCancelEditComment}>
+                                  <XIcon className="w-3 h-3 mr-1" />
+                                  {t('common.cancel', 'Cancel')}
+                                </Button>
+                              </div>
+                            </div>
+                          ) : (
+                            <>
+                              <p className="text-sm text-gray-700 dark:text-gray-300">
+                                <CommentDisplay comment={comment.comment} />
+                              </p>
+                              <div className="flex items-center gap-1 mt-1">
+                                {isIssue && (
+                                  <Button size="sm" variant="ghost" onClick={() => handleToggleResolve(comment.id, isResolved)} className="h-7 px-2 text-xs">
+                                    <Check className="w-3 h-3 mr-1" />
+                                    {isResolved ? t('tasks.comments.reopen', 'Reopen') : t('tasks.comments.resolve', 'Resolve')}
+                                  </Button>
+                                )}
+                                {isOwn && (
+                                  <>
+                                    <Button size="sm" variant="ghost" onClick={() => handleStartEditComment(comment.id, comment.comment)} className="h-7 px-2 text-xs">
+                                      <Pencil className="w-3 h-3 mr-1" />
+                                      {t('common.edit', 'Edit')}
+                                    </Button>
+                                    <Button size="sm" variant="ghost" onClick={() => handleDeleteComment(comment.id)} className="h-7 px-2 text-xs text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20">
+                                      <Trash2 className="w-3 h-3 mr-1" />
+                                      {t('common.delete', 'Delete')}
+                                    </Button>
+                                  </>
+                                )}
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              <TaskCommentInput taskId={taskId} />
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Right column */}
+        <div className="space-y-6 lg:col-span-4">
+          {/* Assignée à */}
+          <Card className={cardShell}>
+            <CardContent className="space-y-4 pt-6">
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                {t('tasks.detail.assigneeLabel', 'Assignée à')}
+              </p>
+              {task.worker_name || profile ? (
+                <div className="flex items-center gap-4">
+                  <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-full bg-emerald-100 text-base font-semibold text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200">
+                    {(() => {
+                      const name = task.worker_name || `${profile?.first_name ?? ''} ${profile?.last_name ?? ''}`;
+                      return name
+                        .split(/\s+/)
+                        .map((p) => p[0])
+                        .filter(Boolean)
+                        .slice(0, 2)
+                        .join('')
+                        .toUpperCase() || '?';
+                    })()}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-medium text-gray-900 dark:text-white truncate">
+                      {task.worker_name || [profile?.first_name, profile?.last_name].filter(Boolean).join(' ') || '—'}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      {(task as { worker_type?: string }).worker_type?.trim()
+                        || (task.worker_name ? t('tasks.detail.worker', 'Ouvrier') : t('tasks.detail.manager', 'Responsable'))}
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500 dark:text-gray-400">—</p>
+              )}
+              <div className="space-y-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full border-gray-200 dark:border-gray-700"
+                  onClick={() => setShowReassign((v) => !v)}
+                  disabled={isClosed}
+                >
+                  <User className="me-2 h-4 w-4" />
+                  {t('tasks.detail.reassign', 'Réassigner')}
+                </Button>
+                {showReassign && (
+                  <Select onValueChange={handleReassign}>
+                    <SelectTrigger>
+                      <SelectValue placeholder={t('tasks.detail.selectWorker', 'Choisir un ouvrier...')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {workers.map((w) => (
+                        <SelectItem key={w.id} value={w.id}>
+                          {[w.first_name, w.last_name].filter(Boolean).join(' ') || w.id}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Actions */}
+          <Card className={cardShell}>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base font-semibold">{t('tasks.detail.actions', 'Actions')}</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2 pt-0">
+              {canStart && (
+                <Button
+                  className="h-11 w-full justify-center bg-emerald-600 text-white hover:bg-emerald-700"
+                  onClick={handleStartTask}
+                  disabled={isActionLoading || blockedStatus?.blocked}
+                >
+                  <Play className="me-2 h-4 w-4" />
+                  {t('tasks.detail.startTask', 'Démarrer la tâche')}
+                </Button>
+              )}
+              {canResume && (
+                <Button
+                  className="h-11 w-full justify-center bg-emerald-600 text-white hover:bg-emerald-700"
+                  onClick={handleResumeTask}
+                  disabled={isActionLoading}
+                >
+                  <Play className="me-2 h-4 w-4" />
+                  {t('tasks.resume', 'Reprendre')}
+                </Button>
+              )}
+              {canComplete && !showHarvestForm && !showPerUnitForm && (
+                <Button
+                  variant="outline"
+                  className="h-11 w-full justify-center border-gray-200 bg-white hover:bg-gray-50 dark:border-gray-700 dark:bg-transparent dark:hover:bg-gray-900"
+                  onClick={handleCompleteTask}
+                  disabled={isActionLoading}
+                >
+                  <CheckCircle2 className="me-2 h-4 w-4 text-emerald-600" />
+                  {t('tasks.detail.markComplete', 'Marquer terminée')}
+                </Button>
+              )}
+              {canPause && (
+                <Button
+                  variant="outline"
+                  className="h-11 w-full justify-center border-gray-200 bg-white hover:bg-gray-50 dark:border-gray-700 dark:bg-transparent dark:hover:bg-gray-900"
+                  onClick={handlePauseTask}
+                  disabled={isActionLoading}
+                >
+                  <Pause className="me-2 h-4 w-4" />
+                  {t('tasks.detail.pauseTask', 'Mettre en pause')}
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                className="h-11 w-full justify-center border-red-200 text-red-700 hover:bg-red-50 dark:border-red-900/50 dark:text-red-400 dark:hover:bg-red-950/40"
+                onClick={handleDeleteTask}
+                disabled={isActionLoading}
+              >
+                <Trash2 className="me-2 h-4 w-4" />
+                {t('common.delete', 'Supprimer')}
+              </Button>
 
               {task.status === 'completed' && (
-                <div className="text-center py-3">
-                  <CheckCircle className="w-8 h-8 text-green-600 mx-auto mb-2" />
-                  <p className="text-sm text-green-700 dark:text-green-400 font-medium">
-                    {t('tasks.detail.taskCompleted', 'Task completed')}
+                <div className="flex items-center justify-center gap-2 rounded-md bg-emerald-50 dark:bg-emerald-900/20 p-3">
+                  <CheckCircle className="h-5 w-5 text-emerald-600" />
+                  <p className="text-sm font-medium text-emerald-700 dark:text-emerald-400">
+                    {t('tasks.detail.taskCompleted', 'Tâche terminée')}
                   </p>
                 </div>
               )}
-
               {task.status === 'cancelled' && (
-                <div className="text-center py-3">
-                  <AlertCircle className="w-8 h-8 text-red-400 mx-auto mb-2" />
-                  <p className="text-sm text-red-600 dark:text-red-400 font-medium">
-                    {t('tasks.detail.taskCancelled', 'Task cancelled')}
+                <div className="flex items-center justify-center gap-2 rounded-md bg-red-50 dark:bg-red-900/20 p-3">
+                  <AlertCircle className="h-5 w-5 text-red-500" />
+                  <p className="text-sm font-medium text-red-700 dark:text-red-400">
+                    {t('tasks.detail.taskCancelled', 'Tâche annulée')}
                   </p>
                 </div>
               )}
-            </div>
-          </div>
+            </CardContent>
+          </Card>
 
-          {/* Task Meta */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-            <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
-              {t('tasks.detail.details', 'Details')}
-            </h2>
-            <dl className="space-y-3 text-sm">
-              <div className="flex justify-between">
-                <dt className="text-gray-500 dark:text-gray-400">{t('tasks.detail.taskId', 'Task ID')}</dt>
-                <dd className="text-gray-900 dark:text-white font-mono text-xs">{task.id.slice(0, 8)}...</dd>
-              </div>
-              <div className="flex justify-between">
-                <dt className="text-gray-500 dark:text-gray-400">{t('tasks.detail.created', 'Created')}</dt>
-                <dd className="text-gray-900 dark:text-white">
-                  {format(new Date(task.created_at), 'PP', { locale: getLocale() })}
-                </dd>
-              </div>
-              {task.updated_at && (
-                <div className="flex justify-between">
-                  <dt className="text-gray-500 dark:text-gray-400">{t('tasks.detail.updated', 'Updated')}</dt>
-                  <dd className="text-gray-900 dark:text-white">
-                    {formatDistance(new Date(task.updated_at), new Date(), {
-                      addSuffix: true,
-                      locale: getLocale(),
-                    })}
-                  </dd>
-                </div>
-              )}
-              {task.cost_estimate && (
-                <div className="flex justify-between">
-                  <dt className="text-gray-500 dark:text-gray-400">{t('tasks.detail.costEstimate', 'Cost estimate')}</dt>
-                  <dd className="text-gray-900 dark:text-white">{task.cost_estimate} MAD</dd>
-                </div>
-              )}
-              {task.actual_cost && (
-                <div className="flex justify-between">
-                  <dt className="text-gray-500 dark:text-gray-400">{t('tasks.detail.actualCost', 'Actual cost')}</dt>
-                  <dd className="text-gray-900 dark:text-white">{task.actual_cost} MAD</dd>
-                </div>
-              )}
-            </dl>
-          </div>
+          {/* Détails */}
+          <Card className={cardShell}>
+            <CardContent className="space-y-1 pt-6">
+              <p className="mb-3 text-xs font-semibold uppercase tracking-[0.15em] text-gray-500 dark:text-gray-400">
+                {t('tasks.detail.details', 'Détails')}
+              </p>
+              <dl className="text-sm">
+                <DetailRow
+                  label={t('tasks.detail.taskId', 'ID tâche')}
+                  value={<span className="font-mono">#{idShort}</span>}
+                />
+                <DetailRow
+                  label={t('tasks.detail.created', 'Créée')}
+                  value={format(new Date(task.created_at), 'dd MMM yyyy', { locale: getLocale() })}
+                />
+                {task.updated_at && (
+                  <DetailRow
+                    label={t('tasks.detail.updated', 'Mise à jour')}
+                    value={formatDistance(new Date(task.updated_at), new Date(), { addSuffix: true, locale: getLocale() })}
+                  />
+                )}
+                <DetailRow
+                  label={t('tasks.detail.source', 'Source')}
+                  value={(task as { source?: string }).source || t('tasks.detail.sourceManual', 'Manuelle')}
+                />
+              </dl>
+            </CardContent>
+          </Card>
         </div>
       </div>
 
-      {/* Sticky mobile action bar — floats at the bottom of the viewport so workers
-          don't have to scroll past description + worklog to reach Clock In / Complete. */}
-      {!showHarvestForm && !showPerUnitForm && (canStart || canPause || canResume || canComplete) && (
-        <div className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 dark:bg-gray-900/95 backdrop-blur border-t border-gray-200 dark:border-gray-800 px-4 py-3 shadow-lg">
+      {/* Sticky mobile action bar */}
+      {!showHarvestForm && !showPerUnitForm && !isEditing && (canStart || canPause || canResume || canComplete) && (
+        <div className="lg:hidden fixed bottom-0 inset-x-0 z-40 border-t border-gray-200 bg-white/95 px-4 py-3 shadow-lg backdrop-blur dark:border-gray-800 dark:bg-gray-900/95">
           <div className="flex items-center gap-2">
             {canStart && (
-              <Button
-                onClick={handleStartTask}
-                disabled={isActionLoading || blockedStatus?.blocked}
-                className="flex-1 h-12 text-base"
-              >
+              <Button onClick={handleStartTask} disabled={isActionLoading || blockedStatus?.blocked} className="flex-1 h-12 text-base bg-emerald-600 hover:bg-emerald-700 text-white">
                 <Play className="w-5 h-5 mr-2" />
-                {t('tasks.start', 'Start')}
+                {t('tasks.start', 'Démarrer')}
               </Button>
             )}
             {canPause && (
-              <Button
-                onClick={handlePauseTask}
-                disabled={isActionLoading}
-                variant="outline"
-                className="flex-1 h-12 text-base"
-              >
+              <Button onClick={handlePauseTask} disabled={isActionLoading} variant="outline" className="flex-1 h-12 text-base">
                 <Pause className="w-5 h-5 mr-2" />
                 {t('tasks.pause', 'Pause')}
               </Button>
             )}
             {canResume && (
-              <Button
-                onClick={handleResumeTask}
-                disabled={isActionLoading}
-                className="flex-1 h-12 text-base"
-              >
+              <Button onClick={handleResumeTask} disabled={isActionLoading} className="flex-1 h-12 text-base bg-emerald-600 hover:bg-emerald-700 text-white">
                 <Play className="w-5 h-5 mr-2" />
-                {t('tasks.resume', 'Resume')}
+                {t('tasks.resume', 'Reprendre')}
               </Button>
             )}
             {canComplete && (
-              <Button
-                onClick={handleCompleteTask}
-                disabled={isActionLoading}
-                className="flex-1 h-12 text-base bg-emerald-600 hover:bg-emerald-700 text-white"
-              >
-                {isHarvestingTask ? (
-                  <>
-                    <Wheat className="w-5 h-5 mr-2" />
-                    {t('tasks.completeShort', 'Finish')}
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle className="w-5 h-5 mr-2" />
-                    {t('tasks.completeShort', 'Finish')}
-                  </>
-                )}
+              <Button onClick={handleCompleteTask} disabled={isActionLoading} className="flex-1 h-12 text-base bg-emerald-600 hover:bg-emerald-700 text-white">
+                <CheckCircle className="w-5 h-5 mr-2" />
+                {t('tasks.completeShort', 'Terminer')}
               </Button>
             )}
           </div>
-          {blockedStatus?.blocked && canStart && (
-            <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-1.5 text-center">
-              <Lock className="w-3 h-3 inline mr-1" />
-              {t('tasks.blocked.hintMobile', 'Waiting on dependencies')}
-            </p>
-          )}
         </div>
       )}
+    </div>
+  );
+}
+
+function InfoField({
+  icon,
+  label,
+  value,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: React.ReactNode;
+}) {
+  return (
+    <div>
+      <p className="flex items-center gap-1.5 text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
+        {icon}
+        {label}
+      </p>
+      <p className="mt-1 font-medium text-gray-900 dark:text-white">{value}</p>
+    </div>
+  );
+}
+
+function DetailRow({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div className="flex items-center justify-between gap-3 border-b border-gray-100 py-2.5 last:border-b-0 dark:border-gray-800">
+      <dt className="text-gray-500 dark:text-gray-400">{label}</dt>
+      <dd className="text-end text-gray-900 dark:text-white">{value}</dd>
     </div>
   );
 }

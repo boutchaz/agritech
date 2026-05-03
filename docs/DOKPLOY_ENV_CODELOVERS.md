@@ -117,8 +117,10 @@ Vite/React frontend. All `VITE_*` vars are baked in at build time.
 | Variable | Purpose |
 |----------|--------|
 | `DASHBOARD_TRAEFIK_HOST` | Traefik.me host for this stack (e.g. `agritech-dashboard-pu6ujw-aade68-37-27-217-1.traefik.me`). Used for HTTP/HTTPS routers. |
-| `DASHBOARD_PUBLIC_HOST` | Custom domain (e.g. `agriprofy.wearecodelovers.com`). Omit or set to a non-matching value to disable custom-domain routing. |
+| `DASHBOARD_PUBLIC_HOST` | **Canonical apex hostname only** (e.g. `agrogina.com`, not `www.agrogina.com`). Traefik routes both apex and `www.` to the dashboard; nginx returns **301** from `www` → `https://<apex>` with path and query preserved. The container receives `CANONICAL_PUBLIC_HOST` from this same variable for that redirect. Omit or use a placeholder to disable custom-domain routing. |
 | `TRAEFIK_NETWORK` | Network Traefik uses to reach the container (default `dokploy-network`). Ensure the stack is attached to this network in Dokploy. |
+
+**WWW vs apex (SEO):** Set `DASHBOARD_PUBLIC_HOST` to your preferred canonical host **without** `www`. DNS should point both `A`/`AAAA` for apex and `www` (or `CNAME` `www` → apex) to Traefik. In **Google Search Console**, choose the same canonical as your site’s `<link rel="canonical">` (`https://agrogina.com/`). API **CORS** / `FRONTEND_URL` only need the canonical `https://agrogina.com` origin once redirects are live; optional to also allow `https://www.agrogina.com` during migration.
 
 | Variable | Copy from thebzlab? | Set in Codelovers |
 |----------|---------------------|-------------------|

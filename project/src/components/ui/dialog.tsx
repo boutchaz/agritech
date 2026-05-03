@@ -27,10 +27,14 @@ const DialogOverlay = React.forwardRef<
 ));
 DialogOverlay.displayName = DialogPrimitive.Overlay.displayName;
 
+interface DialogContentExtraProps {
+  centered?: boolean;
+}
+
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
->(({ className, children, style, ...props }, ref) => (
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & DialogContentExtraProps
+>(({ className, children, style, centered, ...props }, ref) => (
   <DialogPortal>
     <DialogOverlay />
     <DialogPrimitive.Content
@@ -39,12 +43,16 @@ const DialogContent = React.forwardRef<
       className={cn(
         "fixed z-50 flex w-full min-h-0 flex-col gap-4 bg-white p-6 shadow-lg duration-200 dark:bg-gray-800",
         "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
-        /* Bottom sheet: cap height; inner wrapper scrolls (grid + tall content ignored max-h on some viewports) */
-        "left-0 right-0 bottom-0 max-h-[85dvh] overflow-hidden rounded-t-2xl border-t border-gray-200 dark:border-gray-700",
-        "data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom",
-        "sm:bottom-auto sm:right-auto sm:left-[50%] sm:top-[50%] sm:max-h-[min(92dvh,calc(100dvh-1.5rem))] sm:translate-x-[-50%] sm:translate-y-[-50%] sm:overflow-hidden sm:rounded-lg sm:border sm:border-gray-200 sm:dark:border-gray-700",
-        "sm:data-[state=closed]:zoom-out-95 sm:data-[state=open]:zoom-in-95 sm:data-[state=closed]:slide-out-to-left-1/2 sm:data-[state=closed]:slide-out-to-top-[48%] sm:data-[state=open]:slide-in-from-left-1/2 sm:data-[state=open]:slide-in-from-top-[48%]",
-        "sm:max-w-lg",
+        centered
+          ? "left-[50%] top-[50%] max-h-[min(92dvh,calc(100dvh-1.5rem))] translate-x-[-50%] translate-y-[-50%] overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 sm:max-w-lg"
+          : cn(
+              /* Bottom sheet: cap height; inner wrapper scrolls (grid + tall content ignored max-h on some viewports) */
+              "left-0 right-0 bottom-0 max-h-[85dvh] overflow-hidden rounded-t-2xl border-t border-gray-200 dark:border-gray-700",
+              "data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom",
+              "sm:bottom-auto sm:right-auto sm:left-[50%] sm:top-[50%] sm:max-h-[min(92dvh,calc(100dvh-1.5rem))] sm:translate-x-[-50%] sm:translate-y-[-50%] sm:overflow-hidden sm:rounded-lg sm:border sm:border-gray-200 sm:dark:border-gray-700",
+              "sm:data-[state=closed]:zoom-out-95 sm:data-[state=open]:zoom-in-95 sm:data-[state=closed]:slide-out-to-left-1/2 sm:data-[state=closed]:slide-out-to-top-[48%] sm:data-[state=open]:slide-in-from-left-1/2 sm:data-[state=open]:slide-in-from-top-[48%]",
+              "sm:max-w-lg",
+            ),
         className,
       )}
       {...props}

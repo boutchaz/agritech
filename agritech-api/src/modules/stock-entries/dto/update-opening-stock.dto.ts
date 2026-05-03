@@ -1,5 +1,12 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsUUID, IsString, IsNumber, IsDateString } from 'class-validator';
+import {
+  IsArray,
+  IsDateString,
+  IsNumber,
+  IsOptional,
+  IsString,
+  IsUUID,
+} from 'class-validator';
 
 export class UpdateOpeningStockDto {
   @ApiPropertyOptional({ description: 'Item ID' })
@@ -17,20 +24,25 @@ export class UpdateOpeningStockDto {
   @IsNumber()
   quantity?: number;
 
-  @ApiPropertyOptional({ description: 'Unit of measure' })
+  @ApiPropertyOptional({ description: 'Valuation rate / unit cost' })
   @IsOptional()
-  @IsString()
-  unit?: string;
+  @IsNumber()
+  valuation_rate?: number;
 
-  @ApiPropertyOptional({ description: 'Cost per unit' })
+  @ApiPropertyOptional({ description: 'Total value. Computed server-side when omitted.' })
+  @IsOptional()
+  @IsNumber()
+  total_value?: number;
+
+  @ApiPropertyOptional({ description: 'Deprecated alias for valuation_rate' })
   @IsOptional()
   @IsNumber()
   cost_per_unit?: number;
 
-  @ApiPropertyOptional({ description: 'Total value' })
+  @ApiPropertyOptional({ description: 'Deprecated alias. Ignored; item default unit is used.' })
   @IsOptional()
-  @IsNumber()
-  total_value?: number;
+  @IsString()
+  unit?: string;
 
   @ApiPropertyOptional({ description: 'Opening date (YYYY-MM-DD)' })
   @IsOptional()
@@ -42,7 +54,13 @@ export class UpdateOpeningStockDto {
   @IsString()
   batch_number?: string;
 
-  @ApiPropertyOptional({ description: 'Serial number' })
+  @ApiPropertyOptional({ description: 'Serial numbers' })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  serial_numbers?: string[];
+
+  @ApiPropertyOptional({ description: 'Deprecated alias for a single serial number' })
   @IsOptional()
   @IsString()
   serial_number?: string;

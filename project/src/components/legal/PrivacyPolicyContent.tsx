@@ -2,7 +2,10 @@
  * Politique de confidentialité — cadre marocain (Loi n° 09-08, CNDP).
  * À valider par un conseil marocain (identifiants légaux, finalités exactes, sous-traitants).
  */
+import { useSupportInfo } from '@/hooks/useSupportInfo';
+
 export function PrivacyPolicyContent() {
+  const support = useSupportInfo();
   return (
     <>
       <p className="not-prose rounded-lg border border-border/80 bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
@@ -32,10 +35,10 @@ export function PrivacyPolicyContent() {
         <li>
           <strong>Courriel</strong> :{' '}
           <a
-            href="mailto:contact@agrogina.com"
+            href={`mailto:${support.contact_email}`}
             className="font-medium text-primary underline-offset-4 hover:underline"
           >
-            contact@agrogina.com
+            {support.contact_email}
           </a>
         </li>
       </ul>
@@ -275,10 +278,10 @@ export function PrivacyPolicyContent() {
       <p>
         Pour exercer vos droits, adressez une demande à{' '}
         <a
-          href="mailto:contact@agrogina.com"
+          href={`mailto:${support.contact_email}`}
           className="font-medium text-primary underline-offset-4 hover:underline"
         >
-          contact@agrogina.com
+          {support.contact_email}
         </a>
         , en joignant le cas échéant une copie d&apos;une pièce d&apos;identité pour permettre de vérifier
         votre identité. Nous nous efforçons de répondre dans un délai raisonnable, et en principe dans
@@ -374,10 +377,10 @@ export function PrivacyPolicyContent() {
         <li>
           <strong>Courriel</strong> :{' '}
           <a
-            href="mailto:contact@agrogina.com"
+            href={`mailto:${support.contact_email}`}
             className="font-medium text-primary underline-offset-4 hover:underline"
           >
-            contact@agrogina.com
+            {support.contact_email}
           </a>
         </li>
         <li>

@@ -13,10 +13,12 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
 import { Route as AuthenticatedSupportedCountriesRouteImport } from './routes/_authenticated/supported-countries'
+import { Route as AuthenticatedSupportSettingsRouteImport } from './routes/_authenticated/support-settings'
 import { Route as AuthenticatedSubscriptionModelRouteImport } from './routes/_authenticated/subscription-model'
 import { Route as AuthenticatedRdvRouteImport } from './routes/_authenticated/rdv'
 import { Route as AuthenticatedRagSourcesRouteImport } from './routes/_authenticated/rag-sources'
 import { Route as AuthenticatedModulesRouteImport } from './routes/_authenticated/modules'
+import { Route as AuthenticatedLandingSettingsRouteImport } from './routes/_authenticated/landing-settings'
 import { Route as AuthenticatedEmailTemplatesRouteImport } from './routes/_authenticated/email-templates'
 import { Route as AuthenticatedCronJobsRouteImport } from './routes/_authenticated/cron-jobs'
 import { Route as AuthenticatedChangelogRouteImport } from './routes/_authenticated/changelog'
@@ -46,6 +48,12 @@ const AuthenticatedSupportedCountriesRoute =
     path: '/supported-countries',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedSupportSettingsRoute =
+  AuthenticatedSupportSettingsRouteImport.update({
+    id: '/support-settings',
+    path: '/support-settings',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedSubscriptionModelRoute =
   AuthenticatedSubscriptionModelRouteImport.update({
     id: '/subscription-model',
@@ -67,6 +75,12 @@ const AuthenticatedModulesRoute = AuthenticatedModulesRouteImport.update({
   path: '/modules',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedLandingSettingsRoute =
+  AuthenticatedLandingSettingsRouteImport.update({
+    id: '/landing-settings',
+    path: '/landing-settings',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedEmailTemplatesRoute =
   AuthenticatedEmailTemplatesRouteImport.update({
     id: '/email-templates',
@@ -121,10 +135,12 @@ export interface FileRoutesByFullPath {
   '/changelog': typeof AuthenticatedChangelogRoute
   '/cron-jobs': typeof AuthenticatedCronJobsRoute
   '/email-templates': typeof AuthenticatedEmailTemplatesRoute
+  '/landing-settings': typeof AuthenticatedLandingSettingsRoute
   '/modules': typeof AuthenticatedModulesRoute
   '/rag-sources': typeof AuthenticatedRagSourcesRoute
   '/rdv': typeof AuthenticatedRdvRoute
   '/subscription-model': typeof AuthenticatedSubscriptionModelRoute
+  '/support-settings': typeof AuthenticatedSupportSettingsRoute
   '/supported-countries': typeof AuthenticatedSupportedCountriesRoute
   '/clients/$orgId': typeof AuthenticatedClientsOrgIdRoute
   '/referentiels/$crop': typeof AuthenticatedReferentielsCropRoute
@@ -137,10 +153,12 @@ export interface FileRoutesByTo {
   '/changelog': typeof AuthenticatedChangelogRoute
   '/cron-jobs': typeof AuthenticatedCronJobsRoute
   '/email-templates': typeof AuthenticatedEmailTemplatesRoute
+  '/landing-settings': typeof AuthenticatedLandingSettingsRoute
   '/modules': typeof AuthenticatedModulesRoute
   '/rag-sources': typeof AuthenticatedRagSourcesRoute
   '/rdv': typeof AuthenticatedRdvRoute
   '/subscription-model': typeof AuthenticatedSubscriptionModelRoute
+  '/support-settings': typeof AuthenticatedSupportSettingsRoute
   '/supported-countries': typeof AuthenticatedSupportedCountriesRoute
   '/': typeof AuthenticatedIndexRoute
   '/clients/$orgId': typeof AuthenticatedClientsOrgIdRoute
@@ -156,10 +174,12 @@ export interface FileRoutesById {
   '/_authenticated/changelog': typeof AuthenticatedChangelogRoute
   '/_authenticated/cron-jobs': typeof AuthenticatedCronJobsRoute
   '/_authenticated/email-templates': typeof AuthenticatedEmailTemplatesRoute
+  '/_authenticated/landing-settings': typeof AuthenticatedLandingSettingsRoute
   '/_authenticated/modules': typeof AuthenticatedModulesRoute
   '/_authenticated/rag-sources': typeof AuthenticatedRagSourcesRoute
   '/_authenticated/rdv': typeof AuthenticatedRdvRoute
   '/_authenticated/subscription-model': typeof AuthenticatedSubscriptionModelRoute
+  '/_authenticated/support-settings': typeof AuthenticatedSupportSettingsRoute
   '/_authenticated/supported-countries': typeof AuthenticatedSupportedCountriesRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/clients/$orgId': typeof AuthenticatedClientsOrgIdRoute
@@ -176,10 +196,12 @@ export interface FileRouteTypes {
     | '/changelog'
     | '/cron-jobs'
     | '/email-templates'
+    | '/landing-settings'
     | '/modules'
     | '/rag-sources'
     | '/rdv'
     | '/subscription-model'
+    | '/support-settings'
     | '/supported-countries'
     | '/clients/$orgId'
     | '/referentiels/$crop'
@@ -192,10 +214,12 @@ export interface FileRouteTypes {
     | '/changelog'
     | '/cron-jobs'
     | '/email-templates'
+    | '/landing-settings'
     | '/modules'
     | '/rag-sources'
     | '/rdv'
     | '/subscription-model'
+    | '/support-settings'
     | '/supported-countries'
     | '/'
     | '/clients/$orgId'
@@ -210,10 +234,12 @@ export interface FileRouteTypes {
     | '/_authenticated/changelog'
     | '/_authenticated/cron-jobs'
     | '/_authenticated/email-templates'
+    | '/_authenticated/landing-settings'
     | '/_authenticated/modules'
     | '/_authenticated/rag-sources'
     | '/_authenticated/rdv'
     | '/_authenticated/subscription-model'
+    | '/_authenticated/support-settings'
     | '/_authenticated/supported-countries'
     | '/_authenticated/'
     | '/_authenticated/clients/$orgId'
@@ -256,6 +282,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSupportedCountriesRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/support-settings': {
+      id: '/_authenticated/support-settings'
+      path: '/support-settings'
+      fullPath: '/support-settings'
+      preLoaderRoute: typeof AuthenticatedSupportSettingsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/subscription-model': {
       id: '/_authenticated/subscription-model'
       path: '/subscription-model'
@@ -282,6 +315,13 @@ declare module '@tanstack/react-router' {
       path: '/modules'
       fullPath: '/modules'
       preLoaderRoute: typeof AuthenticatedModulesRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/landing-settings': {
+      id: '/_authenticated/landing-settings'
+      path: '/landing-settings'
+      fullPath: '/landing-settings'
+      preLoaderRoute: typeof AuthenticatedLandingSettingsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/email-templates': {
@@ -349,10 +389,12 @@ interface AuthenticatedRouteChildren {
   AuthenticatedChangelogRoute: typeof AuthenticatedChangelogRoute
   AuthenticatedCronJobsRoute: typeof AuthenticatedCronJobsRoute
   AuthenticatedEmailTemplatesRoute: typeof AuthenticatedEmailTemplatesRoute
+  AuthenticatedLandingSettingsRoute: typeof AuthenticatedLandingSettingsRoute
   AuthenticatedModulesRoute: typeof AuthenticatedModulesRoute
   AuthenticatedRagSourcesRoute: typeof AuthenticatedRagSourcesRoute
   AuthenticatedRdvRoute: typeof AuthenticatedRdvRoute
   AuthenticatedSubscriptionModelRoute: typeof AuthenticatedSubscriptionModelRoute
+  AuthenticatedSupportSettingsRoute: typeof AuthenticatedSupportSettingsRoute
   AuthenticatedSupportedCountriesRoute: typeof AuthenticatedSupportedCountriesRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedClientsOrgIdRoute: typeof AuthenticatedClientsOrgIdRoute
@@ -366,10 +408,12 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedChangelogRoute: AuthenticatedChangelogRoute,
   AuthenticatedCronJobsRoute: AuthenticatedCronJobsRoute,
   AuthenticatedEmailTemplatesRoute: AuthenticatedEmailTemplatesRoute,
+  AuthenticatedLandingSettingsRoute: AuthenticatedLandingSettingsRoute,
   AuthenticatedModulesRoute: AuthenticatedModulesRoute,
   AuthenticatedRagSourcesRoute: AuthenticatedRagSourcesRoute,
   AuthenticatedRdvRoute: AuthenticatedRdvRoute,
   AuthenticatedSubscriptionModelRoute: AuthenticatedSubscriptionModelRoute,
+  AuthenticatedSupportSettingsRoute: AuthenticatedSupportSettingsRoute,
   AuthenticatedSupportedCountriesRoute: AuthenticatedSupportedCountriesRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedClientsOrgIdRoute: AuthenticatedClientsOrgIdRoute,

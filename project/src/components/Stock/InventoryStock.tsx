@@ -1,7 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from '@tanstack/react-router';
-import { useCurrency } from '@/hooks/useCurrency';
 import { usePaginatedFarmStockLevels } from '@/hooks/useFarmStockLevels';
 import { useItems } from '@/hooks/useItems';
 import { useWarehouses } from '@/hooks/useWarehouses';
@@ -9,6 +8,8 @@ import { Button } from '@/components/ui/button';
 import { DataTablePagination, FilterBar, ListPageLayout, useServerTableState } from '@/components/ui/data-table';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ExternalLink, Loader2, AlertTriangle, CheckCircle } from 'lucide-react';
+import { formatQuantity } from '@/utils/units';
+import { StockValue } from '@/components/Stock/StockValue';
 
 interface InventoryStockLevel {
   item_id: string;
@@ -31,8 +32,7 @@ interface InventoryWarehouseStockLevel {
 }
 
 export default function InventoryStock() {
-  const { t } = useTranslation('stock');
-  const { format: formatCurrency } = useCurrency();
+  const { t, i18n } = useTranslation('stock');
   const navigate = useNavigate();
   const { page, pageSize, search, setPage, setPageSize, setSearch } = useServerTableState({ defaultPageSize: 20 });
   const [selectedWarehouse, setSelectedWarehouse] = React.useState<string>('all');
@@ -231,10 +231,10 @@ export default function InventoryStock() {
                     {row.warehouse_name}
                   </TableCell>
                   <TableCell className="px-4 py-3 text-sm text-right text-gray-900 dark:text-white">
-                    {row.total_quantity.toFixed(3)} {row.default_unit}
+                    {formatQuantity(row.total_quantity, row.default_unit, i18n.language)}
                   </TableCell>
                   <TableCell className="px-4 py-3 text-sm text-right text-gray-900 dark:text-white">
-                    {formatCurrency(row.total_value)}
+                    <StockValue value={row.total_value} />
                   </TableCell>
                   <TableCell className="px-4 py-3 text-right">
                     {row.total_quantity === 0 ? (

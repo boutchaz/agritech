@@ -721,7 +721,7 @@ const ModernFarmHierarchy = ({
           if (!open) reset();
         }}
       >
-        <DialogContent data-testid="create-farm-form" className="sm:max-w-md">
+        <DialogContent data-testid="create-farm-form" centered className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>{t('farmHierarchy.farm.createNew')}</DialogTitle>
             <DialogDescription>

@@ -220,6 +220,23 @@ export class CalibrationController {
     );
   }
 
+  @Get("bundle")
+  @ApiOperation({
+    summary:
+      "Aggregate endpoint for the calibration page: report + history + nutrition suggestion + latest calibration + ai_phase in one round-trip.",
+  })
+  @ApiResponse({ status: 200, description: "Calibration bundle retrieved" })
+  async getCalibrationBundle(
+    @Param("parcelId") parcelId: string,
+    @Req() req: Request,
+  ) {
+    const organizationId = this.getOrganizationId(req);
+    return this.calibrationService.getCalibrationBundle(
+      parcelId,
+      organizationId,
+    );
+  }
+
   @Get("review")
   @ApiOperation({ summary: "Get 5-level calibration review for a parcel" })
   @ApiResponse({ status: 200, description: "Calibration review retrieved" })

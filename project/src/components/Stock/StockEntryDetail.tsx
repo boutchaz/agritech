@@ -29,14 +29,14 @@ interface StockEntryDetailProps {
 
 export default function StockEntryDetail({ entryId, open, onOpenChange }: StockEntryDetailProps) {
   const { t } = useTranslation('stock');
-  const { data: entry, isLoading } = useStockEntry(entryId);
+  const { data: entry, isLoading, isFetching } = useStockEntry(entryId);
   const { format: formatCurrency } = useCurrency();
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
   if (!open) return null;
 
-  if (isLoading) {
+  if (isLoading || isFetching) {
     return (
       <ResponsiveDialog
         open={open}

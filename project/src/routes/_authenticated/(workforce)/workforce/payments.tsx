@@ -126,6 +126,7 @@ function PaymentsPage() {
       <ModernPageHeader
         breadcrumbs={[
           { icon: Building2, label: currentOrganization.name, path: '/dashboard' },
+          { icon: Users, label: t('nav.workforce', 'Workforce'), path: '/workforce/employees' },
           { icon: DollarSign, label: t('payments.pageTitle', 'Paiements'), isActive: true },
         ]}
         title={t('payments.pageTitle', 'Paiements')}

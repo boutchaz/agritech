@@ -2,9 +2,10 @@ import { useMemo, useState, type ReactNode } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Loader2, Plus, Pencil, Trash2, ShieldCheck, AlertTriangle } from 'lucide-react';
+import { Loader2, Plus, Pencil, Trash2, ShieldCheck, AlertTriangle, Building2, Users } from 'lucide-react';
 import { withRouteProtection } from '@/components/authorization/withRouteProtection';
 import { useAuth } from '@/hooks/useAuth';
+import ModernPageHeader from '@/components/ModernPageHeader';
 import { useWorkers } from '@/hooks/useWorkers';
 import {
   useCreateQualification,
@@ -64,39 +65,41 @@ function QualificationsPage() {
   const workerList = (workers.data ?? []).map((w) => ({ id: w.id, name: `${w.first_name} ${w.last_name}` }));
 
   return (
-    <div className="p-6 space-y-6 max-w-6xl">
-      <header className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold">
-            {t('qualifications.title', 'Worker Qualifications')}
-          </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            {t(
-              'qualifications.subtitle',
-              'Track training certificates: tractor, pesticide, first aid, etc. Get alerts before expiry.',
-            )}
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <Select
-            value={expiringFilter ? String(expiringFilter) : 'all'}
-            onValueChange={(v) => setExpiringFilter(v === 'all' ? undefined : Number(v))}
-          >
-            <SelectTrigger className="w-44">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{t('common.all', 'All')}</SelectItem>
-              <SelectItem value="30">{t('qualifications.expiring30', 'Expiring ≤ 30d')}</SelectItem>
-              <SelectItem value="90">{t('qualifications.expiring90', 'Expiring ≤ 90d')}</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button onClick={() => setCreating(true)} disabled={!workerList.length}>
-            <Plus className="w-4 h-4 mr-2" />
-            {t('common.create', 'Create')}
-          </Button>
-        </div>
-      </header>
+    <>
+      <ModernPageHeader
+        breadcrumbs={[
+          { icon: Building2, label: currentOrganization?.name ?? '', path: '/dashboard' },
+          { icon: Users, label: t('nav.workforce', 'Workforce'), path: '/workforce/employees' },
+          { icon: ShieldCheck, label: t('qualifications.title', 'Worker Qualifications'), isActive: true },
+        ]}
+        title={t('qualifications.title', 'Worker Qualifications')}
+        subtitle={t(
+          'qualifications.subtitle',
+          'Track training certificates: tractor, pesticide, first aid, etc. Get alerts before expiry.',
+        )}
+        actions={
+          <>
+            <Select
+              value={expiringFilter ? String(expiringFilter) : 'all'}
+              onValueChange={(v) => setExpiringFilter(v === 'all' ? undefined : Number(v))}
+            >
+              <SelectTrigger className="w-44">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t('common.all', 'All')}</SelectItem>
+                <SelectItem value="30">{t('qualifications.expiring30', 'Expiring ≤ 30d')}</SelectItem>
+                <SelectItem value="90">{t('qualifications.expiring90', 'Expiring ≤ 90d')}</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button onClick={() => setCreating(true)} disabled={!workerList.length}>
+              <Plus className="w-4 h-4 mr-2" />
+              {t('common.create', 'Create')}
+            </Button>
+          </>
+        }
+      />
+      <div className="p-3 sm:p-4 lg:p-6 space-y-6">
 
       {query.isLoading ? (
         <div className="flex items-center justify-center h-40">
@@ -152,7 +155,8 @@ function QualificationsPage() {
           }}
         />
       )}
-    </div>
+      </div>
+    </>
   );
 }
 

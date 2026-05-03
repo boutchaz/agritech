@@ -2,7 +2,10 @@ import React, { useState } from 'react'
 import ReactDOM from 'react-dom/client'
 import { createRouter, RouterProvider } from '@tanstack/react-router'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { persistQueryClient } from '@tanstack/query-persist-client-core'
+import {
+  persistQueryClientRestore,
+  persistQueryClientSubscribe,
+} from '@tanstack/query-persist-client-core'
 import { routeTree } from './routeTree.gen'
 import { initGA } from './lib/analytics'
 import { useAuthStore, waitForHydration } from './stores/authStore'
@@ -19,6 +22,7 @@ import {
 } from './lib/offline'
 import './i18n/config'
 import './index.css'
+import './styles/onboarding-tokens.css'
 
 // Initialize Locator for React DevTools debugging (development only)
 if (import.meta.env.DEV) {
@@ -45,11 +49,25 @@ export { queryClient }
 const persister = createIDBPersister(
   () => useOrganizationStore.getState().currentOrganization?.id ?? null,
 )
-void persistQueryClient({
+// IMPORTANT: restore from IDB BEFORE mounting React — otherwise components
+// render against an empty cache, fire network requests, and (when offline)
+// stay pending forever instead of resolving from persisted data.
+const persistRestorePromise = persistQueryClientRestore({
   queryClient,
   persister,
   maxAge: PERSIST_MAX_AGE_MS,
   buster: PERSIST_BUSTER,
+}).catch((err) => {
+  console.warn('[persist] restore failed', err)
+})
+
+// Subscribe for ongoing persistence after restore.
+void persistRestorePromise.then(() => {
+  persistQueryClientSubscribe({
+    queryClient,
+    persister,
+    buster: PERSIST_BUSTER,
+  })
 })
 
 // Create router context with auth
@@ -65,7 +83,9 @@ const router = createRouter({
   routeTree,
   context: routerContext,
   defaultPreload: 'intent',
-  defaultPreloadStaleTime: 0,
+  // Was 0 — meant intent-preloaded data was stale on arrival, forcing a
+  // refetch. 30s lets navigations within a click's worth of time hit cache.
+  defaultPreloadStaleTime: 30 * 1000,
 })
 
 // Register the router instance for type safety
@@ -157,9 +177,17 @@ async function init() {
     if (state.isAuthenticated !== prevState.isAuthenticated) {
       routerContext.auth.user = state.user ? { id: state.user.id, email: state.user.email } : null
       router.invalidate()
-      queryClient.clear()
+      // Only nuke the cache on LOGOUT — clearing on login wipes the
+      // queries that were just restored from IDB, breaking offline mode.
+      // The wipeOffline() call in offline runtime handles the same logout.
+      if (prevState.isAuthenticated && !state.isAuthenticated) {
+        queryClient.clear()
+      }
     }
   })
+
+  // Wait for IDB restore so first-paint queries hit cache, not the network.
+  await persistRestorePromise
 
   ReactDOM.createRoot(document.getElementById('root')!).render(
     <React.StrictMode>

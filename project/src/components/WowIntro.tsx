@@ -1,338 +1,350 @@
-import {  useEffect, useRef, useState, Suspense, useCallback  } from "react";
-import { Canvas, useFrame } from '@react-three/fiber';
-import { Stars, PerspectiveCamera, Sparkles, Points, PointMaterial } from '@react-three/drei';
-import { EffectComposer, Bloom, ChromaticAberration, Noise, Vignette } from '@react-three/postprocessing';
-import * as THREE from 'three';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { gsap } from 'gsap';
-import { prepareWithSegments, layoutWithLines } from '@chenglou/pretext';
+
+import '../styles/onboarding-tokens.css';
 
 const FEATURES = [
-  "Gestion des parcelles haute précision",
-  "Analyses satellite NDVI & NDWI en temps réel",
+  'Gestion des parcelles haute précision',
+  'Analyses satellite NDVI & NDWI en temps réel',
   "Optimisation des rendements par l'IA",
-  "Traçabilité complète de la graine à la récolte",
-  "Intelligence Artificielle au service du climat",
-  "Agriculture de précision 4.0"
+  'Traçabilité complète de la graine à la récolte',
+  'Intelligence Artificielle au service du climat',
+  'Agriculture de précision 4.0',
 ];
 
-// --- High-End Digital Simulation ---
+const TELEMETRY = [
+  { l: 'NODE', v: 'AGR-7Q42' },
+  { l: 'GEO', v: '31.629°N · 7.981°W' },
+  { l: 'LOCALE', v: 'fr-MA' },
+  { l: 'BUILD', v: '2026.05' },
+];
 
-const NeuralField = ({ progress }: { progress: number }) => {
-  const count = 4000;
-  const [positions] = useState(() => {
-    const pos = new Float32Array(count * 3);
-    for (let i = 0; i < count; i++) {
-      pos[i * 3] = (Math.random() - 0.5) * 40;
-      pos[i * 3 + 1] = -2 + Math.sin(pos[i * 3] * 0.2) * 0.5;
-      pos[i * 3 + 2] = (Math.random() - 0.5) * 40;
-    }
-    return pos;
-  });
-
-  const pointsRef = useRef<THREE.Points>(null);
-  useFrame(() => {
-    if (pointsRef.current) {
-      pointsRef.current.rotation.y += 0.001;
-    }
-  });
-
+function FieldBackdrop({ progress }: { progress: number }) {
   return (
-    <Points ref={pointsRef} positions={positions} stride={3}>
-      <PointMaterial
-        transparent
-        color="#10b981"
-        size={0.08}
-        sizeAttenuation={true}
-        depthWrite={false}
-        opacity={0.4 * progress}
-        blending={THREE.AdditiveBlending}
-      />
-    </Points>
-  );
-};
-
-const NeuralOrchard = ({ progress }: { progress: number }) => {
-  const treeCount = 60;
-  const [treePositions] = useState(() => {
-    const temp: [number, number, number][] = [];
-    for (let i = 0; i < treeCount; i++) {
-      temp.push([
-        (Math.random() - 0.5) * 20,
-        -1.5,
-        (Math.random() - 0.5) * 20
-      ]);
-    }
-    return temp;
-  });
-
-  return (
-    <group>
-      {treePositions.map((pos, treeIdx) => (
-        <group key={"tree-" + treeIdx} position={pos}>
-          {/* Trunk - simple line for tech look */}
-          <mesh position={[0, 0.5, 0]}>
-            <cylinderGeometry args={[0.01, 0.02, 1, 4]} />
-            <meshBasicMaterial color="#10b981" transparent opacity={0.3 * progress} />
-          </mesh>
-          {/* Data Foliage - Sparkle cloud */}
-          <Sparkles 
-            count={20} 
-            scale={0.8} 
-            size={2} 
-            speed={0.2} 
-            color="#34d399" 
-            opacity={0.5 * progress}
-            position={[0, 1.2, 0]}
+    <svg
+      viewBox="0 0 1600 900"
+      preserveAspectRatio="xMidYMid slice"
+      style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0.55 }}
+      aria-hidden="true"
+    >
+      <defs>
+        <linearGradient id="wi-sky" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#f4f6f0" />
+          <stop offset="55%" stopColor="#eef5e0" />
+          <stop offset="100%" stopColor="#d2dfba" />
+        </linearGradient>
+        <radialGradient id="wi-sun" cx="0.78" cy="0.22" r="0.45">
+          <stop offset="0%" stopColor="rgba(255,220,140,.55)" />
+          <stop offset="100%" stopColor="rgba(255,220,140,0)" />
+        </radialGradient>
+      </defs>
+      <rect width="1600" height="900" fill="url(#wi-sky)" />
+      <rect width="1600" height="900" fill="url(#wi-sun)" />
+      {Array.from({ length: 16 }).map((_, i) => {
+        const yTop = 520 + (i / 15) ** 2 * 380;
+        const yBot = 520 + ((i + 1) / 15) ** 2 * 380;
+        const colors = ['#7fa05f', '#9bbf6c', '#88aa57', '#6f9249', '#a8cd76'];
+        return (
+          <path
+            key={`row-${yTop}`}
+            d={`M0 ${yTop} L 1600 ${yTop} L 1600 ${yBot} L 0 ${yBot} Z`}
+            fill={colors[i % colors.length]}
+            opacity={0.85}
           />
-        </group>
-      ))}
-    </group>
+        );
+      })}
+      {/* progress sweep — emerald hairline scanning down */}
+      <line
+        x1="0"
+        x2="1600"
+        y1={520 + progress * 380}
+        y2={520 + progress * 380}
+        stroke="#0a8f5f"
+        strokeWidth="1.5"
+        opacity="0.7"
+      />
+    </svg>
   );
-};
-
-const OrbitalNode = () => {
-  const mesh = useRef<THREE.Group>(null);
-  const [ringRotations] = useState(() =>
-    [1, 1.3, 1.6].map(
-      () => [Math.random() * Math.PI, Math.random() * Math.PI, 0] as [number, number, number],
-    ),
-  );
-  useFrame((state) => {
-    if (mesh.current) {
-      mesh.current.rotation.z += 0.01;
-      mesh.current.rotation.y += 0.005;
-      const t = state.clock.getElapsedTime();
-      mesh.current.position.y = 12 + Math.sin(t) * 0.5;
-    }
-  });
-
-  return (
-    <group ref={mesh} position={[5, 12, -8]}>
-      {/* Central Core */}
-      <mesh>
-        <sphereGeometry args={[0.4, 32, 32]} />
-        <meshStandardMaterial color="#ffffff" emissive="#10b981" emissiveIntensity={5} />
-      </mesh>
-      {/* Orbital Rings */}
-      {[1, 1.3, 1.6].map((radius, meshIdx) => (
-        <mesh key={"mesh-" + meshIdx} rotation={ringRotations[meshIdx]}>
-          <torusGeometry args={[radius, 0.01, 16, 100]} />
-          <meshBasicMaterial color="#10b981" transparent opacity={0.5} />
-        </mesh>
-      ))}
-      {/* Downlink Beam */}
-      <mesh position={[0, -10, 0]}>
-        <cylinderGeometry args={[0.05, 10, 20, 32, 1, true]} />
-        <meshStandardMaterial 
-          color="#10b981" 
-          transparent 
-          opacity={0.1} 
-          side={THREE.DoubleSide}
-          blending={THREE.AdditiveBlending}
-        />
-      </mesh>
-    </group>
-  );
-};
-
-// --- Main Intro Component ---
+}
 
 export const WowIntro = ({ onComplete }: { onComplete: () => void }) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const textRef = useRef<HTMLDivElement>(null);
+  const featuresRef = useRef<HTMLDivElement>(null);
   const timelineRef = useRef<gsap.core.Timeline | null>(null);
   const hasDismissedRef = useRef(false);
-  const [simProgress, setSimProgress] = useState(0);
+  const [progress, setProgress] = useState(0);
   const [isDone, setIsDone] = useState(false);
 
-  const dismissIntro = useCallback((fast = true) => {
-    if (hasDismissedRef.current) return;
-    hasDismissedRef.current = true;
-
-    timelineRef.current?.kill();
-    const target = containerRef.current;
-    if (!target) {
-      setIsDone(true);
-      onComplete();
-      return;
-    }
-
-    gsap.to(target, {
-      opacity: 0,
-      duration: fast ? 0.35 : 1.2,
-      onComplete: () => {
+  const dismissIntro = useCallback(
+    (fast = true) => {
+      if (hasDismissedRef.current) return;
+      hasDismissedRef.current = true;
+      timelineRef.current?.kill();
+      const target = containerRef.current;
+      if (!target) {
         setIsDone(true);
         onComplete();
-      },
-    });
-  }, [onComplete]);
+        return;
+      }
+      gsap.to(target, {
+        opacity: 0,
+        duration: fast ? 0.35 : 0.9,
+        onComplete: () => {
+          setIsDone(true);
+          onComplete();
+        },
+      });
+    },
+    [onComplete],
+  );
 
   useEffect(() => {
-    if (!containerRef.current || !textRef.current) return;
+    if (!containerRef.current || !featuresRef.current) return;
+    const isMobile = window.innerWidth < 640;
 
-    // 1. Text Layout
-    const viewportWidth = window.innerWidth;
-    const isMobile = viewportWidth < 640;
-    const isTablet = viewportWidth >= 640 && viewportWidth < 1024;
-    const featureFontSize = isMobile ? 14 : isTablet ? 18 : 24;
-    const featureLineHeight = isMobile ? 22 : isTablet ? 28 : 34;
-    const font = `900 ${featureFontSize}px system-ui, -apple-system, sans-serif`;
-    const prepared = FEATURES.map(f => prepareWithSegments(f, font));
-    const fallbackWidth = isMobile ? 300 : isTablet ? 360 : 450;
-    const containerWidth = Math.max(260, textRef.current.clientWidth || fallbackWidth);
-    const layouts = prepared.map(p => layoutWithLines(p, containerWidth, featureLineHeight));
-
-    textRef.current.innerHTML = '';
-    const lineElements: HTMLElement[] = [];
-
-    layouts.forEach((l) => {
-      const group = document.createElement('div');
-      group.className = 'mb-8 opacity-0 transform translate-x-4 transition-all duration-1000 ease-out';
-      l.lines?.forEach(line => {
-        const d = document.createElement('div');
-        d.textContent = line.text;
-        d.style.font = font;
-        d.className = 'text-emerald-400 font-sans tracking-tight uppercase italic';
-        d.style.lineHeight = `${featureLineHeight}px`;
-        group.appendChild(d);
-      });
-      textRef.current?.appendChild(group);
-      lineElements.push(group);
+    // Build feature lines
+    featuresRef.current.innerHTML = '';
+    const lineEls: HTMLElement[] = [];
+    FEATURES.forEach((f) => {
+      const row = document.createElement('div');
+      row.className = 'wi-feature';
+      row.innerHTML = `
+        <span class="wi-feature-bullet"></span>
+        <span class="wi-feature-text">${f}</span>
+      `;
+      featuresRef.current?.appendChild(row);
+      lineEls.push(row);
     });
 
-    // 2. Animation Timeline
     const tl = gsap.timeline({
       onComplete: () => {
-        gsap.delayedCall(isMobile ? 0.9 : 2, () => dismissIntro(false));
-      }
+        gsap.delayedCall(isMobile ? 0.6 : 1.4, () => dismissIntro(false));
+      },
     });
     timelineRef.current = tl;
 
-    tl.to(containerRef.current, { opacity: 1, duration: 1.5 });
+    tl.to(containerRef.current, { opacity: 1, duration: 0.9, ease: 'power2.out' });
 
     const p = { val: 0 };
-    tl.to(p, {
-      val: 1,
-      duration: isMobile ? 4.5 : 6,
-      ease: 'expo.inOut',
-      onUpdate: () => setSimProgress(p.val)
-    }, 0.5);
+    tl.to(
+      p,
+      {
+        val: 1,
+        duration: isMobile ? 3.2 : 4.2,
+        ease: 'expo.inOut',
+        onUpdate: () => setProgress(p.val),
+      },
+      0.3,
+    );
 
-    tl.to(lineElements, {
-      opacity: 1,
-      x: 0,
-      stagger: 0.5,
-      duration: 1.2,
-      ease: 'power4.out'
-    }, 1.5);
+    tl.from(
+      lineEls,
+      {
+        opacity: 0,
+        x: 12,
+        stagger: 0.18,
+        duration: 0.6,
+        ease: 'power3.out',
+      },
+      0.7,
+    );
 
-    return () => { tl.kill(); };
+    return () => {
+      tl.kill();
+    };
   }, [dismissIntro]);
 
   useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') dismissIntro(true);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' || e.key === 'Enter' || e.key === ' ') dismissIntro(true);
     };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
   }, [dismissIntro]);
 
   if (isDone) return null;
 
-  return (
-    <div 
-      ref={containerRef}
-      className="fixed inset-0 z-[9999] bg-[#020617] flex items-center justify-center overflow-hidden"
-      style={{ opacity: 0 }}
-    >
-      {/* 3D Neural Scene */}
-      <div className="absolute inset-0 z-0">
-        <Canvas gl={{ antialias: false, stencil: false, depth: true }} dpr={[1, 2]}>
-          <PerspectiveCamera makeDefault position={[0, 4, 15]} fov={35} />
-          <color attach="background" args={['#020617']} />
-          
-          <Suspense fallback={null}>
-            <NeuralField progress={simProgress} />
-            <NeuralOrchard progress={simProgress} />
-            <OrbitalNode />
-            
-            <Stars radius={100} depth={50} count={5000} factor={4} saturation={0} fade speed={1} />
-            
-            <EffectComposer disableNormalPass>
-              <Bloom luminanceThreshold={0.2} luminanceSmoothing={0.9} height={300} intensity={1.5} />
-              <ChromaticAberration offset={new THREE.Vector2(0.002, 0.002)} />
-              <Noise opacity={0.05} />
-              <Vignette eskil={false} offset={0.1} darkness={1.1} />
-            </EffectComposer>
-          </Suspense>
-          
-          <CameraRig />
-        </Canvas>
-      </div>
+  const pct = Math.round(progress * 100);
 
-      {/* Ultra-Modern Branding Overlay */}
-      <div className="relative z-10 w-full max-w-7xl px-4 sm:px-6 md:px-10 lg:px-16 xl:px-20 flex flex-col md:flex-row items-center md:items-start justify-between gap-8 md:gap-12 lg:gap-16">
-        {/* AgroGina Brand */}
-        <div className="pointer-events-none flex flex-col items-center md:items-start text-center md:text-left">
-          <div className="mb-4 flex items-center gap-2">
-            <div className="w-8 h-[2px] bg-emerald-500" />
-            <div className="text-emerald-500 text-[9px] sm:text-[10px] font-mono tracking-[0.35em] sm:tracking-[0.5em] uppercase">
-              Neural Network V4
-            </div>
+  return (
+    <div
+      ref={containerRef}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Intro"
+      className="onb-shell"
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 9999,
+        background: 'var(--onb-bg-canvas)',
+        opacity: 0,
+        overflow: 'hidden',
+      }}
+    >
+      <style>{`
+        .wi-shell { display: flex; flex-direction: column; height: 100%; padding: 24px; gap: 20px; position: relative; z-index: 2; }
+        .wi-head { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; }
+        .wi-brand-row { display: flex; align-items: center; gap: 14px; }
+        .wi-divider-v { width: 1px; height: 18px; background: var(--onb-rule); }
+        .wi-skip {
+          font-family: var(--onb-font-mono);
+          font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase;
+          color: var(--onb-ink-600);
+          padding: 8px 14px; border-radius: 999px;
+          border: 1px solid var(--onb-rule); background: white;
+          cursor: pointer; transition: background .15s;
+        }
+        .wi-skip:hover { background: var(--onb-ink-50); }
+        .wi-body { flex: 1; display: grid; grid-template-columns: 1fr; gap: 24px; align-content: center; padding: 0 4px; }
+        .wi-display {
+          font-family: var(--onb-font-display); font-weight: 400;
+          letter-spacing: -0.025em; line-height: 0.96;
+          font-size: clamp(48px, 12vw, 128px);
+          color: var(--onb-ink-900);
+          margin: 0;
+          text-wrap: balance;
+        }
+        .wi-display em { font-style: italic; color: var(--onb-brand-700); font-weight: 400; }
+        .wi-tagline {
+          margin: 16px 0 0;
+          max-width: 540px;
+          font-size: clamp(15px, 2.2vw, 19px);
+          line-height: 1.55;
+          color: var(--onb-ink-600);
+          text-wrap: pretty;
+        }
+        .wi-features {
+          display: flex; flex-direction: column; gap: 6px;
+          padding: 18px 0;
+          border-top: 1px solid var(--onb-rule);
+          border-bottom: 1px solid var(--onb-rule);
+          max-width: 560px;
+        }
+        .wi-feature { display: flex; align-items: center; gap: 12px; padding: 4px 0; }
+        .wi-feature-bullet {
+          width: 6px; height: 6px; border-radius: 999px;
+          background: var(--onb-brand-600);
+          box-shadow: 0 0 0 4px rgba(16,185,129,.18);
+          flex-shrink: 0;
+        }
+        .wi-feature-text {
+          font-family: var(--onb-font-body);
+          font-size: 14px; font-weight: 500; letter-spacing: -0.005em;
+          color: var(--onb-ink-800);
+        }
+        .wi-foot { display: flex; justify-content: space-between; align-items: end; gap: 18px; flex-wrap: wrap; }
+        .wi-progress { display: flex; align-items: center; gap: 12px; min-width: 220px; }
+        .wi-progress-bar {
+          flex: 1; height: 3px; border-radius: 999px;
+          background: var(--onb-ink-200); overflow: hidden;
+        }
+        .wi-progress-fill {
+          height: 100%; background: var(--onb-brand-600);
+          transition: width .12s linear;
+        }
+        .wi-telemetry {
+          display: flex; align-items: center; gap: 14px;
+          padding: 6px 14px; border-radius: 999px;
+          background: var(--onb-ink-50); border: 1px solid var(--onb-rule);
+          flex-wrap: wrap;
+        }
+        .wi-tel-dot {
+          width: 6px; height: 6px; border-radius: 999px;
+          background: var(--onb-brand-500);
+          box-shadow: 0 0 0 4px rgba(16,185,129,.18);
+        }
+        .wi-tel-item {
+          font-family: var(--onb-font-mono);
+          font-size: 10px;
+          display: inline-flex; gap: 6px;
+        }
+        .wi-tel-l { color: var(--onb-ink-400); }
+        .wi-tel-v { color: var(--onb-ink-700); }
+
+        @media (min-width: 768px) {
+          .wi-shell { padding: 40px; gap: 32px; }
+          .wi-body { padding: 0 8px; gap: 32px; }
+        }
+        @media (min-width: 1024px) {
+          .wi-shell { padding: 56px 64px; }
+        }
+      `}</style>
+
+      <FieldBackdrop progress={progress} />
+
+      <div className="wi-shell">
+        <div className="wi-head">
+          <div className="wi-brand-row">
+            <picture>
+              <source srcSet="/assets/logo.webp" type="image/webp" />
+              <img src="/assets/logo.png" alt="Agrogina" style={{ height: 26, width: 'auto' }} />
+            </picture>
+            <span
+              style={{
+                fontFamily: 'var(--onb-font-display)',
+                fontSize: 22,
+                fontWeight: 500,
+                letterSpacing: '-0.02em',
+                color: 'var(--onb-ink-900)',
+              }}
+            >
+              agrogina
+            </span>
+            <div className="wi-divider-v" />
+            <span className="onb-mono-cap" style={{ whiteSpace: 'nowrap' }}>
+              Saison 25/26
+            </span>
           </div>
-          <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-semibold text-white tracking-tighter mb-3 sm:mb-4 leading-none">
-            AGRO<span className="text-emerald-500">GINA</span>
-          </h1>
-          <p className="text-emerald-500/70 text-sm sm:text-base md:text-lg lg:text-xl font-light tracking-[0.12em] sm:tracking-[0.16em] lg:tracking-[0.2em] max-w-md uppercase">
-            Agriculture <span className="text-white">Redefined</span>
-          </p>
-          
-          <div className="mt-8 sm:mt-10 lg:mt-16 hidden sm:flex flex-col gap-2">
-            {[ "Satellite Mesh: Active", "Field Topography: Scanned", "Neural Yield: Optimized" ].map((t, statIdx) => (
-              <div key={"stat-" + statIdx} className="flex items-center gap-4 text-white font-mono text-[10px] uppercase tracking-[0.3em]">
-                <div className="w-1 h-1 bg-emerald-500 rounded-full animate-pulse" />
-                {t}
-              </div>
-            ))}
-          </div>
+          <button type="button" className="wi-skip" onClick={() => dismissIntro(true)} aria-label="Skip">
+            Passer ⏎
+          </button>
         </div>
 
-        {/* Feature List reveal */}
-        <div ref={textRef} className="pointer-events-none w-full max-w-[20rem] sm:max-w-[24rem] md:w-[420px] md:max-w-none lg:w-[450px]" />
+        <div className="wi-body">
+          <h1 className="wi-display">
+            Cultivez
+            <br />
+            avec <em>précision.</em>
+            <br />
+            Décidez avec données.
+          </h1>
+          <p className="wi-tagline">
+            Agrogina réunit la gestion de vos parcelles, vos équipes, vos stocks et vos capteurs dans un seul espace —
+            de la graine à la facture.
+          </p>
+          <div className="wi-features" ref={featuresRef} />
+        </div>
+
+        <div className="wi-foot">
+          <div className="wi-telemetry">
+            <span className="wi-tel-dot" />
+            {TELEMETRY.map((it) => (
+              <span key={it.l} className="wi-tel-item">
+                <span className="wi-tel-l">{it.l}</span>
+                <span className="wi-tel-v">{it.v}</span>
+              </span>
+            ))}
+          </div>
+          <div className="wi-progress">
+            <span
+              className="onb-mono"
+              style={{ fontSize: 11, color: 'var(--onb-ink-500)', minWidth: 36 }}
+            >
+              {String(pct).padStart(3, '0')}%
+            </span>
+            <div className="wi-progress-bar">
+              <div className="wi-progress-fill" style={{ width: `${pct}%` }} />
+            </div>
+            <span
+              className="onb-mono"
+              style={{ fontSize: 11, color: 'var(--onb-ink-400)', whiteSpace: 'nowrap' }}
+            >
+              boot · sync · ready
+            </span>
+          </div>
+        </div>
       </div>
-
-      {/* Dismiss controls */}
-      <button
-        type="button"
-        onClick={() => dismissIntro(true)}
-        aria-label="Skip intro"
-        className="absolute top-4 right-4 z-20 rounded-full border border-emerald-400/40 bg-slate-900/70 px-3 py-1.5 text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-emerald-200 shadow-lg backdrop-blur hover:bg-slate-800/80 transition-colors"
-      >
-        Skip
-      </button>
-      <button
-        type="button"
-        onClick={() => dismissIntro(true)}
-        className="absolute bottom-6 left-1/2 z-20 -translate-x-1/2 rounded-full border border-white/20 bg-slate-900/60 px-3 py-1.5 text-[10px] uppercase tracking-wider text-slate-200 backdrop-blur sm:hidden"
-      >
-        Tap to continue
-      </button>
-
-      {/* Glitchy Border HUD */}
-      <div className="absolute inset-3 sm:inset-6 md:inset-10 border border-emerald-500/10 pointer-events-none" />
-      <div className="absolute top-3 left-3 sm:top-6 sm:left-6 md:top-10 md:left-10 w-3 h-3 sm:w-4 sm:h-4 border-t-2 border-l-2 border-emerald-500/80" />
-      <div className="absolute top-3 right-3 sm:top-6 sm:right-6 md:top-10 md:right-10 w-3 h-3 sm:w-4 sm:h-4 border-t-2 border-r-2 border-emerald-500/80" />
-      <div className="absolute bottom-3 left-3 sm:bottom-6 sm:left-6 md:bottom-10 md:left-10 w-3 h-3 sm:w-4 sm:h-4 border-b-2 border-l-2 border-emerald-500/80" />
-      <div className="absolute bottom-3 right-3 sm:bottom-6 sm:right-6 md:bottom-10 md:right-10 w-3 h-3 sm:w-4 sm:h-4 border-b-2 border-r-2 border-emerald-500/80" />
     </div>
   );
 };
-
-function CameraRig() {
-  useFrame((state) => {
-    state.camera.position.x = THREE.MathUtils.lerp(state.camera.position.x, state.mouse.x * 3, 0.05);
-    state.camera.position.y = THREE.MathUtils.lerp(state.camera.position.y, 4 + state.mouse.y * 2, 0.05);
-    state.camera.lookAt(0, 0, 0);
-  });
-  return null;
-}

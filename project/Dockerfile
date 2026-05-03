@@ -61,115 +61,15 @@ RUN pnpm build
 # Production stage
 FROM nginx:alpine
 
+RUN apk add --no-cache gettext
+
 # Copy built files from builder stage
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Add custom nginx configuration for React Router
-RUN cat > /etc/nginx/conf.d/default.conf <<EOF
-server {
-    listen 80;
-    listen [::]:80;
-    server_name localhost;
-    
-    root /usr/share/nginx/html;
-    index index.html;
-    
-    # Serve pre-compressed .gz files (built by vite-plugin-compression2)
-    # This avoids CPU overhead — nginx serves static .gz files directly
-    gzip_static on;
-    
-    # Fallback: on-the-fly gzip for files without .gz pre-built
-    gzip on;
-    gzip_vary on;
-    gzip_min_length 256;
-    gzip_proxied any;
-    gzip_comp_level 4;
-    gzip_types
-        text/plain
-        text/css
-        text/javascript
-        application/javascript
-        application/x-javascript
-        application/json
-        application/ld+json
-        application/xml
-        application/rss+xml
-        application/atom+xml
-        image/svg+xml
-        font/truetype
-        font/opentype
-        font/woff
-        font/woff2;
-    
-    # Blog SSR routes - proxy to NestJS backend
-    location /blog {
-        proxy_pass http://agritech-api:3001/blog;
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
-        proxy_read_timeout 30s;
-    }
-
-    # Sitemap and RSS - proxy to NestJS backend
-    location = /sitemap.xml {
-        proxy_pass http://agritech-api:3001/sitemap.xml;
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
-    }
-
-    location = /rss.xml {
-        proxy_pass http://agritech-api:3001/rss.xml;
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
-    }
-
-    # Service Worker files — NEVER cache (critical for PWA updates)
-    location ~ ^/(sw\.js|workbox-.*\.js)$ {
-        expires -1;
-        add_header Cache-Control "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0" always;
-        add_header X-Content-Type-Options "nosniff" always;
-    }
-
-    # Web manifest — short cache for fast PWA install checks
-    location = /site.webmanifest {
-        expires 1h;
-        add_header Cache-Control "public, max-age=3600";
-        add_header X-Content-Type-Options "nosniff" always;
-    }
-
-    # React Router support - redirect all requests to index.html
-    location / {
-        try_files \$uri \$uri/ /index.html;
-    }
-    
-    # Cache static assets with immutable (hashed filenames from Vite)
-    location /assets/ {
-        expires 1y;
-        add_header Cache-Control "public, immutable";
-        
-        # Security headers (must repeat in location blocks)
-        add_header X-Frame-Options "SAMEORIGIN" always;
-        add_header X-Content-Type-Options "nosniff" always;
-    }
-    
-    # Cache other static files (images, fonts, etc.)
-    location ~* \.(png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
-        expires 1y;
-        add_header Cache-Control "public, immutable";
-    }
-    
-    # Security headers
-    add_header X-Frame-Options "SAMEORIGIN" always;
-    add_header X-Content-Type-Options "nosniff" always;
-    add_header X-XSS-Protection "1; mode=block" always;
-    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
-}
-EOF
+# Nginx config: www → canonical apex (301), SPA + API proxy (from template at container start)
+COPY docker/nginx-default.conf.template /etc/nginx/templates/default.conf.template
+COPY docker/docker-entrypoint-frontend.sh /docker-entrypoint-frontend.sh
+RUN chmod +x /docker-entrypoint-frontend.sh
 
 # Expose port 80
 EXPOSE 80
@@ -178,5 +78,5 @@ EXPOSE 80
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD wget --no-verbose --tries=1 --spider http://localhost/ || exit 1
 
-# Start nginx
-CMD ["nginx", "-g", "daemon off;"]
+# CANONICAL_PUBLIC_HOST must match DASHBOARD_PUBLIC_HOST in docker-compose (e.g. agrogina.com)
+ENTRYPOINT ["/docker-entrypoint-frontend.sh"]

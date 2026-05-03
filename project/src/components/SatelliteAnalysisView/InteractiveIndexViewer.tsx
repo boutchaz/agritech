@@ -1208,7 +1208,10 @@ const MultiIndexOverlayMap = ({ boundary, multiData, overlayOpacity, baseLayer }
   ];
 
   return (
-    <div className={cn("relative transition-all duration-300 overflow-hidden rounded-xl", isFullscreen ? "fixed inset-0 z-50 bg-white" : "h-full border border-slate-100")}>
+    <div
+      className={cn("relative transition-all duration-300 overflow-hidden rounded-xl", isFullscreen ? "bg-white dark:bg-slate-900" : "h-full border border-slate-100")}
+      style={isFullscreen ? { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, width: '100vw', height: '100dvh', zIndex: 9999, borderRadius: 0 } : undefined}
+    >
       <Button
         variant="secondary"
         size="icon"

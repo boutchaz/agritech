@@ -198,6 +198,12 @@ export class CreateTaskDto {
   @Min(0)
   forfait_amount?: number;
 
+  @ApiPropertyOptional({ description: "Payment amount for this task (MAD); auto-fill suggestion = daily_rate × duration when payment_type='daily'" })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  payment_amount?: number;
+
   @ApiPropertyOptional({ description: "Work unit ID for piece-work" })
   @IsOptional()
   @IsUUID()

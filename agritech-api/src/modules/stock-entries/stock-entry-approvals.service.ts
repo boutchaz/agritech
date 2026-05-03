@@ -15,53 +15,62 @@ export class StockEntryApprovalsService {
 
   async requestApproval(stockEntryId: string, organizationId: string, requestedBy: string): Promise<any> {
     return this.databaseService.executeInPgTransaction(async (client) => {
-      const entryResult = await client.query(
-        `SELECT id, organization_id, status
-         FROM stock_entries
-         WHERE id = $1 AND organization_id = $2
-         FOR UPDATE`,
-        [stockEntryId, organizationId],
-      );
-
-      if (entryResult.rows.length === 0) {
-        throw new NotFoundException('Stock entry not found');
-      }
-
-      const stockEntry = entryResult.rows[0];
-
-      if (stockEntry.status !== StockEntryStatus.DRAFT) {
-        throw new BadRequestException('Only draft stock entries can request approval');
-      }
-
-      const existingApprovalResult = await client.query(
-        `SELECT id
-         FROM stock_entry_approvals
-         WHERE stock_entry_id = $1 AND status = 'pending'`,
-        [stockEntryId],
-      );
-
-      if (existingApprovalResult.rows.length > 0) {
-        throw new BadRequestException('A pending approval request already exists for this stock entry');
-      }
-
-      const approvalResult = await client.query(
-        `INSERT INTO stock_entry_approvals (stock_entry_id, requested_by, status)
-         VALUES ($1, $2, 'pending')
-         RETURNING *`,
-        [stockEntryId, requestedBy],
-      );
-
-      await client.query(
-        `UPDATE stock_entries
-         SET status = $1, updated_at = NOW(), updated_by = $2
-         WHERE id = $3 AND organization_id = $4`,
-        [StockEntryStatus.SUBMITTED, requestedBy, stockEntryId, organizationId],
-      );
-
-      this.logger.log(`Approval requested for stock entry ${stockEntryId}`);
-
-      return approvalResult.rows[0];
+      return this.requestApprovalInTransaction(stockEntryId, organizationId, requestedBy, client);
     });
+  }
+
+  async requestApprovalInTransaction(
+    stockEntryId: string,
+    organizationId: string,
+    requestedBy: string,
+    client: PoolClient,
+  ): Promise<any> {
+    const entryResult = await client.query(
+      `SELECT id, organization_id, status
+       FROM stock_entries
+       WHERE id = $1 AND organization_id = $2
+       FOR UPDATE`,
+      [stockEntryId, organizationId],
+    );
+
+    if (entryResult.rows.length === 0) {
+      throw new NotFoundException('Stock entry not found');
+    }
+
+    const stockEntry = entryResult.rows[0];
+
+    if (stockEntry.status !== StockEntryStatus.DRAFT) {
+      throw new BadRequestException('Only draft stock entries can request approval');
+    }
+
+    const existingApprovalResult = await client.query(
+      `SELECT id
+       FROM stock_entry_approvals
+       WHERE stock_entry_id = $1 AND status = 'pending'`,
+      [stockEntryId],
+    );
+
+    if (existingApprovalResult.rows.length > 0) {
+      throw new BadRequestException('A pending approval request already exists for this stock entry');
+    }
+
+    const approvalResult = await client.query(
+      `INSERT INTO stock_entry_approvals (stock_entry_id, requested_by, status)
+       VALUES ($1, $2, 'pending')
+       RETURNING *`,
+      [stockEntryId, requestedBy],
+    );
+
+    await client.query(
+      `UPDATE stock_entries
+       SET status = $1, updated_at = NOW(), updated_by = $2
+       WHERE id = $3 AND organization_id = $4`,
+      [StockEntryStatus.SUBMITTED, requestedBy, stockEntryId, organizationId],
+    );
+
+    this.logger.log(`Approval requested for stock entry ${stockEntryId}`);
+
+    return approvalResult.rows[0];
   }
 
   async approveEntry(approvalId: string, organizationId: string, approvedBy: string): Promise<any> {

@@ -18,6 +18,7 @@ import { SequencesService } from '../sequences/sequences.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { StockReservationsService } from './stock-reservations.service';
 import { StockEntryApprovalsService } from './stock-entry-approvals.service';
+import { AccountsService } from '../accounts/accounts.service';
 
 describe('StockEntriesService', () => {
   type QueryResult = { rows: any[] };
@@ -65,6 +66,12 @@ describe('StockEntriesService', () => {
   };
   let mockStockEntryApprovalsService: {
     assertApprovedForPosting: jest.Mock<(...args: any[]) => Promise<void>>;
+    resolveUserRole: jest.Mock<(...args: any[]) => Promise<string | null>>;
+    requiresApproval: jest.Mock<(...args: any[]) => Promise<boolean>>;
+    requestApprovalInTransaction: jest.Mock<(...args: any[]) => Promise<any>>;
+  };
+  let mockAccountsService: {
+    seedMoroccanChartOfAccounts: jest.Mock<(...args: any[]) => Promise<any>>;
   };
 
   // ============================================================
@@ -283,6 +290,13 @@ describe('StockEntriesService', () => {
 
     mockStockEntryApprovalsService = {
       assertApprovedForPosting: jest.fn<(...args: any[]) => Promise<void>>().mockResolvedValue(undefined),
+      resolveUserRole: jest.fn<(...args: any[]) => Promise<string | null>>().mockResolvedValue(null),
+      requiresApproval: jest.fn<(...args: any[]) => Promise<boolean>>().mockResolvedValue(false),
+      requestApprovalInTransaction: jest.fn<(...args: any[]) => Promise<any>>().mockResolvedValue({ id: 'approval1' }),
+    };
+
+    mockAccountsService = {
+      seedMoroccanChartOfAccounts: jest.fn<(...args: any[]) => Promise<any>>().mockResolvedValue({ created: 0 }),
     };
 
     moduleRef = await Test.createTestingModule({
@@ -294,6 +308,7 @@ describe('StockEntriesService', () => {
         { provide: NotificationsService, useValue: mockNotificationsService },
         { provide: StockReservationsService, useValue: mockStockReservationsService },
         { provide: StockEntryApprovalsService, useValue: mockStockEntryApprovalsService },
+        { provide: AccountsService, useValue: mockAccountsService },
       ],
     }).compile();
 
@@ -583,6 +598,16 @@ describe('StockEntriesService', () => {
         );
 
         mockPgClient.query = createPgQueryMock((query: string) => {
+          if (query.includes('SELECT * FROM stock_entries') && query.includes('FOR UPDATE')) {
+            return pgResult([
+              {
+                id: 'se1',
+                organization_id: TEST_IDS.organization,
+                status: StockEntryStatus.SUBMITTED,
+              },
+            ]);
+          }
+
           if (query.includes('FROM stock_entries se')) {
             return pgResult([
               {
@@ -613,6 +638,16 @@ describe('StockEntriesService', () => {
 
       it('should allow approved submitted entries to post', async () => {
         mockPgClient.query = createPgQueryMock((query: string) => {
+          if (query.includes('SELECT * FROM stock_entries') && query.includes('FOR UPDATE')) {
+            return pgResult([
+              {
+                id: 'se1',
+                organization_id: TEST_IDS.organization,
+                status: StockEntryStatus.SUBMITTED,
+              },
+            ]);
+          }
+
           if (query.includes('FROM stock_entries se')) {
             return pgResult([
               {
@@ -1386,7 +1421,7 @@ describe('StockEntriesService', () => {
             if (query.includes('SELECT valuation_method FROM items WHERE id = $1')) {
               return pgResult([{ valuation_method: ValuationMethod.MOVING_AVERAGE }]);
             }
-            if (query.includes('FROM stock_valuation') && query.includes('ORDER BY created_at ASC')) {
+            if (query.includes('FROM stock_valuation sv')) {
               return pgResult([
                 { id: 'val1', remaining_quantity: '50', cost_per_unit: '10' },
                 { id: 'val2', remaining_quantity: '30', cost_per_unit: '15' },
@@ -1452,7 +1487,7 @@ describe('StockEntriesService', () => {
             if (query.includes('SELECT valuation_method FROM items WHERE id = $1')) {
               return pgResult([{ valuation_method: ValuationMethod.MOVING_AVERAGE }]);
             }
-            if (query.includes('FROM stock_valuation') && query.includes('ORDER BY created_at ASC')) {
+            if (query.includes('FROM stock_valuation sv')) {
               return pgResult([
                 { id: 'val1', remaining_quantity: '50', cost_per_unit: '10' },
                 { id: 'val2', remaining_quantity: '30', cost_per_unit: '15' },
@@ -1522,7 +1557,7 @@ describe('StockEntriesService', () => {
             if (query.includes('SELECT valuation_method FROM items WHERE id = $1')) {
               return pgResult([{ valuation_method: ValuationMethod.MOVING_AVERAGE }]);
             }
-            if (query.includes('FROM stock_valuation') && query.includes('ORDER BY created_at ASC')) {
+            if (query.includes('FROM stock_valuation sv')) {
               return pgResult([
                 { id: 'val1', remaining_quantity: '25', cost_per_unit: '10' },
                 { id: 'val2', remaining_quantity: '25', cost_per_unit: '15' },
@@ -1584,7 +1619,10 @@ describe('StockEntriesService', () => {
             };
           }
           if (query.includes('INSERT INTO stock_entry_items')) {
-            return { rows: [] };
+            return { rows: [{ id: 'sei-rev-1' }] };
+          }
+          if (query.includes('FROM stock_movements') && query.includes('stock_entry_item_id = $2')) {
+            return { rows: [{ cost_per_unit: '50', total_cost: '500' }] };
           }
           if (query.includes('FROM stock_valuation') && query.includes('stock_entry_id = $5')) {
             return {
@@ -1670,7 +1708,10 @@ describe('StockEntriesService', () => {
             };
           }
           if (query.includes('INSERT INTO stock_entry_items')) {
-            return { rows: [] };
+            return { rows: [{ id: 'sei-rev-issue-1' }] };
+          }
+          if (query.includes('FROM stock_movements') && query.includes('stock_entry_item_id = $2')) {
+            return { rows: [{ cost_per_unit: '42', total_cost: '252' }] };
           }
           if (query.includes('INSERT INTO stock_valuation')) {
             valuationInsertParams.push(params || []);
@@ -1701,6 +1742,7 @@ describe('StockEntriesService', () => {
           'wh-source',
           6,
           42,
+          252,
           'se-rev-issue-1',
           'BATCH-1',
           null,
@@ -1764,7 +1806,10 @@ describe('StockEntriesService', () => {
             };
           }
           if (query.includes('INSERT INTO stock_entry_items')) {
-            return { rows: [] };
+            return { rows: [{ id: 'sei-rev-transfer-1' }] };
+          }
+          if (query.includes('FROM stock_movements') && query.includes('stock_entry_item_id = $2')) {
+            return { rows: [{ cost_per_unit: '18', total_cost: '72' }] };
           }
           if (query.includes('FROM stock_valuation') && query.includes('stock_entry_id = $5')) {
             return { rows: [{ id: 'val-transfer-1', remaining_quantity: '4', cost_per_unit: '18' }] };
@@ -2305,6 +2350,16 @@ describe('StockEntriesService', () => {
 
       it('should fulfill reservations when posting a stock entry', async () => {
         mockPgClient.query = createPgQueryMock((query: string) => {
+          if (query.includes('SELECT * FROM stock_entries') && query.includes('FOR UPDATE')) {
+            return pgResult([
+              {
+                id: 'se1',
+                organization_id: TEST_IDS.organization,
+                status: StockEntryStatus.DRAFT,
+              },
+            ]);
+          }
+
           if (query.includes('FROM stock_entries se')) {
             return pgResult([
               {
@@ -2504,7 +2559,7 @@ describe('StockEntriesService', () => {
           item_id: 'item1',
           warehouse_id: 'wh1',
           quantity: 1000,
-          cost_per_unit: 50,
+          valuation_rate: 50,
           opening_date: '2024-01-01',
         };
 
@@ -2560,8 +2615,22 @@ describe('StockEntriesService', () => {
             return Promise.resolve({ rows: [{ default_unit: 'kg' }] });
           }
 
-          if (query.includes('SELECT journal_entry_id')) {
-            return Promise.resolve({ rows: [{ journal_entry_id: 'je1' }] });
+          if (query.includes('SELECT COALESCE(SUM(quantity), 0) as balance')) {
+            return Promise.resolve({ rows: [{ balance: '0' }] });
+          }
+
+          if (query.includes('FROM stock_account_mappings')) {
+            return Promise.resolve({
+              rows: [{ debit_account_id: 'acc-inventory', credit_account_id: 'acc-opening' }],
+            });
+          }
+
+          if (query.includes('INSERT INTO journal_entries')) {
+            return Promise.resolve({ rows: [{ id: 'je1' }] });
+          }
+
+          if (query.includes('INSERT INTO journal_items')) {
+            return Promise.resolve({ rows: [] });
           }
 
           return Promise.resolve({ rows: [] });

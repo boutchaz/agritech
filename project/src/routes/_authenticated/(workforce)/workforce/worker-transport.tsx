@@ -2,9 +2,10 @@ import { useState, type ReactNode } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Loader2, Plus, Pencil, Trash2, Bus } from 'lucide-react';
+import { Loader2, Plus, Pencil, Trash2, Bus, Building2, Users } from 'lucide-react';
 import { withRouteProtection } from '@/components/authorization/withRouteProtection';
 import { useAuth } from '@/hooks/useAuth';
+import ModernPageHeader from '@/components/ModernPageHeader';
 import { useFarms } from '@/hooks/useParcelsQuery';
 import { useWorkers } from '@/hooks/useWorkers';
 import {
@@ -55,22 +56,23 @@ function WorkerTransportPage() {
   const farmName = (id: string) => farmList.find((f) => f.id === id)?.name ?? '—';
 
   return (
-    <div className="p-6 space-y-6 max-w-6xl">
-      <header className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold">
-            {t('transport.title', 'Worker Transport')}
-          </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            {t('transport.subtitle', 'Schedule pickup runs from villages to farms.')}
-          </p>
-        </div>
-        <Button onClick={() => setCreating(true)} disabled={!farmList.length}>
-          <Plus className="w-4 h-4 mr-2" />
-          {t('transport.create', 'New trip')}
-        </Button>
-      </header>
-
+    <>
+      <ModernPageHeader
+        breadcrumbs={[
+          { icon: Building2, label: currentOrganization?.name ?? '', path: '/dashboard' },
+          { icon: Users, label: t('nav.workforce', 'Workforce'), path: '/workforce/employees' },
+          { icon: Bus, label: t('transport.title', 'Worker Transport'), isActive: true },
+        ]}
+        title={t('transport.title', 'Worker Transport')}
+        subtitle={t('transport.subtitle', 'Schedule pickup runs from villages to farms.')}
+        actions={
+          <Button onClick={() => setCreating(true)} disabled={!farmList.length}>
+            <Plus className="w-4 h-4 mr-2" />
+            {t('transport.create', 'New trip')}
+          </Button>
+        }
+      />
+      <div className="p-3 sm:p-4 lg:p-6 space-y-6">
       {query.isLoading ? (
         <div className="flex items-center justify-center h-40">
           <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
@@ -148,7 +150,8 @@ function WorkerTransportPage() {
           }}
         />
       )}
-    </div>
+      </div>
+    </>
   );
 }
 

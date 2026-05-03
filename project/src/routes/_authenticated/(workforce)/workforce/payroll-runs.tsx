@@ -2,9 +2,10 @@ import { useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Loader2, Plus, Play, Send, X } from 'lucide-react';
+import { Loader2, Plus, Play, Send, X, Building2, Users, DollarSign } from 'lucide-react';
 import { withRouteProtection } from '@/components/authorization/withRouteProtection';
 import { useAuth } from '@/hooks/useAuth';
+import ModernPageHeader from '@/components/ModernPageHeader';
 import {
   useCancelPayrollRun,
   useMarkPayrollRunPaid,
@@ -53,23 +54,26 @@ function PayrollRunsPage() {
   const runs = query.data ?? [];
 
   return (
-    <div className="p-6 space-y-6 max-w-6xl">
-      <header className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold">{t('payrollRuns.title', 'Payroll Runs')}</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            {t(
-              'payrollRuns.subtitle',
-              'Process payroll for a period: create a run, generate slips for matching workers, then submit when ready.',
-            )}
-          </p>
-        </div>
-        <Button onClick={() => setCreating(true)}>
-          <Plus className="w-4 h-4 mr-2" />
-          {t('common.create', 'Create')}
-        </Button>
-      </header>
-
+    <>
+      <ModernPageHeader
+        breadcrumbs={[
+          { icon: Building2, label: currentOrganization?.name ?? '', path: '/dashboard' },
+          { icon: Users, label: t('nav.workforce', 'Workforce'), path: '/workforce/employees' },
+          { icon: DollarSign, label: t('payrollRuns.title', 'Payroll Runs'), isActive: true },
+        ]}
+        title={t('payrollRuns.title', 'Payroll Runs')}
+        subtitle={t(
+          'payrollRuns.subtitle',
+          'Process payroll for a period: create a run, generate slips for matching workers, then submit when ready.',
+        )}
+        actions={
+          <Button onClick={() => setCreating(true)}>
+            <Plus className="w-4 h-4 mr-2" />
+            {t('common.create', 'Create')}
+          </Button>
+        }
+      />
+      <div className="p-3 sm:p-4 lg:p-6 space-y-6">
       {query.isLoading ? (
         <div className="flex items-center justify-center h-40">
           <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
@@ -91,7 +95,7 @@ function PayrollRunsPage() {
                 <th className="px-3 py-2 font-medium">{t('common.status', 'Status')}</th>
                 <th className="px-3 py-2 font-medium text-right">{t('payrollRuns.workers', 'Workers')}</th>
                 <th className="px-3 py-2 font-medium text-right">{t('payrollRuns.netPay', 'Net pay')}</th>
-                <th className="px-3 py-2 font-medium text-right">{t('common.actions', 'Actions')}</th>
+                <th className="px-3 py-2 font-medium text-right">{t('actions', 'Actions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -101,7 +105,7 @@ function PayrollRunsPage() {
                   <td className="px-3 py-2 text-gray-600">
                     {format(new Date(r.pay_period_start), 'PP')} → {format(new Date(r.pay_period_end), 'PP')}
                   </td>
-                  <td className="px-3 py-2">{r.pay_frequency}</td>
+                  <td className="px-3 py-2">{t(`payrollRuns.frequencies.${r.pay_frequency}`, r.pay_frequency)}</td>
                   <td className="px-3 py-2"><RunStatusBadge status={r.status} /></td>
                   <td className="px-3 py-2 text-right">{r.total_workers}</td>
                   <td className="px-3 py-2 text-right">
@@ -162,7 +166,9 @@ function PayrollRunsPage() {
                               {
                                 onSuccess: (res) =>
                                   toast.success(
-                                    t('payrollRuns.paidWithJe', `Paid · ${res.journal_entries_created} JE posted`),
+                                    t('payrollRuns.paidWithJe', `Paid · ${res.journal_entries_created} JE posted`, {
+                                      count: res.journal_entries_created,
+                                    }),
                                   ),
                                 onError: (err: any) => toast.error(err?.message ?? 'Error'),
                               },
@@ -207,11 +213,13 @@ function PayrollRunsPage() {
           }}
         />
       )}
-    </div>
+      </div>
+    </>
   );
 }
 
 function RunStatusBadge({ status }: { status: RunStatus }) {
+  const { t } = useTranslation();
   const variants: Record<RunStatus, 'default' | 'secondary' | 'destructive' | 'outline'> = {
     draft: 'outline',
     processing: 'secondary',
@@ -219,7 +227,7 @@ function RunStatusBadge({ status }: { status: RunStatus }) {
     paid: 'default',
     cancelled: 'destructive',
   };
-  return <Badge variant={variants[status]}>{status}</Badge>;
+  return <Badge variant={variants[status]}>{t(`payrollRuns.statuses.${status}`, status)}</Badge>;
 }
 
 function CreateRunDialog({
@@ -305,10 +313,10 @@ function CreateRunDialog({
           >
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="monthly">monthly</SelectItem>
-              <SelectItem value="biweekly">biweekly</SelectItem>
-              <SelectItem value="weekly">weekly</SelectItem>
-              <SelectItem value="daily">daily</SelectItem>
+              <SelectItem value="monthly">{t('payrollRuns.frequencies.monthly', 'Monthly')}</SelectItem>
+              <SelectItem value="biweekly">{t('payrollRuns.frequencies.biweekly', 'Biweekly')}</SelectItem>
+              <SelectItem value="weekly">{t('payrollRuns.frequencies.weekly', 'Weekly')}</SelectItem>
+              <SelectItem value="daily">{t('payrollRuns.frequencies.daily', 'Daily')}</SelectItem>
             </SelectContent>
           </Select>
         </div>

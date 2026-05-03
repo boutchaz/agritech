@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { MapContainer, Polygon, Tooltip } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Loader, RefreshCw, ZoomIn, Layers, Maximize2, Minimize2 } from 'lucide-react';
@@ -300,51 +301,65 @@ const MultiParcelHeatmapViewer = ({
         {farmName && <span className="text-gray-500">— {farmName}</span>}
       </div>
 
-      <div
-        className={
-          isFullscreen
-            ? 'fixed inset-0 z-50 overflow-hidden rounded-none border bg-white dark:bg-slate-900'
-            : 'relative h-[600px] overflow-hidden rounded-lg border'
-        }
-      >
-        <Button
-          onClick={() => setIsFullscreen((v) => !v)}
-          className="absolute right-4 top-4 z-[1000] rounded-lg border-2 border-gray-300 bg-white p-2 shadow-lg transition-colors hover:bg-gray-100"
-          title={isFullscreen ? t('satellite:heatmap.fullscreen.exit', 'Exit fullscreen') : t('satellite:heatmap.fullscreen.enter', 'Fullscreen')}
-        >
-          {isFullscreen ? <Minimize2 className="h-5 w-5" /> : <Maximize2 className="h-5 w-5" />}
-        </Button>
-        <MapContainer
-          center={mapCenter}
-          zoom={14}
-          style={{ height: '100%', width: '100%' }}
-          className="leaflet-container"
-        >
-          <LeafletBaseTileLayers variant="satellite" withSatelliteReferenceLabels />
-
-          <SmoothHeatmapLayer
-            data={data}
-            colorPalette={colorPalette}
-            valueDisplay="interactive"
-            boundaries={clipRings}
-          />
-
-          {usableParcels.map((p) => (
-            <Polygon
-              key={p.id}
-              positions={toLeafletPositions(p.boundary)}
-              pathOptions={{
-                color: '#00FF00',
-                weight: 2,
-                fillOpacity: 0,
-                opacity: 0.9,
-              }}
+      {(() => {
+        const mapInner = (
+          <>
+            <Button
+              onClick={() => setIsFullscreen((v) => !v)}
+              className="absolute right-4 top-4 z-[1000] rounded-lg border-2 border-gray-300 bg-white p-2 shadow-lg transition-colors hover:bg-gray-100"
+              title={isFullscreen ? t('satellite:heatmap.fullscreen.exit', 'Exit fullscreen') : t('satellite:heatmap.fullscreen.enter', 'Fullscreen')}
             >
-              <Tooltip sticky>{p.name}</Tooltip>
-            </Polygon>
-          ))}
-        </MapContainer>
-      </div>
+              {isFullscreen ? <Minimize2 className="h-5 w-5" /> : <Maximize2 className="h-5 w-5" />}
+            </Button>
+            <MapContainer
+              center={mapCenter}
+              zoom={14}
+              style={{ height: '100%', width: '100%' }}
+              className="leaflet-container"
+            >
+              <LeafletBaseTileLayers variant="satellite" withSatelliteReferenceLabels />
+
+              <SmoothHeatmapLayer
+                data={data}
+                colorPalette={colorPalette}
+                valueDisplay="interactive"
+                boundaries={clipRings}
+              />
+
+              {usableParcels.map((p) => (
+                <Polygon
+                  key={p.id}
+                  positions={toLeafletPositions(p.boundary)}
+                  pathOptions={{
+                    color: '#00FF00',
+                    weight: 2,
+                    fillOpacity: 0,
+                    opacity: 0.9,
+                  }}
+                >
+                  <Tooltip sticky>{p.name}</Tooltip>
+                </Polygon>
+              ))}
+            </MapContainer>
+          </>
+        );
+        if (isFullscreen && typeof document !== 'undefined') {
+          return createPortal(
+            <div
+              className="overflow-hidden bg-white dark:bg-slate-900"
+              style={{ position: 'fixed', inset: 0, width: '100vw', height: '100dvh', zIndex: 9999 }}
+            >
+              {mapInner}
+            </div>,
+            document.body,
+          );
+        }
+        return (
+          <div className="relative h-[600px] overflow-hidden rounded-lg border">
+            {mapInner}
+          </div>
+        );
+      })()}
     </div>
   );
 };

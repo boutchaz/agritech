@@ -2,9 +2,10 @@ import { Link, useNavigate } from '@tanstack/react-router';
 import { AlertTriangle, Package, Plus, ExternalLink } from 'lucide-react';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { useFarmStockLevels } from '@/hooks/useFarmStockLevels';
-import { useCurrency } from '@/hooks/useCurrency';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
+import { formatQuantity } from '@/utils/units';
+import { StockValue } from '@/components/Stock/StockValue';
 
 interface LowStockAlertsProps {
   farm_id?: string;
@@ -17,9 +18,8 @@ export default function LowStockAlerts({
   maxItems = 10,
   showActions = true,
 }: LowStockAlertsProps) {
-  const { t } = useTranslation('stock');
+  const { t, i18n } = useTranslation('stock');
   const navigate = useNavigate();
-  const { format: formatCurrency } = useCurrency();
 
   const { data: lowStockItems = [], isLoading } = useFarmStockLevels({
     farm_id,
@@ -101,7 +101,7 @@ export default function LowStockAlerts({
                       {t('stock.lowStockAlerts.currentStock', 'Current Stock')}:
                     </span>
                     <span className="font-medium text-amber-700 dark:text-amber-400">
-                      {parseFloat(item.total_quantity.toFixed(3))} {item.default_unit}
+                      {formatQuantity(item.total_quantity, item.default_unit, i18n.language)}
                     </span>
                   </div>
 
@@ -111,7 +111,7 @@ export default function LowStockAlerts({
                         {t('stock.lowStockAlerts.minimumLevel', 'Minimum Level')}:
                       </span>
                       <span className="font-medium text-gray-900 dark:text-white">
-                        {item.minimum_stock_level} {item.default_unit}
+                        {formatQuantity(item.minimum_stock_level, item.default_unit, i18n.language)}
                       </span>
                     </div>
                   )}
@@ -121,7 +121,7 @@ export default function LowStockAlerts({
                       {t('stock.lowStockAlerts.totalValue', 'Total Value')}:
                     </span>
                     <span className="font-medium text-gray-900 dark:text-white">
-                      {formatCurrency(item.total_value)}
+                      <StockValue value={item.total_value} />
                     </span>
                   </div>
 
@@ -141,7 +141,7 @@ export default function LowStockAlerts({
                               {farmStock.farm_name && ` (${farmStock.farm_name})`}:
                             </span>{' '}
                             <span className={farmStock.is_low_stock ? 'text-amber-600 dark:text-amber-400 font-medium' : ''}>
-                              {parseFloat(farmStock.total_quantity.toFixed(3))} {item.default_unit}
+                              {formatQuantity(farmStock.total_quantity, item.default_unit, i18n.language)}
                             </span>
                           </div>
                         ))}

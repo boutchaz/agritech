@@ -9,7 +9,7 @@ import {
   IsDateString,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class InvoiceItemDto {
   @ApiProperty({ description: 'Item name', example: 'Tomato Seeds' })
@@ -122,6 +122,11 @@ export class CreateInvoiceDto {
   @ApiProperty({ description: 'Outstanding amount', example: 12000 })
   @IsNumber()
   outstanding_amount: number;
+
+  @ApiPropertyOptional({ description: 'Default tax rate applied when a line tax_rate is not provided (hybrid model)', example: 20 })
+  @IsNumber()
+  @IsOptional()
+  default_tax_rate?: number;
 
   @ApiProperty({ description: 'Currency code', example: 'MAD', required: false })
   @IsString()

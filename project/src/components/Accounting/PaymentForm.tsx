@@ -16,7 +16,7 @@ import { getLocalDate } from '@/utils/date';
 import { toast } from 'sonner';
 
 const getPaymentSchema = (t: (key: string) => string) => z.object({
-  payment_type: z.enum(['receive', 'pay']),
+  payment_type: z.enum(['receive', 'pay', 'bank_fee']),
   party_type: z.enum(['customer', 'supplier']).nullable().optional(),
   party_id: z.string().nullable().optional(),
   party_name: z.string().min(1, t('payments.form.validation.partyNameRequired')),
@@ -45,18 +45,18 @@ export const PaymentForm = ({ payment, onSuccess, onCancel }: PaymentFormProps) 
   const { data: suppliers = [] } = useSuppliers();
 
   const form = useForm<PaymentFormData>({
-    resolver: zodResolver(getPaymentSchema(t)),
+    resolver: zodResolver(getPaymentSchema(t)) as never,
     defaultValues: payment ? {
-      payment_type: payment.payment_type as 'receive' | 'pay',
+      payment_type: payment.payment_type as 'receive' | 'pay' | 'bank_fee',
       party_type: payment.party_type as 'customer' | 'supplier' | null,
       party_id: payment.party_id,
       party_name: payment.party_name,
       payment_date: payment.payment_date,
       amount: Number(payment.amount),
-      payment_method: payment.payment_method,
+      payment_method: payment.payment_method as 'cash' | 'bank_transfer' | 'check' | 'mobile_money',
       bank_account_id: payment.bank_account_id,
       reference_number: payment.reference_number,
-      status: payment.status || 'draft',
+      status: (payment.status === 'reconciled' ? 'submitted' : payment.status) || 'draft',
       remarks: payment.remarks,
     } : {
       payment_type: 'receive',
@@ -70,10 +70,11 @@ export const PaymentForm = ({ payment, onSuccess, onCancel }: PaymentFormProps) 
 
   const watchPaymentType = form.watch('payment_type');
   const watchPartyId = form.watch('party_id');
+  const isBankFee = watchPaymentType === 'bank_fee';
 
   // Auto-fill party name when party is selected
   React.useEffect(() => {
-    if (watchPartyId) {
+    if (watchPartyId && !isBankFee) {
       const parties = watchPaymentType === 'receive' ? customers : suppliers;
       const party = parties.find((p) => p.id === watchPartyId);
       if (party) {
@@ -81,7 +82,19 @@ export const PaymentForm = ({ payment, onSuccess, onCancel }: PaymentFormProps) 
         form.setValue('party_type', watchPaymentType === 'receive' ? 'customer' : 'supplier');
       }
     }
-  }, [watchPartyId, watchPaymentType, customers, suppliers, form]);
+  }, [watchPartyId, watchPaymentType, customers, suppliers, form, isBankFee]);
+
+  // Bank fee: party fields irrelevant — set sensible defaults
+  React.useEffect(() => {
+    if (isBankFee) {
+      form.setValue('party_id', null);
+      form.setValue('party_type', null);
+      if (!form.getValues('party_name')) {
+        form.setValue('party_name', 'Banque');
+      }
+      form.setValue('payment_method', 'bank_transfer');
+    }
+  }, [isBankFee, form]);
 
   const onSubmit = async (data: PaymentFormData) => {
     try {
@@ -113,6 +126,7 @@ export const PaymentForm = ({ payment, onSuccess, onCancel }: PaymentFormProps) 
           >
             <option value="receive">{t('payments.form.paymentTypes.received')}</option>
             <option value="pay">{t('payments.form.paymentTypes.made')}</option>
+            <option value="bank_fee">{t('payments.form.paymentTypes.bankFee', 'Frais bancaires')}</option>
           </NativeSelect>
           {form.formState.errors.payment_type && (
             <p className="text-sm text-red-600 mt-1">{form.formState.errors.payment_type.message}</p>
@@ -133,32 +147,36 @@ export const PaymentForm = ({ payment, onSuccess, onCancel }: PaymentFormProps) 
         </div>
       </div>
 
-      {/* Party Selection */}
-      <div>
-        <Label htmlFor="party_id">
-          {watchPaymentType === 'receive' ? t('payments.form.fields.customer') : t('payments.form.fields.supplier')} ({t('payments.form.fields.optional')})
-        </Label>
-        <NativeSelect
-          id="party_id"
-          {...form.register('party_id')}
-        >
-          <option value="">-- {t('payments.form.actions.select')} {watchPaymentType === 'receive' ? t('payments.form.fields.customer') : t('payments.form.fields.supplier')} --</option>
-          {(watchPaymentType === 'receive' ? customers : suppliers).map((party) => (
-            <option key={party.id} value={party.id}>
-              {party.name}
-            </option>
-          ))}
-        </NativeSelect>
-      </div>
+      {/* Party Selection (hidden for bank fees) */}
+      {!isBankFee && (
+        <div>
+          <Label htmlFor="party_id">
+            {watchPaymentType === 'receive' ? t('payments.form.fields.customer') : t('payments.form.fields.supplier')} ({t('payments.form.fields.optional')})
+          </Label>
+          <NativeSelect
+            id="party_id"
+            {...form.register('party_id')}
+          >
+            <option value="">-- {t('payments.form.actions.select')} {watchPaymentType === 'receive' ? t('payments.form.fields.customer') : t('payments.form.fields.supplier')} --</option>
+            {(watchPaymentType === 'receive' ? customers : suppliers).map((party) => (
+              <option key={party.id} value={party.id}>
+                {party.name}
+              </option>
+            ))}
+          </NativeSelect>
+        </div>
+      )}
 
-      {/* Party Name (manual entry if no party selected) */}
+      {/* Party Name (manual entry if no party selected; for bank fees: free-form bank name) */}
       <div>
-        <Label htmlFor="party_name">{t('payments.form.fields.partyName')}</Label>
+        <Label htmlFor="party_name">
+          {isBankFee ? t('payments.form.fields.bankName', 'Banque') : t('payments.form.fields.partyName')}
+        </Label>
         <Input
           id="party_name"
           {...form.register('party_name')}
-          placeholder={`${t('payments.form.actions.enter')} ${watchPaymentType === 'receive' ? t('payments.form.fields.customer').toLowerCase() : t('payments.form.fields.supplier').toLowerCase()} ${t('payments.form.fields.name').toLowerCase()}`}
-          disabled={!!watchPartyId}
+          placeholder={isBankFee ? t('payments.form.placeholders.bankName', 'Nom de la banque') : `${t('payments.form.actions.enter')} ${watchPaymentType === 'receive' ? t('payments.form.fields.customer').toLowerCase() : t('payments.form.fields.supplier').toLowerCase()} ${t('payments.form.fields.name').toLowerCase()}`}
+          disabled={!isBankFee && !!watchPartyId}
         />
         {form.formState.errors.party_name && (
           <p className="text-sm text-red-600 mt-1">{form.formState.errors.party_name.message}</p>

@@ -1,17 +1,19 @@
-<a href="/blog/{{slug}}?lang={{../lang}}" class="card" style="display:block;text-decoration:none;color:inherit;">
+<a href="/blog/{{slug}}?lang={{../lang}}" class="card" style="display:flex;flex-direction:column;text-decoration:none;color:inherit;">
   {{#if featured_image.url}}
-  <div style="height:12rem;overflow:hidden;">
-    <img src="{{featured_image.url}}" alt="{{#if featured_image.alternativeText}}{{featured_image.alternativeText}}{{else}}{{title}}{{/if}}" style="width:100%;height:100%;object-fit:cover;transition:transform 0.3s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+  <div style="aspect-ratio:16/10;overflow:hidden;background:var(--ink-100);">
+    <img src="{{featured_image.url}}" alt="{{#if featured_image.alternativeText}}{{featured_image.alternativeText}}{{else}}{{title}}{{/if}}" style="width:100%;height:100%;object-fit:cover;transition:transform .35s ease;" onmouseover="this.style.transform='scale(1.04)'" onmouseout="this.style.transform='scale(1)'">
   </div>
   {{/if}}
-  <div class="card-body">
+  <div class="card-body" style="display:flex;flex-direction:column;gap:10px;flex:1;">
     {{#if blog_category}}
-    <span class="badge" style="margin-bottom:0.5rem;">{{blog_category.name}}</span>
+    <span class="badge" style="align-self:flex-start;">{{blog_category.name}}</span>
     {{/if}}
-    <h3 style="font-size:1.0625rem;font-weight:600;color:#111827;margin-bottom:0.5rem;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">{{title}}</h3>
-    <p style="font-size:0.875rem;color:#6b7280;margin-bottom:0.75rem;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">{{excerpt}}</p>
-    <div class="meta" style="font-size:0.75rem;">
+    <h3 class="h-display" style="font-size:1.25rem;font-weight:500;color:var(--ink-900);line-height:1.2;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;text-wrap:balance;">{{title}}</h3>
+    <p style="font-size:14px;color:var(--ink-500);line-height:1.55;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;flex:1;">{{excerpt}}</p>
+    <div class="hairline" style="margin-top:6px;"></div>
+    <div class="meta" style="font-size:10.5px;text-transform:uppercase;letter-spacing:0.06em;">
       {{#if publishedAtFormatted}}<span class="meta-item">{{publishedAtFormatted}}</span>{{/if}}
+      <span style="color:var(--ink-300);">·</span>
       <span class="meta-item">{{reading_time}} min</span>
     </div>
   </div>

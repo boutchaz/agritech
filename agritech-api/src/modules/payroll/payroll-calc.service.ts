@@ -310,20 +310,6 @@ export class PayrollCalcService {
     );
     const presentDays = presentDates.size;
 
-    // Approved leave overlap with the period.
-    const { data: leaves } = await supabase
-      .from('leave_applications')
-      .select('from_date, to_date')
-      .eq('organization_id', organizationId)
-      .eq('worker_id', workerId)
-      .eq('status', 'approved')
-      .lte('from_date', payPeriodEnd)
-      .gte('to_date', payPeriodStart);
-    let leaveDays = 0;
-    for (const lv of leaves ?? []) {
-      leaveDays += countDaysOverlap(lv.from_date, lv.to_date, payPeriodStart, payPeriodEnd);
-    }
-
     // Holiday days falling in period (any active holiday list for the org).
     const { data: holidays } = await supabase
       .from('holidays')
@@ -332,7 +318,38 @@ export class PayrollCalcService {
       .eq('holiday_lists.is_active', true)
       .gte('date', payPeriodStart)
       .lte('date', payPeriodEnd);
-    const holidayDays = (holidays ?? []).length;
+    const holidayDates = new Set<string>(
+      (holidays ?? []).map((h: any) => String(h.date).slice(0, 10)),
+    );
+    const holidayDays = holidayDates.size;
+
+    // Approved leave overlap with the period. Count only weekday dates that
+    // are not also holidays so leave can't erase weekends/holidays already
+    // covered by working_days math. Half-day leave counts as 0.5.
+    const { data: leaves } = await supabase
+      .from('leave_applications')
+      .select('from_date, to_date, half_day')
+      .eq('organization_id', organizationId)
+      .eq('worker_id', workerId)
+      .eq('status', 'approved')
+      .lte('from_date', payPeriodEnd)
+      .gte('to_date', payPeriodStart);
+    let leaveDays = 0;
+    for (const lv of leaves ?? []) {
+      const dates = enumerateWeekdayDatesInRange(
+        lv.from_date,
+        lv.to_date,
+        payPeriodStart,
+        payPeriodEnd,
+        holidayDates,
+      );
+      if (dates.length === 0) continue;
+      if (lv.half_day && dates.length === 1) {
+        leaveDays += 0.5;
+      } else {
+        leaveDays += dates.length;
+      }
+    }
 
     const paymentDays = Math.min(workingDays, presentDays + leaveDays + holidayDays);
     const absentDays = Math.max(0, workingDays - paymentDays);
@@ -363,15 +380,23 @@ function countWeekdays(from: string, to: string): number {
   return count;
 }
 
-function countDaysOverlap(
+function enumerateWeekdayDatesInRange(
   aFrom: string,
   aTo: string,
   bFrom: string,
   bTo: string,
-): number {
+  excludeDates: Set<string>,
+): string[] {
   const start = aFrom > bFrom ? aFrom : bFrom;
   const end = aTo < bTo ? aTo : bTo;
-  if (start > end) return 0;
-  const ms = new Date(end).getTime() - new Date(start).getTime();
-  return Math.floor(ms / 86_400_000) + 1;
+  if (start > end) return [];
+  const out: string[] = [];
+  for (let d = new Date(start); d <= new Date(end); d.setDate(d.getDate() + 1)) {
+    const dow = d.getDay();
+    if (dow === 0 || dow === 6) continue;
+    const iso = d.toISOString().slice(0, 10);
+    if (excludeDates.has(iso)) continue;
+    out.push(iso);
+  }
+  return out;
 }

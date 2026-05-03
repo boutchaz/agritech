@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Clock, Play, Square, Loader2, User, Hash } from 'lucide-react';
+import { Clock, Play, Square, Loader2, Hash } from 'lucide-react';
 import { useTaskTimeLogs, useClockIn, useClockOut, useTask } from '@/hooks/useTasks';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -15,9 +15,30 @@ interface TaskWorklogProps {
   taskId: string;
   taskStatus: string;
   assignedWorkerId?: string;
+  /** When true, no outer card chrome — for use inside a parent Card on task detail. */
+  embedded?: boolean;
 }
 
-export default function TaskWorklog({ taskId, taskStatus, assignedWorkerId }: TaskWorklogProps) {
+function initialsFromName(name: string | null | undefined): string {
+  if (!name?.trim()) return '?';
+  return name
+    .split(/\s+/)
+    .map((p) => p[0])
+    .filter(Boolean)
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
+}
+
+/** e.g. 7.5 → "7h30" */
+function formatHoursHM(hours: number): string {
+  const totalMin = Math.round(hours * 60);
+  const hh = Math.floor(totalMin / 60);
+  const mm = totalMin % 60;
+  return `${hh}h${String(mm).padStart(2, '0')}`;
+}
+
+export default function TaskWorklog({ taskId, taskStatus, assignedWorkerId, embedded = false }: TaskWorklogProps) {
   const { t, i18n } = useTranslation();
   const { user, currentOrganization } = useAuth();
   const { data: timeLogs = [], isLoading } = useTaskTimeLogs(taskId);
@@ -27,6 +48,7 @@ export default function TaskWorklog({ taskId, taskStatus, assignedWorkerId }: Ta
   const typedTimeLogs = timeLogs as TaskTimeLog[];
 
   const isPerUnit = task?.payment_type === 'per_unit';
+  const isClosed = taskStatus === 'completed' || taskStatus === 'cancelled';
 
   const [now, setNow] = useState(() => Date.now());
   // Inline clock-out form state — prompts for units + notes when the worker
@@ -69,14 +91,21 @@ export default function TaskWorklog({ taskId, taskStatus, assignedWorkerId }: Ta
     return `${h}h ${m}m`;
   };
 
+  const computeLogHours = (log: TaskTimeLog): number => {
+    if (log.total_hours && log.total_hours > 0) return log.total_hours;
+    if (!log.end_time) return 0;
+    const startMs = new Date(log.start_time).getTime();
+    const endMs = new Date(log.end_time).getTime();
+    const breakMs = (log.break_duration || 0) * 60 * 1000;
+    return Math.max(0, (endMs - startMs - breakMs) / (1000 * 60 * 60));
+  };
+
   const totalStats = useMemo(() => {
     let totalHours = 0;
     let sessionCount = 0;
     for (const log of typedTimeLogs) {
       sessionCount++;
-      if (log.total_hours) {
-        totalHours += log.total_hours;
-      }
+      totalHours += computeLogHours(log);
     }
     return { totalHours, sessionCount };
   }, [typedTimeLogs]);
@@ -115,15 +144,11 @@ export default function TaskWorklog({ taskId, taskStatus, assignedWorkerId }: Ta
     );
   };
 
-  const canStartTimer = taskStatus === 'in_progress' && !activeLog;
+  // Allow clock-in for pending/assigned/in_progress tasks (backend auto-sets status to in_progress)
+  const canStartTimer = !activeLog && !isClosed;
 
-  return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-      <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-        <Clock className="w-5 h-5" />
-        {t('tasks.detail.worklog', 'Time Tracking')}
-      </h2>
-
+  const inner = (
+    <>
       {isLoading ? (
         <div className="flex justify-center py-4">
           <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
@@ -222,8 +247,8 @@ export default function TaskWorklog({ taskId, taskStatus, assignedWorkerId }: Ta
             </Button>
           )}
 
-          {/* Summary */}
-          {typedTimeLogs.length > 0 && (
+          {/* Summary (standalone card only) */}
+          {!embedded && typedTimeLogs.length > 0 && (
             <div className="border-t dark:border-gray-700 pt-3">
               <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
                 {t('tasks.detail.totalTime', 'Total: {{time}} across {{count}} sessions', {
@@ -248,8 +273,8 @@ export default function TaskWorklog({ taskId, taskStatus, assignedWorkerId }: Ta
                         : 'bg-gray-50 dark:bg-gray-700/50'
                     }`}
                   >
-                    <div className="w-7 h-7 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
-                      <User className="w-3.5 h-3.5 text-blue-600" />
+                    <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-emerald-100 text-xs font-semibold text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200">
+                      {initialsFromName(log.worker_name)}
                     </div>
                     <div className="flex-1 min-w-0">
                       {log.worker_name && (
@@ -258,6 +283,10 @@ export default function TaskWorklog({ taskId, taskStatus, assignedWorkerId }: Ta
                         </p>
                       )}
                       <p className="text-gray-500 dark:text-gray-400">
+                        <span className="capitalize">
+                          {format(new Date(log.start_time), 'd MMM', { locale: getLocale() })}
+                        </span>
+                        {' · '}
                         {format(new Date(log.start_time), 'HH:mm', { locale: getLocale() })}
                         {' → '}
                         {log.end_time
@@ -271,8 +300,8 @@ export default function TaskWorklog({ taskId, taskStatus, assignedWorkerId }: Ta
                       )}
                     </div>
                     <div className="text-right flex-shrink-0">
-                      <span className={`font-medium ${isActive ? 'text-green-700 dark:text-green-300' : 'text-gray-900 dark:text-white'}`}>
-                        {isActive ? formatElapsed(log.start_time) : formatDuration(log.total_hours)}
+                      <span className={`font-medium tabular-nums ${isActive ? 'text-green-700 dark:text-green-300' : 'text-gray-900 dark:text-white'}`}>
+                        {isActive ? formatElapsed(log.start_time) : formatHoursHM(computeLogHours(log))}
                       </span>
                     </div>
                   </div>
@@ -289,6 +318,35 @@ export default function TaskWorklog({ taskId, taskStatus, assignedWorkerId }: Ta
           )}
         </div>
       )}
+
+      {/* Embedded total bar — matches task detail mockup */}
+      {embedded && (typedTimeLogs.length > 0 || (task?.estimated_duration != null && Number(task.estimated_duration) > 0)) && (
+        <div className="mt-4 flex items-center justify-between rounded-lg bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-100">
+          <span>{t('tasks.detail.totalLabel', 'Total')}</span>
+          <span className="tabular-nums">
+            {formatHoursHM(totalStats.totalHours)}
+            {task?.estimated_duration ? (
+              <span className="text-emerald-700/90 dark:text-emerald-300/90">
+                {' '}/ {task.estimated_duration}h
+              </span>
+            ) : null}
+          </span>
+        </div>
+      )}
+    </>
+  );
+
+  if (embedded) {
+    return <div className="space-y-4">{inner}</div>;
+  }
+
+  return (
+    <div className="rounded-lg bg-white p-6 shadow dark:bg-gray-800">
+      <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-white">
+        <Clock className="h-5 w-5" />
+        {t('tasks.detail.worklog', 'Time Tracking')}
+      </h2>
+      {inner}
     </div>
   );
 }

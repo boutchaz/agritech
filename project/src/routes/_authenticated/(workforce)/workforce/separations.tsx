@@ -2,9 +2,10 @@ import { useState, type ReactNode } from 'react';
 import { Link, createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Loader2, Plus, ChevronRight } from 'lucide-react';
+import { Loader2, Plus, ChevronRight, Building2, Users, LogOut } from 'lucide-react';
 import { withRouteProtection } from '@/components/authorization/withRouteProtection';
 import { useAuth } from '@/hooks/useAuth';
+import ModernPageHeader from '@/components/ModernPageHeader';
 import { useWorkers } from '@/hooks/useWorkers';
 import { useCreateSeparation, useSeparations } from '@/hooks/useEmployeeLifecycle';
 import type {
@@ -63,37 +64,40 @@ function SeparationsPage() {
   const seps = query.data ?? [];
 
   return (
-    <div className="p-6 space-y-6 max-w-6xl">
-      <header className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold">{t('separations.title', 'Separations')}</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            {t(
-              'separations.subtitle',
-              'Track resignations, terminations, end-of-contract and full & final settlements.',
-            )}
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as typeof statusFilter)}>
-            <SelectTrigger className="w-44">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{t('common.all', 'All')}</SelectItem>
-              <SelectItem value="pending">{t('separations.status.pending', 'Pending')}</SelectItem>
-              <SelectItem value="notice_period">{t('separations.status.notice_period', 'Notice period')}</SelectItem>
-              <SelectItem value="relieved">{t('separations.status.relieved', 'Relieved')}</SelectItem>
-              <SelectItem value="settled">{t('separations.status.settled', 'Settled')}</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button onClick={() => setCreating(true)}>
-            <Plus className="w-4 h-4 mr-2" />
-            {t('separations.create', 'New separation')}
-          </Button>
-        </div>
-      </header>
-
+    <>
+      <ModernPageHeader
+        breadcrumbs={[
+          { icon: Building2, label: currentOrganization?.name ?? '', path: '/dashboard' },
+          { icon: Users, label: t('nav.workforce', 'Workforce'), path: '/workforce/employees' },
+          { icon: LogOut, label: t('separations.title', 'Separations'), isActive: true },
+        ]}
+        title={t('separations.title', 'Separations')}
+        subtitle={t(
+          'separations.subtitle',
+          'Track resignations, terminations, end-of-contract and full & final settlements.',
+        )}
+        actions={
+          <>
+            <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as typeof statusFilter)}>
+              <SelectTrigger className="w-44">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t('common.all', 'All')}</SelectItem>
+                <SelectItem value="pending">{t('separations.status.pending', 'Pending')}</SelectItem>
+                <SelectItem value="notice_period">{t('separations.status.notice_period', 'Notice period')}</SelectItem>
+                <SelectItem value="relieved">{t('separations.status.relieved', 'Relieved')}</SelectItem>
+                <SelectItem value="settled">{t('separations.status.settled', 'Settled')}</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button onClick={() => setCreating(true)}>
+              <Plus className="w-4 h-4 mr-2" />
+              {t('separations.create', 'New separation')}
+            </Button>
+          </>
+        }
+      />
+      <div className="p-3 sm:p-4 lg:p-6 space-y-6">
       {query.isLoading ? (
         <div className="flex items-center justify-center h-40">
           <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
@@ -122,7 +126,8 @@ function SeparationsPage() {
           }}
         />
       )}
-    </div>
+      </div>
+    </>
   );
 }
 

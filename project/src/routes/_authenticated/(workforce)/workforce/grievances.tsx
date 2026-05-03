@@ -2,9 +2,10 @@ import { useState, type ReactNode } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Loader2, Plus, AlertCircle, ShieldAlert } from 'lucide-react';
+import { Loader2, Plus, AlertCircle, ShieldAlert, Building2, Users, AlertTriangle } from 'lucide-react';
 import { withRouteProtection } from '@/components/authorization/withRouteProtection';
 import { useAuth } from '@/hooks/useAuth';
+import ModernPageHeader from '@/components/ModernPageHeader';
 import { useWorkers } from '@/hooks/useWorkers';
 import {
   useCreateGrievance,
@@ -71,33 +72,36 @@ function GrievancesPage() {
   const workerList = (workers.data ?? []).map((w) => ({ id: w.id, name: `${w.first_name} ${w.last_name}` }));
 
   return (
-    <div className="p-6 space-y-6 max-w-6xl">
-      <header className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold">{t('grievances.title', 'Grievances')}</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            {t('grievances.subtitle', 'Confidential channel for worker complaints, harassment, safety concerns.')}
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as typeof statusFilter)}>
-            <SelectTrigger className="w-44">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{t('common.all', 'All')}</SelectItem>
-              {STATUSES.map((s) => (
-                <SelectItem key={s} value={s}>{s}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button onClick={() => setCreating(true)} disabled={!workerList.length}>
-            <Plus className="w-4 h-4 mr-2" />
-            {t('grievances.create', 'New grievance')}
-          </Button>
-        </div>
-      </header>
-
+    <>
+      <ModernPageHeader
+        breadcrumbs={[
+          { icon: Building2, label: currentOrganization?.name ?? '', path: '/dashboard' },
+          { icon: Users, label: t('nav.workforce', 'Workforce'), path: '/workforce/employees' },
+          { icon: AlertTriangle, label: t('grievances.title', 'Grievances'), isActive: true },
+        ]}
+        title={t('grievances.title', 'Grievances')}
+        subtitle={t('grievances.subtitle', 'Confidential channel for worker complaints, harassment, safety concerns.')}
+        actions={
+          <>
+            <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as typeof statusFilter)}>
+              <SelectTrigger className="w-44">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t('common.all', 'All')}</SelectItem>
+                {STATUSES.map((s) => (
+                  <SelectItem key={s} value={s}>{s}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button onClick={() => setCreating(true)} disabled={!workerList.length}>
+              <Plus className="w-4 h-4 mr-2" />
+              {t('grievances.create', 'New grievance')}
+            </Button>
+          </>
+        }
+      />
+      <div className="p-3 sm:p-4 lg:p-6 space-y-6">
       {query.isLoading ? (
         <div className="flex items-center justify-center h-40">
           <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
@@ -159,7 +163,8 @@ function GrievancesPage() {
           }}
         />
       )}
-    </div>
+      </div>
+    </>
   );
 }
 

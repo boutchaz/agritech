@@ -11,10 +11,13 @@ import {
   FileText,
   Star,
   ChevronRight,
+  Building2,
+  Users,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useMyHrSummary } from '@/hooks/useHrAdvanced';
-import { HrPageHeader } from '@/components/HrPageHeader';
+import ModernPageHeader from '@/components/ModernPageHeader';
+import { HrStatGrid } from '@/components/HrStatGrid';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -42,36 +45,50 @@ function MyHrPage() {
   const data = query.data;
   if (!data?.worker) {
     return (
-      <div className="p-6 max-w-3xl">
-        <HrPageHeader
-          icon={User}
+      <>
+        <ModernPageHeader
+          breadcrumbs={[
+            { icon: Building2, label: currentOrganization?.name ?? '', path: '/dashboard' },
+            { icon: Users, label: t('nav.workforce', 'Workforce'), path: '/workforce/employees' },
+            { icon: User, label: t('myHr.title', 'My HR'), isActive: true },
+          ]}
           title={t('myHr.title', 'My HR')}
           subtitle={t('myHr.subtitle', 'Your personal HR dashboard')}
         />
-        <Card className="mt-6">
-          <CardContent className="py-10 text-center">
-            <User className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-            <p className="text-sm text-gray-500">
-              {t(
-                'myHr.noWorkerLink',
-                'Your account is not linked to a worker profile yet. Ask your HR admin to link your user.',
-              )}
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+        <div className="p-3 sm:p-4 lg:p-6 space-y-6">
+          <Card>
+            <CardContent className="py-10 text-center">
+              <User className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+              <p className="text-sm text-gray-500">
+                {t(
+                  'myHr.noWorkerLink',
+                  'Your account is not linked to a worker profile yet. Ask your HR admin to link your user.',
+                )}
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      </>
     );
   }
 
   const w = data.worker;
   const totalRemaining = data.leave_balances.reduce((s, b) => s + Number(b.remaining_days || 0), 0);
+  const fullName = `${profile?.first_name ?? w.first_name} ${profile?.last_name ?? w.last_name}`;
 
   return (
-    <div className="p-6 space-y-6 max-w-6xl">
-      <HrPageHeader
-        icon={User}
-        title={`${profile?.first_name ?? w.first_name} ${profile?.last_name ?? w.last_name}`}
+    <>
+      <ModernPageHeader
+        breadcrumbs={[
+          { icon: Building2, label: currentOrganization?.name ?? '', path: '/dashboard' },
+          { icon: Users, label: t('nav.workforce', 'Workforce'), path: '/workforce/employees' },
+          { icon: User, label: fullName, isActive: true },
+        ]}
+        title={fullName}
         subtitle={t('myHr.subtitle', 'Your personal HR dashboard')}
+      />
+      <div className="p-3 sm:p-4 lg:p-6 space-y-6">
+      <HrStatGrid
         stats={[
           {
             label: t('myHr.leaveRemaining', 'Leave remaining'),
@@ -310,7 +327,8 @@ function MyHrPage() {
           </Button>
         </Link>
       </div>
-    </div>
+      </div>
+    </>
   );
 }
 

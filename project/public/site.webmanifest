@@ -1,7 +1,7 @@
 {
   "name": "AgroGina - Gestion Agricole Intelligente",
   "short_name": "AgroGina",
-  "description": "Plateforme complète de gestion agricole au Maroc",
+  "description": "ERP agricole, imagerie satellite et AgromindIA — parcelles, équipes, stocks et comptabilité pour exploitations marocaines.",
   "start_url": "/dashboard",
   "display": "standalone",
   "background_color": "#ffffff",

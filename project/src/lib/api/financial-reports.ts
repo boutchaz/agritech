@@ -27,8 +27,15 @@ export interface BalanceSheetRow {
   display_balance: number;
 }
 
+export type ProfitLossSection =
+  | 'direct_income'
+  | 'other_income'
+  | 'cogs'
+  | 'indirect_expense'
+  | 'other_expense';
+
 export interface ProfitLossRow {
-  section: 'revenue' | 'expenses';
+  section: ProfitLossSection;
   account_id: string;
   account_code: string;
   account_name: string;
@@ -38,6 +45,23 @@ export interface ProfitLossRow {
   total_credit: number;
   balance: number;
   display_amount: number;
+  budget_amount?: number | null;
+  variance?: number | null;
+  variance_percentage?: number | null;
+  by_currency?: Array<{ currency: string; fc_amount: number; base_amount: number }>;
+}
+
+export interface ProfitLossFilters {
+  cost_center_id?: string;
+  farm_id?: string;
+  parcel_id?: string;
+  fiscal_year_id?: string;
+  include_zero_balances?: boolean;
+  include_budget?: boolean;
+  include_by_currency?: boolean;
+  compare_with?: 'previous_period' | 'previous_year';
+  /** Phase 4c: 'accrual' (default) or 'cash'. */
+  basis?: 'accrual' | 'cash';
 }
 
 export interface GeneralLedgerRow {
@@ -97,13 +121,57 @@ export interface BalanceSheetReport {
 export interface ProfitLossReport {
   start_date: string;
   end_date: string;
-  revenue: ProfitLossRow[];
-  expenses: ProfitLossRow[];
+  direct_income: ProfitLossRow[];
+  other_income: ProfitLossRow[];
+  cogs: ProfitLossRow[];
+  indirect_expenses: ProfitLossRow[];
+  other_expenses: ProfitLossRow[];
   totals: {
-    total_revenue: number;
+    total_direct_income: number;
+    total_other_income: number;
+    total_income: number;
+    total_cogs: number;
+    total_indirect_expenses: number;
+    total_other_expenses: number;
     total_expenses: number;
+    gross_profit: number;
+    operating_profit: number;
     net_income: number;
+    ebitda: number;
+    total_budget?: number;
+    total_variance?: number;
   };
+}
+
+export interface ConsolidatedProfitLossRow extends ProfitLossRow {
+  by_org?: Array<{ organization_id: string; organization_name: string; amount: number }>;
+}
+
+export interface ConsolidatedProfitLossReport {
+  start_date: string;
+  end_date: string;
+  direct_income: ConsolidatedProfitLossRow[];
+  other_income: ConsolidatedProfitLossRow[];
+  cogs: ConsolidatedProfitLossRow[];
+  indirect_expenses: ConsolidatedProfitLossRow[];
+  other_expenses: ConsolidatedProfitLossRow[];
+  totals: ProfitLossReport['totals'];
+  group_id: string;
+  group_name: string;
+  group_base_currency: string;
+  member_organizations: Array<{
+    id: string;
+    name: string;
+    currency: string;
+    rate_used: number;
+  }>;
+  eliminations: Array<{ account_code: string; amount: number }>;
+}
+
+export interface ProfitLossComparisonReport {
+  current: ProfitLossReport;
+  comparison: ProfitLossReport;
+  compare_with: 'previous_period' | 'previous_year';
 }
 
 export interface GeneralLedgerReport {
@@ -221,14 +289,55 @@ export const financialReportsApi = {
   },
 
   /**
-   * Get profit and loss statement
+   * Get profit and loss statement (no comparison).
    */
-  async getProfitLoss(startDate?: string, endDate?: string, organizationId?: string, fiscalYearId?: string): Promise<ProfitLossReport> {
+  async getProfitLoss(
+    startDate?: string,
+    endDate?: string,
+    organizationId?: string,
+    fiscalYearId?: string,
+    filters?: Omit<ProfitLossFilters, 'compare_with' | 'fiscal_year_id'>,
+  ): Promise<ProfitLossReport> {
     const params = new URLSearchParams();
     if (startDate) params.append('start_date', startDate);
     if (endDate) params.append('end_date', endDate);
     if (fiscalYearId) params.append('fiscal_year_id', fiscalYearId);
+    if (filters?.cost_center_id) params.append('cost_center_id', filters.cost_center_id);
+    if (filters?.farm_id) params.append('farm_id', filters.farm_id);
+    if (filters?.parcel_id) params.append('parcel_id', filters.parcel_id);
+    if (filters?.include_zero_balances) params.append('include_zero_balances', 'true');
+    if (filters?.include_budget) params.append('include_budget', 'true');
+    if (filters?.include_by_currency) params.append('include_by_currency', 'true');
+    if (filters?.basis) params.append('basis', filters.basis);
     return apiClient.get<ProfitLossReport>(
+      `/api/v1/financial-reports/profit-loss?${params.toString()}`,
+      {},
+      organizationId
+    );
+  },
+
+  /**
+   * Get profit and loss statement with a comparison period.
+   */
+  async getProfitLossComparison(
+    startDate: string,
+    endDate: string,
+    compareWith: 'previous_period' | 'previous_year',
+    organizationId?: string,
+    fiscalYearId?: string,
+    filters?: Omit<ProfitLossFilters, 'compare_with' | 'fiscal_year_id'>,
+  ): Promise<ProfitLossComparisonReport> {
+    const params = new URLSearchParams();
+    params.append('start_date', startDate);
+    params.append('end_date', endDate);
+    params.append('compare_with', compareWith);
+    if (fiscalYearId) params.append('fiscal_year_id', fiscalYearId);
+    if (filters?.cost_center_id) params.append('cost_center_id', filters.cost_center_id);
+    if (filters?.farm_id) params.append('farm_id', filters.farm_id);
+    if (filters?.parcel_id) params.append('parcel_id', filters.parcel_id);
+    if (filters?.include_zero_balances) params.append('include_zero_balances', 'true');
+    if (filters?.basis) params.append('basis', filters.basis);
+    return apiClient.get<ProfitLossComparisonReport>(
       `/api/v1/financial-reports/profit-loss?${params.toString()}`,
       {},
       organizationId
@@ -305,6 +414,92 @@ export const financialReportsApi = {
       `/api/v1/financial-reports/aged-payables${query ? `?${query}` : ''}`,
       {},
       organizationId
+    );
+  },
+
+  async closeFiscalYear(
+    body: {
+      fiscal_year_id: string;
+      retained_earnings_account_id: string;
+      closing_date?: string;
+      remarks?: string;
+    },
+    organizationId?: string,
+  ): Promise<{ journalEntryId: string; entryNumber: string; netIncome: number }> {
+    return apiClient.post(
+      `/api/v1/financial-reports/close-fiscal-year`,
+      body,
+      {},
+      organizationId,
+    );
+  },
+
+  async reopenFiscalYear(
+    fiscalYearId: string,
+    organizationId?: string,
+  ): Promise<{ reversalEntryId: string; reversalNumber: string }> {
+    return apiClient.post(
+      `/api/v1/financial-reports/reopen-fiscal-year`,
+      { fiscal_year_id: fiscalYearId },
+      {},
+      organizationId,
+    );
+  },
+
+  async fxRevaluate(
+    body: { as_of_date: string; remarks?: string; base_currency?: string },
+    organizationId?: string,
+  ): Promise<{
+    journalEntryId: string;
+    entryNumber: string;
+    netGainLoss: number;
+    revaluedAccounts: number;
+  }> {
+    return apiClient.post(
+      `/api/v1/financial-reports/fx-revaluate`,
+      body,
+      {},
+      organizationId,
+    );
+  },
+
+  async fxRevaluateReverse(
+    body: { as_of_date: string; reason?: string },
+    organizationId?: string,
+  ): Promise<{ reversalEntryId: string; reversalNumber: string }> {
+    return apiClient.post(
+      `/api/v1/financial-reports/fx-revaluate/reverse`,
+      body,
+      {},
+      organizationId,
+    );
+  },
+
+  /**
+   * Phase 4f: consolidated P&L across an organization group.
+   */
+  async getConsolidatedProfitLoss(
+    params: {
+      groupId: string;
+      start: string;
+      end: string;
+      basis?: 'accrual' | 'cash';
+      include_zero_balances?: boolean;
+      include_eliminations?: boolean;
+    },
+    organizationId?: string,
+  ): Promise<ConsolidatedProfitLossReport> {
+    const qs = new URLSearchParams();
+    qs.append('group_id', params.groupId);
+    qs.append('start', params.start);
+    qs.append('end', params.end);
+    if (params.basis) qs.append('basis', params.basis);
+    if (params.include_zero_balances) qs.append('include_zero_balances', 'true');
+    if (params.include_eliminations === false) qs.append('include_eliminations', 'false');
+    return apiClient.get<ConsolidatedProfitLossReport>(
+      `/api/v1/financial-reports/consolidated-profit-loss?${qs.toString()}`,
+      {},
+      organizationId,
     );
   },
 

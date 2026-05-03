@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { X, MapPin, Users, Package, Plus, Trash2 } from 'lucide-react';
+import { MapPin, Users, Package, Plus, Trash2 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -28,6 +28,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../ui/radix-select';
+import { ResponsiveDialog } from '../ui/responsive-dialog';
 
 interface TaskFormProps {
   task?: Task | null;
@@ -35,6 +36,7 @@ interface TaskFormProps {
   farms: Array<{ id: string; name: string }>;
   onClose: () => void;
   onSuccess: () => void;
+  initialWorkerId?: string;
 }
 
 const createTaskFormSchema = (t: (key: string) => string) => z.object({
@@ -54,6 +56,7 @@ const createTaskFormSchema = (t: (key: string) => string) => z.object({
   units_required: z.number().optional(),
   rate_per_unit: z.number().optional(),
   forfait_amount: z.number().optional(),
+  payment_amount: z.number().optional(),
   crop_id: z.string(),
   crop_cycle_id: z.string(),
   campaign_id: z.string(),
@@ -87,6 +90,7 @@ const TaskForm = ({
   farms,
   onClose,
   onSuccess,
+  initialWorkerId,
 }: TaskFormProps) => {
   const { t } = useTranslation();
   const taskFormSchema = useMemo(() => createTaskFormSchema(t), [t]);
@@ -96,7 +100,7 @@ const TaskForm = ({
   const nextWeek = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
   const [selectedWorkerIds, setSelectedWorkerIds] = useState<string[]>(
-    task?.assigned_to ? [task.assigned_to] : []
+    task?.assigned_to ? [task.assigned_to] : initialWorkerId ? [initialWorkerId] : []
   );
 
   // payment_included_in_salary per fixed_salary worker
@@ -122,7 +126,7 @@ const TaskForm = ({
       priority: task?.priority || 'medium',
       farm_id: task?.farm_id || '',
       parcel_id: task?.parcel_id || '',
-      assigned_to: task?.assigned_to || '',
+      assigned_to: task?.assigned_to || initialWorkerId || '',
       scheduled_start: task ? formatDateForInput(task.scheduled_start) : today,
       due_date: task ? formatDateForInput(task.due_date) : nextWeek,
       estimated_duration: task?.estimated_duration || 8,
@@ -132,6 +136,7 @@ const TaskForm = ({
       units_required: task?.units_required,
       rate_per_unit: task?.rate_per_unit,
       forfait_amount: taskForfaitAmount,
+      payment_amount: (task as Task & { payment_amount?: number } | null)?.payment_amount ?? undefined,
       crop_id: '',
       crop_cycle_id: task?.crop_cycle_id || '',
       campaign_id: task?.campaign_id || '',
@@ -159,6 +164,7 @@ const TaskForm = ({
   const watchCropCycleId = watch('crop_cycle_id');
   const watchUnitsRequired = watch('units_required');
   const watchRatePerUnit = watch('rate_per_unit');
+  const watchEstimatedDuration = watch('estimated_duration');
 
   // Backward-compat alias for template references
   const formData = {
@@ -173,6 +179,7 @@ const TaskForm = ({
     crop_cycle_id: watchCropCycleId,
     units_required: watchUnitsRequired,
     rate_per_unit: watchRatePerUnit,
+    estimated_duration: watchEstimatedDuration,
   };
 
   useEffect(() => {
@@ -417,23 +424,32 @@ const TaskForm = ({
   }, []);
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 bg-white dark:bg-gray-800 border-b dark:border-gray-700 px-6 py-4 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-            {task ? t('tasks.form.editTitle') : t('tasks.form.createTitle')}
-          </h2>
+    <ResponsiveDialog
+      open
+      onOpenChange={(o) => !o && onClose()}
+      size="2xl"
+      title={task ? t('tasks.form.editTitle') : t('tasks.form.createTitle')}
+      footer={
+        <div className="flex justify-end gap-3">
           <Button
-            size="icon"
-            variant="ghost"
+            type="button"
+            variant="outline"
             onClick={onClose}
-            aria-label={t('common.close', 'Close')}
+            disabled={isSubmitting}
           >
-            <X className="w-6 h-6" />
+            {t('tasks.form.cancel')}
+          </Button>
+          <Button
+            form="task-form"
+            type="submit"
+            disabled={createTask.isPending || updateTask.isPending || isSubmitting}
+          >
+            {createTask.isPending || updateTask.isPending || isSubmitting ? t('tasks.form.saving') : t('tasks.form.save')}
           </Button>
         </div>
-
-        <form onSubmit={form.handleSubmit(onSubmit, (errs) => console.error('Form validation errors:', errs))} className="p-6 space-y-4">
+      }
+    >
+      <form id="task-form" onSubmit={form.handleSubmit(onSubmit, (errs) => console.error('Form validation errors:', errs))} className="space-y-4">
           {/* Title */}
           <div className="space-y-2">
             <Label htmlFor="title">{t('tasks.form.titleLabel')}</Label>
@@ -782,7 +798,10 @@ const TaskForm = ({
             {selectedWorkerIds.length > 0 &&
               workers.filter(w => selectedWorkerIds.includes(w.id) && w.worker_type === 'fixed_salary').length > 0 && (
               <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                <p className="text-sm text-blue-700 dark:text-blue-300">{t('tasks.form.fixedSalaryNote')}</p>
+                <p className="text-sm text-blue-700 dark:text-blue-300">
+                  <strong>{t('tasks.form.fixedSalaryNoteLabel', 'Note:')} </strong>
+                  {t('tasks.form.fixedSalaryNoteText', 'Fixed salary workers are already paid monthly. Payment for this task is optional (bonus/premium for exceptional work).')}
+                </p>
               </div>
             )}
 
@@ -850,6 +869,38 @@ const TaskForm = ({
                 </div>
               )}
             </div>
+
+            {/* Payment amount (daily / monthly) — auto-filled from worker.daily_rate × duration; overridable */}
+            {(formData.payment_type === 'daily' || formData.payment_type === 'monthly') && (
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="payment_amount">{t('tasks.form.paymentAmountLabel', 'Montant à payer (MAD)')}</Label>
+                  <Input
+                    id="payment_amount"
+                    type="number"
+                    {...register('payment_amount', { valueAsNumber: true })}
+                    invalid={!!errors.payment_amount}
+                    min="0"
+                    step="0.01"
+                    placeholder={(() => {
+                      const w = workers.find(x => selectedWorkerIds.includes(x.id) && x.daily_rate);
+                      const dur = formData.estimated_duration ?? 0;
+                      const rate = w?.daily_rate ?? 0;
+                      const suggested = formData.payment_type === 'daily' && dur && rate
+                        ? (rate * (dur / 8)).toFixed(2)
+                        : '';
+                      return suggested || t('tasks.form.paymentAmountPlaceholder', 'Ex: 100.00');
+                    })()}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {t('tasks.form.paymentAmountHint', 'Auto-suggéré depuis le tarif journalier; modifiable.')}
+                  </p>
+                  {errors.payment_amount && (
+                    <p className="text-red-600 text-sm mt-1">{errors.payment_amount.message}</p>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Forfait amount (only if payment type is forfait) */}
             {formData.payment_type === 'forfait' && (
@@ -1095,27 +1146,8 @@ const TaskForm = ({
               <p className="text-red-600 text-sm mt-1">{errors.notes.message}</p>
             )}
           </div>
-
-          {/* Actions */}
-          <div className="flex justify-end gap-3 pt-4 border-t">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onClose}
-              disabled={isSubmitting}
-            >
-              {t('tasks.form.cancel')}
-            </Button>
-            <Button
-              type="submit"
-              disabled={createTask.isPending || updateTask.isPending || isSubmitting}
-            >
-              {createTask.isPending || updateTask.isPending || isSubmitting ? t('tasks.form.saving') : t('tasks.form.save')}
-            </Button>
-          </div>
         </form>
-      </div>
-    </div>
+    </ResponsiveDialog>
   );
 };
 

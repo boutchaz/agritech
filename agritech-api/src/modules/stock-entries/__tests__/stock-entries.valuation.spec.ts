@@ -9,6 +9,7 @@ import { StockEntryApprovalsService } from '../stock-entry-approvals.service';
 import { StockEntriesService } from '../stock-entries.service';
 import { StockReservationsService } from '../stock-reservations.service';
 import { StockEntryType, ValuationMethod } from '../dto/create-stock-entry.dto';
+import { AccountsService } from '../../accounts/accounts.service';
 
 type ValuationResult = {
   totalCost: number;
@@ -39,6 +40,7 @@ type ReversalInvoker = (
   originalEntry: Record<string, unknown>,
   reversalEntry: Record<string, unknown>,
   item: Record<string, unknown>,
+  reversalItem: Record<string, unknown>,
 ) => Promise<void>;
 
 const createMockClient = (...results: MockQueryResult[]): MockClient => {
@@ -74,6 +76,13 @@ const mockStockReservationsService = {
 
 const mockStockEntryApprovalsService = {
   assertApprovedForPosting: jest.fn(),
+  resolveUserRole: jest.fn(),
+  requiresApproval: jest.fn(),
+  requestApprovalInTransaction: jest.fn(),
+};
+
+const mockAccountsService = {
+  seedMoroccanChartOfAccounts: jest.fn(),
 };
 
 describe('StockEntriesService — Valuation', () => {
@@ -89,6 +98,7 @@ describe('StockEntriesService — Valuation', () => {
         { provide: NotificationsService, useValue: mockNotificationsService },
         { provide: StockReservationsService, useValue: mockStockReservationsService },
         { provide: StockEntryApprovalsService, useValue: mockStockEntryApprovalsService },
+        { provide: AccountsService, useValue: mockAccountsService },
       ],
     }).compile();
 
@@ -184,6 +194,7 @@ describe('StockEntriesService — Valuation', () => {
   describe('Valuation reversal', () => {
     it('should restore stock_valuation on cancel/reversal', async () => {
       const client = createMockClient(
+        { rows: [{ cost_per_unit: '103.3333333333', total_cost: '1240' }] },
         { rows: [] },
         { rows: [{ current_balance: '8' }] },
         { rows: [] },
@@ -213,21 +224,36 @@ describe('StockEntriesService — Valuation', () => {
           batch_number: 'BATCH-01',
           serial_number: null,
         },
+        {
+          id: 'reversal-item-line-1',
+        },
       );
 
       expect(client.query).toHaveBeenNthCalledWith(
-        1,
+        2,
         expect.stringContaining('INSERT INTO stock_valuation'),
-        ['org-1', 'item-1', null, 'warehouse-1', 12, 103.3333333333, 'reversal-1', 'BATCH-01', null, 12],
+        expect.any(Array),
       );
       expect(client.query).toHaveBeenNthCalledWith(
-        3,
+        4,
         expect.stringContaining('INSERT INTO stock_movements'),
         expect.any(Array),
       );
 
-      const movementParams = client.query.mock.calls[2][1] as unknown[];
-      expect(movementParams.slice(0, 10)).toEqual([
+      const movementParams = client.query.mock.calls[3][1] as unknown[];
+      const valuationInsertParams = client.query.mock.calls[1][1] as unknown[];
+      expect(valuationInsertParams.slice(0, 6)).toEqual([
+        'org-1',
+        'item-1',
+        null,
+        'warehouse-1',
+        12,
+        expect.any(Number),
+      ]);
+      expect(valuationInsertParams[6]).toBeCloseTo(1240, 8);
+      expect(valuationInsertParams.slice(7)).toEqual(['reversal-1', 'BATCH-01', null, 12]);
+
+      expect(movementParams.slice(0, 9)).toEqual([
         'org-1',
         'item-1',
         null,
@@ -237,10 +263,10 @@ describe('StockEntriesService — Valuation', () => {
         12,
         'kg',
         20,
-        103.3333333333,
       ]);
+      expect(movementParams[9]).toBeCloseTo(103.33333333333333, 8);
       expect(movementParams[10]).toBeCloseTo(1240, 8);
-      expect(movementParams.slice(11)).toEqual(['reversal-1', 'item-line-1', 'BATCH-01', null]);
+      expect(movementParams.slice(11)).toEqual(['reversal-1', 'reversal-item-line-1', 'BATCH-01', null]);
     });
   });
 

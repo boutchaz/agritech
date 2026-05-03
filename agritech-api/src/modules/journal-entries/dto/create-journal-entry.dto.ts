@@ -1,4 +1,4 @@
-import { IsUUID, IsString, IsDate, IsArray, IsNumber, IsOptional, IsEnum, ValidateNested } from 'class-validator';
+import { IsUUID, IsString, IsDate, IsArray, IsNumber, IsOptional, IsEnum, ValidateNested, Length } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export enum JournalEntryType {
@@ -6,6 +6,8 @@ export enum JournalEntryType {
   REVENUE = 'revenue',
   TRANSFER = 'transfer',
   ADJUSTMENT = 'adjustment',
+  PERIOD_CLOSING = 'period_closing',
+  FX_REVALUATION = 'fx_revaluation',
 }
 
 export enum JournalEntryStatus {
@@ -27,6 +29,26 @@ export class JournalItemDto {
   @IsString()
   @IsOptional()
   description?: string;
+
+  // Multi-currency FX (4d) — optional. If not provided, derived in service:
+  // currency = account.currency_code or org base; rate = 1 if same as base;
+  // fc_debit/fc_credit default to debit/credit.
+  @IsOptional()
+  @IsString()
+  @Length(3, 3)
+  currency?: string;
+
+  @IsOptional()
+  @IsNumber()
+  exchange_rate?: number;
+
+  @IsOptional()
+  @IsNumber()
+  fc_debit?: number;
+
+  @IsOptional()
+  @IsNumber()
+  fc_credit?: number;
 }
 
 export class CreateJournalEntryDto {
@@ -70,4 +92,9 @@ export class CreateJournalEntryDto {
 
   @IsUUID()
   created_by: string;
+
+  // Phase 4f: tag inter-org transaction pair (eliminated on consolidation)
+  @IsOptional()
+  @IsUUID()
+  intercompany_pair_id?: string;
 }

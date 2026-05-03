@@ -321,7 +321,7 @@ export class EquipmentService {
 
     const { data: existing, error: existingError } = await client
       .from('equipment_maintenance')
-      .select('id')
+      .select('id, equipment_id, cost, maintenance_date, type, description, cost_center_id, journal_entry_id')
       .eq('id', maintenanceId)
       .eq('organization_id', organizationId)
       .maybeSingle();
@@ -344,6 +344,68 @@ export class EquipmentService {
     if (error) {
       this.logger.error(`Failed to update maintenance record: ${error.message}`);
       throw new InternalServerErrorException('Failed to update maintenance record');
+    }
+
+    // If any accounting-relevant field changed, reverse the prior JE and post a fresh one.
+    const accountingFieldChanged =
+      (updateDto.cost !== undefined && Number(updateDto.cost) !== Number(existing.cost ?? 0)) ||
+      (updateDto.maintenance_date !== undefined && updateDto.maintenance_date !== existing.maintenance_date) ||
+      (updateDto.cost_center_id !== undefined && updateDto.cost_center_id !== existing.cost_center_id) ||
+      (updateDto.type !== undefined && updateDto.type !== existing.type) ||
+      (updateDto.description !== undefined && updateDto.description !== existing.description);
+
+    if (accountingFieldChanged) {
+      // Reverse existing JE if any
+      if (existing.journal_entry_id) {
+        try {
+          await this.accountingAutomationService.createReversalEntry(
+            organizationId,
+            existing.journal_entry_id,
+            userId,
+            `Maintenance record updated: ${maintenanceId}`,
+          );
+          await client
+            .from('equipment_maintenance')
+            .update({ journal_entry_id: null })
+            .eq('id', maintenanceId);
+        } catch (reversalError: any) {
+          this.logger.error(`Failed to reverse JE for maintenance ${maintenanceId}: ${reversalError?.message}`);
+          throw new BadRequestException(`Failed to reverse prior journal entry: ${reversalError?.message}`);
+        }
+      }
+
+      // Post fresh JE if new cost > 0
+      const newCost = Number(data.cost ?? 0);
+      if (newCost > 0) {
+        const { data: equipment } = await client
+          .from('equipment_assets')
+          .select('name, farm_id')
+          .eq('id', data.equipment_id)
+          .maybeSingle();
+
+        try {
+          const journalEntry = await this.accountingAutomationService.createJournalEntryFromMaintenance(
+            organizationId,
+            data.id,
+            newCost,
+            new Date(data.maintenance_date),
+            data.description || `Maintenance: ${data.type} - ${equipment?.name ?? ''}`,
+            userId,
+            equipment?.name ?? '',
+            data.type,
+            data.cost_center_id,
+            equipment?.farm_id,
+          );
+
+          await client
+            .from('equipment_maintenance')
+            .update({ journal_entry_id: journalEntry.id })
+            .eq('id', maintenanceId);
+        } catch (jeError: any) {
+          this.logger.error(`Failed to create JE on maintenance update ${maintenanceId}: ${jeError?.message}`);
+          throw new BadRequestException(`Failed to create journal entry: ${jeError?.message}`);
+        }
+      }
     }
 
     return data;

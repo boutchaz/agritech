@@ -2,9 +2,10 @@ import { useState, type ReactNode } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Loader2, Plus, Pencil, Power, PowerOff } from 'lucide-react';
+import { Loader2, Plus, Pencil, Power, PowerOff, Building2, Users, Calendar } from 'lucide-react';
 import { withRouteProtection } from '@/components/authorization/withRouteProtection';
 import { useAuth } from '@/hooks/useAuth';
+import ModernPageHeader from '@/components/ModernPageHeader';
 import {
   useCreateLeaveType,
   useDeactivateLeaveType,
@@ -45,31 +46,32 @@ function LeaveTypesPage() {
   const types = query.data ?? [];
 
   return (
-    <div className="p-6 space-y-6 max-w-6xl">
-      <header className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold">
-            {t('leaveTypes.title', 'Leave Types')}
-          </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            {t(
-              'leaveTypes.subtitle',
-              'Configure the leave categories your organization grants — annual, sick, maternity, etc.',
-            )}
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <label className="flex items-center gap-2 text-sm">
-            <Switch checked={includeInactive} onCheckedChange={setIncludeInactive} />
-            {t('common.showInactive', 'Show inactive')}
-          </label>
-          <Button onClick={() => setCreating(true)}>
-            <Plus className="w-4 h-4 mr-2" />
-            {t('common.create', 'Create')}
-          </Button>
-        </div>
-      </header>
-
+    <>
+      <ModernPageHeader
+        breadcrumbs={[
+          { icon: Building2, label: currentOrganization?.name ?? '', path: '/dashboard' },
+          { icon: Users, label: t('nav.workforce', 'Workforce'), path: '/workforce/employees' },
+          { icon: Calendar, label: t('leaveTypes.title', 'Leave Types'), isActive: true },
+        ]}
+        title={t('leaveTypes.title', 'Leave Types')}
+        subtitle={t(
+          'leaveTypes.subtitle',
+          'Configure the leave categories your organization grants — annual, sick, maternity, etc.',
+        )}
+        actions={
+          <>
+            <label className="flex items-center gap-2 text-sm">
+              <Switch checked={includeInactive} onCheckedChange={setIncludeInactive} />
+              {t('common.showInactive', 'Show inactive')}
+            </label>
+            <Button onClick={() => setCreating(true)}>
+              <Plus className="w-4 h-4 mr-2" />
+              {t('common.create', 'Create')}
+            </Button>
+          </>
+        }
+      />
+      <div className="p-3 sm:p-4 lg:p-6 space-y-6">
       {query.isLoading ? (
         <div className="flex items-center justify-center h-40">
           <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
@@ -179,7 +181,8 @@ function LeaveTypesPage() {
           }}
         />
       )}
-    </div>
+      </div>
+    </>
   );
 }
 

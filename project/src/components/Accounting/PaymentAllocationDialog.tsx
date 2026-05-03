@@ -2,7 +2,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { FormField } from '@/components/ui/FormField';
-import { useInvoices } from '@/hooks/useInvoices';
+import { useInvoicesByType } from '@/hooks/useInvoices';
 import type { Payment } from '@/hooks/useAccountingPayments';
 import { useAllocatePayment } from '@/hooks/useAccountingPayments';
 import { Loader2, AlertCircle } from 'lucide-react';
@@ -22,9 +22,9 @@ export const PaymentAllocationDialog = ({
   onOpenChange,
   onAllocated,
 }: PaymentAllocationDialogProps) => {
-  const { t } = useTranslation();
+  const { t } = useTranslation('accounting');
   const invoiceType = payment.payment_type === 'receive' ? 'sales' : 'purchase';
-  const { data: invoices = [], isLoading } = useInvoices();
+  const { data: invoices = [], isLoading } = useInvoicesByType(invoiceType);
   const allocatePayment = useAllocatePayment();
   const [selectedInvoiceId, setSelectedInvoiceId] = React.useState<string>('');
   const [allocationAmount, setAllocationAmount] = React.useState<number>(0);
@@ -40,15 +40,14 @@ export const PaymentAllocationDialog = ({
 
   const eligibleInvoices = React.useMemo(() => {
     return invoices
-      .filter((invoice) => invoice.invoice_type === invoiceType)
       .filter((invoice) => {
-        const outstanding = Number(invoice.outstanding_amount ?? 0);
+        const outstanding = Number(invoice.outstanding_amount ?? invoice.grand_total ?? 0);
         if (outstanding <= 0) return false;
         if (!['submitted', 'partially_paid', 'overdue'].includes(invoice.status)) return false;
         return true;
       })
       .sort((a, b) => Number(b.outstanding_amount ?? 0) - Number(a.outstanding_amount ?? 0));
-  }, [invoices, invoiceType]);
+  }, [invoices]);
 
   const selectedInvoice = eligibleInvoices.find((invoice) => invoice.id === selectedInvoiceId);
 

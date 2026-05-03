@@ -120,10 +120,18 @@ END $$;
 DO $$ BEGIN
   CREATE TYPE accounting_payment_type AS ENUM (
     'receive',
-    'pay'
+    'pay',
+    'bank_fee'
   );
 EXCEPTION
   WHEN duplicate_object THEN null;
+END $$;
+
+-- Idempotently add bank_fee for clusters that already have the type
+DO $$ BEGIN
+  ALTER TYPE accounting_payment_type ADD VALUE IF NOT EXISTS 'bank_fee';
+EXCEPTION
+  WHEN others THEN null;
 END $$;
 
 -- Invoice Status
@@ -297,8 +305,6 @@ BEGIN
   END IF;
 END $$;
 
--- Backfill: all pre-existing organizations are considered approved
-UPDATE organizations SET approval_status = 'approved' WHERE approval_status = 'pending' AND created_at < NOW() - INTERVAL '1 minute';
 
 CREATE INDEX IF NOT EXISTS idx_organizations_slug ON organizations(slug);
 CREATE INDEX IF NOT EXISTS idx_organizations_country_code ON organizations(country_code);
@@ -1387,8 +1393,65 @@ CREATE TABLE IF NOT EXISTS journal_items (
   fiscal_year_id UUID,
   fiscal_period_id UUID,
   biological_asset_id UUID,
+  -- Multi-currency FX (4d): currency the source transaction was in,
+  -- exchange_rate to org base currency, fc_* hold foreign currency amounts.
+  -- debit/credit are always in org base currency.
+  currency CHAR(3),
+  exchange_rate DECIMAL(18, 8),
+  fc_debit DECIMAL(15, 2),
+  fc_credit DECIMAL(15, 2),
+  -- Phase 4c: Cash basis P&L. Set on items whose JE moved cash (or that touch a
+  -- cash/bank account); NULL means "not yet cash-settled" (excluded from cash-basis P&L).
+  cash_settlement_date DATE NULL,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+ALTER TABLE journal_items ADD COLUMN IF NOT EXISTS cash_settlement_date DATE NULL;
+
+-- Multi-currency FX rates (4d)
+CREATE TABLE IF NOT EXISTS exchange_rates (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+  rate_date DATE NOT NULL,
+  from_currency CHAR(3) NOT NULL,
+  to_currency CHAR(3) NOT NULL,
+  rate DECIMAL(18, 8) NOT NULL CHECK (rate > 0),
+  source VARCHAR(50) DEFAULT 'manual',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE (organization_id, rate_date, from_currency, to_currency)
+);
+CREATE INDEX IF NOT EXISTS idx_exchange_rates_lookup
+  ON exchange_rates (organization_id, from_currency, to_currency, rate_date DESC);
+
+-- =====================================================================
+-- P&L Phase 4f: Inter-organization (group) consolidation
+-- =====================================================================
+CREATE TABLE IF NOT EXISTS organization_groups (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  parent_organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  name VARCHAR(255) NOT NULL,
+  base_currency CHAR(3) NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE (parent_organization_id, name)
+);
+CREATE INDEX IF NOT EXISTS idx_org_groups_parent ON organization_groups(parent_organization_id);
+
+CREATE TABLE IF NOT EXISTS organization_group_members (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  group_id UUID NOT NULL REFERENCES organization_groups(id) ON DELETE CASCADE,
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE (group_id, organization_id)
+);
+CREATE INDEX IF NOT EXISTS idx_org_group_members_group ON organization_group_members(group_id);
+CREATE INDEX IF NOT EXISTS idx_org_group_members_org ON organization_group_members(organization_id);
+
+ALTER TABLE journal_entries
+  ADD COLUMN IF NOT EXISTS intercompany_pair_id UUID NULL;
+
+CREATE INDEX IF NOT EXISTS idx_journal_entries_intercompany
+  ON journal_entries(intercompany_pair_id)
+  WHERE intercompany_pair_id IS NOT NULL;
 
 CREATE INDEX IF NOT EXISTS idx_journal_items_entry ON journal_items(journal_entry_id);
 CREATE INDEX IF NOT EXISTS idx_journal_items_account ON journal_items(account_id);
@@ -1396,6 +1459,14 @@ CREATE INDEX IF NOT EXISTS idx_journal_items_cost_center ON journal_items(cost_c
 CREATE INDEX IF NOT EXISTS idx_journal_items_crop_cycle ON journal_items(crop_cycle_id);
 CREATE INDEX IF NOT EXISTS idx_journal_items_campaign ON journal_items(campaign_id);
 CREATE INDEX IF NOT EXISTS idx_journal_items_fiscal_year ON journal_items(fiscal_year_id);
+CREATE INDEX IF NOT EXISTS idx_journal_items_cash_settled
+  ON journal_items(cash_settlement_date)
+  WHERE cash_settlement_date IS NOT NULL;
+
+-- Phase 4c: cash_settlement_date is now set by the application layer
+-- (AccountingAutomationService.applyCashSettlementDate) after every JE post.
+DROP TRIGGER IF EXISTS trg_set_cash_settlement ON journal_entries;
+DROP FUNCTION IF EXISTS set_cash_settlement_on_payment_post();
 
 -- Invoices
 CREATE TABLE IF NOT EXISTS invoices (
@@ -1440,6 +1511,51 @@ ALTER TABLE invoices ADD COLUMN IF NOT EXISTS document_type invoice_document_typ
 ALTER TABLE invoices ADD COLUMN IF NOT EXISTS original_invoice_id UUID;
 ALTER TABLE invoices ADD COLUMN IF NOT EXISTS credit_reason TEXT;
 ALTER TABLE invoices ADD COLUMN IF NOT EXISTS credited_amount DECIMAL(15, 2) DEFAULT 0;
+-- Hybrid tax model: header default applies when a line has no tax_rate
+ALTER TABLE invoices ADD COLUMN IF NOT EXISTS default_tax_rate DECIMAL(5, 2);
+ALTER TABLE sales_orders ADD COLUMN IF NOT EXISTS default_tax_rate DECIMAL(5, 2);
+ALTER TABLE purchase_orders ADD COLUMN IF NOT EXISTS default_tax_rate DECIMAL(5, 2);
+
+-- Petty / unjustified expenses (charges non justifiées)
+-- Standalone ledger of small expenses without a formal supplier invoice. Each row
+-- posts a journal entry DR expense / CR cash on submit, similar to invoice posting.
+CREATE TABLE IF NOT EXISTS petty_expenses (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  expense_number TEXT NOT NULL,
+  expense_date DATE NOT NULL,
+  amount DECIMAL(12, 2) NOT NULL CHECK (amount > 0),
+  currency_code VARCHAR(3) DEFAULT 'MAD' REFERENCES currencies(code),
+  expense_account_id UUID REFERENCES accounts(id) ON DELETE RESTRICT,
+  cash_account_id UUID REFERENCES accounts(id) ON DELETE RESTRICT,
+  bank_account_id UUID REFERENCES bank_accounts(id) ON DELETE SET NULL,
+  description TEXT NOT NULL,
+  attachment_url TEXT,
+  farm_id UUID REFERENCES farms(id) ON DELETE SET NULL,
+  parcel_id UUID REFERENCES parcels(id) ON DELETE SET NULL,
+  status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'submitted', 'cancelled')),
+  journal_entry_id UUID REFERENCES journal_entries(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  created_by UUID REFERENCES auth.users(id),
+  submitted_at TIMESTAMPTZ,
+  UNIQUE(organization_id, expense_number)
+);
+
+CREATE INDEX IF NOT EXISTS idx_petty_expenses_org ON petty_expenses(organization_id);
+CREATE INDEX IF NOT EXISTS idx_petty_expenses_date ON petty_expenses(expense_date DESC);
+CREATE INDEX IF NOT EXISTS idx_petty_expenses_status ON petty_expenses(status);
+CREATE INDEX IF NOT EXISTS idx_petty_expenses_farm ON petty_expenses(farm_id) WHERE farm_id IS NOT NULL;
+
+ALTER TABLE petty_expenses ENABLE ROW LEVEL SECURITY;
+
+DO $$ BEGIN
+  CREATE POLICY "petty_expenses_org_access" ON petty_expenses
+    FOR ALL USING (is_organization_member(organization_id));
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+  WHEN others THEN NULL;
+END $$;
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_invoices_original_invoice') THEN
@@ -1461,49 +1577,12 @@ COMMENT ON COLUMN invoices.original_invoice_id IS 'For credit/debit notes: the i
 COMMENT ON COLUMN invoices.credit_reason IS 'Free-text reason on credit/debit notes (return, damage, weight dispute, price adjustment, other).';
 COMMENT ON COLUMN invoices.credited_amount IS 'Sum of grand_total of credit notes that reference this invoice. Updated by trigger.';
 
--- Keep invoices.credited_amount in sync with related credit notes.
--- Fires on INSERT / UPDATE of grand_total / DELETE of credit_note rows.
-CREATE OR REPLACE FUNCTION sync_invoice_credited_amount()
-RETURNS TRIGGER AS $$
-DECLARE
-  v_target UUID;
-BEGIN
-  v_target := COALESCE(NEW.original_invoice_id, OLD.original_invoice_id);
-  IF v_target IS NULL THEN
-    RETURN COALESCE(NEW, OLD);
-  END IF;
-
-  UPDATE invoices
-  SET credited_amount = COALESCE((
-    SELECT SUM(grand_total)
-    FROM invoices
-    WHERE original_invoice_id = v_target
-      AND document_type = 'credit_note'
-      AND status NOT IN ('cancelled')
-  ), 0)
-  WHERE id = v_target;
-
-  RETURN COALESCE(NEW, OLD);
-END;
-$$ LANGUAGE plpgsql;
-
--- Trigger uses three flavors because TG_OP is not available in WHEN clauses.
--- Each WHEN inspects only NEW (INSERT/UPDATE) or OLD (DELETE).
+-- invoices.credited_amount is now recomputed in the application layer
+-- (InvoicesService.createCreditNote) within the credit-note transaction.
 DROP TRIGGER IF EXISTS trg_sync_invoice_credited_amount ON invoices;
 DROP TRIGGER IF EXISTS trg_sync_invoice_credited_amount_iu ON invoices;
 DROP TRIGGER IF EXISTS trg_sync_invoice_credited_amount_d ON invoices;
-CREATE TRIGGER trg_sync_invoice_credited_amount_iu
-  AFTER INSERT OR UPDATE OF grand_total, status, original_invoice_id, document_type
-  ON invoices
-  FOR EACH ROW
-  WHEN (NEW.document_type = 'credit_note' AND NEW.original_invoice_id IS NOT NULL)
-  EXECUTE FUNCTION sync_invoice_credited_amount();
-CREATE TRIGGER trg_sync_invoice_credited_amount_d
-  AFTER DELETE
-  ON invoices
-  FOR EACH ROW
-  WHEN (OLD.document_type = 'credit_note' AND OLD.original_invoice_id IS NOT NULL)
-  EXECUTE FUNCTION sync_invoice_credited_amount();
+DROP FUNCTION IF EXISTS sync_invoice_credited_amount();
 
 -- Invoice Items
 CREATE TABLE IF NOT EXISTS invoice_items (
@@ -1672,6 +1751,24 @@ ALTER TABLE IF EXISTS taxes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS bank_accounts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS journal_entries ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS journal_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS exchange_rates ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_access" ON exchange_rates;
+CREATE POLICY "org_access" ON exchange_rates
+  FOR ALL USING (organization_id IS NULL OR is_organization_member(organization_id));
+ALTER TABLE IF EXISTS organization_groups ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_group_parent_access" ON organization_groups;
+CREATE POLICY "org_group_parent_access" ON organization_groups FOR ALL
+  USING (is_organization_member(parent_organization_id));
+ALTER TABLE IF EXISTS organization_group_members ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "org_group_member_access" ON organization_group_members;
+CREATE POLICY "org_group_member_access" ON organization_group_members FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM organization_groups og
+      WHERE og.id = organization_group_members.group_id
+        AND is_organization_member(og.parent_organization_id)
+    )
+  );
 ALTER TABLE IF EXISTS invoices ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS invoice_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS accounting_payments ENABLE ROW LEVEL SECURITY;
@@ -2181,6 +2278,8 @@ CREATE TABLE IF NOT EXISTS tasks (
   units_completed NUMERIC DEFAULT 0,
   rate_per_unit NUMERIC,
   forfait_amount NUMERIC,
+  -- Payment amount per task (auto-fill = daily_rate × duration; nullable for non-paid tasks)
+  payment_amount NUMERIC,
   crop_cycle_id UUID,
   campaign_id UUID,
   created_by UUID REFERENCES auth.users(id),
@@ -2309,6 +2408,10 @@ CREATE TABLE IF NOT EXISTS task_watchers (
 CREATE INDEX IF NOT EXISTS idx_task_watchers_task ON task_watchers(task_id);
 CREATE INDEX IF NOT EXISTS idx_task_watchers_user ON task_watchers(user_id);
 CREATE INDEX IF NOT EXISTS idx_task_watchers_org ON task_watchers(organization_id);
+
+ALTER TABLE task_watchers
+  ADD CONSTRAINT task_watchers_user_profile_fkey
+  FOREIGN KEY (user_id) REFERENCES user_profiles(id) ON DELETE CASCADE;
 
 -- Task Mentions — persistent record of @mentions in comments for notifications and analytics
 CREATE TABLE IF NOT EXISTS task_mentions (
@@ -3142,32 +3245,6 @@ FOR EACH ROW EXECUTE FUNCTION update_item_barcodes_updated_at();
 
 GRANT SELECT, INSERT, UPDATE, DELETE ON item_barcodes TO authenticated;
 
--- One-time backfill: migrate existing items.barcode → item_barcodes (primary)
--- and product_variants.barcode → item_barcodes (non-primary, with unit_id).
--- Idempotent via ON CONFLICT DO NOTHING (unique on org_id, barcode where deleted_at IS NULL).
-DO $$
-BEGIN
-  -- Disable the sync trigger for this backfill so it doesn't recursively
-  -- update items.barcode (we're reading FROM items, would cause noise).
-  ALTER TABLE item_barcodes DISABLE TRIGGER trg_sync_primary_barcode;
-
-  INSERT INTO item_barcodes (organization_id, item_id, barcode, is_primary, created_at)
-  SELECT i.organization_id, i.id, i.barcode, true, COALESCE(i.created_at, NOW())
-  FROM items i
-  WHERE i.barcode IS NOT NULL AND i.barcode <> ''
-    AND i.deleted_at IS NULL
-  ON CONFLICT DO NOTHING;
-
-  INSERT INTO item_barcodes (organization_id, item_id, barcode, unit_id, is_primary, created_at)
-  SELECT pv.organization_id, pv.item_id, pv.barcode, pv.unit_id, false, COALESCE(pv.created_at, NOW())
-  FROM product_variants pv
-  WHERE pv.barcode IS NOT NULL AND pv.barcode <> ''
-    AND pv.deleted_at IS NULL
-  ON CONFLICT DO NOTHING;
-
-  ALTER TABLE item_barcodes ENABLE TRIGGER trg_sync_primary_barcode;
-END $$;
-
 -- =====================================================
 -- VARIANT BARCODES (multi-barcode per product variant)
 -- Mirrors item_barcodes structure, linked to product_variants
@@ -3258,21 +3335,6 @@ CREATE TRIGGER variant_barcodes_updated_at
   FOR EACH ROW EXECUTE FUNCTION update_variant_barcodes_updated_at();
 
 GRANT SELECT, INSERT, UPDATE, DELETE ON variant_barcodes TO authenticated;
-
--- One-time backfill: migrate existing product_variants.barcode → variant_barcodes (primary)
-DO $$
-BEGIN
-  ALTER TABLE variant_barcodes DISABLE TRIGGER trg_sync_primary_barcode_variant;
-
-  INSERT INTO variant_barcodes (organization_id, variant_id, barcode, barcode_type, is_primary, created_by)
-  SELECT pv.organization_id, pv.id, pv.barcode, '', true, NULL
-  FROM product_variants pv
-  WHERE pv.barcode IS NOT NULL AND pv.barcode <> ''
-    AND pv.deleted_at IS NULL
-  ON CONFLICT DO NOTHING;
-
-  ALTER TABLE variant_barcodes ENABLE TRIGGER trg_sync_primary_barcode_variant;
-END $$;
 
 -- Add foreign key constraint to invoice_items (deferred because items table is created after invoice_items)
 ALTER TABLE invoice_items ADD CONSTRAINT fk_invoice_items_item_id FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE SET NULL;
@@ -3882,70 +3944,6 @@ CREATE TRIGGER trg_update_warehouse_stock_reserved
   FOR EACH ROW
   EXECUTE FUNCTION update_warehouse_stock_reserved();
 
--- One-time backfill for existing data
-DO $$
-DECLARE
-  v_record RECORD;
-  v_existing_id UUID;
-  v_reserved NUMERIC;
-BEGIN
-  FOR v_record IN
-    SELECT
-      sm.organization_id,
-      sm.item_id,
-      sm.variant_id,
-      sm.warehouse_id,
-      SUM(sm.quantity) AS quantity,
-      MAX(sm.created_at) AS last_movement_at
-    FROM stock_movements sm
-    GROUP BY sm.organization_id, sm.item_id, sm.variant_id, sm.warehouse_id
-  LOOP
-    SELECT COALESCE(SUM(quantity), 0) INTO v_reserved
-    FROM stock_reservations sr
-    WHERE sr.organization_id = v_record.organization_id
-      AND sr.item_id = v_record.item_id
-      AND sr.warehouse_id = v_record.warehouse_id
-      AND sr.status = 'active'
-      AND sr.expires_at > NOW()
-      AND (sr.variant_id = v_record.variant_id OR (v_record.variant_id IS NULL AND sr.variant_id IS NULL));
-
-    SELECT id INTO v_existing_id
-    FROM warehouse_stock_levels wsl
-    WHERE wsl.organization_id = v_record.organization_id
-      AND wsl.item_id = v_record.item_id
-      AND wsl.warehouse_id = v_record.warehouse_id
-      AND (wsl.variant_id = v_record.variant_id OR (v_record.variant_id IS NULL AND wsl.variant_id IS NULL))
-    LIMIT 1;
-
-    IF v_existing_id IS NOT NULL THEN
-      UPDATE warehouse_stock_levels
-      SET quantity = v_record.quantity,
-          reserved_quantity = v_reserved,
-          last_movement_at = v_record.last_movement_at,
-          updated_at = NOW()
-      WHERE id = v_existing_id;
-    ELSE
-      INSERT INTO warehouse_stock_levels (
-        organization_id,
-        item_id,
-        variant_id,
-        warehouse_id,
-        quantity,
-        reserved_quantity,
-        last_movement_at
-      )
-      VALUES (
-        v_record.organization_id,
-        v_record.item_id,
-        v_record.variant_id,
-        v_record.warehouse_id,
-        v_record.quantity,
-        v_reserved,
-        v_record.last_movement_at
-      );
-    END IF;
-  END LOOP;
-END $$;
 
 -- Stock Entry Approvals
 CREATE TABLE IF NOT EXISTS stock_entry_approvals (
@@ -6039,26 +6037,10 @@ CREATE POLICY "Users can delete templates in their organization"
     ON document_templates FOR DELETE
     USING (organization_id IN (SELECT organization_id FROM organization_users WHERE user_id = auth.uid()));
 
-CREATE OR REPLACE FUNCTION ensure_single_default_template()
-RETURNS TRIGGER AS $$
-BEGIN
-    IF NEW.is_default = true THEN
-        UPDATE document_templates
-        SET is_default = false, updated_at = NOW()
-        WHERE organization_id = NEW.organization_id
-          AND document_type = NEW.document_type
-          AND id != NEW.id
-          AND is_default = true;
-    END IF;
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
+-- Single-default-template invariant is enforced in the application layer
+-- (DocumentTemplatesService.clearDefaultForType).
 DROP TRIGGER IF EXISTS trg_ensure_single_default_template ON document_templates;
-CREATE TRIGGER trg_ensure_single_default_template
-    BEFORE INSERT OR UPDATE ON document_templates
-    FOR EACH ROW
-    EXECUTE FUNCTION ensure_single_default_template();
+DROP FUNCTION IF EXISTS ensure_single_default_template();
 
 CREATE OR REPLACE FUNCTION update_document_templates_timestamp()
 RETURNS TRIGGER AS $$
@@ -6081,33 +6063,10 @@ GRANT SELECT ON document_templates TO anon;
 -- 26. ONBOARDING HELPER FUNCTIONS
 -- =====================================================
 
--- Function to handle new user signup - creates user profile automatically
-CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS TRIGGER
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-BEGIN
-  INSERT INTO public.user_profiles (id, email, full_name, created_at, updated_at)
-  VALUES (
-    NEW.id,
-    NEW.email,
-    COALESCE(NEW.raw_user_meta_data->>'full_name', ''),
-    NOW(),
-    NOW()
-  )
-  ON CONFLICT (id) DO NOTHING;
-  RETURN NEW;
-END;
-$$;
-
--- Trigger to auto-create user profile on signup
+-- user_profiles row creation is now handled by AuthService.signup ->
+-- UsersService.createProfile. The auth.users trigger is no longer needed.
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
-CREATE TRIGGER on_auth_user_created
-  AFTER INSERT ON auth.users
-  FOR EACH ROW
-  EXECUTE FUNCTION public.handle_new_user();
+DROP FUNCTION IF EXISTS public.handle_new_user();
 
 
 
@@ -6116,99 +6075,6 @@ CREATE TRIGGER on_auth_user_created
 -- =====================================================
 -- These UPDATE statements populate organization_id for records
 -- that existed before the multi-tenant columns were added
-
--- Backfill parcels
-UPDATE parcels p
-SET organization_id = f.organization_id
-FROM farms f
-WHERE p.farm_id = f.id
-  AND p.organization_id IS NULL
-  AND f.organization_id IS NOT NULL;
-
--- Backfill crops
-UPDATE crops c
-SET organization_id = f.organization_id
-FROM farms f
-WHERE c.farm_id = f.id
-  AND c.organization_id IS NULL
-  AND f.organization_id IS NOT NULL;
-
-
-
--- Backfill work_records
-UPDATE work_records w
-SET organization_id = f.organization_id
-FROM farms f
-WHERE w.farm_id = f.id
-  AND w.organization_id IS NULL
-  AND f.organization_id IS NOT NULL;
-
--- Backfill metayage_settlements
-UPDATE metayage_settlements m
-SET organization_id = f.organization_id
-FROM farms f
-WHERE m.farm_id = f.id
-  AND m.organization_id IS NULL
-  AND f.organization_id IS NOT NULL;
-
--- Backfill utilities
-UPDATE utilities u
-SET organization_id = f.organization_id
-FROM farms f
-WHERE u.farm_id = f.id
-  AND u.organization_id IS NULL
-  AND f.organization_id IS NOT NULL;
-
--- Backfill financial_transactions
-UPDATE financial_transactions ft
-SET organization_id = f.organization_id
-FROM farms f
-WHERE ft.farm_id = f.id
-  AND ft.organization_id IS NULL
-  AND f.organization_id IS NOT NULL;
-
--- Backfill livestock
-UPDATE livestock l
-SET organization_id = f.organization_id
-FROM farms f
-WHERE l.farm_id = f.id
-  AND l.organization_id IS NULL
-  AND f.organization_id IS NOT NULL;
-
--- Backfill analyses (via parcel -> farm)
-UPDATE analyses a
-SET organization_id = f.organization_id
-FROM parcels p
-JOIN farms f ON f.id = p.farm_id
-WHERE a.parcel_id = p.id
-  AND a.organization_id IS NULL
-  AND f.organization_id IS NOT NULL;
-
--- Backfill soil_analyses (via parcel -> farm)
-UPDATE soil_analyses sa
-SET organization_id = f.organization_id
-FROM parcels p
-JOIN farms f ON f.id = p.farm_id
-WHERE sa.parcel_id = p.id
-  AND sa.organization_id IS NULL
-  AND f.organization_id IS NOT NULL;
-
--- Backfill parcel_reports (via parcel -> farm)
-UPDATE parcel_reports pr
-SET organization_id = f.organization_id
-FROM parcels p
-JOIN farms f ON f.id = p.farm_id
-WHERE pr.parcel_id = p.id
-  AND pr.organization_id IS NULL
-  AND f.organization_id IS NOT NULL;
-
--- Backfill trees (via tree_categories)
-UPDATE trees t
-SET organization_id = tc.organization_id
-FROM tree_categories tc
-WHERE t.category_id = tc.id
-  AND t.organization_id IS NULL
-  AND tc.organization_id IS NOT NULL;
 
 -- =====================================================
 -- XX. METEOROLOGICAL DATA TABLES
@@ -6267,16 +6133,9 @@ CREATE INDEX IF NOT EXISTS idx_weather_gdd_daily_location_crop
 CREATE INDEX IF NOT EXISTS idx_weather_gdd_daily_date
   ON public.weather_gdd_daily(date DESC);
 
--- Sum pre-computed GDD between two dates for a location and crop type.
--- Reads from weather_gdd_daily (generic: any crop_type, no schema change needed).
-CREATE OR REPLACE FUNCTION sum_gdd_between(
-  p_lat numeric, p_lon numeric, p_crop text, p_start date, p_end date
-) RETURNS numeric AS $$
-  SELECT COALESCE(SUM(gdd_daily), 0)
-  FROM weather_gdd_daily
-  WHERE latitude = p_lat AND longitude = p_lon
-    AND crop_type = p_crop AND date >= p_start AND date < p_end;
-$$ LANGUAGE sql STABLE;
+-- sum_gdd_between has been replaced by an inline supabase select+sum
+-- in CalibrationDataService — see usage of weather_gdd_daily there.
+DROP FUNCTION IF EXISTS sum_gdd_between(numeric, numeric, text, date, date);
 
 -- Weather hourly data: location-based hourly temperature cache (NOT org-scoped, shared geographically).
 -- Used as the source of truth for chill_hours and other phenological hour-counters.
@@ -6954,37 +6813,10 @@ EXCEPTION WHEN others THEN
   RAISE NOTICE 'FK fk_crop_ai_references_crop_type left NOT VALID: %. Reconcile crop_types.code then run: ALTER TABLE public.crop_ai_references VALIDATE CONSTRAINT fk_crop_ai_references_crop_type;', SQLERRM;
 END $$;
 
--- S2: JSONB shape validation. Ensures reference_data.metadata.culture matches
--- crop_type and metadata.version is present. Defense in depth: app layer also checks.
-CREATE OR REPLACE FUNCTION public.validate_crop_ai_reference()
-RETURNS TRIGGER AS $$
-DECLARE
-  ref_culture TEXT;
-  ref_version TEXT;
-BEGIN
-  IF NEW.reference_data IS NULL THEN
-    RAISE EXCEPTION 'crop_ai_references.reference_data cannot be null';
-  END IF;
-  ref_culture := NEW.reference_data->'metadata'->>'culture';
-  ref_version := NEW.reference_data->'metadata'->>'version';
-  IF ref_culture IS NULL THEN
-    RAISE EXCEPTION 'reference_data.metadata.culture is required';
-  END IF;
-  IF ref_version IS NULL THEN
-    RAISE EXCEPTION 'reference_data.metadata.version is required';
-  END IF;
-  IF NEW.crop_type <> ref_culture THEN
-    RAISE EXCEPTION 'crop_type (%) must match reference_data.metadata.culture (%)',
-      NEW.crop_type, ref_culture;
-  END IF;
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
+-- crop_ai_references shape validation is enforced in the application layer
+-- (admin/ReferentialService.assertValidCropAiReference).
 DROP TRIGGER IF EXISTS trg_validate_crop_ai_reference ON public.crop_ai_references;
-CREATE TRIGGER trg_validate_crop_ai_reference
-  BEFORE INSERT OR UPDATE ON public.crop_ai_references
-  FOR EACH ROW EXECUTE FUNCTION public.validate_crop_ai_reference();
+DROP FUNCTION IF EXISTS public.validate_crop_ai_reference();
 
 -- Evenements Parcelle (parcel events that may trigger partial recalibration)
 CREATE TABLE IF NOT EXISTS evenements_parcelle (
@@ -11248,26 +11080,10 @@ CREATE INDEX IF NOT EXISTS idx_fiscal_years_org ON fiscal_years(organization_id)
 CREATE INDEX IF NOT EXISTS idx_fiscal_years_dates ON fiscal_years(start_date, end_date);
 CREATE INDEX IF NOT EXISTS idx_fiscal_years_current ON fiscal_years(organization_id, is_current) WHERE is_current = true;
 
--- Ensure only one current fiscal year per organization
-CREATE OR REPLACE FUNCTION ensure_single_current_fiscal_year()
-RETURNS TRIGGER AS $$
-BEGIN
-  IF NEW.is_current = true THEN
-    UPDATE fiscal_years
-    SET is_current = false
-    WHERE organization_id = NEW.organization_id
-    AND id != NEW.id
-    AND is_current = true;
-  END IF;
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
+-- Single-current-fiscal-year invariant is enforced in the application layer
+-- (FiscalYearsService.clearCurrentForOrg).
 DROP TRIGGER IF EXISTS trg_ensure_single_current_fiscal_year ON fiscal_years;
-CREATE TRIGGER trg_ensure_single_current_fiscal_year
-  BEFORE INSERT OR UPDATE ON fiscal_years
-  FOR EACH ROW
-  EXECUTE FUNCTION ensure_single_current_fiscal_year();
+DROP FUNCTION IF EXISTS ensure_single_current_fiscal_year();
 
 -- 2. FISCAL PERIODS TABLE
 CREATE TABLE IF NOT EXISTS fiscal_periods (
@@ -11429,6 +11245,9 @@ ALTER TABLE stock_entries ADD CONSTRAINT fk_stock_entries_crop_cycle_id FOREIGN 
 ALTER TABLE stock_movements ADD CONSTRAINT fk_stock_movements_crop_cycle_id FOREIGN KEY (crop_cycle_id) REFERENCES crop_cycles(id) ON DELETE SET NULL;
 
 -- Add foreign key constraints to tasks (deferred because crop_cycles and agricultural_campaigns are created after tasks)
+-- Idempotent column add for clusters that pre-date payment_amount
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS payment_amount NUMERIC;
+
 ALTER TABLE tasks ADD CONSTRAINT fk_tasks_crop_cycle_id FOREIGN KEY (crop_cycle_id) REFERENCES crop_cycles(id) ON DELETE SET NULL;
 ALTER TABLE tasks ADD CONSTRAINT fk_tasks_campaign_id FOREIGN KEY (campaign_id) REFERENCES agricultural_campaigns(id) ON DELETE SET NULL;
 
@@ -14859,66 +14678,15 @@ COMMENT ON FUNCTION check_organization_access(UUID) IS 'Check if current user ha
 -- -----------------------------------------------------
 -- Note: Geometry columns are now directly in CREATE TABLE statements
 
--- Function to sync JSONB coordinates to geometry columns
-CREATE OR REPLACE FUNCTION sync_farm_geometry()
-RETURNS TRIGGER AS $$
-BEGIN
-  IF NEW.coordinates IS NOT NULL AND NEW.coordinates ? 'lat' AND NEW.coordinates ? 'lng' THEN
-    NEW.location_point := ST_SetSRID(
-      ST_MakePoint(
-        (NEW.coordinates->>'lng')::FLOAT,
-        (NEW.coordinates->>'lat')::FLOAT
-      ),
-      4326
-    );
-  END IF;
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
+-- Geometry columns (farms.location_point, parcels.boundary_geom, parcels.centroid)
+-- are now populated in the application layer:
+--   FarmsService.syncFarmLocationPoint
+--   ParcelsService.syncParcelBoundaryGeom
 DROP TRIGGER IF EXISTS trg_sync_farm_geometry ON farms;
-CREATE TRIGGER trg_sync_farm_geometry
-  BEFORE INSERT OR UPDATE ON farms
-  FOR EACH ROW
-  EXECUTE FUNCTION sync_farm_geometry();
-
--- Function to sync parcel boundary JSONB to geometry
-CREATE OR REPLACE FUNCTION sync_parcel_geometry()
-RETURNS TRIGGER AS $$
-DECLARE
-  coords JSONB;
-  ring TEXT;
-BEGIN
-  IF NEW.boundary IS NOT NULL AND jsonb_array_length(NEW.boundary) > 2 THEN
-    -- Build WKT polygon from JSONB array of {lat, lng} points
-    SELECT string_agg(
-      (coord->>'lng')::TEXT || ' ' || (coord->>'lat')::TEXT,
-      ','
-    ) INTO ring
-    FROM jsonb_array_elements(NEW.boundary) AS coord;
-    
-    -- Close the ring if needed
-    IF ring IS NOT NULL THEN
-      NEW.boundary_geom := ST_SetSRID(
-        ST_GeomFromText('POLYGON((' || ring || ',' || 
-          (NEW.boundary->0->>'lng')::TEXT || ' ' || (NEW.boundary->0->>'lat')::TEXT || '))'),
-        4326
-      );
-      NEW.centroid := ST_Centroid(NEW.boundary_geom);
-    END IF;
-  END IF;
-  RETURN NEW;
-EXCEPTION WHEN OTHERS THEN
-  -- Silently ignore geometry conversion errors to not break inserts
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
+DROP FUNCTION IF EXISTS sync_farm_geometry();
 
 DROP TRIGGER IF EXISTS trg_sync_parcel_geometry ON parcels;
-CREATE TRIGGER trg_sync_parcel_geometry
-  BEFORE INSERT OR UPDATE ON parcels
-  FOR EACH ROW
-  EXECUTE FUNCTION sync_parcel_geometry();
+DROP FUNCTION IF EXISTS sync_parcel_geometry();
 
 -- -----------------------------------------------------
 -- 2. MISSING BUSINESS KEY UNIQUE CONSTRAINTS
@@ -16308,9 +16076,6 @@ BEGIN
   END IF;
 END $$;
 
--- Backfill existing rows: set updated_at = created_at for rows that had NULL
-UPDATE stock_movements SET updated_at = created_at WHERE updated_at IS NULL;
-UPDATE stock_valuation SET updated_at = created_at WHERE updated_at IS NULL;
 
 -- ============================================================================
 -- Migration: 20260224100000_add_agriculture_elevage_modules.sql
@@ -16354,92 +16119,6 @@ COMMENT ON COLUMN parcels.water_quantity_unit IS 'Unit for water quantity: m3, l
 -- ============================================================================
 -- Migration: 20260310100000_subscription_contract_alignment.sql
 -- ============================================================================
--- Backfill canonical values for existing rows (idempotent)
-
--- Canonical formula backfill from legacy plan_type values
-UPDATE subscriptions
-SET formula = CASE
-  WHEN COALESCE(formula, '') <> '' THEN formula
-  WHEN plan_type IN ('core', 'essential', 'starter') THEN 'starter'
-  WHEN plan_type IN ('professional', 'standard') THEN 'standard'
-  WHEN plan_type = 'premium' THEN 'premium'
-  WHEN plan_type = 'enterprise' THEN 'enterprise'
-  ELSE 'standard'
-END;
-
--- Canonical billing cycle backfill from legacy billing_interval values
-UPDATE subscriptions
-SET billing_cycle = CASE
-  WHEN COALESCE(billing_cycle, '') <> '' THEN billing_cycle
-  WHEN billing_interval IN ('month', 'monthly') THEN 'monthly'
-  WHEN billing_interval IN ('year', 'yearly', 'annual') THEN 'annual'
-  WHEN billing_interval IN ('semiannual', 'semestrial') THEN 'semiannual'
-  ELSE 'monthly'
-END;
-
--- Normalize legacy billing_interval textual values for compatibility reads
-UPDATE subscriptions
-SET billing_interval = CASE
-  WHEN billing_interval IN ('month', 'monthly') THEN 'monthly'
-  WHEN billing_interval IN ('year', 'yearly', 'annual') THEN 'annual'
-  WHEN billing_interval IN ('semiannual', 'semestrial') THEN 'semiannual'
-  ELSE COALESCE(billing_interval, 'monthly')
-END;
-
-UPDATE polar_subscriptions
-SET billing_interval = CASE
-  WHEN billing_interval IN ('month', 'monthly') THEN 'monthly'
-  WHEN billing_interval IN ('year', 'yearly', 'annual') THEN 'annual'
-  WHEN billing_interval IN ('semiannual', 'semestrial') THEN 'semiannual'
-  ELSE COALESCE(billing_interval, 'monthly')
-END
-WHERE billing_interval IS DISTINCT FROM CASE
-  WHEN billing_interval IN ('month', 'monthly') THEN 'monthly'
-  WHEN billing_interval IN ('year', 'yearly', 'annual') THEN 'annual'
-  WHEN billing_interval IN ('semiannual', 'semestrial') THEN 'semiannual'
-  ELSE COALESCE(billing_interval, 'monthly')
-END;
-
--- Included users default by formula when missing
-UPDATE subscriptions
-SET included_users = CASE
-  WHEN formula = 'starter' THEN 3
-  WHEN formula = 'standard' THEN 10
-  WHEN formula = 'premium' THEN 25
-  WHEN formula = 'enterprise' THEN NULL
-  ELSE 10
-END
-WHERE included_users IS NULL;
-
--- Default contracted hectares by formula when missing
-UPDATE subscriptions
-SET contracted_hectares = CASE
-  WHEN formula = 'starter' THEN 50
-  WHEN formula = 'standard' THEN 200
-  WHEN formula = 'premium' THEN 500
-  WHEN formula = 'enterprise' THEN 501
-  ELSE 200
-END
-WHERE contracted_hectares IS NULL;
-
--- Keep legacy plan_type synchronized during transition
-UPDATE subscriptions
-SET plan_type = CASE
-  WHEN formula = 'starter' THEN 'essential'
-  WHEN formula = 'standard' THEN 'professional'
-  WHEN formula = 'premium' THEN 'enterprise'
-  WHEN formula = 'enterprise' THEN 'enterprise'
-  ELSE plan_type
-END
-WHERE formula IS NOT NULL;
-
--- Queue migration switch at renewal date for currently active subscribers.
-UPDATE subscriptions
-SET pending_formula = COALESCE(pending_formula, formula),
-    pending_billing_cycle = COALESCE(pending_billing_cycle, billing_cycle),
-    migration_effective_at = COALESCE(migration_effective_at, current_period_end)
-WHERE status = 'active'
-  AND current_period_end IS NOT NULL;
 
 CREATE INDEX IF NOT EXISTS idx_subscriptions_next_billing ON subscriptions(next_billing_at);
 CREATE INDEX IF NOT EXISTS idx_subscriptions_migration_effective ON subscriptions(migration_effective_at);
@@ -17174,7 +16853,24 @@ CREATE TRIGGER set_supported_countries_updated_at
 
 -- Seed initial supported countries (more can be added via admin API)
 INSERT INTO supported_countries (country_code, country_name, region, enabled, display_order) VALUES
-  ('MA', 'Morocco', 'Africa', true, 1)
+  -- Africa (MENA)
+  ('MA', 'Morocco',  'Africa', true, 1),
+  ('TN', 'Tunisia',  'Africa', true, 2),
+  ('DZ', 'Algeria',  'Africa', true, 3),
+  ('EG', 'Egypt',    'Africa', true, 4),
+  ('SN', 'Senegal',  'Africa', true, 5),
+  -- Middle East
+  ('AE', 'United Arab Emirates', 'Middle East', true, 1),
+  ('SA', 'Saudi Arabia',         'Middle East', true, 2),
+  ('JO', 'Jordan',               'Middle East', true, 3),
+  ('LB', 'Lebanon',              'Middle East', true, 4),
+  -- Europe
+  ('FR', 'France',  'Europe', true, 1),
+  ('ES', 'Spain',   'Europe', true, 2),
+  ('IT', 'Italy',   'Europe', true, 3),
+  ('PT', 'Portugal','Europe', true, 4),
+  ('DE', 'Germany', 'Europe', true, 5),
+  ('NL', 'Netherlands', 'Europe', true, 6)
 ON CONFLICT (country_code) DO NOTHING;
 
 
@@ -17532,20 +17228,14 @@ ALTER FUNCTION public.update_updated_at_column()                  SET search_pat
 ALTER FUNCTION public.capture_base_quantity_at_movement()         SET search_path = public, pg_catalog;
 ALTER FUNCTION public.update_document_templates_timestamp()       SET search_path = public, pg_catalog;
 ALTER FUNCTION public.audit_trigger_func()                        SET search_path = public, pg_catalog;
-ALTER FUNCTION public.sync_farm_geometry()                        SET search_path = public, pg_catalog;
 ALTER FUNCTION public.update_product_variants_updated_at()        SET search_path = public, pg_catalog;
-ALTER FUNCTION public.ensure_single_default_template()            SET search_path = public, pg_catalog;
 ALTER FUNCTION public.validate_stock_movement_unit()              SET search_path = public, pg_catalog;
-ALTER FUNCTION public.sum_gdd_between(numeric, numeric, text, date, date)
-                                                                  SET search_path = public, pg_catalog;
 ALTER FUNCTION public.update_warehouse_stock_reserved()           SET search_path = public, pg_catalog;
 ALTER FUNCTION public.sync_variant_quantity_from_movements()      SET search_path = public, pg_catalog;
 ALTER FUNCTION public.update_quote_request_updated_at()           SET search_path = public, pg_catalog;
 ALTER FUNCTION public.update_quality_inspections_updated_at()     SET search_path = public, pg_catalog;
-ALTER FUNCTION public.sync_parcel_geometry()                      SET search_path = public, pg_catalog;
 ALTER FUNCTION public.update_warehouse_stock_levels()             SET search_path = public, pg_catalog;
 ALTER FUNCTION public.update_campaigns_updated_at()               SET search_path = public, pg_catalog;
-ALTER FUNCTION public.ensure_single_current_fiscal_year()         SET search_path = public, pg_catalog;
 ALTER FUNCTION public.update_account_mappings_updated_at()        SET search_path = public, pg_catalog;
 
 -- ---------------------------------------------------------------------------
@@ -17929,27 +17619,27 @@ INSERT INTO modules (
   is_available, navigation_items, dashboard_widgets
 ) VALUES
   ('core',             'core',             'Home',          '#10b981', 'core',       'Core features available to every organization', 1,  0,   true,  true,  true,
-    '["/dashboard","/settings","/farm-hierarchy","/parcels","/notifications"]'::jsonb, '[]'::jsonb),
+    '["/dashboard","/settings","/farm-hierarchy","/parcels","/notifications","/analytics","/live-dashboard","/referentiels"]'::jsonb, '[]'::jsonb),
   ('chat_advisor',     'chat_advisor',     'Bot',           '#10b981', 'analytics',  'Conversational AgromindIA assistant',             2,  0,   true,  true,  true,
     '["/chat"]'::jsonb, '[]'::jsonb),
   ('agromind_advisor', 'agromind_advisor', 'Sparkles',      '#7c3aed', 'analytics',  'AI advisor per parcel: calibration, diagnostics, recommendations, annual plan', 3, 0, false, false, true,
     '["/parcels/$parcelId/ai"]'::jsonb, '[]'::jsonb),
   ('satellite',        'satellite',        'Satellite',     '#06b6d4', 'analytics',  'Satellite imagery, vegetation indices, weather',  4,  0,   false, false, true,
-    '["/satellite-analysis","/production/satellite-analysis","/parcels/$parcelId/satellite","/parcels/$parcelId/weather"]'::jsonb, '[]'::jsonb),
+    '["/satellite-analysis","/production/satellite-analysis","/parcels/$parcelId/satellite","/parcels/$parcelId/weather","/parcels/$parcelId/analyse","/farms/$farmId/satellite/heatmap","/production/soil-analysis"]'::jsonb, '[]'::jsonb),
   ('personnel',        'personnel',        'Users',         '#3b82f6', 'hr',         'Workers and tasks',                               5,  0,   false, false, true,
-    '["/workers","/tasks","/workforce/payments","/workforce/workers/piece-work"]'::jsonb, '[]'::jsonb),
+    '["/workers","/tasks","/workforce"]'::jsonb, '[]'::jsonb),
   ('stock',            'stock',            'Package',       '#10b981', 'inventory',  'Inventory and infrastructure',                    6,  0,   false, false, true,
-    '["/stock","/infrastructure"]'::jsonb, '[]'::jsonb),
+    '["/stock","/infrastructure","/equipment","/inventory"]'::jsonb, '[]'::jsonb),
   ('production',       'production',       'Wheat',         '#f59e0b', 'production', 'Campaigns, crop cycles, harvests, quality',       7,  0,   false, false, true,
-    '["/campaigns","/crop-cycles","/harvests","/reception-batches","/quality-control","/biological-assets","/product-applications"]'::jsonb, '[]'::jsonb),
+    '["/campaigns","/crop-cycles","/harvests","/reception-batches","/quality-control","/biological-assets","/product-applications","/production","/parcels/$parcelId/production","/parcels/$parcelId/profitability","/pest-alerts"]'::jsonb, '[]'::jsonb),
   ('fruit_trees',      'fruit_trees',      'TreeDeciduous', '#10b981', 'agriculture','Trees, orchards, pruning',                        8,  0,   false, false, true,
     '["/trees","/orchards","/pruning"]'::jsonb, '[]'::jsonb),
-  ('compliance',       'compliance',       'ShieldCheck',   '#a855f7', 'operations', 'Compliance and certifications',                   9,  0,   false, false, true,
+  ('compliance',       'compliance',       'ShieldCheck',   '#a855f7', 'operations', 'Compliance and certifications',                   9, 0,   false, false, true,
     '["/compliance"]'::jsonb, '[]'::jsonb),
   ('sales_purchasing', 'sales_purchasing', 'ShoppingCart',  '#f43f5e', 'sales',      'Quotes, sales orders, purchase orders',           10, 0,   false, false, true,
     '["/accounting/quotes","/accounting/sales-orders","/accounting/purchase-orders","/accounting/customers","/stock/suppliers"]'::jsonb, '[]'::jsonb),
   ('accounting',       'accounting',       'BookOpen',      '#6366f1', 'accounting', 'Invoices, payments, journal, reports',            11, 0,   false, false, true,
-    '["/accounting","/utilities"]'::jsonb, '[]'::jsonb),
+    '["/accounting","/utilities","/reports","/parcels/$parcelId/reports"]'::jsonb, '[]'::jsonb),
   ('marketplace',      'marketplace',      'ShoppingBag',   '#f97316', 'sales',      'B2B quote marketplace',                           12, 0,   false, false, true,
     '["/marketplace"]'::jsonb, '[]'::jsonb)
 ON CONFLICT (slug) DO UPDATE SET
@@ -18105,27 +17795,10 @@ COMMIT;
 -- modules marked is_required = true. Companion to the preceding
 -- catalog alignment migration.
 
-CREATE OR REPLACE FUNCTION seed_required_modules_for_new_org()
-RETURNS TRIGGER AS $$
-BEGIN
-  INSERT INTO organization_modules (organization_id, module_id, is_active)
-  SELECT NEW.id, m.id, true
-  FROM modules m
-  WHERE m.is_required = true
-  ON CONFLICT (organization_id, module_id) DO UPDATE SET
-    is_active  = true,
-    updated_at = NOW();
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
+-- Required modules are now seeded in the application layer
+-- (OrganizationsService.create -> seedRequiredModules).
 DROP TRIGGER IF EXISTS trg_seed_required_modules ON organizations;
-CREATE TRIGGER trg_seed_required_modules
-AFTER INSERT ON organizations
-FOR EACH ROW EXECUTE FUNCTION seed_required_modules_for_new_org();
-
-COMMENT ON FUNCTION seed_required_modules_for_new_org IS
-  'Auto-activates all modules.is_required=true for newly created organizations.';
+DROP FUNCTION IF EXISTS seed_required_modules_for_new_org();
 
 -- ============================================================================
 -- OFFLINE-FIRST SUPPORT: client_id (idempotency) + version (optimistic lock) +
@@ -18362,26 +18035,11 @@ CREATE TRIGGER update_hr_compliance_settings_updated_at
   BEFORE UPDATE ON hr_compliance_settings
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
--- Auto-create empty (morocco_none) settings row whenever an organization is created.
-CREATE OR REPLACE FUNCTION create_default_hr_compliance_settings()
-RETURNS TRIGGER AS $$
-BEGIN
-  INSERT INTO hr_compliance_settings (organization_id)
-  VALUES (NEW.id)
-  ON CONFLICT (organization_id) DO NOTHING;
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
+-- HR compliance defaults are now seeded in the application layer
+-- (OrganizationsService.create -> createDefaultHrComplianceSettings).
 DROP TRIGGER IF EXISTS trg_create_hr_compliance_settings ON organizations;
-CREATE TRIGGER trg_create_hr_compliance_settings
-  AFTER INSERT ON organizations
-  FOR EACH ROW EXECUTE FUNCTION create_default_hr_compliance_settings();
+DROP FUNCTION IF EXISTS create_default_hr_compliance_settings();
 
--- Backfill: ensure every existing organization has a settings row.
-INSERT INTO hr_compliance_settings (organization_id)
-SELECT id FROM organizations
-ON CONFLICT (organization_id) DO NOTHING;
 
 -- =====================================================================
 -- HR Module — Phase 1.A: Leave Management
@@ -19745,3 +19403,438 @@ SELECT
 FROM salary_slips
 WHERE status != 'cancelled'
 GROUP BY organization_id, farm_id, DATE_TRUNC('month', pay_period_start);
+
+-- =====================================================================
+-- WORKER PAYMENT HISTORY (per-worker aggregate for sparkline context)
+-- =====================================================================
+CREATE OR REPLACE VIEW worker_payment_history WITH (security_invoker = true) AS
+SELECT
+  w.id AS worker_id,
+  w.first_name || ' ' || w.last_name AS worker_name,
+  w.worker_type,
+  COALESCE(pay.total_payments, 0) AS total_payments,
+  COALESCE(pay.total_paid, 0) AS total_paid,
+  COALESCE(pay.pending_amount, 0) AS pending_amount,
+  COALESCE(pay.approved_amount, 0) AS approved_amount,
+  pay.last_payment_date,
+  COALESCE(pay.average_payment, 0) AS average_payment
+FROM workers w
+LEFT JOIN LATERAL (
+  SELECT
+    COUNT(*) AS total_payments,
+    SUM(CASE WHEN pr.status = 'paid' THEN pr.net_amount ELSE 0 END) AS total_paid,
+    SUM(CASE WHEN pr.status = 'pending' THEN pr.net_amount ELSE 0 END) AS pending_amount,
+    SUM(CASE WHEN pr.status = 'approved' THEN pr.net_amount ELSE 0 END) AS approved_amount,
+    MAX(pr.payment_date) AS last_payment_date,
+    CASE WHEN COUNT(*) > 0
+      THEN SUM(pr.net_amount) / COUNT(*)
+      ELSE 0
+    END AS average_payment
+  FROM payment_records pr
+  WHERE pr.worker_id = w.id
+) pay ON true;
+
+-- =====================================================================
+-- SUPPORT SETTINGS (single global row — public read, system_admin write)
+-- =====================================================================
+CREATE TABLE IF NOT EXISTS support_settings (
+  id BOOLEAN PRIMARY KEY DEFAULT TRUE,
+  email TEXT NOT NULL DEFAULT 'support@agrogina.com',
+  phone TEXT NOT NULL DEFAULT '+212 600 000 000',
+  whatsapp TEXT,
+  address TEXT,
+  hours TEXT,
+  contact_email TEXT NOT NULL DEFAULT 'contact@agrogina.com',
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  CONSTRAINT support_settings_singleton CHECK (id = TRUE)
+);
+
+INSERT INTO support_settings (id) VALUES (TRUE)
+ON CONFLICT (id) DO NOTHING;
+
+ALTER TABLE support_settings ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "support_settings_public_read" ON support_settings;
+CREATE POLICY "support_settings_public_read" ON support_settings
+  FOR SELECT USING (TRUE);
+
+DROP POLICY IF EXISTS "support_settings_admin_write" ON support_settings;
+CREATE POLICY "support_settings_admin_write" ON support_settings
+  FOR ALL USING (
+    EXISTS (
+      SELECT 1
+      FROM organization_users ou
+      JOIN roles r ON r.id = ou.role_id
+      WHERE ou.user_id = auth.uid()
+        AND ou.is_active = true
+        AND r.name = 'system_admin'
+    )
+  );
+
+CREATE OR REPLACE FUNCTION update_support_settings_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_support_settings_updated_at ON support_settings;
+CREATE TRIGGER trg_support_settings_updated_at
+  BEFORE UPDATE ON support_settings
+  FOR EACH ROW EXECUTE FUNCTION update_support_settings_updated_at();
+
+-- =====================================================================
+-- LANDING SETTINGS (single global row — public read, system_admin write)
+-- =====================================================================
+CREATE TABLE IF NOT EXISTS landing_settings (
+  id BOOLEAN PRIMARY KEY DEFAULT TRUE,
+  hero_stats JSONB NOT NULL DEFAULT '[
+    {"value":"12.4k","label":"Exploitations actives"},
+    {"value":"847k ha","label":"Surface monitorée"},
+    {"value":"14","label":"Pays · MENA + EU"},
+    {"value":"99.94%","label":"Disponibilité réseau"}
+  ]'::jsonb,
+  partners JSONB NOT NULL DEFAULT '[
+    {"name":"Coopérative Atlas"},
+    {"name":"OCP Agri"},
+    {"name":"GlobalGAP"},
+    {"name":"BIO Maroc"},
+    {"name":"AgriBank"},
+    {"name":"Crédit Agricole"},
+    {"name":"INRA"},
+    {"name":"Domaine Royal"}
+  ]'::jsonb,
+  testimonials JSONB NOT NULL DEFAULT '{
+    "featured": {
+      "quote":"Avant Agrogina, je remplissais des cahiers le soir. Aujourd''hui, j''ai une vision complète de mes 240 hectares depuis mon téléphone — et mes équipes savent exactement quoi faire le matin.",
+      "author":"Zakaria Boutchamir",
+      "role":"Ferme Mabella · 240 ha · Marrakech-Safi",
+      "badge":"★★★★★ · Étude de cas"
+    },
+    "compact": [
+      {"quote":"Le module RH a remplacé Excel et trois cahiers. Le contrôleur de la CNSS adore.","author":"Saida El Khouri","role":"Coopérative Atlas · 12 fermes"},
+      {"quote":"Les alertes capteurs ont sauvé une parcelle d''agrumes du gel l''an dernier. Rentabilisé en une saison.","author":"Karim Benjelloun","role":"Domaine Agdal · 85 ha"}
+    ]
+  }'::jsonb,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  CONSTRAINT landing_settings_singleton CHECK (id = TRUE)
+);
+
+INSERT INTO landing_settings (id) VALUES (TRUE) ON CONFLICT (id) DO NOTHING;
+
+ALTER TABLE landing_settings ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "landing_settings_public_read" ON landing_settings;
+CREATE POLICY "landing_settings_public_read" ON landing_settings FOR SELECT USING (TRUE);
+
+DROP POLICY IF EXISTS "landing_settings_admin_write" ON landing_settings;
+CREATE POLICY "landing_settings_admin_write" ON landing_settings
+  FOR ALL USING (
+    EXISTS (
+      SELECT 1 FROM organization_users ou
+      JOIN roles r ON r.id = ou.role_id
+      WHERE ou.user_id = auth.uid() AND ou.is_active = true AND r.name = 'system_admin'
+    )
+  );
+
+DROP TRIGGER IF EXISTS trg_landing_settings_updated_at ON landing_settings;
+CREATE TRIGGER trg_landing_settings_updated_at
+  BEFORE UPDATE ON landing_settings
+  FOR EACH ROW EXECUTE FUNCTION update_support_settings_updated_at();
+
+-- =====================================================================
+-- PERFORMANCE: Supabase linter fixes
+-- 1) auth.<fn>() / current_setting() in RLS → wrap in (select ...) so
+--    they're evaluated once per query instead of once per row.
+-- 2) Drop duplicate indexes flagged by 0009_duplicate_index.
+-- 3) Consolidate redundant permissive policies on selected tables.
+-- =====================================================================
+
+-- 1) Rewrite RLS policies in public schema. Idempotent: collapses
+--    accidental double-wrapping (select (select auth.x())) → (select auth.x()).
+DO $perf_rls_initplan$
+DECLARE
+  r RECORD;
+  new_qual  TEXT;
+  new_check TEXT;
+  to_clause    TEXT;
+  using_clause TEXT;
+  check_clause TEXT;
+  policy_kind  TEXT;
+BEGIN
+  FOR r IN
+    SELECT schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check
+    FROM pg_policies
+    WHERE schemaname = 'public'
+  LOOP
+    new_qual  := r.qual;
+    new_check := r.with_check;
+
+    IF new_qual IS NOT NULL THEN
+      new_qual := regexp_replace(new_qual,
+        '\mauth\.(uid|jwt|role|email)\(\)',
+        '(select auth.\1())', 'g');
+      new_qual := regexp_replace(new_qual,
+        '\mcurrent_setting\(([^()]*)\)',
+        '(select current_setting(\1))', 'g');
+      -- collapse accidental double-wrap
+      new_qual := regexp_replace(new_qual,
+        '\(\s*select\s+\(\s*select\s+(auth\.(uid|jwt|role|email)\(\))\s*\)\s*\)',
+        '(select \1)', 'g');
+      new_qual := regexp_replace(new_qual,
+        '\(\s*select\s+\(\s*select\s+(current_setting\([^()]*\))\s*\)\s*\)',
+        '(select \1)', 'g');
+    END IF;
+
+    IF new_check IS NOT NULL THEN
+      new_check := regexp_replace(new_check,
+        '\mauth\.(uid|jwt|role|email)\(\)',
+        '(select auth.\1())', 'g');
+      new_check := regexp_replace(new_check,
+        '\mcurrent_setting\(([^()]*)\)',
+        '(select current_setting(\1))', 'g');
+      new_check := regexp_replace(new_check,
+        '\(\s*select\s+\(\s*select\s+(auth\.(uid|jwt|role|email)\(\))\s*\)\s*\)',
+        '(select \1)', 'g');
+      new_check := regexp_replace(new_check,
+        '\(\s*select\s+\(\s*select\s+(current_setting\([^()]*\))\s*\)\s*\)',
+        '(select \1)', 'g');
+    END IF;
+
+    IF new_qual IS NOT DISTINCT FROM r.qual
+       AND new_check IS NOT DISTINCT FROM r.with_check THEN
+      CONTINUE;
+    END IF;
+
+    to_clause    := array_to_string(r.roles, ', ');
+    using_clause := CASE WHEN new_qual  IS NOT NULL THEN format(' USING (%s)', new_qual)        ELSE '' END;
+    check_clause := CASE WHEN new_check IS NOT NULL THEN format(' WITH CHECK (%s)', new_check)  ELSE '' END;
+    policy_kind  := CASE WHEN r.permissive = 'PERMISSIVE' THEN 'PERMISSIVE' ELSE 'RESTRICTIVE' END;
+
+    EXECUTE format('DROP POLICY IF EXISTS %I ON %I.%I',
+                   r.policyname, r.schemaname, r.tablename);
+    EXECUTE format('CREATE POLICY %I ON %I.%I AS %s FOR %s TO %s%s%s',
+                   r.policyname, r.schemaname, r.tablename,
+                   policy_kind, r.cmd, to_clause, using_clause, check_clause);
+  END LOOP;
+END
+$perf_rls_initplan$;
+
+-- 2) Drop duplicate indexes (keep the one with the org-scoped name).
+DROP INDEX IF EXISTS idx_account_mappings_org_override;
+DROP INDEX IF EXISTS idx_ai_rec_citations_unique;
+DROP INDEX IF EXISTS idx_biological_assets_type;
+DROP INDEX IF EXISTS idx_crop_cycles_status;
+
+-- 3) Consolidate the most flagged multiple-permissive overlaps.
+--    Strategy: drop the broad admin_manage_* / admin_write_* catch-alls
+--    where finer-grained org_* / read_* policies already cover the same
+--    actions for the same role. Service-role-only policies are dropped
+--    entirely because the service_role key bypasses RLS by design.
+
+-- modules: admin_manage_modules covers ALL, admin_write_modules covers
+-- INSERT/UPDATE/DELETE; both overlap with public_read_modules /
+-- read_active_modules for SELECT. Keep admin_write_modules + the read
+-- pair, drop admin_manage_modules.
+DROP POLICY IF EXISTS admin_manage_modules ON modules;
+-- modules public read + read_active overlap on SELECT — keep one.
+DROP POLICY IF EXISTS read_active_modules ON modules;
+
+-- roles: admin_manage_roles overlaps with org_*_roles + read_active_roles.
+DROP POLICY IF EXISTS admin_manage_roles ON roles;
+DROP POLICY IF EXISTS read_active_roles  ON roles;
+
+-- account_mappings: admin_manage_account_mappings overlaps with the four
+-- explicit insert/update/delete/read policies.
+DROP POLICY IF EXISTS admin_manage_account_mappings ON account_mappings;
+
+-- account_templates: admin_manage_account_templates overlaps with
+-- read_published_account_templates for SELECT.
+DROP POLICY IF EXISTS admin_manage_account_templates ON account_templates;
+
+-- currencies: admin_manage_currencies overlaps with read_active_currencies.
+DROP POLICY IF EXISTS admin_manage_currencies ON currencies;
+
+-- support_settings + landing_settings: admin_write covers ALL (incl. SELECT)
+-- and overlaps with the public_read policy. Restrict admin_write to
+-- INSERT/UPDATE/DELETE so it no longer overlaps on SELECT.
+DROP POLICY IF EXISTS support_settings_admin_write ON support_settings;
+CREATE POLICY support_settings_admin_write ON support_settings
+  FOR INSERT TO public WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM organization_users ou JOIN roles r ON r.id = ou.role_id
+      WHERE ou.user_id = (select auth.uid())
+        AND ou.is_active = true
+        AND r.name = 'system_admin'
+    )
+  );
+CREATE POLICY support_settings_admin_update ON support_settings
+  FOR UPDATE TO public USING (
+    EXISTS (
+      SELECT 1 FROM organization_users ou JOIN roles r ON r.id = ou.role_id
+      WHERE ou.user_id = (select auth.uid())
+        AND ou.is_active = true
+        AND r.name = 'system_admin'
+    )
+  );
+CREATE POLICY support_settings_admin_delete ON support_settings
+  FOR DELETE TO public USING (
+    EXISTS (
+      SELECT 1 FROM organization_users ou JOIN roles r ON r.id = ou.role_id
+      WHERE ou.user_id = (select auth.uid())
+        AND ou.is_active = true
+        AND r.name = 'system_admin'
+    )
+  );
+
+DROP POLICY IF EXISTS landing_settings_admin_write ON landing_settings;
+CREATE POLICY landing_settings_admin_write ON landing_settings
+  FOR INSERT TO public WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM organization_users ou JOIN roles r ON r.id = ou.role_id
+      WHERE ou.user_id = (select auth.uid())
+        AND ou.is_active = true
+        AND r.name = 'system_admin'
+    )
+  );
+CREATE POLICY landing_settings_admin_update ON landing_settings
+  FOR UPDATE TO public USING (
+    EXISTS (
+      SELECT 1 FROM organization_users ou JOIN roles r ON r.id = ou.role_id
+      WHERE ou.user_id = (select auth.uid())
+        AND ou.is_active = true
+        AND r.name = 'system_admin'
+    )
+  );
+CREATE POLICY landing_settings_admin_delete ON landing_settings
+  FOR DELETE TO public USING (
+    EXISTS (
+      SELECT 1 FROM organization_users ou JOIN roles r ON r.id = ou.role_id
+      WHERE ou.user_id = (select auth.uid())
+        AND ou.is_active = true
+        AND r.name = 'system_admin'
+    )
+  );
+
+-- Remaining permissive overlaps: drop catch-all/duplicate policies.
+DROP POLICY IF EXISTS public_read_all_module_prices       ON module_prices;
+DROP POLICY IF EXISTS public_read_all_subscription_pricing ON subscription_pricing;
+DROP POLICY IF EXISTS service_role_all_user_profiles      ON user_profiles;
+-- admin_read_* overlap with org_read_* (admin already passes via the
+-- org_read predicate when they're org members; cross-org admin reads
+-- happen via service role bypass).
+DROP POLICY IF EXISTS admin_read_all_organizations  ON organizations;
+DROP POLICY IF EXISTS admin_read_subscriptions      ON subscriptions;
+DROP POLICY IF EXISTS admin_read_subscription_usage ON subscription_usage;
+-- Marketplace + crop_templates legitimately need both — combine into
+-- a single OR'd policy per cmd.
+DO $merge_marketplace$
+DECLARE
+  buyers_qual TEXT;
+  sellers_qual TEXT;
+  buyers_upd TEXT;
+  sellers_upd TEXT;
+BEGIN
+  SELECT qual INTO buyers_qual FROM pg_policies
+    WHERE schemaname='public' AND tablename='marketplace_quote_requests'
+      AND policyname='Users can view their own quote requests';
+  SELECT qual INTO sellers_qual FROM pg_policies
+    WHERE schemaname='public' AND tablename='marketplace_quote_requests'
+      AND policyname='Sellers can view requests sent to them';
+  IF buyers_qual IS NOT NULL AND sellers_qual IS NOT NULL THEN
+    DROP POLICY IF EXISTS "Users can view their own quote requests" ON marketplace_quote_requests;
+    DROP POLICY IF EXISTS "Sellers can view requests sent to them"  ON marketplace_quote_requests;
+    EXECUTE format(
+      'CREATE POLICY marketplace_quote_requests_select ON marketplace_quote_requests FOR SELECT USING ((%s) OR (%s))',
+      buyers_qual, sellers_qual);
+  END IF;
+
+  SELECT qual INTO buyers_upd FROM pg_policies
+    WHERE schemaname='public' AND tablename='marketplace_quote_requests'
+      AND policyname='Buyers can update their own requests';
+  SELECT qual INTO sellers_upd FROM pg_policies
+    WHERE schemaname='public' AND tablename='marketplace_quote_requests'
+      AND policyname='Sellers can update their received requests';
+  IF buyers_upd IS NOT NULL AND sellers_upd IS NOT NULL THEN
+    DROP POLICY IF EXISTS "Buyers can update their own requests" ON marketplace_quote_requests;
+    DROP POLICY IF EXISTS "Sellers can update their received requests" ON marketplace_quote_requests;
+    EXECUTE format(
+      'CREATE POLICY marketplace_quote_requests_update ON marketplace_quote_requests FOR UPDATE USING ((%s) OR (%s))',
+      buyers_upd, sellers_upd);
+  END IF;
+END $merge_marketplace$;
+
+-- Merge crop_templates SELECT (global + org) into a single OR'd policy.
+DO $merge_crop_templates$
+DECLARE
+  q_global TEXT;
+  q_org    TEXT;
+BEGIN
+  SELECT qual INTO q_global FROM pg_policies
+    WHERE schemaname='public' AND tablename='crop_templates'
+      AND policyname='crop_templates_select_global';
+  SELECT qual INTO q_org    FROM pg_policies
+    WHERE schemaname='public' AND tablename='crop_templates'
+      AND policyname='crop_templates_select_org';
+  IF q_global IS NOT NULL AND q_org IS NOT NULL THEN
+    DROP POLICY IF EXISTS crop_templates_select_global ON crop_templates;
+    DROP POLICY IF EXISTS crop_templates_select_org    ON crop_templates;
+    EXECUTE format(
+      'CREATE POLICY crop_templates_select ON crop_templates FOR SELECT USING ((%s) OR (%s))',
+      q_global, q_org);
+  END IF;
+END $merge_crop_templates$;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Org-scoped FKs for leave & separations
+-- Prevents cross-org references where the parent FK was worker_id only.
+-- ─────────────────────────────────────────────────────────────────────────────
+DO $worker_org_fk$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'workers_id_org_unique' AND conrelid = 'workers'::regclass
+  ) THEN
+    ALTER TABLE workers
+      ADD CONSTRAINT workers_id_org_unique UNIQUE (id, organization_id);
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'leave_allocations_worker_org_fkey'
+      AND conrelid = 'leave_allocations'::regclass
+  ) THEN
+    ALTER TABLE leave_allocations
+      DROP CONSTRAINT IF EXISTS leave_allocations_worker_id_fkey,
+      ADD CONSTRAINT leave_allocations_worker_org_fkey
+        FOREIGN KEY (worker_id, organization_id)
+        REFERENCES workers(id, organization_id) ON DELETE CASCADE;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'leave_applications_worker_org_fkey'
+      AND conrelid = 'leave_applications'::regclass
+  ) THEN
+    ALTER TABLE leave_applications
+      DROP CONSTRAINT IF EXISTS leave_applications_worker_id_fkey,
+      ADD CONSTRAINT leave_applications_worker_org_fkey
+        FOREIGN KEY (worker_id, organization_id)
+        REFERENCES workers(id, organization_id) ON DELETE CASCADE;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'separations_worker_org_fkey'
+      AND conrelid = 'separations'::regclass
+  ) THEN
+    ALTER TABLE separations
+      DROP CONSTRAINT IF EXISTS separations_worker_id_fkey,
+      ADD CONSTRAINT separations_worker_org_fkey
+        FOREIGN KEY (worker_id, organization_id)
+        REFERENCES workers(id, organization_id) ON DELETE CASCADE;
+  END IF;
+END $worker_org_fk$;

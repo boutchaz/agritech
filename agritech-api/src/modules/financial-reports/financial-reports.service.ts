@@ -38,8 +38,8 @@ export interface AgedReport {
 }
 
 @Injectable()
-export class FinancialReportsService {
-  private readonly logger = new Logger(FinancialReportsService.name);
+export class AgedReportsService {
+  private readonly logger = new Logger(AgedReportsService.name);
 
   constructor(private readonly databaseService: DatabaseService) {}
 

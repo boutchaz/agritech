@@ -5,12 +5,14 @@ import {
 } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { ComputedSlip, PayrollCalcService } from './payroll-calc.service';
+import { AccountingAutomationService } from '../journal-entries/accounting-automation.service';
 
 @Injectable()
 export class SalarySlipsService {
   constructor(
     private readonly db: DatabaseService,
     private readonly calc: PayrollCalcService,
+    private readonly accounting: AccountingAutomationService,
   ) {}
 
   async list(
@@ -57,8 +59,10 @@ export class SalarySlipsService {
 
   /**
    * Generate a slip in draft status. Caller may then submit/pay it.
-   * Idempotent on (worker_id, pay_period_start, pay_period_end) — re-running
-   * updates the existing draft rather than creating a duplicate.
+   * Idempotent only when the existing slip is still a draft of the same
+   * payroll run (or unattached). Submitted/paid/cancelled slips are NEVER
+   * overwritten, and a draft already attached to a different run is not
+   * pulled into a new run.
    */
   async generate(
     organizationId: string,
@@ -89,12 +93,39 @@ export class SalarySlipsService {
     payrollRunId?: string,
   ) {
     const supabase = this.db.getAdminClient();
-    const payload = {
+
+    const { data: existing, error: existingErr } = await supabase
+      .from('salary_slips')
+      .select('id, status, payroll_run_id, journal_entry_id')
+      .eq('organization_id', organizationId)
+      .eq('worker_id', slip.worker_id)
+      .eq('pay_period_start', slip.pay_period_start)
+      .eq('pay_period_end', slip.pay_period_end)
+      .maybeSingle();
+    if (existingErr) throw new BadRequestException(existingErr.message);
+
+    if (existing) {
+      if (existing.status !== 'draft') {
+        throw new BadRequestException(
+          `Cannot regenerate slip for worker ${slip.worker_id} in period ${slip.pay_period_start}..${slip.pay_period_end}: status is ${existing.status}`,
+        );
+      }
+      if (
+        payrollRunId &&
+        existing.payroll_run_id &&
+        existing.payroll_run_id !== payrollRunId
+      ) {
+        throw new BadRequestException(
+          `Slip already attached to payroll run ${existing.payroll_run_id}; cancel that run before regenerating in another`,
+        );
+      }
+    }
+
+    const computedPayload = {
       organization_id: organizationId,
       worker_id: slip.worker_id,
       farm_id: slip.farm_id,
       salary_structure_assignment_id: slip.salary_structure_assignment_id,
-      payroll_run_id: payrollRunId ?? null,
       pay_period_start: slip.pay_period_start,
       pay_period_end: slip.pay_period_end,
       pay_frequency: slip.pay_frequency,
@@ -112,14 +143,31 @@ export class SalarySlipsService {
       net_pay: slip.net_pay,
       taxable_income: slip.taxable_income,
       income_tax: slip.income_tax,
-      status: 'draft',
-      created_by: userId,
       updated_at: new Date().toISOString(),
     };
 
+    if (existing) {
+      const { data, error } = await supabase
+        .from('salary_slips')
+        .update({
+          ...computedPayload,
+          payroll_run_id: payrollRunId ?? existing.payroll_run_id ?? null,
+        })
+        .eq('id', existing.id)
+        .select('*')
+        .single();
+      if (error) throw new BadRequestException(error.message);
+      return data;
+    }
+
     const { data, error } = await supabase
       .from('salary_slips')
-      .upsert(payload, { onConflict: 'worker_id,pay_period_start,pay_period_end' })
+      .insert({
+        ...computedPayload,
+        payroll_run_id: payrollRunId ?? null,
+        status: 'draft',
+        created_by: userId,
+      })
       .select('*')
       .single();
     if (error) throw new BadRequestException(error.message);
@@ -130,8 +178,41 @@ export class SalarySlipsService {
     organizationId: string,
     id: string,
     status: 'submitted' | 'paid' | 'cancelled',
+    userId: string | null = null,
   ) {
     const supabase = this.db.getAdminClient();
+
+    if (status === 'paid') {
+      const { data: slip, error: fetchErr } = await supabase
+        .from('salary_slips')
+        .select(
+          'id, farm_id, worker_id, pay_period_start, pay_period_end, gross_pay, total_deductions, net_pay, journal_entry_id, worker:workers(first_name, last_name)',
+        )
+        .eq('organization_id', organizationId)
+        .eq('id', id)
+        .single();
+      if (fetchErr || !slip) throw new NotFoundException('Salary slip not found');
+
+      if (!slip.journal_entry_id) {
+        const w = (slip as any).worker;
+        const workerName = `${w?.first_name ?? ''} ${w?.last_name ?? ''}`.trim() || 'Worker';
+        try {
+          await this.accounting.createJournalEntryFromSalarySlip(
+            organizationId,
+            slip as any,
+            workerName,
+            userId ?? slip.worker_id,
+          );
+        } catch (err: any) {
+          // Fail closed: never mark a slip paid without a journal entry —
+          // breaks reconciliation and period-close controls.
+          throw new BadRequestException(
+            `Cannot mark slip ${slip.id} paid: journal entry creation failed (${err?.message ?? 'unknown error'})`,
+          );
+        }
+      }
+    }
+
     const { data, error } = await supabase
       .from('salary_slips')
       .update({ status, updated_at: new Date().toISOString() })

@@ -6,6 +6,8 @@ import { NotificationsService, InvoiceEmailData, MANAGEMENT_ROLES } from '../not
 import { NotificationType } from '../notifications/dto/notification.dto';
 import { StockEntriesService } from '../stock-entries/stock-entries.service';
 import { AccountingAutomationService } from '../journal-entries/accounting-automation.service';
+import { PaymentsService } from '../payments/payments.service';
+import { PaymentType } from '../payments/dto/payment.dto';
 import { StockEntryType, StockEntryStatus } from '../stock-entries/dto/create-stock-entry.dto';
 import { InvoiceFiltersDto, UpdateInvoiceStatusDto, CreateInvoiceDto, UpdateInvoiceDto, CreateCreditNoteDto } from './dto';
 import { buildInvoiceLedgerLines } from '../journal-entries/helpers/ledger.helper';
@@ -24,6 +26,7 @@ export class InvoicesService {
     private readonly notificationsService: NotificationsService,
     private readonly stockEntriesService: StockEntriesService,
     private readonly accountingAutomationService: AccountingAutomationService,
+    private readonly paymentsService: PaymentsService,
   ) {}
 
   async findAll(
@@ -163,10 +166,27 @@ export class InvoicesService {
       const invoiceNumber = dto.invoice_number ||
         await this.sequencesService.generateInvoiceNumber(organizationId, dto.invoice_type);
 
-      // Calculate totals from items
-      const subtotal = dto.items.reduce((sum, item) => sum + item.amount, 0);
-      const taxTotal = dto.items.reduce((sum, item) => sum + item.tax_amount, 0);
-      const grandTotal = subtotal + taxTotal;
+      // Hybrid tax model: line tax_rate wins; if absent, fall back to header default_tax_rate.
+      // tax_amount derived when not provided by client.
+      const round2 = (x: number) => Math.round((x + Number.EPSILON) * 100) / 100;
+      const headerDefaultRate = Number((dto as { default_tax_rate?: number }).default_tax_rate ?? 0);
+      const resolvedItems = dto.items.map((item) => {
+        const lineRate = item.tax_rate != null && item.tax_rate !== 0
+          ? Number(item.tax_rate)
+          : headerDefaultRate;
+        const lineTaxAmount = item.tax_amount != null && item.tax_amount !== 0
+          ? Number(item.tax_amount)
+          : round2(Number(item.amount) * (lineRate / 100));
+        return {
+          ...item,
+          tax_rate: lineRate,
+          tax_amount: lineTaxAmount,
+          line_total: round2(Number(item.amount) + lineTaxAmount),
+        };
+      });
+      const subtotal = round2(resolvedItems.reduce((sum, item) => sum + Number(item.amount), 0));
+      const taxTotal = round2(resolvedItems.reduce((sum, item) => sum + item.tax_amount, 0));
+      const grandTotal = round2(subtotal + taxTotal);
 
       // Create invoice
       const { data: invoice, error: invoiceError } = await supabaseClient
@@ -180,10 +200,11 @@ export class InvoicesService {
           party_name: dto.party_name,
           invoice_date: dto.invoice_date,
           due_date: dto.due_date,
-          subtotal: dto.subtotal || subtotal,
-          tax_total: dto.tax_total || taxTotal,
-          grand_total: dto.grand_total || grandTotal,
-          outstanding_amount: dto.outstanding_amount || grandTotal,
+          subtotal: subtotal,
+          tax_total: taxTotal,
+          grand_total: grandTotal,
+          outstanding_amount: grandTotal,
+          default_tax_rate: headerDefaultRate || null,
           currency_code: dto.currency_code || 'MAD',
           exchange_rate: dto.exchange_rate || 1.0,
           payment_terms: dto.payment_terms || null,
@@ -203,7 +224,7 @@ export class InvoicesService {
 
       // Create invoice items
       // Note: Only using columns that exist in the current database schema
-      const itemsToInsert = dto.items.map((item, index) => ({
+      const itemsToInsert = resolvedItems.map((item, index) => ({
         invoice_id: invoice.id,
         line_number: index + 1,
         item_name: item.item_name,
@@ -291,16 +312,34 @@ export class InvoicesService {
     if (dto.payment_terms !== undefined) updateData.payment_terms = dto.payment_terms;
     if (dto.notes !== undefined) updateData.notes = dto.notes;
 
-    // If items are provided, recalculate totals
+    // If items are provided, recalculate totals (hybrid tax model)
+    let resolvedUpdateItems: any[] = [];
     if (dto.items && dto.items.length > 0) {
-      const subtotal = dto.items.reduce((sum, item) => sum + item.amount, 0);
-      const taxTotal = dto.items.reduce((sum, item) => sum + item.tax_amount, 0);
-      const grandTotal = subtotal + taxTotal;
+      const round2 = (x: number) => Math.round((x + Number.EPSILON) * 100) / 100;
+      const headerDefaultRate = Number((dto as { default_tax_rate?: number }).default_tax_rate ?? (existingInvoice as { default_tax_rate?: number }).default_tax_rate ?? 0);
+      resolvedUpdateItems = dto.items.map((item) => {
+        const lineRate = item.tax_rate != null && item.tax_rate !== 0
+          ? Number(item.tax_rate)
+          : headerDefaultRate;
+        const lineTaxAmount = item.tax_amount != null && item.tax_amount !== 0
+          ? Number(item.tax_amount)
+          : round2(Number(item.amount) * (lineRate / 100));
+        return {
+          ...item,
+          tax_rate: lineRate,
+          tax_amount: lineTaxAmount,
+          line_total: round2(Number(item.amount) + lineTaxAmount),
+        };
+      });
+      const subtotal = round2(resolvedUpdateItems.reduce((sum, item) => sum + Number(item.amount), 0));
+      const taxTotal = round2(resolvedUpdateItems.reduce((sum, item) => sum + item.tax_amount, 0));
+      const grandTotal = round2(subtotal + taxTotal);
 
       updateData.subtotal = subtotal;
       updateData.tax_total = taxTotal;
       updateData.grand_total = grandTotal;
       updateData.outstanding_amount = grandTotal;
+      updateData.default_tax_rate = headerDefaultRate || null;
     }
 
     // Update invoice header
@@ -330,7 +369,7 @@ export class InvoicesService {
 
       // Insert new items
       // Note: Only using columns that exist in the current database schema
-      const itemsToInsert = dto.items.map((item, index) => ({
+      const itemsToInsert = resolvedUpdateItems.map((item, index) => ({
         invoice_id: id,
         line_number: index + 1,
         item_name: item.item_name,
@@ -477,47 +516,43 @@ export class InvoicesService {
       throw new BadRequestException(`Failed to update invoice status: ${error.message}`);
     }
 
-    // When marking as paid, create an accounting_payments record + allocation
+    // When marking as paid, route through the canonical PaymentsService flow so a JE
+    // is posted, the bank balance moves, and the payment lands in 'submitted' status
+    // with a journal_entry_id. The previous shortcut left the payment row without a JE.
     if (dto.status === 'paid') {
       try {
-        const paymentNumber = await this.sequencesService.generatePaymentNumber(organizationId);
-        const paymentType = currentInvoice.invoice_type === 'sales' ? 'receive' : 'pay';
+        const amount = Number(currentInvoice.grand_total) || 0;
+        const paymentType = currentInvoice.invoice_type === 'sales' ? PaymentType.RECEIVE : PaymentType.PAY;
 
-        const { data: payment, error: payError } = await supabaseClient
-          .from('accounting_payments')
-          .insert({
-            organization_id: organizationId,
-            payment_number: paymentNumber,
-            payment_date: new Date().toISOString().split('T')[0],
+        const draftPayment = await this.paymentsService.create(
+          {
             payment_type: paymentType,
-            payment_method: 'cash',
-            party_id: currentInvoice.party_id || null,
+            payment_method: 'cash' as any,
+            payment_date: new Date().toISOString().split('T')[0],
+            amount,
             party_name: currentInvoice.party_name || 'Unknown',
-            party_type: currentInvoice.party_type || (currentInvoice.invoice_type === 'sales' ? 'customer' : 'supplier'),
-            amount: Number(currentInvoice.grand_total) || 0,
+            party_id: currentInvoice.party_id || undefined,
+            party_type: (currentInvoice.party_type || (currentInvoice.invoice_type === 'sales' ? 'customer' : 'supplier')) as any,
             currency_code: currentInvoice.currency_code || 'MAD',
             reference_number: currentInvoice.invoice_number,
             remarks: `Payment for invoice ${currentInvoice.invoice_number}`,
-            status: 'submitted',
-            created_by: userId,
-          })
-          .select()
-          .single();
+          } as any,
+          organizationId,
+          userId,
+        );
 
-        if (!payError && payment) {
-          await supabaseClient
-            .from('payment_allocations')
-            .insert({
-              payment_id: payment.id,
-              invoice_id: id,
-              allocated_amount: Number(currentInvoice.grand_total) || 0,
-            });
-        } else {
-          this.logger.warn(`Failed to create payment record for invoice ${id}: ${payError?.message}`);
-        }
-      } catch (paymentErr) {
-        // Don't fail the status update if payment record creation fails
-        this.logger.error(`Error creating payment record for invoice ${id}: ${paymentErr instanceof Error ? paymentErr.message : String(paymentErr)}`);
+        await this.paymentsService.allocatePayment(
+          draftPayment.id,
+          { allocations: [{ invoice_id: id, amount }] } as any,
+          organizationId,
+          userId,
+        );
+      } catch (paymentErr: any) {
+        // Surface accounting failure so caller knows JE was not posted.
+        this.logger.error(`Failed to post payment for invoice ${id}: ${paymentErr?.message}`);
+        throw new BadRequestException(
+          `Invoice marked paid but payment posting failed: ${paymentErr?.message}. Reverse status or retry via Payments module.`,
+        );
       }
     }
 
@@ -692,6 +727,7 @@ export class InvoicesService {
         `UPDATE journal_entries SET status = 'posted', posted_by = $1, posted_at = $2, total_debit = $3, total_credit = $4 WHERE id = $5`,
         [userId, now, totalDebit, totalCredit, jeId],
       );
+      await this.accountingAutomationService.applyCashSettlementDate(pgClient, jeId, postingDate);
 
       // Mark invoice submitted and link to journal entry
       await pgClient.query(
@@ -1289,11 +1325,26 @@ export class InvoicesService {
         `UPDATE journal_entries SET status = 'posted', posted_by = $1, posted_at = $2, total_debit = $3, total_credit = $4 WHERE id = $5`,
         [userId, now, totalDebit, totalCredit, jeId],
       );
+      await this.accountingAutomationService.applyCashSettlementDate(pgClient, jeId, postingDate);
 
-      // 5e. Link JE to credit note
+      // 5e. Link JE to credit note + sync parent's credited_amount
       await pgClient.query(
         `UPDATE invoices SET journal_entry_id = $1 WHERE id = $2`,
         [jeId, cnId],
+      );
+
+      // Replaces dropped sync_invoice_credited_amount trigger:
+      // recompute parent invoice's credited_amount from all non-cancelled credit notes.
+      await pgClient.query(
+        `UPDATE invoices
+           SET credited_amount = COALESCE((
+             SELECT SUM(grand_total) FROM invoices
+             WHERE original_invoice_id = $1
+               AND document_type = 'credit_note'
+               AND status NOT IN ('cancelled')
+           ), 0)
+         WHERE id = $1`,
+        [originalInvoiceId],
       );
 
       return { creditNoteId: cnId, journalEntryId: jeId };

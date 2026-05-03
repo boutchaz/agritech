@@ -53,24 +53,52 @@ export class WorkersService {
     }
   }
 
-  /**
-   * Get all workers for an organization
-   */
-  async findAll(userId: string, organizationId: string, farmId?: string, page: number = 1, pageSize: number = 50): Promise<PaginatedResponse<any>> {
+  async findAll(
+    userId: string,
+    organizationId: string,
+    filters: {
+      farmId?: string;
+      workerType?: string;
+      isActive?: boolean;
+      platformAccess?: 'with' | 'without';
+      page?: number;
+      pageSize?: number;
+      sortBy?: string;
+      sortDir?: string;
+      search?: string;
+    } = {},
+  ): Promise<PaginatedResponse<any>> {
     await this.verifyOrganizationAccess(userId, organizationId);
     const client = this.databaseService.getAdminClient();
+
+    const page = filters.page ?? 1;
+    const pageSize = filters.pageSize ?? 50;
+    const orderBy = filters.sortBy || 'last_name';
+    const ascending = (filters.sortDir || 'asc') === 'asc';
 
     return paginate(client, 'workers', {
       select: '*, organizations!inner(name), farms(name)',
       filters: (q) => {
         q = q.eq('organization_id', organizationId);
-        if (farmId) q = q.or(`farm_id.eq.${farmId.replace(/[,.()'"]/g, '')},farm_id.is.null`);
+        if (filters.farmId) {
+          q = q.or(`farm_id.eq.${filters.farmId.replace(/[,.()'"]/g, '')},farm_id.is.null`);
+        }
+        if (filters.workerType) {
+          q = q.eq('worker_type', filters.workerType);
+        }
+        if (filters.isActive !== undefined && filters.isActive !== null) {
+          q = q.eq('is_active', filters.isActive);
+        }
+        if (filters.search) {
+          const term = filters.search.trim();
+          q = q.or(`first_name.ilike.%${term}%,last_name.ilike.%${term}%,cin.ilike.%${term}%`);
+        }
         return q;
       },
       page,
       pageSize,
-      orderBy: 'last_name',
-      ascending: true,
+      orderBy,
+      ascending,
       map: (worker) => ({
         ...worker,
         organization_name: Array.isArray(worker.organizations)
@@ -422,11 +450,9 @@ export class WorkersService {
       .filter(r => r.payment_status === 'pending')
       .reduce((sum, r) => sum + (r.amount_paid || 0), 0);
 
-    // Count distinct work dates as "days worked"
     const distinctDates = new Set((workRecords || []).map(r => r.work_date).filter(Boolean));
     const totalDaysWorked = distinctDates.size;
 
-    // Count distinct completed tasks
     const distinctTasks = new Set((workRecords || []).map(r => r.task_id).filter(Boolean));
     const totalTasksCompleted = distinctTasks.size;
 
@@ -457,6 +483,8 @@ export class WorkersService {
       }
     }
 
+    const monthly = this.computeMonthlyBreakdown(workRecords || []);
+
     return {
       worker,
       totalWorkRecords: workRecords?.length || 0,
@@ -464,7 +492,159 @@ export class WorkersService {
       pendingPayments: workRecordsPending + paymentsPending,
       totalDaysWorked,
       totalTasksCompleted,
+      monthly,
     };
+  }
+
+  private computeMonthlyBreakdown(workRecords: { work_date: string; task_id: string | null }[]) {
+    const now = new Date();
+    const thisYear = now.getFullYear();
+    const thisMonth = now.getMonth();
+    const prevDate = new Date(thisYear, thisMonth - 1, 1);
+    const prevYear = prevDate.getFullYear();
+    const prevMonth = prevDate.getMonth();
+
+    const thisRecords = workRecords.filter(r => {
+      if (!r.work_date) return false;
+      const d = new Date(r.work_date);
+      return d.getMonth() === thisMonth && d.getFullYear() === thisYear;
+    });
+    const prevRecords = workRecords.filter(r => {
+      if (!r.work_date) return false;
+      const d = new Date(r.work_date);
+      return d.getMonth() === prevMonth && d.getFullYear() === prevYear;
+    });
+
+    const uniqueDays = (recs: { work_date: string }[]) =>
+      new Set(recs.map(r => r.work_date.slice(0, 10))).size;
+
+    const countTasks = (recs: { task_id: string | null }[]) =>
+      new Set(recs.map(r => r.task_id).filter(Boolean)).size;
+
+    const workingDaysSoFar = countWeekdaysInRange(
+      `${thisYear}-${String(thisMonth + 1).padStart(2, '0')}-01`,
+      now.toISOString().slice(0, 10),
+    );
+
+    const daysInPrevMonth = new Date(prevYear, prevMonth + 1, 0).getDate();
+    const prevWorkingDays = countWeekdaysInRange(
+      `${prevYear}-${String(prevMonth + 1).padStart(2, '0')}-01`,
+      `${prevYear}-${String(prevMonth + 1).padStart(2, '0')}-${String(daysInPrevMonth).padStart(2, '0')}`,
+    );
+
+    const attendanceThis = workingDaysSoFar > 0
+      ? Math.min(Math.round((uniqueDays(thisRecords) / workingDaysSoFar) * 100), 100)
+      : 0;
+    const attendancePrev = prevWorkingDays > 0
+      ? Math.min(Math.round((uniqueDays(prevRecords) / prevWorkingDays) * 100), 100)
+      : 0;
+
+    return {
+      thisMonth: {
+        days: uniqueDays(thisRecords),
+        tasks: countTasks(thisRecords),
+        attendance: attendanceThis,
+      },
+      prevMonth: {
+        days: uniqueDays(prevRecords),
+        tasks: countTasks(prevRecords),
+        attendance: attendancePrev,
+      },
+      workingDaysSoFar,
+    };
+  }
+
+  async getActivitySummary(
+    userId: string,
+    organizationId: string,
+    days: number = 30,
+  ) {
+    await this.verifyOrganizationAccess(userId, organizationId);
+    const client = this.databaseService.getAdminClient();
+
+    const endDate = new Date().toISOString().split('T')[0];
+    const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+    const { data: workers, error: workersError } = await client
+      .from('workers')
+      .select('id, worker_type')
+      .eq('organization_id', organizationId)
+      .eq('is_active', true);
+
+    if (workersError || !workers) {
+      throw new BadRequestException(`Failed to fetch workers: ${workersError?.message}`);
+    }
+
+    const workerIds = workers.map(w => w.id);
+
+    if (workerIds.length === 0) {
+      return {};
+    }
+
+    const { data: workRecords, error: wrError } = await client
+      .from('work_records')
+      .select('worker_id, work_date, hours_worked, total_payment, amount_paid, payment_status')
+      .in('worker_id', workerIds)
+      .gte('work_date', startDate)
+      .lte('work_date', endDate);
+
+    if (wrError) {
+      throw new BadRequestException(`Failed to fetch work records: ${wrError.message}`);
+    }
+
+    const { data: paymentRecords, error: prError } = await client
+      .from('payment_records')
+      .select('worker_id, payment_date, net_amount, status')
+      .in('worker_id', workerIds)
+      .gte('period_start', startDate)
+      .lte('period_end', endDate);
+
+    if (prError) {
+      throw new BadRequestException(`Failed to fetch payment records: ${prError.message}`);
+    }
+
+    const result: Record<string, { days: Array<{ date: string; hours: number; amount: number }>; totalHours: number; totalAmount: number }> = {};
+
+    for (const w of workers) {
+      result[w.id] = { days: [], totalHours: 0, totalAmount: 0 };
+    }
+
+    const dayMap: Record<string, Record<string, { hours: number; amount: number }>> = {};
+    for (const w of workers) {
+      dayMap[w.id] = {};
+    }
+
+    for (const wr of workRecords || []) {
+      const date = wr.work_date;
+      if (!dayMap[wr.worker_id][date]) {
+        dayMap[wr.worker_id][date] = { hours: 0, amount: 0 };
+      }
+      dayMap[wr.worker_id][date].hours += Number(wr.hours_worked) || 0;
+      dayMap[wr.worker_id][date].amount += Number(wr.total_payment ?? wr.amount_paid) || 0;
+    }
+
+    for (const pr of paymentRecords || []) {
+      if (pr.status !== 'paid' || !pr.payment_date) continue;
+      const date = pr.payment_date;
+      const wid = pr.worker_id;
+      if (!dayMap[wid]) continue;
+      if (!dayMap[wid][date]) {
+        dayMap[wid][date] = { hours: 0, amount: 0 };
+      }
+      dayMap[wid][date].amount += Number(pr.net_amount) || 0;
+    }
+
+    for (const [workerId, dateEntries] of Object.entries(dayMap)) {
+      const sortedDays = Object.entries(dateEntries)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([date, val]) => ({ date, hours: val.hours, amount: val.amount }));
+
+      result[workerId].days = sortedDays;
+      result[workerId].totalHours = sortedDays.reduce((s, d) => s + d.hours, 0);
+      result[workerId].totalAmount = sortedDays.reduce((s, d) => s + d.amount, 0);
+    }
+
+    return result;
   }
 
   /**
@@ -1247,4 +1427,15 @@ export class WorkersService {
       message: 'Work record created successfully',
     };
   }
+}
+
+function countWeekdaysInRange(from: string, to: string): number {
+  const start = new Date(from);
+  const end = new Date(to);
+  let count = 0;
+  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+    const dow = d.getDay();
+    if (dow !== 0 && dow !== 6) count++;
+  }
+  return count;
 }

@@ -18,6 +18,8 @@ import {
   useServerTableState,
 } from '@/components/ui/data-table';
 import { Button } from '@/components/ui/button';
+import { BulkProcessPaymentDialog } from './BulkProcessPaymentDialog';
+import { Wallet } from 'lucide-react';
 import { TableCell, TableHead, TableRow } from '@/components/ui/table';
 import {
   usePaginatedPaymentRecords,
@@ -49,6 +51,7 @@ const PaymentsList = ({
 }: PaymentsListProps) => {
   const { t, i18n } = useTranslation();
   const [activeStatus, setActiveStatus] = useState<PaymentStatus | 'all'>('all');
+  const [bulkOpen, setBulkOpen] = useState(false);
 
   const tableState = useServerTableState({
     defaultPageSize: 10,
@@ -140,10 +143,16 @@ const PaymentsList = ({
         <ListPageHeader
           variant="shell"
           actions={
-            <Button variant="secondary">
-              <Download className="w-5 h-5" />
-              {t('payments.list.actions.export', 'Exporter')}
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="default" onClick={() => setBulkOpen(true)}>
+                <Wallet className="w-5 h-5" />
+                {t('payments.list.actions.bulkPay', 'Paiement groupé')}
+              </Button>
+              <Button variant="secondary">
+                <Download className="w-5 h-5" />
+                {t('payments.list.actions.export', 'Exporter')}
+              </Button>
+            </div>
           }
         />
       }
@@ -377,6 +386,11 @@ const PaymentsList = ({
             </TableCell>
           </>
         )}
+      />
+      <BulkProcessPaymentDialog
+        open={bulkOpen}
+        onOpenChange={setBulkOpen}
+        payments={allPayments as PaymentSummary[]}
       />
     </ListPageLayout>
   );

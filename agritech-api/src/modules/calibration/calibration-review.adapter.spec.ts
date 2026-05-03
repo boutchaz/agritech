@@ -492,13 +492,12 @@ describe('CalibrationReviewAdapter', () => {
   // ── Block C (Phase 2 stub) ──
 
   describe('block_c', () => {
-    it('returns anomaly list when anomalies exist', () => {
+    it('is always null (anomaly list not exposed in review API)', () => {
       const result = adapter.transform(buildSnapshotInput());
-      expect(result.block_c).toBeDefined();
-      expect(result.block_c!.anomalies).toHaveLength(1);
+      expect(result.block_c).toBeNull();
     });
 
-    it('returns null when no anomalies', () => {
+    it('stays null when step5 has no anomalies', () => {
       const input = buildSnapshotInput();
       (input.output as any).step5.anomalies = [];
       const result = adapter.transform(input);

@@ -1,54 +1,43 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
-import { WelcomeStep } from '@/components/onboarding/steps/WelcomeStep';
-import { useOnboardingStore } from '@/stores/onboardingStore';
+import { useCallback, useState } from 'react';
+import { OnbHeader, OnbShellLayout } from '@/components/onboarding-v2/chrome';
+import { ProfileScreen } from '@/components/onboarding-v2/ProfileScreen';
 import { onboardingApi } from '@/lib/api/onboarding';
-import { useCallback, useRef } from 'react';
+import { useOnboardingStore } from '@/stores/onboardingStore';
 
 export const Route = createFileRoute('/(public)/onboarding/profile')({
-  component: ProfileStep,
+  component: ProfileStepRoute,
 });
 
-function ProfileStep() {
+function ProfileStepRoute() {
   const navigate = useNavigate();
-  const profileData = useOnboardingStore((state) => state.profileData);
-  const updateProfileData = useOnboardingStore((state) => state.updateProfileData);
-  const setCurrentStep = useOnboardingStore((state) => state.setCurrentStep);
-  const persistState = useOnboardingStore((state) => state.persistState);
-  const isSubmittingRef = useRef(false);
+  const profileData = useOnboardingStore((s) => s.profileData);
+  const updateProfileData = useOnboardingStore((s) => s.updateProfileData);
+  const setCurrentStep = useOnboardingStore((s) => s.setCurrentStep);
+  const persistState = useOnboardingStore((s) => s.persistState);
+  const [loading, setLoading] = useState(false);
 
   const handleNext = useCallback(async () => {
-    // Prevent double submission
-    if (isSubmittingRef.current) {
-      return;
-    }
-
-    isSubmittingRef.current = true;
-
+    if (loading) return;
+    setLoading(true);
     try {
       await onboardingApi.saveProfile(profileData);
-
-      // Always advance to step 2 (organization). Signup auto-creates an
-      // org + stashes its id in localStorage, which populates
-      // existingOrgId on the store — but the user has never actually
-      // reviewed/confirmed org info. Skipping straight to farm made new
-      // users land on modules + subscription without ever seeing
-      // profile / org / farm steps. The organization step is
-      // responsible for prefilling from the existing org and letting
-      // the user edit before continuing.
       await persistState({ currentStep: 2 });
       setCurrentStep(2);
-
-      navigate({ to: '/onboarding/organization' });
+      navigate({ to: '/onboarding/account-type' });
     } finally {
-      isSubmittingRef.current = false;
+      setLoading(false);
     }
-  }, [navigate, setCurrentStep, persistState, profileData]);
+  }, [loading, navigate, setCurrentStep, persistState, profileData]);
 
   return (
-    <WelcomeStep
-      profileData={profileData}
-      onUpdate={updateProfileData}
-      onNext={handleNext}
-    />
+    <OnbShellLayout header={<OnbHeader step={1} total={5} />}>
+      <ProfileScreen
+        data={profileData}
+        onChange={updateProfileData}
+        onNext={handleNext}
+        loading={loading}
+      />
+    </OnbShellLayout>
   );
 }

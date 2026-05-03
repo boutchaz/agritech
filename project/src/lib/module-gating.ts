@@ -59,12 +59,15 @@ export function findOwningModuleSlug(
 }
 
 /**
- * True when the path is allowed: either owned by an ACTIVE module, or not
- * owned by any module (permissive — unknown paths pass through).
+ * True when the path is owned by an ACTIVE module (strict mode).
  *
- * Rationale: layout-level wrapping must not block routes that simply haven't
- * been registered in any module yet. Only block when a path is explicitly
- * claimed by a module that the org has not enabled.
+ * - If a module claims the path (longest-prefix-wins) and is active → allowed
+ * - If a module claims the path but is NOT active → blocked
+ * - If NO module claims the path → BLOCKED (strict: unclaimed = blocked)
+ *
+ * This ensures every route must be explicitly registered in some module's
+ * navigation_items to be visible. Orphan routes are blocked by default.
+ * Routes not yet ready (e.g. lab-services) stay unclaimed and inaccessible.
  */
 export function isPathEnabled(
   path: string,
@@ -72,7 +75,7 @@ export function isPathEnabled(
   activeSlugs: Set<string> | string[],
 ): boolean {
   const slug = findOwningModuleSlug(path, modules);
-  if (slug === null) return true;
+  if (slug === null) return false;
   const set = activeSlugs instanceof Set ? activeSlugs : new Set(activeSlugs);
   return set.has(slug);
 }

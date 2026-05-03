@@ -1,0 +1,107 @@
+# Canonical host: set CANONICAL_PUBLIC_HOST at runtime (same as DASHBOARD_PUBLIC_HOST in Dokploy).
+# The apex block is the *default* — if CANONICAL_PUBLIC_HOST is unset (defaults
+# to "localhost" in compose), unknown Host headers (e.g. the public domain
+# behind Dokploy's proxy) still land here instead of falling through to the
+# www-redirect block, which would otherwise 301 every visitor to
+# https://localhost/$request_uri.
+
+server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+    server_name ${CANONICAL_PUBLIC_HOST} localhost _;
+
+    root /usr/share/nginx/html;
+    index index.html;
+
+    gzip_static on;
+
+    gzip on;
+    gzip_vary on;
+    gzip_min_length 256;
+    gzip_proxied any;
+    gzip_comp_level 4;
+    gzip_types
+        text/plain
+        text/css
+        text/javascript
+        application/javascript
+        application/x-javascript
+        application/json
+        application/ld+json
+        application/xml
+        application/rss+xml
+        application/atom+xml
+        image/svg+xml
+        font/truetype
+        font/opentype
+        font/woff
+        font/woff2;
+
+    location /blog {
+        proxy_pass http://agritech-api:3001/blog;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 30s;
+    }
+
+    location = /sitemap.xml {
+        proxy_pass http://agritech-api:3001/sitemap.xml;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location = /rss.xml {
+        proxy_pass http://agritech-api:3001/rss.xml;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location ~ ^/(sw\.js|workbox-.*\.js)$ {
+        expires -1;
+        add_header Cache-Control "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0" always;
+        add_header X-Content-Type-Options "nosniff" always;
+    }
+
+    location = /site.webmanifest {
+        expires 1h;
+        add_header Cache-Control "public, max-age=3600";
+        add_header X-Content-Type-Options "nosniff" always;
+    }
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    location /assets/ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+        add_header X-Frame-Options "SAMEORIGIN" always;
+        add_header X-Content-Type-Options "nosniff" always;
+    }
+
+    location ~* \.(png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+}
+
+# www → apex 301 (preserves path + query for SEO). Only matches explicit
+# www.<canonical> Host — never the catch-all default.
+server {
+    listen 80;
+    listen [::]:80;
+    server_name www.${CANONICAL_PUBLIC_HOST};
+
+    return 301 https://${CANONICAL_PUBLIC_HOST}$request_uri;
+}

@@ -6,6 +6,7 @@ import {
   IsArray,
   ValidateNested,
   IsBoolean,
+  IsNumber,
   ArrayMinSize,
 } from 'class-validator';
 import { Type } from 'class-transformer';
@@ -71,6 +72,11 @@ export class CreatePurchaseOrderDto {
   @IsDateString()
   @IsOptional()
   stock_received_date?: string;
+
+  @ApiPropertyOptional({ description: 'Default tax rate applied when a line tax_rate is not provided (hybrid model)', example: 20 })
+  @IsNumber()
+  @IsOptional()
+  default_tax_rate?: number;
 
   @ApiProperty({
     description: 'Order line items',

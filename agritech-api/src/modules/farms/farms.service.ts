@@ -555,6 +555,8 @@ export class FarmsService {
 
     this.logger.log(`Farm created successfully: ${newFarm.id}`);
 
+    await this.syncFarmLocationPoint(newFarm.id, dto.coordinates);
+
     // Track first farm created milestone
     await this.adoptionService.recordMilestone(
       userId,
@@ -641,8 +643,40 @@ export class FarmsService {
       throw new InternalServerErrorException(`Failed to update farm: ${updateError.message}`);
     }
 
+    if (dto.coordinates !== undefined) {
+      await this.syncFarmLocationPoint(farmId, dto.coordinates);
+    }
+
     this.logger.log(`Farm updated successfully: ${farmId}`);
     return updatedFarm;
+  }
+
+  private async syncFarmLocationPoint(
+    farmId: string,
+    coordinates: unknown,
+  ): Promise<void> {
+    if (
+      !coordinates ||
+      typeof coordinates !== 'object' ||
+      !('lat' in coordinates) ||
+      !('lng' in coordinates)
+    ) {
+      return;
+    }
+    const lat = Number((coordinates as Record<string, unknown>).lat);
+    const lng = Number((coordinates as Record<string, unknown>).lng);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+
+    try {
+      await this.databaseService.executeInPgTransaction(async (pgClient) => {
+        await pgClient.query(
+          `UPDATE farms SET location_point = ST_SetSRID(ST_MakePoint($1, $2), 4326) WHERE id = $3`,
+          [lng, lat, farmId],
+        );
+      });
+    } catch (err) {
+      this.logger.warn(`Failed to sync farm location_point for ${farmId}: ${(err as Error).message}`);
+    }
   }
 
   private getRolePermissions(role: string | null) {

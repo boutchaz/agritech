@@ -14,6 +14,8 @@ export interface CreateJournalEntryDto {
   reference_type?: string;
   reference_number?: string;
   fiscal_year_id?: string;
+  /** Phase 4f: tag this JE as one side of an inter-org transaction. */
+  intercompany_pair_id?: string;
   items: {
     account_id: string;
     debit: number;
@@ -22,6 +24,10 @@ export interface CreateJournalEntryDto {
     cost_center_id?: string;
     farm_id?: string;
     parcel_id?: string;
+    currency?: string;
+    exchange_rate?: number;
+    fc_debit?: number;
+    fc_credit?: number;
   }[];
 }
 
@@ -39,6 +45,10 @@ export interface UpdateJournalEntryDto {
     cost_center_id?: string;
     farm_id?: string;
     parcel_id?: string;
+    currency?: string;
+    exchange_rate?: number;
+    fc_debit?: number;
+    fc_credit?: number;
   }[];
 }
 
@@ -254,6 +264,7 @@ export class JournalEntriesService {
           status: 'draft',
           created_by: userId,
           ...(fiscalYearId ? { fiscal_year_id: fiscalYearId } : {}),
+          ...(dto.intercompany_pair_id ? { intercompany_pair_id: dto.intercompany_pair_id } : {}),
         })
         .select()
         .single();
@@ -263,18 +274,48 @@ export class JournalEntriesService {
         throw new BadRequestException(`Failed to create journal entry: ${entryError.message}`);
       }
 
-      // Create journal items
-      const items = dto.items.map(item => ({
-        journal_entry_id: entry.id,
-        account_id: item.account_id,
-        debit: item.debit || 0,
-        credit: item.credit || 0,
-        description: item.description,
-        cost_center_id: item.cost_center_id,
-        farm_id: item.farm_id,
-        parcel_id: item.parcel_id,
-        ...(fiscalYearId ? { fiscal_year_id: fiscalYearId } : {}),
-      }));
+      // Resolve org base currency + per-account currency (for FX defaulting)
+      const { data: orgRow } = await supabaseClient
+        .from('organizations')
+        .select('currency_code')
+        .eq('id', organizationId)
+        .maybeSingle();
+      const baseCurrency = ((orgRow?.currency_code as string | undefined) || 'MAD').toUpperCase();
+
+      const accountIds = Array.from(new Set(dto.items.map((it) => it.account_id)));
+      const accountCurrencyMap = new Map<string, string>();
+      if (accountIds.length > 0) {
+        const { data: accs } = await supabaseClient
+          .from('accounts')
+          .select('id, currency_code')
+          .in('id', accountIds);
+        for (const a of accs || []) {
+          accountCurrencyMap.set(a.id, ((a.currency_code as string | undefined) || baseCurrency).toUpperCase());
+        }
+      }
+
+      // Create journal items (with FX columns)
+      const items = dto.items.map((item) => {
+        const debit = item.debit || 0;
+        const credit = item.credit || 0;
+        const ccy = (item.currency || accountCurrencyMap.get(item.account_id) || baseCurrency).toUpperCase();
+        const rate = item.exchange_rate ?? (ccy === baseCurrency ? 1 : 1);
+        return {
+          journal_entry_id: entry.id,
+          account_id: item.account_id,
+          debit,
+          credit,
+          description: item.description,
+          cost_center_id: item.cost_center_id,
+          farm_id: item.farm_id,
+          parcel_id: item.parcel_id,
+          currency: ccy,
+          exchange_rate: rate,
+          fc_debit: item.fc_debit ?? debit,
+          fc_credit: item.fc_credit ?? credit,
+          ...(fiscalYearId ? { fiscal_year_id: fiscalYearId } : {}),
+        };
+      });
 
       const { error: itemsError } = await supabaseClient
         .from('journal_items')
@@ -361,18 +402,47 @@ export class JournalEntriesService {
         const updateFiscalYearId = dto.fiscal_year_id || entry.fiscal_year_id ||
           await this.fiscalYearsService.resolveFiscalYear(organizationId, entryDate);
 
-        // Insert new items
-        const items = dto.items.map(item => ({
-          journal_entry_id: id,
-          account_id: item.account_id,
-          debit: item.debit || 0,
-          credit: item.credit || 0,
-          description: item.description,
-          cost_center_id: item.cost_center_id,
-          farm_id: item.farm_id,
-          parcel_id: item.parcel_id,
-          ...(updateFiscalYearId ? { fiscal_year_id: updateFiscalYearId } : {}),
-        }));
+        // Resolve org base + per-account currencies for FX defaults
+        const { data: orgRowU } = await supabaseClient
+          .from('organizations')
+          .select('currency_code')
+          .eq('id', organizationId)
+          .maybeSingle();
+        const baseCurrencyU = ((orgRowU?.currency_code as string | undefined) || 'MAD').toUpperCase();
+        const accountIdsU = Array.from(new Set(dto.items.map((it) => it.account_id)));
+        const accountCcyMap = new Map<string, string>();
+        if (accountIdsU.length > 0) {
+          const { data: accs } = await supabaseClient
+            .from('accounts')
+            .select('id, currency_code')
+            .in('id', accountIdsU);
+          for (const a of accs || []) {
+            accountCcyMap.set(a.id, ((a.currency_code as string | undefined) || baseCurrencyU).toUpperCase());
+          }
+        }
+
+        // Insert new items (with FX columns)
+        const items = dto.items.map((item) => {
+          const debit = item.debit || 0;
+          const credit = item.credit || 0;
+          const ccy = (item.currency || accountCcyMap.get(item.account_id) || baseCurrencyU).toUpperCase();
+          const rate = item.exchange_rate ?? 1;
+          return {
+            journal_entry_id: id,
+            account_id: item.account_id,
+            debit,
+            credit,
+            description: item.description,
+            cost_center_id: item.cost_center_id,
+            farm_id: item.farm_id,
+            parcel_id: item.parcel_id,
+            currency: ccy,
+            exchange_rate: rate,
+            fc_debit: item.fc_debit ?? debit,
+            fc_credit: item.fc_credit ?? credit,
+            ...(updateFiscalYearId ? { fiscal_year_id: updateFiscalYearId } : {}),
+          };
+        });
 
         const { error: insertError } = await supabaseClient
           .from('journal_items')

@@ -19,6 +19,7 @@ import { useAuthStore, waitForHydration } from '../stores/authStore'
 import { useActivityTracking } from '../hooks/useActivityTracking'
 import { usePageView } from '../lib/analytics/hooks'
 import { isRTLLocale } from '../lib/is-rtl-locale'
+import { DirectionProvider } from '@radix-ui/react-direction'
 import { loadLanguage } from '@/i18n/config'
 import { usersApi } from '../lib/api/users'
 import { AuthenticatedLayoutSkeleton } from '@/components/AuthenticatedLayoutSkeleton';
@@ -156,6 +157,7 @@ function AuthenticatedLayout() {
   }
 
   return (
+    <DirectionProvider dir={isRTL ? 'rtl' : 'ltr'}>
     <div className="flex min-h-0 flex-1 flex-col" dir={isRTL ? 'rtl' : 'ltr'}>
       <div
         data-authenticated-app
@@ -226,5 +228,6 @@ function AuthenticatedLayout() {
       {/* Level-up suggestion toast */}
       <LevelUpSuggestion />
     </div>
+    </DirectionProvider>
   )
 }

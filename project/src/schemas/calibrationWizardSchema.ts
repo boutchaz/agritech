@@ -28,72 +28,83 @@ const optionalNumber = z.number().min(0).optional();
 
 const requiredNumber = z.number().min(0);
 
-export const PlantationStepSchema = z
-  .object({
-    plantation_age: requiredNumber,
-    real_tree_count: optionalNumber,
-    real_spacing: z.string().trim().optional(),
-    water_source: z.enum(['well', 'dam', 'seguia', 'municipal', 'mixed', 'other']),
-    water_source_changed: z.boolean(),
-    water_source_change_date: z.string().trim().optional(),
-    previous_water_source: z.string().trim().optional(),
-  })
-  .superRefine((data, ctx) => {
-    if (data.water_source_changed) {
-      if (!data.water_source_change_date) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ['water_source_change_date'],
-          message: 'Water source change date is required when source changed',
-        });
-      }
+// Refines are factored out so the per-step schemas (with refinements) and
+// the merged wizard schema (Zod 4 forbids .merge() on refined objects)
+// can both reuse them.
 
-      if (!data.previous_water_source) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ['previous_water_source'],
-          message: 'Previous water source is required when source changed',
-        });
-      }
+export const PlantationStepBaseSchema = z.object({
+  plantation_age: requiredNumber,
+  real_tree_count: optionalNumber,
+  real_spacing: z.string().trim().optional(),
+  water_source: z.enum(['well', 'dam', 'seguia', 'municipal', 'mixed', 'other']),
+  water_source_changed: z.boolean(),
+  water_source_change_date: z.string().trim().optional(),
+  previous_water_source: z.string().trim().optional(),
+});
+
+const plantationRefine = (
+  data: z.infer<typeof PlantationStepBaseSchema>,
+  ctx: z.RefinementCtx,
+) => {
+  if (data.water_source_changed) {
+    if (!data.water_source_change_date) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['water_source_change_date'],
+        message: 'Water source change date is required when source changed',
+      });
     }
-  });
-
-export const IrrigationStepSchema = z
-  .object({
-    irrigation_frequency: z.enum(['daily', '2_3_per_week', 'weekly', 'biweekly', 'other']),
-    volume_per_tree_liters: requiredNumber,
-    irrigation_regime_changed: z.boolean(),
-    irrigation_change_date: z.string().trim().optional(),
-    previous_irrigation_frequency: z.string().trim().optional(),
-    previous_volume_per_tree_liters: optionalNumber,
-  })
-  .superRefine((data, ctx) => {
-    if (data.irrigation_regime_changed) {
-      if (!data.irrigation_change_date) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ['irrigation_change_date'],
-          message: 'Irrigation change date is required when regime changed',
-        });
-      }
-
-      if (!data.previous_irrigation_frequency) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ['previous_irrigation_frequency'],
-          message: 'Previous irrigation frequency is required when regime changed',
-        });
-      }
-
-      if (data.previous_volume_per_tree_liters == null) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ['previous_volume_per_tree_liters'],
-          message: 'Previous volume per tree is required when regime changed',
-        });
-      }
+    if (!data.previous_water_source) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['previous_water_source'],
+        message: 'Previous water source is required when source changed',
+      });
     }
-  });
+  }
+};
+
+export const PlantationStepSchema = PlantationStepBaseSchema.superRefine(plantationRefine);
+
+export const IrrigationStepBaseSchema = z.object({
+  irrigation_frequency: z.enum(['daily', '2_3_per_week', 'weekly', 'biweekly', 'other']),
+  volume_per_tree_liters: requiredNumber,
+  irrigation_regime_changed: z.boolean(),
+  irrigation_change_date: z.string().trim().optional(),
+  previous_irrigation_frequency: z.string().trim().optional(),
+  previous_volume_per_tree_liters: optionalNumber,
+});
+
+const irrigationRefine = (
+  data: z.infer<typeof IrrigationStepBaseSchema>,
+  ctx: z.RefinementCtx,
+) => {
+  if (data.irrigation_regime_changed) {
+    if (!data.irrigation_change_date) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['irrigation_change_date'],
+        message: 'Irrigation change date is required when regime changed',
+      });
+    }
+    if (!data.previous_irrigation_frequency) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['previous_irrigation_frequency'],
+        message: 'Previous irrigation frequency is required when regime changed',
+      });
+    }
+    if (data.previous_volume_per_tree_liters == null) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['previous_volume_per_tree_liters'],
+        message: 'Previous volume per tree is required when regime changed',
+      });
+    }
+  }
+};
+
+export const IrrigationStepSchema = IrrigationStepBaseSchema.superRefine(irrigationRefine);
 
 export const SoilParametersSchema = z.object({
   prioritaire: z.object({
@@ -212,13 +223,18 @@ export const CulturalHistoryStepSchema = z.object({
 
 export const ValidationStepSchema = z.object({});
 
-export const CalibrationWizardSchema = PlantationStepSchema.merge(IrrigationStepSchema)
-  .merge(SoilAnalysisStepSchema)
-  .merge(WaterAnalysisStepSchema)
-  .merge(FoliarAnalysisStepSchema)
-  .merge(HarvestHistoryStepSchema)
-  .merge(CulturalHistoryStepSchema)
-  .merge(ValidationStepSchema);
+export const CalibrationWizardSchema = PlantationStepBaseSchema
+  .extend(IrrigationStepBaseSchema.shape)
+  .extend(SoilAnalysisStepSchema.shape)
+  .extend(WaterAnalysisStepSchema.shape)
+  .extend(FoliarAnalysisStepSchema.shape)
+  .extend(HarvestHistoryStepSchema.shape)
+  .extend(CulturalHistoryStepSchema.shape)
+  .extend(ValidationStepSchema.shape)
+  .superRefine((data, ctx) => {
+    plantationRefine(data, ctx);
+    irrigationRefine(data, ctx);
+  });
 
 export type CalibrationWizardFormValues = z.infer<typeof CalibrationWizardSchema>;
 

@@ -108,6 +108,66 @@
         "update": "Mettre à jour le Paiement",
         "create": "Créer le Paiement"
       }
+    },
+    "errors": {
+      "loadFailed": "Échec du chargement des paiements"
+    },
+    "actions": {
+      "recordNew": "Enregistrer un Paiement",
+      "allocate": "Allouer"
+    },
+    "search": {
+      "placeholder": "Rechercher par numéro de paiement ou tiers..."
+    },
+    "filter": {
+      "allTypes": "Tous les Types",
+      "received": "Reçus",
+      "paid": "Émis",
+      "allStatus": "Tous les Statuts"
+    },
+    "status": {
+      "draft": "Brouillon",
+      "submitted": "Soumis",
+      "reconciled": "Rapproché",
+      "cancelled": "Annulé"
+    },
+    "stats": {
+      "total": "Total Paiements",
+      "received": "Reçus",
+      "paidOut": "Émis",
+      "draft": "Brouillons"
+    },
+    "list": {
+      "title": "Tous les Paiements",
+      "subtitle": "Consultez, allouez et gérez vos transactions de paiement"
+    },
+    "columns": {
+      "number": "N° Paiement",
+      "type": "Type",
+      "party": "Tiers",
+      "date": "Date",
+      "method": "Méthode",
+      "amount": "Montant",
+      "status": "Statut",
+      "allocation": "Allocation"
+    },
+    "type": {
+      "receive": "Réception",
+      "pay": "Émission"
+    },
+    "allocation": {
+      "linked": "{{count}} facture(s)",
+      "pending": "Non alloué"
+    },
+    "empty": {
+      "filtered": "Aucun paiement ne correspond à vos filtres.",
+      "initial": "Aucun paiement trouvé. Enregistrez votre premier paiement pour commencer."
+    },
+    "dialogs": {
+      "create": {
+        "title": "Enregistrer un Nouveau Paiement",
+        "description": "Enregistrez un paiement reçu d'un client ou effectué à un fournisseur"
+      }
     }
   },
   "journal": {
@@ -194,5 +254,284 @@
     "balanced": "✓ L'écriture est équilibrée",
     "cancelBtn": "Annuler",
     "createEntry": "Créer l'écriture"
+  },
+  "invoices": {
+    "actions": {
+      "create": "Créer une Facture",
+      "menu": "Actions",
+      "submit": "Soumettre la Facture",
+      "download": "Télécharger le PDF",
+      "delete": "Supprimer",
+      "onlyDraftDelete": "Seules les factures brouillon peuvent être supprimées",
+      "confirmDelete": "Êtes-vous sûr de vouloir supprimer la facture {{invoiceNumber}} ?",
+      "deleteSuccess": "Facture {{invoiceNumber}} supprimée avec succès",
+      "deleteError": "Échec de la suppression de la facture"
+    },
+    "search": {
+      "placeholder": "Rechercher par numéro de facture ou client..."
+    },
+    "filter": {
+      "allTypes": "Tous les Types",
+      "sales": "Vente",
+      "purchase": "Achat",
+      "allStatus": "Tous les Statuts"
+    },
+    "status": {
+      "draft": "Brouillon",
+      "submitted": "Soumise",
+      "paid": "Payée",
+      "partiallyPaid": "Partiellement Payée",
+      "overdue": "En Retard",
+      "cancelled": "Annulée"
+    },
+    "stats": {
+      "total": "Total Factures",
+      "pending": "En Attente",
+      "paid": "Payées",
+      "overdue": "En Retard"
+    },
+    "allInvoices": "Factures",
+    "tableDescription": "Liste de toutes vos factures de vente et d'achat",
+    "table": {
+      "invoiceNumber": "N° Facture",
+      "type": "Type",
+      "party": "Client/Fournisseur",
+      "date": "Date",
+      "amount": "Montant",
+      "status": "Statut",
+      "actions": "Actions"
+    },
+    "type": {
+      "sales": "Vente",
+      "purchase": "Achat"
+    },
+    "error": {
+      "loading": "Erreur lors du chargement des factures",
+      "editDraftOnly": "Seules les factures brouillon peuvent être modifiées"
+    },
+    "empty": {
+      "filtered": "Aucune facture ne correspond à vos filtres.",
+      "message": "Aucune facture trouvée. Créez votre première facture pour commencer."
+    }
+  },
+  "fiscalYears": {
+    "title": "Exercices Comptables",
+    "description": "Gérez les exercices comptables pour les rapports financiers et la clôture des périodes.",
+    "addNew": "Ajouter un Exercice",
+    "noPermission": "Vous n'avez pas la permission de gérer les exercices comptables.",
+    "status": {
+      "closed": "Clôturé",
+      "current": "En cours",
+      "open": "Ouvert"
+    },
+    "edit": {
+      "title": "Modifier l'Exercice",
+      "description": "Mettre à jour les détails de l'exercice."
+    },
+    "close": {
+      "title": "Clôturer l'Exercice",
+      "description": "Êtes-vous sûr de vouloir clôturer l'exercice \"{{name}}\" ? Cette action est irréversible. Toutes les transactions de cette période seront verrouillées.",
+      "confirm": "Clôturer l'Exercice"
+    },
+    "listTitle": "Liste des Exercices",
+    "listDescription": "Total : {{count}} exercices",
+    "table": {
+      "code": "Code",
+      "name": "Nom",
+      "period": "Période",
+      "periodType": "Type",
+      "status": "Statut",
+      "actions": "Actions"
+    },
+    "filters": {
+      "searchPlaceholder": "Rechercher par nom ou code",
+      "allStatuses": "Tous les statuts",
+      "allTypes": "Tous les types"
+    },
+    "form": {
+      "code": "Code",
+      "name": "Nom",
+      "startDate": "Date de Début",
+      "endDate": "Date de Fin",
+      "periodType": "Type de Période",
+      "monthly": "Mensuel",
+      "quarterly": "Trimestriel",
+      "setCurrent": "Définir comme exercice en cours",
+      "update": "Mettre à Jour",
+      "create": "Créer"
+    },
+    "create": {
+      "title": "Créer un Exercice",
+      "description": "Ajouter un nouvel exercice pour les rapports financiers."
+    },
+    "empty": "Aucun exercice comptable. Créez votre premier exercice pour commencer.",
+    "emptyFiltered": "Aucun exercice ne correspond à votre recherche ou filtres.",
+    "emptyFilteredHint": "Essayez d'ajuster ou d'effacer vos filtres pour voir plus d'exercices."
+  },
+  "accountMappings": {
+    "title": "Affectations Comptables",
+    "description": "Configurez comment les événements métier correspondent aux comptes du grand livre pour les écritures automatiques.",
+    "noPermission": "Vous n'avez pas la permission de gérer les affectations comptables.",
+    "initializeDefaults": "Initialiser par Défaut",
+    "addNew": "Ajouter une Affectation",
+    "active": "Actif",
+    "inactive": "Inactif",
+    "deactivate": "Désactiver",
+    "activate": "Activer",
+    "deactivated": "Affectation comptable désactivée",
+    "activated": "Affectation comptable activée",
+    "toggleFailed": "Échec de la mise à jour du statut de l'affectation",
+    "table": {
+      "key": "Clé",
+      "account": "Compte",
+      "description": "Description",
+      "status": "Statut",
+      "actions": "Actions"
+    },
+    "noAccounts": {
+      "title": "Plan Comptable Requis",
+      "description": "Vous devez configurer votre plan comptable avant d'initialiser les affectations.",
+      "link": "Aller aux Comptes"
+    },
+    "infoTitle": "Comment Fonctionnent les Affectations",
+    "infoDescription": "Les affectations comptables lient les événements métier (comme l'achèvement de tâches ou les ventes de récoltes) à des comptes spécifiques du grand livre. Lorsqu'une tâche est terminée ou une récolte vendue, le système crée automatiquement des écritures comptables en utilisant ces affectations.",
+    "searchPlaceholder": "Rechercher par clé ou compte...",
+    "filterType": "Filtrer par type",
+    "filterStatus": "Statut",
+    "allTypes": "Tous les Types",
+    "allStatus": "Tous les Statuts",
+    "activeOnly": "Actifs",
+    "inactiveOnly": "Inactifs",
+    "typeCount": "{{count}} affectations",
+    "noSearchResults": "Aucune affectation ne correspond à vos filtres.",
+    "empty": "Aucune affectation comptable configurée. Cliquez sur \"Initialiser par Défaut\" pour configurer les affectations standard, ou ajoutez-les manuellement.",
+    "labels": {
+      "cost_type": "Type de Coût",
+      "revenue_type": "Type de Revenu",
+      "harvest_sale": "Vente de Récolte",
+      "cash": "Espèces",
+      "planting": "Plantation",
+      "harvesting": "Récolte",
+      "irrigation": "Irrigation",
+      "fertilization": "Fertilisation",
+      "pesticide": "Pesticide",
+      "pruning": "Élagage",
+      "maintenance": "Maintenance",
+      "transport": "Transport",
+      "labor": "Main d'œuvre",
+      "materials": "Matériaux",
+      "utilities": "Services Publics",
+      "other": "Autre",
+      "product_sales": "Ventes de Produits",
+      "service_income": "Revenus de Services",
+      "other_income": "Autres Revenus",
+      "market": "Marché",
+      "export": "Export",
+      "wholesale": "Gros",
+      "direct": "Direct",
+      "processing": "Transformation",
+      "bank": "Banque",
+      "petty_cash": "Caisse"
+    },
+    "create": {
+      "title": "Créer une Affectation",
+      "description": "Associer un événement métier à un compte du grand livre.",
+      "success": "Affectation comptable créée avec succès",
+      "failed": "Échec de la création de l'affectation"
+    },
+    "update": {
+      "success": "Affectation comptable mise à jour avec succès",
+      "failed": "Échec de la mise à jour de l'affectation"
+    },
+    "delete": {
+      "title": "Supprimer l'Affectation",
+      "description": "Êtes-vous sûr de vouloir supprimer l'affectation pour \"{{key}}\" ? Cela n'affectera pas les écritures existantes, mais les nouvelles écritures automatiques échoueront sans cette affectation.",
+      "success": "Affectation comptable supprimée avec succès",
+      "failed": "Échec de la suppression de l'affectation"
+    },
+    "initialize": {
+      "success": "{{count}} affectations par défaut initialisées",
+      "failed": "Échec de l'initialisation des affectations par défaut"
+    },
+    "edit": {
+      "title": "Modifier l'Affectation",
+      "description": "Mettre à jour les détails de l'affectation comptable."
+    },
+    "form": {
+      "type": "Type d'Affectation",
+      "typePlaceholder": "Sélectionner le type d'affectation",
+      "key": "Clé d'Affectation",
+      "keyPlaceholder": "Sélectionner la clé d'affectation",
+      "account": "Compte du Grand Livre",
+      "accountPlaceholder": "Sélectionner un compte",
+      "description": "Description",
+      "descriptionPlaceholder": "Description facultative...",
+      "active": "Actif",
+      "activeHelp": "Les affectations inactives sont ignorées lors de la création d'écritures.",
+      "update": "Mettre à Jour",
+      "create": "Créer"
+    }
+  },
+  "common": {
+    "new": "Nouveau",
+    "view": "Voir",
+    "cancel": "Annuler",
+    "delete": "Supprimer",
+    "clearFilters": "Effacer les filtres",
+    "actions": "Actions",
+    "error": {
+      "unknown": "Erreur inconnue"
+    }
+  },
+  "app": {
+    "edit": "Modifier",
+    "delete": "Supprimer",
+    "cancel": "Annuler",
+    "unknownError": "Erreur inconnue"
+  },
+  "dialogs": {
+    "paymentDetail": {
+      "title": "Détails du paiement",
+      "editTitle": "Modifier le paiement",
+      "editDescription": "Mettez à jour les informations du paiement ci-dessous.",
+      "paymentNumber": "Paiement",
+      "paymentDate": "Date",
+      "amount": "Montant",
+      "paymentType": "Type",
+      "paymentReceived": "Paiement reçu",
+      "paymentMade": "Paiement effectué",
+      "party": "Tiers",
+      "paymentMethod": "Mode de paiement",
+      "referenceNumber": "Référence",
+      "remarks": "Remarques",
+      "created": "Créé",
+      "updated": "Mis à jour",
+      "allocateAndPost": "Affecter & Comptabiliser",
+      "paymentSubmitted": "Soumis",
+      "deleting": "Suppression...",
+      "deleteFailed": "Échec de la suppression du paiement",
+      "confirmDelete": "Êtes-vous sûr de vouloir supprimer ce paiement ?",
+      "confirmDeleteTitle": "Supprimer le paiement"
+    },
+    "paymentAllocation": {
+      "title": "Affecter le paiement",
+      "description": "Affectez ce paiement à une facture en attente.",
+      "selectInvoiceError": "Veuillez sélectionner une facture",
+      "amountError": "Veuillez entrer un montant valide",
+      "exceedsBalanceError": "Le montant dépasse le maximum affectable",
+      "allocationFailed": "Échec de l'affectation du paiement",
+      "noInvoicesFound": "Aucune facture éligible trouvée.",
+      "ensureSalesInvoice": "Assurez-vous qu'il existe au moins une facture de vente soumise.",
+      "ensurePurchaseInvoice": "Assurez-vous qu'il existe au moins une facture d'achat soumise.",
+      "invoiceToSettle": "Facture à régler",
+      "selectInvoice": "Sélectionner une facture...",
+      "remaining": "Restant :",
+      "invoiceBalance": "Solde de la facture",
+      "paymentAmount": "Montant du paiement",
+      "amountToAllocate": "Montant à affecter",
+      "maxAllocatable": "Maximum affectable",
+      "posting": "Comptabilisation...",
+      "allocateAndPost": "Affecter & Comptabiliser"
+    }
   }
 }

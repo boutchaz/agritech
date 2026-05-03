@@ -174,6 +174,7 @@ export interface TaskComment {
   
   // Joined data
   user_name?: string;
+  user_avatar_url?: string;
   worker_name?: string;
 }
 
@@ -371,14 +372,13 @@ export interface CreateTaskRequest {
   repeat_pattern?: RepeatPattern;
   cost_estimate?: number;
   notes?: string;
-  // Production traceability
-  crop_cycle_id?: string;
-  campaign_id?: string;
   // Work Unit Payment fields (for piece-work tracking)
   payment_type?: 'daily' | 'per_unit' | 'monthly' | 'metayage';
   work_unit_id?: string;
   units_required?: number;
   rate_per_unit?: number;
+  forfait_amount?: number;
+  payment_amount?: number;
   planned_items?: Array<{ product_id: string; quantity: number; area_treated?: number }>;
 }
 

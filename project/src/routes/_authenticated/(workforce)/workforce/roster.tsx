@@ -2,9 +2,10 @@ import { useMemo, useState, type ReactNode } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Loader2, Plus, X, Check } from 'lucide-react';
+import { Loader2, Plus, X, Check, Building2, Users, CalendarRange } from 'lucide-react';
 import { withRouteProtection } from '@/components/authorization/withRouteProtection';
 import { useAuth } from '@/hooks/useAuth';
+import ModernPageHeader from '@/components/ModernPageHeader';
 import { useWorkers } from '@/hooks/useWorkers';
 import {
   useCreateAssignment,
@@ -70,23 +71,23 @@ function RosterPage() {
   if (!orgId) return null;
 
   return (
-    <div className="p-6 space-y-6 max-w-7xl">
-      <header className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold">{t('roster.title', 'Roster')}</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            {t(
-              'roster.subtitle',
-              'Assign workers to shifts. Manage shift change requests.',
-            )}
-          </p>
-        </div>
-        <Button onClick={() => setCreating(true)} disabled={!shifts.data?.length || !workers.data?.length}>
-          <Plus className="w-4 h-4 mr-2" />
-          {t('roster.assign', 'Assign shift')}
-        </Button>
-      </header>
-
+    <>
+      <ModernPageHeader
+        breadcrumbs={[
+          { icon: Building2, label: currentOrganization?.name ?? '', path: '/dashboard' },
+          { icon: Users, label: t('nav.workforce', 'Workforce'), path: '/workforce/employees' },
+          { icon: CalendarRange, label: t('roster.title', 'Roster'), isActive: true },
+        ]}
+        title={t('roster.title', 'Roster')}
+        subtitle={t('roster.subtitle', 'Assign workers to shifts. Manage shift change requests.')}
+        actions={
+          <Button onClick={() => setCreating(true)} disabled={!shifts.data?.length || !workers.data?.length}>
+            <Plus className="w-4 h-4 mr-2" />
+            {t('roster.assign', 'Assign shift')}
+          </Button>
+        }
+      />
+      <div className="p-3 sm:p-4 lg:p-6 space-y-6">
       <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)}>
         <TabsList>
           <TabsTrigger value="assignments">
@@ -245,7 +246,8 @@ function RosterPage() {
           }}
         />
       )}
-    </div>
+      </div>
+    </>
   );
 }
 

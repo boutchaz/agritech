@@ -99,9 +99,16 @@ interface ProfitLossExportRow {
   display_amount: number;
 }
 
+interface ProfitLossSections {
+  direct_income: ProfitLossExportRow[];
+  other_income: ProfitLossExportRow[];
+  cogs: ProfitLossExportRow[];
+  indirect_expenses: ProfitLossExportRow[];
+  other_expenses: ProfitLossExportRow[];
+}
+
 export function exportProfitLossCsv(
-  revenue: ProfitLossExportRow[],
-  expenses: ProfitLossExportRow[],
+  sections: ProfitLossSections,
   startDate: string,
   endDate: string,
   currencySymbol: string
@@ -113,8 +120,11 @@ export function exportProfitLossCsv(
     { header: `Amount (${currencySymbol})`, key: 'display_amount', format: (v) => formatCurrencyValue(Number(v)) },
   ];
   const allRows = [
-    ...revenue.map(r => ({ ...r, section: 'Revenue' })),
-    ...expenses.map(e => ({ ...e, section: 'Expenses' })),
+    ...sections.direct_income.map(r => ({ ...r, section: 'Direct Income' })),
+    ...sections.other_income.map(r => ({ ...r, section: 'Other Income' })),
+    ...sections.cogs.map(r => ({ ...r, section: 'COGS' })),
+    ...sections.indirect_expenses.map(r => ({ ...r, section: 'Indirect Expenses' })),
+    ...sections.other_expenses.map(r => ({ ...r, section: 'Other Expenses' })),
   ];
   const csv = toCsv(columns, allRows as unknown as Record<string, unknown>[]);
   downloadBlob(csv, `profit-loss-${startDate}-to-${endDate}.csv`, 'text/csv;charset=utf-8;');

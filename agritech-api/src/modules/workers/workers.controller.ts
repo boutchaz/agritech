@@ -26,6 +26,7 @@ import {
 import { WorkersService } from './workers.service';
 import { CreateWorkerDto } from './dto/create-worker.dto';
 import { UpdateWorkerDto } from './dto/update-worker.dto';
+import { ListWorkersDto } from './dto/list-workers.dto';
 
 @ApiTags('Workforce - Workers')
 @ApiBearerAuth('JWT-auth')
@@ -40,15 +41,22 @@ export class WorkersController {
   @ApiOperation({ summary: 'Get all workers for an organization' })
   @ApiParam({ name: 'organizationId', description: 'Organization ID' })
   @ApiQuery({ name: 'farmId', required: false, description: 'Filter by farm ID' })
+  @ApiQuery({ name: 'workerType', required: false, enum: ['fixed_salary', 'daily_worker', 'metayage'], description: 'Filter by worker type' })
+  @ApiQuery({ name: 'isActive', required: false, description: 'Filter by active status' })
+  @ApiQuery({ name: 'page', required: false, description: 'Page number' })
+  @ApiQuery({ name: 'pageSize', required: false, description: 'Items per page' })
+  @ApiQuery({ name: 'search', required: false, description: 'Search term' })
+  @ApiQuery({ name: 'sortBy', required: false, description: 'Sort by field' })
+  @ApiQuery({ name: 'sortDir', required: false, enum: ['asc', 'desc'], description: 'Sort direction' })
   @ApiResponse({ status: 200, description: 'Workers retrieved successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 403, description: 'Forbidden - no access to organization' })
   async getWorkers(
     @Request() req,
     @Param('organizationId') organizationId: string,
-    @Query('farmId') farmId?: string,
+    @Query() filters: ListWorkersDto,
   ) {
-    return this.workersService.findAll(req.user.id, organizationId, farmId);
+    return this.workersService.findAll(req.user.id, organizationId, filters);
   }
 
   @Get('active')
@@ -62,6 +70,22 @@ export class WorkersController {
     @Param('organizationId') organizationId: string,
   ) {
     return this.workersService.findActive(req.user.id, organizationId);
+  }
+
+  @Get('activity-summary')
+  @CanReadWorkers()
+  @ApiOperation({ summary: 'Get per-worker daily activity summary for sparklines' })
+  @ApiParam({ name: 'organizationId', description: 'Organization ID' })
+  @ApiQuery({ name: 'days', required: false, description: 'Number of days to look back (default 30)' })
+  @ApiResponse({ status: 200, description: 'Activity summary per worker' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async getActivitySummary(
+    @Request() req,
+    @Param('organizationId') organizationId: string,
+    @Query('days') days?: string,
+  ) {
+    const parsedDays = days ? parseInt(days, 10) : 30;
+    return this.workersService.getActivitySummary(req.user.id, organizationId, parsedDays);
   }
 
   @Get(':workerId')

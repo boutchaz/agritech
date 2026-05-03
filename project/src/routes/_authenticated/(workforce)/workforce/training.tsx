@@ -2,9 +2,10 @@ import { useState, type ReactNode } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { Loader2, Plus, Pencil, Trash2, Users, GraduationCap } from 'lucide-react';
+import { Loader2, Plus, Pencil, Trash2, Users, GraduationCap, Building2 } from 'lucide-react';
 import { withRouteProtection } from '@/components/authorization/withRouteProtection';
 import { useAuth } from '@/hooks/useAuth';
+import ModernPageHeader from '@/components/ModernPageHeader';
 import { useWorkers } from '@/hooks/useWorkers';
 import {
   useBulkEnroll,
@@ -74,22 +75,25 @@ function TrainingPage() {
   const workerList = (workers.data ?? []).map((w) => ({ id: w.id, name: `${w.first_name} ${w.last_name}` }));
 
   return (
-    <div className="p-6 space-y-6 max-w-6xl">
-      <header className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold">{t('training.title', 'Training')}</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            {t('training.subtitle', 'Manage programs (safety, technical, certifications) and worker enrollments.')}
-          </p>
-        </div>
-        {tab === 'programs' && (
-          <Button onClick={() => setCreating(true)}>
-            <Plus className="w-4 h-4 mr-2" />
-            {t('training.newProgram', 'New program')}
-          </Button>
-        )}
-      </header>
-
+    <>
+      <ModernPageHeader
+        breadcrumbs={[
+          { icon: Building2, label: currentOrganization?.name ?? '', path: '/dashboard' },
+          { icon: Users, label: t('nav.workforce', 'Workforce'), path: '/workforce/employees' },
+          { icon: GraduationCap, label: t('training.title', 'Training'), isActive: true },
+        ]}
+        title={t('training.title', 'Training')}
+        subtitle={t('training.subtitle', 'Manage programs (safety, technical, certifications) and worker enrollments.')}
+        actions={
+          tab === 'programs' ? (
+            <Button onClick={() => setCreating(true)}>
+              <Plus className="w-4 h-4 mr-2" />
+              {t('training.newProgram', 'New program')}
+            </Button>
+          ) : undefined
+        }
+      />
+      <div className="p-3 sm:p-4 lg:p-6 space-y-6">
       <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)}>
         <TabsList>
           <TabsTrigger value="programs">{t('training.programs', 'Programs')}</TabsTrigger>
@@ -248,7 +252,8 @@ function TrainingPage() {
           }}
         />
       )}
-    </div>
+      </div>
+    </>
   );
 }
 

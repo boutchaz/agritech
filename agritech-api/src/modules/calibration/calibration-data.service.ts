@@ -1202,15 +1202,19 @@ export class CalibrationDataService {
             if (!cycleStartDate || !startDate) return t;
 
             // SUM(gdd_daily) from cycle start to this transition
-            const { data } = await supabase.rpc('sum_gdd_between', {
-              p_lat: roundedLat,
-              p_lon: roundedLon,
-              p_crop: cropType.toLowerCase(),
-              p_start: cycleStartDate,
-              p_end: startDate,
-            });
+            const { data: rows } = await supabase
+              .from('weather_gdd_daily')
+              .select('gdd_daily')
+              .eq('latitude', roundedLat)
+              .eq('longitude', roundedLon)
+              .eq('crop_type', cropType.toLowerCase())
+              .gte('date', cycleStartDate)
+              .lt('date', startDate);
 
-            const gddSum = typeof data === 'number' ? data : 0;
+            const gddSum = (rows ?? []).reduce(
+              (s: number, r: { gdd_daily: number | null }) => s + (Number(r.gdd_daily) || 0),
+              0,
+            );
             return { ...t, gdd_at_entry: Math.round(gddSum * 100) / 100 };
           }),
         );

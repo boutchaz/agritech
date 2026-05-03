@@ -1,75 +1,133 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
-import { FarmStep } from '@/components/onboarding/steps/FarmStep';
-import { useOnboardingStore } from '@/stores/onboardingStore';
-import { useAuth } from '@/hooks/useAuth';
-import { onboardingApi } from '@/lib/api/onboarding';
-import { useState, useCallback, useRef } from 'react';
+import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { OnbHeader, OnbShellLayout } from '@/components/onboarding-v2/chrome';
+import { FarmScreen } from '@/components/onboarding-v2/FarmScreen';
+import { onboardingApi } from '@/lib/api/onboarding';
+import { usersApi } from '@/lib/api/users';
+import { useOnboardingStore } from '@/stores/onboardingStore';
 
 export const Route = createFileRoute('/(public)/onboarding/farm')({
-  component: FarmStepComponent,
+  component: FarmStepRoute,
 });
 
-function FarmStepComponent() {
+function FarmStepRoute() {
   const { t } = useTranslation();
-  const { user } = useAuth();
   const navigate = useNavigate();
-  const farmData = useOnboardingStore((state) => state.farmData);
-  const existingFarmId = useOnboardingStore((state) => state.existingFarmId);
-  const updateFarmData = useOnboardingStore((state) => state.updateFarmData);
-  const setExistingFarmId = useOnboardingStore((state) => state.setExistingFarmId);
-  const setCurrentStep = useOnboardingStore((state) => state.setCurrentStep);
-  const persistState = useOnboardingStore((state) => state.persistState);
+  const organizationData = useOnboardingStore((s) => s.organizationData);
+  const farmData = useOnboardingStore((s) => s.farmData);
+  const existingOrgId = useOnboardingStore((s) => s.existingOrgId);
+  const existingFarmId = useOnboardingStore((s) => s.existingFarmId);
+  const updateOrganizationData = useOnboardingStore((s) => s.updateOrganizationData);
+  const updateFarmData = useOnboardingStore((s) => s.updateFarmData);
+  const setExistingOrgId = useOnboardingStore((s) => s.setExistingOrgId);
+  const setExistingFarmId = useOnboardingStore((s) => s.setExistingFarmId);
+  const setCurrentStep = useOnboardingStore((s) => s.setCurrentStep);
+  const persistState = useOnboardingStore((s) => s.persistState);
   const [error, setError] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const isSubmittingRef = useRef(false);
+  const [loading, setLoading] = useState(false);
+
+  const [region, setRegion] = useState(farmData.description || '');
+  const formData = {
+    org_name: organizationData.name || '',
+    email: organizationData.email || '',
+    city: organizationData.city || '',
+    region,
+  };
+
+  const handleChange = (patch: Partial<typeof formData>) => {
+    if (patch.org_name !== undefined) {
+      updateOrganizationData({ name: patch.org_name });
+      updateFarmData({ name: patch.org_name });
+    }
+    if (patch.email !== undefined) updateOrganizationData({ email: patch.email });
+    if (patch.city !== undefined) {
+      updateOrganizationData({ city: patch.city });
+      updateFarmData({ location: patch.city });
+    }
+    if (patch.region !== undefined) {
+      setRegion(patch.region);
+      updateFarmData({ description: patch.region });
+    }
+  };
 
   const handleNext = useCallback(async () => {
-    // Prevent double submission
-    if (isSubmittingRef.current) {
-      return;
-    }
-
-    isSubmittingRef.current = true;
-    setIsSubmitting(true);
+    if (loading) return;
+    setLoading(true);
     setError(null);
-
     try {
-      const result = await onboardingApi.saveFarm(farmData, existingFarmId || undefined);
+      let orgId = existingOrgId;
 
-      // Calculate the farm ID (either new or existing)
-      const farmId = result.id || existingFarmId;
-
-      // Persist state with the farm ID directly to avoid timing issues
-      await persistState({ existingFarmId: farmId, currentStep: 4 });
-
-      // Also update local state
-      if (farmId !== existingFarmId) {
-        setExistingFarmId(farmId);
+      // Re-entry safety: user may have an org from signup or prior onboarding
+      // attempt that's not in the store. Look up before creating.
+      if (!orgId) {
+        try {
+          const orgs = await usersApi.getMyOrganizations();
+          if (orgs && orgs.length > 0) {
+            orgId = orgs[0].id;
+            setExistingOrgId(orgId);
+          }
+        } catch {
+          // ignore — fall through to create
+        }
       }
 
-      navigate({ to: '/onboarding/modules' });
+      if (!orgId) {
+        const baseSlug =
+          (organizationData.name || 'mon-exploitation')
+            .toLowerCase()
+            .replace(/\s+/g, '-')
+            .replace(/[^a-z0-9-]/g, '')
+            .slice(0, 40) || 'mon-exploitation';
+        const orgResult = await onboardingApi.saveOrganization({
+          name: organizationData.name,
+          slug: `${baseSlug}-${Date.now().toString(36)}`,
+          phone: organizationData.phone || '',
+          email: organizationData.email,
+          account_type: organizationData.account_type as 'individual' | 'business' | 'farm',
+          city: organizationData.city,
+          country: organizationData.country || 'MA',
+        });
+        orgId = orgResult.id;
+        setExistingOrgId(orgId);
+      }
+
+      // Farm is saved in the next step (Surface) once size is known —
+      // farms table enforces size > 0.
+      await persistState({ existingOrgId: orgId, currentStep: 4 });
+      setCurrentStep(4);
+      navigate({ to: '/onboarding/surface' });
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : t('onboarding.errorGeneric', 'Une erreur est survenue');
-      setError(errorMessage);
-      setIsSubmitting(false);
-      isSubmittingRef.current = false;
+      setError(err instanceof Error ? err.message : t('onboarding.errorGeneric', 'Une erreur est survenue'));
+    } finally {
+      setLoading(false);
     }
-  }, [navigate, persistState, setExistingFarmId, existingFarmId, farmData, t]);
+  }, [
+    loading,
+    existingOrgId,
+    existingFarmId,
+    organizationData,
+    farmData,
+    setExistingOrgId,
+    setExistingFarmId,
+    persistState,
+    setCurrentStep,
+    navigate,
+    t,
+  ]);
+
+  const handleBack = useCallback(() => {
+    navigate({ to: '/onboarding/account-type' });
+  }, [navigate]);
 
   return (
-    <>
+    <OnbShellLayout header={<OnbHeader step={3} total={5} />}>
       {error && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 max-w-md px-4 py-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
           {error}
         </div>
       )}
-      <FarmStep
-        farmData={farmData}
-        onUpdate={updateFarmData}
-        onNext={handleNext}
-        isLoading={isSubmitting}
-      />
-    </>
+      <FarmScreen data={formData} onChange={handleChange} onNext={handleNext} onBack={handleBack} loading={loading} />
+    </OnbShellLayout>
   );
 }

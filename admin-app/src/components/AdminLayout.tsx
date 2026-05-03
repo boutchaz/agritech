@@ -14,7 +14,9 @@ import {
   Megaphone,
   BookOpen,
   Globe,
+  Layers,
   Library,
+  LifeBuoy,
   PanelLeft,
   PanelLeftClose,
   Shield,
@@ -43,6 +45,8 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/rag-sources', label: 'RAG Corpus', icon: Library },
   { to: '/changelog', label: 'Changelog', icon: BookOpen },
   { to: '/supported-countries', label: 'Supported Countries', icon: Globe },
+  { to: '/support-settings', label: 'Support Info', icon: LifeBuoy },
+  { to: '/landing-settings', label: 'Landing Page', icon: Layers },
   { to: '/rdv', label: 'RDV SIAM', icon: CalendarCheck },
 ];
 

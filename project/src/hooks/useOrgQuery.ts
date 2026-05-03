@@ -111,9 +111,9 @@ export function createOrgCrudHooks<
         );
         return queued(data);
       },
-      onSuccess: (data, variables, context) => {
-        queryClient.invalidateQueries({ queryKey: [resourceName, currentOrganization?.id] });
-        options?.onSuccess?.(data, variables, context);
+      onSuccess: (...args) => {
+        queryClient.invalidateQueries({ queryKey: [resourceName] });
+        options?.onSuccess?.(...args);
       },
     });
   }
@@ -145,10 +145,11 @@ export function createOrgCrudHooks<
         );
         return queued(data as TUpdateInput);
       },
-      onSuccess: (data, variables, context) => {
-        queryClient.invalidateQueries({ queryKey: [resourceName, currentOrganization?.id] });
+      onSuccess: (...args) => {
+        const [, variables] = args;
+        queryClient.invalidateQueries({ queryKey: [resourceName] });
         queryClient.invalidateQueries({ queryKey: [resourceName.replace(/s$/, ''), variables.id] });
-        options?.onSuccess?.(data, variables, context);
+        options?.onSuccess?.(...args);
       },
     });
   }
@@ -178,9 +179,9 @@ export function createOrgCrudHooks<
         );
         return queued();
       },
-      onSuccess: (data, variables, context) => {
-        queryClient.invalidateQueries({ queryKey: [resourceName, currentOrganization?.id] });
-        options?.onSuccess?.(data, variables, context);
+      onSuccess: (...args) => {
+        queryClient.invalidateQueries({ queryKey: [resourceName] });
+        options?.onSuccess?.(...args);
       },
     });
   }

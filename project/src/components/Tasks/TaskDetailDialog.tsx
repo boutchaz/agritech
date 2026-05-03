@@ -43,6 +43,7 @@ import {
   TASK_PRIORITY_COLORS,
 } from '../../types/tasks';
 import { Button } from '../ui/button';
+import UserAvatar from '../ui/UserAvatar';
 import { useTranslation } from 'react-i18next';
 import { Label } from '../ui/label';
 import { Input } from '../ui/Input';
@@ -120,6 +121,7 @@ const TaskDetailDialog = ({
       title: string;
       body?: string;
       author?: string;
+      authorAvatarUrl?: string;
     };
     const events: TimelineEvent[] = [];
 
@@ -188,6 +190,7 @@ const TaskDetailDialog = ({
             : t('taskDetail.timeline.comment', 'Comment'),
         body: c.comment,
         author: c.user_name || c.worker_id || undefined,
+        authorAvatarUrl: c.user_avatar_url || undefined,
       });
     }
 
@@ -1124,9 +1127,20 @@ const TaskDetailDialog = ({
                       : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400';
                   return (
                     <li key={evt.id} className="relative">
-                      <span className={`absolute -start-9 flex h-6 w-6 items-center justify-center rounded-full ring-4 ring-white dark:ring-gray-800 ${toneClasses}`}>
-                        <Icon className="h-3 w-3" />
-                      </span>
+                      {evt.kind === 'comment' && evt.author ? (
+                        <span className="absolute -start-9 flex items-center justify-center rounded-full ring-4 ring-white dark:ring-gray-800 overflow-hidden">
+                          <UserAvatar
+                            src={evt.authorAvatarUrl}
+                            firstName={evt.author.split(' ')[0]}
+                            lastName={evt.author.split(' ').slice(1).join(' ')}
+                            size="xs"
+                          />
+                        </span>
+                      ) : (
+                        <span className={`absolute -start-9 flex h-6 w-6 items-center justify-center rounded-full ring-4 ring-white dark:ring-gray-800 ${toneClasses}`}>
+                          <Icon className="h-3 w-3" />
+                        </span>
+                      )}
                       <div>
                         <p className="text-sm font-medium text-gray-900 dark:text-white">{evt.title}</p>
                         <p className="text-xs text-gray-500 dark:text-gray-400">

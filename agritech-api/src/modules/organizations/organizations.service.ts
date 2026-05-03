@@ -116,7 +116,51 @@ export class OrganizationsService {
             throw new ConflictException('Failed to create organization with unique slug after multiple attempts');
         }
 
+        await this.seedRequiredModules(organization.id);
+        await this.createDefaultHrComplianceSettings(organization.id);
+
         return organization;
+    }
+
+    private async seedRequiredModules(organizationId: string): Promise<void> {
+        const client = this.databaseService.getAdminClient();
+        const { data: required, error } = await client
+            .from('modules')
+            .select('id')
+            .eq('is_required', true);
+
+        if (error) {
+            this.logger.warn(`Failed to load required modules: ${error.message}`);
+            return;
+        }
+        if (!required?.length) return;
+
+        const now = new Date().toISOString();
+        const rows = required.map((m: { id: string }) => ({
+            organization_id: organizationId,
+            module_id: m.id,
+            is_active: true,
+            updated_at: now,
+        }));
+
+        const { error: upsertError } = await client
+            .from('organization_modules')
+            .upsert(rows, { onConflict: 'organization_id,module_id' });
+
+        if (upsertError) {
+            this.logger.warn(`Failed to seed required modules: ${upsertError.message}`);
+        }
+    }
+
+    private async createDefaultHrComplianceSettings(organizationId: string): Promise<void> {
+        const client = this.databaseService.getAdminClient();
+        const { error } = await client
+            .from('hr_compliance_settings')
+            .upsert({ organization_id: organizationId }, { onConflict: 'organization_id' });
+
+        if (error) {
+            this.logger.warn(`Failed to seed HR compliance settings: ${error.message}`);
+        }
     }
 
     async findOne(id: string) {

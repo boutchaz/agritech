@@ -189,7 +189,39 @@ export class AttendanceService {
         geofenceId = matched.geofence.id;
         distance = matched.distance;
         within = matched.distance <= matched.geofence.radius_m;
+        if (!within) {
+          throw new BadRequestException(
+            `Punch outside geofence (${Math.round(distance)}m from boundary, allowed ${matched.geofence.radius_m}m)`,
+          );
+        }
       }
+    }
+
+    // Sequencing: a check_in must not follow another check_in (and same for
+    // check_out) on the same calendar day — invalid pairs inflate hours.
+    const occurredAt = dto.occurred_at ?? new Date().toISOString();
+    const day = occurredAt.slice(0, 10);
+    const { data: lastSameDay } = await supabase
+      .from('attendance_records')
+      .select('type, occurred_at')
+      .eq('organization_id', organizationId)
+      .eq('worker_id', dto.worker_id)
+      .gte('occurred_at', `${day}T00:00:00`)
+      .lte('occurred_at', `${day}T23:59:59`)
+      .order('occurred_at', { ascending: false })
+      .limit(1);
+    const last = lastSameDay?.[0];
+    if (last) {
+      if (last.type === dto.type) {
+        throw new BadRequestException(
+          `Cannot record consecutive ${dto.type} punches; expected the opposite type next`,
+        );
+      }
+      if (occurredAt <= last.occurred_at) {
+        throw new BadRequestException('Punch occurred_at must be after the previous punch');
+      }
+    } else if (dto.type === 'check_out') {
+      throw new BadRequestException('Cannot check_out without a prior check_in for the day');
     }
 
     const { data, error } = await supabase
@@ -200,7 +232,7 @@ export class AttendanceService {
         farm_id: dto.farm_id ?? null,
         geofence_id: geofenceId,
         type: dto.type,
-        occurred_at: dto.occurred_at ?? new Date().toISOString(),
+        occurred_at: occurredAt,
         lat: dto.lat ?? null,
         lng: dto.lng ?? null,
         accuracy_m: dto.accuracy_m ?? null,
@@ -258,6 +290,7 @@ export class AttendanceService {
       outs: number;
     };
     const byDay = new Map<string, Row>();
+    const eventsByDay = new Map<string, Array<{ type: string; occurred_at: string }>>();
     for (const r of data ?? []) {
       const day = r.occurred_at.slice(0, 10);
       const row =
@@ -280,14 +313,25 @@ export class AttendanceService {
         row.last_check_out = r.occurred_at;
       }
       byDay.set(day, row);
+      const list = eventsByDay.get(day) ?? [];
+      list.push({ type: r.type, occurred_at: r.occurred_at });
+      eventsByDay.set(day, list);
     }
-    for (const row of byDay.values()) {
-      if (row.first_check_in && row.last_check_out) {
-        row.hours_worked =
-          (new Date(row.last_check_out).getTime() -
-            new Date(row.first_check_in).getTime()) /
-          3_600_000;
+    // Pair-based hours: sum (check_out - matching check_in) over each shift,
+    // so lunch breaks and multiple shifts no longer inflate hours.
+    for (const [day, events] of eventsByDay) {
+      let openIn: string | null = null;
+      let total = 0;
+      for (const e of events) {
+        if (e.type === 'check_in') {
+          if (!openIn) openIn = e.occurred_at;
+        } else if (e.type === 'check_out' && openIn) {
+          total += (new Date(e.occurred_at).getTime() - new Date(openIn).getTime()) / 3_600_000;
+          openIn = null;
+        }
       }
+      const row = byDay.get(day);
+      if (row) row.hours_worked = total;
     }
     return [...byDay.values()].sort((a, b) => a.date.localeCompare(b.date));
   }

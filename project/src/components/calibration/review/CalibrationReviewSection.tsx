@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 import { useCalibrationReview } from '@/hooks/useCalibrationReview';
 import { useParcelById } from '@/hooks/useParcelsQuery';
 import { BlockASynthese } from './BlockASynthese';
-import { BlockCAnomalies } from './BlockCAnomalies';
 import { BlockFAlternance } from './BlockFAlternance';
 import { SpectralChart } from './SpectralChart';
 import { ZoneMap } from './ZoneMap';
@@ -23,7 +22,6 @@ const SECTION_ANCHORS = [
   { id: 'A', label: 'Synthèse' },
   { id: 'spectral', label: 'Seuils spectraux' },
   { id: 'zones', label: 'Zonage intra-parc.' },
-  { id: 'C', label: 'Anomalies' },
   { id: 'D', label: 'Améliorer précision' },
   { id: 'F', label: 'Alternance' },
 ] as const;
@@ -136,10 +134,6 @@ export function CalibrationReviewSection({ parcelId }: CalibrationReviewSectionP
             heterogeneityFlag={review.block_b.heterogeneity_flag}
             boundary={parcel?.boundary}
           />
-
-          {review.block_c && (
-            <BlockCAnomalies data={review.block_c} />
-          )}
 
           <BlockDAmeliorer data={review.block_d} />
 

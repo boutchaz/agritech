@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { DatabaseService } from '../database/database.service';
-import { FinancialReportsService } from './financial-reports.service';
+import { AgedReportsService } from './financial-reports.service';
 import {
   createMockSupabaseClient,
   createMockDatabaseService,
@@ -11,8 +11,8 @@ import {
 } from '../../../test/helpers/mock-database.helper';
 import { TEST_IDS } from '../../../test/helpers/test-utils';
 
-describe('FinancialReportsService', () => {
-  let service: FinancialReportsService;
+describe('AgedReportsService', () => {
+  let service: AgedReportsService;
   let mockClient: MockSupabaseClient;
   let mockDatabaseService: MockDatabaseService;
 
@@ -22,12 +22,12 @@ describe('FinancialReportsService', () => {
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
-        FinancialReportsService,
+        AgedReportsService,
         { provide: DatabaseService, useValue: mockDatabaseService },
       ],
     }).compile();
 
-    service = module.get<FinancialReportsService>(FinancialReportsService);
+    service = module.get<AgedReportsService>(AgedReportsService);
   });
 
   afterEach(() => {

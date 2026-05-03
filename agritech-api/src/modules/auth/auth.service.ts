@@ -15,8 +15,6 @@ import { OrganizationsService } from '../organizations/organizations.service';
 import { DemoDataService } from '../demo-data/demo-data.service';
 import { AdoptionService, MilestoneType } from '../adoption/adoption.service';
 import { CaslAbilityFactory } from '../casl/casl-ability.factory';
-import { SubscriptionsService } from '../subscriptions/subscriptions.service';
-import { TrialPlanInput } from '../subscriptions/dto/create-trial-subscription.dto';
 
 @Injectable()
 export class AuthService {
@@ -30,7 +28,6 @@ export class AuthService {
     private demoDataService: DemoDataService,
     private adoptionService: AdoptionService,
     private caslAbilityFactory: CaslAbilityFactory,
-    private subscriptionsService: SubscriptionsService,
   ) { }
 
   private getAllowedRedirectOrigins(): string[] {
@@ -681,20 +678,9 @@ export class AuthService {
         }
         this.logger.log(`Successfully created organization_users record: ${JSON.stringify(orgUserData)}`);
 
-        // 5. Create trial subscription for the new organization
-        try {
-          await this.subscriptionsService.createTrialSubscription(userId, {
-            organization_id: organizationId,
-            plan_type: TrialPlanInput.STARTER,
-          });
-          this.logger.log(`Trial subscription created for organization ${organizationId}`);
-        } catch (trialError) {
-          // Log but don't fail signup — org creation succeeded
-          this.logger.error(
-            `Failed to create trial subscription (non-critical): ${trialError.message}`,
-            trialError.stack,
-          );
-        }
+        // 5. Trial subscription is no longer auto-created on signup. The user
+        // picks modules + hectares on /onboarding/select-trial, which calls
+        // POST /subscriptions/trial explicitly with their picks.
 
         // 6. Seed demo data if requested
         this.logger.log(`includeDemoData value: ${signupDto.includeDemoData} (type: ${typeof signupDto.includeDemoData})`);
@@ -872,18 +858,10 @@ export class AuthService {
 
     this.logger.log(`User ${userId} added to organization ${newOrg.id} as organization_admin`);
 
-    try {
-      await this.subscriptionsService.createTrialSubscription(userId, {
-        organization_id: newOrg.id,
-        plan_type: TrialPlanInput.STARTER,
-      });
-      this.logger.log(`Trial subscription created for organization ${newOrg.id}`);
-    } catch (trialError) {
-      this.logger.error(
-        `Failed to create trial subscription (non-critical): ${trialError.message}`,
-        trialError.stack,
-      );
-    }
+    // Trial subscription is no longer auto-created here. The user picks
+    // modules + hectares on /onboarding/select-trial, which creates the
+    // trial subscription explicitly. Auto-creating it caused select-trial
+    // to detect a valid sub and redirect away before the user could pick.
 
     return {
       success: true,

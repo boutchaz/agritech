@@ -63,7 +63,7 @@ type FiscalYearFormValues = z.output<typeof fiscalYearSchema>;
 
 export function FiscalYearManagement() {
   const { hasRole } = useAuth();
-  const { t } = useTranslation();
+  const { t } = useTranslation('accounting');
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingYear, setEditingYear] = useState<FiscalYear | null>(null);

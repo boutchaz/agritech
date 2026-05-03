@@ -79,8 +79,13 @@ export function useCreateStockEntry() {
       }
       return outcome.result;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['stock-entries', currentOrganization?.id] });
+    onSuccess: (created) => {
+      queryClient.invalidateQueries({ queryKey: ['stock-entries'] });
+      const id = (created as { id?: string } | null | undefined)?.id;
+      if (id) {
+        queryClient.setQueryData(['stock-entry', id], created);
+        queryClient.invalidateQueries({ queryKey: ['stock-entry', id] });
+      }
     },
   });
 }
